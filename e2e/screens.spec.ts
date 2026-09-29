@@ -413,6 +413,53 @@ async function writtenAs(page: Page, as: WrittenAs): Promise<void> {
   }, as);
 }
 
+/** Chooses the radio button `name` of `group` by a click on its words. */
+async function chooseRadio(group: Locator, name: string): Promise<void> {
+  await group.locator("label").filter({ hasText: name }).click();
+  await expect(group.getByRole("radio", { name })).toBeChecked();
+}
+
+/** Loads panel.nei and panel_meta.csv, chooses popcat, goes to the
+    Analyses step, and gives the panel of the principal components. */
+async function pcaPanel(page: Page): Promise<Locator> {
+  await pickVariants(page, "panel.nei");
+  await expect(
+    page.getByRole("main").getByText("200 individuals"),
+  ).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, "panel_meta.csv");
+  await choose(page, "Column that defines the populations", "popcat");
+  await goTo(page, "Analyses");
+  return page.getByRole("region", { name: "Principal components" });
+}
+
+/** Sets the PCA's own LD filter within 50000 base pairs. */
+async function ownLdDistance(panel: Locator): Promise<void> {
+  await chooseRadio(
+    panel.getByRole("radiogroup", {
+      name: "Prune the variants by linkage disequilibrium (LD)",
+    }),
+    "For the PCA alone",
+  );
+  const field = panel.getByLabel(
+    "Distance within which variants are compared, in base pairs, from 1",
+  );
+  await field.fill("50000");
+  await field.press("Enter");
+}
+
+/** The panel of the principal components with the PCA run, with its own
+    LD filter within 50000 base pairs when `ownLd`. */
+async function pcaRun(page: Page, ownLd: boolean): Promise<Locator> {
+  const panel = await pcaPanel(page);
+  if (ownLd) await ownLdDistance(panel);
+  await panel.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(panel.getByText(/^The place of each of the 200/)).toBeVisible({
+    timeout: 30_000,
+  });
+  return panel;
+}
+
 // The page of the population genetics application, in both themes, since
 // its dark theme is the same page with other colours and breaks on its own.
 for (const theme of ["light", "dark"] as const) {
@@ -2878,8 +2925,9 @@ for (const theme of ["light", "dark"] as const) {
     }) => {
       await diversityWithThresholds(page, false);
       await goTo(page, "Analyses");
+      // The principal components say the same beside their Run.
       await expect(
-        page.getByRole("main").getByText(/^Run calculates the statistics/),
+        diversityPanel(page).getByText(/^Run calculates the statistics/),
       ).toBeVisible();
       await save(page, `popgen-diversity-waits-ready-${theme}`);
     });
@@ -3028,6 +3076,165 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("textbox", { name: "The details of the errors" }),
       ).toBeVisible();
       await save(page, `popgen-error-bar-details-${theme}`);
+    });
+
+    // The panel of the principal components (docs/specs/analyses/pca.md,
+    // "The panel"): panel.nei and panel_meta.csv, the populations of
+    // popcat.
+
+    test("the principal components ready, with their options", async ({
+      page,
+    }) => {
+      const panel = await pcaPanel(page);
+      await chooseRadio(
+        panel.getByRole("radiogroup", {
+          name: "Prune the variants by linkage disequilibrium (LD)",
+        }),
+        "For the PCA alone",
+      );
+      await expect(
+        panel.getByText(/^The LD filter of the PCA needs the distance/),
+      ).toHaveCount(2);
+      await save(page, `popgen-pca-ready-${theme}`);
+    });
+
+    test("the principal components running, with the words of the decomposition", async ({
+      page,
+    }) => {
+      const panel = await pcaPanel(page);
+      await holdResults(page);
+      await panel.getByRole("button", { name: "Run", exact: true }).click();
+      await expect(
+        panel.getByText(/^The bar shows the reading of panel\.nei/),
+      ).toBeVisible();
+      await expect(
+        panel.getByText(/^Calculating · 99% · 0:0\d$/),
+      ).toBeVisible();
+      await save(page, `popgen-pca-running-${theme}`);
+    });
+
+    test("the principal components in 3D, p1 highlighted", async ({ page }) => {
+      const panel = await pcaRun(page, true);
+      await expect(
+        panel.getByRole("img", {
+          name: "Principal components, PC1, PC2 and PC3",
+        }),
+      ).toBeVisible();
+      await expect(
+        panel.getByRole("button", { name: "Turn left" }),
+      ).toBeVisible();
+      await panel
+        .getByRole("radiogroup", { name: "Population" })
+        .locator("button")
+        .filter({ hasText: "p1 (68)" })
+        .click();
+      await expect(
+        panel.getByRole("radio", { name: "p1 (68)" }),
+      ).toHaveAttribute("aria-checked", "true");
+      // A frame for the view to be drawn with the highlight.
+      await page.waitForTimeout(200);
+      await save(page, `popgen-pca-3d-highlighted-${theme}`);
+    });
+
+    test("the principal components in 2D", async ({ page }) => {
+      const panel = await pcaRun(page, true);
+      await panel.getByRole("radio", { name: "2D", exact: true }).click();
+      await expect(
+        panel.locator("svg.chart-scatter .chart-axis-label").first(),
+      ).toHaveText("PC1 (3.55%)");
+      await save(page, `popgen-pca-2d-${theme}`);
+    });
+
+    test("the principal components in a browser with no WebGL", async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its canvas
+        const getContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function (
+          this: HTMLCanvasElement,
+          id: string,
+          ...rest: unknown[]
+        ) {
+          if (id === "webgl2") return null;
+          return (getContext as (...args: unknown[]) => unknown).call(
+            this,
+            id,
+            ...rest,
+          );
+        } as typeof getContext;
+      });
+      await page.reload();
+      const panel = await pcaRun(page, false);
+      await expect(
+        panel.getByText(/^This browser cannot draw the 3D view/),
+      ).toBeVisible();
+      await save(page, `popgen-pca-no-webgl-${theme}`);
+    });
+
+    test("the principal components, three.js not loaded", async ({ page }) => {
+      await page.route("**/pca3d-*.js", (route) =>
+        route.fulfill({ status: 404 }),
+      );
+      const panel = await pcaRun(page, false);
+      await expect(
+        panel.getByText(/^The 3D view could not be loaded/),
+      ).toBeVisible();
+      await save(page, `popgen-pca-not-loaded-${theme}`);
+    });
+
+    test("the principal components coloured by the values of altitude", async ({
+      page,
+    }) => {
+      const panel = await pcaRun(page, true);
+      await panel.getByRole("radio", { name: "2D", exact: true }).click();
+      await choose(page, "Colour the points by", "altitude");
+      await expect(panel.getByText("No value (3)")).toBeVisible();
+      await save(page, `popgen-pca-values-${theme}`);
+    });
+
+    test("the principal components, the table sorted by PC1", async ({
+      page,
+    }) => {
+      const panel = await pcaRun(page, true);
+      await panel.getByRole("radio", { name: "2D", exact: true }).click();
+      await panel
+        .getByRole("columnheader", { name: "PC1", exact: true })
+        .click();
+      const part = panel
+        .getByText(/^The place of each of the 200/)
+        .locator("..");
+      await part.scrollIntoViewIfNeeded();
+      await part.screenshot({
+        path: join(SCREENS, `popgen-pca-table-${theme}.png`),
+      });
+    });
+
+    test("the PCoA with the warning of the correction", async ({ page }) => {
+      const panel = await pcaPanel(page);
+      await ownLdDistance(panel);
+      await chooseRadio(
+        panel.getByRole("radiogroup", { name: "Method" }),
+        "PCoA of the Kosman distances, for data with many missing genotypes",
+      );
+      await panel.getByRole("button", { name: "Run", exact: true }).click();
+      await expect(
+        panel.getByText(/^Warning: The Kosman distances/),
+      ).toBeVisible({ timeout: 30_000 });
+      await panel.getByRole("radio", { name: "2D", exact: true }).click();
+      await save(page, `popgen-pcoa-warning-${theme}`);
+    });
+
+    test("the principal components at 320 pixels wide", async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      const panel = await pcaRun(page, true);
+      await expect(
+        panel.getByRole("img", {
+          name: "Principal components, PC1, PC2 and PC3",
+        }),
+      ).toBeVisible();
+      await page.waitForTimeout(200);
+      await save(page, `popgen-pca-320-${theme}`);
     });
   });
 }

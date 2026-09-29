@@ -22,6 +22,7 @@ import {
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
 import {
+  crashText,
   refusalText as pcaRefusalText,
   statisticsFailedText as pcaStatisticsFailedText,
 } from "../../core/analyses/pca.ts";
@@ -33,6 +34,9 @@ import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
+import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
+import { PcaResults } from "./pca/PcaResults.tsx";
+import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
 
 /** What the component of a result is drawn with. */
@@ -78,6 +82,19 @@ export interface AnalysisUi {
     | null;
   /** Draws the result: its table, its plot, its download. */
   readonly Results: ComponentType<ResultsProps>;
+  /** Draws the options of the analysis, above its Run button, in every
+      state, since they are what the user may change; `null` for an
+      analysis with none. */
+  readonly Options: ComponentType | null;
+  /** A line under the bar of a calculation under way, for the project
+      `p`, what the bar does not show; `null` for none. */
+  readonly runningLine: (p: Project) => string | null;
+  /** The words of a worker that stopped with no answer, `workerFailed`,
+      for the project `p` and the individuals kept of the state of the
+      store, when the analysis has its own; `null` for the words every
+      analysis shares. */
+  readonly workerFailedText:
+    ((p: Project, kept: IndividualsKept | null) => string) | null;
 }
 
 /** The panel of the diversity (docs/specs/analyses/diversity.md, "The
@@ -111,26 +128,46 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   refusalText,
   statisticsFailedText,
   Results: DiversityResults,
+  Options: null,
+  runningLine: (): null => null,
+  workerFailedText: null,
 });
 
-/**
- * The panel of the principal components (docs/specs/analyses/pca.md, "The
- * panel"), for now its words alone: the frame draws its options of none,
- * its Run, its warnings and its error state, and its result draws
- * nothing. The panel whole, the options, the plots, the legend, the
- * explained variance, the table and its lines before a Run, is task 8.4
- * of docs/plans/individuals-pca.md, which replaces `readyLines` and
- * `Results` here.
- */
+/** The panel of the principal components (docs/specs/analyses/pca.md,
+    "The panel"). */
 const PCA: AnalysisUi = Object.freeze({
   title: titleOf("pca"),
   name: "the principal components",
   resultName: "the plot and the table",
-  readyLines: (): readonly string[] => [],
+  readyLines: pcaReadyLines,
   refusalText: pcaRefusalText,
   statisticsFailedText: pcaStatisticsFailedText,
-  Results: (): null => null,
+  Results: PcaResults,
+  Options: PcaOptionsPart,
+  runningLine: (p: Project): string | null =>
+    p.variants === null ? null : decompositionLine(p.variants.name),
+  workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
+    crashText(p, individualsRunOn(p, kept)),
 });
+
+/** The individuals a calculation of the project `p` ran on, those the
+    filters of individuals keep, `kept` of the state of the store under
+    the same filters as its key: the known list, or every individual of
+    the variants file when the filters remove none; those the lists keep
+    should the statistics a threshold needs have left the cache since. A
+    defect with no variants file read, or no individuals kept, which lock
+    the analysis before any calculation. */
+function individualsRunOn(p: Project, kept: IndividualsKept | null): number {
+  const read = p.variants?.read;
+  if (kept === null || read?.kind !== "read") {
+    throw new Error(
+      "popnei_web defect: the principal components failed with no individuals kept.",
+    );
+  }
+  return kept.list.kind === "known"
+    ? (kept.list.individuals?.length ?? read.individuals.length)
+    : kept.byLists.length;
+}
 
 /** The panel of every analysis of the Analyses step, by its id. */
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([

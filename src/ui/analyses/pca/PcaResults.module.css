@@ -1,0 +1,158 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.results {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* The bar of controls above the plot: the switch, the selects and the
+   buttons of the view, wrapping when there is no room. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.viewButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.why2d {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The plot and the legend over it; the 2D and the 3D plot take the same
+   size, so that the switch between them does not move the page
+   (docs/specs/charts/scatter.md, "The size"). */
+.plotArea {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 48rem;
+}
+
+.view3d {
+  position: relative;
+}
+
+/* The element of a plot: its width from the panel, its height from the
+   ratio of the scatter, 4 by 3 meanwhile; the tooltip is placed inside
+   it. */
+.plot {
+  position: relative;
+  inline-size: 100%;
+  min-inline-size: 0;
+  aspect-ratio: 4 / 3;
+}
+
+/* The words that stand in the place of the 3D view while it loads, or
+   over it while the browser has taken the drawing away. */
+.over {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: var(--space-4);
+  background: var(--color-background);
+  text-align: center;
+}
+
+/* The legend over the top right corner of the frame of the plot, on the
+   background of the page, so that the points under it do not cross its
+   words; it scrolls when it is higher than the frame. */
+.legend {
+  position: absolute;
+  display: grid;
+  gap: var(--space-1);
+  max-block-size: calc(100% - var(--space-8) - var(--space-8));
+  max-inline-size: 60%;
+  overflow: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+}
+
+.legendTitle {
+  margin: 0;
+  padding-inline: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.scale {
+  display: flex;
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+}
+
+.scaleBar {
+  inline-size: var(--space-4);
+  block-size: 6rem;
+  border: 1px solid var(--chart-axis);
+}
+
+.scaleEnds {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.legendNone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.notes {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.part {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  min-inline-size: 0;
+}
+
+.table {
+  display: grid;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* The button and the line of the versions side by side, wrapping when
+   there is no room. */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

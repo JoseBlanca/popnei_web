@@ -26,6 +26,10 @@ export interface RunningProps {
   /** Whether it is a Run that waits for the statistics of each
       individual, whose request `runId` and `progress` are then. */
   readonly waitsForStatistics: boolean;
+  /** A line under the bar, what the bar does not show of the calculation:
+      the principal components, whose bar stands still while they are
+      calculated; none when absent. */
+  readonly line?: string | null;
 }
 
 /** The bar and the line of a calculation under way, with the time since
@@ -35,6 +39,7 @@ export function Running({
   runId,
   progress,
   waitsForStatistics,
+  line,
 }: RunningProps): React.JSX.Element {
   const afterStop = useAppState(
     (s) => s.runs.find((r) => r.runId === runId)?.afterStop ?? false,
@@ -57,6 +62,9 @@ export function Running({
           waitsForStatistics,
         })}
       </p>
+      {line !== undefined && line !== null && (
+        <p className={classOf(styles, "line")}>{line}</p>
+      )}
     </div>
   );
 }

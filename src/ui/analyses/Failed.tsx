@@ -43,6 +43,12 @@ export interface FailedProps {
       step takes "in the Variants step" out of them, `withoutTheStep`;
       left as they are when absent. */
   readonly asShown?: (text: string) => string;
+  /** The words of a worker that stopped with no answer, `workerFailed`,
+      for the project, when the analysis has its own: those of the
+      principal components say it by the memory the calculation needed
+      (docs/specs/analyses/pca.md, "Its words"); those of `failureText`
+      when absent. */
+  readonly workerFailedText?: (p: Project) => string;
 }
 
 /** What went wrong, and what to do. */
@@ -53,6 +59,7 @@ export function Failed({
   again,
   statisticsFailedText,
   asShown,
+  workerFailedText,
 }: FailedProps): React.JSX.Element {
   const text = useAppState((s) => {
     const variants = s.project.variants;
@@ -68,8 +75,11 @@ export function Failed({
         failureText(failure, variants.name, again),
       );
     }
-    return error.kind === "refused"
-      ? refusalText(error.message, s.project)
+    if (error.kind === "refused") {
+      return refusalText(error.message, s.project);
+    }
+    return error.error.kind === "workerFailed" && workerFailedText !== undefined
+      ? workerFailedText(s.project)
       : failureText(error.error, variants.name, again);
   });
   return <Problem>{asShown === undefined ? text : asShown(text)}</Problem>;

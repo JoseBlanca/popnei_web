@@ -3,8 +3,10 @@
  * analysis"; docs/specs/analyses/diversity.md, "The panel"): the `<h2>` of
  * the analysis, and one of the states the store gives it, each drawn here
  * with every case named, so that a new state is a type error until it is
- * drawn. The panel of one analysis, in `panels.ts`, gives its words and
- * the component of its result.
+ * drawn. The panel of one analysis, in `panels.ts`, gives its words, the
+ * component of its result, and the component of its options, drawn above
+ * the button in every state, since they are what the user may change
+ * (docs/specs/analyses/pca.md, "The states").
  *
  * - locked: Run, disabled, with the reason beside it as its description;
  * - ready: Run, and what it will run on, the individuals the filters
@@ -33,7 +35,7 @@
 import { useId, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
-import type { AnalysisId } from "../../core/project.ts";
+import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
@@ -84,6 +86,7 @@ export function AnalysisPanel({ id }: AnalysisPanelProps): React.JSX.Element {
           {stoppedText(ui.name, stoppedBy)}
         </p>
       )}
+      {ui.Options !== null && <ui.Options />}
       <Above ui={ui} status={status} />
       {button !== null && (
         <RunButton
@@ -116,6 +119,12 @@ interface PartProps {
 /** What comes before the button: why the result went, or why it could
     not be calculated. */
 function Above({ ui, status }: PartProps): React.JSX.Element | null {
+  const kept = useAppState((s) => s.individualsKept);
+  const own = ui.workerFailedText;
+  const workerFailed =
+    own === null
+      ? {}
+      : { workerFailedText: (p: Project): string => own(p, kept) };
   switch (status.kind) {
     case "removed":
       return <Removed ui={ui} />;
@@ -126,6 +135,7 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
             error={status.error}
             name={ui.title}
             refusalText={ui.refusalText}
+            {...workerFailed}
           />
         );
       }
@@ -164,6 +174,7 @@ function Below({
   // project file, when the variants file loaded is of the other format
   // than the reference's, or its VCF was read with other read options.
   const uncompared = useAppState((s) => uncomparedText(s.project, id));
+  const runningLine = useAppState((s) => ui.runningLine(s.project));
   switch (status.kind) {
     case "ready":
     case "removed":
@@ -177,6 +188,7 @@ function Below({
           runId={status.runId}
           progress={status.progress}
           waitsForStatistics={status.waitsForStatistics}
+          line={status.waitsForStatistics ? null : runningLine}
         />
       );
     case "done":
