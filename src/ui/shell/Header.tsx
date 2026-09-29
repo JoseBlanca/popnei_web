@@ -11,7 +11,9 @@
  * the last step was undone or redone, the focus moves to the other, which
  * that change has just enabled, since a disabled button cannot hold the
  * focus, which the browser would drop to the start of the page (WCAG
- * 2.4.3). An undo or a redo is announced as undoRedo.ts says. The
+ * 2.4.3); and when an undo or a redo removes another control that had
+ * the focus, the focus goes to the `<h1>` of the step, as focusKept.ts
+ * says. An undo or a redo is announced as undoRedo.ts says. The
  * browser's own undo in a text field is kept from reaching another field,
  * as shortcuts.ts says.
  */
@@ -23,6 +25,7 @@ import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Link } from "../widgets/Link.tsx";
 import { useAnnouncer } from "./announcer.tsx";
+import { keepingFocus } from "./focusKept.ts";
 import styles from "./Header.module.css";
 import { OpenProject, SaveProject } from "./ProjectButtons.tsx";
 import { ownerOfKeys, shortcutOf, undoesAnotherField } from "./shortcuts.ts";
@@ -45,9 +48,12 @@ export function Header(): React.JSX.Element {
     const hadFocus =
       own.current !== null && document.activeElement === own.current;
     // Drawn at once, so that the other button is enabled before it is
-    // given the focus.
-    flushSync(() => {
-      undoOrRedo(store, announcer, which);
+    // given the focus; and a control that had the focus and left the page
+    // with the change hands it to the h1 of the step.
+    keepingFocus(() => {
+      flushSync(() => {
+        undoOrRedo(store, announcer, which);
+      });
     });
     if (hadFocus && store.getState()[which] === null) other.current?.focus();
   };

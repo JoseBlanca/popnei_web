@@ -18,7 +18,7 @@ import type { Project } from "../../../core/project.ts";
 import type { ColumnType, CsvOptions } from "../../../worker/protocol.ts";
 import type { StepCommand } from "../variants/commands.ts";
 import type { CsvOption, PopulationItemId } from "./words.ts";
-import { AUTO_CSV, groupingOfItem } from "./words.ts";
+import { AUTO_CSV, columnOfItem } from "./words.ts";
 
 /** A file picked or dropped, a new load read with every option found
     by the reader. */
@@ -66,10 +66,9 @@ export const ONE_POPULATION_COMMAND: StepCommand = Object.freeze({
 /** The item `id` of the select of the populations chosen: the one
     population, or a column. */
 export function populationItemCommand(id: PopulationItemId): StepCommand {
-  const grouping = groupingOfItem(id);
-  return grouping.kind === "populations" && grouping.column !== null
-    ? groupingCommand(grouping.column)
-    : ONE_POPULATION_COMMAND;
+  return id === "one"
+    ? ONE_POPULATION_COMMAND
+    : groupingCommand(columnOfItem(id));
 }
 
 /** The type `type` chosen for the column `column`; a binary type as

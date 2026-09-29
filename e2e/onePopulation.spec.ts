@@ -318,6 +318,10 @@ test("IP5 D2 a project file whose metadata file was not read when it was saved s
   await expect(stepLink(page, "Individuals")).toHaveAccessibleName(
     "Individuals, To do",
   );
+  // The opening says the file to load again, after the variants file.
+  await expect(page.getByRole("status").last()).toHaveText(
+    "Opened v1-metadata-not-read.popnei.json. This project was made with panel.nei, of 4 individuals and 1,200 variants. Load it to run its analyses again. pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+  );
   await expect(stepLink(page, "Individuals")).toHaveAccessibleDescription(
     "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
   );

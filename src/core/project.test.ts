@@ -8,7 +8,9 @@ import {
   VARIANT_FILTER_ORDER,
   analysisOptions,
   columnAllows,
+  columnWarningsOf,
   emptyProject,
+  firstValues,
   forgetTypesLost,
   typeLostReason,
   typesLost,
@@ -74,7 +76,10 @@ import type {
   IndividualsFileError,
   IndividualsTable,
 } from "../worker/protocol.ts";
-import { inferColumnTypes } from "../worker/individuals/columnTypes.ts";
+import {
+  columnWarnings,
+  inferColumnTypes,
+} from "../worker/individuals/columnTypes.ts";
 import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
@@ -6119,5 +6124,156 @@ describe("IP4 D4 the projects drawn with the fields of stage 4", () => {
     for (const count of Object.values(seen)) {
       expect(count).toBeGreaterThan(2);
     }
+  });
+});
+
+describe("IP5 D2 the first column is never the column of the populations", () => {
+  test("a new file whose first column is the column chosen gives no populations and populationsNeeds of the kind noSuchColumn, with its words", () => {
+    const table: IndividualsTable = {
+      columns: ["pop", "name"],
+      rows: [
+        ["A", "i1"],
+        ["B", "i2"],
+        ["A", "i3"],
+        ["C", "i4"],
+      ],
+    };
+    const p = popsProject({ table });
+    expect(populationsOf(p)).toBeNull();
+    expect(populationsToRun(p)).toBeNull();
+    expect(populationsKept(p, null)).toBeNull();
+    expect(populationsNeeds(p)).toStrictEqual({
+      kind: "noSuchColumn",
+      reason:
+        "pops.csv has no column pop, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.",
+      inStep:
+        "pops.csv has no column pop, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.",
+    });
+  });
+
+  test("the same column in the second place gives its populations", () => {
+    expect(populationsOf(popsProject())).toStrictEqual([
+      ["A", ["i1", "i3"]],
+      ["B", ["i2"]],
+      ["C", ["i5"]],
+    ]);
+  });
+});
+
+/** The rows of a table, which count every read of them once `armed` is
+    set, so that a test sees whether a function walks the table again. */
+function watchedRows(rows: readonly (readonly Cell[])[]): {
+  readonly rows: readonly (readonly Cell[])[];
+  readonly arm: () => void;
+  readonly reads: () => number;
+} {
+  let armed = false;
+  let reads = 0;
+  const watched = new Proxy(
+    Object.freeze(rows.map((row) => Object.freeze([...row]))),
+    {
+      get(target, key, receiver) {
+        if (armed) reads += 1;
+        const value: unknown = Reflect.get(target, key, receiver);
+        return value;
+      },
+    },
+  );
+  return {
+    rows: watched,
+    arm: () => {
+      armed = true;
+    },
+    reads: () => reads,
+  };
+}
+
+/** A table with a column of a few whole numbers, score, one of decimals,
+    h, and one of words, region. */
+const WARNED_COLUMNS = ["id", "score", "h", "region"] as const;
+const WARNED_ROWS: readonly (readonly Cell[])[] = [
+  ["i1", "1", "1,5", "north"],
+  ["i2", "2", "2", "south"],
+  ["i3", "3", "2,25", null],
+  ["i4", "2", null, "east"],
+];
+
+describe("IP5 D2 columnWarningsOf and firstValues", () => {
+  test("columnWarningsOf gives the warnings columnWarnings of the reader gives for the table, the types and the mark of the read, with each mark", () => {
+    for (const decimal of [".", ","] as const) {
+      const read = readOf(WARNED_COLUMNS, WARNED_ROWS, decimal);
+      const expected = columnWarnings(read.table, read.columns, decimal);
+      expect(columnWarningsOf(read)).toStrictEqual(expected);
+    }
+    const warned = columnWarningsOf(readOf(WARNED_COLUMNS, WARNED_ROWS, ","));
+    expect(warned).toStrictEqual([
+      {
+        kind: "fewWholeLevels",
+        column: "score",
+        numLevels: 3,
+        numTexts: 3,
+        min: 1,
+        max: 3,
+      },
+    ]);
+  });
+
+  test("an xlsx, whose found is null, is read with the point", () => {
+    const read = readOf(
+      ["id", "n"],
+      [
+        ["i1", 1],
+        ["i2", 2],
+        ["i3", "3"],
+      ],
+      null,
+    );
+    expect(columnWarningsOf(read)).toStrictEqual(
+      columnWarnings(read.table, read.columns, "."),
+    );
+    expect(columnWarningsOf(read)).toHaveLength(1);
+  });
+
+  test("the same array for the same read", () => {
+    const read = readOf(WARNED_COLUMNS, WARNED_ROWS, ",");
+    expect(columnWarningsOf(read)).toBe(columnWarningsOf(read));
+  });
+
+  test("a column set categorical loses its warning and set continuous again has it back, with no walk of the table again", () => {
+    const watched = watchedRows(WARNED_ROWS);
+    const read = readOf(WARNED_COLUMNS, watched.rows, ",");
+    const before = columnWarningsOf(read);
+    expect(before.map((w) => w.column)).toStrictEqual(["score"]);
+    const categorical = setColumnType(
+      projectOf([], read),
+      "score",
+      CATEGORICAL,
+    );
+    const continuous = setColumnType(categorical, "score", CONTINUOUS);
+    watched.arm();
+    expect(columnWarningsOf(tableReadOf(categorical))).toStrictEqual([]);
+    expect(columnWarningsOf(tableReadOf(continuous))).toStrictEqual(before);
+    expect(watched.reads()).toBe(0);
+  });
+
+  test("firstValues gives the first three distinct values of each column that are not missing, in the order of the file, a number of an xlsx as String writes it", () => {
+    const table: IndividualsTable = deepFreeze({
+      columns: ["id", "n", "few", "none"],
+      rows: [
+        ["i1", 1.5, null, null],
+        ["i2", "1.5", "a", null],
+        ["i3", true, "a", null],
+        ["i4", 2, "b", null],
+        ["i5", 3, "c", null],
+      ],
+    });
+    const values = firstValues(table);
+    expect(values).toStrictEqual([
+      ["i1", "i2", "i3"],
+      ["1.5", "true", "2"],
+      ["a", "b", "c"],
+      [],
+    ]);
+    expect(firstValues(table)).toBe(values);
   });
 });

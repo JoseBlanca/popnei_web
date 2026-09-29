@@ -93,7 +93,8 @@
 }
 
 .cell,
-.nameCell {
+.nameCell,
+.valuesCell {
   padding-block: var(--space-1);
   padding-inline: var(--space-2);
   border-block-end: 1px solid var(--color-border);
@@ -106,6 +107,11 @@
   font-weight: 600;
 }
 
+/* A name or the values of a column, in their cell. */
+.cellText {
+  display: block;
+}
+
 /* On a narrow page, 4 pixels on each side of a cell and not 8, so that
    the table fits 320 pixels also with DejaVu Sans, the sans-serif font
    of Ubuntu, with which it needed 300 pixels of the 288 the page gives
@@ -113,8 +119,27 @@
    of src/ui/widgets/Table.module.css. */
 @media (width < 30em) {
   .cell,
-  .nameCell {
+  .nameCell,
+  .valuesCell {
     padding-inline: var(--space-1);
+  }
+
+  /* A name or a value of the file may be a word longer than its column
+     can be, "Estado_de_salud_del_individuo", which break-word counts
+     whole in the narrowest width of the column, and which pushed the
+     table 30 pixels past the page. A name no wider than 4.5 rem and the
+     values no wider than 4.25 rem cut such a word at that width, and
+     leave whole a word that fits, "Individuo", 70 pixels in bold; with
+     the 130 pixels of the column of the type, the select of
+     "categorical" and its mark, and the space of the cells, the table
+     is then 286 of the 288 pixels the page gives it, in Chromium and
+     WebKit on 29 September 2026. */
+  .cellText {
+    max-inline-size: 4.5rem;
+  }
+
+  .valuesCell .cellText {
+    max-inline-size: 4.25rem;
   }
 }
 
@@ -126,11 +151,19 @@
   min-inline-size: 0;
 }
 
-/* The warning of a column, under its type, in the size of a note. */
+/* The warning of a column, under its type, in the size of a note. Its
+   words take the width the column has and give the column none of their
+   own (contain: inline-size, Chrome 105, Firefox 101, Safari 15.4, below
+   the floor of css.md): the warning names its column, whose name may be
+   a word as long as "Numero_de_la_poblacion_de_origen", which the
+   warning's break-word counts whole in the narrowest width of the column
+   of the type, and which then took the width of the other two columns,
+   the names and the values cut to a letter a line, at 320 px. */
 .columnWarning {
   display: block;
   margin-block-start: var(--space-1);
   font-size: var(--text-sm);
+  contain: inline-size;
 }
 
 .missing {

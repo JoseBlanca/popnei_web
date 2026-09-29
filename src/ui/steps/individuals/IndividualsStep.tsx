@@ -14,6 +14,7 @@ import { useId, useRef, useState } from "react";
 
 import {
   columnAllows,
+  columnWarningsOf,
   escaped,
   individualsCheck,
   individualsStepMissing,
@@ -25,8 +26,8 @@ import {
 import type {
   ColumnAllows,
   IndividualsCheck,
-  IndividualsRead,
   IndividualsSource,
+  TableRead,
 } from "../../../core/project.ts";
 import type {
   ColumnType,
@@ -34,10 +35,7 @@ import type {
   CsvOptions,
   IndividualsTable,
 } from "../../../worker/protocol.ts";
-import {
-  columnWarningText,
-  columnWarnings,
-} from "../../../worker/individuals/columnTypes.ts";
+import { columnWarningText } from "../../../worker/individuals/columnTypes.ts";
 import { classOf } from "../../classOf.ts";
 import { useFiles } from "../../files.tsx";
 import { useAnnouncer } from "../../shell/announcer.tsx";
@@ -77,7 +75,7 @@ import {
   chosenPopulationItem,
   codedZeroText,
   codingItems,
-  codingLabel,
+  codingLabelEnd,
   copiedNames,
   copiedText,
   copyLabel,
@@ -393,9 +391,6 @@ function ReadOptions({
   );
 }
 
-/** A read of the table of the metadata file. */
-type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
-
 /** What the table of the columns is drawn with. */
 interface ColumnsProps {
   /** The metadata file, whose read is `read`. */
@@ -426,12 +421,7 @@ function Columns({
   const firstType = useRef<HTMLButtonElement>(null);
   const { table, columns } = read;
   const allows = columnAllows(read);
-  const warnings = new Map(
-    columnWarnings(table, columns, read.found?.decimal ?? ".").map((w) => [
-      w.column,
-      w,
-    ]),
-  );
+  const warnings = new Map(columnWarningsOf(read).map((w) => [w.column, w]));
   const lost = typesLost(source);
   const lostWords = typesLostWords(source.name, read, lost);
 
@@ -507,13 +497,17 @@ function Columns({
             return (
               <tr key={name}>
                 <th scope="row" className={classOf(styles, "nameCell")}>
-                  {escaped(name)}
+                  <span className={classOf(styles, "cellText")}>
+                    {escaped(name)}
+                  </span>
                 </th>
                 <td className={classOf(styles, "cell")}>
                   {index === 0 ? (
                     // The names of the individuals, whose type cannot be
                     // changed.
                     typeWords(type)
+                  ) : type.kind === "identifier" ? (
+                    identifierDefect(name)
                   ) : (
                     <TypeSelects
                       column={name}
@@ -534,8 +528,10 @@ function Columns({
                     </span>
                   )}
                 </td>
-                <td className={classOf(styles, "cell")}>
-                  {firstValuesText(table, index)}
+                <td className={classOf(styles, "valuesCell")}>
+                  <span className={classOf(styles, "cellText")}>
+                    {firstValuesText(table, index)}
+                  </span>
                 </td>
               </tr>
             );
@@ -546,12 +542,20 @@ function Columns({
   );
 }
 
+/** A column other than the first typed identifier, which only the first
+    column is: a defect. */
+function identifierDefect(column: string): never {
+  throw new Error(
+    `popnei_web defect: the column ${column}, not the first, is the identifier.`,
+  );
+}
+
 /** What the selects of the type of a column are drawn with. */
 interface TypeSelectsProps {
   /** The name of the column. */
   readonly column: string;
   /** Its type now, never identifier, which only the first column has. */
-  readonly type: ColumnType;
+  readonly type: Exclude<ColumnType, { readonly kind: "identifier" }>;
   /** The types its values allow, `columnAllows` of the read. */
   readonly allowed: ColumnAllows;
   /** Sends a command to the store. */
@@ -572,16 +576,11 @@ function TypeSelects({
   send,
   buttonRef,
 }: TypeSelectsProps): React.JSX.Element {
-  if (type.kind === "identifier") {
-    throw new Error(
-      `popnei_web defect: the column ${column}, not the first, is the identifier.`,
-    );
-  }
   return (
     <div className={classOf(styles, "typeSelects")}>
       <Select
         label={typeLabel(column)}
-        isLabelHidden
+        labelShown="hidden"
         items={typeItems(allowed)}
         value={type.kind}
         onChange={(id) => {
@@ -594,11 +593,11 @@ function TypeSelects({
       {type.kind === "binary" && (
         <>
           <Select
-            label={codingLabel(column)}
-            shownLabel={CODING_LABEL}
+            label={codingLabelEnd(column)}
+            labelShown={{ start: CODING_LABEL }}
             // In the order of the reader's proposal, so that the two keep
             // their place when the coding changes.
-            items={codingItems(allowed.binary ?? type)}
+            items={codingItems(binaryAllowed(column, allowed))}
             value={type.one}
             onChange={(one) => {
               if (one !== type.one) {
@@ -611,6 +610,22 @@ function TypeSelects({
       )}
     </div>
   );
+}
+
+/** The binary type the values of the binary column `column` allow, with
+    the reader's coding. A column typed binary whose values are not two is
+    a defect: the record and the validation put a binary type only where
+    `columnAllows` gives one. */
+function binaryAllowed(
+  column: string,
+  allowed: ColumnAllows,
+): NonNullable<ColumnAllows["binary"]> {
+  if (allowed.binary === null) {
+    throw new Error(
+      `popnei_web defect: the column ${column} is binary and its values are not two.`,
+    );
+  }
+  return allowed.binary;
 }
 
 /** What the part of the populations is drawn with. */
@@ -781,15 +796,16 @@ function CopyNames({
 }): React.JSX.Element {
   const announcer = useAnnouncer();
   async function copy(): Promise<void> {
+    let copied = true;
     try {
       // navigator.clipboard is missing on a page served over plain HTTP
       // from another machine, and the call then throws; a browser may
       // also refuse the write.
       await navigator.clipboard.writeText(copiedNames(names));
-      announcer.announce(copiedText(names.length));
     } catch {
-      announcer.announce(NOT_COPIED);
+      copied = false;
     }
+    announcer.announce(copied ? copiedText(names.length) : NOT_COPIED);
   }
   return (
     <Button

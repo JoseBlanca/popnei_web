@@ -1254,6 +1254,32 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-individuals-no-such-column-${theme}`);
     });
 
+    test("the Individuals step, a column that gives no population", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+      const withEmpty = text
+        .split("\n")
+        .filter((line) => line !== "")
+        .map((line, index) => (index === 0 ? `${line},region` : `${line},`));
+      await pickIndividuals(page, {
+        name: "pops.csv",
+        text: `${withEmpty.join("\n")}\n`,
+      });
+      await choose(page, "Column that defines the populations", "region");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(/^No individual of panel\.nei has a population/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-no-population-${theme}`);
+    });
+
     test("the Individuals step, the types of the columns", async ({ page }) => {
       await goTo(page, "Individuals");
       await pickIndividuals(page, {

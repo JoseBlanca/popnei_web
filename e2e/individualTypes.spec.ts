@@ -864,6 +864,200 @@ test("IP5 D2 at 320 px wide the table of the columns with its selects, the warni
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The heading of the step, where the focus goes when the control that
+    had it leaves the page with an Undo or a Redo. */
+function stepHeading(page: Page): Locator {
+  return page.getByRole("heading", { level: 1, name: "Individuals" });
+}
+
+test("IP5 D2 an Undo with the keyboard that removes Forget these types, and a Redo that removes the select of a type, each hand the focus to the h1 of the step", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, { name: "types.csv", text: TYPES_CSV });
+  await expect.poll(() => columnRows(page)).toEqual(TYPES_ROWS);
+  await choose(page, typeSelect(page, "score"), "categorical");
+  await choose(page, select(page, "Separator"), "Semicolon");
+  await expect(forgetButton(page)).toHaveText("Forget this type");
+
+  // The Undo of the separator applies the types again, and the warning
+  // goes with its button.
+  await forgetButton(page).focus();
+  await page.keyboard.press("Control+z");
+  await expect(forgetButton(page)).toHaveCount(0);
+  await expect(typeSelect(page, "score")).toHaveText("categorical");
+  await expect(stepHeading(page)).toBeFocused();
+
+  // The Redo reads the file as one column again, and the select of a type
+  // goes.
+  await typeSelect(page, "score").focus();
+  await page.keyboard.press("Control+Shift+z");
+  await expect(zone(page).getByText("4 rows, 1 column")).toBeVisible();
+  await expect(typeSelect(page, "score")).toHaveCount(0);
+  await expect(stepHeading(page)).toBeFocused();
+  // The next Tab goes on from the heading, into the step.
+  await page.keyboard.press("Tab");
+  await expect(
+    zone(page).getByRole("button", { name: "Paste a metadata file" }),
+  ).toBeFocused();
+});
+
+test("IP5 D2 an Undo with the keyboard of the type binary removes the select of the value coded 1 with the focus, which goes to the h1 of the step", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, { name: "types.csv", text: TYPES_CSV });
+  await expect.poll(() => columnRows(page)).toEqual(TYPES_ROWS);
+  await choose(page, typeSelect(page, "status"), "categorical");
+  await choose(page, typeSelect(page, "status"), "binary");
+  await expect(codingSelect(page, "status")).toHaveText("yes");
+
+  await codingSelect(page, "status").focus();
+  await page.keyboard.press("Control+z");
+
+  await expect(typeSelect(page, "status")).toHaveText("categorical");
+  await expect(codingSelect(page, "status")).toHaveCount(0);
+  await expect(stepHeading(page)).toBeFocused();
+
+  // An Undo that leaves the control with the focus on the page leaves the
+  // focus there.
+  await typeSelect(page, "status").focus();
+  await page.keyboard.press("Control+z");
+  await expect(codingSelect(page, "status")).toHaveText("yes");
+  await expect(typeSelect(page, "status")).toBeFocused();
+});
+
+test("IP5 D2 a Redo with the keyboard whose read is under way removes the table with the focus in it, which goes to the h1 of the step", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, { name: "types.csv", text: TYPES_CSV });
+  await expect.poll(() => columnRows(page)).toEqual(TYPES_ROWS);
+  // The read of the next options is held on its way to the light worker.
+  await holdReads(page);
+  await choose(page, select(page, "Separator"), "Semicolon");
+  await expect(zone(page).getByText("Reading types.csv.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
+  await expect(typeSelect(page, "height")).toBeVisible();
+
+  await typeSelect(page, "height").focus();
+  await page.keyboard.press("Control+Shift+z");
+
+  await expect(zone(page).getByText("Reading types.csv.")).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(stepHeading(page)).toBeFocused();
+  await releaseReads(page);
+  await expect(zone(page).getByText("4 rows, 1 column")).toBeVisible();
+});
+
+test("IP5 D2 a column of the populations that a new file puts first is no column of the populations: the select asks for a column, with the reason of a column not in the file", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  await loadPanel(page);
+  await pick(page, "panel_pops.csv");
+  await choose(
+    page,
+    select(page, "Column that defines the populations"),
+    "popcat",
+  );
+  await expect(page.getByText("p0 · 48", { exact: true })).toBeVisible();
+
+  // The same rows, the header naming the column of the names popcat.
+  const [, ...rows] = await panelPopsLines();
+  await pick(page, {
+    name: "swapped.csv",
+    text: `${["popcat,IID", ...rows].join("\n")}\n`,
+  });
+
+  await expect(zone(page).getByText("200 rows, 2 columns")).toBeVisible();
+  const column = select(page, "Column that defines the populations");
+  await expect(column).toHaveText("Choose a column");
+  const reason =
+    "swapped.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population.";
+  await expect(
+    page.getByRole("main").getByText(reason, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Populations" }).getByRole("list"),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Steps" })
+      .getByRole("link", { name: "Individuals" }),
+  ).toHaveAccessibleName("Individuals, Problem");
+  await expect(
+    page.getByText(/ · column popcat not in swapped\.csv$/),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("IP5 D2 at 320 px wide a column of a long name and long values with no space keeps the page from scrolling sideways, and a name that fits is not cut", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await openIndividuals(page);
+  await pick(page, {
+    name: "salud.csv",
+    text:
+      "IID,Estado_de_salud_del_individuo,Numero_de_la_poblacion_de_origen,Individuo\n" +
+      "s000,Sano_y_vacunado,1,a\n" +
+      "s001,Enfermo_sin_vacunar,2,b\n" +
+      "s002,Sano_y_vacunado,3,c\n" +
+      "s003,Convaleciente_de_la_gripe,2,d\n",
+  });
+  await expect(zone(page).getByText("4 rows, 4 columns")).toBeVisible();
+  await expect(
+    page.getByText(/^Warning: Numero_de_la_poblacion_de_origen holds only/),
+  ).toBeVisible();
+
+  const widths = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+  const table = await columnsTable(page).boundingBox();
+  expect((table?.x ?? 0) + (table?.width ?? 0)).toBeLessThanOrEqual(320);
+  // A name that fits its column is not cut to make room for the others.
+  expect(
+    await cutWords(
+      columnsTable(page).getByRole("rowheader", {
+        name: "Individuo",
+        exact: true,
+      }),
+    ),
+  ).toEqual([]);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("IP5 D2 a click on the words Coded 1, the case focuses the select of the value coded 1, as a click on a label does", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, { name: "types.csv", text: TYPES_CSV });
+  await expect.poll(() => columnRows(page)).toEqual(TYPES_ROWS);
+
+  await columnsTable(page)
+    .getByText("Coded 1, the case", { exact: true })
+    .click();
+
+  await expect(codingSelect(page, "status")).toBeFocused();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  // The name is as it was.
+  await expect(codingSelect(page, "status")).toHaveAccessibleName(
+    "yes Coded 1, the case, in status",
+  );
+  // A click on the label of another select does the same.
+  await page.getByText("Separator", { exact: true }).click();
+  await expect(select(page, "Separator")).toBeFocused();
+});
+
 /** What the page is given to hold the reads of the metadata file. */
 interface Holding {
   /** Whether a read asked for now is held. */

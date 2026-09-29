@@ -31,8 +31,10 @@ import type {
 } from "../worker/protocol.ts";
 import {
   cellNumber,
+  columnWarnings,
   inferColumnTypes,
 } from "../worker/individuals/columnTypes.ts";
+import type { ColumnWarning } from "../worker/individuals/columnTypes.ts";
 
 /** The two applications, population genetics and association. */
 export type AppId = "popgen" | "gwas";
@@ -814,8 +816,8 @@ function sameValues(
 // The types of the columns: which each column allows, worked out from the
 // table, and the types the user set that a read does not apply.
 
-/** A read of a table of the individuals file. */
-type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
+/** A read of the individuals file that gave its table. */
+export type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
 
 /** The types the values of one column allow, besides categorical, which
     any column but the first allows. */
@@ -947,6 +949,118 @@ export function typeLostReason(
     return "gone";
   }
   return index === 0 ? "firstColumn" : "values";
+}
+
+/** The warning each column of a table would have if it were continuous,
+    by the table and the decimal mark, by the name of the column; the
+    first column, the names of the individuals, has none. */
+const WARNED = new WeakMap<
+  IndividualsTable,
+  Map<"." | ",", ReadonlyMap<string, ColumnWarning>>
+>();
+
+/** The answers of `columnWarningsOf`, by the read. */
+const WARNINGS = new WeakMap<TableRead, readonly ColumnWarning[]>();
+
+/**
+ * The warnings of the columns of few whole numbers of a read, as
+ * `columnWarnings` of the reader gives them for its table, its types and
+ * its decimal mark, `found.decimal` or the point for an xlsx, whose
+ * `found` is null. The same array for the same read. The walk of each
+ * column does not depend on the types, so it is kept by the table and
+ * the mark, for every column but the first as if it were continuous: a
+ * read that changes only a type walks no column again, and a column the
+ * read does not type continuous has no warning. Throws a defect when a
+ * row is not as long as the header, as `columnWarnings` does.
+ */
+export function columnWarningsOf(read: TableRead): readonly ColumnWarning[] {
+  const kept = WARNINGS.get(read);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const decimal = read.found?.decimal ?? ".";
+  let byDecimal = WARNED.get(read.table);
+  if (byDecimal === undefined) {
+    byDecimal = new Map();
+    WARNED.set(read.table, byDecimal);
+  }
+  let byColumn = byDecimal.get(decimal);
+  if (byColumn === undefined) {
+    const everyContinuous = read.table.columns.map((_, index): ColumnType =>
+      index === 0 ? { kind: "identifier" } : { kind: "continuous" },
+    );
+    byColumn = new Map(
+      columnWarnings(read.table, everyContinuous, decimal).map((warning) => [
+        warning.column,
+        Object.freeze(warning),
+      ]),
+    );
+    byDecimal.set(decimal, byColumn);
+  }
+  const warned = byColumn;
+  const warnings = Object.freeze(
+    read.columns.flatMap((type, index) => {
+      if (type.kind !== "continuous") {
+        return [];
+      }
+      const warning = warned.get(columnName(read.table, index));
+      return warning === undefined ? [] : [warning];
+    }),
+  );
+  WARNINGS.set(read, warnings);
+  return warnings;
+}
+
+/** The name of the column at `index` of `table`, which has it. */
+function columnName(table: IndividualsTable, index: number): string {
+  const name = table.columns[index];
+  if (name === undefined) {
+    throw defect(`the table has no column ${String(index)}.`);
+  }
+  return name;
+}
+
+/** The number of distinct values `firstValues` gives of each column. */
+const FIRST_VALUES = 3;
+
+/** The answers of `firstValues`, by the table. */
+const FIRST = new WeakMap<IndividualsTable, readonly (readonly string[])[]>();
+
+/**
+ * The first three distinct values of each column of `table` that are not
+ * missing, as `String` writes them, in the order of the file: one array
+ * per column, in the order of the table, which the Individuals step shows
+ * beside each type. The same array for the same table, so that a table of
+ * 10,000 rows is walked once.
+ */
+export function firstValues(
+  table: IndividualsTable,
+): readonly (readonly string[])[] {
+  const kept = FIRST.get(table);
+  if (kept !== undefined) {
+    return kept;
+  }
+  const values = Object.freeze(
+    table.columns.map((_, index) => {
+      const found: string[] = [];
+      for (const row of table.rows) {
+        const cell: Cell | undefined = row[index];
+        if (cell === undefined || cell === null) {
+          continue;
+        }
+        const text = String(cell);
+        if (!found.includes(text)) {
+          found.push(text);
+        }
+        if (found.length === FIRST_VALUES) {
+          break;
+        }
+      }
+      return Object.freeze(found);
+    }),
+  );
+  FIRST.set(table, values);
+  return values;
 }
 
 /** The columns of a read with each type of `typesSet` that it allows put
@@ -2245,14 +2359,17 @@ export function populationsOf(p: Project): Pops | "all" | null {
 }
 
 /** The populations of `table` by its column `column`, as `populationsOf`
-    gives them; `null` when the table has no column of that name. */
+    gives them; `null` when the table has no column of that name, or has
+    it first, where it names the individuals. */
 function groupedBy(table: IndividualsTable, column: string): Pops | null {
   const kept = GROUPED.get(table)?.get(column);
   if (kept !== undefined) {
     return kept;
   }
   const index = table.columns.indexOf(column);
-  if (index === -1) {
+  // The first column names the individuals, and is never the column of
+  // the populations.
+  if (index <= 0) {
     return null;
   }
   const members = new Map<string, string[]>();

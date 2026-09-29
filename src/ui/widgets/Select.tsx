@@ -34,10 +34,28 @@ export interface SelectItem<T extends string> {
   readonly label: string;
 }
 
+/** How much of the name of a select the eye sees:
+    - `"whole"`, the name, above the select;
+    - `"hidden"`, none, for a select whose purpose the page shows
+      otherwise, as the header "Type" of a column of a table does for the
+      select of each row; a screen reader reads the name;
+    - `{ start }`, the words `start` alone, when the name says more than
+      the eye needs, what the eye takes from where the select is, the row
+      of a table, and a screen reader does not. The name is then `start`
+      followed by `label`, so that it holds the words the eye sees, and a
+      user who drives the page by voice and says them reaches the select
+      (WCAG 2.2, 2.5.3); a click on them focuses the select, as a click on
+      a label does. */
+export type LabelShown = "whole" | "hidden" | { readonly start: string };
+
 /** What a select is drawn with. */
 export interface SelectProps<T extends string> {
-  /** The name of the select, shown above it. */
+  /** The name of the select, as `labelShown` shows it; with `labelShown`
+      `{ start }`, the words of the name after `start`, ", in status" after
+      "Coded 1, the case". */
   readonly label: string;
+  /** How much of the name the eye sees; `"whole"` when absent. */
+  readonly labelShown?: LabelShown;
   /** The choices, in their order. */
   readonly items: readonly SelectItem<T>[];
   /** The id of the item chosen, or `null` for none, when the button
@@ -52,21 +70,6 @@ export interface SelectProps<T extends string> {
   readonly problem?: string;
   /** Called with the id of the item the user chose. */
   readonly onChange: (id: T) => void;
-  /** Whether the label is hidden from the eye and read by a screen reader
-      alone, for a select whose purpose the page shows otherwise, as the
-      header "Type" of a column of a table does for the select of each
-      row; false when absent. */
-  readonly isLabelHidden?: boolean;
-  /** The words shown as the label, when the label, its name, says more
-      than the eye needs: what the eye takes from where the select is, the
-      row of a table, and a screen reader does not. They are the start of
-      the label, so that a user who drives the page by voice and says the
-      words they see reaches the select (WCAG 2.2, 2.5.3); the label is
-      then hidden from the eye, and these words from a screen reader,
-      which reads the label. One text and not the label with its end
-      hidden, since a browser may put a space before a part hidden from
-      the eye as it makes the name. */
-  readonly shownLabel?: string;
   /** The element of the button, for a screen that moves the focus to
       it. */
   readonly buttonRef?: React.Ref<HTMLButtonElement>;
@@ -75,20 +78,20 @@ export interface SelectProps<T extends string> {
 /** A select with its label. */
 export function Select<T extends string>({
   label,
+  labelShown = "whole",
   items,
   value,
   placeholder,
   description,
   problem,
   onChange,
-  isLabelHidden = false,
-  shownLabel,
   buttonRef,
 }: SelectProps<T>): React.JSX.Element {
   const chosen = (key: Key | null): void => {
     const item = items.find((one) => one.id === key);
     if (item !== undefined) onChange(item.id);
   };
+  const start = typeof labelShown === "object" ? labelShown.start : null;
   return (
     <AriaSelect
       className={classOf(styles, "field")}
@@ -100,19 +103,33 @@ export function Select<T extends string>({
       validationBehavior="aria"
       {...(placeholder !== undefined && { placeholder })}
     >
-      {shownLabel !== undefined && (
-        <span aria-hidden="true" className={classOf(styles, "label")}>
-          {shownLabel}
+      {start !== null && (
+        // The words the eye sees, hidden from a screen reader, which reads
+        // the name. A click on them focuses the select, as a click on the
+        // label of another select does; the keyboard reaches the select
+        // by the Tab key.
+        <span
+          aria-hidden="true"
+          className={classOf(styles, "label")}
+          onClick={(event) => {
+            // The button of the select, beside these words in its field.
+            event.currentTarget.parentElement?.querySelector("button")?.focus();
+          }}
+        >
+          {start}
         </span>
       )}
+      {/* The name as one text, and not the words shown with the rest
+          hidden beside them, since a browser may put a space before a
+          part hidden from the eye as it makes the name. */}
       <Label
         className={
-          isLabelHidden || shownLabel !== undefined
-            ? classOf(styles, "visuallyHidden")
-            : classOf(styles, "label")
+          labelShown === "whole"
+            ? classOf(styles, "label")
+            : classOf(styles, "visuallyHidden")
         }
       >
-        {label}
+        {start === null ? label : `${start}${label}`}
       </Label>
       <Button
         className={classOf(styles, "button")}

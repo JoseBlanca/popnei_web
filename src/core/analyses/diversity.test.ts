@@ -1436,34 +1436,13 @@ describe("WS10 the cases of the spec", () => {
     ]);
   });
 
-  test("the first column, the identifiers, chosen as the populations gives a population of one to each individual, a table with no values and one warning", () => {
+  test("the first column, the identifiers, chosen as the populations is no column of the populations, and locks the diversity with the reason of a column not in the file", () => {
     const p = project({ column: "name" });
-    expect(populationsOf(p)).toEqual([
-      ["i1", ["i1"]],
-      ["i2", ["i2"]],
-      ["i3", ["i3"]],
-      ["i4", ["i4"]],
-      ["i5", ["i5"]],
-    ]);
-    const { client, jobs } = recordingClient();
-    diversity.run(p, client);
-    expect(jobs.map((j) => j.pops)).toEqual([
-      [
-        ["i1", ["i1"]],
-        ["i2", ["i2"]],
-        ["i3", ["i3"]],
-        ["i4", ["i4"]],
-      ],
-    ]);
-    const r = result({
-      pops: ["i1", "i2", "i3", "i4"],
-      numIndividuals: [1, 1, 1, 1],
-      numVarsWithValue: [0, 0, 0, 0],
-      numVars: 1000,
-    });
-    expect(diversity.warnings(r, p).map((w) => w.code)).toEqual([
-      "tooFewIndividuals",
-    ]);
+    expect(populationsOf(p)).toBeNull();
+    const reason =
+      "pops.csv has no column name, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step.";
+    expect(populationsNeeds(p)?.kind).toBe("noSuchColumn");
+    expect(diversity.needs(p)).toBe(reason);
   });
 });
 

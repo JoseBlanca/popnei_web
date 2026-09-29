@@ -23,7 +23,7 @@ import {
   TYPES_LINE,
   codedZeroText,
   codingItems,
-  codingLabel,
+  codingLabelEnd,
   copiedNames,
   copiedText,
   copyLabel,
@@ -310,8 +310,10 @@ describe("IP5 D2 the words of the columns and their types", () => {
     expect(typeLabel("score")).toBe("Type of score");
     expect(typeLabel("sc‮ore")).toBe("Type of sc\\u202eore");
     expect(CODING_LABEL).toBe("Coded 1, the case");
-    expect(codingLabel("status")).toBe("Coded 1, the case, in status");
-    expect(codingLabel("st\natus")).toBe("Coded 1, the case, in st\\natus");
+    expect(`${CODING_LABEL}${codingLabelEnd("status")}`).toBe(
+      "Coded 1, the case, in status",
+    );
+    expect(codingLabelEnd("st\natus")).toBe(", in st\\natus");
     expect(codedZeroText("no")).toBe("no is coded 0.");
     expect(codedZeroText("n\to")).toBe("n\\to is coded 0.");
   });

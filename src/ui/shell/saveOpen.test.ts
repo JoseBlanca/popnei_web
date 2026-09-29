@@ -197,6 +197,18 @@ describe("the words and the reading of Save project and Open project…", () => 
     );
   });
 
+  test("IP5 D2 an opened project whose metadata file was not read when it was saved says so after the variants file to give", async () => {
+    const text = await readFile(
+      join(FIXTURES, "v1-metadata-not-read.popnei.json"),
+      "utf8",
+    );
+    const picked = await readPicked(fileOf("pops.popnei.json", text), read);
+    if (picked.kind !== "project") throw new Error(picked.text);
+    expect(openedText("pops.popnei.json", picked.project)).toBe(
+      "Opened pops.popnei.json. This project was made with panel.nei, of 4 individuals and 1,200 variants. Load it to run its analyses again. pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+    );
+  });
+
   test("an opened project with no variants file is only said opened", async () => {
     const text = await readFile(join(FIXTURES, "v1-empty.popnei.json"), "utf8");
     const picked = await readPicked(fileOf("empty.popnei.json", text), read);

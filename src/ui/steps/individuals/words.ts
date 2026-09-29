@@ -12,17 +12,17 @@ import type {
   ColumnTypeOf,
   Grouping,
   IndividualsCheck,
-  IndividualsRead,
+  TableRead,
 } from "../../../core/project.ts";
 import {
   counted,
   escaped,
+  firstValues,
   grouped,
   individualsStepRefusal,
   typeLostReason,
 } from "../../../core/project.ts";
 import type {
-  Cell,
   ColumnType,
   CsvFound,
   CsvOptions,
@@ -225,9 +225,6 @@ function valueText(value: string | number | boolean): string {
   return escaped(String(value));
 }
 
-/** The number of distinct values the table shows of each column. */
-const FIRST_VALUES = 3;
-
 /** What joins the values of a column, its first values and the two of a
     binary column: a dot and not a comma, as the owner decided on 25
     September 2026, since a column of the decimal comma would read "1,75,
@@ -304,12 +301,12 @@ export function typeLabel(column: string): string {
     column. */
 export const CODING_LABEL = "Coded 1, the case";
 
-/** The name of the select of the value coded 1 of the column `column`:
-    its label shown first, so that a user who says the words they see
-    reaches it, and then the column, which the eye takes from the row and
-    a screen reader does not: "Coded 1, the case, in status". */
-export function codingLabel(column: string): string {
-  return `${CODING_LABEL}, in ${escaped(column)}`;
+/** The end of the name of the select of the value coded 1 of the column
+    `column`, after its label shown, `CODING_LABEL`: the column, which the
+    eye takes from the row and a screen reader does not, so that the name
+    is "Coded 1, the case, in status". */
+export function codingLabelEnd(column: string): string {
+  return `, in ${escaped(column)}`;
 }
 
 /** The items of the select of the value coded 1 of a binary column of
@@ -344,9 +341,6 @@ export type TypesLostWords =
       readonly lines: readonly string[];
       readonly closing: string;
     };
-
-/** A read of a table of the metadata file. */
-type TableRead = Extract<IndividualsRead, { readonly kind: "read" }>;
 
 /**
  * The words of the types set that the read `read` of the file `name`
@@ -424,20 +418,20 @@ export function forgetLabel(count: number): string {
 }
 
 /** The first three distinct values of the column at `index` that are
-    not missing, in the order of the file: "España · Italia · Perú". */
+    not missing, in the order of the file, escaped: "España · Italia ·
+    Perú". Core's `firstValues` keeps them by the table, so that a table
+    of 10,000 rows is not walked at each drawing of the step. */
 export function firstValuesText(
   table: IndividualsTable,
   index: number,
 ): string {
-  const values: string[] = [];
-  for (const row of table.rows) {
-    const cell: Cell | undefined = row[index];
-    if (cell === undefined || cell === null) continue;
-    const text = valueText(cell);
-    if (!values.includes(text)) values.push(text);
-    if (values.length === FIRST_VALUES) break;
+  const values = firstValues(table)[index];
+  if (values === undefined) {
+    throw new Error(
+      `popnei_web defect: the table has no column ${String(index)}.`,
+    );
   }
-  return values.join(VALUES_JOIN);
+  return values.map(escaped).join(VALUES_JOIN);
 }
 
 /** The heading of the check of the individuals of the variants file
@@ -604,9 +598,8 @@ export function chosenPopulationItem(
   }
 }
 
-/** The grouping an item of the select of the populations stands for. */
-export function groupingOfItem(id: PopulationItemId): Grouping {
-  return id === "one"
-    ? { kind: "onePopulation" }
-    : { kind: "populations", column: id.slice("column:".length) };
+/** The column the item `id` of a column of the select of the populations
+    names. */
+export function columnOfItem(id: `column:${string}`): string {
+  return id.slice("column:".length);
 }

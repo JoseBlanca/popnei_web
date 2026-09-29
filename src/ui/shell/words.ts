@@ -23,6 +23,7 @@ import { writtenName } from "../../core/fileNames.ts";
 import { keptNoneReason } from "../../core/individualsKept.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import {
+  columnWarningsOf,
   counted,
   escaped,
   grouped,
@@ -40,9 +41,9 @@ import {
 } from "../../core/project.ts";
 import type {
   AnalysisId,
-  IndividualsRead,
   IndividualsSource,
   Project,
+  TableRead,
   VariantSource,
 } from "../../core/project.ts";
 import {
@@ -59,7 +60,6 @@ import type {
   Warning,
 } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
-import { columnWarnings } from "../../worker/individuals/columnTypes.ts";
 import type { CsvOptions } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
 import { sizeText as tableSizeText } from "../steps/individuals/words.ts";
@@ -962,7 +962,7 @@ function individualsReadAnnouncements(
 function broughtUp(
   p: Project,
   source: IndividualsSource,
-  read: Extract<IndividualsRead, { readonly kind: "read" }>,
+  read: TableRead,
 ): readonly string[] {
   const sentences: string[] = [];
   const name = escaped(source.name);
@@ -972,11 +972,7 @@ function broughtUp(
       `Warning: line ${String(undecodedLine)} of ${name} has bytes that could not be read.`,
     );
   }
-  const warnings = columnWarnings(
-    read.table,
-    read.columns,
-    read.found?.decimal ?? ".",
-  );
+  const warnings = columnWarningsOf(read);
   const [onlyWarning] = warnings;
   if (onlyWarning !== undefined) {
     sentences.push(

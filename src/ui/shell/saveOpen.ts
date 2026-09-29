@@ -5,7 +5,7 @@
  * opening, which read and check the picked file before the page asks the
  * user to give up their project for it.
  */
-import { escaped } from "../../core/project.ts";
+import { escaped, individualsNeeds } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import {
   MAX_PROJECT_FILE_BYTES,
@@ -86,12 +86,17 @@ export function openButtonText(name: string): string {
   return `Open ${escaped(name)}`;
 }
 
-/** What the status region says after an opening: the file opened, and
-    the variants file to give when the project file names one. */
+/** What the status region says after an opening: the file opened; the
+    variants file to give when the project file names one; and, when the
+    metadata file was not read when the project was saved, `notGiven`,
+    the reason `individualsNeeds` gives it, which says to load it again
+    (docs/specs/shell.md, "The status region"). */
 export function openedText(name: string, p: Project): string {
-  const asked = askedFileText(p);
-  const opened = `Opened ${escaped(name)}.`;
-  return asked === null ? opened : `${opened} ${asked}`;
+  const notGiven =
+    p.individuals?.read.kind === "notGiven" ? individualsNeeds(p) : null;
+  return [`Opened ${escaped(name)}.`, askedFileText(p), notGiven]
+    .filter((sentence) => sentence !== null)
+    .join(" ");
 }
 
 /** A picked file the browser could not read, moved or changed since it
