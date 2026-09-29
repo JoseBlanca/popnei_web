@@ -972,23 +972,29 @@ size the test sets:
   measured it; no bound fails the test, and the times are written into
   this spec with their engines.
 
-The times, measured on 28 September 2026 on the owner's Apple M5 Pro
+The times, measured on 29 September 2026 on the owner's Apple M5 Pro
 with 64 GB, macOS 27.0, Playwright 1.63.0, by the last of those flows
-run alone, `--workers=1`, on a plot of 600 by 450 pixels; five times
-each after one not counted, the median and the range:
+run alone, `--workers=1`, on a plot of 600 by 450 pixels, after the fixes
+of the review of the scatter changed its drawing, at load averages of
+2.9, 2.5 and 2.4 over 1, 5 and 15 minutes, since a virtual machine and
+the photo analysis of macOS each held a core; five times each after one
+not counted, the median and the range:
 
 | | Chromium 153.0.8010.12 | WebKit 26.6 |
 |---|---|---|
-| `createScatter` to the next frame drawn | 17.0 ms (16.4 to 17.1) | 19.0 ms (17 to 19) |
-| the call of `createScatter` alone | 9.4 ms (7.2 to 11.5) | 11.0 ms (10 to 11) |
-| an `update` of the highlight to the next frame drawn | 16.7 ms (16.6 to 17.4) | 17.0 ms (15 to 18) |
-| the call of that `update` alone | 8.3 ms (7.7 to 11.2) | 11.0 ms (11 to 11) |
+| `createScatter` to the next frame drawn | 16.8 ms (16.0 to 18.2) | 18.0 ms (18 to 19) |
+| the call of `createScatter` alone | 7.9 ms (6.4 to 10.8) | 10.0 ms (9 to 10) |
+| an `update` of the highlight to the next frame drawn | 16.9 ms (16.6 to 17.8) | 18.0 ms (17 to 23) |
+| the call of that `update` alone | 9.8 ms (7.1 to 10.7) | 10.0 ms (9 to 10) |
 
 The call draws the plot before it returns, and the time to the next
 frame holds the wait for it, a frame every 16.7 ms: in both engines the
 scatter of the largest PCA is drawn, and its highlight changed, within
 the frame after the call. WebKit gives `performance.now()` to the
-millisecond. Two more runs gave the same to within 2 ms.
+millisecond. The first measurement, on 28 September 2026 before those
+fixes, gave within 2 ms of these: 17.0 and 19.0 ms to the frame after
+`createScatter`, and 16.7 and 17.0 ms after an `update`, in Chromium
+and WebKit.
 
 The PCA panel in both themes, with the legend over the plot and a group
 highlighted, is in the screens of `e2e/screens.spec.ts`, looked at as
