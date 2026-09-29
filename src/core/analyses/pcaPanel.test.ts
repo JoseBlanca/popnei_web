@@ -395,6 +395,50 @@ describe("IP8 D3 pcaColours", () => {
       "pop has 1,001 different values, more than the 1,000 the plot can tell apart, so the points are of one colour; the table gives each individual's value.",
     );
     expect(pcaOptions(p).colourBy).toBeNull();
+    // The table gives each individual's population, as the note says
+    // (stop C 9).
+    expect(c.cellTexts?.slice(0, 2)).toEqual(["pi0", "pi1"]);
+    const rows = pcaRows(result(names), c);
+    expect(rows.map((row) => row.colour).slice(0, 2)).toEqual(["pi0", "pi1"]);
+    expect(pcaCsv(result(names), c).split("\n")[1]).toMatch(/^i0,pi0,/);
+  });
+
+  test("a categorical column of more than 1,000 values: one group, and the table gives each individual's value, No value for a missing cell", () => {
+    const names = Array.from(
+      { length: MAX_COLOUR_GROUPS + 2 },
+      (_, i) => `i${String(i)}`,
+    );
+    const p = project({
+      individuals: names,
+      meta: {
+        table: {
+          columns: ["IID", "pop", "plot"],
+          rows: names.map((name, i): Cell[] => [
+            name,
+            "A",
+            i === 1 ? null : `plot${name}`,
+          ]),
+        },
+        types: [{ kind: "categorical" }, { kind: "categorical" }],
+      },
+      options: { colourBy: "plot" },
+    });
+    const c = groupsOf(pcaColours(result(names), p));
+    expect(c.title).toBe("plot");
+    expect(c.names).toEqual(["All individuals"]);
+    expect(c.cellTexts?.slice(0, 3)).toEqual(["ploti0", null, "ploti2"]);
+    expect(
+      pcaRows(result(names), c)
+        .slice(0, 3)
+        .map((row) => row.colour),
+    ).toEqual(["ploti0", null, "ploti2"]);
+  });
+
+  test("a colouring the plot can draw gives no text of each individual", () => {
+    const p = project({ individuals: FOUR, meta: WORKED });
+    expect(groupsOf(pcaColours(result(FOUR), p)).cellTexts).toBeNull();
+    const none = project({ individuals: FOUR, meta: null });
+    expect(groupsOf(pcaColours(result(FOUR), none)).cellTexts).toBeNull();
   });
 
   test("colourBy a column the table does not have: the populations, and the note", () => {

@@ -419,6 +419,7 @@ describe("IP8 panel: the notes", () => {
       numNone: 0,
       noneName: "No value",
       note: null,
+      cellTexts: null,
     };
     expect(marksNote(many)).toBe(
       "The 60 values of collection are drawn with 49 marks, which repeat; the legend and the table tell them apart.",

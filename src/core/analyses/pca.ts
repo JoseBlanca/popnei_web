@@ -982,6 +982,11 @@ export type PcaColours =
       readonly noneName: "No population" | "No value";
       /** Why the colours are not those the options ask, or `null`. */
       readonly note: string | null;
+      /** When the colouring asked has more than MAX_COLOUR_GROUPS groups
+          and is drawn as one, the value of each individual of the result
+          in its column, or its population, `null` for none, which the
+          table gives as the note says (stop C 9); `null` otherwise. */
+      readonly cellTexts: readonly (string | null)[] | null;
     }
   | {
       readonly kind: "values";
@@ -1114,7 +1119,16 @@ function coloursOf(
     cell === null ? [] : [String(cell)],
   );
   if (names.length > MAX_COLOUR_GROUPS) {
-    return oneGroup(r, colourBy, "No value", tooManyText(colourBy, names));
+    return oneGroup(
+      r,
+      colourBy,
+      "No value",
+      tooManyText(colourBy, names),
+      (individual) => {
+        const cell = cells.get(individual);
+        return cell === undefined || cell === null ? null : String(cell);
+      },
+    );
   }
   const groupOf = new Map<string, number>(
     names.map((name, i) => [name, i] as const),
@@ -1173,6 +1187,12 @@ function byPopulations(
     return oneGroup(r, "Population", "No population", note);
   }
   const names = pops.map(([name]) => name);
+  const groupOf = new Map<string, number>();
+  for (const [i, [, individuals]] of pops.entries()) {
+    for (const individual of individuals) {
+      groupOf.set(individual, i);
+    }
+  }
   if (names.length > MAX_COLOUR_GROUPS) {
     const column = p.grouping.kind === "populations" ? p.grouping.column : null;
     return oneGroup(
@@ -1180,13 +1200,11 @@ function byPopulations(
       "Population",
       "No population",
       joined(before, column === null ? null : tooManyText(column, names)),
+      (individual) => {
+        const index = groupOf.get(individual);
+        return index === undefined ? null : (names[index] ?? null);
+      },
     );
-  }
-  const groupOf = new Map<string, number>();
-  for (const [i, [, individuals]] of pops.entries()) {
-    for (const individual of individuals) {
-      groupOf.set(individual, i);
-    }
   }
   return byGroups(r, "Population", names, "No population", note, (individual) =>
     groupOf.get(individual),
@@ -1203,14 +1221,23 @@ function joined(first: string | null, second: string | null): string | null {
 }
 
 /** The colours of every individual of `r` in the one group "All
-    individuals". */
+    individuals"; with `cellOf`, the text the table gives each
+    individual, `null` for none, when the colouring asked has more groups
+    than the plot can tell apart. */
 function oneGroup(
   r: PcaResult,
   title: string,
   noneName: GroupsColours["noneName"],
   note: string | null,
+  cellOf: ((individual: string) => string | null) | null = null,
 ): PcaColours {
-  return byGroups(r, title, [ONE_POPULATION], noneName, note, () => 0);
+  const colours = byGroups(r, title, [ONE_POPULATION], noneName, note, () => 0);
+  return cellOf === null
+    ? colours
+    : Object.freeze({
+        ...colours,
+        cellTexts: Object.freeze(r.individuals.map(cellOf)),
+      });
 }
 
 /** The colours of `r` in the groups `names`, the group of each individual
@@ -1246,6 +1273,7 @@ function byGroups(
     numNone,
     noneName,
     note,
+    cellTexts: null,
   });
 }
 
@@ -1414,6 +1442,9 @@ export function pcaRows(r: PcaResult, c: PcaColours): readonly PcaRow[] {
 function colourOf(c: PcaColours, i: number): string | number | null {
   switch (c.kind) {
     case "groups": {
+      if (c.cellTexts !== null) {
+        return c.cellTexts[i] ?? null;
+      }
       const group = c.group[i];
       return group === undefined ? null : (c.names[group] ?? null);
     }
