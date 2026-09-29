@@ -1113,7 +1113,7 @@ and saves it as a CSV.
   `pca3d.md` whole but "The export" of the panel, with the listener of
   the wheel with Ctrl; the 3D plot on `e2e/plots.html` and its flows.
   Serves 2, 3 and 4. Needs 8.1.
-- [ ] 8.3 The panel's functions of `pca.md`: "The colours", "The note of
+- [x] 8.3 The panel's functions of `pca.md`: "The colours", "The note of
   the missing genotypes", `colourColumns`, `axesShown`, `pcaRows`,
   `pcaCsv`, `varianceCsv` and `pcaDescription`; the PCA in
   `POPGEN_ANALYSES` before the diversity, its title "Principal
