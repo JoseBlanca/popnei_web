@@ -365,13 +365,21 @@ peak, measured by popnei, which counts it at the PCA's 48.8 in its
 release `js-v0.1.0-dev.3`; that memory never shrinks. In node, with popnei's
 release, the process grew by 69 MB for a PCA of 1,000 individuals, 196
 MB for 2,000 and 662 MB for 4,000 (`docs/specs/analyses/pca.md`, "How it
-runs"). So the client starts the calculation worker again after a run of
+runs"). In the browsers, run from the panel of the application on 29
+September 2026, the engine grew by 613 MB for a PCA of 4,000 in Chromium
+153 and 745 MB in WebKit 26.6, and by 3.03 and 3.12 GB for one of 9,381,
+which took 205 s and 121 s (the same section). So the client starts the calculation worker again after a run of
 the analysis `pca` whose individuals are more than
 `PCA_RESTART_INDIVIDUALS`, 700: those of its job's list, or, when the
 list is `null`, those the `opened` of its load gave. At 700 a PCA or a
 PCoA holds about 24 MB by popnei's count, the size of
 `WRITE_RESTART_BYTES`, the bound of a write, below which the worker is
-left as it is. It does so after an outcome `done`, and after a refusal
+left as it is: measured the same day, a PCA or a PCoA of 700 left the
+engine 11 to 18 MB larger in Chromium and WebKit 3 s after its result,
+and after one of 1,000
+or more the worker was started again every time and the engine was, 3 s
+later, no larger than before the Run, so the bound stays at 700. It does
+so after an outcome `done`, and after a refusal
 of popnei, which may come after the matrix was made, a pass with no
 variant of variance among them; a refusal of more than 9,381
 individuals, which popnei gives before it makes anything, of the file
