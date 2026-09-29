@@ -533,8 +533,10 @@ distance of 1 base pair, and End and the Down arrow one of
 9007199254740991, that the user never typed. The number field of `src/ui/widgets/` makes this rule for
 every field given `NaN`, the PCA's distance as well. In a field that
 holds a number, End and Home move the caret to the end or the start of
-the number, and with Shift select to there, as a field of text does on
-Windows, and change nothing; the field moves the caret itself, since a
+the number, and with Shift select to there from the anchor of the
+selection, the end that stays put, so that Shift+Home and then
+Shift+End from the caret at 2 of 50000 select 0 to 2 and then 2 to 5,
+as a field of text does on Windows, and change nothing; the field moves the caret itself, since a
 browser on a Mac moves none at these keys, and with Ctrl, Alt or ⌘
 leaves them to the browser. React Aria
 would move the number to the largest or the least of its range, so that
