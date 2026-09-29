@@ -864,6 +864,38 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     });
   });
 
+  test("IP10 D3 a population with no individual is refused with popnei's message", () => {
+    const job = diversityJob(
+      [],
+      [
+        ["p0", ["s000", "s001"]],
+        ["p1", []],
+      ],
+    );
+    expect(opened("panel.nei").run(job, ignore)).toEqual({
+      kind: "refused",
+      message:
+        "the population `p1` names no individual, and every statistic of a population is calculated over the individuals of that population",
+    });
+  });
+
+  test("IP10 D3 the statistics of each individual of a VCF of a header alone are refused as a file with no variant", () => {
+    const header =
+      '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n";
+    const runner = createRunner();
+    const open = runner.open(VCF, {
+      name: "empty.vcf",
+      source: new TextEncoder().encode(header),
+    });
+    expect(valueOf(open).individuals).toEqual(["a", "b"]);
+    expect(runner.run(individualChecksJob(), ignore)).toEqual({
+      kind: "refused",
+      message:
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+    });
+  });
+
   test("WS8 D2 a VCF of a header alone opens, and its diversity is refused as a file with no variant, with the missing data filter and without it", () => {
     const header =
       '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +

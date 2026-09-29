@@ -303,6 +303,48 @@ describe("WS4 D3 the bytes", () => {
   });
 });
 
+describe("IP10 D3 the cases of the reader spec: a file saved by Excel for Mac", () => {
+  // Mac Roman, which older versions of Excel for Mac wrote for "CSV":
+  // ó is the byte 97 and ñ the byte 96, which Windows-1252 reads as the
+  // dashes — and –, and UTF-8 as no character.
+  const macRoman = (text: string): number[] =>
+    singleBytes(text.replaceAll("ó", "\u0097").replaceAll("ñ", "\u0096"));
+  const lines = [
+    "Individuo;Población;Altura",
+    "ind_001;España;1,75",
+    "ind_002;Italia;1,82",
+    "ind_003;España;1,71",
+  ];
+  const bytes = macRoman(lines.join("\r\n") + "\r\n");
+
+  test("an accented name of Mac Roman is read as other characters by both encodings offered, and the populations are still grouped", async () => {
+    expect(bytes[17]).toBe(0x97);
+    const found = await readCsvFile(blobOf(bytes), AUTO);
+    if (found.kind !== "read") throw new Error("the read failed");
+    expect(found.found?.encoding).toBe("windows-1252");
+    expect(found.table.columns).toEqual([
+      "Individuo",
+      "Poblaci\u2014n",
+      "Altura",
+    ]);
+    expect(found.table.rows.map((row) => row[1])).toEqual([
+      "Espa\u2013a",
+      "Italia",
+      "Espa\u2013a",
+    ]);
+    const utf8 = await readCsvFile(blobOf(bytes), {
+      ...AUTO,
+      encoding: "utf-8",
+    });
+    if (utf8.kind !== "read") throw new Error("the read failed");
+    expect(utf8.table.rows.map((row) => row[1])).toEqual([
+      "Espa\uFFFDa",
+      "Italia",
+      "Espa\uFFFDa",
+    ]);
+  });
+});
+
 describe("WS4 D3 the owner's decisions of 25 September on the bytes", () => {
   const encode = (text: string): number[] => [
     ...new TextEncoder().encode(text),

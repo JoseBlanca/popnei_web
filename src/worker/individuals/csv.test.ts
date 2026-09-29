@@ -684,3 +684,17 @@ describe("WS4 D1 the owner's decisions of 25 September on the metadata file", ()
     ]);
   });
 });
+
+describe("IP10 D3 the cases of the reader spec", () => {
+  test("a file with no header: its first individual is taken for the names of the columns, and is not a row", () => {
+    const read = readOk("s000,p0\ns001,p1\ns002,p0\n");
+    expect(read.table).toEqual({
+      columns: ["s000", "p0"],
+      rows: [
+        ["s001", "p1"],
+        ["s002", "p0"],
+      ],
+    });
+    expect(read.table.rows.map((row) => row[0])).not.toContain("s000");
+  });
+});

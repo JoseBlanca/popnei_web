@@ -383,3 +383,46 @@ describe("IP9 D1 the xlsx in node: columnLetters", () => {
     expect(() => columnLetters(1.5)).toThrow(/^popnei_web defect: /);
   });
 });
+
+describe("IP10 D3 the cases of the reader spec: an xlsx", () => {
+  test("a column of heights with one text n.d. is categorical, and n.d. a value of it", () => {
+    const { table, columns } = read(
+      sheetOf([
+        ["id", "h"],
+        ["A", 1.75],
+        ["B", "n.d."],
+        ["C", 1.69],
+        ["D", 1.8],
+      ]),
+    );
+    expect(table.rows[1]).toEqual(["B", "n.d."]);
+    expect(columns[1]).toEqual({ kind: "categorical" });
+  });
+
+  test("a column of heights with #N/A in the place of n.d., typed as text or an error of Excel, is continuous, that individual with no height", () => {
+    const { table, columns } = read(
+      sheetOf([
+        ["id", "h"],
+        ["A", 1.75],
+        ["B", "#N/A"],
+        ["C", 1.69],
+        ["D", 1.8],
+      ]),
+    );
+    expect(table.rows[1]).toEqual(["B", null]);
+    expect(columns[1]).toEqual({ kind: "continuous" });
+  });
+
+  test("a column of years typed as numbers is continuous, each year a number", () => {
+    const { table, columns } = read(
+      sheetOf([
+        ["id", "year"],
+        ["A", 2019],
+        ["B", 2021],
+        ["C", 2024],
+      ]),
+    );
+    expect(table.rows.map((row) => row[1])).toEqual([2019, 2021, 2024]);
+    expect(columns[1]).toEqual({ kind: "continuous" });
+  });
+});
