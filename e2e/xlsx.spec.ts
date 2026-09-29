@@ -5,7 +5,9 @@
  * Playwright, from stage 4"; docs/specs/steps/individuals.md, "The file"
  * and "How the file was read"; the refusals of "Its words"). The xlsx
  * files, and excel97.xls, are those of the tests of xlsx_rs,
- * tests/data/ at 4a29ee7, copied into e2e/fixtures/.
+ * tests/data/ at 4a29ee7, copied into e2e/fixtures/, but
+ * header_error.xlsx, which is ours (its entry in REFUSALS says how it was
+ * made).
  *
  * The HTML standard lets an engine keep a failed import() as failed for
  * the life of the worker, as Chromium 153 does, so a second try after
@@ -316,6 +318,19 @@ const REFUSALS: readonly {
     bytes: () => readFile(join(FIXTURES, "getting_data.xlsx")),
     words:
       "a cell holds the error #GETTING_DATA, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value",
+  },
+  {
+    // Ours, not of the tests of xlsx_rs: made with openpyxl 3.1.5 on 29
+    // September 2026, the table from B3, IID, popcat and in D3 the error
+    // #VALUE!, stored as an error cell (t="e"), over s000 p0 1 and s001
+    // p1 2:
+    //   ws.cell(row=3, column=4, value="#VALUE!")  # data_type "e"
+    kind: "headerError",
+    what: "header_error.xlsx, whose header holds the error #VALUE! in D3,",
+    name: "header_error.xlsx",
+    bytes: () => readFile(join(FIXTURES, "header_error.xlsx")),
+    words:
+      "the header has the error #VALUE! at row 3, column D, where the name of a column should be; in Excel, type the name of the column in that cell",
   },
   {
     kind: "files",
