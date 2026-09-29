@@ -451,6 +451,54 @@ writing. Recommended: each spec takes what the code does.
 Opening a project with a table of 10,000 rows and 50 columns took 127
 ms in node, all on the page; task 5.3 measures it in the browsers.
 
+## Stop B: the Individuals step, for the owner
+
+### How to try it
+
+In a terminal, in `.claude/worktrees/individuals-pca`: `npm run dev`,
+then open the address it prints, followed by `popgen.html`. Load
+`e2e/fixtures/panel.nei`, then in the Individuals step
+`e2e/fixtures/panel_pops.csv`, or a metadata file of your own. In
+Firefox and Safari by hand; Playwright saw only Chromium and WebKit.
+
+What to judge, from the spec's open points: a project with a metadata
+file locked until a column or the one population is chosen; the words
+of the types that wait and "Forget these types"; the populations and the
+check not shown while the file has no table; a select of the type in
+every row; the name "All individuals"; and, if you wish, the section
+"How it is checked" of `steps/individuals.md`.
+
+### The screenshots, in `screens/` of the worktree, light and dark
+
+`popgen-individuals-*`: `empty` (no file, the step optional),
+`one-population`, `no-column`, `types`, `types-waiting` (a type set that
+a new read cannot apply), `missing` (12 individuals of the variants file
+not in the metadata file), `no-population`, `no-such-column`,
+`not-given`, and `types-320`, `types-waiting-320` at the width of a
+phone.
+
+### Decisions, each with the recommendation
+
+1. The words of the coding put the value bare: "no is coded 0." reads
+   as "nothing is coded 0", and "binary with no coded 1" as "binary
+   without a value coded 1". Recommended: quote the value, "\"no\" is
+   coded 0.", "binary with \"yes\" coded 1".
+2. With a font wider than the Mac's, at 320 px, the dot between two
+   first values can start a line, "España ·". Avoiding it leaves no
+   margin. Recommended: accept.
+3. A file of one column still says "Choose the column that defines the
+   populations…" though only "All individuals" can be chosen.
+   Recommended: accept.
+4. Changes made to the specs during the review, to accept: the first
+   column is never the column of the populations, and a grouping on it
+   is "not in the file" (`project.md`, `diversity.md`, which said the
+   opposite); an Undo or a Redo that removes the control with the focus
+   gives the focus to the step's heading (`shell.md`); the name of the
+   select of the coding has the value first, as React Aria makes it
+   (`steps/individuals.md`). Below 30em the selects of every step are
+   drawn smaller, and the warning of a few whole numbers stands in a row
+   of its own.
+
 ## The restart of 29 September 2026
 
 The Mac rebooted during the night of 28 September, while the orchestrator
