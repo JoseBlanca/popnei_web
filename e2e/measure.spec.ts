@@ -2648,8 +2648,14 @@ test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,
 
 /** The individuals of the VCFs of the PCA's time and memory: 700, the
     bound of the restart, below which the worker keeps what the PCA left,
-    and the four of the plan, the last popnei's limit. */
-const PCA_INDIVIDUALS = [700, 1_000, 2_000, 4_000, 9_381] as const;
+    and the four of the plan, the last popnei's limit; or those of
+    MEASURE_PCA_INDIVIDUALS, a list such as "700,1000", to check the
+    measurement in minutes rather than the 37 of the whole. */
+const PCA_INDIVIDUALS: readonly number[] = process.env[
+  "MEASURE_PCA_INDIVIDUALS"
+]
+  ?.split(",")
+  .map(Number) ?? [700, 1_000, 2_000, 4_000, 9_381];
 
 /** Their variants, those of the times in node of pca.md, "How it runs". */
 const PCA_VARIANTS = 300;
