@@ -622,9 +622,12 @@ export function createPca3d(
 
   const canvas = document.createElement("canvas");
   // The plot asks for the context itself, so that none means noWebGl and
-  // not the words of an error of three.js.
+  // not the words of an error of three.js; a context the browser hands
+  // over already lost draws nothing, and three.js throws a TypeError of
+  // its own reading its attributes (pca3d.md, "When the browser has no
+  // WebGL").
   const context = canvas.getContext("webgl2", CONTEXT_ATTRIBUTES);
-  if (context === null) throw new Pca3dError();
+  if (context === null || context.isContextLost()) throw new Pca3dError();
 
   const ids = nextChartIds();
   const renderer = new WebGLRenderer({ canvas, context });
@@ -832,6 +835,10 @@ export function createPca3d(
       const y = xy[2 * axis + 1] ?? Number.NaN;
       label.style.left = `${String(padding.left + x + LABEL_OFFSET)}px`;
       label.style.top = `${String(padding.top + y - LABEL_OFFSET)}px`;
+      // A label whose end the zoom brought out of the plot is hidden, so
+      // that it is not drawn over what surrounds the plot (pca3d.md, "What
+      // the user sees").
+      label.hidden = !(x >= 0 && x <= size.width && y >= 0 && y <= size.height);
     }
   }
 

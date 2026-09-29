@@ -51,6 +51,14 @@
   position: relative;
 }
 
+/* The element of the 3D view clips what it holds, so that the label of
+   an axis the zoom brought out of it is not drawn over the controls
+   around it nor makes the page scroll sideways (pca3d.md, "What the user
+   sees"). */
+.view3d .plot {
+  overflow: hidden;
+}
+
 /* The element of a plot: its width from the panel, its height from the
    ratio of the scatter, 4 by 3 meanwhile; the tooltip is placed inside
    it. */

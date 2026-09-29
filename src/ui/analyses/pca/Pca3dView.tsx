@@ -56,6 +56,14 @@ export function Pca3dView({
   const drawnRef = useRef<Pca3dData | null>(null);
   const [loading, setLoading] = useState(loadedPca3d() === null);
   const [lost, setLost] = useState(false);
+  // A defect of the plot made after the download, in a promise, which no
+  // error boundary sees: thrown again in the drawing, so that the boundary
+  // of the panel shows it as it shows one made at once (react.md,
+  // "Errors").
+  const [defect, setDefect] = useState<{ readonly error: unknown } | null>(
+    null,
+  );
+  if (defect !== null) throw defect.error;
   // The latest data and callbacks, for the effect below, which runs once,
   // at the mount, and may create the plot after a download.
   const latest = useRef({ data, onHandle, onFailed, announcer });
@@ -92,9 +100,18 @@ export function Pca3dView({
       create(module);
     } else {
       latest.current.announcer.announce(LOADING_3D);
-      void loadPca3d().then(create, () => {
-        if (!over) latest.current.onFailed("load");
-      });
+      void loadPca3d().then(
+        (loaded) => {
+          try {
+            create(loaded);
+          } catch (error) {
+            if (!over) setDefect({ error });
+          }
+        },
+        () => {
+          if (!over) latest.current.onFailed("load");
+        },
+      );
     }
     return () => {
       over = true;

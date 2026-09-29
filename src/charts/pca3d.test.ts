@@ -348,4 +348,33 @@ describe("IP8 D1 the 3D plot in node, under jsdom", () => {
     expect(element.childNodes).toHaveLength(0);
     element.remove();
   });
+
+  test("with a context already lost, createPca3d throws a Pca3dError of kind noWebGl and leaves the element with no child", () => {
+    const element = document.createElement("div");
+    document.body.append(element);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- put back below
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    const lost = { isContextLost: (): boolean => true };
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      value: () => lost,
+    });
+    let thrown: unknown = null;
+    try {
+      createPca3d(
+        element,
+        dataOf([0, 1], [1, 0], [0, 1], groupsOf([0, NO_GROUP], ["P1"])),
+      );
+    } catch (error) {
+      thrown = error;
+    } finally {
+      Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+        configurable: true,
+        value: getContext,
+      });
+    }
+    expect(thrown instanceof Pca3dError ? thrown.kind : thrown).toBe("noWebGl");
+    expect(element.childNodes).toHaveLength(0);
+    element.remove();
+  });
 });
