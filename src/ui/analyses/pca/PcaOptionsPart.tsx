@@ -4,7 +4,8 @@
  * method, and the three filters of the variants the analysis may have of
  * its own, missing data, MAF and LD, in the order of the Variants step,
  * each two radio buttons, "As in the Variants step" with what the step has
- * on, and "For the PCA alone", which shows under it the number fields of
+ * on, and "For the PCA alone", or "For the PCoA alone" by the method,
+ * which shows under it the number fields of
  * that filter in the Variants step, with their labels, their refusals and
  * the line of what popnei filters on. Each choice and each field committed
  * is one command. While the analysis's own LD filter has no distance, the
@@ -46,10 +47,10 @@ import styles from "./PcaOptionsPart.module.css";
 import {
   METHOD_ITEMS,
   METHOD_LABEL,
-  OWN_LABEL,
   filtersHeading,
   filtersLine,
   followLabel,
+  ownLabel,
 } from "./words.ts";
 import type { OwnFilterKind } from "./words.ts";
 
@@ -96,7 +97,7 @@ export function PcaOptionsPart(): React.JSX.Element {
     kind: OwnFilterKind,
   ): readonly { readonly id: FollowChoice; readonly label: string }[] => [
     { id: "follow", label: followLabel(kind, filters) },
-    { id: "own", label: OWN_LABEL },
+    { id: "own", label: ownLabel(options.method) },
   ];
   const choiceOf = (follow: boolean): FollowChoice =>
     follow ? "follow" : "own";

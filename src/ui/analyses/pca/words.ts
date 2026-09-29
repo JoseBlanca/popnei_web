@@ -58,8 +58,12 @@ export function filtersLine(method: PcaMethod): string {
     Variants step. */
 export type OwnFilterKind = "missing_data" | "maf" | "ld";
 
-/** The radio button of a filter set for the analysis alone. */
-export const OWN_LABEL = "For the PCA alone";
+/** The radio button of a filter set for the analysis alone, by the
+    method, as the heading above it: "For the PCA alone", "For the PCoA
+    alone" (stop C 5 of docs/specs/stage-4-open-points.md). */
+export function ownLabel(method: PcaMethod): string {
+  return `For the ${methodName(method)} alone`;
+}
 
 /**
  * The radio button of a filter that follows the Variants step, with what

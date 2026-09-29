@@ -41,6 +41,7 @@ import {
   filtersHeading,
   filtersLine,
   followLabel,
+  ownLabel,
   marksNote,
   pcoaVarianceLine,
   plotTitle,
@@ -97,6 +98,11 @@ describe("IP8 panel: the words of the options", () => {
     expect(filtersLine("pcoa")).toBe(
       "The PCoA uses the filters of the Variants step. Set a filter here to use another value for the PCoA alone.",
     );
+  });
+
+  test("the choice of a value of its own says the method, as the heading does", () => {
+    expect(ownLabel("pca")).toBe("For the PCA alone");
+    expect(ownLabel("pcoa")).toBe("For the PCoA alone");
   });
 
   test("a filter that follows the Variants step says what the step has on, off, or an LD filter with no distance", () => {

@@ -600,7 +600,7 @@ function status(page: Page): Locator {
 }
 
 test.describe("IP10 D3 the options, the warnings and the results removed", () => {
-  test("IP10 D3 a new project: PCA of the genotypes chosen, the heading of level 3 of its filters with its line, the three filters in the order of the Variants step, and the heading and line of the PCoA once it is chosen", async ({
+  test("IP10 D3 a new project: PCA of the genotypes chosen, the heading of level 3 of its filters with its line, the three filters in the order of the Variants step, and the heading, the line and the choices For the PCoA alone once the PCoA is chosen", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -640,6 +640,11 @@ test.describe("IP10 D3 the options, the warnings and the results removed", () =>
         { exact: true },
       ),
     ).toBeVisible();
+    // The choice of a value of its own follows the method, as the heading
+    // does (stop C 5).
+    await expect(
+      panel.getByRole("radio", { name: "For the PCA alone", exact: true }),
+    ).toHaveCount(3);
 
     await chooseRadio(
       method,
@@ -660,6 +665,12 @@ test.describe("IP10 D3 the options, the warnings and the results removed", () =>
     ).toBeVisible();
     await expect(
       panel.getByRole("heading", { name: /for the PCA$/ }),
+    ).toHaveCount(0);
+    await expect(
+      panel.getByRole("radio", { name: "For the PCoA alone", exact: true }),
+    ).toHaveCount(3);
+    await expect(
+      panel.getByRole("radio", { name: "For the PCA alone", exact: true }),
     ).toHaveCount(0);
     await expectNoViolations(makeAxeBuilder);
   });
