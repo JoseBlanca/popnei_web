@@ -1495,6 +1495,29 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
     expect(result.maf.mean).toBe(0.7173150249650765);
     expect(result.obsHet.mean).toBe(0.3528596566999348);
     expect(result.unbiasedExpHet.mean).toBe(0.3749397114515978);
+    expect([...result.maf.counts]).toEqual([
+      ...Array.from({ length: 20 }, () => 0),
+      58,
+      86,
+      64,
+      73,
+      66,
+      61,
+      71,
+      80,
+      80,
+      63,
+      69,
+      70,
+      63,
+      73,
+      54,
+      62,
+      52,
+      33,
+      16,
+      6,
+    ]);
     for (const distrib of [result.maf, result.obsHet, result.unbiasedExpHet]) {
       expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(1200);
     }
@@ -2601,5 +2624,67 @@ describe("IP4 D1 the diversity on one population", () => {
       numVarsWithValue: [1152],
       passStats: AT_0_05.passStats,
     });
+  });
+});
+
+describe("IP10 D3 the cases of pca.md and variantChecks.md in the runner", () => {
+  test("the PCoA of two individuals, the list before the MAF filter at 0.95: one component of 100%, s000 at 0.1597938144329897, s001 opposite, and a constant of 0", () => {
+    const result = resultOf(
+      opened("panel.nei").run(
+        pcaJob([{ kind: "maf", maxAllowedMaf: 0.95 }], {
+          method: "pcoa",
+          individuals: ["s000", "s001"],
+        }),
+        ignore,
+      ),
+      "pca",
+    );
+    expect(result.individuals).toEqual(["s000", "s001"]);
+    expect(result.numComps).toBe(1);
+    expect([...result.explainedVariancePercent]).toEqual([100]);
+    expect(result.projections[0]).toBe(0.1597938144329897);
+    expect(result.projections[1]).toBe(-0.1597938144329897);
+    expect(result.lingoesConstant).toBe(0);
+  });
+
+  test("the PCA and the PCoA of a VCF of a header alone are refused, each with its words", () => {
+    const vcf = vcfHeader(["a", "b", "c"]);
+    expect(openedVcf("empty.vcf", vcf).run(pcaJob([]), ignore)).toEqual({
+      kind: "refused",
+      message: "there are no variants to do a PCA with",
+    });
+    expect(
+      openedVcf("empty.vcf", vcf).run(pcaJob([], { method: "pcoa" }), ignore),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the pass gave no variant and its source holds none: a statistic of a pass is calculated over the variants it gives",
+    });
+  });
+
+  test("the PCA places the five individuals whose pairs with the fifth have no distance", () => {
+    const vcf =
+      vcfHeader(["a", "b", "c", "d", "e"]) +
+      "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t0/1\t1/1\t0/1\t./.\n" +
+      "1\t20\t.\tC\tT\t.\tPASS\t.\tGT\t0/1\t0/0\t1/1\t1/1\t./.\n" +
+      "1\t30\t.\tG\tA\t.\tPASS\t.\tGT\t./.\t./.\t./.\t./.\t0/1\n";
+    const result = resultOf(
+      openedVcf("five.vcf", vcf).run(pcaJob([]), ignore),
+      "pca",
+    );
+    expect(result.individuals).toEqual(["a", "b", "c", "d", "e"]);
+    // e is called only at the third variant, which varies in no one else
+    // and is not used: the PCA places it at the centre.
+    expect(result.numComps).toBe(2);
+    expect([...result.projections]).toEqual([
+      -1.3563996360612927, -0.8796683414384984, -1.1918282365569939,
+      1.191828236556991, 1.8331309306840915, 0.4029370468157008,
+      0.7150969419341952, -0.7150969419341943, -0, 0,
+    ]);
+    expect([...result.explainedVariancePercent]).toEqual([
+      71.32007163556102, 28.679928364438943,
+    ]);
+    expect(result.numVarsUsed).toBe(2);
+    expect(result.passStats).toEqual({ numVars: 3, filtering: {} });
   });
 });
