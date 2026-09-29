@@ -188,7 +188,7 @@ function ownLd(maxDist: number | null): Partial<PcaOptions> {
 
 /** The reason of the PCA's own LD filter with no distance. */
 const PRUNING_DISTANCE =
-  "The LD filter of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD filter of the PCA back to as in the Variants step.";
+  "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD pruning of the PCA back to as in the Variants step.";
 
 /** The reason of the LD filter of the Variants step with no distance. */
 const STEP_LD_DISTANCE =
@@ -529,6 +529,14 @@ describe("IP6 D4 needs", () => {
     });
     expect(pca.needs(reading)).toBe("Reading pops.csv.");
     expect(pruningDistanceReason(reading)).toBe(PRUNING_DISTANCE);
+  });
+
+  test("under the PCoA the reason names the PCoA, in both places", () => {
+    const pcoa = project({ options: { method: "pcoa", ...ownLd(null) } });
+    expect(pruningDistanceReason(pcoa)).toBe(
+      PRUNING_DISTANCE.replaceAll("of the PCA", "of the PCoA"),
+    );
+    expect(pca.needs(pcoa)).toBe(pruningDistanceReason(pcoa));
   });
 
   test("the step's LD filter on with no distance: the reason of variantFilterNeeds while the PCA follows it, none with its own at 50,000, and none once 20,000 is typed in the step", () => {

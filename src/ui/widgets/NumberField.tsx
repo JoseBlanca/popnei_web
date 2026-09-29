@@ -97,20 +97,24 @@ const COMMIT_KEYS: ReadonlySet<string> = new Set([
 const CARET_KEYS: ReadonlySet<string> = new Set(["Home", "End"]);
 
 /** Moves the caret of `input` to the start of its text, for Home, or to
-    its end, for End; with Shift, selects from where the selection starts
-    to there, as a field of text does on Windows. A field of text on a Mac
+    its end, for End; with Shift, selects from the anchor of the
+    selection, the end that stays, to there, as a field of text does on
+    Windows. A field of text on a Mac
     moves no caret at Home and End, so the field moves it itself, in
     every browser alike. */
 function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
   const length = input.value.length;
   const start = input.selectionStart ?? 0;
   const end = input.selectionEnd ?? start;
+  // The end of the selection that stays where it is, as in a text field:
+  // its start, unless it was made backward.
+  const anchor = input.selectionDirection === "backward" ? end : start;
   if (key === "Home") {
-    if (shift) input.setSelectionRange(0, end, "backward");
+    if (shift) input.setSelectionRange(0, anchor, "backward");
     else input.setSelectionRange(0, 0);
     return;
   }
-  if (shift) input.setSelectionRange(start, length, "forward");
+  if (shift) input.setSelectionRange(anchor, length, "forward");
   else input.setSelectionRange(length, length);
 }
 

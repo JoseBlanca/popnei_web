@@ -44,7 +44,7 @@ const RESULT_TIMEOUT = 30_000;
 const LD_GROUP = "Prune the variants by linkage disequilibrium (LD)";
 const DISTANCE =
   "Distance within which variants are compared, in base pairs, from 1";
-const REASON = /^The LD filter of the PCA needs the distance/;
+const REASON = /^The LD pruning of the PCA needs the distance/;
 const PCA_3D = "Principal components, PC1, PC2 and PC3";
 const PCA_2D = "Principal components, PC1 and PC2";
 

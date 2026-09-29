@@ -3119,7 +3119,7 @@ for (const theme of ["light", "dark"] as const) {
         "For the PCA alone",
       );
       await expect(
-        panel.getByText(/^The LD filter of the PCA needs the distance/),
+        panel.getByText(/^The LD pruning of the PCA needs the distance/),
       ).toHaveCount(2);
       await save(page, `popgen-pca-ready-${theme}`);
     });

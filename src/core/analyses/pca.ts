@@ -417,9 +417,12 @@ const PCA_LD_FILTER: LdFilterWords = Object.freeze({
   turnOff: "set the LD filter of the PCA back to as in the Variants step",
 });
 
-/** The reason of the PCA's own LD filter with no distance. */
-const PRUNING_DISTANCE =
-  "The LD filter of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD filter of the PCA back to as in the Variants step.";
+/** The reason of the analysis's own LD pruning with no distance, named
+    by the method `name`, "PCA" or "PCoA", as the choice "For the PCoA
+    alone" is (docs/specs/analyses/pca.md, "Why it cannot run"). */
+function pruningDistanceText(name: string): string {
+  return `The LD pruning of the ${name} needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD pruning of the ${name} back to as in the Variants step.`;
+}
 
 /** The reason of the lock of the PCA's own LD filter, set with no
     distance, or null; needs gives it, and the panel shows it beside the
@@ -427,8 +430,10 @@ const PRUNING_DISTANCE =
     run"). A distance kept while the filter follows the Variants step
     locks nothing, since it is not used. */
 export function pruningDistanceReason(p: Project): string | null {
-  const ld = pcaOptions(p).ld;
-  return !ld.follow && ld.maxDist === null ? PRUNING_DISTANCE : null;
+  const o = pcaOptions(p);
+  return !o.ld.follow && o.ld.maxDist === null
+    ? pruningDistanceText(methodName(o.method))
+    : null;
 }
 
 /**

@@ -1037,7 +1037,7 @@ test.describe("the PCA's own filters typed", () => {
 
     await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
     await expect(status(page)).toContainText(
-      "The LD filter of the PCA needs the distance within which variants are compared.",
+      "The LD pruning of the PCA needs the distance within which variants are compared.",
     );
     const r2 = panel.getByLabel(
       "Maximum r² with a variant kept before it, from 0 to 1",
@@ -1694,4 +1694,54 @@ test.describe("IP10 D3 the states of the panel", () => {
     ).toBeEnabled();
     await expectNoViolations(makeAxeBuilder);
   });
+});
+
+test("after the review of the rounds: under the PCoA the reason of its own LD pruning with no distance names the PCoA, beside the field and in the status region", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  const panel = await openPanel(page);
+  await chooseRadio(
+    panel.getByRole("radiogroup", { name: "Method" }),
+    "PCoA of the Kosman distances, for data with many missing genotypes",
+  );
+  await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCoA alone");
+  const reason =
+    "The LD pruning of the PCoA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or set the LD pruning of the PCoA back to as in the Variants step.";
+  await expect(status(page)).toContainText(reason);
+  // The reason first, then the line under the fields.
+  await expect(panel.getByLabel(DISTANCE)).toHaveAccessibleDescription(
+    new RegExp(`^${reason.replaceAll(".", "\\.")} Of two variants`),
+  );
+  await expect(panel.getByText(/of the PCA/)).toHaveCount(0);
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});
+
+test("after the review of the rounds: Shift+Home and then Shift+End in the field of the distance keep the anchor of the selection, as a text field does", async ({
+  page,
+}) => {
+  const panel = await openPanel(page);
+  await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
+  const distance = panel.getByLabel(DISTANCE);
+  await distance.click();
+  await distance.pressSequentially("50000");
+  await distance.press("Enter");
+  await expect(distance).toHaveValue("50000");
+  const selection = (): Promise<[number | null, number | null]> =>
+    distance.evaluate((input: HTMLInputElement) => [
+      input.selectionStart,
+      input.selectionEnd,
+    ]);
+  await distance.evaluate((input: HTMLInputElement) => {
+    input.setSelectionRange(2, 2);
+  });
+  await distance.press("Shift+Home");
+  expect(await selection()).toEqual([0, 2]);
+  await distance.press("Shift+End");
+  expect(await selection()).toEqual([2, 5]);
+  await distance.press("Shift+End");
+  expect(await selection()).toEqual([2, 5]);
+  await distance.press("Shift+Home");
+  expect(await selection()).toEqual([0, 2]);
+  await expect(distance).toHaveValue("50000");
 });
