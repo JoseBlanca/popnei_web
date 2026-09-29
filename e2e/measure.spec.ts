@@ -2750,9 +2750,6 @@ interface PcaRun {
   /** From the run posted to the calculation worker to its answer; `null`
       when the tab closed. */
   readonly runMs: number | null;
-  /** From the run posted to the last progress of a range read, the pass
-      over the file; the rest is the calculation and its end. */
-  readonly passMs: number | null;
   /** The engine's memory, the footprints of its processes summed: after
       the load, before the Run; the largest while the PCA ran; and 3 s
       after its answer, after the restart when there is one. */
@@ -2830,7 +2827,6 @@ async function pcaOnce(
       return {
         answer: "the tab closed",
         runMs: null,
-        passMs: null,
         before: null,
         peak: null,
         after: null,
@@ -2844,13 +2840,10 @@ async function pcaOnce(
       throw new Error("no run, or no answer to it, in the log of the worker");
     }
     const worker = answer.worker;
-    const ranges = ended.filter(
-      (l) => l.worker === worker && l.event === "in" && l.kind === "progress",
-    );
-    // popnei tells each range of 4 MiB it reads and the end of the run,
-    // which comes after the decomposition: the pass ends at the last
-    // progress before the one of the end.
-    const lastRange = ranges.length >= 2 ? ranges.at(-2) : undefined;
+    // The pass over the file is not timed apart: popnei tells a progress
+    // at each range of 4 MiB it reads and at the end of the run, after the
+    // decomposition, and the VCFs of 300 variants are under 4 MiB, so no
+    // progress marks the end of their pass.
     await expect(region.getByRole("progressbar")).toHaveCount(0, {
       timeout: 60_000,
     });
@@ -2876,7 +2869,6 @@ async function pcaOnce(
     return {
       answer: answer.kind,
       runMs: answer.t - run.t,
-      passMs: lastRange === undefined ? null : lastRange.t - run.t,
       before: beforeRun,
       peak: during.length === 0 ? null : Math.max(...during),
       after: sampler.samples.at(-1)?.total ?? null,
@@ -2951,10 +2943,15 @@ test.describe("IP6 D6 the times of the PCA", () => {
             250,
           );
           expect(ran.answer).toBe("result");
+          expect(ran.before).toBeGreaterThan(0);
           times[key].push(ran.runMs ?? Number.NaN);
           used[key] = ran.numVarsUsed;
         }
       }
+      // The PCA's own LD filter pruned: fewer variants used with it.
+      expect(used.with).not.toBeNull();
+      expect(used.without).not.toBeNull();
+      expect(used.with ?? Infinity).toBeLessThan(used.without ?? 0);
       const noLd = median(times.without);
       const ld = median(times.with);
       rows.push([
@@ -2969,14 +2966,14 @@ test.describe("IP6 D6 the times of the PCA", () => {
     }
     report(
       "IP6 D6 the pruning inside a PCA",
-      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the filters of a new project, the missing data at 0.1; the PCA's own LD filter at r² 0.1 and ${PCA_LD_DIST.toLocaleString("en-US")} bp; each PCA run from its panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times, alternating; the time from the run posted to the calculation worker to its result`,
+      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the filters of a new project, the missing data at 0.1; the PCA's own LD filter at r² 0.1 and ${PCA_LD_DIST.toLocaleString("en-US")} bp; each PCA run from its panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times, alternating; the time from the run posted to the calculation worker to its result; the difference is a lower bound of the pruning, since the PCA with the filter also calculates over fewer variants`,
       [
         "file",
         "variants used without the LD filter",
         "the PCA without it: median, range",
         "variants used with it",
         "the PCA with it: median, range",
-        "the pruning, the difference of the medians",
+        "the pruning, at least: the difference of the medians",
         "its share of the PCA with it",
       ],
       rows,
@@ -3019,6 +3016,16 @@ test.describe("IP6 D6 the times of the PCA", () => {
             ),
           );
         }
+        for (const ran of runs) {
+          // Only the largest may close the tab, which is recorded and
+          // fails nothing. Otherwise each run gives a result, the engine's
+          // memory was taken, and the worker is started again after more
+          // than PCA_RESTART_INDIVIDUALS, 700, and not at 700.
+          if (ran.answer === "the tab closed" && n === 9_381) continue;
+          expect(ran.answer).toBe("result");
+          expect(ran.before).toBeGreaterThan(0);
+          expect(ran.restarted).toBe(n > 700);
+        }
         const cell = (
           of: (r: PcaRun) => number | null,
           unit: (x: number) => string,
@@ -3036,7 +3043,6 @@ test.describe("IP6 D6 the times of the PCA", () => {
           String(runs.length),
           [...new Set(runs.map((r) => r.answer))].join(", "),
           cell((r) => r.runMs, seconds),
-          cell((r) => r.passMs, ms),
           cell((r) => r.before, mb),
           cell((r) => r.peak, mb),
           cell(
@@ -3052,14 +3058,13 @@ test.describe("IP6 D6 the times of the PCA", () => {
     }
     report(
       "IP6 D6 the time and the memory of the tab for a PCA and a PCoA",
-      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; gzipped VCFs of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts, the filters of a new project; each run from the panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times up to 2,000 individuals, the median and the range, and once above; the memory is the footprints of the engine's processes summed, taken every 20 ms and the time of a sample up to 2,000 individuals and every 250 ms above`,
+      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; gzipped VCFs of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts, the filters of a new project; each run from the panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times up to 2,000 individuals, the median and the range, and once above; the time is the run whole, the pass over the file with the calculation, which popnei's progress does not tell apart in files under 4 MiB; the memory is the footprints of the engine's processes summed, taken every 20 ms and the time of a sample up to 2,000 individuals and every 250 ms above`,
       [
         "individuals",
         "method",
         "runs",
         "answer",
         "run posted to answer",
-        "of it, the pass",
         "memory before the Run",
         "largest during it",
         "grown by",
