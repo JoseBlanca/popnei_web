@@ -202,3 +202,15 @@ describe("VS2 D4 a size of a file in words", () => {
     expect(sizeText(1_234_560_000_000)).toBe("1,234.6 GB");
   });
 });
+
+describe("IP10 D3 the warning of the size, one byte below its bound", () => {
+  test("723,589 variants of 651 individuals, 499,999,999 bytes, one byte below WRITE_WARN_BYTES, give no warning", () => {
+    const individuals = keptOf({
+      kind: "known",
+      individuals: Array.from({ length: 651 }, (_, i) => `i${String(i)}`),
+    });
+    const below = writeEstimate(projectOf(null, []), individuals, 723_589);
+    expect(below?.numBytes).toBe(WRITE_WARN_BYTES - 1);
+    expect(below?.warn).toBe(false);
+  });
+});

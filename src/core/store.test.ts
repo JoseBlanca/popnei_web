@@ -3982,6 +3982,26 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(again.job.analysis).toBe("stats");
     expect(store.getState().notice).toBeNull();
   });
+  test("with keep a, remove a and a threshold of 0.2, and no statistics in the cache, the analysis is locked with keptNoneReason at once, and startRun gives null and sends nothing, the statistics' request among it", () => {
+    const { store, sent, lists } = storeOfFive([
+      { kind: "keep", individuals: ["a"] },
+      { kind: "remove", individuals: ["a"] },
+      MISSING_AT_02,
+    ]);
+
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: [],
+    });
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "locked",
+      reason:
+        "The filters of individuals keep none of the 5 individuals of panel.nei. Loosen them in the Variants step.",
+    });
+    expect(store.startRun("pops")).toBeNull();
+    expect(sent).toStrictEqual([]);
+    expect(lists).toStrictEqual([]);
+  });
 });
 
 describe("VS3 D4 a list of individuals popnei would refuse", () => {
@@ -5046,6 +5066,33 @@ describe("VS3 D5 the counts filled", () => {
     ).toThrow(
       /^popnei_web defect: createStore was given the analysis of the counts "counts"/,
     );
+  });
+  test("counts filled under a threshold of the individuals are not named among the results removed when the threshold changes, and its undo shows them done again", () => {
+    const { store, sent } = storeOfFiveWithCounts([MISSING_AT_02], {
+      variants: true,
+      individuals: false,
+    });
+    store.startRun("stats");
+    const stats = sentAt(sent, 0);
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+    store.startRun("vars");
+    const vars = sentAt(sent, 1);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(1200)));
+    const filled = resultOf(statusIn(store, "counts"));
+    expect(filled).toMatchObject({ kind: "counts", numVars: 1200 });
+
+    store.apply("the missing data filter of the individuals changed", (p) =>
+      setIndividualFilter(p, {
+        kind: "missing_data",
+        maxAllowedMissingRate: 0.3,
+      }),
+    );
+
+    expect(statusIn(store, "counts").kind).toBe("ready");
+    expect(store.getState().notice).toBeNull();
+    store.undo();
+    expect(resultOf(statusIn(store, "counts"))).toBe(filled);
+    expect(sent).toHaveLength(2);
   });
 });
 

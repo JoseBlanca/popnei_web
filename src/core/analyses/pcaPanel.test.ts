@@ -25,6 +25,7 @@ import {
   pca,
   pcaColours,
   pcaCsv,
+  pcaOptions,
   pcaDescription,
   pcaRows,
   varianceCsv,
@@ -55,12 +56,13 @@ function optionsJson(options: Partial<PcaOptions>): JsonObject {
 }
 
 /** A metadata file as a test gives it: its table, the type of each
-    column but the first, and the decimal mark of its read. */
+    column but the first, and the decimal mark of its read, `null` for an
+    xlsx, whose read finds none. */
 interface Meta {
   readonly name?: string;
   readonly table: IndividualsTable;
   readonly types: readonly ColumnType[];
-  readonly decimal?: "." | ",";
+  readonly decimal?: "." | "," | null;
 }
 
 /** What a test sets of a project. */
@@ -111,12 +113,15 @@ function project(setting: Setting): Project {
               kind: "read",
               table: meta.table,
               columns: [{ kind: "identifier" }, ...meta.types],
-              found: {
-                encoding: "utf-8",
-                separator: ",",
-                decimal: meta.decimal ?? ".",
-                undecodedLine: null,
-              },
+              found:
+                meta.decimal === null
+                  ? null
+                  : {
+                      encoding: "utf-8",
+                      separator: ",",
+                      decimal: meta.decimal ?? ".",
+                      undecodedLine: null,
+                    },
             },
           },
     grouping: setting.grouping ?? { kind: "populations", column: "pop" },
@@ -274,6 +279,122 @@ describe("IP8 D3 pcaColours", () => {
     expect(c.counts).toEqual([2, 1]);
     expect(c.noneName).toBe("No value");
     expect(c.note).toBeNull();
+  });
+
+  test("the numbers and booleans of an xlsx in a categorical or binary column are groups by their text, a score from 1 to 5 set as categorical five groups", () => {
+    const p = project({
+      individuals: FOUR,
+      meta: {
+        name: "pops.xlsx",
+        table: {
+          columns: ["IID", "pop", "score", "sick"],
+          rows: [
+            ["i1", "A", 1, true],
+            ["i2", "B", 5, false],
+            ["i3", "A", 3, true],
+            ["i4", null, 2.5, null],
+          ],
+        },
+        types: [
+          { kind: "categorical" },
+          { kind: "categorical" },
+          { kind: "binary", one: "true", zero: "false" },
+        ],
+        decimal: null,
+      },
+      options: { colourBy: "score" },
+    });
+    const score = groupsOf(pcaColours(result(FOUR), p));
+    expect(score.title).toBe("score");
+    expect(score.names).toEqual(["1", "5", "3", "2.5"]);
+    expect([...score.group]).toEqual([0, 1, 2, 3]);
+    const sick = groupsOf(
+      pcaColours(result(FOUR), {
+        ...p,
+        analyses: [
+          { analysis: "pca", options: optionsJson({ colourBy: "sick" }) },
+        ],
+      }),
+    );
+    expect(sick.names).toEqual(["true", "false"]);
+    expect([...sick.group]).toEqual([0, 1, 0, NO_COLOUR_GROUP]);
+    expect(sick.counts).toEqual([2, 1]);
+    const scores = project({
+      individuals: FOUR,
+      meta: {
+        table: {
+          columns: ["IID", "pop", "score"],
+          rows: [
+            ["i1", "A", "1"],
+            ["i2", "B", "2"],
+            ["i3", "A", "3"],
+            ["i4", null, "4"],
+            ["i5", null, "5"],
+          ],
+        },
+        types: [{ kind: "categorical" }, { kind: "categorical" }],
+      },
+      options: { colourBy: "score" },
+    });
+    expect(groupsOf(pcaColours(result(FOUR), scores)).names).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+    ]);
+  });
+
+  test("a continuous column of an xlsx is read with the point: its numbers, and a text with a point", () => {
+    const p = project({
+      individuals: FOUR,
+      meta: {
+        name: "pops.xlsx",
+        table: {
+          columns: ["IID", "pop", "altitude"],
+          rows: [
+            ["i1", "A", 1.5],
+            ["i2", "B", "2.25"],
+            ["i3", "A", "3,5"],
+            ["i4", null, null],
+          ],
+        },
+        types: [{ kind: "categorical" }, { kind: "continuous" }],
+        decimal: null,
+      },
+      options: { colourBy: "altitude" },
+    });
+    const c = pcaColours(result(FOUR), p);
+    if (c.kind !== "values") {
+      throw new Error(`the colours are ${c.kind}, not values`);
+    }
+    expect([...c.values]).toEqual([1.5, 2.25, NaN, NaN]);
+    expect(c.numNone).toBe(2);
+  });
+
+  test("more populations than 1,000, with colourBy null: one group, and the note of a column of more values than the plot can tell apart", () => {
+    const names = Array.from(
+      { length: MAX_COLOUR_GROUPS + 1 },
+      (_, i) => `i${String(i)}`,
+    );
+    const p = project({
+      individuals: names,
+      meta: {
+        table: {
+          columns: ["IID", "pop"],
+          rows: names.map((name): Cell[] => [name, `p${name}`]),
+        },
+        types: [{ kind: "categorical" }],
+      },
+    });
+    const c = groupsOf(pcaColours(result(names), p));
+    expect(c.title).toBe("Population");
+    expect(c.names).toEqual(["All individuals"]);
+    expect(c.counts).toEqual([1001]);
+    expect(c.note).toBe(
+      "pop has 1,001 different values, more than the 1,000 the plot can tell apart, so the points are of one colour; the table gives each individual's value.",
+    );
+    expect(pcaOptions(p).colourBy).toBeNull();
   });
 
   test("colourBy a column the table does not have: the populations, and the note", () => {

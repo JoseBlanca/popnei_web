@@ -8,19 +8,25 @@ import {
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
+import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "../apps.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import {
   emptyProject,
   individualsNeeds,
+  loadIndividuals,
+  loadVariants,
   populationsKept,
   populationsNeeds,
   populationsOf,
   populationsToRun,
+  removeIndividuals,
+  setGrouping,
 } from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
-import type { WorkerClient } from "../store.ts";
+import { createStore } from "../store.ts";
+import type { AnalysisStatus, WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
   Cell,
@@ -29,6 +35,7 @@ import type {
   IndividualsTable,
   Job,
   JobResult,
+  Outcome,
   Run,
 } from "../../worker/protocol.ts";
 
@@ -1949,5 +1956,134 @@ describe("IP4 D1 the one population", () => {
     expect(populationsToRun(one)).toEqual([
       ["All individuals", ["i1", "i2", "i3"]],
     ]);
+  });
+});
+
+describe("IP10 D3 the cases of the one population", () => {
+  test("an opened project whose metadata file was not read when it was saved is locked with the reason of individualsNeeds, with the column chosen, with none, and with the one population", () => {
+    const base = project();
+    if (base.individuals === null) {
+      throw new Error("the project of the test has an individuals file");
+    }
+    const notGiven = deepFreeze<Project>({
+      ...base,
+      individuals: { ...base.individuals, read: { kind: "notGiven" } },
+    });
+    const reason =
+      "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.";
+    expect(individualsNeeds(notGiven)).toBe(reason);
+    for (const grouping of [
+      { kind: "populations", column: "pop" },
+      { kind: "populations", column: null },
+      { kind: "onePopulation" },
+    ] as const) {
+      const p = deepFreeze<Project>({ ...notGiven, grouping });
+      expect(diversity.needs(p)).toBe(reason);
+    }
+  });
+
+  test("with no metadata file the diversity of All individuals is done, and stays when a column is chosen; a metadata file read with that column takes it off, and the file removed brings it back from the cache with no calculation", () => {
+    const sent: { key: string; job: Job; run: Run<JobResult> }[] = [];
+    const store = createStore<Job, JobResult>({
+      first: emptyProject("popgen"),
+      analyses: POPGEN_ANALYSES,
+      send: (key, job) => {
+        const run: Run<JobResult> = {
+          id: sent.length + 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+        sent.push({ key, job, run });
+        return run;
+      },
+      countsOf,
+      counts: "filterCounts",
+      statistics: { analysis: "individualChecks", of: individualStatsOf },
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    const status = (): AnalysisStatus<JobResult> | undefined =>
+      store.getState().analyses.find((view) => view.id === "diversity")?.status;
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", (p) =>
+      loadVariants(p, {
+        fileId: VARIANTS_ID,
+        name: "panel.nei",
+        size: 261_490,
+        format: "nei",
+        readOptions: null,
+      }),
+    );
+    store.variantsRead(VARIANTS_ID, {
+      kind: "read",
+      individuals: ["i1", "i2", "i3", "i4"],
+      ploidy: 2,
+      numVars: null,
+    });
+    store.startRun("diversity");
+    const request = sent.at(-1);
+    if (request?.job.analysis !== "diversity") {
+      throw new Error("no request of the diversity was sent");
+    }
+    expect(request.job.pops).toEqual([
+      ["All individuals", ["i1", "i2", "i3", "i4"]],
+    ]);
+    const done = result({
+      pops: ["All individuals"],
+      numIndividuals: [4],
+      numVars: 1000,
+    });
+    store.runEnded(request.run.id, {
+      kind: "done",
+      key: request.key,
+      result: done,
+    });
+    expect(status()?.kind).toBe("done");
+    const numSent = sent.length;
+
+    // A column chosen with no file leaves the one population, whatever
+    // the grouping holds.
+    store.apply("the column pop chosen", (p) =>
+      setGrouping(p, { kind: "populations", column: "pop" }),
+    );
+    expect(status()).toMatchObject({ kind: "done", key: request.key });
+
+    store.apply("a metadata file was loaded", (p) =>
+      loadIndividuals(p, {
+        fileId: INDIVIDUALS_ID,
+        name: "pops.csv",
+        csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      }),
+    );
+    expect(status()).toStrictEqual({
+      kind: "locked",
+      reason: "Reading pops.csv.",
+    });
+    const read = project().individuals?.read;
+    if (read?.kind !== "read") {
+      throw new Error("the project of the test has an individuals file read");
+    }
+    store.individualsRead(
+      INDIVIDUALS_ID,
+      { encoding: "auto", separator: "auto", decimal: "auto" },
+      {
+        kind: "read",
+        table: read.table,
+        columns: read.columns,
+        found: read.found,
+      },
+    );
+    const ofColumn = status();
+    expect(ofColumn?.kind).toBe("removed");
+    expect(ofColumn?.kind !== "locked" && ofColumn?.key).not.toBe(request.key);
+
+    store.apply("the metadata file was removed", removeIndividuals);
+
+    const back = status();
+    expect(back).toMatchObject({ kind: "done", key: request.key });
+    expect(back?.kind === "done" && back.result).toBe(done);
+    expect(sent).toHaveLength(numSent);
   });
 });

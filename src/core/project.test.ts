@@ -5736,6 +5736,41 @@ describe("IP4 D2 the types of the columns: the types", () => {
     expect(typeLostReason(tableReadOf(p), "status")).toBe("firstColumn");
   });
 
+  test("a type set on status, first in one read, is applied again by a read of a file that puts it back among the others", () => {
+    const users = { kind: "binary", one: "no", zero: "yes" } as const;
+    const first = recordedWith(
+      [["status", users]],
+      readOf(
+        ["status", "id"],
+        [
+          ["yes", "i1"],
+          ["no", "i2"],
+        ],
+      ),
+    );
+    expect(typesOf(first)["status"]).toEqual({ kind: "identifier" });
+    const again = loadIndividuals(first, {
+      fileId: NEW_ID,
+      name: "pops.csv",
+      csv: TYPES_CSV,
+    });
+    const back = recordIndividualsRead(
+      again,
+      NEW_ID,
+      TYPES_CSV,
+      readOf(
+        ["id", "status"],
+        [
+          ["i1", "yes"],
+          ["i2", "no"],
+        ],
+      ),
+    );
+    expect(typesOf(back)["status"]).toEqual(users);
+    expect(back.individuals?.typesSet).toStrictEqual([["status", users]]);
+    expect(typesLost(individualsOf(back))).toStrictEqual([]);
+  });
+
   test("a file read as one column applies no type set, and the same file read with the right separator applies them all", () => {
     const typesSet: readonly ColumnTypeOf[] = [
       ["pop", CATEGORICAL],

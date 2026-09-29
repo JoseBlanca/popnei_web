@@ -19,16 +19,19 @@ import {
   refusalText,
 } from "./individualChecks.ts";
 import type { DescribedBin } from "./words.ts";
+import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "../apps.ts";
 import { INDIVIDUAL_BINS, binValues } from "../histogram.ts";
-import { emptyProject } from "../project.ts";
+import { emptyProject, loadVariants, setIndividualFilter } from "../project.ts";
 import type { Project } from "../project.ts";
-import type { WorkerClient } from "../store.ts";
+import { createStore } from "../store.ts";
+import type { AnalysisStatus, Store, WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
   IndividualChecksJob,
   IndividualChecksResult,
   Job,
   JobResult,
+  Outcome,
   Run,
   VariantFilter,
 } from "../../worker/protocol.ts";
@@ -570,6 +573,174 @@ describe("VS3 D1 the statistics of each individual: the descriptions", () => {
       individualHistogramDescription("observedHeterozygosity", rows, 0.5),
     ).toBe(
       "The observed heterozygosity of 1 individual, in 1 bin from 0.3 to 0.35. The threshold 0.5 keeps the bin up to it, 1 individual.",
+    );
+  });
+});
+
+/** A request the store of the application sent, with the number of times
+    it was cancelled. */
+interface Sent {
+  readonly key: string;
+  readonly job: Job;
+  readonly run: Run<JobResult>;
+  readonly cancels: () => number;
+}
+
+/** The store of the population genetics page, as the page makes it, with
+    a fake send that records each request and answers none; `panel.nei`
+    of the three individuals of the worked example is loaded as
+    `VARIANTS_ID` and read, with the threshold of 0.6 on the proportion
+    of missing genotypes, which keeps i1 and i2. */
+function exampleStore(): {
+  readonly store: Store<JobResult>;
+  readonly sent: Sent[];
+} {
+  const sent: Sent[] = [];
+  const store = createStore<Job, JobResult>({
+    first: emptyProject("popgen"),
+    analyses: POPGEN_ANALYSES,
+    send: (key, job) => {
+      let cancels = 0;
+      const run: Run<JobResult> = {
+        id: sent.length + 1,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => {
+          cancels += 1;
+        },
+      };
+      sent.push({ key, job, run, cancels: () => cancels });
+      return run;
+    },
+    countsOf,
+    counts: "filterCounts",
+    statistics: { analysis: "individualChecks", of: individualStatsOf },
+    write: null,
+    appVersion: "0.1.0",
+    cacheMaxBytes: 1024 * 1024,
+    maxUndoSteps: 200,
+  });
+  store.popneiReady("0.1.0");
+  loadExample(store, VARIANTS_ID);
+  store.apply("the missing data filter of the individuals changed", (p) =>
+    setIndividualFilter(p, {
+      kind: "missing_data",
+      maxAllowedMissingRate: 0.6,
+    }),
+  );
+  return { store, sent };
+}
+
+/** Loads panel.nei of the worked example as the load `fileId`, and reads
+    it with i1, i2 and i3. */
+function loadExample(store: Store<JobResult>, fileId: string): void {
+  store.apply("a variants file was loaded", (p) =>
+    loadVariants(p, {
+      fileId,
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    }),
+  );
+  store.variantsRead(fileId, {
+    kind: "read",
+    individuals: ["i1", "i2", "i3"],
+    ploidy: 2,
+    numVars: null,
+  });
+}
+
+/** The state the store gives the statistics of each individual. */
+function statisticsIn(store: Store<JobResult>): AnalysisStatus<JobResult> {
+  const status = store
+    .getState()
+    .analyses.find((view) => view.id === "individualChecks")?.status;
+  if (status === undefined) {
+    throw new Error("the store has no statistics of each individual");
+  }
+  return status;
+}
+
+/** The one request the store sent, of the statistics. */
+function statisticsSent(sent: readonly Sent[]): Sent {
+  const request = sent[0];
+  if (sent.length !== 1 || request?.job.analysis !== "individualChecks") {
+    throw new Error("the store sent other than the statistics alone");
+  }
+  return request;
+}
+
+describe("IP10 D3 the cases of the statistics of each individual in the store of the application", () => {
+  test("an undo to an earlier load finds the statistics in the cache, done with the same result, and the list of the individuals kept with them, with no calculation", () => {
+    const { store, sent } = exampleStore();
+    store.startRun("individualChecks");
+    const request = statisticsSent(sent);
+    store.runEnded(request.run.id, {
+      kind: "done",
+      key: request.key,
+      result: EXAMPLE,
+    });
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["i1", "i2"],
+    });
+
+    loadExample(store, "ffeeddccbbaa99887766554433221100");
+    expect(statisticsIn(store).kind).toBe("removed");
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.undo();
+
+    const status = statisticsIn(store);
+    expect(status).toMatchObject({ kind: "done", key: request.key });
+    expect(status.kind === "done" && status.result).toBe(EXAMPLE);
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["i1", "i2"],
+    });
+    expect(sent).toHaveLength(1);
+  });
+
+  test("statistics that arrive after a new load go into the cache under the key they were asked for, and an undo shows them, with the list of the individuals kept, with no calculation", () => {
+    const { store, sent } = exampleStore();
+    store.startRun("individualChecks");
+    const request = statisticsSent(sent);
+    loadExample(store, "ffeeddccbbaa99887766554433221100");
+    expect(request.cancels()).toBe(1);
+
+    store.runEnded(request.run.id, {
+      kind: "done",
+      key: request.key,
+      result: EXAMPLE,
+    });
+    expect(statisticsIn(store).kind).not.toBe("done");
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.undo();
+
+    const status = statisticsIn(store);
+    expect(status).toMatchObject({ kind: "done", key: request.key });
+    expect(status.kind === "done" && status.result).toBe(EXAMPLE);
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["i1", "i2"],
+    });
+    expect(sent).toHaveLength(1);
+  });
+});
+
+describe("IP10 D3 the statistics of each individual: refusalText of a gzipped VCF", () => {
+  test("a gzipped VCF cut short tells to correct the file or fetch it again", () => {
+    const message =
+      "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`";
+    expect(
+      refusalText(message, project({ name: "panel.vcf.gz", onlyPassed: true })),
+    ).toBe(
+      `popnei could not read panel.vcf.gz: ${message}. Correct the file, or fetch it again, and load it in the Variants step.`,
     );
   });
 });

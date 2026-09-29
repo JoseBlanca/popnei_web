@@ -13,7 +13,12 @@ import {
 } from "./keys.ts";
 import type { JsonObject, JsonValue, KeyMemo, KeyedDef } from "./keys.ts";
 import type { VariantFilter } from "../worker/protocol.ts";
-import { VARIANT_FILTER_ORDER, turnOffVariantFilter } from "./project.ts";
+import { POPGEN_ANALYSES } from "./apps.ts";
+import {
+  VARIANT_FILTER_ORDER,
+  emptyProject,
+  turnOffVariantFilter,
+} from "./project.ts";
 import type { Project, VariantSource } from "./project.ts";
 import {
   anyLoadId,
@@ -1163,4 +1168,44 @@ describe("IP3 D1 a filter turned off is in no key", () => {
       ),
     );
   });
+});
+
+/** `p` with a `variants` that throws when it is read, so that a test sees
+    that a `keyInputs` given it never reads it. */
+function withVariantsUnreadable(p: Project): Project {
+  const copy: Project = { ...p };
+  Object.defineProperty(copy, "variants", {
+    get(): never {
+      throw new Error("keyInputs read p.variants");
+    },
+  });
+  return copy;
+}
+
+describe("IP10 D3 every analysis gives the inputs of its key", () => {
+  test.each(POPGEN_ANALYSES.map((def) => [def.id, def] as const))(
+    "keyInputs of %s gives a value for the empty project and for a project whose reads are pending, without reading p.variants",
+    (_id, def) => {
+      const sample = sampleProject();
+      const { variants, individuals } = sample;
+      if (variants === null || individuals === null) {
+        throw new Error("popnei_web defect: the sample has both files.");
+      }
+      const pending = deepFreeze<Project>({
+        ...sample,
+        variants: { ...variants, read: { kind: "pending" } },
+        individuals: { ...individuals, read: { kind: "pending" } },
+        // The options of the sample are those of the test definitions,
+        // which the analyses of the application refuse.
+        analyses: [],
+      });
+      for (const p of [emptyProject("popgen"), pending]) {
+        // A value the canonical form writes, which throws on anything
+        // that is not JSON.
+        expect(() =>
+          canonical(def.keyInputs(withVariantsUnreadable(p)), null),
+        ).not.toThrow();
+      }
+    },
+  );
 });

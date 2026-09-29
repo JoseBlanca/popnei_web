@@ -24,6 +24,10 @@ import type { JsonObject, Key, KeyedDef } from "../keys.ts";
 import {
   emptyProject,
   individualsNeeds,
+  loadIndividuals,
+  setAnalysisOptions,
+  setVariantFilter,
+  turnOffVariantFilter,
   variantFilterNeeds,
 } from "../project.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";
@@ -1795,5 +1799,318 @@ describe("IP6 D5 the key, the cases of 'How it is verified'", () => {
       options: { missingData: { follow: false, maxAllowedMissingRate: 0.1 } },
     });
     expect(keyOfPca(own)).toBe(keyOfPca(project()));
+  });
+});
+
+/** A request the store of `pcaStore` sent: its key, its job, its handle,
+    and how many times it was cancelled. */
+interface Sent {
+  readonly key: string;
+  readonly job: Job;
+  readonly run: Run<JobResult>;
+  readonly cancels: () => number;
+}
+
+/** A store of the population genetics application with the PCA among its
+    analyses, the project `first` opened, and every request it sends. */
+function pcaStore(first: Project): {
+  readonly store: ReturnType<typeof createStore<Job, JobResult>>;
+  readonly sent: Sent[];
+  readonly status: () => AnalysisView<JobResult>["status"];
+} {
+  const sent: Sent[] = [];
+  const store = createStore<Job, JobResult>({
+    first: emptyProject("popgen"),
+    analyses: [individualChecks, filterCounts, pca, diversity],
+    send: (key, job): Run<JobResult> => {
+      let cancelled = 0;
+      const run: Run<JobResult> = {
+        id: sent.length + 1,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => {
+          cancelled += 1;
+        },
+      };
+      sent.push({ key, job, run, cancels: () => cancelled });
+      return run;
+    },
+    countsOf,
+    counts: "filterCounts",
+    statistics: { analysis: "individualChecks", of: individualStatsOf },
+    write: null,
+    appVersion: "0.1.0",
+    cacheMaxBytes: 256_000_000,
+    maxUndoSteps: 100,
+  });
+  store.popneiReady("0.1.0");
+  store.open(first);
+  const status = (): AnalysisView<JobResult>["status"] => {
+    const view = store.getState().analyses.find((one) => one.id === "pca");
+    if (view === undefined) {
+      throw new Error("the store has no PCA");
+    }
+    return view.status;
+  };
+  return { store, sent, status };
+}
+
+/** The last request the store sent, or a failure of the test. */
+function lastSent(sent: readonly Sent[]): Sent {
+  const last = sent.at(-1);
+  if (last === undefined) {
+    throw new Error("the store sent no request");
+  }
+  return last;
+}
+
+/** Runs the PCA of the store and ends its request with `r`. */
+function runPca(
+  made: ReturnType<typeof pcaStore>,
+  r: PcaResult = result({}),
+): PcaResult {
+  made.store.startRun("pca");
+  const request = lastSent(made.sent);
+  if (request.job.analysis !== "pca") {
+    throw new Error(`the Run sent a job of ${request.job.analysis}`);
+  }
+  made.store.runEnded(request.run.id, {
+    kind: "done",
+    key: request.key,
+    result: r,
+  });
+  return r;
+}
+
+/** The id of the new load of the metadata file. */
+const NEW_INDIVIDUALS_ID = "0f0e0d0c0b0a09080706050403020100";
+
+/** The CSV options of the new load. */
+const NEW_CSV = {
+  encoding: "auto",
+  separator: "auto",
+  decimal: "auto",
+} as const;
+
+/** Loads a new metadata file, `pops2.csv`, over the project of the store. */
+function loadNewMetadata(made: ReturnType<typeof pcaStore>): void {
+  made.store.apply("a new metadata file was loaded", (p) =>
+    loadIndividuals(p, {
+      fileId: NEW_INDIVIDUALS_ID,
+      name: "pops2.csv",
+      csv: NEW_CSV,
+    }),
+  );
+}
+
+/** Records the read of `pops2.csv`, a table of `individuals` whose
+    column `pop` is all p9 and whose column `country` is all ES. */
+function readNewMetadata(
+  made: ReturnType<typeof pcaStore>,
+  individuals: readonly string[],
+): void {
+  made.store.individualsRead(NEW_INDIVIDUALS_ID, NEW_CSV, {
+    kind: "read",
+    table: {
+      columns: ["IID", "pop", "country"],
+      rows: individuals.map((name) => [name, "p9", "ES"]),
+    },
+    columns: [
+      { kind: "identifier" },
+      { kind: "categorical" },
+      { kind: "categorical" },
+    ],
+    found: {
+      encoding: "utf-8",
+      separator: ",",
+      decimal: ".",
+      undecodedLine: null,
+    },
+  });
+}
+
+/** The reason of `pops2.csv` without s000 and s001. */
+const LACKING_TWO =
+  "2 individuals of panel.nei are not in pops2.csv: s000 and s001. Add them to the file and load it again in the Individuals step.";
+
+describe("IP10 D3 the cases of the PCA in the store", () => {
+  test("a new metadata file over a PCA that is done: locked while it is read and in the notice; its read gives the plot back with no calculation and the notice goes", () => {
+    const made = pcaStore(project());
+    const r = runPca(made);
+    const numSent = made.sent.length;
+    loadNewMetadata(made);
+    expect(made.status()).toEqual({
+      kind: "locked",
+      reason: "Reading pops2.csv.",
+    });
+    expect(made.store.getState().notice?.removed).toEqual(["pca"]);
+    readNewMetadata(made, individualsOf(200));
+    const back = made.status();
+    expect(back.kind === "done" && back.result).toBe(r);
+    expect(made.sent).toHaveLength(numSent);
+    expect(made.store.getState().notice).toBeNull();
+  });
+
+  test("a new metadata file that lacks individuals, over a PCA that is done: locked with that reason and in the notice, and an undo of the load brings the plot back", () => {
+    const made = pcaStore(project());
+    const r = runPca(made);
+    loadNewMetadata(made);
+    readNewMetadata(made, individualsOf(200).slice(2));
+    expect(made.status()).toEqual({ kind: "locked", reason: LACKING_TWO });
+    expect(made.store.getState().notice?.removed).toEqual(["pca"]);
+    made.store.undo();
+    const back = made.status();
+    expect(back.kind === "done" && back.result).toBe(r);
+  });
+
+  test("a new metadata file loaded while the PCA runs: left behind by the notice; a read that gives the key again lets it go on, and one that lacks individuals leaves it behind, to be stopped unless the load is undone", () => {
+    const given = pcaStore(project());
+    given.store.startRun("pca");
+    const request = lastSent(given.sent);
+    loadNewMetadata(given);
+    expect(given.status().kind).toBe("locked");
+    expect(given.store.getState().notice?.leftBehind).toEqual(["pca"]);
+    readNewMetadata(given, individualsOf(200));
+    expect(given.status()).toMatchObject({
+      kind: "running",
+      runId: request.run.id,
+    });
+    expect(given.store.getState().notice).toBeNull();
+    expect(request.cancels()).toBe(0);
+
+    const lacking = pcaStore(project());
+    lacking.store.startRun("pca");
+    const behind = lastSent(lacking.sent);
+    loadNewMetadata(lacking);
+    readNewMetadata(lacking, individualsOf(200).slice(2));
+    expect(lacking.status()).toEqual({ kind: "locked", reason: LACKING_TWO });
+    expect(lacking.store.getState().notice?.leftBehind).toEqual(["pca"]);
+    expect(behind.cancels()).toBe(0);
+    lacking.store.undo();
+    expect(lacking.status()).toMatchObject({
+      kind: "running",
+      runId: behind.run.id,
+    });
+    expect(behind.cancels()).toBe(0);
+
+    const closed = pcaStore(project());
+    closed.store.startRun("pca");
+    const stopped = lastSent(closed.sent);
+    loadNewMetadata(closed);
+    readNewMetadata(closed, individualsOf(200).slice(2));
+    closed.store.dismissNotice();
+    expect(stopped.cancels()).toBe(1);
+  });
+
+  test("a change of colourBy, the axes or the view while the PCA runs keeps its key: it goes on, with no notice, and its result is drawn when it arrives", () => {
+    const made = pcaStore(project());
+    made.store.startRun("pca");
+    const request = lastSent(made.sent);
+    made.store.apply("the colour changed", (p) =>
+      setAnalysisOptions(
+        p,
+        pca,
+        optionsJson({ colourBy: "pop", axes: [2, 1, 3], view: "2d" }),
+      ),
+    );
+    expect(made.status()).toMatchObject({
+      kind: "running",
+      runId: request.run.id,
+    });
+    expect(made.store.getState().notice).toBeNull();
+    const r = result({});
+    made.store.runEnded(request.run.id, {
+      kind: "done",
+      key: request.key,
+      result: r,
+    });
+    const done = made.status();
+    expect(done.kind === "done" && done.result).toBe(r);
+    expect(request.cancels()).toBe(0);
+  });
+
+  test("the method changed: the PCA leaves the screen with the notice, the PCoA needs a Run, and an undo, or the method set back, shows the PCA with no calculation", () => {
+    const made = pcaStore(project());
+    const r = runPca(made);
+    const toPcoa = (p: Project): Project =>
+      setAnalysisOptions(p, pca, optionsJson({ method: "pcoa" }));
+    made.store.apply("the method changed", toPcoa);
+    expect(made.status().kind).toBe("removed");
+    expect(made.store.getState().notice?.removed).toEqual(["pca"]);
+    const pcoa = runPca(made, result({ method: "pcoa" }));
+    expect(lastSent(made.sent).job).toMatchObject({ method: "pcoa" });
+    const numSent = made.sent.length;
+    made.store.undo();
+    const back = made.status();
+    expect(back.kind === "done" && back.result).toBe(r);
+    made.store.redo();
+    const again = made.status();
+    expect(again.kind === "done" && again.result).toBe(pcoa);
+    made.store.apply("the method changed", (p) =>
+      setAnalysisOptions(p, pca, optionsJson({ method: "pca" })),
+    );
+    const setBack = made.status();
+    expect(setBack.kind === "done" && setBack.result).toBe(r);
+    expect(made.sent).toHaveLength(numSent);
+  });
+
+  test("the LD filter of the Variants step turned off while the PCA follows it: removed with the notice; a Run sends no LD filter and gives pruningOff; an undo brings the plot back", () => {
+    const made = pcaStore(project({ filters: [MISSING_01, ld(0.3, 10_000)] }));
+    const r = runPca(made);
+    made.store.apply("the LD filter was turned off", (p) =>
+      turnOffVariantFilter(p, "ld"),
+    );
+    expect(made.status().kind).toBe("removed");
+    expect(made.store.getState().notice?.removed).toEqual(["pca"]);
+    runPca(made, result({ numVarsUsed: 1200 }));
+    expect(lastSent(made.sent).job).toMatchObject({ filters: [MISSING_01] });
+    const without = made.status();
+    expect(
+      without.kind === "done" && without.warnings.map((w) => w.code),
+    ).toEqual(["pruningOff"]);
+    made.store.undo();
+    const back = made.status();
+    expect(back.kind === "done" && back.result).toBe(r);
+  });
+
+  test("a filter of the Variants step of a kind the PCA has of its own changed: the plot stays and the notice does not name it", () => {
+    const made = pcaStore(project({ options: ALL_OWN }));
+    const r = runPca(made);
+    made.store.apply("the MAF filter changed", (p) =>
+      setVariantFilter(p, maf(0.9)),
+    );
+    const still = made.status();
+    expect(still.kind === "done" && still.result).toBe(r);
+    expect(made.store.getState().notice?.removed ?? []).not.toContain("pca");
+  });
+
+  test("the PCA's own missing data filter set at the 0.1 of the step: the same key, so the plot stays, and the command is a step of Undo", () => {
+    const made = pcaStore(project());
+    const r = runPca(made);
+    made.store.apply("the missing data filter of the PCA changed", (p) =>
+      setAnalysisOptions(
+        p,
+        pca,
+        optionsJson({
+          missingData: { follow: false, maxAllowedMissingRate: 0.1 },
+        }),
+      ),
+    );
+    const still = made.status();
+    expect(still.kind === "done" && still.result).toBe(r);
+    expect(made.store.getState().notice).toBeNull();
+    expect(made.store.getState().undo).toBe(
+      "the missing data filter of the PCA changed",
+    );
+  });
+
+  test("filters of individuals that keep none: the PCA cannot start, and a Run sends nothing", () => {
+    const made = pcaStore(
+      project({
+        individualFilters: [{ kind: "keep", individuals: [] }],
+      }),
+    );
+    expect(made.status().kind).toBe("locked");
+    expect(made.store.startRun("pca")).toBeNull();
+    expect(made.sent).toEqual([]);
   });
 });

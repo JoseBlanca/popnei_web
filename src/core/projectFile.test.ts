@@ -3228,3 +3228,80 @@ describe("IP4 D4 the project file of stage 4", () => {
     ).toBe(true);
   });
 });
+
+describe("IP10 D3 the cases of the project file", () => {
+  test("a project saved while its VCF was read, opened, is compared with the file given by its name, its size, its format and the choice of the passed variants alone", () => {
+    const opening = readProjectFile(
+      fixture("v1-vcf-pending.popnei.json"),
+      "popgen",
+      POPGEN_DEFS,
+    );
+    if (!opening.ok || opening.value.reference === null) {
+      throw new Error("the fixture opens, with its reference");
+    }
+    const saved = opening.value.reference.variants;
+    expect(saved.read).toEqual({ kind: "pending" });
+    const given: VariantSource = {
+      ...saved,
+      fileId: SAMPLE_VARIANTS_ID,
+      read: {
+        kind: "read",
+        individuals: ["i1", "i2", "i3"],
+        ploidy: 4,
+        numVars: 99,
+      },
+    };
+    const withGiven = (variants: VariantSource): Project =>
+      deepFreeze<Project>({ ...opening.value, variants });
+
+    // Its individuals, its ploidy read and its number of variants are not
+    // known of the file saved, so they are not compared.
+    expect(compareIdentity(saved, given)).toEqual([]);
+    expect(identityWarning(withGiven(given))).toBeNull();
+
+    const other: VariantSource = {
+      ...given,
+      name: "tetraploid_2027.vcf.gz",
+      size: 734100,
+      readOptions: { ploidy: 4, onlyPassed: false },
+    };
+    expect(compareIdentity(saved, other)).toEqual([
+      { kind: "name", now: "tetraploid_2027.vcf.gz" },
+      { kind: "size", saved: 734003, now: 734100 },
+      { kind: "onlyPassed", now: false },
+    ]);
+    expect(
+      compareIdentity(saved, {
+        ...given,
+        format: "nei",
+        readOptions: null,
+      }),
+    ).toEqual([{ kind: "format", now: "nei" }]);
+  });
+
+  test("a project saved while its metadata file was read opens with a check of the diversity of any count, which cannot be counted without the table", () => {
+    const file = fixtureJson("v1-metadata-not-read.popnei.json");
+    const withCheck = JSON.stringify({
+      ...file,
+      checks: [
+        {
+          analysis: "diversity",
+          numbers: [1152, 0.37, 0.35],
+          keyVersion: 2,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+        },
+      ],
+    });
+    const opening = readProjectFile(withCheck, "popgen", POPGEN_ANALYSES);
+    if (!opening.ok) {
+      throw new Error(JSON.stringify(opening.error));
+    }
+    expect(opening.value.reference?.checks.map((c) => c.numbers)).toEqual([
+      [1152, 0.37, 0.35],
+    ]);
+    expect(individualsNeeds(opening.value)).toBe(
+      "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+    );
+  });
+});
