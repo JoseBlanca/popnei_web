@@ -1173,8 +1173,6 @@ None of these is urgent, and none changes what a user can do.
   the background in light and 1.63 in dark; judge whether a faded point
   should be that faint, at stop C.
 
-
-
 ## The owner's decisions of 29 September 2026
 
 The owner took every recommendation: "I recommend it says it is the
