@@ -342,7 +342,7 @@ export type IndividualsFileError =
   | { kind: "oldExcel" }                               // a workbook of Excel 97–2003
   | { kind: "encrypted" }                              // saved with a password
   | { kind: "emptySheet"; sheet: string }              // the first sheet not hidden has no value
-  | { kind: "cellError"; error: string }               // an error calamine does not know, "#SPILL!"
+  | { kind: "cellError"; error: string }               // an error calamine does not know, "#GETTING_DATA"
   | { kind: "sheetTooLarge"; sheet: string; lastRow: number; // counted from 1
       lastColumn: string; max: number }                // "XFD"; cells, MAX_SHEET_CELLS
   | { kind: "xlsxReaderNotLoaded"; message: string };  // the files wasm not downloaded; the browser's, for the console

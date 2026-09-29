@@ -30,7 +30,11 @@ reader of xlsx into a project of its own, xlsx_rs
 (`docs/architecture.md`, section 6): the light worker's part of
 `docs/specs/worker/files.md`, which becomes xlsx_rs's spec, moved here,
 "The package of xlsx_rs, loaded on first need". The revisions for
-stage 4 are approved by the owner on 28 September 2026. The reader turns
+stage 4 are approved by the owner on 28 September 2026. Corrected on 29
+September 2026 after the review of work package 9: `#SPILL!` does not
+refuse a sheet, since Excel saves it as `#VALUE!`, and the example of
+`cellError` is `#GETTING_DATA`; a row of the tests of `readSheet` gave a
+column of one number as continuous. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -355,8 +359,12 @@ step makes it so for a file whose name ends in `.xlsx`
    gives the text where the xlsx gives a missing cell. In the first
    column, whose cells are names, an error is a name, as `NA` and `-`
    are, and in the header, the name of its column. An error calamine
-   does not know, `#SPILL!` among them, still refuses the sheet
-   (`files.md`, "The refusals").
+   does not know, one Excel stores as itself, such as the
+   `#GETTING_DATA` rust_xlsxwriter writes, still refuses the sheet
+   (`files.md`, "The refusals"). The newer errors of Excel, `#SPILL!`
+   among them, do not: Excel saves such a cell as `#VALUE!`, which is
+   missing, as the owner's `spill.xlsx` showed xlsx_rs on 28 September
+   2026 (xlsx_rs's `docs/specs/read.md`, "The refusals", point 5).
 5. **A number or a boolean** stays one in the table, but in the header
    and in the first column, whose cells are names and so text: there it
    is written as JavaScript's `String` writes it, `1`, `1.5`, `true`, so
@@ -550,7 +558,7 @@ words after "pops.xlsx could not be read:":
 | `oldExcel` | a compound file of the old Office, not encrypted | "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)" |
 | `encrypted` | saved with a password | "it is protected by a password; in Excel, save a copy without the password" |
 | `emptySheet` | the first sheet that is not hidden has no value | "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet" |
-| `cellError` | a cell with an error calamine does not know | "a cell holds the error #SPILL!, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value" |
+| `cellError` | a cell with an error calamine does not know | "a cell holds the error #GETTING_DATA, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value" |
 | `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values as far as row 123 and column XFD, more than the 2,000,000 cells a metadata file can have; delete the values outside the table", "a traits file" in association |
 | `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again" |
 | `files` | calamine could not open it as a workbook | "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again" |
@@ -759,7 +767,7 @@ export type IndividualsFileError =
   | { kind: "oldExcel" }                               // Excel 97–2003
   | { kind: "encrypted" }                              // saved with a password
   | { kind: "emptySheet"; sheet: string }
-  | { kind: "cellError"; error: string }               // "#SPILL!"
+  | { kind: "cellError"; error: string }               // "#GETTING_DATA"
   | { kind: "sheetTooLarge"; sheet: string; lastRow: number; lastColumn: string; max: number }
   | { kind: "xlsxReaderNotLoaded"; message: string };  // the browser's, for the console
 ```
@@ -1093,7 +1101,7 @@ gives, or the refusal. Among them:
 | `["id","pop"]`, `[1,"P1"]`, `["1","P2"]` | `duplicateIndividual`, `1` |
 | `["id","pop"]` | `empty` |
 | `["id","#N/A"]`, `["A","#N/A"]` | the column `#N/A`, and its cell `null`, missing |
-| `["id","h"]`, `["A","#DIV/0!"]`, `["B",1.5]` | the cell `null`, missing, and `h` continuous |
+| `["id","h"]`, `["A","#DIV/0!"]`, `["B",1.5]`, `["C",1.6]`, `["D",1.7]` | the cell `null`, missing, and `h` continuous |
 | `["id","h"]`, `["A","#NAME?"]`, `["B","#NULL!"]`, `["C","#NUM!"]`, `["D","#REF!"]`, `["E","#VALUE!"]`, `["F",1.5]` | the five cells `null`, missing |
 | `["id","h"]`, `["#N/A",1.5]`, `["#REF!",2.5]` | the individuals `#N/A` and `#REF!`, names |
 

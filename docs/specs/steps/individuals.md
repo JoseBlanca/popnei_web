@@ -550,8 +550,8 @@ The descriptions of the commands are in the table above. The rest:
   - an empty first sheet, `emptySheet`: "pops.xlsx could not be read: its
     first sheet, Hoja1, is empty, and only the first sheet is read; put
     the table in the first sheet. Load a corrected file."
-  - an error of the newest Excel, `cellError`: "pops.xlsx could not be
-    read: a cell holds the error #SPILL!, which cannot be read; in Excel,
+  - an error calamine does not know, `cellError`: "pops.xlsx could not be
+    read: a cell holds the error #GETTING_DATA, which cannot be read; in Excel,
     find the cells with an error with Find & Select › Go To Special ›
     Formulas › Errors, and correct the formula or replace it with its
     value. Load a corrected file."
