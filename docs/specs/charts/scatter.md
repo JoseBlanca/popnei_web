@@ -859,8 +859,12 @@ is `position: relative`, so that the tooltip is placed inside it
   times a half, a quarter, down to a 256th, the first at which the ends
   of both axes are finite, which places every point where it would be,
   since a power of two multiplies exactly, and writes the labels of the
-  ticks at the size of the coordinates. `scatterScales` gives the scales
-  at 1. The points are drawn and coloured as any others.
+  ticks at the size of the coordinates. A tick of an axis that runs past
+  the largest number would read "Infinity" there, which a user would
+  take for a value of the data, so a tick whose label would not be a
+  finite number is left out, by the base's `tickShown` (`plot2d.md`).
+  `scatterScales` gives the scales at 1. The points are drawn and
+  coloured as any others.
 
 ## How it runs
 

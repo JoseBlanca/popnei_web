@@ -349,6 +349,9 @@ export interface AxesOptions {
   readonly yFormat?: (value: number) => string;
   /** Ticks at whole numbers only, with a comma between thousands. */
   readonly yWholeNumbers?: boolean;
+  /** Whether a tick of either axis is drawn, of those its scale gives;
+      all are when absent. */
+  readonly tickShown?: (value: number) => boolean;
 }
 
 export interface Frame {
