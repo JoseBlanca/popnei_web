@@ -925,7 +925,7 @@ browsers is measured.
   6.3): the diversity's words of any other refusal without popnei's
   backquotes, as `diversity.md`, "Its words", asks and no task built
   (`withoutBackquotes` of `words.ts`).
-- [ ] 6.5 The measurements of D6 (above, "Where the specs are thin", for
+- [x] 6.5 The measurements of D6 (above, "Where the specs are thin", for
   how the PCA runs in the browser before its panel); `e2e/bigVcf.ts`
   given the individuals it needs (`pca.md`, "How it runs"; the
   open-points file, "Set by a measurement"); the constants set from
@@ -1108,7 +1108,7 @@ and saves it as a CSV.
   tests of D2 and the 3D screenshots are reported as not run in each
   such engine, the flow of D4 takes its 2D branch there, and the owner
   sees the 3D view in their own browser at stop C.
-- [ ] 8.2 The dependencies, in a commit of their own;
+- [x] 8.2 The dependencies, in a commit of their own;
   `src/charts/pca3d.ts`, `project.ts` and `pca3dError.ts`, from
   `pca3d.md` whole but "The export" of the panel, with the listener of
   the wheel with Ctrl; the 3D plot on `e2e/plots.html` and its flows.

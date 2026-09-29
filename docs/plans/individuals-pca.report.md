@@ -619,6 +619,108 @@ check at 320 px has to bring a wider font of its own. The review's
 reviewers each needed a directory and a port of their own, as work
 package 3 found.
 
+## 6. The PCA and the PCoA, in the worker and core
+
+The calculation worker answers a PCA or a PCoA with popnei's numbers, cut
+to the first 10 components, and is started again after one of more than
+700 individuals; the analysis knows its options, its own filters that
+follow the Variants step, its key, its locks, warnings, check numbers and
+words. Commits 155ec45, 8b524d8, ee6f21d, c575d2e, c79ff88; the
+measurements 8dc278c, e5328f3, fe216ca, 9bf5fa0; the fixes of the review
+904f5f3, efdaeb6, df1267e, 0bfe060, 5f2bdc4.
+
+### The deliverables, on 5f2bdc4
+
+1. `npx vitest run src/worker/messages.test.ts -t "IP6 D1"`: "Tests 19
+   passed" (at least 11).
+2. `npx vitest run src/worker/runner.test.ts -t "IP6 D2"`: "Tests 18
+   passed" (at least 10); the tests reviewer ran popnei on `panel.nei`
+   and every number of the tests matched to the last digit.
+3. `npx vitest run src/worker/client.test.ts -t "IP6 D3"`: "Tests 10
+   passed" (at least 5).
+4. `npx vitest run src/core/analyses/pca.test.ts src/core -t "IP6 D4"`:
+   "Tests 105 passed" (at least 40).
+5. `npx vitest run src/core/analyses/pca.test.ts -t "IP6 D5"`: "Tests 23
+   passed" (at least 12); a scratch `keyInputs` that leaves out the PCA's
+   own LD filter failed 7 of them (the tests reviewer).
+6. `npx playwright test --project=measure-chromium
+   --project=measure-webkit -g "IP6 D6" --workers=1`: "4 passed (37.8m)"
+   on 9bf5fa0, the load 1.4 to 2.9; after the review's new assertions,
+   on the sizes of 700 and 1,000 and the pruning alone, "4 passed
+   (23.0m)", the load 9 to 17.
+
+`npm test` "Tests 2719 passed (2719)"; the browser check "782 passed
+(2.7m)".
+
+### The measurements
+
+29 September 2026, Apple M5 Pro with 64 GB, macOS 27.0, Playwright
+1.63.0, the PCA run from the application; the tables are in `pca.md`,
+"How it runs", and the architecture's section 11.
+
+| individuals | Chromium 153, PCA / PCoA | WebKit 26.6, PCA / PCoA |
+|---|---|---|
+| 700 | 0.12 s / 0.14 s | 0.10 s / 0.12 s |
+| 1,000 | 0.31 s / 0.36 s | 1.21 s / 1.26 s |
+| 2,000 | 2.11 s / 2.50 s | 1.25 s / 1.63 s |
+| 4,000 | 16.0 s / 18.9 s | 10.2 s / 12.9 s |
+| 9,381 | 205 s, 3.03 GB / 240 s, 3.30 GB | 121 s, 3.12 GB / 156 s, 3.40 GB |
+
+No engine closed the tab; a first run of the WebKit PCoA at 9,381 held
+4.10 GB at its peak. A PCA of 700 individuals left 11 to 18 MB in the
+worker, and a restart after every one of more than 700 gave all of it
+back, so `PCA_RESTART_INDIVIDUALS` stays at 700. The pruning of the PCA's
+own LD filter is at least 62 to 68% of a PCA in both engines (1,000
+individuals and 20,000 variants: 3.4 s with it, 1.1 to 1.2 s without), a
+lower bound, since the PCA with the filter also decomposes fewer
+variants. Firefox: not measured.
+
+### The review
+
+`spec` with `stale`, `tests`, and `errors` with `api` and
+`architecture`. Spec and stale found nothing: every change of the PCA's
+inputs gives a new key, and the warnings ran on popnei's real PCoA give
+the spec's numbers. The tests reviewer made 102 changes; 13 passed every
+test. Fixed, each test seen to fail first:
+
+- the Python script's lines of the MAF and observed heterozygosity
+  filters and of `only_passed`;
+- the runner's checks of popnei's answer, tested with popnei mocked,
+  since popnei itself always answers in the job's order;
+- five refusals of the options of a project file;
+- the measurement's time of "the pass" timed the start of the pass, so
+  that column and the "at most 17 ms" of `pca.md` are gone; the
+  measurement now fails when it measures nothing.
+
+Not fixed, for the owner (below): a defect of the application during a
+PCA is shown as the user's problem.
+
+### For the owner
+
+- A defect of the application during a PCA, a result of popnei that does
+  not match what was asked, reaches the page as a crash, and the words of
+  a crash are chosen by the number of individuals alone: from 2,264 up
+  "did not fit in the memory of this tab… Keep fewer individuals", below
+  it "load panel.nei again". Recommended: a defect keeps its kind to the
+  page and gets the words of a defect of the application. It is the same
+  question as decision 9 of stop A, a refusal of popnei naming an option
+  it does not know, and one answer serves both.
+- Point 1 of the open-points file: the pruning is at least two thirds of
+  a PCA with the LD filter. Recommended: ask popnei to keep the pruned
+  variants for the next PCA, at a low priority, since it saves about 2 s
+  a repeated PCA at 1,000 individuals and 20,000 variants.
+- WebKit takes 1.21 s for a PCA of 1,000 individuals, four times
+  Chromium, in every run; the cause is not known.
+
+### How the work of 6 went, for whoever revises a skill or a plan
+
+The PCA was measured through the application's panel, with a
+placeholder of task 8.3 and a project file for its options, rather than
+a page of the measurements. The first measurement passed while one of
+its columns measured nothing: a measurement's test needs assertions that
+it measured, as any test does, and the tests reviewer is the one that
+finds it.
+
 ## 7. The 2D scatter
 
 The scatter of the individuals, its marks, colours, tooltip, legend
