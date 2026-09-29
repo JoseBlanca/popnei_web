@@ -92,7 +92,8 @@ package 5 of `docs/plans/individuals-pca.md`: the first column, the
 names of the individuals, is never the column of the populations, as
 the owner is shown at stop B of that plan; and `columnWarningsOf` and
 `firstValues`, which keep what the Individuals step shows of each
-column.
+column; and the same day with the owner's decisions on stop B of that
+plan (`docs/specs/stage-4-open-points.md`): the words of `notText`.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -457,9 +458,12 @@ as the separator"; "it is 312.4 MB, more than the 20 MB a metadata file
 can have; check that it is the metadata file and not the variants", with
 "a traits file" and "the traits file" in association; "the browser could
 not read it; it may have been changed, moved or deleted since it was
-picked"; "it is not a text file; if it is an Excel workbook, give it a
-name that ends in .xlsx", from stage 4, where stage 2 said "in Excel,
-save the sheet as CSV"; "it
+picked"; "it is not a text file; if it is an Excel workbook, open it in
+Excel and save it as Excel Workbook (.xlsx)", as the owner decided on
+29 September 2026 (stop B 5 of `docs/specs/stage-4-open-points.md`),
+where stage 2 said "in Excel, save the sheet as CSV" and the specs of
+stage 4 "give it a name that ends in .xlsx", after which a workbook of
+Excel 97–2003 was refused again as one; "it
 is a variants file, which the Variants step takes"; "it ends in the
 middle of a character and may have been cut short"; and the message of
 the files wasm for `files`, until stage 4. From stage 4 the reader's spec gives the

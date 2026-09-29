@@ -34,7 +34,9 @@ stage 4 are approved by the owner on 28 September 2026. Corrected on 29
 September 2026 after the review of work package 9: `#SPILL!` does not
 refuse a sheet, since Excel saves it as `#VALUE!`, and the example of
 `cellError` is `#GETTING_DATA`; a row of the tests of `readSheet` gave a
-column of one number as continuous. The reader turns
+column of one number as continuous. Revised on 29 September 2026 with
+the owner's decisions on stop B of `docs/plans/individuals-pca.md`
+(`docs/specs/stage-4-open-points.md`): the words of `notText`. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -537,7 +539,7 @@ Each is a kind of `IndividualsFileError`, and the last eight are new:
 | `unclosedQuote` | "the quote that opens a cell on line 7 is never closed, read with the comma as the separator" |
 | `tooLarge` | "it is 312.4 MB, more than the 20 MB a metadata file can have; check that it is the metadata file and not the variants", with the name of the file of the application, "a traits file" in association |
 | `unreadable` | "the browser could not read it; it may have been changed, moved or deleted since it was picked" |
-| `notText` | "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx", from stage 4, which reads an xlsx by the end of its name; stage 2 said "in Excel, save the sheet as CSV" |
+| `notText` | "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx)", as the owner decided on 29 September 2026 (stop B 5 of `docs/specs/stage-4-open-points.md`), which serves an xlsx under another name and a workbook of Excel 97–2003 alike; stage 2 said "in Excel, save the sheet as CSV", and the specs of stage 4 "give it a name that ends in .xlsx", after which a workbook of Excel 97–2003 is refused again, as one |
 | `variantsFile` | "it is a variants file, which the Variants step takes" |
 | `cutShort` | "it ends in the middle of a character and may have been cut short" |
 
