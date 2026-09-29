@@ -14,7 +14,8 @@
     "src/worker/start.ts",
     "src/worker/messages.ts",
     "e2e/plots.ts",
-    "e2e/webgl.ts"
+    "e2e/webgl.ts",
+    "e2e/allows.ts"
   ],
   "exclude": ["src/ui/**/*.test.ts"]
 }

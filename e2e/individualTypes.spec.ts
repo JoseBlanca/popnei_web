@@ -313,6 +313,29 @@ async function cutWords(element: Locator): Promise<string[]> {
   });
 }
 
+/** The fonts of DejaVu Sans, as wide as Verdana and wider than the Mac's
+    system font, cut to the Latin letters and the punctuation, which the
+    flows give the page themselves, so that a check of the width does not
+    rest on the fonts of the machine that runs it. */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
 test("IP5 D2 panel_pops.csv read shows a select of the type in every row but the first, with the types its values allow, and the check", async ({
   page,
   makeAxeBuilder,
@@ -396,6 +419,12 @@ test("IP5 D2 a type changed and the value coded 1 chosen are each one step of Un
   await expect(
     columnsTable(page).getByText("yes is coded 0.", { exact: true }),
   ).toBeVisible();
+  // The two values keep their place, in the order of the reader's
+  // proposal, when the coding changes.
+  expect(await itemsOf(page, codingSelect(page, "status"))).toEqual([
+    "yes",
+    "no",
+  ]);
   await expect(notice(page)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
@@ -639,6 +668,17 @@ test("IP5 D2 the names missing copied by Copy the 12 names, one a line, and anno
   await expect(copy).toBeFocused();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toBe(LEFT_OUT.join("\n"));
+
+  // While individuals are missing, no list of the populations, whether a
+  // column or the one population is chosen.
+  const populations = page.getByRole("region", { name: "Populations" });
+  const column = select(page, "Column that defines the populations");
+  await choose(page, column, "popcat");
+  await expect(column).toHaveText("popcat");
+  await expect(populations.getByRole("list")).toHaveCount(0);
+  await choose(page, column, "All individuals in one population");
+  await expect(column).toHaveText("All individuals in one population");
+  await expect(populations.getByRole("list")).toHaveCount(0);
 });
 
 test("IP5 D2 in a page without the clipboard the copy says the names could not be copied, and to select them in the list", async ({
@@ -827,45 +867,77 @@ test("IP5 D2 while a read of other options is under way the table, the warning o
   await expect(forgetButton(page)).toHaveText("Forget these types");
 });
 
-test("IP5 D2 at 320 px wide the table of the columns with its selects, the warning of the types that wait and the check fit, no word cut and no sideways scroll", async ({
-  page,
-  makeAxeBuilder,
-}) => {
-  await page.setViewportSize({ width: 320, height: 800 });
-  await openIndividuals(page);
-  await loadPanel(page);
-  await setTypesThenDropScore(page);
-  await expect(forgetButton(page)).toBeVisible();
-  await expect(codingSelect(page, "status")).toBeVisible();
-
-  const sideways = (): Promise<boolean> =>
-    page.evaluate(
-      () =>
-        document.documentElement.scrollWidth >
-        document.documentElement.clientWidth,
+for (const font of ["the font of the system", "a wide font"] as const) {
+  test(`IP5 D2 at 320 px wide, in ${font}, the table of the columns with its selects, the warning of a few whole numbers, the warning of the types that wait and the problem of the check fit, no word cut and no sideways scroll`, async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openIndividuals(page);
+    if (font === "a wide font") await useWideFont(page);
+    await loadPanel(page);
+    await pick(page, { name: "types.csv", text: TYPES_CSV });
+    await choose(page, typeSelect(page, "height"), "categorical");
+    await choose(page, codingSelect(page, "status"), "no");
+    // The same file without height, whose type set then waits, and with a
+    // column of a long name with no space.
+    await pick(page, {
+      name: "types.csv",
+      text:
+        "IID,status,score,region,Numero_de_la_poblacion_de_origen\n" +
+        "s000,yes,1,north,x\n" +
+        "s001,no,2,south,y\n" +
+        "s002,yes,3,east,x\n" +
+        "s003,no,5,north,z\n",
+    });
+    await expect(zone(page).getByText("4 rows, 5 columns")).toBeVisible();
+    // The end of the read, whole, with what it brings up on the step, in
+    // the order of shell.md, "The status region".
+    await expect(status(page)).toHaveText(
+      "types.csv read: 4 rows, 5 columns. 196 individuals of panel.nei are not in types.csv. Warning: score may hold codes and is taken as a measurement. height does not have the type you set.",
     );
-  expect(await sideways()).toBe(false);
-  const table = columnsTable(page);
-  for (const part of [
-    table.getByRole("columnheader"),
-    table.getByRole("rowheader"),
-    table.getByRole("button"),
-    table.getByText(/ is coded 0\.$/),
-    table.getByText(/^Warning: score holds/),
-    page.getByText(/^Warning: panel_pops\.csv|^Warning: types\.csv/),
-  ]) {
-    for (const one of await part.all()) {
-      expect(await cutWords(one)).toEqual([]);
+    await expect(forgetButton(page)).toBeVisible();
+    await expect(codingSelect(page, "status")).toBeVisible();
+    const table = columnsTable(page);
+    await expect(table.getByText(/^Warning: score holds/)).toHaveCount(1);
+    const problem = page
+      .getByRole("region", { name: "Individuals of panel.nei" })
+      .getByText(/^196 individuals of panel\.nei are not in types\.csv/);
+    await expect(problem).toHaveCount(1);
+
+    const sideways = (): Promise<boolean> =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+      );
+    expect(await sideways()).toBe(false);
+    for (const part of [
+      table.getByRole("columnheader"),
+      table.getByRole("rowheader"),
+      table.getByRole("button"),
+      table.getByText(/ is coded 0\.$/),
+      table.getByText(/^Warning: score holds/),
+      page.getByText(/^Warning: types\.csv has no column height/),
+      problem,
+    ]) {
+      for (const one of await part.all()) {
+        expect(
+          (await cutWords(one)).filter(
+            (word) => word !== "Numero_de_la_poblacion_de_origen",
+          ),
+        ).toEqual([]);
+      }
     }
-  }
-  // Each select stays inside its cell.
-  for (const button of await table.getByRole("button").all()) {
-    const box = await button.boundingBox();
-    expect(box).not.toBeNull();
-    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
-  }
-  await expectNoViolations(makeAxeBuilder);
-});
+    // Each select stays inside its cell.
+    for (const button of await table.getByRole("button").all()) {
+      const box = await button.boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
+    }
+    await expectNoViolations(makeAxeBuilder);
+  });
+}
 
 /** The heading of the step, where the focus goes when the control that
     had it leaves the page with an Undo or a Redo. */
@@ -1000,12 +1072,6 @@ test("IP5 D2 a column of the populations that a new file puts first is no column
   await expectNoViolations(makeAxeBuilder);
 });
 
-/** A font wider than the Mac's, which the system of another user may
-    give the page: Verdana, or DejaVu Sans of Linux where it has no
-    Verdana. */
-const WIDE_FONT =
-  ':root { --font-body: Verdana, "DejaVu Sans", sans-serif; font-family: Verdana, "DejaVu Sans", sans-serif; }';
-
 for (const font of ["the font of the system", "a wide font"] as const) {
   test(`IP5 D2 at 320 px wide, in ${font}, a column of a long name and long values with no space keeps the page from scrolling sideways, and a word that fits is not cut`, async ({
     page,
@@ -1013,7 +1079,7 @@ for (const font of ["the font of the system", "a wide font"] as const) {
   }) => {
     await page.setViewportSize({ width: 320, height: 800 });
     await openIndividuals(page);
-    if (font === "a wide font") await page.addStyleTag({ content: WIDE_FONT });
+    if (font === "a wide font") await useWideFont(page);
     await pick(page, {
       name: "salud.csv",
       text:
@@ -1070,10 +1136,15 @@ test("IP5 D2 a click on the words Coded 1, the case focuses the select of the va
 
   await expect(codingSelect(page, "status")).toBeFocused();
   await expect(page.getByRole("listbox")).toHaveCount(0);
-  // The name is as it was.
+  // The name is as it was, and the words shown are not read a second time:
+  // the tree of accessibility holds them only with the column, as the
+  // label of the select, never alone.
   await expect(codingSelect(page, "status")).toHaveAccessibleName(
     "yes Coded 1, the case, in status",
   );
+  const tree = await columnsTable(page).ariaSnapshot();
+  expect(tree).toContain("Coded 1, the case, in status");
+  expect(tree.match(/Coded 1, the case(?!, in status)/g)).toBeNull();
   // A click on the label of another select does the same.
   await page.getByText("Separator", { exact: true }).click();
   await expect(select(page, "Separator")).toBeFocused();

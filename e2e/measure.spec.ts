@@ -57,7 +57,9 @@
  * it runs"), in both engines: the page frozen by a metadata file of
  * 10,000 rows and 50 columns read, and by a project file that holds its
  * read opened, each MEASURE_REPEATS times on a new page, as the longest
- * time between two frames and, in Chromium, the longest task.
+ * time between two frames and, in Chromium, the longest task; and, beside
+ * them, columnAllows alone on the same table, on e2e/allows.html, which
+ * the plan's rule of 100 ms is about.
  *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
@@ -96,6 +98,7 @@ import { bigVcfPopsCsv, STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { drawPoints } from "./measure/points.ts";
 import type { DrawAsked, DrawTimes } from "./measure/points.ts";
 import type { Commit } from "./measure/profilingRoot.ts";
+import "./allowsPage.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -2486,7 +2489,13 @@ test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,
     ).toBeVisible({ timeout: 120_000 });
     await goTo(page, "Individuals");
     await pick(page, "Metadata file", csv);
-    await expect(page.getByText(size)).toBeVisible({ timeout: 60_000 });
+    // In the card: the status region says the same words at the end of
+    // the read.
+    await expect(
+      page
+        .getByRole("region", { name: "Metadata file" })
+        .getByText(size, { exact: true }),
+    ).toBeVisible({ timeout: 60_000 });
     reads.push(await frozenSinceChange(page));
     if (k === 0) {
       await page
@@ -2529,9 +2538,33 @@ test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,
     await expect(
       page.getByRole("heading", { level: 1, name: "Individuals" }),
     ).toBeVisible();
-    await expect(page.getByText(size)).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Metadata file" })
+        .getByText(size, { exact: true }),
+    ).toBeVisible();
     await context.close();
   }
+
+  // columnAllows alone, on the page of the tests that runs it on the same
+  // table, which the plan's rule is about: above 100 ms in an engine, it is
+  // worked out in the light worker.
+  const alone = await (async (): Promise<readonly number[]> => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto("e2e/allows.html");
+    await page.waitForFunction(() => window.allowsPage !== undefined);
+    const times = await page.evaluate(
+      ([csvText, repeats]) => {
+        const allows = window.allowsPage;
+        if (allows === undefined) throw new Error("no allowsPage");
+        return allows.time(csvText, repeats);
+      },
+      [text, REPEATS] as const,
+    );
+    await context.close();
+    return times;
+  })();
 
   const longest = (xs: readonly Frozen[]): [string, string] => {
     const tasks = xs.map((x) => x.longTask);
@@ -2577,6 +2610,10 @@ test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,
       [
         "the Individuals step shown after the opening, the click to the task after the next frame",
         ...stats(shown, ms),
+      ],
+      [
+        "columnAllows alone, on a copy of the table each time, on e2e/allows.html",
+        ...stats(alone, ms),
       ],
     ],
   );
