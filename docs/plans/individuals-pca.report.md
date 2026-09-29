@@ -462,6 +462,115 @@ package 5, which never reported and was run again, and the orchestrator's
 notes, which were rebuilt from the session's transcript. The box of task
 3.3 had been left unticked after its review; it is ticked now.
 
+## 5. The Individuals step
+
+The user picks a metadata file or goes on without one, sets the type of
+each column and the value coded 1 of a binary column, chooses a column
+of the populations or "All individuals in one population", forgets the
+types that wait, and copies the names missing from the file. Commits
+36b7d13, 67cc11a, 5a6e5af and aa407ef; the fixes of the review 0ecb53d,
+d50a9f7, 9a16957, c21319a, 2c74fbf, ec96fb3 and 5789f37.
+
+### The deliverables, on 794b876
+
+1. `npx vitest run src/ui/shell -t "IP5 D1"`: "Tests 15 passed" (at
+   least 14).
+2. The browser check with `-g "IP5 D2"`: "48 passed (31.1s)", 24 in each
+   engine (at least 24).
+3. `-g "IP5 D3"`: "2 passed"; the row "All individuals" with 200, 0.3755,
+   0.3543 and 0.9792.
+4. The freeze, below, measured after the fixes.
+5. The screenshots, light and dark, 40 files `popgen-individuals-*` in
+   `screens/`, the state of a column that gives no population among them;
+   the orchestrator looked at `popgen-individuals-types-320-light`.
+6. Stop B: waiting for the owner.
+
+`npm test` "Tests 2674 passed (2674)"; the browser check "756 passed
+(2.5m)", with the PCA placeholder of task 8.3 in the Analyses step.
+
+### The freeze of a large metadata file (IP5 D4)
+
+`npx playwright test --project=measure-chromium --project=measure-webkit
+-g "IP5 D4" --workers=1`, 29 September 2026, on the built site, Apple M5
+Pro with 64 GB, macOS 27.0, Playwright 1.63.0; a virtual machine and the
+analysis of photos of macOS each held one core. A metadata file of
+10,000 rows and 50 columns, 2.64 MB, read after a VCF of 10,000
+individuals; the project file that holds its read, 4.36 MB; each 5 times
+on a new page, the median.
+
+| what | Chromium 153 | WebKit 26.6 |
+|---|---|---|
+| `columnAllows` alone | 35 ms | 9 ms |
+| the read: the longest time between two frames | 102 ms | 162 ms |
+| the opening of the project: the same | 47 ms | 111 ms |
+| the step shown after the opening | 53 ms | 99 ms |
+
+Before the fixes of the review, on aa407ef, the read froze the page for
+238 ms in Chromium and 351 ms in WebKit, the opening 79 and 201 ms, and
+every change of a type 104 to 131 ms (the react reviewer's measure),
+since the step walked the whole table at each drawing. `columnAllows`
+alone is under the 100 ms of `project.md`, "How it runs", in both
+engines, so it stays on the page; the rest of the freeze of a read is
+the drawing of the table. A change of a type after the fixes was not
+measured. Firefox: not measured, since it does not launch here.
+
+### What was changed in the plan
+
+Task 5.3 was timed first on aa407ef, and the review showed its test
+measured the whole freeze and not `columnAllows`, which the rule of the
+plan names; the test now gives both, and the table above is from it.
+
+### The review
+
+`spec` with `stale`, `tests`, `errors` with `api`, `react`,
+`accessibility` with a drive of the keyboard, and `ux`; then `react`
+with `accessibility` again at 2c74fbf, and `accessibility` with `ux` at
+5789f37, which found nothing. The tests reviewer was lost with the
+reboot and run again. What was fixed:
+
+- On a phone 320 px wide, a column with a long name without spaces,
+  `Estado_de_salud_del_individuo`, made the whole page scroll sideways.
+  The table now fits with a font wider than the Mac's, which the flow
+  serves itself: 282 of 288 px with DejaVu Sans, the longest names of the
+  flow.
+- An Undo or a Redo that took away the control with the focus left the
+  focus nowhere, so a screen reader said nothing; the focus now goes to
+  the step's heading, in every step, and the Variants step still places
+  it itself where it does.
+- Opening a project whose metadata file was not read when it was saved
+  did not tell a screen reader to load that file again.
+- When the column of the populations became the first column of a new
+  file, the analyses ran on 200 populations of one individual while the
+  step said no column was chosen; that column is now "not in the file".
+- The step walked the whole table at each drawing (the freeze above).
+- A click on the visible words "Coded 1, the case" did nothing.
+- The tests reviewer broke the code 42 ways; four passed every test,
+  and each now fails one: the populations shown while individuals are
+  missing, the order of the coding, the table at 320 px in a wider font,
+  the measurement's test.
+
+Not taken: the words of the coding, which are the spec's, for the owner
+below; a flow of stage 2 that holds a read by the name of a built file
+and so fails under `npm run dev`.
+
+### What the owner should know
+
+- `e2e/fixtures/fonts/` holds DejaVu Sans cut to the Latin letters,
+  72 KB with its licence, which allows it: the flow at 320 px serves it
+  so that it checks a wide font on any machine. It never reaches the
+  site.
+- A flow of the Variants step, `variants.spec.ts:826`, failed 5 times in
+  120 runs in WebKit with the fixes and 1 in 140 before; a race of the
+  status region, not on the path of the fixes. Watched.
+
+### How the work of 5 went, for whoever revises a skill or a plan
+
+The fix of the table at 320 px was sent back once: it fitted with 2 px
+to spare in the Mac's font, and the site uses the system's font, so a
+check at 320 px has to bring a wider font of its own. The review's
+reviewers each needed a directory and a port of their own, as work
+package 3 found.
+
 ## 7. The 2D scatter
 
 The scatter of the individuals, its marks, colours, tooltip, legend

@@ -812,7 +812,7 @@ reads in the stepper that the step is optional.
   variants file in it", "What it sends and reads", "Its words" and
   "Accessibility"); the flows of D2 and the states of D5 in
   `e2e/screens.spec.ts`. Serves 2 and 5. Needs 5.1.
-- [ ] 5.3 The measurement of D4, with the table of 10,000 rows and 50
+- [x] 5.3 The measurement of D4, with the table of 10,000 rows and 50
   columns written into `MEASURE_DIR` by the test; if it asks, the work
   in the light worker, `project.md` first. Serves 4. Needs 5.2.
 - [ ] 5.4 Stop B: the owner tries the Individuals step in Firefox by
