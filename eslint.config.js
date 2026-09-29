@@ -167,7 +167,13 @@ const probePopneiValues = {
 };
 
 export default defineConfig(
-  globalIgnores(["dist/", "playwright-report/", "test-results/", "screens/"]),
+  globalIgnores([
+    "dist/",
+    "playwright-report/",
+    "test-results/",
+    "screens/",
+    ".claude/",
+  ]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -175,7 +181,12 @@ export default defineConfig(
       tseslint.configs.strictTypeChecked,
       tseslint.configs.stylisticTypeChecked,
     ],
-    languageOptions: { parserOptions: { projectService: true } },
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     linterOptions: { reportUnusedDisableDirectives: "error" },
     rules: {
       "no-restricted-syntax": noWorkerMade,

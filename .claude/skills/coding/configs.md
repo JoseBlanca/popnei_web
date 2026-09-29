@@ -554,6 +554,7 @@ export default defineConfig(
     "playwright-report/",
     "test-results/",
     "screens/",
+    ".claude/",
   ]),
   {
     files: ["**/*.{ts,tsx}"],
@@ -562,7 +563,9 @@ export default defineConfig(
       tseslint.configs.strictTypeChecked,
       tseslint.configs.stylisticTypeChecked,
     ],
-    languageOptions: { parserOptions: { projectService: true } },
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
     linterOptions: { reportUnusedDisableDirectives: "error" },
     rules: {
       "no-restricted-syntax": noWorkerMade,
@@ -971,6 +974,11 @@ export default defineConfig(
   exact version of `.npmrc` makes a commit of its own.
 - `projectService: true` finds the `tsconfig` of each file by itself, the
   way the editor does; it is what typescript-eslint recommends since 2025.
+  `tsconfigRootDir` names the folder of the repository, and `.claude/` is
+  ignored, since a worktree under `.claude/worktrees/` holds a
+  `tsconfig` of its own: with both roots in sight, typescript-eslint
+  refused to parse any file of the main checkout, 516 errors, on 29
+  September 2026.
 - The rules added beyond it, and why: `switch-exhaustiveness-check`, so a
   new member of a union fails wherever it is not handled, a `default`
   included, which would otherwise swallow it;
