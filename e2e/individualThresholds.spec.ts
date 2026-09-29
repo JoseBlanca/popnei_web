@@ -54,6 +54,16 @@ const OBS_HET_TITLE = "Observed heterozygosity of each individual";
     (runner.md, "How it is verified", "The written file"). */
 const WRITTEN_111 = 156_818;
 
+/** The size of the same file with the LD pruning on as well, r² 0.3
+    within 50,000 base pairs, which keeps 1,067 variants (node, 28
+    September 2026; docs/specs/steps/variants.md, "How it is checked"). */
+const WRITTEN_111_LD = 150_290;
+
+const LD_SWITCH = "Prune the variants by linkage disequilibrium (LD)";
+const LD_DISTANCE_LABEL =
+  "Distance within which variants are compared, in base pairs, from 1";
+const COUNT = "Count the variants each filter keeps";
+
 /** The modifier of the keyboard's Undo on this engine's platform. */
 const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
 
@@ -616,4 +626,50 @@ test("IP2 D3, IP1 D2 the written files of dev.3 on the screen, VS7 D3 the write 
   const path = testInfo.outputPath("panel.filtered.nei");
   await file.saveAs(path);
   expect((await stat(path)).size).toBe(WRITTEN_111);
+});
+
+test("IP10 D3 the write of the individuals kept with the LD pruning on as well, r² 0.3 within 50,000: Write and Save give panel.filtered.nei of 150,290 bytes and 1,067 variants, and with the pruning turned off again 156,818 bytes", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  await thresholdsSet(page);
+  const variantFilters = page.getByRole("region", {
+    name: "Filters of the variants",
+  });
+  await variantFilters.getByText(LD_SWITCH, { exact: true }).click();
+  const distance = variantFilters.getByLabel(LD_DISTANCE_LABEL, {
+    exact: true,
+  });
+  await distance.fill("50000");
+  await distance.press("Enter");
+  await expect(distance).toHaveValue("50000");
+  await variantFilters.getByRole("button", { name: COUNT }).click();
+  await expect(
+    variantFilters.getByText(
+      "1,067 of the 1,200 variants of panel.nei pass the filters.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  /** Writes, saves, and gives the size of the file downloaded. */
+  const writeAndSave = async (saved: string): Promise<number> => {
+    await writeButton(page).click();
+    const save = writing(page).getByRole("button", {
+      name: /^Save panel\.filtered\.nei, /,
+    });
+    await expect(save).toBeVisible();
+    const download = page.waitForEvent("download");
+    await save.click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe("panel.filtered.nei");
+    const path = testInfo.outputPath(saved);
+    await file.saveAs(path);
+    return (await stat(path)).size;
+  };
+  expect(await writeAndSave("with-ld.nei")).toBe(WRITTEN_111_LD);
+  await expectNoViolations(makeAxeBuilder);
+
+  await variantFilters.getByText(LD_SWITCH, { exact: true }).click();
+  await expect(distance).toHaveCount(0);
+  expect(await writeAndSave("without-ld.nei")).toBe(WRITTEN_111);
 });

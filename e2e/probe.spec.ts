@@ -4,6 +4,7 @@
  * verified" of docs/specs/site.md says, and its failures and defects show
  * on the page.
  */
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { BrowserContext, Locator, Page, Worker } from "@playwright/test";
@@ -123,6 +124,17 @@ test("a VCF of the user is opened as diploid and the page says the ploidy was gi
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
 
+test("IP10 D3 a tetraploid VCF opens as diploid, since the probe makes no first pass", async ({
+  page,
+}) => {
+  await openProbe(page);
+  await pick(page, "tetraploid.vcf.gz");
+
+  await expect(own(page)).toContainText(
+    "tetraploid.vcf.gz: 12 individuals, ploidy 2 (given: a VCF is opened as diploid).",
+  );
+});
+
 test("the input says which reader a name chooses", async ({ page }) => {
   await openProbe(page);
 
@@ -149,6 +161,61 @@ test("a file popnei refuses shows popnei's message and the reader its name chose
   );
   await expect(served(page)).toContainText(`panel.nei: ${PANEL}.`);
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});
+
+test("IP10 D3 a gzip cut short and a vars file of another version are refused with popnei's message and the reader their name chose, the served result stays, and the page opens another file after them", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openProbe(page);
+  await expect(served(page)).toContainText(`panel.nei: ${PANEL}.`);
+  const input = fileInput(page);
+  await expect(input).toBeEnabled();
+
+  // Cut inside the header: popnei opens a VCF by its header, so a gzip cut
+  // after it opens (under node, 29 September 2026).
+  await input.setInputFiles({
+    name: "cut.vcf.gz",
+    mimeType: "application/gzip",
+    buffer: readFileSync(join(FIXTURES, "panel.vcf.gz")).subarray(0, 100),
+  });
+  await expect(own(page)).toContainText(
+    "cut.vcf.gz could not be opened: the source could not be read: incomplete deflate stream.",
+  );
+  await expect(own(page)).toContainText(
+    "It was read as a VCF because its name ends in .vcf or .vcf.gz; any other name is read as a .nei file.",
+  );
+  await expect(served(page)).toContainText(`panel.nei: ${PANEL}.`);
+
+  // The version of the format is in the metadata of the arrow file, as
+  // "format_version":"1.0", once in its header and once in its footer;
+  // popnei reads the footer's.
+  const panel = readFileSync(join(FIXTURES, "panel.nei"));
+  const other = Buffer.from(
+    panel
+      .toString("latin1")
+      .replaceAll('"format_version":"1.0"', '"format_version":"2.0"'),
+    "latin1",
+  );
+  expect(other.equals(panel)).toBe(false);
+  await input.setInputFiles({
+    name: "old.nei",
+    mimeType: "application/octet-stream",
+    buffer: other,
+  });
+  await expect(own(page)).toContainText(
+    "old.nei could not be opened: the vars file says its format is the version 2.0, and popnei reads the files whose version starts with 1; a file of a later version is read by a later popnei.",
+  );
+  await expect(own(page)).toContainText(
+    "It was read as a .nei file because its name does not end in .vcf or .vcf.gz.",
+  );
+  await expect(served(page)).toContainText(`panel.nei: ${PANEL}.`);
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+
+  await pick(page, "tetraploid.nei");
+  await expect(own(page)).toContainText(
+    "tetraploid.nei: 12 individuals, ploidy 4.",
+  );
 });
 
 test("the answers of the two files may come in either order", async ({
@@ -266,6 +333,43 @@ test("the page says popnei could not be loaded when its wasm is not found", asyn
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
 
+test("IP10 D3 a wasm the server answers 404 for shows the address tried", async ({
+  page,
+}) => {
+  await page.route("**/*.wasm", (route) => route.fulfill({ status: 404 }));
+  await openProbe(page);
+
+  await expect(popnei(page)).toContainText("popnei could not be loaded.");
+  await expect(popnei(page)).toContainText(
+    /Address tried: \S*\/assets\/popnei_bg-[^/]*\.wasm/,
+  );
+});
+
+test("IP10 D3 a wasm whose request fails is told with the address in Chromium and without it in WebKit", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.route("**/*.wasm", (route) => route.abort("failed"));
+  await openProbe(page);
+
+  // WebKit never lists the wasm, and the page waits a second for it
+  // (docs/specs/site.md, "The cases").
+  await expect(popnei(page)).toContainText("popnei could not be loaded.", {
+    timeout: 10_000,
+  });
+  await expect(popnei(page).getByText(/^Message: /)).toBeVisible();
+  const engine = test.info().project.name;
+  if (engine === "chromium") {
+    await expect(popnei(page)).toContainText(
+      /Address tried: \S*\/assets\/popnei_bg-[^/]*\.wasm/,
+    );
+  } else if (engine === "webkit") {
+    await expect(popnei(page)).not.toContainText("Address tried:");
+    await expect(popnei(page)).toContainText("Load failed");
+  }
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});
+
 test("the page names the address of a wasm that arrives and does not compile", async ({
   page,
 }) => {
@@ -300,6 +404,20 @@ test("the page says the probe's worker did not start when its script is not foun
     /No file can be opened, since the probe's worker did not start\./,
   );
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+});
+
+test("IP10 D3 a worker that does not start is told with the advice to reload and report", async ({
+  page,
+}) => {
+  await page.route("**/probeWorker-*.js", (route) =>
+    route.fulfill({ status: 404 }),
+  );
+  await openProbe(page);
+
+  await expect(popnei(page)).toContainText("The probe's worker did not start.");
+  await expect(popnei(page)).toContainText(
+    "Reload the page. If the worker still does not start, report it at https://github.com/JoseBlanca/popnei_web/issues, with the name and version of your browser.",
+  );
 });
 
 test("the page names the address of the served file when it is not found", async ({
@@ -457,4 +575,22 @@ test("a trap of popnei's wasm stops the worker and is shown as a defect", async 
   await expect(fileInput(page)).toHaveAccessibleDescription(
     /No more files can be opened, since the probe's worker stopped\. Reload the page\./,
   );
+});
+
+test("IP10 D3 a trap of popnei's wasm is shown with the browser's message", async ({
+  page,
+}) => {
+  const worker = await openProbeWorker(page);
+  await worker.evaluate(() => {
+    performance.now = () => {
+      throw new WebAssembly.RuntimeError("unreachable");
+    };
+  });
+  await pick(page, "panel.nei");
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText(
+    "A defect of the probe: its worker stopped.",
+  );
+  await expect(alert).toContainText("unreachable");
 });

@@ -522,6 +522,23 @@ test("IP5 D2 the separator set to the semicolon names the types that wait with F
   await expect(forgetButton(page)).toHaveText("Forget these types");
 });
 
+test("IP10 D3 a read again for a change of the separator is said whole in the status region, its size and the types set and not applied", async ({
+  page,
+}) => {
+  await openIndividuals(page);
+  await pick(page, { name: "types.csv", text: TYPES_CSV });
+  await expect.poll(() => columnRows(page)).toEqual(TYPES_ROWS);
+  await choose(page, typeSelect(page, "score"), "categorical");
+  await choose(page, codingSelect(page, "status"), "no");
+
+  await choose(page, select(page, "Separator"), "Semicolon");
+
+  // panel.nei is not loaded, so the read says no check.
+  await expect(status(page)).toHaveText(
+    "types.csv read: 4 rows, 1 column. 2 columns do not have the type you set.",
+  );
+});
+
 test("IP5 D2 Forget this type, pressed with the keyboard on a table with other columns, puts the focus on the first select of a type", async ({
   page,
   makeAxeBuilder,

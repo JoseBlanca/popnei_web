@@ -23,7 +23,8 @@ import {
   type PointColours,
   type ValueColours,
 } from "./marks.ts";
-import { MAX_SVG_POINTS } from "./limits.ts";
+import { legendOf } from "./legend.ts";
+import { MAX_POINT_GROUPS, MAX_SVG_POINTS } from "./limits.ts";
 import {
   createScatter,
   SCATTER_MARGIN,
@@ -265,6 +266,26 @@ describe("IP7 D1 the pieces of the scatter, its scales", () => {
     expect(x(1) - x(0)).toBeCloseTo(190, 9);
     expect(y(5)).toBeCloseTo(150, 9);
   });
+
+  test("IP10 D3 every point at one place, three at (2, 3): 140 pixels per unit, drawn at the centre of the frame", () => {
+    const data = scatterOf([2, 2, 2], [3, 3, 3], groups([0, 0, 0], ["P"]));
+    const { x, y } = scatterScales(data, 400, 300);
+    expect(x(3) - x(2)).toBeCloseTo(140, 9);
+    expect(y(3) - y(4)).toBeCloseTo(140, 9);
+    expect(x(2)).toBeCloseTo(200, 9);
+    expect(y(3)).toBeCloseTo(150, 9);
+  });
+
+  test("IP10 D3 scatterScales gives the scales at 1: for coordinates near the largest number, the width of the domain is not finite", () => {
+    const data = scatterOf(
+      [-1.7e308, 1.7e308],
+      [-1.7e308, 1.7e308],
+      groups([0, 0], ["P"]),
+    );
+    const { x } = scatterScales(data, 400, 300);
+    const [start = 0, end = 0] = x.domain();
+    expect(Number.isFinite(end - start)).toBe(false);
+  });
 });
 
 describe("IP7 D1 the pieces of the scatter, the defects of its data", () => {
@@ -306,6 +327,36 @@ describe("IP7 D1 the pieces of the scatter, the defects of its data", () => {
     }).toThrow("neither null nor a whole number from 0");
     drawn.destroy();
   });
+
+  test("IP10 D3 a group index beyond the names, more than 1,000 names and values of another length throw from createScatter and from update, and nothing is drawn", () => {
+    const element = sizedElement(400, 300);
+    const defects: ScatterData[] = [
+      scatterOf([0, 1], [0, 1], groups([0, 4], ["P1"])),
+      scatterOf(
+        [0, 1],
+        [0, 1],
+        groups(
+          [0, 0],
+          Array.from(
+            { length: MAX_POINT_GROUPS + 1 },
+            (_name, index) => `P${String(index)}`,
+          ),
+        ),
+      ),
+      scatterOf([0, 1], [0, 1], values([1])),
+    ];
+    for (const defect of defects) {
+      expect(() => createScatter(element, defect)).toThrow("popnei_web defect");
+      expect(element.childNodes).toHaveLength(0);
+    }
+    const drawn = createScatter(element, six());
+    for (const defect of defects) {
+      expect(() => {
+        drawn.update(defect);
+      }).toThrow("popnei_web defect");
+    }
+    drawn.destroy();
+  });
 });
 
 describe("IP7 D2 the scatter under jsdom, its SVG", () => {
@@ -340,6 +391,29 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
     const ticks = [...element.querySelectorAll(".chart-axis-x .tick")];
     expect(ticks.length).toBeGreaterThan(2);
     expect(element.innerHTML).not.toContain("NaN");
+  });
+
+  test("IP10 D3 near the largest number, the labels of the ticks are at the size of the coordinates", () => {
+    const element = sizedElement(400, 300);
+    createScatter(
+      element,
+      scatterOf(
+        [-1.7e308, 1.7e308],
+        [-1.7e308, 1.7e308],
+        groups([0, 0], ["P"]),
+      ),
+    );
+    for (const axis of ["x", "y"]) {
+      const labels = [
+        ...element.querySelectorAll(`.chart-axis-${axis} .tick text`),
+      ].map((text) => Number(text.textContent.replaceAll("−", "-")));
+      // Points at ±1.7e308; the drawing scales are over their half, whose
+      // ticks, unscaled, would be written up to 8e307. The axis across
+      // runs past the largest number, and its ticks there read "Infinity".
+      const finite = labels.filter((label) => Number.isFinite(label));
+      expect(finite.length).toBeGreaterThan(2);
+      expect(Math.max(...finite.map(Math.abs))).toBeGreaterThan(1e308);
+    }
   });
 
   test("the class chart chart-scatter, and the overlay the last child of the frame, of the size of the frame", () => {
@@ -479,6 +553,59 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
     ].map((tick) => tick.textContent);
     expect(ticks).toEqual(["\u22121", "0", "1"]);
   });
+
+  test("IP10 D3 no point with finite coordinates: the legend counts none, in the file and in legendOf", () => {
+    const element = sizedElement(400, 300);
+    const data = scatterOf(
+      [Number.NaN, 1],
+      [0, Number.POSITIVE_INFINITY],
+      groups([0, NO_GROUP], ["P1"]),
+    );
+    const handle = createScatter(element, data);
+    expect(legendTexts(fileOf(handle.toSVG()))).toEqual(["Population"]);
+    expect(legendOf(data.colours, [data.x, data.y])).toEqual({
+      kind: "groups",
+      title: "Population",
+      entries: [],
+    });
+  });
+
+  test("IP10 D3 an update joins the paths by their keys: the path of group 2 is the same element after its highlight is removed, fourth and no longer last", () => {
+    const element = sizedElement(400, 300);
+    const handle = createScatter(element, six(2));
+    const second = element.querySelector("path.chart-colour-2");
+    if (second === null) throw new Error("No path of group 2.");
+    expect(element.querySelector("g.chart-marks")?.lastElementChild).toBe(
+      second,
+    );
+    handle.update(six(null));
+    expect(element.querySelector("path.chart-colour-2")).toBe(second);
+    const paths = [...element.querySelectorAll("g.chart-marks > path")];
+    expect(paths.indexOf(second)).toBe(3);
+  });
+
+  test("IP10 D3 a resize draws again at the new size, with new scales and new pixel positions", () => {
+    const element = sizedElement(400, 300);
+    createScatter(element, six());
+    // The element grows to 500 by 300: a frame of 424 by 244.
+    FakeObserver.made[0]?.resize(500, 300);
+    runFrames();
+    expect(overlayOf(element).getAttribute("width")).toBe("424");
+    const scales = scatterScales(six(), 424, FRAME_HEIGHT);
+    const expected = pathRound(PATH_DIGITS);
+    for (const index of [0, 5]) {
+      drawSymbolAt(
+        expected,
+        groupSymbol(0),
+        SYMBOL_AREA,
+        scales.x(SIX_X[index] ?? 0),
+        scales.y(SIX_Y[index] ?? 0),
+      );
+    }
+    expect(
+      element.querySelector("path.chart-colour-0")?.getAttribute("d"),
+    ).toBe(expected.toString());
+  });
 });
 
 describe("IP7 D2 the scatter under jsdom, the legend of the exported file", () => {
@@ -588,6 +715,17 @@ describe("IP7 D2 the scatter under jsdom, the legend of the exported file", () =
     );
     expect(Number(longBackground?.getAttribute("width"))).toBe(FRAME_WIDTH);
     expect(Number(longBackground?.getAttribute("x"))).toBe(SCATTER_MARGIN.left);
+  });
+
+  test("IP10 D3 a column name with markup is text in the legend of the file, and no b element is made", () => {
+    const element = sizedElement(400, 300);
+    const handle = createScatter(
+      element,
+      scatterOf([0, 1], [0, 1], { ...values([1, 2]), title: "<b>Year</b>" }),
+    );
+    const file = fileOf(handle.toSVG());
+    expect(legendTexts(file)[0]).toBe("<b>Year</b>");
+    expect(file.querySelector("b")).toBeNull();
   });
 
   test("values: a bar of 32 bands of viridis, the largest value at its top, and the ring and No value last", () => {
@@ -777,6 +915,28 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(tooltipText(element)?.[1]).toBe("Population: P4");
   });
 
+  test("IP10 D3 a population or a column name with markup is shown as text in the tooltip, and no b element is made", () => {
+    const byGroup = sizedElement(400, 300);
+    const grouped = scatterOf(
+      [0, 1],
+      [0, 1],
+      groups([0, 1], ["<b>P1</b>", "P2"]),
+    );
+    createScatter(byGroup, grouped);
+    moveTo(byGroup, pixelOf(grouped, 0));
+    expect(tooltipText(byGroup)?.[1]).toBe("Population: <b>P1</b>");
+    expect(byGroup.querySelector("b")).toBeNull();
+    const byValue = sizedElement(400, 300);
+    const valued = scatterOf([0, 1], [0, 1], {
+      ...values([1, 2]),
+      title: "<b>Year</b>",
+    });
+    createScatter(byValue, valued);
+    moveTo(byValue, pixelOf(valued, 0));
+    expect(tooltipText(byValue)?.[1]).toBe("<b>Year</b>: 1");
+    expect(byValue.querySelector("b")).toBeNull();
+  });
+
   test("a point is under the pointer within 10 pixels of it and not at 11", () => {
     const element = sizedElement(400, 300);
     const onHover = vi.fn();
@@ -942,6 +1102,18 @@ describe("IP7 D2 the scatter under jsdom, the point under the pointer", () => {
     expect(tooltipText(element)).toBeNull();
     expect(element.querySelector("path.chart-hover")).toBeNull();
     expect(onHover.mock.calls).toEqual([[0], [null], [0], [null]]);
+  });
+
+  test("IP10 D3 an update to another colouring, from groups to values, hides the tooltip and calls onHover with null", () => {
+    const element = sizedElement(400, 300);
+    const onHover = vi.fn();
+    const handle = createScatter(element, six(), { onHover });
+    moveTo(element, pixelOf(six(), 0));
+    expect(tooltipText(element)).not.toBeNull();
+    handle.update(scatterOf(SIX_X, SIX_Y, values([1, 2, 3, 4, 5, 6])));
+    expect(tooltipText(element)).toBeNull();
+    expect(element.querySelector("path.chart-hover")).toBeNull();
+    expect(onHover.mock.calls).toEqual([[0], [null]]);
   });
 
   test("toSVG while a point is under the pointer has no mark of it and no tooltip", () => {

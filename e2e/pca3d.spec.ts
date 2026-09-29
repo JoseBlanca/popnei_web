@@ -159,6 +159,46 @@ async function exportedCentres(
   });
 }
 
+/** The ends of a line of toSVG, in the pixels of the file. */
+interface LineEnds {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+}
+
+/** The ends of the three lines of toSVG, the first component's first. */
+async function exportedLines(page: Page): Promise<LineEnds[]> {
+  return page.evaluate(() => {
+    const plot = window.plotsPage?.pca3d();
+    if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+    const file = new DOMParser().parseFromString(plot.toSVG(), "image/svg+xml");
+    return [...file.querySelectorAll("line.chart-pca3d-axis")].map((line) => ({
+      x1: Number(line.getAttribute("x1")),
+      y1: Number(line.getAttribute("y1")),
+      x2: Number(line.getAttribute("x2")),
+      y2: Number(line.getAttribute("y2")),
+    }));
+  });
+}
+
+/** Gives the 3D plot drawn last the data of `kind` by its update. */
+async function updatePca3d(page: Page, kind: Pca3dKind): Promise<void> {
+  await page.evaluate((k) => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    plots.pca3dUpdate(k);
+  }, kind);
+}
+
+/** The indices of `values` from the smallest value to the largest. */
+function orderOf(values: readonly number[]): number[] {
+  return values
+    .map((value, index) => ({ value, index }))
+    .toSorted((a, b) => a.value - b.value)
+    .map((each) => each.index);
+}
+
 /**
  * The colours of a screenshot of the canvas at `points` of the viewport,
  * read by the page from the PNG, at the pixel ratio of the screenshot.
@@ -332,6 +372,39 @@ test("IP8 D2 after viewAlong(2) the order of the points across and up in toSVG i
   expect(await exportedCentres(page)).toEqual(centres);
 });
 
+test("IP10 D3 an update while the view is turned, to another colouring or to other components, keeps the view, and the labels of the lines change with the components", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const lines = await exportedLines(page);
+  const five = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const data = plots.pca3dData();
+    return { x: [...data.x], y: [...data.y] };
+  });
+
+  // Coloured by values: the same points, seen along the third component.
+  await updatePca3d(page, "values");
+  expect(await exportedLines(page)).toEqual(lines);
+
+  // The first and second components swapped: the second now runs across
+  // and the first up, the view still along the third.
+  await updatePca3d(page, "swapped");
+  const centres = await exportedCentres(page);
+  expect(orderOf(centres.map((centre) => centre.x))).toEqual(orderOf(five.y));
+  expect(orderOf(centres.map((centre) => -centre.y))).toEqual(orderOf(five.x));
+  const [across] = await exportedLines(page);
+  expect(across?.y1).toBe(across?.y2);
+  await expect(page.locator("#plots .chart-pca3d-label")).toHaveText([
+    "PC2 (3.40%)",
+    "PC1 (3.55%)",
+    "PC3 (1.89%)",
+  ]);
+});
+
 test("IP8 D2 the pointer at the projected place of point 0 shows its tooltip with three coordinates and its name of markup as text, and calls onHover with 0; Escape hides it", async ({
   page,
 }) => {
@@ -379,6 +452,87 @@ test("IP8 D2 the pointer at the projected place of point 0 shows its tooltip wit
   await turn(page, "rotate", 15);
   await expect(tooltip).toBeHidden();
   expect(await hovers(page)).toEqual([0, null, 0, null]);
+});
+
+test("IP10 D3 the pointer moved from point 0 onto its tooltip in 10 steps keeps it, still that point's", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "cloud");
+  expect(await nearestOther(page, 0, "start")).toBeGreaterThanOrEqual(12);
+  const zero = await pointAt(page, 0, "start");
+  const tooltip = page.locator(".chart-tooltip");
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  const box = await tooltip.boundingBox();
+  if (box === null) throw new Error("The tooltip is not laid out.");
+  // 8 pixels inside the corner of the tooltip nearest the point, which is
+  // 6 pixels across and 6 up or down from it: the line there passes
+  // through that corner, 8.5 pixels from the point.
+  const onTooltip = {
+    x: box.x < zero.x ? box.x + box.width - 8 : box.x + 8,
+    y: box.y < zero.y ? box.y + box.height - 8 : box.y + 8,
+  };
+  expect(Math.hypot(onTooltip.x - zero.x, onTooltip.y - zero.y)).toBeCloseTo(
+    14 * Math.SQRT2,
+    0,
+  );
+  await page.mouse.move(onTooltip.x, onTooltip.y, { steps: 10 });
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.locator("div").first()).toHaveText(MARKUP_NAME);
+  expect(await hovers(page)).toEqual([0]);
+});
+
+test("IP10 D3 a name with markup shows as text in the hidden title and description, the labels of the lines, and the title, labels and legend of the file", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "markup");
+  const canvas = page.locator("#plots canvas");
+  await expect(canvas).toHaveAccessibleName("<i>T</i>");
+  await expect(canvas).toHaveAccessibleDescription(MARKUP_NAME);
+  await expect(page.locator("#plots .chart-pca3d-label")).toHaveText([
+    "<b>PC1</b>",
+    "<b>PC2</b>",
+    "<b>PC3</b>",
+  ]);
+  await expect(page.locator("#plots").locator("b, i, img")).toHaveCount(0);
+  const file = await page.evaluate(() => {
+    const plot = window.plotsPage?.pca3d();
+    if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+    const parsed = new DOMParser().parseFromString(
+      plot.toSVG(),
+      "image/svg+xml",
+    );
+    return {
+      title: parsed.querySelector("svg > title")?.textContent,
+      desc: parsed.querySelector("svg > desc")?.textContent,
+      labels: [...parsed.querySelectorAll(".chart-pca3d-label-text")].map(
+        (label) => label.textContent,
+      ),
+      rows: [...parsed.querySelectorAll(".chart-legend-row text")].map(
+        (row) => row.textContent,
+      ),
+      markup: parsed.querySelectorAll("b, i, img").length,
+    };
+  });
+  expect(file).toEqual({
+    title: "<i>T</i>",
+    desc: MARKUP_NAME,
+    labels: ["<b>PC1</b>", "<b>PC2</b>", "<b>PC3</b>"],
+    rows: [
+      "Population",
+      "P1 (1)",
+      "P2 (1)",
+      "P3 (1)",
+      "<b>P4</b> (1)",
+      "P5 (1)",
+    ],
+    markup: 0,
+  });
+  expect(await page.evaluate(() => window.plotsPage?.markupRan() ?? true)).toBe(
+    false,
+  );
 });
 
 test.describe("on a screen of touch", () => {
@@ -529,6 +683,86 @@ test("IP8 D2 toSVG has no var( and holds the legend, whose last row with 40 grou
   expect(found.png).toEqual([1800, 1350]);
 });
 
+test("IP10 D3 with no point of three finite coordinates, the three lines are drawn from −1 to 1, and no point", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  // In `five`, seen along the third component, the line of the first
+  // ends at d, whose first coordinate, 1, is the largest: 1 at the scale 1.
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const [fiveAcross] = await exportedLines(page);
+  if (fiveAcross === undefined) throw new Error("No line in five.");
+
+  await drawPca3d(page, 600, 450, "none");
+  await turn(page, "viewAlong", 2);
+  const lines = await exportedLines(page);
+  expect(lines).toHaveLength(3);
+  expect(await exportedPaths(page)).toEqual([]);
+  const [across] = lines;
+  // From −1, left of the middle of 600, to 1 right of it.
+  expect(across?.x2).toBeCloseTo(fiveAcross.x2, 0);
+  expect(across?.x1).toBeCloseTo(600 - fiveAcross.x2, 0);
+  expect(across?.y1).toBe(across?.y2);
+  // And drawn on the canvas.
+  const colours = await coloursAt(page, await lineSamples(page));
+  expect(
+    colours.filter((colour) => near(colour, LIGHT_AXIS)).length,
+  ).toBeGreaterThanOrEqual(10);
+});
+
+/** The count of the textures WebGL made on the page, kept by the init script of a test. */
+interface TextureCount {
+  texturesMade: number;
+}
+
+test("IP10 D3 a thousand groups are each drawn, and share at most 50 textures of their marks", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const counted = window as unknown as TextureCount;
+    counted.texturesMade = 0;
+    const prototype = WebGL2RenderingContext.prototype;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called with its context below
+    const create = prototype.createTexture;
+    prototype.createTexture = function (this: WebGL2RenderingContext) {
+      counted.texturesMade += 1;
+      return create.call(this);
+    };
+  });
+  await openPlots(page);
+  const made = (): Promise<number> =>
+    page.evaluate(() => (window as unknown as TextureCount).texturesMade);
+  // The textures of a plot of five groups, one mark each, and those the
+  // renderer makes for itself.
+  const beforeFive = await made();
+  await drawPca3d(page, 600, 450, "five");
+  const ofFive = (await made()) - beforeFive;
+  const beforeThousand = await made();
+  await drawPca3d(page, 600, 450, "thousand");
+  const ofThousand = (await made()) - beforeThousand;
+  process.stdout.write(
+    `Textures made by WebGL in ${test.info().project.name}: ${String(ofFive)} for five groups, ${String(ofThousand)} for a thousand\n`,
+  );
+  expect(ofThousand - ofFive + 5).toBeLessThanOrEqual(50);
+
+  const paths = await exportedPaths(page);
+  expect(paths).toHaveLength(1000);
+  const box = await page.locator("#plots canvas").boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  const colours = await coloursAt(page, [
+    await pointAt(page, 0, "start"),
+    await pointAt(page, 500, "start"),
+    await pointAt(page, 999, "start"),
+    { x: box.x + 3, y: box.y + box.height - 3 },
+  ]);
+  expect(near(colours[3] ?? [], WHITE)).toBe(true);
+  for (const colour of colours.slice(0, 3)) {
+    expect(near(colour, WHITE)).toBe(false);
+  }
+});
+
 test("IP8 D2 after destroy no canvas is left in the element, and the context of the old canvas reports itself lost", async ({
   page,
 }) => {
@@ -550,6 +784,89 @@ test("IP8 D2 after destroy no canvas is left in the element, and the context of 
     };
   });
   expect(found).toEqual({ canvases: 0, children: 0, lost: true });
+});
+
+test("IP10 D3 the handle throws for data of another length, a turn not finite and a zoom of 0; after destroy every call but destroy throws; and a plot never drawn exports nothing", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  const found = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const plot = plots.pca3d();
+    const data = plots.pca3dData();
+    const thrown = (call: () => unknown): string => {
+      try {
+        call();
+        return "no error";
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    };
+    const rejected = async (call: () => Promise<unknown>): Promise<string> => {
+      try {
+        await call();
+        return "no error";
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    };
+    const drawn = {
+      update: thrown(() => {
+        plot.update({ ...data, y: data.y.subarray(0, 4) });
+      }),
+      rotate: thrown(() => {
+        plot.rotate("vertical", Number.NaN);
+      }),
+      zoom: thrown(() => {
+        plot.zoom(0);
+      }),
+    };
+    plot.destroy();
+    const destroyed = {
+      update: thrown(() => {
+        plot.update(data);
+      }),
+      toSVG: thrown(() => plot.toSVG()),
+      toPNG: await rejected(() => plot.toPNG(2)),
+      rotate: thrown(() => {
+        plot.rotate("vertical", 15);
+      }),
+      viewAlong: thrown(() => {
+        plot.viewAlong(2);
+      }),
+      zoom: thrown(() => {
+        plot.zoom(1.25);
+      }),
+      resetView: thrown(() => {
+        plot.resetView();
+      }),
+      destroy: thrown(() => {
+        plot.destroy();
+      }),
+    };
+    await plots.drawPca3d(0, 0, "five");
+    const never = plots.pca3d();
+    const neverDrawn = {
+      toSVG: thrown(() => never.toSVG()),
+      toPNG: await rejected(() => never.toPNG(2)),
+    };
+    return { drawn, destroyed, neverDrawn };
+  });
+  for (const message of Object.values(found.drawn)) {
+    expect(message).toMatch(/^popnei_web defect/);
+  }
+  const { destroy, ...calls } = found.destroyed;
+  expect(destroy).toBe("no error");
+  for (const [call, message] of Object.entries(calls)) {
+    expect(message).toBe(
+      `popnei_web defect: ${call} of a 3D plot after its destroy.`,
+    );
+  }
+  for (const message of Object.values(found.neverDrawn)) {
+    expect(message).toMatch(/^popnei_web defect: .* never drawn/);
+  }
 });
 
 test("IP8 D2 the wheel over the plot scrolls the page and leaves the points where they were; with Ctrl held it moves them apart and the page does not scroll", async ({
@@ -813,6 +1130,34 @@ test("IP8 D2 a loss of the context hides the tooltip that was shown and calls on
   expect(await hovers(page)).toEqual([0, null]);
 });
 
+test("IP10 D3 with the context lost, toSVG and toPNG still export the plot", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await page.evaluate(() => {
+    document
+      .querySelector<HTMLCanvasElement>("#plots canvas")
+      ?.getContext("webgl2")
+      ?.getExtension("WEBGL_lose_context")
+      ?.loseContext();
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.plotsPage?.contextChanges()))
+    .toEqual([true]);
+  const found = await page.evaluate(async () => {
+    const plot = window.plotsPage?.pca3d();
+    if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+    const file = new DOMParser().parseFromString(plot.toSVG(), "image/svg+xml");
+    const image = await createImageBitmap(await plot.toPNG(2));
+    return {
+      paths: file.querySelectorAll(".chart-marks path.chart-points").length,
+      png: [image.width, image.height],
+    };
+  });
+  expect(found).toEqual({ paths: 5, png: [1200, 900] });
+});
+
 test("IP8 D2 a smaller element draws the canvas at its new size", async ({
   page,
 }) => {
@@ -831,6 +1176,49 @@ test("IP8 D2 a smaller element draws the canvas at its new size", async ({
   });
   await expect(canvas).toHaveJSProperty("width", 400 * ratio);
   await expect(canvas).toHaveJSProperty("height", 300 * ratio);
+});
+
+test("IP10 D3 an element with no size renders nothing and toSVG exports the last view; the next size renders", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const canvas = page.locator("#plots canvas");
+  const ratio = await page.evaluate(() => Math.min(devicePixelRatio, 2));
+  await expect(canvas).toHaveJSProperty("width", 600 * ratio);
+  const exported = (): Promise<string> =>
+    page.evaluate(() => {
+      const plot = window.plotsPage?.pca3d();
+      if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+      return plot.toSVG();
+    });
+  const kept = await exported();
+  // A tab that is hidden: the element laid out at no size, and three
+  // frames of the screen, in which the observer of its size and the frame
+  // of a new drawing would have run.
+  await page.evaluate(async () => {
+    const element = window.plotsPage?.element();
+    if (element === undefined) throw new Error("e2e/plots.html has not run.");
+    element.style.display = "none";
+    for (let frame = 0; frame < 3; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  });
+  expect(await exported()).toBe(kept);
+  await expect(canvas).toHaveJSProperty("width", 600 * ratio);
+  await expect(canvas).toHaveJSProperty("height", 450 * ratio);
+
+  await page.evaluate(() => {
+    const element = window.plotsPage?.element();
+    if (element === undefined) throw new Error("e2e/plots.html has not run.");
+    element.style.display = "";
+    element.style.width = "400px";
+    element.style.height = "300px";
+  });
+  await expect(canvas).toHaveJSProperty("width", 400 * ratio);
+  await expect(canvas).toHaveJSProperty("height", 300 * ratio);
+  expect(await exported()).toContain('width="400" height="300"');
 });
 
 test.describe("at a pixel ratio of 2", () => {

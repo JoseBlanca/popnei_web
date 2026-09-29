@@ -24,9 +24,23 @@ export interface ViewportPoint {
  * `forty`, 40 points in 40 populations; `pair`, two points at one place
  * across and up, of P1 below and P2 above, and a third of neither;
  * `values`, the five points of `five` coloured by the values 100 to 400
- * of their first four, and the fifth with no value.
+ * of their first four, and the fifth with no value; `none`, the five
+ * points of `five` with no first coordinate, NaN, so that none is drawn;
+ * `swapped`, `five` with its first and second coordinates and their
+ * labels swapped; `markup`, `five` with markup in its title, its
+ * description, the labels of its lines and the name of P4; `thousand`,
+ * 1,000 points on a sphere, each in a population of its own.
  */
-export type Pca3dKind = "cloud" | "five" | "forty" | "pair" | "values";
+export type Pca3dKind =
+  | "cloud"
+  | "five"
+  | "forty"
+  | "pair"
+  | "values"
+  | "none"
+  | "swapped"
+  | "markup"
+  | "thousand";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -105,6 +119,8 @@ export interface PlotsPage {
   pca3dData(): Pca3dData;
   /** Draws the 3D plot again with `highlighted` as the legend's highlight. */
   pca3dHighlight(highlighted: number | null): void;
+  /** Gives the 3D plot drawn last the data of `kind` by its `update`. */
+  pca3dUpdate(kind: Pca3dKind): void;
   /**
    * Where point `index` of the 3D plot drawn last is in the viewport at
    * `view` with a zoom of 1, computed by the page with the pieces of

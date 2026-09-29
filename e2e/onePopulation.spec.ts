@@ -11,7 +11,7 @@
  */
 import { join } from "node:path";
 
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 
@@ -120,6 +120,83 @@ function row(page: Page, pop: string): Locator {
 async function run(page: Page): Promise<void> {
   await panel(page).getByRole("button", { name: "Run" }).click();
   await expect(panel(page).getByRole("table")).toBeVisible();
+}
+
+/** The calculation worker of the page. */
+function runnerWorker(page: Page): Worker | undefined {
+  return page.workers().find((w) => w.url().includes("runnerWorker"));
+}
+
+/** Makes the calculation worker keep its results back, so that a table
+    shown from then on can only have come from the cache. */
+async function holdResults(page: Page): Promise<void> {
+  await expect.poll(() => runnerWorker(page) !== undefined).toBe(true);
+  const worker = runnerWorker(page);
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind !== "result") post(message, transfer);
+    };
+  });
+}
+
+/** What the page gives to hold the reads of the metadata file. */
+interface Holding {
+  /** Whether a read asked for now is held. */
+  holding: boolean;
+  /** Sends the reads held, and holds no more. */
+  releaseReads: () => void;
+}
+
+/** From now on, every read of the metadata file the page asks for is
+    held on its way to the light worker, until `releaseReads`. */
+async function holdReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const state = window as unknown as Partial<Holding>;
+    state.holding = true;
+    if (state.releaseReads !== undefined) return;
+    const held: (() => void)[] = [];
+    const pageWorker = window.Worker.prototype;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its worker, by apply
+    const post = pageWorker.postMessage;
+    pageWorker.postMessage = function (
+      this: typeof pageWorker,
+      ...args: [message: unknown, options?: StructuredSerializeOptions]
+    ) {
+      const [message] = args;
+      if (
+        state.holding === true &&
+        typeof message === "object" &&
+        message !== null &&
+        "kind" in message &&
+        message.kind === "readIndividuals"
+      ) {
+        held.push(() => {
+          post.apply(this, args);
+        });
+        return;
+      }
+      post.apply(this, args);
+    } as typeof pageWorker.postMessage;
+    state.releaseReads = () => {
+      state.holding = false;
+      for (const send of held.splice(0)) send();
+    };
+  });
+}
+
+async function releaseReads(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as Holding).releaseReads();
+  });
 }
 
 function notice(page: Page): Locator {
@@ -292,7 +369,6 @@ test("IP5 D2 with the one population, the metadata file picked again gives the t
   await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
 
   await goTo(page, "Individuals");
-  await pick(page, "Metadata file", "panel_pops.csv");
   await expect(
     page.getByText("All 200 individuals of panel.nei found", { exact: true }),
   ).toBeVisible();
@@ -304,6 +380,72 @@ test("IP5 D2 with the one population, the metadata file picked again gives the t
   await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
   // The notice of the new load no longer names the diversity, and goes.
   await expect(notice(page)).toHaveCount(0);
+});
+
+test("IP10 D3 Undo of All individuals in one population brings the table by popcat back from the cache, with no calculation", async ({
+  page,
+}) => {
+  await loadPanel(page);
+  await loadPops(page);
+  await choosePopulations(page, "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3519",
+    "0.3564",
+    "0.9267",
+  ]);
+  await goTo(page, "Individuals");
+  await choosePopulations(page, "All individuals in one population");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
+
+  // With the results of the calculation worker held back, the table by
+  // popcat can only come back from the cache.
+  await holdResults(page);
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
+
+  await expect(row(page, "p0")).toHaveText([
+    "48",
+    "0.3519",
+    "0.3564",
+    "0.9267",
+  ]);
+  await expect(page.getByRole("status").last()).not.toHaveText(
+    /Diversity: calculating\./,
+  );
+});
+
+test("IP10 D3 with the one population, the metadata file picked again takes the table away while it is read, and Run waits for the read", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await loadPanel(page);
+  await loadPops(page);
+  await choosePopulations(page, "All individuals in one population");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
+
+  await goTo(page, "Individuals");
+  await holdReads(page);
+  await pick(page, "Metadata file", "panel_pops.csv");
+  await goTo(page, "Analyses");
+
+  await expect(panel(page).getByRole("table")).toHaveCount(0);
+  const button = panel(page).getByRole("button", { name: "Run" });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAccessibleDescription("Reading panel_pops.csv.");
+  await expectNoViolations(makeAxeBuilder);
+
+  // Once read, the table comes back with no Run.
+  await releaseReads(page);
+  await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
 });
 
 test("IP5 D2 a project file whose metadata file was not read when it was saved shows its reason with no options and no table, and Individuals is To do", async ({

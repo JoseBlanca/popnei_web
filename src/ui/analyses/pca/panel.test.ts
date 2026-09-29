@@ -441,6 +441,22 @@ describe("IP8 panel: the notes", () => {
   });
 });
 
+describe("IP10 D3 panel: the note of the missing genotypes", () => {
+  test("IP10 D3 an individual that lacks more than 20% of its genotypes is named in a note under the plot, given the statistics of each individual, and in none without them", () => {
+    const r = result();
+    const p = sampleProject();
+    const stats = {
+      individuals: ["i1", "i2", "i3", "i4"],
+      missingGtRate: Float64Array.from([0.25, 0.2, 0, 0.1]),
+      obsHetRate: Float64Array.from([0.3, 0.3, 0.3, 0.3]),
+    };
+    expect(notesOf(r, p, stats)).toEqual([
+      "i1 lacks more than 20% of its genotypes over the variants of panel.nei. The PCA gives a missing genotype the mean of its variant, which draws an individual toward the centre of the plot about as much as it lacks. The PCoA of the Kosman distances compares each pair over the variants both have called, and does not.",
+    ]);
+    expect(notesOf(r, p, null)).toEqual([]);
+  });
+});
+
 describe("IP8 panel: the address a retry of the 3D view asks for", () => {
   test("the first address of http or https in the message of a failure, whatever its words, and none when it names none", () => {
     expect(

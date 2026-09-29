@@ -287,6 +287,32 @@ test("WS7 D3 the ploidy set to 4 and the VCF read again show ploidy 4, and the f
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("IP10 D3 a VCF read again with ploidy 4 gives its ploidy in the line of how it was read, and the card has no line of the ploidy", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openVariants(page);
+  await pick(page, "tetraploid.vcf.gz");
+  await expect(zone(page).getByText(/^Read with ploidy 2,/)).toBeVisible();
+
+  const ploidy = page.getByLabel("Ploidy of the VCF");
+  await ploidy.fill("4");
+  await ploidy.press("Tab");
+  await page
+    .getByRole("button", { name: "Read tetraploid.vcf.gz again with ploidy 4" })
+    .click();
+
+  const card = zone(page);
+  await expect(
+    card.getByText(
+      "Read with ploidy 4, only the variants with PASS or . in the FILTER column",
+    ),
+  ).toBeVisible();
+  await expect(card.getByText("12 individuals")).toBeVisible();
+  await expect(card.getByText(/^Ploidy /)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
 test("WS7 D3 bad.vcf shows the reason popnei refused it", async ({
   page,
   makeAxeBuilder,

@@ -963,6 +963,42 @@ describe("WS9 D1 the announcements made from the state", () => {
     ]);
   });
 
+  test("IP10 D3 the end of a calculation of an opened project whose numbers differ from the project file says so, with the versions of popnei and of the application", () => {
+    const before = state({
+      project: READY,
+      statuses: [running(KEY_A, 1), LOCKED],
+      runs: [run(1, DIVERSITY, KEY_A, CURRENT)],
+    });
+    const otherPopnei = done(KEY_A, 0, {
+      kind: "differs",
+      popnei: { saved: "0.1.0", now: "0.1.1" },
+      app: null,
+    });
+    expect(
+      announcementsOf(
+        before,
+        state({ project: READY, statuses: [otherPopnei, LOCKED] }),
+        WORDS,
+      ),
+    ).toEqual([
+      "Diversity: done. Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated with popnei 0.1.0, and this is popnei 0.1.1.",
+    ]);
+    const otherApp = done(KEY_A, 0, {
+      kind: "differs",
+      popnei: null,
+      app: { saved: "0.1.0", now: "0.2.0" },
+    });
+    expect(
+      announcementsOf(
+        before,
+        state({ project: READY, statuses: [otherApp, LOCKED] }),
+        WORDS,
+      ),
+    ).toEqual([
+      "Diversity: done. Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
+    ]);
+  });
+
   test("a current request that ended done under its key is done, with its warnings counted", () => {
     const before = state({
       project: READY,

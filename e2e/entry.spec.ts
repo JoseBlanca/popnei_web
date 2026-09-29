@@ -6,6 +6,8 @@
  * is not an error of the page (docs/specs/entry.md, "How it is verified";
  * docs/specs/shell.md, "The error bar").
  */
+import { join } from "node:path";
+
 import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
@@ -376,6 +378,42 @@ test("WS7 D2 a defect while the entry starts shows the bar with its words for th
     "The application met an error of its own as it started: test. Reload the page.",
   );
   await expect(page.getByText(/Loading/)).toHaveCount(0);
+});
+
+test("IP10 D3 a record of a read that throws reaches the error bar, and the store stays as it was", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  // The store freezes the project with the read of the variants file
+  // when it records it, and so the read itself, the one object with the
+  // kind "read" and a field ploidy; nothing else freezes it.
+  await page.addInitScript(() => {
+    const freeze = Object.freeze;
+    Object.freeze = <T>(value: T): Readonly<T> => {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        "kind" in value &&
+        value.kind === "read" &&
+        "ploidy" in value
+      ) {
+        throw new Error("test");
+      }
+      return freeze(value);
+    };
+  });
+  await openPopgen(page);
+  const zone = page.getByRole("region", { name: "Variants file" });
+  const chooser = page.waitForEvent("filechooser");
+  await zone.getByRole("button", { name: /^(Choose|Replace) .*…$/ }).click();
+  await (
+    await chooser
+  ).setFiles(join(import.meta.dirname, "fixtures", "panel.nei"));
+
+  await expect(bar(page)).toHaveText(BAR_TEST);
+  await expect(zone.getByText("Reading panel.nei.")).toBeVisible();
+  await expect(zone.getByText("200 individuals")).toHaveCount(0);
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 });
 
 test("WS7 D2 a throw while a step is drawn shows the bar and keeps the frame and the step's heading", async ({

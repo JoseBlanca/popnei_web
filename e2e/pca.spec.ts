@@ -593,3 +593,135 @@ test.describe("IP8 D6 the key of the PCA on the screen", () => {
     expect(await runsPosted(page)).toBe(posted);
   });
 });
+
+/** The shell's status region, the last of the page's two. */
+function status(page: Page): Locator {
+  return page.getByRole("status").last();
+}
+
+test.describe("IP10 D3 the options, the warnings and the results removed", () => {
+  test("IP10 D3 a new project: PCA of the genotypes chosen, the heading of level 3 of its filters with its line, the three filters in the order of the Variants step, and the heading and line of the PCoA once it is chosen", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    // The method, then the three filters in the order of the Variants
+    // step, as the page gives them.
+    const groups = panel.getByRole("radiogroup");
+    const names = [
+      "Method",
+      "Filter the variants by missing data",
+      "Filter the variants by major allele frequency (MAF)",
+      "Prune the variants by linkage disequilibrium (LD)",
+    ];
+    await expect(groups).toHaveCount(names.length);
+    for (const [at, name] of names.entries()) {
+      await expect(groups.nth(at)).toHaveAccessibleName(name);
+    }
+    const method = panel.getByRole("radiogroup", { name: "Method" });
+    await expect(
+      method.getByRole("radio", { name: "PCA of the genotypes" }),
+    ).toBeChecked();
+    await expect(
+      method.getByRole("radio", {
+        name: "PCoA of the Kosman distances, for data with many missing genotypes",
+      }),
+    ).not.toBeChecked();
+    await expect(
+      panel.getByRole("heading", {
+        level: 3,
+        name: "Filters of the variants for the PCA",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(
+        "The PCA uses the filters of the Variants step. Set a filter here to use another value for the PCA alone.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+
+    await chooseRadio(
+      method,
+      "PCoA of the Kosman distances, for data with many missing genotypes",
+    );
+    await expect(
+      panel.getByRole("heading", {
+        level: 3,
+        name: "Filters of the variants for the PCoA",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(
+        "The PCoA uses the filters of the Variants step. Set a filter here to use another value for the PCoA alone.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("heading", { name: /for the PCA$/ }),
+    ).toHaveCount(0);
+    await expectNoViolations(makeAxeBuilder);
+  });
+
+  test("IP10 D3 a run of a new project: the heading 1 warning above its warning, and the end of the run announced in the status region with its count", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await run(panel);
+    const warnings = panel.getByRole("region", { name: "1 warning" });
+    await expect(
+      warnings.getByRole("heading", { name: "1 warning", exact: true }),
+    ).toBeVisible();
+    await expect(
+      warnings.getByText(/^Warning: No LD filter was applied/),
+    ).toBeVisible();
+    await expect(status(page)).toContainText(
+      "Principal components: done, 1 warning.",
+    );
+  });
+
+  test("IP10 D3 results removed: the line of the individuals and Run, as in ready, and the Undo of the notice and then that of the header bring the result back with no calculation", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await run(panel);
+    const posted = await runsPosted(page);
+    expect(posted).toBe(1);
+    const caption = panel.getByText(/^The place of each of the 200/);
+    const line = panel.getByText("200 individuals of panel.nei", {
+      exact: true,
+    });
+    const runButton = panel.getByRole("button", { name: "Run", exact: true });
+    await expect(line).toHaveCount(0);
+    await expect(runButton).toHaveCount(0);
+    const remove = async (): Promise<void> => {
+      await chooseRadio(
+        panel.getByRole("radiogroup", {
+          name: "Filter the variants by major allele frequency (MAF)",
+        }),
+        "For the PCA alone",
+      );
+      await expect(caption).toHaveCount(0);
+      await expect(line).toBeVisible();
+      await expect(runButton).toBeEnabled();
+    };
+
+    await remove();
+    await expectNoViolations(makeAxeBuilder);
+    await page
+      .getByRole("alertdialog", { name: /^Principal components removed/ })
+      .getByRole("button", { name: "Undo", exact: true })
+      .click();
+    await expect(caption).toBeVisible();
+    await expect(line).toHaveCount(0);
+    await expect(runButton).toHaveCount(0);
+
+    await remove();
+    await undo(page).click();
+    await expect(caption).toBeVisible();
+    await expect(runButton).toHaveCount(0);
+    expect(await runsPosted(page)).toBe(posted);
+  });
+});

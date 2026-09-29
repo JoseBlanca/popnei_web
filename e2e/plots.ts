@@ -287,6 +287,87 @@ function valuesData(): Pca3dData {
   };
 }
 
+/** The five points of `five` with no first coordinate: none is drawn. */
+function noneData(): Pca3dData {
+  return {
+    ...fiveData(),
+    title: "No individual drawn, in 3D",
+    description: "Five individuals with no first coordinate, for the tests.",
+    x: new Float64Array(5).fill(Number.NaN),
+  };
+}
+
+/** The five points of `five` with the first and second coordinates, and their labels, swapped. */
+function swappedData(): Pca3dData {
+  const five = fiveData();
+  return {
+    ...five,
+    x: five.y,
+    y: five.x,
+    axisNames: ["PC2", "PC1", "PC3"],
+    axisLabels: ["PC2 (3.40%)", "PC1 (3.55%)", "PC3 (1.89%)"],
+  };
+}
+
+/**
+ * The five points of `five` with markup in the title, the description,
+ * the labels of the lines and the name of P4, which must show as text.
+ */
+function markupData(): Pca3dData {
+  const five = fiveData();
+  if (five.colours.kind !== "groups") {
+    throw new Error("popnei_web defect: the page's five are not of groups.");
+  }
+  return {
+    ...five,
+    title: "<i>T</i>",
+    description: MARKUP_NAME,
+    axisLabels: ["<b>PC1</b>", "<b>PC2</b>", "<b>PC3</b>"],
+    colours: {
+      ...five.colours,
+      names: ["P1", "P2", "P3", "<b>P4</b>", "P5"],
+    },
+  };
+}
+
+/**
+ * A thousand points on a sphere of radius 1, spread by the golden angle,
+ * each in a population of its own, T1 to T1000: the most groups a plot
+ * draws.
+ */
+function thousandData(): Pca3dData {
+  const count = 1000;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const at = Array.from({ length: count }, (_v, index) => index);
+  const height = (index: number): number => 1 - (2 * (index + 0.5)) / count;
+  const radius = (index: number): number => Math.sqrt(1 - height(index) ** 2);
+  return {
+    title: "A thousand populations, in 3D",
+    description:
+      "A thousand individuals in a thousand populations, for the tests.",
+    x: Float64Array.from(
+      at,
+      (index) => radius(index) * Math.cos(golden * index),
+    ),
+    y: Float64Array.from(
+      at,
+      (index) => radius(index) * Math.sin(golden * index),
+    ),
+    z: Float64Array.from(at, height),
+    axisNames: ["PC1", "PC2", "PC3"],
+    axisLabels: ["PC1 (3.55%)", "PC2 (3.40%)", "PC3 (1.89%)"],
+    pointNames: at.map((index) => `t${String(index)}`),
+    colours: {
+      kind: "groups",
+      title: "Population",
+      group: Uint16Array.from(at),
+      names: at.map((index) => `T${String(index + 1)}`),
+      noneName: "No population",
+      highlighted: null,
+    },
+  };
+}
+
 /** The data of each kind of 3D plot of the page. */
 function pca3dDataOf(kind: Pca3dKind): Pca3dData {
   switch (kind) {
@@ -300,6 +381,14 @@ function pca3dDataOf(kind: Pca3dKind): Pca3dData {
       return pairData();
     case "values":
       return valuesData();
+    case "none":
+      return noneData();
+    case "swapped":
+      return swappedData();
+    case "markup":
+      return markupData();
+    case "thousand":
+      return thousandData();
   }
 }
 
@@ -578,6 +667,12 @@ const page: PlotsPage = {
       throw new Error("popnei_web defect: the 3D plot is not of groups.");
     }
     const data = { ...plot.data, colours: { ...colours, highlighted } };
+    drawn = { ...plot, data };
+    plot.handle.update(data);
+  },
+  pca3dUpdate(kind) {
+    const plot = lastPca3d();
+    const data = pca3dDataOf(kind);
     drawn = { ...plot, data };
     plot.handle.update(data);
   },

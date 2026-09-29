@@ -51,8 +51,12 @@ const download = vi.hoisted(() => {
   };
 });
 
+/** The module as loadedPca3d gives it: null until a test says it was
+    downloaded before the mount. */
+const downloaded = vi.hoisted((): { module: unknown } => ({ module: null }));
+
 vi.mock("./load3d.ts", () => ({
-  loadedPca3d: (): null => null,
+  loadedPca3d: (): unknown => downloaded.module,
   loadPca3d: (): Promise<unknown> => {
     download.asks += 1;
     return download.promise;
@@ -134,6 +138,7 @@ beforeEach(() => {
   handles = [];
   failures = [];
   download.asks = 0;
+  downloaded.module = null;
   download.arm();
   container = document.createElement("div");
   document.body.append(container);
@@ -194,6 +199,18 @@ describe("IP8 the mount of the 3D view under StrictMode", () => {
     expect(container.querySelectorAll("canvas")).toHaveLength(1);
     expect(container.textContent).toBe("");
     expect(handles.filter((handle) => handle !== null)).toHaveLength(1);
+    expect(handles.at(-1)).not.toBeNull();
+    expect(failures).toEqual([]);
+  });
+
+  test("IP10 D3 with the module downloaded before, StrictMode's double mount destroys the first plot and makes a second, one canvas left, whose handle the panel is given", async () => {
+    downloaded.module = MODULE;
+    await draw(data("first"));
+    expect(download.asks).toBe(0);
+    expect(made).toHaveLength(2);
+    expect(made[0]?.destroyed).toBe(1);
+    expect(made[1]?.destroyed).toBe(0);
+    expect(container.querySelectorAll("canvas")).toHaveLength(1);
     expect(handles.at(-1)).not.toBeNull();
     expect(failures).toEqual([]);
   });

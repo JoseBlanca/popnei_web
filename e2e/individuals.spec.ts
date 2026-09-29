@@ -355,6 +355,9 @@ test("WS8 D1 a metadata file without 12 individuals of panel.nei gives the reaso
   // With individuals missing, no list of populations.
   await choose(page, "Column that defines the populations", "popcat");
   await expect(names).toHaveText(LEFT_OUT);
+  await expect(
+    page.getByRole("region", { name: "Populations" }).getByRole("list"),
+  ).toHaveCount(0);
 });
 
 test("WS8 D1 a file with a row one cell short gives the reason that names the separator, and a separator chosen reads it again", async ({
@@ -917,6 +920,165 @@ test("WS8 D1 a piece of text dropped on the zone, or pasted into its button, loa
     page.getByRole("main").getByText(message, { exact: true }),
   ).toBeVisible();
   await expect(fileButton(page)).toHaveText("Replace panel_pops.csv…");
+});
+
+/** A drop of two files, a.csv and b.csv, with the bytes of
+    panel_pops.csv. */
+async function twoFiles(page: Page): Promise<unknown> {
+  const bytes = [...(await readFile(join(FIXTURES, "panel_pops.csv")))];
+  return page.evaluateHandle((given) => {
+    // A file a script puts into a DataTransfer has no entry of the file
+    // system in Chromium, and React Aria skips an item without one; so
+    // the item says it is a file.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+    DataTransferItem.prototype.webkitGetAsEntry = function (
+      this: DataTransferItem,
+    ) {
+      return (
+        entryOf.call(this) ??
+        ({ isFile: true, isDirectory: false } as FileSystemEntry)
+      );
+    };
+    const transfer = new DataTransfer();
+    for (const name of ["a.csv", "b.csv"]) {
+      transfer.items.add(new File([new Uint8Array(given)], name));
+    }
+    return transfer;
+  }, bytes);
+}
+
+/** A drop of a folder, as the entry of a folder dragged from the desktop
+    says it is one. */
+async function aFolder(page: Page): Promise<unknown> {
+  return page.evaluateHandle(() => {
+    DataTransferItem.prototype.webkitGetAsEntry = function () {
+      return {
+        isFile: false,
+        isDirectory: true,
+        name: "metadata",
+      } as FileSystemEntry;
+    };
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([], "metadata"));
+    return transfer;
+  });
+}
+
+/** A drop of a piece of text. */
+async function aText(page: Page): Promise<unknown> {
+  return page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "pops.csv");
+    return transfer;
+  });
+}
+
+/** Each way of giving the zone something it does not load, with the
+    words the step says (docs/specs/steps/individuals.md, "How it is
+    checked"). */
+const NOT_LOADED: readonly {
+  readonly what: string;
+  readonly give: (page: Page) => Promise<void>;
+  readonly message: string;
+}[] = [
+  {
+    what: "several files dropped at once",
+    give: async (page) => {
+      await dropOn(page, await twoFiles(page));
+    },
+    message: "Load one metadata file at a time.",
+  },
+  {
+    what: "a folder dropped",
+    give: async (page) => {
+      await dropOn(page, await aFolder(page));
+    },
+    message:
+      "Load a metadata file, a CSV, a TSV or an .xlsx file, not a folder.",
+  },
+  {
+    what: "a piece of text dropped",
+    give: async (page) => {
+      await dropOn(page, await aText(page));
+    },
+    message:
+      "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.",
+  },
+  {
+    what: "a variants file told by its name",
+    give: async (page) => {
+      await pick(page, { name: "panel.vcf.gz", text: "x" });
+    },
+    message:
+      "panel.vcf.gz was not loaded: it is a variants file, which the Variants step takes. Load a metadata file.",
+  },
+  {
+    what: "a file of another name",
+    give: async (page) => {
+      await pick(page, { name: "pops.dat", text: "IID,pop\n" });
+    },
+    message:
+      "pops.dat was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt, or an Excel file, whose name ends in .xlsx. If it is one of them, rename it.",
+  },
+];
+
+for (const { what, give, message } of NOT_LOADED) {
+  test(`IP10 D3 ${what} is not loaded, is said and announced, and the focus stays on the file button`, async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await openIndividuals(page);
+    await fileButton(page).focus();
+
+    await give(page);
+
+    await expect(
+      page.getByRole("main").getByText(message, { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("status").last()).toHaveText(message);
+    await expect(fileButton(page)).toHaveText("Choose a metadata file…");
+    await expect(fileButton(page)).toBeFocused();
+    await expectNoViolations(makeAxeBuilder);
+  });
+}
+
+test("IP10 D3 a piece of text pasted into the zone's button is not loaded, is said and announced, and the focus stays on the paste button", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openIndividuals(page);
+  const paste = zone(page).getByRole("button", {
+    name: "Paste a metadata file",
+    exact: true,
+  });
+  await paste.focus();
+  await paste.evaluate((button) => {
+    const transfer = new DataTransfer();
+    transfer.setData("text/plain", "pops.csv");
+    // Firefox takes the text of a paste made by a script from the
+    // members `dataType` and `data`, which only it knows, and not from
+    // `clipboardData`; the other two engines take `clipboardData`.
+    const init: ClipboardEventInit & { dataType: string; data: string } = {
+      clipboardData: transfer,
+      dataType: "text/plain",
+      data: "pops.csv",
+      bubbles: true,
+      cancelable: true,
+    };
+    button.dispatchEvent(new ClipboardEvent("paste", init));
+  });
+
+  const message =
+    "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.";
+  await expect(
+    page.getByRole("main").getByText(message, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(message);
+  // The focus stays where the paste was made, on the zone's paste
+  // button, and not on the file button the spec names.
+  await expect(paste).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
 });
 
 /** The words of an element whose letters stand on more than one line,

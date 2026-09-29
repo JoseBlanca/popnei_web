@@ -1314,3 +1314,345 @@ test.describe("the legend", () => {
     await expect(panel.locator("canvas")).toHaveCount(0);
   });
 });
+
+/** The calculation workers the page has. */
+function runnerWorkers(page: Page): number {
+  return page.workers().filter((w) => w.url().includes("runnerWorker")).length;
+}
+
+/** The header's Undo. */
+function headerUndo(page: Page): Locator {
+  return page
+    .getByRole("banner")
+    .getByRole("button", { name: "Undo", exact: true });
+}
+
+const MAF_GROUP = "Filter the variants by major allele frequency (MAF)";
+const MAF_FIELD = "Maximum major allele frequency, from 0 to 1";
+const R2_FIELD = "Maximum r² with a variant kept before it, from 0 to 1";
+
+/** Selects what `field` holds and types `typed` into it key by key,
+    without committing it. */
+async function retype(
+  page: Page,
+  field: Locator,
+  typed: string,
+): Promise<void> {
+  await field.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await field.pressSequentially(typed);
+}
+
+test.describe("IP10 D3 the number fields of the PCA's own filters", () => {
+  test("IP10 D3 the MAF set for the PCA shows under its field the line of the Variants step of what popnei filters on, which describes the field", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await chooseRadio(filterGroup(panel, MAF_GROUP), "For the PCA alone");
+    const line =
+      "The frequency of the commonest allele: 0.95 removes a variant whose commonest allele is above 0.95. For a variant of two alleles, that is a minor allele frequency below 0.05.";
+    await expect(panel.getByText(line, { exact: true })).toBeVisible();
+    await expect(panel.getByLabel(MAF_FIELD)).toHaveAccessibleDescription(line);
+    await expectNoViolations(makeAxeBuilder);
+  });
+
+  test("IP10 D3 an r² of 1.5 or typed 0,5 key by key, a distance of 0 or typed 60,000 key by key while it is 50000, and a MAF of 0.123 are refused with the line of the Variants step, the value kept and nothing sent", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await ownLd(panel);
+    const lastStep = "Undo: the LD filter of the principal components changed";
+    await expect(headerUndo(page)).toHaveAccessibleDescription(lastStep);
+    const r2 = panel.getByLabel(R2_FIELD);
+    const distance = panel.getByLabel(DISTANCE);
+    const refused = async (
+      field: Locator,
+      typed: string,
+      line: string,
+      kept: string,
+      undoText: string,
+    ): Promise<void> => {
+      await retype(page, field, typed);
+      await field.press("Enter");
+      await expect(panel.getByText(line, { exact: true })).toBeVisible();
+      await expect(status(page)).toContainText(line);
+      await expect(field).toHaveValue(kept);
+      await expect(headerUndo(page)).toHaveAccessibleDescription(undoText);
+    };
+
+    await refused(
+      r2,
+      "1.5",
+      "1.5 is more than 1; the maximum r² stays 0.1.",
+      "0.1",
+      lastStep,
+    );
+    await refused(
+      r2,
+      "0,5",
+      "Write the decimals with a point, 0.1 and not 0,1; the maximum r² stays 0.1.",
+      "0.1",
+      lastStep,
+    );
+    await refused(
+      distance,
+      "0",
+      "0 is less than 1; the distance stays 50000.",
+      "50000",
+      lastStep,
+    );
+    await refused(
+      distance,
+      "60,000",
+      "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance stays 50000.",
+      "50000",
+      lastStep,
+    );
+    await expectNoViolations(makeAxeBuilder);
+
+    await chooseRadio(filterGroup(panel, MAF_GROUP), "For the PCA alone");
+    const mafStep =
+      "Undo: the MAF filter of the principal components was set for them alone";
+    await refused(
+      panel.getByLabel(MAF_FIELD),
+      "0.123",
+      "0.123 has more than two decimals; the threshold stays 0.95.",
+      "0.95",
+      mafStep,
+    );
+  });
+
+  test("IP10 D3 a field left empty sends nothing: the MAF shows 0.95 again after Enter, and the empty distance stays empty after Tab", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await chooseRadio(filterGroup(panel, MAF_GROUP), "For the PCA alone");
+    const maf = panel.getByLabel(MAF_FIELD);
+    const mafStep =
+      "Undo: the MAF filter of the principal components was set for them alone";
+    await expect(headerUndo(page)).toHaveAccessibleDescription(mafStep);
+    await maf.click();
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("Backspace");
+    await expect(maf).toHaveValue("");
+    await page.keyboard.press("Enter");
+    await expect(maf).toHaveValue("0.95");
+    await expect(panel.getByText(/stays 0\.95\.$/)).toHaveCount(0);
+    await expect(headerUndo(page)).toHaveAccessibleDescription(mafStep);
+
+    await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
+    const ldStep =
+      "Undo: the LD filter of the principal components was set for them alone";
+    const distance = panel.getByLabel(DISTANCE);
+    await expect(distance).toHaveValue("");
+    await distance.focus();
+    await page.keyboard.press("Tab");
+    await expect(distance).not.toBeFocused();
+    await expect(distance).toHaveValue("");
+    await expect(panel.getByText(/still to be typed\.$/)).toHaveCount(0);
+    await expect(headerUndo(page)).toHaveAccessibleDescription(ldStep);
+  });
+
+  test("IP10 D3 in the PCA's empty distance the arrow keys, Page Up, Page Down, Home and End send nothing, and an Undo of 50000 leaves it empty", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
+    const ldStep =
+      "Undo: the LD filter of the principal components was set for them alone";
+    const distance = panel.getByLabel(DISTANCE);
+    await distance.focus();
+    for (const key of [
+      "ArrowUp",
+      "ArrowDown",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+    ]) {
+      await page.keyboard.press(key);
+      await expect(distance).toHaveValue("");
+    }
+    await page.keyboard.press("Tab");
+    await expect(distance).toHaveValue("");
+    await expect(headerUndo(page)).toHaveAccessibleDescription(ldStep);
+
+    await distance.pressSequentially("50000");
+    await distance.press("Enter");
+    await expect(distance).toHaveValue("50000");
+    await headerUndo(page).click();
+    await expect(distance).toHaveValue("");
+    await expect(headerUndo(page)).toHaveAccessibleDescription(ldStep);
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toBeDisabled();
+    await expectNoViolations(makeAxeBuilder);
+  });
+});
+
+test.describe("IP10 D3 the states of the panel", () => {
+  test("IP10 D3 before any variants file the PCA is locked: its Run disabled and described by the reason", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await page.goto("popgen.html#analyses");
+    const panel = page.getByRole("region", { name: "Principal components" });
+    const runButton = panel.getByRole("button", { name: "Run", exact: true });
+    await expect(runButton).toBeDisabled();
+    await expect(runButton).toHaveAccessibleDescription(
+      "Load a variants file in the Variants step.",
+    );
+    await expect(
+      panel.getByText("Load a variants file in the Variants step.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expectNoViolations(makeAxeBuilder);
+  });
+
+  test("IP10 D3 the method changed while the PCA runs leaves the calculation behind with the notice and shows Run for the PCoA, and its Undo gives the calculation back", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await holdResults(page);
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    const bar = panel.getByRole("progressbar");
+    await expect(bar).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Stop" })).toBeVisible();
+
+    await chooseRadio(
+      filterGroup(panel, "Method"),
+      "PCoA of the Kosman distances, for data with many missing genotypes",
+    );
+    const notice = page.getByRole("alertdialog");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("unless you undo the change");
+    await expect(bar).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Stop" })).toHaveCount(0);
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toBeEnabled();
+    await expectNoViolations(makeAxeBuilder);
+
+    await notice.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(
+      filterGroup(panel, "Method").getByRole("radio", {
+        name: "PCA of the genotypes",
+      }),
+    ).toBeChecked();
+    await expect(bar).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Stop" })).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test("IP10 D3 Stop pressed with the keyboard stops the PCA and not the diversity: Run back in its place, and the diversity ready", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await holdResults(page);
+    const button = panel.getByRole("button", { name: "Run", exact: true });
+    await button.focus();
+    await page.keyboard.press("Enter");
+    const stop = panel.getByRole("button", { name: "Stop" });
+    await expect(stop).toBeFocused();
+    await expect(panel.getByRole("progressbar")).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(button).toBeFocused();
+    await expect(panel.getByRole("progressbar")).toHaveCount(0);
+    await expect(stop).toHaveCount(0);
+    await expect(status(page)).toContainText("Principal components: stopped.");
+    const diversity = page.getByRole("region", { name: "Diversity" });
+    await expect(
+      diversity.getByRole("button", { name: "Run", exact: true }),
+    ).toBeEnabled();
+    await expect(diversity.getByRole("progressbar")).toHaveCount(0);
+  });
+
+  test("IP10 D3 Run pressed with the keyboard: once the result is drawn and the button gone, the focus is on the heading of the panel", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    const button = panel.getByRole("button", { name: "Run", exact: true });
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(panel.getByText(/^The place of each of the 200/)).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(button).toHaveCount(0);
+    await expect(
+      panel.getByRole("heading", { level: 2, name: "Principal components" }),
+    ).toBeFocused();
+  });
+
+  test("IP10 D3 popnei's refusal of no variant left after the PCA's MAF of 0 in its words, with no Run; the statistics of each individual failed in theirs, and a crash, each with Run again", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await chooseRadio(filterGroup(panel, MAF_GROUP), "For the PCA alone");
+    const maf = panel.getByLabel(MAF_FIELD);
+    await retype(page, maf, "0");
+    await maf.press("Enter");
+    await expect(maf).toHaveValue("0");
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      panel.getByText(
+        "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters the PCA has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toHaveCount(0);
+    await expectNoViolations(makeAxeBuilder);
+
+    // The MAF back to the step's, and the statistics of each individual
+    // asked by a threshold of the individuals, then crashed.
+    await chooseRadio(
+      filterGroup(panel, MAF_GROUP),
+      "As in the Variants step: off",
+    );
+    await goTo(page, "Variants");
+    await page
+      .getByRole("region", { name: "Filters of the individuals" })
+      .getByText("Filter the individuals by missing data", { exact: true })
+      .click();
+    await goTo(page, "Analyses");
+    await crashResults(page);
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      panel.getByText(
+        /^The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run\./,
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toBeEnabled();
+
+    // With no threshold of the individuals, the PCA's own calculation
+    // crashes, in the worker started after the last crash: its words, and
+    // Run again.
+    await goTo(page, "Variants");
+    await page
+      .getByRole("region", { name: "Filters of the individuals" })
+      .getByText("Filter the individuals by missing data", { exact: true })
+      .click();
+    await goTo(page, "Analyses");
+    await expect.poll(() => runnerWorkers(page)).toBe(1);
+    await crashResults(page);
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      panel.getByText(/^The calculation stopped unexpectedly\. Run it again\./),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toBeEnabled();
+    await expectNoViolations(makeAxeBuilder);
+  });
+});

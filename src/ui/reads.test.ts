@@ -320,6 +320,32 @@ describe("WS10 the cases of the entry", () => {
     expect(fake.variants).toHaveLength(0);
     expect(fake.individuals).toHaveLength(0);
   });
+
+  test("IP10 D3 an opened project whose individuals file is notGiven asks for no read, until the user gives the files", () => {
+    const { store, fake } = setUp();
+    const text = readFileSync(
+      join(
+        import.meta.dirname,
+        "..",
+        "core",
+        "fixtures",
+        "projectFile",
+        "v1-metadata-not-read.popnei.json",
+      ),
+      "utf8",
+    );
+    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    if (!opened.ok) {
+      throw new Error("the fixture of the metadata not read does not open");
+    }
+
+    store.open(opened.value);
+
+    expect(store.getState().project.variants).toBeNull();
+    expect(individualsRead(store)).toEqual({ kind: "notGiven" });
+    expect(fake.variants).toHaveLength(0);
+    expect(fake.individuals).toHaveLength(0);
+  });
 });
 
 describe("WS7 D1 the reads cancelled", () => {
@@ -658,6 +684,39 @@ describe("IP9 the reads of an xlsx", () => {
     expect(wantedReads(project)).toEqual([
       { kind: "individuals", fileId: POPS_ID, csv: null },
     ]);
+  });
+
+  test("IP10 D3 an individuals source notGiven, and one read, give no read", () => {
+    const source = {
+      fileId: POPS_ID,
+      name: "pops.csv",
+      csv: A,
+      typesSet: [],
+    };
+    const notGiven: Project = {
+      ...emptyProject("popgen"),
+      individuals: { ...source, read: { kind: "notGiven" } },
+    };
+    const read: Project = {
+      ...emptyProject("popgen"),
+      individuals: {
+        ...source,
+        read: {
+          kind: "read",
+          table: { columns: ["name", "pop"], rows: [["s000", "p0"]] },
+          columns: [{ kind: "identifier" }, { kind: "categorical" }],
+          found: {
+            encoding: "utf-8",
+            separator: ",",
+            decimal: ".",
+            undecodedLine: null,
+          },
+        },
+      },
+    };
+
+    expect(wantedReads(notGiven)).toEqual([]);
+    expect(wantedReads(read)).toEqual([]);
   });
 
   test("an xlsx picked is read with csv null, its read recorded under null with found null, and asked once", async () => {

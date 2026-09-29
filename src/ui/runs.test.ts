@@ -514,4 +514,34 @@ describe("VS3 D6 startWriting", () => {
     expect(ended).toStrictEqual([statsRequest.run.id, write?.run.id]);
     expect(store.getState().write?.kind).toBe("done");
   });
+
+  test("IP10 D3 a write that waits for statistics already in flight gets no handle and settles at once, while the write, sent when they end, is awaited by the Calculate that started them", async () => {
+    const { store, sent, writes } = setUpWriting(() => false);
+    const calculate = startAnalysis(store, "stats");
+    const statsRequest = sentAt(sent, 0);
+    expect(statsRequest.job.analysis).toBe("stats");
+
+    const started = startWriting(store, "nei");
+
+    expect(started).not.toBeNull();
+    expect(await settled(started)).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(writes).toHaveLength(0);
+    statsRequest.end({
+      kind: "done",
+      key: statsRequest.key,
+      result: fiveStats(),
+    });
+    expect(await settled(calculate)).toBe(false);
+    expect(writes).toHaveLength(1);
+    const write = writes[0];
+    write?.end({
+      kind: "done",
+      key: write.key,
+      result: writtenFile(1150, 1200),
+    });
+    await calculate;
+
+    expect(store.getState().write?.kind).toBe("done");
+  });
 });

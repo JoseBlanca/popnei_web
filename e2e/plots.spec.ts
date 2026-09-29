@@ -1212,6 +1212,10 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
         (path) => path.getAttribute("style") ?? "",
       ),
       firstMarkClass,
+      firstMarkStyle:
+        file
+          .querySelector(".chart-legend path.chart-colour-0")
+          ?.getAttribute("style") ?? "",
       backgroundLeft,
       rows,
       png: { width: image.width, height: image.height, pixel, ringPixel },
@@ -1245,6 +1249,8 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
   );
 
   expect(found.firstMarkClass).toContain("chart-colour-0");
+  // The colour written on the legend's mark, and not only its pixel.
+  expect(found.firstMarkStyle).toContain("fill: rgb(230, 159, 0)");
   expect([found.png.width, found.png.height]).toEqual([1800, 1350]);
   const [red, green, blue] = found.png.pixel;
   expect(Math.abs((red ?? -99) - FIRST_GROUP[0])).toBeLessThanOrEqual(8);
@@ -1254,6 +1260,61 @@ test("IP7 D3 toSVG of the scatter has no overlay, no mark of the hover and no va
   expect(near(found.png.ringPixel, WHITE)).toBe(true);
   expect(found.backgroundStyle).toContain("fill-opacity: 0.85");
   expect(found.backgroundStyle).toContain(`fill: ${LIGHT_BACKGROUND}`);
+});
+
+test("IP10 D3 a change of theme while the scatter is on the screen draws nothing again, and a later toSVG is in the light theme", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawScatter(page, 600, 450);
+  const found = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    if (svg === null) throw new Error("The scatter has no SVG.");
+    const first = svg.querySelector("path.chart-points.chart-colour-0");
+    if (first === null) throw new Error("The scatter has no path of P1.");
+    const lightStroke = getComputedStyle(first).stroke;
+    let mutations = 0;
+    const observer = new MutationObserver((records) => {
+      mutations += records.length;
+    });
+    observer.observe(svg, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
+    document.documentElement.dataset["theme"] = "dark";
+    // Two frames of the screen, in which a redraw would have run.
+    for (let frame = 0; frame < 2; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    observer.disconnect();
+    const darkStroke = getComputedStyle(first).stroke;
+    const file = new DOMParser().parseFromString(
+      plots.handle().toSVG(),
+      "image/svg+xml",
+    );
+    return {
+      lightStroke,
+      darkStroke,
+      mutations,
+      exported: [
+        ...file.querySelectorAll(".chart-marks path.chart-colour-0"),
+      ].map((path) => path.getAttribute("style") ?? ""),
+    };
+  });
+  // The outline of the marks is --chart-axis, which the dark theme changes.
+  expect(found.lightStroke).toBe(LIGHT_AXIS);
+  expect(found.darkStroke).toBe("rgb(163, 171, 181)");
+  expect(found.mutations).toBe(0);
+  expect(found.exported).toHaveLength(1);
+  for (const style of found.exported) {
+    expect(style).toContain(`fill: rgb(${FIRST_GROUP.join(", ")})`);
+    expect(style).toContain(`stroke: ${LIGHT_AXIS}`);
+  }
 });
 
 /** The median of `xs`, which is not empty. */

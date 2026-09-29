@@ -9,7 +9,7 @@
 
 import { Vector3, type OrthographicCamera } from "three";
 import { describe, expect, test } from "vitest";
-import { MAX_SVG_POINTS } from "./limits.ts";
+import { MAX_POINT_GROUPS, MAX_SVG_POINTS } from "./limits.ts";
 import { NO_GROUP, type PointColours } from "./marks.ts";
 import {
   createPca3d,
@@ -299,6 +299,36 @@ describe("IP8 D1 the 3D plot in node, its defects", () => {
       const element = document.createElement("div");
       expect(() => createPca3d(element, data)).toThrow(/popnei_web defect/);
       expect(() => createPca3d(element, data)).not.toThrow(Pca3dError);
+      expect(element.childNodes).toHaveLength(0);
+    }
+  });
+
+  test("IP10 D3 createPca3d throws for values of another length than the points, a highlight that is not a whole number from 0, and more than 1,000 names, before it asks for WebGL", () => {
+    const values: PointColours = {
+      kind: "values",
+      title: "altitude",
+      values: Float64Array.from([100]),
+      noneName: "No value",
+    };
+    const names = Array.from(
+      { length: MAX_POINT_GROUPS + 1 },
+      (_name, at) => `P${String(at + 1)}`,
+    );
+    const cases: Pca3dData[] = [
+      dataOf([0, 1], [0, 1], [0, 1], values),
+      dataOf([0, 1], [0, 1], [0, 1], {
+        ...groupsOf([0, 0], ["P1"]),
+        highlighted: 1.5,
+      }),
+      dataOf([0, 1], [0, 1], [0, 1], {
+        ...groupsOf([0, 0], ["P1"]),
+        highlighted: -1,
+      }),
+      dataOf([0, 1], [0, 1], [0, 1], groupsOf([0, 0], names)),
+    ];
+    for (const data of cases) {
+      const element = document.createElement("div");
+      expect(() => createPca3d(element, data)).toThrow(/popnei_web defect/);
       expect(element.childNodes).toHaveLength(0);
     }
   });

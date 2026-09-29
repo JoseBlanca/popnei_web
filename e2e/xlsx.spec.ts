@@ -3,8 +3,9 @@
  * package of the release of xlsx_rs that package.json names
  * (docs/specs/worker/individuals.md, "How it is verified", "With
  * Playwright, from stage 4"; docs/specs/steps/individuals.md, "The file"
- * and "How the file was read"). The three xlsx files are those of the
- * tests of xlsx_rs, tests/data/ at 4a29ee7, copied into e2e/fixtures/.
+ * and "How the file was read"; the refusals of "Its words"). The xlsx
+ * files, and excel97.xls, are those of the tests of xlsx_rs,
+ * tests/data/ at 4a29ee7, copied into e2e/fixtures/.
  *
  * The HTML standard lets an engine keep a failed import() as failed for
  * the life of the worker, as Chromium 153 does, so a second try after
@@ -267,6 +268,97 @@ test("IP9 D2 encrypted.xlsx is refused with its words", async ({
   );
   await expectNoViolations(makeAxeBuilder);
 });
+
+/** Each refusal of an xlsx that a file can bring about, through the
+    reader of xlsx files and the screen, with the file that brings it
+    and its words (docs/specs/steps/individuals.md, "Its words"). The
+    xlsx files are those of the tests of xlsx_rs, tests/data/ at
+    4a29ee7. `encrypted` is the test above, and `xlsxReaderNotLoaded`
+    the two of the reader that answered with an error. `sheetTooLarge`
+    needs a sheet of more than 2,000,000 cells, which no file of the
+    tests of xlsx_rs has, so its words are checked in node only
+    (src/core/project.test.ts). */
+const REFUSALS: readonly {
+  readonly kind: string;
+  readonly what: string;
+  readonly name: string;
+  readonly bytes: () => Promise<Buffer>;
+  readonly words: string;
+}[] = [
+  {
+    kind: "notXlsx",
+    what: "a CSV named pops.xlsx",
+    name: "pops.xlsx",
+    bytes: () => readFile(join(FIXTURES, "panel_pops.csv")),
+    words:
+      "it is not an Excel workbook, although its name ends in .xlsx; if it is a CSV or a TSV, give it a name that ends in .csv",
+  },
+  {
+    kind: "oldExcel",
+    what: "excel97.xls, of Excel 97–2003, named pops.xlsx",
+    name: "pops.xlsx",
+    bytes: () => readFile(join(FIXTURES, "excel97.xls")),
+    words:
+      "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)",
+  },
+  {
+    kind: "emptySheet",
+    what: "empty_first_sheet.xlsx, whose first sheet is empty,",
+    name: "empty_first_sheet.xlsx",
+    bytes: () => readFile(join(FIXTURES, "empty_first_sheet.xlsx")),
+    words:
+      "its first sheet, Notas, is empty, and only the first sheet is read; put the table in the first sheet",
+  },
+  {
+    kind: "cellError",
+    what: "getting_data.xlsx, whose cell holds the error #GETTING_DATA,",
+    name: "getting_data.xlsx",
+    bytes: () => readFile(join(FIXTURES, "getting_data.xlsx")),
+    words:
+      "a cell holds the error #GETTING_DATA, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value",
+  },
+  {
+    kind: "files",
+    what: "excel_en.xlsx cut short to its first 100 bytes",
+    name: "excel_en.xlsx",
+    // A zip cut short: its first 100 bytes.
+    bytes: async () =>
+      (await readFile(join(FIXTURES, "excel_en.xlsx"))).subarray(0, 100),
+    words:
+      "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again",
+  },
+];
+
+for (const { kind, what, name, bytes, words } of REFUSALS) {
+  test(`IP10 D3 ${what} is refused with its words, those of ${kind}`, async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await openIndividuals(page);
+    const chooser = page.waitForEvent("filechooser");
+    await fileButton(page).click();
+    await (
+      await chooser
+    ).setFiles({
+      name,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await bytes(),
+    });
+
+    await expect(
+      zone(page).getByText(
+        `${name} could not be read: ${words}. Load a corrected file.`,
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      zone(page).getByText(/^Read from the first sheet/),
+    ).toHaveCount(0);
+    await expect(page.getByRole("table")).toHaveCount(0);
+    await expectNoViolations(makeAxeBuilder);
+  });
+}
 
 test("IP9 D2 individuals_10000.xlsx, 10,000 rows and 20 columns, is read, timed from the pick to the table with the download and without it", async ({
   page,
