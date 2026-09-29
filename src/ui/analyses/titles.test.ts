@@ -13,21 +13,23 @@ describe("VS5 D1 the words of the shell of the page", () => {
       "Statistics of each individual",
       "Histograms of the variants",
       "Counts of the filters",
+      "Principal components",
       "Diversity",
     ]);
   });
 
-  test("the checks are in the Variants step and the diversity in the Analyses step, and an analysis of no step is a defect", () => {
+  test("the checks are in the Variants step and the principal components and the diversity in the Analyses step, and an analysis of no step is a defect", () => {
     expect(POPGEN_ANALYSES.map((def) => SHELL_WORDS.stepOf(def.id))).toEqual([
       "variants",
       "variants",
       "variants",
       "analyses",
+      "analyses",
     ]);
-    expect(() => SHELL_WORDS.stepOf("pca")).toThrow(/^popnei_web defect:/);
+    expect(() => SHELL_WORDS.stepOf("tsne")).toThrow(/^popnei_web defect:/);
   });
 
   test("an analysis with no title is a defect", () => {
-    expect(() => SHELL_WORDS.title("pca")).toThrow(/^popnei_web defect:/);
+    expect(() => SHELL_WORDS.title("tsne")).toThrow(/^popnei_web defect:/);
   });
 });

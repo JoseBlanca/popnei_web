@@ -21,6 +21,10 @@ import {
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
+import {
+  refusalText as pcaRefusalText,
+  statisticsFailedText as pcaStatisticsFailedText,
+} from "../../core/analyses/pca.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
@@ -109,8 +113,28 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   Results: DiversityResults,
 });
 
+/**
+ * The panel of the principal components (docs/specs/analyses/pca.md, "The
+ * panel"), for now its words alone: the frame draws its options of none,
+ * its Run, its warnings and its error state, and its result draws
+ * nothing. The panel whole, the options, the plots, the legend, the
+ * explained variance, the table and its lines before a Run, is task 8.4
+ * of docs/plans/individuals-pca.md, which replaces `readyLines` and
+ * `Results` here.
+ */
+const PCA: AnalysisUi = Object.freeze({
+  title: titleOf("pca"),
+  name: "the principal components",
+  resultName: "the plot and the table",
+  readyLines: (): readonly string[] => [],
+  refusalText: pcaRefusalText,
+  statisticsFailedText: pcaStatisticsFailedText,
+  Results: (): null => null,
+});
+
 /** The panel of every analysis of the Analyses step, by its id. */
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([
+  ["pca", PCA],
   ["diversity", DIVERSITY],
 ]);
 

@@ -16,7 +16,16 @@
 // of the file, with no filter, to
 // e2e/fixtures/panel_individual_stats.json, which the tests of core read,
 // since they may not call popnei (docs/specs/core/individualsKept.md, "How
-// it is verified").
+// it is verified"). From panel_pops.csv it writes
+// e2e/fixtures/panel_meta.csv, the same individuals and populations with a
+// third column of numbers, `altitude`, 100 + 10 × i for the individual
+// `s‹i›` and NA for s197, s198 and s199, which the flow of the PCA colours
+// by (docs/specs/analyses/pca.md, "How it is verified"). And from panel.nei
+// it writes the PCA of the flow, the missing data filter at 0.1 and the
+// PCA's own LD filter at r² 0.1 within 50,000 base pairs, cut to its first
+// 10 components as the calculation worker cuts it, to
+// e2e/fixtures/panel_pca.json, which the tests of the panel's functions of
+// core read.
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -29,6 +38,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   calcPerIndividualStats,
+  doPcaFromVariants,
   init,
   openVars,
   openVcf,
@@ -131,4 +141,81 @@ writeFileSync(
 console.log(
   `${statsPath}: ${String(individualStats.individuals.length)} individuals, ` +
     `${String(individualStats.passStats.numVars)} variants`,
+);
+
+// The metadata file with a column of numbers: the rows of panel_pops.csv in
+// its order, and `altitude`, 100 + 10 × i for s‹i›, from 100 for s000 to
+// 2,060 for s196, and NA for the last three, so that the column is read
+// as continuous and three individuals have no value.
+const NO_ALTITUDE = new Set(["s197", "s198", "s199"]);
+const [popsHeader, ...popsRows] = csv.trim().split("\n");
+const metaLines = [
+  `${popsHeader},altitude`,
+  ...popsRows.map((row) => {
+    const name = row.split(",")[0];
+    const match = /^s(\d+)$/.exec(name);
+    if (match === null) {
+      throw new Error(`an individual of panel_pops.csv is not s‹i›: ${name}`);
+    }
+    const altitude = NO_ALTITUDE.has(name)
+      ? "NA"
+      : String(100 + 10 * Number(match[1]));
+    return `${row},${altitude}`;
+  }),
+];
+const metaPath = join(fixtures, "panel_meta.csv");
+writeFileSync(metaPath, `${metaLines.join("\n")}\n`);
+console.log(`${metaPath}: ${String(metaLines.length)} lines`);
+
+// The PCA of the flow of docs/specs/analyses/pca.md: the missing data
+// filter at 0.1 and the PCA's own LD filter at r² 0.1 within 50,000 base
+// pairs, as src/worker/runner.ts asks popnei for it, cut to the first 10
+// components as the runner cuts it, PCA_NUM_COMPS_KEPT.
+const NUM_COMPS_KEPT = 10;
+const pcaVariants = openVars(readFileSync(join(fixtures, "panel.nei")));
+let pca;
+try {
+  pcaVariants.filterByMissingData(0.1);
+  pcaVariants.filterByLd(0.1, 50000);
+  pca = doPcaFromVariants(pcaVariants, {
+    numPrinComps: 0,
+    transformToBiallelic: true,
+  });
+} finally {
+  pcaVariants.free();
+}
+const numComps = Math.min(NUM_COMPS_KEPT, pca.numComps);
+const projections = [];
+for (let row = 0; row < pca.individuals.length; row += 1) {
+  const start = row * pca.numComps;
+  projections.push(...pca.projections.slice(start, start + numComps));
+}
+const pcaPath = join(fixtures, "panel_pca.json");
+writeFileSync(
+  pcaPath,
+  `${JSON.stringify(
+    {
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+        { kind: "ld", maxAllowedR2: 0.1, maxDist: 50000 },
+      ],
+      method: "pca",
+      individuals: pca.individuals,
+      numComps,
+      numCompsFound: pca.numComps,
+      numVarsUsed: pca.usedVars.length,
+      passStats: pca.passStats,
+      explainedVariancePercent: [
+        ...pca.explainedVariancePercent.slice(0, numComps),
+      ],
+      projections,
+    },
+    null,
+    2,
+  )}\n`,
+);
+console.log(
+  `${pcaPath}: ${String(pca.individuals.length)} individuals, ` +
+    `${String(numComps)} of ${String(pca.numComps)} components, ` +
+    `${String(pca.usedVars.length)} variants used`,
 );

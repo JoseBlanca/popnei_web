@@ -22,11 +22,13 @@ import type { ShellWords } from "../shell/words.ts";
 /** The title of every analysis of the applications, by its id: the
     heading of its panel, or of its part of the Variants step
     (docs/specs/analyses/individualChecks.md, variantChecks.md,
-    filterCounts.md and diversity.md). */
+    filterCounts.md, pca.md and diversity.md). The principal components
+    have one title whatever their method. */
 const TITLES: ReadonlyMap<AnalysisId, string> = new Map([
   ["individualChecks", "Statistics of each individual"],
   ["variantChecks", "Histograms of the variants"],
   ["filterCounts", "Counts of the filters"],
+  ["pca", "Principal components"],
   ["diversity", "Diversity"],
 ]);
 

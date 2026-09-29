@@ -8,3 +8,6 @@ src/core/fixtures/projectFile/
 # The statistics of panel.nei are kept as make_fixtures.mjs writes them with
 # popnei, so that running it again changes nothing.
 e2e/fixtures/panel_individual_stats.json
+
+# The PCA of the flow on panel.nei, the same.
+e2e/fixtures/panel_pca.json

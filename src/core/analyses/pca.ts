@@ -5,27 +5,44 @@
  * warnings, its check numbers, its lines of the Python script, and the
  * words of its error state (docs/specs/analyses/pca.md, "The module").
  *
+ * It gives the panel what it reads of a result as well: how the
+ * individuals are coloured, the columns that can colour them, the
+ * components drawn, the rows of the table and the CSV files, the
+ * description a screen reader reads, and the note of the individuals with
+ * many missing genotypes (docs/specs/analyses/pca.md, "The colours", "The
+ * note of the missing genotypes" and "The panel").
+ *
  * Every number of a result is popnei's, from one call of
  * `doPcaFromVariants` or `doPcoaFromVariants` in the calculation worker;
- * the one arithmetic of this module is in the warning of Lingoes'
- * correction, which says how large the correction was beside the
- * distances.
+ * the arithmetic of this module is in the warning of Lingoes' correction,
+ * which says how large the correction was beside the distances, and in
+ * the description, which gives the mean of the projections of each group.
  */
 
-import type { IndividualsKept } from "../individualsKept.ts";
+import type { IndividualStats, IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   MAX_LD_DIST,
+  ONE_POPULATION,
   VARIANT_FILTER_ORDER,
   counted,
   escaped,
   grouped,
   individualsNeeds,
   jobFilters,
+  namesOf,
+  populationsNeeds,
+  populationsOf,
   shown,
   variantFilterNeeds,
 } from "../project.ts";
-import type { Project, ProjectVariantFilter } from "../project.ts";
+import type {
+  Grouping,
+  IndividualsSource,
+  Project,
+  ProjectVariantFilter,
+  VariantSource,
+} from "../project.ts";
 import type { Result } from "../result.ts";
 import type {
   AnalysisDef,
@@ -38,13 +55,17 @@ import type { Failure } from "./individualChecks.ts";
 import {
   CHANGE_SETTINGS,
   STEP_LD_FILTER,
+  csvField,
   defect,
   emptySourceText,
   ldOrderText,
   refusalWords,
 } from "./words.ts";
 import type { LdFilterWords } from "./words.ts";
+import { cellNumber } from "../../worker/individuals/columnTypes.ts";
 import type {
+  Cell,
+  IndividualsTable,
   Job,
   JobResult,
   PcaMethod,
@@ -914,6 +935,722 @@ export function statisticsFailedText(
     failureText,
     `the ${name} was not run`,
   );
+}
+
+// What the panel reads of a result (docs/specs/analyses/pca.md, "The
+// colours", "The note of the missing genotypes" and "The panel").
+
+/** The proportion of missing genotypes above which an individual is named
+    by the note of the missing genotypes: the projection of an individual
+    shrinks toward the centre about as much as it lacks, so at 0.2 it is
+    drawn about a fifth of the way in (docs/specs/analyses/pca.md, "The
+    note of the missing genotypes"). */
+export const MANY_MISSING_RATE = 0.2;
+
+/** The group of an individual with no population or no value, 0xffff:
+    NO_GROUP of src/charts/marks.ts, which core does not import; a test of
+    the panel asserts the two are equal. */
+export const NO_COLOUR_GROUP = 0xffff;
+
+/** The most groups the points are coloured by: MAX_POINT_GROUPS of
+    src/charts/limits.ts, which the scatter refuses above; the same test
+    asserts it. */
+export const MAX_COLOUR_GROUPS = 1000;
+
+/**
+ * How the individuals of a result are coloured: by groups, or by the
+ * numbers of a continuous column. The panel gives the plots the
+ * `PointColours` of src/charts/marks.ts made of it, with the group it
+ * highlights; core imports nothing of src/charts.
+ */
+export type PcaColours =
+  | {
+      readonly kind: "groups";
+      /** "Population", or the column's name. */
+      readonly title: string;
+      /** Every group of the table, in the order of first appearance; the
+          index of a group gives its mark. */
+      readonly names: readonly string[];
+      /** The group of each individual of the result, an index of `names`,
+          or NO_COLOUR_GROUP for none. */
+      readonly group: Uint16Array;
+      /** The individuals of the result in each group, 0 for some. */
+      readonly counts: readonly number[];
+      /** The individuals of the result in no group. */
+      readonly numNone: number;
+      /** The name of the individuals in no group. */
+      readonly noneName: "No population" | "No value";
+      /** Why the colours are not those the options ask, or `null`. */
+      readonly note: string | null;
+    }
+  | {
+      readonly kind: "values";
+      /** The column's name. */
+      readonly title: string;
+      /** The number of each individual of the result; NaN for none. */
+      readonly values: Float64Array;
+      /** The individuals of the result with no number. */
+      readonly numNone: number;
+      /** The name of the individuals with no number. */
+      readonly noneName: "No value";
+      /** Why the colours are not those the options ask, or `null`. */
+      readonly note: string | null;
+    };
+
+/** The colours of the groups kind. */
+type GroupsColours = Extract<PcaColours, { readonly kind: "groups" }>;
+
+/** What stands in a chain of the memo of the colours for a part of the
+    project that is null: no individuals file, or no variants file. */
+const ABSENT = Object.freeze({});
+
+/** The colours `pcaColours` made, by the result, the individuals file, the
+    grouping, the variants file and the option, so that the same inputs
+    give the same object, which the highlight of the legend is kept with. */
+const COLOURS = new WeakMap<
+  PcaResult,
+  WeakMap<
+    IndividualsSource | typeof ABSENT,
+    WeakMap<
+      Grouping,
+      WeakMap<VariantSource | typeof ABSENT, Map<string | null, PcaColours>>
+    >
+  >
+>();
+
+/** The value of `map` under `key`, made by `make` and kept the first time
+    it is asked. */
+function kept<K extends object, V>(
+  map: WeakMap<K, V>,
+  key: K,
+  make: () => V,
+): V {
+  const found = map.get(key);
+  if (found !== undefined) {
+    return found;
+  }
+  const made = make();
+  map.set(key, made);
+  return made;
+}
+
+/**
+ * How each individual of the result `r` is coloured in the project `p`
+ * (docs/specs/analyses/pca.md, "The colours"): with `colourBy` null, by
+ * the populations of the grouping, "All individuals" with no metadata file
+ * or with the grouping of one population, and one group with the reason
+ * of `populationsNeeds` as the note when the populations cannot be given;
+ * with a categorical or binary column, by the text of each cell; with a
+ * continuous column, by its numbers, read with the decimal mark of the
+ * read; with a column the table does not have, or no metadata file, by
+ * the populations with a note, the option unchanged. A colouring of more
+ * than MAX_COLOUR_GROUPS groups is one group, with a note. The groups are
+ * every group of the table, in the order of first appearance, so that a
+ * population keeps its mark when the filters leave it no individual. The
+ * same object for the same result, individuals file, grouping, variants
+ * file and option.
+ */
+export function pcaColours(r: PcaResult, p: Project): PcaColours {
+  const byColumn = kept(
+    kept(
+      kept(COLOURS, r, () => new WeakMap()),
+      p.individuals ?? ABSENT,
+      () => new WeakMap(),
+    ),
+    p.grouping,
+    () => new WeakMap(),
+  );
+  const byOption = kept(
+    byColumn,
+    p.variants ?? ABSENT,
+    () => new Map<string | null, PcaColours>(),
+  );
+  const colourBy = pcaOptions(p).colourBy;
+  const found = byOption.get(colourBy);
+  if (found !== undefined) {
+    return found;
+  }
+  const made = coloursOf(r, p, colourBy);
+  byOption.set(colourBy, made);
+  return made;
+}
+
+/** The colours of `r` in `p` by the option `colourBy`, made anew. */
+function coloursOf(
+  r: PcaResult,
+  p: Project,
+  colourBy: string | null,
+): PcaColours {
+  if (colourBy === null) {
+    return byPopulations(r, p, null);
+  }
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return byPopulations(
+      r,
+      p,
+      `No metadata file is loaded, so the points cannot be coloured by ${shown(colourBy)}.`,
+    );
+  }
+  const read = individuals.read;
+  if (read.kind !== "read") {
+    // The PCA is locked while the file is read, refused or not given, so
+    // no result is drawn with it; the populations cannot be given either.
+    return byPopulations(r, p, null);
+  }
+  const index = read.table.columns.indexOf(colourBy);
+  if (index === -1) {
+    return byPopulations(
+      r,
+      p,
+      `${escaped(individuals.name)} has no column ${shown(colourBy)}, by which the points were coloured, so they are coloured by the populations.`,
+    );
+  }
+  const cells = cellsOf(read.table, index);
+  if (read.columns[index]?.kind === "continuous") {
+    return byValues(r, colourBy, cells, read.found?.decimal ?? ".");
+  }
+  const names = [...new Set(cells.values())].flatMap((cell) =>
+    cell === null ? [] : [String(cell)],
+  );
+  if (names.length > MAX_COLOUR_GROUPS) {
+    return oneGroup(r, colourBy, "No value", tooManyText(colourBy, names));
+  }
+  const groupOf = new Map<string, number>(
+    names.map((name, i) => [name, i] as const),
+  );
+  return byGroups(r, colourBy, names, "No value", null, (individual) => {
+    const cell = cells.get(individual);
+    return cell === undefined || cell === null
+      ? undefined
+      : groupOf.get(String(cell));
+  });
+}
+
+/** The cell of the column `index` of each individual of `table`, by the
+    name of the individual, in the order of the rows. */
+function cellsOf(table: IndividualsTable, index: number): Map<string, Cell> {
+  const cells = new Map<string, Cell>();
+  for (const row of table.rows) {
+    const [name] = row;
+    const cell = row[index];
+    if (name === undefined || name === null || cell === undefined) {
+      throw defect("a row of the individuals table lacks a cell.");
+    }
+    cells.set(String(name), cell);
+  }
+  return cells;
+}
+
+/** The note of a colouring whose column `column` has more different
+    `values` than the plot can tell apart. */
+function tooManyText(column: string, values: readonly string[]): string {
+  return `${shown(column)} has ${grouped(values.length)} different values, more than the ${grouped(MAX_COLOUR_GROUPS)} the plot can tell apart, so the points are of one colour; the table gives each individual's value.`;
+}
+
+/** What follows the reason the populations cannot be given, in the note
+    of the colours. */
+const MEANWHILE =
+  "Meanwhile the points are not coloured by population; another column can colour them.";
+
+/** The colours of `r` by the populations of `p`, with `before`, the note
+    of a column that cannot colour them, first in the note. */
+function byPopulations(
+  r: PcaResult,
+  p: Project,
+  before: string | null,
+): PcaColours {
+  const pops = populationsOf(p);
+  if (pops === "all") {
+    return oneGroup(r, "Population", "No population", before);
+  }
+  const need = populationsNeeds(p);
+  const note = joined(
+    before,
+    need === null ? null : `${need.reason} ${MEANWHILE}`,
+  );
+  if (pops === null) {
+    return oneGroup(r, "Population", "No population", note);
+  }
+  const names = pops.map(([name]) => name);
+  if (names.length > MAX_COLOUR_GROUPS) {
+    const column = p.grouping.kind === "populations" ? p.grouping.column : null;
+    return oneGroup(
+      r,
+      "Population",
+      "No population",
+      joined(before, column === null ? null : tooManyText(column, names)),
+    );
+  }
+  const groupOf = new Map<string, number>();
+  for (const [i, [, individuals]] of pops.entries()) {
+    for (const individual of individuals) {
+      groupOf.set(individual, i);
+    }
+  }
+  return byGroups(r, "Population", names, "No population", note, (individual) =>
+    groupOf.get(individual),
+  );
+}
+
+/** Two notes in one, either `null`. */
+function joined(first: string | null, second: string | null): string | null {
+  return first === null
+    ? second
+    : second === null
+      ? first
+      : `${first} ${second}`;
+}
+
+/** The colours of every individual of `r` in the one group "All
+    individuals". */
+function oneGroup(
+  r: PcaResult,
+  title: string,
+  noneName: GroupsColours["noneName"],
+  note: string | null,
+): PcaColours {
+  return byGroups(r, title, [ONE_POPULATION], noneName, note, () => 0);
+}
+
+/** The colours of `r` in the groups `names`, the group of each individual
+    given by `groupOf`, `undefined` for none. */
+function byGroups(
+  r: PcaResult,
+  title: string,
+  names: readonly string[],
+  noneName: GroupsColours["noneName"],
+  note: string | null,
+  groupOf: (individual: string) => number | undefined,
+): PcaColours {
+  const group = new Uint16Array(r.individuals.length);
+  const counts = names.map(() => 0);
+  let numNone = 0;
+  for (const [i, individual] of r.individuals.entries()) {
+    const index = groupOf(individual);
+    const count = index === undefined ? undefined : counts[index];
+    if (index === undefined || count === undefined) {
+      group[i] = NO_COLOUR_GROUP;
+      numNone += 1;
+    } else {
+      group[i] = index;
+      counts[index] = count + 1;
+    }
+  }
+  return Object.freeze({
+    kind: "groups",
+    title,
+    names: Object.freeze([...names]),
+    group,
+    counts: Object.freeze(counts),
+    numNone,
+    noneName,
+    note,
+  });
+}
+
+/** The colours of `r` by the numbers of the cells `cells` of the column
+    `column`, read with the decimal mark `decimal`. */
+function byValues(
+  r: PcaResult,
+  column: string,
+  cells: ReadonlyMap<string, Cell>,
+  decimal: "." | ",",
+): PcaColours {
+  const values = new Float64Array(r.individuals.length);
+  let numNone = 0;
+  for (const [i, individual] of r.individuals.entries()) {
+    const cell = cells.get(individual);
+    const value = cell === undefined ? null : cellNumber(cell, decimal);
+    values[i] = value ?? NaN;
+    if (value === null) {
+      numNone += 1;
+    }
+  }
+  return Object.freeze({
+    kind: "values",
+    title: column,
+    values,
+    numNone,
+    noneName: "No value",
+    note: null,
+  });
+}
+
+/** The columns each read offers to colour by, so that a draw of the panel
+    does not walk the table again. */
+const COLOUR_COLUMNS = new WeakMap<object, readonly string[]>();
+
+/**
+ * The columns the colour can be taken from: every column of the table but
+ * the first, the identifiers, and but a categorical or binary column of
+ * more than MAX_COLOUR_GROUPS different values, in its order; a continuous
+ * column whatever the number of its values. None while the metadata file
+ * is not read, or with none.
+ */
+export function colourColumns(p: Project): readonly string[] {
+  const read = p.individuals?.read;
+  if (read?.kind !== "read") {
+    return Object.freeze([]);
+  }
+  return kept(COLOUR_COLUMNS, read, () =>
+    Object.freeze(
+      read.table.columns.filter((_, index) => {
+        if (index === 0) {
+          return false;
+        }
+        if (read.columns[index]?.kind === "continuous") {
+          return true;
+        }
+        const values = new Set<string>();
+        for (const cell of cellsOf(read.table, index).values()) {
+          if (cell !== null) {
+            values.add(String(cell));
+          }
+        }
+        return values.size <= MAX_COLOUR_GROUPS;
+      }),
+    ),
+  );
+}
+
+/** A component as the screen names it, "PC3". */
+function pc(component: number): string {
+  return `PC${String(component)}`;
+}
+
+/**
+ * The components drawn, from the options `o` and the result `r`, and the
+ * line that says why they are not those chosen, or null: the axes of the
+ * options that the result has, as many as it can draw, three at most; an
+ * axis beyond the components of the result replaced by the first
+ * component not shown, with the note "The axes chosen, PC4, PC5 and PC6,
+ * are beyond the 3 components of this result, so PC1, PC2 and PC3 are
+ * drawn."; with two components, the first two axes and the line of the 3D
+ * view, "The 3D view needs three components, and this result has 2.";
+ * with one, PC1 and the line that there is no plot (docs/specs/analyses/
+ * pca.md, "The cases" and "What it shows").
+ */
+export function axesShown(
+  o: PcaOptions,
+  r: PcaResult,
+): { readonly axes: readonly number[]; readonly note: string | null } {
+  const numComps = r.numComps;
+  if (numComps < 1) {
+    throw defect("a result of the principal components has no component.");
+  }
+  if (numComps === 1) {
+    return Object.freeze({
+      axes: Object.freeze([1]),
+      note: `Only one component has variance, since ${counted(r.individuals.length, "individual")} ${r.individuals.length === 1 ? "has" : "have"} one axis between them, so there is no plot; the table gives each individual's place on it.`,
+    });
+  }
+  const chosen = o.axes.slice(0, Math.min(3, numComps));
+  const beyond = chosen.filter((axis) => axis > numComps);
+  const free = Array.from({ length: numComps }, (_, i) => i + 1).filter(
+    (component) => !chosen.includes(component),
+  );
+  const axes = chosen.map((axis) => (axis > numComps ? free.shift() : axis));
+  const drawn = axes.flatMap((axis) => (axis === undefined ? [] : [axis]));
+  if (drawn.length !== chosen.length) {
+    throw defect("the components of a result ran out for its axes.");
+  }
+  const beyondNote =
+    beyond.length === 0
+      ? null
+      : `The ${beyond.length === 1 ? "axis" : "axes"} chosen, ${namesOf(beyond.map(pc))}, ${beyond.length === 1 ? "is" : "are"} beyond the ${counted(numComps, "component")} of this result, so ${namesOf(drawn.map(pc))} are drawn.`;
+  const threeDNote =
+    numComps === 2
+      ? "The 3D view needs three components, and this result has 2."
+      : null;
+  return Object.freeze({
+    axes: Object.freeze(drawn),
+    note: joined(beyondNote, threeDNote),
+  });
+}
+
+/** A row of the table of the individuals. */
+export interface PcaRow {
+  /** The name of the individual. */
+  readonly individual: string;
+  /** Its group's name, or its value; null for none. */
+  readonly colour: string | number | null;
+  /** Its place on each component kept, `numComps` numbers. */
+  readonly projections: readonly number[];
+}
+
+/** The rows `pcaRows` made, by the result and the colours. */
+const ROWS = new WeakMap<PcaResult, WeakMap<PcaColours, readonly PcaRow[]>>();
+
+/**
+ * The rows of the table, one per individual in the order of the result,
+ * with its group's name or its value, and its place on every component
+ * kept. The same frozen array for the same result and colours, so that
+ * the table sees with `===` that nothing changed.
+ */
+export function pcaRows(r: PcaResult, c: PcaColours): readonly PcaRow[] {
+  return kept(
+    kept(ROWS, r, () => new WeakMap()),
+    c,
+    () =>
+      Object.freeze(
+        r.individuals.map((individual, i) =>
+          Object.freeze({
+            individual,
+            colour: colourOf(c, i),
+            projections: Object.freeze(
+              Array.from(
+                r.projections.subarray(i * r.numComps, (i + 1) * r.numComps),
+              ),
+            ),
+          }),
+        ),
+      ),
+  );
+}
+
+/** The group's name or the value of the individual `i` in `c`, null for
+    none. */
+function colourOf(c: PcaColours, i: number): string | number | null {
+  switch (c.kind) {
+    case "groups": {
+      const group = c.group[i];
+      return group === undefined ? null : (c.names[group] ?? null);
+    }
+    case "values": {
+      const value = c.values[i];
+      return value === undefined || Number.isNaN(value) ? null : value;
+    }
+  }
+}
+
+/**
+ * The table of the individuals as the text of a CSV file: the header
+ * `individual,population,PC1,…,PC10`, the second field named by the title
+ * of the colours in lower case, and a row per individual, its numbers as
+ * `String` writes them and an empty field for no group or no value; a
+ * field that holds a comma, a quote or a new line quoted, as RFC 4180 has
+ * it. Each line ends in a new line.
+ */
+export function pcaCsv(r: PcaResult, c: PcaColours): string {
+  const components = Array.from({ length: r.numComps }, (_, i) => pc(i + 1));
+  const header = ["individual", csvField(c.title.toLowerCase()), ...components];
+  const lines = pcaRows(r, c).map((row) =>
+    [
+      csvField(row.individual),
+      row.colour === null
+        ? ""
+        : typeof row.colour === "number"
+          ? String(row.colour)
+          : csvField(row.colour),
+      ...row.projections.map(String),
+    ].join(","),
+  );
+  return [header.join(","), ...lines].map((line) => `${line}\n`).join("");
+}
+
+/** The explained variance as the text of a CSV file: the header
+    `component,explained_variance_percent` and a row per component kept,
+    `PC1,3.5476992895181616`. Each line ends in a new line. */
+export function varianceCsv(r: PcaResult): string {
+  const lines = Array.from(
+    r.explainedVariancePercent,
+    (percent, i) => `${pc(i + 1)},${String(percent)}`,
+  );
+  return ["component,explained_variance_percent", ...lines]
+    .map((line) => `${line}\n`)
+    .join("");
+}
+
+/** The minus sign the screen writes a negative number with. */
+const MINUS = "−";
+
+/** A number of the screen with the minus sign in the place of the
+    hyphen. */
+function withMinus(text: string): string {
+  return text.replace("-", MINUS);
+}
+
+/** A centre of a group, to one decimal, with no sign for a centre that
+    rounds to 0. */
+function centreText(value: number): string {
+  const text = value.toFixed(1);
+  return text === "-0.0" ? "0.0" : withMinus(text);
+}
+
+/** A value of a column as the table writes it, to 12 significant digits,
+    as tableNumber of src/charts/numbers.ts gives it. */
+function valueText(value: number): string {
+  return withMinus(String(Number(value.toPrecision(12))));
+}
+
+/** An explained variance, to two decimals, "3.55%". */
+function percentText(r: PcaResult, component: number): string {
+  const percent = r.explainedVariancePercent[component - 1];
+  if (percent === undefined) {
+    throw defect(
+      `the description was given ${pc(component)}, beyond the result.`,
+    );
+  }
+  return `${percent.toFixed(2)}%`;
+}
+
+/**
+ * The text a screen reader reads for the plot (docs/specs/analyses/pca.md,
+ * "Accessibility"): with two axes, those of the 2D plot, across and up;
+ * with three, those of the 3D view, which has no across and up. It names
+ * the individuals of `r` and the variants file of `p`, each axis with its
+ * explained variance, and the colours: where each group with an
+ * individual lies, the mean of its projections, in the order of the
+ * groups and the individuals in no group last, with the group
+ * `highlighted`, an index of the names or NO_COLOUR_GROUP; or the range of
+ * the values and how many have none. Throws a defect for other than two
+ * or three axes, an axis beyond the result, or a project with no variants
+ * file.
+ */
+export function pcaDescription(
+  r: PcaResult,
+  c: PcaColours,
+  axes: readonly number[],
+  highlighted: number | null,
+  p: Project,
+): string {
+  const variants = p.variants;
+  if (variants === null) {
+    throw defect("the description of the PCA has no variants file.");
+  }
+  if (axes.length !== 2 && axes.length !== 3) {
+    throw defect(
+      `the description of the PCA was given ${String(axes.length)} axes.`,
+    );
+  }
+  const of = `Principal components of ${counted(r.individuals.length, "individual")} of ${escaped(variants.name)}`;
+  const [first = 0, second = 0, third = 0] = axes;
+  const opening =
+    axes.length === 2
+      ? `${of}, ${pc(first)}, ${percentText(r, first)} of the variance, across, and ${pc(second)}, ${percentText(r, second)}, up.`
+      : `${of} in 3D, on ${pc(first)}, ${percentText(r, first)} of the variance, ${pc(second)}, ${percentText(r, second)}, and ${pc(third)}, ${percentText(r, third)}.`;
+  const closing =
+    axes.length === 2
+      ? "The table of the individuals gives each one's place."
+      : "The view turns, so it has no across and up; the 2D plot, one button away, shows two components at a time, and the table of the individuals gives every coordinate.";
+  const colours =
+    c.kind === "values"
+      ? valuesDescription(c)
+      : groupsDescription(r, c, axes, highlighted);
+  return `${opening} ${colours} ${closing}`;
+}
+
+/** The part of the description of a colouring by values: the range of
+    the values and how many individuals have none. */
+function valuesDescription(
+  c: Extract<PcaColours, { readonly kind: "values" }>,
+): string {
+  const finite = Array.from(c.values).filter((value) => !Number.isNaN(value));
+  const title = `Coloured by ${shown(c.title)}`;
+  if (finite.length === 0) {
+    return `${title}; no individual has a value.`;
+  }
+  // A loop and not Math.min(...finite), whose arguments a browser caps.
+  let min = Infinity;
+  let max = -Infinity;
+  for (const value of finite) {
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+  const range = `${title}, from ${valueText(min)} to ${valueText(max)}`;
+  return c.numNone === 0
+    ? `${range}.`
+    : `${range}; ${counted(c.numNone, "individual")} ${c.numNone === 1 ? "has" : "have"} no value.`;
+}
+
+/** The part of the description of a colouring by groups: where each group
+    with an individual lies on the `axes`, and the group highlighted. */
+function groupsDescription(
+  r: PcaResult,
+  c: GroupsColours,
+  axes: readonly number[],
+  highlighted: number | null,
+): string {
+  const members = new Map<number, number[]>();
+  for (const [i, group] of c.group.entries()) {
+    const list = members.get(group) ?? [];
+    members.set(group, list);
+    list.push(i);
+  }
+  const shownGroups = [
+    ...c.names.flatMap((name, group) =>
+      (c.counts[group] ?? 0) > 0 ? [[name, group] as const] : [],
+    ),
+    ...(c.numNone > 0 ? [[c.noneName, NO_COLOUR_GROUP] as const] : []),
+  ];
+  const parts = shownGroups.map(([name, group], index) => {
+    const rows = members.get(group) ?? [];
+    const centres = axes.map((axis) => {
+      if (axis < 1 || axis > r.numComps) {
+        throw defect(
+          `the description was given ${pc(axis)}, beyond the result.`,
+        );
+      }
+      let sum = 0;
+      for (const row of rows) {
+        sum += r.projections[row * r.numComps + axis - 1] ?? NaN;
+      }
+      return centreText(sum / rows.length);
+    });
+    return index === 0
+      ? `${shown(name)}, ${counted(rows.length, "individual")}, centred at ${namesOf(centres.map((centre, i) => `${centre} on ${pc(axes[i] ?? 0)}`))}`
+      : `${shown(name)}, ${grouped(rows.length)}, centred at ${namesOf(centres)}`;
+  });
+  const title = c.title === "Population" ? "population" : shown(c.title);
+  const highlightedName =
+    highlighted === null
+      ? undefined
+      : highlighted === NO_COLOUR_GROUP
+        ? c.noneName
+        : c.names[highlighted];
+  const highlight =
+    highlightedName === undefined
+      ? ""
+      : ` ${shown(highlightedName)} is highlighted.`;
+  return `Coloured by ${title}: ${parts.join("; ")}.${highlight}`;
+}
+
+/**
+ * The note of the individuals of the PCA `r` whose proportion of missing
+ * genotypes is above MANY_MISSING_RATE in the statistics of each
+ * individual `stats`, over every variant of the variants file of `p`
+ * (docs/specs/analyses/pca.md, "The note of the missing genotypes"): the
+ * individuals named as `namesOf` names them. `null` for the PCoA, with no
+ * statistics, or with no such individual. Throws a defect on a project
+ * with no variants file.
+ */
+export function manyMissingNote(
+  r: PcaResult,
+  stats: IndividualStats | null,
+  p: Project,
+): string | null {
+  if (r.method !== "pca" || stats === null) {
+    return null;
+  }
+  if (p.variants === null) {
+    throw defect("the note of the missing genotypes has no variants file.");
+  }
+  const rates = new Map<string, number>();
+  for (const [i, individual] of stats.individuals.entries()) {
+    const rate = stats.missingGtRate[i];
+    if (rate !== undefined) {
+      rates.set(individual, rate);
+    }
+  }
+  const many = r.individuals.filter(
+    (individual) => (rates.get(individual) ?? 0) > MANY_MISSING_RATE,
+  );
+  if (many.length === 0) {
+    return null;
+  }
+  const one = many.length === 1;
+  return `${namesOf(many)} ${one ? "lacks" : "lack"} more than ${String(Math.round(MANY_MISSING_RATE * 100))}% of ${one ? "its" : "their"} genotypes over the variants of ${escaped(p.variants.name)}. The PCA gives a missing genotype the mean of its variant, which draws an individual toward the centre of the plot about as much as it lacks. The PCoA of the Kosman distances compares each pair over the variants both have called, and does not.`;
 }
 
 /** The result as the PCA's own. Throws a defect on the result of another
