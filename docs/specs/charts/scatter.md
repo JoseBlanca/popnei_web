@@ -173,9 +173,13 @@ plot is measured again, on 9,381 points, when it is built (below, "How
 it is verified").
 
 A point whose coordinate is not finite, NaN or an infinity, is not drawn
-and is not counted in the legend, and the screen says how many there
-are (`charts.md`, "The contract of a plot"); popnei's PCA gives none, and
-the rule is there for the PCoA and any later use.
+and is not counted in the legend (`charts.md`, "The contract of a
+plot"). The panel of the PCA never gives the plot such a point: popnei's
+PCA gives none, and its PCoA refuses distances that are missing or
+infinite rather than place an individual it cannot. So the panel has no
+words for it, as the owner decided on 29 September 2026; the rule is
+there for a later use of the plot, whose screen then says how many
+points are not drawn.
 
 ### The colours: groups, or the values of a column
 
@@ -191,8 +195,12 @@ has none, and the names of the groups. The marks are those above.
 **Values.** Each point has a number, NaN when it has none. The colour of
 a value is viridis, `interpolateViridis` of `d3-scale-chromatic`, at its
 place between the smallest and the largest finite value, in 256 steps,
-which are the 256 colours that `interpolateViridis` holds, so nothing is
-lost by the steps. The points of one step are one path, 256 paths at
+one for each entry of the table that `interpolateViridis` holds, so
+nothing is lost by the steps. In `d3-scale-chromatic` 3.1.0 those 256
+entries are 254 distinct colours: steps 112 and 113 are both `#26828e`,
+and steps 129 and 130 both `#20928c`, counted in node on 29 September
+2026, and the spec, which said 256 colours, takes it as the owner
+decided that day. The points of one step are one path, 256 paths at
 most, all circles, each with an outline in `--chart-axis`, since the
 yellow end of viridis is below 3:1 on the light background. The colour of
 each step is written on its path as its `fill` attribute: viridis is
@@ -823,8 +831,9 @@ is `position: relative`, so that the tooltip is placed inside it
 ## The cases
 
 - **No point with finite coordinates**: the axes are drawn as for one
-  point at (0, 0), no mark is drawn, and the legend counts none; the
-  screen says why.
+  point at (0, 0), no mark is drawn, and the legend counts none. The
+  panel of the PCA never gives such data (above, "The points: one path
+  per group, drawn by a loop").
 - **One point, or every point at one place**: it is drawn at the centre
   of the frame (above, "The axes").
 - **A group with no point drawn** has no path and no entry in the

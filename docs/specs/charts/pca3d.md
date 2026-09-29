@@ -79,7 +79,9 @@ pixels from the top of the element and `SCATTER_MARGIN.right` from its
 right (`scatter.md`), so that it does not move when the user switches.
 Three lines through the origin, one along each
 component over the range of its values, carry at their positive ends
-the labels "PC1 (3.55%)", "PC2 (3.40%)" and "PC3 (1.89%)". A label
+the labels "PC1 (3.55%)", "PC2 (3.40%)" and "PC3 (1.89%)", each with
+its top left corner 4 pixels to the right of the end of its line and 4
+pixels above it, on the screen and in the exported file. A label
 whose end falls outside the element, as the zoom brings the ends of the
 lines out of it, is hidden, and the element clips what it holds, so
 that no label is drawn over the controls around the plot or makes the
@@ -164,6 +166,11 @@ line 406). The plot sets `up` to the z of the scene, the third
 component, before it makes them. So PC3 is always up, or towards the
 top of the screen, and a turn to the left or the right turns the cloud
 about PC3.
+
+At a zoom of 1 the view spans from −1.3 to 1.3 of the units of the
+scene on its shorter side, where the largest coordinate is 1, so that
+the cloud and the labels at the ends of its lines fit whichever way it
+is turned; the longer side spans more, at the same scale across and up.
 
 A view along PC3 is then a view straight down the axis the controls
 keep up, which they allow: they keep the angle between the camera and
@@ -307,8 +314,9 @@ placed as the scatter places it, where the pointer reaches it. The plot
 listens to the pointer on its canvas itself, since it has no base, and
 a pointer that leaves the canvas onto the tooltip, which `holds` of the
 tooltip tells from the event's `relatedTarget`, keeps it shown. A turn,
-a zoom or an `update` hides it. A tap that does not move shows
-the tooltip of the point tapped.
+a zoom or an `update` hides it. A tap, a press whose pointer moves 3
+pixels at most before it is lifted, shows the tooltip of the point
+tapped; one that moves more is a drag, which turns the view.
 
 ### Loading three.js
 
@@ -690,7 +698,10 @@ export function projectToScreen(
 ## The cases
 
 - **No point with three finite coordinates**: the three lines are drawn
-  from −1 to 1 and no point; the screen says why.
+  from −1 to 1 and no point. The panel of the PCA never gives such data,
+  since popnei's PCA gives no coordinate that is not finite
+  (`scatter.md`), and so has no words for it, as the owner decided on 29
+  September 2026.
 - **An `update` while the view is turned**, to another colouring, a
   highlight or other components: the view stays; the labels of the
   lines change with the components.

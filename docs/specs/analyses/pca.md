@@ -1385,7 +1385,12 @@ decided on 28 September 2026 (**Open 2**, below).
   `[4, 5, 6]` and a result of three components: `axesShown` gives the
   first components, PC1, PC2 and PC3, and the note "The axes chosen, PC4,
   PC5 and PC6, are beyond the 3 components of this result, so PC1, PC2
-  and PC3 are drawn." The option stays.
+  and PC3 are drawn." The option stays. Each axis beyond the result takes
+  the first component that the other axes chosen do not show, so `[1, 5,
+  2]` on three components draws PC1, PC3 and PC2, with the note "The axis
+  chosen, PC5, is beyond the 3 components of this result, so PC1, PC3
+  and PC2 are drawn."; written here on 29 September 2026, as the owner
+  decided that day, the spec taking the code.
 - **The LD filter of the Variants step turned off while the PCA follows
   it.** The PCA that ran with that filter leaves the screen with the
   notice, as for any change of the filters it reads, and is ready: a Run
@@ -2115,7 +2120,7 @@ the 3D view as it is turned (`charts.md`, "Export of the 3D plot").
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
 | locked | the reason, as text beside a Run button that is disabled and described by it: "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory …", for the PCoA, once the list of the individuals kept is known, "… the principal coordinates of more than 9,381 need more memory than a browser tab can hold. Keep at most 9,381 with the filters of individuals in the Variants step, …", "12 individuals of panel.nei are not in pops.csv: …", "Reading pops.csv.", "pops.csv was not read when this project was saved, so the project file does not hold it. …", "The LD filter of the PCA needs the distance within which variants are compared. …", this one also beside the field of the distance, "The LD filter of the Variants step needs the distance …"; or the store's when the filters keep no individual. The options stay editable, since they are what the user may change | go to the step the reason names; type the distance, or set the LD filter of the PCA back to as in the Variants step; keep fewer individuals for the PCoA; change the options |
 | ready | the options, the line of the individuals it will run on, and Run | set the options; Run |
-| running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options stay editable, as in every analysis and in the Variants step: a change of the method or of a filter, of the PCA's own or of the Variants step, that changes the key leaves the calculation behind, with the notice of the store, which says it will be stopped unless the change is undone (`docs/specs/core/store.md`, "The notice, and the calculations it stops"), and the panel shows the state of the new settings; a change of the colour, the axes or the view keeps the key and the calculation | Stop; change the options |
+| running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", its words after a stop and while it waits for the statistics of each individual; and under them "The bar shows the reading of panel.nei. The components are calculated once it is read, and the bar does not move meanwhile: from under a second for 1,000 individuals to minutes for several thousand." The options stay editable, as in every analysis and in the Variants step: a change of the method or of a filter, of the PCA's own or of the Variants step, that changes the key leaves the calculation behind, with the notice of the store, which says it will be stopped unless the change is undone (`docs/specs/core/store.md`, "The notice, and the calculations it stops"), and the panel shows the state of the new settings. The colour, the axes and the view are chosen in the bar of controls, which is there only once a result is, so while the PCA runs only an Undo or a Redo can change them, and that keeps the key and the calculation (decided by the owner on 29 September 2026, the spec taking the code) | Stop; change the options |
 | done | the bar of controls, the plot, in 3D first, or the 2D plot with the words of why when the browser cannot draw 3D, the legend, the explained variance, the table and their downloads; the warnings above the plot, with their count on the heading, "2 warnings"; the notes; after an opened project file, the comparison with its check numbers under the table; and the options, whose change removes the result | draw, colour, turn, highlight, sort, download; change the options |
 | results removed | the words of the change that removed it, below, and the options and the line of the individuals, as in ready | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again; as the diversity's | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
@@ -2313,7 +2318,12 @@ The help, for the drawer of stage 8:
   Coloured by population: p0, 48 individuals, centred at 0.4 on PC1 and
   7.4 on PC2; p2, 84, centred at −4.5 and −2.1; p1, 68, centred at 5.3
   and −2.7. p1 is highlighted. The table of the individuals gives each
-  one's place." The centre of a group is the mean of its projections,
+  one's place." The groups are named in their order, a group with no
+  individual in the result left out, and the individuals in no group
+  last, under the name the legend gives them, "No population" or "No
+  value", with their count and their centre as a group's; written here
+  on 29 September 2026, as the owner decided that day, the spec taking
+  the code. The centre of a group is the mean of its projections,
   arithmetic on popnei's numbers, written to one decimal; those of the
   example are of the PCA of `panel.nei` with the filters of the flow,
   the missing data filter at 0.1 and the PCA's own LD filter at r² 0.1
@@ -2375,8 +2385,11 @@ The help, for the drawer of stage 8:
 - **The keyboard order**: the options, the method, then the three
   filters, each group of two radio buttons one stop of the Tab key with
   its fields after it while it is set for the PCA; Run or Stop, the warnings, the bar
-  of controls, the legend, the plot's link to the table, the explained
-  variance, the table, the downloads. A number typed in a field is
+  of controls, "Try again" when the 3D view could not be loaded, the
+  legend, the plot's link to the table, the explained variance and its
+  download, the table and its download: each download beside what it
+  downloads, as the owner decided on 29 September 2026, the spec taking
+  the code, where it had put the downloads last. A number typed in a field is
   committed by the Tab key before the focus moves, so that a distance
   typed in the field of the PCA's own LD filter enables Run before the
   Tab key reaches it, and the next stop is that Run and not the
