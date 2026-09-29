@@ -2209,6 +2209,7 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
     case "encrypted":
     case "emptySheet":
     case "cellError":
+    case "headerError":
     case "sheetTooLarge":
       return "Load a corrected file.";
     case "xlsxReaderNotLoaded":
@@ -2730,6 +2731,8 @@ function individualsFileRefusalWords(
       return `its first sheet, ${shown(error.sheet)}, is empty, and only the first sheet is read; put the table in the first sheet`;
     case "cellError":
       return `a cell holds the error ${shown(error.error)}, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value`;
+    case "headerError":
+      return `the header has the error ${shown(error.error)} at row ${grouped(error.row)}, column ${columnLetters(error.column)}, where the name of a column should be; in Excel, type the name of the column in that cell`;
     case "sheetTooLarge":
       return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells a ${FILE_WORDS[app]} can have; delete the values outside the table`;
     case "xlsxReaderNotLoaded":
@@ -3219,6 +3222,10 @@ const INDIVIDUALS_ERROR_KINDS: Kinds<IndividualsFileError["kind"] | "worker"> =
     encrypted: { fields: [], words: "a workbook protected by a password" },
     emptySheet: { fields: ["sheet"], words: "an empty first sheet" },
     cellError: { fields: ["error"], words: "a cell with an error" },
+    headerError: {
+      fields: ["row", "column", "error"],
+      words: "an error of Excel in the header",
+    },
     sheetTooLarge: {
       fields: ["sheet", "lastRow", "lastColumn", "max"],
       words: "a sheet too large",
@@ -4105,6 +4112,43 @@ function parseIndividualsError(
     case "cellError": {
       const error = parseText(fields["error"], [...path, "error"]);
       return error.ok ? success({ kind, error: error.value }) : error;
+    }
+    case "headerError": {
+      // A row and a column of the sheet, counted from 1, which the words
+      // write as Excel does.
+      const row = numberField(fields, path, "row");
+      if (!row.ok) {
+        return row;
+      }
+      const wrongRow = wholeNumberError(row.value, 1, Number.MAX_SAFE_INTEGER, [
+        ...path,
+        "row",
+      ]);
+      if (wrongRow !== null) {
+        return failure(wrongRow);
+      }
+      const column = numberField(fields, path, "column");
+      if (!column.ok) {
+        return column;
+      }
+      const wrongColumn = wholeNumberError(
+        column.value,
+        1,
+        Number.MAX_SAFE_INTEGER,
+        [...path, "column"],
+      );
+      if (wrongColumn !== null) {
+        return failure(wrongColumn);
+      }
+      const error = parseText(fields["error"], [...path, "error"]);
+      return error.ok
+        ? success({
+            kind,
+            row: row.value,
+            column: column.value,
+            error: error.value,
+          })
+        : error;
     }
     case "sheetTooLarge": {
       const sheet = parseText(fields["sheet"], [...path, "sheet"]);

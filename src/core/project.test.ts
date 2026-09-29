@@ -6441,6 +6441,10 @@ const XLSX_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
     { kind: "emptyIndividual", line: 7 },
     "row 7 has no name of an individual in its first column",
   ],
+  [
+    { kind: "headerError", row: 1, column: 4, error: "#VALUE!" },
+    "the header has the error #VALUE! at row 1, column D, where the name of a column should be; in Excel, type the name of the column in that cell",
+  ],
 ];
 
 const XLSX_NOT_LOADED =
@@ -6572,6 +6576,40 @@ describe("IP9 the words of an xlsx refused", () => {
       expect(parse(data)).toMatchObject({
         ok: false,
         error: { path: ["individuals", "read", "error", "column"] },
+      });
+    },
+  );
+
+  test.each([
+    ["row", 0],
+    ["column", 0],
+    ["row", 2.5],
+    ["column", "4"],
+  ])(
+    "the validation refuses a headerError whose %s is %o, which no row or column of a sheet is, at its path",
+    (name, value) => {
+      const p = xlsxProject();
+      const data: unknown = JSON.parse(
+        JSON.stringify({
+          ...p,
+          individuals: {
+            ...individualsOf(p),
+            read: {
+              kind: "failed",
+              error: {
+                kind: "headerError",
+                row: 1,
+                column: 4,
+                error: "#VALUE!",
+                [name]: value,
+              },
+            },
+          },
+        }),
+      );
+      expect(parse(data)).toMatchObject({
+        ok: false,
+        error: { path: ["individuals", "read", "error", name] },
       });
     },
   );

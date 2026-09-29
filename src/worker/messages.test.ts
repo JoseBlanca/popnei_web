@@ -1387,6 +1387,12 @@ const fileError = fc.oneof(
   fc.record({ kind: fc.constant("emptySheet" as const), sheet: text }),
   fc.record({ kind: fc.constant("cellError" as const), error: text }),
   fc.record({
+    kind: fc.constant("headerError" as const),
+    row: number,
+    column: number,
+    error: text,
+  }),
+  fc.record({
     kind: fc.constant("sheetTooLarge" as const),
     sheet: text,
     lastRow: number,
@@ -1800,6 +1806,7 @@ describe("IP9 D1 the messages of an xlsx", () => {
     [{ kind: "encrypted" }],
     [{ kind: "emptySheet", sheet: "Hoja1" }],
     [{ kind: "cellError", error: "#SPILL!" }],
+    [{ kind: "headerError", row: 1, column: 4, error: "#VALUE!" }],
     [
       {
         kind: "sheetTooLarge",

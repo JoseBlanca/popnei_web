@@ -256,15 +256,89 @@ describe("IP9 D1 the xlsx in node: readSheet", () => {
     });
   });
 
-  test("#N/A names a column in the header, and is missing below it", () => {
+  test("#N/A in the header is headerError, row 1, column 2, and not the name of its column", () => {
+    expect(
+      readSheet(
+        sheetOf([
+          ["id", "#N/A"],
+          ["A", "#N/A"],
+        ]),
+      ),
+    ).toEqual({
+      ok: false,
+      error: { kind: "headerError", row: 1, column: 2, error: "#N/A" },
+    });
+  });
+
+  test("an error with spaces around it in a header after a blank row is headerError, the row and the column E of the sheet", () => {
+    expect(
+      readSheet(
+        sheetOf(
+          [
+            [null, null, null],
+            ["id", "pop", " #VALUE! "],
+            ["A", "P1", 1],
+          ],
+          { firstColumn: 3, firstRow: 5 },
+        ),
+      ),
+    ).toEqual({
+      ok: false,
+      error: { kind: "headerError", row: 6, column: 5, error: "#VALUE!" },
+    });
+  });
+
+  test("an error in the first cell of a header alone is headerError, before empty", () => {
+    expect(readSheet(sheetOf([["#REF!", "pop"]]))).toEqual({
+      ok: false,
+      error: { kind: "headerError", row: 1, column: 1, error: "#REF!" },
+    });
+  });
+
+  test("each of the seven errors of Excel in the header is headerError, and #SPILL! there is a name", () => {
+    for (const error of [
+      "#N/A",
+      "#DIV/0!",
+      "#NAME?",
+      "#NULL!",
+      "#NUM!",
+      "#REF!",
+      "#VALUE!",
+    ]) {
+      expect(
+        readSheet(
+          sheetOf([
+            ["id", "pop", error],
+            ["A", "P1", 1],
+          ]),
+        ),
+      ).toEqual({
+        ok: false,
+        error: { kind: "headerError", row: 1, column: 3, error },
+      });
+    }
+    expect(
+      read(
+        sheetOf([
+          ["id", "#SPILL!"],
+          ["A", 1],
+        ]),
+      ).table.columns,
+    ).toEqual(["id", "#SPILL!"]);
+  });
+
+  test("#VALUE! below the header is missing, and refuses nothing", () => {
     const { table } = read(
       sheetOf([
-        ["id", "#N/A"],
-        ["A", "#N/A"],
+        ["id", "pop"],
+        ["A", "#VALUE!"],
+        ["B", "P1"],
       ]),
     );
-    expect(table.columns).toEqual(["id", "#N/A"]);
-    expect(table.rows).toEqual([["A", null]]);
+    expect(table.rows).toEqual([
+      ["A", null],
+      ["B", "P1"],
+    ]);
   });
 
   test("#DIV/0! is missing, and h stays continuous", () => {

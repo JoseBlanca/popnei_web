@@ -854,6 +854,20 @@ const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
     message,
   })),
   fc.constant<IndividualsFileError>({ kind: "notText" }),
+  // A row and a column of the sheet, counted from 1, as a project file
+  // holds them.
+  fc
+    .tuple(
+      fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }),
+      fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }),
+      fc.constantFrom("#N/A", "#VALUE!", "#REF!"),
+    )
+    .map(([row, column, error]): IndividualsFileError => ({
+      kind: "headerError",
+      row,
+      column,
+      error,
+    })),
 );
 
 /** Any read of the individuals file, `notGiven` among them. */

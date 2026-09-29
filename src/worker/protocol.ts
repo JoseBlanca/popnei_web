@@ -196,6 +196,15 @@ export type IndividualsFileError =
   | { readonly kind: "emptySheet"; readonly sheet: string }
   /** A cell holds an error calamine does not know, `error`, "#SPILL!". */
   | { readonly kind: "cellError"; readonly error: string }
+  /** A cell of the header, at the row `row` and the column `column` of
+      the sheet, each counted from 1, is one of the seven errors of Excel
+      calamine knows, `error`, "#VALUE!", where a name is needed. */
+  | {
+      readonly kind: "headerError";
+      readonly row: number;
+      readonly column: number;
+      readonly error: string;
+    }
   /** The first sheet, `sheet`, has values as far as the row `lastRow`,
       counted from 1, and the column `lastColumn`, in the letters of
       Excel, "XFD": a rectangle of more than `max` cells. */

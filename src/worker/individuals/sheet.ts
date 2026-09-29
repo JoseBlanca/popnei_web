@@ -52,8 +52,10 @@ export type SheetCellsRead =
 export const MAX_SHEET_CELLS = 2_000_000;
 
 /** The errors of Excel that calamine knows, which xlsx_rs gives as their
-    text; such a text is a missing value of an xlsx, outside the header and
-    the first column, as the owner decided on 28 September 2026. */
+    text; such a text is a missing value of an xlsx outside the header and
+    the first column, as the owner decided on 28 September 2026, a name in
+    the first column, and a refusal in the header, `headerError`, as the
+    owner decided on 29 September 2026. */
 const EXCEL_ERRORS: readonly string[] = [
   "#N/A",
   "#DIV/0!",
@@ -76,11 +78,14 @@ const BLANK_ENDS = /^[ \t]+|[ \t]+$/gu;
  * The rows go through the rules of the rows of a CSV, the refusals in
  * the same order, and none of them is of another length. A text has its
  * spaces and tabs at the ends removed, and is missing when it is then
- * empty, `NA`, `-` or one of the seven errors of Excel, but in the header
- * and the first column, where it is a name. A number or a boolean stays
+ * empty, `NA`, `-` or one of the seven errors of Excel, but in the first
+ * column, where it is a name. One of the seven in the header, the first
+ * row that is not blank, refuses the sheet before any refusal of the
+ * rows, `headerError`, with the row and the column of the sheet where it
+ * stands, since it is no name the user gave. A number or a boolean stays
  * one in the table, and is written as `String` writes it in the header
- * and the first column. The row of `emptyIndividual` and the column of
- * `unnamedColumn` are those of the sheet. The types are inferred with the
+ * and the first column. The row of `emptyIndividual`, the column of
+ * `unnamedColumn` and both of `headerError` are those of the sheet. The types are inferred with the
  * point, as a text of an xlsx writes a number. Throws a defect when
  * `numColumns` is not a whole number above 0 or `cells` is not a whole
  * number of rows of it.
@@ -109,6 +114,8 @@ export function readSheet(sheet: SheetCells): Result<
       cells: cells.slice(start, start + numColumns).map(trimmed),
     });
   }
+  const headerError = errorInHeader(rows, sheet.firstColumn);
+  if (headerError !== null) return { ok: false, error: headerError };
   const table = tableOfRows(rows, {
     isEmpty,
     isMissing: (cell) =>
@@ -128,6 +135,29 @@ export function readSheet(sheet: SheetCells): Result<
       columns: inferColumnTypes(table.value, "."),
     },
   };
+}
+
+/** The refusal of the first cell of the header, the first row that is
+    not blank, that is one of the errors of Excel, with its row and its
+    column of the sheet; `null` when there is none, or no header. */
+function errorInHeader(
+  rows: readonly ScannedRow<SheetCell>[],
+  firstColumn: number,
+): IndividualsFileError | null {
+  const header = rows.find((row) => !row.cells.every(isEmpty));
+  if (header === undefined) return null;
+  const index = header.cells.findIndex(
+    (cell) => typeof cell === "string" && EXCEL_ERRORS.includes(cell),
+  );
+  const error = header.cells[index];
+  return typeof error === "string"
+    ? {
+        kind: "headerError",
+        row: header.line,
+        column: firstColumn + index,
+        error,
+      }
+    : null;
 }
 
 /** A cell with the spaces and tabs at the ends of its text removed. */

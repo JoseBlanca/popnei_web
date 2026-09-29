@@ -905,6 +905,7 @@ const FILE_ERROR_KINDS: Readonly<Record<IndividualsFileError["kind"], true>> = {
   encrypted: true,
   emptySheet: true,
   cellError: true,
+  headerError: true,
   sheetTooLarge: true,
   xlsxReaderNotLoaded: true,
 };
@@ -2009,6 +2010,35 @@ function checkFileError(
         return error;
       }
       return accepted({ kind: tag, error: error.value });
+    }
+    case "headerError": {
+      const wrong = exactFields(record, place, [
+        "kind",
+        "row",
+        "column",
+        "error",
+      ]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      const row = field(record, "row", place, isNumber);
+      if (!row.ok) {
+        return row;
+      }
+      const column = field(record, "column", place, isNumber);
+      if (!column.ok) {
+        return column;
+      }
+      const error = field(record, "error", place, isText);
+      if (!error.ok) {
+        return error;
+      }
+      return accepted({
+        kind: tag,
+        row: row.value,
+        column: column.value,
+        error: error.value,
+      });
     }
     case "sheetTooLarge": {
       const wrong = exactFields(record, place, [
