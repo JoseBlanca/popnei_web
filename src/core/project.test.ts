@@ -3213,7 +3213,7 @@ const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   ],
   [
     { kind: "notText" },
-    "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx",
+    "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx)",
   ],
   [
     { kind: "variantsFile" },
@@ -3571,7 +3571,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "notText" },
-        "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx. Load a corrected file.",
+        "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx). Load a corrected file.",
       ],
       [
         { kind: "cutShort" },

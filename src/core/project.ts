@@ -2713,7 +2713,7 @@ function individualsFileRefusalWords(
     case "unreadable":
       return "the browser could not read it; it may have been changed, moved or deleted since it was picked";
     case "notText":
-      return "it is not a text file; if it is an Excel workbook, give it a name that ends in .xlsx";
+      return "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx)";
     case "variantsFile":
       return "it is a variants file, which the Variants step takes";
     case "cutShort":
