@@ -1905,7 +1905,11 @@ method.
     base pairs", "As in the Variants step: off", or, while the step's
     filter has no distance, "As in the Variants step: r² at most 0.3,
     its distance still to be typed there".
-  - **"For the PCA alone"**, which shows under it the number fields of
+  - **"For the PCA alone"**, or "For the PCoA alone" under the PCoA,
+    following the method as the heading and the line above do, as the
+    owner decided on 29 September 2026 (stop C 5 of
+    `docs/specs/stage-4-open-points.md`), where it said PCA under both
+    methods. It shows under it the number fields of
     that filter in the Variants step, the same component of
     `src/ui/widgets/` with the same labels: "Maximum proportion of
     missing genotypes, from 0 to 1"; "Maximum major allele frequency,
@@ -1917,7 +1921,8 @@ method.
     above 0.95. …" among them, since a label alone would mislead here as
     it would there.
 
-  Choosing "For the PCA alone" sends `follow` false with the values the
+  Choosing "For the PCA alone", or "For the PCoA alone", sends `follow`
+  false with the values the
   option keeps: the first time, 0.1 for the missing data, 0.95 for the
   MAF, and r² 0.1 with the distance empty for the LD (above, "Its
   options"); after that, the values the user last typed. Choosing "As in
@@ -2152,7 +2157,7 @@ interface", and the command of the project of
 | the change | the description |
 |---|---|
 | `method` | "the method of the principal components changed" |
-| `missingData`, `maf` or `ld` set for the PCA, the radio button "For the PCA alone", which sends `ld: { ...pcaOptions(p).ld, follow: false }`, with the values as they are | "the missing data filter of the principal components was set for them alone", "the MAF filter …", "the LD filter …" |
+| `missingData`, `maf` or `ld` set for the PCA, the radio button "For the PCA alone", or "For the PCoA alone", which sends `ld: { ...pcaOptions(p).ld, follow: false }`, with the values as they are | "the missing data filter of the principal components was set for them alone", "the MAF filter …", "the LD filter …" |
 | the same set back, the radio button "As in the Variants step", `follow` true and the values as they are | "the missing data filter of the principal components was set back to that of the Variants step", "the MAF filter …", "the LD filter …" |
 | a value of a filter set for the PCA, its fields shown only while it is | "the missing data filter of the principal components changed", "the MAF filter of the principal components changed", "the LD filter of the principal components changed" |
 | `colourBy` | "the colour of the points of the principal components changed" |
@@ -2421,7 +2426,8 @@ The help, for the drawer of stage 8:
   a change of the colour, the axes or the view, "Note: " and their
   words, since the focus is then on the select or the button that made
   them; and the reason of the LD filter of the PCA with no distance when
-  choosing "For the PCA alone" makes it appear, since the focus is then
+  choosing "For the PCA alone", or "For the PCoA alone", makes it
+  appear, since the focus is then
   on the radio button.
   A highlight is said by the checked state of its entry and not
   announced again.
