@@ -387,13 +387,44 @@ what draws only through the extension `WEBGL_debug_renderer_info`. So the
 tests of the 3D plot run in Chromium and WebKit here, and the 3D view is
 in the screens. Chromium's headless shell draws with SwiftShader and not
 with the Mac's graphics card, which a Chrome with a window uses; a
-defect of the card's driver is out of its reach. On GitHub's runners,
-Linux with no graphics card, no engine has been seen: the plan's
-branches are never pushed, and the first push of `main` after the merge
-of stage 4 shows it in the output of that test. In an engine that gives
-no WebGL 2, the tests of the 3D plot are reported as not run for that
-reason, and not as passed, and the test of the words of a browser with
-no WebGL runs there instead.
+defect of the card's driver is out of its reach.
+
+On GitHub's runners, `ubuntu-latest` with no graphics card, the first
+push of `main` after the merge of stage 4, on 29 September 2026, gave:
+
+| engine | WebGL 2 | drawn by | point sizes | `MAX_TEXTURE_SIZE` |
+|---|---|---|---|---|
+| Chromium 153.0.8010.12 | given | SwiftShader, through ANGLE and Vulkan | 1 to 1,023 pixels | 8,192 |
+| WebKit 26.6 | given | not named: it reports "Apple GPU" there too | 1 to 256 pixels | 16,384 |
+| Firefox 155.0 | not given, nor WebGL 1 | | | |
+
+So the tests of the 3D plot run in Chromium and WebKit there, and in
+Firefox, which gives no WebGL at all, they are reported as not run for
+that reason, and not as passed; the flows of the PCA take their 2D
+branch there, with the words of a browser with no WebGL, and the test
+of those words runs there instead. The 256 pixels of WebKit are above
+the 36 a mark needs at a pixel ratio of 2.
+
+What differs on the runners, and what the tests of a plot hold to:
+
+- WebKit on Linux builds the screenshot of an element from the drawing
+  of a WebGL canvas, which WebGL clears once the frame is shown, so a
+  screenshot of the 3D plot was of the background while the page showed
+  it drawn. A test that reads the pixels of the canvas in WebKit gives
+  the page `keepDrawingBuffer` of `e2e/drawingBuffer.ts` first, which
+  asks each WebGL 2 context to keep its drawing; the application does
+  not.
+- The fonts are Ubuntu's, DejaVu Sans for `system-ui`, wider than the
+  Mac's: a word that fits a column or a square read around a mark on
+  the Mac may not there. A test that reads the pixels of the canvas
+  hides the labels over it in its screenshot, and a width that holds
+  words is checked with DejaVu Sans, whose files are not in the
+  repository: on the Mac, a page of a test given them by `@font-face`.
+- Firefox gives the page no text from a `DataTransfer` passed to a
+  `ClipboardEvent` made by a script, and Playwright 1.63 knows no
+  permission to read its clipboard; and when the Tab key leaves the last
+  stop of the page for the browser's bar, Firefox keeps that stop as the
+  page's active element, where Chromium and WebKit give the body.
 
 ### The measurements
 

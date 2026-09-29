@@ -737,8 +737,9 @@ with smaller squares, and smaller marks, where it is below 36 pixels.
 On the owner's Mac on 28 September 2026, with Playwright 1.63.0, the
 headless Chromium 153 gave 1 to 1,023 pixels and the headless WebKit
 26.6 gave 1 to 511, so both draw the squares at their full 36 pixels
-(below, "Which headless engines give WebGL"). GitHub's runners have not
-been seen.
+(below, "Which headless engines give WebGL"). On GitHub's runners on 29
+September 2026 Chromium gave 1 to 1,023 and WebKit 1 to 256, both
+above 36.
 
 ## How it is verified
 
@@ -838,11 +839,19 @@ site:
   of 16,384 pixels at most.
 - Firefox was not seen: Playwright cannot launch it on this Mac
   (`testing.md`, "Against the built site").
-- GitHub's runners were not seen: the branches of the plans are never
-  pushed, and the first push of `main` after the merge of stage 4 shows
-  them in the output of that test.
-
-So the tests above run in Chromium and WebKit on the Mac, and the 3D
+- GitHub's runners, `ubuntu-latest`, at the first push of `main`
+  after the merge of stage 4 on 29 September 2026, Playwright 1.63.0:
+  Chromium 153 gives WebGL 2, drawn by SwiftShader through ANGLE and
+  Vulkan, points of 1 to 1,023 pixels, textures of 8,192; WebKit 26.6
+  gives WebGL 2, points of 1 to 256 pixels, textures of 16,384, and
+  names what draws "Apple GPU" there too; Firefox 155.0 gives no WebGL,
+  neither 2 nor 1, so its tests of the 3D plot are reported as not run
+  and its flows take the 2D branch. WebKit there builds the screenshot
+  of the canvas from a drawing WebGL has cleared, so its tests of the
+  pixels give the page of the tests a context that keeps its drawing
+  (`testing.md`, "Against the built site").
+So the tests above run in Chromium and WebKit, on the Mac and on the
+runners, and the 3D
 view is in the screens. In an engine that gives none, those tests are
 reported as not run for that reason, and not as passed, as `testing.md`
 asks of a check that could not be run; and the test of the words of
@@ -939,9 +948,9 @@ group, and the outlines drawn with round joins.
 Each of these was made in its document on 27 September 2026, when the
 specs of stage 4 were made to agree, `docs/architecture.md` among them
 (its sections 9, 11 and 13, point 10), but the lines of `testing.md` on
-the headless engines, made on 28 September 2026 for the owner's Mac;
-those of GitHub's runners wait for the first push of `main` after the
-merge of stage 4.
+the headless engines, made on 28 September 2026 for the owner's Mac,
+and on 30 September 2026 for GitHub's runners, from the first push of
+`main` after the merge of stage 4.
 
 ## Open points
 
