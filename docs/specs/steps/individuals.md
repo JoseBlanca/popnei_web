@@ -23,7 +23,10 @@ it is checked", written from the parts of this spec and the checks of
 review of work package 5 of that plan: the name of the select of the
 coding as React Aria makes it, and a column of the populations that a
 new file puts first; and the warnings and the first values of the
-columns read from core, which keeps them. The
+columns read from core, which keeps them; and the same day with the
+owner's decisions on the review of that work package, stop B of
+`docs/specs/stage-4-open-points.md`: the value of a coding between
+quotation marks. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -245,7 +248,11 @@ its `binary` in `columnAllows`, with the coding the reader proposes.
 A binary column also has its coding, which of its two values is 1, the
 case, and which 0 (`docs/functionality.md`, section 4). Under its type,
 a second `Select`, labelled "Coded 1, the case", whose two items are its
-two values, and beside it the other: "no is coded 0.". The reader proposes
+two values, and beside it the other: `"no" is coded 0.`, the value
+between quotation marks, as the owner decided on 29 September 2026
+(stop B 1 of `docs/specs/stage-4-open-points.md`), since the bare value,
+"no is coded 0.", reads as nothing coded 0. The items of the select are
+the values bare, since each stands alone there. The reader proposes
 the coding, the larger of two numbers, `case` over `control`, `yes`
 over `no` and the other known pairs, and otherwise the value that comes
 second when their characters are compared one by one by the number
@@ -593,10 +600,11 @@ The descriptions of the commands are in the table above. The rest:
   the table of the columns, with the button to forget them. The words do
   not say that the file was just read, since a project opened from a
   project file shows the same warning. A type is named by its word, and
-  a binary one with its coding, "binary with yes coded 1". For one
+  a binary one with its coding, the value between quotation marks as
+beside the select of the coding, `binary with "yes" coded 1`. For one
   column, by the reason `typeLostReason` of `src/core/project.ts` gives:
   - its values, `"values"`: "Warning: status does not have the type you
-    set, binary with yes coded 1, since its values in pops.csv do not
+    set, binary with "yes" coded 1, since its values in pops.csv do not
     allow it; it is categorical, as its values give it. The type you set
     comes back when the file is read with values that allow it."
   - no such column, `"gone"`: "Warning: pops.csv has no column score,
@@ -604,14 +612,14 @@ The descriptions of the commands are in the table above. The rest:
     is read with a column of that name."
   - the first column, `"firstColumn"`: "Warning: status is the first
     column of pops.csv, whose cells are the names of the individuals, so
-    it does not have the type you set, binary with yes coded 1. If it
+    it does not have the type you set, binary with "yes" coded 1. If it
     should not be first, correct the file and load it again; the type
     you set then comes back."
 
   For more than one, a sentence and a list, a line for each column in
   the order of `typesLost`: "Warning: 2 columns do not have the type you
-  set:", "status: binary with yes coded 1; its values do not allow it,
-  and it is categorical", "score: categorical; pops.csv has no column
+  set:", `status: binary with "yes" coded 1; its values do not allow it,
+  and it is categorical`, "score: categorical; pops.csv has no column
   score", "code: categorical; it is the first column, the names of the
   individuals", and after the list "Each type you set comes
   back when the file is read with a column that allows it." The file is
