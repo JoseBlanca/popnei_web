@@ -90,7 +90,9 @@ filter of individuals. The revisions for stage 4 are approved by the owner on 28
 code of stage 3. Revised on 29 September 2026 after the review of work
 package 5 of `docs/plans/individuals-pca.md`: the first column, the
 names of the individuals, is never the column of the populations, as
-the owner is shown at stop B of that plan.
+the owner is shown at stop B of that plan; and `columnWarningsOf` and
+`firstValues`, which keep what the Individuals step shows of each
+column.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -834,6 +836,28 @@ apply, and keeps the others: a command, a step of undo, which the step
 offers beside the warning. Decided here, not by the owner, on 27
 September 2026, with the types kept unapplied.
 
+Two more things the Individuals step shows of each column walk the
+table, and core gives them so that each is walked once and not at every
+drawing of the step, after every change of the store
+(`.claude/skills/coding/react.md`, "Reading core"): the warning of a
+column of few whole numbers, and its first values. `columnWarningsOf(read)`
+gives the warnings of `columnWarnings` of the reader
+(`docs/specs/worker/individuals.md`, "The types of the columns") for
+the table, the types and the decimal mark of the read, the same as that
+function gives. What walks the table, the whole numbers of each column,
+does not depend on the types, so it is kept by the table and the decimal
+mark, for every column but the first as if it were continuous, and the
+warnings are those of the columns the read types continuous: a change of
+a type walks no column again, and a column set categorical loses its
+warning. `firstValues(table)` gives the first three distinct values of
+each column that are not missing, as `String` writes them, in the order
+of the file, kept by the table. While the step worked them out at each
+drawing, a change of a type on a table of 10,000 rows and 50 columns
+held the page for 104 to 131 ms, in Chromium and WebKit on the owner's
+Mac, as the review of work package 5 of
+`docs/plans/individuals-pca.md` measured on 28 September 2026. Added on
+29 September 2026 after that review.
+
 ## The TypeScript interface
 
 The fields are `readonly` in the code, and every list `readonly T[]`;
@@ -1343,6 +1367,21 @@ export function typesLost(source: IndividualsSource): ColumnTypeOf[];
 export function typeLostReason(
   read: Extract<IndividualsRead, { kind: "read" }>, column: string,
 ): "gone" | "firstColumn" | "values";
+
+/** The warnings of the columns of few whole numbers of a read, as
+    columnWarnings of the reader gives them for its table, its types and
+    its decimal mark, found.decimal or "." for an xlsx. The same array for
+    the same read; the walk of each column kept by the table and the
+    decimal mark, whatever the types. */
+export function columnWarningsOf(
+  read: Extract<IndividualsRead, { kind: "read" }>,
+): readonly ColumnWarning[];
+
+/** The first three distinct values of each column of the table that are
+    not missing, as String writes them, in the order of the file; one
+    array per column, in the order of the table. The same array for the
+    same table. */
+export function firstValues(table: IndividualsTable): readonly (readonly string[])[];
 ```
 
 The populations, of "The populations" above; they were exported by
@@ -1794,6 +1833,20 @@ for a project of association.
   continuous; in the table of an xlsx, a column of the number 1, the
   text `1` and the number 0, binary with `1` coded 1; the same array for
   the same read.
+- **`columnWarningsOf` and `firstValues`**: on a table with a column of
+  a few whole numbers typed continuous, a column of decimals and a column
+  of words, `columnWarningsOf` the warnings `columnWarnings` of the reader
+  gives for the same table, types and mark; the same array for the same
+  read; after `setColumnType` sets that column categorical, no warning,
+  and, set continuous again, its warning back, with a table whose rows
+  throw when they are walked again, so that the walk is shown kept by the
+  table and the mark; with the decimal comma, the warnings of that mark.
+  `firstValues`: the first three distinct values of each column in the
+  order of the file, a missing cell skipped, a number of an xlsx as
+  `String` writes it, and the same array for the same table.
+- **The column of the populations first**: a new file whose first column
+  is the column chosen gives `populationsOf` `null` and
+  `populationsNeeds` of kind `noSuchColumn`, with its words.
 - **The types**: `setColumnType` of each type a column may have, and a
   defect for each it may not, from `columnAllows`; a binary type of either
   coding accepted; `typesSet` holding the pair, replaced in its place when

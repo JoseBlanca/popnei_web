@@ -22,7 +22,8 @@ it is checked", written from the parts of this spec and the checks of
 `docs/plans/individuals-pca.md`); and on 29 September 2026 after the
 review of work package 5 of that plan: the name of the select of the
 coding as React Aria makes it, and a column of the populations that a
-new file puts first. The
+new file puts first; and the warnings and the first values of the
+columns read from core, which keeps them. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -458,10 +459,13 @@ which a screen does not write as a cache of its own
   `src/core/project.ts`; the types set that the read does not apply,
   `typesLost(source)`; and why each is not applied, `typeLostReason`,
   of the same module.
-- **the warning of a column of few whole numbers**, `columnWarnings` of
-  the reader, from the table, its types and the decimal mark of the
-  read, `found?.decimal ?? "."`, the point for an xlsx, whose `found` is
-  `null`; and `columnWarningText` for its words.
+- **the warning of a column of few whole numbers**, `columnWarningsOf`
+  of `src/core/project.ts`, the warnings of `columnWarnings` of the
+  reader for the table, its types and the decimal mark of the read,
+  `found?.decimal ?? "."`, the point for an xlsx, whose `found` is
+  `null`; and `columnWarningText` of the reader for its words.
+- **the first values of each column**, `firstValues(table)` of the same
+  module.
 
 Each keeps its answer for the same inputs, so that a table of 10,000
 rows is not matched again each time React draws the screen again, which
