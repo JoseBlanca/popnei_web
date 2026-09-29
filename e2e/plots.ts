@@ -4,9 +4,11 @@
  * histogram of the MAF of e2e/fixtures/panel.nei, its bins as literals,
  * and a scatter of 9,381 points in four populations and none, drawn at
  * the size a test sets, with the handle given to the test as
- * `window.plotsPage`. No screen offers the export before stage 6, nor the
- * scatter before the PCA panel, so this page is where they are seen
- * working in a browser.
+ * `window.plotsPage`; and the 3D plot of those points with a third
+ * coordinate, loaded with `import()` as the screen loads it
+ * (docs/specs/charts/pca3d.md, "How it is verified"). No screen offers the
+ * export before stage 6, nor the scatter and the 3D plot before the PCA
+ * panel, so this page is where they are seen working in a browser.
  */
 
 import "../src/ui/tokens.css";
@@ -14,6 +16,9 @@ import { PngError } from "../src/charts/export.ts";
 import { createHistogram } from "../src/charts/histogram.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
 import { NO_GROUP } from "../src/charts/marks.ts";
+import type * as Pca3dModule from "../src/charts/pca3d.ts";
+import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
+import { projectToScreen } from "../src/charts/project.ts";
 import {
   createScatter,
   SCATTER_MARGIN,
@@ -21,7 +26,7 @@ import {
 } from "../src/charts/scatter.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
-import type { PlotsPage } from "./plotsPage.ts";
+import type { Pca3dKind, PlotsPage } from "./plotsPage.ts";
 
 /**
  * The edges of the default 40 bins over [0, 1] as popnei gives them,
@@ -146,6 +151,138 @@ function highlightedData(highlighted: number | null): ScatterData {
   return { ...SCATTER, colours: { ...SCATTER.colours, highlighted } };
 }
 
+/**
+ * The cloud of the 3D plot: the scatter's points with a third coordinate,
+ * each population around a depth of its own, −0.5 or 0.5, and none around
+ * 0, within 0.4 of it, by a generator of its own. Point 0 at a depth of
+ * 0.9, point 1 of −0.9 and point 2 of 0.9; points 3 and 4 moved to one
+ * place across and up, (−1.6, 1.1), 0.85 from the centre of the nearest
+ * population, at the depths −0.5 and 0.5.
+ */
+function cloudData(): Pca3dData {
+  let state = 67890;
+  const next = (): number => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+  const depths = [0.5, -0.5, -0.5, 0.5, 0];
+  const x = Float64Array.from(SCATTER.x);
+  const y = Float64Array.from(SCATTER.y);
+  const z = new Float64Array(NUM_POINTS);
+  for (let index = 0; index < NUM_POINTS; index++) {
+    z[index] = (depths[index % 5] ?? 0) + 0.4 * (2 * next() - 1);
+  }
+  z[0] = 0.9;
+  z[1] = -0.9;
+  z[2] = 0.9;
+  x[3] = -1.6;
+  y[3] = 1.1;
+  z[3] = -0.5;
+  x[4] = -1.6;
+  y[4] = 1.1;
+  z[4] = 0.5;
+  return {
+    title: "Principal components, in 3D",
+    description: `Principal components of ${NUM_POINTS.toLocaleString("en-US")} individuals in 3D, for the tests.`,
+    x,
+    y,
+    z,
+    axisNames: ["PC1", "PC2", "PC3"],
+    axisLabels: ["PC1 (3.55%)", "PC2 (3.40%)", "PC3 (1.89%)"],
+    pointNames: SCATTER.pointNames,
+    colours: SCATTER.colours,
+  };
+}
+
+/** Five points in five populations, P1 to P5, each alone in its path. */
+function fiveData(): Pca3dData {
+  return {
+    title: "Five individuals, in 3D",
+    description: "Five individuals in five populations, for the tests.",
+    x: Float64Array.from([0.2, -0.9, 0.5, 1, -0.3]),
+    y: Float64Array.from([-0.4, 0.8, 0.1, -1, 0.6]),
+    z: Float64Array.from([0.3, -0.2, 0.7, -0.6, 0]),
+    axisNames: ["PC1", "PC2", "PC3"],
+    axisLabels: ["PC1 (3.55%)", "PC2 (3.40%)", "PC3 (1.89%)"],
+    pointNames: ["a", "b", "c", "d", "e"],
+    colours: {
+      kind: "groups",
+      title: "Population",
+      group: Uint16Array.from([0, 1, 2, 3, 4]),
+      names: ["P1", "P2", "P3", "P4", "P5"],
+      noneName: "No population",
+      highlighted: null,
+    },
+  };
+}
+
+/** Forty points on a circle, each in a population of its own, Q1 to Q40. */
+function fortyData(): Pca3dData {
+  const count = 40;
+  const angles = Array.from(
+    { length: count },
+    (_v, at) => (2 * Math.PI * at) / count,
+  );
+  return {
+    title: "Forty populations, in 3D",
+    description: "Forty individuals in forty populations, for the tests.",
+    x: Float64Array.from(angles, Math.cos),
+    y: Float64Array.from(angles, Math.sin),
+    z: Float64Array.from(angles, (_angle, at) => at / count - 0.5),
+    axisNames: ["PC1", "PC2", "PC3"],
+    axisLabels: ["PC1 (3.55%)", "PC2 (3.40%)", "PC3 (1.89%)"],
+    pointNames: angles.map((_angle, at) => `q${String(at)}`),
+    colours: {
+      kind: "groups",
+      title: "Population",
+      group: Uint16Array.from(angles, (_angle, at) => at),
+      names: angles.map((_angle, at) => `Q${String(at + 1)}`),
+      noneName: "No population",
+      highlighted: null,
+    },
+  };
+}
+
+/**
+ * Two points at (0.5, −0.5) across and up, away from the lines, point 0
+ * of P1 at a depth of −0.5 and point 1 of P2 at 0.5, above it, and point
+ * 2, of neither, at (1, 1, 1), which sets the scale.
+ */
+function pairData(): Pca3dData {
+  return {
+    title: "Two individuals at one place, in 3D",
+    description: "Two individuals at one place, for the tests.",
+    x: Float64Array.from([0.5, 0.5, 1]),
+    y: Float64Array.from([-0.5, -0.5, 1]),
+    z: Float64Array.from([-0.5, 0.5, 1]),
+    axisNames: ["PC1", "PC2", "PC3"],
+    axisLabels: ["PC1 (3.55%)", "PC2 (3.40%)", "PC3 (1.89%)"],
+    pointNames: ["below", "above", "corner"],
+    colours: {
+      kind: "groups",
+      title: "Population",
+      group: Uint16Array.from([0, 1, NO_GROUP]),
+      names: ["P1", "P2"],
+      noneName: "No population",
+      highlighted: null,
+    },
+  };
+}
+
+/** The data of each kind of 3D plot of the page. */
+function pca3dDataOf(kind: Pca3dKind): Pca3dData {
+  switch (kind) {
+    case "cloud":
+      return cloudData();
+    case "five":
+      return fiveData();
+    case "forty":
+      return fortyData();
+    case "pair":
+      return pairData();
+  }
+}
+
 /** A plot of the page: its element and its handle. */
 type Drawn =
   | {
@@ -157,6 +294,13 @@ type Drawn =
       readonly kind: "scatter";
       readonly element: HTMLElement;
       readonly handle: ChartHandle<ScatterData>;
+    }
+  | {
+      readonly kind: "pca3d";
+      readonly element: HTMLElement;
+      readonly handle: Pca3dHandle;
+      readonly data: Pca3dData;
+      readonly module: typeof Pca3dModule;
     };
 
 const found = document.getElementById("plots");
@@ -166,8 +310,10 @@ if (found === null) {
 const plots: HTMLElement = found;
 
 let drawn: Drawn | null = null;
-/** The calls of the scatter's onHover since it was drawn. */
+/** The calls of onHover of the scatter or the 3D plot since it was drawn. */
 let hovers: (number | null)[] = [];
+/** The calls of onContextChange of the 3D plot since it was drawn. */
+let contextChanges: boolean[] = [];
 
 function last(): Drawn {
   if (drawn === null) {
@@ -182,6 +328,50 @@ function lastScatter(): Extract<Drawn, { kind: "scatter" }> {
     throw new Error("popnei_web defect: the plot drawn last is no scatter.");
   }
   return plot;
+}
+
+function lastPca3d(): Extract<Drawn, { kind: "pca3d" }> {
+  const plot = last();
+  if (plot.kind !== "pca3d") {
+    throw new Error("popnei_web defect: the plot drawn last is no 3D plot.");
+  }
+  return plot;
+}
+
+/**
+ * Where each point of the 3D plot drawn last is in the viewport at `view`
+ * with a zoom of 1, x and y, two per point, NaN for a point not drawn:
+ * the corner of the element, its padding, and the camera of that view
+ * made apart from the plot's.
+ */
+function pca3dViewport(view: ViewName): Float64Array {
+  const plot = lastPca3d();
+  const { element, data, module } = plot;
+  const style = getComputedStyle(element);
+  const padLeft = Number.parseFloat(style.paddingLeft);
+  const padTop = Number.parseFloat(style.paddingTop);
+  const width =
+    element.clientWidth - padLeft - Number.parseFloat(style.paddingRight);
+  const height =
+    element.clientHeight - padTop - Number.parseFloat(style.paddingBottom);
+  const { camera, controls } = module.createView(null, width, height);
+  module.lookAlong(controls, view);
+  camera.updateMatrixWorld();
+  const matrix = camera.projectionMatrix
+    .clone()
+    .multiply(camera.matrixWorldInverse)
+    .toArray();
+  const { positions, index } = module.scenePositions(data.x, data.y, data.z);
+  const xy = new Float32Array((2 * positions.length) / 3);
+  const depth = new Float32Array(positions.length / 3);
+  projectToScreen(positions, matrix, width, height, xy, depth);
+  const box = element.getBoundingClientRect();
+  const pixels = new Float64Array(2 * data.x.length).fill(Number.NaN);
+  for (const [at, point] of index.entries()) {
+    pixels[2 * point] = box.left + padLeft + (xy[2 * at] ?? Number.NaN);
+    pixels[2 * point + 1] = box.top + padTop + (xy[2 * at + 1] ?? Number.NaN);
+  }
+  return pixels;
 }
 
 /**
@@ -337,8 +527,68 @@ const page: PlotsPage = {
     element.remove();
     return { create, createCall, highlight, highlightCall };
   },
+  webgl() {
+    const context = document.createElement("canvas").getContext("webgl2");
+    if (context === null) return false;
+    // Given back at once: a browser allows only a few at a time.
+    context.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
+  },
+  async drawPca3d(width, height, kind) {
+    const module = await import("../src/charts/pca3d.ts");
+    const element = newElement(width, height, SCATTER_PADDING);
+    hovers = [];
+    contextChanges = [];
+    const data = pca3dDataOf(kind);
+    const handle = module.createPca3d(element, data, {
+      onHover(point) {
+        hovers.push(point);
+      },
+      onContextChange(lost) {
+        contextChanges.push(lost);
+      },
+    });
+    drawn = { kind: "pca3d", element, handle, data, module };
+  },
+  pca3dData: () => lastPca3d().data,
+  pca3dHighlight(highlighted) {
+    const plot = lastPca3d();
+    const { colours } = plot.data;
+    if (colours.kind !== "groups") {
+      throw new Error("popnei_web defect: the 3D plot is not of groups.");
+    }
+    const data = { ...plot.data, colours: { ...colours, highlighted } };
+    drawn = { ...plot, data };
+    plot.handle.update(data);
+  },
+  pca3dPixel(index, view) {
+    const pixels = pca3dViewport(view);
+    const x = pixels[2 * index];
+    const y = pixels[2 * index + 1];
+    if (x === undefined || y === undefined) {
+      throw new Error(
+        `popnei_web defect: the 3D plot has no point ${String(index)}.`,
+      );
+    }
+    return { x, y };
+  },
+  pca3dNearest(index, view) {
+    const pixels = pca3dViewport(view);
+    const x = pixels[2 * index] ?? Number.NaN;
+    const y = pixels[2 * index + 1] ?? Number.NaN;
+    let nearest = Infinity;
+    for (let other = 0; other < pixels.length / 2; other++) {
+      if (other === index) continue;
+      const dx = (pixels[2 * other] ?? Number.NaN) - x;
+      const dy = (pixels[2 * other + 1] ?? Number.NaN) - y;
+      nearest = Math.min(nearest, Math.hypot(dx, dy));
+    }
+    return nearest;
+  },
+  contextChanges: () => [...contextChanges],
   element: () => last().element,
   handle: () => last().handle,
+  pca3d: () => lastPca3d().handle,
   pngErrorKind: (error) => (error instanceof PngError ? error.kind : null),
 };
 

@@ -8,6 +8,7 @@
 
 import type { PngErrorKind } from "../src/charts/export.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
+import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
 
@@ -16,6 +17,14 @@ export interface ViewportPoint {
   readonly x: number;
   readonly y: number;
 }
+
+/**
+ * The data of a 3D plot of the page: `cloud`, the scatter's 9,381 points
+ * with a third coordinate; `five`, five points in five populations;
+ * `forty`, 40 points in 40 populations; `pair`, two points at one place
+ * across and up, of P1 below and P2 above, and a third of neither.
+ */
+export type Pca3dKind = "cloud" | "five" | "forty" | "pair";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -60,7 +69,7 @@ export interface PlotsPage {
    * point of the scatter, leaving out point `except` when it is given.
    */
   nearestDistance(x: number, y: number, except?: number): number;
-  /** The calls of the scatter's `onHover` since it was drawn, in order. */
+  /** The calls of `onHover` of the scatter or the 3D plot since it was drawn, in order. */
   hovers(): (number | null)[];
   /** True once the markup of a name has run, which it never should. */
   markupRan(): boolean;
@@ -75,10 +84,44 @@ export interface PlotsPage {
     height: number,
     repeats: number,
   ): Promise<ScatterTimes>;
+  /**
+   * True when the browser gives a canvas a WebGL 2 context, which the 3D
+   * plot needs; the tests of the 3D plot are not run where it gives none.
+   */
+  webgl(): boolean;
+  /**
+   * Loads the 3D plot with `import()`, as the screen does, and draws the
+   * data of `kind` in a new element whose content is `width` by `height`
+   * CSS pixels, with a padding of 8, `position: relative`, in place of
+   * the plot drawn before. In `cloud`, point 0, of P1, named with markup,
+   * is alone at the top of the data, (0, 1.1, 0.9); points 3 and 4 are at
+   * one place across and up, (−1.6, 1.1), 3 at a depth of −0.5 and 4 at
+   * 0.5, nearer a camera above; the others are those of the scatter.
+   */
+  drawPca3d(width: number, height: number, kind: Pca3dKind): Promise<void>;
+  /** The data of the 3D plot drawn last. */
+  pca3dData(): Pca3dData;
+  /** Draws the 3D plot again with `highlighted` as the legend's highlight. */
+  pca3dHighlight(highlighted: number | null): void;
+  /**
+   * Where point `index` of the 3D plot drawn last is in the viewport at
+   * `view` with a zoom of 1, computed by the page with the pieces of
+   * pca3d.ts and projectToScreen, apart from the plot's own camera.
+   */
+  pca3dPixel(index: number, view: ViewName): ViewportPoint;
+  /**
+   * The distance in CSS pixels from point `index` to the nearest other
+   * point of the 3D plot drawn last at `view`, as pca3dPixel places them.
+   */
+  pca3dNearest(index: number, view: ViewName): number;
+  /** The calls of the 3D plot's onContextChange since it was drawn, in order. */
+  contextChanges(): boolean[];
   /** The element of the plot drawn last; throws when none was drawn. */
   element(): HTMLElement;
   /** The handle of the plot drawn last; throws when none was drawn. */
-  handle(): ChartHandle<HistogramData> | ChartHandle<ScatterData>;
+  handle(): ChartHandle<HistogramData> | ChartHandle<ScatterData> | Pca3dHandle;
+  /** The handle of the 3D plot drawn last; throws when the last plot is not one. */
+  pca3d(): Pca3dHandle;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */
   pngErrorKind(error: unknown): PngErrorKind | null;
 }

@@ -192,3 +192,36 @@
   fill-opacity: 0.85;
   stroke: none;
 }
+
+/* The canvas of the 3D plot fills the content of its element, whose size
+   the screen's CSS gives; three.js is told not to write its size
+   (charts.md, "Resizing and the pixel ratio"). */
+.chart-pca3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The labels at the positive ends of the three lines of the 3D plot,
+   placed by pca3d.ts at the projected ends after each render; hidden
+   from a screen reader, which reads the table. */
+.chart-pca3d-label {
+  position: absolute;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-100%);
+}
+
+/* The three lines of the exported 3D view, drawn in the colour of the
+   axes as on the screen. */
+.chart-pca3d-axis {
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+.chart-pca3d-label-text {
+  text-anchor: start;
+}
