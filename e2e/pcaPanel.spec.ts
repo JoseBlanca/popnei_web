@@ -155,10 +155,13 @@ test("the running state says the bar stands still while the components are calcu
 
 /** Makes the calculation worker post a crash in the place of each
     result. */
-async function crashResults(page: Page): Promise<void> {
+async function crashResults(
+  page: Page,
+  message = "a crash made by the test",
+): Promise<void> {
   const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
   if (worker === undefined) throw new Error("no calculation worker");
-  await worker.evaluate(() => {
+  await worker.evaluate((crash) => {
     const scope = globalThis as unknown as {
       postMessage: (message: unknown, transfer?: Transferable[]) => void;
     };
@@ -169,13 +172,11 @@ async function crashResults(page: Page): Promise<void> {
           ? message.kind
           : null;
       post(
-        kind === "result"
-          ? { kind: "crashed", message: "a crash made by the test" }
-          : message,
+        kind === "result" ? { kind: "crashed", message: crash } : message,
         transfer,
       );
     };
-  });
+  }, message);
 }
 
 test("a worker that stopped with no answer: the words of any analysis for 200 individuals", async ({
@@ -190,6 +191,36 @@ test("a worker that stopped with no answer: the words of any analysis for 200 in
     ),
   ).toBeVisible({ timeout: RESULT_TIMEOUT });
 });
+
+for (const [what, crash, shown] of [
+  [
+    "projections of popnei that do not match the individuals",
+    "popnei_web defect: popnei gave 10 projections for 3 individuals and 2 components",
+    "The application met an error of its own: popnei gave 10 projections for 3 individuals and 2 components. Run it again.",
+  ],
+  [
+    "popnei's refusal of an option it does not know",
+    "popnei_web defect: popnei: `numCompsKept` is not an option of `doPcoaFromVariants`, whose options are `minNumSnps` and `correctByLingoes`",
+    "The application met an error of its own: popnei: `numCompsKept` is not an option of `doPcoaFromVariants`, whose options are `minNumSnps` and `correctByLingoes`. Run it again.",
+  ],
+] as const) {
+  test(`stops A 9 and C 6 a defect of the application, ${what}, in the words of a defect and not of a crash`, async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    const panel = await openPanel(page);
+    await crashResults(page, crash);
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(panel.getByText(shown, { exact: true })).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    await expect(panel.getByText(/stopped unexpectedly/)).toHaveCount(0);
+    await expect(
+      panel.getByRole("button", { name: "Run", exact: true }),
+    ).toBeEnabled();
+    await expectNoViolations(makeAxeBuilder);
+  });
+}
 
 test("a browser with no WebGL 2: the 2D plot in the place of the 3D view with its words, 3D still pressed, until 2D is pressed", async ({
   page,

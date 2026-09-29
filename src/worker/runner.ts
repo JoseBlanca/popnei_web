@@ -36,7 +36,7 @@ import type {
 } from "popnei";
 
 import type { Result } from "../core/result.ts";
-import { messageOf } from "./messages.ts";
+import { DEFECT_START, messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
 import type {
   DiversityJob,
@@ -157,6 +157,17 @@ const RANGE_NOT_GIVEN = [
   "the source could not be read: popnei asked this file for the ",
 ] as const;
 
+/**
+ * popnei's refusal of a key of an object of options that the function
+ * does not have, "popnei: `numCompsKept` is not an option of
+ * `doPcoaFromVariants`, whose options are `minNumSnps` and
+ * `correctByLingoes`" (`onlyTheseOptions` of popnei's
+ * `js/popnei/src/arguments.ts`, from `js-v0.1.0-dev.3`): only the runner
+ * writes those objects, so it is a defect of ours.
+ */
+const UNKNOWN_OPTION =
+  /^popnei: `[^`]*` is not an option of `[^`]*`, whose options are /u;
+
 let popneiLoading: Promise<Result<string, string>> | null = null;
 
 /**
@@ -179,13 +190,20 @@ export function loadPopnei(): Promise<Result<string, string>> {
  * for a plain `Error`, whose prototype is `Error.prototype` itself, which
  * is how popnei refuses its input; `crashed` for anything else, a trap of
  * the wasm, a `RangeError` of a memory that cannot grow, a `TypeError`.
+ * popnei's refusal of an option it does not know, which only the runner
+ * can send, is `crashed` with its message after `DEFECT_START`, a defect
+ * of ours, which the page tells as one and not as a refusal of the
+ * user's settings (stops A 9 and C 6, decided by the owner on 29
+ * September 2026).
  */
 export function answerOfThrown(thrown: unknown): Answer<never> {
   if (
     thrown instanceof Error &&
     Object.getPrototypeOf(thrown) === Error.prototype
   ) {
-    return { kind: "refused", message: thrown.message };
+    return UNKNOWN_OPTION.test(thrown.message)
+      ? { kind: "crashed", message: `${DEFECT_START}${thrown.message}` }
+      : { kind: "refused", message: thrown.message };
   }
   return { kind: "crashed", message: messageOf(thrown) };
 }

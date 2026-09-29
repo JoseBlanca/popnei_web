@@ -26,6 +26,7 @@ import type {
   WriteJob,
   Written,
 } from "./protocol.ts";
+import { answerOfThrown } from "./runner.ts";
 
 /**
  * A worker the test drives by hand: it records what it is sent and
@@ -825,6 +826,45 @@ describe("WS2 D3 the client: crashes, defects, and every read answered", () => {
     expect(await now(env.r1.outcome)).toEqual({
       kind: "failed",
       error: { kind: "workerFailed", message: "unreachable executed" },
+    });
+    expectRestartedWithR2(env);
+  });
+
+  test("stop C 6 a defect of ours thrown in the calculation worker, crashed with its message, fails the run as a defect, not as workerFailed, written whole to the console, and the worker is started again", async () => {
+    const env = twoRuns();
+    const console_ = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const message =
+      "popnei_web defect: popnei gave 10 projections for 3 individuals and 2 components";
+    emit(env.first, { kind: "crashed", message });
+    expect(await now(env.r1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "defect",
+        message:
+          "popnei gave 10 projections for 3 individuals and 2 components",
+      },
+    });
+    expect(console_).toHaveBeenCalledWith(
+      `popnei_web: the calculation worker stopped. ${message}`,
+    );
+    expectRestartedWithR2(env);
+  });
+
+  test("stop A 9 popnei's refusal of an option it does not know, as the runner answers it, fails the run as a defect with popnei's message, and not as popnei's refusal", async () => {
+    const env = twoRuns();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const popneis =
+      "popnei: `numCompsKept` is not an option of `doPcoaFromVariants`, whose options are `minNumSnps` and `correctByLingoes`";
+    const answer = answerOfThrown(new Error(popneis));
+    if (answer.kind !== "crashed") {
+      throw new Error(`the runner answered ${answer.kind}, not crashed`);
+    }
+    emit(env.first, answer);
+    expect(await now(env.r1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: popneis },
     });
     expectRestartedWithR2(env);
   });

@@ -275,7 +275,10 @@ export type RunError =
   /** The worker is of another version of the protocol: a stale file after
       a deploy. */
   | { readonly kind: "protocolMismatch" }
-  /** A message that did not validate, a mistake of our code. */
+  /** A mistake of our code: a message that did not validate, a request
+      a worker refused, a `popnei_web defect:` thrown in the calculation
+      worker, whose message this is after that start, or popnei's refusal
+      of an option it does not know. */
   | { readonly kind: "defect"; readonly message: string };
 
 /** How a VCF is read: the two options of popnei's `openVcf`, both always

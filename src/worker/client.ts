@@ -15,6 +15,7 @@
  */
 
 import {
+  DEFECT_START,
   describeMessageError,
   messageOf,
   parseFromFilesRunner,
@@ -415,7 +416,18 @@ export function createClient(config: {
         console.error(
           `popnei_web: the calculation worker stopped. ${message.message}`,
         );
-        calculationBroken({ kind: "workerFailed", message: message.message });
+        // A defect of ours thrown in the worker, or popnei's refusal of an
+        // option it does not know, is told as a defect of the
+        // application, and not as a crash, whose words send the user to
+        // load the file again or blame the memory of the tab.
+        calculationBroken(
+          message.message.startsWith(DEFECT_START)
+            ? {
+                kind: "defect",
+                message: message.message.slice(DEFECT_START.length),
+              }
+            : { kind: "workerFailed", message: message.message },
+        );
         return;
       case "badRequest":
         calculationBroken({ kind: "defect", message: message.message });

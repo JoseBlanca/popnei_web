@@ -1020,6 +1020,21 @@ describe("WS3 D2 what goes wrong: answerOfThrown", () => {
     });
   });
 
+  test("stops A 9 and C 6 popnei's refusal of an option it does not know is crashed, as a defect of the application, and any other refusal of popnei's is refused", () => {
+    const unknown =
+      "popnei: `numCompsKept` is not an option of `doPcoaFromVariants`, whose options are `minNumSnps` and `correctByLingoes`";
+    expect(answerOfThrown(new Error(unknown))).toEqual({
+      kind: "crashed",
+      message: `popnei_web defect: ${unknown}`,
+    });
+    const other =
+      "popnei: the options of `doPcoaFromVariants` are an object, and null was given";
+    expect(answerOfThrown(new Error(other))).toEqual({
+      kind: "refused",
+      message: other,
+    });
+  });
+
   test("a TypeError, a mistake of the code, is crashed", () => {
     expect(answerOfThrown(new TypeError("x is not a function"))).toEqual({
       kind: "crashed",

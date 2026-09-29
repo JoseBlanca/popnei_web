@@ -751,6 +751,15 @@ export function parseFromFilesRunner(
   }
 }
 
+/** How the message of a defect of our code starts, the `Error` that a
+    state our code makes impossible throws (.claude/skills/coding/
+    typescript.md, "Errors"). A `crashed` of the calculation worker whose
+    message starts so is a defect of the application, which the client
+    gives the page as the `RunError` `defect`, and not a crash
+    (docs/specs/worker/client.md, "Crashes, defects, and every read
+    answered"). */
+export const DEFECT_START = "popnei_web defect: ";
+
 /** The text of what was thrown, which a `crashed` and a failure of a
     worker carry: the message of an `Error`, of any of its subclasses, and
     the text of anything else. The worker's copy of messageOf of
