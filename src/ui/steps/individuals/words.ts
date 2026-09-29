@@ -42,27 +42,26 @@ export const PICKER_ENDINGS: readonly string[] = Object.freeze([
   ".csv",
   ".tsv",
   ".txt",
+  ".xlsx",
 ]);
 
 /** The endings of a file read as a CSV or a TSV, the reader finding the
     separator whatever the ending. */
 const TEXT_ENDINGS = [".csv", ".tsv", ".txt"] as const;
 
-/** The endings of an Excel file, not read in this version. */
-const EXCEL_ENDINGS = [".xlsx", ".xls"] as const;
-
 /** The endings of a variants file, which the Variants step takes. */
 const VARIANTS_ENDINGS = [".vcf", ".vcf.gz", ".bcf", ".nei"] as const;
 
 /** What the end of `name` tells, compared without regard to case: a CSV
-    or a TSV, which is loaded; an Excel file, a variants file, or a file
-    of any other name, which are not. */
+    or a TSV, or an xlsx, which are loaded; a workbook of the older Excel,
+    `.xls`, a variants file, or a file of any other name, which are not. */
 export function kindOfName(
   name: string,
-): "text" | "excel" | "variants" | "other" {
+): "text" | "xlsx" | "xls" | "variants" | "other" {
   const lower = name.toLowerCase();
   if (TEXT_ENDINGS.some((ending) => lower.endsWith(ending))) return "text";
-  if (EXCEL_ENDINGS.some((ending) => lower.endsWith(ending))) return "excel";
+  if (lower.endsWith(".xlsx")) return "xlsx";
+  if (lower.endsWith(".xls")) return "xls";
   if (VARIANTS_ENDINGS.some((ending) => lower.endsWith(ending))) {
     return "variants";
   }
@@ -76,14 +75,22 @@ export function variantsNameText(name: string, app: AppId): string {
   return `${escaped(name)} was not loaded: ${individualsStepRefusal({ kind: "variantsFile" }, app)}`;
 }
 
-/** What the step says of an Excel file, which it did not load. */
-export function excelText(name: string): string {
-  return `${escaped(name)} was not loaded: this version reads a CSV or a TSV, and reads .xlsx files from a later version. In Excel, save the sheet with File › Save As › CSV, and load that file.`;
+/** What the step says of a workbook of the older Excel, `.xls`, which it
+    did not load, as the owner decided on 25 September 2026. */
+export function xlsText(name: string): string {
+  return `${escaped(name)} was not loaded: this version reads .xlsx files and not the older .xls. In Excel, save the sheet with File › Save As, as an Excel Workbook (.xlsx) or as CSV, and load that file.`;
 }
 
 /** What the step says of a file of another name, which it did not load. */
 export function otherNameText(name: string): string {
-  return `${escaped(name)} was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If it is one of them, rename it.`;
+  return `${escaped(name)} was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt, or an Excel file, whose name ends in .xlsx. If it is one of them, rename it.`;
+}
+
+/** The line of the card of an xlsx read, which says that only its first
+    sheet was read, with no name of the sheet, as the owner decided on 28
+    September 2026 (docs/specs/worker/individuals.md, Open 1). */
+export function firstSheetText(name: string): string {
+  return `Read from the first sheet of ${escaped(name)}; any other sheet is not read.`;
 }
 
 /** What the step says when several files are dropped or pasted at
@@ -94,12 +101,12 @@ export const SEVERAL_DROPPED = "Load one metadata file at a time.";
 
 /** What the step says when a folder is dropped or pasted. */
 export const FOLDER_DROPPED =
-  "Load a metadata file, a CSV or a TSV, not a folder.";
+  "Load a metadata file, a CSV, a TSV or an .xlsx file, not a folder.";
 
 /** What the step says when a piece of text is dropped, dragged from
     another window, or pasted. */
 export const TEXT_DROPPED =
-  "Load a metadata file, a CSV or a TSV, not a piece of text.";
+  "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.";
 
 /** The line of the zone with no file, which says what the analyses per
     population run on, as the owner decided on 25 September 2026. */

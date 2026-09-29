@@ -386,15 +386,15 @@ test("WS8 D1 a file with a row one cell short gives the reason that names the se
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS8 D1 pops.xlsx is not loaded, and the step says why and announces it", async ({
+test("WS8 D1 pops.xls, of the older Excel, is not loaded, and the step says why and announces it", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openIndividuals(page);
-  await pick(page, { name: "pops.xlsx", text: "PK" });
+  await pick(page, { name: "pops.xls", text: "PK" });
 
   const message =
-    "pops.xlsx was not loaded: this version reads a CSV or a TSV, and reads .xlsx files from a later version. In Excel, save the sheet with File › Save As › CSV, and load that file.";
+    "pops.xls was not loaded: this version reads .xlsx files and not the older .xls. In Excel, save the sheet with File › Save As, as an Excel Workbook (.xlsx) or as CSV, and load that file.";
   await expect(page.getByRole("main").getByText(message)).toBeVisible();
   await expect(page.getByRole("status").last()).toHaveText(message);
   await expect(fileButton(page)).toHaveText("Choose a metadata file…");
@@ -407,7 +407,7 @@ test("WS8 D1 pops.xlsx is not loaded, and the step says why and announces it", a
     page
       .getByRole("main")
       .getByText(
-        "pops.dat was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If it is one of them, rename it.",
+        "pops.dat was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt, or an Excel file, whose name ends in .xlsx. If it is one of them, rename it.",
       ),
   ).toBeVisible();
   await expect(page.getByRole("main").getByText(message)).toHaveCount(0);
@@ -862,7 +862,8 @@ test("WS8 D1 a folder dropped on the zone loads nothing, and the step says what 
   });
   await dropOn(page, dataTransfer);
 
-  const message = "Load a metadata file, a CSV or a TSV, not a folder.";
+  const message =
+    "Load a metadata file, a CSV, a TSV or an .xlsx file, not a folder.";
   await expect(
     page.getByRole("main").getByText(message, { exact: true }),
   ).toBeVisible();
@@ -875,7 +876,8 @@ test("WS8 D1 a piece of text dropped on the zone, or pasted into its button, loa
   page,
 }) => {
   await openIndividuals(page);
-  const message = "Load a metadata file, a CSV or a TSV, not a piece of text.";
+  const message =
+    "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.";
   const dataTransfer = await page.evaluateHandle(() => {
     const transfer = new DataTransfer();
     transfer.setData("text/plain", "pops.csv");
@@ -987,7 +989,7 @@ for (const width of [320, 640]) {
 
     // A word longer than the line, a name of a file with no space, is
     // cut to fit rather than pushing the page sideways.
-    const longName = `${"metadata_of_the_collection_".repeat(3)}2026.xlsx`;
+    const longName = `${"metadata_of_the_collection_".repeat(3)}2026.xls`;
     await pick(page, { name: longName, text: "PK" });
     await expect(
       page.getByRole("main").getByText(/was not loaded: this version/),

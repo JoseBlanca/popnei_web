@@ -82,7 +82,7 @@ import {
   decimalItems,
   detectedText,
   encodingItems,
-  excelText,
+  firstSheetText,
   firstValuesText,
   forgetLabel,
   kindOfName,
@@ -101,6 +101,7 @@ import {
   typesLostWords,
   undecodedText,
   variantsNameText,
+  xlsText,
 } from "./words.ts";
 import type { PopulationLine } from "./words.ts";
 
@@ -145,9 +146,10 @@ export function IndividualsStep(): React.JSX.Element {
       refuse(SEVERAL_DROPPED);
       return;
     }
-    switch (kindOfName(file.name)) {
-      case "excel":
-        refuse(excelText(file.name));
+    const kind = kindOfName(file.name);
+    switch (kind) {
+      case "xls":
+        refuse(xlsText(file.name));
         return;
       case "variants":
         refuse(variantsNameText(file.name, app));
@@ -156,11 +158,12 @@ export function IndividualsStep(): React.JSX.Element {
         refuse(otherNameText(file.name));
         return;
       case "text":
+      case "xlsx":
         break;
     }
     setMessage(null);
     const fileId = files.addFile(file);
-    send(pickCommand(fileId, file.name));
+    send(pickCommand(fileId, file.name, kind === "xlsx"));
   };
 
   const remove = (): void => {
@@ -286,7 +289,8 @@ interface FileCardProps {
 }
 
 /** The card of the loaded file: its name, and its size once read, with
-    the warning of a character not decoded, or why it is not read. */
+    the line of the first sheet of an xlsx and the warning of a character
+    not decoded, or why it is not read. */
 function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
   const read = individuals.read;
   const undecodedLine =
@@ -297,6 +301,11 @@ function FileCard({ individuals, reason }: FileCardProps): React.JSX.Element {
       {read.kind === "read" ? (
         <>
           <p className={classOf(styles, "muted")}>{sizeText(read.table)}</p>
+          {individuals.csv === null && (
+            <p className={classOf(styles, "line")}>
+              {firstSheetText(individuals.name)}
+            </p>
+          )}
           {read.found !== null && undecodedLine !== null && (
             <p className={classOf(styles, "line")}>
               <Warning>

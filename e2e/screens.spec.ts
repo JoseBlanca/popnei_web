@@ -1391,11 +1391,35 @@ for (const theme of ["light", "dark"] as const) {
 
     test("the Individuals step, an Excel file not loaded", async ({ page }) => {
       await goTo(page, "Individuals");
-      await pickIndividuals(page, { name: "pops.xlsx", text: "PK" });
+      await pickIndividuals(page, { name: "pops.xls", text: "PK" });
       await expect(
-        page.getByRole("main").getByText(/^pops\.xlsx was not loaded/),
+        page.getByRole("main").getByText(/^pops\.xls was not loaded/),
       ).toBeVisible();
       await save(page, `popgen-individuals-excel-${theme}`);
+    });
+
+    test("the Individuals step, an xlsx read", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "excel_en.xlsx");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(
+            "Read from the first sheet of excel_en.xlsx; any other sheet is not read.",
+          ),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-xlsx-${theme}`);
+    });
+
+    test("the Individuals step, an xlsx refused", async ({ page }) => {
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, "encrypted.xlsx");
+      await expect(
+        page
+          .getByRole("main")
+          .getByText(/^encrypted\.xlsx could not be read: it is protected/),
+      ).toBeVisible();
+      await save(page, `popgen-individuals-xlsx-refused-${theme}`);
     });
 
     test("the Individuals step, a piece of text dropped", async ({ page }) => {
@@ -1415,7 +1439,7 @@ for (const theme of ["light", "dark"] as const) {
         page
           .getByRole("main")
           .getByText(
-            "Load a metadata file, a CSV or a TSV, not a piece of text.",
+            "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.",
           ),
       ).toBeVisible();
       await save(page, `popgen-individuals-text-dropped-${theme}`);

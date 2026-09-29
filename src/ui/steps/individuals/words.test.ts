@@ -8,13 +8,17 @@ import {
   checkHeading,
   chosenPopulationItem,
   detectedText,
-  excelText,
   firstValuesText,
   kindOfName,
   loadAgainText,
   missingLabel,
   noPopulationLine,
   otherNameText,
+  firstSheetText,
+  xlsText,
+  FOLDER_DROPPED,
+  TEXT_DROPPED,
+  PICKER_ENDINGS,
   populationItems,
   populationLine,
   sizeText,
@@ -62,8 +66,10 @@ describe("the words of the Individuals step", () => {
     expect(kindOfName("pops.csv")).toBe("text");
     expect(kindOfName("POPS.TSV")).toBe("text");
     expect(kindOfName("pops.txt")).toBe("text");
-    expect(kindOfName("pops.xlsx")).toBe("excel");
-    expect(kindOfName("POPS.XLS")).toBe("excel");
+    expect(kindOfName("pops.xlsx")).toBe("xlsx");
+    expect(kindOfName("POPS.XLSX")).toBe("xlsx");
+    expect(kindOfName("POPS.XLS")).toBe("xls");
+    expect(kindOfName("pops.xlsm")).toBe("other");
     expect(kindOfName("pops.dat")).toBe("other");
     expect(kindOfName("pops.csv.gz")).toBe("other");
   });
@@ -80,17 +86,30 @@ describe("the words of the Individuals step", () => {
   });
 
   test("a file not loaded is named in its message", () => {
-    expect(excelText("pops.xlsx")).toBe(
-      "pops.xlsx was not loaded: this version reads a CSV or a TSV, and reads .xlsx files from a later version. In Excel, save the sheet with File › Save As › CSV, and load that file.",
-    );
-    expect(excelText("pops.xls")).toBe(
-      "pops.xls was not loaded: this version reads a CSV or a TSV, and reads .xlsx files from a later version. In Excel, save the sheet with File › Save As › CSV, and load that file.",
+    expect(xlsText("pops.xls")).toBe(
+      "pops.xls was not loaded: this version reads .xlsx files and not the older .xls. In Excel, save the sheet with File › Save As, as an Excel Workbook (.xlsx) or as CSV, and load that file.",
     );
     expect(otherNameText("pops.dat")).toBe(
-      "pops.dat was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt. If it is one of them, rename it.",
+      "pops.dat was not loaded: the Individuals step reads a CSV or a TSV, whose name ends in .csv, .tsv or .txt, or an Excel file, whose name ends in .xlsx. If it is one of them, rename it.",
     );
     expect(loadAgainText("pops.csv")).toBe(
       "To change how pops.csv is read, load it again.",
+    );
+  });
+
+  test("IP9 the words of an xlsx: the line of the first sheet, the picker, a folder and a piece of text", () => {
+    expect(firstSheetText("pops.xlsx")).toBe(
+      "Read from the first sheet of pops.xlsx; any other sheet is not read.",
+    );
+    expect(firstSheetText("po\npsI.xlsx")).toBe(
+      "Read from the first sheet of po\\npsI.xlsx; any other sheet is not read.",
+    );
+    expect(PICKER_ENDINGS).toEqual([".csv", ".tsv", ".txt", ".xlsx"]);
+    expect(FOLDER_DROPPED).toBe(
+      "Load a metadata file, a CSV, a TSV or an .xlsx file, not a folder.",
+    );
+    expect(TEXT_DROPPED).toBe(
+      "Load a metadata file, a CSV, a TSV or an .xlsx file, not a piece of text.",
     );
   });
 
