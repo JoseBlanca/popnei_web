@@ -14,6 +14,13 @@ import type { Locator, Page, Route } from "@playwright/test";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
 
+/** The panel of the diversity, its region named by its heading: the
+    Analyses step holds the principal components' panel beside it, with
+    a Run of its own. */
+function diversityPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "Diversity" });
+}
+
 /** Saves the whole page as `name`, or only the window with `fullPage`
     false, which shows a toast fixed at the bottom of the window where the
     user sees it. */
@@ -1394,7 +1401,7 @@ for (const theme of ["light", "dark"] as const) {
       await pickIndividuals(page, "panel_pops.csv");
       await goTo(page, "Analyses");
       await expect(
-        page.getByRole("button", { name: "Run" }),
+        diversityPanel(page).getByRole("button", { name: "Run" }),
       ).toHaveAccessibleDescription(/^Choose the column/);
       await save(page, `popgen-diversity-locked-${theme}`);
     });
@@ -1412,7 +1419,7 @@ for (const theme of ["light", "dark"] as const) {
       await loadPanelWithPopulations(page);
       await holdResults(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
       ).toBeVisible({
@@ -1424,7 +1431,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the diversity done", async ({ page }) => {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await save(page, `popgen-diversity-done-${theme}`);
     });
@@ -1445,7 +1452,7 @@ for (const theme of ["light", "dark"] as const) {
         }),
       ).toHaveCount(0);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page.getByRole("main").getByText(/^Warning: Population A/),
       ).toBeVisible();
@@ -1455,7 +1462,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the diversity in error, the ploidy refused", async ({ page }) => {
       await loadTetraploid(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page.getByRole("main").getByText(/^At line 5 of tetraploid\.vcf\.gz/),
       ).toBeVisible();
@@ -1465,7 +1472,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the diversity removed", async ({ page }) => {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await goTo(page, "Variants");
       const threshold = page.getByLabel(
@@ -1484,7 +1491,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.setViewportSize({ width: 320, height: 900 });
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       // The frame measured as narrower than the table, and its line shown.
       await expect(
@@ -1515,7 +1522,7 @@ for (const theme of ["light", "dark"] as const) {
       });
       await choose(page, "Column that defines the populations", "pop");
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page
           .getByRole("main")
@@ -1538,9 +1545,9 @@ for (const theme of ["light", "dark"] as const) {
       await choose(page, "Column that defines the populations", "popcat");
       await goTo(page, "Analyses");
       await unlink(path);
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByRole("main").getByText(/^panel\.nei could not be read again/),
+        diversityPanel(page).getByText(/^panel\.nei could not be read again/),
       ).toBeVisible();
       await save(page, `popgen-diversity-no-longer-read-${theme}`);
     });
@@ -1555,8 +1562,10 @@ for (const theme of ["light", "dark"] as const) {
       await choose(page, "Column that defines the populations", "popcat");
       await holdResults(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
-      await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Stop" }),
+      ).toBeVisible();
       await goTo(page, "Variants");
       await page
         .getByText("Only the variants with PASS or . in the FILTER column", {
@@ -1618,7 +1627,7 @@ for (const theme of ["light", "dark"] as const) {
       await loadPanelWithPopulations(page);
       await holdResults(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
       ).toBeVisible({
@@ -1630,7 +1639,7 @@ for (const theme of ["light", "dark"] as const) {
     test("the shell done", async ({ page }) => {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await save(page, `popgen-shell-done-${theme}`);
     });
@@ -1640,7 +1649,7 @@ for (const theme of ["light", "dark"] as const) {
     async function removeTheDiversity(page: Page): Promise<void> {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await goTo(page, "Variants");
       const threshold = page.getByLabel(
@@ -1807,7 +1816,7 @@ for (const theme of ["light", "dark"] as const) {
       const saved = await saveProjectFile(page, testInfo.outputPath());
       await holdResults(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await openProject(page, saved);
       await expect(
         page.getByText(/The ongoing calculations will be stopped\.$/),
@@ -1830,7 +1839,7 @@ for (const theme of ["light", "dark"] as const) {
       await threshold.fill("0.05");
       await threshold.press("Enter");
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await page.getByRole("heading", { level: 1, name: "Analyses" }).focus();
       await page.keyboard.press("ControlOrMeta+z");
       await expect(
@@ -1887,7 +1896,7 @@ for (const theme of ["light", "dark"] as const) {
       // The diversity counts the variants the filter keeps.
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       await goTo(page, "Variants");
       await expect(
@@ -2881,7 +2890,7 @@ for (const theme of ["light", "dark"] as const) {
       await diversityWithThresholds(page, false);
       await holdResults(page);
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page
           .getByRole("main")
@@ -2903,13 +2912,11 @@ for (const theme of ["light", "dark"] as const) {
         "0.5",
       );
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page
-          .getByRole("main")
-          .getByText(
-            /^The statistics of each individual, which the thresholds/,
-          ),
+        diversityPanel(page).getByText(
+          /^The statistics of each individual, which the thresholds/,
+        ),
       ).toBeVisible();
       await save(page, `popgen-diversity-stats-failed-${theme}`);
     });
@@ -2946,7 +2953,7 @@ for (const theme of ["light", "dark"] as const) {
       await pickIndividuals(page, "panel_pops.csv");
       await choose(page, "Column that defines the populations", "popcat");
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
       const saved = await saveProjectFile(page, testInfo.outputPath());
       await openProject(page, saved);
@@ -2955,7 +2962,7 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText("200 individuals"),
       ).toBeVisible();
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByText(/^The same numbers as in/)).toBeVisible();
       await save(page, `popgen-diversity-compared-${theme}`);
 
@@ -2974,7 +2981,7 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText("200 individuals"),
       ).toBeVisible();
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByText(/^Not compared with/)).toBeVisible();
       await save(page, `popgen-diversity-uncompared-${theme}`);
 
@@ -2985,7 +2992,7 @@ for (const theme of ["light", "dark"] as const) {
         page.getByRole("main").getByText("200 individuals"),
       ).toBeVisible();
       await goTo(page, "Analyses");
-      await page.getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         page.getByText(/^Not compared with .* this file is a \.nei file/),
       ).toBeVisible();

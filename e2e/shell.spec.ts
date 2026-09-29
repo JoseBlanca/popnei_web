@@ -206,7 +206,7 @@ test("WS9 D3 the shell running: Analyses at Running, the start in the status reg
   await loadPanel(page);
   await holdResults(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
 
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
     "Analyses, Running",
@@ -215,18 +215,20 @@ test("WS9 D3 the shell running: Analyses at Running, the start in the status reg
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("WS9 D3 the shell done: Analyses at Done, the end in the status region, the variants counted in the summary, and axe", async ({
+test("WS9 D3 the shell with the diversity done: Analyses at Ready while the principal components wait for a Run, the end in the status region, the variants counted in the summary, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openPopgen(page);
   await loadPanel(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
 
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+  // Done only when every analysis of the step that is not locked is done
+  // (shell.md, "The stepper"): the principal components are ready.
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
-    "Analyses, Done",
+    "Analyses, Ready",
   );
   // The start and the end, together when the end comes within the pause
   // of the announcer.
@@ -397,7 +399,7 @@ function notice(page: Page): Locator {
 async function removeTheDiversity(page: Page): Promise<Locator> {
   await loadPanel(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   // The end announced, before an undo is.
   await expect(status(page)).toHaveText(/Diversity: done\.$/);
@@ -417,7 +419,7 @@ test("WS9 D3 a change that leaves a calculation behind says so in the notice, an
   await loadPanel(page);
   await holdResults(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
     "Analyses, Running",
   );
@@ -447,7 +449,7 @@ test("WS9 D3 a change that leaves a calculation behind says so in the notice, an
       if (region.textContent !== "") texts.push(region.textContent);
     }).observe(region, { childList: true, subtree: true, characterData: true });
   });
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(notice(page)).toHaveCount(0);
   // The calculation stopped, and the worker made again without the hold
   // calculates the diversity to its end.
@@ -471,7 +473,7 @@ test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the 
   await openPopgen(page);
   await loadPanel(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   await expect(status(page)).toHaveText(/Diversity: done\.$/);
   // A calculation of the threshold 0.05 held under way, and an undo back
@@ -482,7 +484,7 @@ test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the 
   await threshold.fill("0.05");
   await threshold.press("Enter");
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(status(page)).toHaveText("Diversity: calculating.");
   await undoButton(page).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
@@ -520,7 +522,9 @@ test("WS9 D3 Run that takes the calculation stopped out of the notice keeps the 
 
   // Run pressed as a screen reader presses it, which leaves the focus
   // where it is.
-  await page.getByRole("button", { name: "Run" }).dispatchEvent("click");
+  await diversityPanel(page)
+    .getByRole("button", { name: "Run" })
+    .dispatchEvent("click");
 
   await expect(
     notice(page).getByRole("alertdialog", {
@@ -664,7 +668,7 @@ test("WS9 D3 after an undo that removed the diversity the notice offers Redo, wh
   await threshold.fill("0.5");
   await threshold.press("Enter");
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   await expect(status(page)).toHaveText(/Diversity: done\.$/);
   await expect(notice(page)).toHaveCount(0);
@@ -741,7 +745,7 @@ test("WS9 D3 while a dialog is open, the status region and the error bar's alert
   await openPopgen(page);
   await loadPanel(page);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await header(page).getByRole("button", { name: "Save project" }).click();
   await expect(
     page.getByRole("dialog", { name: "Save the project" }),
@@ -762,3 +766,9 @@ test("WS9 D3 while a dialog is open, the status region and the error bar's alert
   // The bar's own status region, the first of the page.
   expect(await isInert(page.getByRole("status").first())).toBe(false);
 });
+/** The panel of the diversity, its region named by its heading: the
+    Analyses step holds the principal components' panel beside it, with
+    a Run of its own. */
+function diversityPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "Diversity" });
+}

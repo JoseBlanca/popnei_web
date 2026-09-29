@@ -17,6 +17,13 @@ import { expect, test } from "./axe.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
+/** The panel of the diversity, its region named by its heading: the
+    Analyses step holds the principal components' panel beside it, with
+    a Run of its own. */
+function diversityPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "Diversity" });
+}
+
 /** The largest project file the page reads, 64 MB. */
 const MAX_PROJECT_FILE_BYTES = 64 * 1024 * 1024;
 
@@ -404,7 +411,7 @@ test("WS9 D3 a result that ends after a Save is a change: leaving the page raise
   // A first run counts the variants of the file, which the project then
   // holds, so that the second run changes nothing of the project.
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   await goTo(page, "Variants");
   await setThreshold(page, "0.05");
@@ -433,7 +440,7 @@ test("WS9 D3 a result that ends after a Save is a change: leaving the page raise
     };
   });
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
     "Analyses, Running",
   );
@@ -833,7 +840,7 @@ test("WS9 D3 the question before an opening says that the calculations under way
     };
   });
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
     "Analyses, Running",
   );
@@ -884,7 +891,7 @@ test("WS9 D3 the question before an opening loses its sentence of the calculatio
     };
   });
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
     "Analyses, Running",
   );
@@ -900,8 +907,10 @@ test("WS9 D3 the question before an opening loses its sentence of the calculatio
     (globalThis as unknown as { release: () => void }).release();
   });
 
+  // The diversity done and the principal components ready, not run:
+  // Ready (shell.md, "The stepper").
   await expect(stepLink(page, "Analyses")).toHaveAccessibleName(
-    "Analyses, Done",
+    "Analyses, Ready",
   );
   await expect(question).toHaveAccessibleDescription(
     "It replaces the project on the page, and an opening cannot be undone. To keep the project on the page, press Keep the current project and save it first.",
@@ -975,7 +984,7 @@ test("WS9 D3 a ploidy typed and a file refused with no variants file are forgott
   await openPopgen(first);
   await loadWithPopulations(first, "panel.vcf.gz");
   await goTo(first, "Analyses");
-  await first.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(first).getByRole("button", { name: "Run" }).click();
   await expect(first.getByRole("rowheader", { name: "p0" })).toBeVisible();
   const saved = await saveProjectFile(first, testInfo.outputPath());
 
@@ -1016,7 +1025,7 @@ test("WS9 D3 a ploidy typed and a file refused with no variants file are forgott
     page.getByRole("region", { name: "Variants file" }).getByText(/^Warning/),
   ).toHaveCount(0);
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   // The line under the table alone: the status region may say the same
   // words after those of the read, when the two come together.
   await expect(
@@ -1284,7 +1293,7 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
   await openPopgen(page);
   await loadWithPopulations(page, "panel.vcf.gz");
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   const saved = await saveProjectFile(page, testInfo.outputPath());
   await openProject(page, saved);
@@ -1310,7 +1319,7 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
       .getByText(/^Warning: .*is read with every variant where that one/),
   ).toBeVisible();
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   const notCompared =
     "Not compared with the numbers of the project file: this file was read with every variant, and the project's with only the variants with PASS or . in the FILTER column. To compare them, read the file again in the Variants step with only the variants with PASS or . in the FILTER column.";
@@ -1333,7 +1342,7 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
     "Variants, Done",
   );
   await goTo(page, "Analyses");
-  await page.getByRole("button", { name: "Run" }).click();
+  await diversityPanel(page).getByRole("button", { name: "Run" }).click();
   const same =
     "The same numbers as in the project file: this variants file gives the results the project was saved with.";
   await expect(diversity.getByText(same)).toBeVisible();
