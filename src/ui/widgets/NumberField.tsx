@@ -50,6 +50,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   NumberField as AriaNumberField,
   Input,
@@ -584,9 +585,12 @@ function FieldInput({
         // number makes: a Run the distance of an LD filter unlocks, which
         // would otherwise be enabled only once the focus had passed it
         // (docs/specs/analyses/pca.md, "Accessibility"). React draws the
-        // change of the project within this event, before the browser
-        // moves the focus. The commit at the blur that follows commits
-        // the same number, no change.
+        // change of the project within this handler, by `flushSync`,
+        // before the browser moves the focus: left to React's own time,
+        // after the handler, it came too late in Firefox 155, which had
+        // chosen the next stop while Run was still disabled and passed
+        // it, on GitHub's runners on 29 September 2026. The commit at the
+        // blur that follows commits the same number, no change.
         if (
           event.key === "Tab" &&
           !event.altKey &&
@@ -595,9 +599,11 @@ function FieldInput({
           state !== null &&
           isTyped()
         ) {
-          onCommitStarts();
-          state.commit();
-          onCommitEnds();
+          flushSync(() => {
+            onCommitStarts();
+            state.commit();
+            onCommitEnds();
+          });
           onTabbed(true);
         }
         // Undo and Redo are never the browser's here (docs/specs/shell.md,

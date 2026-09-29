@@ -13,6 +13,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { ViewName } from "../src/charts/pca3d.ts";
 import type { Pca3dKind, ViewportPoint } from "./plotsPage.ts";
+import { keepDrawingBuffer } from "./drawingBuffer.ts";
 
 /** --chart-axis of the light theme, #555d68, and of the dark, #a3abb5. */
 const LIGHT_AXIS = [85, 93, 104] as const;
@@ -26,9 +27,20 @@ const WHITE = [255, 255, 255] as const;
 const MARKUP_NAME = '<img src=x onerror="window.plotsInjected = true">';
 /** The padding of the element of a plot of the page. */
 const PADDING = 8;
+/**
+ * The style of a screenshot of the canvas, which hides the labels of the
+ * lines: they are elements over the canvas, and their text, wider in
+ * DejaVu Sans, the font of Ubuntu, than on a Mac, reached the square
+ * read around a mark on GitHub's runners, where its pixels were counted
+ * as the outline of the mark.
+ */
+const CANVAS_ONLY = ".chart-pca3d-label { visibility: hidden; }";
 
 /** Opens the page of the plots, and skips the test where the engine gives no WebGL 2. */
 async function openPlots(page: Page): Promise<void> {
+  if (test.info().project.name === "webkit") {
+    await page.addInitScript(keepDrawingBuffer);
+  }
   await page.goto("e2e/plots.html");
   await page.waitForFunction(() => "plotsPage" in window);
   const webgl = await page.evaluate(() => window.plotsPage?.webgl() ?? false);
@@ -210,7 +222,9 @@ async function coloursAt(
   const canvas = page.locator("#plots canvas");
   const box = await canvas.boundingBox();
   if (box === null) throw new Error("The canvas is not laid out.");
-  const png = (await canvas.screenshot()).toString("base64");
+  const png = (await canvas.screenshot({ style: CANVAS_ONLY })).toString(
+    "base64",
+  );
   return page.evaluate(
     async ([data, at, left, top]) => {
       const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
@@ -938,7 +952,9 @@ async function marksAround(
   const canvas = page.locator("#plots canvas");
   const box = await canvas.boundingBox();
   if (box === null) throw new Error("The canvas is not laid out.");
-  const png = (await canvas.screenshot()).toString("base64");
+  const png = (await canvas.screenshot({ style: CANVAS_ONLY })).toString(
+    "base64",
+  );
   return page.evaluate(
     async ([data, at, left, top, side]) => {
       const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
@@ -995,7 +1011,9 @@ async function pixelsNear(
   const canvas = page.locator("#plots canvas");
   const box = await canvas.boundingBox();
   if (box === null) throw new Error("The canvas is not laid out.");
-  const png = (await canvas.screenshot()).toString("base64");
+  const png = (await canvas.screenshot({ style: CANVAS_ONLY })).toString(
+    "base64",
+  );
   return page.evaluate(
     async ([data, at, left, top, side, wanted, tolerance]) => {
       const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));

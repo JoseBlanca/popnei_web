@@ -267,8 +267,28 @@ test("IP3 D3 in the empty distance the arrow keys, Page Up, Page Down, Home and 
     await page.keyboard.press(key);
     await expect(distance(page)).toHaveValue("");
   }
+  // The field is the last stop of the page, so the Tab key takes the
+  // focus out of it to the browser's own bar. Chromium and WebKit then
+  // give the page's focus to its body; Firefox 155 keeps the field as the
+  // page's active element, with the page no longer focused. The field
+  // losing the focus is what both have.
+  await distance(page).evaluate((input) => {
+    input.addEventListener(
+      "blur",
+      () => {
+        Object.assign(window, { distanceLeft: true });
+      },
+      { once: true },
+    );
+  });
   await page.keyboard.press("Tab");
-  await expect(distance(page)).not.toBeFocused();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as unknown as { distanceLeft?: boolean }).distanceLeft,
+      ),
+    )
+    .toBe(true);
   await expect(distance(page)).toHaveValue("");
   // Nothing was sent: the last step of undo is still the switch.
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
@@ -553,15 +573,21 @@ test("IP3 a distance above 2^53 − 1 is refused with the number as it was typed
     what the field does is the page's. */
 async function paste(input: Locator, text: string): Promise<void> {
   await input.evaluate((element, pasted) => {
-    const transfer = new DataTransfer();
-    transfer.setData("text/plain", pasted);
-    element.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    const event = new ClipboardEvent("paste", {
+      bubbles: true,
+      cancelable: true,
+    });
+    // The text is given by the event's own `clipboardData`, and not by a
+    // DataTransfer passed to the event: Firefox 155 gave the page no text
+    // from such a DataTransfer, on GitHub's runners on 29 September 2026,
+    // so that nothing was pasted. The field reads `getData` alone.
+    Object.defineProperty(event, "clipboardData", {
+      value: {
+        getData: (type: string): string =>
+          type === "text/plain" ? pasted : "",
+      },
+    });
+    element.dispatchEvent(event);
   }, text);
 }
 

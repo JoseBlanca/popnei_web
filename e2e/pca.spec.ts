@@ -546,9 +546,19 @@ test.describe("IP8 D6 the key of the PCA on the screen", () => {
     await page.getByRole("option", { name: "altitude", exact: true }).click();
     await expect(description2d(panel)).toHaveText(/Coloured by altitude/);
     await panel.getByRole("radio", { name: "3D", exact: true }).click();
-    await expect(
-      panel.getByRole("button", { name: "Third axis, kept up" }),
-    ).toBeVisible();
+    if (await givesWebGl(page)) {
+      await expect(
+        panel.getByRole("button", { name: "Third axis, kept up" }),
+      ).toBeVisible();
+    } else {
+      test.info().annotations.push({
+        type: "no WebGL 2",
+        description: "3D pressed drew the 2D plot with the words of no WebGL",
+      });
+      await expect(
+        panel.getByText(/^This browser cannot draw the 3D view/),
+      ).toBeVisible();
+    }
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(
       panel.getByText(/^The place of each of the 200/),
@@ -679,6 +689,19 @@ test.describe("IP10 D3 the options, the warnings and the results removed", () =>
     page,
   }) => {
     const panel = await openPanel(page);
+    // Every text the region is given from the run on: in an engine with
+    // no WebGL 2 the words of no WebGL follow the end of the run there.
+    await status(page).evaluate((region) => {
+      const texts: string[] = [];
+      Object.assign(window, { statusTexts: texts });
+      new MutationObserver(() => {
+        texts.push(region.textContent);
+      }).observe(region, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    });
     await run(panel);
     const warnings = panel.getByRole("region", { name: "1 warning" });
     await expect(
@@ -687,9 +710,20 @@ test.describe("IP10 D3 the options, the warnings and the results removed", () =>
     await expect(
       warnings.getByText(/^Warning: No LD filter was applied/),
     ).toBeVisible();
-    await expect(status(page)).toContainText(
-      "Principal components: done, 1 warning.",
-    );
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (window as unknown as { statusTexts: string[] }).statusTexts.some(
+            (text) => text.includes("Principal components: done, 1 warning."),
+          ),
+        ),
+      )
+      .toBe(true);
+    if (await givesWebGl(page)) {
+      await expect(status(page)).toContainText(
+        "Principal components: done, 1 warning.",
+      );
+    }
   });
 
   test("IP10 D3 results removed: the line of the individuals and Run, as in ready, and the Undo of the notice and then that of the header bring the result back with no calculation", async ({
@@ -799,9 +833,10 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
       expect(box).not.toBeNull();
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
     }
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(320);
+    // The plot is drawn again at the next frame after its size changed.
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(320);
     await expectNoViolations(makeAxeBuilder);
   });
 });

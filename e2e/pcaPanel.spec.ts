@@ -26,12 +26,38 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { writeBigVcf } from "./bigVcf.ts";
+import { keepDrawingBuffer } from "./drawingBuffer.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
 const NO_WEBGL = /^This browser cannot draw the 3D view: WebGL/;
 const LOAD_FAILED = /^The 3D view could not be loaded, so the 2D plot/;
+
+/** Whether this engine gives WebGL 2, as the plot asks for it. */
+async function givesWebGl(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const context = document.createElement("canvas").getContext("webgl2");
+    context?.getExtension("WEBGL_lose_context")?.loseContext();
+    return context !== null;
+  });
+}
+
+/** Skips what follows in an engine with no WebGL 2, and says so: the
+    test was not run, and did not pass (pca3d.md, "Which headless
+    engines give WebGL"). */
+async function needsWebGl(page: Page, what: string): Promise<void> {
+  const given = await givesWebGl(page);
+  if (!given) {
+    test.info().annotations.push({ type: "no WebGL 2", description: what });
+  }
+  test.skip(!given, `no WebGL 2: ${what}`);
+}
+
+/** Notes that the test took the branch of an engine with no WebGL 2. */
+function noted2d(what: string): void {
+  test.info().annotations.push({ type: "no WebGL 2", description: what });
+}
 
 /** The PCA takes longer than the 5 seconds of an assertion in WebKit on a
     loaded machine only rarely; 30 s leaves room. */
@@ -277,6 +303,17 @@ test("three.js not downloaded: the 2D plot with its words and Try again, which d
   await expectNoViolations(makeAxeBuilder);
   await page.unroute("**/pca3d-*.js");
   await panel.getByRole("button", { name: "Try again" }).click();
+  if (!(await givesWebGl(page))) {
+    // The file comes, and the browser cannot draw it: the words of no
+    // WebGL take the place of those of the failed download.
+    noted2d(
+      "the file of the 3D view came, and the words of no WebGL were shown",
+    );
+    await expect(panel.getByText(NO_WEBGL)).toBeVisible();
+    await expect(panel.getByText(LOAD_FAILED)).toHaveCount(0);
+    await expect(panel.locator("canvas")).toHaveCount(0);
+    return;
+  }
   // Drawn in every engine: Chromium, which keeps the failed download for
   // the life of the page, is asked the same file at another address.
   await expect(
@@ -458,6 +495,7 @@ for (const width of [320, 1280]) {
   }) => {
     await page.setViewportSize({ width, height: 900 });
     const panel = await openPanel(page);
+    await needsWebGl(page, "the labels of the 3D view were not seen");
     await run(panel);
     const canvas = panel.getByRole("img", {
       name: "Principal components, PC1, PC2 and PC3",
@@ -524,6 +562,47 @@ test("the table of the individuals at 320 px: a header of one line, and a column
       cells.map((cell) => getComputedStyle(cell).justifyContent),
     );
   expect(aligns[0]).toBe(aligns[1]);
+});
+
+test("the 2D plot drawn on a page 1280 px wide is drawn again at the width of the page narrowed to 320 px, which does not scroll sideways", async ({
+  page,
+}) => {
+  const panel = await openPanel(page);
+  await run(panel);
+  await to2d(panel);
+  const svg = panel.locator("svg.chart-scatter");
+  const widthOf = (): Promise<number> =>
+    svg.evaluate((element) => element.getBoundingClientRect().width);
+  // 48rem, the most the plot is given.
+  await expect.poll(widthOf).toBe(768);
+  await page.setViewportSize({ width: 320, height: 800 });
+  // Drawn again at the next frame after the change of its size.
+  await expect.poll(widthOf).toBeLessThanOrEqual(320);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});
+
+test("the Tab key after 50000 typed in the distance of the PCA's LD filter stops at Run even when React draws its changes only after the key has gone through the page, as it did in Firefox", async ({
+  page,
+}) => {
+  // React draws a change made in a handler of the keyboard in a
+  // microtask after it; here in a task after it, later than the browser's
+  // choice of the next stop, the order that made Firefox 155 pass Run on
+  // GitHub's runners on 29 September 2026.
+  await page.addInitScript(() => {
+    window.queueMicrotask = (callback: VoidFunction): void => {
+      setTimeout(callback, 0);
+    };
+  });
+  const panel = await openPanel(page);
+  await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
+  const field = panel.getByLabel(DISTANCE);
+  await field.pressSequentially("50000");
+  await page.keyboard.press("Tab");
+  await expect(
+    panel.getByRole("button", { name: "Run", exact: true }),
+  ).toBeFocused();
 });
 
 test("from the keyboard alone, the LD filter set for the PCA, 50000 typed in its distance, and Tab then Enter run the PCA and not the diversity", async ({
@@ -713,6 +792,7 @@ test.describe("the 3D view in the panel", () => {
     page,
   }) => {
     const panel = await openPanel(page);
+    await needsWebGl(page, "the 3D view was not drawn");
     await ownLd(panel);
     await run(panel);
     const canvas = panel.getByRole("img", { name: PCA_3D });
@@ -770,7 +850,11 @@ test.describe("the 3D view in the panel", () => {
   test("each button of the view moves it its own way, Reset view gives back the start, Zoom in and Zoom out undo each other, and View along names the components chosen", async ({
     page,
   }) => {
+    if (test.info().project.name === "webkit") {
+      await page.addInitScript(keepDrawingBuffer);
+    }
     const panel = await openPanel(page);
+    await needsWebGl(page, "the buttons of the 3D view were not tried");
     await ownLd(panel);
     await run(panel);
     const canvas = panel.getByRole("img", { name: PCA_3D });
@@ -943,7 +1027,14 @@ test.describe("the 3D view in the panel", () => {
     await page.unroute(PCA3D_FILE);
     await panel.getByRole("button", { name: "Try again" }).click();
     await expect.poll(() => asked.length).toBe(4);
-    await expect(panel.getByRole("img", { name: PCA_3D })).toBeVisible();
+    if (await givesWebGl(page)) {
+      await expect(panel.getByRole("img", { name: PCA_3D })).toBeVisible();
+    } else {
+      noted2d(
+        "the file of the 3D view came, and the words of no WebGL were shown",
+      );
+      await expect(panel.getByText(NO_WEBGL)).toBeVisible();
+    }
     await expect(failed).toHaveCount(0);
   });
 
@@ -964,6 +1055,15 @@ test.describe("the 3D view in the panel", () => {
     await expect(loading).toBeVisible({ timeout: RESULT_TIMEOUT });
     await expect(status(page)).toContainText(LOADING_WORDS);
     release();
+    if (!(await givesWebGl(page))) {
+      // The drawing cannot be taken away where there is none.
+      noted2d(
+        "the words of no WebGL followed those of the loading; the loss of the drawing was not tried",
+      );
+      await expect(panel.getByText(NO_WEBGL)).toBeVisible();
+      await expect(loading).toHaveCount(0);
+      return;
+    }
     const canvas = panel.getByRole("img", { name: PCA_3D });
     await expect(canvas).toBeVisible();
     await expect(loading).toHaveCount(0);

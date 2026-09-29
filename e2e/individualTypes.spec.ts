@@ -656,11 +656,25 @@ test("IP5 D2 the names missing copied by Copy the 12 names, one a line, and anno
 }) => {
   // Playwright gives Chromium the clipboard only with both permissions;
   // WebKit lets the page write on a press, and the test read once granted.
-  await context.grantPermissions(
-    browserName === "chromium"
-      ? ["clipboard-read", "clipboard-write"]
-      : ["clipboard-read"],
-  );
+  // Firefox lets the page write on a press too, and Playwright 1.63 knows
+  // no permission to read it there: the text the page writes is kept as
+  // it passes to the browser's clipboard, and read from there.
+  if (browserName === "firefox") {
+    await page.addInitScript(() => {
+      const clipboard = navigator.clipboard;
+      const write = clipboard.writeText.bind(clipboard);
+      clipboard.writeText = async (text: string): Promise<void> => {
+        await write(text);
+        Object.assign(window, { copiedText: text });
+      };
+    });
+  } else {
+    await context.grantPermissions(
+      browserName === "chromium"
+        ? ["clipboard-read", "clipboard-write"]
+        : ["clipboard-read"],
+    );
+  }
   await openIndividuals(page);
   await loadPanel(page);
   await pick(page, { name: "pops.csv", text: await withSex(LEFT_OUT) });
@@ -683,7 +697,11 @@ test("IP5 D2 the names missing copied by Copy the 12 names, one a line, and anno
 
   await expect(status(page)).toHaveText("12 names copied.");
   await expect(copy).toBeFocused();
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  const copied = await page.evaluate(() =>
+    "copiedText" in window
+      ? String(window.copiedText)
+      : navigator.clipboard.readText(),
+  );
   expect(copied).toBe(LEFT_OUT.join("\n"));
 
   // While individuals are missing, no list of the populations, whether a

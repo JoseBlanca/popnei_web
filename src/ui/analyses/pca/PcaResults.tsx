@@ -100,9 +100,13 @@ const POPULATION_ID = "population";
 const COLUMN_PREFIX = "column:";
 
 /** The narrowest each column of the table may be, in CSS pixels: the
-    individual, its group or value, and each component, "−10.0000". */
-const INDIVIDUAL_WIDTH = 112;
-const COLOUR_WIDTH = 128;
+    individual, its group or value, and each component, "−10.0000". The
+    first two hold their header, its arrow and its padding on one line
+    also in DejaVu Sans, the sans-serif font of Ubuntu, whose bold
+    "Individual" and "Population" wrapped in the 112 and 128 pixels
+    these had, on GitHub's runners on 29 September 2026. */
+const INDIVIDUAL_WIDTH = 136;
+const COLOUR_WIDTH = 144;
 const COMPONENT_WIDTH = 96;
 
 /** The factors of the buttons of the zoom, and the step of the turns, in

@@ -40,10 +40,16 @@
 
 /* The plot and the legend over it; the 2D and the 3D plot take the same
    size, so that the switch between them does not move the page
-   (docs/specs/charts/scatter.md, "The size"). */
+   (docs/specs/charts/scatter.md, "The size"). It may be narrower than
+   the plot drawn in it: without `min-inline-size: 0` the SVG of the 2D
+   plot, drawn 768 pixels wide on a wide page, held the column of the
+   panel at that width when the page became 320 pixels wide, so the
+   plot was never drawn again at the new width and the page scrolled
+   sideways (WCAG 1.4.10). */
 .plotArea {
   position: relative;
   inline-size: 100%;
+  min-inline-size: 0;
   max-inline-size: 48rem;
 }
 

@@ -607,7 +607,13 @@ test.describe("IP10 D3 the legend", () => {
     const panel = await openPanel(page);
     await run(panel);
     await panel.getByRole("radio", { name: "2D", exact: true }).click();
-    await expect(status(page)).toContainText("Principal components: done");
+    // The last words the run gave the region: in an engine with no WebGL
+    // 2, those of no WebGL, which follow the end of the run.
+    await expect(status(page)).toContainText(
+      (await givesWebGl(page))
+        ? "Principal components: done"
+        : "This browser cannot draw the 3D view",
+    );
     // Every text the region is given from here on.
     await status(page).evaluate((region) => {
       const texts: string[] = [];
@@ -628,9 +634,23 @@ test.describe("IP10 D3 the legend", () => {
     // The Undo of the switch to 2D is announced alone: an announcement of
     // the highlight would stand before it or with it.
     await banner(page, "Undo").click();
-    await expect(status(page)).toHaveText(
-      "Undone: the principal components were drawn in 2D.",
-    );
+    // In an engine with no WebGL 2 the 3D view it brings back is the 2D
+    // plot again, whose words may follow in the region.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (window as unknown as { statusTexts: string[] }).statusTexts.some(
+            (text) =>
+              text === "Undone: the principal components were drawn in 2D.",
+          ),
+        ),
+      )
+      .toBe(true);
+    if (await givesWebGl(page)) {
+      await expect(status(page)).toHaveText(
+        "Undone: the principal components were drawn in 2D.",
+      );
+    }
     const texts = await page.evaluate(
       () => (window as unknown as { statusTexts: string[] }).statusTexts,
     );
