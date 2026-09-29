@@ -304,6 +304,25 @@ test("IP3 D3 0 typed in the empty distance is refused, and so is a comma typed k
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("IP10 D3 a comma typed first in the empty distance is thrown away with the line of the comma, and Enter leaves the field empty", async ({
+  page,
+}) => {
+  await ldTurnedOn(page);
+  const main = page.getByRole("main");
+  const comma =
+    "Write the distance as a whole number of base pairs, 10000 and not 10,000; the distance is still to be typed.";
+  await distance(page).pressSequentially(",5");
+  await expect(distance(page)).toHaveValue("5");
+  await expect(main.getByText(comma, { exact: true })).toBeVisible();
+  await expect(status(page)).toHaveText(endsWith(comma));
+  await distance(page).press("Enter");
+  await expect(distance(page)).toHaveValue("");
+  await expect(main.getByText(comma, { exact: true })).toBeVisible();
+  await expect(banner(page, "Undo")).toHaveAccessibleDescription(
+    "Undo: the LD pruning was turned on",
+  );
+});
+
 test("IP3 D3 50000 typed: the reason goes and the Count gives a count beside the LD pruning; an Undo gives back the empty field and the lock, and a Redo 50000", async ({
   page,
   makeAxeBuilder,

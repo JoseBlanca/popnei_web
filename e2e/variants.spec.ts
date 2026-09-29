@@ -508,6 +508,26 @@ test("WS7 D3 a comma typed key by key in the threshold is thrown away, and the f
   ).toBeVisible();
 });
 
+test("IP10 D3 a comma typed first in the emptied threshold is thrown away with the line of the comma, and Enter shows the threshold kept in digits", async ({
+  page,
+}) => {
+  await openVariants(page);
+  const threshold = page.getByLabel(
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    { exact: true },
+  );
+  const comma =
+    "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.1.";
+  await threshold.fill("");
+  await threshold.pressSequentially(",5");
+  await expect(threshold).toHaveValue("5");
+  await expect(page.getByRole("main").getByText(comma)).toBeVisible();
+  await expect(page.getByRole("status").last()).toHaveText(comma);
+  await threshold.press("Enter");
+  await expect(threshold).toHaveValue("0.1");
+  await expect(page.getByRole("main").getByText(comma)).toBeVisible();
+});
+
 test("WS7 D3 the line of a number refused goes at the next commit, the value kept typed back or an arrow key at a bound", async ({
   page,
 }) => {

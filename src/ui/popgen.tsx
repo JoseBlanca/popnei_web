@@ -60,8 +60,13 @@ declare global {
 
 /** The language of the widgets of React Aria, which would otherwise take
     the browser's: the application is in English, and a number field in a
-    Spanish browser would show 0,1 and read its buttons in Spanish. */
-const LOCALE = "en-US";
+    Spanish browser would show 0,1 and read its buttons in Spanish. Its
+    digits are the Latin ones, named by `-u-nu-latn`: with no numbering
+    system named, React Aria reads a text that is no number in these
+    digits, a comma typed first in an empty field, in the digits of
+    another system that takes it, keeps it in the field, and then shows
+    the number in those digits, 0.1 as ٠٫١. */
+const LOCALE = "en-US-u-nu-latn";
 
 /** The element of the page with the id `id`; a defect when popgen.html
     lacks it. */
