@@ -94,7 +94,13 @@ individuals file does. The key holds the thresholds of the individuals
 and not the list they keep (`docs/specs/core/keys.md`), so two
 thresholds that keep the same individuals give two keys. The key
 version is 2, raised on 28 September 2026 when the key began to hold
-the filters of individuals.
+the filters of individuals. The check numbers of a project file saved by
+stage 3 are compared always, whatever its filters, since the fingerprint
+of their settings is made when the file is opened
+(`docs/specs/core/keys.md`); their key version, 1, is not this one, so a
+difference adds the sentence that the version of the application that
+saved them calculated this analysis in another way. Decided by the owner
+on 29 September 2026, the spec taking the code.
 
 ### Why it cannot run
 
@@ -159,7 +165,7 @@ stop A of `docs/plans/variants-step.md`.
 
 | code | when | the text |
 |---|---|---|
-| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms.", with "among the individuals kept" after "genotype" when the filters of individuals remove some, as the job's `individuals` not `null` says: "12 of the 1,200 variants of panel.nei have no called genotype among the individuals kept, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1." |
+| `variantsWithoutCalls` | the counts of a histogram sum to fewer than `numVars` | "12 of the 1,200 variants of panel.nei have no called genotype, and are in none of the histograms.", with "among the individuals kept" after "genotype" when the project has a filter of individuals, a list or a threshold, turned on; the result does not say whether the filter removed anybody, and for one that removes nobody the sentence is still true: "12 of the 1,200 variants of panel.nei have no called genotype among the individuals kept, and are in none of the histograms. The filter by observed heterozygosity, the MAF filter and the LD pruning remove them at any threshold, and the missing data filter at any threshold below 1." |
 
 Every value is from 0 to 1, inside the range of the bins, so a variant
 missing from the counts is one with no value. The warning reads the

@@ -507,8 +507,12 @@ The descriptions of the commands are in the table above. The rest:
 
   These six stay beside the zone until the next pick, are the
   screen's and not the project's, and are announced when they appear,
-  through the function the shell gives the screens, since the focus
-  stays on the button. The words of stage 2 for an Excel file, "this
+  through the function the shell gives the screens, since the step
+  does not move the focus: it stays where it was, on the file button
+  after a pick, on the button "Paste a metadata file" after a paste, and,
+  after a drop, wherever it was before the drop. Decided by the owner on 29 September 2026, the spec taking
+  the code; the spec had the focus on the file button after a paste too.
+  The words of stage 2 for an Excel file, "this
   version reads a CSV or a TSV, and reads .xlsx files from a later
   version", go.
 - **No metadata file**: "No metadata file: every individual is in one
@@ -879,7 +883,8 @@ otherwise:
 - **Files not loaded**: an `.xls` file, several files dropped at once, a
   folder, a piece of text dropped and one pasted into the zone's button,
   a variants file told by its name, and a file of another name, each
-  with its words, announced, and the focus still on the file button; a
+  with its words, announced, and the focus where it was, on the file
+  button after a pick, on the paste button after a paste; a
   VCF picked under the name of a CSV refused as a variants file by the
   reader.
 - **Remove**: the card, the options and the table gone, the line of no

@@ -87,10 +87,14 @@ store leaves this analysis out of the notice of results removed, which
 would otherwise speak at every move of a threshold
 (`docs/architecture.md`, section 4, "The notice leaves the counts out").
 The key version is 2, raised on 28 September 2026 to mark that the
-counts are over the individuals kept; the key and the fingerprint of the
-settings of a project with a filter of individuals hold it now, so a
-result or a check number of version 1 is found or compared only for a
-project with none, whose counts are the same.
+counts are over the individuals kept. The check numbers of a project file saved by stage 3 are
+compared always, whatever its filters, since the fingerprint of their
+settings is made when the file is opened (`docs/specs/core/keys.md`);
+their key version, 1, is not this one, so a difference adds the sentence
+that the version of the application that saved them calculated this
+analysis in another way. Decided by the owner on 29 September 2026, the
+spec taking the code; the sentence before compared them only for a
+project with no filter of individuals.
 
 ### Why it cannot run
 

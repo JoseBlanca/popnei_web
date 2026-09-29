@@ -106,10 +106,16 @@ and which would otherwise take it off the screen at every move
 The key version is 2, raised on 28 September 2026 to mark that the
 result is now over every variant of the file: the key of version 1 held
 the filters of the variants, and a result under it was counted over the
-variants they kept. The key and the fingerprint of the settings, which
-no longer hold the filters of the variants, would tell the two apart in
-any case, but for a project with no filter of the variants, whose result
-is the same in both.
+variants they kept. The check numbers of a project file saved by stage
+3 are compared always, whatever its filters: the fingerprint of their
+settings is made when the file is opened (`docs/specs/core/keys.md`),
+and so matches the settings the project opens with. Their key version,
+1, is not this one, so a difference adds the sentence that the version
+of the application that saved them calculated this analysis in another
+way (`checkVerdictText` of `docs/specs/core/projectFile.md`). Corrected on
+29 September 2026 to what the code does, as the owner decided that day;
+the sentence before said they were told apart but for a project with no
+filter of the variants, which the file cannot tell.
 
 ### Why it cannot run
 
