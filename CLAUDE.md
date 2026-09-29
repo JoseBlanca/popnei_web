@@ -47,7 +47,12 @@ two are changed together, the application may use the local build of
 popnei, packed with `npm pack` in `popnei/js/popnei` and installed with
 `npm install --no-save <absolute path of the .tgz>`, which changes neither
 `package.json` nor the lockfile and is never committed: what is committed,
-and what the site is built from, is always a release. A link, `npm link`
+and what the site is built from, is always a release. Over an installed
+popnei of the same version that install leaves the old package in place,
+and the build keeps the old wasm, as the plan of stage 4 found on 28
+September 2026 with `js-v0.1.0-dev.3` over `dev.2`, both "0.1.0"; so
+`node_modules/popnei` is removed first, or `npm ci` run, before it. A
+link, `npm link`
 or `"file:../popnei/js/popnei"`, does not do: the development server
 refuses to serve popnei's `.wasm` through it, "403 Forbidden", and
 `../popnei` names no folder from a worktree, as the specs of stage 4 found

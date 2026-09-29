@@ -158,6 +158,17 @@ called rate")`, and never by a CSS class or a test id. Such a locator is
 itself a check of accessibility: a button that a screen reader cannot
 name cannot be found by the test either.
 
+One kind of component has a test of its own besides: an effect that
+moves the focus is tested under `<StrictMode>` in jsdom, rendered with
+`createRoot` of `react-dom/client` and no Testing Library, as
+`src/ui/shell/focusKept.test.ts` does. In development React runs the
+effects of a component just mounted twice (`react.md`, "Mounting a
+plot"), and the built site, which the flows run against, runs them once.
+So a focus that the second run sends elsewhere, or leaves on nothing,
+fails only on the development server, where the owner tries the screens,
+and no flow can see it. The plan of stage 4 met four such defects;
+decided by the owner on 29 September 2026.
+
 This is revisited after the walking skeleton. If a widget of our own
 grows states that the flows reach only slowly, Vitest's browser mode,
 which runs component tests in a real browser, is looked at before
