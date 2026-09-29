@@ -1000,7 +1000,7 @@ SVG and PNG with the legend in it, which no screen offers before stage
   (`scatter.md`, "What it does", "The SVG it builds", "The numbers
   without the picture", "The export" and "The size"). Serves 3. Needs
   7.1.
-- [ ] 7.3 The scatter on `e2e/plots.html` and its flows in
+- [x] 7.3 The scatter on `e2e/plots.html` and its flows in
   `e2e/plots.spec.ts`, from `scatter.md`, "How it is verified", "In
   Playwright"; the times of D5, written into `scatter.md`, "How it is
   verified".

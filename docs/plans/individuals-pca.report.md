@@ -638,8 +638,9 @@ Commits aecfa8a to bfd77d8, and the fixes of the review up to 2111d9f.
 5. The times, in `scatter.md`, on an Apple M5 Pro with 64 GB and macOS
    27.0, run alone: from `createScatter` to the next frame, 9,381
    points, 17.0 ms in Chromium 153 and 19.0 ms in WebKit 26.6; an
-   update of the highlight 16.7 and 17.0 ms. The fixes changed the
-   drawing, so they are measured again when the machine is quiet.
+   update of the highlight 16.7 and 17.0 ms. Measured again after the
+   fixes, on 29 September 2026 with the load at 2.9: 16.8 and 18.0 ms,
+   the update 16.9 and 18.0 ms (72a0546).
 
 The three d3 packages reach no file of the site yet: the first script
 of `popgen.html` grew 0.48 kB gzipped, the base of the 2D plots.
