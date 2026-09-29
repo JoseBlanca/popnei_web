@@ -1078,7 +1078,10 @@ heading, an `<h2>`, is "Diversity", the title by which the shell names
 it in the notice and the status region, listed in
 `src/ui/analyses/panels.ts` (`docs/specs/shell.md`, "What it sends and
 reads"). The Analyses step of stage 2 is the `<h1>` "Analyses" and this
-panel under it; it has no spec of its own while it holds one panel.
+panel under it; from stage 4 the panel of the principal components
+comes first, and a list of links to the two panels stands under the
+`<h1>` (`docs/specs/shell.md`, "The links to the analyses"). The step
+has no spec of its own.
 
 ### What it shows
 

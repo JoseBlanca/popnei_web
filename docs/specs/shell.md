@@ -50,6 +50,9 @@ individuals kept unknown, since the statistics read no filter. The revisions for
 Revised on 29 September 2026 after the review of work package 5 of
 `docs/plans/individuals-pca.md`: an Undo or a Redo that removes the
 control that had the focus hands it to the `<h1>` of the step.
+Revised again on 29 September 2026 with the owner's decision at stop C 3
+of that plan: a list of links to the analyses under the `<h1>` of the
+Analyses step.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -247,6 +250,28 @@ new page (`react.md`, "Moving focus"); not when the page opens, where
 the browser puts the reader at the start. The title of the page names
 the step, "Variants · Population genetics · popnei web", so that a tab
 and the history of the browser say where the user is (2.4.2).
+
+### The links to the analyses
+
+Under the `<h1>` "Analyses" of the Analyses step, before the first
+panel, a short list of links, one for each analysis shown in the step,
+in the order of their panels, each named by the title of its panel,
+"Principal components" and "Diversity", as the owner decided on 29
+September 2026 (stop C 3 of `docs/specs/stage-4-open-points.md`): once
+there is a PCA, its plot and its table put the diversity about 2,400
+pixels below the heading of the PCA, and nothing on the screen said it
+was there. The list is a `<nav>` labelled "Analyses of this step", so
+that a screen reader names it and can jump to it, and each link is React
+Aria's `Link` of `src/ui/widgets/`, as the link from the plot of the PCA
+to its table is (`docs/specs/analyses/pca.md`, "Accessibility"). A press
+moves the focus to the `<h2>` of its panel, which takes the focus and is
+not in the order of the Tab key, and the browser scrolls the heading into
+view. The link is not an `<a>` to an anchor, since the address after `#`
+names the step, and a change of it would change the step. The list is
+there in every state of the step, since every panel shows its heading in
+every state, and it names a panel that failed to draw too, whose heading
+the error boundary leaves. The option not taken: nothing that leads to
+the panels below.
 
 ### The summary line
 
@@ -934,6 +959,10 @@ the walking skeleton (stage 8).
   Decided on 29 September 2026 after the review of work package 5 of
   `docs/plans/individuals-pca.md`, which found the focus dropped in
   Chromium and WebKit.
+- **The links to the analyses** are in the order of the Tab key after
+  the `<h1>` of the Analyses step and before the first panel; Enter on
+  one moves the focus to the heading of its panel, and the next Tab goes
+  on from that heading into its panel (2.4.3).
 - **Not colour alone**: a state of a step is a word and a symbol; the
   current step a mark; the error bar its words (1.4.1).
 - **The dialogs** of opening and of Save take the focus, the dialog of
@@ -1031,6 +1060,11 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
 - The links of the stepper change the step and the title; the back
   button goes to the step before; the focus is on the `<h1>` of the new
   step.
+- The Analyses step has the list "Analyses of this step" with
+  "Principal components" and "Diversity", in the order of the panels;
+  each link, pressed with the mouse and with Enter, puts the focus on the
+  `<h2>` of its panel and leaves the step and the address as they were;
+  at 320 pixels wide the list fits with no sideways scroll.
 - A page just opened is left with no question; after a pick of a file,
   leaving it raises the browser's question, which Playwright sees as a
   `beforeunload` dialog.
