@@ -1220,3 +1220,24 @@ gathers the digits typed across edits, "5000050000777", which a screen
 reader may read; from before this plan, recommended a look in the next
 stage.
 
+## After the push of `main`, 29 and 30 September 2026
+
+The first run of the flows on GitHub, at 44a8f23, failed 33 of about
+1,550: 18 in Firefox, 13 in WebKit, 2 in Chromium; the deploy waited.
+What the runners give for WebGL, now in `testing.md` and `pca3d.md`:
+Chromium 153 WebGL 2 by SwiftShader, points of 1 to 1,023 px; WebKit 26.6
+WebGL 2, points of 1 to 256 px; Firefox 155 none, not even WebGL 1. Three
+of the failures were defects of the application, fixed test first
+(ac5f853): at 320 px the 2D plot, drawn in place of the 3D view, did not
+shrink, and the page was 784 px wide, in every engine; with the fonts of
+Linux the header of the table of the individuals took two lines; and in
+Firefox the Tab after the PCA's LD distance went past its Run. The rest
+were tests: those that need WebGL now take the 2D path or are reported as
+not run where there is none, and those that read pixels of the Mac hold
+what they mean on Linux. The second run, at c3da56a, failed one flow in
+Firefox, which waited for a blur that Firefox there does not fire when the
+focus leaves the page; the third, at e51f830, passed: Chromium and WebKit
+519 each, Firefox 477 and 42 skipped for want of WebGL, and the site was
+deployed. The Firefox fixes were seen passing only on GitHub, since
+Firefox does not launch on the owner's Mac.
+
