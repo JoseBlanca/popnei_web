@@ -331,10 +331,14 @@ page, into a script file of its own that the browser downloads then
   `OrbitControls`, bundled and minified by rolldown 1.2.10, the bundler
   of Vite 8.3.0, from three 0.186.1, was 554,333 bytes, and 134,245
   with `gzip -9`, on 27 September 2026; the first script of the page is
-  154,923 bytes with `gzip -9` (`docs/technology.md`). At 3 Mbit/s, a
-  slow mobile connection, the 134 KB take about 0.4 s; the browser keeps
-  the file for the next time. The file of the built site is measured
-  again when the plot is built.
+  154,923 bytes with `gzip -9` (`docs/technology.md`). That was the
+  estimate. The file of the built site, three.js with `OrbitControls` and
+  `src/charts/pca3d.ts`, is 565,306 bytes, 141.36 KB gzipped as Vite
+  counts it, and 139,304 bytes with `gzip -9`, measured on 29 September
+  2026 on the owner's Mac, an Apple M5 Pro, in the build of the branch
+  `plan/individuals-pca`. At 3 Mbit/s, a slow mobile connection, its
+  139 KB take about 0.4 s; the browser keeps the file for the next
+  time.
 - **When it loads.** The panel opens on the 3D view, so the file is
   downloaded when the first result of a PCA is drawn in the tab, and not
   when the page opens: a user who never runs a PCA never downloads it.
@@ -428,7 +432,7 @@ to 2D by itself, since that would be a change of the project the user
 did not make.
 
 The option not taken: to test for WebGL 2 before downloading three.js,
-by asking a canvas for a context, which spares 134 KB on the machines
+by asking a canvas for a context, which spares 139 KB on the machines
 that have none and makes and throws away a WebGL context on every other.
 
 ### The WebGL context lost

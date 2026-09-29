@@ -2398,7 +2398,9 @@ the same numbers for everything else but the size of a written file.
   recorded, 120 ms for 200,000 regions in node on the owner's Mac (section
   3); in the browsers it is measured with the reader.
 - **A file of the site fetched after a deploy.** three.js, for the 3D
-  view of the PCA, 134 KB gzipped, and the files wasm, for an xlsx, 0.30
+  view of the PCA, 139 KB gzipped (139,304 bytes with `gzip -9` in the
+  built site, 29 September 2026, on the owner's Mac; 134 KB was the
+  estimate of `docs/specs/charts/pca3d.md`), and the files wasm, for an xlsx, 0.30
   MB, are downloaded the first time they are needed, not when the page
   opens (`docs/technology.md`). A deploy replaces every file of the site,
   and the name of each of these files holds a hash of its content, so a

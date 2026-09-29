@@ -292,7 +292,10 @@ development; the owner approved both, three 0.186.1 and `@types/three`
 drawn, into a chunk of its own, a script the browser downloads then, so
 that a user who never runs a PCA never downloads it, unlike the 2D plots
 above. The panel of the PCA opens on the 3D view, as the owner decided
-on 28 September 2026, so three.js, 134 KB gzipped, is downloaded when
+on 28 September 2026, so three.js, 139 KB gzipped (139,304 bytes with
+`gzip -9` in the built site, with `OrbitControls` and the plot, measured
+on 29 September 2026 on the owner's Mac, an Apple M5 Pro, where 134 KB
+had been estimated from the classes alone), is downloaded when
 the first result of a PCA is drawn, and not only when a user asks for
 the 3D view (`docs/specs/analyses/pca.md`, "Its options").
 
@@ -364,15 +367,16 @@ calamine 0.36.1 refuses a whole sheet at an error cell it does not
 know, as its source reads and the same trial saw: it knows the seven
 errors of older Excel,
 `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and `#VALUE!`,
-and gives `XlsxError::CellError` at any other: `#SPILL!` and `#CALC!` of
-the newest versions of Excel, if Excel stores them as such, which it may
-instead store as `#VALUE!` with the real error elsewhere in the file,
-unconfirmed until the owner's `spill.xlsx` is read
-(`docs/specs/worker/files.md`); and `#GETTING_DATA`, which
+and gives `XlsxError::CellError` at any other, such as `#GETTING_DATA`, which
 rust_xlsxwriter writes and which the trial refused with "Unsupported
 cell error value '#GETTING_DATA'". xlsx_rs gives such a sheet as a
 refusal that names the error, so that the user is told which formula to
-mend (`docs/specs/worker/files.md`, "The refusals").
+mend (`docs/specs/worker/files.md`, "The refusals"). `#SPILL!` of the
+newest versions of Excel does not reach calamine: Excel saves it as
+`#VALUE!`, with the real error in a part of the file calamine does not
+read, as the owner's `spill.xlsx`, saved by Excel for Mac on 28
+September 2026, showed in xlsx_rs's tests; such a cell is read as
+missing, and no sheet is refused for it. `#CALC!` was not tried.
 
 Together they would almost double what a user downloads before anything
 runs. So they are a second wasm module, apart from the wasm package of
@@ -643,11 +647,19 @@ worker, is in `.claude/skills/coding/typescript.md`, `css.md` and
    test files kept in the repository. On 27 September 2026 its source,
    and a trial with `#GETTING_DATA`, showed that it refuses a whole
    sheet at an error cell it does not know, `#GETTING_DATA` among them;
-   whether `#SPILL!` of the newest Excel is one is unconfirmed
-   (section 2, "xlsx and zip in Rust, in xlsx_rs"); the
-   files the owner makes for the tests of xlsx_rs, kept in its
-   repository, `docs/specs/worker/files.md`, "How it is verified",
-   answer the rest.
+   `#SPILL!` of the newest Excel is not one, since Excel saves it as
+   `#VALUE!` (section 2, "xlsx and zip in Rust, in xlsx_rs"). The files
+   the owner made for the tests of xlsx_rs, kept in its repository
+   (`docs/specs/worker/files.md`, "How it is verified"), answered most
+   of the rest by 29 September 2026: a workbook of Excel in Spanish, with
+   a decimal comma, dates, times, merged cells, errors and a blank row;
+   one of the date system of 1904, whose dates calamine alone gives 4
+   years and a day early and xlsx_rs gives right, since it reads that
+   setting itself; an encrypted workbook; one of Excel 97-2003; the
+   `#SPILL!` above; and one downloaded from Google Sheets, each read as
+   xlsx_rs's spec gives it in the release `js-v0.1.0-dev.1`. Open still:
+   a workbook saved by LibreOffice Calc, which the owner's Mac does not
+   have, and whose test in xlsx_rs waits for the file.
 2. How the second wasm module is built and published. Settled by the
    owner on 24 September 2026: a crate of this repository,
    `crates/files/`, built by the site's own build; settled again on 28

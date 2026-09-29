@@ -1039,9 +1039,9 @@ and asking for its lines is a defect.
 ### The TypeScript interface
 
 The request and the result are members of `Job` and `JobResult` of
-`src/worker/protocol.ts`, where they are written as the other jobs are,
-without `readonly` (`docs/specs/worker/protocol.md`); core reads them as
-below:
+`src/worker/protocol.ts`, written as the other jobs are, with every
+field `readonly` and every array `readonly T[]`
+(`docs/specs/worker/protocol.md`):
 
 ```ts
 export interface PcaJob {
