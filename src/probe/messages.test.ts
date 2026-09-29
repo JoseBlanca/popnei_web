@@ -165,7 +165,7 @@ describe("validateFromProbe", () => {
     });
   });
 
-  test("refuses a message of the other side", () => {
+  test("refuses a message of the page's side, which the page sends", () => {
     expect(validateFromProbe({ kind: "openServed" })).toEqual({
       ok: false,
       error: {
@@ -208,7 +208,7 @@ describe("validateToProbe", () => {
     ).toBe(file);
   });
 
-  test("refuses a message of the other side", () => {
+  test("refuses a message of the worker's side, which the worker sends", () => {
     expect(validateToProbe({ kind: "ready" })).toEqual({
       ok: false,
       error: {
