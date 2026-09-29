@@ -8,6 +8,7 @@
  */
 
 import { writtenName } from "../../../core/fileNames.ts";
+import { variantFilterNeeds } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { WriteStatus } from "../../../core/store.ts";
 import { WRITE_MAX_BYTES } from "../../../core/writeEstimate.ts";
@@ -26,7 +27,7 @@ import {
   warnText,
   writeErrorText,
 } from "./writeWords.ts";
-import { withoutTheStep } from "./words.ts";
+import { lockedInTheStep } from "./words.ts";
 
 /** What the Count of the filters is doing, as the section needs it:
     `counted` when its counts are those of the filters as they are;
@@ -158,7 +159,7 @@ export function writeParts(
         button: {
           kind: "write",
           disabled: true,
-          description: withoutTheStep(write.reason),
+          description: lockedInTheStep(write.reason, variantFilterNeeds(p)),
         },
       };
     case "ready":

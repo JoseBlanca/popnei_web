@@ -1935,9 +1935,11 @@ export function projectNeeds(p: Project): string | null {
 }
 
 /** The reason of the LD filter of the variants on with no distance
-    (the project spec, "What an analysis needs of every project"). */
+    (the project spec, "What an analysis needs of every project"), which
+    names it "the LD pruning", as the switch and the Undo of the Variants
+    step do (stop A 1, decided by the owner on 29 September 2026). */
 const LD_NO_DISTANCE =
-  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.";
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.";
 
 /**
  * The reason of the LD filter of the variants on with no distance, whose

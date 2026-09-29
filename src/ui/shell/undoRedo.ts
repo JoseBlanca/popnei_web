@@ -7,27 +7,47 @@
  * notice is read out by the notice. It is said before what the change
  * announces from the state, the warning of a reopened project it brings
  * back among it, since it is what the user did.
+ *
+ * One that brings back the LD pruning with no distance says after it the
+ * reason whole, as the stepper gives it, since the undo may be pressed on
+ * any step, or the reason alone when it makes a notice: the Count and the
+ * analyses that read the filters are locked again, and the focus is
+ * where the user left it (stop A 3, decided by the owner on 29 September
+ * 2026).
  */
+import { variantFilterNeeds } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
 import type { Shortcut } from "./shortcuts.ts";
 import type { Announcer } from "./status.ts";
 import { undoneOrRedone } from "../sentences.ts";
 
 /** Undoes or redoes the project of `store`, as `which` says, and
-    announces it when it makes no notice; nothing when there is no step
-    to undo or redo. */
+    announces it when it makes no notice, with the reason of the LD
+    pruning with no distance when it brings it back; nothing when there
+    is no step to undo or redo. */
 export function undoOrRedo<R, F>(
   store: Store<R, F>,
   announcer: Announcer,
   which: Shortcut,
 ): void {
-  const description = store.getState()[which];
+  const before = store.getState();
+  const description = before[which];
   if (description === null) return;
+  const lockedBefore = variantFilterNeeds(before.project);
   announcer.announceChange(() => {
     if (which === "undo") store.undo();
     else store.redo();
-    if (store.getState().notice !== null) return null;
-    const words = undoneOrRedone({ kind: which, description });
-    return words === null ? null : `${words}.`;
+    const after = store.getState();
+    const locked =
+      lockedBefore === null ? variantFilterNeeds(after.project) : null;
+    const words =
+      after.notice === null
+        ? undoneOrRedone({ kind: which, description })
+        : null;
+    const said = [
+      ...(words === null ? [] : [`${words}.`]),
+      ...(locked === null ? [] : [locked]),
+    ];
+    return said.length === 0 ? null : said.join(" ");
   });
 }

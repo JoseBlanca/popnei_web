@@ -20,8 +20,10 @@
  * - removed: never, since the counts are in no notice;
  * - locked, by a list of individuals popnei would refuse or by filters
  *   of individuals that keep nobody, since the filters of the variants
- *   count over the individuals kept: the button disabled, with the reason
- *   beside it, without its end "in the Variants step", in place of the
+ *   count over the individuals kept, or by the LD pruning with no
+ *   distance: the button disabled, with the reason beside it, without
+ *   its end "in the Variants step", or the short line of the LD pruning,
+ *   whose reason stands under the field of the distance, in place of the
  *   line of no counts, and no count beside the filters; when the Count
  *   leaves the page with the focus and the part is locked, the focus
  *   moves to the part that holds the disabled button and its reason.
@@ -39,6 +41,7 @@ import {
   statisticsFailedText,
   variantsOfFile,
 } from "../../../core/analyses/filterCounts.ts";
+import { variantFilterNeeds } from "../../../core/project.ts";
 import type { AnalysisStatus } from "../../../core/store.ts";
 import type { JobResult } from "../../../worker/protocol.ts";
 import { RunButton } from "../../analyses/RunButton.tsx";
@@ -102,7 +105,10 @@ export function FilterCountsPart(): React.JSX.Element {
     );
   });
 
-  const button = buttonInTheStep(buttonOf(status));
+  // The reason of the LD pruning with no distance, which the step shows
+  // beside the button as its short line (the spec, "Its words").
+  const ldReason = useAppState((s) => variantFilterNeeds(s.project));
+  const button = buttonInTheStep(buttonOf(status), ldReason);
   const stoppedBy = stoppedNotice(status, notice, ID);
   const runButton = (shown: NonNullable<ButtonOf>): React.JSX.Element => (
     <RunButton

@@ -2521,7 +2521,7 @@ describe("IP3 D3 the stepper and the summary line with the switches of stage 4",
   test("an LD filter with no distance gives Variants Problem with the words of variantFilterNeeds, before a check running", () => {
     const reason = variantFilterNeeds(LD_NO_DISTANCE);
     expect(reason).toBe(
-      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+      "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.",
     );
     const s = checksState({
       project: LD_NO_DISTANCE,

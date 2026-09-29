@@ -3,7 +3,9 @@ import { describe, expect, test } from "vitest";
 import { emptyProject } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
+  LD_LOCKED_LINE,
   buttonInTheStep,
+  lockedInTheStep,
   withoutTheStep,
   LD_LINE,
   MISSING_DATA_LINE,
@@ -338,20 +340,49 @@ describe("the words of the application without the Variants step", () => {
 
   test("the reason of a disabled Calculate or Count loses its end, and an enabled Run, a Stop and no button stay as they are", () => {
     expect(
-      buttonInTheStep({
-        kind: "run",
-        reason:
-          "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.",
-      }),
+      buttonInTheStep(
+        {
+          kind: "run",
+          reason:
+            "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.",
+        },
+        null,
+      ),
     ).toEqual({
       kind: "run",
       reason:
         "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
     });
     const enabled = { kind: "run", reason: null } as const;
-    expect(buttonInTheStep(enabled)).toBe(enabled);
+    expect(buttonInTheStep(enabled, null)).toBe(enabled);
     const stop = { kind: "stop" } as const;
-    expect(buttonInTheStep(stop)).toBe(stop);
-    expect(buttonInTheStep(null)).toBeNull();
+    expect(buttonInTheStep(stop, LD_REASON)).toBe(stop);
+    expect(buttonInTheStep(null, LD_REASON)).toBeNull();
+  });
+
+  test("stop A 2 the reason of the LD pruning with no distance is the short line beside a button, and any other reason loses its end", () => {
+    expect(LD_LOCKED_LINE).toBe(
+      "Locked until the distance of the LD pruning is typed, above.",
+    );
+    expect(lockedInTheStep(LD_REASON, LD_REASON)).toBe(LD_LOCKED_LINE);
+    expect(
+      buttonInTheStep({ kind: "run", reason: LD_REASON }, LD_REASON),
+    ).toEqual({ kind: "run", reason: LD_LOCKED_LINE });
+    // A list refused comes before the LD pruning, and keeps its words.
+    expect(lockedInTheStep(LIST_REASON, LD_REASON)).toBe(
+      "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
+    );
+    expect(lockedInTheStep(LIST_REASON, null)).toBe(
+      "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter.",
+    );
   });
 });
+
+/** The reason of the LD pruning with no distance, whole
+    (docs/specs/core/project.md). */
+const LD_REASON =
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.";
+
+/** The reason of a list of individuals refused, whole. */
+const LIST_REASON =
+  "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.";

@@ -33,7 +33,12 @@ const WRITE = "Write the filtered variants as a .nei file";
 /** The reason of the LD pruning with no distance, as the step shows it,
     without its end "in the Variants step". */
 const LD_REASON =
-  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter.";
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning.";
+
+/** The short line beside the disabled Count and Write in its place
+    (stop A 2 of docs/specs/stage-4-open-points.md). */
+const LD_LOCKED =
+  "Locked until the distance of the LD pruning is typed, above.";
 
 /** The same reason whole, as the stepper gives it. */
 const LD_REASON_WHOLE = LD_REASON.replace(/\.$/u, ", in the Variants step.");
@@ -109,11 +114,11 @@ function status(page: Page): Locator {
   return page.getByRole("status").last();
 }
 
-/** The reason beside the empty field of the distance, the first of the
-    section, before the one beside the disabled Count; `toHaveCount(0)`
-    on it says neither is there. */
+/** The reason under the empty field of the distance, the one place of
+    the step it stands (stop A 2); `toHaveCount(0)` on it says it is not
+    there. */
 function ldReason(page: Page): Locator {
-  return filters(page).getByText(LD_REASON, { exact: true }).first();
+  return page.getByRole("main").getByText(LD_REASON, { exact: true });
 }
 
 /** Turns a switch on or off with the mouse, on its words. */
@@ -188,9 +193,15 @@ test("IP3 D3 the LD pruning turned on: the distance empty with its reason beside
   expect(reasonBox?.y ?? 0).toBeGreaterThan(fieldBox?.y ?? Infinity);
 
   await expect(countButton(page)).toBeDisabled();
-  await expect(countButton(page)).toHaveAccessibleDescription(LD_REASON);
+  await expect(countButton(page)).toHaveAccessibleDescription(LD_LOCKED);
   await expect(writeButton(page)).toBeDisabled();
-  await expect(writeButton(page)).toHaveAccessibleDescription(LD_REASON);
+  await expect(writeButton(page)).toHaveAccessibleDescription(LD_LOCKED);
+  // The reason stands once on the step, and the short line beside each
+  // of the two buttons.
+  await expect(ldReason(page)).toHaveCount(1);
+  await expect(
+    page.getByRole("main").getByText(LD_LOCKED, { exact: true }),
+  ).toHaveCount(2);
   await expect(
     page.getByRole("main").getByText("in the Variants step", { exact: false }),
   ).toHaveCount(0);
@@ -352,8 +363,13 @@ test("IP3 D3 50000 typed: the reason goes and the Count gives a count beside the
   await banner(page, "Undo").click();
   await expect(distance(page)).toHaveValue("");
   await expect(ldReason(page)).toBeVisible();
+  // What the Undo did, then the reason whole, as the stepper gives it
+  // (stop A 3).
+  await expect(status(page)).toHaveText(
+    endsWith(`Undone: the LD pruning changed. ${LD_REASON_WHOLE}`),
+  );
   await expect(countButton(page)).toBeDisabled();
-  await expect(countButton(page)).toHaveAccessibleDescription(LD_REASON);
+  await expect(countButton(page)).toHaveAccessibleDescription(LD_LOCKED);
   await expect(filters(page).getByText(/^Kept /)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
@@ -361,6 +377,32 @@ test("IP3 D3 50000 typed: the reason goes and the Count gives a count beside the
   await expect(distance(page)).toHaveValue("50000");
   await expect(ldReason(page)).toHaveCount(0);
   await expect(ldCount(page)).toHaveText(kept);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+const UNDO = process.platform === "darwin" ? "Meta+z" : "Control+z";
+
+test("stop A 2 an Undo of the distance with the focus on the Count leaves the focus on the short line beside it, named for the Count by the hidden words, and announces the reason", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await ldTurnedOn(page);
+  await commit(page, DISTANCE_LABEL, "50000");
+  await expect(countButton(page)).toBeEnabled();
+  await countButton(page).focus();
+  await page.keyboard.press(UNDO);
+  await expect(distance(page)).toHaveValue("");
+  const beside = filters(page).locator("[tabindex='-1']", {
+    hasText: "Count the variants each filter keeps is unavailable: ",
+  });
+  await expect(beside).toBeFocused();
+  await expect(beside).toHaveText(
+    `Count the variants each filter keeps is unavailable: ${LD_LOCKED}`,
+  );
+  await expect(countButton(page)).toHaveAccessibleDescription(LD_LOCKED);
+  await expect(status(page)).toHaveText(
+    endsWith(`Undone: the LD pruning changed. ${LD_REASON_WHOLE}`),
+  );
   await expectNoViolations(makeAxeBuilder);
 });
 

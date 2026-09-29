@@ -77,7 +77,7 @@ const DISTANCE_LABEL =
 
 /** The reason of the LD pruning with no distance, as the step shows it. */
 const LD_REASON =
-  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter.";
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning.";
 
 async function openVariants(page: Page): Promise<void> {
   await page.goto("popgen.html#variants");

@@ -4110,7 +4110,7 @@ describe("VS2 D1 the filters of a project", () => {
 
 /** The reason of the LD filter with no distance, in the spec's words. */
 const LD_NO_DISTANCE_REASON =
-  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.";
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.";
 
 /** The LD filter as its switch turns it on, with no distance. */
 const LD_NO_DISTANCE = {

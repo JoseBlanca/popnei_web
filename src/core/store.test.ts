@@ -5922,7 +5922,7 @@ function withNoDistance(filters: readonly ProjectVariantFilter[]): boolean {
 describe("IP3 D1 an LD filter with no distance in the store", () => {
   test("the reason is the spec's", () => {
     expect(LD_REASON).toBe(
-      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+      "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.",
     );
   });
 

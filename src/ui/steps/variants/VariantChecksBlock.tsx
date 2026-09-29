@@ -79,7 +79,9 @@ export function VariantChecksBlock({
   const notice = useAppState((s) => s.notice);
   const heading = useRef<HTMLHeadingElement>(null);
 
-  const button = buttonInTheStep(buttonOf(status));
+  // The histograms read no filter of the variants, so the LD pruning with
+  // no distance never locks them (variantChecks.md).
+  const button = buttonInTheStep(buttonOf(status), null);
   const stoppedBy = stoppedNotice(status, notice, ID);
 
   return (

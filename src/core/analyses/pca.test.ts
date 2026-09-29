@@ -192,7 +192,7 @@ const PRUNING_DISTANCE =
 
 /** The reason of the LD filter of the Variants step with no distance. */
 const STEP_LD_DISTANCE =
-  "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.";
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.";
 
 describe("IP6 D4 pcaFilters, the rows of 'Which variants it reads'", () => {
   const own = {

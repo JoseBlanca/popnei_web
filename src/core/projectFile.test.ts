@@ -2614,7 +2614,7 @@ describe("IP3 D2 the project file of the switches", () => {
     const read = readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS);
     expect(read).toEqual({ ok: true, value: opened(ldNoDistanceProject()) });
     expect(read.ok && variantFilterNeeds(read.value)).toBe(
-      "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step.",
+      "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.",
     );
   });
 

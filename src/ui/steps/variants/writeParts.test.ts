@@ -8,7 +8,11 @@ import { describe, expect, test } from "vitest";
 
 import { keptNoneReason } from "../../../core/individualsKept.ts";
 import { keyFromWire } from "../../../core/keys.ts";
-import { individualListNeeds } from "../../../core/project.ts";
+import {
+  individualListNeeds,
+  setVariantFilter,
+  variantFilterNeeds,
+} from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { AnalysisError, WriteStatus } from "../../../core/store.ts";
 import type { PassStats } from "../../../worker/protocol.ts";
@@ -125,6 +129,24 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
         disabled: true,
         description: "The filters keep none.",
       },
+    });
+  });
+
+  test("stop A 2 locked by the LD pruning with no distance: Write disabled, described by the short line", () => {
+    const p = setVariantFilter(PROJECT, {
+      kind: "ld",
+      maxAllowedR2: 0.3,
+      maxDist: null,
+    });
+    const reason = variantFilterNeeds(p);
+    expect(reason).not.toBeNull();
+    expect(
+      writeParts({ kind: "locked", reason: reason ?? "" }, SMALL, p).button,
+    ).toEqual({
+      kind: "write",
+      disabled: true,
+      description:
+        "Locked until the distance of the LD pruning is typed, above.",
     });
   });
 

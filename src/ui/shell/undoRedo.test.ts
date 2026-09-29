@@ -9,7 +9,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { firstProject } from "../../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../../core/history.ts";
-import { loadVariants } from "../../core/project.ts";
+import {
+  loadVariants,
+  setVariantFilter,
+  turnOffVariantFilter,
+} from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import { identityWarning } from "../../core/projectFile.ts";
 import { createStore } from "../../core/store.ts";
@@ -142,5 +146,120 @@ describe("WS9 an undo and the status region", () => {
     expect(announcer.getState()).toBe(
       `Undone: a new variants file was loaded. Warning: ${String(warning)}`,
     );
+  });
+});
+
+/** The reason of the LD pruning with no distance, whole, as the stepper
+    gives it (docs/specs/core/project.md). */
+const LD_REASON =
+  "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.";
+
+describe("stop A 3 an undo or a redo that brings back the LD pruning with no distance", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** panel.nei read, the LD pruning turned on with no distance, and
+      then 50000 typed. */
+  function withDistance(): Store<TestDefResult> {
+    const store = makeStore();
+    store.popneiReady("0.1.0");
+    loadAndRead(store, MADE_WITH_ID, "panel.nei", 261_490);
+    store.apply("the LD pruning was turned on", (p) =>
+      setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.3, maxDist: null }),
+    );
+    store.apply("the LD pruning changed", (p) =>
+      setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.3, maxDist: 50_000 }),
+    );
+    return store;
+  }
+
+  test("an undo of the distance typed says what it undid and then the reason whole", () => {
+    const store = withDistance();
+    const announcer = createAnnouncer();
+    announceChanges(store, announcer);
+    undoOrRedo(store, announcer, "undo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+
+    expect(store.getState().notice).toBeNull();
+    expect(announcer.getState()).toBe(
+      `Undone: the LD pruning changed. ${LD_REASON}`,
+    );
+  });
+
+  test("a redo of the switch turned on says the reason, and a redo of the distance does not", () => {
+    const store = withDistance();
+    store.undo();
+    store.undo();
+    const announcer = createAnnouncer();
+    announceChanges(store, announcer);
+    undoOrRedo(store, announcer, "redo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(announcer.getState()).toBe(
+      `Redone: the LD pruning was turned on. ${LD_REASON}`,
+    );
+
+    undoOrRedo(store, announcer, "redo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(announcer.getState()).toBe("Redone: the LD pruning changed.");
+  });
+
+  test("an undo of the switch turned off, with no distance, says the reason; one of a filter that keeps its distance does not", () => {
+    const store = makeStore();
+    store.popneiReady("0.1.0");
+    loadAndRead(store, MADE_WITH_ID, "panel.nei", 261_490);
+    store.apply("the LD pruning was turned on", (p) =>
+      setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.3, maxDist: null }),
+    );
+    store.apply("the LD pruning was turned off", (p) =>
+      turnOffVariantFilter(p, "ld"),
+    );
+    const announcer = createAnnouncer();
+    announceChanges(store, announcer);
+    undoOrRedo(store, announcer, "undo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(announcer.getState()).toBe(
+      `Undone: the LD pruning was turned off. ${LD_REASON}`,
+    );
+
+    const typed = withDistance();
+    typed.apply("the LD pruning was turned off", (p) =>
+      turnOffVariantFilter(p, "ld"),
+    );
+    const other = createAnnouncer();
+    announceChanges(typed, other);
+    undoOrRedo(typed, other, "undo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(other.getState()).toBe("Undone: the LD pruning was turned off.");
+  });
+  test("an undo that makes a notice, a calculation over the distance left behind, says the reason alone, since the notice is read out by itself", () => {
+    const store = withDistance();
+    expect(store.startRun("diversity")).not.toBeNull();
+    const announcer = createAnnouncer();
+    announceChanges(store, announcer);
+    undoOrRedo(store, announcer, "undo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(store.getState().notice).not.toBeNull();
+    expect(announcer.getState()).toBe(LD_REASON);
+  });
+  test("an undo of the r² while the distance is still empty does not say the reason again, which it did not bring back", () => {
+    const store = makeStore();
+    store.popneiReady("0.1.0");
+    loadAndRead(store, MADE_WITH_ID, "panel.nei", 261_490);
+    store.apply("the LD pruning was turned on", (p) =>
+      setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.3, maxDist: null }),
+    );
+    store.apply("the LD pruning changed", (p) =>
+      setVariantFilter(p, { kind: "ld", maxAllowedR2: 0.5, maxDist: null }),
+    );
+    const announcer = createAnnouncer();
+    announceChanges(store, announcer);
+    undoOrRedo(store, announcer, "undo");
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(announcer.getState()).toBe("Undone: the LD pruning changed.");
   });
 });

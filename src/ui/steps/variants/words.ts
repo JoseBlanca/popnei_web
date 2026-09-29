@@ -30,12 +30,34 @@ export function withoutTheStep(text: string): string {
   return text.replace(IN_THE_STEP, "");
 }
 
+/** The short line beside the disabled Count and Write while the LD
+    pruning has no distance, in the place of its reason, which stands
+    whole under the field of the distance (variants.md, "Its words";
+    stop A 2, decided by the owner on 29 September 2026). */
+export const LD_LOCKED_LINE =
+  "Locked until the distance of the LD pruning is typed, above.";
+
+/** The text beside a button of the step locked with `reason`: the short
+    line of the LD pruning when `reason` is `ldReason`, the reason of the
+    LD pruning with no distance that `variantFilterNeeds` gives the
+    project, or `null` when it gives none; any other reason without "in
+    the Variants step". */
+export function lockedInTheStep(
+  reason: string,
+  ldReason: string | null,
+): string {
+  return reason === ldReason ? LD_LOCKED_LINE : withoutTheStep(reason);
+}
+
 /** The button of a check of the step, `button`, with the reason of a
-    disabled Calculate or Count without "in the Variants step", as the
-    step shows it beside the button (variants.md, "Its words"). */
-export function buttonInTheStep(button: ButtonOf): ButtonOf {
+    disabled Calculate or Count as the step shows it beside the button,
+    `lockedInTheStep` of it with `ldReason` (variants.md, "Its words"). */
+export function buttonInTheStep(
+  button: ButtonOf,
+  ldReason: string | null,
+): ButtonOf {
   return button?.kind === "run" && button.reason !== null
-    ? { kind: "run", reason: withoutTheStep(button.reason) }
+    ? { kind: "run", reason: lockedInTheStep(button.reason, ldReason) }
     : button;
 }
 
