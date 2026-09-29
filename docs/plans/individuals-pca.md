@@ -1,6 +1,6 @@
 # Plan: the Individuals step and the PCA
 
-28 September 2026, approved by the owner the same day; under way from 28 September 2026 on the branch `plan/individuals-pca`. It builds stage 4
+28 September 2026, approved by the owner the same day; under way from 28 September 2026 on the branch `plan/individuals-pca`, built whole on 29 September 2026 and waiting for the owner at stops A, B and C. It builds stage 4
 of `docs/build-order.md`: the changes to the Variants step of stage 3
 that the owner decided on 28 September 2026, the individuals filtered
 first and the filters that keep their values while off; the Individuals
@@ -1256,7 +1256,7 @@ specs of stage 4 matched to a test.
 
 - [x] 10.1 The documents, and the final checks. Serves 1 and 2. Needs
   work package 8, and 9 when it was run.
-- [ ] 10.2 The map of the cases, and the tests it finds missing. Serves
+- [x] 10.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 10.1.
 
 ## At the end

@@ -6,7 +6,34 @@ The work report of the plan `docs/plans/individuals-pca.md`, stage 4 of
 
 ## Where the plan stands
 
-Under way, from 28 September 2026.
+Built whole, on 29 September 2026, on the branch `plan/individuals-pca`,
+which is not merged and not pushed. Every task is ticked but the three
+stops where the owner tries a screen, 3.4, 5.4 and 8.6, so the plan is
+not done until the owner has tried them. Work package 9, the xlsx, ran,
+since xlsx_rs published its first release while work package 8 was
+reviewed.
+
+What exists now that did not at the start: the individuals filtered
+before the variants; the LD filter with no default distance, and every
+filter keeping its values while off; the Individuals step with the
+metadata file optional, the types of its columns set by the user, and a
+metadata file read from an xlsx; the PCA and the PCoA with their own
+filters, drawn in 3D with three.js or in 2D, with their table and its
+CSV. On the last commit, `npm test` gives 2,924 tests passed and the
+browser check 1,016, in Chromium and WebKit; Firefox runs them first on
+GitHub when `main` is pushed. The map of the cases,
+`docs/plans/individuals-pca.cases.md`, reaches 978 of the 1,015 items of
+the specs of stage 4 with a test.
+
+What is asked of the owner:
+
+- to try the three screens, stops A, B and C below, in Firefox and
+  Safari by hand, and to answer their decisions, each with a
+  recommendation;
+- the points of "For the owner, later", at the end, none urgent;
+- the order to merge `plan/individuals-pca` into `main`, once the stops
+  are accepted, and then to push `main`, which runs the flows in Firefox
+  and shows which engines give WebGL on GitHub's runners.
 
 ## Before the first task
 
@@ -512,6 +539,11 @@ phone.
    the file stopped unexpectedly. If it happens again with this file,
    save it again from Excel as .xlsx or as CSV."
 
+8. After a paste into the step that loads nothing, the focus stays on
+   the paste button; the spec puts it on the file button. Recommended:
+   the spec says the focus stays where it was, on the file button after
+   a pick or a drop, on the paste button after a paste.
+
 ## Stop C: the PCA panel, for the owner
 
 ### How to try it
@@ -563,6 +595,27 @@ colour by altitude), `-table`, `-no-webgl`, `-not-loaded`, `-320`, and
 9. The note of a column of more than 1,000 values says "the table gives
    each individual's value", but the table then shows "All individuals".
    Recommended: the table gives the value, or the clause goes.
+
+10. The order of the Tab key through the panel puts the download of the
+    explained variance right after its table, and "Try again" after the
+    bar of controls; the spec lists the downloads last. Recommended: the
+    spec takes the code, each download beside what it downloads.
+11. `pca3d.md` and `scatter.md` say "the screen says why" for a plot with
+    no point, with no words for it; popnei's PCA gives no coordinate that
+    is not finite. Recommended: the spec says the panel never has such a
+    point, and drops the sentence.
+12. `pca.md` says a change of the colour, the axes or the view while the
+    PCA runs keeps the calculation, but those controls exist only once
+    the result is there. Recommended: the sentence says only an Undo or a
+    Redo can change them while it runs.
+13. With two components, "2D" looks pressed while the option stays 3D;
+    the spec says nothing. Judge on the screen.
+14. A click on a switch just below a number field is lost when leaving
+    the field adds or takes off a line of refusal (decision 12 of stop A);
+    the PCA panel has it too.
+15. The 3D/2D switch and the legend are announced as radio buttons, and
+    their arrow keys move the focus without choosing, as React Aria makes
+    them; the spec states it for the legend. Recommended: accept.
 
 ## The restart of 29 September 2026
 
@@ -995,4 +1048,86 @@ For the owner, below at stop B: the words for an Excel 97-2003 file
 named `.csv`, which lead to a second refusal; whether an error of Excel
 in the header should refuse the file; the words of the light worker's
 crash, which speak of a calculation.
+
+## 10. The end of the stage
+
+The documents the specs ask for, the final checks, and the map of the
+cases. Commits 76f0727, 0df562b, 20b000b (10.1); c6bfc01, 534d705,
+cfe1300, e8122ac, f6ff2d5, 5328bbf, fb783ac, dcb4a5f, faa0995, 589787f,
+5771037, 8e38f1f and e40bc1e (10.2).
+
+### The deliverables, on e40bc1e
+
+1. `npm run format:check`, `typecheck`, `lint` and `build` exit 0; `npm
+   test` "Tests 2924 passed (2924)", none skipped; the browser check
+   "1016 passed (3.1m)", the probe's 40 among them; `npm run screens`
+   "308 passed"; popnei at `js-v0.1.0-dev.3` and xlsx_rs at
+   `js-v0.1.0-dev.1`; the search for time, randomness, `await` and popnei
+   in `src/core` finds nothing. The first script of `popgen.html` is
+   228.87 KB gzipped as Vite counts it, beside 191.81 KB at the start,
+   the only file of the first download that grew (the second,
+   `jsx-runtime-*.js`, 68.78 KB, is the same file to the byte); the file
+   of three.js 141.36 KB, 139,304 bytes with gzip -9.
+2. The 35 items the specs of stage 4 ask of the skills and of
+   `docs/architecture.md` and `docs/technology.md` are each made, with
+   its commit; one, the answer to open point 1 of `technology.md` once
+   the owner's xlsx files were read, was made by this task. The comment
+   of `site.yml` says the workflow needs no Rust. `make_fixtures.mjs`
+   writes the `.nei` files only when asked, since popnei dev.3 writes
+   them larger than the tests pin.
+3. The map, `docs/plans/individuals-pca.cases.md`: 1,015 items, 978
+   reached; 53 tests of Vitest and 55 flows added for it, each seen to
+   fail with its code broken; 37 left without a test, each with its
+   reason, most a person looking or listening, a measurement, or a fact
+   of the build.
+
+### What the map found
+
+- In an emptied number field, a comma typed first made the field show
+  the threshold in Arabic-Indic digits, "٠٫١", in both engines; the
+  application now names the Latin digits in its locale.
+- Near the largest number the axes of the scatter showed ticks of
+  "−Infinity" and "Infinity"; they are left out.
+- Twelve sentences of the specs that the code had left behind were
+  corrected, with no rule changed: the deployed site's address,
+  "none yet in `package.json`", the version of the protocol, and others.
+
+### How the work of 10 went, for whoever revises a skill or a plan
+
+The map was made by three sessions side by side, as in stage 3, and
+their line numbers came from four commits: 182 of 2,438 had moved and
+were recomputed from the titles by a script. A map's parts should be
+joined by a script from the start.
+
+## For the owner, later
+
+None of these is urgent, and none changes what a user can do.
+
+- Specs that say less than the code or contradict it, where the code is
+  right; recommended for each, the spec takes the code: `diversity.md`
+  gives the populations of a new project as none where `project.md`
+  gives "all"; `store.md` says it keeps the key of each result removed;
+  the example refusal of `project.md`, "The validation", and its
+  sentence on a read pending; the layout of `typesSet` in the example of
+  `projectFile.md`; `projectFile.md` compares a VCF's ploidy where the
+  code compares its name, size, format and the choice of passed
+  variants; `writeVariants.md` on what a list popnei would refuse locks;
+  `scatter.md` gives viridis 256 colours where d3 gives 254.
+- The application's version is 0.1.0 before and after, so a check of a
+  saved project may say "0.1.0 … 0.1.0". Recommended: raise it at the
+  first release.
+- `CLAUDE.md`: `npm install --no-save <tgz>` over an installed popnei of
+  the same version did not replace it; `npm ci` did. Recommended: say to
+  remove `node_modules/popnei` first.
+- `testing.md`: the checks run against the built site, so a defect of
+  React's double effects in development is caught only by a test under
+  `<StrictMode>`; this plan met four. Recommended: a line there.
+- On the Variants step, seven controls are 13 by 13 pixels, under the 24
+  of WCAG 2.5.8 unless nothing is near them; not checked, from stage 3.
+- After a crash, the page starts the calculation worker again before it
+  gives the outcome, the reverse of the order after a large PCA; from
+  before stage 4.
+- Faded points, at an opacity of 0.25, have an outline of 1.44 to 1 on
+  the background in light and 1.63 in dark; judge whether a faded point
+  should be that faint, at stop C.
 
