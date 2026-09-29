@@ -269,6 +269,24 @@ function pairData(): Pca3dData {
   };
 }
 
+/**
+ * The five points of `five`, coloured by the values 100, 200, 300 and 400
+ * of the first four, and the fifth, e, with no value, a ring.
+ */
+function valuesData(): Pca3dData {
+  return {
+    ...fiveData(),
+    title: "Five individuals by altitude, in 3D",
+    description: "Five individuals coloured by altitude, for the tests.",
+    colours: {
+      kind: "values",
+      title: "altitude",
+      values: Float64Array.from([100, 200, 300, 400, Number.NaN]),
+      noneName: "No value",
+    },
+  };
+}
+
 /** The data of each kind of 3D plot of the page. */
 function pca3dDataOf(kind: Pca3dKind): Pca3dData {
   switch (kind) {
@@ -280,6 +298,8 @@ function pca3dDataOf(kind: Pca3dKind): Pca3dData {
       return fortyData();
     case "pair":
       return pairData();
+    case "values":
+      return valuesData();
   }
 }
 

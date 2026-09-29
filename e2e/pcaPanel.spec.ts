@@ -8,6 +8,16 @@
  * a calculation under way, of a browser with no WebGL 2 and of three.js
  * not downloaded, and a worker that stopped; axe at each state reached.
  * The spec's flow, IP8 D4, is in e2e/pca.spec.ts.
+ *
+ * And what the tests review of work package 8 of
+ * docs/plans/individuals-pca.md found no test of: the 3D view drawn again
+ * after a highlight, a colour and other components; each button of its
+ * view; Try again and 3D after 2D asking for its file again; the words of
+ * the 3D view in the status region; the PCA's own filters typed, against
+ * popnei's count of the variants; the download of the explained variance,
+ * the sort of the table, its link and the comparison with the check
+ * numbers; the line under the bar of each analysis; and the legend's
+ * marks, fading, second press and bar of values.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -204,6 +214,9 @@ test("a browser with no WebGL 2: the 2D plot in the place of the 3D view with it
   const panel = await openPanel(page);
   await run(panel);
   await expect(panel.getByText(NO_WEBGL)).toBeVisible();
+  await expect(page.getByRole("status").last()).toContainText(
+    "This browser cannot draw the 3D view: WebGL, the part of the browser that draws it, is turned off or not available on this computer, so the 2D plot is shown in its place.",
+  );
   await expect(
     panel.getByRole("radio", { name: "3D", exact: true }),
   ).toBeChecked();
@@ -242,7 +255,7 @@ test("three.js not downloaded: the 2D plot with its words and Try again, which d
   await expect(panel.getByText(LOAD_FAILED)).toHaveCount(0);
 });
 
-test("a worker that stopped with no answer after a PCA of 2,300 individuals: the words of memory, counted on the individuals it ran on", async ({
+test("a worker that stopped with no answer after a PCA of 2,270 of 2,300 individuals: the words of memory, counted on the individuals it ran on", async ({
   page,
 }, testInfo) => {
   const vcf = testInfo.outputPath("wide.vcf.gz");
@@ -257,13 +270,39 @@ test("a worker that stopped with no answer after a PCA of 2,300 individuals: the
   await expect(
     page.getByRole("main").getByText("2,300 individuals"),
   ).toBeVisible({ timeout: RESULT_TIMEOUT });
+  // The first 30 removed by the list to remove: 2,270 are kept, above
+  // the 2,264 from which the words speak of the memory.
+  const lists = page.getByRole("region", {
+    name: "Filters of the individuals",
+  });
+  await lists
+    .getByRole("textbox", { name: "Individuals to remove, one name per line" })
+    .fill(
+      Array.from(
+        { length: 30 },
+        (_, i) => `s${String(i).padStart(4, "0")}`,
+      ).join("\n"),
+    );
+  await lists
+    .getByRole("button", { name: "Apply the list to remove", exact: true })
+    .click();
+  await expect(
+    lists.getByText(
+      "This list is not applied yet; Apply the list to remove applies it.",
+    ),
+  ).toHaveCount(0);
   await goTo(page, "Analyses");
   const panel = page.getByRole("region", { name: "Principal components" });
+  await expect(
+    panel.getByText(
+      "2,270 of the 2,300 individuals of wide.vcf.gz, those the filters of individuals keep",
+    ),
+  ).toBeVisible();
   await crashResults(page);
   await panel.getByRole("button", { name: "Run", exact: true }).click();
   await expect(
     panel.getByText(
-      "The calculation stopped unexpectedly, perhaps because the principal components of 2,300 individuals, which need about 0.3 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.",
+      "The calculation stopped unexpectedly, perhaps because the principal components of 2,270 individuals, which need about 0.3 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser.",
     ),
   ).toBeVisible({ timeout: RESULT_TIMEOUT });
 });
@@ -546,4 +585,732 @@ test("Escape in a number field puts back the number it holds, so that Tab after 
   await expect(undo).toHaveAccessibleDescription(
     "Undo: the MAF filter of the principal components was set for them alone",
   );
+});
+
+/** The shell's status region, the last of the page's two. */
+function status(page: Page): Locator {
+  return page.getByRole("status").last();
+}
+
+const PCA_3D = "Principal components, PC1, PC2 and PC3";
+
+/** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"),
+    whole. */
+const LOADING_WORDS = "Loading the 3D view…";
+const LOST_WORDS =
+  "The browser stopped drawing the 3D view. It is drawn again when the browser allows it, or when you switch to 2D and back to 3D.";
+const LOAD_FAILED_WORDS =
+  "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";
+
+/** The file of the 3D view, with or without the address a retry asks. */
+const PCA3D_FILE = /\/pca3d-[^/?]*\.js(\?.*)?$/;
+
+/** The part of the canvas left of the legend, its left 40%, as the screen
+    shows it. */
+async function leftOfLegend(page: Page, canvas: Locator): Promise<Buffer> {
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  return page.screenshot({
+    clip: { x: box.x, y: box.y, width: box.width * 0.4, height: box.height },
+  });
+}
+
+/** Moves the pointer along the middle row of `canvas`, from its centre
+    outwards, until a point shows its tooltip; gives the tooltip. */
+async function hoverSomePoint(page: Page, canvas: Locator): Promise<Locator> {
+  await canvas.scrollIntoViewIfNeeded();
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  const tooltip = page.locator(".chart-tooltip");
+  for (let step = 0; step < 60; step++) {
+    const across = (step % 2 === 0 ? 1 : -1) * 4 * Math.floor(step / 2);
+    await page.mouse.move(
+      box.x + box.width / 2 + across,
+      box.y + box.height / 2 + 1,
+    );
+    if (await tooltip.isVisible()) return tooltip;
+  }
+  throw new Error("No point of the 3D view was found along its middle row.");
+}
+
+/** Where the three lines of the 3D view end on the canvas, in pixels
+    from its top left corner: the anchor of each label, 4 pixels left of
+    and below its bottom left corner. */
+async function lineEnds(panel: Locator): Promise<{ x: number; y: number }[]> {
+  const labels = panel.locator(".chart-pca3d-label");
+  await expect(labels).toHaveCount(3);
+  return labels.evaluateAll((all) =>
+    all.map((label) => {
+      const canvas = label.parentElement?.querySelector("canvas");
+      if (canvas === null || canvas === undefined) {
+        throw new Error("The label is beside no canvas.");
+      }
+      const at = canvas.getBoundingClientRect();
+      const box = label.getBoundingClientRect();
+      return { x: box.left - 4 - at.left, y: box.bottom + 4 - at.top };
+    }),
+  );
+}
+
+/** The middle of the canvas, where the lines cross, in pixels from its
+    top left corner. */
+async function middleOf(canvas: Locator): Promise<{ x: number; y: number }> {
+  return canvas.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return { x: box.width / 2, y: box.height / 2 };
+  });
+}
+
+/** Whether two sets of ends are within half a pixel of each other. */
+function sameEnds(
+  a: readonly { x: number; y: number }[],
+  b: readonly { x: number; y: number }[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (end, at) =>
+        Math.abs(end.x - (b[at]?.x ?? Number.NaN)) < 0.5 &&
+        Math.abs(end.y - (b[at]?.y ?? Number.NaN)) < 0.5,
+    )
+  );
+}
+
+test.describe("the 3D view in the panel", () => {
+  test("drawn again after a highlight, a colour and other components: its picture, its name, its description and its tooltip", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await ownLd(panel);
+    await run(panel);
+    const canvas = panel.getByRole("img", { name: PCA_3D });
+    await expect(canvas).toBeVisible();
+    await expect(canvas).toHaveAccessibleDescription(
+      /Coloured by population: p0, 48 individuals, .* The view turns/,
+    );
+    const start = await leftOfLegend(page, canvas);
+
+    await panel
+      .getByRole("radiogroup", { name: "Population" })
+      .locator("button")
+      .filter({ hasText: "p1 (68)" })
+      .click();
+    await expect(canvas).toHaveAccessibleDescription(
+      "Principal components of 200 individuals of panel.nei in 3D, on PC1, 3.55% of the variance, PC2, 3.40%, and PC3, 1.89%. Coloured by population: p0, 48 individuals, centred at 0.4 on PC1, 7.4 on PC2 and −0.2 on PC3; p2, 84, centred at −4.5, −2.1 and −0.2; p1, 68, centred at 5.3, −2.7 and 0.4. p1 is highlighted. The view turns, so it has no across and up; the 2D plot, one button away, shows two components at a time, and the table of the individuals gives every coordinate.",
+    );
+    // The other groups faded: other pixels where the legend is not.
+    await expect
+      .poll(async () => (await leftOfLegend(page, canvas)).equals(start))
+      .toBe(false);
+    const highlighted = await leftOfLegend(page, canvas);
+
+    await panel.getByRole("button", { name: "Colour the points by" }).click();
+    await page.getByRole("option", { name: "altitude", exact: true }).click();
+    await expect(
+      panel.getByRole("button", { name: "Colour the points by" }),
+    ).toContainText("altitude");
+    await expect(canvas).toHaveAccessibleDescription(
+      /Coloured by altitude, from 100 to 2060; 3 individuals have no value\./,
+    );
+    await expect
+      .poll(async () => (await leftOfLegend(page, canvas)).equals(highlighted))
+      .toBe(false);
+
+    await panel.getByRole("button", { name: "First axis" }).click();
+    await page.getByRole("option", { name: "PC4", exact: true }).click();
+    const other = panel.getByRole("img", {
+      name: "Principal components, PC4, PC2 and PC3",
+    });
+    await expect(other).toBeVisible();
+    await expect(other).toHaveAccessibleDescription(
+      /^Principal components of 200 individuals of panel\.nei in 3D, on PC4, 1\.85% of the variance, PC2, 3\.40%, and PC3, 1\.89%\./,
+    );
+    await expect(panel.locator(".chart-pca3d-label").first()).toHaveText(
+      "PC4 (1.85%)",
+    );
+    const tooltip = await hoverSomePoint(page, other);
+    await expect(tooltip.locator("div").last()).toHaveText(
+      /^PC4 −?[\d.]+, PC2 −?[\d.]+, PC3 −?[\d.]+$/,
+    );
+    await expect(tooltip.locator("div").nth(1)).toHaveText(/^altitude: /);
+  });
+
+  test("each button of the view moves it its own way, Reset view gives back the start, Zoom in and Zoom out undo each other, and View along names the components chosen", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await ownLd(panel);
+    await run(panel);
+    const canvas = panel.getByRole("img", { name: PCA_3D });
+    await expect(canvas).toBeVisible();
+    await canvas.scrollIntoViewIfNeeded();
+    const middle = await middleOf(canvas);
+    const press = async (name: string): Promise<void> => {
+      await panel.getByRole("button", { name, exact: true }).click();
+    };
+    const start = await canvas.screenshot();
+    const startEnds = await lineEnds(panel);
+
+    // Each button draws another picture than the one before it.
+    for (const name of [
+      "Turn left",
+      "Turn right",
+      "Tilt up",
+      "Tilt down",
+      "View along PC1",
+      "View along PC2",
+      "View along PC3",
+      "Zoom in",
+      "Zoom out",
+    ]) {
+      await press("Reset view");
+      await expect
+        .poll(async () => sameEnds(await lineEnds(panel), startEnds))
+        .toBe(true);
+      await press(name);
+      await expect
+        .poll(async () => (await canvas.screenshot()).equals(start), {
+          message: name,
+        })
+        .toBe(false);
+    }
+
+    // Each view along a component looks down that one: the first of the
+    // other two runs to the right and the second up, and the one looked
+    // down ends in the middle.
+    for (const [name, down, right, up] of [
+      ["View along PC1", 0, 1, 2],
+      ["View along PC2", 1, 0, 2],
+      ["View along PC3", 2, 0, 1],
+    ] as const) {
+      await press(name);
+      const ends = await lineEnds(panel);
+      expect(ends[right]?.x ?? 0, name).toBeGreaterThan(middle.x + 20);
+      expect(ends[up]?.y ?? 0, name).toBeLessThan(middle.y - 20);
+      expect(Math.abs((ends[down]?.x ?? 0) - middle.x), name).toBeLessThan(2);
+      expect(Math.abs((ends[down]?.y ?? 0) - middle.y), name).toBeLessThan(2);
+    }
+
+    // Along PC2, whose far end is in the middle: a turn to the right
+    // brings the near side right and the far end left, a turn to the left
+    // the other way; a tilt down looks from above, so the far end rises,
+    // and a tilt up lowers it.
+    for (const [name, moves] of [
+      [
+        "Turn right",
+        (a: { x: number; y: number }, b: { x: number; y: number }) =>
+          b.x < a.x - 10,
+      ],
+      [
+        "Turn left",
+        (a: { x: number; y: number }, b: { x: number; y: number }) =>
+          b.x > a.x + 10,
+      ],
+      [
+        "Tilt down",
+        (a: { x: number; y: number }, b: { x: number; y: number }) =>
+          b.y < a.y - 10,
+      ],
+      [
+        "Tilt up",
+        (a: { x: number; y: number }, b: { x: number; y: number }) =>
+          b.y > a.y + 10,
+      ],
+    ] as const) {
+      await press("View along PC2");
+      const before = (await lineEnds(panel))[1];
+      await press(name);
+      const after = (await lineEnds(panel))[1];
+      if (before === undefined || after === undefined) {
+        throw new Error("No end of PC2.");
+      }
+      expect(
+        moves(before, after),
+        `${name}: ${JSON.stringify([before, after])}`,
+      ).toBe(true);
+    }
+
+    // A turn and its opposite, and the two zooms, give back the view.
+    for (const [one, back] of [
+      ["Turn left", "Turn right"],
+      ["Tilt up", "Tilt down"],
+      ["Zoom in", "Zoom out"],
+    ] as const) {
+      await press("Reset view");
+      const before = await lineEnds(panel);
+      await press(one);
+      expect(sameEnds(await lineEnds(panel), before), one).toBe(false);
+      await press(back);
+      expect(sameEnds(await lineEnds(panel), before), `${one}, ${back}`).toBe(
+        true,
+      );
+    }
+    // Zoom in moves the ends away from the middle by a quarter, and Zoom
+    // out towards it by a fifth.
+    await press("Reset view");
+    const first = startEnds[0] ?? middle;
+    await press("Zoom in");
+    expect(((await lineEnds(panel))[0]?.x ?? 0) - middle.x).toBeCloseTo(
+      1.25 * (first.x - middle.x),
+      0,
+    );
+    await press("Reset view");
+    await press("Zoom out");
+    expect(((await lineEnds(panel))[0]?.x ?? 0) - middle.x).toBeCloseTo(
+      0.8 * (first.x - middle.x),
+      0,
+    );
+
+    // Reset view gives back the start, zoom and all.
+    await press("Zoom in");
+    await press("Turn left");
+    await press("Tilt down");
+    await press("Reset view");
+    expect(sameEnds(await lineEnds(panel), startEnds)).toBe(true);
+    expect((await canvas.screenshot()).equals(start)).toBe(true);
+
+    // The buttons of the views name the components on the axes.
+    await panel.getByRole("button", { name: "First axis" }).click();
+    await page.getByRole("option", { name: "PC4", exact: true }).click();
+    await expect(
+      panel.getByRole("button", { name: "View along PC4", exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "View along PC1", exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test("Try again, and 3D pressed after 2D, each ask the network for the file of the 3D view again, in every engine, and each failure is announced", async ({
+    page,
+  }) => {
+    const asked: string[] = [];
+    page.on("request", (request) => {
+      if (PCA3D_FILE.test(request.url())) asked.push(request.url());
+    });
+    await page.route(PCA3D_FILE, (route) => route.fulfill({ status: 404 }));
+    const panel = await openPanel(page);
+    await run(panel);
+    const failed = panel.getByText(LOAD_FAILED_WORDS, { exact: true });
+    await expect(failed).toBeVisible();
+    await expect(status(page)).toContainText(LOAD_FAILED_WORDS);
+    expect(asked).toHaveLength(1);
+
+    // Still refused: a new request, and the words again.
+    await panel.getByRole("button", { name: "Try again" }).click();
+    await expect.poll(() => asked.length).toBe(2);
+    await expect(failed).toBeVisible();
+    await expect(status(page)).toContainText(LOAD_FAILED_WORDS);
+
+    // 2D, then 3D: the 3D view is asked for again.
+    await panel.getByRole("radio", { name: "2D", exact: true }).click();
+    await expect(failed).toHaveCount(0);
+    await panel.getByRole("radio", { name: "3D", exact: true }).click();
+    await expect.poll(() => asked.length).toBe(3);
+    await expect(failed).toBeVisible();
+
+    await page.unroute(PCA3D_FILE);
+    await panel.getByRole("button", { name: "Try again" }).click();
+    await expect.poll(() => asked.length).toBe(4);
+    await expect(panel.getByRole("img", { name: PCA_3D })).toBeVisible();
+    await expect(failed).toHaveCount(0);
+  });
+
+  test("the loading of the 3D view, and the drawing the browser takes away and gives back: their words in the place of the plot and in the status region", async ({
+    page,
+  }) => {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(PCA3D_FILE, async (route) => {
+      await held;
+      await route.continue();
+    });
+    const panel = await openPanel(page);
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    const loading = panel.getByText(LOADING_WORDS, { exact: true });
+    await expect(loading).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(status(page)).toContainText(LOADING_WORDS);
+    release();
+    const canvas = panel.getByRole("img", { name: PCA_3D });
+    await expect(canvas).toBeVisible();
+    await expect(loading).toHaveCount(0);
+
+    await canvas.evaluate((element) => {
+      const extension = (element as HTMLCanvasElement)
+        .getContext("webgl2")
+        ?.getExtension("WEBGL_lose_context");
+      if (extension === undefined || extension === null) {
+        throw new Error("No WEBGL_lose_context.");
+      }
+      Object.assign(window, { loseContext: extension });
+      extension.loseContext();
+    });
+    const lost = panel.getByText(LOST_WORDS, { exact: true });
+    await expect(lost).toBeVisible();
+    await expect(status(page)).toContainText(LOST_WORDS);
+    await page.evaluate(() => {
+      (
+        window as unknown as { loseContext: WEBGL_lose_context }
+      ).loseContext.restoreContext();
+    });
+    await expect(lost).toHaveCount(0);
+    await expect(canvas).toBeVisible();
+  });
+});
+
+test.describe("the PCA's own filters typed", () => {
+  test("missing data 1.5 refused, MAF 0,9 key by key refused and 0.9 taken, the LD reason said, a distance of 0 refused, and the PCA of 0.05, 0.9, r² 0.2 within 50000 runs on the 950 variants popnei keeps", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    const commit = async (field: Locator, typed: string): Promise<void> => {
+      await field.click();
+      await page.keyboard.press("ControlOrMeta+a");
+      await field.pressSequentially(typed);
+      await field.press("Enter");
+    };
+
+    await chooseRadio(
+      filterGroup(panel, "Filter the variants by missing data"),
+      "For the PCA alone",
+    );
+    const missing = panel.getByLabel(
+      "Maximum proportion of missing genotypes, from 0 to 1",
+    );
+    await expect(missing).toHaveValue("0.1");
+    await commit(missing, "1.5");
+    const over = "1.5 is more than 1; the threshold stays 0.1.";
+    await expect(panel.getByText(over, { exact: true })).toBeVisible();
+    await expect(status(page)).toContainText(over);
+    await expect(missing).toHaveValue("0.1");
+    await commit(missing, "0.05");
+    await expect(missing).toHaveValue("0.05");
+
+    await chooseRadio(
+      filterGroup(panel, "Filter the variants by major allele frequency (MAF)"),
+      "For the PCA alone",
+    );
+    const maf = panel.getByLabel("Maximum major allele frequency, from 0 to 1");
+    await expect(maf).toHaveValue("0.95");
+    await commit(maf, "0,9");
+    const comma =
+      "Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.95.";
+    await expect(panel.getByText(comma, { exact: true })).toBeVisible();
+    await expect(status(page)).toContainText(comma);
+    await expect(maf).toHaveValue("0.95");
+    await commit(maf, "0.9");
+    await expect(maf).toHaveValue("0.9");
+    await expect(missing).toHaveValue("0.05");
+
+    await chooseRadio(filterGroup(panel, LD_GROUP), "For the PCA alone");
+    await expect(status(page)).toContainText(
+      "The LD filter of the PCA needs the distance within which variants are compared.",
+    );
+    const r2 = panel.getByLabel(
+      "Maximum r² with a variant kept before it, from 0 to 1",
+    );
+    const distance = panel.getByLabel(DISTANCE);
+    await commit(distance, "0");
+    const zero = "0 is less than 1; the distance is still to be typed.";
+    await expect(panel.getByText(zero, { exact: true })).toBeVisible();
+    await expect(status(page)).toContainText(zero);
+    await expect(distance).toHaveValue("");
+    await commit(r2, "0.2");
+    await expect(r2).toHaveValue("0.2");
+    await commit(distance, "50000");
+    await expect(distance).toHaveValue("50000");
+
+    // popnei's js-v0.1.0-dev.3 in node on panel.nei, filterByMissingData
+    // (0.05), filterByMaf(0.9) and filterByLd(0.2, 50000), then
+    // doPcaFromVariants with numPrinComps 0: 950 variants used, PC1
+    // 6.288814135489047 and PC2 4.997116046232042; 29 September 2026.
+    await run(panel);
+    await expect(
+      panel.getByText(
+        "The place of each of the 200 individuals of panel.nei on the first 10 of the 199 components, from 950 variants.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const labels = await to2d(panel);
+    await expect(labels).toHaveText(["PC1 (6.29%)", "PC2 (5.00%)"]);
+  });
+});
+
+test.describe("the explained variance and the table", () => {
+  test("the explained variance downloaded with popnei's numbers, the table sorted by PC1, the link that takes the focus to the table, and the line of the versions", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await run(panel);
+
+    const downloading = page.waitForEvent("download");
+    await panel
+      .getByRole("button", { name: "Download the explained variance as CSV" })
+      .click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toBe("panel.pca_variance.csv");
+    const lines = (await readFile(await download.path(), "utf8")).split("\n");
+    // PC1 of popnei's js-v0.1.0-dev.3 with the filters of a new project
+    // (docs/specs/analyses/pca.md, "How it is verified").
+    expect(lines.slice(0, 3)).toEqual([
+      "component,explained_variance_percent",
+      "PC1,7.605779109441194",
+      "PC2,5.555518021523858",
+    ]);
+    expect(lines).toHaveLength(12);
+
+    const table = panel.getByRole("grid", { name: /^The place of each/ });
+    const firstRow = table.getByRole("row").nth(1);
+    await expect(firstRow.getByRole("rowheader")).toHaveText("s000");
+    const header = table.getByRole("columnheader", {
+      name: "PC1",
+      exact: true,
+    });
+    await header.click();
+    await expect(header).toHaveAttribute("aria-sort", "ascending");
+    await expect(firstRow.getByRole("rowheader")).not.toHaveText("s000");
+    const pc1 = await table
+      .getByRole("row")
+      .evaluateAll((rows) =>
+        rows
+          .slice(1, 6)
+          .map((row) =>
+            Number(
+              (
+                row.querySelectorAll("[role=gridcell]")[1]?.textContent ?? ""
+              ).replace("−", "-"),
+            ),
+          ),
+      );
+    expect(pc1).toEqual(pc1.toSorted((a, b) => a - b));
+    expect(pc1.every((value) => Number.isFinite(value))).toBe(true);
+
+    await panel
+      .getByRole("link", {
+        name: "Go to the table of the individuals, which gives the place of each one.",
+      })
+      .click();
+    await expect
+      .poll(() =>
+        table.evaluate((grid) => grid.contains(document.activeElement)),
+      )
+      .toBe(true);
+
+    await expect(
+      panel.getByText(
+        "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+  });
+
+  test("a project saved after the PCA and opened again with panel.nei: the comparison with its check numbers under the table", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", "panel.nei");
+    await expect(
+      page.getByRole("main").getByText("200 individuals"),
+    ).toBeVisible();
+    await goTo(page, "Analyses");
+    const panel = page.getByRole("region", { name: "Principal components" });
+    await run(panel);
+    const same =
+      "The same numbers as in the project file: this variants file gives the results the project was saved with.";
+    await expect(panel.getByText(same)).toHaveCount(0);
+
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Save project" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Save the project" });
+    const saving = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    const saved = await saving;
+    const path = testInfo.outputPath(saved.suggestedFilename());
+    await saved.saveAs(path);
+
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Open project…" })
+      .click();
+    await (await chooser).setFiles(path);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Variants" }),
+    ).toBeFocused();
+    await pick(page, "Variants file", "panel.nei");
+    await expect(
+      page.getByRole("main").getByText("200 individuals"),
+    ).toBeVisible();
+    await goTo(page, "Analyses");
+    await run(panel);
+    await expect(panel.getByText(same, { exact: true })).toBeVisible();
+  });
+});
+
+/** Makes the calculation worker keep back every result it posts. */
+async function holdResults(page: Page): Promise<void> {
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind !== "result") post(message, transfer);
+    };
+  });
+}
+
+test.describe("the line under the bar of a calculation under way", () => {
+  test("a Run of the PCA that waits for the statistics of each individual shows no line of the components under its bar", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await holdResults(page);
+    await goTo(page, "Variants");
+    await page
+      .getByRole("region", { name: "Filters of the individuals" })
+      .getByText("Filter the individuals by missing data", { exact: true })
+      .click();
+    await goTo(page, "Analyses");
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      panel.getByRole("progressbar", {
+        name: "Calculating the statistics of each individual",
+      }),
+    ).toBeVisible();
+    await expect(
+      panel.getByText(/^Calculating the statistics of each individual, which/),
+    ).toBeVisible();
+    await expect(panel.getByText(/^The bar shows the reading of/)).toHaveCount(
+      0,
+    );
+  });
+
+  test("the diversity under way has its bar and its one line, and not the line of the components", async ({
+    page,
+  }) => {
+    await openPanel(page);
+    await holdResults(page);
+    const diversity = page.getByRole("region", { name: "Diversity" });
+    await diversity.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      diversity.getByRole("progressbar", { name: "Calculating the diversity" }),
+    ).toBeVisible();
+    await expect(diversity.getByText(/^Calculating · /)).toBeVisible();
+    await expect(diversity.locator("p")).toHaveCount(1);
+  });
+});
+
+test.describe("the legend", () => {
+  test("each entry drawn with the mark of its own group, as the plot draws it; the marks of the others faded and not their names; a second press clears the highlight; and the bar of the values yellow at the top, where the largest is written", async ({
+    page,
+  }) => {
+    const panel = await openPanel(page);
+    await run(panel);
+    await to2d(panel);
+    const legend = panel.getByRole("radiogroup", { name: "Population" });
+    const entries = legend.getByRole("radio");
+    await expect(entries).toHaveText(["p0 (48)", "p2 (84)", "p1 (68)"]);
+    // The groups of the plot, 0 to 2, in the order they first appear.
+    const drawn = await panel.evaluate((element) => {
+      const fillOf = (path: Element | null): string =>
+        path === null ? "none" : getComputedStyle(path).fill;
+      return {
+        legend: [...element.querySelectorAll('[role="radio"] svg path')].map(
+          (path) => ({ d: path.getAttribute("d"), fill: fillOf(path) }),
+        ),
+        plot: [0, 1, 2].map((group) =>
+          fillOf(
+            element.querySelector(
+              `svg.chart-scatter path.chart-points.chart-colour-${String(group)}`,
+            ),
+          ),
+        ),
+      };
+    });
+    expect(drawn.legend.map((mark) => mark.fill)).toEqual(drawn.plot);
+    expect(new Set(drawn.plot).size).toBe(3);
+    expect(new Set(drawn.legend.map((mark) => mark.d)).size).toBe(3);
+
+    const p1 = legend.locator("button").filter({ hasText: "p1 (68)" });
+    await p1.click();
+    await expect(entries.nth(2)).toHaveAttribute("aria-checked", "true");
+    const opacities = await legend.evaluate((group) =>
+      [...group.querySelectorAll('[role="radio"]')].map((entry) => {
+        const [mark, words] = [...entry.children];
+        return [
+          mark === undefined ? -1 : Number(getComputedStyle(mark).opacity),
+          words === undefined ? -1 : Number(getComputedStyle(words).opacity),
+        ];
+      }),
+    );
+    expect(opacities).toEqual([
+      [0.25, 1],
+      [0.25, 1],
+      [1, 1],
+    ]);
+    await p1.click();
+    await expect(entries.nth(2)).toHaveAttribute("aria-checked", "false");
+    await expect(panel.locator("svg.chart-scatter desc")).not.toHaveText(
+      /is highlighted/,
+    );
+    await expect(panel.locator("path.chart-points-faded")).toHaveCount(0);
+
+    await panel.getByRole("button", { name: "Colour the points by" }).click();
+    await page.getByRole("option", { name: "altitude", exact: true }).click();
+    // The two ends of the scale, and beside them its bar, from the top.
+    const ends = panel.getByText("2060", { exact: true }).locator("..");
+    await expect(ends.locator("span")).toHaveText(["2060", "100"]);
+    const bands = await ends
+      .locator("..")
+      .locator("rect")
+      .evaluateAll((rects) => rects.map((rect) => rect.getAttribute("fill")));
+    expect(bands).toHaveLength(32);
+    expect(bands[0]).toBe("#fde725");
+    expect(bands.at(-1)).toBe("#440154");
+  });
+
+  test("a result of two components: 3D disabled, with the line that says why, and the 2D plot", async ({
+    page,
+  }) => {
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", "panel.nei");
+    await expect(
+      page.getByRole("main").getByText("200 individuals"),
+    ).toBeVisible();
+    const lists = page.getByRole("region", {
+      name: "Filters of the individuals",
+    });
+    await lists
+      .getByRole("textbox", { name: "Individuals to keep, one name per line" })
+      .fill("s000\ns001\ns002");
+    await lists
+      .getByRole("button", { name: "Apply the list to keep", exact: true })
+      .click();
+    await goTo(page, "Analyses");
+    const panel = page.getByRole("region", { name: "Principal components" });
+    await panel.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(
+      panel.getByText(
+        "The 3D view needs three components, and this result has 2.",
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(
+      panel.getByRole("radio", { name: "3D", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      panel.getByRole("img", { name: "Principal components, PC1 and PC2" }),
+    ).toBeVisible();
+    await expect(panel.locator("canvas")).toHaveCount(0);
+  });
 });

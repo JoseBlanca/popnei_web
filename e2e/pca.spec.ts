@@ -273,6 +273,7 @@ test.describe("IP8 D4 the PCA on the screen", () => {
     await run(panel);
     await panel.getByRole("radio", { name: "2D", exact: true }).click();
     const posted = await runsPosted(page);
+    expect(posted).toBe(1);
     const legend = panel.getByRole("radiogroup", { name: "Population" });
     await legend.getByRole("radio", { name: "p0 (48)" }).focus();
     await page.keyboard.press("ArrowDown");
@@ -334,6 +335,7 @@ test.describe("IP8 D4 the PCA on the screen", () => {
     await panel.getByRole("radio", { name: "2D", exact: true }).click();
     await expect(axisLabels(panel)).toHaveText(["PC1 (3.55%)", "PC2 (3.40%)"]);
     const posted = await runsPosted(page);
+    expect(posted).toBe(2);
     await chooseRadio(ldGroup(panel), "As in the Variants step: off");
     await expect(axisLabels(panel)).toHaveText(["PC1 (7.61%)", "PC2 (5.56%)"]);
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
@@ -532,6 +534,9 @@ test.describe("IP8 D6 the key of the PCA on the screen", () => {
     const panel = await openPanel(page);
     await run(panel);
     const posted = await runsPosted(page);
+    // The one calculation of the PCA, so that the count below is a count
+    // of what the page asks the worker.
+    expect(posted).toBe(1);
     await panel.getByRole("radio", { name: "2D", exact: true }).click();
     await expect(axisLabels(panel)).toHaveText(["PC1 (7.61%)", "PC2 (5.56%)"]);
     await panel.getByRole("button", { name: "Horizontal axis" }).click();
@@ -557,6 +562,7 @@ test.describe("IP8 D6 the key of the PCA on the screen", () => {
     const panel = await openPanel(page);
     await run(panel);
     const posted = await runsPosted(page);
+    expect(posted).toBe(1);
     const missing = panel.getByRole("radiogroup", {
       name: "Filter the variants by missing data",
     });

@@ -462,7 +462,7 @@ describe("IP8 D3 pcaColours", () => {
 });
 
 describe("IP8 D3 colourColumns", () => {
-  test("every column but the first, and not a categorical column of 1,001 values, where a continuous one of as many is offered", () => {
+  test("every column but the first, and not a categorical column of 1,001 values, where a continuous one of as many is offered; one of 1,000 is offered", () => {
     const rows = Array.from(
       { length: MAX_COLOUR_GROUPS + 1 },
       (_, i): Cell[] => [
@@ -471,21 +471,27 @@ describe("IP8 D3 colourColumns", () => {
         `c${String(i)}`,
         String(i),
         i % 2 === 0 ? "yes" : "no",
+        // 1,000 values: the last row repeats the first.
+        `b${String(i % MAX_COLOUR_GROUPS)}`,
       ],
     );
     const p = project({
       individuals: ["s0"],
       meta: {
-        table: { columns: ["IID", "pop", "code", "altitude", "sick"], rows },
+        table: {
+          columns: ["IID", "pop", "code", "altitude", "sick", "batch"],
+          rows,
+        },
         types: [
           { kind: "categorical" },
           { kind: "categorical" },
           { kind: "continuous" },
           { kind: "binary", one: "yes", zero: "no" },
+          { kind: "categorical" },
         ],
       },
     });
-    expect(colourColumns(p)).toEqual(["pop", "altitude", "sick"]);
+    expect(colourColumns(p)).toEqual(["pop", "altitude", "sick", "batch"]);
     expect(colourColumns(p)).toBe(colourColumns(p));
     expect(colourColumns(project({ individuals: FOUR, meta: WORKED }))).toEqual(
       ["pop"],

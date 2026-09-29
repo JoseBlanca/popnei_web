@@ -22,9 +22,11 @@ export interface ViewportPoint {
  * The data of a 3D plot of the page: `cloud`, the scatter's 9,381 points
  * with a third coordinate; `five`, five points in five populations;
  * `forty`, 40 points in 40 populations; `pair`, two points at one place
- * across and up, of P1 below and P2 above, and a third of neither.
+ * across and up, of P1 below and P2 above, and a third of neither;
+ * `values`, the five points of `five` coloured by the values 100 to 400
+ * of their first four, and the fifth with no value.
  */
-export type Pca3dKind = "cloud" | "five" | "forty" | "pair";
+export type Pca3dKind = "cloud" | "five" | "forty" | "pair" | "values";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {

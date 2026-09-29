@@ -94,6 +94,13 @@ import {
 
 const NEW_ID = "0123456789abcdef0123456789abcdef";
 
+/** The time each property of this file may take, in milliseconds. Their
+    100 cases took 0.2 to 0.8 s each when the file ran alone on the owner's
+    Mac on 29 September 2026, and two went past Vitest's 5 s when the
+    whole suite ran beside the browsers of the flows; the same cases are
+    drawn, with more time to run them. */
+const PROPERTY_TIMEOUT_MS = 60_000;
+
 const PROJECT_FIELDS: readonly (keyof Project)[] = [
   "app",
   "variants",
@@ -639,43 +646,53 @@ describe("WP1 D3 the commands", () => {
     });
   });
 
-  test("any sequence of commands keeps one filter of each kind, the individuals' in their order", () => {
-    fc.assert(
-      fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
-        let p = sampleProject();
-        for (const command of commands) {
-          const bound = command.bind(p);
-          if (bound === null) {
-            continue;
+  test(
+    "any sequence of commands keeps one filter of each kind, the individuals' in their order",
+    () => {
+      fc.assert(
+        fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
+          let p = sampleProject();
+          for (const command of commands) {
+            const bound = command.bind(p);
+            if (bound === null) {
+              continue;
+            }
+            p = deepFreeze(bound(p));
+            const kinds = p.filters.map((f) => f.kind);
+            expect(new Set(kinds).size).toBe(kinds.length);
+            const ranks = p.individualFilters.map((f) =>
+              INDIVIDUAL_FILTER_ORDER.indexOf(f.kind),
+            );
+            expect(ranks).toEqual(
+              [...new Set(ranks)].toSorted((a, b) => a - b),
+            );
           }
-          p = deepFreeze(bound(p));
-          const kinds = p.filters.map((f) => f.kind);
-          expect(new Set(kinds).size).toBe(kinds.length);
-          const ranks = p.individualFilters.map((f) =>
-            INDIVIDUAL_FILTER_ORDER.indexOf(f.kind),
-          );
-          expect(ranks).toEqual([...new Set(ranks)].toSorted((a, b) => a - b));
-        }
-      }),
-    );
-  });
+        }),
+      );
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 
-  test("a command applied twice gives, the second time, the project it was given", () => {
-    fc.assert(
-      fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
-        let p = sampleProject();
-        for (const command of commands) {
-          const bound = command.bind(p);
-          if (bound === null) {
-            continue;
+  test(
+    "a command applied twice gives, the second time, the project it was given",
+    () => {
+      fc.assert(
+        fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
+          let p = sampleProject();
+          for (const command of commands) {
+            const bound = command.bind(p);
+            if (bound === null) {
+              continue;
+            }
+            const once = deepFreeze(bound(p));
+            expect(bound(once), command.name).toBe(once);
+            p = once;
           }
-          const once = deepFreeze(bound(p));
-          expect(bound(once), command.name).toBe(once);
-          p = once;
-        }
-      }),
-    );
-  });
+        }),
+      );
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 
   test.each<[string, () => { q: Project; change: () => void }]>([
     [
@@ -2594,19 +2611,23 @@ describe("WP1 D5 the validation", () => {
     });
   });
 
-  test("every project reads back from its JSON equal to itself", () => {
-    fc.assert(
-      fc.property(wholeProject, (p) => {
-        const read = parseProject(
-          JSON.parse(JSON.stringify(p)),
-          p.app,
-          1,
-          TEST_ANALYSES,
-        );
-        expect(read).toStrictEqual({ ok: true, value: p });
-      }),
-    );
-  });
+  test(
+    "every project reads back from its JSON equal to itself",
+    () => {
+      fc.assert(
+        fc.property(wholeProject, (p) => {
+          const read = parseProject(
+            JSON.parse(JSON.stringify(p)),
+            p.app,
+            1,
+            TEST_ANALYSES,
+          );
+          expect(read).toStrictEqual({ ok: true, value: p });
+        }),
+      );
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 
   describe("the checks found by the review", () => {
     test("a header that names a column twice", () => {
@@ -3089,15 +3110,19 @@ describe("WP1 D5 the validation", () => {
       );
     });
 
-    test("every field of every project is named in words, with no value of the code", () => {
-      fc.assert(
-        fc.property(wholeProject, (p) => {
-          for (const path of pathsOf(JSON.parse(JSON.stringify(p)), [])) {
-            expectWords(projectErrorText({ kind: "missingField", path }));
-          }
-        }),
-      );
-    });
+    test(
+      "every field of every project is named in words, with no value of the code",
+      () => {
+        fc.assert(
+          fc.property(wholeProject, (p) => {
+            for (const path of pathsOf(JSON.parse(JSON.stringify(p)), [])) {
+              expectWords(projectErrorText({ kind: "missingField", path }));
+            }
+          }),
+        );
+      },
+      PROPERTY_TIMEOUT_MS,
+    );
 
     test("every kind of error is written in words, with no value of the code", () => {
       const errors: ProjectError[] = [
@@ -3909,26 +3934,30 @@ describe("VS2 D1 the filters of a project", () => {
       ).toEqual([]);
     });
 
-    test("any sequence of commands keeps the filters of the variants in their fixed order, one of each kind", () => {
-      fc.assert(
-        fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
-          let p = sampleProject();
-          for (const command of commands) {
-            const bound = command.bind(p);
-            if (bound === null) {
-              continue;
+    test(
+      "any sequence of commands keeps the filters of the variants in their fixed order, one of each kind",
+      () => {
+        fc.assert(
+          fc.property(fc.array(drawnCommand, { maxLength: 20 }), (commands) => {
+            let p = sampleProject();
+            for (const command of commands) {
+              const bound = command.bind(p);
+              if (bound === null) {
+                continue;
+              }
+              p = deepFreeze(bound(p));
+              const ranks = p.filters.map((f) =>
+                VARIANT_FILTER_ORDER.indexOf(f.kind),
+              );
+              expect(ranks).toEqual(
+                [...new Set(ranks)].toSorted((a, b) => a - b),
+              );
             }
-            p = deepFreeze(bound(p));
-            const ranks = p.filters.map((f) =>
-              VARIANT_FILTER_ORDER.indexOf(f.kind),
-            );
-            expect(ranks).toEqual(
-              [...new Set(ranks)].toSorted((a, b) => a - b),
-            );
-          }
-        }),
-      );
-    });
+          }),
+        );
+      },
+      PROPERTY_TIMEOUT_MS,
+    );
   });
 
   describe("individualListNeeds", () => {
@@ -4194,46 +4223,57 @@ describe("IP3 D1 the LD filter with no distance", () => {
     expect(typed.individualFilters).toBe(r2.individualFilters);
   });
 
-  test("for every project, variantFilterNeeds gives a reason exactly when the LD filter has no distance, jobFilters throws exactly then, and the project reads back from its JSON", () => {
-    /** Projects with the LD filter with no distance in about half. */
-    const withLd = fc
-      .tuple(
-        wholeProject,
-        fc.double({ min: 0, max: 1, noNaN: true }),
-        fc.option(fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }), {
-          freq: 2,
-        }),
-        fc.boolean(),
-      )
-      .map(([p, r2, maxDist, add]) =>
-        add
-          ? freezeProject(
-              setVariantFilter(p, { kind: "ld", maxAllowedR2: r2, maxDist }),
-            )
-          : p,
-      );
-    let noDistance = 0;
-    fc.assert(
-      fc.property(withLd, (p) => {
-        const none = p.filters.some(
-          (f) => f.kind === "ld" && f.maxDist === null,
+  test(
+    "for every project, variantFilterNeeds gives a reason exactly when the LD filter has no distance, jobFilters throws exactly then, and the project reads back from its JSON",
+    () => {
+      /** Projects with the LD filter with no distance in about half. */
+      const withLd = fc
+        .tuple(
+          wholeProject,
+          fc.double({ min: 0, max: 1, noNaN: true }),
+          fc.option(fc.integer({ min: 1, max: Number.MAX_SAFE_INTEGER }), {
+            freq: 2,
+          }),
+          fc.boolean(),
+        )
+        .map(([p, r2, maxDist, add]) =>
+          add
+            ? freezeProject(
+                setVariantFilter(p, { kind: "ld", maxAllowedR2: r2, maxDist }),
+              )
+            : p,
         );
-        noDistance += none ? 1 : 0;
-        expect(variantFilterNeeds(p)).toBe(none ? LD_NO_DISTANCE_REASON : null);
-        if (none) {
-          expect(() => jobFilters(p.filters)).toThrow(DEFECT);
-        } else {
-          expect(jobFilters(p.filters)).toBe(p.filters);
-        }
-        expect(
-          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
-        ).toStrictEqual({ ok: true, value: p });
-      }),
-      { numRuns: 200 },
-    );
-    // The drawn projects reach the filter with no distance.
-    expect(noDistance).toBeGreaterThan(20);
-  });
+      let noDistance = 0;
+      fc.assert(
+        fc.property(withLd, (p) => {
+          const none = p.filters.some(
+            (f) => f.kind === "ld" && f.maxDist === null,
+          );
+          noDistance += none ? 1 : 0;
+          expect(variantFilterNeeds(p)).toBe(
+            none ? LD_NO_DISTANCE_REASON : null,
+          );
+          if (none) {
+            expect(() => jobFilters(p.filters)).toThrow(DEFECT);
+          } else {
+            expect(jobFilters(p.filters)).toBe(p.filters);
+          }
+          expect(
+            parseProject(
+              JSON.parse(JSON.stringify(p)),
+              p.app,
+              1,
+              TEST_ANALYSES,
+            ),
+          ).toStrictEqual({ ok: true, value: p });
+        }),
+        { numRuns: 200 },
+      );
+      // The drawn projects reach the filter with no distance.
+      expect(noDistance).toBeGreaterThan(20);
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 });
 
 /** The text of an error of a project file around the words of what is
@@ -4566,107 +4606,120 @@ describe("IP3 D1 the filters turned off", () => {
     );
   });
 
-  test("for every project, an LD filter with no distance in filtersOff locks nothing, and the project reads back from its JSON", () => {
-    let offWithNoDistance = 0;
-    fc.assert(
-      fc.property(wholeProject, (p) => {
-        const onNone = p.filters.some(
-          (f) => f.kind === "ld" && f.maxDist === null,
-        );
-        const offNone = p.filtersOff.some(
-          (f) => f.kind === "ld" && f.maxDist === null,
-        );
-        offWithNoDistance += offNone ? 1 : 0;
-        expect(variantFilterNeeds(p)).toBe(
-          onNone ? LD_NO_DISTANCE_REASON : null,
-        );
-        expect(
-          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
-        ).toStrictEqual({ ok: true, value: p });
-      }),
-      { numRuns: 300 },
-    );
-    // The drawn projects reach an LD filter with no distance turned off.
-    expect(offWithNoDistance).toBeGreaterThan(10);
-  });
-
-  test("for every sequence of commands, each of the four lists of filters has one filter of each kind at most, in its fixed order, no kind is both on and off, and a filter turned off then on again by the value kept gives the filters on of before", () => {
-    const rankIn =
-      <K extends string>(order: readonly K[]) =>
-      (filters: readonly { readonly kind: K }[]): number[] =>
-        filters.map((f) => order.indexOf(f.kind));
-    const strictlyRising = (ranks: readonly number[]): boolean =>
-      ranks.every((rank, at) => at === 0 || rank > (ranks[at - 1] ?? -1));
-    const variantRanks = rankIn(VARIANT_FILTER_ORDER);
-    const individualRanks = rankIn(INDIVIDUAL_FILTER_ORDER);
-    let turnedBack = 0;
-    let keptOff = 0;
-    fc.assert(
-      fc.property(fc.array(drawnCommand, { maxLength: 30 }), (commands) => {
-        let p = sampleProject();
-        for (const command of commands) {
-          const bound = command.bind(p);
-          if (bound === null) {
-            continue;
-          }
-          const before = p;
-          p = deepFreeze(bound(p));
-          for (const list of [p.filters, p.filtersOff]) {
-            expect(strictlyRising(variantRanks(list))).toBe(true);
-          }
-          for (const list of [p.individualFilters, p.individualFiltersOff]) {
-            expect(strictlyRising(individualRanks(list))).toBe(true);
-          }
+  test(
+    "for every project, an LD filter with no distance in filtersOff locks nothing, and the project reads back from its JSON",
+    () => {
+      let offWithNoDistance = 0;
+      fc.assert(
+        fc.property(wholeProject, (p) => {
+          const onNone = p.filters.some(
+            (f) => f.kind === "ld" && f.maxDist === null,
+          );
+          const offNone = p.filtersOff.some(
+            (f) => f.kind === "ld" && f.maxDist === null,
+          );
+          offWithNoDistance += offNone ? 1 : 0;
+          expect(variantFilterNeeds(p)).toBe(
+            onNone ? LD_NO_DISTANCE_REASON : null,
+          );
           expect(
-            p.filtersOff.filter((f) =>
-              p.filters.some((g) => g.kind === f.kind),
+            parseProject(
+              JSON.parse(JSON.stringify(p)),
+              p.app,
+              1,
+              TEST_ANALYSES,
             ),
-          ).toStrictEqual([]);
-          expect(
-            p.individualFiltersOff.filter((f) =>
-              p.individualFilters.some((g) => g.kind === f.kind),
-            ),
-          ).toStrictEqual([]);
-          keptOff +=
-            p.filtersOff.length + p.individualFiltersOff.length > 0 ? 1 : 0;
+          ).toStrictEqual({ ok: true, value: p });
+        }),
+        { numRuns: 300 },
+      );
+      // The drawn projects reach an LD filter with no distance turned off.
+      expect(offWithNoDistance).toBeGreaterThan(10);
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 
-          // Turned off, then on again by the value kept: the filters on
-          // of before.
-          for (const filter of before.filters) {
-            const off = deepFreeze(turnOffVariantFilter(before, filter.kind));
-            const kept = off.filtersOff.find((f) => f.kind === filter.kind);
-            if (kept === undefined) {
-              throw new Error("the filter turned off is kept");
-            }
-            expect(setVariantFilter(off, kept).filters).toStrictEqual(
-              before.filters,
-            );
-            turnedBack += 1;
-          }
-          for (const filter of before.individualFilters) {
-            if (filter.kind === "keep" || filter.kind === "remove") {
+  test(
+    "for every sequence of commands, each of the four lists of filters has one filter of each kind at most, in its fixed order, no kind is both on and off, and a filter turned off then on again by the value kept gives the filters on of before",
+    () => {
+      const rankIn =
+        <K extends string>(order: readonly K[]) =>
+        (filters: readonly { readonly kind: K }[]): number[] =>
+          filters.map((f) => order.indexOf(f.kind));
+      const strictlyRising = (ranks: readonly number[]): boolean =>
+        ranks.every((rank, at) => at === 0 || rank > (ranks[at - 1] ?? -1));
+      const variantRanks = rankIn(VARIANT_FILTER_ORDER);
+      const individualRanks = rankIn(INDIVIDUAL_FILTER_ORDER);
+      let turnedBack = 0;
+      let keptOff = 0;
+      fc.assert(
+        fc.property(fc.array(drawnCommand, { maxLength: 30 }), (commands) => {
+          let p = sampleProject();
+          for (const command of commands) {
+            const bound = command.bind(p);
+            if (bound === null) {
               continue;
             }
-            const off = deepFreeze(
-              turnOffIndividualFilter(before, filter.kind),
-            );
-            const kept = off.individualFiltersOff.find(
-              (f) => f.kind === filter.kind,
-            );
-            if (kept === undefined) {
-              throw new Error("the threshold turned off is kept");
+            const before = p;
+            p = deepFreeze(bound(p));
+            for (const list of [p.filters, p.filtersOff]) {
+              expect(strictlyRising(variantRanks(list))).toBe(true);
+            }
+            for (const list of [p.individualFilters, p.individualFiltersOff]) {
+              expect(strictlyRising(individualRanks(list))).toBe(true);
             }
             expect(
-              setIndividualFilter(off, kept).individualFilters,
-            ).toStrictEqual(before.individualFilters);
+              p.filtersOff.filter((f) =>
+                p.filters.some((g) => g.kind === f.kind),
+              ),
+            ).toStrictEqual([]);
+            expect(
+              p.individualFiltersOff.filter((f) =>
+                p.individualFilters.some((g) => g.kind === f.kind),
+              ),
+            ).toStrictEqual([]);
+            keptOff +=
+              p.filtersOff.length + p.individualFiltersOff.length > 0 ? 1 : 0;
+
+            // Turned off, then on again by the value kept: the filters on
+            // of before.
+            for (const filter of before.filters) {
+              const off = deepFreeze(turnOffVariantFilter(before, filter.kind));
+              const kept = off.filtersOff.find((f) => f.kind === filter.kind);
+              if (kept === undefined) {
+                throw new Error("the filter turned off is kept");
+              }
+              expect(setVariantFilter(off, kept).filters).toStrictEqual(
+                before.filters,
+              );
+              turnedBack += 1;
+            }
+            for (const filter of before.individualFilters) {
+              if (filter.kind === "keep" || filter.kind === "remove") {
+                continue;
+              }
+              const off = deepFreeze(
+                turnOffIndividualFilter(before, filter.kind),
+              );
+              const kept = off.individualFiltersOff.find(
+                (f) => f.kind === filter.kind,
+              );
+              if (kept === undefined) {
+                throw new Error("the threshold turned off is kept");
+              }
+              expect(
+                setIndividualFilter(off, kept).individualFilters,
+              ).toStrictEqual(before.individualFilters);
+            }
           }
-        }
-      }),
-      { numRuns: 200 },
-    );
-    expect(keptOff).toBeGreaterThan(100);
-    expect(turnedBack).toBeGreaterThan(100);
-  });
+        }),
+        { numRuns: 200 },
+      );
+      expect(keptOff).toBeGreaterThan(100);
+      expect(turnedBack).toBeGreaterThan(100);
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 });
 
 /** The table of the worked example of docs/specs/analyses/diversity.md,
@@ -6086,45 +6139,54 @@ describe("IP4 D3 the words after a worker that could not start", () => {
 });
 
 describe("IP4 D4 the projects drawn with the fields of stage 4", () => {
-  test("every project drawn, with types set applied and not, onePopulation and a read notGiven among them, reads back from its JSON equal to itself", () => {
-    const seen = {
-      notGiven: 0,
-      onePopulation: 0,
-      typeApplied: 0,
-      gone: 0,
-      firstColumn: 0,
-      values: 0,
-      typesSetNotRead: 0,
-    };
-    fc.assert(
-      fc.property(wholeProject, (p) => {
-        const source = p.individuals;
-        seen.onePopulation += p.grouping.kind === "onePopulation" ? 1 : 0;
-        if (source !== null) {
-          const read = source.read;
-          if (read.kind === "read") {
-            const lost = typesLost(source);
-            seen.typeApplied += source.typesSet.length > lost.length ? 1 : 0;
-            for (const [column] of lost) {
-              seen[typeLostReason(read, column)] += 1;
+  test(
+    "every project drawn, with types set applied and not, onePopulation and a read notGiven among them, reads back from its JSON equal to itself",
+    () => {
+      const seen = {
+        notGiven: 0,
+        onePopulation: 0,
+        typeApplied: 0,
+        gone: 0,
+        firstColumn: 0,
+        values: 0,
+        typesSetNotRead: 0,
+      };
+      fc.assert(
+        fc.property(wholeProject, (p) => {
+          const source = p.individuals;
+          seen.onePopulation += p.grouping.kind === "onePopulation" ? 1 : 0;
+          if (source !== null) {
+            const read = source.read;
+            if (read.kind === "read") {
+              const lost = typesLost(source);
+              seen.typeApplied += source.typesSet.length > lost.length ? 1 : 0;
+              for (const [column] of lost) {
+                seen[typeLostReason(read, column)] += 1;
+              }
+            } else {
+              seen.notGiven += read.kind === "notGiven" ? 1 : 0;
+              seen.typesSetNotRead += source.typesSet.length > 0 ? 1 : 0;
             }
-          } else {
-            seen.notGiven += read.kind === "notGiven" ? 1 : 0;
-            seen.typesSetNotRead += source.typesSet.length > 0 ? 1 : 0;
           }
-        }
-        expect(
-          parseProject(JSON.parse(JSON.stringify(p)), p.app, 1, TEST_ANALYSES),
-        ).toStrictEqual({ ok: true, value: p });
-      }),
-      { numRuns: 400 },
-    );
-    // The drawn projects reach each field of stage 4, and each reason a
-    // read does not apply a type.
-    for (const count of Object.values(seen)) {
-      expect(count).toBeGreaterThan(2);
-    }
-  });
+          expect(
+            parseProject(
+              JSON.parse(JSON.stringify(p)),
+              p.app,
+              1,
+              TEST_ANALYSES,
+            ),
+          ).toStrictEqual({ ok: true, value: p });
+        }),
+        { numRuns: 400 },
+      );
+      // The drawn projects reach each field of stage 4, and each reason a
+      // read does not apply a type.
+      for (const count of Object.values(seen)) {
+        expect(count).toBeGreaterThan(2);
+      }
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
 });
 
 describe("IP5 D2 the first column is never the column of the populations", () => {

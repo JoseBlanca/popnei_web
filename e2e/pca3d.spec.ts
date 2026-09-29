@@ -606,3 +606,308 @@ test("IP8 D2 the canvas lies inside the padding of its element, at the size of i
   expect(canvas.width).toBeCloseTo(600, 0);
   expect(canvas.height).toBeCloseTo(450, 0);
 });
+
+/**
+ * The marks around `points` of the viewport, read from a screenshot of
+ * the canvas: for each, the pixels of a square of `half` CSS pixels each
+ * side of it, 1 where the mark is drawn, anything other than the white
+ * background, and 0 elsewhere, row after row.
+ */
+async function marksAround(
+  page: Page,
+  points: readonly ViewportPoint[],
+  half: number,
+): Promise<number[][]> {
+  const canvas = page.locator("#plots canvas");
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  const png = (await canvas.screenshot()).toString("base64");
+  return page.evaluate(
+    async ([data, at, left, top, side]) => {
+      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+      const image = await createImageBitmap(
+        new Blob([bytes], { type: "image/png" }),
+      );
+      const ratio = devicePixelRatio;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (context === null) throw new Error("No context of a canvas.");
+      context.drawImage(image, 0, 0);
+      const span = Math.round(2 * side * ratio);
+      return at.map((point) => {
+        const pixels = context.getImageData(
+          Math.round((point.x - left - side) * ratio),
+          Math.round((point.y - top - side) * ratio),
+          span,
+          span,
+        ).data;
+        const ink: number[] = [];
+        for (let i = 0; i < pixels.length; i += 4) {
+          const white =
+            (pixels[i] ?? 0) > 245 &&
+            (pixels[i + 1] ?? 0) > 245 &&
+            (pixels[i + 2] ?? 0) > 245;
+          ink.push(white ? 0 : 1);
+        }
+        return ink;
+      });
+    },
+    [png, points, box.x, box.y, half] as const,
+  );
+}
+
+/** The pixels where two marks of `marksAround` differ. */
+function differing(a: readonly number[], b: readonly number[]): number {
+  return a.filter((value, at) => value !== b[at]).length;
+}
+
+/** The viridis colour of the smallest value, #440154, and of the largest, #fde725. */
+const VIRIDIS_MIN = [68, 1, 84] as const;
+const VIRIDIS_MAX = [253, 231, 37] as const;
+
+test("IP8 D2 the five groups of five are drawn with five shapes, as in 2D, and not only five colours", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const places = await Promise.all(
+    [0, 1, 2, 3, 4].map((point) => pointAt(page, point, 2)),
+  );
+  const marks = await marksAround(page, places, 10);
+  // A circle, a cross, a diamond, a square and a star, of one area: any
+  // two differ by more pixels than the same mark drawn at another
+  // fraction of a pixel.
+  for (let one = 0; one < marks.length; one++) {
+    for (let other = one + 1; other < marks.length; other++) {
+      expect(
+        differing(marks[one] ?? [], marks[other] ?? []),
+        `the marks of P${String(one + 1)} and P${String(other + 1)}`,
+      ).toBeGreaterThanOrEqual(12);
+    }
+  }
+});
+
+test("IP8 D2 a colouring by values draws the smallest value in the dark end of viridis and the largest in the yellow one, and the export fills them so", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "values");
+  await turn(page, "viewAlong", 2);
+  // Point a has the smallest value, 100, and point d the largest, 400.
+  const [smallest, largest] = await coloursAt(page, [
+    await pointAt(page, 0, 2),
+    await pointAt(page, 3, 2),
+  ]);
+  expect(smallest).toEqual(expect.any(Array));
+  expect(near(smallest ?? [], VIRIDIS_MIN)).toBe(true);
+  expect(near(largest ?? [], VIRIDIS_MAX)).toBe(true);
+  const fills = await page.evaluate(() => {
+    const plot = window.plotsPage?.pca3d();
+    if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+    const file = new DOMParser().parseFromString(plot.toSVG(), "image/svg+xml");
+    return [...file.querySelectorAll(".chart-marks path.chart-points-value")]
+      .map((path) => path.getAttribute("fill"))
+      .toSorted();
+  });
+  // One path per step of viridis, the first and the last among them.
+  expect(fills).toHaveLength(4);
+  expect(fills).toContain("#440154");
+  expect(fills).toContain("#fde725");
+});
+
+test("IP8 D2 with a group highlighted, the others are faded on the screen, and in the export drawn before it with the class of the faded, with the title and the description", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const one = await pointAt(page, 1, 2);
+  const zero = await pointAt(page, 0, 2);
+  const [before] = await coloursAt(page, [one]);
+  expect(near(before ?? [], SKY_BLUE)).toBe(true);
+  await page.evaluate(() => {
+    window.plotsPage?.pca3dHighlight(0);
+  });
+  const [faded, highlighted] = await coloursAt(page, [one, zero]);
+  // A quarter of the colour over the white: every channel lighter.
+  expect(near(faded ?? [], SKY_BLUE)).toBe(false);
+  for (const [channel, value] of SKY_BLUE.entries()) {
+    expect(faded?.[channel] ?? 0).toBeGreaterThanOrEqual(value);
+  }
+  expect(near(faded ?? [], WHITE)).toBe(false);
+  expect(near(highlighted ?? [], ORANGE)).toBe(true);
+
+  const exported = await page.evaluate(() => {
+    const plot = window.plotsPage?.pca3d();
+    if (plot === undefined) throw new Error("e2e/plots.html has not run.");
+    const file = new DOMParser().parseFromString(plot.toSVG(), "image/svg+xml");
+    return {
+      title: file.querySelector("svg > title")?.textContent,
+      desc: file.querySelector("svg > desc")?.textContent,
+      classes: [...file.querySelectorAll(".chart-marks path")].map(
+        (path) => path.getAttribute("class") ?? "",
+      ),
+    };
+  });
+  expect(exported.title).toBe("Five individuals, in 3D");
+  expect(exported.desc).toBe(
+    "Five individuals in five populations, for the tests.",
+  );
+  // Seen from above, c, of P3, is the nearest, and a, of P1, highlighted,
+  // is drawn after it all the same.
+  expect(exported.classes).toEqual([
+    "chart-points chart-colour-3 chart-points-faded",
+    "chart-points chart-colour-1 chart-points-faded",
+    "chart-points chart-colour-4 chart-points-faded",
+    "chart-points chart-colour-2 chart-points-faded",
+    "chart-points chart-colour-0",
+  ]);
+});
+
+test("IP8 D2 a drag across the cloud shows no tooltip on the way, and calls no onHover", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "cloud");
+  const box = await page.locator("#plots canvas").boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  // From a place with no point, through the middle of the cloud.
+  const from = { x: box.x + 20, y: box.y + box.height - 20 };
+  await page.mouse.move(from.x, from.y);
+  expect(await hovers(page)).toEqual([]);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 12,
+  });
+  await expect(page.locator(".chart-tooltip")).toBeHidden();
+  await page.mouse.up();
+  expect(await hovers(page)).toEqual([]);
+});
+
+test("IP8 D2 a loss of the context hides the tooltip that was shown and calls onHover with null", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "cloud");
+  const zero = await pointAt(page, 0, "start");
+  const tooltip = page.locator(".chart-tooltip");
+  await page.mouse.move(zero.x, zero.y);
+  await expect(tooltip).toBeVisible();
+  await page.evaluate(() => {
+    document
+      .querySelector<HTMLCanvasElement>("#plots canvas")
+      ?.getContext("webgl2")
+      ?.getExtension("WEBGL_lose_context")
+      ?.loseContext();
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.plotsPage?.contextChanges()))
+    .toEqual([true]);
+  await expect(tooltip).toBeHidden();
+  expect(await hovers(page)).toEqual([0, null]);
+});
+
+test("IP8 D2 a smaller element draws the canvas at its new size", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  const canvas = page.locator("#plots canvas");
+  // The pixels of the screen per CSS pixel, 1 in Chromium's device and 2
+  // in WebKit's.
+  const ratio = await page.evaluate(() => Math.min(devicePixelRatio, 2));
+  await expect(canvas).toHaveJSProperty("width", 600 * ratio);
+  await page.evaluate(() => {
+    const element = window.plotsPage?.element();
+    if (element === undefined) throw new Error("e2e/plots.html has not run.");
+    element.style.width = "400px";
+    element.style.height = "300px";
+  });
+  await expect(canvas).toHaveJSProperty("width", 400 * ratio);
+  await expect(canvas).toHaveJSProperty("height", 300 * ratio);
+});
+
+test.describe("at a pixel ratio of 2", () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test("IP8 D2 the canvas holds two pixels of the screen for each CSS pixel", async ({
+    page,
+  }) => {
+    await openPlots(page);
+    await drawPca3d(page, 600, 450, "five");
+    const canvas = page.locator("#plots canvas");
+    await expect(canvas).toHaveJSProperty("width", 1200);
+    await expect(canvas).toHaveJSProperty("height", 900);
+  });
+});
+
+test("IP8 D2 a change of the colour scheme of the system draws the lines in the colour of the axes of the dark theme", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const samples = await lineSamples(page);
+  const count = (colours: number[][], axis: readonly number[]): number =>
+    colours.filter((colour) => near(colour, axis)).length;
+  expect(
+    count(await coloursAt(page, samples), LIGHT_AXIS),
+  ).toBeGreaterThanOrEqual(10);
+  await page.emulateMedia({ colorScheme: "dark" });
+  // The canvas is transparent, and the page behind it dark now: the
+  // lines are read against it.
+  await expect
+    .poll(async () => count(await coloursAt(page, samples), DARK_AXIS))
+    .toBeGreaterThanOrEqual(10);
+});
+
+test("IP8 D2 the label of each line stands at its positive end, 4 pixels across and up from it", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "five");
+  await turn(page, "viewAlong", 2);
+  const box = await page.locator("#plots canvas").boundingBox();
+  if (box === null) throw new Error("The canvas is not laid out.");
+  const middle = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // The line of PC1 ends at d, at 1, the largest first coordinate, and
+  // that of PC2 at b, at 0.8, the largest second one.
+  const d = await pointAt(page, 3, 2);
+  const b = await pointAt(page, 1, 2);
+  const labels = page.locator("#plots .chart-pca3d-label");
+  const first = await labels.nth(0).boundingBox();
+  const second = await labels.nth(1).boundingBox();
+  if (first === null || second === null)
+    throw new Error("No label is laid out.");
+  expect(Math.abs(first.x - (d.x + 4))).toBeLessThan(1.5);
+  expect(Math.abs(first.y + first.height - (middle.y - 4))).toBeLessThan(1.5);
+  expect(Math.abs(second.x - (middle.x + 4))).toBeLessThan(1.5);
+  expect(Math.abs(second.y + second.height - (b.y - 4))).toBeLessThan(1.5);
+});
+
+test("IP8 D2 destroy takes the tooltip that was shown off the page", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawPca3d(page, 600, 450, "cloud");
+  const zero = await pointAt(page, 0, "start");
+  await page.mouse.move(zero.x, zero.y);
+  await expect(page.locator(".chart-tooltip")).toBeVisible();
+  const left = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    plots.pca3d().destroy();
+    return {
+      children: plots.element().childElementCount,
+      tooltips: document.querySelectorAll(".chart-tooltip").length,
+    };
+  });
+  expect(left).toEqual({ children: 0, tooltips: 0 });
+});

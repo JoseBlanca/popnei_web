@@ -293,6 +293,22 @@ describe("IP8 panel: the data of the plots", () => {
     expect(deep.description).toMatch(/in 3D/);
   });
 
+  test("the 3D data of other components name them for the tooltip, with their labels and their highlight", () => {
+    const r = result();
+    const p = sampleProject();
+    const c = pcaColours(r, p);
+    const deep = pca3dData(r, c, [3, 1, 2], 0, p);
+    expect(deep.axisNames).toEqual(["PC3", "PC1", "PC2"]);
+    expect(deep.axisLabels).toEqual([
+      "PC3 (20.00%)",
+      "PC1 (40.13%)",
+      "PC2 (30.00%)",
+    ]);
+    expect(Array.from(deep.x)).toEqual([3, 6, 9, -0.00001]);
+    expect(deep.colours).toMatchObject({ kind: "groups", highlighted: 0 });
+    expect(deep.title).toBe("Principal components, PC3, PC1 and PC2");
+  });
+
   test("a colouring by values has no highlight", () => {
     const c: PcaColours = {
       kind: "values",
