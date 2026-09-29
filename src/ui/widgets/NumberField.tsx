@@ -26,7 +26,8 @@
  * otherwise and at each commit, for a screen that follows the number as
  * it is typed (the spec, "The threshold typed and not yet committed").
  *
- * The Tab key commits what is typed before the focus moves, so that the
+ * Escape with something typed puts back the number the field holds, as
+ * Ctrl+Z does. The Tab key commits what is typed before the focus moves, so that the
  * next stop of the Tab key is the button the number makes enabled, the
  * Run of an analysis locked for the distance of its LD filter.
  *
@@ -560,6 +561,24 @@ function FieldInput({
         // "The header"): with something typed, Ctrl+Z puts the number back
         // and redo does nothing; with nothing typed, the shell takes them
         // for the project.
+        // Escape with something typed puts back the number the field
+        // holds, as Ctrl+Z does, so that the next Tab commits nothing
+        // (docs/specs/shell.md, "The header"); with nothing typed it is
+        // left to what else listens for it, a dialog among them.
+        if (
+          event.key === "Escape" &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          state !== null &&
+          isTyped()
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          state.setInputValue(committedText);
+          onRevert();
+          return;
+        }
         const shortcut = shortcutOf(event);
         if (shortcut === null || state === null || !isTyped()) return;
         event.preventDefault();

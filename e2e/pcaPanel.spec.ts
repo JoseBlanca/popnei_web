@@ -503,3 +503,47 @@ test("Try again pressed with the keyboard moves the focus to the heading of the 
     panel.getByRole("heading", { level: 2, name: "Principal components" }),
   ).toBeFocused();
 });
+
+test("Escape in a number field puts back the number it holds, so that Tab after it commits nothing, in the PCA panel and in the Variants step", async ({
+  page,
+}) => {
+  const panel = await openPanel(page);
+  const maf = filterGroup(
+    panel,
+    "Filter the variants by major allele frequency (MAF)",
+  );
+  await chooseRadio(maf, "For the PCA alone");
+  const field = panel.getByLabel("Maximum major allele frequency, from 0 to 1");
+  await expect(field).toHaveValue("0.95");
+  const undo = page
+    .getByRole("banner")
+    .getByRole("button", { name: "Undo", exact: true });
+  const before = await undo.getAttribute("aria-describedby");
+  await field.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("0.4");
+  await page.keyboard.press("Escape");
+  await expect(field).toHaveValue("0.95");
+  await page.keyboard.press("Tab");
+  await expect(field).toHaveValue("0.95");
+  await expect(undo).toHaveAccessibleDescription(
+    "Undo: the MAF filter of the principal components was set for them alone",
+  );
+  expect(await undo.getAttribute("aria-describedby")).toBe(before);
+
+  await goTo(page, "Variants");
+  const threshold = page.getByLabel(
+    "Maximum proportion of missing genotypes, from 0 to 1",
+    { exact: true },
+  );
+  await threshold.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("0.4");
+  await page.keyboard.press("Escape");
+  await expect(threshold).toHaveValue("0.1");
+  await page.keyboard.press("Tab");
+  await expect(threshold).toHaveValue("0.1");
+  await expect(undo).toHaveAccessibleDescription(
+    "Undo: the MAF filter of the principal components was set for them alone",
+  );
+});
