@@ -636,7 +636,7 @@ statistics first, as the diversity's does (`docs/specs/core/store.md`,
 "A Run that waits for the statistics"), and once they are in the cache
 the lock applies to the list: when it keeps more than 9,381, the Run
 ends with nothing sent, the panel is locked with the words above, and
-the shell announces "Principal components was not run. " and the same
+the shell announces "Principal components were not run. " and the same
 words, as it does for the diversity (`docs/specs/shell.md`, the
 announcements, "Diversity was not run"). So the number the
 words give as kept is always that of a known list, and the request of a
