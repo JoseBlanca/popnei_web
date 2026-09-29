@@ -353,10 +353,11 @@ The values of WCAG 2.2 at level AA, in both themes:
   with the formula of WCAG, and fails below the limit. A pair is added to
   the test when a component starts to use it. It is a Vitest test in
   node, `src/ui/tokens.test.ts` (`testing.md`).
-- **The fill of the groups of a plot is not what carries the 3:1**, since
-  three of the seven colours are below it on white; each mark has an
-  outline in `--chart-axis`, which carries it and is the pair tested
-  (`charts.md`).
+- **The fill of the groups of a plot carries the 3:1 for four of the
+  seven colours**, and a test checks them on the background of both
+  themes; the three below it on white, orange, sky blue and yellow, have
+  an outline in `--chart-axis`, which carries it and is the pair tested
+  (`charts.md`; decided by the owner on 29 September 2026).
 - **Colour is never the only sign** (WCAG 1.4.1). An error has a message
   and a symbol, a warning its "⚠" and its words, a selected tab a bar
   and not only a colour, a disabled control its muted text and its state

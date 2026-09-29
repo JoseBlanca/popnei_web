@@ -114,8 +114,9 @@ view"). `scenePositions` of "The TypeScript interface" makes the
 positions, the index and the scale.
 
 The groups are one `Points` object each, with the symbol of the group
-drawn on a small canvas as its texture, in its colour with the outline
-in `--chart-axis`, the no-group a ring, and the area of a mark on the
+drawn on a small canvas as its texture, in its colour, with the outline
+in `--chart-axis` on the three light colours alone, as in 2D
+(`scatter.md`, "The marks of the groups", stop C 2), the no-group a ring, and the area of a mark on the
 screen that of the scatter, `SYMBOL_AREA`, whatever the zoom
 (`charts.md`, "The data and the scene"). three.js draws each point of a
 `Points` object as a square of a size in CSS pixels, with the texture

@@ -105,16 +105,29 @@ so that a population has the same mark in both:
   triangle and wye. The first seven groups differ in colour and in
   shape, and the first 49 have 49 different marks; group 49 has the mark
   of group 0 again, and the legend and the tooltip still name each.
-- every mark has an outline of 1 pixel in `--chart-axis`, since three of
-  the seven colours are below 3:1 on the light background, orange,
-  sky blue and yellow, and the outline gives the edge of each mark the
-  contrast the fill does not (`css.md`, "Contrast and colour"). The
-  outline has round joins, `stroke-linejoin: round`: with the default
+- a mark in one of the three light colours of the palette, orange,
+  sky blue and yellow, `--chart-cat-1`, `--chart-cat-2` and
+  `--chart-cat-4`, the colours `i % 7` 0, 1 and 3, has an outline of 1
+  pixel in `--chart-axis`, since they are below 3:1 on the light
+  background, 2.25, 2.31 and 1.32, and the outline gives their edge the
+  contrast the fill does not (`css.md`, "Contrast and colour"). A mark
+  in one of the other four has none: its fill is 3:1 or more on the
+  background of both themes, green 3.42 and 5.20, blue 5.19 and 3.43,
+  vermilion 3.87 and 4.60, pink 3.06 and 5.81, light and dark, and an
+  outline on every mark covered the colours of a dense cluster in grey,
+  on the screen and more in an exported file, where a highlighted group
+  looked grey. Decided by the owner on 29 September 2026 (stop C 2 of
+  `docs/specs/stage-4-open-points.md`); the options not taken, the
+  outline on every mark, or a thinner one. The rule is by the colour,
+  and the same in both themes, in the 2D plot, the 3D view, the legend
+  and the exported file, so that a population has one mark everywhere;
+  a test of the tokens checks the four colours with no outline at 3:1
+  or more on the background of each theme. The outline has round joins, `stroke-linejoin: round`: with the default
   joins, mitred, the outline of a sharp corner runs past the corner by
   half its width divided by the sine of half the angle, and at the tips
   of the star, of 36°, it reaches 9.2 pixels from the centre; with round
   joins no mark reaches beyond 8.05 pixels, the tips of the star, 7.55,
-  and half the outline.
+  and half the outline. A mark with no outline reaches 7.55.
 - a point in no group is a ring, a circle with no fill outlined in
   `--chart-axis`, since a mark with no colour of its own is what "no
   value" looks like, and the ring differs in shape from the seven filled
@@ -727,7 +740,8 @@ the export draws into it (below).
 ```
 
 The colours of the groups are the same in both themes (`css.md`, "Light
-and dark"), and the outline, the ring and the mark under the pointer
+and dark"), and the outline of the three light colours, the ring and
+the mark under the pointer
 follow the theme through their tokens with no redraw. The tooltip takes
 the surface and the text of the theme.
 
@@ -806,7 +820,9 @@ screen draws it:
   fits says "and 12 more", since the file cannot scroll; the table,
   downloaded beside it as CSV, has every group.
 
-The outlines of the marks keep their round joins in the file:
+The outlines of the marks of the three light colours are in the file as
+on the screen, and the marks of the other four have none there either;
+the outlines keep their round joins in the file:
 `stroke-linejoin` is among the properties the export writes on each
 element (`charts.md`, "Colours, themes and the exported file"), and
 without it a program that opens the file draws the mitred joins, whose
@@ -1078,7 +1094,8 @@ Of `docs/specs/analyses/pca.md`:
     exported file": the class of the colour of a path is
     `chart-colour-‹0 to 6›`, where it was `chart-group-‹i›`, since a
     group's colour is `i % 7` and the class names the colour; the
-    outline is set once on `.chart-points`, with round joins;
+    outline is set once on `.chart-points`, with round joins, and taken
+    off the classes of the four colours that do not need it (stop C 2);
   - "Hover and tooltips": the nearest point by a loop over the pixel
     positions, 0.027 ms for 50,000 points in node, and not a Delaunay;
     `d3-delaunay` off the list of the modules; after the review of 27

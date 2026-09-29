@@ -354,9 +354,12 @@ A plot is an image to a screen reader, and has to say what it shows:
 - **Contrast**: the ratios are those of `css.md`, "Contrast and colour",
   and the tokens of the plots are checked there, not in each plot. Three
   of the colours of Okabe and Ito are below 3:1 on the light background,
-  orange 2.25:1, sky blue 2.31:1 and yellow 1.32:1, so every mark of a
-  group has a 1 px outline in `--chart-axis`, which gives its edge the
-  contrast the fill does not.
+  orange 2.25:1, sky blue 2.31:1 and yellow 1.32:1, so a mark of those
+  three has a 1 px outline in `--chart-axis`, which gives its edge the
+  contrast the fill does not; the other four, 3:1 or more on both
+  backgrounds, have none, since an outline on every mark covered the
+  colours of a dense cluster in grey (the owner, 29 September 2026;
+  `docs/specs/charts/scatter.md`).
 
 ## Colours, themes and the exported file
 
