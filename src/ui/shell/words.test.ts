@@ -76,6 +76,7 @@ function title(id: AnalysisId): string {
     kept as the first number of the result of the Counts done. */
 const WORDS: ShellWords<TestDefResult> = {
   title,
+  plural: (id) => [STATISTICS, HISTOGRAMS, COUNTS].includes(id),
   stepOf: (id) =>
     [STATISTICS, HISTOGRAMS, COUNTS].includes(id) ? "variants" : "analyses",
   variantsKept: (s) => {
@@ -2389,6 +2390,45 @@ describe("VS5 D2 the announcements of the writing, more", () => {
     expect(announcementsOf(before, after, WORDS)).toEqual([
       "Statistics of each individual could not be calculated. The Variants step says why.",
       "Diversity was not run. The Analyses step says why.",
+    ]);
+  });
+
+  test("stop A 6 the histograms and the counts, whose titles are plural, were not run", () => {
+    const reason =
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.";
+    const waiting = (key: Key): AnalysisStatus<TestDefResult> => ({
+      kind: "running",
+      key,
+      runId: 1,
+      progress: null,
+      waitsForStatistics: true,
+    });
+    const before = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: running(KEY_S, 1),
+        [HISTOGRAMS]: waiting(KEY_A),
+        [COUNTS]: waiting(KEY_B),
+      },
+      runs: [run(1, STATISTICS, KEY_S, CURRENT)],
+    });
+    const failedAfter = checksState({
+      project: THREE_FILTERS,
+      statuses: {
+        [STATISTICS]: failed(KEY_S),
+        [HISTOGRAMS]: {
+          kind: "error",
+          key: KEY_A,
+          error: { kind: "refused", message: "too few individuals" },
+          ofStatistics: true,
+        },
+        [COUNTS]: { kind: "locked", reason },
+      },
+    });
+    expect(announcementsOf(before, failedAfter, WORDS)).toEqual([
+      "Statistics of each individual could not be calculated. The Variants step says why.",
+      "Histograms of the variants were not run. The Variants step says why.",
+      `Counts of the filters were not run. ${reason}`,
     ]);
   });
 

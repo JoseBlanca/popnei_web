@@ -32,6 +32,23 @@ const TITLES: ReadonlyMap<AnalysisId, string> = new Map([
   ["diversity", "Diversity"],
 ]);
 
+/** The analyses whose title names several things, after which the verb
+    is plural, "Histograms of the variants were not run." (stop A 6,
+    decided by the owner on 29 September 2026). */
+const PLURAL_TITLES: ReadonlySet<AnalysisId> = new Set([
+  "individualChecks",
+  "variantChecks",
+  "filterCounts",
+  "pca",
+]);
+
+/** Whether the title of the analysis `id` names several things; a
+    defect for an analysis with no title. */
+export function pluralOf(id: AnalysisId): boolean {
+  titleOf(id);
+  return PLURAL_TITLES.has(id);
+}
+
 /** The title of the analysis `id`, "Diversity", "Counts of the
     filters"; a defect when it has none. */
 export function titleOf(id: AnalysisId): string {
@@ -53,10 +70,11 @@ export function stepOf(id: AnalysisId): StepId {
 }
 
 /** What the words of the shell need of the population genetics
-    application: the title of each analysis, the step it is shown in, and
-    the variants the filters keep. */
+    application: the title of each analysis and whether it names several
+    things, the step it is shown in, and the variants the filters keep. */
 export const SHELL_WORDS: ShellWords<JobResult> = Object.freeze({
   title: titleOf,
+  plural: pluralOf,
   stepOf,
   variantsKept,
 });

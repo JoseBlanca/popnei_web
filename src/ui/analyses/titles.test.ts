@@ -32,4 +32,15 @@ describe("VS5 D1 the words of the shell of the page", () => {
   test("an analysis with no title is a defect", () => {
     expect(() => SHELL_WORDS.title("tsne")).toThrow(/^popnei_web defect:/);
   });
+
+  test("stop A 6 the title of the diversity names one thing, and the others several, after which the status region says were", () => {
+    expect(POPGEN_ANALYSES.map((def) => SHELL_WORDS.plural(def.id))).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(() => SHELL_WORDS.plural("tsne")).toThrow(/^popnei_web defect:/);
+  });
 });

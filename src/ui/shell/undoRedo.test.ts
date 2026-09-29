@@ -84,6 +84,7 @@ function announceChanges(
     const after = store.getState();
     const texts = announcementsOf(before, after, {
       title: (id) => id,
+      plural: () => false,
       stepOf: () => "analyses",
       variantsKept: () => null,
     });

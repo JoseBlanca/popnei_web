@@ -104,6 +104,10 @@ export interface StepState {
 export interface ShellWords<R> {
   /** The title of the analysis `id`, "Diversity". */
   title(id: AnalysisId): string;
+  /** Whether the title of the analysis `id` names several things,
+      "Histograms of the variants", after which the verb is plural:
+      "Histograms of the variants were not run." */
+  plural(id: AnalysisId): boolean;
   /** The step the analysis `id` is shown in. */
   stepOf(id: AnalysisId): StepId;
   /** The variants that pass the filters, `passStats.numVars` of the
@@ -743,7 +747,8 @@ function endedAnnouncements<R>(
     were then not run: locked, the filters of individuals keeping no one,
     "Diversity was not run. " and the reason of the lock, the words
     beside its disabled Run; or in error, the statistics having failed,
-    "Diversity was not run. The Analyses step says why." */
+    "Diversity was not run. The Analyses step says why."; "were" after a
+    plural title, "Histograms of the variants were not run." */
 function notRunAnnouncements<R>(
   before: AppState<R, unknown>,
   after: AppState<R, unknown>,
@@ -766,11 +771,12 @@ function notRunAnnouncements<R>(
     }
     const now = after.analyses.find((a) => a.id === analysis.id)?.status;
     const name = w.title(analysis.id);
+    const notRun = `${name} ${w.plural(analysis.id) ? "were" : "was"} not run.`;
     if (now?.kind === "locked") {
-      announcements.push(`${name} was not run. ${now.reason}`);
+      announcements.push(`${notRun} ${now.reason}`);
     } else if (now?.kind === "error" && now.ofStatistics) {
       const step = STEP_NAMES[w.stepOf(analysis.id)];
-      announcements.push(`${name} was not run. The ${step} step says why.`);
+      announcements.push(`${notRun} The ${step} step says why.`);
     }
   }
   return announcements;
