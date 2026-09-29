@@ -1100,10 +1100,13 @@ in their sections. The rest:
   name, "the LD pruning", is the one of the switch, "Prune the variants
   by linkage disequilibrium (LD)", and of the Undo, "Undo: the LD
   pruning was turned on", as the owner decided on 29 September 2026
-  (stop A 1 of `docs/specs/stage-4-open-points.md`); the words of the
-  refusal of a file not sorted, which popnei gives while the LD pruning
-  reads the file, still name it "the LD filter of the Variants step"
-  (`docs/specs/analyses/diversity.md`, "Its words").
+  (stop A 1 of `docs/specs/stage-4-open-points.md`); so do the words of
+  the refusal of a file not sorted, which popnei gives while the LD
+  pruning reads the file, "The LD pruning of the Variants step needs the
+  variants of each chromosome together …, or turn off the LD pruning in
+  the Variants step." (`docs/specs/analyses/diversity.md`, "Its words"),
+  where they said "the LD filter of the Variants step" until 29
+  September 2026.
 - **The lines under the filters, the lists and the counts**: in their
   sections, above.
 - **The line under the ploidy**, and the button that reads the VCF
