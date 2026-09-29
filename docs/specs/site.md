@@ -230,7 +230,10 @@ writes `e2e/fixtures/tetraploid.nei`: 200 variants, 12 individuals, ploidy
 differ from the panel's, so a page that always showed the panel's fails
 the test that picks it. All these files are committed, so neither the site nor its tests need a
 checkout of popnei, and the script is run again only when popnei's format
-of vars files changes. `e2e/fixtures/bad.vcf` is a line of plain text, for
+of vars files changes. It writes the vars files only when it is given
+`--nei`, since 29 September 2026: popnei `js-v0.1.0-dev.3` writes them in
+261,570 and 16,218 bytes, and a run for the other files it writes, which
+stage 4 added, would leave the tests failing on the sizes above. `e2e/fixtures/bad.vcf` is a line of plain text, for
 the case of a file popnei refuses.
 
 ### xlsx_rs, from stage 4

@@ -32,6 +32,16 @@
 // writes are committed. popnei's checkout is looked for beside this
 // repository's, at ../popnei, or where the variable POPNEI says, as from a
 // worktree: `POPNEI=/Users/jose/devel/popnei node e2e/fixtures/make_fixtures.mjs`.
+//
+// The three vars files, panel.nei, its copy in public/probe/ and
+// tetraploid.nei, are written only when the script is given `--nei`; the
+// statistics and the PCA are calculated from the panel.nei on disk either
+// way. The tests pin the sizes of the committed files, 261,490 and 16,194
+// bytes, written by popnei 0.1.0 on 24 September 2026, and popnei
+// js-v0.1.0-dev.3 writes them in 261,570 and 16,218 bytes (29 September
+// 2026), so a run for the other files leaves the vars files as they are.
+// `--nei` is for a change of the format, with the sizes in the tests and
+// the specs changed in the same commit.
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,13 +89,18 @@ function writeFixture(vcf, options, outputs) {
   }
 }
 
-writeFixture("panel.vcf.gz", {}, [
-  join(fixtures, "panel.nei"),
-  join(root, "public", "probe", "panel.nei"),
-]);
-writeFixture("tetraploid.vcf.gz", { ploidy: 4 }, [
-  join(fixtures, "tetraploid.nei"),
-]);
+// eslint-disable-next-line no-undef -- a script of node, as above
+if (process.argv.includes("--nei")) {
+  writeFixture("panel.vcf.gz", {}, [
+    join(fixtures, "panel.nei"),
+    join(root, "public", "probe", "panel.nei"),
+  ]);
+  writeFixture("tetraploid.vcf.gz", { ploidy: 4 }, [
+    join(fixtures, "tetraploid.nei"),
+  ]);
+} else {
+  console.log("the vars files left as they are; --nei writes them again");
+}
 
 // The populations: the copy, and the same rows as a CSV. The names hold no
 // comma nor quote, so no cell is quoted; a name that did would stop here.
