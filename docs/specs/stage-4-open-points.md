@@ -36,7 +36,10 @@ variants count over the individuals kept; and the Variants step shows
 the section of the individuals before that of the variants (the last
 three under point A). Last that day the owner decided points 6 and 13,
 as recommended, and approved the specs and the revision of
-`docs/architecture.md`.
+`docs/architecture.md`. On 29 September 2026 the owner accepted the
+recommendations of the three stops of the plan of stage 4, where it
+stopped for the owner to try the Variants step, the Individuals step and
+the PCA panel (below, "Decided by the owner on 29 September 2026").
 
 The specs are, new: `docs/specs/analyses/pca.md`, the analysis and its
 panel; `docs/specs/charts/scatter.md`, the 2D plot, and `pca3d.md`, the
@@ -86,7 +89,14 @@ reads the page aloud to a user who cannot see it.
   with Ctrl held, and if Ctrl clashes there when the plan tries it, the
   plan asks whether ⌘ takes its place (point 10).
 - **To judge point 14, the legend over the plot**, on the running
-  screen, when the owner tries the PCA panel.
+  screen, when the owner tries the PCA panel, with the other points of
+  the stops of the plan left to be judged there: the gap under each
+  filter that is on, stop A 5, and "2D" looking pressed with two
+  components, stop C 13 (below, "Decided by the owner on 29 September
+  2026").
+- **Three points with no recommendation yet**, open: the controls of 13
+  by 13 pixels of the Variants step, the order of the restart after a
+  crash, and how faint a faded point is (the same section).
 
 ## Decided by the owner on 27 September 2026
 
@@ -410,11 +420,14 @@ What a user meets:
   populations by pop". They were given by popnei in node, by the script
   `orderA.mjs` of `docs/specs/worker/runner.md`, "How it is verified".
 - A project file saved by stage 3 opens as before. The check numbers of
-  its diversity are compared with a key version raised to 2, so that,
-  with a filter of individuals, a difference is said to come from the
-  application's calculation and not from the file; those of the three
-  checks are compared only where their result is the same as stage 3's,
-  since their settings now hold other filters.
+  its diversity and of the three checks are compared always, whatever
+  its filters, since the fingerprint of the settings is made when the
+  file is opened; the key version of each is raised to 2, so a
+  difference is said to come from the new version of the application,
+  and not only from the file. Corrected on 29 September 2026, as the
+  owner decided that day: this said those of the three checks were
+  compared only where their result is the same as stage 3's, which the
+  file cannot tell.
 
 The histograms of the variants over the individuals kept, the writers'
 reading of the owner's words, were confirmed by the owner later on 28
@@ -723,6 +736,256 @@ deploy, which GitHub Pages does not do by itself.
 `docs/architecture.md`, section 11 and section 13, point 10;
 `pca3d.md`; `docs/specs/worker/individuals.md`.
 
+## Decided by the owner on 29 September 2026
+
+The plan of stage 4, `docs/plans/individuals-pca.md`, stops three times
+for the owner to try a screen, each stop with a list of decisions and a
+recommendation for each in its report,
+`docs/plans/individuals-pca.report.md`: stop A, the Variants step; stop
+B, the Individuals step; stop C, the PCA panel; and a last list, "For
+the owner, later". On 29 September 2026 the owner accepted every
+recommendation, in these words: "I recommend it says it is the
+application's own error" yes; "I recommend quotation marks around the
+value." OK; "I recommend a list of links to the analyses at the top of
+the step." OK; "i accept the recommendations merge and push". The owner
+had not tried the screens by hand. A point that asked the owner to judge
+on the screen, with no recommendation, changes nothing, and is listed
+below as open. Each decision is named by its stop and its number in the
+report, whose numbers these are.
+
+Some change only the specs, which take what the code does; they are
+revised with this entry. The others change the code, and the plan
+revises their specs first, before the code: "Specs to revise" names
+those.
+
+### The words of the Variants step
+
+- **Stop A 1.** The step says "the LD pruning" in its words, the reason
+  of the missing distance and the lines beside the buttons, as its
+  switch, "Prune the variants by linkage disequilibrium (LD)", and its
+  Undo do. Not taken: "turn off the LD filter", the words of the reason
+  of point 16. Specs to revise: `steps/variants.md`, `project.md`.
+- **Stop A 2.** That reason, 45 words, stands whole under the field of
+  the distance; beside the Count and the Write, a short line, "Locked
+  until the distance of the LD pruning is typed, above."; the hidden
+  words a screen reader reads before the reason of a locked Count are
+  kept as they are. Not taken: the whole reason three times, under the
+  field and beside each button. Specs to revise: `steps/variants.md`.
+- **Stop A 3.** An Undo that brings the empty distance back announces,
+  after "Undone: the LD pruning changed.", the reason. Not taken: the
+  first sentence alone. Specs to revise: `steps/variants.md`.
+- **Stop A 6.** The status region, the part of the page a screen reader
+  reads out when its text changes, says "were" after a plural title:
+  "Histograms of the variants were not run.", "Counts of the filters
+  were not run.". Not taken: "was" after every title, as `shell.md`
+  gave the sentence. Specs to revise: `shell.md` first.
+- **Stop A 5.** The line of each count keeps its place, empty before a
+  Count, so that a click on a switch is not lost when a field above it
+  commits; it shows as a small gap under each filter that is on. Asked
+  to be judged on the screen, with no recommendation: open, and nothing
+  changes.
+
+### The number fields
+
+- **Stop A 4 (a).** An empty field ignores the arrow keys, Page Up and
+  Page Down, Home and End, a cleared threshold too: kept. Not taken: a
+  key that puts a value into an empty field.
+- **Stop A 4 (b).** In a field that holds a number, End and Home move
+  the caret only, in every number field. Not taken: the jump of the
+  value to its limit, as React Aria, the library of the widgets, does,
+  which made End in the field of
+  the distance 9,007,199,254,740,991 base pairs. Specs to revise:
+  `steps/variants.md`, `pca.md`.
+- **Stop A 10, and stop C 14.** A number refused under a field above a
+  switch adds its line when the field loses the focus and moves the
+  switch from under the pointer, so that click is lost; stage 3 had it,
+  and the PCA panel has it too. Left as it is, as recommended, unless the
+  owner meets it. Not taken: a fix now.
+
+### The check numbers of a project saved by stage 3
+
+- **Stop A 7.** They are compared always, and a difference is said to
+  come from the new version of the application, as the code does. A
+  check number is found for an analysis by the fingerprint of its
+  settings, a hash of what the user chose for it, and that fingerprint is
+  made when the file is opened, so it matches the settings of the opened
+  project whatever its filters; and the key version saved with it, the
+  number an analysis raises when what its result means changes, is 1,
+  not the 2 of now. Entry A above,
+  `individualChecks.md`, `variantChecks.md` and `filterCounts.md`
+  corrected. Not taken: compared "only where their result is stage
+  3's", which entry A said and a file cannot tell.
+
+### The warning of the variants with no called genotype
+
+- **Stop A 8.** It says "among the individuals kept" whenever the
+  project has a filter of individuals, a list or a threshold, turned
+  on, as the code does. Not taken: only when the filter removes someone,
+  as `variantChecks.md` said; the two differ only for a filter that
+  removes nobody, where the sentence is still true. `variantChecks.md`
+  corrected.
+
+### A defect of the application told as one
+
+- **Stop A 9 and stop C 6.** A defect of the application reaches the
+  user in the words of a defect of the application, never as a fault of
+  their input: a refusal of popnei that names an option it does not
+  know, which only the application can send, is answered by the runner
+  as a defect and not as `refused`; and a `popnei_web defect:` thrown in
+  the calculation worker during a PCA, such as a result of popnei that
+  does not match what was asked, keeps its kind to the page, the words
+  of a crash being for a real crash only. Not taken: "Change the
+  settings", which the user would read for the first; and for the
+  second the words of a crash, chosen by the number of individuals,
+  "did not fit in the memory of this tab" from 2,264 individuals up and
+  "load panel.nei again" below. Specs to revise: `runner.md`,
+  `client.md`, `pca.md`, first.
+
+### The Individuals step
+
+- **Stop B 1.** The value in quotation marks wherever the words of a
+  coding write one: `"no" is coded 0.`, `binary with "yes" coded 1`,
+  and in the warning of the types that wait. Not taken: the bare value,
+  which reads "no is coded 0." as nothing coded 0. Specs to revise:
+  `project.md`, `steps/individuals.md`.
+- **Stop B 2**, accepted as it is: with a font wider than the Mac's, at
+  320 pixels, the dot between two first values can start a line,
+  "España ·". Not taken: avoiding it, which leaves no margin.
+- **Stop B 3**, accepted as it is: a file of one column still says
+  "Choose the column that defines the populations…", though only "All
+  individuals" can be chosen. Not taken: other words for that file.
+- **Stop B 5.** A metadata file that is not text, under the name of a
+  CSV: "…it is not a text file; if it is an Excel workbook, open it in
+  Excel and save it as Excel Workbook (.xlsx)." Not taken: telling the
+  user to give it a name ending in `.xlsx`, after which an Excel
+  97-2003 workbook is refused again as one. Specs to revise:
+  `project.md`, `worker/individuals.md`.
+- **Stop B 6.** A header cell of an xlsx that is an error of Excel, in
+  the first row of the table whatever row the table starts at, refuses
+  the file, with words that name the cell's place as the other refusals
+  of an xlsx name places; the names of the individuals stay as they
+  are. Not taken: the error as the name of its column, "#VALUE!". Specs
+  to revise: `worker/individuals.md` first.
+- **Stop B 7.** A crash of the light worker during a read: "…could not
+  be read: the reading of the file stopped unexpectedly. If it happens
+  again with this file, save it again from Excel as .xlsx or as CSV.",
+  which closes Open 4 of `project.md`. Not taken: "the calculation
+  stopped unexpectedly. Choose it again." Specs to revise: `project.md`
+  first, and the specs that quote its words.
+- **Stop B 8.** After a file the step does not load, the focus stays
+  where it was: on the file button after a pick, on the hidden button
+  "Paste a metadata file" after a paste. Not taken: the file button after a paste too, as the
+  spec said. `steps/individuals.md` corrected; after a drop the focus
+  stays wherever it was.
+- **The changes made to the specs during the work, stop A, and during
+  the review, stop B 4**, which the report listed for the owner to
+  accept, are accepted with the rest: the focus and the hidden words of
+  the Count, the words of the histograms when the statistics fail, the
+  words of the validation of two filters of one kind off, the legend of
+  an exported plot at the left edge of its frame; the first column never
+  the column of the populations, the focus to the step's heading when an
+  Undo removes the control that had it, and the name of the select of
+  the coding.
+
+### The PCA panel
+
+- **Stop C 2.** The grey outline of the marks only on the three light
+  colours of the palette, in the 2D plot, the 3D view and the exported
+  file, since in dense clusters it covers the colours, and a highlighted
+  group looked grey in an exported file. The contrast of the marks
+  against the background is checked again, in both themes. Not taken:
+  the outline on every mark, or a thinner one. Specs to revise:
+  `scatter.md`, "The marks of the groups".
+- **Stop C 3.** A short list of links under the heading of the Analyses
+  step, one for each panel, each moving the focus to the heading of its
+  panel, since once there is a PCA the diversity starts about 2,400
+  pixels below the heading of the PCA. Not taken: nothing that leads to
+  the panels below. Specs to revise: `shell.md` or the step's spec.
+- **Stop C 4.** When the statistics of each individual fail, an
+  analysis whose own Run was not pressed says "…so the ‹analysis›
+  cannot run", and one whose Run was pressed keeps "…was not run". Not
+  taken: "was not run" for both. Specs to revise: `store.md`, `pca.md`,
+  `diversity.md`.
+- **Stop C 5.** Under the PCoA the choice says "For the PCoA alone",
+  following the method, as its heading does. Not taken: "For the PCA
+  alone" for both methods. Specs to revise: `pca.md`.
+- **Stop C 7.** popnei is asked for the variants its pruning kept (below,
+  "Asked of popnei"). Not taken: not asking, which point 1 kept until
+  the time of the pruning was measured.
+- **Stop C 8.** Three choices the code made are written into the specs:
+  an axis beyond the result takes the first component the other axes do
+  not show, with a note; the description a screen reader reads names the
+  individuals in no group last and leaves out a group with no
+  individual; in 3D the view spans ±1.3 on its shorter side, a tap may
+  move 3 pixels, and the names of the axes sit 4 pixels from the ends of
+  their lines. `pca.md` and `pca3d.md` revised. Not taken: leaving them
+  to the code.
+- **Stop C 9.** With a colour column of more than 1,000 values, the
+  table gives each individual's value, as the note says; the table
+  showed "All individuals" in its place. Not taken: dropping that clause
+  of the note. Specs to revise: `pca.md`.
+- **Stop C 10.** The order of the Tab key through the panel is the
+  code's: the explained variance and its download, then the table and
+  its download, and "Try again" after the bar of controls. Not taken:
+  the downloads last, as `pca.md` had them. `pca.md` revised.
+- **Stop C 11.** The panel of the PCA never gives the plots a point that
+  is not finite, since popnei's PCA gives none, and has no words for
+  one. Not taken: "the screen says why", which `pca3d.md` and
+  `scatter.md` said with no words for it. Both revised.
+- **Stop C 12.** Only an Undo or a Redo can change the colour, the axes
+  or the view while the PCA runs, since their controls exist only once
+  the result is there. Not taken: the sentence of `pca.md` that a
+  change of them while it runs keeps the calculation, as if they could
+  be changed. `pca.md` revised.
+- **Stop C 15**, accepted as it is: the switch of 3D and 2D and the
+  legend are announced as radio buttons, and their arrow keys move the
+  focus without choosing, as React Aria makes them. Not taken: widgets
+  of our own.
+- **Stop C 1**, the legend over the plot, point 14 above, and **stop C
+  13**, "2D" looking pressed with two components while the option stays
+  3D: asked to be judged on the screen, with no recommendation: open,
+  and nothing changes.
+
+### For the owner, later
+
+- **The specs take the code**, where they said less than the code or
+  contradicted it: `diversity.md`, the populations of a new project are
+  "all", as `project.md` has them; `store.md`, the store keeps no key of
+  a result removed, which leaves the notice once the cache holds a
+  result under the key the project gives it now; `project.md`, "The
+  validation", its example refusal of the types set replaced by one the
+  rule gives, and a read pending or failed of the individuals file
+  accepted by `parseProject`, while `projectFile.ts` refuses a file
+  that holds one; `projectFile.md`, the example of `typesSet` laid out
+  by its own rule of writing, and a project saved while its VCF was
+  read compared with the file given on its name, size, format and
+  choice of the passed variants, not on its ploidy; `writeVariants.md`,
+  a list of individuals popnei would refuse locks the Count and the
+  histograms of the variants too, and not the statistics of each
+  individual; `scatter.md`, the 256 steps of viridis are 254 distinct
+  colours in `d3-scale-chromatic` 3.1.0. Not taken: code changed to
+  the specs.
+- **`CLAUDE.md`**: `node_modules/popnei` removed, or `npm ci` run,
+  before `npm install --no-save` of the `.tgz` of a popnei of the same
+  version, which otherwise leaves the old package in place, as it did
+  with `js-v0.1.0-dev.3` over `dev.2`, both "0.1.0".
+- **`.claude/skills/coding/testing.md`**: code of a screen that moves the
+  focus gets a test in the mode React runs in development, `<StrictMode>`,
+  in jsdom, a page emulated for the tests, since the checks run against
+  the built site, and React runs that code twice only in development,
+  where the owner tries the screens; the plan met four such defects.
+- **Not now**: the version of the application, 0.1.0 before and after
+  stage 4, so that a check of a saved project may say "0.1.0 … 0.1.0",
+  is raised at its first release.
+- **Open, with no recommendation to apply**: seven controls of the
+  Variants step are 13 by 13 pixels, under the 24 of WCAG 2.2, success
+  criterion 2.5.8, unless nothing is near them, not checked, from stage
+  3; after a crash, the page starts the calculation worker again before
+  it gives the outcome, the reverse of the order after a large PCA,
+  from before stage 4; a faded point, at an opacity of 0.25, has an
+  outline of 1.44 to 1 against the background in light and 1.63 in dark,
+  to judge whether it should be that faint.
+
 ## Opened by the specs
 
 With its options and its recommendation in the spec named, which is the
@@ -1011,11 +1274,16 @@ node, and they stay asked:
 - the called genotypes of each individual with the PCA, for the warning
   of point 9, "The individuals with many missing genotypes".
 
-A fifth, a way to keep the variants a pruning left so that a second PCA
-does not prune again, is not asked yet: the owner decided on 27
-September 2026 to ask for it only if the time of the pruning, measured in
-stage 4, is large (above, "1. The pruned variants are not kept between
-two PCAs").
+A fifth, at a low priority: to give back the list of the variants its
+pruning kept, so that the next PCA with the same filters reads those
+alone and skips the pruning. The owner decided on 27 September 2026 to
+ask for it only if the time of the pruning, measured in stage 4, was
+large (above, "1. The pruned variants are not kept between two PCAs"),
+and asked for it on 29 September 2026 (stop C 7, above): the pruning of
+the PCA's own LD filter is at least 62 to 68% of a PCA, 3.4 s with it
+and 1.1 to 1.2 s without, at 1,000 individuals and 20,000 variants, in
+Chromium 153 and WebKit 26.6 on the owner's Apple M5 Pro, a lower bound
+since the PCA with the filter also decomposes fewer variants.
 
 ## popnei's release `js-v0.1.0-dev.3`
 
@@ -1063,7 +1331,8 @@ meets it measures it:
 - the time of the pruning inside a PCA, on `panel.nei` and on the files
   of 20,000 variants, which decides whether popnei is asked to keep the
   pruned variants (point 1, "The pruned variants are not kept between two
-  PCAs");
+  PCAs"): measured on 29 September 2026, at least 62 to 68% of a PCA,
+  and popnei asked (above, "Asked of popnei");
 - the time and the memory of a PCA in the three engines, at 1,000 to
   9,381 individuals, and whether 700 individuals is the right bound of
   point 8;
