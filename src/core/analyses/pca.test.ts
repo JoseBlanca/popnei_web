@@ -840,7 +840,30 @@ describe("IP6 D4 parseOptions", () => {
         ld: { follow: false, maxAllowedR2: 0.1, maxDist: 2.5 },
       },
     ],
+    [
+      "maf with follow 1",
+      { ...DEFAULTS_JSON, maf: { follow: 1, maxAllowedMaf: 0.95 } },
+    ],
+    [
+      "maxAllowedMaf 5",
+      { ...DEFAULTS_JSON, maf: { follow: false, maxAllowedMaf: 5 } },
+    ],
+    [
+      "ld with follow yes",
+      {
+        ...DEFAULTS_JSON,
+        ld: { follow: "yes", maxAllowedR2: 0.1, maxDist: null },
+      },
+    ],
+    [
+      "maxAllowedR2 5",
+      {
+        ...DEFAULTS_JSON,
+        ld: { follow: false, maxAllowedR2: 5, maxDist: 50_000 },
+      },
+    ],
     ["the axes 1, 1 and 2", { ...DEFAULTS_JSON, axes: [1, 1, 2] }],
+    ["the axes 1, 2 and 1", { ...DEFAULTS_JSON, axes: [1, 2, 1] }],
     ["the axes 1, 2 and 11", { ...DEFAULTS_JSON, axes: [1, 2, 11] }],
     ["the view 4d", { ...DEFAULTS_JSON, view: "4d" }],
     ["a colour column that is a number", { ...DEFAULTS_JSON, colourBy: 3 }],
@@ -1355,6 +1378,34 @@ describe("IP6 D4 script", () => {
         "print(pcoa.projections.iloc[:, :10].to_string())",
         "print(pcoa.lingoes_constant)",
         "print(pcoa.negative_eigenvalues_percent)",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  test("a VCF read with only_passed False, and the step's missing data, observed heterozygosity and MAF filters that the PCA follows, each in its line with its value", () => {
+    const p = project({
+      variantsName: "panel.vcf.gz",
+      readOptions: { ploidy: 4, onlyPassed: false },
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        { kind: "obs_het", maxAllowedObsHet: 0.7 },
+        { kind: "maf", maxAllowedMaf: 0.9 },
+      ],
+    });
+    expect(pca.script(p)).toBe(
+      [
+        "# The principal components of the individuals, a PCA of the genotypes,",
+        "# over the filters of the Variants step, on a Variants of its own",
+        'pca_variants = popnei.open_vcf("panel.vcf.gz", ploidy=4, only_passed=False)',
+        "pca_variants.filter_by_missing_data(0.2)",
+        "pca_variants.filter_by_obs_het(0.7)",
+        "pca_variants.filter_by_maf(0.9)",
+        "pca = popnei.do_pca_from_variants(",
+        "    pca_variants, transform_to_biallelic=True, num_prin_comps=0",
+        ")",
+        "print(pca.explained_variance_percent.iloc[:10].to_string())",
+        "print(pca.projections.iloc[:, :10].to_string())",
         "",
       ].join("\n"),
     );
