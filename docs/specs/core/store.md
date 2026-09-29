@@ -441,8 +441,12 @@ results removed leaves them too when a read of a file, recorded, makes
 the project give again the key of the result the change removed, and the
 cache still holds that result: the result is back on the screen, `done`,
 with no calculation, and a notice that went on saying it was removed
-would be false. So the store keeps, with the notice, the key of each
-result it lists as removed. The case is a metadata file loaded while
+would be false. So an analysis leaves the results removed whenever the
+cache holds a result under the key the project gives it now, which
+covers this case and that of a calculation done again; the store keeps
+no key of the result removed. Until 29 September 2026 this said the
+store kept that key, and the spec took the code, as the owner decided
+that day. The case is a metadata file loaded while
 every individual is in one population: the diversity is locked while
 the file is read, which removes its result, and with the grouping
 `onePopulation` the read gives the key it had (`docs/specs/steps/individuals.md`,

@@ -914,9 +914,14 @@ definition, on frozen projects, as
   gives the lines of the one population, as a literal.
 - **The key**: for each row of the table of what changes the key, two
   projects that differ in it, and `keyOf` equal or not as the row says;
-  `keyInputs` of `emptyProject("popgen")` and of a project whose reads are
-  pending gives `{ pops: null, options: DIVERSITY_DEFAULTS }` without
-  reading `p.variants`, which the test makes a getter that throws.
+  `keyInputs` of `emptyProject("popgen")`, which has no metadata file,
+  gives `{ pops: "all", options: DIVERSITY_DEFAULTS }`, the one
+  population, as `populationsOf` of `docs/specs/core/project.md` gives
+  it, and of a project whose metadata file is pending `{ pops: null,
+  options: DIVERSITY_DEFAULTS }`, each without reading `p.variants`,
+  which the test makes a getter that throws. The empty project's was
+  `null` here until 29 September 2026, when the spec took the code, as
+  the owner decided.
 - **`parseOptions`**: the defaults back, and `minNumIndividuals`
   4,294,967,295; a missing field, a field more, `minNumIndividuals` 2.5,
   −1 or 4,294,967,296, `polyThreshold` 1.5 or a text, refused.

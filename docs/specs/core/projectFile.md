@@ -141,9 +141,12 @@ written as below, the rows of the table shortened here to two:
       "decimal": "auto"
     },
     "typesSet": [
-      ["pop", {
-        "kind": "categorical"
-      }]
+      [
+        "pop",
+        {
+          "kind": "categorical"
+        }
+      ]
     ],
     "read": {
       "kind": "read",
@@ -916,7 +919,12 @@ export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
   and the file names the new variants file.
 - **A project saved while the variants file is being read.** The file
   holds its name, size, format and read options, and a read `pending`;
-  the reopened project compares only those with the file given.
+  the reopened project compares with the file given its name, its size,
+  its format and, for a VCF, the choice of the passed variants, and not
+  its ploidy, which the identity compares from two reads (above, "The
+  comparisons after an opening"). Until 29 September 2026 this said the
+  read options were compared, the ploidy among them, and the spec took
+  the code, as the owner decided that day.
 - **A project opened, its VCF given again and read again with another
   ploidy, and saved before that read ends.** The file holds the VCF
   loaded, with the ploidy the user set and its read `pending`, and none

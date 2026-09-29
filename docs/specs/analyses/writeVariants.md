@@ -402,8 +402,12 @@ GB". It is the same function for the estimate and for the written file.
   names an individual not in the file. The write is locked by the store
   with the reason of `individualListNeeds` of
   `docs/specs/core/project.md`, which the step shows under the list it
-  names and beside the button; the three checks of the step are not
-  locked by it.
+  names and beside the button. The same reason locks the Count and the
+  histograms of the variants, which read the filters of individuals;
+  the statistics of each individual, which read no filter, are not
+  locked. Until 29 September 2026 this said none of the three checks of
+  the step was locked, and the spec took the code, as the owner decided
+  that day.
 - **The filters keep no variant.** `writeVars` does not refuse: on
   `panel.nei` with the missing data filter at 0.05 and the MAF filter at
   0.4 it gave a file of 3,594 bytes and no variant (node, 26 September

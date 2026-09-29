@@ -1533,9 +1533,11 @@ application given, `onePopulation` only in population genetics, with no column n
 of the reference of an analysis among those given, once, with a key
 version that is a whole number of at least 0, its version of popnei and
 of the application, two texts, and a fingerprint of 64 lower case
-hexadecimal digits; a read of the individuals file `notGiven`, with no
-other field, and never `pending` or `failed`, which `projectFile.ts`
-refuses before, since this version writes them as `notGiven`
+hexadecimal digits; a read of the individuals file `notGiven` with no
+other field, or `pending` or `failed` with their fields, which a
+project of the page holds and `parseProject` accepts, while
+`projectFile.ts` refuses a file that holds one before it calls
+`parseProject`, since this version writes them as `notGiven`
 (`docs/specs/core/projectFile.md`, rule 8 of the opening); each
 separator one of the three a CSV can have; `"utf-16"` among the encodings found; and the
 line of `undecodedLine` of what was found a whole number of at least 1,
@@ -1620,8 +1622,10 @@ or `null`.
     column can have that type"; "the type of the third column of the
     individuals file cannot be continuous: its values are not all
     numbers"; and, of the new field of stage 4, named "the types set by
-    the user", "the second of the types set by the user names the column
-    score, which the individuals file does not have"; and, of the two
+    the user", "the first of the types set by the user names the column
+    height, whose values allow the type set, but that column has another
+    type", since a type set for a column the file does not have is not
+    refused but waits (`typesLost`); and, of the two
     lists of the filters off, named "the filters of the variants turned
     off" and "the filters of the individuals turned off", "the threshold
     of the first filter of the variants turned off should be a number
