@@ -827,10 +827,14 @@ const individualsFileError: fc.Arbitrary<IndividualsFileError> = fc.oneof(
     kind: "files",
     message,
   })),
-  fc.nat().map((column): IndividualsFileError => ({
-    kind: "unnamedColumn",
-    column,
-  })),
+  // A column counted from 1, as the reader gives it and a project file
+  // holds it.
+  fc
+    .integer({ min: 1, max: Number.MAX_SAFE_INTEGER })
+    .map((column): IndividualsFileError => ({
+      kind: "unnamedColumn",
+      column,
+    })),
   fc.nat().map((line): IndividualsFileError => ({
     kind: "emptyIndividual",
     line,
