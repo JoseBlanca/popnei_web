@@ -188,7 +188,7 @@ has the kind `removed` in the code.
 | locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or it reads the filters of the variants and `variantFilterNeeds` gives one; or its `needs` does | the first reason, in that order |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
-| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own |
+| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own; and, for that failure, whether a Run of the analysis under its key waited for those statistics when they failed, `waited`, so that the panel says it "was not run" after its Run was pressed and "cannot run" when it was not |
 | locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run") | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
@@ -660,7 +660,15 @@ the user presses Run once (`docs/architecture.md`, section 5):
   cache has no statistics under it, every
   analysis that reads the filters of individuals and is not `done` shows
   it, in the state `error` with `ofStatistics`: its Run would wait for the same statistics
-  and end the same way. `startRun` of such an analysis does nothing after
+  and end the same way. The store keeps, with the failure, the keys of
+  the Runs that waited for those statistics when they failed, and gives
+  `waited` true to an analysis whose key is among them, false to the
+  others, whose Run was not pressed: the diversity waited and says it
+  "was not run", the PCA, whose Run nobody pressed, says it "cannot
+  run", as the owner decided on 29 September 2026 (stop C 4 of
+  `docs/specs/stage-4-open-points.md`). The next failure of the
+  statistics replaces those keys with the keys of the Runs that waited
+  for it. `startRun` of such an analysis does nothing after
   a refusal of popnei; after another failure it forgets it, as it forgets
   one of its own, and starts the statistics again. A stop leaves the
   analysis `ready`.
@@ -916,7 +924,8 @@ export type AnalysisStatus<R> =
       readonly progress: Progress | null;
       readonly waitsForStatistics: boolean }   // runId and progress: the statistics'
   | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError;
-      readonly ofStatistics: boolean }   // the failure of the statistics it waited for
+      readonly ofStatistics: boolean     // the failure of the statistics it waited for
+      readonly waited: boolean }         // with ofStatistics, its own Run waited for them; false without
   | { readonly kind: "removed"; readonly key: Key }
   | { readonly kind: "ready"; readonly key: Key };
 
@@ -1343,7 +1352,14 @@ whose file is a text.
   threshold moved while it waits: the notice names it in `leftBehind`;
   the statistics end, and `runEnded` gives no handle. A refusal of the
   statistics: the analysis is `error` with popnei's message and
-  `ofStatistics` true, and `startRun` gives `null`. With keep `[a]`,
+  `ofStatistics` true, and `startRun` gives `null`. With two analyses
+  that read the filters of individuals, a Run of the first alone and a
+  refusal or a failure of the statistics it waited for: the first is
+  `error` with `ofStatistics` and `waited` true, the second with
+  `ofStatistics` true and `waited` false; after a change that forgets
+  the failure, a Run of the second alone and a new failure give the
+  first `waited` false and the second true. An error of the analysis's
+  own gives `waited` false. With keep `[a]`,
   remove `[a]` and a threshold of 0.2 on the missing rate, and no
   statistics in the cache: the analysis is `locked` with
   `keptNoneReason`, and `startRun` gives `null` and sends nothing, the

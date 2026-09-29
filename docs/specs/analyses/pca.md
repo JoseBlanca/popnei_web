@@ -2201,7 +2201,7 @@ or "the PCoA":
 
 | the failure | the text |
 |---|---|
-| the statistics of each individual a Run waited for failed, `ofStatistics` | the diversity's row, with "so the PCA was not run" in place of "so the diversity was not run" |
+| the statistics of each individual a Run waited for failed, `ofStatistics` | the diversity's row, with "so the PCA was not run" in place of "so the diversity was not run" when the PCA's own Run waited for them, `waited`, and "so the PCA cannot run" when it did not (stop C 4); "the PCoA" by the method |
 | "there are no variants to do a PCA with", and a pass has counted the file at 0 variants (`numVars` of the read of the variants file) | the words of a file with no variant, `emptySourceText` of `src/core/analyses/words.ts`: "empty.vcf has no variants, so there is no variant to do the PCA with. Load another variants file in the Variants step.", or, for a VCF read with only the passed variants, "failed.vcf has no variant with PASS or . in its FILTER column, …" |
 | the same, the variants of the file not counted or more than 0 | "No variant of panel.nei is left after the filters of the PCA, so there is no variant to do the PCA with. Loosen the filters the PCA has for itself in its options above, or those of the Variants step that it follows; the Count button of the Variants step shows how many each filter of the step keeps." |
 | "no variant has more than one dosage among its called genotypes" | "No variant left after the filters varies among the individuals kept, so there is nothing to do the PCA with. This happens with one individual, or a few of one line; keep more individuals with the filters of individuals in the Variants step." |
