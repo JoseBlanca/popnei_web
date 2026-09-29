@@ -401,6 +401,10 @@ test("IP10 D3 Undo of All individuals in one population brings the table by popc
   await goTo(page, "Analyses");
   await run(page);
   await expect(row(page, "All individuals")).toHaveText(ALL_INDIVIDUALS_ROW);
+  // The end of that run said first, so that the region holds no text of
+  // it when the Undo is said: the status region joins the texts
+  // announced within 100 ms.
+  await expect(page.getByRole("status").last()).toHaveText(/Diversity: done/);
 
   // With the results of the calculation worker held back, the table by
   // popcat can only come back from the cache.
