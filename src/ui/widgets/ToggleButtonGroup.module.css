@@ -1,0 +1,101 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* A row of buttons joined, the one pressed filled with the accent and its
+   words in bold: not colour alone (WCAG 1.4.1). */
+.segments {
+  display: inline-flex;
+}
+
+.segments .button {
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segments .button:first-child {
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.segments .button:last-child {
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
+}
+
+.segments .button + .button {
+  border-inline-start: none;
+}
+
+.segments .button[data-selected] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+/* The entries of a legend, one a line; the entry pressed has a border of
+   the text's colour, and the others fade their marks. */
+.legend {
+  display: grid;
+  gap: 0;
+}
+
+.legend .button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+  padding-block: 0;
+  padding-inline: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+}
+
+.legend .button[data-selected] {
+  border-color: var(--color-text);
+  font-weight: 600;
+}
+
+.button[data-hovered] {
+  background: var(--color-surface);
+}
+
+.segments .button[data-selected][data-hovered] {
+  background: var(--color-accent);
+}
+
+.button[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  position: relative;
+}
+
+.button[data-disabled] {
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+.mark {
+  display: inline-flex;
+  flex: none;
+}
+
+/* The mark of a group faded by the highlight of another, at the opacity
+   of its points on the plot; the words keep the contrast of the text. */
+.faded {
+  opacity: 0.25;
+}
+
+.text {
+  overflow-wrap: anywhere;
+}
