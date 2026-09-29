@@ -6,12 +6,14 @@ The work report of the plan `docs/plans/individuals-pca.md`, stage 4 of
 
 ## Where the plan stands
 
-Built whole, on 29 September 2026, on the branch `plan/individuals-pca`,
-which is not merged and not pushed. Every task is ticked but the three
-stops where the owner tries a screen, 3.4, 5.4 and 8.6, so the plan is
-not done until the owner has tried them. Work package 9, the xlsx, ran,
-since xlsx_rs published its first release while work package 8 was
-reviewed.
+Done, on 29 September 2026, on the branch `plan/individuals-pca`, and
+merged into `main` by the owner's order of the same day. The owner took
+every recommendation of stops A, B and C and of "For the owner, later",
+and ordered the merge and the push, without trying the screens by hand
+first; the three stops are accepted by that order. The recommendations
+were built before the merge, in four rounds, below, "The owner's
+decisions of 29 September 2026". Work package 9, the xlsx, ran, since
+xlsx_rs published its first release while work package 8 was reviewed.
 
 What exists now that did not at the start: the individuals filtered
 before the variants; the LD filter with no default distance, and every
@@ -19,21 +21,18 @@ filter keeping its values while off; the Individuals step with the
 metadata file optional, the types of its columns set by the user, and a
 metadata file read from an xlsx; the PCA and the PCoA with their own
 filters, drawn in 3D with three.js or in 2D, with their table and its
-CSV. On the last commit, `npm test` gives 2,924 tests passed and the
-browser check 1,016, in Chromium and WebKit; Firefox runs them first on
-GitHub when `main` is pushed. The map of the cases,
-`docs/plans/individuals-pca.cases.md`, reaches 978 of the 1,015 items of
-the specs of stage 4 with a test.
+CSV. The map of the cases, `docs/plans/individuals-pca.cases.md`,
+reaches 978 of the 1,015 items of the specs of stage 4 with a test.
 
-What is asked of the owner:
-
-- to try the three screens, stops A, B and C below, in Firefox and
-  Safari by hand, and to answer their decisions, each with a
-  recommendation;
-- the points of "For the owner, later", at the end, none urgent;
-- the order to merge `plan/individuals-pca` into `main`, once the stops
-  are accepted, and then to push `main`, which runs the flows in Firefox
-  and shows which engines give WebGL on GitHub's runners.
+Not seen: Firefox, which runs the flows for the first time on GitHub
+when `main` is pushed, and which engines give WebGL on GitHub's runners;
+Safari itself, whose engine WebKit the flows ran headless; a screen
+reader. Left open, with the owner: the points of the open-points file
+that have no recommendation (the legend over the plot, the gap under
+each filter that is on, the pressed button with two components, the
+faint faded points, the small controls of the Variants step, the order
+of the restart after a crash), and the new point at the end of "The
+owner's decisions of 29 September 2026".
 
 ### Words the report uses
 
@@ -1173,4 +1172,53 @@ None of these is urgent, and none changes what a user can do.
 - Faded points, at an opacity of 0.25, have an outline of 1.44 to 1 on
   the background in light and 1.63 in dark; judge whether a faded point
   should be that faint, at stop C.
+
+
+
+## The owner's decisions of 29 September 2026
+
+The owner took every recommendation: "I recommend it says it is the
+application's own error" yes; "I recommend quotation marks around the
+value." OK; "I recommend a list of links to the analyses at the top of
+the step." OK; "i accept the recommendations merge and push". They are
+recorded, each with the option not taken, in the entry of that date of
+`docs/specs/stage-4-open-points.md` (e6f1d1b). Each was built as a round,
+its spec first, then its code with a test seen to fail first:
+
+- The specs that take the code, and the record: e6f1d1b, 3a3ea24,
+  549bba4, 33e5cf8, d0ca220 (`CLAUDE.md` and `testing.md` among them).
+- The Variants step and the words of a defect, 7c4548d to f11a4f1: "the
+  LD pruning" in its words; the reason whole under the distance, and
+  "Locked until the distance of the LD pruning is typed, above." beside
+  the Count and the Write; the reason said after an Undo that brings the
+  empty distance back; End and Home move the caret and never jump a
+  number to its limit; "were not run" for a plural title; a defect of the
+  application during a PCA, and popnei refusing an option it does not
+  know, read "The application met an error of its own: …".
+- The Individuals step, 826a278 to 088f116: `"no" is coded 0.`; the words
+  of a file that is not text; a header cell that is an error of Excel
+  refuses the file, naming its place (`headerError`, with a fixture of
+  our own, `header_error.xlsx`); the words of the reader's crash. The
+  property of `project.test.ts` that failed now and then was the
+  generator's fault, which drew column 0; fixed (cb8bd7c).
+- The PCA panel and the Analyses step, 9d43236 to b9f4fc6: the grey
+  outline on the three light colours only, the others at 3.06 to 5.81
+  to 1 on the background; the list of links to the analyses under the
+  step's heading; "…cannot run" for an analysis whose Run was not
+  pressed; "For the PCoA alone"; each individual's value in the table
+  for a column of more than 1,000 values.
+
+The rounds were looked at again by the `react`, `accessibility` and `ux`
+reviewers, on Chromium and WebKit, built and in development, with axe
+clean in every state; they found two things, fixed: the reason of the
+PCA's own LD filter under the PCoA still said "the PCA", and Shift with
+Home or End lost the anchor of a selection in a number field.
+
+For the owner, new, with a recommendation: the Variants step's checks
+and the writing still say "…were not calculated", "…the file was not
+written" when their own button was not pressed; recommended, the same
+"cannot" as the analyses. And React Aria's live region of a number field
+gathers the digits typed across edits, "5000050000777", which a screen
+reader may read; from before this plan, recommended a look in the next
+stage.
 

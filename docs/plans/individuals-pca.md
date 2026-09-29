@@ -1,6 +1,6 @@
 # Plan: the Individuals step and the PCA
 
-28 September 2026, approved by the owner the same day; under way from 28 September 2026 on the branch `plan/individuals-pca`, built whole on 29 September 2026 and waiting for the owner at stops A, B and C. It builds stage 4
+28 September 2026, approved by the owner the same day; under way from 28 September 2026 on the branch `plan/individuals-pca`, done on 29 September 2026, its stops accepted by the owner's order to merge of the same day. It builds stage 4
 of `docs/build-order.md`: the changes to the Variants step of stage 3
 that the owner decided on 28 September 2026, the individuals filtered
 first and the filters that keep their values while off; the Individuals
@@ -618,7 +618,7 @@ was typed, and the results of before come back from the cache.
   the summary line (`shell.md`, "The stepper" and "The summary line");
   the flows of D3 and the states of D5 in `e2e/screens.spec.ts`. Serves
   3, 4 and 5. Needs 3.2.
-- [ ] 3.4 Stop A: the owner tries the Variants step of work packages 2
+- [x] 3.4 Stop A: the owner tries the Variants step of work packages 2
   and 3, in Firefox by hand as well, and judges the choices of the
   open-points file that this step shows: the section of the individuals
   first, the words of the LD filter with no distance, and every switch
@@ -815,7 +815,7 @@ reads in the stepper that the step is optional.
 - [x] 5.3 The measurement of D4, with the table of 10,000 rows and 50
   columns written into `MEASURE_DIR` by the test; if it asks, the work
   in the light worker, `project.md` first. Serves 4. Needs 5.2.
-- [ ] 5.4 Stop B: the owner tries the Individuals step in Firefox by
+- [x] 5.4 Stop B: the owner tries the Individuals step in Firefox by
   hand as well, and judges the choices of the spec that it shows (its
   "Open points"): a project with a file locked until a column or the one
   population is chosen, the words of the types that wait and their
@@ -1132,7 +1132,7 @@ and saves it as a CSV.
   `pca.md`, "How it is verified", the Playwright flow, and `pca3d.md`,
   "How it is verified", "The file of its own". Serves 6, 7
   and 8. Needs 8.4.
-- [ ] 8.6 Stop C: the owner tries the PCA panel in their browsers,
+- [x] 8.6 Stop C: the owner tries the PCA panel in their browsers,
   Firefox and Safari by hand, and on a Mac the zoom by the wheel with
   Ctrl held and a pinch of the trackpad in Safari (point 10 of the
   open-points file); judges the legend over the plot (point 14) and the
