@@ -400,15 +400,19 @@ distance, made the user type the distance at every turn on.
 While the distance is empty, popnei cannot be given the filter, and
 `variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
 which locks what reads the filters of the variants: in this step, the
-Count, showing the reason beside its disabled button, and the writing
-of the filtered variants; in the Analyses step, the diversity and the
-PCA. The statistics of each individual, which read no filter, and the
+Count and the writing of the filtered variants; in the Analyses step,
+the diversity and the PCA. The statistics of each individual, which read no filter, and the
 histograms of the variants, which read the filters of individuals alone,
 can still be calculated, so that the user can look at the data while
-choosing; until 28 September 2026 the statistics were locked too. The reason stands beside the field
+choosing; until 28 September 2026 the statistics were locked too. The reason stands whole under the field
 of the distance, without the end "in the Variants step", as the reasons
 of the lists do (below, "Its words"), and says why there is no default
-and what to do. Turning the filter on takes off the screen the results
+and what to do. Beside the disabled Count and the disabled Write stands
+a short line that points to it, "Locked until the distance of the LD
+pruning is typed, above.", as the owner decided on 29 September 2026
+(stop A 2 of `docs/specs/stage-4-open-points.md`): the reason, 45
+words, stood three times before, under the field and beside each
+button. Turning the filter on takes off the screen the results
 that read the filters, as any change of a filter does, and the notice
 says so with its Undo; they are locked, not ready, until the distance
 is typed. The option not taken, the switch on and the field empty as
@@ -697,8 +701,9 @@ the filters; while it runs, and in error, the bar or the words of the
 error stand there instead, since the line asks for a Count that is under
 way, or that has no button after popnei refused it (`filterCounts.md`,
 "The states"). While the LD pruning has no distance, the Count is
-locked, with the reason of `variantFilterNeeds` beside its disabled
-button in place of that line, and nothing is shown beside the filters,
+locked, with the short line of the reason of `variantFilterNeeds`,
+"Locked until the distance of the LD pruning is typed, above.", beside
+its disabled button in place of that line, and nothing is shown beside the filters,
 the ones above the LD pruning included: no count is made for filters
 that cannot all be given to popnei, and counts of other filters would
 be read as those of these. The Count is locked in the same way, and
@@ -948,7 +953,7 @@ step as a whole:
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: with no file, the step offers the pick and the filters, which is the ready state | — |
-| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. While the LD pruning has no distance, the Count and the writing are locked, each with the reason of `variantFilterNeeds` beside its button, and the reason stands beside the empty field; the histograms of the variants and the statistics of each individual are not. The writing, the Count and the histograms of the variants are locked too when `individualListNeeds` gives a reason, with the reason beside each button, or when the filters keep no individual; the statistics of each individual read no filter, and nothing but the file locks them | type the distance, or turn the LD pruning off; fix the list, or loosen the thresholds |
+| locked | cannot happen for the step: nothing has to be done before a file is picked. A file picked before the calculation worker has started is read once it has. While the LD pruning has no distance, the Count and the writing are locked, each with the short line "Locked until the distance of the LD pruning is typed, above." beside its button, and the reason of `variantFilterNeeds` stands whole under the empty field; the histograms of the variants and the statistics of each individual are not. The writing, the Count and the histograms of the variants are locked too when `individualListNeeds` gives a reason, with the reason beside each button, or when the filters keep no individual; the statistics of each individual read no filter, and nothing but the file locks them | type the distance, or turn the LD pruning off; fix the list, or loosen the thresholds |
 | ready | no file: the zone, "Choose a variants file…", the options of a VCF, the filters, and in place of the checks the line of a file not read. With an opened project file, the file it was made with, below. With a file read: every part, each check with its button | pick a file; set the filters; calculate a check; count; write |
 | running | the read: the card with its name, format and size, "Reading panel.nei." and the seconds since the step saw the read start, which the step keeps and loses when it is left; no progress bar, since the read is of the header of a VCF, or the end of a `.nei` file, which popnei tells to nobody (`js/popnei/src/variant.ts`, `onProgress`). A check, the Count or the writing: its bar and its clock in its own part, the rest of the step as it was | during the read: pick another file, which replaces this one; Undo; set the filters. During a calculation: Stop it; set the filters, which leaves it behind, as the notice says |
 | done | the card with the individuals, the ploidy of a `.nei` file, the number of variants once counted, how a VCF was read; each check done beside its filters, the counts, the Save button | replace the file; set the filters; sort and download the table; download the bins of a histogram as CSV; save the file |
@@ -1065,19 +1070,27 @@ in their sections. The rest:
 - **No variants file read**, in place of the checks: "The histograms,
   the counts and the statistics of each individual are calculated once a
   variants file is read."
-- **The LD pruning with no distance**, beside the empty field of the
-  distance: "The LD filter of the Variants step needs the distance
+- **The LD pruning with no distance**, under the empty field of the
+  distance: "The LD pruning of the Variants step needs the distance
   within which variants are compared. It has no default, because it
   depends on how far linkage disequilibrium extends in the genome of
   your species. Type a distance in base pairs, or turn off the LD
-  filter.", the reason of `variantFilterNeeds` without its end "in the
-  Variants step", and so beside the disabled buttons of the Count and
-  of the writing, as every reason this step shows, and not beside those
-  of the statistics and of the histograms, which it does not lock;
-  in the Analyses step and the stepper it is shown whole. The name "the
-  LD filter of the Variants step" is the one the refusal of a file not
-  sorted already gives it (`docs/specs/analyses/diversity.md`, "Its
-  words").
+  pruning.", the reason of `variantFilterNeeds` without its end "in
+  the Variants step"; in the Analyses step and the stepper it is shown
+  whole. Beside the disabled buttons of the Count and of the writing,
+  in its place, the short line "Locked until the distance of the LD
+  pruning is typed, above.", which points to the field, the one place
+  the reason stands whole on the step; nothing beside those of the
+  statistics and of the histograms, which it does not lock. Every other
+  reason the step shows beside a button, a list of individuals refused,
+  filters of individuals that keep nobody, stands there whole. The
+  name, "the LD pruning", is the one of the switch, "Prune the variants
+  by linkage disequilibrium (LD)", and of the Undo, "Undo: the LD
+  pruning was turned on", as the owner decided on 29 September 2026
+  (stop A 1 of `docs/specs/stage-4-open-points.md`); the words of the
+  refusal of a file not sorted, which popnei gives while the LD pruning
+  reads the file, still name it "the LD filter of the Variants step"
+  (`docs/specs/analyses/diversity.md`, "Its words").
 - **The lines under the filters, the lists and the counts**: in their
   sections, above.
 - **The line under the ploidy**, and the button that reads the VCF
@@ -1201,7 +1214,18 @@ nothing on the screen says the things the lines above do not.
   the LD pruning with no distance when the switch turned on makes it
   appear, since the focus stays on the switch and a user of a screen
   reader would not otherwise learn that the analyses are locked until
-  they type the distance. Announced by the shell from
+  they type the distance. Announced by the shell after an Undo or a
+  Redo, wherever it is pressed, that brings back the LD pruning with no
+  distance, an Undo of the distance typed or of the switch turned off,
+  a Redo of the switch turned on: the reason whole, as the stepper
+  gives it, after the words of the Undo, "Undone: the LD pruning
+  changed. The LD pruning of the Variants step needs the distance …, in
+  the Variants step.", or alone when the Undo makes a notice, which is
+  read out by itself (`docs/specs/shell.md`, "The status region"); the
+  owner decided it on 29 September 2026 (stop A 3 of
+  `docs/specs/stage-4-open-points.md`), where the Undo said only
+  "Undone: the LD pruning changed." and a user of a screen reader did
+  not learn that the Count and the analyses were locked again. Announced by the shell from
   the state of the store, and not by this step, which may not be on the
   screen when they happen: the end of a read; the start, the end and the
   stop of each check, of the Count and of the writing; and the warning
@@ -1224,15 +1248,19 @@ nothing on the screen says the things the lines above do not.
   words of the error, since the Count has no heading of its own to take
   it, as the block of a check does. When the Count becomes locked with
   the focus on it, by filters of individuals found to keep nobody once
-  the statistics it waited for arrive, or by an Undo to such filters, the
-  focus moves to the reason beside its disabled button, which takes the
+  the statistics it waited for arrive, or by an Undo to such filters or
+  to the LD pruning with no distance, the
+  focus moves to the text beside its disabled button, its reason or the
+  short line of the LD pruning, which takes the
   focus for that and is not a stop of the Tab key, as the words of an
   error do, since a disabled button cannot hold the focus. The same
-  reason stands beside the histograms, the Count and the Write, so the
+  text stands beside the histograms, the Count and the Write, or beside
+  the Count and the Write for the LD pruning, so the
   one that takes the focus is named for the Count by words a screen
   reader reads before it and the eye does not see, "Count the variants
   each filter keeps is unavailable: ", and its visible words do not
-  change. When the line of the total, the warning of a file of no
+  change: "Count the variants each filter keeps is unavailable: Locked
+  until the distance of the LD pruning is typed, above." When the line of the total, the warning of a file of no
   variant, the words of an error or the reason leave the page while they
   have the focus, by an Undo or a Redo among them, the focus moves to
   what the new state shows first: the Count button when it can be
@@ -1254,8 +1282,9 @@ nothing on the screen says the things the lines above do not.
   distance, by a list of individuals
   or by the individuals kept, or refused for its size, for filters that
   keep no variant or after a Count refused
-  (`docs/specs/analyses/writeVariants.md`), is described by its reason, which is text beside it, since a disabled button is not a stop
-  of the Tab key and a user of the keyboard would not learn why.
+  (`docs/specs/analyses/writeVariants.md`), is described by its reason, which is text beside it, or, for the LD pruning, by the short line that stands there in its place, since a disabled button is not a stop
+  of the Tab key and a user of the keyboard would not learn why. The
+  Count disabled is described in the same way.
 
 ## How it is checked
 
@@ -1323,16 +1352,19 @@ node on 28 September 2026, the same with both releases:
   cleared, and the reason gone; a list typed and not applied, with its
   line, and an Undo putting the text back to the list applied;
 - from stage 4, the LD pruning turned on with the missing data filter
-  at 0.05: the field of the distance empty, and the reason beside it,
+  at 0.05: the field of the distance empty, and the reason under it,
   announced and read as the description of the field; the Count and
-  the writing disabled, the reason beside each, and the histograms of
+  the writing disabled, the short line "Locked until the distance of
+  the LD pruning is typed, above." beside each and describing it, the
+  reason once on the step, and the histograms of
   the variants and the statistics of each individual still calculated; an
   arrow key, Home, End, then the Tab key, in the empty field sending
   nothing; 0
   typed, and "0 is less than 1; the distance is still to be typed.";
   50000 typed, the reason gone and the Count giving a count beside the
-  LD pruning; an Undo giving back the empty field and the lock, and a
-  Redo 50000; the filter turned off and on again, the field holding
+  LD pruning; an Undo giving back the empty field and the lock, with
+  "Undone: the LD pruning changed." and the reason whole announced, and
+  a Redo 50000; the filter turned off and on again, the field holding
   50000 and the count back beside the filter with no calculation; in a
   new project, the filter turned on, off and on again before a distance
   is typed, the field empty and the lock back; the threshold of the

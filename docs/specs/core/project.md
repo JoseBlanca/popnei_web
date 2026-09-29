@@ -282,11 +282,16 @@ filter turned off is given to no job:
 
 | the project | the reason |
 |---|---|
-| the LD filter of the variants on, with no distance | "The LD filter of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD filter, in the Variants step." |
+| the LD filter of the variants on, with no distance | "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step." |
 
 The words are those of the PCA's own LD filter with no distance
 (`pruningDistanceReason` of `docs/specs/analyses/pca.md`), with the end
-of the reasons that send the user to another step. The store locks with
+of the reasons that send the user to another step, and with the name the
+Variants step gives the filter, "the LD pruning", as its switch, "Prune
+the variants by linkage disequilibrium (LD)", and its Undo do; the owner
+decided it on 29 September 2026 (stop A 1 of
+`docs/specs/stage-4-open-points.md`), where the reason said "the LD
+filter of the Variants step" and "turn off the LD filter". The store locks with
 it, after `projectNeeds` and `individualListNeeds`, what reads
 the filters of the variants: the Count, the diversity and the writing
 of the filtered variants. The PCA, whose filters can be its own, is
@@ -295,9 +300,11 @@ filter follows the Variants step (`docs/specs/analyses/pca.md`, "Why it
 cannot run"). The statistics of each individual,
 which read no filter, and the histograms of the variants, which read
 the filters of individuals alone, stay unlocked, so that the user can
-look at the data while choosing the distance. The Variants step shows the reason beside
+look at the data while choosing the distance. The Variants step shows the reason under
 the field of the distance, without the end "in the Variants step", as
-it shows the reasons of the lists.
+it shows the reasons of the lists, and beside the Count and the Write a
+short line that points to it (`docs/specs/steps/variants.md`, "Its
+words").
 
 What reads only the filters of individuals, the histograms of the
 variants, is not locked by it, from 28 September 2026. Until then it

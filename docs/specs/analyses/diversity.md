@@ -348,12 +348,12 @@ variants file in the Variants step."; the file being read, "Reading
 panel.nei."; the file refused or not read. Then, since the diversity
 reads the filters of individuals, `individualListNeeds`, the lists of
 individuals that popnei would refuse; and, since it reads the filters
-of the variants, `variantFilterNeeds` of the same spec, the LD filter
-of the Variants step with no distance, "The LD filter of the Variants
+of the variants, `variantFilterNeeds` of the same spec, the LD pruning
+of the Variants step with no distance, "The LD pruning of the Variants
 step needs the distance within which variants are compared. It has no
 default, because it depends on how far linkage disequilibrium extends
 in the genome of your species. Type a distance in base pairs, or turn
-off the LD filter, in the Variants step.", in the order in which the
+off the LD pruning, in the Variants step.", in the order in which the
 filters act, which the PCA's reasons follow too
 (`docs/specs/core/store.md`, "The definition of an analysis"). Then
 `needs` of this module gives the first of

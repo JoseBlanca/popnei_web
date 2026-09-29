@@ -101,7 +101,7 @@ project with no filter of individuals.
 `needs(p)` gives `null`. The store locks it with the reasons of
 `projectNeeds` and, since it reads the filters of the variants, with
 that of `variantFilterNeeds` of `docs/specs/core/project.md`, the LD
-filter with no distance, "The LD filter of the Variants step needs the
+filter with no distance, "The LD pruning of the Variants step needs the
 distance within which variants are compared. …": no count is made while
 the filters cannot all be given to popnei. Since it reads the filters
 of individuals, the store also locks it with a list of individuals that
