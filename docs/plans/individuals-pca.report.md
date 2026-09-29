@@ -35,6 +35,38 @@ What is asked of the owner:
   are accepted, and then to push `main`, which runs the flows in Firefox
   and shows which engines give WebGL on GitHub's runners.
 
+### Words the report uses
+
+- **The open-points file** is `docs/specs/stage-4-open-points.md`, where
+  every decision you took on stage 4 is written with the option not
+  taken; "entry A" and "point 10" are its parts.
+- **A tag** such as `IP5 D2` starts the name of a test: `IP` for this
+  plan, the number of the work package, and `D` with the number of its
+  deliverable; a count of tests of a tag is what checks that deliverable.
+- **The orchestrator** is the session that ran the plan and wrote this
+  report; **a writer** or **a fixer** is a session it sent to write a
+  task's code or its fixes; **a reviewer** is a session that reads or
+  runs the code afresh, one for each kind of problem: `spec` (does the
+  code do what the spec says), `stale` (can an old result show as
+  current), `tests` (breaks the code on purpose to see whether a test
+  fails), `errors` (what the user reads when something fails), `api` and
+  `architecture` (the shapes and layers of the code), `react` (the
+  screens' code), `accessibility` (keyboard and screen reader), `ux`
+  (what a user sees), `browser` and `bundle` (the engines, and the size
+  of the files downloaded).
+- **The calculation worker** runs popnei in a thread of its own so the
+  page keeps answering; **the light worker** reads the metadata file,
+  and the xlsx, in another. The **protocol** is the list of the messages
+  between the page and the calculation worker, with its version.
+- **The probe** is the test page of stage 1 that checks popnei's wasm in
+  each browser; its 40 tests run in every browser check.
+- **React Aria** is the library of accessible controls the screens are
+  built with; **StrictMode** is React's mode of development, where it
+  runs each effect twice to show defects; **jsdom** is the imitation of
+  a browser, with no layout, that the unit tests run in.
+- A name in backquotes, `columnAllows`, is a name of the code or of a
+  spec; the report says what it does where it matters.
+
 ## Before the first task
 
 The branch `plan/individuals-pca` was made from `main` at 7e7eb04,
@@ -371,12 +403,16 @@ its values and its count back; and the choices below.
 6. The status region says "Histograms of the variants was not run.",
    as `shell.md` gives the sentence. Recommended: "were" for a plural
    title.
-7. A project file saved by stage 3: entry A of the open-points file
-   says the check numbers of the three checks are compared "only where
+7. A project file keeps a few numbers of each result, its check numbers,
+   and when the project is opened again and the result calculated anew,
+   the application compares them and says whether the result changed.
+   Entry A of the open-points file, your decision to filter the
+   individuals first, says those of the statistics, the histograms and
+   the counts of a project saved by stage 3 are compared "only where
    their result is stage 3's", which the file cannot tell. The code
-   compares them always, and a difference is said to come from the new
-   version of the application. Recommended: correct that sentence of
-   entry A and of the three specs.
+   compares them always, and says a difference comes from the new version
+   of the application. Recommended: correct that sentence of entry A and
+   of the three specs.
 8. The warning of the variants with no called genotype says "among the
    individuals kept" when the project has a filter of individuals; the
    spec says when the filter removes someone. They differ only for a
@@ -386,10 +422,11 @@ its values and its count back; and the choices below.
    be a defect of the application, and the user would read "Change the
    settings". No call sends one. Recommended: show it as a defect.
 
-Known and not fixed: a number refused under a field above a switch adds
-its line when the field loses the focus, and moves the switch from
-under the pointer, so that click is lost; it was so in stage 3.
-Recommended: leave it unless you meet it.
+10. Known and not fixed: a number refused under a field above a switch
+    adds its line when the field loses the focus, and moves the switch
+    from under the pointer, so that click is lost; it was so in stage 3,
+    and the PCA panel has it too. Recommended: leave it unless you meet
+    it.
 
 ### Changes made to the specs during the work, for you to accept
 
@@ -517,7 +554,9 @@ phone.
    populations…" though only "All individuals" can be chosen.
    Recommended: accept.
 4. Changes made to the specs during the review, to accept: the first
-   column is never the column of the populations, and a grouping on it
+   column, which holds the names of the individuals, one in each row, is
+   never the column of the populations, since it would make each
+   individual a population of its own, and a grouping on it
    is "not in the file" (`project.md`, `diversity.md`, which said the
    opposite); an Undo or a Redo that removes the control with the focus
    gives the focus to the step's heading (`shell.md`); the name of the
@@ -555,7 +594,8 @@ Individuals step and its column of the populations, and run the
 principal components in the Analyses step. In Firefox and Safari by hand.
 On the Mac: the zoom of the 3D view with Ctrl held and the wheel, and a
 pinch of the trackpad in Safari (point 10 of the open-points file); if
-Ctrl clashes with something there, say whether ⌘ should take its place.
+Ctrl held with the wheel does something else there, such as the zoom of
+the whole screen of macOS's Accessibility, say whether ⌘ should take its place.
 
 ### The screenshots, in `screens/` of the worktree, light and dark
 
@@ -586,7 +626,9 @@ colour by altitude), `-table`, `-no-webgl`, `-not-loaded`, `-320`, and
    not fit in the memory of this tab"). Recommended: the words of a defect
    of the application, which also answers decision 9 of stop A.
 7. The pruning is at least two thirds of a PCA with the LD filter.
-   Recommended: ask popnei to keep the pruned variants, at a low priority.
+   Recommended: ask popnei, at a low priority, to give back the list of
+   the variants its pruning kept, so that the next PCA with the same
+   filters reads those alone and skips the pruning.
 8. `pca.md` leaves three choices open that the code made: an axis beyond
    the result takes the first component not shown, with a note; the
    description names the individuals of no group last; and in 3D the
@@ -594,7 +636,8 @@ colour by altitude), `-table`, `-no-webgl`, `-not-loaded`, `-320`, and
    names sit 4 px from the lines. Recommended: write them into the specs.
 9. The note of a column of more than 1,000 values says "the table gives
    each individual's value", but the table then shows "All individuals".
-   Recommended: the table gives the value, or the clause goes.
+   Recommended: the table gives each individual's value, as the note
+   says; the other way is to drop the clause.
 
 10. The order of the Tab key through the panel puts the download of the
     explained variance right after its table, and "Try again" after the
@@ -611,7 +654,7 @@ colour by altitude), `-table`, `-no-webgl`, `-not-loaded`, `-320`, and
 13. With two components, "2D" looks pressed while the option stays 3D;
     the spec says nothing. Judge on the screen.
 14. A click on a switch just below a number field is lost when leaving
-    the field adds or takes off a line of refusal (decision 12 of stop A);
+    the field adds or takes off a line of refusal (decision 10 of stop A);
     the PCA panel has it too.
 15. The 3D/2D switch and the legend are announced as radio buttons, and
     their arrow keys move the focus without choosing, as React Aria makes
@@ -978,7 +1021,7 @@ fixes. What was fixed:
   are cleanups of `destroy` that nothing on the page shows.
 
 Not taken, for the owner at stop C: a click on a switch just below a
-number field is lost when a refusal's line comes or goes (decision 12 of
+number field is lost when a refusal's line comes or goes (decision 10 of
 stop A); the 3D/2D switch and the legend move the focus with the arrow
 keys without choosing, as React Aria makes them.
 
