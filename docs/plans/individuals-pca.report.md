@@ -499,6 +499,58 @@ phone.
    drawn smaller, and the warning of a few whole numbers stands in a row
    of its own.
 
+## Stop C: the PCA panel, for the owner
+
+### How to try it
+
+In a terminal, in `.claude/worktrees/individuals-pca`: `npm run dev`,
+then open the address it prints, followed by `popgen.html`. Load
+`e2e/fixtures/panel.nei`, then `e2e/fixtures/panel_meta.csv` in the
+Individuals step and its column of the populations, and run the
+principal components in the Analyses step. In Firefox and Safari by hand.
+On the Mac: the zoom of the 3D view with Ctrl held and the wheel, and a
+pinch of the trackpad in Safari (point 10 of the open-points file); if
+Ctrl clashes with something there, say whether ⌘ should take its place.
+
+### The screenshots, in `screens/` of the worktree, light and dark
+
+`popgen-pca-ready`, `-running`, `-3d-highlighted`, `-2d`, `-values` (the
+colour by altitude), `-table`, `-no-webgl`, `-not-loaded`, `-320`, and
+`popgen-pcoa-warning`.
+
+### Decisions, each with the recommendation
+
+1. The legend over the plot (point 14): at 320 px it covers about a third
+   of the 3D view. Judge on the screen; the other way is a strip beside
+   the plot.
+2. In dense clusters the grey outline of the marks covers their colours,
+   on the screen and more in an exported file, where a highlighted group
+   looks grey. Recommended: an outline only on the three light colours,
+   or a thinner one; judge on the screen.
+3. Once there is a PCA, the diversity starts about 2,400 px below the
+   PCA's heading, and nothing leads to it. Recommended: a short list of
+   links to the analyses under the heading of the step.
+4. When the statistics of each individual fail after the diversity's
+   Run, the PCA's panel says "…so the PCA was not run" though its Run was
+   never pressed. Recommended: "…so the PCA cannot run" for an analysis
+   whose Run was not pressed.
+5. Under the PCoA, the choice "For the PCA alone" still says PCA.
+   Recommended: it follows the method.
+6. A defect of the application during a PCA is told as the user's
+   problem (below 2,264 individuals "load panel.nei again", above it "did
+   not fit in the memory of this tab"). Recommended: the words of a defect
+   of the application, which also answers decision 9 of stop A.
+7. The pruning is at least two thirds of a PCA with the LD filter.
+   Recommended: ask popnei to keep the pruned variants, at a low priority.
+8. `pca.md` leaves three choices open that the code made: an axis beyond
+   the result takes the first component not shown, with a note; the
+   description names the individuals of no group last; and in 3D the
+   view spans ±1.3 on its shorter side, a tap may move 3 px, the axis
+   names sit 4 px from the lines. Recommended: write them into the specs.
+9. The note of a column of more than 1,000 values says "the table gives
+   each individual's value", but the table then shows "All individuals".
+   Recommended: the table gives the value, or the clause goes.
+
 ## The restart of 29 September 2026
 
 The Mac rebooted during the night of 28 September, while the orchestrator
@@ -776,3 +828,98 @@ For the owner at stop C: in dense clusters the grey outline of the
 marks covers their colours, so that at 600 by 450 pixels the four
 populations of the test page look like grey discs; see the section of
 stop C.
+
+## 8. The PCA panel and the 3D view
+
+The user runs the PCA or the PCoA in the Analyses step, with its own
+filters that follow the Variants step until set, and sees the individuals
+in 3D, turned by dragging or with buttons, or in 2D where the browser
+cannot draw 3D; colours them by a column, highlights a population from
+the legend, and reads and saves the explained variance and the table.
+Commits f8b998a (8.1), cdcc473 and 794b876 (8.3), 8bfe80b and 0e759c7
+(8.2), d0b6260 and 22a59fd (8.4), 0e70690 and 6d3fb9a (8.5); the fixes of
+the review e01f6fe, 9a000ff, b861e85, 7f2802b, c675d8f, 903bd5b, 6a9dece
+and 5db6ac6.
+
+### The deliverables, on 5db6ac6
+
+1. Both headless engines here give WebGL 2: Chromium 153 by SwiftShader,
+   points of 1 to 1,023 px; WebKit 26.6 by the Mac's graphics card, 1 to
+   511 px; written into `testing.md` and `pca3d.md`. Firefox does not
+   launch here; GitHub's runners are seen at the first push of `main`.
+2. `npm ls three @types/three`: 0.186.1 and 0.186.0, pinned; the lockfile
+   added those two and the six `pca3d.md` names, and nothing else.
+3. `npx vitest run src/charts -t "IP8 D1"`: "Tests 24 passed" (at least
+   14).
+4. The browser check with `-g "IP8 D2"`: "46 passed", 23 in each engine
+   (at least 9 each).
+5. `npx vitest run src/core src/ui -t "IP8 D3"`: "Tests 31 passed" (at
+   least 20).
+6. `-g "IP8 D4"`: "12 passed" (at least 8): the numbers of `pca.md` read
+   on the screen, 7.61% and 5.56%, then with the PCA's own LD filter
+   3.55%, 3.40% and `s000` at −0.7139 and 7.6765, the PCoA's 3.68%,
+   3.54%, 7.87%, 0.047, 53%, 0.22 and 198 components.
+7. `-g "IP8 D5"`: "6 passed" (at least 4); `grep -c WebGLRenderer` of the
+   first script of `popgen.html`: 0; the file of three.js 139,253 bytes
+   with gzip -9, beside the 134,245 of `pca3d.md`.
+8. `-g "IP8 D6"`: "4 passed" (at least 4); a change of the colour, the
+   axes or the view sends no request to the calculation worker.
+9. The screenshots, light and dark, 20 files `popgen-pca-*` and
+   `popgen-pcoa-*` in `screens/`; the orchestrator looked at
+   `popgen-pca-3d-highlighted-light`.
+10. Stop C: waiting for the owner.
+
+`npm test` "Tests 2740 passed (2740)"; the browser check "872 passed
+(3.4m)"; `npm run screens` "302 passed". The first script of
+`popgen.html` is 224,454 bytes with gzip -9, where it was 191.81 KB as
+Vite counts it at the start of the plan.
+
+### What was changed in the plan
+
+Task 8.2 built "The export" of `pca3d.md` too, since the handle's `toSVG`
+and `toPNG` belong to the plot. The flows of task 8.3 that found the
+diversity's Run by its name alone were scoped to its panel, since the
+Analyses step now has two.
+
+### The review
+
+`spec` with `stale`, `errors`, `api` and `architecture`; `react` with
+`accessibility` and a drive of the keyboard; `ux` with `browser` and
+`bundle`; `tests`; then `react` with `accessibility` again after the
+fixes. What was fixed:
+
+- A keyboard user who typed the PCA's LD distance and pressed Tab went
+  past the PCA's Run, still locked, to the diversity's, and Enter ran the
+  diversity. Every number field now commits its value at the Tab key,
+  before the focus moves.
+- "Try again" after a failed download of the 3D view could never work in
+  Chromium, which keeps a failed download for the life of the page; it
+  now asks for the file under another address, and draws in both
+  engines. Pressed from the keyboard it left the focus nowhere.
+- A drawing context handed over already lost made the whole PCA panel
+  disappear; it is now the case of no WebGL, with the 2D plot.
+- Zoomed in, the names of the axes left the plot, over the controls, and
+  at 320 px the page scrolled sideways.
+- Escape in a number field did not put back the number typed, so the
+  next Tab committed it.
+- "The principal components was removed … as it was"; the table's header
+  81 px high at 320 px; a column of numbers aligned left; "none" in the
+  table where the legend says "No population".
+- The tests reviewer broke the code 120 ways and 60 passed every test,
+  most in what only a browser shows: a highlight or a colour change that
+  left the old picture in the 3D view, the buttons of the view, the
+  downloads, the announcements. 57 of them now fail a test; the two left
+  are cleanups of `destroy` that nothing on the page shows.
+
+Not taken, for the owner at stop C: a click on a switch just below a
+number field is lost when a refusal's line comes or goes (decision 12 of
+stop A); the 3D/2D switch and the legend move the focus with the arrow
+keys without choosing, as React Aria makes them.
+
+### How the work of 8 went, for whoever revises a skill or a plan
+
+The review ran beside task 8.5, on copies, which saved a round. The
+tests reviewer's share of changes that passed every test, half, is the
+highest of the plan and comes from the 3D view, which only a browser
+shows; a task that builds a view drawn by WebGL should be asked to
+compare pictures from its first flow.

@@ -1121,14 +1121,14 @@ and saves it as a CSV.
   "`src/core/apps.ts`"; `shell.md`); the fixture
   `e2e/fixtures/panel_meta.csv`, written by `make_fixtures.mjs` as
   `pca.md` gives it. Serves 5. Can run beside 8.2.
-- [ ] 8.4 The panel of `pca.md`, "The panel": the options with the
+- [x] 8.4 The panel of `pca.md`, "The panel": the options with the
   three filters of the PCA, the bar, the 3D view loaded with `import()`
   and its words while loading, when it fails and with no WebGL, the 2D
   scatter, the legend with React Aria's `ToggleButtonGroup`, the
   explained variance, the table and its CSV, the notes, "Its words" and
   "Accessibility"; the states of D9 in `e2e/screens.spec.ts`. Serves 9.
   Needs 8.2 and 8.3.
-- [ ] 8.5 The flows of D4, D5 and D8 in `e2e/pca.spec.ts`, from
+- [x] 8.5 The flows of D4, D5 and D8 in `e2e/pca.spec.ts`, from
   `pca.md`, "How it is verified", the Playwright flow, and `pca3d.md`,
   "How it is verified", "The file of its own". Serves 6, 7
   and 8. Needs 8.4.
