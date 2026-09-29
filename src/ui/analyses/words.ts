@@ -127,21 +127,29 @@ export function runningText(line: RunningLine): string {
  * back the table as it was, with no calculation, and Run calculates a new
  * one for the settings as they are now.", and after a redo the same with
  * "Redone:" and Undo. `name` is the analysis in a sentence, "the
- * diversity", and `resultName` its result, "the table".
+ * diversity", and `resultName` its result, "the table"; `plural` for an
+ * analysis and a result named in the plural, "The principal components
+ * were removed …; Undo brings back the plot and the table as they were,
+ * …; Run calculates new ones …" (docs/specs/analyses/pca.md, "Its
+ * words").
  */
 export function removedText(
   name: string,
   resultName: string,
   notice: Notice,
+  plural = false,
 ): string {
   const cause = notice.cause;
   const start = undoneOrRedone(cause);
-  const back = `brings back ${resultName} as it was, with no calculation`;
+  const was = plural ? "were" : "was";
+  const it = plural ? "they were" : "it was";
+  const one = plural ? "new ones" : "a new one";
+  const back = `brings back ${resultName} as ${it}, with no calculation`;
   if (start === null) {
-    return `${capitalized(name)} was removed because ${cause.description}. Undo ${back}; Run calculates a new one for the new settings.`;
+    return `${capitalized(name)} ${was} removed because ${cause.description}. Undo ${back}; Run calculates ${one} for the new settings.`;
   }
   const action = cause.kind === "undo" ? "Redo" : "Undo";
-  return `${start}. ${capitalized(name)} was removed; ${action} ${back}, and Run calculates a new one for the settings as they are now.`;
+  return `${start}. ${capitalized(name)} ${was} removed; ${action} ${back}, and Run calculates ${one} for the settings as they are now.`;
 }
 
 /** The line of a calculation stopped at once by a change of the load of

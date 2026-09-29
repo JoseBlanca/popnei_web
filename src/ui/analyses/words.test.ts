@@ -107,6 +107,29 @@ describe("the words of the frame of an analysis panel", () => {
     );
   });
 
+  test("IP8 D4 the principal components removed are told in the plural, with the plot and the table", () => {
+    expect(
+      removedText(
+        "the principal components",
+        "the plot and the table",
+        notice("command"),
+        true,
+      ),
+    ).toBe(
+      "The principal components were removed because the filter of the variants by missing data changed. Undo brings back the plot and the table as they were, with no calculation; Run calculates new ones for the new settings.",
+    );
+    expect(
+      removedText(
+        "the principal components",
+        "the plot and the table",
+        notice("undo"),
+        true,
+      ),
+    ).toBe(
+      "Undone: the filter of the variants by missing data changed. The principal components were removed; Redo brings back the plot and the table as they were, with no calculation, and Run calculates new ones for the settings as they are now.",
+    );
+  });
+
   test("WS8 D2 a calculation stopped is told from the change that stopped it", () => {
     expect(
       stoppedText(

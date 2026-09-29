@@ -243,7 +243,7 @@ function Removed({ ui }: { readonly ui: AnalysisUi }): React.JSX.Element {
   }
   return (
     <p className={classOf(styles, "line")}>
-      {removedText(ui.name, ui.resultName, notice)}
+      {removedText(ui.name, ui.resultName, notice, ui.plural)}
     </p>
   );
 }

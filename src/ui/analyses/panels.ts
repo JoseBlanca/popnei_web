@@ -59,6 +59,10 @@ export interface AnalysisUi {
   /** Its result in the middle of a sentence, "the table", which the
       words of a result removed say Undo brings back and Run makes anew. */
   readonly resultName: string;
+  /** Whether the analysis and its result are named in the plural, "the
+      principal components", "the plot and the table", as the words of a
+      result removed say them. */
+  readonly plural: boolean;
   /** The lines beside Run in the states ready and removed, what it will
       run on, from the project `p` and the individuals the filters keep,
       `kept` of the state of the store; none for none. */
@@ -103,6 +107,7 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   title: titleOf("diversity"),
   name: "the diversity",
   resultName: "the table",
+  plural: false,
   readyLines: (p: Project, kept: IndividualsKept | null): readonly string[] => {
     // No individuals kept, `null`, comes of a variants file not read or
     // of lists popnei would refuse, and the store locks the diversity for
@@ -139,6 +144,7 @@ const PCA: AnalysisUi = Object.freeze({
   title: titleOf("pca"),
   name: "the principal components",
   resultName: "the plot and the table",
+  plural: true,
   readyLines: pcaReadyLines,
   refusalText: pcaRefusalText,
   statisticsFailedText: pcaStatisticsFailedText,
