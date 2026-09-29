@@ -79,7 +79,13 @@ pixels from the top of the element and `SCATTER_MARGIN.right` from its
 right (`scatter.md`), so that it does not move when the user switches.
 Three lines through the origin, one along each
 component over the range of its values, carry at their positive ends
-the labels "PC1 (3.55%)", "PC2 (3.40%)" and "PC3 (1.89%)". The user turns
+the labels "PC1 (3.55%)", "PC2 (3.40%)" and "PC3 (1.89%)". A label
+whose end falls outside the element, as the zoom brings the ends of the
+lines out of it, is hidden, and the element clips what it holds, so
+that no label is drawn over the controls around the plot or makes the
+page scroll sideways; decided on 29 September 2026, after the review of
+work package 8 found "PC3 (1.89%)" over a field of the panel after four
+presses of "Zoom in", and a page of 320 pixels scrolling to 364. The user turns
 the view by dragging it, zooms it, and turns it with the buttons of the
 bar; the pointer over a point shows the tooltip of the scatter, with
 three coordinates.
@@ -391,8 +397,16 @@ preserveDrawingBuffer: false })`, the attributes `WebGLRenderer` asks
 for by default (line 16425), and gives the canvas and the context to
 `new WebGLRenderer({ canvas, context })`, which then asks for none of
 its own. When `getContext` gives no context, `null` in a browser and
-in jsdom, `createPca3d` throws a `Pca3dError` of kind `noWebGl`, after
-removing what it added, and the element is left as it was. `noWebGl`
+in jsdom, or gives one already lost, which a browser does when it has
+taken the graphics card away from the page or holds too many contexts,
+`createPca3d` throws a `Pca3dError` of kind `noWebGl`, after
+removing what it added, and the element is left as it was. With a
+context lost at its creation three.js throws a `TypeError` of its own,
+reading the attributes of the context, which the review of work package
+8 of `docs/plans/individuals-pca.md` found on 29 September 2026: the page
+then showed the bar of an error of the application and no plot. Such a
+context draws nothing until the browser gives it back, and a view made
+anew once it has, by 2D and 3D pressed again, asks for a new one. `noWebGl`
 comes from that call alone, and not from reading the message of an
 error of three.js, whose words can change in any release; an error of
 three.js made with a context in hand is a defect. It is a
@@ -757,6 +771,7 @@ with no WebGL:
 - Each defect of "The TypeScript interface" throws.
 - Under jsdom, which gives no WebGL, `createPca3d` throws a `Pca3dError`
   of kind `noWebGl` and leaves the element with no child.
+  So does a canvas whose `getContext` gives a context already lost.
 
 **In Playwright, in Chromium, Firefox and WebKit**, on the page of the
 tests of the plots, `e2e/plots.html`, which draws the 3D plot of the
