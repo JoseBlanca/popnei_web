@@ -1426,8 +1426,8 @@ VCFs of 300 variants: 1,000 individuals in 0.45 s, the memory of the
 process grown by 69 MB; 2,000 in 3.0 s and 196 MB; 4,000 in 21 s and 662
 MB, against popnei's estimate of 6.1 × 8 bytes per pair of individuals,
 49, 195 and 781 MB. At 9,381 individuals the cube gives about four
-minutes and the estimate 4.3 GB. These are node's times; the browsers
-run the same wasm, and the plan measures them in Chromium and WebKit.
+minutes and the estimate 4.3 GB. These are node's times; those of the
+browsers follow.
 Here a pair is a cell of the individuals × individuals matrix, n² of
 them. The PCoA asks for the matrix it decomposes, 8 bytes a cell,
 before the pass, and holds beside it, while the pass runs, the sums of
@@ -1451,6 +1451,41 @@ The correction adds nothing to it, since popnei makes it from the
 eigenvalues and eigenvectors it already has, with no second
 decomposition.
 
+In the browsers the same wasm took less time than in node, and the tab
+grew by less than popnei's count. Each PCA and PCoA was run from its
+panel in the application, on a new page, on gzipped VCFs of 300
+variants of `e2e/bigVcf.ts` with the filters of a new project, by
+`IP6 D6` of `e2e/measure.spec.ts`, on 29 September 2026, with
+`js-v0.1.0-dev.3`, on the owner's Apple M5 Pro with 64 GB and macOS
+27.0, Playwright 1.63.0, load averages of 1.4 to 2.9, since a virtual
+machine and the photo analysis of macOS each held a core. The time is
+from the run posted to the calculation worker to its result, of which
+the pass over the file was at most 17 ms; the memory is the footprints
+of all the processes of the engine summed, as macOS counts them, its
+largest during the run less its value before it. Up to 2,000
+individuals, the median of 5 runs, whose ranges were within 0.01 s and
+18 MB; above, one run each:
+
+| individuals | Chromium 153 PCA | Chromium 153 PCoA | WebKit 26.6 PCA | WebKit 26.6 PCoA |
+|---|---|---|---|---|
+| 700 | 0.12 s, 29 MB | 0.14 s, 30 MB | 0.10 s, 134 MB | 0.12 s, 138 MB |
+| 1,000 | 0.31 s, 49 MB | 0.36 s, 46 MB | 1.21 s, 143 MB | 1.26 s, 145 MB |
+| 2,000 | 2.11 s, 175 MB | 2.50 s, 171 MB | 1.25 s, 276 MB | 1.63 s, 261 MB |
+| 4,000 | 16.0 s, 613 MB | 18.9 s, 620 MB | 10.2 s, 745 MB | 12.9 s, 724 MB |
+| 9,381 | 205 s, 3.03 GB | 240 s, 3.30 GB | 121 s, 3.12 GB | 156 s, 3.40 GB |
+
+So the largest PCA takes three and a half minutes in Chromium and two
+in WebKit, and the PCoA a sixth to three tenths more; neither engine
+closed the tab, and in a first run the same day the PCoA of 9,381
+individuals grew WebKit by 4.10 GB. In Chromium the PCA of 9,381 grew
+the tab by 34 bytes a cell, under popnei's count of 48.8. In WebKit a
+PCA of 1,000 took 1.21 s, four times Chromium's and as long as one of
+2,000, in each of its 5 runs and in a first run of the same day; why is
+not known, and a user waits a second for it. The memory of WebKit grew
+by about 135 MB for any PCA up to 1,000 individuals, and all but 15
+MB of it was given back after a PCA of 700, which does not restart
+the worker (below).
+
 The memory of wasm grows to the matrix and never shrinks
 (`docs/architecture.md`, section 11), so a worker that made a PCA of
 4,000 individuals holds some 700 MB until it is started again. The
@@ -1461,7 +1496,12 @@ holds about 24 MB, 700 × 700 × 48.8 bytes, and a PCoA the same by
 popnei's count, about the 25 MB above which a written file restarts the
 worker too
 (`WRITE_RESTART_BYTES`, `docs/specs/worker/client.md`), so the two
-restarts come at the same memory left behind. In stage 4
+restarts come at the same memory left behind. Measured on 29 September
+2026 (above), a PCA or a PCoA of 700 individuals left the engine 11 to
+15 MB larger in Chromium, and 15 to 18 MB in WebKit, 3 s after its
+result, the medians of 5 runs; every run of 1,000 individuals or more
+started the worker again, and 3 s later the engine was no larger than
+before the Run. So the bound stays at 700. In stage 4
 the restart costs the reading of the header of the file, at most 49 ms
 (`docs/architecture.md`, section 13, point 5), and nothing else: the
 worker keeps no intermediate result ("The pruned variants are not kept
@@ -1481,9 +1521,25 @@ under its bound of 256 MB (`docs/specs/core/cache.md`). So the words
 calculation" hold as they do for the diversity. The LD filter, the
 PCA's own or the dataset's, is applied again at every PCA, as the owner decided on 27 September 2026 ("The pruned
 variants are not kept between two PCAs" in
-`docs/specs/stage-4-open-points.md`), and its time is measured in stage
-4, on `panel.nei` and on the files of 20,000 variants, with and without
-it.
+`docs/specs/stage-4-open-points.md`). The pruning takes about two
+thirds of such a PCA. Measured on 29 September 2026 as the table above,
+a PCA with the PCA's own LD filter at r² 0.1 and 100,000 bp against one
+with no LD filter, 5 runs of each, alternating, the medians:
+
+| file | Chromium 153, with no LD filter / with it | WebKit 26.6, with no LD filter / with it | the pruning, Chromium / WebKit | its share of the PCA with it |
+|---|---|---|---|---|
+| `panel.nei`, 200 individuals, 1,200 variants, 548 kept | 28 / 73 ms | 26 / 72 ms | 45 / 46 ms | 62% / 64% |
+| `big.nei`, 1,000 individuals, 20,000 variants, 18,646 kept, 19,161,194 bytes | 1,174 / 3,395 ms | 1,068 / 3,293 ms | 2,220 / 2,225 ms | 65% / 68% |
+| `big.vcf`, the same variants, 80,692,954 bytes | 1,285 / 3,514 ms | 1,187 / 3,418 ms | 2,229 / 2,231 ms | 63% / 65% |
+
+The pruning is the difference of the two times; each range was within
+19 ms. The files of 20,000 variants are those of `e2e/measure.spec.ts`,
+their variants 1,000 bases apart, so the distance compares each with
+the 100 before it; their genotypes are simulated with no
+linkage between variants, so the pruning kept 93% of them, and on a genome with
+linkage it would keep fewer. A second Run of the same PCA would spare
+the 2.2 s of its pruning if popnei kept the pruned variants, which
+point 1 of that file leaves to this measurement.
 
 `pcaColours` walks the table once per result and table, kept in a
 `WeakMap` by the result, the table, the grouping and the option, so a
@@ -2587,7 +2643,10 @@ option not taken: not starting it again, as the owner decided on 26
 September 2026 for every request but a write (`docs/architecture.md`,
 section 13, point 2), which leaves the tab holding up to 4.3 GB after a
 PCA of 9,381 individuals, which a phone, or a laptop with the variants
-file and other tabs open, may not have for the next analysis.
+file and other tabs open, may not have for the next analysis. The
+measurement of 29 September 2026 ("How it runs") kept the bound: a PCA
+of 700 left at most 18 MB behind in Chromium and WebKit, and the worker
+started again after one of 1,000 or more gave the tab back its size.
 
 **Open 2, decided by the owner on 28 September 2026, as recommended:
 the individuals with many missing genotypes told by a note of the
