@@ -777,15 +777,17 @@ test("WS8 D1 a column whose name reverses the text is named escaped in its warni
     text: "IID,score\u202eevil\ns000,1\ns001,2\ns002,3\n",
   });
 
-  const row = page
-    .getByRole("table", { name: "Columns" })
-    .getByRole("row")
-    .nth(2);
-  await expect(row.getByRole("rowheader")).toHaveText("score\\u202eevil");
-  await expect(row).toContainText(
+  const rows = page.getByRole("table", { name: "Columns" }).getByRole("row");
+  await expect(rows.nth(2).getByRole("rowheader")).toHaveText(
+    "score\\u202eevil",
+  );
+  // The warning has a line of its own under the row of its column.
+  const warning = rows.nth(3);
+  await expect(warning).toContainText(
     "Warning: score\\u202eevil holds only 3 different whole numbers, from 1 to 3, and is taken as a measurement.",
   );
-  await expect(row).not.toContainText("\u202e");
+  await expect(rows.nth(2)).not.toContainText("\u202e");
+  await expect(warning).not.toContainText("\u202e");
   await expectNoViolations(makeAxeBuilder);
 });
 

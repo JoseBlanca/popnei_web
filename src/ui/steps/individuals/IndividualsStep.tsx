@@ -10,7 +10,7 @@
  * from the store and sends it commands; what it holds itself is the
  * message of a file it did not load.
  */
-import { useId, useRef, useState } from "react";
+import { Fragment, useId, useRef, useState } from "react";
 
 import {
   columnAllows,
@@ -494,46 +494,66 @@ function Columns({
                 `popnei_web defect: the column ${String(index)} of the table has no types allowed.`,
               );
             }
+            // The warning of a column has a line of its own under the
+            // type and the values, so that its words have the width of
+            // both at 320 px; the name, its header, spans the two lines.
+            const warned = warning !== undefined;
+            const border = warned ? "cellAbove" : "cell";
             return (
-              <tr key={name}>
-                <th scope="row" className={classOf(styles, "nameCell")}>
-                  <span className={classOf(styles, "cellText")}>
-                    {escaped(name)}
-                  </span>
-                </th>
-                <td className={classOf(styles, "cell")}>
-                  {index === 0 ? (
-                    // The names of the individuals, whose type cannot be
-                    // changed.
-                    typeWords(type)
-                  ) : type.kind === "identifier" ? (
-                    identifierDefect(name)
-                  ) : (
-                    <TypeSelects
-                      column={name}
-                      type={type}
-                      allowed={allowed}
-                      send={send}
-                      {...(index === 1 && { buttonRef: firstType })}
-                    />
-                  )}
-                  {warning !== undefined && (
-                    <span className={classOf(styles, "columnWarning")}>
-                      <Warning>
-                        {columnWarningText({
-                          ...warning,
-                          column: escaped(warning.column),
-                        })}
-                      </Warning>
+              <Fragment key={name}>
+                <tr>
+                  <th
+                    scope="row"
+                    rowSpan={warned ? 2 : 1}
+                    className={classOf(styles, "nameCell")}
+                  >
+                    <span className={classOf(styles, "cellText")}>
+                      {escaped(name)}
                     </span>
-                  )}
-                </td>
-                <td className={classOf(styles, "valuesCell")}>
-                  <span className={classOf(styles, "cellText")}>
-                    {firstValuesText(table, index)}
-                  </span>
-                </td>
-              </tr>
+                  </th>
+                  <td className={classOf(styles, border)}>
+                    {index === 0 ? (
+                      // The names of the individuals, whose type cannot be
+                      // changed.
+                      typeWords(type)
+                    ) : type.kind === "identifier" ? (
+                      identifierDefect(name)
+                    ) : (
+                      <TypeSelects
+                        column={name}
+                        type={type}
+                        allowed={allowed}
+                        send={send}
+                        {...(index === 1 && { buttonRef: firstType })}
+                      />
+                    )}
+                  </td>
+                  <td
+                    className={classOf(
+                      styles,
+                      warned ? "valuesCellAbove" : "valuesCell",
+                    )}
+                  >
+                    <span className={classOf(styles, "cellText")}>
+                      {firstValuesText(table, index)}
+                    </span>
+                  </td>
+                </tr>
+                {warned && (
+                  <tr>
+                    <td colSpan={2} className={classOf(styles, "warningCell")}>
+                      <span className={classOf(styles, "columnWarning")}>
+                        <Warning>
+                          {columnWarningText({
+                            ...warning,
+                            column: escaped(warning.column),
+                          })}
+                        </Warning>
+                      </span>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>

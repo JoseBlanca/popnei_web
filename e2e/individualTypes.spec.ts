@@ -181,6 +181,9 @@ async function columnRows(page: Page): Promise<ColumnRow[]> {
   const count = await rows.count();
   for (let index = 1; index < count; index++) {
     const row = rows.nth(index);
+    // The line of the warning of a column, under its row, whose header
+    // spans both.
+    if ((await row.getByRole("rowheader").count()) === 0) continue;
     const name = await row.getByRole("rowheader").innerText();
     const cells = row.getByRole("cell");
     const typeButton = row.getByRole("button", { name: / Type of / });
@@ -997,44 +1000,62 @@ test("IP5 D2 a column of the populations that a new file puts first is no column
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("IP5 D2 at 320 px wide a column of a long name and long values with no space keeps the page from scrolling sideways, and a name that fits is not cut", async ({
-  page,
-  makeAxeBuilder,
-}) => {
-  await page.setViewportSize({ width: 320, height: 800 });
-  await openIndividuals(page);
-  await pick(page, {
-    name: "salud.csv",
-    text:
-      "IID,Estado_de_salud_del_individuo,Numero_de_la_poblacion_de_origen,Individuo\n" +
-      "s000,Sano_y_vacunado,1,a\n" +
-      "s001,Enfermo_sin_vacunar,2,b\n" +
-      "s002,Sano_y_vacunado,3,c\n" +
-      "s003,Convaleciente_de_la_gripe,2,d\n",
-  });
-  await expect(zone(page).getByText("4 rows, 4 columns")).toBeVisible();
-  await expect(
-    page.getByText(/^Warning: Numero_de_la_poblacion_de_origen holds only/),
-  ).toBeVisible();
+/** A font wider than the Mac's, which the system of another user may
+    give the page: Verdana, or DejaVu Sans of Linux where it has no
+    Verdana. */
+const WIDE_FONT =
+  ':root { --font-body: Verdana, "DejaVu Sans", sans-serif; font-family: Verdana, "DejaVu Sans", sans-serif; }';
 
-  const widths = await page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth,
-  }));
-  expect(widths.scroll).toBeLessThanOrEqual(widths.client);
-  const table = await columnsTable(page).boundingBox();
-  expect((table?.x ?? 0) + (table?.width ?? 0)).toBeLessThanOrEqual(320);
-  // A name that fits its column is not cut to make room for the others.
-  expect(
-    await cutWords(
-      columnsTable(page).getByRole("rowheader", {
-        name: "Individuo",
-        exact: true,
-      }),
-    ),
-  ).toEqual([]);
-  await expectNoViolations(makeAxeBuilder);
-});
+for (const font of ["the font of the system", "a wide font"] as const) {
+  test(`IP5 D2 at 320 px wide, in ${font}, a column of a long name and long values with no space keeps the page from scrolling sideways, and a word that fits is not cut`, async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await openIndividuals(page);
+    if (font === "a wide font") await page.addStyleTag({ content: WIDE_FONT });
+    await pick(page, {
+      name: "salud.csv",
+      text:
+        "Individuo,Estado_de_salud_del_individuo,Numero_de_la_poblacion_de_origen,Column,Sano\n" +
+        "s000,Sano_y_vacunado,1,España,sí\n" +
+        "s001,Enfermo_sin_vacunar,2,Italia,no\n" +
+        "s002,Sano_y_vacunado,3,Perú,sí\n" +
+        "s003,Convaleciente_de_la_gripe,2,España,no\n",
+    });
+    await expect(zone(page).getByText("4 rows, 5 columns")).toBeVisible();
+    await expect(
+      page.getByText(/^Warning: Numero_de_la_poblacion_de_origen holds only/),
+    ).toBeVisible();
+
+    const widths = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }));
+    expect(widths.scroll).toBeLessThanOrEqual(widths.client);
+    const table = columnsTable(page);
+    const box = await table.boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(320);
+    // The words that fit their column are not cut to make room for the
+    // others: the names, the headers, the values, the selects and the
+    // warning, but for the long names and values.
+    const long =
+      /^(Estado_de_salud_del_individuo|Numero_de_la_poblacion_de_origen|Sano_y_vacunado|Enfermo_sin_vacunar|Convaleciente_de_la_gripe)/;
+    for (const part of [
+      table.getByRole("columnheader"),
+      table.getByRole("rowheader"),
+      table.getByRole("button"),
+      table.getByRole("cell"),
+    ]) {
+      for (const one of await part.all()) {
+        expect(
+          (await cutWords(one)).filter((word) => !long.test(word)),
+        ).toEqual([]);
+      }
+    }
+    await expectNoViolations(makeAxeBuilder);
+  });
+}
 
 test("IP5 D2 a click on the words Coded 1, the case focuses the select of the value coded 1, as a click on a label does", async ({
   page,

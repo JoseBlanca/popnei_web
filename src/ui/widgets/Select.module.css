@@ -77,6 +77,23 @@
   stroke-linejoin: round;
 }
 
+/* On a narrow page, less room around the value, so that a select of a
+   type in a row of the table of the columns of the Individuals step,
+   "categorical" and its mark, leaves the name and the first values of
+   the row their words at 320 px with a font as wide as Verdana. 30em is
+   the width of src/ui/widgets/Table.module.css. */
+@media (width < 30em) {
+  .button {
+    gap: var(--space-1);
+    padding-inline: var(--space-1);
+  }
+
+  .chevron {
+    inline-size: var(--space-3);
+    block-size: var(--space-3);
+  }
+}
+
 .description {
   color: var(--color-text-muted);
   font-size: var(--text-sm);

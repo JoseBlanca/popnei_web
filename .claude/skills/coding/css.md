@@ -24,6 +24,7 @@ so nothing tests the floor; this table is the check.
 |---|---|---|
 | custom properties, grid, flex with `gap`, `clamp()`, `min()`, `max()`, `:is()`, `:where()`, `:focus-visible`, `aspect-ratio`, logical properties (`margin-inline`, `inset`), `prefers-color-scheme`, `prefers-reduced-motion`, `forced-colors`, `@supports selector()` | all at the floor | allowed |
 | container queries, `@container`, `cqi` | 105, 110, 16 | allowed |
+| `contain: inline-size` | 105, 101, 15.4 | allowed: the warning of a column in the table of the columns of the Individuals step gives the columns no width of its own with it, added on 29 September 2026 |
 | media range syntax, `(width >= 40em)` | 104, 102, 16.4 | allowed |
 | `dvh` and the other dynamic viewport units | 108, 101, 15.4 | allowed |
 | `@layer` | 99, 97, 15.4 | allowed, and not needed while every style is a CSS Module of low and equal specificity; a style outside a layer wins over every layer, so if one is used, all the global CSS goes in layers |

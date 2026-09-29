@@ -94,13 +94,23 @@
 
 .cell,
 .nameCell,
-.valuesCell {
+.valuesCell,
+.cellAbove,
+.valuesCellAbove,
+.warningCell {
   padding-block: var(--space-1);
   padding-inline: var(--space-2);
   border-block-end: 1px solid var(--color-border);
   text-align: start;
   vertical-align: top;
   overflow-wrap: break-word;
+}
+
+/* The type and the values of a column whose warning is on the line under
+   them, with no line between the two. */
+.cellAbove,
+.valuesCellAbove {
+  border-block-end: none;
 }
 
 .nameCell {
@@ -120,26 +130,37 @@
 @media (width < 30em) {
   .cell,
   .nameCell,
-  .valuesCell {
+  .valuesCell,
+  .cellAbove,
+  .valuesCellAbove,
+  .warningCell {
     padding-inline: var(--space-1);
   }
 
   /* A name or a value of the file may be a word longer than its column
      can be, "Estado_de_salud_del_individuo", which break-word counts
      whole in the narrowest width of the column, and which pushed the
-     table 30 pixels past the page. A name no wider than 4.5 rem and the
-     values no wider than 4.25 rem cut such a word at that width, and
-     leave whole a word that fits, "Individuo", 70 pixels in bold; with
-     the 130 pixels of the column of the type, the select of
-     "categorical" and its mark, and the space of the cells, the table
-     is then 286 of the 288 pixels the page gives it, in Chromium and
-     WebKit on 29 September 2026. */
+     table 30 pixels past the page. A name no wider than 5.5 rem, the
+     values no wider than 4.25 rem and the selects of the type in the
+     size of a note cut such a word at that width, and leave whole a word
+     that fits in the font of the system, and in Verdana, among the widest
+     fonts of the system a page may be given: "Individuo" in bold, 86
+     pixels in Verdana, "España", "Column" and "values". The narrowest the
+     table can then be, with such long names, is 278 of the 288 pixels
+     the page gives it with the font of the Mac and 282 with Verdana, in
+     Chromium and WebKit on 29 September 2026; in Verdana a value and its
+     dot, "España ·", may still go on two lines. */
   .cellText {
-    max-inline-size: 4.5rem;
+    max-inline-size: 5.5rem;
   }
 
-  .valuesCell .cellText {
+  .valuesCell .cellText,
+  .valuesCellAbove .cellText {
     max-inline-size: 4.25rem;
+  }
+
+  .typeSelects {
+    font-size: var(--text-sm);
   }
 }
 
@@ -151,17 +172,16 @@
   min-inline-size: 0;
 }
 
-/* The warning of a column, under its type, in the size of a note. Its
-   words take the width the column has and give the column none of their
-   own (contain: inline-size, Chrome 105, Firefox 101, Safari 15.4, below
-   the floor of css.md): the warning names its column, whose name may be
-   a word as long as "Numero_de_la_poblacion_de_origen", which the
-   warning's break-word counts whole in the narrowest width of the column
-   of the type, and which then took the width of the other two columns,
-   the names and the values cut to a letter a line, at 320 px. */
+/* The warning of a column, on a line of its own under the type and the
+   values, whose width it takes, in the size of a note. Its words give
+   the columns no width of their own (contain: inline-size, css.md): the
+   warning names its column, whose name may be a word as long as
+   "Numero_de_la_poblacion_de_origen", which the warning's break-word
+   would count whole in the narrowest width of the columns it spans, and
+   which then took the width of the name, cut to a letter a line, at 320
+   px. */
 .columnWarning {
   display: block;
-  margin-block-start: var(--space-1);
   font-size: var(--text-sm);
   contain: inline-size;
 }
