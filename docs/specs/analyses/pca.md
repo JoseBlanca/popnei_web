@@ -1138,6 +1138,9 @@ export type PcaColours =
       readonly numNone: number;               // those in no group
       readonly noneName: "No population" | "No value";
       readonly note: string | null;           // why the colours are not those the options ask
+      readonly cellTexts: readonly (string | null)[] | null;
+        // of each individual of the result, its value, or its population, when the colouring
+        // asked has more than MAX_COLOUR_GROUPS groups and is drawn as one; null for none; else null
     }
   | {
       readonly kind: "values";
@@ -1278,7 +1281,14 @@ than 1,000 groups, a `colourBy` saved before its column grew, or more
 populations than that, is drawn as one group, "All individuals", with
 the note "popcat has 1,204 different values, more than the 1,000 the
 plot can tell apart, so the points are of one colour; the table gives
-each individual's value.", and the option is not changed. The plots give group `i` colour `i % 7` and shape `(i + ⌊i / 7⌋) %
+each individual's value.", and the option is not changed. The table of
+the individuals and its CSV then give, as the note says, each
+individual's value in that column, or its population, and "No value"
+or "No population" for an individual with none, from `cellTexts`,
+while the plots, the legend and the tooltip show the one group, as the
+owner decided on 29 September 2026 (stop C 9 of
+`docs/specs/stage-4-open-points.md`); until then the table showed "All
+individuals" in every row. The plots give group `i` colour `i % 7` and shape `(i + ⌊i / 7⌋) %
 7`, 49 different marks (`.claude/skills/coding/charts.md`, "Not colour
 alone"); past 49 groups the marks repeat, and the legend and the table,
 which name each individual's group, still tell them apart, so the panel
@@ -1672,7 +1682,9 @@ With Vitest, at the functions of the definition, on frozen projects:
   no individual of the variants in it, every individual in `NO_GROUP`
   and the note of `noPopulation`; with `colourBy` a categorical column
   of 1,001 values, one group and the note of a column of more values
-  than the plot can tell apart.
+  than the plot can tell apart, with `cellTexts` the value of each
+  individual, and `pcaRows` giving it as each row's colour; `cellTexts`
+  `null` in every other case.
 - **`colourColumns`**: every column but the first, and not a categorical
   column of 1,001 values, where a continuous one of as many is offered.
 - **`axesShown`**, `[4, 5, 6]` on three components, the first three and
@@ -2077,7 +2089,9 @@ are these.
   `panel.pca_variance.csv`, or `panel.pcoa_variance.csv`, with the header
   `component,explained_variance_percent` and rows `PC1,3.5476992895181616`.
 - **The table of the individuals**, one row per individual of the result
-  in the order of the file: Individual; its group or its value, headed
+  in the order of the file: Individual; its group or its value, its
+  value in the column also when the colouring has more than 1,000
+  groups and the points are of one colour (above, "The colours"), headed
   by the title of the colours, "Population" or the column's name, and
   for an individual in no group or with no value the words of the
   legend, "No population" or "No value"; and PC1
