@@ -58,7 +58,11 @@ the numbers with the thresholds of the flow are recomputed; and, for
 the owner's decision of the PCA's own filters, the refusal of a file not
 sorted, whose words no longer name the statistics of each individual
 and give the PCA's own LD filter in the place of its pruning. The revisions for stage 4 are approved by the owner on 28 September 2026;
-they change the code of stage 3 too.
+they change the code of stage 3 too. Revised on 29 September 2026 after
+the review of work package 5 of `docs/plans/individuals-pca.md`: the
+first column chosen as the populations locks the diversity as a column
+not in the file, as `docs/specs/core/project.md`, "The populations",
+now has it; shown to the owner at stop B of that plan.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton: the module
@@ -791,10 +795,14 @@ version 1 in the same way (`docs/architecture.md`, section 12).
   keeps the refusal under the key, so an undo back to those settings
   shows it again without a calculation (`docs/specs/core/store.md`, "A
   calculation that failed").
-- **The column chosen is the first, the identifiers.** Every individual
-  is its own population, of one, with no values. The individuals step
-  does not offer that column (`docs/specs/steps/individuals.md`); a project file that
-  names it gives a table of rows with no values and one warning.
+- **The column chosen is the first, the identifiers.** It is no column
+  of the populations (`docs/specs/core/project.md`, "The populations"):
+  the Individuals step does not offer it, and a grouping that names it,
+  from a project file or after a new file put the column chosen first,
+  locks the diversity with the reason of a column not in the file,
+  `noSuchColumn`. Until 29 September 2026 every individual was then its
+  own population, of one, and the table had rows with no values and one
+  warning.
 - **The individuals file loaded again, with the same table.** The key is
   the same, and the result is on screen at once.
 - **A result that arrives after the populations changed.** It goes into
