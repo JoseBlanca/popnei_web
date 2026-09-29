@@ -2064,7 +2064,9 @@ are these.
   `component,explained_variance_percent` and rows `PC1,3.5476992895181616`.
 - **The table of the individuals**, one row per individual of the result
   in the order of the file: Individual; its group or its value, headed
-  by the title of the colours, "Population" or the column's name; and PC1
+  by the title of the colours, "Population" or the column's name, and
+  for an individual in no group or with no value the words of the
+  legend, "No population" or "No value"; and PC1
   to PC‹numComps›.
   Sortable by any column, React Aria's `Table`, which a
   screen reader reads as a table and the keyboard moves through cell by
@@ -2373,8 +2375,16 @@ The help, for the drawer of stage 8:
   filters, each group of two radio buttons one stop of the Tab key with
   its fields after it while it is set for the PCA; Run or Stop, the warnings, the bar
   of controls, the legend, the plot's link to the table, the explained
-  variance, the table, the downloads. The switch of 2D and 3D keeps the
-  focus on the button pressed. Run and Stop are one button, and the focus
+  variance, the table, the downloads. A number typed in a field is
+  committed by the Tab key before the focus moves, so that a distance
+  typed in the field of the PCA's own LD filter enables Run before the
+  Tab key reaches it, and the next stop is that Run and not the
+  diversity's, as the review of work package 8 of
+  `docs/plans/individuals-pca.md` found on 29 September 2026; the number
+  field of `src/ui/widgets/` does it for every field. The switch of 2D and 3D keeps the
+  focus on the button pressed. "Try again" goes with the words of a
+  failed download, and the focus moves to the heading of the panel, as
+  when Run or Stop goes. Run and Stop are one button, and the focus
   moves to the heading when it goes, as the diversity's.
 - **Announced without moving the focus**, since WCAG 2.2 asks that a
   message of status reach a screen reader without taking the user away

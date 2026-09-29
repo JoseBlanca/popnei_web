@@ -457,7 +457,10 @@ the next element, after the Tab key, and a screen reader would read the
 line in neither place; it is also the field's description, read with it
 when the focus comes back. The line goes at the next commit of the
 field, by Enter, the Tab key or an arrow key, whatever number is
-committed then. That includes the number kept typed again, which is no
+committed then. The Tab key commits before the browser moves the focus,
+so that the next stop is the one the number makes: a button its number
+enables is reached, and not passed over while still disabled
+(`docs/specs/analyses/pca.md`, "Accessibility"). That includes the number kept typed again, which is no
 change of the project, so the field clears the line itself and does not
 wait for a new value, which would never come. The line goes, too, when
 the value of the field changes otherwise, by an Undo, a new load or the
