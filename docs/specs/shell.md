@@ -47,6 +47,9 @@ individuals act first (`docs/architecture.md`, section 2): the numbers
 of the summary line with the thresholds of the individuals are
 recomputed, and an LD filter with no distance no longer leaves the
 individuals kept unknown, since the statistics read no filter. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 29 September 2026 after the review of work package 5 of
+`docs/plans/individuals-pca.md`: an Undo or a Redo that removes the
+control that had the focus hands it to the `<h1>` of the step.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -908,6 +911,19 @@ the walking skeleton (stage 8).
 - **The focus is never dropped** (2.4.3): Undo and Redo hand it to each
   other when they are disabled; after an opening it goes to the `<h1>`
   of Variants; after Close of the error bar, to the `<h1>` of the step.
+  An Undo or a Redo, with the buttons or the keyboard, that removes the
+  control that had the focus, "Forget these types" after an Undo of the
+  separator that applies the types again, the select of the value coded
+  1 after an Undo of the type binary, a select of the table while the
+  file is read again, hands the focus to the `<h1>` of the step on
+  screen, as Close of the error bar does; the browser would otherwise
+  send the next Tab to the top of the page. It does so only when the
+  focus was lost: when the step moves it itself, as the Variants step
+  does after an Undo that removes a part of the Count, or the control
+  that had it is still on the page, the focus stays where it is.
+  Decided on 29 September 2026 after the review of work package 5 of
+  `docs/plans/individuals-pca.md`, which found the focus dropped in
+  Chromium and WebKit.
 - **Not colour alone**: a state of a step is a word and a symbol; the
   current step a mark; the error bar its words (1.4.1).
 - **The dialogs** of opening and of Save take the focus, the dialog of
