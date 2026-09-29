@@ -2278,14 +2278,24 @@ the same numbers for everything else but the size of a written file.
   300 variants, 0.45 s and 69 MB more for 1,000 individuals, 3.0 s and 196
   MB for 2,000, and 21 s and 662 MB for 4,000, on 27 September 2026
   (`docs/specs/analyses/pca.md`). The time grows about seven times when
-  the individuals double, which puts a PCA of 9,381 individuals at
-  minutes, not measured. popnei reports no progress while it decomposes
+  the individuals double. In the browsers, run from the panel of the
+  application on 29 September 2026 on the same Mac, a PCA of 4,000
+  individuals took 16.0 s in Chromium 153 and 10.2 s in WebKit 26.6, and
+  grew the engine by 613 and 745 MB; one of 9,381 took 205 s and 121 s,
+  and grew it by 3.03 and 3.12 GB, and the PCoA a sixth to three tenths
+  longer and 3.30 and 3.40 GB; neither engine closed the tab. popnei reports no progress while it decomposes
   the matrix, so the bar stands full meanwhile, 6.7 of the 6.75 s of a
   PCA of 2,500 individuals; the panel says so, and popnei is asked for a
   progress of the decomposition, which `js-v0.1.0-dev.3` does not give
   either, for the PCA or the PCoA. The memory stays with wasm after the
   PCA, which is why the worker is started again after a large one
-  (section 13, point 9).
+  (section 13, point 9): after one of more than 700 individuals, since a
+  PCA of 700 left the engine 11 to 18 MB larger in both engines, under
+  the 25 MB above which a written file restarts the worker too. The LD filter of
+  the PCA is applied again at every PCA, and took about 2.2 s of the 3.4
+  s of a PCA of 1,000 individuals and 20,000 variants with a distance of
+  100,000 bp, 62% to 68% in both engines (`docs/specs/analyses/pca.md`,
+  "How it runs").
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
