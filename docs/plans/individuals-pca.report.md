@@ -481,8 +481,8 @@ phone.
 
 1. The words of the coding put the value bare: "no is coded 0." reads
    as "nothing is coded 0", and "binary with no coded 1" as "binary
-   without a value coded 1". Recommended: quote the value, "\"no\" is
-   coded 0.", "binary with \"yes\" coded 1".
+   without a value coded 1". Recommended: quote the value, `"no" is coded 0.` and
+   `binary with "yes" coded 1`.
 2. With a font wider than the Mac's, at 320 px, the dot between two
    first values can start a line, "España ·". Avoiding it leaves no
    margin. Recommended: accept.
