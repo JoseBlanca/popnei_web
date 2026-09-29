@@ -232,7 +232,7 @@ const TYPES_ROWS: readonly ColumnRow[] = [
   {
     name: "status",
     type: "binary",
-    coding: ["yes", "no is coded 0."],
+    coding: ["yes", '"no" is coded 0.'],
     values: "yes · no",
   },
   { name: "score", type: "continuous", values: "1 · 2 · 3" },
@@ -417,7 +417,7 @@ test("IP5 D2 a type changed and the value coded 1 chosen are each one step of Un
   await choose(page, codingSelect(page, "status"), "no");
   await expect(codingSelect(page, "status")).toHaveText("no");
   await expect(
-    columnsTable(page).getByText("yes is coded 0.", { exact: true }),
+    columnsTable(page).getByText('"yes" is coded 0.', { exact: true }),
   ).toBeVisible();
   // The two values keep their place, in the order of the reader's
   // proposal, when the coding changes.
@@ -432,7 +432,7 @@ test("IP5 D2 a type changed and the value coded 1 chosen are each one step of Un
   await undo(page);
   await expect(codingSelect(page, "status")).toHaveText("yes");
   await expect(
-    columnsTable(page).getByText("no is coded 0.", { exact: true }),
+    columnsTable(page).getByText('"no" is coded 0.', { exact: true }),
   ).toBeVisible();
   await expect(status(page)).toHaveText(
     "Undone: the value coded 1 in status changed.",
@@ -471,7 +471,7 @@ test("IP5 D2 the separator set to the semicolon names the types that wait with F
   ).toBeVisible();
   await expect(columns.getByRole("listitem")).toHaveText([
     "score: categorical; types.csv has no column score",
-    "status: binary with no coded 1; types.csv has no column status",
+    'status: binary with "no" coded 1; types.csv has no column status',
   ]);
   await expect(
     columns.getByText(
@@ -804,7 +804,7 @@ test("IP5 D2 the Tab key goes through the table in the order of the spec, and th
   await expect(codingSelect(page, "sex")).toHaveText("F");
   await expect(codingSelect(page, "sex")).toBeFocused();
   await expect(
-    columnsTable(page).getByText("M is coded 0.", { exact: true }),
+    columnsTable(page).getByText('"M" is coded 0.', { exact: true }),
   ).toBeVisible();
 
   // The type, with the keyboard: categorical takes the coding away, and

@@ -532,7 +532,7 @@ test("WS8 D1 the types of the columns, the warning of a few whole numbers, and a
     table.getByRole("button", { name: / Coded 1, the case, in Sano$/ }),
   ).toHaveText("sí");
   await expect(
-    table.getByText("no is coded 0.", { exact: true }),
+    table.getByText('"no" is coded 0.', { exact: true }),
   ).toBeVisible();
   await expect(
     table.getByText(

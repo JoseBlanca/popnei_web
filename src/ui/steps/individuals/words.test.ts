@@ -287,9 +287,9 @@ describe("IP5 D2 the words of the columns and their types", () => {
     expect(typeWords({ kind: "identifier" })).toBe("identifier");
     expect(typeWords({ kind: "categorical" })).toBe("categorical");
     expect(typeWords({ kind: "continuous" })).toBe("continuous");
-    expect(typeWords(BINARY_YES)).toBe("binary with yes coded 1");
+    expect(typeWords(BINARY_YES)).toBe('binary with "yes" coded 1');
     expect(typeWords({ kind: "binary", one: "y\ne", zero: "n" })).toBe(
-      "binary with y\\ne coded 1",
+      'binary with "y\\ne" coded 1',
     );
   });
 
@@ -340,8 +340,8 @@ describe("IP5 D2 the words of the columns and their types", () => {
       "Coded 1, the case, in status",
     );
     expect(codingLabelEnd("st\natus")).toBe(", in st\\natus");
-    expect(codedZeroText("no")).toBe("no is coded 0.");
-    expect(codedZeroText("n\to")).toBe("n\\to is coded 0.");
+    expect(codedZeroText("no")).toBe('"no" is coded 0.');
+    expect(codedZeroText("n\to")).toBe('"n\\to" is coded 0.');
   });
 
   test("the items of the value coded 1 are the two values, in the order of the reader's proposal, escaped", () => {
@@ -357,7 +357,7 @@ describe("IP5 D2 the words of the columns and their types", () => {
       typesLostWords("pops.csv", READ, [["status", { kind: "continuous" }]]),
     ).toEqual({
       kind: "one",
-      text: "status does not have the type you set, continuous, since its values in pops.csv do not allow it; it is binary with yes coded 1, as its values give it. The type you set comes back when the file is read with values that allow it.",
+      text: 'status does not have the type you set, continuous, since its values in pops.csv do not allow it; it is binary with "yes" coded 1, as its values give it. The type you set comes back when the file is read with values that allow it.',
     });
     expect(
       typesLostWords("pops.csv", READ, [
@@ -365,7 +365,7 @@ describe("IP5 D2 the words of the columns and their types", () => {
       ]),
     ).toEqual({
       kind: "one",
-      text: "code does not have the type you set, binary with yes coded 1, since its values in pops.csv do not allow it; it is categorical, as its values give it. The type you set comes back when the file is read with values that allow it.",
+      text: 'code does not have the type you set, binary with "yes" coded 1, since its values in pops.csv do not allow it; it is categorical, as its values give it. The type you set comes back when the file is read with values that allow it.',
     });
     expect(
       typesLostWords("new.csv", READ, [["region", { kind: "categorical" }]]),
@@ -375,7 +375,7 @@ describe("IP5 D2 the words of the columns and their types", () => {
     });
     expect(typesLostWords("pops.csv", READ, [["IID", BINARY_YES]])).toEqual({
       kind: "one",
-      text: "IID is the first column of pops.csv, whose cells are the names of the individuals, so it does not have the type you set, binary with yes coded 1. If it should not be first, correct the file and load it again; the type you set then comes back.",
+      text: 'IID is the first column of pops.csv, whose cells are the names of the individuals, so it does not have the type you set, binary with "yes" coded 1. If it should not be first, correct the file and load it again; the type you set then comes back.',
     });
     expect(typesLostWords("pops.csv", READ, [])).toBeNull();
   });
@@ -391,7 +391,7 @@ describe("IP5 D2 the words of the columns and their types", () => {
       kind: "several",
       opening: "3 columns do not have the type you set:",
       lines: [
-        "code: binary with yes coded 1; its values do not allow it, and it is categorical",
+        'code: binary with "yes" coded 1; its values do not allow it, and it is categorical',
         "region: categorical; po\\nps.csv has no column region",
         "IID: categorical; it is the first column, the names of the individuals",
       ],

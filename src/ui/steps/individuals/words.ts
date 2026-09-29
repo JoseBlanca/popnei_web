@@ -240,9 +240,17 @@ function valueText(value: string | number | boolean): string {
     with a dot, which would read as the mark of a list. */
 const VALUES_DOT = "\u00a0·";
 
+/** A value of a coding in words, escaped and between quotation marks,
+    since a bare value reads as a word of the sentence, "no is coded 0."
+    as nothing coded 0 (stop B 1, decided by the owner on 29 September
+    2026). */
+function codedText(value: string): string {
+  return `"${valueText(value)}"`;
+}
+
 /** The type of a column in words: "identifier", "continuous",
-    "categorical", and a binary one with its coding, "binary with yes
-    coded 1". */
+    "categorical", and a binary one with its coding, `binary with "yes"
+    coded 1`. */
 export function typeWords(type: ColumnType): string {
   switch (type.kind) {
     case "identifier":
@@ -250,7 +258,7 @@ export function typeWords(type: ColumnType): string {
     case "categorical":
       return type.kind;
     case "binary":
-      return `binary with ${valueText(type.one)} coded 1`;
+      return `binary with ${codedText(type.one)} coded 1`;
   }
 }
 
@@ -330,10 +338,10 @@ export function codingItems(binary: {
   ];
 }
 
-/** The line beside the value coded 1, which names the other: "no is
-    coded 0.". */
+/** The line beside the value coded 1, which names the other: `"no" is
+    coded 0.`. */
 export function codedZeroText(zero: string): string {
-  return `${valueText(zero)} is coded 0.`;
+  return `${codedText(zero)} is coded 0.`;
 }
 
 /** The warning of the types the user set that a read does not apply,
