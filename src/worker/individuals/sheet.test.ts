@@ -121,6 +121,20 @@ describe("IP9 D1 the xlsx in node: readSheet", () => {
     ]);
   });
 
+  test("a row named NA whose other cells are all missing is kept, NA a name", () => {
+    const { table } = read(
+      sheetOf([
+        ["id", "pop"],
+        ["NA", "#N/A"],
+        ["B", "P1"],
+      ]),
+    );
+    expect(table.rows).toEqual([
+      ["NA", null],
+      ["B", "P1"],
+    ]);
+  });
+
   test("a blank row is skipped", () => {
     const { table } = read(
       sheetOf([

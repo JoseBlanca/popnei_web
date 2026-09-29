@@ -262,6 +262,13 @@ describe("WS4 D1 readCsv", () => {
   });
 
   describe("the rest of the rules of the rows and the cells", () => {
+    test("a row named NA whose other cells are all missing is kept, NA a name", () => {
+      expect(readOk("id,pop\nNA,NA\nB,P1\n").table.rows).toEqual([
+        ["NA", null],
+        ["B", "P1"],
+      ]);
+    });
+
     test("spaces at the ends of a cell are removed, and inside quotes kept", () => {
       expect(
         readOk('id,pop\nind_01, pop1 \nind_02, " p 2 "\n').table.rows,

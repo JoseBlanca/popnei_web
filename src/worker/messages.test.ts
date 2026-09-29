@@ -1888,26 +1888,30 @@ describe("IP9 D1 the messages of an xlsx", () => {
     });
   });
 
-  test("a sheetTooLarge whose lastRow is a text is wrongType", () => {
-    const message = {
-      kind: "individuals",
-      id: 5,
-      read: {
-        kind: "failed",
-        error: {
-          kind: "sheetTooLarge",
-          sheet: "Hoja1",
-          lastRow: "123",
-          lastColumn: "XFD",
-          max: 2_000_000,
+  test.each([["lastRow"], ["max"]])(
+    "a sheetTooLarge whose %s is a text is wrongType",
+    (name) => {
+      const message = {
+        kind: "individuals",
+        id: 5,
+        read: {
+          kind: "failed",
+          error: {
+            kind: "sheetTooLarge",
+            sheet: "Hoja1",
+            lastRow: 123,
+            lastColumn: "XFD",
+            max: 2_000_000,
+            [name]: "123",
+          },
         },
-      },
-    };
-    expect(parseFromFilesRunner(message)).toMatchObject({
-      ok: false,
-      error: { kind: "wrongType", path: "read.error.lastRow" },
-    });
-  });
+      };
+      expect(parseFromFilesRunner(message)).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `read.error.${name}` },
+      });
+    },
+  );
 });
 
 describe("messageOf", () => {

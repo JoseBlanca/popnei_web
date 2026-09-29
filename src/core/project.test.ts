@@ -6460,6 +6460,22 @@ describe("IP9 the words of an xlsx refused", () => {
     ).toMatch(/^pops\.csv could not be read: line 7 has no name/);
   });
 
+  test("the row of a sheet too large is written with commas, row 100,001", () => {
+    expect(
+      individualsStepNeeds(
+        xlsxRefusedWith({
+          kind: "sheetTooLarge",
+          sheet: "Hoja1",
+          lastRow: 100_001,
+          lastColumn: "V",
+          max: 2_000_000,
+        }),
+      ),
+    ).toBe(
+      "pops.xlsx could not be read: its first sheet, Hoja1, has values as far as row 100,001 and column V, more than the 2,000,000 cells a metadata file can have; delete the values outside the table. Load a corrected file.",
+    );
+  });
+
   test("a sheet too large in association names a traits file", () => {
     expect(
       individualsNeeds(
@@ -6525,27 +6541,31 @@ describe("IP9 the words of an xlsx refused", () => {
     },
   );
 
-  test("the validation refuses a sheetTooLarge whose lastRow is a text, at its path", () => {
-    const refusal = {
-      kind: "sheetTooLarge",
-      sheet: "Hoja1",
-      lastRow: "123",
-      lastColumn: "XFD",
-      max: 2_000_000,
-    };
-    const p = sampleProject();
-    const data: unknown = JSON.parse(
-      JSON.stringify({
-        ...p,
-        individuals: {
-          ...individualsOf(p),
-          read: { kind: "failed", error: refusal },
-        },
-      }),
-    );
-    expect(parse(data)).toMatchObject({
-      ok: false,
-      error: { path: ["individuals", "read", "error", "lastRow"] },
-    });
-  });
+  test.each([["lastRow"], ["max"]])(
+    "the validation refuses a sheetTooLarge whose %s is a text, at its path",
+    (name) => {
+      const refusal = {
+        kind: "sheetTooLarge",
+        sheet: "Hoja1",
+        lastRow: 123,
+        lastColumn: "XFD",
+        max: 2_000_000,
+        [name]: "123",
+      };
+      const p = sampleProject();
+      const data: unknown = JSON.parse(
+        JSON.stringify({
+          ...p,
+          individuals: {
+            ...individualsOf(p),
+            read: { kind: "failed", error: refusal },
+          },
+        }),
+      );
+      expect(parse(data)).toMatchObject({
+        ok: false,
+        error: { path: ["individuals", "read", "error", name] },
+      });
+    },
+  );
 });
