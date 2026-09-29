@@ -451,6 +451,17 @@ writing. Recommended: each spec takes what the code does.
 Opening a project with a table of 10,000 rows and 50 columns took 127
 ms in node, all on the page; task 5.3 measures it in the browsers.
 
+## The restart of 29 September 2026
+
+The Mac rebooted during the night of 28 September, while the orchestrator
+waited for the last reviewer of work package 5. Nothing committed was
+lost: the branch stood at 72c36e6 with a clean tree, and on it
+`format:check`, `typecheck`, `lint` and the build pass and `npm test`
+gives "Tests 2631 passed (2631)". Lost were the tests reviewer of work
+package 5, which never reported and was run again, and the orchestrator's
+notes, which were rebuilt from the session's transcript. The box of task
+3.3 had been left unticked after its review; it is ticked now.
+
 ## 7. The 2D scatter
 
 The scatter of the individuals, its marks, colours, tooltip, legend

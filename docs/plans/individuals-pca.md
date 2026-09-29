@@ -610,7 +610,7 @@ was typed, and the results of before come back from the cache.
   filter turned off (`project.md`, "The filters turned off"), their
   validation, the project file and its fixture, and the property of
   `project.md` with the four lists. Serves 1 and 2. Needs 3.1.
-- [ ] 3.3 The switches on the screen: the field of the distance with no
+- [x] 3.3 The switches on the screen: the field of the distance with no
   default, its reason and the locks shown, `turnedOnFilter` reading
   `filtersOff`, `LD_DIST_TURNED_ON` removed with its test, every switch
   turned off by the new commands (`steps/variants.md`, "The filters of
