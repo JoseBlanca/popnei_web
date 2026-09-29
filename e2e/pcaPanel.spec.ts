@@ -1621,7 +1621,7 @@ test.describe("IP10 D3 the states of the panel", () => {
     ).toBeFocused();
   });
 
-  test("IP10 D3 popnei's refusal of no variant left after the PCA's MAF of 0 in its words, with no Run; the statistics of each individual failed in theirs, and a crash, each with Run again", async ({
+  test("IP10 D3 popnei's refusal of no variant left after the PCA's MAF of 0 in its words, with no Run; the statistics of each individual failed in theirs, the diversity, not run, saying it cannot run, and a crash, each with Run again", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -1665,6 +1665,14 @@ test.describe("IP10 D3 the states of the panel", () => {
     await expect(
       panel.getByRole("button", { name: "Run", exact: true }),
     ).toBeEnabled();
+    // The diversity, whose Run was not pressed, cannot run (stop C 4).
+    await expect(
+      page
+        .getByRole("region", { name: "Diversity", exact: true })
+        .getByText(
+          /^The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run\./,
+        ),
+    ).toBeVisible();
 
     // With no threshold of the individuals, the PCA's own calculation
     // crashes, in the worker started after the last crash: its words, and

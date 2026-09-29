@@ -243,18 +243,20 @@ export function refusalText(message: string, p: Project): string {
  * The words of the error state of the panel when the statistics of each
  * individual that a Run waited for were refused or failed, the store's
  * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
- * with "the diversity was not run".
+ * with "the diversity was not run" when its own Run waited for them,
+ * `waited`, and "the diversity cannot run" when it did not (stop C 4).
  */
 export function statisticsFailedText(
   error: AnalysisError,
   p: Project,
   failureText: (failure: Failure) => string,
+  waited: boolean,
 ): string {
   return statisticsFailedWords(
     error,
     p,
     failureText,
-    "the diversity was not run",
+    waited ? "the diversity was not run" : "the diversity cannot run",
   );
 }
 

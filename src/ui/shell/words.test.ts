@@ -259,6 +259,7 @@ function failed(key: Key): AnalysisStatus<TestDefResult> {
     key,
     error: { kind: "refused", message: "too few individuals" },
     ofStatistics: false,
+    waited: false,
   };
 }
 
@@ -2384,6 +2385,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
           key: KEY_A,
           error: { kind: "refused", message: "too few individuals" },
           ofStatistics: true,
+          waited: true,
         },
       },
     });
@@ -2421,6 +2423,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
           key: KEY_A,
           error: { kind: "refused", message: "too few individuals" },
           ofStatistics: true,
+          waited: true,
         },
         [COUNTS]: { kind: "locked", reason },
       },

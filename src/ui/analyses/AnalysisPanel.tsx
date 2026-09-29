@@ -141,7 +141,8 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
       }
       // The failure of the statistics its Run waited for, in their
       // words, never in the analysis's own.
-      if (ui.statisticsFailedText === null) {
+      const statisticsFailedText = ui.statisticsFailedText;
+      if (statisticsFailedText === null) {
         throw new Error(
           `popnei_web defect: ${ui.title} failed by the statistics of each individual, which it does not read.`,
         );
@@ -151,7 +152,9 @@ function Above({ ui, status }: PartProps): React.JSX.Element | null {
           error={status.error}
           name={ui.title}
           refusalText={ui.refusalText}
-          statisticsFailedText={ui.statisticsFailedText}
+          statisticsFailedText={(error, p, failureText) =>
+            statisticsFailedText(error, p, failureText, status.waited)
+          }
         />
       );
     }

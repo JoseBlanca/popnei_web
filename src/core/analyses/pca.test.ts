@@ -1323,7 +1323,7 @@ describe("IP6 D4 statisticsFailedText", () => {
   test("the statistics refused, with the PCA named and then the PCoA", () => {
     const error = { kind: "refused", message: "anything" } as const;
     const failureText = (): string => "unused";
-    expect(statisticsFailedText(error, project(), failureText)).toMatch(
+    expect(statisticsFailedText(error, project(), failureText, true)).toMatch(
       /^The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run\. popnei could not calculate the statistics of each individual: anything\./,
     );
     expect(
@@ -1331,8 +1331,25 @@ describe("IP6 D4 statisticsFailedText", () => {
         error,
         project({ options: { method: "pcoa" } }),
         failureText,
+        true,
       ),
     ).toContain("so the PCoA was not run.");
+  });
+
+  test("the statistics refused when the PCA's own Run did not wait for them: it cannot run (stop C 4)", () => {
+    const error = { kind: "refused", message: "anything" } as const;
+    const failureText = (): string => "unused";
+    expect(
+      statisticsFailedText(error, project(), failureText, false),
+    ).toContain("could not be calculated, so the PCA cannot run. popnei");
+    expect(
+      statisticsFailedText(
+        error,
+        project({ options: { method: "pcoa" } }),
+        failureText,
+        false,
+      ),
+    ).toContain("so the PCoA cannot run.");
   });
 });
 

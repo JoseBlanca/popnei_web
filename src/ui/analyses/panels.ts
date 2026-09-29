@@ -75,13 +75,16 @@ export interface AnalysisUi {
   readonly refusalText: (message: string, p: Project) => string;
   /** The words of the failure of the statistics of each individual that
       a Run waited for, the store's error with `ofStatistics`, for an
-      analysis that reads the filters of individuals; `null` for one that
-      does not, which the store never gives that error. */
+      analysis that reads the filters of individuals, "was not run" when
+      its own Run waited for them, `waited`, "cannot run" when it did
+      not; `null` for one that does not read them, which the store never
+      gives that error. */
   readonly statisticsFailedText:
     | ((
         error: AnalysisError,
         p: Project,
         failureText: (failure: Failure) => string,
+        waited: boolean,
       ) => string)
     | null;
   /** Draws the result: its table, its plot, its download. */

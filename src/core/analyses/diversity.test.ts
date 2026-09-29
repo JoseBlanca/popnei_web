@@ -1647,9 +1647,14 @@ describe("VS3 D3 the diversity of stage 3", () => {
     const message =
       "the pass gave no variant: its source gave 1200 and the steps kept none of them, the `missing_data` filter was given 1200 and kept 1152, the `maf` filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives";
     expect(
-      statisticsFailedText({ kind: "refused", message }, project(), () => {
-        throw new Error("a refusal was given the words of a failure");
-      }),
+      statisticsFailedText(
+        { kind: "refused", message },
+        project(),
+        () => {
+          throw new Error("a refusal was given the words of a failure");
+        },
+        true,
+      ),
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. popnei could not calculate the statistics of each individual: the pass gave no variant: its source gave 1200 and the steps kept none of them, the missing_data filter was given 1200 and kept 1152, the maf filter was given 1152 and kept 0; a statistic of a pass is calculated over the variants it gives. Change the settings, or load the variants file again, to calculate them again.",
     );
@@ -1679,11 +1684,26 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
           given.push(error);
           return "The calculation stopped unexpectedly.";
         },
+        true,
       ),
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity was not run. The calculation stopped unexpectedly.",
     );
     expect(given).toEqual([failure]);
+  });
+
+  test("the words of the statistics that failed when the diversity's own Run did not wait for them say it cannot run (stop C 4)", () => {
+    const failure = { kind: "workerFailed", message: "a trap" } as const;
+    expect(
+      statisticsFailedText(
+        { kind: "failed", error: failure },
+        project(),
+        () => "The calculation stopped unexpectedly.",
+        false,
+      ),
+    ).toBe(
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the diversity cannot run. The calculation stopped unexpectedly.",
+    );
   });
 
   test("keptNeeds locks the diversity when the individuals kept leave no population, with the words of all left empty", () => {

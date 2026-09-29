@@ -1077,6 +1077,7 @@ describe("WP4 D2 the calculations", () => {
       key,
       error: { kind: "refused", message: "no variant left" },
       ofStatistics: false,
+      waited: false,
     };
     expect(statuses(store)[1]).toStrictEqual(refused);
     expect(store.startRun("vars")).toBeNull();
@@ -1099,6 +1100,7 @@ describe("WP4 D2 the calculations", () => {
       key,
       error: { kind: "failed", error },
       ofStatistics: false,
+      waited: false,
     });
     // A second try, cancelled: the failure it retried is forgotten.
     const retry = store.startRun("vars");
@@ -1131,12 +1133,14 @@ describe("WP4 D2 the calculations", () => {
         key: keyAt(store, 0),
         error: shownError,
         ofStatistics: false,
+        waited: false,
       },
       {
         kind: "error",
         key: keyAt(store, 1),
         error: shownError,
         ofStatistics: false,
+        waited: false,
       },
     ]);
     expect(store.startRun("vars")).toBeNull();
@@ -1147,6 +1151,7 @@ describe("WP4 D2 the calculations", () => {
       key: keyAt(store, 1),
       error: shownError,
       ofStatistics: false,
+      waited: false,
     });
     expect(store.startRun("vars")).toBeNull();
     store.undo();
@@ -1155,6 +1160,7 @@ describe("WP4 D2 the calculations", () => {
       key: keyAt(store, 1),
       error: shownError,
       ofStatistics: false,
+      waited: false,
     });
     expect(store.startRun("vars")).toBeNull();
     expect(sent).toHaveLength(1);
@@ -1189,6 +1195,7 @@ describe("WP4 D2 the calculations", () => {
       key: keyAt(store, 0),
       error: { kind: "failed", error },
       ofStatistics: false,
+      waited: false,
     });
     store.redo();
     expect(store.getState().project.variants).toMatchObject({
@@ -1552,6 +1559,7 @@ describe("WP4 D2 the calculations", () => {
           },
         },
         ofStatistics: false,
+        waited: false,
       });
       expect(store.getState().runs).toStrictEqual([]);
       expect(store.getState().project.variants?.read).toStrictEqual(
@@ -3816,11 +3824,13 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       key: keyOfNow(store, analyses[0]),
       error: refused,
       ofStatistics: true,
+      waited: true,
     });
     expect(statusIn(store, "stats")).toMatchObject({
       kind: "error",
       error: refused,
       ofStatistics: false,
+      waited: false,
     });
     expect(statusIn(store, "vars")).toStrictEqual({
       kind: "ready",
@@ -3847,6 +3857,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       key: keyOfNow(store, analyses[0]),
       error: refused,
       ofStatistics: true,
+      waited: false,
     });
     expect(store.startRun("pops")).toBeNull();
 
@@ -3871,6 +3882,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       key: keyOfNow(store, analyses[0]),
       error: refused,
       ofStatistics: true,
+      waited: false,
     });
     expect(store.startRun("pops")).toBeNull();
   });
@@ -3917,6 +3929,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       kind: "error",
       error: { kind: "failed", error },
       ofStatistics: true,
+      waited: true,
     });
 
     const handles = store.startRun("pops");
@@ -4368,6 +4381,7 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
     expect(statusIn(store, "pops")).toMatchObject({
       kind: "error",
       ofStatistics: true,
+      waited: true,
     });
     expect(store.getState().individualsKept?.list).toStrictEqual({
       kind: "needsStatistics",
@@ -4402,6 +4416,7 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
     expect(statusIn(store, "pops")).toMatchObject({
       kind: "error",
       ofStatistics: true,
+      waited: true,
     });
     expect(store.getState().individualsKept?.list).toStrictEqual({
       kind: "needsStatistics",
@@ -4469,6 +4484,75 @@ function storeOfFiveWithCounts(
   store.open(fiveIndividualsProject(filters));
   return { store, analyses, sent, lists };
 }
+
+describe("stop C 4: waited, whether the analysis's own Run waited for the statistics that failed", () => {
+  test("after a failure of the statistics that the Run of pops waited for, pops is in error with waited and vars, whose Run was not pressed, without; after a change and a Run of vars alone, the other way round", () => {
+    const { store, sent } = storeOfFiveWithCounts([MISSING_AT_02], {
+      variants: true,
+      individuals: true,
+    });
+    store.startRun("pops");
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
+
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: true,
+    });
+    expect(statusIn(store, "vars")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: false,
+    });
+
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statusIn(store, "vars").kind).toBe("ready");
+    store.startRun("vars");
+    const again = sentAt(sent, 1);
+    expect(again.job.analysis).toBe("stats");
+    store.runEnded(again.run.id, { kind: "failed", error });
+
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: false,
+    });
+    expect(statusIn(store, "vars")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: true,
+    });
+  });
+
+  test("a refusal of the statistics by popnei asked by their own Run leaves every analysis that reads the filters of individuals without waited", () => {
+    const { store, sent } = storeOfFiveWithCounts([MISSING_AT_02], {
+      variants: true,
+      individuals: true,
+    });
+    store.startRun("stats");
+    store.runEnded(sentAt(sent, 0).run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
+    });
+
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: false,
+    });
+    expect(statusIn(store, "vars")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: false,
+    });
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "error",
+      ofStatistics: false,
+      waited: false,
+    });
+  });
+});
 
 describe("IP2 D2 the store with the individuals first", () => {
   test("createStore throws on a definition of the statistics that reads the filters of the variants, of individuals or both, and takes one of the counts that reads the filters of individuals", () => {
@@ -4831,12 +4915,14 @@ describe("VS3 D4 the analysis's own error before that of the statistics", () => 
     expect(statusIn(store, "stats")).toMatchObject({
       kind: "error",
       ofStatistics: false,
+      waited: false,
     });
     expect(statusIn(store, "pops")).toStrictEqual({
       kind: "error",
       key: keyOfNow(store, analyses[0]),
       error: { kind: "refused", message: "the pass gave no variant" },
       ofStatistics: false,
+      waited: false,
     });
   });
 });

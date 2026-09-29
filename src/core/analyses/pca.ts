@@ -921,19 +921,21 @@ export function crashText(p: Project, numIndividuals: number): string {
  * The words of the error state of the panel when the statistics of each
  * individual that a Run waited for were refused or failed, the store's
  * error with `ofStatistics`: `statisticsFailedWords` of the statistics,
- * with "the PCA was not run", or "the PCoA".
+ * with "the PCA was not run", or "the PCoA", when its own Run waited for
+ * them, `waited`, and "the PCA cannot run" when it did not (stop C 4).
  */
 export function statisticsFailedText(
   error: AnalysisError,
   p: Project,
   failureText: (failure: Failure) => string,
+  waited: boolean,
 ): string {
   const name = methodName(pcaOptions(p).method);
   return statisticsFailedWords(
     error,
     p,
     failureText,
-    `the ${name} was not run`,
+    waited ? `the ${name} was not run` : `the ${name} cannot run`,
   );
 }
 

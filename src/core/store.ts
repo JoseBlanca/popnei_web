@@ -221,12 +221,17 @@ export type AnalysisStatus<R> =
   /** popnei refused the calculation of its key, or the calculation
       failed since the last change; or, `ofStatistics`, it reads the
       filters of individuals and the statistics of each individual its
-      Run would wait for were refused, or failed since the last change. */
+      Run would wait for were refused, or failed since the last change,
+      and `waited` when a Run of it under its key waited for them when
+      they failed, false when its Run was not pressed (stop C 4 of
+      docs/specs/stage-4-open-points.md); `waited` is false without
+      `ofStatistics`. */
   | {
       readonly kind: "error";
       readonly key: Key;
       readonly error: AnalysisError;
       readonly ofStatistics: boolean;
+      readonly waited: boolean;
     }
   /** The current notice lists it among the results removed; it can run
       again. */
@@ -703,6 +708,14 @@ export function createStore<J, R, F = never>(
   const waits = new Map<number, Waiting<J, R>>();
   /** The id of the last wait. */
   let lastWaitId = 0;
+  /** The key of the statistics of each individual that last failed or
+      were refused, and the keys of the analyses whose Runs waited for
+      them then: those say "was not run", the others "cannot run" (stop
+      C 4 of docs/specs/stage-4-open-points.md). */
+  let statsWaited: {
+    readonly statsKey: Key;
+    readonly keys: ReadonlySet<Key>;
+  } | null = null;
   /** popnei's refusals, kept for the session. */
   const refusals = new Map<Key, AnalysisError>();
   /** The other failures, kept until the next change of the user. */
@@ -1093,12 +1106,21 @@ export function createStore<J, R, F = never>(
     }
     const error = errorOf(key);
     if (error !== undefined) {
-      return { kind: "error", key, error, ofStatistics: false };
+      return { kind: "error", key, error, ofStatistics: false, waited: false };
     }
     if (def.filtersRead.individuals) {
       const statsError = statsErrorOf(keptNow, keys);
       if (statsError !== undefined) {
-        return { kind: "error", key, error: statsError, ofStatistics: true };
+        return {
+          kind: "error",
+          key,
+          error: statsError,
+          ofStatistics: true,
+          waited:
+            statsWaited !== null &&
+            statsWaited.statsKey === statsKeyIn(keys) &&
+            statsWaited.keys.has(key),
+        };
       }
       const reason =
         keptNoneReason(history.present.project, keptNow) ??
@@ -2373,6 +2395,26 @@ export function createStore<J, R, F = never>(
         (wait) => wait.statsRunId === runId,
       );
       endWaits(waiting.map((wait) => wait.waitId));
+      /** Keeps, when the request is of the statistics, the keys of the
+          analyses whose Runs waited for them, as they fail. */
+      const keepWaited = (): void => {
+        if (
+          request.target.kind === "analysis" &&
+          request.target.index === statsIndex
+        ) {
+          statsWaited = {
+            statsKey: request.key,
+            keys: new Set(
+              waiting.flatMap((wait) =>
+                wait.target.kind === "analysis" ? [wait.key] : [],
+              ),
+            ),
+          };
+        }
+      };
+      if (outcome.kind === "failed") {
+        keepWaited();
+      }
       if (outcome.kind !== "cancelled") {
         // Answered by a worker past any stop issued before, and, on the
         // load it opened, past the opening.
@@ -2386,6 +2428,7 @@ export function createStore<J, R, F = never>(
       } catch (error) {
         // A defect of our code, which the analysis shows until the next
         // change, rather than ready with nothing said.
+        keepWaited();
         failures.set(request.key, {
           kind: "failed",
           error: {
@@ -2563,7 +2606,8 @@ function sameStatus<R>(a: AnalysisStatus<R>, b: AnalysisStatus<R>): boolean {
         b.kind === "error" &&
         a.key === b.key &&
         a.error === b.error &&
-        a.ofStatistics === b.ofStatistics
+        a.ofStatistics === b.ofStatistics &&
+        a.waited === b.waited
       );
     case "removed":
       return b.kind === "removed" && a.key === b.key;
