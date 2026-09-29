@@ -61,6 +61,16 @@
  * them, columnAllows alone on the same table, on e2e/allows.html, which
  * the plan's rule of 100 ms is about.
  *
+ * And the times of the PCA (IP6 D6, docs/specs/analyses/pca.md, "How it
+ * runs"), in both engines, each PCA run from its panel in the
+ * application, on a new page, with its options set by a project file the
+ * test writes, since the panel has none yet: the pruning inside a PCA, a
+ * PCA with and without its own LD filter on panel.nei and the two files of
+ * 20,000 variants; and the time and the memory of the engine for a PCA
+ * and a PCoA of 700 to 9,381 individuals, from the gzipped VCFs of 300
+ * variants of e2e/bigVcf.ts, with whether the worker was started again. A
+ * tab that closes is recorded, and fails nothing.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -107,9 +117,12 @@ const MEASURE_DIR =
   process.env["MEASURE_DIR"] ?? join(tmpdir(), "popnei_web-measure");
 const UV = process.env["UV"] ?? "uv";
 
-/** The sizes of the two files of the restart, as the plan gives them. */
+/** The sizes of the two files of the restart. The plan of stage 2 gave
+    the .nei file 19,161,178 bytes, written by popnei's js-v0.1.0-dev.2;
+    writeVars of js-v0.1.0-dev.3 writes the same variants in 16 bytes
+    more, 19,161,194, as it does panel.nei's (runner.md). */
 const BIG_VCF_BYTES = 80_692_954;
-const BIG_NEI_BYTES = 19_161_178;
+const BIG_NEI_BYTES = 19_161_194;
 
 // ---------------------------------------------------------------------
 // What the page is timed with.
@@ -128,6 +141,8 @@ interface Logged {
   readonly t: number;
   /** Of a progress, the bytes read. */
   readonly bytesRead?: number;
+  /** Of a result of the PCA, the variants it used. */
+  readonly numVarsUsed?: number;
 }
 
 /** Put in the page before its scripts: every worker it makes is timed
@@ -162,7 +177,11 @@ function instrument(): void {
       });
       this.addEventListener("message", (event: MessageEvent<unknown>) => {
         const kind = kindOf(event.data);
-        const data = event.data as { readonly bytesRead?: unknown };
+        const data = event.data as {
+          readonly bytesRead?: unknown;
+          readonly result?: { readonly numVarsUsed?: unknown };
+        };
+        const used = data.result?.numVarsUsed;
         log.push({
           worker,
           url: name,
@@ -171,6 +190,9 @@ function instrument(): void {
           t: performance.now(),
           ...(kind === "progress" && typeof data.bytesRead === "number"
             ? { bytesRead: data.bytesRead }
+            : {}),
+          ...(kind === "result" && typeof used === "number"
+            ? { numVarsUsed: used }
             : {}),
         });
       });
@@ -1441,10 +1463,12 @@ interface Sample {
 }
 
 /** Takes the memory of the engine one time after another until stopped,
-    a few tens of milliseconds apart. */
+    a few tens of milliseconds apart, or `pauseMs` and the time of a
+    sample. */
 function sampleMemory(
   browser: Browser,
   browserName: string,
+  pauseMs = 10,
 ): { readonly samples: readonly Sample[]; stop(): Promise<void> } {
   const samples: Sample[] = [];
   const state = { stopped: false };
@@ -1461,7 +1485,7 @@ function sampleMemory(
         total += size;
       }
       samples.push({ t: Date.now(), byKind, total });
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, pauseMs));
     }
   })();
   return {
@@ -2617,4 +2641,432 @@ test("IP5 D4 the time of columnAllows: the page frozen by a metadata file of 10,
       ],
     ],
   );
+});
+
+// ---------------------------------------------------------------------
+// IP6 D6, the times of the PCA.
+
+/** The individuals of the VCFs of the PCA's time and memory: 700, the
+    bound of the restart, below which the worker keeps what the PCA left,
+    and the four of the plan, the last popnei's limit. */
+const PCA_INDIVIDUALS = [700, 1_000, 2_000, 4_000, 9_381] as const;
+
+/** Their variants, those of the times in node of pca.md, "How it runs". */
+const PCA_VARIANTS = 300;
+
+/** The distance of the PCA's own LD filter in the measurement of the
+    pruning, in base pairs: the variants of the files of 20,000 variants
+    are 1,000 bases apart, so each is compared with the 100 before it. It
+    is not a default of the application, which has none. */
+const PCA_LD_DIST = 100_000;
+
+/** The gzipped VCF of `n` individuals and 300 variants of `e2e/bigVcf.ts`
+    in MEASURE_DIR, written when it is not there. */
+async function pcaVcf(n: number): Promise<string> {
+  await mkdir(MEASURE_DIR, { recursive: true });
+  const name = `pca_${String(n)}x${String(PCA_VARIANTS)}`;
+  const path = join(MEASURE_DIR, `${name}.vcf.gz`);
+  if (!existsSync(path)) {
+    const part = join(MEASURE_DIR, `${name}.part.vcf.gz`);
+    await writeBigVcf(part, PCA_VARIANTS, n);
+    await rename(part, path);
+  }
+  return path;
+}
+
+/** The options of the PCA in a project file: `method`, its filters of
+    missing data and MAF following the Variants step, and its LD filter
+    following the step, whose own is off, or its own at r² 0.1 and
+    `ldDist`. */
+function pcaOptionsJson(
+  method: "pca" | "pcoa",
+  ldDist: number | null,
+): Record<string, unknown> {
+  return {
+    axes: [1, 2, 3],
+    colourBy: null,
+    ld: { follow: ldDist === null, maxAllowedR2: 0.1, maxDist: ldDist },
+    maf: { follow: true, maxAllowedMaf: 0.95 },
+    method,
+    missingData: { follow: true, maxAllowedMissingRate: 0.1 },
+    view: "3d",
+  };
+}
+
+/** The project file of a new project with the variants file at
+    `variants` loaded, saved by the application into MEASURE_DIR as
+    `name`. */
+async function savedProject(
+  browser: Browser,
+  variants: string,
+  name: string,
+): Promise<string> {
+  const path = join(MEASURE_DIR, name);
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", variants);
+    await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible({
+      timeout: 120_000,
+    });
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Save project" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Save the project" });
+    const download = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await (await download).saveAs(path);
+  } finally {
+    await context.close();
+  }
+  return path;
+}
+
+/** The project file at `base` with the PCA's options `options`, written
+    beside it with `suffix`: the placeholder panel of the PCA has no
+    options yet, so a PCoA and the PCA's own LD filter are set by the
+    project the application opens. */
+async function projectWithPca(
+  base: string,
+  suffix: string,
+  options: Record<string, unknown>,
+): Promise<string> {
+  const project = JSON.parse(await readFile(base, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  project["analyses"] = [{ analysis: "pca", options }];
+  const path = base.replace(/\.popnei\.json$/, `_${suffix}.popnei.json`);
+  await writeFile(path, JSON.stringify(project, null, 2));
+  return path;
+}
+
+/** What one PCA through the application gave. */
+interface PcaRun {
+  /** The answer that ended the request, or "the tab closed". */
+  readonly answer: string;
+  /** From the run posted to the calculation worker to its answer; `null`
+      when the tab closed. */
+  readonly runMs: number | null;
+  /** From the run posted to the last progress of a range read, the pass
+      over the file; the rest is the calculation and its end. */
+  readonly passMs: number | null;
+  /** The engine's memory, the footprints of its processes summed: after
+      the load, before the Run; the largest while the PCA ran; and 3 s
+      after its answer, after the restart when there is one. */
+  readonly before: number | null;
+  readonly peak: number | null;
+  readonly after: number | null;
+  /** Whether a new calculation worker was started after the answer. */
+  readonly restarted: boolean;
+  /** Of a result of the PCA, the variants it used. */
+  readonly numVarsUsed: number | null;
+}
+
+/** Opens the project file at `project` on a new page, loads the variants
+    file at `variants` that it asks for, and runs the PCA from its panel
+    in the Analyses step, with the memory of the engine sampled. */
+async function pcaOnce(
+  browser: Browser,
+  browserName: string,
+  project: string,
+  variants: string,
+  timeout: number,
+  pauseMs: number,
+): Promise<PcaRun> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false };
+  page.on("crash", () => {
+    closed.crashed = true;
+  });
+  const sampler = sampleMemory(browser, browserName, pauseMs);
+  try {
+    await page.addInitScript(instrument);
+    await page.goto("popgen.html#variants");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Open project…" })
+      .click();
+    await (await chooser).setFiles(project);
+    await expect(page.getByRole("status").last()).toHaveText(/^Opened /, {
+      timeout: 60_000,
+    });
+    await pick(page, "Variants file", variants);
+    await expect(
+      page
+        .getByRole("region", { name: "Variants file" })
+        .getByText(/^[\d,]+ individuals$/),
+    ).toBeVisible({ timeout: 120_000 });
+    await goTo(page, "Analyses");
+    const region = page.getByRole("region", { name: "Principal components" });
+    // The memory settles after the load before it is taken.
+    await page.waitForTimeout(2000);
+    const before = (await logOf(page)).length;
+    const clickedAt = Date.now();
+    await region.getByRole("button", { name: "Run", exact: true }).click();
+    let ended: readonly Logged[] = [];
+    try {
+      await expect
+        .poll(
+          async () => {
+            if (closed.crashed) return true;
+            ended = (await logOf(page)).slice(before).filter(isCalc);
+            return ended.some((l) => l.event === "in" && ENDS.has(l.kind));
+          },
+          { timeout, intervals: [200] },
+        )
+        .toBe(true);
+    } catch (error) {
+      if (!closed.crashed && !/crash|closed/i.test(String(error))) throw error;
+      closed.crashed = true;
+    }
+    const answeredAt = Date.now();
+    if (closed.crashed) {
+      return {
+        answer: "the tab closed",
+        runMs: null,
+        passMs: null,
+        before: null,
+        peak: null,
+        after: null,
+        restarted: false,
+        numVarsUsed: null,
+      };
+    }
+    const run = ended.find((l) => l.event === "out" && l.kind === "run");
+    const answer = ended.find((l) => l.event === "in" && ENDS.has(l.kind));
+    if (run === undefined || answer === undefined) {
+      throw new Error("no run, or no answer to it, in the log of the worker");
+    }
+    const worker = answer.worker;
+    const ranges = ended.filter(
+      (l) => l.worker === worker && l.event === "in" && l.kind === "progress",
+    );
+    // popnei tells each range of 4 MiB it reads and the end of the run,
+    // which comes after the decomposition: the pass ends at the last
+    // progress before the one of the end.
+    const lastRange = ranges.length >= 2 ? ranges.at(-2) : undefined;
+    await expect(region.getByRole("progressbar")).toHaveCount(0, {
+      timeout: 60_000,
+    });
+    // The restart, when there is one, comes after the answer: waited for
+    // up to 15 s, and the memory taken 3 s after it.
+    const startedAgain = async (): Promise<boolean> =>
+      (await logOf(page)).some(
+        (l) => isCalc(l) && l.event === "start" && l.worker > worker,
+      );
+    const restarted = await expect
+      .poll(startedAgain, { timeout: 15_000, intervals: [100] })
+      .toBe(true)
+      .then(
+        () => true,
+        () => false,
+      );
+    await page.waitForTimeout(3000);
+    await sampler.stop();
+    const at = (from: number, to: number): readonly Sample[] =>
+      sampler.samples.filter((s) => s.t >= from && s.t <= to);
+    const beforeRun = at(0, clickedAt).at(-1)?.total ?? null;
+    const during = at(clickedAt, answeredAt).map((s) => s.total);
+    return {
+      answer: answer.kind,
+      runMs: answer.t - run.t,
+      passMs: lastRange === undefined ? null : lastRange.t - run.t,
+      before: beforeRun,
+      peak: during.length === 0 ? null : Math.max(...during),
+      after: sampler.samples.at(-1)?.total ?? null,
+      restarted,
+      numVarsUsed: answer.numVarsUsed ?? null,
+    };
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+/** The load of the machine, `uptime`'s averages of 1, 5 and 15 minutes. */
+function machineLoad(): string {
+  const text = execFileSync("uptime", [], { encoding: "utf8" });
+  return /load averages?: (.*)$/m.exec(text.trim())?.[1] ?? text.trim();
+}
+
+test.describe("IP6 D6 the times of the PCA", () => {
+  test("IP6 D6 the pruning inside a PCA: panel.nei and the files of 20,000 variants, with and without the PCA's own LD filter", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(3_600_000);
+    const { vcf, nei } = await bigFiles();
+    const files: readonly (readonly [string, string])[] = [
+      [
+        "panel.nei, 200 individuals, 1,200 variants",
+        join(FIXTURES, "panel.nei"),
+      ],
+      ["big.nei, 1,000 individuals, 20,000 variants, 19,161,194 bytes", nei],
+      ["big.vcf, 1,000 individuals, 20,000 variants, 80,692,954 bytes", vcf],
+    ];
+    const loadBefore = machineLoad();
+    const rows: string[][] = [];
+    for (const [what, file] of files) {
+      const name = file.split("/").at(-1) ?? "file";
+      const base = await savedProject(
+        browser,
+        file,
+        `pca_prune_${browserName}_${name.replace(/\./g, "_")}.popnei.json`,
+      );
+      const without = await projectWithPca(
+        base,
+        "noLd",
+        pcaOptionsJson("pca", null),
+      );
+      const withLd = await projectWithPca(
+        base,
+        "ld",
+        pcaOptionsJson("pca", PCA_LD_DIST),
+      );
+      const times: Record<"without" | "with", number[]> = {
+        without: [],
+        with: [],
+      };
+      const used: Record<"without" | "with", number | null> = {
+        without: null,
+        with: null,
+      };
+      for (let k = 0; k < REPEATS; k++) {
+        for (const [key, project] of [
+          ["without", without],
+          ["with", withLd],
+        ] as const) {
+          const ran = await pcaOnce(
+            browser,
+            browserName,
+            project,
+            file,
+            600_000,
+            250,
+          );
+          expect(ran.answer).toBe("result");
+          times[key].push(ran.runMs ?? Number.NaN);
+          used[key] = ran.numVarsUsed;
+        }
+      }
+      const noLd = median(times.without);
+      const ld = median(times.with);
+      rows.push([
+        what,
+        String(used.without),
+        stats(times.without, ms).join(", "),
+        String(used.with),
+        stats(times.with, ms).join(", "),
+        ms(ld - noLd),
+        `${((100 * (ld - noLd)) / ld).toFixed(0)}%`,
+      ]);
+    }
+    report(
+      "IP6 D6 the pruning inside a PCA",
+      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; the filters of a new project, the missing data at 0.1; the PCA's own LD filter at r² 0.1 and ${PCA_LD_DIST.toLocaleString("en-US")} bp; each PCA run from its panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times, alternating; the time from the run posted to the calculation worker to its result`,
+      [
+        "file",
+        "variants used without the LD filter",
+        "the PCA without it: median, range",
+        "variants used with it",
+        "the PCA with it: median, range",
+        "the pruning, the difference of the medians",
+        "its share of the PCA with it",
+      ],
+      rows,
+    );
+  });
+
+  test("IP6 D6 the time and the memory of the tab for a PCA and a PCoA of 700 to 9,381 individuals", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(4 * 3_600_000);
+    const loadBefore = machineLoad();
+    const rows: string[][] = [];
+    for (const n of PCA_INDIVIDUALS) {
+      const vcf = await pcaVcf(n);
+      const base = await savedProject(
+        browser,
+        vcf,
+        `pca_${String(n)}_${browserName}.popnei.json`,
+      );
+      for (const method of ["pca", "pcoa"] as const) {
+        const project = await projectWithPca(
+          base,
+          method,
+          pcaOptionsJson(method, null),
+        );
+        // The runs of seconds are repeated, and their memory taken more
+        // often; those of minutes are run once.
+        const small = n <= 2_000;
+        const runs: PcaRun[] = [];
+        for (let k = 0; k < (small ? REPEATS : 1); k++) {
+          runs.push(
+            await pcaOnce(
+              browser,
+              browserName,
+              project,
+              vcf,
+              1_800_000,
+              small ? 20 : 250,
+            ),
+          );
+        }
+        const cell = (
+          of: (r: PcaRun) => number | null,
+          unit: (x: number) => string,
+        ): string => {
+          const xs = runs.map(of).filter((x): x is number => x !== null);
+          if (xs.length === 0) return "";
+          if (xs.length === 1) return unit(xs[0] ?? Number.NaN);
+          const [mid, range] = stats(xs, unit);
+          return `${mid} (${range})`;
+        };
+        const seconds = (x: number): string => `${(x / 1000).toFixed(2)} s`;
+        rows.push([
+          n.toLocaleString("en-US"),
+          method === "pca" ? "PCA" : "PCoA",
+          String(runs.length),
+          [...new Set(runs.map((r) => r.answer))].join(", "),
+          cell((r) => r.runMs, seconds),
+          cell((r) => r.passMs, ms),
+          cell((r) => r.before, mb),
+          cell((r) => r.peak, mb),
+          cell(
+            (r) =>
+              r.peak === null || r.before === null ? null : r.peak - r.before,
+            mb,
+          ),
+          cell((r) => r.after, mb),
+          `${String(runs.filter((r) => r.restarted).length)} of ${String(runs.length)}`,
+        ]);
+        process.stdout.write(`${rows.at(-1)?.join(" | ") ?? ""}\n`);
+      }
+    }
+    report(
+      "IP6 D6 the time and the memory of the tab for a PCA and a PCoA",
+      `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; gzipped VCFs of ${String(PCA_VARIANTS)} variants of e2e/bigVcf.ts, the filters of a new project; each run from the panel on a new page after the project opened and the file loaded, ${String(REPEATS)} times up to 2,000 individuals, the median and the range, and once above; the memory is the footprints of the engine's processes summed, taken every 20 ms and the time of a sample up to 2,000 individuals and every 250 ms above`,
+      [
+        "individuals",
+        "method",
+        "runs",
+        "answer",
+        "run posted to answer",
+        "of it, the pass",
+        "memory before the Run",
+        "largest during it",
+        "grown by",
+        "3 s after the answer or the restart",
+        "worker started again",
+      ],
+      rows,
+    );
+  });
 });
