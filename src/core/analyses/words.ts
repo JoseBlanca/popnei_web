@@ -118,18 +118,20 @@ export function refusalWords(
 /** How the words of a refusal of an LD filter name the filter and say how
     to turn it off. */
 export interface LdFilterWords {
-  /** The filter, at the start of a sentence: "The LD filter of the
+  /** The filter, at the start of a sentence: "The LD pruning of the
       Variants step". */
   readonly name: string;
-  /** How to turn it off, after "or": "turn off the LD filter in the
+  /** How to turn it off, after "or": "turn off the LD pruning in the
       Variants step". */
   readonly turnOff: string;
 }
 
-/** The LD filter of the Variants step, in the words of a refusal. */
+/** The LD filter of the Variants step, in the words of a refusal: "the
+    LD pruning", as the switch and the Undo of that step name it (stop A 1,
+    decided by the owner on 29 September 2026). */
 export const STEP_LD_FILTER: LdFilterWords = Object.freeze({
-  name: "The LD filter of the Variants step",
-  turnOff: "turn off the LD filter in the Variants step",
+  name: "The LD pruning of the Variants step",
+  turnOff: "turn off the LD pruning in the Variants step",
 });
 
 /** The start of popnei's refusal of a variant out of the order of its
@@ -155,7 +157,7 @@ const NUMBERED_CHROMOSOME = /^numbered \d+ in the table of the reader$/u;
 /**
  * The words of popnei's refusal of a variant out of the order of its
  * chromosome by an LD filter, `filter` naming the filter and how to turn
- * it off (docs/specs/analyses/diversity.md, "Its words"): "The LD filter
+ * it off (docs/specs/analyses/diversity.md, "Its words"): "The LD pruning
  * of the Variants step needs the variants of each chromosome together and
  * in the order of their positions, and panel.vcf.gz does not have them
  * so: on chromosome 1, a variant at position 10 comes after one at

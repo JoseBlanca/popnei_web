@@ -1137,7 +1137,7 @@ describe("IP6 D4 refusalText", () => {
         vcf({ filters: [MISSING_01, ld(0.3, 10_000)] }),
       ),
     ).toBe(
-      "The LD filter of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD filter in the Variants step.",
+      "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
     );
   });
 
@@ -1248,16 +1248,16 @@ describe("IP6 D4 ldOrderText, the words of an LD filter over a file not sorted",
 
   test("a variant of a chromosome that had already ended, and the diversity's refusal with the LD filter of the Variants step", () => {
     expect(ldOrderText(LD_CAME_BACK, vcf, STEP_LD_FILTER)).toBe(
-      "The LD filter of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD filter in the Variants step.",
+      "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: a variant of chromosome 1, at position 10, comes after a variant of another chromosome, though variants of chromosome 1 came before that one. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
     );
     expect(diversityRefusalText(LD_NOT_SORTED, vcf)).toBe(
-      "The LD filter of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD filter in the Variants step.",
+      "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.",
     );
   });
 
   test("a message the place cannot be read from, or that numbers the chromosome, gives the words without the place; another message null", () => {
     const withoutPlace =
-      "The LD filter of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD filter in the Variants step.";
+      "The LD pruning of the Variants step needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so. Sort the file, with bcftools sort for a VCF, and load it again, or turn off the LD pruning in the Variants step.";
     expect(
       ldOrderText(
         "the variant 2 of the ones the filter by linkage disequilibrium has read, and more",
