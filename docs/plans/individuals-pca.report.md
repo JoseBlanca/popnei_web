@@ -499,6 +499,19 @@ phone.
    drawn smaller, and the warning of a few whole numbers stands in a row
    of its own.
 
+5. An Excel 97-2003 workbook named `.csv` is told to give it a name
+   ending in `.xlsx`, and is then refused again as a workbook of Excel
+   97-2003. Recommended: "…if it is an Excel workbook, open it in Excel
+   and save it as Excel Workbook (.xlsx)", which serves both.
+6. An error of Excel in the header is the name of its column: a sheet
+   whose first cell Excel saved as `#VALUE!` gives a column named
+   "#VALUE!". Recommended: refuse a header cell that is an error of
+   Excel, naming its place.
+7. When the reader of a file crashes, the user reads "the calculation
+   stopped unexpectedly. Choose it again." Recommended: "the reading of
+   the file stopped unexpectedly. If it happens again with this file,
+   save it again from Excel as .xlsx or as CSV."
+
 ## Stop C: the PCA panel, for the owner
 
 ### How to try it
@@ -923,3 +936,63 @@ tests reviewer's share of changes that passed every test, half, is the
 highest of the plan and comes from the 3D view, which only a browser
 shows; a task that builds a view drawn by WebGL should be asked to
 compare pictures from its first flow.
+
+## 9. The metadata file read from an xlsx
+
+The user loads the metadata file as an `.xlsx`; the Individuals step
+reads its first sheet with the same types, checks and populations as a
+CSV. The reader, xlsx_rs's wasm package, is downloaded the first time an
+xlsx is read, never for a CSV. xlsx_rs published its first release,
+`js-v0.1.0-dev.1`, on 29 September 2026 at 12:02 UTC, while work package
+8 was reviewed, so this work package ran. Commits 873725c (the release
+in `package.json`; the lockfile added xlsx_rs alone), 915b06e (9.1),
+191bb7e (9.2); the fixes of the review 4ad209e, 4b86110, d11fe7f and
+be43e05.
+
+### The deliverables, on be43e05
+
+1. `npm pkg get dependencies.xlsx_rs`:
+   `https://github.com/JoseBlanca/xlsx_rs/releases/download/js-v0.1.0-dev.1/xlsx_rs-0.1.0.tgz`.
+2. `npx vitest run src/worker -t "IP9 D1"`: "Tests 80 passed" (at least
+   12).
+3. The browser check with `-g "IP9 D2"`: "14 passed", 7 in each engine
+   (at least 5 each). After the `.wasm` was answered with an error, both
+   engines ask for it again. After the JavaScript was, Chromium keeps the
+   failed import for the life of the page and WebKit asks again; the
+   retry now asks for the file at another address, so the next xlsx is
+   read in both.
+4. In the built site, xlsx_rs's `.wasm` is 565,045 bytes, 300,655 with
+   gzip -9, and its JavaScript 4,564 and 1,767: 0.30 MB, as `files.md`
+   gives.
+
+`npm test` "Tests 2866 passed (2866)"; the browser check "886 passed".
+The contract of the release matched our specs field by field; the three
+xlsx files of the flow are byte for byte those of xlsx_rs's
+`tests/data`. Reading `individuals_10000.xlsx` took 347 to 430 ms in
+Chromium and 362 to 424 ms in WebKit with the download, and the page
+stayed answering while the light worker read it.
+
+### The review
+
+`spec` with `stale`, `errors`, `api` and `architecture`; `tests`; `ux`
+with `accessibility`, `browser` and `bundle`. The code followed the
+specs; fixed:
+
+- in Chromium, after the reader's JavaScript failed to download, every
+  later xlsx failed for the rest of the page;
+- a date in the first values broke at its hyphen, "2024-05-" then "15";
+- two passages of the specs corrected to the release's contract: an
+  example row that contradicted its own table, and `#SPILL!`, which Excel
+  saves as `#VALUE!` and so refuses no sheet;
+- a crash of either worker is now written to the console;
+- a project file could hold a refusal naming column 0;
+- the tests reviewer made 92 changes, 85 caught; the 4 real gaps now
+  fail a test: a row named NA with every other cell missing, which must
+  stay, the largest size of a sheet checked in two places, and "row
+  100,001" in the words.
+
+For the owner, below at stop B: the words for an Excel 97-2003 file
+named `.csv`, which lead to a second refusal; whether an error of Excel
+in the header should refuse the file; the words of the light worker's
+crash, which speak of a calculation.
+

@@ -1193,7 +1193,7 @@ the branch was merged meanwhile.
 
 **Tasks:**
 
-- [ ] 9.1 xlsx_rs in `package.json`, in a commit of its own
+- [x] 9.1 xlsx_rs in `package.json`, in a commit of its own
   (`site.md`, "xlsx_rs, from stage 4"); `src/worker/xlsxCells.ts` and
   the package loaded on first need in `filesRunner.ts`
   (`individuals.md`, "The package of xlsx_rs, loaded on first need");
@@ -1203,7 +1203,7 @@ the branch was merged meanwhile.
   `csv` `null` (`entry.md`, "Who asks for a read"). Serves 1 and 2. Added on 28 September 2026 (found by task 4.2):
   the words of a file that is not text (`notText` of `individuals.md`), which
   tell the user to name the file `.xlsx` and so wait for the xlsx.
-- [ ] 9.2 The Individuals step accepts an `.xlsx`, with the fixed line
+- [x] 9.2 The Individuals step accepts an `.xlsx`, with the fixed line
   of the first sheet (`steps/individuals.md`, "The file" and "How the
   file was read"); the three xlsx files copied into `e2e/fixtures/`; the
   flows of D3 and the state of an xlsx read in `e2e/screens.spec.ts`;
