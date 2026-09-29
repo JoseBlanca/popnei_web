@@ -2984,8 +2984,10 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-variants-opened-${theme}`);
       await pickVariants(page, "panel.vcf.gz");
       await expect(page.getByRole("main").getByText(/^Warning:/)).toBeVisible();
+      // The line of the card, exactly: the warning of the identity names
+      // the 200 individuals of the project too.
       await expect(
-        page.getByRole("main").getByText("200 individuals"),
+        page.getByRole("main").getByText("200 individuals", { exact: true }),
       ).toBeVisible();
       await save(page, `popgen-variants-identity-${theme}`);
     });

@@ -568,10 +568,14 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
     await maf.press("ControlOrMeta+a");
     await maf.press("Backspace");
     await maf.pressSequentially(keys);
+    // In the step: the status region holds the same words once it is
+    // written, 100 ms later.
     await expect(
-      page.getByText(
-        /^Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.95.$/,
-      ),
+      page
+        .getByRole("main")
+        .getByText(
+          /^Write the decimals with a point, 0.1 and not 0,1; the threshold stays 0.95.$/,
+        ),
     ).toBeVisible();
     await expect(
       group.getByText(

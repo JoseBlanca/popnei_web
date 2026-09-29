@@ -312,7 +312,9 @@ test("WS7 D3 panel.txt is not loaded, and the step says why and announces it", a
 
   const message =
     "panel.txt was not loaded: the Variants step reads a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.";
-  await expect(page.getByText(message)).toBeVisible();
+  // In the step: the status region holds the same words once it is
+  // written, 100 ms later.
+  await expect(page.getByRole("main").getByText(message)).toBeVisible();
   await expect(page.getByRole("status").last()).toHaveText(message);
   await expect(fileButton(page)).toHaveText("Choose a variants file…");
   await expect(fileButton(page)).toBeFocused();
