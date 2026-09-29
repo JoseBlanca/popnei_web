@@ -4043,8 +4043,19 @@ function parseIndividualsError(
       });
     }
     case "unnamedColumn": {
+      // A column of a file or of a sheet, counted from 1, which the words
+      // of an xlsx write in the letters of Excel.
       const column = numberField(fields, path, "column");
-      return column.ok ? success({ kind, column: column.value }) : column;
+      if (!column.ok) {
+        return column;
+      }
+      return orFailure(
+        { kind, column: column.value },
+        wholeNumberError(column.value, 1, Number.MAX_SAFE_INTEGER, [
+          ...path,
+          "column",
+        ]),
+      );
     }
     case "emptyIndividual": {
       const line = numberField(fields, path, "line");

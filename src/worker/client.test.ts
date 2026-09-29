@@ -2865,3 +2865,45 @@ describe("IP6 D3 the restart after a large PCA", () => {
     expect(order).toEqual(["k1 done", "k6 failed"]);
   });
 });
+
+describe("IP9 a crash of a worker reaches the console", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("the light worker crashed while it read an xlsx: the read fails as workerFailed, and its message is written to the console", async () => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const env = setUp();
+    env.client.addFile("ind", CSV_FILE);
+    const read = env.client.readIndividuals("ind", null);
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    emit(worker, { kind: "crashed", message: "RuntimeError: unreachable" });
+
+    expect(await now(read.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "RuntimeError: unreachable" },
+    });
+    expect(logged).toHaveBeenCalledWith(
+      "popnei_web: the light worker stopped. RuntimeError: unreachable",
+    );
+  });
+
+  test("the calculation worker crashed: its message is written to the console", () => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const env = setUp();
+    emit(last(env.calculation), READY);
+    emit(last(env.calculation), { kind: "crashed", message: "trap" });
+    expect(logged).toHaveBeenCalledWith(
+      "popnei_web: the calculation worker stopped. trap",
+    );
+  });
+});

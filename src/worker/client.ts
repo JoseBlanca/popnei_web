@@ -409,6 +409,12 @@ export function createClient(config: {
   function onCalculationMessage(message: FromRunner): void {
     switch (message.kind) {
       case "crashed":
+        // The page shows only that the reading or the calculation
+        // stopped; the message, a trap of the wasm among them, is for
+        // whoever reports the problem.
+        console.error(
+          `popnei_web: the calculation worker stopped. ${message.message}`,
+        );
         calculationBroken({ kind: "workerFailed", message: message.message });
         return;
       case "badRequest":
@@ -863,6 +869,12 @@ export function createClient(config: {
   function onLightMessage(message: FromFilesRunner): void {
     switch (message.kind) {
       case "crashed":
+        // The page shows only that the reading or the calculation
+        // stopped; the message, a trap of the wasm among them, is for
+        // whoever reports the problem.
+        console.error(
+          `popnei_web: the light worker stopped. ${message.message}`,
+        );
         lightBroken({ kind: "workerFailed", message: message.message });
         return;
       case "badRequest":

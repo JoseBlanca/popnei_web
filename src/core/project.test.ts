@@ -6505,6 +6505,26 @@ describe("IP9 the words of an xlsx refused", () => {
     },
   );
 
+  test.each([[0], [2.5], [-1]])(
+    "the validation refuses an unnamedColumn whose column is %d, which no column of a file or a sheet is",
+    (column) => {
+      const p = xlsxProject();
+      const data: unknown = JSON.parse(
+        JSON.stringify({
+          ...p,
+          individuals: {
+            ...individualsOf(p),
+            read: { kind: "failed", error: { kind: "unnamedColumn", column } },
+          },
+        }),
+      );
+      expect(parse(data)).toMatchObject({
+        ok: false,
+        error: { path: ["individuals", "read", "error", "column"] },
+      });
+    },
+  );
+
   test("the validation refuses a sheetTooLarge whose lastRow is a text, at its path", () => {
     const refusal = {
       kind: "sheetTooLarge",
