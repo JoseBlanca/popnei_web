@@ -467,3 +467,9 @@ describe("IP4 D2 the types compared as text", () => {
     ).toMatchObject([{ numLevels: 2, numTexts: 2 }]);
   });
 });
+
+describe("IP10 D3 the cases of the reader spec: cellNumber", () => {
+  test("with a point, the number cell 1.75 is 1.75", () => {
+    expect(cellNumber(1.75, ".")).toBe(1.75);
+  });
+});
