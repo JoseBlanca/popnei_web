@@ -225,7 +225,10 @@ knows which one it was:
   load, which is an answer (above). The runner posts it
   with the message of what was thrown, then closes itself. The client
   fails the request with the `RunError` `workerFailed` of
-  `docs/specs/worker/protocol.md`, or, before the worker was ready, counts
+  `docs/specs/worker/protocol.md`, or with `defect` when a message of
+  the calculation worker starts "popnei_web defect: ", a mistake of our
+  code (`docs/specs/worker/client.md`, "Crashes, defects, and every
+  read answered"), or, before the worker was ready, counts
   it as a failed start, and starts another worker
   (`docs/specs/worker/client.md`).
 - **`badRequest`**: a request that did not pass its check, which only a

@@ -409,7 +409,8 @@ was ready:
 |---|---|---|
 | `refused` | fails with `popnei`, popnei's message | goes on to the next request |
 | `reopenFailed` | fails with `reopenFailed`, the name of the file and popnei's message | goes on to the next request |
-| `crashed`, or an `error` event of the worker | fails with `workerFailed`, its message | ended, and started again |
+| `crashed` whose message starts "popnei_web defect: ", a defect of our code in the worker or popnei's refusal of an option it does not know (`docs/specs/worker/runner.md`, "What it answers when something goes wrong") | fails with `defect`, the message after that start; the client writes the whole message to the console of the browser | ended, and started again |
+| any other `crashed`, or an `error` event of the worker | fails with `workerFailed`, its message | ended, and started again |
 | `messageerror`, a message the browser could not copy | fails with `workerFailed` | ended, and started again |
 | `badRequest` | fails with `defect`, its message | ended, and started again |
 | a message that fails its check, an answer of another request's id or of the wrong kind for the request, a `result` to a `write` or a `written` to a `run` among them, a result or a file under another key than its request's, a result of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
@@ -441,7 +442,14 @@ the client's own words, "the worker stopped with no message". These are
 details; what the user reads is chosen by the kind of the failure, for a
 read of a file by `docs/specs/core/project.md` (**Open 4** there), and for
 a calculation by the panel of its analysis
-(`docs/specs/analyses/diversity.md`, "Its words").
+(`docs/specs/analyses/diversity.md`, "Its words"). A `crashed` of a
+defect of ours is `defect` and not `workerFailed` so that the panel says
+the application met an error of its own, and not that the calculation
+stopped, whose words send the user to load the file again or, for a
+principal components of 2,264 individuals or more, blame the memory of
+the tab; the owner decided it on 29 September 2026 (stops A 9 and C 6
+of `docs/specs/stage-4-open-points.md`). The light worker is left as
+it was: its `crashed` is `workerFailed` whatever its message.
 
 ### Progress
 

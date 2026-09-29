@@ -784,16 +784,24 @@ why, and the client fails the request and starts another worker
 refusal of popnei, which the store keeps for those settings;
 `reopenFailed`, a variants file the browser can no longer read;
 `workerFailed`, a worker that crashed; `defect`, a mistake of our code.
-Which answer, by what was thrown:
+A mistake of our code reaches the page as `defect`, in the words of a
+defect of the application, and never as a refusal of the user's input
+nor as a crash, whose words say to change the settings or to load the
+file again, which mends nothing, or, for a large PCA, that its memory
+did not fit (`docs/specs/analyses/pca.md`, "Its words"): the owner
+decided it on 29 September 2026 (stops A 9 and C 6 of
+`docs/specs/stage-4-open-points.md`). Which answer, by what was thrown:
 
 | what happened | answer | on the page (`RunError`) | the worker |
 |---|---|---|---|
 | a call to popnei that reads the file, the open, a calculation, the iteration of the counts or the write, threw a plain `Error` whose message is one of popnei's of a range the browser refused or gave short (below) | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
+| a call to popnei threw a plain `Error` whose message is popnei's refusal of an option it does not know, "popnei: `‹key›` is not an option of `‹function›`, whose options are …", which only the application can send, since the runner writes every object of options with its keys alone (above, "The principal components", step 2) | `crashed`, with "popnei_web defect: " and popnei's message | `defect` | closes |
 | a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself: a refusal of the data, filters that keep no variant, a list of individuals that names one twice, a file the memory of the tab does not take | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
 | popnei refused the open of the file again, in a request whose steps changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
 | a request that failed `parseToRunner`; a second `open`; a `run` or a `write` before the `open`, of another load, or after an open that popnei refused; an empty list of individuals; two populations of one name | `badRequest`, what was wrong | `defect` | closes |
-| a throw of our own code anywhere else: what `told` threw, which popnei's call throws back (step 2 above), a `popnei_web defect:` of step 4 or of the counts of a pass among them | `crashed`, its message | `workerFailed` | closes |
+| a defect thrown by our own code anywhere else, an `Error` whose message starts "popnei_web defect: ": a result of popnei that does not match what was asked, step 3 of the principal components, the counts of a pass with a filter the job has not, a `told` that threw one, which popnei's call throws back (step 2 above) | `crashed`, its message, which the client tells by its start | `defect` | closes |
+| any other throw of our own code: a `TypeError` of a mistake, what `told` threw otherwise | `crashed`, its message | `workerFailed` | closes |
 
 - **The file changed on the disk.** A `File` is a handle to the file as
   it was when the user picked it, and the File API asks a browser to
@@ -941,7 +949,10 @@ export function createRunner(): Runner; // after loadPopnei has given ok
 
 The answer of what a call to popnei threw, `refused` for a plain `Error`
 and `crashed` for anything else, exported so that the tests reach the
-cases popnei cannot be made to give in node, a trap among them. The
+cases popnei cannot be made to give in node, a trap among them. A plain
+`Error` whose message is popnei's refusal of an option it does not know
+is `crashed` with "popnei_web defect: " before popnei's message, a
+defect of ours (above, "What it answers when something goes wrong"). The
 runner turns a `refused` into `reopenFailed` after this function, when
 its message is one of popnei's of a range, or when it was an open
 again.
@@ -1303,7 +1314,13 @@ The tests of stage 2, each at `open` and `run` of a runner made by
 - **`answerOfThrown`**: `new Error("x")` is `refused` with "x";
   `new RangeError("x")`, `new WebAssembly.RuntimeError("unreachable")`,
   a `TypeError`, what JavaScript throws for a mistake of the code, and a
-  thrown string are `crashed`.
+  thrown string are `crashed`; what `doPcoaFromVariants` of the release
+  throws for an option it does not know, `numCompsKept`, is `crashed`
+  with "popnei_web defect: popnei: `numCompsKept` is not an option of
+  `doPcoaFromVariants`, whose options are `minNumSnps` and
+  `correctByLingoes`", its message held as a literal against the pinned
+  release, since a change of popnei's words would turn it back into a
+  refusal of the user's settings.
 - **`transferablesOf`**: of a result of each of the five analyses, the
   principal components with their `projections` and
   `explainedVariancePercent`, one buffer per array, none twice when two

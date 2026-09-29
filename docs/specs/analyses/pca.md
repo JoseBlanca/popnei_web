@@ -2194,9 +2194,10 @@ or "the PCoA":
 | the PCoA's refusal of the pairs with no distance, a message that matches "‹n› of the ‹m› pairs of individuals has no distance" or "… have no distance", then "the first of them ‹a› and ‹b›, and ‹c› is in ‹k› of them", each name between backquotes (above, "The request") | "4 pairs of individuals of panel.nei have no variant called in both, so they have no Kosman distance and the PCoA cannot place them; s082 is in 3 of them. Remove the individuals with many missing genotypes with the filters of individuals in the Variants step, or use the PCA of the genotypes, which places every individual." With one pair, "1 pair of individuals of panel.nei has no variant called in both, so it has no Kosman distance and the PCoA cannot place it; s082 is in it. …" |
 | the PCoA's "there is 1 individual, and a principal coordinate analysis places 2 at least", which the filters of individuals give when they keep one | "The filters of individuals keep one individual of panel.nei, and the PCoA needs two at least to place them. Keep more individuals with the filters of individuals in the Variants step." |
 | the PCoA's "every distance is 0" | "Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with the filters of the Variants step." |
-| any other refusal | "popnei could not calculate the principal components: ‹its message›. Change the settings, or load the variants file again, to run it again." |
+| any other refusal | "popnei could not calculate the principal components: ‹its message›. Change the settings, or load the variants file again, to run it again." Not popnei's refusal of an option it does not know, which only the application can send, and which the runner answers as a defect (below) |
 | the worker stopped with no answer, `workerFailed`, with the memory the calculation needs estimated at `PCA_MEMORY_WORDS_BYTES`, 250 MB, or more: 48.8 bytes for either method, popnei's count, for each cell of the individuals × individuals matrix of the individuals it ran on, 2,264 individuals or more; "the principal coordinates" for the PCoA | "The calculation stopped unexpectedly, perhaps because the principal components of 4,000 individuals, which need about 0.8 GB, did not fit in the memory of this tab; a phone or a tablet gives a tab far less than a computer. Keep fewer individuals with the filters of individuals in the Variants step, close other tabs and run it again, or calculate them with popnei in Python, outside the browser." |
 | `workerFailed` below that, `reopenFailed`, `defect`, `couldNotStart`, `protocolMismatch`, `files` | the diversity's rows |
+| a defect of the application, `defect`: a `popnei_web defect:` thrown in the calculation worker during the PCA, such as popnei's individuals or projections not those the pass was to give (`docs/specs/worker/runner.md`, "The principal components", step 3), or popnei's refusal of an option it does not know | the diversity's row of `defect`, whatever the number of individuals: "The application met an error of its own: popnei gave 10 projections for 3 individuals and 2 components. Run it again." Before 29 September 2026 the first reached the panel as a crash, `workerFailed`, whose words said to load panel.nei again below 2,264 individuals and blamed the memory of the tab from there up, and the second as a refusal, whose words said to change the settings; the owner decided on that day that a defect of the application is told as one (stops A 9 and C 6 of `docs/specs/stage-4-open-points.md`) |
 
 The words of the LD filter's refusal take from popnei's message only
 the chromosome and the two positions, as the diversity's row says
@@ -2212,7 +2213,9 @@ rewording made without knowing the case could say something false.
 `refusalText` makes the rows of popnei's refusals; the rows of the
 refusals of the diversity whose words are not the PCA's are not used,
 since popnei's PCA words its empty pass otherwise. `crashText` makes the
-two rows of `workerFailed`.
+two rows of `workerFailed`, and is for a crash alone: a worker that
+stopped for a trap of the wasm, a memory that could not grow, or a throw
+that is not a defect of ours.
 
 A browser may refuse the memory well below popnei's limit: wasm can
 address 4 GB, but a tab is given what the browser and the machine allow,

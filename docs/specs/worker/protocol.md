@@ -383,7 +383,7 @@ export type RunError =
   | { kind: "workerFailed"; message: string } // the worker crashed, or threw outside a call
   | { kind: "couldNotStart"; reason: string } // no `ready` from the worker, twice
   | { kind: "protocolMismatch" }              // a stale file after a deploy
-  | { kind: "defect"; message: string };      // a message that did not validate
+  | { kind: "defect"; message: string };      // a mistake of our code: a message that did not validate, a request refused, a popnei_web defect thrown in the calculation worker
 ```
 
 `reopenFailed` is a variants file the browser can no longer read,
