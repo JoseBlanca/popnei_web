@@ -498,10 +498,16 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = (
       frame.axes(scales.x, scales.y);
     } else {
       // The labels at the size of the coordinates, which the ticks are a
-      // factor of.
+      // factor of. An axis that runs past the largest number would have a
+      // tick there whose label reads "Infinity", which a user would take
+      // for a value of the data, so it is left out.
       const tick = (value: number): string =>
         String(tableNumber(value / factor)).replaceAll("-", MINUS);
-      frame.axes(scales.x, scales.y, { xFormat: tick, yFormat: tick });
+      frame.axes(scales.x, scales.y, {
+        xFormat: tick,
+        yFormat: tick,
+        tickShown: (value) => Number.isFinite(value / factor),
+      });
     }
     // The point under the pointer may have moved: the next movement of
     // the pointer finds it again.

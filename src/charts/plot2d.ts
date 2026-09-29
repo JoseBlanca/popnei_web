@@ -57,6 +57,12 @@ export interface AxesOptions {
   readonly yFormat?: (value: number) => string;
   /** Ticks of the vertical axis at whole numbers only. */
   readonly yWholeNumbers?: boolean;
+  /**
+   * Whether a tick of either axis is drawn, of those its scale gives; all
+   * are when absent. The scatter leaves out a tick whose label would not
+   * be a finite number.
+   */
+  readonly tickShown?: (value: number) => boolean;
 }
 
 /** A group of the SVG, where a plot draws. */
@@ -360,15 +366,21 @@ export function createPlot2d<Data extends PlotText>(
       axes(x, y, options = {}) {
         const xCount = Math.max(1, Math.round(innerWidth / X_TICK_SPACING));
         const yCount = Math.max(1, Math.round(innerHeight / Y_TICK_SPACING));
-        const xAxis = axisBottom<number>(x).ticks(xCount);
+        // The count of ticks also sets how many digits the scale's own
+        // labels have, so it stays beside the values of the ticks.
+        const shown = options.tickShown ?? (() => true);
+        const xAxis = axisBottom<number>(x)
+          .ticks(xCount)
+          .tickValues(x.ticks(xCount).filter(shown));
         if (options.xFormat !== undefined) xAxis.tickFormat(options.xFormat);
         const yAxis = axisLeft<number>(y).ticks(yCount);
         if (options.yWholeNumbers === true) {
           yAxis
-            .tickValues(wholeNumberTicks(y, yCount))
+            .tickValues(wholeNumberTicks(y, yCount).filter(shown))
             .tickFormat(options.yFormat ?? formatWholeNumber);
-        } else if (options.yFormat !== undefined) {
-          yAxis.tickFormat(options.yFormat);
+        } else {
+          yAxis.tickValues(y.ticks(yCount).filter(shown));
+          if (options.yFormat !== undefined) yAxis.tickFormat(options.yFormat);
         }
         xAxisGroup.call(xAxis);
         yAxisGroup.call(yAxis);

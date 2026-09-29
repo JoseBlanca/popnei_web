@@ -554,6 +554,33 @@ describe("VS4 D1 the base of the 2D plots, its axes and its handle", () => {
     ]);
   });
 
+  test("IP10 D3 tickShown leaves out the ticks of both axes it is false for, the whole numbers among them", () => {
+    const kept = (yWholeNumbers: boolean): Plot2dDefinition<Bars> => ({
+      ...bars,
+      draw(frame, data) {
+        const x = scaleLinear()
+          .domain([0, data.values.length])
+          .range([0, frame.innerWidth]);
+        const y = scaleLinear()
+          .domain([0, Math.max(1, ...data.values)])
+          .range([frame.innerHeight, 0]);
+        frame.axes(x, y, {
+          yWholeNumbers,
+          tickShown: (value) => value !== 2,
+        });
+      },
+    });
+    const element = sizedElement(400, 300);
+    createPlot2d(element, barsOf([10, 1, 1, 1, 1, 1, 1]), kept(false));
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["0", "4", "6"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(
+      EVEN_TO_10.filter((label) => label !== "2"),
+    );
+    const whole = sizedElement(400, 300);
+    createPlot2d(whole, barsOf([3, 1]), kept(true));
+    expect(tickLabels(whole, "g.chart-axis-y")).toEqual(["0", "1", "3"]);
+  });
+
   test("a draw that a resize scheduled draws the data of a later update at the new size", () => {
     const element = sizedElement(400, 300);
     const handle = createPlot2d(element, barsOf([1, 2]), bars);

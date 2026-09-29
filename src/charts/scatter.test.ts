@@ -393,7 +393,7 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
     expect(element.innerHTML).not.toContain("NaN");
   });
 
-  test("IP10 D3 near the largest number, the labels of the ticks are at the size of the coordinates", () => {
+  test("IP10 D3 near the largest number, the labels of the ticks are at the size of the coordinates, and a tick past the largest number is left out", () => {
     const element = sizedElement(400, 300);
     createScatter(
       element,
@@ -409,10 +409,11 @@ describe("IP7 D2 the scatter under jsdom, its SVG", () => {
       ].map((text) => Number(text.textContent.replaceAll("−", "-")));
       // Points at ±1.7e308; the drawing scales are over their half, whose
       // ticks, unscaled, would be written up to 8e307. The axis across
-      // runs past the largest number, and its ticks there read "Infinity".
-      const finite = labels.filter((label) => Number.isFinite(label));
-      expect(finite.length).toBeGreaterThan(2);
-      expect(Math.max(...finite.map(Math.abs))).toBeGreaterThan(1e308);
+      // runs past the largest number, where a tick would read "Infinity",
+      // and is left out.
+      expect(labels.length).toBeGreaterThan(2);
+      expect(labels.every((label) => Number.isFinite(label))).toBe(true);
+      expect(Math.max(...labels.map(Math.abs))).toBeGreaterThan(1e308);
     }
   });
 
