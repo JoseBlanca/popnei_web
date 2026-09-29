@@ -1980,15 +1980,15 @@ describe("WP1 D4 the records and the needs", () => {
       ],
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
+        "the reading of the file stopped unexpectedly. Load it again in the Individuals step. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
       ],
       [
         { kind: "defect", message: "a read the project cannot hold" },
-        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
+        "the reading of the file stopped unexpectedly. Load it again in the Individuals step. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
       ],
       [
         { kind: "popnei", message: "a message of popnei" },
-        "the calculation stopped unexpectedly. Load it again in the Individuals step.",
+        "the reading of the file stopped unexpectedly. Load it again in the Individuals step. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
       ],
       [
         { kind: "protocolMismatch" },
@@ -3348,7 +3348,7 @@ describe("WS1 D3 the additions to project.ts", () => {
         }),
       ),
     ).toBe(
-      "pops.csv could not be read: the calculation stopped unexpectedly. Load it again in the Individuals step.",
+      "pops.csv could not be read: the reading of the file stopped unexpectedly. Load it again in the Individuals step. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
     );
   });
 
@@ -3593,11 +3593,11 @@ describe("WS1 D3 the additions to project.ts", () => {
     test.each([
       [
         { kind: "workerFailed", message: "out of memory" },
-        "the calculation stopped unexpectedly. Choose it again.",
+        "the reading of the file stopped unexpectedly. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
       ],
       [
         { kind: "defect", message: "a read the project cannot hold" },
-        "the calculation stopped unexpectedly. Choose it again.",
+        "the reading of the file stopped unexpectedly. If it happens again with this file, save it again from Excel as .xlsx or as CSV.",
       ],
       [
         { kind: "couldNotStart", reason: "no ready message, twice" },

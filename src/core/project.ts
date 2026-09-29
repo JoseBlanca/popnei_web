@@ -2077,8 +2077,10 @@ export function individualsNeeds(p: Project): string | null {
   }
   if (individuals.read.kind !== "read") {
     const load = loadIndividualsText(p.app);
+    const ends = endsIn("Individuals", load);
     return individualsReadNeeds(individuals, p.app, {
-      ...endsIn("Individuals", load),
+      ...ends,
+      again: `${ends.again} ${SAVE_AGAIN}`,
       refusedEnd: () => load,
       notGivenEnd: (fileName) =>
         `Load ${fileName} again in the Individuals step.`,
@@ -2126,6 +2128,18 @@ interface IndividualsEnds extends Pick<ReasonEnds, "again" | "reload"> {
   readonly notGivenEnd: (fileName: string) => string;
 }
 
+/** What happened when the light worker stopped, by a crash or a defect
+    of our code, while it read the individuals file, as the owner decided
+    on 29 September 2026, which closes Open 4 of the project spec for that
+    file (stop B 7); what follows is the end `again` of the place. */
+const READING_STOPPED = "the reading of the file stopped unexpectedly.";
+
+/** What to do when the reading of the individuals file stopped: save the
+    file again from Excel, since a file that stops the reader every time
+    is not mended by loading it again (the owner, 29 September 2026). */
+const SAVE_AGAIN =
+  "If it happens again with this file, save it again from Excel as .xlsx or as CSV.";
+
 /** Why an opened project does not hold its individuals file of the name
     `fileName`, as shown: its read was not done when the project was
     saved (the project spec, "The project of an opened project file"). */
@@ -2148,7 +2162,9 @@ function individualsReadNeeds(
     case "failed": {
       const error = read.error;
       if (error.kind === "worker") {
-        return workerFailedText(name, error.error.kind, ends);
+        return MENDED_BY_RELOAD.has(error.error.kind)
+          ? workerFailedText(name, error.error.kind, ends)
+          : `${name} could not be read: ${READING_STOPPED} ${ends.again}`;
       }
       const words = `${name} could not be read${saying(individualsFileRefusalWords(error, app, individuals.csv === null))}.`;
       // Its words say what to do, and take no end.
@@ -2225,8 +2241,10 @@ function stepRefusedEnd(error: IndividualsFileError, app: AppId): string {
  * `individualsNeeds` for such a file, with the ends of that step, "Choose
  * another separator, or load a corrected file." after a row of the
  * wrong length or a quote never closed, "Load a corrected file." after
- * most other refusals, and "Choose it again." after a crash, as the
- * Variants step says it.
+ * most other refusals, and after a crash of the reader the owner's words
+ * of 29 September 2026, "the reading of the file stopped unexpectedly. If
+ * it happens again with this file, save it again from Excel as .xlsx or
+ * as CSV."
  */
 export function individualsStepNeeds(p: Project): string | null {
   const individuals = p.individuals;
@@ -2236,7 +2254,7 @@ export function individualsStepNeeds(p: Project): string | null {
   return individualsReadNeeds(individuals, p.app, {
     refusedEnd: (error) => stepRefusedEnd(error, p.app),
     notGivenEnd: () => STEP_AGAIN,
-    again: STEP_AGAIN,
+    again: SAVE_AGAIN,
     reload: stepReload,
   });
 }
