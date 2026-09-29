@@ -3171,6 +3171,27 @@ for (const theme of ["light", "dark"] as const) {
       await save(page, `popgen-pca-2d-${theme}`);
     });
 
+    test("the principal components in 2D, p1 highlighted", async ({ page }) => {
+      const panel = await pcaRun(page, true);
+      await panel.getByRole("radio", { name: "2D", exact: true }).click();
+      await expect(
+        panel.locator("svg.chart-scatter .chart-axis-label").first(),
+      ).toHaveText("PC1 (3.55%)");
+      await panel
+        .getByRole("radiogroup", { name: "Population" })
+        .locator("button")
+        .filter({ hasText: "p1 (68)" })
+        .click();
+      await expect(
+        panel.getByRole("radio", { name: "p1 (68)" }),
+      ).toHaveAttribute("aria-checked", "true");
+      // p0 and p2 faded, p1 drawn over them.
+      await expect(
+        panel.locator("svg.chart-scatter path.chart-points-faded"),
+      ).toHaveCount(2);
+      await save(page, `popgen-pca-2d-highlighted-${theme}`);
+    });
+
     test("the principal components in a browser with no WebGL", async ({
       page,
     }) => {
