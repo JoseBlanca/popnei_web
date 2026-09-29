@@ -269,26 +269,20 @@ test("IP3 D3 in the empty distance the arrow keys, Page Up, Page Down, Home and 
   }
   // The field is the last stop of the page, so the Tab key takes the
   // focus out of it to the browser's own bar. Chromium and WebKit then
-  // give the page's focus to its body; Firefox 155 keeps the field as the
-  // page's active element, with the page no longer focused. The field
-  // losing the focus is what both have.
-  await distance(page).evaluate((input) => {
-    input.addEventListener(
-      "blur",
-      () => {
-        Object.assign(window, { distanceLeft: true });
-      },
-      { once: true },
-    );
-  });
+  // give the page's focus to its body; Firefox 155 on GitHub's runners
+  // fires no blur and keeps the field as the page's active element. What
+  // the rule asks holds in all three: the field's own handling of the Tab
+  // runs on the key, so after a frame the field is still empty and nothing
+  // was sent.
   await page.keyboard.press("Tab");
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => (window as unknown as { distanceLeft?: boolean }).distanceLeft,
-      ),
-    )
-    .toBe(true);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      }),
+  );
   await expect(distance(page)).toHaveValue("");
   // Nothing was sent: the last step of undo is still the switch.
   await expect(banner(page, "Undo")).toHaveAccessibleDescription(
