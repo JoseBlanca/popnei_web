@@ -343,6 +343,8 @@ export type IndividualsFileError =
   | { kind: "encrypted" }                              // saved with a password
   | { kind: "emptySheet"; sheet: string }              // the first sheet not hidden has no value
   | { kind: "cellError"; error: string }               // an error calamine does not know, "#GETTING_DATA"
+  | { kind: "headerError"; row: number; column: number;  // a cell of the header that is an error of Excel;
+      error: string }                                  // row and column of the sheet, from 1; "#VALUE!"
   | { kind: "sheetTooLarge"; sheet: string; lastRow: number; // counted from 1
       lastColumn: string; max: number }                // "XFD"; cells, MAX_SHEET_CELLS
   | { kind: "xlsxReaderNotLoaded"; message: string };  // the files wasm not downloaded; the browser's, for the console

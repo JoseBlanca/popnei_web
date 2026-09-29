@@ -93,7 +93,9 @@ names of the individuals, is never the column of the populations, as
 the owner is shown at stop B of that plan; and `columnWarningsOf` and
 `firstValues`, which keep what the Individuals step shows of each
 column; and the same day with the owner's decisions on stop B of that
-plan (`docs/specs/stage-4-open-points.md`): the words of `notText`.
+plan (`docs/specs/stage-4-open-points.md`): the words of `notText`,
+and a kind of refusal more, `headerError`, an error of Excel in the
+header of an xlsx.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -447,7 +449,7 @@ reasons below are those of population genetics.
 The words after "could not be read:" of a refusal of the reader are
 those of the reader's spec, `docs/specs/worker/individuals.md`, "The
 refusals and their words", one for each kind of `IndividualsFileError`,
-thirteen in stage 2 and twenty from stage 4, which settles the words of
+thirteen in stage 2 and twenty-one from stage 4, which settles the words of
 **Open 5**: "it has
 no row of individuals"; "two columns are named pop"; "the individual ind_031 is in
 two rows"; "line 7 has 3 cells where the header has 4, read with the
@@ -468,7 +470,7 @@ is a variants file, which the Variants step takes"; "it ends in the
 middle of a character and may have been cut short"; and the message of
 the files wasm for `files`, until stage 4. From stage 4 the reader's spec gives the
 words of the kinds of an xlsx, `notXlsx`, `oldExcel`, `encrypted`,
-`emptySheet`, `cellError`, `sheetTooLarge`, `xlsxReaderNotLoaded` and
+`emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, `xlsxReaderNotLoaded` and
 `files`, and, for a source whose `csv` is `null`, those of
 `emptyIndividual` and `unnamedColumn` with the row and the column of the
 sheet as Excel names them, "row 7 has no name of an individual in its

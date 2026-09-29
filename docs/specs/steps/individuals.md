@@ -26,7 +26,8 @@ new file puts first; and the warnings and the first values of the
 columns read from core, which keeps them; and the same day with the
 owner's decisions on the review of that work package, stop B of
 `docs/specs/stage-4-open-points.md`: the value of a coding between
-quotation marks. The
+quotation marks, and an error of Excel in the header of an xlsx
+refused. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -566,6 +567,10 @@ The descriptions of the commands are in the table above. The rest:
     find the cells with an error with Find & Select › Go To Special ›
     Formulas › Errors, and correct the formula or replace it with its
     value. Load a corrected file."
+  - an error of Excel in the header, `headerError`, from 29 September
+    2026: "pops.xlsx could not be read: the header has the error #VALUE!
+    at row 1, column D, where the name of a column should be; in Excel,
+    type the name of the column in that cell. Load a corrected file."
   - a value far from the table, `sheetTooLarge`: "pops.xlsx could not be
     read: its first sheet, Hoja1, has values as far as row 123 and column
     XFD, more than the 2,000,000 cells a metadata file can have; delete

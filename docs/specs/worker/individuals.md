@@ -36,7 +36,8 @@ refuse a sheet, since Excel saves it as `#VALUE!`, and the example of
 `cellError` is `#GETTING_DATA`; a row of the tests of `readSheet` gave a
 column of one number as continuous. Revised on 29 September 2026 with
 the owner's decisions on stop B of `docs/plans/individuals-pca.md`
-(`docs/specs/stage-4-open-points.md`): the words of `notText`. The reader turns
+(`docs/specs/stage-4-open-points.md`): the words of `notText`, and an
+error of Excel in the header of an xlsx refused, `headerError`. The reader turns
 the file of the individuals, a CSV, a TSV or an xlsx, the
 metadata file of population genetics or the traits file of association,
 into the table the project holds, and infers the type of each of its
@@ -360,7 +361,20 @@ step makes it so for a file whose name ends in `.xlsx`
    is a value, as before, so the CSV Excel saves from the same sheet
    gives the text where the xlsx gives a missing cell. In the first
    column, whose cells are names, an error is a name, as `NA` and `-`
-   are, and in the header, the name of its column. An error calamine
+   are. In the header, the first row that is not blank, whatever row of
+   the sheet the table starts at, a cell that is one of the seven, once
+   its spaces and tabs at the ends are removed, refuses the file,
+   `headerError`, with the row and the column of the sheet where it
+   stands and its text, as the owner decided on 29 September 2026 (stop
+   B 6 of `docs/specs/stage-4-open-points.md`): a column named
+   `#VALUE!` is a formula that failed, not a name the user gave. The
+   option not taken: the error as the name of its column. The first
+   cell of the header, the name of the column of the individuals, is
+   one of them. This refusal comes before those of the rows, point 3,
+   since the header is found before a row is read against it, and the
+   cells xlsx_rs gives are taken as they are: a header cell where the
+   user typed the text `#VALUE!` is refused too, as it is missing below
+   the header. An error calamine
    does not know, one Excel stores as itself, such as the
    `#GETTING_DATA` rust_xlsxwriter writes, still refuses the sheet
    (`files.md`, "The refusals"). The newer errors of Excel, `#SPILL!`
@@ -384,8 +398,9 @@ step makes it so for a file whose name ends in `.xlsx`
 A refusal of an xlsx names a row and a column as Excel does, so that the
 user finds them: the row by its number in the sheet, and the column by
 its number, A being 1, which the words write as Excel's letters. The
-line of `emptyIndividual` is the row of the sheet, and the column of
-`unnamedColumn` the column of the sheet, not of the rectangle.
+line of `emptyIndividual` is the row of the sheet, the column of
+`unnamedColumn` the column of the sheet, not of the rectangle, and the
+row and the column of `headerError` those of the sheet.
 
 ### The types of the columns
 
@@ -560,6 +575,7 @@ words after "pops.xlsx could not be read:":
 | `oldExcel` | a compound file of the old Office, not encrypted | "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)" |
 | `encrypted` | saved with a password | "it is protected by a password; in Excel, save a copy without the password" |
 | `emptySheet` | the first sheet that is not hidden has no value | "its first sheet, Hoja1, is empty, and only the first sheet is read; put the table in the first sheet" |
+| `headerError` | a cell of the header that is one of the seven errors of Excel calamine knows, from 29 September 2026 | "the header has the error #VALUE! at row 1, column D, where the name of a column should be; in Excel, type the name of the column in that cell", the row and the column of the sheet, as Excel names them |
 | `cellError` | a cell with an error calamine does not know | "a cell holds the error #GETTING_DATA, which cannot be read; in Excel, find the cells with an error with Find & Select › Go To Special › Formulas › Errors, and correct the formula or replace it with its value" |
 | `sheetTooLarge` | a rectangle of more than 2,000,000 cells | "its first sheet, Hoja1, has values as far as row 123 and column XFD, more than the 2,000,000 cells a metadata file can have; delete the values outside the table", "a traits file" in association |
 | `xlsxReaderNotLoaded` | the files wasm could not be downloaded | "the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again" |
@@ -770,13 +786,16 @@ export type IndividualsFileError =
   | { kind: "encrypted" }                              // saved with a password
   | { kind: "emptySheet"; sheet: string }
   | { kind: "cellError"; error: string }               // "#GETTING_DATA"
+  | { kind: "headerError"; row: number; column: number;  // of the sheet, from 1
+      error: string }                                  // "#VALUE!", one of the seven
   | { kind: "sheetTooLarge"; sheet: string; lastRow: number; lastColumn: string; max: number }
   | { kind: "xlsxReaderNotLoaded"; message: string };  // the browser's, for the console
 ```
 
-For an xlsx, the `line` of `emptyIndividual` is the row of the sheet and
-the `column` of `unnamedColumn` the column of the sheet, A being 1
-("The xlsx").
+For an xlsx, the `line` of `emptyIndividual` is the row of the sheet,
+the `column` of `unnamedColumn` the column of the sheet, A being 1, and
+the `row` and the `column` of `headerError` those of the sheet ("The
+xlsx").
 
 `src/core/project.ts` learns them in two places: the words above, in
 `individualsNeeds`, and the validation of a project file, which accepts
@@ -1109,7 +1128,10 @@ gives, or the refusal. Among them:
 | `["id","pop"]`, `[null,"P1"]`, with `firstRow` 5 | `emptyIndividual`, 6, the row of the sheet |
 | `["id","pop"]`, `[1,"P1"]`, `["1","P2"]` | `duplicateIndividual`, `1` |
 | `["id","pop"]` | `empty` |
-| `["id","#N/A"]`, `["A","#N/A"]` | the column `#N/A`, and its cell `null`, missing |
+| `["id","#N/A"]`, `["A","#N/A"]` | `headerError`, row 1, column 2, `#N/A`, and not the column `#N/A` |
+| `[null,null,null]`, `["id","pop"," #VALUE! "]`, `["A","P1",1]`, with `firstColumn` 3 and `firstRow` 5 | `headerError`, row 6, column 5, the column E of the sheet, `#VALUE!` |
+| `["#REF!","pop"]` | `headerError`, row 1, column 1, `#REF!`, before `empty` |
+| `["id","pop"]`, `["A","#VALUE!"]`, `["B","P1"]` | no refusal: the cell `null`, missing, below the header |
 | `["id","h"]`, `["A","#DIV/0!"]`, `["B",1.5]`, `["C",1.6]`, `["D",1.7]` | the cell `null`, missing, and `h` continuous |
 | `["id","h"]`, `["A","#NAME?"]`, `["B","#NULL!"]`, `["C","#NUM!"]`, `["D","#REF!"]`, `["E","#VALUE!"]`, `["F",1.5]` | the five cells `null`, missing |
 | `["id","h"]`, `["#N/A",1.5]`, `["#REF!",2.5]` | the individuals `#N/A` and `#REF!`, names |
