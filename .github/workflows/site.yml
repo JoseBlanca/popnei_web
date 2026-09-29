@@ -1,7 +1,8 @@
 # The continuous integration of the site, as .claude/skills/coding/testing.md
-# gives it, without the Rust setup, which comes with the files crate:
-# every push and pull request is checked and tested in the three engines,
-# and a push to main that passed both is published on GitHub Pages.
+# gives it: every push and pull request is checked and tested in the three
+# engines, and a push to main that passed both is published on GitHub Pages.
+# It needs no Rust: the reader of xlsx is xlsx_rs's package, which npm ci
+# installs from its GitHub Release as it installs popnei's.
 #
 # The actions are pinned to their major version, the latest released on
 # 24 September 2026. npm ci installs popnei from its public GitHub Release,
