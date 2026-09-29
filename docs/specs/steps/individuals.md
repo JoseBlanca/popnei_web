@@ -27,7 +27,7 @@ columns read from core, which keeps them; and the same day with the
 owner's decisions on the review of that work package, stop B of
 `docs/specs/stage-4-open-points.md`: the value of a coding between
 quotation marks, and an error of Excel in the header of an xlsx
-refused. The
+refused, and the words of a crash of the light worker. The
 code of stage 2 is in `src/ui/steps/individuals/`.
 
 The screen spec of the second step of the population genetics
@@ -588,10 +588,14 @@ The descriptions of the commands are in the table above. The rest:
   The reasons of core name the file as each application does, "a
   metadata file" here and "a traits file" in association, as the owner
   decided on 25 September 2026 (point P of
-  `docs/specs/stage-2-open-points.md`). The advice of a crash of the
-  light worker, "the calculation stopped unexpectedly", is among the
-  provisional words of core the owner judges on these screens
-  (`docs/specs/core/project.md`, open point 4).
+  `docs/specs/stage-2-open-points.md`). A crash of the light worker
+  while it reads the file reads "pops.csv could not be read: the reading
+  of the file stopped unexpectedly. If it happens again with this file,
+  save it again from Excel as .xlsx or as CSV.", as the owner decided on
+  29 September 2026, which closes open point 4 of
+  `docs/specs/core/project.md` (stop B 7 of
+  `docs/specs/stage-4-open-points.md`); the option not taken was "the
+  calculation stopped unexpectedly. Choose it again."
 - **A character not decoded**, on the card of a CSV read, "Warning:
   line 3 of pops.csv has bytes that could not be read as UTF-8, shown as
   �. Correct them in the file and load it again, or, if every letter

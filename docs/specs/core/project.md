@@ -95,7 +95,8 @@ the owner is shown at stop B of that plan; and `columnWarningsOf` and
 column; and the same day with the owner's decisions on stop B of that
 plan (`docs/specs/stage-4-open-points.md`): the words of `notText`,
 and a kind of refusal more, `headerError`, an error of Excel in the
-header of an xlsx.
+header of an xlsx; and Open 4 closed for the individuals file, with the
+words of a crash of its reader.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -442,7 +443,7 @@ reasons below are those of population genetics.
 | the individuals file of an opened project, not read when the project was saved, `notGiven` (below, "The project of an opened project file") | "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step." |
 | the files wasm refused the file | "pops.xlsx could not be read: it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again. Load a metadata file in the Individuals step.", in the words the reader's spec gives `files` from stage 4, where stage 2 showed the message of the files wasm |
 | the reader of CSV and TSV refused the file | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Load a metadata file in the Individuals step." (**Open 5**) |
-| the worker crashed while it read the file | "pops.csv could not be read: ‹what happened› (**Open 4**). Load it again in the Individuals step." |
+| the worker crashed while it read the file, or failed by a defect of our code (**Open 4**, closed) | "pops.csv could not be read: the reading of the file stopped unexpectedly. Load it again in the Individuals step. If it happens again with this file, save it again from Excel as .xlsx or as CSV." |
 | the worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Save the project, reload the page, open the project and load pops.csv again." |
 | individuals of the variants missing from it | "12 individuals of panel.nei are not in pops.csv: ind_031, ind_044 and 10 more. Add them to the file and load it again in the Individuals step." |
 
@@ -503,11 +504,15 @@ file or a file read, which the step shows otherwise:
 | refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again." |
 | refused by the reader, `xlsxReaderNotLoaded`, the files wasm not downloaded, from stage 4 | "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with no end, since its words say what to do; the same beside a Run button |
 | refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
-| its read stopped by a crash of the light worker | "pops.csv could not be read: ‹what happened› (**Open 4**). Choose it again." |
+| its read stopped by a crash of the light worker, or by a defect of our code (**Open 4**, closed) | "pops.csv could not be read: the reading of the file stopped unexpectedly. If it happens again with this file, save it again from Excel as .xlsx or as CSV." |
 | the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Save the project, reload the page, open the project and choose pops.csv again." |
 
-The ends of the rows of `variantsFile`, `unreadable` and a crash are the
-writer's, the same day, and that of `notGiven` the writers' of stage 4,
+The words of a crash are the owner's, on 29 September 2026 (**Open 4**,
+closed); beside a Run button they take "Load it again in the
+Individuals step." before their last sentence, the writer's, since the
+Run button has no file picker beside it. The ends of the rows of
+`variantsFile` and `unreadable` are the writer's, of 25 September 2026,
+and that of `notGiven` the writers' of stage 4,
 on 27 September 2026, on the pattern of the Variants step: a variants
 file is not corrected but replaced, with "a traits file" in
 association; and a file that could not be read by no fault of its own
@@ -2017,6 +2022,20 @@ of them changes those texts and their tests, and nothing else.
    taken was "Reload the page and load it again." after every failure of
    the worker, which after a crash would have lost the whole project for
    what a new load of the file mends.
+   **Closed** by the owner on 29 September 2026 for the individuals file
+   (stop B 7 of `docs/specs/stage-4-open-points.md`): when the light
+   worker crashes, or fails by a defect of our code, while it reads the
+   individuals file, the user reads in the Individuals step "pops.csv
+   could not be read: the reading of the file stopped unexpectedly. If it
+   happens again with this file, save it again from Excel as .xlsx or as
+   CSV.", since a file that makes the reader stop every time is best
+   mended by saving it again from Excel; beside a Run button, "Load it
+   again in the Individuals step." comes before the last sentence, the
+   writer's. The option not taken: "the calculation stopped unexpectedly.
+   Choose it again.", which spoke of a calculation where a file was being
+   read. The words of a worker that could not start or of a page out of
+   date, and those of the variants file, stay as above; the owner
+   accepted them with the rest of the report of stop B.
 5. **The end of a refusal of the reader of the individuals file**, the
    reader of CSV and TSV. Its words, after "could not be read:", are the
    reader's spec's since 25 September 2026, above, which settles what
