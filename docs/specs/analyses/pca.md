@@ -1459,8 +1459,11 @@ variants of `e2e/bigVcf.ts` with the filters of a new project, by
 `js-v0.1.0-dev.3`, on the owner's Apple M5 Pro with 64 GB and macOS
 27.0, Playwright 1.63.0, load averages of 1.4 to 2.9, since a virtual
 machine and the photo analysis of macOS each held a core. The time is
-from the run posted to the calculation worker to its result, of which
-the pass over the file was at most 17 ms; the memory is the footprints
+from the run posted to the calculation worker to its result, the pass
+over the file and the calculation together: popnei tells a progress at
+each range of 4 MiB it reads and at the end of the run, after the
+decomposition, so in these files, all under 4 MiB, no progress marks
+the end of the pass, and it is not timed apart; the memory is the footprints
 of all the processes of the engine summed, as macOS counts them, its
 largest during the run less its value before it. Up to 2,000
 individuals, the median of 5 runs, whose ranges were within 0.01 s and
@@ -1521,24 +1524,28 @@ under its bound of 256 MB (`docs/specs/core/cache.md`). So the words
 calculation" hold as they do for the diversity. The LD filter, the
 PCA's own or the dataset's, is applied again at every PCA, as the owner decided on 27 September 2026 ("The pruned
 variants are not kept between two PCAs" in
-`docs/specs/stage-4-open-points.md`). The pruning takes about two
-thirds of such a PCA. Measured on 29 September 2026 as the table above,
+`docs/specs/stage-4-open-points.md`). The pruning takes at least three
+fifths of such a PCA. Measured on 29 September 2026 as the table above,
 a PCA with the PCA's own LD filter at r² 0.1 and 100,000 bp against one
 with no LD filter, 5 runs of each, alternating, the medians:
 
-| file | Chromium 153, with no LD filter / with it | WebKit 26.6, with no LD filter / with it | the pruning, Chromium / WebKit | its share of the PCA with it |
+| file | Chromium 153, with no LD filter / with it | WebKit 26.6, with no LD filter / with it | the pruning at least, Chromium / WebKit | its share of the PCA with it, at least |
 |---|---|---|---|---|
 | `panel.nei`, 200 individuals, 1,200 variants, 548 kept | 28 / 73 ms | 26 / 72 ms | 45 / 46 ms | 62% / 64% |
 | `big.nei`, 1,000 individuals, 20,000 variants, 18,646 kept, 19,161,194 bytes | 1,174 / 3,395 ms | 1,068 / 3,293 ms | 2,220 / 2,225 ms | 65% / 68% |
 | `big.vcf`, the same variants, 80,692,954 bytes | 1,285 / 3,514 ms | 1,187 / 3,418 ms | 2,229 / 2,231 ms | 63% / 65% |
 
-The pruning is the difference of the two times; each range was within
-19 ms. The files of 20,000 variants are those of `e2e/measure.spec.ts`,
+The pruning is at least the difference of the two times, a lower
+bound, since the PCA with the filter also calculates over fewer
+variants, 548 of 1,200 in `panel.nei` and 18,646 of 20,000 in the
+files of 20,000 variants; popnei's progress cannot time the pruning
+apart, since it is a step of the same pass. Each range was within 19
+ms. The files of 20,000 variants are those of `e2e/measure.spec.ts`,
 their variants 1,000 bases apart, so the distance compares each with
 the 100 before it; their genotypes are simulated with no
 linkage between variants, so the pruning kept 93% of them, and on a genome with
 linkage it would keep fewer. A second Run of the same PCA would spare
-the 2.2 s of its pruning if popnei kept the pruned variants, which
+the 2.2 s or more of its pruning if popnei kept the pruned variants, which
 point 1 of that file leaves to this measurement.
 
 `pcaColours` walks the table once per result and table, kept in a

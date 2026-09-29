@@ -2292,10 +2292,11 @@ the same numbers for everything else but the size of a written file.
   (section 13, point 9): after one of more than 700 individuals, since a
   PCA of 700 left the engine 11 to 18 MB larger in both engines, under
   the 25 MB above which a written file restarts the worker too. The LD filter of
-  the PCA is applied again at every PCA, and took about 2.2 s of the 3.4
-  s of a PCA of 1,000 individuals and 20,000 variants with a distance of
-  100,000 bp, 62% to 68% in both engines (`docs/specs/analyses/pca.md`,
-  "How it runs").
+  the PCA is applied again at every PCA, and took at least 2.2 s of the
+  3.4 s of a PCA of 1,000 individuals and 20,000 variants with a distance
+  of 100,000 bp, at least 62% to 68% in both engines, a lower bound since
+  the PCA with the filter also calculates over fewer variants
+  (`docs/specs/analyses/pca.md`, "How it runs").
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
