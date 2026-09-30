@@ -59,6 +59,40 @@ called the start below, in the worktree
 - `--project=screens --list` lists 308 tests, the two measurement
   projects 44.
 
+## For the owner, as the work goes
+
+Points found during the work, each with its recommendation. None stops
+the plan; each is asked of you at the next stop.
+
+1. **The axis of a histogram of the spectrum, `histogram.md`, "How it
+   is verified".** The spec says that p0's shares, with the top 0.061
+   shared by the three populations, give a vertical axis of 0 to 0.07.
+   Its own rule, the top "made round by the scale's `nice`", gives 0 to
+   0.065 with the d3 the application uses (`scaleLinear().domain([0,
+   0.061]).nice()`, run on 30 September 2026); 0.07 comes only from a
+   rounding to 5 ticks, which would change the histograms of stage 4
+   too. The code follows the rule and its test asserts 0.065, which
+   still tells the shared top from p0's own, 0.06. Recommendation:
+   correct the example to 0.065, and the plan's deliverable `PA4 D6`
+   with it.
+2. **Where the functions the three analyses share live,
+   `project.md`.** The spec puts `populationListsNeeds` in `project.ts`,
+   and says `project.ts` imports `individualsKept.ts` for its types
+   alone, because that module imports `project.ts`. The function needs
+   `individualsKept` itself, so the two modules now import each other.
+   Nothing breaks today: every name that crosses is a function, and the
+   reviewer loaded each module first under node with no error. A
+   constant added at the top of either module could stop the page at
+   load, which the reviewer showed on a scratch copy. Recommendation:
+   a module of its own, `src/core/populations.ts`, for the four shared
+   functions, with `project.md` changed to say so. It is a change of
+   imports, and can be made at any point of the plan.
+3. **Three helpers the spec's interface does not list.** `project.ts`
+   exports `allEmptiedText`, `loosenText` and, after the review,
+   `populationsColumnOf`, which the analyses need and the interface of
+   `project.md`, "What the analyses per population share from stage 5",
+   does not name. Recommendation: list them there.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
