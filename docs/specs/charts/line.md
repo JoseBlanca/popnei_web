@@ -32,9 +32,9 @@ line from the axis up to a height and a mark of the series at its top.
 A frame with a horizontal axis over the range the data give and a
 vertical one over theirs, both from the data and never from the points,
 so that two plots of the same range read alike. For each series, in the
-colour and the shape of its group, the rule of `scatter.md`: series `i`
-has the colour `i % 7` of Okabe and Ito and the shape `(i + Math.floor(i
-/ 7)) % 7` of the seven filled symbols of `d3-shape`.
+colour and the shape of its group, the rule of `scatter.md`: a series of
+group `i` has the colour `i % 7` of Okabe and Ito and the shape
+`(i + Math.floor(i / 7)) % 7` of the seven filled symbols of `d3-shape`.
 
 - **Its points**, one mark of 64 square pixels each, `SYMBOL_AREA` of
   `src/charts/marks.ts`, drawn by `drawSymbolAt` into one path per
@@ -131,6 +131,8 @@ export interface LineData extends PlotText {
 export interface LineSeries {
   /** The label of the legend, written as text. */
   readonly label: string;
+  /** Its group for the colour and the shape, by the rule of the scatter. */
+  readonly group: number;
   /** Drawn one mark each; NaN skipped. */
   readonly points: XY;
   /** Drawn through in order, broken at a NaN; null for no line. */
@@ -149,19 +151,24 @@ export const createLine: Chart<LineData> = (element, data) =>
   createPlot2d(element, data, lineDefinition);
 ```
 
-The index of a series in `series` is its group for the colour and the
-shape, so the screen gives the populations in the same order at every
-draw, and a population keeps its mark after a change of the options.
+The colour and the shape of a series are those of its `group`, which
+the screen gives, and not of its place in `series`: the LD decay gives
+the index of the population among every population of the metadata
+file, as the PCA does (`scatter.md`, "The marks of the groups"), so a
+population keeps its mark when the filters empty a population before it,
+and has the same mark in both analyses. The legend lists the series in
+their order in `series`.
 
 `createLine`, `update` and the `check` of the definition throw an
 `Error`, a defect of the caller (`charts.md`): for a domain whose ends
 are not finite or not in order; for `points` or a `line` whose two
-arrays differ in length; for more than `MAX_LINE_SERIES` series, 49, the
-number of different marks the rule of the groups gives, since the
-fiftieth would take the mark of the first; and for more than
-`MAX_SVG_POINTS`, 50,000, points and positions of lines together
-(`scatter.md`, "The points"). The LD decay gives at most 49 × (50 +
-200), 12,250. Both constants are in `src/charts/limits.ts`.
+arrays differ in length; for a `group` that is not a whole number from
+0; for two series of one group, which would draw two populations alike;
+for more than `MAX_LINE_SERIES` series, 49, the number of different
+marks the rule of the groups gives; and for more than `MAX_SVG_POINTS`,
+50,000, points and positions of lines together (`scatter.md`, "The
+points"). The LD decay gives at most 16 × (50 + 200), 4,000. Both
+constants are in `src/charts/limits.ts`.
 
 ## The SVG it builds
 
@@ -169,14 +176,14 @@ The base makes the skeleton with the class `chart chart-line`. In
 `chart-marks`, for each series `i`, in this order across the series:
 
 - `path.chart-line-casing` for a light colour, and `path.chart-line
-  chart-line-colour-‹i % 7›`, with the numbers of the path rounded to one
+  chart-line-colour-‹group % 7›`, with the numbers of the path rounded to one
   decimal, `pathRound(1)`, as the scatter's;
-- `path.chart-points chart-colour-‹i % 7›`, the points of the series, as
+- `path.chart-points chart-colour-‹group % 7›`, the points of the series, as
   the scatter's groups.
 
 In `chart-annotations`, for each mark, `line.chart-mark-line
-chart-line-colour-‹i % 7›` and `path.chart-points chart-mark
-chart-colour-‹i % 7›`. In `chart-legend`, one `g.chart-legend-row` per
+chart-line-colour-‹group % 7›` and `path.chart-points chart-mark
+chart-colour-‹group % 7›`. In `chart-legend`, one `g.chart-legend-row` per
 series, its text anchored at its end at the right edge of the frame and
 its mark and piece of line to the right of the text, one row every 18
 pixels from 8 pixels below the top of the frame; the legend is placed
@@ -204,9 +211,11 @@ application; the legend is inside the frame and asks for no margin.
 - **Every series empty**: the axes and the legend, and an empty frame.
 - **A mark with a NaN** is not drawn, as a point is not.
 - **More series than the legend has room for** in the frame: the rows
-  run below the frame's bottom and are cut by the SVG; the LD decay of a
-  frame 300 pixels high holds 16 rows. How the legend holds many series
-  is left for the running application, checked with 3 and with 12.
+  run below the frame's bottom and are cut by the SVG, and a series
+  would be drawn with no name. So the screen gives no more series than
+  its frame holds rows, one every 18 pixels: a frame 300 pixels high
+  holds 16, which the LD decay draws at most. How the legend holds more
+  is left for the running application, checked with 3 and with 16.
 - **A label with markup**, `<b>p1</b>`: written as text.
 - **A change of theme**: nothing is drawn again; the file is in the
   light theme.
@@ -215,7 +224,7 @@ application; the legend is inside the frame and asks for no margin.
 
 On the page, in the main thread, drawn again at each change of size or
 of data, by the base. What it draws grows with the points and positions,
-12,250 at most for the LD decay, well under the 50,000 the walking
+4,000 at most for the LD decay, well under the 50,000 the walking
 skeleton drew in 16 to 19 ms (`scatter.md`, "The points").
 
 ## How it is verified
@@ -226,11 +235,13 @@ At `createLine` and the handle, as the histogram and the scatter are.
 element stubbed at 600 by 375:
 
 - the skeleton with `chart chart-line` and no `chart-overlay`;
-- two series of three points, a line of four positions and one mark
-  each: two `path.chart-line`, one `path.chart-line-casing`, for series
-  0, orange, and none for series 2 when a third, green, is added; two
-  `path.chart-points` with the classes `chart-colour-0` and
-  `chart-colour-1`; two `line.chart-mark-line`, from the bottom of the
+- two series of groups 0 and 1, of three points, a line of four
+  positions and one mark each: two `path.chart-line` and two
+  `path.chart-line-casing`, since orange and sky blue are both light
+  colours, and none more when a third series of group 2, green, is
+  added; two `path.chart-points` with the classes `chart-colour-0` and
+  `chart-colour-1`; a series of group 9 has `chart-colour-2` and the
+  shape of index 3; two `line.chart-mark-line`, from the bottom of the
   frame to the y of the mark; two legend rows with the labels as text;
 - the order in `chart-marks`: every line before every set of points;
 - a NaN in `points.y` leaves that point out of the path; a NaN in
@@ -253,6 +264,9 @@ background of each theme, as the scatter's test does for the marks.
 
 ## What this spec asks of other documents
 
+- `docs/specs/charts/plot2d.md`, `AxesOptions`: `xWholeNumbers`, ticks
+  at whole numbers with a comma between thousands on the horizontal
+  axis, beside its `yWholeNumbers`.
 - `.claude/skills/coding/charts.md`, "Accessibility": that the lines of
   the LD decay are told apart by the legend and the marks of their
   points, not by labels at their ends, for the reason of "What the user

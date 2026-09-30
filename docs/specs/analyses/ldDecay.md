@@ -153,18 +153,22 @@ move the curve or the half distance, which are fitted to every pair, so
 a user who wants other bins gains nothing they read off the curve; a
 constant changed in a later release raises the key version. Whether
 `maxAllowedMaf` is an option is the writers' decision of 30 September
-2026: it changes which variants each population counts, and the plot
-moves with it, where the bins do not.
+2026, for the owner to overrule: it changes which variants each
+population counts, and the plot moves with it, where the bins do not.
 
 `ldDecayOptions(p)` gives the options of the project for `ldDecay`, or
 `LD_DECAY_DEFAULTS`. `parseOptions(o, 1)` gives back an object of
 exactly the two fields, `maxDist` a whole number from 50 to
 9,007,199,254,740,991, the largest popnei takes, or `null`, and
-`maxAllowedMaf` a number from 0 to 1; anything else is refused with the
+`maxAllowedMaf` a number from 0.5 to 1; anything else is refused with the
 words that follow "should be" in `projectErrorText`: "the largest
 distance of a pair, a whole number of base pairs from 50 to
 9,007,199,254,740,991 or null, and the largest major allele frequency
-in each population, a number from 0 to 1, and nothing else".
+in each population, a number from 0.5 to 1, and nothing else". Below
+0.5 no variant of two alleles passes, since its major allele frequency
+is at least 0.5: at 0, `ld.nei` gave 0 variants to both populations
+(node, 30 September 2026), and a user who typed a minor allele
+frequency, 0.05, would get no pair anywhere.
 
 ### What goes into its key
 
@@ -211,7 +215,7 @@ these:
 |---|---|
 | any reason of `individualsNeeds`, and the three of `populationsNeeds`, and the lists of individuals leaving no individual with a population | the diversity's words, the same function (`diversity.md`, "Why it cannot run"; below, "What this spec asks of other documents") |
 | `maxDist` `null` | "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs." |
-| 16 × `maxDist` × the populations of `populationsKept(p, byLists)` above 1,000,000,000 bytes, `LD_DECAY_MAX_BYTES` | "With 3 populations, the largest distance can be at most 20,833,333 base pairs: the pairs are counted at every distance up to it, in 16 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser." With one population, "The largest distance can be at most 62,500,000 base pairs: …" |
+| 40 × `maxDist` × the populations of `populationsKept(p, byLists)` above 1,000,000,000 bytes, `LD_DECAY_MAX_BYTES` | "With 3 populations, the largest distance can be at most 8,333,333 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser." With one population, "The largest distance can be at most 25,000,000 base pairs: …" |
 
 The reason of the distance is also shown beside its field whenever it
 holds, and not only when it is the first reason, as the PCA's reason of
@@ -221,7 +225,12 @@ to be filled.
 **The lock of the memory.** popnei keeps, for each population, a count
 of pairs and a sum of their r² at every distance from 1 to `maxDist`,
 16 bytes each, asked for before the pass (`crates/popnei/src/ld/dist.rs`
-of popnei, and "How it runs" of its `docs/specs/ld.md`). Measured in
+of popnei, and "How it runs" of its `docs/specs/ld.md`); when the pass
+has ended it copies the distances that hold a pair into three arrays of
+24 bytes a distance, while the 16 bytes of every distance are still
+held (`the_distances_that_hold_a_pair_are_kept` of `dist.rs`), so at
+most 40 bytes a base pair and population, when every distance holds a
+pair, as it can with positions that are not evenly spaced. Measured in
 node, the memory of wasm grew by 16.0 MB for one population at
 1,000,000 bp, 48.0 MB for three, and 480 MB for three at 10,000,000 bp,
 each plus about 12 MB (below, "How it runs"); popnei refused
@@ -229,12 +238,14 @@ each plus about 12 MB (below, "How it runs"); popnei refused
 has not the memory for the pairs counted at every distance, 250000000
 values of 16 bytes". So the count is known from the options before the
 Run, and the module locks rather than let the user wait for a refusal
-or lose the tab. The bound of 1 GB, 62,500,000 base pairs for one
-population, is the writers' decision of 30 September 2026: a pass of
+or lose the tab. The bound of 1 GB of those 40 bytes, 25,000,000 base
+pairs for one population, is the writers' decision of 30 September
+2026, for the owner to overrule: a pass of
 1,000 individuals held up to 1.09 GB more beside the counts, and a PCA
 that grew the engines by 3.03 to 3.40 GB did not close the tab in
 Chromium 153 or WebKit 26.6 (`docs/architecture.md`, section 11); the
-plan measures an LD decay at the bound in both. The populations are
+plan measures an LD decay at the bound in both, over a file whose
+positions are not evenly spaced, so that most distances hold a pair. The populations are
 counted on the lists of individuals alone, `byLists` of
 `docs/specs/core/individualsKept.md`, which a threshold on the
 individuals can only lower, so the lock is known without the statistics
@@ -380,12 +391,13 @@ whole base pairs.
 |---|---|---|
 | `fewIndividuals` | a population has fewer than 20 individuals, `LD_DECAY_FEW_INDIVIDUALS` | "Population p3 has 12 individuals. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so its curve lies higher and its half distance is longer than those of a larger population. Compare it with the others with this in mind." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8. …, so their curves lie higher …" With more, no counts. For the one population, "All individuals has 12 individuals. …" |
 | `noPairs` | a population with no pair counted, the sum of its `numPairs` 0 | "p3 has no pair of variants to measure: fewer than two of its variants pass its maximum major allele frequency of 0.95." when its `numVars` is below 2; otherwise "p3 has no pair of variants to measure: no two of its 1,152 variants on one chromosome are within 100,000 base pairs of each other with a value of r². Type a larger distance." |
-| `noCurve` | a population with pairs and `rhoPerBp` NaN | "No curve could be fitted to the pairs of p3, so it has no half distance: its pairs are at one distance only, or r² does not fall with distance in a way a curve can follow within 100,000 base pairs, flat across them or fallen before the first bin. Its mean r² of each bin is shown." |
-| `halfDistBeyondPairs` | a finite half distance above `maxDist` | "The curve of p3 falls to half at 1,599,810 bp, beyond the 100,000 base pairs within which pairs were counted, so that distance is where the curve would reach and not where pairs were measured, and the plot does not reach it. Type a larger distance to count pairs that far apart." |
+| `noCurve` | a population with pairs and `rhoPerBp` NaN | "No curve could be fitted to the pairs of p3, so it has no half distance: its pairs are at one distance only, or r² does not fall with distance in a way a curve can follow within 100,000 base pairs, flat across them or fallen within the first base pair. Its mean r² of each bin is shown." |
+| `halfDistBeyondPairs` | a finite half distance above the largest distance of the last bin with a pair | above `maxDist`: "The curve of p3 falls to half at 1,599,810 bp, beyond the 100,000 base pairs within which pairs were counted, so that distance is where the curve would reach and not where pairs were measured, and the plot does not reach it. Type a larger distance to count pairs that far apart."; within `maxDist`: "The curve of p3 falls to half at 1,868,335 bp, beyond its furthest pairs, in the bin to 280,000 bp, so that distance is where the curve would reach and not where pairs were measured." |
 | `halfDistBelowPairs` | a finite half distance below the smallest distance of the first bin with a pair | "The curve of p3 falls to half at 800 bp, closer than the closest pairs counted, in the bin from 8,001 bp: r² is already low at the shortest distances of this file, and the half distance says only that LD falls within them." Below 1 bp, "falls to half within 1 bp, closer than the closest pairs counted, in the bin from 1 bp: …" |
 | `individualsWithoutPopulation`, `populationNotInResult` | as the diversity's | the diversity's words with "left out of the LD decay" and "so it is not in the plot" (`diversity.md`, "The warnings") |
 
-The threshold of 20 is the writers', decided on 30 September 2026: it
+The threshold of 20 is the writers', decided on 30 September 2026, for
+the owner to overrule: it
 is the minimum number of individuals the diversity asks at each
 variant, a number the user already meets, and on `ld.vcf.gz`, the
 fixture below, four populations of 10 of its individuals gave half
@@ -401,10 +413,6 @@ missing data filter at 0.1 and a largest distance of 100,000 bp every
 pair falls in the first bin, 1 to 2,000, and popnei gives p0 a half
 distance of 0.247 bp, p2 0.109 and p1 0.139 (node, `js-v0.1.0-dev.3`,
 30 September 2026).
-
-A population whose half distance is NaN while its ρ per base pair is
-not, fewer than three individuals, has `fewIndividuals` already, and
-the plot draws its curve with no mark.
 
 ### The check numbers
 
@@ -531,7 +539,8 @@ export function ldDecayOptions(p: Project): LdDecayOptions;
 export function ldDecayFilters(filters: Project["filters"]): Project["filters"];
 
 /** The largest distance the memory allows for this many populations. */
-export function maxDistFor(numPops: number): number;   // Math.floor(LD_DECAY_MAX_BYTES / (16 * numPops))
+export function maxDistFor(numPops: number): number;   // Math.floor(LD_DECAY_MAX_BYTES / (40 * numPops))
+export const LD_PLOT_MAX_POPS = 16;
 
 /** The fitted curve at `dist` base pairs, popnei's formula in its order. */
 export function fittedR2(dist: number, rhoPerBp: number, numIndividuals: number): number;
@@ -602,6 +611,14 @@ result and throw a defect for another's.
   cache under its own key and is not shown.
 - **A threshold on the individuals**: a Run calculates their statistics
   first, as for the diversity.
+- **A population named `__proto__`.** popnei's release builds the
+  objects of its result by assigning to them, `perPop[pop] = …` in
+  `ld.ts`, and that name sets the object's parent instead of making a
+  field, so the population is missing from the result: a job of `a` and
+  `__proto__` came back with `a` alone (node, 30 September 2026). The
+  runner's check then throws a defect of ours, and the panel shows the
+  words of a defect. It is asked of popnei with **Open 2**, since the
+  cause is in popnei's result and the application cannot mend it.
 
 ### How it runs
 
@@ -614,7 +631,11 @@ comment of `maxDist`, and "How it runs" of the item "LD against
 distance, per population" of popnei's `docs/specs/ld.md`):
 
 - the counts of each distance, 16 bytes × `maxDist` for each population,
-  asked for before the pass, which the lock above bounds at 1 GB;
+  asked for before the pass, and up to 24 bytes more a distance at its
+  end, which the lock above bounds at 1 GB together; the fit then reads
+  every distance that holds a pair, 183 times, with no progress, a time
+  the plan measures on a file of positions not evenly spaced at the
+  largest distance the lock allows;
 - the blocks of variants the pass holds within `maxDist` of the newest
   variant, dropped a whole block at a time, of 10,000 variants for 100
   individuals and 5,000 for 1,000 in this release, with their genotypes
@@ -673,8 +694,8 @@ With Vitest, at the functions of the definition, on frozen projects, as
 - **The key**: for each row of its table, two projects that differ in
   it, and `keyOf` equal or not as the row says; the LD pruning turned
   on keeps it.
-- **`needs`**: each row of its table; `maxDist` 20,833,333 with three
-  populations gives `null`, and 20,833,334 the reason; the LD pruning of
+- **`needs`**: each row of its table; `maxDist` 8,333,333 with three
+  populations gives `null`, and 8,333,334 the reason; the LD pruning of
   the step with no distance gives `null`.
 - **`parseOptions`**: the defaults back; `maxDist` 50 and
   9,007,199,254,740,991 taken; 49, 50.5, 9,007,199,254,740,992, a field
@@ -706,7 +727,7 @@ In node, at `createRunner` of the runner, with the popnei of the
 release, as `docs/specs/worker/runner.md` tests the diversity: the job
 of the flow over `e2e/fixtures/ld.nei` gives the numbers below to the
 last digit, the populations in the order of the job when the job names
-them "2", "10".
+them "10", "2", which popnei gives back as "2", "10".
 
 With Playwright, in Chromium, Firefox and WebKit, against the built
 site: the flow loads `ld.nei` and `ld_pops.csv`, chooses the column
@@ -786,7 +807,7 @@ and the one changed:
   Under it: "How far to look for pairs. Choose a distance beyond which
   you expect little LD in your species; the half distance of the result
   shows whether it was far enough."
-- "Maximum major allele frequency in each population, from 0 to 1",
+- "Maximum major allele frequency in each population, from 0.5 to 1",
   0.95. Under it: "A variant is left out of a population where its
   commonest allele is more frequent than this, since the r² of a
   variant that hardly varies rests on one or two individuals."
@@ -818,11 +839,16 @@ individuals it will run on, as the PCA's.
   rounded up to a tenth, at most 1, and 0 to 1 when nothing is drawn,
   "Mean r² of the pairs". Each entry of the legend reads
   "pop_a · half at 7,548 bp"; "pop_a · half at 1,599,810 bp, beyond the
-  plot"; "pop_a · no half distance" for a curve with no half distance,
-  fewer than three individuals; "pop_a · no curve" for pairs with no
-  curve; and "pop_a · no pair". The plot draws the first 49
-  populations, `MAX_LINE_SERIES`, and a line under it says how many
-  more the tables hold.
+  plot"; "pop_a · no curve" for pairs with no curve; and "pop_a · no
+  pair". A half distance below 10 bp is written to three significant
+  digits, "half at 0.247 bp", and from 10 bp in whole base pairs. Each
+  population keeps the colour and the shape of its place among the
+  populations of `populationsOf(p)`, its `group`, whether or not the
+  filters empty those before it, so that it has one mark here and in
+  the PCA. The plot draws the first 16 populations of the result,
+  `LD_PLOT_MAX_POPS`, the rows of the legend a frame 300 pixels high
+  holds, so that none is drawn without its name, and a line under it
+  says how many more the tables hold.
 - **The table of the populations**, with the caption "The LD decay of
   each population, over the 500 variants of ld.nei the filters kept,
   pairs up to 100,000 base pairs apart.", the 500 being
@@ -835,7 +861,7 @@ individuals it will run on, as the PCA's.
 | Individuals | `numIndividuals` |
 | Variants | `numVars`: those that pass its maximum MAF |
 | Pairs | the sum of its `numPairs` |
-| Half distance (bp) | `halfDist`, in whole base pairs, "no curve" for NaN |
+| Half distance (bp) | `halfDist`, as in the legend, "no pair" or "no curve" for NaN |
 | r² at distance 0, of the curve | `r2AtZero`, to four decimals |
 | 4Nr per base pair | `rhoPerBp`, the ρ per base pair, to three significant digits |
 
@@ -854,7 +880,7 @@ panel.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
-| locked | the reason, as text beside a disabled Run button described by it: the distance not typed, also beside its field; the memory, "With 3 populations, the largest distance can be at most 20,833,333 base pairs: …"; the reasons of the metadata file and the populations; the store's when the filters keep no individual. The options stay editable | type the distance; go to the step the reason names |
+| locked | the reason, as text beside a disabled Run button described by it: the distance not typed, also beside its field; the memory, "With 3 populations, the largest distance can be at most 8,333,333 base pairs: …"; the reasons of the metadata file and the populations; the store's when the filters keep no individual. The options stay editable | type the distance; go to the step the reason names |
 | ready | the options, the line of the LD pruning when it is on, the line of the individuals, and Run | set the options; Run |
 | running | the bar and the clock of the diversity, "Calculating · 35% · 0:12", and under them "The bar shows the reading of ld.nei. The curves are fitted once it is read." The options stay editable, and a change leaves the calculation behind with the notice of the store | Stop; change the options |
 | done | the plot and its tables, their downloads, the warnings; after an opened project file, the comparison with its check numbers | read, download; change the options |
@@ -879,8 +905,10 @@ tab of the plot or the table.
 The locked reasons and the warnings are those of the module. The error
 state is the diversity's table (`diversity.md`, "Its words"), made by
 `refusalWords` of `src/core/analyses/words.ts` with the words of the LD
-decay: "calculate the LD decay", "there is no variant to calculate the
-LD decay over", and the empty pass "The filters kept none of the
+decay: `calculate` "calculate the LD decay", `nothingLeft` "there is no
+variant to calculate the LD decay over", `change` the diversity's
+"Change the settings, or load the variants file again", `again` "to
+calculate it again", and `emptyPass` "The filters kept none of the
 variants of ld.nei, so there is no variant to calculate the LD decay
 over. Loosen the filters in the Variants step." One row comes before
 them, in `refusalText` of this module:
@@ -890,7 +918,10 @@ them, in `refusalText` of this module:
 | popnei refused for memory: its message starts "this machine has not the memory for" | "The LD decay needed more memory than the browser tab could give. Type a smaller largest distance, keep fewer individuals with the filters of individuals, or calculate it with popnei in Python, outside the browser." |
 
 The LD pruning's refusal of a file not sorted never reaches this panel,
-since its job has no LD filter.
+since its job has no LD filter. Once popnei refuses such a file in
+`calcLdAndDistPerPop` (**Open 2**), `refusalText` tests for that message
+with `ldOrderText` and the words of the LD decay before `refusalWords`,
+whose own test of it would tell the user to turn off the LD pruning.
 
 The help, a few lines of Markdown for the help drawer of stage 8:
 
