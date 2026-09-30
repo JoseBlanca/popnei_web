@@ -415,7 +415,9 @@ one, sent the `open` of the load and the requests that waited.
 An LD decay leaves the memory of wasm larger by 16 bytes × its largest
 distance × its populations, the counts popnei asks for before the pass,
 plus the blocks of variants it held within that distance: in node with
-`js-v0.1.0-dev.3` on 30 September 2026, 64 MB for 100 individuals, and
+`js-v0.1.0-dev.3` on 30 September 2026, 64 MB for 100 individuals and
+20,000 variants at 100,000 bp, 480 MB for 100 individuals and three
+populations at 10,000,000 bp, set by the distance, and
 0.4 to 1.1 GB for 1,000 individuals and 20,000 variants
 (`docs/specs/analyses/ldDecay.md`, "How it runs"), where the bound of a
 write and of a PCA is about 25 MB. A bound on the individuals and the

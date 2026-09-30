@@ -358,9 +358,12 @@ proportion of polymorphic variants is not rarefied, as the owner decided
 the same day: on variants of two alleles it is the rarefied number of
 alleles minus 1. The application warns whenever a population reaches
 that number of chromosomes at fewer variants than it has a value at,
-with how many, since its rarefied values then rest on those alone; only
-a number larger than the default gives it, since at the default every
-variant with a value reaches the draw.
+with how many, since its rarefied values then rest on those alone. At
+the default every variant with a value reaches the draw, and the
+warning comes only from a larger number, or from the default draw of 2
+at a minimum of 0, or of 1 in a haploid file, where a variant with one
+allele called has a value (`docs/specs/analyses/diversity.md`, "The
+warnings").
 
 ### The site frequency spectrum
 

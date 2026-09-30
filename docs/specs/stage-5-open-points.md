@@ -110,7 +110,8 @@ counts of the pairs at each distance, 16 bytes a base pair and
 population, 4.8 MB for three populations at 100,000 bp; and the
 variants it held within that distance, the larger part. Measured in
 node, the memory grew by 64 MB for 100 individuals and 20,000 variants
-at 100,000 bp, and by 0.4 to 1.1 GB for 1,000 individuals and the same
+at 100,000 bp, by 480 MB for 100 individuals and three populations at
+10,000,000 bp, the counts alone, and by 0.4 to 1.1 GB for 1,000 individuals and the same
 variants at 100,000 and 1,000,000 bp, which the tab keeps until the
 next load of the variants file.
 

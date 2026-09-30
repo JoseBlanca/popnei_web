@@ -451,7 +451,12 @@ step 5, over the same steps of the `Variants`, the runner:
    call and no second pass.
 7. Puts popnei's arrays back in the order of the job, as step 4 does,
    `foldedSfs` among them, which popnei gives as an object by the name
-   of the population, each array copied into a new `Float64Array`; a
+   of the population, each array copied into a new `Float64Array`, read
+   by a plain lookup, `foldedSfs[name]`, and checked with `instanceof
+   Float64Array`, since popnei's object holds a population named
+   `__proto__` without making it an own field, and a check with
+   `Object.hasOwn` would crash a diversity that ran with such a
+   population in stages 3 and 4; a
    population of `pops` not in `popDiversityPops` has NaN in `fis`,
    `numAllelesMean`, `numAllelesInDraw` and the three of the private
    alleles, 0 in `numVarsInDraw`, and `null` for its spectrum; the
@@ -754,8 +759,14 @@ the `Variants`, the runner:
    minDist, maxDist, numBins, maxAllowedMaf })` of
    `js/popnei/src/ld.ts`, the options written with these keys alone,
    since the release refuses a key it does not know.
-3. Checks that popnei gave every population of the job, in `perPop` and
-   `decayPerPop`, and that the smallest and the largest distance of the
+3. Checks that popnei gave every population of the job, with
+   `Object.hasOwn`, in `numVarsPerPop`, `perPop` and `decayPerPop`: a
+   plain lookup or `in` finds a population named `__proto__` in the last
+   two, where popnei's objects hold it, and returns `Object.prototype` in
+   the first, where assigning a number to that name is ignored, so the
+   check with `in` would pass and `numVars` would be NaN with no word
+   (node, `js-v0.1.0-dev.3`, found by the review of 30 September 2026);
+   and that the smallest and the largest distance of the
    bins are the same for every population, as popnei's rule has them;
    a difference is a defect of ours, thrown. A population named
    `__proto__` is missing from popnei's result, whose objects the
@@ -765,7 +776,9 @@ the `Variants`, the runner:
 4. Answers the `LdDecayResult` of `ldDecay.md`, every array in the order
    of the job: `numIndividuals`, the lengths of the job's populations,
    the n of each curve; `numVars` from `numVarsPerPop`; `smallestDist`
-   and `largestDist` from the bins of the first population; `numPairs`,
+   and `largestDist` copied with `slice()` from the bins of the first
+   population, since popnei gives each population's bins as `subarray`
+   views of one array, which `transferablesOf` refuses; `numPairs`,
    `meanR2` and `sdR2` from the bins of each, one population after
    another; `rhoPerBp`, `r2AtZero` and `halfDist` from `decayPerPop`;
    and `passStats`.
@@ -1273,7 +1286,9 @@ worker holds, from popnei's README and its doc comments:
   variants the pass holds within `maxDist` of the newest variant, with
   their genotypes by population. Measured in node with
   `js-v0.1.0-dev.3` on 30 September 2026, an LD decay grew wasm by 64 MB
-  for 100 individuals and 0.4 to 1.1 GB for 1,000 individuals and
+  for 100 individuals and 20,000 variants at 100,000 bp, by 480 MB for
+  100 individuals and three populations at 10,000,000 bp, 16 bytes × the
+  distance × the populations, and by 0.4 to 1.1 GB for 1,000 individuals and
   20,000 variants (`ldDecay.md`, "How it runs", whose table gives each
   case), which is why the client starts the worker again after it.
 - **The distances between populations**, from stage 5: a few sums for

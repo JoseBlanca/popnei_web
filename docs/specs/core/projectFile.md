@@ -1179,7 +1179,7 @@ check with its own (point E there).
 ## What this spec relies on in the specs written beside it
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
-  of 1, of 3 from stage 5, and `checkNumbers` giving its numbers in a fixed order, `null`
+  of 1, of 2 from 28 September 2026, of 3 from stage 5, and `checkNumbers` giving its numbers in a fixed order, `null`
   for a NaN, and `numCheckNumbers` their count, as its section "The
   check numbers" has them; a change to them raises its key version; the
   panel shows `checkVerdictText` of the `check` of its `done` state under

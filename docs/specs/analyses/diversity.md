@@ -745,7 +745,9 @@ refusal.
 
 `numVarsInDraw` is, for each population, the variants at which it has
 a value and called at least the draw, the divisor of its rarefied
-alleles; at the default draw it equals `numVarsWithValue`. When no
+alleles; at the default draw it equals `numVarsWithValue`, but for a
+draw of 2 at a minimum of 0, or in a haploid file at a minimum of 1
+(`variantsNotInDraw`, below). When no
 population is given to `calcPopDiversity`, the six arrays of its
 numbers are NaN, `numVarsInDraw` 0, `numVarsEveryPop` and
 `numVarsEveryPopInDraw` `null`, and every entry of `foldedSfs` `null`;

@@ -251,6 +251,11 @@ sends:
 }
 ```
 
+Its pass has the project's filters of the variants and the list of the
+individuals kept, so its result fills the counts of the filters of the
+Variants step, as the diversity's does (`docs/specs/analyses/filterCounts.md`,
+"Which results fill it").
+
 `leftOut` is not used by the runner, which copies it into the result.
 The warning that names the populations left out is made from the result
 and the project alone, and the project cannot say how many individuals
