@@ -29,7 +29,10 @@ import {
 import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import { refusalText as ldDecayRefusalText } from "../../core/analyses/ldDecay.ts";
-import { refusalText as popDistsRefusalText } from "../../core/analyses/popDists.ts";
+import {
+  popDistsOptions,
+  refusalText as popDistsRefusalText,
+} from "../../core/analyses/popDists.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
@@ -40,7 +43,9 @@ import { readyLines } from "./diversity/words.ts";
 import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
-import { PopDistsPlaceholder } from "./popDists/PopDistsPlaceholder.tsx";
+import { PopDistsOptionsPart } from "./popDists/PopDistsOptionsPart.tsx";
+import { PopDistsResults } from "./popDists/PopDistsResults.tsx";
+import { readyLines as popDistsReadyLines } from "./popDists/words.ts";
 import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
 
@@ -164,17 +169,30 @@ const PCA: AnalysisUi = Object.freeze({
     crashText(p, individualsRunOn(p, kept)),
 });
 
-/** The placeholder of the panel of the distances between populations,
-    its Run button alone, until task 5.2 of the plan of stage 5 draws its
-    panel, with the field of the minimum, the radio buttons of the
-    measure, the heatmap and the table (docs/specs/analyses/popDists.md,
-    "The panel"): a result draws nothing. */
+/** The panel of the distances between populations
+    (docs/specs/analyses/popDists.md, "The panel"). */
 const POP_DISTS: AnalysisUi = Object.freeze({
   title: titleOf("popDists"),
   name: "the distances between populations",
   resultName: "the heatmap and the table",
   plural: true,
-  readyLines: (): readonly string[] => [],
+  readyLines: (p: Project, kept: IndividualsKept | null): readonly string[] => {
+    // As the diversity's: the store locks the distances with no
+    // individuals kept before they are ready or removed.
+    if (kept === null) {
+      throw new Error(
+        "popnei_web defect: the distances between populations are ready or removed with no individuals kept.",
+      );
+    }
+    const pops = populationsBeforeRun(p, kept);
+    return pops === null
+      ? []
+      : popDistsReadyLines(
+          pops,
+          popDistsOptions(p).minNumIndividuals,
+          kept.list.kind === "needsStatistics",
+        );
+  },
   refusalText: popDistsRefusalText,
   statisticsFailedText: (
     error: AnalysisError,
@@ -190,8 +208,8 @@ const POP_DISTS: AnalysisUi = Object.freeze({
         ? "the distances between populations were not run"
         : "the distances between populations cannot run",
     ),
-  Results: PopDistsPlaceholder,
-  Options: null,
+  Results: PopDistsResults,
+  Options: PopDistsOptionsPart,
   runningLine: (): null => null,
   workerFailedText: null,
 });

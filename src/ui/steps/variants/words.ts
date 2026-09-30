@@ -201,6 +201,15 @@ const PLOIDY_NOT_TAKEN: NotTakenWords = Object.freeze({
   other: "cannot be typed in the ploidy, which is a whole number, as 4",
 });
 
+/** What the minimum number of individuals of an analysis says of a
+    character it threw away: the field of the distances between
+    populations, and the diversity's when it has one
+    (docs/specs/analyses/diversity.md, "What it shows"). */
+const MINIMUM_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma: "Write the minimum as a whole number, 20 and not 20,0",
+  other: "cannot be typed in the minimum, which is a whole number, as 20",
+});
+
 /** What the maximum r² says of a character it threw away: the words of
     the threshold, with the noun of the field. */
 const R2_NOT_TAKEN: NotTakenWords = Object.freeze({
@@ -297,6 +306,17 @@ export function ploidyRefusedText(
   kept: number,
 ): string {
   return `${refusedWhy(refusal, PLOIDY_NOT_TAKEN)}; the ploidy stays ${numberText(kept)}.`;
+}
+
+/** The line under the minimum number of individuals of an analysis for
+    a number it refused, or a character it threw away, with the minimum
+    kept: "2.5 is not a whole number; the minimum stays 20.", "Write the
+    minimum as a whole number, 20 and not 20,0; the minimum stays 20." */
+export function minimumRefusedText(
+  refusal: NumberRefusal,
+  kept: number,
+): string {
+  return `${refusedWhy(refusal, MINIMUM_NOT_TAKEN)}; the minimum stays ${numberText(kept)}.`;
 }
 
 /** The format of a loaded file, as the card names it. */

@@ -1,0 +1,7 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}

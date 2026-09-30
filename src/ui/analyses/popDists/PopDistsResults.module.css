@@ -1,0 +1,74 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as the panel, and never wider: without `min-inline-size: 0`
+   the least width of the heatmap would hold the column of the panel at
+   that width, and the page would scroll sideways where the frame of the
+   heatmap should (WCAG 1.4.10). */
+.results {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.heatmapPart {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.heatmapFrame {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.scrollLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A heatmap wider than the page scrolls sideways, and the page does not
+   (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
+   shows the focus. */
+.heatmapScroll {
+  min-inline-size: 0;
+  overflow-x: auto;
+}
+
+.heatmapScroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The element of the heatmap: its width from the panel, up to 40rem,
+   and its height from its ratio of 1 by 1, meanwhile, refined in the
+   running application (docs/specs/charts/heatmap.md, "The size"); the
+   tooltip is placed inside it. Its least width is given by the page,
+   from the margins of its names. */
+.heatmap {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  aspect-ratio: 1 / 1;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The button and the line of the versions side by side, wrapping when
+   there is no room. */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
