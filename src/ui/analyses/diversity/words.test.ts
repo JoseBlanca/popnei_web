@@ -5,11 +5,10 @@ import {
   cellText,
   rowCells,
   csvName,
-  emptiedText,
   optionsText,
-  populationsText,
   readyLines,
 } from "./words.ts";
+import { emptiedText, populationsText } from "../words.ts";
 
 describe("the words of the panel of the diversity", () => {
   test("the populations a run takes, with their sizes", () => {

@@ -11,6 +11,8 @@ import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
 import type { ButtonOf } from "../../analyses/status.ts";
+import { refusedWhy } from "../../analyses/words.ts";
+import type { NotTakenWords } from "../../analyses/words.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 
@@ -177,17 +179,6 @@ export const DISTANCE_LABEL =
 export const LD_LINE =
   "Of two variants closer than the distance, and with an r² above the maximum, the first is kept.";
 
-/** The number of decimals in words, as a refusal says it. */
-const DECIMAL_WORDS = ["no", "one", "two", "three", "four"] as const;
-
-/** What a field says of a character typed that it threw away. */
-interface NotTakenWords {
-  /** The line of a comma, before the value kept. */
-  readonly comma: string;
-  /** What follows the character named, before the value kept. */
-  readonly other: string;
-}
-
 /** What the threshold says of a character it threw away. */
 const THRESHOLD_NOT_TAKEN: NotTakenWords = Object.freeze({
   comma: "Write the decimals with a point, 0.1 and not 0,1",
@@ -199,15 +190,6 @@ const THRESHOLD_NOT_TAKEN: NotTakenWords = Object.freeze({
 const PLOIDY_NOT_TAKEN: NotTakenWords = Object.freeze({
   comma: "Write the ploidy as a whole number, 4 and not 4,0",
   other: "cannot be typed in the ploidy, which is a whole number, as 4",
-});
-
-/** What the minimum number of individuals of an analysis says of a
-    character it threw away: the field of the distances between
-    populations, and the diversity's when it has one
-    (docs/specs/analyses/diversity.md, "What it shows"). */
-const MINIMUM_NOT_TAKEN: NotTakenWords = Object.freeze({
-  comma: "Write the minimum as a whole number, 20 and not 20,0",
-  other: "cannot be typed in the minimum, which is a whole number, as 20",
 });
 
 /** What the maximum r² says of a character it threw away: the words of
@@ -225,45 +207,6 @@ const DISTANCE_NOT_TAKEN: NotTakenWords = Object.freeze({
   other:
     "cannot be typed in the distance, which is a whole number of base pairs, as 10000",
 });
-
-/** The characters a number of the fields is written with. */
-const NUMBER_CHARACTER = /^[0-9.]$/;
-
-/** The line of the text `text` a field threw away: the comma's, when
-    there is one in it, otherwise the first character that is not a
-    digit or a point, or the first of all, named. */
-function notTakenWhy(text: string, words: NotTakenWords): string {
-  if (text.includes(",")) return words.comma;
-  const characters = Array.from(text);
-  const named =
-    characters.find((character) => !NUMBER_CHARACTER.test(character)) ??
-    characters[0] ??
-    "";
-  const name =
-    named === " " || named === "\u00a0" ? "A space" : `‘${escaped(named)}’`;
-  return `${name} ${words.other}`;
-}
-
-/** Why a number was refused: "10 is more than 1", "0.125 has more than
-    two decimals", "2.5 is not a whole number", or the words of a
-    character thrown away, `notTaken` of the field. */
-function refusedWhy(refusal: NumberRefusal, notTaken: NotTakenWords): string {
-  switch (refusal.kind) {
-    case "aboveMax":
-      return `${refusal.typed} is more than ${numberText(refusal.maxValue)}`;
-    case "belowMin":
-      return `${refusal.typed} is less than ${numberText(refusal.minValue)}`;
-    case "offStep": {
-      const typed = refusal.typed;
-      if (refusal.decimals === 0) return `${typed} is not a whole number`;
-      const count = DECIMAL_WORDS[refusal.decimals] ?? String(refusal.decimals);
-      const noun = refusal.decimals === 1 ? "decimal" : "decimals";
-      return `${typed} has more than ${count} ${noun}`;
-    }
-    case "notTaken":
-      return notTakenWhy(refusal.text, notTaken);
-  }
-}
 
 /** The line under the threshold for a number it refused, or a character
     it threw away, with the threshold kept: "10 is more than 1; the
@@ -306,17 +249,6 @@ export function ploidyRefusedText(
   kept: number,
 ): string {
   return `${refusedWhy(refusal, PLOIDY_NOT_TAKEN)}; the ploidy stays ${numberText(kept)}.`;
-}
-
-/** The line under the minimum number of individuals of an analysis for
-    a number it refused, or a character it threw away, with the minimum
-    kept: "2.5 is not a whole number; the minimum stays 20.", "Write the
-    minimum as a whole number, 20 and not 20,0; the minimum stays 20." */
-export function minimumRefusedText(
-  refusal: NumberRefusal,
-  kept: number,
-): string {
-  return `${refusedWhy(refusal, MINIMUM_NOT_TAKEN)}; the minimum stays ${numberText(kept)}.`;
 }
 
 /** The format of a loaded file, as the card names it. */

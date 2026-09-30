@@ -15,17 +15,15 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import {
-  popDists,
-  popDistsDescription,
-  popDistsOptions,
-} from "../../../core/analyses/popDists.ts";
+import { popDists, popDistsOptions } from "../../../core/analyses/popDists.ts";
 import { setAnalysisOptions } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
-import type { AppState, Store } from "../../../core/store.ts";
+import type { Key } from "../../../core/keys.ts";
+import type { AnalysisStatus, AppState, Store } from "../../../core/store.ts";
 import { sampleProject } from "../../../core/testSupport.ts";
 import type {
   JobResult,
+  HeatmapOrder,
   PopDistsResult,
   ShownMeasure,
 } from "../../../worker/protocol.ts";
@@ -34,6 +32,15 @@ import type { Announcer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
 import { PopDistsOptionsPart } from "./PopDistsOptionsPart.tsx";
 import { PopDistsResults } from "./PopDistsResults.tsx";
+import { rowCells } from "./words.ts";
+import type * as WordsModule from "./words.ts";
+
+// The cells of the rows of the table are made by rowCells, counted here
+// so that a test sees when the rows are made again.
+vi.mock("./words.ts", async (importOriginal) => {
+  const words = await importOriginal<typeof WordsModule>();
+  return { ...words, rowCells: vi.fn(words.rowCells) };
+});
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -61,15 +68,24 @@ let applied: string[];
 /** The texts announced. */
 let announced: string[];
 let project: Project;
+/** The state of the distances the store gives. */
+let status: AnalysisStatus<JobResult>;
 let listeners: Set<() => void>;
 let container: HTMLElement;
 let root: Root;
 
-/** A store that holds `project` and applies commands to it, for the
-    parts of the panel, which read the project and the version of popnei
-    alone. */
+/** A key of a result, as the store gives one. */
+const KEY = "a key of the tests" as Key;
+
+/** A store that holds `project` and applies commands to it, and gives
+    the distances the state `status`, for the parts of the panel, which
+    read the project, the version of popnei and that state alone. */
 function testStore(): Store<JobResult, Blob> {
-  let state = { project, popneiVersion: "0.1.0-dev.3" };
+  let state = {
+    project,
+    popneiVersion: "0.1.0-dev.3",
+    analyses: [{ id: "popDists", status }],
+  };
   const store = {
     getState: () => state,
     subscribe: (listener: () => void) => {
@@ -103,6 +119,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", QuietObserver);
   applied = [];
+  status = { kind: "ready", key: KEY };
   announced = [];
   listeners = new Set();
   project = sampleProject();
@@ -220,6 +237,7 @@ describe("PA5 the options of the distances, drawn by React", () => {
       minNumIndividuals: 12,
       measure: "fst",
     });
+    status = doneWith(FLOW);
     draw(createElement(PopDistsOptionsPart));
     const fst = radio("Hudson's Fst");
     expect(fst.checked).toBe(true);
@@ -242,6 +260,41 @@ describe("PA5 the options of the distances, drawn by React", () => {
       "Heatmap of Hudson's Fst",
     ]);
     expect(document.activeElement).toBe(radio("Hudson's Fst"));
+  });
+
+  test("PA5 D1 with no heatmap on the page, the measure changed is announced by nothing: locked, ready, running, removed, in error and above 200 populations", () => {
+    const states: readonly AnalysisStatus<JobResult>[] = [
+      { kind: "locked", reason: "The distances need two populations." },
+      { kind: "ready", key: KEY },
+      {
+        kind: "running",
+        key: KEY,
+        runId: 1,
+        progress: null,
+        waitsForStatistics: false,
+      },
+      { kind: "removed", key: KEY },
+      {
+        kind: "error",
+        key: KEY,
+        error: { kind: "refused", message: "no" },
+        ofStatistics: false,
+        waited: false,
+      },
+      doneWith(manyPops(201)),
+    ];
+    for (const shown of states) {
+      status = shown;
+      draw(createElement(PopDistsOptionsPart));
+      act(() => {
+        radio("Hudson's Fst").focus();
+      });
+      press("ArrowDown");
+      press("ArrowUp");
+      expect(applied).toHaveLength(2);
+      expect(announced).toEqual([]);
+      applied = [];
+    }
   });
 
   test("a minimum typed is one command at Enter, with the measure kept", () => {
@@ -298,17 +351,19 @@ const FLOW_PASS = {
 
 /** A result of `pops` with `fst` and `dest` for each pair, ordered by
     the PCoA as `order` when given, and in the order of the file
-    otherwise, for two populations. */
+    otherwise, for two populations; Jost's D ordered as `destOrder` when
+    given, and as Fst otherwise. */
 function resultOf(
   pops: readonly string[],
   fst: readonly number[],
   dest: readonly number[],
   order: readonly number[] | null,
+  destOrder?: HeatmapOrder,
 ): PopDistsResult {
-  const heatmapOrder =
+  const heatmapOrder: HeatmapOrder =
     order === null
-      ? ({ kind: "file", reason: "twoPopulations" } as const)
-      : ({ kind: "pcoa", order: Uint32Array.from(order) } as const);
+      ? { kind: "file", reason: "twoPopulations" }
+      : { kind: "pcoa", order: Uint32Array.from(order) };
   return {
     analysis: "popDists",
     pops,
@@ -316,7 +371,7 @@ function resultOf(
     fst: Float64Array.from(fst),
     dest: Float64Array.from(dest),
     numVarsPerPair: Uint32Array.from(fst.map(() => 1200)),
-    order: { fst: heatmapOrder, dest: heatmapOrder },
+    order: { fst: heatmapOrder, dest: destOrder ?? heatmapOrder },
     leftOut: [],
     passStats: FLOW_PASS,
   };
@@ -329,6 +384,42 @@ const FLOW = resultOf(
   [0.06129813142463423, 0.06354346296076403, 0.06567052128821259],
   [1, 0, 2],
 );
+
+/** The flow's result with Jost's D in another order, p1, p2, p0. */
+const OTHER_D_ORDER = resultOf(
+  FLOW.pops,
+  Array.from(FLOW.fst),
+  Array.from(FLOW.dest),
+  [1, 0, 2],
+  { kind: "pcoa", order: Uint32Array.from([2, 1, 0]) },
+);
+
+/** A result ordered by the PCoA for Fst, and in the order of the file
+    for Jost's D, every one of whose values is 0 or below. */
+const D_ALL_ZERO = resultOf(
+  FLOW.pops,
+  Array.from(FLOW.fst),
+  [-0.01, 0, -0.02],
+  [1, 0, 2],
+  { kind: "file", reason: "allZero" },
+);
+
+/** A result of `numPops` populations, `q0`, `q1`, …, every pair 0.1 and
+    0.06, in the order of the file. */
+function manyPops(numPops: number): PopDistsResult {
+  const numPairs = (numPops * (numPops - 1)) / 2;
+  return resultOf(
+    Array.from({ length: numPops }, (_, i) => `q${String(i)}`),
+    new Array<number>(numPairs).fill(0.1),
+    new Array<number>(numPairs).fill(0.06),
+    Array.from({ length: numPops }, (_, i) => i),
+  );
+}
+
+/** The state of the distances done with the result `r`. */
+function doneWith(r: PopDistsResult): AnalysisStatus<JobResult> {
+  return { kind: "done", key: KEY, result: r, warnings: [], check: null };
+}
 
 /** Draws the result `r` with no comparison. */
 function drawResult(r: PopDistsResult): Store<JobResult, Blob> {
@@ -370,7 +461,7 @@ describe("PA5 the result of the distances, drawn by React", () => {
       "Hudson's Fst between populations",
     );
     expect(heatmapSvg()?.querySelector("desc")?.textContent).toBe(
-      popDistsDescription(FLOW, "fst", "panel.nei"),
+      "Heatmap of Hudson's Fst between 3 populations of panel.nei, ordered so that similar ones are together: p2, p0, p1. From 0.1027, between p0 and p2, to 0.1096, between p2 and p1.",
     );
     expect(container.textContent).toContain(
       "Ordered so that similar populations are together: by the first axis of a principal coordinate analysis of these distances.",
@@ -411,11 +502,76 @@ describe("PA5 the result of the distances, drawn by React", () => {
       "Jost's D between populations",
     );
     expect(svg?.querySelector("desc")?.textContent).toBe(
-      popDistsDescription(FLOW, "dest", "panel.nei"),
+      "Heatmap of Jost's D between 3 populations of panel.nei, ordered so that similar ones are together: p2, p0, p1. From 0.0613, between p0 and p2, to 0.0657, between p2 and p1.",
     );
     expect(document.activeElement).toBe(button);
     // The table shows both measures, whatever the heatmap draws.
     expect(tableRows()[0]).toEqual(["p0 and p2", "0.1027", "0.0613", "1,200"]);
+  });
+
+  test("PA5 D1 a change of the measure makes no row of the table again", () => {
+    const store = drawResult(FLOW);
+    const made = vi.mocked(rowCells).mock.calls.length;
+    expect(made).toBeGreaterThanOrEqual(3);
+    setMeasure(store, "dest");
+    setMeasure(store, "fst");
+    expect(vi.mocked(rowCells).mock.calls.length).toBe(made);
+  });
+
+  test("PA5 D1 Jost's D in its own order: the heatmap and its description follow it", () => {
+    const store = drawResult(OTHER_D_ORDER);
+    setMeasure(store, "dest");
+    expect(heatmapSvg()?.querySelector("desc")?.textContent).toBe(
+      "Heatmap of Jost's D between 3 populations of panel.nei, ordered so that similar ones are together: p1, p2, p0. From 0.0613, between p0 and p2, to 0.0657, between p2 and p1.",
+    );
+  });
+
+  test("PA5 D1 each measure has the line of its own order: the PCoA for Hudson's Fst, the file for Jost's D of values 0 or below", () => {
+    const store = drawResult(D_ALL_ZERO);
+    const pcoaLine =
+      "Ordered so that similar populations are together: by the first axis of a principal coordinate analysis of these distances.";
+    const fileLine =
+      "In the order of the metadata file: every distance is 0 or below, so no population is closer to one than to another.";
+    expect(container.textContent).toContain(pcoaLine);
+    expect(container.textContent).not.toContain(fileLine);
+    setMeasure(store, "dest");
+    expect(container.textContent).toContain(fileLine);
+    expect(container.textContent).not.toContain(pcoaLine);
+  });
+
+  test("PA5 D1 popnei's words of an order it refused go to the console once for the result, and not to the page", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const refused = resultOf(
+      FLOW.pops,
+      Array.from(FLOW.fst),
+      Array.from(FLOW.dest),
+      [1, 0, 2],
+      {
+        kind: "file",
+        reason: "notPlaced",
+        message: "doPcoa: the individuals could not be placed",
+      },
+    );
+    const store = drawResult(refused);
+    setMeasure(store, "dest");
+    drawResult(refused);
+    expect(warn.mock.calls).toEqual([
+      [
+        "popnei could not order the heatmap of dest: doPcoa: the individuals could not be placed",
+      ],
+    ]);
+    expect(container.textContent).not.toContain("doPcoa");
+  });
+
+  test("PA5 D1 the pair keeps each name on one line, and the line breaks only after “and”", () => {
+    drawResult(FLOW);
+    const spans = [...container.querySelectorAll("tbody tr")][0]
+      ?.querySelector("th")
+      ?.querySelectorAll("span");
+    expect([...(spans ?? [])].map((span) => span.textContent)).toEqual([
+      "p0 and",
+      "p2",
+    ]);
   });
 
   test("two populations have no line of order", () => {
@@ -426,16 +582,7 @@ describe("PA5 the result of the distances, drawn by React", () => {
   });
 
   test("above 200 populations, the line that says so and the download, and neither the heatmap nor the table", () => {
-    const numPops = 201;
-    const numPairs = (numPops * (numPops - 1)) / 2;
-    drawResult(
-      resultOf(
-        Array.from({ length: numPops }, (_, i) => `q${String(i)}`),
-        new Array<number>(numPairs).fill(0.1),
-        new Array<number>(numPairs).fill(0.06),
-        Array.from({ length: numPops }, (_, i) => i),
-      ),
-    );
+    drawResult(manyPops(201));
     expect(container.textContent).toContain(
       "The heatmap and the table are shown for up to 200 populations, and this result has 201. Download the table as CSV to read it.",
     );

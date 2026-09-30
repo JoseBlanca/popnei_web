@@ -5,15 +5,28 @@
  * removed and of a calculation stopped, written from the change that
  * caused them, the count of the warnings, a
  * failure that is not popnei's refusal, and the line of the versions
- * beside a result. Pure, so that a test in node
- * checks them; `AnalysisPanel.tsx`, `Failed.tsx` and the parts of the
- * checks of the Variants step draw them.
+ * beside a result; and what several panels share: the populations of a
+ * ready state, those the filters leave empty and the wait for the
+ * statistics of each individual, and the refusals of a number field,
+ * the minimum of individuals of the distances between populations and
+ * the diversity, and the fields of the Variants step. Pure, so that a
+ * test in node checks them; `AnalysisPanel.tsx`, `Failed.tsx`, the
+ * panels and the Variants step draw them.
  */
 
-import { counted, escaped, saying } from "../../core/project.ts";
+import {
+  counted,
+  escaped,
+  grouped,
+  loosenText,
+  namesOf,
+  saying,
+} from "../../core/project.ts";
 import type { Notice } from "../../core/store.ts";
-import type { Progress, RunError } from "../../worker/protocol.ts";
+import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";
+import { numberText } from "../widgets/committedNumber.ts";
+import type { NumberRefusal } from "../widgets/committedNumber.ts";
 
 /** The line beside the download: "Calculated with popnei 0.1.0, in
     version 0.1.0 of the application." */
@@ -203,4 +216,125 @@ export function failureText(
         `popnei_web defect: a calculation failed in the files wasm, which the calculation worker does not hold: ${error.message}`,
       );
   }
+}
+
+/** The populations a run will take, with their sizes, the noun with
+    each: "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
+    individuals". The ready state of the diversity and of the distances
+    between populations. */
+export function populationsText(pops: Pops): string {
+  const parts = pops.map(
+    ([pop, members]) =>
+      `${escaped(pop)}, ${counted(members.length, "individual")}`,
+  );
+  return `${counted(pops.length, "population")}: ${parts.join("; ")}`;
+}
+
+/** The line of the ready state while a threshold on the individuals waits
+    for the statistics of each individual, which a Run calculates first:
+    the diversity's, the distances' and the principal components'. */
+export const WAITS_FOR_STATISTICS_TEXT =
+  "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.";
+
+/** The populations the filters of individuals leave with no individual,
+    which a run leaves out, and what to do, since the panels are in the
+    Analyses step: "p9 has no individual left after the filters of
+    individuals, and is left out. Loosen the filters of individuals in
+    the Variants step to keep it."; "p1 and p2 have …, and are left out.
+    Loosen … to keep them.". */
+export function emptiedText(emptied: readonly string[]): string {
+  const one = emptied.length === 1;
+  return `${namesOf(emptied)} ${one ? "has" : "have"} no individual left after the filters of individuals, and ${one ? "is" : "are"} left out. ${loosenText(one)}`;
+}
+
+/** The number of decimals in words, as a refusal says it. */
+const DECIMAL_WORDS = ["no", "one", "two", "three", "four"] as const;
+
+/** What a number field says of a character typed that it threw away. */
+export interface NotTakenWords {
+  /** The line of a comma, before the value kept. */
+  readonly comma: string;
+  /** What follows the character named, before the value kept. */
+  readonly other: string;
+}
+
+/** The characters a number of the fields is written with. */
+const NUMBER_CHARACTER = /^[0-9.]$/;
+
+/** The line of the text `text` a field threw away: the comma's, when
+    there is one in it, otherwise the first character that is not a
+    digit or a point, or the first of all, named. */
+function notTakenWhy(text: string, words: NotTakenWords): string {
+  if (text.includes(",")) return words.comma;
+  const characters = Array.from(text);
+  const named =
+    characters.find((character) => !NUMBER_CHARACTER.test(character)) ??
+    characters[0] ??
+    "";
+  const name =
+    named === " " || named === " " ? "A space" : `‘${escaped(named)}’`;
+  return `${name} ${words.other}`;
+}
+
+/** Why a number was refused: "10 is more than 1", "0.125 has more than
+    two decimals", "2.5 is not a whole number", or the words of a
+    character thrown away, `notTaken` of the field. The numbers are as
+    the field shows them and as they were typed, or, given `written`,
+    the bounds and a whole number typed are written by it, with commas
+    between thousands for a count. The number fields of the Variants step
+    and of the panels. */
+export function refusedWhy(
+  refusal: NumberRefusal,
+  notTaken: NotTakenWords,
+  written?: (value: number) => string,
+): string {
+  const bound = written ?? numberText;
+  const typed = (text: string): string =>
+    written === undefined ? text : typedWritten(text, written);
+  switch (refusal.kind) {
+    case "aboveMax":
+      return `${typed(refusal.typed)} is more than ${bound(refusal.maxValue)}`;
+    case "belowMin":
+      return `${typed(refusal.typed)} is less than ${bound(refusal.minValue)}`;
+    case "offStep": {
+      const text = refusal.typed;
+      if (refusal.decimals === 0) return `${text} is not a whole number`;
+      const count = DECIMAL_WORDS[refusal.decimals] ?? String(refusal.decimals);
+      const noun = refusal.decimals === 1 ? "decimal" : "decimals";
+      return `${text} has more than ${count} ${noun}`;
+    }
+    case "notTaken":
+      return notTakenWhy(refusal.text, notTaken);
+  }
+}
+
+/** A number typed as a refusal names it: a whole number written by
+    `written`, anything else as it was typed. */
+function typedWritten(
+  typed: string,
+  written: (value: number) => string,
+): string {
+  return /^\d+$/.test(typed) ? written(Number(typed)) : typed;
+}
+
+/** What the minimum number of individuals of an analysis says of a
+    character it threw away: the field of the distances between
+    populations, and the diversity's when it has one
+    (docs/specs/analyses/diversity.md, "What it shows"). */
+const MINIMUM_NOT_TAKEN: NotTakenWords = Object.freeze({
+  comma: "Write the minimum as a whole number, 20 and not 20,0",
+  other: "cannot be typed in the minimum, which is a whole number, as 20",
+});
+
+/** The line under the minimum number of individuals of an analysis for
+    a number it refused, or a character it threw away, with the minimum
+    kept, its whole numbers with commas between thousands: "2.5 is not a
+    whole number; the minimum stays 20.", "5,000,000,000 is more than
+    4,294,967,295; the minimum stays 20.", "Write the minimum as a whole
+    number, 20 and not 20,0; the minimum stays 20." */
+export function minimumRefusedText(
+  refusal: NumberRefusal,
+  kept: number,
+): string {
+  return `${refusedWhy(refusal, MINIMUM_NOT_TAKEN, grouped)}; the minimum stays ${grouped(kept)}.`;
 }

@@ -4,6 +4,7 @@ import type { Notice } from "../../core/store.ts";
 import {
   clockText,
   failureText,
+  minimumRefusedText,
   progressShare,
   removedText,
   runningBarLabel,
@@ -218,6 +219,28 @@ describe("the line of the versions", () => {
     // shows.
     expect(versionsText("0.1.0", "0.2.0")).toBe(
       "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
+    );
+  });
+});
+
+describe("PA5 D1 the refusals of the minimum of individuals", () => {
+  test("a comma as a whole number, any other character named, why, and the minimum kept, with commas between thousands", () => {
+    expect(minimumRefusedText({ kind: "notTaken", text: "," }, 20)).toBe(
+      "Write the minimum as a whole number, 20 and not 20,0; the minimum stays 20.",
+    );
+    expect(minimumRefusedText({ kind: "notTaken", text: "x" }, 12)).toBe(
+      "‘x’ cannot be typed in the minimum, which is a whole number, as 20; the minimum stays 12.",
+    );
+    expect(
+      minimumRefusedText({ kind: "offStep", typed: "2.5", decimals: 0 }, 20),
+    ).toBe("2.5 is not a whole number; the minimum stays 20.");
+    expect(
+      minimumRefusedText(
+        { kind: "aboveMax", typed: "5000000000", maxValue: 4_294_967_295 },
+        1500,
+      ),
+    ).toBe(
+      "5,000,000,000 is more than 4,294,967,295; the minimum stays 1,500.",
     );
   });
 });

@@ -54,6 +54,13 @@
   aspect-ratio: 1 / 1;
 }
 
+/* A name of the pair, with "and" after the first, kept on one line: a
+   narrow column breaks the pair after "and", and never inside a name,
+   which the column then makes room for. */
+.name {
+  white-space: nowrap;
+}
+
 .line {
   margin: 0;
   overflow-wrap: anywhere;

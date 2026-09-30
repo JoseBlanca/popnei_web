@@ -10,10 +10,11 @@
  * the warnings above it, and gives the words of the comparison with the
  * check numbers, drawn under the table.
  *
- * The measure is in no key, so a change of it keeps this component and
- * its heatmap, which is drawn again with the other measure.
+ * The measure is in no key, so a change of it keeps this component. Only
+ * the part of the heatmap reads it and is drawn again; the rows of the
+ * table, up to 19,900 of them, are made once for each result.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import {
@@ -26,16 +27,19 @@ import {
   popDistsRows,
   tooManyPopulationsText,
 } from "../../../core/analyses/popDists.ts";
-import type { PopDistsResult, ShownMeasure } from "../../../worker/protocol.ts";
+import type { PopDistsRow } from "../../../core/analyses/popDists.ts";
+import { escaped } from "../../../core/project.ts";
+import type { PopDistsResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { Table } from "../../widgets/Table.tsx";
-import type { TableColumn } from "../../widgets/Table.tsx";
+import type { TableColumn, TableRow } from "../../widgets/Table.tsx";
 import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
 import { HeatmapPlot } from "./HeatmapPlot.tsx";
+import { warnNotPlaced } from "./notPlaced.ts";
 import styles from "./PopDistsResults.module.css";
 import { captionText, csvName, heatmapTitle, rowCells } from "./words.ts";
 
@@ -54,7 +58,6 @@ export function PopDistsResults({
 }: ResultsProps): React.JSX.Element {
   const variantsName = useAppState((s) => s.project.variants?.name ?? null);
   const popneiVersion = useAppState((s) => s.popneiVersion);
-  const measure = useAppState((s) => popDistsOptions(s.project).measure);
   if (result.analysis !== "popDists") {
     throw new Error(
       `popnei_web defect: the heatmap of the distances was given a result of ${result.analysis}.`,
@@ -77,21 +80,8 @@ export function PopDistsResults({
     <div className={classOf(styles, "results")}>
       {tooMany === null ? (
         <>
-          <DistancesHeatmap
-            result={result}
-            measure={measure}
-            variantsName={variantsName}
-          />
-          <Table
-            caption={captionText(result.passStats.numVars, variantsName)}
-            columns={COLUMNS}
-            rows={popDistsRows(result).map((row) => ({
-              // Two names never hold a character that no name of a file
-              // holds, the null, so the pair is its own id.
-              id: `${row.first}\u0000${row.second}`,
-              cells: rowCells(row),
-            }))}
-          />
+          <DistancesHeatmap result={result} variantsName={variantsName} />
+          <PairsTable result={result} variantsName={variantsName} />
         </>
       ) : (
         <p className={classOf(styles, "line")}>{tooMany}</p>
@@ -107,23 +97,27 @@ export function PopDistsResults({
   );
 }
 
-/** What the heatmap is drawn with. */
-interface DistancesHeatmapProps {
+/** What the heatmap and the table are drawn with. */
+interface PartProps {
   /** The result, of 200 populations or fewer. */
   readonly result: PopDistsResult;
-  /** The measure the radio buttons chose. */
-  readonly measure: ShownMeasure;
-  /** The name of the variants file, which the description names. */
+  /** The name of the variants file, which the description and the
+      caption name. */
   readonly variantsName: string;
 }
 
-/** The heatmap of `measure`, and the line of its order under it, none
-    for two populations. */
+/** The heatmap of the measure the radio buttons choose, and the line of
+    its order under it, none for two populations. */
 function DistancesHeatmap({
   result,
-  measure,
   variantsName,
-}: DistancesHeatmapProps): React.JSX.Element {
+}: PartProps): React.JSX.Element {
+  const measure = useAppState((s) => popDistsOptions(s.project).measure);
+  // popnei's words of an order it refused are not shown, and go to the
+  // console once for the result, for a report of the problem.
+  useEffect(() => {
+    warnNotPlaced(result);
+  }, [result]);
   // The same data while the result and the measure are the same, so
   // that the heatmap is not drawn again on every render (react.md,
   // "Mounting a plot").
@@ -147,5 +141,37 @@ function DistancesHeatmap({
       <HeatmapPlot data={data} />
       {order !== null && <p className={classOf(styles, "line")}>{order}</p>}
     </div>
+  );
+}
+
+/** The table of the pairs, whose rows are made once for the result. */
+function PairsTable({ result, variantsName }: PartProps): React.JSX.Element {
+  const rows = useMemo(
+    (): readonly TableRow[] =>
+      popDistsRows(result).map((row) => ({
+        // The null character is in no name of a file, so it parts the
+        // two names of the pair without making two pairs alike.
+        id: `${row.first}\u0000${row.second}`,
+        cells: [pairCell(row), ...rowCells(row).slice(1)],
+      })),
+    [result],
+  );
+  return (
+    <Table
+      caption={captionText(result.passStats.numVars, variantsName)}
+      columns={COLUMNS}
+      rows={rows}
+    />
+  );
+}
+
+/** The pair of a row, "p0 and p2", each name kept whole on its line and
+    the line broken, when the column is narrow, only after "and". */
+function pairCell(row: PopDistsRow): React.JSX.Element {
+  return (
+    <>
+      <span className={classOf(styles, "name")}>{escaped(row.first)} and</span>{" "}
+      <span className={classOf(styles, "name")}>{escaped(row.second)}</span>
+    </>
   );
 }

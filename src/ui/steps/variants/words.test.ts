@@ -15,7 +15,6 @@ import {
   elapsedText,
   formatOfName,
   keptText,
-  minimumRefusedText,
   notLoadedText,
   ploidyRefusedText,
   r2RefusedText,
@@ -144,24 +143,6 @@ describe("the words of the Variants step", () => {
     expect(ploidyRefusedText({ kind: "notTaken", text: "-" }, 4)).toBe(
       "‘-’ cannot be typed in the ploidy, which is a whole number, as 4; the ploidy stays 4.",
     );
-  });
-
-  test("PA5 D1 a character or a number the minimum of individuals refused: a comma as a whole number, any other named, why, and the minimum kept", () => {
-    expect(minimumRefusedText({ kind: "notTaken", text: "," }, 20)).toBe(
-      "Write the minimum as a whole number, 20 and not 20,0; the minimum stays 20.",
-    );
-    expect(minimumRefusedText({ kind: "notTaken", text: "x" }, 12)).toBe(
-      "‘x’ cannot be typed in the minimum, which is a whole number, as 20; the minimum stays 12.",
-    );
-    expect(
-      minimumRefusedText({ kind: "offStep", typed: "2.5", decimals: 0 }, 20),
-    ).toBe("2.5 is not a whole number; the minimum stays 20.");
-    expect(
-      minimumRefusedText(
-        { kind: "aboveMax", typed: "5000000000", maxValue: 4_294_967_295 },
-        20,
-      ),
-    ).toBe("5000000000 is more than 4294967295; the minimum stays 20.");
   });
 
   test("a number the ploidy refused: why, and the ploidy kept", () => {

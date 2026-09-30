@@ -39,8 +39,10 @@ export interface TableColumn {
 export interface TableRow {
   /** Its id, unique in the table: the name of what it is about. */
   readonly id: string;
-  /** The text of its cells, one per column, in their order. */
-  readonly cells: readonly string[];
+  /** The contents of its cells, one per column, in their order: a text,
+      or an element of text laid out by the screen, the pair of names of
+      the distances between populations, each kept on one line. */
+  readonly cells: readonly (string | React.JSX.Element)[];
 }
 
 /** What a table is drawn with. */
@@ -151,8 +153,9 @@ function cellClass(
   return `${classOf(styles, kind)} ${classOf(styles, alignment)}`;
 }
 
-/** The text of the cell `index` of `row`; a defect when it has none. */
-function cellOf(row: TableRow, index: number): string {
+/** The contents of the cell `index` of `row`; a defect when it has
+    none. */
+function cellOf(row: TableRow, index: number): string | React.JSX.Element {
   const text = row.cells[index];
   if (text === undefined) {
     throw new Error(

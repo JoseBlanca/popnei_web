@@ -9,7 +9,12 @@
  * (docs/specs/shell.md, "The status region"). Pure, so that a test in
  * node checks them; the panel draws them.
  */
-import { MEASURE_NAMES } from "../../../core/analyses/popDists.ts";
+import {
+  MEASURE_NAMES,
+  POP_DISTS_MAX_SHOWN,
+} from "../../../core/analyses/popDists.ts";
+import type { AnalysisStatus } from "../../../core/store.ts";
+import type { JobResult, ShownMeasure } from "../../../worker/protocol.ts";
 import type { PopDistsRow } from "../../../core/analyses/popDists.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
@@ -21,12 +26,11 @@ import {
   underMinimumText,
 } from "../../../core/project.ts";
 import type { PopulationsKept } from "../../../core/project.ts";
-import type { ShownMeasure } from "../../../worker/protocol.ts";
 import {
   WAITS_FOR_STATISTICS_TEXT,
   emptiedText,
   populationsText,
-} from "../diversity/words.ts";
+} from "../words.ts";
 
 /** The label of the field of the minimum of individuals. */
 export const MINIMUM_LABEL =
@@ -100,6 +104,22 @@ export function heatmapTitle(measure: ShownMeasure): string {
     heatmap" are set to `measure`, "Heatmap of Jost's D". */
 export function measureAnnounced(measure: ShownMeasure): string {
   return `Heatmap of ${MEASURE_NAMES[measure]}`;
+}
+
+/** What the status region says when the radio buttons are set to
+    `measure` with the panel in `status`: `measureAnnounced` while a
+    result of `POP_DISTS_MAX_SHOWN` populations or fewer is shown, whose
+    heatmap is drawn again; nothing in any other state, where no heatmap
+    is on the page. */
+export function measureAnnouncement(
+  status: AnalysisStatus<JobResult>,
+  measure: ShownMeasure,
+): string | null {
+  return status.kind === "done" &&
+    status.result.analysis === "popDists" &&
+    status.result.pops.length <= POP_DISTS_MAX_SHOWN
+    ? measureAnnounced(measure)
+    : null;
 }
 
 /** The line over the heatmap while its frame is narrower than it. */

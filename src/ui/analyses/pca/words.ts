@@ -20,7 +20,7 @@ import type { PcaMethod, PcaResult } from "../../../worker/protocol.ts";
 import { tableNumber } from "../../../charts/numbers.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { TableSort } from "../../widgets/tableSort.ts";
-import { WAITS_FOR_STATISTICS_TEXT } from "../diversity/words.ts";
+import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 
 /** The method as the lines of the panel name it: "PCA" or "PCoA". */
 export function methodName(method: PcaMethod): string {

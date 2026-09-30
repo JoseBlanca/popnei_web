@@ -45,8 +45,8 @@ export const DEFAULT_ONLY_PASSED = true;
     histograms of the variants and the counts of what each filter kept;
     then the principal components and the diversity, in the Analyses step,
     the PCA first from stage 4, and the distances between populations and
-    the LD decay after them, from stage 5, with the placeholders of their
-    panels until tasks 5.2 and 8.1 of the plan of stage 5
+    the LD decay after them, from stage 5, the LD decay with the
+    placeholder of its panel until task 8.1 of the plan of stage 5
     (docs/specs/entry.md, "`src/core/apps.ts`").
     The stepper names the first check in error in this order. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =

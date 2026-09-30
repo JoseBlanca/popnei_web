@@ -17,7 +17,6 @@ import { hasIndividualThreshold } from "../individualsKept.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
-  analysisOptions,
   bothOf,
   counted,
   escaped,
@@ -120,12 +119,26 @@ export const MEASURE_NAMES: Readonly<Record<ShownMeasure, string>> =
     Throws a defect on options its `parseOptions` would refuse, which no
     command puts into a project. */
 export function popDistsOptions(p: Project): PopDistsOptions {
-  const read = readOptions(analysisOptions(p, ID, POP_DISTS_DEFAULTS));
+  const stored = p.analyses.find((a) => a.analysis === ID)?.options;
+  if (stored === undefined) {
+    return POP_DISTS_DEFAULTS;
+  }
+  const known = READ.get(stored);
+  if (known !== undefined) {
+    return known;
+  }
+  const read = readOptions(stored);
   if (!read.ok) {
     throw defect("the project holds options of the distances it refuses.");
   }
-  return read.value;
+  const options = Object.freeze(read.value);
+  READ.set(stored, options);
+  return options;
 }
+
+/** The options the project holds, as `readOptions` read them, so that the
+    same options give the same object, which a screen may select. */
+const READ = new WeakMap<JsonObject, PopDistsOptions>();
 
 /**
  * The words of a refusal of popnei, for the error state of the panel of
@@ -815,8 +828,8 @@ export function popDistsHeatmap(
   for (let i = 0; i < numPops; i++) {
     for (let j = i + 1; j < numPops; j++) {
       const value = valueAt(r[measure], at);
-      const row = valueAt(rowOf, i);
-      const column = valueAt(rowOf, j);
+      const row = rowAt(rowOf, i);
+      const column = rowAt(rowOf, j);
       values[row * numPops + column] = value;
       values[column * numPops + row] = value;
       at += 1;
@@ -960,6 +973,18 @@ function valueAt(values: ArrayLike<number>, i: number): number {
     throw defect(`the result of the distances has no pair ${String(i)}.`);
   }
   return value;
+}
+
+/** The row of the heatmap of the population `i` of the result; one
+    missing is a defect, as the order placed every population. */
+function rowAt(rowOf: Int32Array, i: number): number {
+  const row = rowOf[i];
+  if (row === undefined || row === -1) {
+    throw defect(
+      `the heatmap of the distances has no row for the population ${String(i)} of the result.`,
+    );
+  }
+  return row;
 }
 
 /** The population `i` of `pops`; one missing is a defect, as an order of
