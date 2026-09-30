@@ -766,17 +766,17 @@ negative distance.
   diversity, their title in `titles.ts` and their entry in `panels.ts`
   (`entry.md`, "`src/core/apps.ts`"); the shell's words of stage 5 for
   them (`shell.md`, "The status region"). Serves 1.
-- [ ] 5.2 The panel of `src/ui/analyses/popDists/`, from `popDists.md`,
+- [x] 5.2 The panel of `src/ui/analyses/popDists/`, from `popDists.md`,
   "The panel": the field of the minimum and the radio buttons, the
   heatmap mounted as `react.md` mounts a plot, its line of order, the
   table and its download, the text above 200 populations, the states,
   "Its words" and "Accessibility"; the states of D5 in
   `e2e/screens.spec.ts`. Serves 5. Needs 5.1.
-- [ ] 5.3 The flows of D2 in `e2e/popDists.spec.ts`, with
+- [x] 5.3 The flows of D2 in `e2e/popDists.spec.ts`, with
   `bigVcfPopsCsv` given the number of individuals a population holds,
   for the 201 populations of two; and the measurement of D3, with 20
   populations of the 19 MB file. Serves 2 and 3. Needs 5.2.
-- [ ] 5.4 The flow of D4, over the field of the minimum. Serves 4.
+- [x] 5.4 The flow of D4, over the field of the minimum. Serves 4.
   Needs 5.2; runs after 5.3, since both run Playwright.
 - [ ] 5.5 Stop A: the owner tries the panel of the distances, in
   Firefox and Safari by hand as well, and judges the writers' choices of

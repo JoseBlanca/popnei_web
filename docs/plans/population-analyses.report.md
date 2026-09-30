@@ -395,6 +395,89 @@ fresh writer's reading. A flow of stage 2 that 6.3 changed was found
 only by the orchestrator's whole check: a writer that is told not to
 run Playwright should be told which flows its change reaches.
 
+## Stop A: the panel of the distances, for the owner
+
+### How to try it
+
+In a terminal, in the worktree
+`/Users/jose/devel/popnei_web/.claude/worktrees/population-analyses`,
+run `npm run dev` and open the address it prints, then the population
+genetics application. Load `e2e/fixtures/panel.nei` in the Variants
+step and `e2e/fixtures/panel_pops.csv` in the Individuals step, with
+its column `popcat`; in the Analyses step, "Distances between
+populations", Run. For the negative distance and a population under
+the minimum, load `e2e/fixtures/panel_split.csv` with the column
+`popsplit` and set the minimum at 25. Try it in Firefox and Safari by
+hand too: the checks here ran Chromium and WebKit only.
+
+### What to judge
+
+- The panel as a whole: the options above Run (the minimum of 20 by
+  default, the two measures), the heatmap in its order by similarity,
+  the line of order, the table and its download, the words of each
+  state.
+- The writers' choices of the open-points file that it shows: the field
+  of the minimum with its default of 20; the measure left out of the
+  key, so that switching Fst and D calculates nothing; the panel after
+  the diversity.
+- The colours from 0 that you decided (point 15): on `panel.nei` the
+  three pairs are three yellows alike.
+- The meanwhile values of `heatmap.md`: 56 pixels under which a cell
+  holds no value, and a width of 40rem.
+- A screen reader: on the first edit of the field of the minimum in a
+  page, it hears "15" and then a stray "1" (React Aria holds its first
+  message back 100 ms); after that, only the number typed.
+
+### Decisions, each with the recommendation
+
+The points 4, 9, 10, 11, 13 and 21 above, and these from the review of
+the panel:
+
+A1. **The warning of negative distances** says "The heatmap orders them
+    as if the distance were 0" also when the heatmap is not ordered by
+    similarity (two populations, a pair with no value, all distances 0)
+    and above 200 populations, where no heatmap is drawn, right over
+    the line that says so. Recommendation: that clause only when the
+    heatmap is drawn and ordered by similarity; otherwise "The heatmap
+    shows the value", or nothing above 200.
+A2. **A pair whose Fst has no value though it has variants.** popnei
+    gives no Fst when both populations share one allele at every
+    variant counted for them; the table then shows "no value" beside
+    "12" variants, with no warning. Recommendation: a warning of its
+    own, "p0 and p2 share one allele at every variant counted for them,
+    so Hudson's Fst has no value (0/0)".
+A3. **The words at a minimum of 0 or 1.** The warnings then read "fewer
+    than 0 individuals with a called genotype". Recommendation: at a
+    minimum of 0 or 1, "at which both have a called genotype".
+A4. **The lock's advice.** It says "Lower the minimum of individuals
+    below", while the field is above it and its label is "Individuals
+    with a called genotype needed in each population, per variant".
+    Recommendation: "Lower the number of individuals needed, above".
+A5. **The ready state** reads "p0a and p0b have fewer individuals than
+    the minimum of 25, 24 and 24, and are left out", which reads as
+    three minimums. Recommendation: "p0a and p0b have 24 and 24
+    individuals, fewer than the minimum of 25, and are left out"; the
+    diversity shares it.
+A6. **"20,100 of the 20,100 pairs are over fewer than…"**, when every
+    pair is concerned, with "at the others" pointing at none.
+    Recommendation: "All 20,100 pairs are over fewer than…", without
+    the clause of the others.
+A7. **A population whose name starts with "=", "+", "-" or "@"** is run
+    as a formula by a spreadsheet that opens any of the application's
+    CSVs. Recommendation: every CSV writes such a name with a quote
+    before it, as spreadsheets advise; it concerns the downloads of
+    every stage, and is a change of the shared writer.
+A8. **The heatmap's least width**, a meanwhile choice of the writer: the
+    names' margins and a grid of 128 pixels; below it the heatmap's box
+    scrolls sideways, as the tables do, and is reached with Tab.
+    Recommendation: keep it, and settle point 13 with it.
+A9. **Two sentences of other specs.** `steps/variants.md` (about lines
+    402-404) names the diversity and the PCA as what an empty distance
+    of the LD pruning locks; the distances and the LD decay lock too.
+    And the interface of `popDists.md` lacks `MEASURE_NAMES`,
+    `PopDistsHeatmap` and `orderText` returning none for two
+    populations. Recommendation: correct both.
+
 ## For the owner, as the work goes
 
 Points found during the work, each with its recommendation. None stops
