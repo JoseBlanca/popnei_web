@@ -562,6 +562,10 @@ export function ldDecayFilters(filters: Project["filters"]): Project["filters"];
 export function maxDistFor(numPops: number): number;   // Math.floor(LD_DECAY_MAX_BYTES / (40 * numPops))
 export const LD_PLOT_MAX_POPS = 16;
 
+/** The line under the plot when the result has more than LD_PLOT_MAX_POPS
+    populations, which the plot leaves out; null otherwise. */
+export function ldPlotOmittedText(r: LdDecayResult): string | null;
+
 /** The fitted curve at `dist` base pairs, popnei's formula in its order. */
 export function fittedR2(dist: number, rhoPerBp: number, numIndividuals: number): number;
 
@@ -745,6 +749,9 @@ With Vitest, at the functions of the definition, on frozen projects, as
   as literals.
 - **`script`** of the project of the flow gives the lines above, as a
   literal.
+- **`ldPlotOmittedText`** of a fake result of 17 populations gives "The
+  plot draws the first 16 of the 17 populations, in the order of the
+  table. The tables below hold all 17.", and of 16 `null`.
 
 In node, at `createRunner` of the runner, with the popnei of the
 release, as `docs/specs/worker/runner.md` tests the diversity: the job
@@ -756,9 +763,17 @@ With Playwright, in Chromium, Firefox and WebKit, against the built
 site: the flow loads `ld.nei` and `ld_pops.csv`, chooses the column
 `pop`, opens the LD decay, sees the lock of the distance beside the
 field and the Run button, types 100000, runs it, and sees the plot, the
-half distances "7,548 bp" and "7,340 bp" in the table of the
-populations, and no warning; the axe check of every state; the keyboard
-path of "Accessibility", below.
+half distances "7,548" and "7,340" in the column "Half distance (bp)"
+of the table of the populations, and no warning; the axe check of every state; the keyboard
+path of "Accessibility", below. A second flow, in the same three
+browsers, loads `ld.nei` with a
+metadata file the test writes, `IID,pop` with the individual `i000` to
+`i099` in the population `q` and its number modulo 17, `q0` to `q16`,
+17 populations of 5 or 6 individuals; types 100000; runs; and sees 16
+rows in the legend of the plot, `q0` to `q15`, the line "The plot draws
+the first 16 of the 17 populations, in the order of the table. The
+tables below hold all 17.", and 17 rows in the table of the
+populations.
 
 **The fixture.** `panel.nei` cannot test the decay: its variants are at
 positions 1 to 1,200 of one chromosome, so at any largest distance of
@@ -870,8 +885,10 @@ individuals it will run on, as the PCA's.
   filters empty those before it, so that it has one mark here and in
   the PCA. The plot draws the first 16 populations of the result,
   `LD_PLOT_MAX_POPS`, the rows of the legend a frame 300 pixels high
-  holds, so that none is drawn without its name, and a line under it
-  says how many more the tables hold.
+  holds, so that none is drawn without its name. With more, a line
+  under the plot, `ldPlotOmittedText`, says which it drew and where
+  the others are: "The plot draws the first 16 of the 20 populations,
+  in the order of the table. The tables below hold all 20."
 - **The table of the populations**, with the caption "The LD decay of
   each population, over the 500 variants of ld.nei the filters kept,
   pairs up to 100,000 base pairs apart.", the 500 being
@@ -884,7 +901,7 @@ individuals it will run on, as the PCA's.
 | Individuals | `numIndividuals` |
 | Variants | `numVars`: those that pass its maximum MAF |
 | Pairs | the sum of its `numPairs` |
-| Half distance (bp) | `halfDist`, as in the legend, "no pair" or "no curve" for NaN |
+| Half distance (bp) | `halfDist`, the number as the legend writes it but without "bp", which the header carries, as the headers of the diversity's and the distances' tables carry what their numbers count: "7,548", "0.247"; "no pair" or "no curve" for NaN |
 | r² at distance 0, of the curve | `r2AtZero`, to four decimals |
 | 4Nr per base pair | `rhoPerBp`, the ρ per base pair, to three significant digits |
 
@@ -925,7 +942,11 @@ tab of the plot or the table.
 
 ### Its words
 
-The locked reasons and the warnings are those of the module. The error
+The locked reasons and the warnings are those of the module. Under the
+plot, with more than 16 populations, `ldPlotOmittedText`: "The plot
+draws the first 16 of the 20 populations, in the order of the table.
+The tables below hold all 20.", the count of `r.pops` with a comma
+between thousands. The error
 state is the diversity's table (`diversity.md`, "Its words"), made by
 `refusalWords` of `src/core/analyses/words.ts` with the words of the LD
 decay: `calculate` "calculate the LD decay", `nothingLeft` "there is no
@@ -980,6 +1001,19 @@ The help, a few lines of Markdown for the help drawer of stage 8:
   population, their rows, as the diversity's.
 - The order of the keyboard: the two fields, Run, the tabs of the plot
   and the table, the downloads.
+- While digits are typed, the two fields announce what React Aria's
+  `NumberField` announces through a live region of its own, a part of
+  the page whose changes a screen reader reads out: in stage 4 that
+  region was found to gather the digits typed across edits,
+  "5000050000777", which a screen reader may read out
+  (`docs/plans/individuals-pca.report.md`, "The owner's decisions of 29
+  September 2026", the paragraph "For the owner, new, with a
+  recommendation"). They are made with the one wrapper of the application,
+  `src/ui/widgets/NumberField.tsx`, as the fields of the PCA and of
+  the Variants step are, and the code of this panel adds nothing for
+  it. What the wrapper announces is for the plan of stage 5 and its
+  review to look at, with a screen reader, and a change it calls for is
+  made in the wrapper, for every number field at once.
 - The end of a run, a lock that appears when a field changes, and the
   notice are said by the status region of the shell without moving the
   focus (WCAG 2.2, 4.1.3).

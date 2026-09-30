@@ -1801,8 +1801,9 @@ each spec gives beside them, and written into the tests as literals:
   and "2" for p0, p2 and p1, given back by popnei as "1", "2", "3", held
   as "3", "1", "2" pair by pair; and the fixture `panel_split.csv`,
   whose negative pair gives the order p0b, p0a, p2, p1 for both
-  measures. The scripts `dists.mjs` and `order.mjs` of that spec's
-  session are kept beside this spec's `numbers.mjs` by the plan.
+  measures. They are given by the scripts `dists.mjs` and `order.mjs`,
+  whose text is in `popDists.md`, "How it is verified", run from the
+  root of the repository with `node dists.mjs` and `node order.mjs`.
 - **The LD decay**, over `e2e/fixtures/ld.nei` and `ld_pops.csv` with
   the missing data filter at 0.1, `maxDist` 100,000: the numbers of
   `ldDecay.md`, "How it is verified", 432 variants and 29,367 pairs in

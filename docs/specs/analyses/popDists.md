@@ -472,7 +472,7 @@ export const popDists: AnalysisDef<Job, JobResult>;
 // filtersRead { variants: true, individuals: true }; defaults POP_DISTS_DEFAULTS
 
 export interface PopDistsOptions {
-  readonly minNumIndividuals: number;  // a whole number from 1 to 4,294,967,295
+  readonly minNumIndividuals: number;  // a whole number from 0 to 4,294,967,295
   readonly measure: "fst" | "dest";    // what the heatmap draws
 }
 export const POP_DISTS_DEFAULTS: { readonly minNumIndividuals: 20; readonly measure: "fst" };
@@ -507,19 +507,39 @@ export function popDistsDescription(r: PopDistsResult, measure: "fst" | "dest", 
 
 /** The words of a refusal of popnei, for the error state of the panel. */
 export function refusalText(message: string, p: Project): string;
+
+/** The most populations the panel draws the heatmap and the table for:
+    MAX_HEATMAP_NAMES of src/charts/limits.ts, which core does not import. */
+export const POP_DISTS_MAX_SHOWN = 200;
+
+/** The line the panel shows in place of the heatmap and the table when the
+    result has more than POP_DISTS_MAX_SHOWN populations; null otherwise. */
+export function tooManyPopulationsText(r: PopDistsResult): string | null;
 ```
 
 `popDistsRows` and `popDistsHeatmap` keep their answer by the result in
 a `WeakMap`, as `diversityRows` does. `parseOptions(o, 1)` gives back an
 object with exactly the two fields, `minNumIndividuals` a whole number
-from 1 to 4,294,967,295, the largest popnei takes, and `measure` `"fst"`
+from 0 to 4,294,967,295, as popnei takes it, and `measure` `"fst"`
 or `"dest"`; anything else is refused with the words that follow
 "should be" in `projectErrorText`: "the minimum of individuals, a whole
-number from 1 to 4,294,967,295, and the distance the heatmap draws,
-"fst" or "dest", and nothing else". A minimum of 0 is not taken, though
-popnei takes it: a variant would then count for a pair in which a
-population has no genotype called there, and on `panel.nei` 0 and 1 gave
-the same distances (node, 30 September 2026).
+number from 0 to 4,294,967,295, and the distance the heatmap draws,
+"fst" or "dest", and nothing else".
+
+The minimum of the distances and the minimum of the diversity follow
+one rule: a whole number from 0 to 4,294,967,295, the range popnei's
+`calcPerVarDistribs`, `calcPopDiversity` and `calcPopDists` all check
+with `wholeNumberOfZeroOrMore` of `js/popnei/src/arguments.ts`, so that
+a project moves its minimum from one analysis to the other without a
+value one takes and the other refuses. A 0 counts no variant at which a
+population has nothing called: `calcPopDists` counts a variant for a
+pair only where each of the two populations has one called genotype at
+least, whatever the minimum (the doc comment of `of_the_pop` in
+`crates/popnei/src/pop_dists.rs`), as `calcPopDiversity` does for a
+population (the doc comment of `minNumIndividuals` in
+`js/popnei/src/diversity.ts`). On `panel.nei` with no filter, the three
+calls gave the same numbers at 0 as at 1, to the last digit (node,
+`js-v0.1.0-dev.3`, 30 September 2026).
 
 ### The cases
 
@@ -602,16 +622,22 @@ With Vitest, at the functions of the definition, as for the diversity:
 - **`numCheckNumbers`** 7 for the flow's project, and `null` with a
   threshold on the individuals, with no column of the populations, with
   the variants file pending, and with one population.
-- **`parseOptions`**: the defaults back; a minimum of 0, 2.5 or
-  4,294,967,296, a `measure` `"gst"`, a field missing or more, refused.
+- **`parseOptions`**: the defaults back; a minimum of 0 and of
+  4,294,967,295 taken, as the diversity's `parseOptions` takes them; a
+  minimum of −1, 2.5 or 4,294,967,296, a `measure` `"gst"`, a field
+  missing or more, refused.
 - **`script`** of the flow's project gives the lines above, as a literal.
+- **`tooManyPopulationsText`** of a fake result of 201 populations
+  gives "The heatmap and the table are shown for up to 200 populations,
+  and this result has 201. Download the table as CSV to read it.", of
+  1,000 populations the same with "1,000", and of 200 `null`. A test of
+  `src/ui/analyses/popDists/`, where both may be imported, checks that
+  `POP_DISTS_MAX_SHOWN` is `MAX_HEATMAP_NAMES`.
 
 The runner's test, in node with the popnei of the release, asserts
 these numbers as literals, got on 30 September 2026 with
-`js-v0.1.0-dev.3` by `dists.mjs` and `order.mjs`, scripts of this spec's
-session that build `pops` from the CSV in the order of the file and
-call `calcPopDists` as above and the steps of "The order of the
-heatmap"; the runner's spec keeps the script:
+`js-v0.1.0-dev.3` by the scripts `dists.mjs` and `order.mjs`, whose text
+is below, after the fixture with a negative distance:
 
 | populations | pair | Hudson's Fst | Jost's D | variants |
 |---|---|---|---|---|
@@ -659,6 +685,74 @@ p2, p1. The Python lines above printed the same order. With the minimum
 at 25, p0a and p0b are left out, and p2 and p1 keep their pair, Fst
 0.10962148955018115, in the order of the file.
 
+**The scripts.** Each is saved at the root of the repository, where
+`import "popnei"` finds the release in `node_modules`, and run from
+there, `node dists.mjs` and `node order.mjs`; each reads
+`e2e/fixtures/panel.nei` and `e2e/fixtures/panel_pops.csv`, builds
+`pops` in the order of the file, and makes the populations of
+`panel_split.csv` from `popcat` itself, so it needs no fixture that the
+plan has not made yet. They are not committed: the spec holds them so
+that the numbers can be got again. Run on 30 September 2026, they
+printed every number and order above to the last digit. `dists.mjs`
+gives the distances of the table, those of the names "3", "1" and "2",
+of `popsplit`, and of `popsplit` at the minimum of 25:
+
+```js
+import { readFileSync } from "node:fs";
+import { init, openVars, calcPopDists } from "popnei";
+await init();
+const rows = readFileSync("e2e/fixtures/panel_pops.csv", "utf8").trim().split("\n").slice(1).map((l) => l.split(","));
+const popcat = {};
+for (const [ind, pop] of rows) (popcat[pop] ??= []).push(ind);
+const split = {};
+rows.filter(([, pop]) => pop === "p0").forEach(([ind], i) => (split[i % 2 === 0 ? "p0a" : "p0b"] ??= []).push(ind));
+for (const [ind, pop] of rows) if (pop !== "p0") (split[pop] ??= []).push(ind);
+const renamed = { 3: popcat.p0, 1: popcat.p2, 2: popcat.p1 };
+const runs = [["popcat", popcat, 0.1, 20], ["popcat", popcat, 0.05, 20], ["3 1 2", renamed, 0.1, 20],
+  ["popsplit", split, 0.1, 20], ["popsplit", split, 0.1, 25]];
+for (const [label, pops, threshold, min] of runs) {
+  const v = openVars(new Uint8Array(readFileSync("e2e/fixtures/panel.nei")));
+  v.filterByMissingData(threshold);
+  const kept = Object.fromEntries(Object.entries(pops).filter(([, is]) => is.length >= min));
+  const d = calcPopDists(v, kept, { jackknifeGroup: null, measures: ["fst", "dest"], minNumIndividuals: min });
+  console.log(label, threshold, min, d.pops, d.passStats.numVars);
+  let k = 0;
+  for (let i = 0; i < d.pops.length; i++) for (let j = i + 1; j < d.pops.length; j++, k++)
+    console.log(" ", d.pops[i], d.pops[j], d.fst.distVector[k], d.dest.distVector[k], d.numVars[k]);
+  v.free();
+}
+```
+
+`order.mjs` gives the order of each measure by the steps of "The order
+of the heatmap", its first components and Lingoes' constant:
+
+```js
+import { readFileSync } from "node:fs";
+import { init, openVars, calcPopDists, Distances, correctDistsByLingoes, doPcoa } from "popnei";
+await init();
+const rows = readFileSync("e2e/fixtures/panel_pops.csv", "utf8").trim().split("\n").slice(1).map((l) => l.split(","));
+const popcat = {};
+for (const [ind, pop] of rows) (popcat[pop] ??= []).push(ind);
+const split = {};
+rows.filter(([, pop]) => pop === "p0").forEach(([ind], i) => (split[i % 2 === 0 ? "p0a" : "p0b"] ??= []).push(ind));
+for (const [ind, pop] of rows) if (pop !== "p0") (split[pop] ??= []).push(ind);
+for (const [label, pops, threshold] of [["popcat", popcat, 0.1], ["popcat", popcat, 0.05], ["popsplit", split, 0.1]]) {
+  const v = openVars(new Uint8Array(readFileSync("e2e/fixtures/panel.nei")));
+  v.filterByMissingData(threshold);
+  const d = calcPopDists(v, pops, { jackknifeGroup: null, measures: ["fst", "dest"], minNumIndividuals: 20 });
+  for (const measure of ["fst", "dest"]) {
+    const m = d[measure];
+    const clipped = new Distances(m.distVector.map((x) => Math.max(x, 0)), m.names, m.passStats);
+    const lingoes = correctDistsByLingoes(clipped);
+    const pcoa = doPcoa(lingoes.distances);
+    const first = m.names.map((_, i) => pcoa.projections[i * pcoa.numComps]);
+    const order = m.names.map((_, i) => i).sort((a, b) => first[a] - first[b] || a - b);
+    console.log(label, threshold, measure, "constant", lingoes.constant, "first", first, "order", order.map((i) => m.names[i]));
+  }
+  v.free();
+}
+```
+
 **In Playwright**, the flow of the Analyses step, in Chromium, Firefox
 and WebKit: `panel.nei` and `panel_pops.csv`, the column `popcat`; Run;
 the table reads p0 and p2 0.1027, 0.0613, 1,200; the heatmap's rows are
@@ -671,6 +765,17 @@ the rows p0b, p0a, p2, p1; the minimum set to 25: the notice of the
 result removed, the ready state naming p0a and p0b as left out, Run,
 the heatmap of two in the order p2, p1 and no line of order. axe, the
 checker of accessibility, runs in each state the flow reaches.
+
+A second flow, in the same three browsers, checks the panel above 200
+populations: a VCF of 402 individuals and 100 variants written by
+`writeBigVcf` of `e2e/bigVcf.ts`, the helper of the flows that writes a
+VCF of drawn genotypes, into the output folder of the test, and its metadata file,
+`bigVcfPopsCsv(402)` with the population of the individual i set to
+`q` and i / 2 rounded down, `q0` to `q200`, 201 populations of two;
+the minimum set to 2; Run.
+The panel shows the text of `tooManyPopulationsText` with 201 and the
+download, and neither the heatmap's SVG nor a table; the download saves
+a CSV of 20,100 rows and its header. axe runs on that state.
 
 ## The panel
 
@@ -686,7 +791,7 @@ title in the notice, the status region and the links of the step, is
 
 | option | control | default |
 |---|---|---|
-| the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 1, the field of React Aria that the PCA's fields use | 20, popnei's default |
+| the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 0, as the diversity's, the field of React Aria that the PCA's fields use | 20, popnei's default |
 | `measure` | a group of two radio buttons, "Distance in the heatmap": "Hudson's Fst" and "Jost's D" | Hudson's Fst, `docs/functionality.md` section 7 |
 
 The radio buttons are in that one place, with the minimum, in every
@@ -698,9 +803,16 @@ change of them redraws the heatmap below and calculates nothing.
 order of the measure, each cell coloured by the distance of its pair,
 with the value written in it when the cell is large enough. Its title is
 "Hudson's Fst between populations" or "Jost's D between populations".
-Under it, the line of its order, `orderText`. More than
-`MAX_HEATMAP_NAMES` populations, 200, are not drawn, as the owner
-decided on 30 September 2026 (below, "Open points").
+Under it, the line of its order, `orderText`.
+
+**More than 200 populations.** Above `POP_DISTS_MAX_SHOWN`, 200, the
+most the heatmap draws, the panel draws neither the heatmap nor the
+table, as the owner decided on 30 September 2026 (below, "Open
+points"), and shows in their place the line of `tooManyPopulationsText`,
+"The heatmap and the table are shown for up to 200 populations, and
+this result has 201. Download the table as CSV to read it.", with the
+download below it; the warnings, the radio buttons and the line of the
+versions stay.
 
 **The table**, one row per pair, in the order of the result, which is
 the order of the file, with the caption "Distances between the
@@ -740,7 +852,7 @@ Beside it, the line of the versions, as the diversity's.
 | locked | the reason, beside a disabled Run button that it describes, as the diversity's; the field of the minimum stays enabled, since lowering it can unlock | go where the reason says; change the minimum |
 | ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out." | Run; change the options |
 | running | the diversity's bar and clock, "Calculating · 35% · 0:12", the bar labelled "Calculating the distances between populations", and its words while it waits for the statistics of each individual | Stop |
-| done | the warnings above, each as a sentence, with their count; the heatmap, its line of order and its radio buttons; the table and its download; the comparison of an opened project file under the table | change the measure; download |
+| done | the warnings above, each as a sentence, with their count; the heatmap, its line of order and its radio buttons; the table and its download; the comparison of an opened project file under the table. Above 200 populations, the line of `tooManyPopulationsText` and the download in place of the heatmap, its line of order and the table | change the measure; download |
 | results removed | the diversity's words, with `resultName` "the heatmap and the table": "The distances between populations were removed because the filter of the variants by missing data changed. Undo brings back the heatmap and the table as they were, with no calculation; Run calculates new ones for the new settings." | Run; Undo or Redo |
 | error | what happened and what to do, below | as the diversity's |
 
@@ -774,6 +886,12 @@ order, `orderText`:
 | `noDistance`, no pair | "In the order of the metadata file: no pair has a value of Jost's D.", or of Hudson's Fst, by the measure drawn |
 | `allZero` | "In the order of the metadata file: every distance is 0 or below, so no population is closer to one than to another." |
 | `notPlaced` | "In the order of the metadata file: popnei could not order these distances." popnei's message, which names its arguments and calls the populations individuals, is not shown; the tests of the runner assert it. |
+
+Above 200 populations, in place of the heatmap and the table,
+`tooManyPopulationsText`: "The heatmap and the table are shown for up
+to 200 populations, and this result has 201. Download the table as CSV
+to read it.", the count of `r.pops` with a comma between thousands,
+"1,000".
 
 The error state: the rows of the diversity's table ("Its words" of
 `diversity.md`), with "the distances between populations" in the place
@@ -835,6 +953,19 @@ The help, for the help drawer of stage 8:
   the table (1.4.1).
 - The keyboard: the options, Run or Stop, the warnings, the radio
   buttons, the table, the download.
+- While digits are typed, the field of the minimum announces what React Aria's
+  `NumberField` announces through a live region of its own, a part of
+  the page whose changes a screen reader reads out: in stage 4 that
+  region was found to gather the digits typed across edits,
+  "5000050000777", which a screen reader may read out
+  (`docs/plans/individuals-pca.report.md`, "The owner's decisions of 29
+  September 2026", the paragraph "For the owner, new, with a
+  recommendation"). It is made with the one wrapper of the application,
+  `src/ui/widgets/NumberField.tsx`, as the fields of the PCA and of
+  the Variants step are, and the code of this panel adds nothing for
+  it. What the wrapper announces is for the plan of stage 5 and its
+  review to look at, with a screen reader, and a change it calls for is
+  made in the wrapper, for every number field at once.
 
 ### Left for the running application
 
@@ -868,8 +999,8 @@ warnings").
   refusals of `calcPopDists` answered `refused` and those of
   `correctDistsByLingoes` and `doPcoa` kept as the order's reason
   `notPlaced` rather than a refusal of the job, since the distances are
-  there; its test with the numbers of "How it is verified" and the
-  scripts `dists.mjs` and `order.mjs`.
+  there; its test with the numbers of "How it is verified", which the
+  scripts `dists.mjs` and `order.mjs` written there give.
 - `docs/specs/core/store.md`: `popDists` among the analyses with a
   `keptNeeds`, in the row locked of "The state of an analysis".
 - `docs/specs/core/projectFile.md`: the options of `popDists` saved and

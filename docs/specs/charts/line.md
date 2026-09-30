@@ -214,7 +214,10 @@ application; the legend is inside the frame and asks for no margin.
   run below the frame's bottom and are cut by the SVG, and a series
   would be drawn with no name. So the screen gives no more series than
   its frame holds rows, one every 18 pixels: a frame 300 pixels high
-  holds 16, which the LD decay draws at most. How the legend holds more
+  holds 16, which the LD decay draws at most, saying in a line under the
+  plot which populations it left out, words that are the screen's and
+  not this plot's (`docs/specs/analyses/ldDecay.md`, "Its words", with
+  their check in its "How it is verified"). How the legend holds more
   is left for the running application, checked with 3 and with 16.
 - **A label with markup**, `<b>p1</b>`: written as text.
 - **A change of theme**: nothing is drawn again; the file is in the
