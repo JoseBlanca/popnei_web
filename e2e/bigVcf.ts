@@ -143,12 +143,23 @@ export async function writeBigVcf(
 }
 
 /** The CSV of the `numIndividuals` individuals of the VCF, 1,000 when it
-    is not given, `IID,pop`, in three populations. */
-export function bigVcfPopsCsv(numIndividuals = NUM_INDIVIDUALS): string {
+    is not given, `IID,pop`: in three populations, the individual `i` in
+    the `i % 3`, when `perPopulation` is not given; otherwise in
+    populations of `perPopulation` in the order of the file, the individual
+    `i` in `q` and `i / perPopulation` rounded down, so that 402
+    individuals by 2 are the 201 populations q0 to q200
+    (docs/specs/analyses/popDists.md, "How it is verified"). */
+export function bigVcfPopsCsv(
+  numIndividuals = NUM_INDIVIDUALS,
+  perPopulation?: number,
+): string {
+  const popOf = (i: number): string =>
+    perPopulation === undefined
+      ? (POPS[i % POPS.length] ?? "")
+      : `q${String(Math.floor(i / perPopulation))}`;
   const rows = Array.from(
     { length: numIndividuals },
-    (_, i) =>
-      `${individual(i, numIndividuals)},${POPS[i % POPS.length] ?? ""}\n`,
+    (_, i) => `${individual(i, numIndividuals)},${popOf(i)}\n`,
   );
   return `IID,pop\n${rows.join("")}`;
 }
