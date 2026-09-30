@@ -37,7 +37,7 @@ change the code of stage 3. Revised on 30 September 2026 for stage 5,
 in the table of "Which results fill it": the distances between
 populations fill the counts, the diversity from the first of its two
 passes, and the LD decay does not, as `docs/specs/analyses/popDists.md`,
-`diversity.md` and `ldDecay.md` have it; not yet approved by the owner.
+`diversity.md` and `ldDecay.md` have it; approved by the owner on 30 September 2026.
 
 ## The module
 

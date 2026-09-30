@@ -11,7 +11,8 @@ recommended; and the ten decided before the specs were written, 1 to
 10. It gathers as well what the specs decided alone that a user meets,
 what is asked of popnei, and what a measurement will set.
 
-The specs, all written on 30 September 2026 and none yet approved, are
+The specs, all written on 30 September 2026 and approved by the owner
+the same day, with the revision of `docs/architecture.md`, are
 `docs/specs/analyses/popDists.md` with the heatmap,
 `docs/specs/charts/heatmap.md`; `docs/specs/analyses/diversity.md`,
 revised; `docs/specs/analyses/ldDecay.md` with the line plot,

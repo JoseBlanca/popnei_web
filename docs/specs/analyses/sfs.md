@@ -7,8 +7,7 @@ the diversity's block `if large:`, and its point of whether the
 spectrum is part of the diversity written with the diversity as that
 spec now has it. Its three open points were decided by the owner on 30
 September 2026, each as recommended, and are written below as decided
-(points 11, 17 and 18 of `docs/specs/stage-5-open-points.md`). Not yet
-approved by the owner. There
+(points 11, 17 and 18 of `docs/specs/stage-5-open-points.md`). Approved by the owner on 30 September 2026. There
 is no code of it yet. This spec gives
 the folded site frequency spectrum (SFS) of each population, the part of
 section 6 of `docs/functionality.md` headed "The site frequency

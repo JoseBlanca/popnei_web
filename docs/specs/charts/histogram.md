@@ -7,8 +7,8 @@ frequency spectrum of stage 5 (`docs/specs/analyses/sfs.md`), drawn as
 one histogram per population in the block of the diversity's panel:
 counts that are not whole numbers, a top of the vertical axis the
 screen gives, so that several histograms share one scale, and ticks at
-whole numbers on the horizontal axis when asked; not yet approved by the
-owner. This spec gives the first plot of the applications: the
+whole numbers on the horizontal axis when asked; approved by the
+owner on 30 September 2026. This spec gives the first plot of the applications: the
 function of `src/charts/histogram.ts` that draws a histogram whose bins
 are already counted, and marks which bins the threshold of a filter keeps
 and which it removes. The Variants step draws five histograms with it:

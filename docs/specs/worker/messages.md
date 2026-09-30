@@ -31,7 +31,7 @@ Revised on 30 September 2026 for stage 5, the analyses of the
 populations: the checks of the fields the diversity gains, of the jobs
 and results of the distances between populations and of the LD decay
 (`docs/specs/analyses/diversity.md`, `sfs.md`, `popDists.md` and
-`ldDecay.md`), and `PROTOCOL_VERSION` 4; not yet approved by the owner.
+`ldDecay.md`), and `PROTOCOL_VERSION` 4; approved by the owner on 30 September 2026.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest

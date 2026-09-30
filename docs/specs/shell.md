@@ -62,8 +62,8 @@ change of the distance the heatmap draws (`docs/specs/analyses/popDists.md`
 and `ldDecay.md`). The folded site frequency spectrum has no title of
 its own: it is a block of the panel of the diversity, as the owner
 decided on 30 September 2026 (`docs/specs/analyses/sfs.md`, "Open
-points"). Not yet approved
-by the owner.
+points"). Approved
+by the owner on 30 September 2026.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),

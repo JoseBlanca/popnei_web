@@ -7,7 +7,7 @@ populations made by the functions the diversity and the distances
 between populations share. Its two open points were decided by the
 owner on 30 September 2026, each as recommended, and are written below
 as decided (points 12 and 19 of `docs/specs/stage-5-open-points.md`).
-Not yet approved by the owner. This spec
+Approved by the owner on 30 September 2026. This spec
 gives the analysis that shows, for each population, how the linkage
 disequilibrium between two variants falls as the distance between them
 grows, and the distance at which it has fallen to half: the module

@@ -48,7 +48,7 @@ result gain the fields of `calcPopDiversity`, the folded site frequency
 spectrum among them, which rides in the diversity's result
 (`docs/specs/analyses/diversity.md` and `sfs.md`); and the distances
 between populations (`popDists.md`) and the LD decay (`ldDecay.md`)
-join `Job` and `JobResult`. Not yet approved by the owner.
+join `Job` and `JobResult`. Approved by the owner on 30 September 2026.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of

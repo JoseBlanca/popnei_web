@@ -17,7 +17,7 @@ same day for the order of the filters, the filters of individuals
 first, as the owner decided that day. The revisions for stage 4, of 27
 and 28 September 2026, are approved by the owner on 28 September 2026.
 Revised on 30 September 2026 for the specs of stage 5, in sections 4, 9,
-11 and 13, not yet approved by the owner but for the new point 16 of
+11 and 13, approved by the owner on 30 September 2026 but for the new point 16 of
 section 13, the calculation worker started again after every LD decay,
 which the owner approved on 30 September 2026. What was
 revised each time is at the end
@@ -386,7 +386,7 @@ day: first, before the statistics of each individual and the filters of
 individuals (section 13, point 15).
 
 What was revised on 30 September 2026 for the specs of stage 5, the
-analyses of the populations, not yet approved by the owner. Stage 5
+analyses of the populations, approved by the owner on 30 September 2026. Stage 5
 fits the shape of section 4: the distances between populations and the
 LD decay are two analyses more, each with its module, its panel, its
 job and result, its handler in the runner, and three lines beside them;

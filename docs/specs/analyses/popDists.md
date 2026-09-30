@@ -1,7 +1,7 @@
 # The distances between populations
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
-analyses of the populations; not yet approved by the owner, and no code
+analyses of the populations; approved by the owner on 30 September 2026, and no code
 of it exists. Revised the same day when the specs of stage 5 were made
 to agree: the populations under the minimum split, and named before a
 Run, by the functions of `project.ts` the diversity calls too. Its

@@ -1,7 +1,7 @@
 # The heatmap
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
-analyses of the populations; not yet approved by the owner, and there is
+analyses of the populations; approved by the owner on 30 September 2026, and there is
 no code of it. This spec gives the function of `src/charts/heatmap.ts`
 that draws a symmetric matrix of values between named things, the
 distances between populations of `docs/specs/analyses/popDists.md`, as a

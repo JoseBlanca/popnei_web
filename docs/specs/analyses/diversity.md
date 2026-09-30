@@ -78,7 +78,7 @@ day, when the specs of stage 5 were made to agree, the populations
 under the minimum split, named in the ready state, and the locks and
 two warnings of the populations made by functions the distances between
 populations and the LD decay share. The revision for
-stage 5 is not yet approved by the owner.
+stage 5 is approved by the owner on 30 September 2026.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton and, from stage 5,

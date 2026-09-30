@@ -57,7 +57,7 @@ where it names the analyses: the distances between populations and the
 LD decay among those whose `keptNeeds` locks when the individuals kept
 leave no population, the diversity's second reason of `keptNeeds`, and
 which results fill the counts of the filters (`docs/specs/analyses/popDists.md`,
-`diversity.md` and `ldDecay.md`); not yet approved by the owner. The store is the one object of core that
+`diversity.md` and `ldDecay.md`); approved by the owner on 30 September 2026. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

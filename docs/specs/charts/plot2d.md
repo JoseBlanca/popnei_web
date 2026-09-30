@@ -17,7 +17,7 @@ the line plot of `docs/specs/charts/line.md`, and the histograms of the
 spectrum of `docs/specs/analyses/sfs.md`: an axis of names drawn from a
 band scale, its labels slanted when asked, no text for an empty label
 of an axis, and ticks at whole numbers on the horizontal axis alone,
-`xWholeNumbers`; not yet approved by the owner. The code of stage 3,
+`xWholeNumbers`; approved by the owner on 30 September 2026. The code of stage 3,
 `src/charts/plot2d.ts` and `export.ts`, has none of these yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of

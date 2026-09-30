@@ -35,7 +35,7 @@ Analyses step after the diversity, with their titles in
 the distances between populations and none of the LD decay's; the
 folded site frequency spectrum is no analysis of `apps.ts`, since it is
 calculated and shown with the diversity, as the owner decided on 30
-September 2026 (`docs/specs/analyses/sfs.md`, "Open points"). Not yet approved by the owner.
+September 2026 (`docs/specs/analyses/sfs.md`, "Open points"). Approved by the owner on 30 September 2026.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for

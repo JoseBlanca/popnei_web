@@ -45,7 +45,7 @@ populations and of the LD decay, which their panels set, written in
 version 1; the diversity's key version 3 with its check numbers as they
 were; the check numbers of the two new analyses; and a fixture of a
 project with the options of all three (`docs/specs/analyses/diversity.md`,
-`popDists.md` and `ldDecay.md`). Not yet approved by the owner.
+`popDists.md` and `ldDecay.md`). Approved by the owner on 30 September 2026.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file

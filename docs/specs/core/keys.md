@@ -27,7 +27,7 @@ of `keys.ts` changes. The revisions for stage 4 are approved by the owner on 28 
 Revised on 30 September 2026 for stage 5: the LD decay reads every
 filter but the LD pruning, through its own inputs as the PCA does; the
 measure the heatmap of the distances between populations draws is in no
-key; nothing of `keys.ts` changes. Not yet approved by the owner.
+key; nothing of `keys.ts` changes. Approved by the owner on 30 September 2026.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an

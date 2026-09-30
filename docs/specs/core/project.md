@@ -105,8 +105,8 @@ populations; and the two locks the diversity alone had, the lists of
 individuals leaving no individual with a population and the individuals
 kept leaving no population, made functions here, since the distances
 between populations and the LD decay lock on them too
-(`docs/specs/analyses/popDists.md` and `ldDecay.md`). Not yet approved
-by the owner.
+(`docs/specs/analyses/popDists.md` and `ldDecay.md`). Approved
+by the owner on 30 September 2026.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the

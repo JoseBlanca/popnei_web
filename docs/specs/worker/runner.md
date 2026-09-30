@@ -40,7 +40,7 @@ diversity, `calcPopDiversity`, with the folded site frequency spectrum
 in it, told as the second pass of the run (below, "The diversity" and
 "Progress"); the distances between populations with the order of their
 heatmap; the LD decay; the memory of the LD decay; and their tests.
-Not yet approved by the owner. The calculation
+Approved by the owner on 30 September 2026. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
