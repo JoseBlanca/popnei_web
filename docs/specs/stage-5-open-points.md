@@ -5,10 +5,11 @@ the analyses of the populations: the distances between populations, as a
 heatmap and a table; the diversity whole, with F, the private alleles and
 the rarefaction; the LD against distance, with the distance at which r²
 falls to half; and the folded site frequency spectrum. This file gathers
-the nine points the specs of stage 5 ask the owner to decide, 11 to 19;
-the ten decisions the owner made on 30 September 2026 before the specs
-were written, 1 to 10; what the specs decided alone that a user meets;
-what is asked of popnei; and what a measurement will set.
+the owner's decisions of 30 September 2026: the nine points the specs of
+stage 5 asked, 11 to 19, which the owner answered that day, each as
+recommended; and the ten decided before the specs were written, 1 to
+10. It gathers as well what the specs decided alone that a user meets,
+what is asked of popnei, and what a measurement will set.
 
 The specs, all written on 30 September 2026 and none yet approved, are
 `docs/specs/analyses/popDists.md` with the heatmap,
@@ -16,7 +17,9 @@ The specs, all written on 30 September 2026 and none yet approved, are
 revised; `docs/specs/analyses/ldDecay.md` with the line plot,
 `docs/specs/charts/line.md`; and `docs/specs/analyses/sfs.md`, the
 spectrum; the other specs and documents were brought to them the same
-day.
+day. The specs state points 11 to 19 as decided by the owner, and
+`docs/architecture.md` has the restart of point 12 as its point 16 of
+section 13, approved by the owner with that answer.
 
 A few words are used throughout. A **pass** is one reading of the
 variants file from start to end, which on a file of several GB takes
@@ -59,252 +62,194 @@ way and not blamed on the variants file.
 
 ## What is still the owner's
 
-Nine points, in the order of how much of the specs an answer against
-the recommendation would change, most first. Each has a meanwhile, with which the
-specs are written, so none stops the plan of stage 5; an answer other
-than the recommendation changes the specs it names, and the plan if it
-comes after the code.
+No point that the specs asked is open: the owner answered the nine,
+11 to 19, on 30 September 2026, below. What is left to the owner is the
+approval of the specs, and the decisions of their writers further
+below, which stand unless the owner overrules them.
 
-### 11. The spectrum as a block of the diversity, or an analysis of its own
+## Decided by the owner on 30 September 2026, on the points of the specs
 
-What is decided: whether the folded spectrum shares the diversity's
-call of popnei, its pass, its draw and its Run
-(`docs/specs/analyses/sfs.md`, **Open 1**).
+Every answer took the recommendation, with which the specs had been
+written, so the specs now state each as decided and change nothing
+else.
 
-- **A block of the diversity's panel**, below its table. One Run gives
-  the table and the spectra; the spectrum adds no pass, 0.1 to 0.3 ms to
-  the call on `panel.nei` held in memory, in node, and one field sets
-  the draw of both. A user who wants the spectrum alone waits for the
-  whole diversity: today two passes, and one once popnei issue #4 lets
-  the diversity make one.
-- **An analysis of its own**, with its key, its job and its Run, one
-  pass of the spectrum alone, and a field of its own for the draw or the
-  diversity's. A user who wants both waits for three passes today, two
-  after the issue. A spectrum filled from the diversity's pass, so that
-  the second Run costs nothing, would need one calculation to give the
-  results of two analyses, which only the counts of the filters of the
-  Variants step do today, and that needs a design first.
+### 11. The spectrum is a block of the diversity
 
-Recommended: a block of the diversity, since every input of the
-spectrum is already an input of the table and the pass is what costs.
-Meanwhile, every spec and document is written with it. The other
-answer takes the spectrum out of `diversity.md`, its statistic, its
-field of the result, its warnings and its block, and makes `sfs.md` an
-analysis with a key, a job and a result of its own, which the specs of
-the calculation worker, of the frame of the page and of the list of the
-analyses gain.
+"OK, a block". The folded spectrum shares the diversity's call of
+popnei, its pass, its draw and its Run, and is drawn in a part of the
+diversity's panel of its own, below its table (`docs/specs/analyses/sfs.md`). It
+adds no pass, and 0.1 to 0.3 ms to the call on `panel.nei` held in
+memory, in node; one field sets the draw of both. A user who wants the
+spectrum alone waits for the whole diversity: today two passes, and one
+once popnei issue #4 lets the diversity make one. Not taken: an
+analysis of its own, with its key, its job and its Run, for which a
+user who wants both would wait for three passes today, two after the
+issue.
 
-### 12. The calculation worker started again after every LD decay
+### 12. The calculation worker is started again after every LD decay
 
-What is decided: whether the calculation worker is ended and a new one
-started after each LD decay. Ending the worker is the only way the tab
-gets back the memory popnei took, since popnei's memory never shrinks
-while its worker lives
-(`docs/specs/analyses/ldDecay.md`, **Open 1**; written as proposed in
-`docs/architecture.md` as point 16 of its section 13). The owner
-decided on 26 September 2026 not to restart the worker between two
-calculations. Two exceptions were decided since: after a written file,
-and after a PCA of more than 700 individuals, each because it leaves
-more than about 25 MB behind. An LD decay leaves it larger by two
-things: the blocks of variants popnei holds while it reads, at least two
-of about 5 million genotypes each, about 0.4 to 0.6 GB for 1,000
-individuals whatever the distance, 580 MB at a distance of 1,000 bp;
-and its counts of the pairs at each distance, 16 bytes a base pair and
-population, 4.8 MB for three populations at 100,000 bp and 480 MB at
-10,000,000 bp. Measured in
+"OK". The calculation worker is ended and a new one started after each
+LD decay, after its result, a refusal or a defect, and not after a
+variants file that can no longer be read (`docs/specs/analyses/ldDecay.md`,
+`docs/specs/worker/client.md`). Ending the worker is the only way the
+tab gets back the memory popnei took, since popnei's memory never
+shrinks while its worker lives. It is a third exception to the owner's
+decision of 26 September 2026 not to restart the worker between two
+calculations, after a written file and after a PCA of more than 700
+individuals, each because it leaves more than about 25 MB behind; it is
+point 16 of section 13 of `docs/architecture.md`, which the owner
+approved with this answer.
+
+An LD decay leaves the memory larger by two things: the blocks of
+variants popnei holds while it reads, about 0.4 to 0.6 GB for 1,000
+individuals whatever the distance; and its counts of the pairs at each
+distance, 16 bytes a base pair and population, 4.8 MB for three
+populations at 100,000 bp and 480 MB at 10,000,000 bp. Measured in
 node, the memory grew by 64 MB for 100 individuals and 20,000 variants
-at 100,000 bp, by 480 MB for 100 individuals and three populations at
-10,000,000 bp, the counts alone, and by 0.4 to 1.1 GB for 1,000 individuals and the same
-variants at 100,000 and 1,000,000 bp, which the tab keeps until the
-next load of the variants file.
+at 100,000 bp, and by 0.4 to 1.1 GB for 1,000 individuals and the same
+variants at 100,000 and 1,000,000 bp. The restart costs at most 49 ms
+from the start of the new worker to the file opened, measured on the
+`.nei` file of 19 MB and its VCF in Chromium 153 and WebKit 26.6 at the
+end of stage 2, against 0.6 s and more for the LD decay itself on
+20,000 variants, in node, which has not been timed in a browser. After a new version of the site is put online
+while the page is open, the restarted worker cannot start, and the user
+saves the project, reloads the page and picks the variants file again,
+as after a cancel or a large PCA today. From stage 7 the restart would
+also drop the kinship matrix of the GWAS, up to 800 MB and minutes to
+calculate again, so the point is decided again then.
 
-- **After every LD decay**, after its result, a refusal or a defect,
-  and not after a variants file that can no longer be read. The user sees the result as usual; nothing
-  loaded is lost, since the page keeps the variants file and the new
-  worker loads popnei from the cache of the browser and opens the file
-  again, and the next calculation waits for that, at most 49 ms from
-  the start of the new worker to the file opened, measured on the `.nei` file of 19 MB and its VCF in
-  Chromium 153 and WebKit 26.6 at the end of stage 2, against 0.6 s and
-  more for the LD decay itself on 20,000 variants, in node. After a
-  new version of the site is put online while the page is open, the
-  restarted worker cannot start, and the user saves the project,
-  reloads the page and picks the variants file again, as after a cancel
-  or a large PCA today. From stage 7 the
-  restart would also drop the kinship matrix of the GWAS, which the
-  worker keeps between requests, up to 800 MB and minutes to calculate
-  again, so the point is decided again then.
-- **Above a bound of the individuals and the distance**, as for the
-  PCA. By the numbers above, a few hundred individuals pass any bound
-  near 25 MB, so the restart would come almost always, and the bound
-  would have to be measured in both engines first.
-- **Never.** Up to a gigabyte stays with the tab after one LD decay of
-  1,000 individuals, and a later calculation that needs memory, a PCA
-  of thousands of individuals, may then not fit.
+Not taken: a restart above a bound of the individuals and the distance,
+as for the PCA, which a few hundred individuals would pass almost
+always, and which would have to be measured in both engines first; and
+no restart, which leaves up to a gigabyte with the tab after one LD
+decay of 1,000 individuals, so that a later calculation that needs
+memory may not fit. The plan measures, in Chromium and WebKit, the
+memory the browser has gained 3 s after an LD decay, with the restart
+and without it.
 
-Recommended: after every LD decay. Meanwhile, the specs are written
-with it. The plan measures, in Chromium and WebKit, the growth of the
-browser 3 s after an LD decay with the restart and without it. With
-"never", the restart goes from the specs and from the architecture;
-with a bound, the plan measures it before the code.
+### 13. A population under the minimum is left out of the distances
 
-### 13. A population under the minimum left out of the distances
+"leave it out". The owner's decision 7, which leaves a population of
+fewer individuals than the minimum out of the private alleles, holds
+for the distances between populations as well
+(`docs/specs/analyses/popDists.md`). Such a population is named in the
+panel before the Run, "p3 has 12 individuals, fewer than the minimum of
+20, and is left out.", and in a warning after it, with the minimum to
+lower; the heatmap keeps its order by similarity. The diversity and the
+distances find the populations under the minimum with one function and
+name them in the same words. popnei's `calcPopDists` counts a variant
+for a pair only where both populations have the minimum of individuals
+called, so a population under it has no value in any pair, and leaving
+it out changes no other number: on `panel.nei`, with 10 individuals of
+p0 made a population p0s, the three pairs of p0s had 0 variants and no
+value, and the other three pairs gave the same Fst to the last digit
+with p0s left out (node, popnei's release `js-v0.1.0-dev.3`). Not
+taken: sending it to popnei, which makes each pair it is in a row of
+"no value" in the table and a crossed cell in the heatmap, and, since
+popnei's PCoA refuses a matrix with a pair of no value, gives the
+heatmap of every population the order of the metadata file (decision 2)
+instead of the order by similarity.
 
-What is decided: whether the owner's decision 7, which leaves a
-population of fewer individuals than the minimum out of the private
-alleles, holds for the distances between populations as well
-(`docs/specs/analyses/popDists.md`, **Open 4**). popnei's `calcPopDists`
-counts a variant for a pair only where both populations have the
-minimum of individuals called, so a population under it has no value in
-any pair. On `panel.nei`, with 10 individuals of p0 made a population
-p0s: the three pairs of p0s had 0 variants and no value, and the other
-three pairs gave the same Fst to the last digit with p0s left out
-(node, popnei's release `js-v0.1.0-dev.3`).
+### 14. A negative distance is taken as 0 for the order of the heatmap
 
-- **Left out**, named in the panel before the Run, "p3 has 12
-  individuals, fewer than the minimum of 20, and is left out.", and in a
-  warning after it, with the minimum to lower. The heatmap keeps its
-  order by similarity.
-- **Sent to popnei**: each pair it is in is a row of "no value" in the
-  table and a crossed cell in the heatmap. A pair with no value makes
-  popnei's PCoA refuse the matrix, so the heatmap of every population
-  loses its order by similarity and keeps the order of the metadata
-  file (decision 2).
+"OK". popnei gives a negative Fst or Jost's D for two populations the
+variants cannot tell apart, and its PCoA refuses a negative distance;
+on `panel.nei`, p0 split in two halves of 24 gives an Fst of −0.0113.
+A negative distance is taken as 0 in the matrix given to the PCoA, and
+nowhere else: the table, the cell and the tooltip show popnei's value,
+and a warning says that the order takes it as 0
+(`docs/specs/analyses/popDists.md`). It is one comparison with 0 made by
+the application, for the order and never for a number shown. The
+reason: a negative estimate of a distance is an estimate of 0 that
+sampling pushed below it. Not taken: the order of the metadata file
+whenever a distance is negative, with which a dataset with two close
+populations, where the order helps most, loses it for every
+population.
 
-The numbers of the other pairs are the same in both. Recommended: left
-out, since sending it shows nothing the words do not say and costs the
-order of the whole heatmap. Meanwhile, the specs are written with it.
-The diversity and the distances find the populations under the minimum
-with one function and name them in the same words.
+### 15. The colours of the heatmap start at 0
 
-### 14. A negative distance, for the order of the heatmap
+"yes, at 0". The darkest colour of the heatmap is a distance of 0, and
+the lightest the largest distance of the matrix; the colours run from
+dark purple to yellow, 256 steps (`docs/specs/analyses/popDists.md`,
+`docs/specs/charts/heatmap.md`). So the colours say how far apart the
+pairs are: on `panel.nei` the three pairs, 0.1027 to 0.1096, fall at
+steps 239, 245 and 255 of the 256, where 255 is the lightest yellow,
+three yellows that look alike, since the three pairs are about equally
+far apart; the values in the cells and the table give the differences.
+Not taken: colours from the smallest distance of the matrix, with which
+the same three pairs are the darkest, the middle and the lightest, and a
+difference of 0.007 looks as large as one of 0.3, which the principle of
+`docs/functionality.md`, nothing that misleads without warning, rules
+out.
 
-What is decided: what the order of the heatmap does with a negative
-Fst or Jost's D (`popDists.md`, **Open 1**). popnei gives one for two
-populations the variants cannot tell apart, and its PCoA refuses it. On
-`panel.nei`, p0 split in two halves of 24 gives an Fst of −0.0113.
+### 16. Above 200 populations, neither the heatmap nor the table
 
-- **Taken as 0 in the matrix given to the PCoA, and nowhere else.** The
-  table, the cell and the tooltip show popnei's value, and a warning
-  says the order takes it as 0. The order is kept. It is one comparison
-  with 0 made by the application, for the order and never for a number
-  shown.
-- **The file's order whenever a distance is negative.** The application
-  computes nothing; a dataset with two close populations, where the
-  order helps most, loses it for every population.
+"whatever, more than 50 populations is already too much for this app".
+The recommendation stands: above 200 populations the panel of the
+distances draws neither the heatmap nor the table, says how many
+populations there are, and offers the table's download as CSV
+(`docs/specs/analyses/popDists.md`). The table has a row per pair: 250
+populations are 31,125 rows, and a column of 1,000 names chosen by
+mistake as the populations gives 499,500 pairs, which a table that makes
+an element of the page for each row would take seconds to draw, an
+estimate not measured; the heatmap draws up to 200 populations. The
+numbers are calculated and can be taken out, and a column chosen by
+mistake shows its count at once. The owner added that more than 50
+populations is already beyond what the application is for; 200 stays
+the bound, since it is the most the heatmap draws. Not taken: the analysis locked
+above 200 populations, and the table drawn whatever its size.
 
-Recommended: taken as 0, since a negative estimate of a distance is an
-estimate of 0 that sampling pushed below it. Meanwhile, the specs are
-written with it.
+### 17. A MAF filter on the spectrum raises a warning
 
-### 15. Where the colours of the heatmap start
+"add the warning". The spectrum reads every filter of the Variants
+step, as the table of the diversity does, and when a MAF filter is on a
+warning says what the filter removed and to turn it off
+(`docs/specs/analyses/sfs.md`). The MAF filter removes the variants
+whose rarer allele is rare in all the individuals kept, taken together,
+and so empties the first bars of the spectrum, the variants with one or
+a few copies of the rarer allele in the draw: on `panel.nei`, the filter at 0.95
+removed 25 of the 1,200 variants, and the share of p2 at one copy of the
+rarer allele fell from 0.0426 to 0.0367. The filter is off by default in
+the population genetics application, so a user who sees the warning
+turned it on. Not taken: the spectrum reading every filter but the MAF,
+as the LD decay reads every filter but the LD pruning (decision 8),
+with which it reads other variants than the table whenever a MAF filter
+is on, and needs a pass and a Run of its own for those projects.
 
-What is decided: whether the darkest colour of the heatmap is a
-distance of 0 or the smallest distance of the matrix (`popDists.md`,
-**Open 2**; `heatmap.md`, **Open 1**). The colours run from dark purple
-to yellow, 256 steps.
+### 18. The bars of the spectrum are shares
 
-- **From 0.** The colours say how far apart the pairs are. On
-  `panel.nei` the three pairs, 0.1027 to 0.1096, fall at steps 239, 245
-  and 255 of the 256, where 255 is the lightest yellow: three yellows
-  that look alike, which is true, since the three pairs are about
-  equally far apart.
-- **From the smallest distance.** The colours say which pairs are nearer
-  than the others; the same three are the darkest, the middle and the
-  lightest, and a difference of 0.007 looks as large as one of 0.3.
+"OK". popnei gives, for each count of the rarer allele in the draw, the
+expected number of the population's variants with that count. Each bar
+of the spectrum is a share of the population's variants that show both
+alleles in the draw, so the bars of a population sum to 1; the variants
+that show one allele only are in the table and not drawn; one vertical
+scale serves every population (`docs/specs/analyses/sfs.md`). So
+populations with different numbers of variants compare by their shapes.
+The table and the CSV give both the shares and popnei's expected
+numbers. Not taken: popnei's expected numbers as the heights, the bar of
+one allele drawn or not, with which two populations with different
+numbers of variants differ in height for that reason too.
 
-Recommended: from 0, since starting from the smallest distance makes
-small differences look large, which the principle of nothing that
-misleads without warning rules out; the values in the cells and the
-table give the differences. Meanwhile, the specs are written with it.
+### 19. popnei is asked to refuse a variants file not sorted by position in the LD decay
 
-### 16. Many populations
-
-What is decided: what the panel of the distances does with many
-populations (`popDists.md`, **Open 3**). The table has a row per pair:
-250 populations are 31,125 rows, and a column of 1,000 names chosen by
-mistake as the populations gives 499,500 pairs, which a table that
-makes an element of the page for each row would take seconds to draw,
-an estimate not measured. The heatmap draws up to 200 populations.
-
-- **Above 200, neither the heatmap nor the table**, with words that say
-  how many there are, and the table's download as CSV.
-- **The analysis locked above 200.** A user with 250 populations cannot
-  run it in this version.
-- **The table drawn whatever its size.**
-
-Recommended: the first, since the numbers are calculated and can be
-taken out, and a column of names chosen by mistake shows its count at
-once. Meanwhile, the specs are written with it.
-
-### 17. A MAF filter on the spectrum: a warning, or left out
-
-What is decided: what the spectrum does when the Variants step has a
-MAF filter, which removes the variants whose rarer allele is rare in
-all the individuals kept, taken together, and so empties the first
-bins (`sfs.md`, **Open
-2**). On `panel.nei`, the filter at 0.95 removed 25 of the 1,200 variants,
-and the share of p2 at one copy of the rarer allele fell from 0.0426 to
-0.0367.
-
-- **A warning**: the spectrum reads every filter, as the table does,
-  and the warning says what the filter removed and to turn it off. The
-  MAF filter is off by default in the population genetics application,
-  so a user who sees the warning turned it on.
-- **Every filter but the MAF**, as the LD decay reads every filter but
-  the LD pruning (decision 8). Whenever a MAF filter is on, the spectrum
-  then reads other variants than the table, and needs a pass and a Run
-  of its own: for those projects it is the second answer of point 11,
-  an analysis of its own.
-
-Recommended: the warning. Meanwhile, the specs are written with it.
-
-### 18. The heights of the bars of the spectrum
-
-What is decided: what a bar of the spectrum measures (`sfs.md`, **Open
-3**). popnei gives, for each count of the rarer allele in the draw, the
-expected number of the population's variants with that count.
-
-- **Shares**: each bar is a share of the population's variants that
-  show both alleles in the draw, so the bars of a population sum to 1;
-  the variants that show one allele only are in the table and not
-  drawn; one vertical scale serves every population. Populations with
-  different numbers of variants then compare by their shapes.
-- **popnei's expected numbers**, the bar of one allele only drawn or
-  not. Two populations with different numbers of variants then differ in
-  height for that reason too.
-
-Recommended: shares, the bar of one allele not drawn. Meanwhile, the
-specs are written with it; the table and the CSV give both, so the
-answer moves the plot alone.
-
-### 19. Asking popnei to refuse a variants file not sorted by position in the LD decay
-
-What is decided: whether popnei is asked, in a GitHub issue the
-orchestrating session opens, to refuse such a file in
-`calcLdAndDistPerPop` (`ldDecay.md`, **Open 2**). That function counts
-the pairs of a variant with the variants held within the largest
-distance of it, and drops a block of variants once none is in reach, so
-a file whose chromosomes are interleaved, or whose positions go back,
-gives fewer pairs, with no word: 1,517,002 of 1,520,324 pairs on a file
-made for it, and 7,785 of 3,044,978 lost with two chromosomes
-interleaved (node, `js-v0.1.0-dev.3`). The LD pruning of the Variants
-step, popnei's LD filter, refuses such a file already, and the
-application has the words for that refusal.
-
-- **Ask popnei**, recommended: the check is popnei's, where the numbers
-  are verified, it costs the pass nothing, and it comes with a later
-  release. The same issue would ask popnei to keep in the result of
-  this call a population named `__proto__`, a name that JavaScript
-  treats specially, which popnei loses today, and to make it an own key
-  of the spectra of `calcPopDiversity` as well, which today hold it
-  only as the object's parent.
-- **Check it in the application**: a pass of its own over the whole
-  file, reading the positions, which on a file of several GB is minutes
-  more for each Run, for a check popnei could make in its own pass.
-- **Leave it**, with a line of the help.
-
-Meanwhile, the help of the panel says the file must be sorted, and no
-check is made; stage 5 does not wait for the release.
+"yes, popnei should refuse non-sorted files in those cases. open an
+issue". The issue is popnei issue #5, opened on 30 September 2026
+(below, "Asked of popnei"). popnei's `calcLdAndDistPerPop` counts the
+pairs of a variant with the variants held within the largest distance
+of it, and drops a block of variants once none is in reach, so a file
+whose chromosomes are interleaved, or whose positions go back, gives
+fewer pairs, with no word: 1,517,002 of 1,520,324 pairs on a file made
+for it, and 7,785 of 3,044,978 lost with two chromosomes interleaved
+(node, `js-v0.1.0-dev.3`). The LD pruning of the Variants step, popnei's
+LD filter, refuses such a file already, and the application has the
+words for that refusal, which it gives this one too once a release of
+popnei has it (`docs/specs/analyses/ldDecay.md`). The check is popnei's,
+where the numbers are verified, and it costs the pass nothing. Stage 5
+does not wait for the release: until then, the help of the panel says
+the file must be sorted, and no check is made. Not taken: a check in the
+application, a pass of its own over the whole file reading the
+positions, minutes more for each Run on a file of several GB; and
+leaving it, with a line of the help alone.
 
 ## Decided by the writers of the specs, for the owner to overrule
 
@@ -377,7 +322,7 @@ The LD decay (`docs/specs/analyses/ldDecay.md`):
 - The plot draws at most 16 populations, the rows its legend holds; the
   tables hold all.
 
-## Decided by the owner on 30 September 2026
+## Decided by the owner on 30 September 2026, before the specs
 
 The owner answered nine questions, each with its options, and a tenth
 follows from the owner's standing rule.
@@ -401,7 +346,7 @@ always. The question put to the owner named one way it fails, a pair
 with no distance; popnei refuses more matrices than that, and whether
 the file's order serves for all of them was open, and the spec of the
 distances settled it but for the negative distances (below, "Opened by
-the specs", point 1, and point 14).
+the specs", point 1; and point 14, above).
 
 ### 3. F is popnei's
 
@@ -492,11 +437,21 @@ pairs.
   digit to what `calcPerVarDistribs` gives, with the options
   `polyThreshold` and `ploidy`, so that the diversity is one pass. Stage
   5 does not wait for it.
-- **If the owner agrees to point 19**, a second issue: that
-  `calcLdAndDistPerPop` refuse a source whose variants are not sorted by
-  position, with the message of its LD filter, and keep a population
-  named `__proto__` in its result, and as an own key of the spectra of
-  `calcPopDiversity`. Not opened yet.
+- **The refusal of a variants file out of order in the LD decay**,
+  popnei issue #5, opened on 30 September 2026 as the owner decided in
+  point 19 (https://github.com/JoseBlanca/popnei/issues/5): that
+  `calcLdAndDistPerPop`, `calc_ld_and_dist` in Rust, refuse a variant
+  that comes out of order as its LD filter does, with the same refusal,
+  which names the variant and its chromosome and says whether its
+  position falls below the one before or its chromosome came back after
+  another; a variant at the same position as the one before is not
+  refused. And, in the JavaScript package, that a population named
+  `__proto__`, a name that JavaScript treats specially, be kept in the
+  result of `calcLdAndDistPerPop` and in the `foldedSfs` of
+  `calcPopDiversity` as every other population is: today the first loses
+  it, and the second holds it where a lookup by that name finds it but
+  a list of the populations of the result does not. Stage 5 does not
+  wait for it.
 
 popnei's release `js-v0.1.0-dev.3`, which the application has
 installed since stage 4, has every other calculation of the stage, as checked in its code and by running it under node on 30
