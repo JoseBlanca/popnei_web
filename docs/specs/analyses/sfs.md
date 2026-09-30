@@ -176,10 +176,15 @@ One is the spectrum's own:
 
 | code | when | the text |
 |---|---|---|
-| `mafFilterOnSpectrum` | the request's filters hold a MAF filter with a threshold below 1, and it removed at least one variant: in `passStats.filtering.maf` of the result, popnei's counts of the pass, the variants the filter was given, `varsProcessed`, are more than those it kept, `varsKept` | "The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 25 of the 1,200 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step." |
+| `mafFilterOnSpectrum` | the request's filters hold a MAF filter with a threshold below 1, and it removed at least one variant: in `passStats.filtering.maf` of the result, popnei's counts of the pass, the variants the filter was given, `varsProcessed`, are more than those it kept, `varsKept` | "The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step." |
 
-The threshold is written as the project holds it, and the numbers with a
-comma between groups of three digits, as `counted` of `project.ts` does.
+The text is that of the diversity's flow, with the missing data filter
+at 0.05 before the MAF filter at 0.95, which is given the 1,152 variants
+the first kept and removes 24 of them; with the missing data filter at
+its default of 0.1, which keeps all 1,200, the MAF filter removes 25 of
+the 1,200. The threshold is written as the project holds it, and the
+numbers with a comma between groups of three digits, as `counted` of
+`project.ts` does.
 A MAF filter that removed no variant raises nothing, and so does one at
 1, which removes only the variants with no called allele: popnei's
 `filterByMaf` keeps none of those, whatever the threshold, so the count
@@ -191,9 +196,12 @@ and the number of alleles of the table is the diversity's to warn of
 The filter acts on the frequency of all the individuals kept together,
 not on each population's, so a variant rare in p0 and common in p2
 stays: the spectrum loses some of its rare alleles, not all. On
-`panel.nei` at n = 40, the MAF filter at 0.95 removed 25 of the 1,200
-variants, and p0's share at bin 1 fell from 0.0330 to 0.0301, p2's from
-0.0426 to 0.0367 (below, "The numbers of popnei"). A cut this uneven cannot
+`panel.nei` at n = 40, after the missing data filter at 0.05 of the
+flow, the MAF filter at 0.95 removed 24 of the 1,152 variants, and p0's
+share at bin 1 fell from 0.0328 to 0.0297, p2's from 0.0424 to 0.0367;
+with no other filter it removed 25 of the 1,200, and p0's share fell
+from 0.0330 to 0.0301, p2's from 0.0426 to 0.0367 (below, "The numbers
+of popnei"). A cut this uneven cannot
 be undone by reading the plot, which is why the warning asks for the
 filter off rather than for care.
 
@@ -222,10 +230,13 @@ taken was the share of bin 1 of each population, one number each.
 
 ### Its lines of the Python script
 
-Inside the diversity's block `if large:`, after its call of
-`calc_pop_diversity`, which asks for `folded_sfs` among its `stats` with
-`num_called_alleles=40` and names its result `diversity`
-(`diversity.md`, "Its lines of the Python script"): `diversity` is
+This module writes no script of its own. Its lines are part of the
+literal of the diversity's `script(p)`, written out there
+(`diversity.md`, "Its lines of the Python script"), and the diversity's
+test of `script` checks them with the rest. They sit inside the
+diversity's block `if large:`, after its call of `calc_pop_diversity`,
+which asks for `PopDiversityStat.FOLDED_SFS` among its `stats` with
+`num_called_alleles=40` and names its result `diversity`: `diversity` is
 defined only there, since with no population of the minimum of
 individuals the call is not made, and the spectrum is not either.
 popnei's Python package gives the spectrum as a pandas table, one row
@@ -244,7 +255,14 @@ population. The lines, indented as the block is:
 ```
 
 The 40 is the size of the draw of the project, written as a whole
-number.
+number. Run on 30 September 2026 in the diversity's script over
+`panel.nei` and `panel_pops.csv`, with the Python of popnei's checkout
+at its commit `eae29a2`, they printed the spectra of the table below,
+"The numbers of popnei", to the six digits pandas prints: with no
+filter, p0 44.793231 at 0 copies of the rarer allele, 38.077959 at 1
+and 30.355251 at 20, and the shares at 1 of p0, p2 and p1 0.032962,
+0.042617 and 0.038119; with the missing data filter at 0.05 of the
+diversity's flow, those of the rows of that filter.
 
 ### The TypeScript interface
 
@@ -361,9 +379,10 @@ With Vitest, at the highest functions that show each thing:
   for the same result, compared with `===`. A `foldedSfs` array of 2
   values for n = 4 throws the defect.
 - **`spectrumWarnings`**: no warning without a MAF filter; none with one
-  that kept every variant it was given; with `passStats.filtering.maf`
-  of 1,200 given and 1,175 kept and a threshold of 0.95, the text of the
-  table above to the letter.
+  that kept every variant it was given; with a project whose MAF filter
+  is at 0.95, from which the text takes the threshold, and a result
+  whose `passStats.filtering.maf` is 1,152 given and 1,128 kept, the
+  text of the table above to the letter.
 - **`spectraCsv`** on the worked example, to the letter.
 - **The numbers of popnei**, with a result written as literals from the
   run below: at n = 40 with no filter, `spectraOf` gives p0 a share at
@@ -380,7 +399,9 @@ With Vitest, at the highest functions that show each thing:
 In Playwright, in Chromium, Firefox and WebKit, the flow of the
 diversity (`docs/specs/analyses/diversity.md`) goes on to the block: three
 histograms, each titled with its population, 20 bars each, and the table
-of 21 rows; with the MAF filter at 0.95, the warning's text. The block
+of 21 rows; with the MAF filter at 0.95 added to the flow's missing
+data filter at 0.05, the warning's text, "…it removed 24 of the 1,152
+it was given. …". The block
 is looked at in both themes and at 320 pixels wide, as
 `.claude/skills/coding/testing.md` says, and axe runs on it.
 
@@ -397,7 +418,10 @@ const rows = fs.readFileSync("e2e/fixtures/panel_pops.csv", "utf8")
   .trim().split("\n").slice(1).map((l) => l.split(","));
 const pops = {}; for (const [i, g] of rows) (pops[g] ??= []).push(i);
 const bytes = new Uint8Array(fs.readFileSync("e2e/fixtures/panel.nei"));
-const v = p.openVars(bytes); // v.filterByMaf(0.95) for the second row
+const v = p.openVars(bytes);
+// for the rows "MAF 0.95": v.filterByMaf(0.95);
+// for the rows "missing data 0.05": v.filterByMissingData(0.05);
+// for the rows "missing data 0.05 and MAF 0.95": v.filterByMissingData(0.05); v.filterByMaf(0.95);
 const r = p.calcPopDiversity(v, { pops, numCalledAlleles: 40,
   minNumIndividuals: 20, stats: ["folded_sfs"] });
 ```
@@ -410,8 +434,16 @@ const r = p.calcPopDiversity(v, { pops, numCalledAlleles: 40,
 | 40, MAF 0.95, 1,175 kept | p0 | 1,175 | 36.44032846059611 | 34.21378678743365 | 30.35525095309904 | 1138.5596715394038 | 0.030050060302218917 | 0.056720116395990845, 15 |
 | 40, MAF 0.95, 1,175 kept | p2 | 1,175 | 38.38170270726871 | 41.7646232182723 | 29.71636704623948 | 1136.618297292731 | 0.03674463390018435 | 0.055878373568248194, 11 |
 | 96, none | p0 | 278 | 4 | 2 | 4 | 274 | 0.0072992700729927005 | 0.043795620437956206, 40 |
+| 40, missing data 0.05, 1,152 kept | p0 | 1,152 | 40.761955639534804 | 36.42942568440002 | 29.426562531000528 | 1111.238044360465 | 0.03278273801844656 | 0.05547399158856299, 14 |
+| 40, missing data 0.05, 1,152 kept | p2 | 1,152 | 46.58175274265209 | 46.898336829943084 | 27.997427699928693 | 1105.4182472573477 | 0.04242587540625687 | 0.055521040948668776, 11 |
+| 40, missing data 0.05, 1,152 kept | p1 | 1,152 | 48.07284274031523 | 42.74208893861179 | 30.188401673918626 | 1103.9271572596847 | 0.03871821492707174 | 0.0559376119145622, 15 |
+| 40, missing data 0.05 and MAF 0.95, 1,128 kept | p0 | 1,128 | 32.40913561301673 | 32.56660196627672 | 29.426562531000517 | 1095.5908643869832 | 0.029725149254962745 | 0.056266268667944576, 14 |
+| 40, missing data 0.05 and MAF 0.95, 1,128 kept | p2 | 1,128 | 36.92749628295179 | 40.01028043318462 | 27.99742769992869 | 1091.0725037170478 | 0.03667059732224784 | 0.05625104792554323, 11 |
 
-The same call with every statistic of the diversity, `num_alleles`,
+With the missing data filter at 0.05 and the MAF filter at 0.95, the
+counts of the pass, `passStats.filtering`, are `missing_data` 1,200
+given and 1,152 kept, and `maf` 1,152 given and 1,128 kept; with the MAF
+filter alone, `maf` 1,200 and 1,175. The same call with every statistic of the diversity, `num_alleles`,
 `private_alleles`, `variable_vars_ratio`, `fis` and `folded_sfs`, gave
 the same spectra to the last digit. Without `numCalledAlleles` popnei
 refuses `folded_sfs`, and with 402, above the 400 gene copies of the
@@ -551,9 +583,9 @@ spec:
 - Its default size of the draw is never below 2, which popnei refuses:
   the ploidy times a minimum of 0, or of 1 for a haploid dataset, gives
   less.
-- Its script names its result `diversity` and its `stats` hold
-  `folded_sfs`, so that the lines of this spec follow its call inside
-  its block `if large:`.
+- Its script names its result `diversity`, its `stats` hold
+  `folded_sfs`, and the literal of its `script(p)` holds the lines of
+  this spec after its call, inside its block `if large:`.
 - It decides whether the MAF filter warns on its own table too: it
   removes the variants rare in all the individuals together, which moves
   the heterozygosities, the proportion of polymorphic variants and the

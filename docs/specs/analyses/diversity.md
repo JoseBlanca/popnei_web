@@ -999,6 +999,14 @@ if large:
         table["private_alleles"] = diversity.private_alleles["total"]
         table["private_alleles_per_variant"] = diversity.private_alleles["mean"]
         table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]
+    # The folded site frequency spectrum of each population, in a draw of
+    # 40 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
 print(table.to_string())
 ```
 
@@ -1014,17 +1022,28 @@ by the module, since with a threshold on the individuals the module
 does not know it until the statistics of each individual are
 calculated, and the script is made from the project. popnei's Python
 `calc_pop_diversity` takes the members of `PopDiversityStat` in `stats`,
-and refuses their names as text. The result of `calc_pop_diversity`
-is named `diversity`, since the lines of the spectrum
-(`docs/specs/analyses/sfs.md`, "Its lines of the Python script") follow
-these and read `diversity.folded_sfs`; they go inside the `if large:`,
-where `diversity` is defined. These
+and refuses their names as text. The eight lines from the comment of
+the spectrum on are those of the folded spectrum
+(`docs/specs/analyses/sfs.md`, "Its lines of the Python script"): they
+are part of this literal, which `script(p)` gives whole, and sit inside
+the `if large:`, where `diversity` is defined, the 40 of their comment
+being the draw as `run` sends it. These
 lines, run with popnei's Python package on 25 September 2026 over the
 files of the flow with the filter at 0.05, printed the numbers of the
 table below, and, as revised for stage 5, on 30 September 2026 with the
 package built from popnei's code of that day, whose sources of the
 diversity are those of `js-v0.1.0-dev.3`, the numbers of the table of
-stage 5, below, to the six digits pandas prints. The warnings as comments, which `docs/functionality.md`
+stage 5, below, to the six digits pandas prints. With the lines of the
+spectrum, run the same day with the Python of popnei's checkout at its
+commit `eae29a2`, `.venv/bin/python` of `/Users/jose/devel/popnei`,
+over the same files and filter, they printed for p0 an expected
+40.761956 variants at 0 copies of the rarer allele and 36.429426 at 1,
+and a share of 0.032783 at 1, and for p2 a share of 0.042426 at 1,
+which are `calcPopDiversity`'s at the filter at 0.05 in node,
+40.761955639534804, 36.42942568440002, 0.03278273801844656 and
+0.04242587540625687, to the six digits pandas prints; and with no
+filter, p0's 44.793231, 38.077959 and 0.032962 of the table of
+`sfs.md`, "The numbers of popnei". The warnings as comments, which `docs/functionality.md`
 section 9 asks for, come from the results, which `script(p)` is not
 given; `script.ts` adds them in stage 6. `script` is asked only for an
 analysis that has run, so a project with no populations is a defect
@@ -1209,7 +1228,13 @@ text of `projectErrorText`: "the minimum of individuals, a whole number
 from 0 to 4,294,967,295, the frequency below which a variant is
 polymorphic, a number from 0 to 1, and the chromosomes of the
 rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing
-else". Until stage 5 it took the first two alone. The format stays at
+else". The minimum has the same range in the distances between
+populations, from stage 5, one rule for both, the range popnei's
+`calcPerVarDistribs`, `calcPopDiversity` and `calcPopDists` all take; at
+0 popnei still counts no variant at which a population has nothing
+called, and on `panel.nei` the three gave the same numbers at 0 as at 1
+(`docs/specs/analyses/popDists.md`, "The TypeScript interface"). Until stage 5 `parseOptions` took the first two fields
+alone. The format stays at
 version 1 until the first release (`docs/specs/core/projectFile.md`,
 "The versions of the format"), and no project file of stages 2 to 4
 holds options of the diversity, which had no control, so no file that
@@ -2148,6 +2173,19 @@ moves.
   screen reader reads "Chromosomes drawn for the rarefaction, a whole
   number from 2, 40, The default: the ploidy, 2, …"; the line of a
   number refused is announced, as in the Variants step.
+- While digits are typed, the three fields announce what React Aria's
+  `NumberField` announces through a live region of its own, a part of
+  the page whose changes a screen reader reads out: in stage 4 that
+  region was found to gather the digits typed across edits,
+  "5000050000777", which a screen reader may read out
+  (`docs/plans/individuals-pca.report.md`, "The owner's decisions of 29
+  September 2026", the paragraph "For the owner, new, with a
+  recommendation"). They are made with the one wrapper of the application,
+  `src/ui/widgets/NumberField.tsx`, as the fields of the PCA and of
+  the Variants step are, and the code of this panel adds nothing for
+  it. What the wrapper announces is for the plan of stage 5 and its
+  review to look at, with a screen reader, and a change it calls for is
+  made in the wrapper, for every number field at once.
 - "Use the default" goes when it is pressed, the draw being the default
   again, and the focus moves to the field of the draw, so that a user
   of the keyboard is not sent to the top of the page (2.4.3).

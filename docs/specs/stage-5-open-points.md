@@ -208,9 +208,12 @@ warning says what the filter removed and to turn it off
 (`docs/specs/analyses/sfs.md`). The MAF filter removes the variants
 whose rarer allele is rare in all the individuals kept, taken together,
 and so empties the first bars of the spectrum, the variants with one or
-a few copies of the rarer allele in the draw: on `panel.nei`, the filter at 0.95
-removed 25 of the 1,200 variants, and the share of p2 at one copy of the
-rarer allele fell from 0.0426 to 0.0367. The filter is off by default in
+a few copies of the rarer allele in the draw: on `panel.nei`, after
+the missing data filter at 0.05 with which the flow of the diversity
+is tested, the filter at 0.95 removed 24 of the 1,152 variants, and the
+share of p2 at one copy of the rarer allele fell from 0.0424 to 0.0367;
+with the missing data filter at its default of 0.1, which keeps all
+1,200, it removed 25, and the share fell from 0.0426 to 0.0367. The filter is off by default in
 the population genetics application, so a user who sees the warning
 turned it on. Not taken: the spectrum reading every filter but the MAF,
 as the LD decay reads every filter but the LD pruning (decision 8),
