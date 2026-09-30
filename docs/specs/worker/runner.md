@@ -1284,7 +1284,12 @@ worker holds, from popnei's README and its doc comments:
   bytes more a distance at its end, at most 40 bytes a base pair and
   population, which core bounds at 1 GB; beside them, the blocks of
   variants the pass holds within `maxDist` of the newest variant, with
-  their genotypes by population. Measured in node with
+  their genotypes by population, at least two of about 5 million
+  genotypes each, with three matrices of 8 bytes a value for each
+  population, whatever the distance: 580 MB for 1,000 individuals at a
+  distance of 1,000 bp over 200,000 variants (node, found by the review
+  of the architecture on 30 September 2026), so the blocks, and not the
+  counts, are most of the memory from about 1,000 individuals. Measured in node with
   `js-v0.1.0-dev.3` on 30 September 2026, an LD decay grew wasm by 64 MB
   for 100 individuals and 20,000 variants at 100,000 bp, by 480 MB for
   100 individuals and three populations at 10,000,000 bp, 16 bytes × the

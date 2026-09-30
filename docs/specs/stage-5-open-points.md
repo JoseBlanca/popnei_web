@@ -105,10 +105,13 @@ while its worker lives
 decided on 26 September 2026 not to restart the worker between two
 calculations. Two exceptions were decided since: after a written file,
 and after a PCA of more than 700 individuals, each because it leaves
-more than about 25 MB behind. An LD decay leaves it larger by two things: popnei's
-counts of the pairs at each distance, 16 bytes a base pair and
-population, 4.8 MB for three populations at 100,000 bp; and the
-variants it held within that distance, the larger part. Measured in
+more than about 25 MB behind. An LD decay leaves it larger by two
+things: the blocks of variants popnei holds while it reads, at least two
+of about 5 million genotypes each, about 0.4 to 0.6 GB for 1,000
+individuals whatever the distance, 580 MB at a distance of 1,000 bp;
+and its counts of the pairs at each distance, 16 bytes a base pair and
+population, 4.8 MB for three populations at 100,000 bp and 480 MB at
+10,000,000 bp. Measured in
 node, the memory grew by 64 MB for 100 individuals and 20,000 variants
 at 100,000 bp, by 480 MB for 100 individuals and three populations at
 10,000,000 bp, the counts alone, and by 0.4 to 1.1 GB for 1,000 individuals and the same

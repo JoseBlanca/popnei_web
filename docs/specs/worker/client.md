@@ -412,9 +412,16 @@ were made; not after `reopenFailed`, as for a write. The steps are those
 of a write, above: the outcome first, then the worker ended, then a new
 one, sent the `open` of the load and the requests that waited.
 
-An LD decay leaves the memory of wasm larger by 16 bytes × its largest
-distance × its populations, the counts popnei asks for before the pass,
-plus the blocks of variants it held within that distance: in node with
+An LD decay leaves the memory of wasm larger by two things: the blocks of variants it holds while it reads, at least two of about
+5 million genotypes each, 5,000 variants for 1,000 individuals, with
+three matrices of 8 bytes a value for each population, and more when
+the distance spans more than a block (popnei's `docs/specs/ld.md`, "How
+it runs"): about 0.4 to 0.6 GB for 1,000 individuals whatever the
+distance, 580 MB at a distance of 1,000 bp over 200,000 variants (node,
+`js-v0.1.0-dev.3`, found by the review of the architecture on 30
+September 2026); and
+its counts, 16 bytes × its largest distance × its populations asked for
+before the pass, and up to 24 more a distance at its end. In node with
 `js-v0.1.0-dev.3` on 30 September 2026, 64 MB for 100 individuals and
 20,000 variants at 100,000 bp, 480 MB for 100 individuals and three
 populations at 10,000,000 bp, set by the distance, and

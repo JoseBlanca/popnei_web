@@ -2356,9 +2356,17 @@ the same numbers for everything else but the size of a written file.
   of 100,000 bp, at least 62% to 68% in both engines, a lower bound since
   the PCA with the filter also calculates over fewer variants
   (`docs/specs/analyses/pca.md`, "How it runs").
-- **The memory of the LD decay grows with the largest distance** the
-  user types, from stage 5: popnei counts the pairs of each population
-  at every distance up to it, 16 bytes a base pair asked for before the
+- **The memory of the LD decay grows with the individuals, and with the
+  largest distance** the user types, from stage 5. It holds
+  the blocks of variants it holds while it reads, at least two of about
+  5 million genotypes each, 5,000 variants for 1,000 individuals, with
+  three matrices of 8 bytes a value for each population, and more when
+  the distance spans more than a block (popnei's `docs/specs/ld.md`, "How
+  it runs"): about 0.4 to 0.6 GB for 1,000 individuals whatever the
+  distance, 580 MB at a distance of 1,000 bp over 200,000 variants (node,
+  `js-v0.1.0-dev.3`, found by the review of the architecture on 30
+  September 2026). Beside them popnei counts the pairs of each population
+  at every distance up to the largest, 16 bytes a base pair asked for before the
   pass and up to 24 more at its end, and holds the variants within that
   distance of the newest one read. Measured in node 26.8.2 on the
   owner's Mac with `js-v0.1.0-dev.3` on 30 September 2026, as the growth
@@ -2713,8 +2721,9 @@ meanwhile:
    whatever its size, after a result and after a refusal of popnei, as
    after a large PCA (point 9); not after a file that no longer reads.
    It is a third exception to point 2. An LD decay leaves the memory of
-   wasm larger by 16 bytes × its largest distance × its populations,
-   plus the variants it held within that distance: in node, 10.6 MB for
+   wasm larger by the blocks of variants it held, about 0.4 to 0.6 GB
+   for 1,000 individuals whatever the distance, and by its counts, up to
+   40 bytes × its largest distance × its populations (section 11): in node, 10.6 MB for
    100 individuals and 500 variants at 100,000 bp, and 0.4 to 1.1 GB for
    1,000 individuals and 20,000 variants (section 11), where a written
    file and a PCA restart the worker above about 25 MB. What it costs:
