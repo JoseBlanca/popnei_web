@@ -7,9 +7,9 @@
  * (`statisticsFailedText`) (docs/specs/analyses/diversity.md, "The
  * module").
  *
- * The three numbers of each population are popnei's, from one call of
- * `calcPerVarDistribs` in the calculation worker; this module computes
- * none of them. The populations are those of `project.ts`, which every
+ * The numbers of each population are popnei's, from a call of
+ * `calcPerVarDistribs` and, from stage 5, one of `calcPopDiversity` in
+ * the calculation worker; this module computes none of them. The populations are those of `project.ts`, which every
  * analysis per population shares: those of a column of the metadata
  * file, or one population of every individual, "All individuals".
  */
@@ -45,6 +45,7 @@ import type {
   WorkerClient,
 } from "../store.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
+import { spectrumWarnings } from "./sfs.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
   CHANGE_SETTINGS,
@@ -52,6 +53,7 @@ import {
   csvNumber,
   defect,
   orNull,
+  percentOf,
   populationWarnings,
   refusalWords,
 } from "./words.ts";
@@ -133,6 +135,19 @@ export interface DiversityRow {
   readonly observedHeterozygosity: number | null;
   /** The proportion of polymorphic variants. */
   readonly polymorphic: number | null;
+  /** F, one minus the observed heterozygosity over the expected one. */
+  readonly f: number | null;
+  /** The alleles called per variant. */
+  readonly allelesPerVariant: number | null;
+  /** The alleles per variant in a draw of the chromosomes of the result. */
+  readonly allelesPerVariantRarefied: number | null;
+  /** The private alleles; null when they were not counted, and not 0,
+      which would read as a count. */
+  readonly privateAlleles: number | null;
+  /** The private alleles per variant. */
+  readonly privateAllelesPerVariant: number | null;
+  /** The private alleles per variant in a draw. */
+  readonly privateAllelesPerVariantRarefied: number | null;
 }
 
 /** The rows of a result, in its order; the same array for the same
@@ -152,6 +167,22 @@ export function diversityRows(r: DiversityResult): readonly DiversityRow[] {
         ),
         observedHeterozygosity: orNull(valueAt(r.obsHet, i, "obsHet")),
         polymorphic: orNull(valueAt(r.polyRatio, i, "polyRatio")),
+        f: orNull(valueAt(r.fis, i, "fis")),
+        allelesPerVariant: orNull(
+          valueAt(r.numAllelesMean, i, "numAllelesMean"),
+        ),
+        allelesPerVariantRarefied: orNull(
+          valueAt(r.numAllelesInDraw, i, "numAllelesInDraw"),
+        ),
+        privateAlleles: orNull(
+          valueAt(r.privateAllelesTotal, i, "privateAllelesTotal"),
+        ),
+        privateAllelesPerVariant: orNull(
+          valueAt(r.privateAllelesMean, i, "privateAllelesMean"),
+        ),
+        privateAllelesPerVariantRarefied: orNull(
+          valueAt(r.privateAllelesInDraw, i, "privateAllelesInDraw"),
+        ),
       }),
     ),
   );
@@ -159,9 +190,11 @@ export function diversityRows(r: DiversityResult): readonly DiversityRow[] {
   return rows;
 }
 
-/** The header of the CSV of the table. */
+/** The header of the CSV of the table, the names of the columns of the
+    table of the Python script; F sixth, so that the first five are those
+    of stages 2 to 4. */
 const CSV_HEADER =
-  "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic";
+  "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied";
 
 /**
  * The table as the text of a CSV file: a header row, one row per
@@ -177,6 +210,12 @@ export function diversityCsv(r: DiversityResult): string {
       csvNumber(row.expectedHeterozygosity),
       csvNumber(row.observedHeterozygosity),
       csvNumber(row.polymorphic),
+      csvNumber(row.f),
+      csvNumber(row.allelesPerVariant),
+      csvNumber(row.allelesPerVariantRarefied),
+      csvNumber(row.privateAlleles),
+      csvNumber(row.privateAllelesPerVariant),
+      csvNumber(row.privateAllelesPerVariantRarefied),
     ].join(","),
   );
   return [CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
@@ -497,11 +536,18 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * in this order: populations of too few individuals, populations with a
  * value at fewer variants than the filters kept, individuals of the
  * variants file with no population, populations with individuals in the
- * variants file that are not in the result.
+ * variants file that are not in the result; from stage 5, the private
+ * alleles counted without the populations of too few individuals, with
+ * one population only, or over fewer variants than the filters kept,
+ * populations that reach the draw at fewer variants than they have a
+ * value at, and F in a haploid file; then the warnings of the spectrum.
+ * The populations given to `calcPopDiversity` are found as `run` chose
+ * them, from `numIndividuals` and the minimum.
  */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = diversityResultOf(result);
-  if (p.variants?.read.kind !== "read") {
+  const read = p.variants?.read;
+  if (p.variants === null || read?.kind !== "read") {
     throw defect("the warnings of the diversity need a variants file read.");
   }
   const min = diversityOptions(p).minNumIndividuals;
@@ -526,15 +572,15 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
         : tooFewText(tooFew, min, filtered),
     });
   }
-  const withoutValue = rows
-    .map((row, i) => ({
-      row,
-      withValue: valueAt(r.numVarsWithValue, i, "numVarsWithValue"),
-    }))
-    .filter(
-      ({ row, withValue }) =>
-        row.individuals >= min && withValue < r.passStats.numVars,
-    );
+  const counts = rows.map((row, i) => ({
+    row,
+    withValue: valueAt(r.numVarsWithValue, i, "numVarsWithValue"),
+    inDraw: valueAt(r.numVarsInDraw, i, "numVarsInDraw"),
+  }));
+  const withoutValue = counts.filter(
+    ({ row, withValue }) =>
+      row.individuals >= min && withValue < r.passStats.numVars,
+  );
   if (withoutValue.length > 0) {
     found.push({
       code: "variantsWithoutValue",
@@ -542,6 +588,69 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
     });
   }
   found.push(...populationWarnings(r.pops, p, DIVERSITY_WORDS));
+  found.push(...privateAllelesWarnings(r, rows, min, onePopulation));
+  const notInDraw = counts.filter(
+    ({ row, withValue, inDraw }) =>
+      row.individuals >= min && inDraw < withValue,
+  );
+  if (notInDraw.length > 0) {
+    found.push({
+      code: "variantsNotInDraw",
+      text: notInDrawText(notInDraw, r),
+    });
+  }
+  if (read.ploidy === 1) {
+    found.push({
+      code: "noFInHaploid",
+      text: `The variants of ${escaped(p.variants.name)} have a ploidy of 1, and a genotype of one allele cannot be heterozygous, so F has no value.`,
+    });
+  }
+  found.push(...spectrumWarnings(r, p));
+  return found;
+}
+
+/**
+ * The warnings of the private alleles, from stage 5, in this order:
+ * counted without the populations of fewer than `min` individuals, which
+ * `run` left out of `calcPopDiversity`; not counted, with one population
+ * given to it, in the words of the one population when `onePopulation`;
+ * counted over fewer variants than the filters kept.
+ */
+function privateAllelesWarnings(
+  r: DiversityResult,
+  rows: readonly DiversityRow[],
+  min: number,
+  onePopulation: boolean,
+): readonly Warning[] {
+  const called = rows.filter((row) => row.individuals >= min);
+  const tooFew = rows.filter((row) => row.individuals < min);
+  const found: Warning[] = [];
+  if (called.length > 1 && tooFew.length > 0) {
+    found.push({
+      code: "privateAllelesWithoutSmall",
+      text: withoutSmallText(called, tooFew, min),
+    });
+  }
+  const [only] = called;
+  if (called.length === 1 && only !== undefined) {
+    found.push({
+      code: "privateAllelesNeedTwoPopulations",
+      text: onePopulation
+        ? "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles. Choose a column that defines the populations in the Individuals step to count them."
+        : `Only ${namesOf([only.population])} has ${grouped(min)} individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.`,
+    });
+  }
+  const everyPop = r.numVarsEveryPop;
+  if (
+    called.length > 1 &&
+    everyPop !== null &&
+    everyPop < r.passStats.numVars
+  ) {
+    found.push({
+      code: "privateAllelesOverFewerVariants",
+      text: overFewerVariantsText(everyPop, r.passStats.numVars, min),
+    });
+  }
   return found;
 }
 
@@ -555,9 +664,7 @@ function tooFewText(
 ): string {
   const rule = `a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there`;
   const names = namesOf(rows.map((row) => row.population));
-  const end = filtered
-    ? "in the metadata file, or loosen the filters of individuals in the Variants step."
-    : "in the metadata file.";
+  const end = `in the metadata file, ${LOWER_MINIMUM}${filtered ? LOOSEN_FILTERS : "."}`;
   const [first] = rows;
   if (rows.length === 1 && first !== undefined) {
     return `Population ${names} has ${counted(first.individuals, "individual")}, and ${rule}, so ${names} has no values. To have them, merge it with another population ${end}`;
@@ -568,6 +675,16 @@ function tooFewText(
       : "";
   return `Populations ${names} have fewer than ${grouped(min)} individuals${counts}, and ${rule}, so they have no values. To have them, merge each with another population ${end}`;
 }
+
+/** What `tooFewIndividuals` offers from stage 5, after "To have them,
+    merge it with another population in the metadata file, ". */
+const LOWER_MINIMUM =
+  "or lower the minimum number of individuals in the options of the diversity";
+
+/** The end of `tooFewIndividuals` when the filters of individuals took
+    individuals from a population it names. */
+const LOOSEN_FILTERS =
+  ", or loosen the filters of individuals in the Variants step.";
 
 /** The text of `tooFewIndividuals` for the one population, `rows` its
     one row, which has no metadata file to merge it in; `filtered` when
@@ -581,10 +698,115 @@ function tooFewOfOneText(
   if (row === undefined || rows.length !== 1) {
     throw defect("the one population has another number of rows than one.");
   }
-  const end = filtered
-    ? "To have them, loosen the filters of individuals in the Variants step."
-    : `The minimum of ${grouped(min)} cannot be changed in this version.`;
+  const end = `To have them, lower the minimum number of individuals in the options of the diversity${filtered ? LOOSEN_FILTERS : "."}`;
   return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there, so it has no values. ${end}`;
+}
+
+/** The text of `privateAllelesWithoutSmall`: the private alleles of the
+    populations `called`, two or more, counted without those of
+    `tooFew`. */
+function withoutSmallText(
+  called: readonly DiversityRow[],
+  tooFew: readonly DiversityRow[],
+  min: number,
+): string {
+  const whose =
+    called.length <= MAX_NAMED
+      ? `${namesOf(called.map((row) => row.population))} are counted among these populations alone`
+      : `the ${grouped(called.length)} populations with ${grouped(min)} individuals or more are counted among them alone`;
+  const leftOut = namesOf(tooFew.map((row) => row.population));
+  const sharedWith =
+    tooFew.length === 1
+      ? `${leftOut}, which has fewer than ${grouped(min)} individuals: an allele they share only with ${leftOut} counts as private.`
+      : `${leftOut}, which have fewer than ${grouped(min)} individuals: an allele they share only with some of those populations counts as private.`;
+  return `The private alleles of ${whose}, without ${sharedWith}`;
+}
+
+/** The text of `privateAllelesOverFewerVariants`: the private alleles
+    counted over `everyPop` of the `numVars` variants kept. */
+function overFewerVariantsText(
+  everyPop: number,
+  numVars: number,
+  min: number,
+): string {
+  if (everyPop === 0) {
+    const kept =
+      numVars === 1 ? "the one kept" : `the ${grouped(numVars)} kept`;
+    return `The private alleles are counted over the variants at which every population has a value, and there is none among ${kept}: at each, fewer than ${grouped(min)} individuals of some population have a genotype. So no population has private alleles.`;
+  }
+  return `The private alleles are counted over the ${grouped(everyPop)} of the ${grouped(numVars)} variants kept (${percentOf(everyPop, numVars)}) at which every population has a value; at the others, fewer than ${grouped(min)} individuals of some population have a genotype.`;
+}
+
+/** The text of `variantsNotInDraw`, for its populations with the
+    variants at which each has a value and those at which it reaches the
+    draw of `r`; with a last sentence when the rarefied private alleles
+    are over fewer variants than the others. */
+function notInDrawText(
+  pops: readonly {
+    readonly row: DiversityRow;
+    readonly withValue: number;
+    readonly inDraw: number;
+  }[],
+  r: DiversityResult,
+): string {
+  const text = notInDrawFirst(pops, r.numCalledAlleles);
+  const everyPop = r.numVarsEveryPop;
+  const everyPopInDraw = r.numVarsEveryPopInDraw;
+  if (
+    everyPop === null ||
+    everyPopInDraw === null ||
+    everyPopInDraw >= everyPop
+  ) {
+    return text;
+  }
+  const draw = grouped(r.numCalledAlleles);
+  const over =
+    everyPopInDraw === 0
+      ? `No variant has every population at ${draw} called chromosomes, so there are no rarefied private alleles.`
+      : everyPopInDraw === 1
+        ? `The rarefied private alleles are over the one variant at which every population reaches ${draw}.`
+        : `The rarefied private alleles are over the ${grouped(everyPopInDraw)} variants at which every population reaches ${draw}.`;
+  return `${text} ${over}`;
+}
+
+/** The text of `variantsNotInDraw` without its last sentence, for a draw
+    of `numCalledAlleles`. */
+function notInDrawFirst(
+  pops: readonly {
+    readonly row: DiversityRow;
+    readonly withValue: number;
+    readonly inDraw: number;
+  }[],
+  numCalledAlleles: number,
+): string {
+  const draw = grouped(numCalledAlleles);
+  const names = namesOf(pops.map(({ row }) => row.population));
+  const [first] = pops;
+  if (pops.every(({ inDraw }) => inDraw === 0)) {
+    // At the smallest draw there is no smaller one to offer.
+    const lower =
+      numCalledAlleles > MIN_DRAW
+        ? " Lower the number of chromosomes of the rarefaction in the options of the diversity."
+        : "";
+    return pops.length === 1
+      ? `${names} reaches ${draw} called chromosomes at none of the variants at which it has a value, so it has no rarefied values.${lower}`
+      : `${names} reach ${draw} called chromosomes at none of the variants at which they have a value, so they have no rarefied values.${lower}`;
+  }
+  if (pops.length === 1 && first !== undefined) {
+    return `${names} reaches ${draw} called chromosomes at ${grouped(first.inDraw)} of the ${grouped(first.withValue)} variants at which it has a value (${percentOf(first.inDraw, first.withValue)}), so its rarefied values are over those alone.`;
+  }
+  if (pops.length > MAX_NAMED) {
+    return `${names} reach ${draw} called chromosomes at fewer than the variants at which they have a value, so their rarefied values are over those alone.`;
+  }
+  const withValue = pops.map((pop) => pop.withValue);
+  const counts = listed(pops.map(({ inDraw }) => grouped(inDraw)));
+  const of = withValue.every((count) => count === withValue[0])
+    ? `the ${grouped(first?.withValue ?? 0)} variants at which they have a value`
+    : `the ${listed(withValue.map(grouped))} variants at which each has a value`;
+  const shares = listed(
+    pops.map(({ inDraw, withValue: all }) => percentOf(inDraw, all)),
+  );
+  return `${names} reach ${draw} called chromosomes at ${counts} of ${of} (${shares}), so their rarefied values are over those alone.`;
 }
 
 /** The text of `variantsWithoutValue`, for its populations with the
@@ -669,25 +891,76 @@ const NUMBERS_PER_POPULATION = 3;
 /**
  * The lines of the Python script that calculate the same numbers with
  * popnei's Python API, after the lines that open `variants` and read the
- * table `individuals`. Throws a defect on a project with no column of the
- * populations, since it is asked only of an analysis that has run.
+ * table `individuals`: the three numbers of each population, then, in a
+ * block for the populations of the minimum of individuals, the call of
+ * `calcPopDiversity` with the draw `run` sends, its columns of the table,
+ * and the lines of the spectrum (docs/specs/analyses/sfs.md, "Its lines
+ * of the Python script"). Throws a defect on a project with no column of
+ * the populations or no draw, since it is asked only of an analysis that
+ * has run.
  */
 function script(p: Project): string {
   const options = diversityOptions(p);
+  const min = String(options.minNumIndividuals);
+  const drawn = drawOf(p);
+  if (drawn === null) {
+    throw defect("the script of the diversity was asked with no draw.");
+  }
+  const draw = String(drawn);
   return [
     ...scriptPops(p),
-    "diversity = popnei.calc_per_var_distribs(",
-    `    variants, pops=pops, min_num_individuals=${String(options.minNumIndividuals)}, poly_threshold=${String(options.polyThreshold)}`,
+    "per_var = popnei.calc_per_var_distribs(",
+    `    variants, pops=pops, min_num_individuals=${min}, poly_threshold=${String(options.polyThreshold)}`,
     ")",
-    "print(pandas.DataFrame({",
+    "table = pandas.DataFrame({",
     '    "individuals": {pop: len(names) for pop, names in pops.items()},',
-    '    "expected_heterozygosity_unbiased": diversity.unbiased_exp_het.mean,',
-    '    "observed_heterozygosity": diversity.obs_het.mean,',
-    '    "proportion_polymorphic": diversity.poly_vars_ratio.poly_ratio,',
-    "}).to_string())",
+    '    "expected_heterozygosity_unbiased": per_var.unbiased_exp_het.mean,',
+    '    "observed_heterozygosity": per_var.obs_het.mean,',
+    '    "proportion_polymorphic": per_var.poly_vars_ratio.poly_ratio,',
+    "})",
+    `# A population of fewer than ${min} individuals has a value at no variant; it`,
+    "# is left out here, where it would take every variant out of the private",
+    "# alleles of the others. A private allele needs two populations.",
+    `large = {pop: names for pop, names in pops.items() if len(names) >= ${min}}`,
+    "if large:",
+    "    stats = [",
+    "        popnei.PopDiversityStat.NUM_ALLELES,",
+    "        popnei.PopDiversityStat.FIS,",
+    "        popnei.PopDiversityStat.FOLDED_SFS,",
+    "    ]",
+    "    if len(large) > 1:",
+    "        stats.append(popnei.PopDiversityStat.PRIVATE_ALLELES)",
+    "    diversity = popnei.calc_pop_diversity(",
+    `        variants, large, stats=stats, num_called_alleles=${draw}, min_num_individuals=${min}`,
+    "    )",
+    '    table["f"] = diversity.fis',
+    '    table["alleles_per_variant"] = diversity.num_alleles["mean"]',
+    '    table["alleles_per_variant_rarefied"] = diversity.num_alleles["in_draw"]',
+    "    if diversity.private_alleles is not None:",
+    '        table["private_alleles"] = diversity.private_alleles["total"]',
+    '        table["private_alleles_per_variant"] = diversity.private_alleles["mean"]',
+    '        table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]',
+    ...spectrumScript(draw),
+    "print(table.to_string())",
   ]
     .map((line) => `${line}\n`)
     .join("");
+}
+
+/** The lines of the folded spectrum, of `sfs.md`, "Its lines of the
+    Python script", in a draw of `draw` chromosomes, indented as the block
+    `if large:` of `script`, where `diversity` is defined. */
+function spectrumScript(draw: string): readonly string[] {
+  return [
+    "    # The folded site frequency spectrum of each population, in a draw of",
+    `    # ${draw} chromosomes: the expected number of variants with each count of the`,
+    "    # rarer allele, and the share of each count among the variants that show",
+    "    # both alleles in the draw",
+    "    spectrum = diversity.folded_sfs",
+    "    print(spectrum.to_string())",
+    "    both_alleles = spectrum.iloc[1:]",
+    "    print((both_alleles / both_alleles.sum()).to_string())",
+  ];
 }
 
 /** The lines of the script that make the dict of the populations: from

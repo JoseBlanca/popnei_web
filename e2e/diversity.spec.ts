@@ -716,7 +716,7 @@ test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's word
   ).toBeVisible();
   await expect(
     panel(page).getByText(
-      "Warning: Population A has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file.",
+      "Warning: Population A has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       { exact: true },
     ),
   ).toBeVisible();

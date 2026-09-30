@@ -101,6 +101,12 @@ describe("the words of the panel of the diversity", () => {
         expectedHeterozygosity: 0.35267894847982756,
         observedHeterozygosity: null,
         polymorphic: 0.9288194444444444,
+        f: null,
+        allelesPerVariant: null,
+        allelesPerVariantRarefied: null,
+        privateAlleles: null,
+        privateAllelesPerVariant: null,
+        privateAllelesPerVariantRarefied: null,
       }),
     ).toEqual(["p1\\u200b", "1,000", "0.3527", "no value", "0.9288"]);
   });
