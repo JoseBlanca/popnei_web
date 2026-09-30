@@ -248,7 +248,17 @@ pairs for one population, is the writers' decision of 30 September
 that grew the engines by 3.03 to 3.40 GB did not close the tab in
 Chromium 153 or WebKit 26.6 (`docs/architecture.md`, section 11); the
 plan measures an LD decay at the bound in both, over a file whose
-positions are not evenly spaced, so that most distances hold a pair. The populations are
+positions are not evenly spaced, so that most distances hold a pair.
+The lock bounds the counts alone, and not the variants held within the
+largest distance, which grow with the individuals, the density of the
+variants and the distance, about 48 bytes for each individual and
+variant held by the table of "How it runs": a file of 1,000 individuals
+with a variant every 100 bp, at the 8,333,333 bp the lock allows three
+populations, would hold about 3 to 4 GB, an extrapolation not measured,
+found by the review of the architecture on 30 September 2026. The plan
+measures such a file at several million base pairs in WebKit and
+Chromium, and if a tab closes the lock counts the individuals × the
+distance as well (`docs/architecture.md`, section 11). The populations are
 counted on the lists of individuals alone, `byLists` of
 `docs/specs/core/individualsKept.md`, which a threshold on the
 individuals can only lower, so the lock is known without the statistics

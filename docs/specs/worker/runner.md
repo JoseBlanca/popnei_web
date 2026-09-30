@@ -1018,7 +1018,12 @@ decided it on 29 September 2026 (stops A 9 and C 6 of
 - **popnei's refusal is caught at the call**, and only there: the open,
   each filter, the list of individuals, `calcPerVarDistribs`,
   `calcPerIndividualStats`, the iteration of `iterBlocks`, `writeVars`,
-  and, from stage 4, `doPcaFromVariants` and `doPcoaFromVariants`.
+  and, from stage 4, `doPcaFromVariants` and `doPcoaFromVariants`,
+  and, from stage 5, `calcPopDiversity`, `calcPopDists` and
+  `calcLdAndDistPerPop`, whose refusals are `refused`, and
+  `correctDistsByLingoes` and `doPcoa`, whose refusals become the
+  reason `notPlaced` of the order of the heatmap (above, "The distances
+  between populations").
   That catch is the one `try` of the
   runner that does not throw again (`.claude/skills/coding/typescript.md`,
   "Errors"), save for what `told` threw, which it throws again (above,

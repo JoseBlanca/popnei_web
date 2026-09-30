@@ -723,10 +723,16 @@ every key are:
   every move of a threshold: the statistics of each individual read no
   filter, and the histograms of the variants the filters of individuals
   alone, which act before the filters of the variants they serve to set
-  (section 4, `filtersRead`). The filter of the
+  (section 4, `filtersRead`); the PCA, from stage 4, and the LD decay,
+  from stage 5, read the filters of the variants through their own
+  inputs and not through `filtersRead`, since theirs are not the
+  project's list as it is (`docs/specs/core/keys.md`). The filter of the
   regions of a BED file enters the key with the hash of the regions, which
   `keys.ts` takes from the project's regions when the filter is on, so
-  the hash is held in one place; and the list of the individuals that the filters
+  the hash is held in one place; when the regions come, that hash goes
+  into the key of an analysis that carries its filters in its inputs as
+  well, the PCA and the LD decay, or a new BED file would leave their
+  results shown as current; and the list of the individuals that the filters
   of individuals keep is in no key, since it is made from the load, the
   version of popnei and the filters of the individuals, which are
   (section 4), and, until 28 September 2026, the filters of the
@@ -909,8 +915,16 @@ module of the analysis knows how many it gives. Adding an
 analysis is adding its module and its panel, and three lines beside
 them: its definition in the list of the analyses of `src/core/apps.ts`,
 the step it is shown in in `POPGEN_ANALYSIS_STEPS` of the same file, and
-its title in `src/ui/analyses/titles.ts`, by which the shell names it;
-nothing else changes. This is the
+its title in `src/ui/analyses/titles.ts`, by which the shell names it.
+Its request and result also join the unions of `protocol.ts`, with their
+check in `messages.ts` and a handler in the runner (section 5), which
+the specs of stages 3 to 5 each added; and, from stage 4, an analysis
+after which the calculation worker is started again, the PCA and, as
+proposed for stage 5, the LD decay (section 13, points 9 and 16), is
+named by its id in the client; nothing else changes. The option not
+taken for the last, the definition of the analysis saying whether its
+run restarts the worker, would keep the client out of it, and is
+weighed again with the kinship of stage 7. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
 
@@ -1259,7 +1273,11 @@ The page and each worker talk through typed messages
   of the run, which popnei's `numPassesOf` gives before the run starts, so
   that the bar does not go from full to empty at the second pass of a run
   that makes two.
-  The worker passes them on to the page (section 6).
+  The worker passes them on to the page (section 6). From stage 5 the
+  diversity's job makes two calls of popnei of one pass each, until
+  popnei issue #4, and the runner tells them as passes 1 and 2 of 2,
+  where popnei tells each as pass 1 of 1, so that the bar fills once
+  (`docs/specs/worker/runner.md`, "Progress").
 - **Cancelling** a request that is running ends its worker and starts a
   new one. While a calculation runs inside wasm, the worker cannot read a
   message that asks it to stop, and without `SharedArrayBuffer`, which
@@ -2347,12 +2365,24 @@ the same numbers for everything else but the size of a written file.
   of the memory of wasm: 10.6 MB for 100 individuals and 500 variants at
   100,000 bp and three populations, 480 MB for the same at 10,000,000
   bp; 63.7 MB for 100 individuals and 20,000 variants every 1,000 bp at
-  100,000 bp; and 0.4 to 1.1 GB for 1,000 individuals and 20,000
-  variants at 100,000 and 1,000,000 bp, which took 3.1 to 73.6 s
-  (`docs/specs/analyses/ldDecay.md`, "How it runs", whose table gives
-  each case). Core locks the analysis when its counts would pass 1 GB,
-  40 bytes × the distance × the populations, 25,000,000 bp for one
-  population, and popnei refused 250,000,000 bp for one, 4 GB of counts.
+  100,000 bp; for 1,000 individuals and 20,000 variants, 0.4 to 0.65 GB
+  with one variant every 1,000 bp at 100,000 and 1,000,000 bp, in 3.1
+  to 11.6 s, and 0.75 to 1.1 GB with one every 100 bp at 1,000,000 bp,
+  in 64 to 74 s (`docs/specs/analyses/ldDecay.md`, "How it runs", whose
+  table gives each case). Core locks the analysis when its counts would
+  pass 1 GB, 40 bytes × the distance × the populations, 25,000,000 bp
+  for one population, and popnei refused 250,000,000 bp for one, 4 GB
+  of counts. The lock does not bound the variants held within the
+  distance, which grow with the individuals, the density of the
+  variants and the distance, about 48 bytes for each individual and
+  variant held by the table above: a file of 1,000 individuals with a
+  variant every 100 bp, at the 8,333,333 bp the lock allows three
+  populations, would hold about 3 to 4 GB, an extrapolation not
+  measured, and the user would wait minutes for popnei's refusal for
+  memory, or lose the tab in WebKit, which closed it on a write of 2.2
+  GB. The plan measures such a file at several million base pairs in
+  WebKit and Chromium; if the tab closes, the lock counts the
+  individuals × the distance as well.
   That memory stays with wasm after the analysis, so the worker is
   started again after every LD decay (section 13, point 16, proposed).
   None of it has been measured in a browser; the plan of stage 5
@@ -2471,7 +2501,8 @@ the same numbers for everything else but the size of a written file.
   and to save the project, reload the page and open the project again
   (`docs/specs/charts/pca3d.md`, `docs/specs/worker/files.md`). The
   script of each worker is such a file too: a worker started again, after
-  a cancel, a crash, a large write or a large PCA (section 13, point 9),
+  a cancel, a crash, a large write, a large PCA (section 13, point 9)
+  or, as proposed for stage 5, any LD decay (point 16),
   fetches its script from the build the page came from, and after a
   deploy cannot start, which the client reports as `couldNotStart`, whose
   words say to reload the page (`docs/specs/core/project.md`, open point
@@ -2690,7 +2721,14 @@ meanwhile:
    reading the header of the variants file again, at most 49 ms (point
    5), against a calculation of 0.6 s and more on 20,000 variants, and,
    from stage 7, the intermediate results the worker holds, the kinship
-   among them, which the next GWAS would calculate again. The options
+   among them, which the next GWAS would calculate again. And each
+   restart fetches the script of the worker: after a deploy of the site
+   while the page is open, the next LD decay leaves the worker unable to
+   start, and the user saves the project, reloads the page and picks the
+   variants file again, as after a cancel, a crash or a large PCA
+   (section 11, "A file of the site fetched after a deploy"). The
+   restart does nothing for the peak of an LD decay, which the lock of
+   section 11 bounds only in part. The options
    not taken: a bound on the individuals and the distance, as for the
    PCA, which almost every file of a few hundred individuals would pass,
    so that the restart would come almost always and the bound would
