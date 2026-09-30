@@ -15,14 +15,16 @@ describe("VS5 D1 the words of the shell of the page", () => {
       "Counts of the filters",
       "Principal components",
       "Diversity",
+      "LD decay",
     ]);
   });
 
-  test("the checks are in the Variants step and the principal components and the diversity in the Analyses step, and an analysis of no step is a defect", () => {
+  test("the checks are in the Variants step and the principal components, the diversity and the LD decay in the Analyses step, and an analysis of no step is a defect", () => {
     expect(POPGEN_ANALYSES.map((def) => SHELL_WORDS.stepOf(def.id))).toEqual([
       "variants",
       "variants",
       "variants",
+      "analyses",
       "analyses",
       "analyses",
     ]);
@@ -33,12 +35,13 @@ describe("VS5 D1 the words of the shell of the page", () => {
     expect(() => SHELL_WORDS.title("tsne")).toThrow(/^popnei_web defect:/);
   });
 
-  test("stop A 6 the title of the diversity names one thing, and the others several, after which the status region says were", () => {
+  test("stop A 6 the titles of the diversity and the LD decay name one thing, and the others several, after which the status region says were", () => {
     expect(POPGEN_ANALYSES.map((def) => SHELL_WORDS.plural(def.id))).toEqual([
       true,
       true,
       true,
       true,
+      false,
       false,
     ]);
     expect(() => SHELL_WORDS.plural("tsne")).toThrow(/^popnei_web defect:/);

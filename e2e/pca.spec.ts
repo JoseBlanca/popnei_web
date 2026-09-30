@@ -782,7 +782,13 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
       name: "Analyses of this step",
     });
     const links = list.getByRole("link");
-    await expect(links).toHaveText(["Principal components", "Diversity"]);
+    // The LD decay has the placeholder of its panel until task 8.1 of the
+    // plan of stage 5, its title and its Run button.
+    await expect(links).toHaveText([
+      "Principal components",
+      "Diversity",
+      "LD decay",
+    ]);
     const pcaHeading = panel.getByRole("heading", {
       level: 2,
       name: "Principal components",
@@ -790,6 +796,9 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
     const diversityHeading = page
       .getByRole("region", { name: "Diversity", exact: true })
       .getByRole("heading", { level: 2, name: "Diversity" });
+    const ldDecayHeading = page
+      .getByRole("region", { name: "LD decay", exact: true })
+      .getByRole("heading", { level: 2, name: "LD decay" });
 
     // The mouse.
     await list.getByRole("link", { name: "Diversity" }).click();
@@ -801,7 +810,12 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
     ).toBeVisible();
     await expectNoViolations(makeAxeBuilder);
 
-    // The keyboard: from the heading of the step, the two links in order,
+    await list.getByRole("link", { name: "LD decay" }).click();
+    await expect(ldDecayHeading).toBeFocused();
+    await expect(ldDecayHeading).toBeInViewport();
+    expect(new URL(page.url()).hash).toBe("#analyses");
+
+    // The keyboard: from the heading of the step, the links in order,
     // Enter on each, and the next Tab goes on inside its panel.
     await page.getByRole("heading", { level: 1, name: "Analyses" }).focus();
     await page.keyboard.press("Tab");
@@ -810,6 +824,9 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
     ).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(list.getByRole("link", { name: "Diversity" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(list.getByRole("link", { name: "LD decay" })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Enter");
     await expect(diversityHeading).toBeFocused();
     await page.keyboard.press("Tab");
@@ -827,7 +844,7 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
     // At 320 pixels wide, the list fits and the page does not scroll
     // sideways.
     await page.setViewportSize({ width: 320, height: 800 });
-    await expect(links).toHaveCount(2);
+    await expect(links).toHaveCount(3);
     for (const link of await links.all()) {
       const box = await link.boundingBox();
       expect(box).not.toBeNull();

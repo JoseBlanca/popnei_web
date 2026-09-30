@@ -26,7 +26,9 @@ import {
   refusalText as pcaRefusalText,
   statisticsFailedText as pcaStatisticsFailedText,
 } from "../../core/analyses/pca.ts";
+import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
+import { refusalText as ldDecayRefusalText } from "../../core/analyses/ldDecay.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
@@ -34,6 +36,7 @@ import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
+import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
 import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
@@ -159,6 +162,36 @@ const PCA: AnalysisUi = Object.freeze({
     crashText(p, individualsRunOn(p, kept)),
 });
 
+/** The placeholder of the panel of the LD decay, its Run button alone,
+    until task 8.1 of the plan of stage 5 draws its panel
+    (docs/plans/population-analyses.md, "Where the specs are thin"): the
+    measurements of its memory run it from here, with its options set by
+    a project file, and a result draws nothing. */
+const LD_DECAY: AnalysisUi = Object.freeze({
+  title: titleOf("ldDecay"),
+  name: "the LD decay",
+  resultName: "the plot and the tables",
+  plural: false,
+  readyLines: (): readonly string[] => [],
+  refusalText: ldDecayRefusalText,
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string =>
+    statisticsFailedWords(
+      error,
+      p,
+      failureText,
+      waited ? "the LD decay was not run" : "the LD decay cannot run",
+    ),
+  Results: LdDecayPlaceholder,
+  Options: null,
+  runningLine: (): null => null,
+  workerFailedText: null,
+});
+
 /** The individuals a calculation of the project `p` ran on, those the
     filters of individuals keep, `kept` of the state of the store under
     the same filters as its key: the known list, or every individual of
@@ -182,6 +215,7 @@ function individualsRunOn(p: Project, kept: IndividualsKept | null): number {
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([
   ["pca", PCA],
   ["diversity", DIVERSITY],
+  ["ldDecay", LD_DECAY],
 ]);
 
 /** The panel of the analysis `id`; a defect when it has none. */

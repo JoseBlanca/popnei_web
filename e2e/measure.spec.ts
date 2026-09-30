@@ -71,6 +71,19 @@
  * variants of e2e/bigVcf.ts, with whether the worker was started again. A
  * tab that closes is recorded, and fails nothing.
  *
+ * And the memory and the time of the LD decay (PA2 D7, the open-points
+ * file of stage 5, "Set by a measurement"; docs/specs/analyses/ldDecay.md,
+ * "How it runs"), in both engines, each run from the placeholder of its
+ * panel on a new page, with its largest distance set by a project file:
+ * the growth of the engine and its size when the answer arrives, which
+ * the tab would keep without the restart after it, and 3 s after the
+ * restart, on a VCF of 20,000 variants and 1,000 individuals at 100,000
+ * and 1,000,000 bp; an LD decay at the lock of 1 GB of counts, on a file
+ * whose positions are drawn at random, with the time of the fit after the
+ * pass; and a file of 1,000 individuals with a variant every 100 bp at
+ * the distances of MEASURE_LD_DENSE, until a tab closes or popnei
+ * refuses. A tab that closes is the outcome of its case.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -91,7 +104,7 @@ import {
   utimes,
   writeFile,
 } from "node:fs/promises";
-import { cpus, tmpdir, totalmem } from "node:os";
+import { cpus, loadavg, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -105,6 +118,7 @@ import {
 import { init, openVcf, writeVars } from "popnei";
 
 import { bigVcfPopsCsv, STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+import type { VcfPositions } from "./bigVcf.ts";
 import { drawPoints } from "./measure/points.ts";
 import type { DrawAsked, DrawTimes } from "./measure/points.ts";
 import type { Commit } from "./measure/profilingRoot.ts";
@@ -139,6 +153,8 @@ interface Logged {
   readonly kind: string;
   /** `performance.now()` of the page. */
   readonly t: number;
+  /** `Date.now()` of the page, the clock of the samples of the memory. */
+  readonly wall: number;
   /** Of a progress, the bytes read. */
   readonly bytesRead?: number;
   /** Of a result of the PCA, the variants it used. */
@@ -174,6 +190,20 @@ function instrument(): void {
         event: "start",
         kind: "",
         t: performance.now(),
+        wall: Date.now(),
+      });
+      // A worker that stops with no answer, as when wasm runs out of
+      // memory, is told by an error event, logged as the answer
+      // "workerError".
+      this.addEventListener("error", () => {
+        log.push({
+          worker,
+          url: name,
+          event: "in",
+          kind: "workerError",
+          t: performance.now(),
+          wall: Date.now(),
+        });
       });
       this.addEventListener("message", (event: MessageEvent<unknown>) => {
         const kind = kindOf(event.data);
@@ -188,6 +218,7 @@ function instrument(): void {
           event: "in",
           kind,
           t: performance.now(),
+          wall: Date.now(),
           ...(kind === "progress" && typeof data.bytesRead === "number"
             ? { bytesRead: data.bytesRead }
             : {}),
@@ -207,6 +238,7 @@ function instrument(): void {
         event: "out",
         kind: kindOf(message),
         t: performance.now(),
+        wall: Date.now(),
       });
       super.postMessage(message, options as StructuredSerializeOptions);
     }
@@ -2700,12 +2732,14 @@ function pcaOptionsJson(
 }
 
 /** The project file of a new project with the variants file at
-    `variants` loaded, saved by the application into MEASURE_DIR as
-    `name`. */
+    `variants` loaded, and the metadata file at `pops` with its column
+    `pop` chosen when it is given, saved by the application into
+    MEASURE_DIR as `name`. */
 async function savedProject(
   browser: Browser,
   variants: string,
   name: string,
+  pops: string | null = null,
 ): Promise<string> {
   const path = join(MEASURE_DIR, name);
   const context = await browser.newContext();
@@ -2716,6 +2750,12 @@ async function savedProject(
     await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible({
       timeout: 120_000,
     });
+    if (pops !== null) {
+      await goTo(page, "Individuals");
+      await pick(page, "Metadata file", pops);
+      await expect(page.getByText(/^All [\d,]+ individuals of /)).toBeVisible();
+      await chooseColumn(page, "pop");
+    }
     await page
       .getByRole("banner")
       .getByRole("button", { name: "Save project" })
@@ -2744,6 +2784,27 @@ async function projectWithPca(
     unknown
   >;
   project["analyses"] = [{ analysis: "pca", options }];
+  const path = base.replace(/\.popnei\.json$/, `_${suffix}.popnei.json`);
+  await writeFile(path, JSON.stringify(project, null, 2));
+  return path;
+}
+
+/** The project file at `base` with the LD decay's largest distance
+    `maxDist`, and its maximum MAF at its default, 0.95, written beside it
+    with `suffix`: the placeholder of the LD decay's panel has no options
+    until task 8.1 of the plan of stage 5. */
+async function projectWithLdDecay(
+  base: string,
+  suffix: string,
+  maxDist: number,
+): Promise<string> {
+  const project = JSON.parse(await readFile(base, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  project["analyses"] = [
+    { analysis: "ldDecay", options: { maxAllowedMaf: 0.95, maxDist } },
+  ];
   const path = base.replace(/\.popnei\.json$/, `_${suffix}.popnei.json`);
   await writeFile(path, JSON.stringify(project, null, 2));
   return path;
@@ -3076,6 +3137,529 @@ test.describe("IP6 D6 the times of the PCA", () => {
         "grown by",
         "3 s after the answer or the restart",
         "worker started again",
+      ],
+      rows,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------
+// PA2 D7, the memory and the time of the LD decay.
+
+/** The answers that end a request of the LD decay: those of every
+    request, and a worker that stopped with no answer. */
+const LD_ENDS = new Set([...ENDS, "workerError"]);
+
+/** How the end of the pass is found in the memory of the engine. When the
+    pass has ended popnei takes each population in turn: it copies the
+    distances that hold a pair into three arrays of 24 bytes a distance,
+    then fits the curve over them, which reads and takes no memory
+    (`calc_ld_and_dist` of popnei's crates/popnei/src/ld/dist.rs;
+    ldDecay.md, "Why it cannot run"). So the memory rises once for each
+    population after the pass, tens to hundreds of MB at the lock, and is
+    flat between: a rise is a run of samples each more than STEP_RISE
+    above the one before, of more than FIT_RISE in all, and the pass ended
+    at the first of the last rises, one for each population. It is not
+    told apart at distances whose copies are a few MB. */
+const STEP_RISE = 2e6;
+const FIT_RISE = 20e6;
+
+/** The distances of the dense file, from MEASURE_LD_DENSE, a list such
+    as "2000000", to check the measurement in minutes; those of the plan
+    otherwise. */
+const LD_DENSE_DISTS: readonly number[] = process.env["MEASURE_LD_DENSE"]
+  ?.split(",")
+  .map(Number) ?? [2_000_000, 4_000_000, 8_333_333];
+
+/** The gzipped VCF of `e2e/bigVcf.ts` named `name` in MEASURE_DIR, of
+    `numVars` variants of `numIndividuals` at the positions `where`,
+    written when it is not there, and the CSV of its individuals in three
+    populations beside it. */
+async function ldVcf(
+  name: string,
+  numVars: number,
+  numIndividuals: number,
+  where: VcfPositions,
+): Promise<{ vcf: string; pops: string }> {
+  await mkdir(MEASURE_DIR, { recursive: true });
+  const vcf = join(MEASURE_DIR, `${name}.vcf.gz`);
+  if (!existsSync(vcf)) {
+    const part = join(MEASURE_DIR, `${name}.part.vcf.gz`);
+    await writeBigVcf(part, numVars, numIndividuals, where);
+    await rename(part, vcf);
+  }
+  const pops = join(MEASURE_DIR, `${name}_pops.csv`);
+  await writeFile(pops, bigVcfPopsCsv(numIndividuals));
+  return { vcf, pops };
+}
+
+/** What one LD decay through the application gave. */
+interface LdRun {
+  /** The answer that ended the request, "result", "refused", "crashed"
+      or "workerError", or "the tab closed". */
+  readonly answer: string;
+  /** The text of the panel after an answer that is not a result. */
+  readonly words: string;
+  /** From the run posted to the calculation worker to its answer, or from
+      the Run to the tab closed. */
+  readonly runMs: number | null;
+  /** The engine's memory, the footprints of its processes summed: after
+      the load, before the Run; the largest while the LD decay ran; the
+      last sample before the answer, while the worker still held what
+      popnei took, which the tab would keep without the restart; and 3 s
+      after the restart. */
+  readonly before: number | null;
+  readonly peak: number | null;
+  readonly atAnswer: number | null;
+  readonly after: number | null;
+  /** Whether a new calculation worker was started after the answer. */
+  readonly restarted: boolean;
+  /** The time after the pass, which tells no progress: from the first
+      sample of the copy of the counts of the first population to the
+      answer, `null` when the rises of the copies were not found. */
+  readonly fitMs: number | null;
+  /** The memory the rises of the copies gained, all populations. */
+  readonly riseBytes: number | null;
+  /** The load average of 1 minute of the machine at the Run. */
+  readonly load: number;
+}
+
+/** Opens the project file at `project` on a new page, loads the variants
+    file at `variants` that it asks for, and runs the LD decay from the
+    placeholder of its panel in the Analyses step, with the memory of the
+    engine sampled every `pauseMs` and the time of a sample; the pass
+    ended at the first of the last `numPops` rises of the memory. */
+async function ldDecayOnce(
+  browser: Browser,
+  browserName: string,
+  project: string,
+  variants: string,
+  timeout: number,
+  pauseMs: number,
+  numPops: number,
+): Promise<LdRun> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const closed = { crashed: false, at: 0 };
+  page.on("crash", () => {
+    closed.crashed = true;
+    closed.at = Date.now();
+  });
+  const sampler = sampleMemory(browser, browserName, pauseMs);
+  try {
+    await page.addInitScript(instrument);
+    await page.goto("popgen.html#variants");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Open project…" })
+      .click();
+    await (await chooser).setFiles(project);
+    await expect(page.getByRole("status").last()).toHaveText(/^Opened /, {
+      timeout: 60_000,
+    });
+    await pick(page, "Variants file", variants);
+    await expect(
+      page
+        .getByRole("region", { name: "Variants file" })
+        .getByText(/^[\d,]+ individuals$/),
+    ).toBeVisible({ timeout: 300_000 });
+    await goTo(page, "Analyses");
+    const region = page.getByRole("region", { name: "LD decay", exact: true });
+    // The memory settles after the load before it is taken.
+    await page.waitForTimeout(2000);
+    const logged = (await logOf(page)).length;
+    const load = loadavg()[0] ?? Number.NaN;
+    const clickedAt = Date.now();
+    await region.getByRole("button", { name: "Run", exact: true }).click();
+    let ended: readonly Logged[] = [];
+    try {
+      await expect
+        .poll(
+          async () => {
+            if (closed.crashed) return true;
+            ended = (await logOf(page)).slice(logged).filter(isCalc);
+            return ended.some((l) => l.event === "in" && LD_ENDS.has(l.kind));
+          },
+          { timeout, intervals: [500] },
+        )
+        .toBe(true);
+    } catch (error) {
+      if (!closed.crashed && !/crash|closed/i.test(String(error))) throw error;
+      closed.crashed = true;
+      closed.at = closed.at === 0 ? Date.now() : closed.at;
+    }
+    const at = (from: number, to: number): readonly Sample[] =>
+      sampler.samples.filter((s) => s.t >= from && s.t <= to);
+    const beforeRun = at(0, clickedAt).at(-1)?.total ?? null;
+    if (closed.crashed) {
+      await sampler.stop();
+      const during = at(clickedAt, closed.at).map((s) => s.total);
+      return {
+        answer: "the tab closed",
+        words: "",
+        runMs: closed.at - clickedAt,
+        before: beforeRun,
+        peak: during.length === 0 ? null : Math.max(...during),
+        atAnswer: null,
+        after: null,
+        restarted: false,
+        fitMs: null,
+        riseBytes: null,
+        load,
+      };
+    }
+    const run = ended.find((l) => l.event === "out" && l.kind === "run");
+    const answer = ended.find((l) => l.event === "in" && LD_ENDS.has(l.kind));
+    if (run === undefined || answer === undefined) {
+      throw new Error("no run, or no answer to it, in the log of the worker");
+    }
+    await expect(region.getByRole("progressbar")).toHaveCount(0, {
+      timeout: 60_000,
+    });
+    const words =
+      answer.kind === "result"
+        ? ""
+        : (await region.innerText()).replace(/\s+/g, " ").trim();
+    // The restart comes after the answer: waited for up to 15 s, and the
+    // memory taken 3 s after it.
+    const startedAgain = async (): Promise<boolean> =>
+      (await logOf(page)).some(
+        (l) => isCalc(l) && l.event === "start" && l.worker > answer.worker,
+      );
+    const restarted = await expect
+      .poll(startedAgain, { timeout: 15_000, intervals: [100] })
+      .toBe(true)
+      .then(
+        () => true,
+        () => false,
+      );
+    await page.waitForTimeout(3000);
+    await sampler.stop();
+    const during = at(clickedAt, answer.wall);
+    const totals = during.map((s) => s.total);
+    const total = (i: number): number => during[i]?.total ?? 0;
+    // The rises: runs of samples each more than STEP_RISE above the one
+    // before, from the first sample above to the last, of more than
+    // FIT_RISE in all.
+    const rises: { readonly first: number; readonly bytes: number }[] = [];
+    for (let i = 1; i < during.length; i += 1) {
+      if (total(i) - total(i - 1) <= STEP_RISE) continue;
+      let last = i;
+      while (
+        last + 1 < during.length &&
+        total(last + 1) - total(last) > STEP_RISE
+      ) {
+        last += 1;
+      }
+      const bytes = total(last) - total(i - 1);
+      if (bytes > FIT_RISE) rises.push({ first: i, bytes });
+      i = last;
+    }
+    const copies = rises.length >= numPops ? rises.slice(-numPops) : null;
+    const passEnd = copies?.[0]?.first;
+    return {
+      answer: answer.kind,
+      words,
+      runMs: answer.t - run.t,
+      before: beforeRun,
+      peak: totals.length === 0 ? null : Math.max(...totals),
+      atAnswer: during.at(-1)?.total ?? null,
+      after: sampler.samples.at(-1)?.total ?? null,
+      restarted,
+      fitMs:
+        passEnd === undefined ? null : answer.wall - (during[passEnd]?.t ?? 0),
+      riseBytes:
+        copies === null ? null : copies.reduce((sum, r) => sum + r.bytes, 0),
+      load,
+    };
+  } finally {
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+/** The cells of one run of the LD decay in a table: its answer, the time,
+    the memory, the time after the pass and the rises of the copies when
+    `withFit`, and the load; "" for what a closed tab left unmeasured. */
+function ldCells(r: LdRun, withFit: boolean): string[] {
+  const seconds = (x: number | null): string =>
+    x === null ? "" : `${(x / 1000).toFixed(1)} s`;
+  const size = (x: number | null): string => (x === null ? "" : mb(x));
+  return [
+    r.words === "" ? r.answer : `${r.answer}: "${r.words.slice(0, 160)}"`,
+    seconds(r.runMs),
+    size(r.before),
+    size(r.peak),
+    size(r.peak === null || r.before === null ? null : r.peak - r.before),
+    size(r.atAnswer),
+    size(r.after),
+    ...(withFit ? [seconds(r.fitMs), size(r.riseBytes)] : []),
+    r.load.toFixed(1),
+  ];
+}
+
+/** The heads of the columns of `ldCells`. */
+function ldColumns(withFit: boolean): readonly string[] {
+  return [
+    "answer",
+    "run posted to answer",
+    "memory before the Run",
+    "largest during it",
+    "grown by",
+    "at the answer, the worker still holding it: without the restart",
+    "3 s after the restart: with it",
+    ...(withFit
+      ? [
+          "after the pass, the copies and the fits: from the first copy to the answer",
+          "the memory the copies took",
+        ]
+      : []),
+    "load average of 1 minute at the Run",
+  ];
+}
+
+/** That the run `r` measured a number in every column of `ldCells`: every
+    one after a result, the fit only when `withFit`, all but the fit after
+    a refusal or a crash, and the time and the memory before and during
+    it after a tab that closed. */
+function expectMeasured(r: LdRun, what: string, withFit: boolean): void {
+  const wanted: readonly (keyof LdRun)[] =
+    r.answer === "the tab closed"
+      ? ["runMs", "before", "peak", "load"]
+      : [
+          "runMs",
+          "before",
+          "peak",
+          "atAnswer",
+          "after",
+          "load",
+          ...(withFit && r.answer === "result"
+            ? (["fitMs", "riseBytes"] as const)
+            : []),
+        ];
+  for (const key of wanted) {
+    const value = r[key];
+    expect(
+      typeof value === "number" && Number.isFinite(value),
+      `${what}: ${key}`,
+    ).toBe(true);
+  }
+  expect(r.before ?? 0, `${what}: the memory before`).toBeGreaterThan(0);
+  expect(r.peak ?? 0, `${what}: the largest memory`).toBeGreaterThan(0);
+  if (r.answer !== "the tab closed") {
+    expect(r.restarted, `${what}: the worker started again`).toBe(true);
+  }
+}
+
+/** The head of a table of the LD decay: the engine, the machine, the
+    load, the file `what` and how the memory was sampled. */
+function ldHead(
+  browser: Browser,
+  browserName: string,
+  loadBefore: string,
+  what: string,
+  pauseMs: number,
+  withFit: boolean,
+): string {
+  const fit = withFit
+    ? `; after the pass popnei copies the counts of each population in turn and fits its curve, with no progress, and the memory rises once for each population: a rise is a run of samples each more than ${mb(STEP_RISE)} above the one before, of more than ${mb(FIT_RISE)} in all, and the time after the pass is from the first sample of the first of the last rises, one for each population, to the answer`
+    : "";
+  return `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; ${what}; each LD decay run from the placeholder of its panel on a new page, after the project file that sets its largest distance opened and the file loaded; the memory is the footprints of the engine's processes summed, a sample every ${String(pauseMs)} ms and the time of a sample${fit}`;
+}
+
+test.describe("PA2 D7 the memory and the time of the LD decay", () => {
+  test("PA2 D7 the growth of the engine and its size 3 s after an LD decay, with the restart and without it: 20,000 variants every 1,000 bp and 1,000 individuals in three populations, at 100,000 and 1,000,000 bp", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(2 * 3_600_000);
+    const pauseMs = 20;
+    const { vcf, pops } = await ldVcf("ld_1000x20000", 20_000, 1_000, {
+      every: 1000,
+    });
+    const base = await savedProject(
+      browser,
+      vcf,
+      `ld_1000x20000_${browserName}.popnei.json`,
+      pops,
+    );
+    const loadBefore = machineLoad();
+    const rows: string[][] = [];
+    for (const maxDist of [100_000, 1_000_000]) {
+      const project = await projectWithLdDecay(base, String(maxDist), maxDist);
+      for (let k = 0; k < REPEATS; k++) {
+        const ran = await ldDecayOnce(
+          browser,
+          browserName,
+          project,
+          vcf,
+          1_800_000,
+          pauseMs,
+          3,
+        );
+        expect(ran.answer).toBe("result");
+        expectMeasured(
+          ran,
+          `${String(maxDist)} bp, run ${String(k + 1)}`,
+          false,
+        );
+        rows.push([
+          maxDist.toLocaleString("en-US"),
+          String(k + 1),
+          ...ldCells(ran, false),
+        ]);
+        process.stdout.write(`${rows.at(-1)?.join(" | ") ?? ""}\n`);
+      }
+    }
+    report(
+      "PA2 D7 the growth of the engine and its size after an LD decay, with the restart and without it",
+      ldHead(
+        browser,
+        browserName,
+        loadBefore,
+        "a gzipped VCF of e2e/bigVcf.ts, 20,000 variants every 1,000 bp on one chromosome, 1,000 individuals in three populations of 334, 333 and 333, the filters of a new project, the missing data at 0.1",
+        pauseMs,
+        false,
+      ),
+      ["largest distance, bp", "run", ...ldColumns(false)],
+      rows,
+    );
+  });
+
+  test("PA2 D7 at the lock of 1 GB of counts: 25,000,000 bp for one population and 8,333,333 for three, on 20,000 variants of 100 individuals at positions drawn at random over 26 Mb", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(3 * 3_600_000);
+    const pauseMs = 100;
+    const { vcf, pops } = await ldVcf("ld_lock_100x20000", 20_000, 100, {
+      randomOver: 26_000_000,
+    });
+    const cases = [
+      {
+        what: "one population, 25,000,000 bp",
+        base: await savedProject(
+          browser,
+          vcf,
+          `ld_lock_one_${browserName}.popnei.json`,
+        ),
+        maxDist: 25_000_000,
+        numPops: 1,
+      },
+      {
+        what: "three populations, 8,333,333 bp",
+        base: await savedProject(
+          browser,
+          vcf,
+          `ld_lock_three_${browserName}.popnei.json`,
+          pops,
+        ),
+        maxDist: 8_333_333,
+        numPops: 3,
+      },
+    ];
+    const loadBefore = machineLoad();
+    const rows: string[][] = [];
+    for (const c of cases) {
+      const project = await projectWithLdDecay(
+        c.base,
+        String(c.maxDist),
+        c.maxDist,
+      );
+      const ran = await ldDecayOnce(
+        browser,
+        browserName,
+        project,
+        vcf,
+        3_600_000,
+        pauseMs,
+        c.numPops,
+      );
+      // A tab that closes is the outcome of its case, and the next case
+      // is run.
+      expectMeasured(ran, c.what, true);
+      rows.push([
+        c.what,
+        ran.answer === "the tab closed" ? "no" : "yes",
+        ...ldCells(ran, true),
+      ]);
+      process.stdout.write(`${rows.at(-1)?.join(" | ") ?? ""}\n`);
+    }
+    report(
+      "PA2 D7 at the lock of 1 GB of counts",
+      ldHead(
+        browser,
+        browserName,
+        loadBefore,
+        "a gzipped VCF of e2e/bigVcf.ts, 20,000 variants on one chromosome at positions drawn at random from 1 to 26,000,000, 100 individuals, with no metadata file, one population, in the first case, and in three populations of 34, 33 and 33 in the second, the filters of a new project, the missing data at 0.1",
+        pauseMs,
+        true,
+      ),
+      ["case", "the tab held", ...ldColumns(true)],
+      rows,
+    );
+  });
+
+  test("PA2 D7 the dense file: 1,000 individuals in three populations, a variant every 100 bp, at 2,000,000, 4,000,000 and 8,333,333 bp until a tab closes or popnei refuses", async ({
+    browser,
+    browserName,
+  }) => {
+    test.setTimeout(10 * 3_600_000);
+    const pauseMs = 1000;
+    const loadBefore = machineLoad();
+    const rows: string[][] = [];
+    for (const maxDist of LD_DENSE_DISTS) {
+      // The file reaches 500,000 bp beyond the distance, so that the pass
+      // holds a whole distance of variants for its last 5,000.
+      const numVars = Math.ceil(maxDist / 100) + 5_000;
+      const name = `ld_dense_1000x${String(numVars)}`;
+      const { vcf, pops } = await ldVcf(name, numVars, 1_000, { every: 100 });
+      const base = await savedProject(
+        browser,
+        vcf,
+        `${name}_${browserName}.popnei.json`,
+        pops,
+      );
+      const project = await projectWithLdDecay(base, String(maxDist), maxDist);
+      const ran = await ldDecayOnce(
+        browser,
+        browserName,
+        project,
+        vcf,
+        6 * 3_600_000,
+        pauseMs,
+        3,
+      );
+      // The time after the pass is taken at the lock, above: here the
+      // blocks of variants read make rises too, and a sample is taken
+      // every second.
+      expectMeasured(ran, `${String(maxDist)} bp`, false);
+      rows.push([
+        maxDist.toLocaleString("en-US"),
+        numVars.toLocaleString("en-US"),
+        ran.answer === "the tab closed" ? "no" : "yes",
+        ...ldCells(ran, false),
+      ]);
+      process.stdout.write(`${rows.at(-1)?.join(" | ") ?? ""}\n`);
+      if (ran.answer !== "result") break;
+    }
+    report(
+      "PA2 D7 the dense file",
+      ldHead(
+        browser,
+        browserName,
+        loadBefore,
+        "gzipped VCFs of e2e/bigVcf.ts, a variant every 100 bp on one chromosome up to 500,000 bp beyond the largest distance, 1,000 individuals in three populations of 334, 333 and 333, the filters of a new project, the missing data at 0.1; the distances tried from the smallest, stopping at the first that closes the tab or is not a result",
+        pauseMs,
+        false,
+      ),
+      [
+        "largest distance, bp",
+        "variants of the file",
+        "the tab held",
+        ...ldColumns(false),
       ],
       rows,
     );

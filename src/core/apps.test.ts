@@ -113,7 +113,7 @@ describe("VS5 D1 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components and the diversity", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components, the diversity and the LD decay", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
@@ -122,16 +122,18 @@ describe("VS5 D1 apps.ts", () => {
       "filterCounts",
       "pca",
       "diversity",
+      "ldDecay",
     ]);
   });
 
-  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components and the diversity in the Analyses step, and no other analysis has one", () => {
+  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components, the diversity and the LD decay in the Analyses step, and no other analysis has one", () => {
     expect(POPGEN_ANALYSIS_STEPS).toStrictEqual({
       individualChecks: "variants",
       variantChecks: "variants",
       filterCounts: "variants",
       pca: "analyses",
       diversity: "analyses",
+      ldDecay: "analyses",
     });
     expect(Object.keys(POPGEN_ANALYSIS_STEPS).toSorted()).toEqual(
       POPGEN_ANALYSES.map((def) => def.id).toSorted(),

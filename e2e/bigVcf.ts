@@ -12,7 +12,14 @@
  * drawn from a generator of a fixed seed, with the frequency of the
  * allele of each variant between 0.1 and 0.9; they are not that script's
  * genotypes, and no number of them is read: the file is for the time of
- * a pass.
+ * a pass, and for the memory and the time of the LD decay, which do not
+ * depend on LD (docs/plans/population-analyses.md, "Where the specs are
+ * thin").
+ *
+ * Its variants are on one chromosome, 1,000 bp apart from 1,000 by
+ * default, or as many base pairs apart as it is given, or at positions
+ * drawn at random over a length it is given, from a generator of another
+ * seed, so that the pairs of the LD decay fall at most distances.
  */
 import { createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
@@ -46,11 +53,42 @@ function generator(seed: number): () => number {
   };
 }
 
+/** Where the variants of the VCF are: `every` base pairs apart from
+    `every`, or at positions drawn at random from 1 to `randomOver`. */
+export type VcfPositions =
+  { readonly every: number } | { readonly randomOver: number };
+
+/** The positions of `numVars` variants, increasing, each at least 1
+    above the one before: `every` base pairs apart, or drawn at random over
+    `randomOver` and sorted, a position drawn twice moved up by 1 bp. */
+function positionsOf(numVars: number, where: VcfPositions): Float64Array {
+  const positions = new Float64Array(numVars);
+  if ("every" in where) {
+    for (let v = 0; v < numVars; v += 1) positions[v] = where.every * (v + 1);
+    return positions;
+  }
+  const random = generator(7);
+  for (let v = 0; v < numVars; v += 1) {
+    positions[v] = 1 + Math.floor(random() * where.randomOver);
+  }
+  positions.sort();
+  for (let v = 1; v < numVars; v += 1) {
+    const before = positions[v - 1] ?? 0;
+    if ((positions[v] ?? 0) <= before) positions[v] = before + 1;
+  }
+  return positions;
+}
+
 /** The lines of a VCF of `numVars` variants of `numIndividuals`
-    individuals, 4 bytes a genotype and about 30 more a variant, in pieces
-    of 2,000 variants. */
-function* vcfLines(numVars: number, numIndividuals: number): Generator<Buffer> {
+    individuals at the positions `where`, 4 bytes a genotype and about 30
+    more a variant, in pieces of 2,000 variants. */
+function* vcfLines(
+  numVars: number,
+  numIndividuals: number,
+  where: VcfPositions,
+): Generator<Buffer> {
   const random = generator(42);
+  const positions = positionsOf(numVars, where);
   const samples = Array.from({ length: numIndividuals }, (_, i) =>
     individual(i, numIndividuals),
   ).join("\t");
@@ -76,7 +114,7 @@ function* vcfLines(numVars: number, numIndividuals: number): Generator<Buffer> {
     }
     batch.push(
       Buffer.from(
-        `chr1\t${String(1000 * (v + 1))}\tvar${String(v)}\tA\tT\t.\t.\t.\tGT\t`,
+        `chr1\t${String(positions[v] ?? 0)}\tvar${String(v)}\tA\tT\t.\t.\t.\tGT\t`,
       ),
       Buffer.from(genotypes),
     );
@@ -89,14 +127,16 @@ function* vcfLines(numVars: number, numIndividuals: number): Generator<Buffer> {
 }
 
 /** Writes at `path` a VCF of `numVars` variants of `numIndividuals`
-    individuals, 1,000 when it is not given, compressed with gzip when
-    `path` ends in `.gz`. */
+    individuals, 1,000 when it is not given, at the positions `where`,
+    1,000 bp apart when it is not given, compressed with gzip when `path`
+    ends in `.gz`. */
 export async function writeBigVcf(
   path: string,
   numVars: number,
   numIndividuals = NUM_INDIVIDUALS,
+  where: VcfPositions = { every: 1000 },
 ): Promise<void> {
-  const lines = Readable.from(vcfLines(numVars, numIndividuals));
+  const lines = Readable.from(vcfLines(numVars, numIndividuals, where));
   await (path.endsWith(".gz")
     ? pipeline(lines, createGzip({ level: 1 }), createWriteStream(path))
     : pipeline(lines, createWriteStream(path)));
