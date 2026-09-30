@@ -2864,6 +2864,61 @@ describe("PA2 D2 the runner's LD decay", () => {
     );
   });
 
+  test("populations of 30 and 70, a maximum MAF of 0.8, a smallest distance of 1,000 and 20 bins are each passed on: popnei's numbers of that job to the last digit", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    const everyone = [...a[1], ...b[1]];
+    const job: LdDecayJob = {
+      ...ldDecayJob([
+        ["pop_a", everyone.slice(0, 30)],
+        ["pop_b", everyone.slice(30)],
+      ]),
+      minDist: 1000,
+      numBins: 20,
+      maxAllowedMaf: 0.8,
+    };
+    const result = resultOf(opened("ld.nei").run(job, ignore), "ldDecay");
+    // From calcLdAndDistPerPop of js-v0.1.0-dev.3 in node, 30 September
+    // 2026, over ld.nei with the missing data filter at 0.1 and this job.
+    expect([...result.numIndividuals]).toEqual([30, 70]);
+    expect([...result.numVars]).toEqual([380, 419]);
+    expect(result.smallestDist.length).toBe(20);
+    expect(result.numPairs.length).toBe(40);
+    const pairs = [0, 1].map((at) =>
+      result.numPairs
+        .subarray(at * 20, (at + 1) * 20)
+        .reduce((sum, n) => sum + n, 0),
+    );
+    expect(pairs).toEqual([22721, 27598]);
+    expect([result.smallestDist[0], result.largestDist[0]]).toEqual([
+      1000, 5950,
+    ]);
+    expect([result.smallestDist[19], result.largestDist[19]]).toEqual([
+      95051, 100000,
+    ]);
+    expect([result.numPairs[0], result.numPairs[20]]).toEqual([1432, 1737]);
+    expect([result.meanR2[0], result.meanR2[20]]).toEqual([
+      0.3223283873712064, 0.2951918679844314,
+    ]);
+    expect([result.sdR2[0], result.sdR2[20]]).toEqual([
+      0.28459515863794016, 0.26644810520149775,
+    ]);
+    expect([result.numPairs[39], result.meanR2[39]]).toEqual([
+      1067, 0.02320785441270928,
+    ]);
+    expect([...result.rhoPerBp]).toEqual([
+      0.0002770516279266476, 0.00031026461693426104,
+    ]);
+    expect([...result.r2AtZero]).toEqual([
+      0.47933884297520657, 0.46517119244391963,
+    ]);
+    expect([...result.halfDist]).toEqual([
+      8705.048775242918, 7104.846292628652,
+    ]);
+  });
+
   // The only one: given to popnei as a field of its own, by
   // Object.fromEntries, popnei calculates it and the runner throws; given by
   // an assignment, popnei would be given no population and refuse.

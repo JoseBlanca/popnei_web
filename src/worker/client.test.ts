@@ -1120,8 +1120,9 @@ type Step =
   | { readonly kind: "pick" }
   /** The read of a load picked before asked for again. */
   | { readonly kind: "reread"; readonly load: number }
-  /** A run on a load picked before. */
-  | { readonly kind: "run"; readonly load: number }
+  /** A run on a load picked before, of an LD decay when `ld`, which
+      starts the worker again after it ends done or refused. */
+  | { readonly kind: "run"; readonly load: number; readonly ld: boolean }
   /** A write on a load picked before, whose file is larger than
       WRITE_RESTART_BYTES when `large`. */
   | { readonly kind: "write"; readonly load: number; readonly large: boolean }
@@ -1160,7 +1161,11 @@ const step: fc.Arbitrary<Step> = fc.oneof(
   },
   {
     weight: 4,
-    arbitrary: fc.record({ kind: fc.constant("run" as const), load: fc.nat() }),
+    arbitrary: fc.record({
+      kind: fc.constant("run" as const),
+      load: fc.nat(),
+      ld: fc.boolean(),
+    }),
   },
   {
     weight: 2,
@@ -1356,10 +1361,12 @@ function stampedOpened(id: number, fileId: string): unknown {
   return { kind: "opened", id, individuals: [fileId], ploidy: 2 };
 }
 
-/** A result whose numVars is `stamp`, the id of its run. */
+/** A result whose numVars is `stamp`, the id of its run: of an LD decay
+    when the key ends in "D", of a diversity otherwise. */
 function stampedResult(id: number, key: string, stamp: number): unknown {
   const passStats = { ...RESULT.passStats, numVars: stamp };
-  return { kind: "result", id, key, result: { ...RESULT, passStats } };
+  const result = key.endsWith("D") ? ldDecayResult() : RESULT;
+  return { kind: "result", id, key, result: { ...result, passStats } };
 }
 
 /** A written whose numVars is `stamp`, the id of its write, and whose
@@ -1510,8 +1517,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     watched.pending = null;
     if (how === 2) {
       deliver(index, { kind: "refused", id: pending.id, message: "refused" });
-      if (pending.kind === "write") {
-        expectEnded(watched, true, `the write ${pending.key} refused`);
+      if (pending.kind === "write" || isLdDecay(pending)) {
+        expectEnded(
+          watched,
+          true,
+          `the ${pending.kind} ${pending.key} refused`,
+        );
       }
       return;
     }
@@ -1522,8 +1533,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         name: "f.nei",
         message: "short",
       });
-      if (pending.kind === "write") {
-        expectEnded(watched, false, `the write ${pending.key} reopenFailed`);
+      if (pending.kind === "write" || isLdDecay(pending)) {
+        expectEnded(
+          watched,
+          false,
+          `the ${pending.kind} ${pending.key} reopenFailed`,
+        );
       }
       return;
     }
@@ -1533,6 +1548,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         return;
       case "run":
         deliver(index, stampedResult(pending.id, pending.key, pending.id));
+        expectEnded(watched, isLdDecay(pending), `the run ${pending.key} done`);
         return;
       case "write":
         deliver(index, stampedWritten(pending.id, pending.key, pending.id));
@@ -1545,8 +1561,15 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     }
   }
 
-  /** After the answer of a write, its worker was ended or not, as `ended`
-      says it should be. */
+  /** Whether a request is the run of an LD decay. */
+  function isLdDecay(
+    request: ToRunner,
+  ): request is Extract<ToRunner, { readonly kind: "run" }> {
+    return request.kind === "run" && request.job.analysis === "ldDecay";
+  }
+
+  /** After the answer of a write or a run, its worker was ended or not, as
+      `ended` says it should be. */
   function expectEnded(watched: Watched, ended: boolean, what: string): void {
     if (watched.fake.terminated !== ended) {
       seen.wrongRestart.push(
@@ -1631,8 +1654,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       }
       case "run": {
         const load = loads[next.load % Math.max(loads.length, 1)] ?? "none";
-        const key = `k${String(counts.length)}`;
-        const run = client.run(key, job(load), noProgress);
+        const key = `k${String(counts.length)}${next.ld ? "D" : ""}`;
+        const run = client.run(
+          key,
+          next.ld ? ldDecayJob(load) : job(load),
+          noProgress,
+        );
         track(run.outcome, { kind: "run", id: run.id, key });
         cancels.push(() => {
           run.cancel();
@@ -1819,7 +1846,7 @@ describe("VS1 D5 the write of the client: the properties", () => {
     vi.restoreAllMocks();
   });
 
-  test("the worker is ended after a write larger than WRITE_RESTART_BYTES or refused, and not after a smaller one", async () => {
+  test("the worker is ended after a write larger than WRITE_RESTART_BYTES or refused, and after an LD decay done or refused, and not after a smaller write, a diversity or a reopenFailed", async () => {
     await fc.assert(
       fc.asyncProperty(steps, async (sequence) => {
         expect((await explore(sequence)).wrongRestart).toEqual([]);
@@ -2966,10 +2993,10 @@ describe("IP9 a crash of a worker reaches the console", () => {
 });
 
 /** An LD decay of two individuals of its list, one in each population. */
-function ldDecayJob(): LdDecayJob {
+function ldDecayJob(fileId = "A"): LdDecayJob {
   return {
     analysis: "ldDecay",
-    fileId: "A",
+    fileId,
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
     individuals: ["s1", "s2"],
     pops: [
@@ -3132,4 +3159,47 @@ describe("PA2 D4 the restart after an LD decay", () => {
       expect(order).toEqual([`k1 ${kind}`, "k6 failed"]);
     },
   );
+
+  test("a crashed of a defect during a diversity gives its outcome before the worker is ended too: when no new worker can be made, the diversity fails as a defect and then k6 fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "opened",
+      id: lastSent(first).id,
+      individuals: names(2),
+      ploidy: 2,
+    });
+    const k1 = client.run("k1", job("A"), noProgress);
+    const k6 = client.run("k6", job("A"), noProgress);
+    const order: string[] = [];
+    void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+    void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+    emit(first, {
+      kind: "crashed",
+      message: "popnei_web defect: a population popnei did not give",
+    });
+    await now(k6.outcome);
+    expect(await now(k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: "a population popnei did not give" },
+    });
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["k1 failed", "k6 failed"]);
+  });
 });

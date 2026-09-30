@@ -245,8 +245,10 @@ export function createClient(config: {
 
   /** Whether the worker is started again after the run ends done or
       refused by popnei: a large PCA, and every LD decay, whose blocks of
-      variants and counts leave hundreds of MB in the memory of wasm
-      whatever its size (client.md, "The LD decay, and the restart after
+      variants and counts leave the memory of wasm larger, 64 MB for 100
+      individuals and 20,000 variants at 100,000 bp and 0.4 to 1.1 GB for
+      1,000 individuals in node, far above the 25 MB of the bound of a
+      write and of a PCA (client.md, "The LD decay, and the restart after
       it"). */
   function restartsAfterRun(request: JobRequest): boolean {
     return (

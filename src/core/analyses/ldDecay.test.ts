@@ -13,6 +13,7 @@ import {
   ldDecayRows,
   ldPlotOmittedText,
   maxDistFor,
+  maxDistReason,
   refusalText,
 } from "./ldDecay.ts";
 import { countsOf, individualStatsOf } from "../apps.ts";
@@ -29,7 +30,7 @@ import {
 } from "../project.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import { createStore } from "../store.ts";
-import type { WorkerClient } from "../store.ts";
+import type { Warning, WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
 import type {
   Cell,
@@ -243,6 +244,8 @@ interface PopOf {
   /** The pairs of each bin, 50 of them; none by default. */
   readonly pairs?: readonly number[];
   readonly rhoPerBp?: number;
+  /** The fitted curve at 0; that of 50 individuals by default. */
+  readonly r2AtZero?: number;
   readonly halfDist?: number;
 }
 
@@ -264,7 +267,9 @@ function resultOf(pops: readonly PopOf[], maxDist = 100_000): LdDecayResult {
     rhoPerBp: Float64Array.from(pops.map((pop) => pop.rhoPerBp ?? 0.0003)),
     r2AtZero: Float64Array.from(
       pops.map((pop) =>
-        Number.isNaN(pop.rhoPerBp ?? 0) ? Number.NaN : 0.46942148760330576,
+        Number.isNaN(pop.rhoPerBp ?? 0)
+          ? Number.NaN
+          : (pop.r2AtZero ?? 0.46942148760330576),
       ),
     ),
     halfDist: Float64Array.from(pops.map((pop) => pop.halfDist ?? 7000)),
@@ -654,7 +659,17 @@ describe("PA2 D5 fittedR2 and ldDecayCurve", () => {
   });
 
   test("ldDecayCurve gives 200 points evenly spaced from 0 to the largest distance, and the curve at each", () => {
-    const curve = ldDecayCurve(flowResult(), 1, 100_000);
+    // pop_b of 100 individuals, so that the n of pop_a would give another
+    // curve.
+    const r = resultOf([
+      flowPop("pop_a", { rhoPerBp: rhoA }),
+      flowPop("pop_b", {
+        individuals: 100,
+        rhoPerBp: rhoB,
+        r2AtZero: 0.46198347107438015,
+      }),
+    ]);
+    const curve = ldDecayCurve(r, 1, 100_000);
     if (curve === null) {
       throw new Error("pop_b has a curve");
     }
@@ -664,8 +679,8 @@ describe("PA2 D5 fittedR2 and ldDecayCurve", () => {
     expect(curve.x[0]).toBe(0);
     expect(curve.x[1]).toBe(100_000 / 199);
     expect(curve.x[199]).toBe(100_000);
-    expect(curve.y[0]).toBe(0.46942148760330576);
-    expect(curve.y[199]).toBe(fittedR2(100_000, rhoB, 50));
+    expect(curve.y[0]).toBe(0.46198347107438015);
+    expect(curve.y[199]).toBe(fittedR2(100_000, rhoB, 100));
   });
 
   test("ldDecayCurve of a population the result does not have throws a defect", () => {
@@ -1032,6 +1047,25 @@ describe("PA2 D5 the rows and the CSV of the two tables", () => {
       r2AtZero: 0.46942148760330576,
       rhoPerBp: 0.00029996668947275404,
     });
+    const other = resultOf([
+      flowPop("pop_a"),
+      flowPop("pop_b", {
+        individuals: 100,
+        variants: 419,
+        rhoPerBp: 0.00031,
+        r2AtZero: 0.46198347107438015,
+        halfDist: 7104.846292628652,
+      }),
+    ]);
+    expect(ldDecayRows(other)[1]).toStrictEqual({
+      population: "pop_b",
+      individuals: 100,
+      variants: 419,
+      pairs: 29367,
+      halfDist: 7104.846292628652,
+      r2AtZero: 0.46198347107438015,
+      rhoPerBp: 0.00031,
+    });
   });
 
   test("ldBinRows gives one row per population and bin, the bins of a population together, null for no pair", () => {
@@ -1050,6 +1084,22 @@ describe("PA2 D5 the rows and the CSV of the two tables", () => {
       meanR2: 0.2,
       sdR2: 0.1,
     });
+    expect(rows[1]).toStrictEqual({
+      population: "pop_a",
+      from: 2001,
+      to: 4000,
+      pairs: 587,
+      meanR2: 0.2,
+      sdR2: 0.1,
+    });
+    expect(rows[52]).toStrictEqual({
+      population: "pop_b",
+      from: 4001,
+      to: 6000,
+      pairs: 10,
+      meanR2: 0.2,
+      sdR2: 0.1,
+    });
     expect(rows[50]).toStrictEqual({
       population: "pop_b",
       from: 1,
@@ -1064,17 +1114,29 @@ describe("PA2 D5 the rows and the CSV of the two tables", () => {
     const r = resultOf([
       flowPop("pop,a", { halfDist: Number.NaN, rhoPerBp: Number.NaN }),
     ]);
-    expect(ldDecayCsv(flowResult()).split("\n").slice(0, 2)).toStrictEqual([
-      "population,individuals,variants,pairs,half_distance_bp,r2_at_distance_0,rho_per_bp",
-      "pop_a,50,432,29367,7548.08187836982,0.46942148760330576,0.00029996668947275404",
-    ]);
+    expect(ldDecayCsv(flowResult())).toBe(
+      [
+        "population,individuals,variants,pairs,half_distance_bp,r2_at_distance_0,rho_per_bp",
+        "pop_a,50,432,29367,7548.08187836982,0.46942148760330576,0.00029996668947275404",
+        "pop_b,50,432,29367,7339.709512618931,0.46942148760330576,0.00030848266256738914",
+        "",
+      ].join("\n"),
+    );
     expect(ldDecayCsv(r)).toBe(
       'population,individuals,variants,pairs,half_distance_bp,r2_at_distance_0,rho_per_bp\n"pop,a",50,432,29367,,,\n',
     );
-    expect(ldBinsCsv(flowResult()).split("\n").slice(0, 2)).toStrictEqual([
+    const bins = ldBinsCsv(flowResult()).split("\n");
+    expect(bins).toHaveLength(102);
+    expect(bins.slice(0, 3)).toStrictEqual([
       "population,smallest_dist,largest_dist,num_pairs,mean_r2,sd_r2",
       "pop_a,1,2000,745,0.3104664289575117,0.28243883665741665",
+      "pop_a,2001,4000,587,0.1,0.2",
     ]);
+    expect(bins.slice(50, 52)).toStrictEqual([
+      "pop_a,98001,100000,452,0.025953462391956096,0.2",
+      "pop_b,1,2000,745,0.31876304803774247,0.2814576610764838",
+    ]);
+    expect(bins[101]).toBe("");
   });
 });
 
@@ -1239,5 +1301,192 @@ describe("PA2 D6 the key of the LD decay", () => {
       filters: [MISSING_DATA],
       options: { maxDist: 100_000, maxAllowedMaf: 0.95 },
     });
+  });
+});
+
+describe("PA2 D5 maxDistReason, the reason beside the field of the distance", () => {
+  test("gives the reason of the largest distance not typed, whatever else locks, and null once it is typed", () => {
+    expect(maxDistReason(project({ ld: null }))).toBe(NO_DISTANCE);
+    expect(maxDistReason(project({ column: null, ld: null }))).toBe(
+      NO_DISTANCE,
+    );
+    expect(maxDistReason(project())).toBeNull();
+    expect(
+      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 9_000_000 } })),
+    ).toBeNull();
+  });
+});
+
+describe("PA2 D5 the script with every option and filter", () => {
+  test("a maximum MAF of 0.8, the MAF and observed heterozygosity filters and a VCF read with every variant are written out", () => {
+    const lines = ldDecay
+      .script(
+        project({
+          vcf: true,
+          variantsName: "ld.vcf.gz",
+          filters: [
+            MISSING_DATA,
+            { kind: "obs_het", maxAllowedObsHet: 0.5 },
+            { kind: "maf", maxAllowedMaf: 0.95 },
+            LD_PRUNING,
+          ],
+          ld: { maxDist: 250_000, maxAllowedMaf: 0.8 },
+        }),
+      )
+      .split("\n");
+    expect(lines.slice(2, 6)).toStrictEqual([
+      'ld_variants = popnei.open_vcf("ld.vcf.gz", ploidy=2, only_passed=True)',
+      "ld_variants.filter_by_missing_data(0.1)",
+      "ld_variants.filter_by_obs_het(0.5)",
+      "ld_variants.filter_by_maf(0.95)",
+    ]);
+    expect(lines.slice(13, 16)).toStrictEqual([
+      "ld = popnei.calc_ld_and_dist_per_pop(",
+      "    ld_variants, pops=pops, min_dist=1, max_dist=250000, num_bins=50,",
+      "    max_allowed_maf=0.8,",
+    ]);
+    const vcf = project({ vcf: true, variantsName: "ld.vcf.gz" });
+    const variants = vcf.variants;
+    if (variants === null) {
+      throw new Error("the VCF project has a variants file");
+    }
+    const unpassed = ldDecay.script(
+      changed(vcf, {
+        variants: {
+          ...variants,
+          readOptions: { ploidy: 4, onlyPassed: false },
+        },
+      }),
+    );
+    expect(unpassed.split("\n")[2]).toBe(
+      'ld_variants = popnei.open_vcf("ld.vcf.gz", ploidy=4, only_passed=False)',
+    );
+  });
+});
+
+describe("PA2 D5 the boundaries of the rules", () => {
+  test("fewIndividuals: 19 individuals are fewer than 20, and 20 are not", () => {
+    const at = (individuals: number): readonly string[] =>
+      ldDecay
+        .warnings(
+          resultOf([flowPop("pop_a"), flowPop("pop_b", { individuals })]),
+          project(),
+        )
+        .map((w) => w.code);
+    expect(at(19)).toStrictEqual(["fewIndividuals"]);
+    expect(at(20)).toStrictEqual([]);
+  });
+
+  test("noPairs: 1 variant is below 2, with the words of the MAF, and 2 are not; the maximum MAF and the distance of the project are in the words", () => {
+    const at = (variants: number): string | undefined =>
+      ldDecay.warnings(
+        resultOf([
+          flowPop("pop_a"),
+          {
+            name: "pop_b",
+            variants,
+            rhoPerBp: Number.NaN,
+            halfDist: Number.NaN,
+          },
+        ]),
+        project({ ld: { maxDist: 100_000, maxAllowedMaf: 0.8 } }),
+      )[0]?.text;
+    expect(at(1)).toBe(
+      "pop_b has no pair of variants to measure: fewer than two of its variants pass its maximum major allele frequency of 0.8.",
+    );
+    expect(at(2)).toBe(
+      "pop_b has no pair of variants to measure: no two of its 2 variants on one chromosome are within 100,000 base pairs of each other with a value of r². Type a larger distance.",
+    );
+    const r = resultOf(
+      [
+        flowPop("pop_a"),
+        {
+          name: "pop_b",
+          variants: 3,
+          rhoPerBp: Number.NaN,
+          halfDist: Number.NaN,
+        },
+      ],
+      250_000,
+    );
+    expect(
+      ldDecay.warnings(r, project({ ld: { maxDist: 250_000 } }))[0]?.text,
+    ).toMatch(/ within 250,000 base pairs of each other /u);
+  });
+
+  test("noCurve names the distance of the project", () => {
+    const r = resultOf(
+      [flowPop("pop_b", { rhoPerBp: Number.NaN, halfDist: Number.NaN })],
+      250_000,
+    );
+    expect(
+      ldDecay.warnings(r, project({ table: null, ld: { maxDist: 250_000 } }))[0]
+        ?.text,
+    ).toMatch(/ a curve can follow within 250,000 base pairs, flat /u);
+  });
+
+  test("halfDistBeyondPairs: a half distance at the furthest pairs is not beyond them, and one at the largest distance is beyond the pairs but within the distance", () => {
+    // Pairs up to the bin to 280,000 of a largest distance of 2,800,000.
+    const at = (halfDist: number): readonly Warning[] =>
+      ldDecay.warnings(
+        resultOf(
+          [{ name: "pop_b", pairs: pairsIn([0, 4]), halfDist }],
+          2_800_000,
+        ),
+        project({ table: null, ld: { maxDist: 2_800_000 } }),
+      );
+    expect(at(280_000)).toStrictEqual([]);
+    expect(at(2_800_000)).toStrictEqual([
+      {
+        code: "halfDistBeyondPairs",
+        text: "The curve of pop_b falls to half at 2,800,000 bp, beyond its furthest pairs, in the bin to 280,000 bp, so that distance is where the curve would reach and not where pairs were measured.",
+      },
+    ]);
+    expect(at(2_800_001)[0]?.text).toMatch(
+      /^The curve of pop_b falls to half at 2,800,001 bp, beyond the 2,800,000 base pairs within which/u,
+    );
+  });
+
+  test("halfDistBelowPairs: a half distance at the closest pairs is not below them, and one of 1 bp is written at 1 bp, not within it", () => {
+    const at = (halfDist: number): readonly Warning[] =>
+      ldDecay.warnings(
+        resultOf([{ name: "p3", pairs: pairsIn([1, 2]), halfDist }], 400_000),
+        project({ table: null, ld: { maxDist: 400_000 } }),
+      );
+    expect(at(8001)).toStrictEqual([]);
+    expect(at(1)[0]?.text).toMatch(/^The curve of p3 falls to half at 1 bp, /u);
+    expect(at(0.999)[0]?.text).toMatch(
+      /^The curve of p3 falls to half within 1 bp, /u,
+    );
+  });
+
+  test("numCheckNumbers counts the populations the lists of individuals to keep and to remove leave", () => {
+    expect(
+      ldDecay.numCheckNumbers(
+        project({
+          individualFilters: [
+            { kind: "keep", individuals: LD_INDIVIDUALS.slice(0, 50) },
+          ],
+        }),
+      ),
+    ).toBe(4);
+    expect(
+      ldDecay.numCheckNumbers(
+        project({
+          table: THREE_POPS,
+          individualFilters: [{ kind: "remove", individuals: ["i000"] }],
+        }),
+      ),
+    ).toBe(10);
+  });
+
+  test("needs throws a defect on a project of association", () => {
+    const association = deepFreeze<Project>({
+      ...project(),
+      app: "gwas",
+      grouping: { kind: "roles", roles: [["pop", "ignored"]] },
+    });
+    expect(individualsNeeds(association)).toBeNull();
+    expect(() => ldDecay.needs(association)).toThrow(/^popnei_web defect: /u);
   });
 });

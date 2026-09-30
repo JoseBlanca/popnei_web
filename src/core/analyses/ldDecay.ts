@@ -21,7 +21,6 @@ import {
   counted,
   grouped,
   individualsNeeds,
-  jobFilters,
   namesOf,
   populationListsNeeds,
   populationsColumnOf,
@@ -51,6 +50,7 @@ import type {
   LdDecayResult,
   Pops,
   Run,
+  VariantFilter,
 } from "../../worker/protocol.ts";
 
 /** The id of the analysis. */
@@ -147,11 +147,15 @@ export function ldDecayOptions(p: Project): LdDecayOptions {
   return read.value;
 }
 
+/** A filter of the variants the LD decay reads: any but the LD pruning,
+    each as popnei takes it. */
+export type LdDecayFilter = Exclude<VariantFilter, { readonly kind: "ld" }>;
+
 /** The lists `ldDecayFilters` made, by the project's filters, so that the
     same filters give the same array. */
 const FILTERS = new WeakMap<
   readonly ProjectVariantFilter[],
-  readonly ProjectVariantFilter[]
+  readonly LdDecayFilter[]
 >();
 
 /** The project's filters of the variants that are on, in their order,
@@ -160,14 +164,24 @@ const FILTERS = new WeakMap<
     The same frozen array for the same filters. */
 export function ldDecayFilters(
   filters: Project["filters"],
-): Project["filters"] {
+): readonly LdDecayFilter[] {
   const known = FILTERS.get(filters);
   if (known !== undefined) {
     return known;
   }
-  const made = Object.freeze(filters.filter((filter) => filter.kind !== "ld"));
+  const made = Object.freeze(
+    filters.filter((filter): filter is LdDecayFilter => filter.kind !== "ld"),
+  );
   FILTERS.set(filters, made);
   return made;
+}
+
+/** The reason of the largest distance not typed, or `null` once it is:
+    `needs` gives it after the reasons of the populations, and the panel
+    shows it beside the field of the distance whenever it holds
+    (ldDecay.md, "Why it cannot run"). */
+export function maxDistReason(p: Project): string | null {
+  return ldDecayOptions(p).maxDist === null ? NO_DISTANCE : null;
 }
 
 /** The largest distance the memory allows for `numPops` populations, the
@@ -519,9 +533,10 @@ function needs(p: Project): string | null {
   if (populations !== null) {
     return populations;
   }
+  const distance = maxDistReason(p);
   const maxDist = ldDecayOptions(p).maxDist;
-  if (maxDist === null) {
-    return NO_DISTANCE;
+  if (distance !== null || maxDist === null) {
+    return distance;
   }
   const numPops = populationsByLists(p)?.length ?? 0;
   return numPops > 0 && maxDist > maxDistFor(numPops)
@@ -552,8 +567,9 @@ function populationsByLists(p: Project): Pops | null {
 
 /** Builds the request, with the individuals the filters keep that the
     store gives through `c`, and sends it through `c`. Throws a defect when
-    the variants file is not read, there are no populations to run or the
-    largest distance is not typed, which `needs` rules out. */
+    there are no populations to run, which is also the case of a variants
+    file not loaded or not read, and when the largest distance is not
+    typed, which `needs` and the store rule out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   const kept = populationsKept(p, c.individuals);
   const options = ldDecayOptions(p);
@@ -565,7 +581,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(ldDecayFilters(p.filters)),
+    filters: ldDecayFilters(p.filters),
     individuals: c.individuals,
     pops: kept.pops,
     minDist: LD_DECAY_MIN_DIST,
@@ -868,9 +884,8 @@ function scriptPops(p: Project): readonly string[] {
 }
 
 /** The line of the script that puts one filter of the job on
-    `ld_variants`, its numbers as `String` writes them. The LD pruning,
-    which `ldDecayFilters` leaves out, is a defect. */
-function filterLine(filter: ProjectVariantFilter): string {
+    `ld_variants`, its numbers as `String` writes them. */
+function filterLine(filter: LdDecayFilter): string {
   switch (filter.kind) {
     case "missing_data":
       return `ld_variants.filter_by_missing_data(${String(filter.maxAllowedMissingRate)})`;
@@ -878,8 +893,6 @@ function filterLine(filter: ProjectVariantFilter): string {
       return `ld_variants.filter_by_obs_het(${String(filter.maxAllowedObsHet)})`;
     case "maf":
       return `ld_variants.filter_by_maf(${String(filter.maxAllowedMaf)})`;
-    case "ld":
-      throw defect("the script of the LD decay was given the LD pruning.");
   }
 }
 
