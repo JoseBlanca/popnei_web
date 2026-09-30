@@ -15,7 +15,11 @@ moved out of this repository into a project of its own, xlsx_rs, as the
 owner decided that day; and the
 same day for the order of the filters, the filters of individuals
 first, as the owner decided that day. The revisions for stage 4, of 27
-and 28 September 2026, are approved by the owner on 28 September 2026. What was
+and 28 September 2026, are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for the specs of stage 5, in sections 4, 9,
+11 and 13; the new point 16 of section 13, the calculation worker
+started again after every LD decay, is proposed and not yet approved by
+the owner. What was
 revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -380,6 +384,31 @@ review left one point open, where the filter of the regions of a BED
 file goes once the application has it, which the owner decided the same
 day: first, before the statistics of each individual and the filters of
 individuals (section 13, point 15).
+
+What was revised on 30 September 2026 for the specs of stage 5, the
+analyses of the populations, not yet approved by the owner. Stage 5
+fits the shape of section 4: the distances between populations and the
+LD decay are two analyses more, each with its module, its panel, its
+job and result, its handler in the runner, and three lines beside them;
+the diversity gains a second call of popnei in its job. The folded site
+frequency spectrum is not an analysis: it is a statistic of the
+diversity's call, shown in a block of the diversity's panel, while the
+owner decides whether it stays so (`docs/specs/analyses/sfs.md`, **Open
+1**). What changes here:
+
+- **The id of the example of section 4** is `"popDists"`, the id the
+  spec of the distances gives, where it was `"fst"`; and the measure the
+  heatmap of the distances draws joins the options left out of a key.
+- **Section 9** names `heatmap.ts` and `line.ts` by the analyses that
+  draw them, and `analyses/` the module of the spectrum, which the
+  diversity calls.
+- **Section 11** gains the memory of the LD decay, which grows with the
+  largest distance the user types and stays with wasm after the
+  analysis.
+- **Section 13, point 16, proposed**: the calculation worker is started
+  again after every LD decay, a third exception to point 2. It is
+  **Open 1** of `docs/specs/analyses/ldDecay.md`, the owner's to decide;
+  the specs are written with it meanwhile.
 
 ## 2. The project
 
@@ -840,7 +869,7 @@ Each analysis is one module, with the same shape, in both applications:
 
 ```ts
 interface AnalysisDef<J, R> {           // J: its request; R: its result
-  id: AnalysisId;                        // "pca", "diversity", "fst", "gwas"...
+  id: AnalysisId;                        // "pca", "diversity", "popDists", "gwas"...
   app: ("popgen" | "gwas")[];
   defaults: JsonObject;                  // its options, as the project holds them
   keyVersion: number;                    // raised when the meaning of its result changes
@@ -904,7 +933,9 @@ applications share the steps of the variants and the analysis of the PCA.
 **An option that changes only how a result is drawn is left out of its
 key**, from stage 4: the column that colours the points of the PCA, the
 components on its axes, and whether it is drawn in 2D or 3D
-(`docs/specs/analyses/pca.md`). They are options of the analysis, as
+(`docs/specs/analyses/pca.md`); from stage 5, the measure the heatmap of
+the distances between populations draws, Hudson's Fst or Jost's D, both
+of which one pass calculates (`docs/specs/analyses/popDists.md`). They are options of the analysis, as
 `AnalysisOptions` holds them, so a project file saves them and an undo
 gives them back; `keyInputs` leaves them out, since they are not inputs
 of the result, and a change of them is a command that removes no result.
@@ -2069,7 +2100,11 @@ src/core/
                     subscription the screens read
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
-                    individualChecks, variantChecks, filterCounts
+                    individualChecks, variantChecks, filterCounts; from
+                    stage 5 popDists and ldDecay, and sfs.ts, the rows,
+                    the CSV and the warnings of the folded spectrum, which
+                    the diversity's module and panel call and which is no
+                    analysis of its own (docs/specs/analyses/sfs.md)
   individualsKept.ts
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
@@ -2113,6 +2148,12 @@ src/charts/
   plot2d.ts         the base every 2D plot makes its handle with: its SVG,
                     size, axes, text for a screen reader and export
   histogram.ts scatter.ts line.ts qq.ts heatmap.ts manhattan.ts pca3d.ts
+                    from stage 5, line.ts the plot of series of points, a
+                    line and marks, the LD decay's
+                    (docs/specs/charts/line.md), and heatmap.ts the grid
+                    of a symmetric matrix between named things, the
+                    distances between populations'
+                    (docs/specs/charts/heatmap.md)
   marks.ts          the colour and the symbol of each group of points, and
                     the colours of a column of numbers, for the 2D and 3D
                     plots of the PCA (docs/specs/charts/scatter.md)
@@ -2297,6 +2338,25 @@ the same numbers for everything else but the size of a written file.
   of 100,000 bp, at least 62% to 68% in both engines, a lower bound since
   the PCA with the filter also calculates over fewer variants
   (`docs/specs/analyses/pca.md`, "How it runs").
+- **The memory of the LD decay grows with the largest distance** the
+  user types, from stage 5: popnei counts the pairs of each population
+  at every distance up to it, 16 bytes a base pair asked for before the
+  pass and up to 24 more at its end, and holds the variants within that
+  distance of the newest one read. Measured in node 26.8.2 on the
+  owner's Mac with `js-v0.1.0-dev.3` on 30 September 2026, as the growth
+  of the memory of wasm: 10.6 MB for 100 individuals and 500 variants at
+  100,000 bp and three populations, 480 MB for the same at 10,000,000
+  bp; 63.7 MB for 100 individuals and 20,000 variants every 1,000 bp at
+  100,000 bp; and 0.4 to 1.1 GB for 1,000 individuals and 20,000
+  variants at 100,000 and 1,000,000 bp, which took 3.1 to 73.6 s
+  (`docs/specs/analyses/ldDecay.md`, "How it runs", whose table gives
+  each case). Core locks the analysis when its counts would pass 1 GB,
+  40 bytes × the distance × the populations, 25,000,000 bp for one
+  population, and popnei refused 250,000,000 bp for one, 4 GB of counts.
+  That memory stays with wasm after the analysis, so the worker is
+  started again after every LD decay (section 13, point 16, proposed).
+  None of it has been measured in a browser; the plan of stage 5
+  measures it in Chromium and WebKit, as stage 4 measured the PCA.
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
@@ -2306,7 +2366,8 @@ the same numbers for everything else but the size of a written file.
   The calculation worker is restarted when the load of the variant file
   changes (section 5); it is not restarted between requests, as the
   owner settled on 26 September 2026 (section 13, point 2), but after a
-  large written file and after a large PCA (points 5 and 9).
+  large written file and after a large PCA (points 5 and 9), and, as
+  proposed for stage 5, after every LD decay (point 16).
 - **The downloads**: the wasm package of popnei, 0.79 MB gzipped
   (785.16 KB, release `js-v0.1.0-dev.3`, as Vite measures it in the
   build of the site, 28 September 2026), against 0.71 MB (710.6 KB) for
@@ -2611,3 +2672,34 @@ day:
    off. Not taken: the regions after the list, with the other filters of
    the variants, which kept the statistics one pass per load whatever
    the regions.
+
+Opened by the revision of 30 September 2026, for stage 5
+(`docs/specs/stage-5-open-points.md`, point 12). Proposed, and not yet
+approved by the owner; the specs of stage 5 are written with it
+meanwhile:
+
+16. **The calculation worker is started again after every LD decay**,
+   whatever its size, after a result and after a refusal of popnei, as
+   after a large PCA (point 9); not after a file that no longer reads.
+   It is a third exception to point 2. An LD decay leaves the memory of
+   wasm larger by 16 bytes × its largest distance × its populations,
+   plus the variants it held within that distance: in node, 10.6 MB for
+   100 individuals and 500 variants at 100,000 bp, and 0.4 to 1.1 GB for
+   1,000 individuals and 20,000 variants (section 11), where a written
+   file and a PCA restart the worker above about 25 MB. What it costs:
+   reading the header of the variants file again, at most 49 ms (point
+   5), against a calculation of 0.6 s and more on 20,000 variants, and,
+   from stage 7, the intermediate results the worker holds, the kinship
+   among them, which the next GWAS would calculate again. The options
+   not taken: a bound on the individuals and the distance, as for the
+   PCA, which almost every file of a few hundred individuals would pass,
+   so that the restart would come almost always and the bound would
+   still have to be measured; and no restart, which leaves the tab up to
+   a gigabyte larger after one LD decay of 1,000 individuals, until the
+   next load of the variants file. It is decided again in stage 7 with
+   the kinship, as point 9 is, since a restart after an LD decay would
+   then drop a kinship of up to 800 MB (`docs/specs/analyses/ldDecay.md`,
+   **Open 1**; `docs/specs/worker/client.md`, "The LD decay, and the
+   restart after it"). The plan of stage 5 measures, in Chromium and
+   WebKit, the growth of the engine 3 s after an LD decay with the
+   restart and without it.

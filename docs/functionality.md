@@ -334,7 +334,11 @@ For each population, over the variants:
   which the words say too, as the owner decided on 30 September 2026. Left
   in, such a population would take every variant out of the count of
   every population. The option not taken was a warning with no private
-  alleles for any population.
+  alleles for any population. A private allele needs a second
+  population to be absent from, so the table has no private alleles for
+  the one population of every individual, nor when one population alone
+  has the minimum of individuals, and the words say why
+  (`docs/specs/analyses/diversity.md`, "The populations").
 
 Each is given with the number of individuals of the population beside it.
 
@@ -352,9 +356,11 @@ population's values on its smallest one, and on `panel.nei` it left the
 rarefied values of population p0 on 278 of its 1,200 variants. The
 proportion of polymorphic variants is not rarefied, as the owner decided
 the same day: on variants of two alleles it is the rarefied number of
-alleles minus 1. The application warns when a population reaches that
-number of chromosomes at few of its variants, since its rarefied values
-then rest on those few.
+alleles minus 1. The application warns whenever a population reaches
+that number of chromosomes at fewer variants than it has a value at,
+with how many, since its rarefied values then rest on those alone; only
+a number larger than the default gives it, since at the default every
+variant with a value reaches the draw.
 
 ### The site frequency spectrum
 
@@ -366,7 +372,22 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   (open point 3).
 - Missing genotypes and populations of different sizes make the spectra
   of different variants and populations incomparable, so the spectra are
-  projected down to a common number of chromosomes.
+  projected down to a common number of chromosomes, the same number the
+  rarefaction draws, set by its one field.
+- It is calculated in the same call of popnei as the rest of the
+  diversity, and shown below the diversity's table, in one Run and one
+  pass; whether it is instead an analysis of its own is point 11 of
+  `docs/specs/stage-5-open-points.md`, and meanwhile it is part of the
+  diversity.
+- The height of each bar is the share of the population's variants that
+  show both alleles in the draw, the variants with one allele only in
+  the table and not drawn, so that populations with different numbers
+  of variants compare by their shapes; the table gives popnei's expected
+  numbers of variants as well (point 18 there, meanwhile so).
+- A MAF filter of the Variants step removes the variants whose rarer
+  allele is rare over all the individuals, and so empties the first bins
+  of the spectrum; the application warns of it and says to turn it off
+  (point 17 there, meanwhile so).
 
 ### LD decay
 
@@ -392,21 +413,46 @@ individuals, because r² is then biased upwards.
   owner decided on 30 September 2026. It has no LD filter of its own,
   where the PCA puts its own in the place of that of the Variants step
   (section 5). The option not taken was all the filters.
+- A variant counts in a population only when its major allele frequency
+  there is at most 0.95, popnei's default, which the user can change
+  from 0.5 to 1: the r² of a variant that hardly varies rests on one or
+  two individuals.
+- popnei counts the pairs at every distance up to the largest one, in up
+  to 40 bytes for each base pair and population, so the analysis cannot
+  run when those counts would pass 1 GB, 25,000,000 base pairs for one
+  population, and says so with the largest distance allowed.
+- The warning of few individuals comes below 20, the minimum of the
+  diversity: on popnei's reference file of LD, populations of 10 gave
+  half distances of 10,509 to 11,357 bp where populations of 50 gave
+  7,340 and 7,548 (`docs/specs/analyses/ldDecay.md`, "The warnings").
 
 ## 7. Between populations
 
 - A matrix of distances between the populations, with Hudson's Fst as the
   default and Jost's D as the alternative, without standard errors, as
-  the owner decided on 30 September 2026. The option not taken, standard
+  the owner decided on 30 September 2026. A variant counts for a pair
+  only where both populations have the minimum number of individuals
+  with a called genotype, 20 by default, which a field changes, since
+  populations of 5 to 15 are common in collections of varieties and
+  breeds. A population with fewer individuals than the minimum is left
+  out and named, since every pair it is in would have no value; this
+  is point 13 of `docs/specs/stage-5-open-points.md`, meanwhile so. The option not taken, standard
   errors when the user types a length of the blocks they are resampled
   over, needs that length, which depends on how far the LD reaches in the
   user's genome.
-- Shown as a heatmap and as a table. The heatmap orders the populations
+- Shown as a heatmap of the measure the user picks and as a table of
+  the pairs, each with both measures and the number of variants it was
+  calculated over. The heatmap orders the populations
   along the first axis of popnei's PCoA of the distance matrix, so that
   similar ones are together, and in the order of the metadata file when
   popnei cannot place them, as when a pair has no distance, as the owner
   decided on 30 September 2026. The option not taken was a clustering
-  tree written in the application.
+  tree written in the application. A matrix that no set of points has
+  as its distances, as a matrix of Fst often is, is corrected by
+  Lingoes' method before the PCoA, which leaves its first axis as it
+  was; a negative distance, which two populations the variants cannot
+  tell apart give, is taken as 0 for the order alone and shown as popnei
+  gave it (point 14 there, meanwhile so).
 
 ## 8. The GWAS
 
@@ -585,6 +631,10 @@ popnei's release `js-v0.1.0-dev.3` has the first six, as checked on 30
 September 2026: `calcPopDists`; `calcPopDiversity`, with the private
 alleles, the rarefaction, F and the folded SFS; and
 `calcLdAndDistPerPop`, with the fitted curve and its half distance.
+`calcLdAndDistPerPop` does not refuse a variants file whose variants are
+not sorted by position, and counts fewer pairs without a word; whether
+popnei is asked to refuse it, as its LD filter does, is point 19 of
+`docs/specs/stage-5-open-points.md`.
 
 - A VCF writer, for the variants after the filters (section 3).
 - The filter of the variants by the regions of a BED file (section 3).

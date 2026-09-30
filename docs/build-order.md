@@ -241,11 +241,17 @@ order does not wait for what exists:
 
 ### Stage 5. The analyses of the populations
 
-- **What:** each one a module of `docs/architecture.md` section 4 with its
-  panel, in this order: the distances between populations, as a heatmap
-  and a table, which popnei has; the diversity whole, with F, the private
-  alleles and the rarefaction; the LD against distance, with the distance
-  at which r² falls to half; the folded site frequency spectrum.
+- **What:** in this order, the distances between populations, as a
+  heatmap and a table; the diversity whole, with F, the private alleles and the
+  rarefaction; the LD against distance, with the distance at which r²
+  falls to half; the folded site frequency spectrum. The first three
+  are each a module of `docs/architecture.md` section 4 with its panel.
+  The spectrum is not a module of its own: it is a statistic of the
+  diversity's call of popnei, at the draw of the rarefaction, shown in a
+  block of the diversity's panel below its table, as the specs of 30
+  September 2026 have it while the owner decides whether it stays so
+  (`docs/specs/analyses/sfs.md`, **Open 1**, and point 11 of
+  `docs/specs/stage-5-open-points.md`).
 - **Why in this order:** first what popnei computes today, then what it
   is asked for (section 4), so that the stage never waits on popnei.
 - **Needs of popnei:** none that stops the stage. popnei's release
