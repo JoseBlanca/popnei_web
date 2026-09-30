@@ -1046,7 +1046,7 @@ task 8.1 shares; and, if a tab closed in task 2.5, the owner's answer.
 
 **Tasks:**
 
-- [ ] 8.1 The panel's functions: the data of the plot, the labels of
+- [x] 8.1 The panel's functions: the data of the plot, the labels of
   the legend, the description, the two tables and their CSVs
   (`ldDecay.md`, "What it shows", "Its words" and "Accessibility"); the
   LD decay in `POPGEN_ANALYSES` after the distances, its title and its

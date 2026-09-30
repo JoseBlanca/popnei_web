@@ -549,6 +549,68 @@ A9. **Two sentences of other specs.** `steps/variants.md` (about lines
     `PopDistsHeatmap` and `orderText` returning none for two
     populations. Recommendation: correct both.
 
+## Stop B: the diversity and the spectrum, for the owner
+
+### What to judge
+
+- The panel of the diversity whole: the three fields (the minimum, the
+  threshold of polymorphism, the draw of the rarefaction) with the line
+  of the default draw and "Use the default"; the eleven columns with F
+  sixth; the populations under the minimum named before a Run; the
+  running state of two passes; the block of the spectrum under the
+  table, one histogram per population on one scale, its table in a tab
+  and its download.
+- The writers' choices of the open-points file that it shows: no
+  private alleles for one population, the check numbers as they were,
+  eleven columns with F sixth, the lock of the draw, no warning of the
+  MAF filter on the table, the warning of variants outside the draw
+  from one variant, the words of F in a haploid file, the populations
+  under the minimum named before a Run.
+- Points 15, 16 and 17 above.
+
+### Decisions, each with the recommendation
+
+B1. **The table of eleven columns** is at least 1,187 pixels wide, wider
+    than the page's column on any window, so it always scrolls
+    sideways, and the rarefied private alleles, the column the draw is
+    for, are not seen first. Recommendation: see it at stop B; a
+    narrower table would need shorter headers or two tables.
+B2. **"Use the default" and Run look alike**, one above the other.
+    Recommendation: "Use the default" drawn as a link-like button beside
+    the draw's line.
+B3. **The lock of the draw** counts the chromosomes of every individual
+    kept, 400 on `panel.nei`, so a draw from 169 to 400 passes it, runs
+    both passes, and gives no rarefied value and no spectrum to any
+    population, since the largest, p2, holds 168. Recommendation: the
+    lock's "at most" the chromosomes of the largest population, and the
+    ready state naming the populations whose chromosomes are fewer than
+    the draw.
+B4. **The warning of the MAF filter on the spectrum** stands above the
+    diversity's table, about 500 pixels above the histograms.
+    Recommendation: a sentence at the end of the block's caption.
+B5. **Typing the default's own number**, 40 over the default 40, removes
+    the table "because the number of chromosomes of the rarefaction
+    changed" and runs both passes again, for the same numbers, as the
+    spec asks (a typed draw no longer follows the minimum).
+    Recommendation: keep the rule, and say in the notice that the draw
+    is now typed.
+B6. **What a screen reader hears of the spectrum.** Each histogram's
+    description starts by repeating its title ("The spectrum of p0 The
+    spectrum of p0: 1,200 variants…"), and the block has no heading, so
+    moving by headings gives "Diversity, p0, p2, p1". Recommendation:
+    the description begins after the colon; a heading "Site frequency
+    spectrum" for the block, the populations under it.
+B7. **The same minimum named twice.** The diversity's field reads
+    "Minimum number of individuals with a genotype", the distances'
+    "Individuals with a called genotype needed in each population, per
+    variant"; both default to 20 and are separate. Recommendation: one
+    label in both, with a line saying it is for that analysis alone.
+B8. **A sentence of `diversity.md`** still calls the width of the table
+    of eleven columns "not measured"; it is 1,187 pixels at the least.
+    And the line of the draw before the file is read ("Typed; the
+    default would be the ploidy of the variants file times…") is the
+    writer's. Recommendation: correct the first; judge the second.
+
 ## For the owner, as the work goes
 
 Points found during the work, each with its recommendation. None stops
