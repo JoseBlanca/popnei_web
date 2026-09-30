@@ -966,17 +966,17 @@ its table and its CSV.
 
 **Tasks:**
 
-- [ ] 7.1 The options and the table: the three fields with the line of
+- [x] 7.1 The options and the table: the three fields with the line of
   the default and "Use the default", the eleven columns, the ready state
   with `underMinimumText`, the running state of two passes
   (`diversity.md`, "The panel": "What it shows", "The states", "Its
   words" and "Accessibility"). Serves 1 and 4.
-- [ ] 7.2 The block of the spectrum, below the table in the state done:
+- [x] 7.2 The block of the spectrum, below the table in the state done:
   its caption, one histogram per population with the shared `yMax`, the
   line under them, the table in its tab and the download (`sfs.md`, "The
   block of the panel"); the states of D4 in `e2e/screens.spec.ts`.
   Serves 2 and 4. Needs 7.1.
-- [ ] 7.3 The flows of D1 and D2, extending `e2e/diversity.spec.ts` and
+- [x] 7.3 The flows of D1 and D2, extending `e2e/diversity.spec.ts` and
   `diversityKept.spec.ts`; the measurement of D3. Serves 1, 2 and 3.
   Needs 7.2.
 - [ ] 7.4 Stop B: the owner tries the diversity and the spectrum, in
