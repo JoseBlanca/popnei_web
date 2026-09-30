@@ -1,7 +1,11 @@
 # The folded site frequency spectrum of each population
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
-analyses of the populations. There is no code of it yet. This spec gives
+analyses of the populations, and revised the same day when the specs
+of stage 5 were made to agree: its lines of the Python script inside
+the diversity's block `if large:`, and its **Open 1** written with the
+diversity as that spec now has it. Not yet approved by the owner. There
+is no code of it yet. This spec gives
 the folded site frequency spectrum (SFS) of each population, the part of
 section 6 of `docs/functionality.md` headed "The site frequency
 spectrum": what popnei gives for it, how it rides in the pass of the
@@ -197,8 +201,9 @@ allele, and whether it moves the shape of a spectrum was not measured:
 `panel.nei` cannot tell, its 1,200 variants lying at positions 1 to
 1,200 of one chromosome.
 
-The diversity's warnings about the draw, a population that reaches the
-size of the draw at few of its variants among them, hold for the
+The diversity's warnings about the draw, `variantsNotInDraw`, raised
+when a population reaches the size of the draw at fewer variants than
+it has a value at, hold for the
 spectrum too, since it is the same draw, and are not given twice.
 
 ### The check numbers
@@ -211,21 +216,25 @@ taken was the share of bin 1 of each population, one number each.
 
 ### Its lines of the Python script
 
-After the diversity's lines, whose call of `calc_pop_diversity` asks for
-`folded_sfs` among its `stats` with `num_called_alleles=40`, and whose
-result they name `diversity` (asked below). popnei's Python package
-gives the spectrum as a pandas table, one row per count of the rarer
-allele, `rarer_allele`, and one column per population:
+Inside the diversity's block `if large:`, after its call of
+`calc_pop_diversity`, which asks for `folded_sfs` among its `stats` with
+`num_called_alleles=40` and names its result `diversity`
+(`diversity.md`, "Its lines of the Python script"): `diversity` is
+defined only there, since with no population of the minimum of
+individuals the call is not made, and the spectrum is not either.
+popnei's Python package gives the spectrum as a pandas table, one row
+per count of the rarer allele, `rarer_allele`, and one column per
+population. The lines, indented as the block is:
 
 ```python
-# The folded site frequency spectrum of each population, in a draw of
-# 40 chromosomes: the expected number of variants with each count of the
-# rarer allele, and the share of each count among the variants that show
-# both alleles in the draw
-spectrum = diversity.folded_sfs
-print(spectrum.to_string())
-both_alleles = spectrum.iloc[1:]
-print((both_alleles / both_alleles.sum()).to_string())
+    # The folded site frequency spectrum of each population, in a draw of
+    # 40 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
 ```
 
 The 40 is the size of the draw of the project, written as a whole
@@ -515,16 +524,16 @@ becomes one table per population when there are many populations.
 
 ## What this spec asks of other documents
 
+Each item was made in its document on 30 September 2026, with the
+spectrum a block of the diversity's panel in the diversity's call, as
+the meanwhile of **Open 1**.
+
 Of `docs/specs/analyses/diversity.md`, revised for stage 5 beside this
 spec:
 
-- Its paragraph that makes the spectrum an analysis of its own, whose
-  call does not ask for `folded_sfs` (in its draft of 30 September 2026,
-  "The folded site frequency spectrum, which `calcPopDiversity` gives as
-  well, is an analysis of its own ..."), is replaced by one that says
-  the spectrum is a statistic of its call, shown in a block of its
-  panel, as this spec gives it; the two cannot both stand, and **Open
-  1** decides between them.
+- The spectrum is a statistic of its call, shown in a block of its
+  panel, as this spec gives it, and not an analysis of its own, as a
+  draft of 30 September 2026 had it.
 - Its call of `calcPopDiversity` names `folded_sfs` among `stats`, in
   each of its forms, with one population of enough individuals too, and
   its result carries `numCalledAlleles` and `foldedSfs`, one array per
@@ -537,7 +546,8 @@ spec:
   the ploidy times a minimum of 0, or of 1 for a haploid dataset, gives
   less.
 - Its script names its result `diversity` and its `stats` hold
-  `folded_sfs`, so that the lines of this spec follow it.
+  `folded_sfs`, so that the lines of this spec follow its call inside
+  its block `if large:`.
 - It decides whether the MAF filter warns on its own table too: it
   removes the variants rare in all the individuals together, which moves
   the heterozygosities, the proportion of polymorphic variants and the
@@ -562,7 +572,8 @@ Of the other specs:
   gives so that several histograms share one scale; and the ticks of the
   horizontal axis at whole numbers only, when asked, which needs an
   option of the base for that axis alone, `xWholeNumbers` beside
-  `yWholeNumbers` of `plot2d.md`, since its `tickShown` acts on both
+  `yWholeNumbers` of `plot2d.md`, the option the line plot of the LD
+  decay asks for its distances too, since its `tickShown` acts on both
   axes and would take away the ticks of the shares. `histogramRows` gives `count` as a number of
   either kind. Its "Not in this spec" names the histograms of several
   populations for stage 5: they are drawn side by side, one plot each.
@@ -599,17 +610,15 @@ pass, its size of the draw and its Run.
   every pass gives, and a second case needs a design first (`docs/architecture.md`,
   section 4: adding an analysis changes nothing else).
 
-The draft of `docs/specs/analyses/diversity.md` revised beside this
-spec takes the second option, with the reason that one job of two
-analyses would take both results off the screen at a change of the
-options of either. The first option is not a job of two analyses: the
-spectrum is a statistic of the diversity, with no option of its own,
-and every input it has is already an input of the table, so there is
-no change that should take one off the screen and not the other.
+The first option is not a job of two analyses, whose results a change
+of the options of either would both take off the screen: the spectrum
+is a statistic of the diversity, with no option of its own, and every
+input it has is already an input of the table, so there is no change
+that should take one off the screen and not the other.
 
-Recommended: part of the diversity. Meanwhile, the implementer builds
-it as part of the diversity, as this spec gives it, once the owner has
-decided and the two specs agree.
+Recommended: part of the diversity. Meanwhile, part of the diversity,
+as this spec, `docs/specs/analyses/diversity.md` and every shared
+document are written.
 
 **Open 2. A MAF filter on the spectrum: a warning, or left out of its
 pass.** What is decided: what the spectrum does when the Variants step

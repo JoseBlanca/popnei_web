@@ -2,7 +2,9 @@
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
 analyses of the populations; not yet approved by the owner, and no code
-of it exists. This spec gives the module
+of it exists. Revised the same day when the specs of stage 5 were made
+to agree: the populations under the minimum split, and named before a
+Run, by the functions of `project.ts` the diversity calls too. This spec gives the module
 `src/core/analyses/popDists.ts`, which says what the distances between
 the populations are calculated from, when they cannot run, what they
 ask of the calculation worker, what they warn of, and what they keep in
@@ -202,11 +204,11 @@ the first of these, in the words the panel shows beside its Run button:
 
 | the project | the reason |
 |---|---|
-| any reason of `individualsNeeds` and `populationsNeeds` of `project.md`, and the lists of individuals leaving no population, in the diversity's words ("Why it cannot run" of `diversity.md`, its whole table) | their words |
+| any reason of `individualsNeeds` and `populationsNeeds` of `project.md`, and the lists of individuals leaving no population, `populationListsNeeds` of `project.md`, which the diversity and the LD decay give too ("Why it cannot run" of `diversity.md`, its whole table) | their words |
 | no metadata file: one population, "All individuals" | "The distances between populations need two populations or more, and without a metadata file every individual is in one. Load a metadata file, and choose the column that defines the populations, in the Individuals step." |
 | the grouping `onePopulation` | "The distances between populations need two populations or more, and all individuals are in one population. Choose the column that defines the populations in the Individuals step." |
 | the column gives one population to the individuals of the variants file, `populationsToRun` of length 1 | "The column popcat of pops.csv gives the individuals of panel.nei one population, p0, and the distances need two or more. Choose another column, or fill in this one and load the file again, in the Individuals step." |
-| fewer than two populations of `populationsKept(p, byLists)`, the individuals the lists to keep and to remove keep, have the minimum of individuals, `minimumNeeds` | "Only p1 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file." With none: "No population has 20 individuals or more, and …", the rest the same. |
+| fewer than two populations of `populationsKept(p, byLists)`, the individuals the lists to keep and to remove keep, have the minimum of individuals, `withMinimum` of `populationsWithMinimum` of `project.md`; `minimumNeeds` | "Only p1 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file." With none: "No population has 20 individuals or more, and …", the rest the same. |
 
 The last row names one population, or none; with the lists of
 individuals as the reason some of them fell below the minimum, the words
@@ -216,8 +218,9 @@ of the project.
 
 `keptNeeds(p, kept)`, which the store asks once the list of the
 individuals kept is known and keeps some (`docs/specs/core/store.md`,
-"The state of an analysis"), gives the diversity's reason when the
-list leaves no population, and otherwise the last row's words when
+"The state of an analysis"), gives `populationsKeptNeeds(p, kept)` of
+`project.md`, the diversity's reason, when the list leaves no
+population, and otherwise the last row's words when
 fewer than two populations of `populationsKept(p, kept.list.individuals)`,
 the list being known, have the minimum, with "among the individuals the filters keep" after "20
 individuals or more" and the ending "…, or loosen the filters of
@@ -229,9 +232,12 @@ does when they leave none.
 ### The request
 
 `run(p, c)` narrows the populations to the individuals kept,
-`populationsKept(p, c.individuals)`, splits them into those that have
-the minimum of individuals, sent in the order of the file, and those
-that do not, `leftOut`, and sends:
+`populationsKept(p, c.individuals)`, splits them with
+`populationsWithMinimum` of `project.md`, the function with which the
+diversity chooses the populations of its private alleles, into those
+that have the minimum of individuals, `withMinimum`, sent in the order
+of the file, and those that do not, `under`, sent as `leftOut`, and
+sends:
 
 ```ts
 {
@@ -324,14 +330,20 @@ how many more.
 | code | when | the text |
 |---|---|---|
 | `tooFewIndividuals` | `r.leftOut` is not empty | "Population p3 has 12 individuals, fewer than the minimum of 20, so it is left out of the distances. To include it, lower the minimum of individuals, or merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file." With more than three, "Populations p3, p5 and 4 more have fewer than 20 individuals, …", with no counts. When the filters of individuals removed some of the individuals of one of them, as the diversity finds it, the last sentence ends "…in the metadata file, or loosen the filters of individuals in the Variants step." |
-| `populationNotInResult` | a population of `populationsToRun(p)` is in neither `r.pops` nor `r.leftOut`: the filters of individuals left it none | the diversity's words, "…so it is not in the distances." |
 | `individualsWithoutPopulation` | as the diversity's | the diversity's words, "…and are left out of the distances. …" |
+| `populationNotInResult` | a population of `populationsToRun(p)` is in neither `r.pops` nor `r.leftOut`: the filters of individuals left it none | the diversity's words, "…so it is not in the distances." |
 | `pairWithoutDistance` | a pair counted 0 variants | "p0 and p3 have no variant at which both have 20 individuals with a called genotype, so the pair has no distance." With two or three pairs, "The pairs p0 and p3, and p1 and p3, have no variant …, so they have no distance."; with more, "The pairs p0 and p3, p1 and p3 and 4 more have …". |
 | `pairsOnFewerVariants` | a pair counted more than 0 and fewer than `passStats.numVars` | "3 of the 6 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p3: at the others, one of the two populations has fewer than 20 individuals with a called genotype." With one pair, "The pair p0 and p3 is over 641 of the 1,152 variants kept (56%): at the others, …". The share is written as the diversity writes it, never 100% below all nor 0% above none. |
 | `negativeDistance` | a pair has a negative value of either measure | "p0a and p0b have a negative Hudson's Fst, −0.0113, and Jost's D, −0.0060: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value." With more pairs, "3 pairs have a negative Hudson's Fst or Jost's D, …: the variants cannot tell their two populations apart. …", naming the pairs as above. The measure that is not negative is left out of the words. |
 | `jostHaploid` | the ploidy of the load is 1 | "Jost's D has no value for panel.nei, whose genotypes have one allele each: it compares two heterozygosities, and a haploid individual has none. Hudson's Fst has its values." |
 
-The numbers of `pairsOnFewerVariants` and `pairWithoutDistance` above
+`individualsWithoutPopulation` and `populationNotInResult` are made by
+`populationWarnings` of `src/core/analyses/words.ts`, which the
+diversity and the LD decay call too (`diversity.md`, "The warnings"),
+with the words "the distances" and "the distances", and given the
+populations of `r.pops` and of `r.leftOut`, so that a population left
+out for its size is not named as emptied by the filters. The numbers of
+`pairsOnFewerVariants` and `pairWithoutDistance` above
 are an example of the form; the tests make them with a fake result.
 The words of `negativeDistance` are the fixture's below, "How it is
 verified". popnei gives Jost's D as NaN for every pair at ploidy 1 and
@@ -717,7 +729,7 @@ Beside it, the line of the versions, as the diversity's.
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
 | locked | the reason, beside a disabled Run button that it describes, as the diversity's; the field of the minimum stays enabled, since lowering it can unlock | go where the reason says; change the minimum |
-| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out." | Run; change the options |
+| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out." | Run; change the options |
 | running | the diversity's bar and clock, "Calculating · 35% · 0:12", the bar labelled "Calculating the distances between populations", and its words while it waits for the statistics of each individual | Stop |
 | done | the warnings above, each as a sentence, with their count; the heatmap, its line of order and its radio buttons; the table and its download; the comparison of an opened project file under the table | change the measure; download |
 | results removed | the diversity's words, with `resultName` "the heatmap and the table": "The distances between populations were removed because the filter of the variants by missing data changed. Undo brings back the heatmap and the table as they were, with no calculation; Run calculates new ones for the new settings." | Run; Undo or Redo |
@@ -816,6 +828,17 @@ place of the radio buttons, and how the ready state lists many
 populations.
 
 ## What this spec asks of other documents
+
+Made in those documents on 30 September 2026. The rule of the
+populations under the minimum is one function of `project.ts`,
+`populationsWithMinimum`, which the diversity calls too, with the words
+of the ready state of both panels, `underMinimumText`; the reason of the
+lists and the individuals kept leaving no population is
+`populationListsNeeds` and `populationsKeptNeeds` of the same module; and
+the two warnings of the populations are `populationWarnings` of
+`src/core/analyses/words.ts` (`docs/specs/core/project.md`, "What the
+analyses per population share from stage 5"; `diversity.md`, "The
+warnings").
 
 - `docs/specs/worker/protocol.md`: `PopDistsJob`, `PopDistsResult`,
   `HeatmapOrder`, `FileOrderReason` and `LeftOut` in the unions `Job`

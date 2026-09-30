@@ -73,7 +73,11 @@ heterozygosities in it, and that call gives the folded site frequency
 spectrum of `docs/specs/analyses/sfs.md` too; the three options get their fields, the number
 of chromosomes of the rarefaction among them; a population with fewer
 individuals than the minimum is left out of that second call; the key
-version is 3, and the check numbers stay as they were. The revision for
+version is 3, and the check numbers stay as they were; and the same
+day, when the specs of stage 5 were made to agree, the populations
+under the minimum split, named in the ready state, and the locks and
+two warnings of the populations made by functions the distances between
+populations and the LD decay share. The revision for
 stage 5 is not yet approved by the owner.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
@@ -630,7 +634,13 @@ Individuals step shows it at its select (`docs/specs/steps/individuals.md`,
 "Its words"); `needs` gives it after the first row, and the row of the
 lists last. The individuals the lists keep are `byLists` of
 `individualsKept` (`docs/specs/core/individualsKept.md`), known with no
-statistics.
+statistics. From stage 5 the row of the lists is
+`populationListsNeeds(p)` of `project.ts`, and the reason of the
+individuals kept leaving no population, which `keptNeeds` gives first,
+is `populationsKeptNeeds(p, kept)`, with the same words, since the
+distances between populations and the LD decay lock on them too
+(`docs/specs/core/project.md`, "What the analyses per population share
+from stage 5").
 
 The names of the files, of the column and of the individuals are shown
 with the helpers `project.ts` exports, `shown`, `escaped`, `namesOf`,
@@ -665,7 +675,10 @@ it only when `needs` gives `null`, so the variants file is read.
 ```
 
 `popDiversityPops` is made by `run` from the individuals of each
-population it sends, so the rule of decision 7 is core's and the runner
+population it sends, the names of `withMinimum` of
+`populationsWithMinimum(pops, minNumIndividuals)` of `project.ts`, the
+function the distances between populations split their populations
+with too, so the rule of decision 7 is core's, made once, and the runner
 only follows it.
 
 The field `individualFilters` of stage 2, always empty there, becomes
@@ -816,6 +829,26 @@ of individuals: a population of `populationsToRun(p)` that is not in
 list of the individuals kept. That a population of `tooFewIndividuals`
 lost individuals to the filters is found in the same way, its
 `numIndividuals` below its count in `populationsToRun(p)`.
+
+`individualsWithoutPopulation` and `populationNotInResult` are raised
+alike by the three analyses per population of stage 5, so from stage 5
+they are made by one function of `src/core/analyses/words.ts`, given
+what the analysis calls itself and its result: the diversity "the
+diversity" and "the table", the distances between populations "the
+distances" and "the distances", the LD decay "the LD decay" and "the
+plot" (`popDists.md` and `ldDecay.md`, "The warnings"):
+
+```ts
+/** individualsWithoutPopulation and populationNotInResult, in this
+    order, for the populations `pops` of a result and the project of its
+    request: "…, and are left out of ‹leftOutOf›: …" and "…, so it is not
+    in ‹notIn›."; none for the one population. */
+export function populationWarnings(
+  pops: readonly string[],
+  p: Project,
+  words: { readonly leftOutOf: string; readonly notIn: string },
+): readonly Warning[];
+```
 
 A population of a text is named as `project.md` names an individual, its
 control characters escaped and cut after 40 characters. The numbers of
@@ -1741,7 +1774,7 @@ page shows it beside the download: "Rarefied to 40 chromosomes."
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
 | locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the individuals kept are known, when the filters keep no individual, or leave no population, in its words (`docs/specs/core/store.md`), or, from stage 5, when the draw is larger than their chromosomes, whose words send the user to the field of this panel; the three fields | go to the step the reason names; change the draw |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds."; from stage 5, the three fields above the Run button | Run; change the options |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds."; from stage 5, the populations under the minimum of individuals named after them, by `underMinimumText` of `project.ts` as the distances between populations name theirs, "p3 has 12 individuals, fewer than the minimum of 20, so it will have no values, and is left out of the count of the private alleles of the others."; and the three fields above the Run button | Run; change the options |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and, from stage 5, "Calculating · pass 1 of 2 · 17% · 0:12" while the job makes two passes, the share being of the whole run; and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`); the three fields, from stage 5 | Stop, which cancels it, and the statistics with it; change the options |
 | done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings", the spectrum's among them; after an opened project file, the comparison with its check numbers under the table; from stage 5, below the table, the block of the site frequency spectrum of `docs/specs/analyses/sfs.md`, "The block of the panel" | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
@@ -2259,7 +2292,15 @@ When the specs of stage 4 were made to agree, the same day:
 ## What this spec asks of other documents
 
 The revision of stage 5, 30 September 2026, asks these changes, which
-are made in those documents and not here:
+were made in those documents the same day, with what the specs of the
+distances between populations and of the LD decay ask of this spec:
+the populations of `popDiversityPops` split by `populationsWithMinimum`
+of `project.ts`, which the distances call too, the populations under the
+minimum named in the ready state by `underMinimumText`, the reasons of
+no population by `populationListsNeeds` and `populationsKeptNeeds`, and
+the two warnings of the populations made by `populationWarnings`, given
+the words of each analysis (above, "Why it cannot run", "The request",
+"The warnings" and "The states"):
 
 - `docs/specs/worker/protocol.md`: `DiversityJob` with `numCalledAlleles`
   and `popDiversityPops`, and `DiversityResult` with the ten fields of

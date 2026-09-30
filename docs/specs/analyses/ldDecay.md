@@ -1,7 +1,10 @@
 # The LD decay of each population
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
-analyses of the populations. This spec
+analyses of the populations, and revised the same day when the specs of
+stage 5 were made to agree: its locks and two warnings of the
+populations made by the functions the diversity and the distances
+between populations share. Not yet approved by the owner. This spec
 gives the analysis that shows, for each population, how the linkage
 disequilibrium between two variants falls as the distance between them
 grows, and the distance at which it has fallen to half: the module
@@ -213,7 +216,7 @@ these:
 
 | the project | the reason |
 |---|---|
-| any reason of `individualsNeeds`, and the three of `populationsNeeds`, and the lists of individuals leaving no individual with a population | the diversity's words, the same function (`diversity.md`, "Why it cannot run"; below, "What this spec asks of other documents") |
+| any reason of `individualsNeeds`, and the three of `populationsNeeds`, and the lists of individuals leaving no individual with a population, `populationListsNeeds` | the diversity's words, the same functions of `project.md` ("What the analyses per population share from stage 5"; `diversity.md`, "Why it cannot run") |
 | `maxDist` `null` | "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs." |
 | 40 × `maxDist` × the populations of `populationsKept(p, byLists)` above 1,000,000,000 bytes, `LD_DECAY_MAX_BYTES` | "With 3 populations, the largest distance can be at most 8,333,333 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser." With one population, "The largest distance can be at most 25,000,000 base pairs: …" |
 
@@ -254,8 +257,9 @@ bound as it was: the lock may then ask for a smaller distance than the
 populations that remain need, and never lets through one they cannot
 hold.
 
-`keptNeeds(p, kept)` is the diversity's: the individuals kept leaving no
-population, in its words (`diversity.md`, "Why it cannot run").
+`keptNeeds(p, kept)` is `populationsKeptNeeds(p, kept)` of `project.md`,
+the diversity's reason: the individuals kept leaving no population, in
+its words (`diversity.md`, "Why it cannot run").
 
 ### The request
 
@@ -394,7 +398,7 @@ whole base pairs.
 | `noCurve` | a population with pairs and `rhoPerBp` NaN | "No curve could be fitted to the pairs of p3, so it has no half distance: its pairs are at one distance only, or r² does not fall with distance in a way a curve can follow within 100,000 base pairs, flat across them or fallen within the first base pair. Its mean r² of each bin is shown." |
 | `halfDistBeyondPairs` | a finite half distance above the largest distance of the last bin with a pair | above `maxDist`: "The curve of p3 falls to half at 1,599,810 bp, beyond the 100,000 base pairs within which pairs were counted, so that distance is where the curve would reach and not where pairs were measured, and the plot does not reach it. Type a larger distance to count pairs that far apart."; within `maxDist`: "The curve of p3 falls to half at 1,868,335 bp, beyond its furthest pairs, in the bin to 280,000 bp, so that distance is where the curve would reach and not where pairs were measured." |
 | `halfDistBelowPairs` | a finite half distance below the smallest distance of the first bin with a pair | "The curve of p3 falls to half at 800 bp, closer than the closest pairs counted, in the bin from 8,001 bp: r² is already low at the shortest distances of this file, and the half distance says only that LD falls within them." Below 1 bp, "falls to half within 1 bp, closer than the closest pairs counted, in the bin from 1 bp: …" |
-| `individualsWithoutPopulation`, `populationNotInResult` | as the diversity's | the diversity's words with "left out of the LD decay" and "so it is not in the plot" (`diversity.md`, "The warnings") |
+| `individualsWithoutPopulation`, `populationNotInResult` | as the diversity's | `populationWarnings` of `src/core/analyses/words.ts` with the words "the LD decay" and "the plot": "…left out of the LD decay" and "…so it is not in the plot" (`diversity.md`, "The warnings") |
 
 The threshold of 20 is the writers', decided on 30 September 2026, for
 the owner to overrule: it
@@ -971,8 +975,14 @@ population can be hidden from the plot.
 
 ## What this spec asks of other documents
 
-Not changed here; another agent applies them after the analyses of
-stage 5 are written.
+Made in those documents on 30 September 2026. The diversity's reasons
+of the lists and of the individuals kept leaving no population are
+`populationListsNeeds` and `populationsKeptNeeds` of
+`docs/specs/core/project.md`, and its two warnings of the populations
+`populationWarnings` of `src/core/analyses/words.ts`
+(`docs/specs/analyses/diversity.md`, "The warnings"), which the three
+analyses per population call. Section 13 of `docs/architecture.md`
+has the restart as point 16, proposed and not yet approved.
 
 - `docs/specs/worker/protocol.md`: `LdDecayJob` and `LdDecayResult`, as
   above, in the unions `Job` and `JobResult`.

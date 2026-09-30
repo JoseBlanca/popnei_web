@@ -330,6 +330,9 @@ in the running application (`popDists.md`, "How it is verified").
 
 ## What this spec asks of other documents
 
+Made in those documents on 30 September 2026, but `src/ui/tokens.css`,
+which is code and comes with the plan.
+
 - `docs/specs/charts/plot2d.md`: `Frame.axes` takes a band scale of
   names, `ScaleBand<string>` of `d3-scale`, for either axis, drawn with
   no tick marks and each label cut by the plot as it gives it; an

@@ -264,6 +264,11 @@ background of each theme, as the scatter's test does for the marks.
 
 ## What this spec asks of other documents
 
+Made in those documents on 30 September 2026, but `limits.ts`, which is
+code and comes with the plan. `xWholeNumbers` is one option of the base
+for the horizontal axis, which the histograms of the spectrum ask for
+too (`docs/specs/analyses/sfs.md`).
+
 - `docs/specs/charts/plot2d.md`, `AxesOptions`: `xWholeNumbers`, ticks
   at whole numbers with a comma between thousands on the horizontal
   axis, beside its `yWholeNumbers`.
