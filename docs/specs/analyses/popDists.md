@@ -78,7 +78,8 @@ at a variant loses it in every pair it is in, and the other pairs keep
 it. So two pairs can be over different variants, and the table gives
 each its count.
 
-**A population with fewer individuals than the minimum is left out.**
+**A population with fewer individuals than the minimum is left out**
+(**Open 4**, below).
 Such a population can reach the minimum at no variant, so popnei gives
 every pair it is in no value, NaN, and counts 0 variants for it: on
 `panel.nei`, with p0 cut to 12 individuals, the pairs of p0 with p2 and
@@ -89,10 +90,6 @@ the order of the heatmap, which needs every pair (below). So `run`
 leaves it out of the request, the ready state names it before a Run, and
 the warning `tooFewIndividuals` names it after. Leaving it out changes
 no number of the other pairs, since popnei tests each pair on its own.
-This is the rule the owner set for the private alleles on 30 September
-2026, "just leave that population out for that analysis" (decision 7 of
-`docs/specs/stage-5-open-points.md`), applied here by the writer of this
-spec; the option not taken was to send it, with its rows of no value.
 
 **The minimum of individuals is an option, with a field.** Populations
 of 5 to 15 individuals are common in collections of plant varieties and
@@ -866,7 +863,7 @@ populations.
   becomes `"popDists"`.
 - `docs/specs/stage-5-open-points.md`: point 1 of "Opened by the specs"
   settled but for the negative distances, which become this spec's
-  **Open 1**; and **Open 2** and **Open 3**.
+  **Open 1**; and **Open 2**, **Open 3** and **Open 4**.
 
 ## Open points
 
@@ -931,6 +928,43 @@ each, would take seconds to draw, not measured. The heatmap draws up to
 Recommended: (a), since the numbers are calculated and can be taken
 out, and a column of names chosen by mistake shows its count at once.
 Meanwhile, (a).
+
+**Open 4: a population with fewer individuals than the minimum.**
+`calcPopDists` has a `minNumIndividuals` of its own, 20 by default,
+and tests it for each pair at each variant: a variant counts for a pair
+only when both populations have that many called genotypes there
+(`PopDists.numVars` of `js/popnei/src/pop_dists.ts`; `min_num_individuals`
+in `crates/popnei/src/pop_dists.rs`). A population of fewer individuals
+reaches it at no variant, so every pair it is in counts 0 variants and
+has no value, NaN, for both measures; the other pairs are not touched.
+On `panel.nei`, with 10 individuals of p0 made a population of their
+own, p0s, and p0 left with 38 (node, `js-v0.1.0-dev.3`, 30 September
+2026): the three pairs of p0s counted 0 variants and gave NaN; p0 and
+p2 gave an Fst of 0.10614095340778874, p0 and p1 0.1071478341274544 and
+p2 and p1 0.10962148955018115, each over 1,200 variants, the same to the
+last digit as with p0s left out of the call. With the minimum at 10,
+p0s had values, its pairs over 875 variants, Fst 0.0456 with p0. The
+options:
+
+- (a) Leave it out of the request, as above: named in the ready state
+  before a Run and by `tooFewIndividuals` after it, with the minimum to
+  lower. The table and the heatmap hold the populations that have
+  values, and the heatmap keeps its order by similarity. It is the
+  owner's rule for the private alleles, decision 7 of
+  `docs/specs/stage-5-open-points.md`, applied to a new case.
+- (b) Send it: its pairs are rows of "no value" in the table and
+  crossed cells in the heatmap, and, since a pair with no value keeps
+  the order of the metadata file (decision 2), the heatmap of every
+  population loses its order by similarity. The warning
+  `pairWithoutDistance` names its pairs, and the words say to lower the
+  minimum.
+
+The numbers of the other pairs are the same in both. Recommended: (a),
+since (b) shows nothing more than (a) says in words and costs the order
+of the whole heatmap. Meanwhile, (a). With (b), `run` sends every
+population, `leftOut` and `tooFewIndividuals` go, the lock of fewer
+than two populations with the minimum stays, and the Python lines lose
+the test `len(names) >= 20` for `if names`.
 
 ## Not in this spec
 
