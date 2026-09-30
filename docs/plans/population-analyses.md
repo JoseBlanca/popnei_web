@@ -903,6 +903,15 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   `wholeProject` of `src/core/testSupport.ts` drawing the options of the
   three analyses. Serves 7. Needs 2.3, 3.2 and 6.2.
 
+- [ ] 6.7 Added on 30 September 2026, from the reviews of work packages
+  2 and 3: the small rules of the populations that the three analyses
+  wrote each for itself, gathered into one exported function each, with
+  no change to what they give: `MAX_NAMED` beside `namesOf`; whether the
+  project has a threshold on the individuals, from `individualsKept.ts`;
+  the populations the lists leave; the diversity's own rule of shares
+  replaced by `percentOf`. Needs 6.3 and 6.4, which edit
+  `diversity.ts`.
+
 **What could go wrong:** the flows of stages 2 and 3 read the diversity's
 rows by their cells; a column added before the fifth breaks them, and
 the spec keeps F sixth for that reason. A job of the diversity that sent
@@ -1104,7 +1113,10 @@ specs of stage 5 matched to a test.
 
 **Tasks:**
 
-- [ ] 9.1 The documents, and the final checks. Serves 1 and 2.
+- [ ] 9.1 The documents, and the final checks, with a sentence of
+  section 7 of `docs/architecture.md` that the order of the heatmap and
+  the curve of the LD decay are made outside the plots, found missing
+  by the review of work package 3. Serves 1 and 2.
 - [ ] 9.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 9.1.
 

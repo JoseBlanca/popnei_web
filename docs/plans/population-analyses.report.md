@@ -211,6 +211,36 @@ the plan; each is asked of you at the next stop.
    Recommendation: the code's, one list with one "or", and the plural
    for several pairs; the spec then says so.
 
+10. **The lock of the distances when the lists leave one population,
+    `popDists.md`, "Why it cannot run".** When the lists of individuals,
+    or the filters of individuals, leave one population, the lock says
+    "Only p0 has 20 individuals or more … Lower the minimum of
+    individuals below, merge populations…", which cannot help, since
+    the other populations have no individual at all; at a minimum of 0
+    it reads "Only p0 has 0 individuals or more". Recommendation: a row
+    of its own, "The lists of individuals leave one population, p0, and
+    the distances need two or more. Change the lists in the Variants
+    step.", and the minimum's words only when two or more are left. For
+    stop A.
+11. **The Python script of the distances, `popDists.md`, "Its lines of
+    the Python script".** Run in popnei's Python, the spec's lines fail
+    where the application gives a result: at a minimum of 0 they keep a
+    population left empty, which popnei refuses; on a haploid file,
+    where Jost's D has no value, and on a pair with no distance or all
+    distances 0, `correct_dists_by_lingoes` raises, where the
+    application keeps the order of the file; with two populations the
+    script prints an order from the PCoA, where the application keeps
+    the order of the file. Recommendation: the script's lines follow
+    the six steps of the application's order, and keep a population
+    only when it holds an individual. For stop A; the lines are built
+    here and joined into the script in stage 6.
+12. **For stage 6, the script's reading of the metadata file.** With a
+    column of populations named by numbers, pandas reads them as
+    numbers and popnei's Python refuses them ("'int' object is not an
+    instance of 'str'", checked in popnei's Python). The script of
+    stage 6 reads the metadata file with `dtype=str`; the diversity's
+    lines share the pattern.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
