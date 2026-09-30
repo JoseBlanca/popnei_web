@@ -158,6 +158,44 @@ the plan; each is asked of you at the next stop.
    places its horizontal axis, which changes `plot2d.md`. Asked at stop
    A, where it can be the first round.
 
+5. **The right margin of the LD decay's plot, `line.md`.** With its
+   right margin of 16 pixels, the last number of the axis of distances,
+   "100,000", is cut by 3.5 to 7.5 pixels at the plot's right edge, in
+   Chromium and WebKit, at 600 and 320 pixels wide
+   (`screens/scratch-line-light-600.png`). Recommendation: a right
+   margin of 28 pixels. Asked at stop C.
+6. **A population named `__proto__` in the LD decay, `ldDecay.md`, "The
+   cases".** The spec accepts that such a population fails the LD decay
+   as an error of the application, since popnei loses it (popnei issue
+   #5's neighbour). The user reads "The application met an error of its
+   own … Run it again", and running it again fails the same way. The
+   errors reviewer found a way around popnei: the application gives
+   popnei names of its own for the populations, `p0`, `p1`, and puts the
+   user's names back by their place. Recommendation: do so, a change of
+   `runner.md` and a few lines of the worker, with no wait for popnei.
+   Asked at stop C.
+7. **The warnings of the LD decay, `ldDecay.md`, "The warnings".** Two
+   gaps the spec reviewer found, for stop C:
+   - The spec says each warning names up to three populations, and
+     every text it gives carries one population's own numbers. The
+     code makes one warning per population, so a distance below the
+     spacing of the variants shows one warning for each of 20
+     populations. Recommendation: keep one per population, and write so
+     in the spec.
+   - A population of one individual is told "Type a larger distance",
+     which cannot give it a pair, since r² needs two individuals; and
+     `fewIndividuals` tells it that its curve lies higher, when it has
+     no curve. Recommendation: a third text of `noPairs` for fewer than
+     two individuals, and `fewIndividuals` saying "its curve, when it
+     has one".
+8. **The order after a crash, `client.md`.** After a crash of a defect,
+   the page now gives the analysis its failure and then starts a new
+   calculation worker, for every kind of run; before, it started the
+   new worker first. `client.md` asks this order of the LD decay alone
+   and gives none for the others. The new order is the one the writing
+   of a file and the PCA already had. Recommendation: write it in
+   `client.md` for every request.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
