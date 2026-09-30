@@ -582,10 +582,22 @@ One pass over the file, `numPassesOf("calcPopDists")` 1 in popnei's
 pass. Without standard errors popnei keeps a few sums for each pair,
 so the memory does not grow with the variants, and the PCoA of the
 order is of a matrix of k × k numbers. The time grows with the variants
-and with the pairs, k × (k − 1) / 2; it is not measured, and the plan of
-stage 5 measures it where its code first runs, on `panel.nei` and on the
-`.nei` file of 19,161,178 bytes of `docs/architecture.md` section 13,
-with three populations and with twenty. The result is 20 bytes a pair,
+and with the pairs, k × (k − 1) / 2. Measured on 30 September 2026 by
+`PA5 D3` of `e2e/measure.spec.ts`, on the built site, on an Apple M5
+Pro of 64 GB with a load average of 3 to 4, from the run posted to the
+calculation worker to its answer, the median of five runs, each on a new
+page:
+
+| variants file | populations, pairs | Chromium 153 | WebKit 26.6 |
+|---|---|---|---|
+| `panel.nei`, 1,200 variants of 200 individuals | 3, 3 | 17 ms | 14 ms |
+| | 20 of 10 individuals, the minimum at 10; 190 | 17 ms | 19 ms |
+| the `.nei` file of 19,161,178 bytes of `docs/architecture.md` section 13, 20,000 variants of 1,000 individuals | 3, 3 | 118 ms | 118 ms |
+| | 20 of 50 individuals; 190 | 155 ms | 144 ms |
+
+So the pass takes most of the time, and twenty populations add about a
+third to it on the large file; the table is on the screen within 50 ms
+of the answer in both engines. The result is 20 bytes a pair,
 two distances and a count, and the orders, a few kilobytes for twenty
 populations.
 
