@@ -47,8 +47,9 @@ The words of the genetics, from popnei's `js/popnei/src/ld.ts`:
   with the correction of Weir and Hill (1986) for a sample of n
   individuals, expects at a distance, fitted by popnei to every pair of
   the population at its own distance, so the bins do not move it. It
-  has one fitted number, **ρ per base pair**, `rhoPerBp`, four times the
-  effective size times the recombination per base pair; its value at a
+  has one fitted number, **ρ per base pair**, `rhoPerBp`, 4Nr per base
+  pair: four times the effective size times the recombination per base
+  pair, which the table of the panel names "4Nr per base pair"; its value at a
   distance of 0, `r2AtZero`, depends on n alone.
 - The **half distance**, `halfDist`, the distance at which the fitted
   curve is half its value at 0. It is read off the curve, so it can lie
@@ -238,7 +239,9 @@ counted on the lists of individuals alone, `byLists` of
 `docs/specs/core/individualsKept.md`, which a threshold on the
 individuals can only lower, so the lock is known without the statistics
 of each individual; a threshold that empties a population leaves the
-bound as it was.
+bound as it was: the lock may then ask for a smaller distance than the
+populations that remain need, and never lets through one they cannot
+hold.
 
 `keptNeeds(p, kept)` is the diversity's: the individuals kept leaving no
 population, in its words (`diversity.md`, "Why it cannot run").
@@ -963,10 +966,13 @@ stage 5 are written.
    MB for 100 individuals and 0.4 to 1.1 GB for 1,000 in the table of
    "How it runs", in node. The owner decided on 26 September 2026 not to
    restart the worker between requests, and made two exceptions, a
-   written file and a PCA above about 25 MB (`docs/architecture.md`,
-   section 13, points 2, 5 and 9). The options:
-   - **After every LD decay**, recommended. It costs about 49 ms, the
-     reading of the header of the file, against a calculation of 0.6 s
+   written file and a PCA that leave wasm more than about 25 MB larger,
+   the size below which a PCA of 700 individuals left the engines 11 to
+   18 MB larger (`docs/architecture.md`, section 13, points 2, 5 and 9). The options:
+   - **After every LD decay**, recommended. It costs at most 49 ms, from
+     the start of a new worker to the file opened, measured at the end of
+     the walking skeleton in Chromium 153 and WebKit 26.6 on the owner's
+     Mac (`docs/specs/worker/runner.md`, "What a restart costs"), against a calculation of 0.6 s
      and more on 20,000 variants, and the worker keeps no intermediate
      result before stage 7. It needs no bound, which the table shows
      would be passed by almost any file of a few hundred individuals.
@@ -995,6 +1001,8 @@ stage 5 are written.
 
    Meanwhile the application ships with the line of the help, and the
    issue is opened in popnei by the orchestrator if the owner agrees.
+   Stage 5 does not wait for it: the refusal comes with a later release
+   of popnei, and the panel's words for it are then `ldOrderText`'s.
 
 ## Not in this spec
 
