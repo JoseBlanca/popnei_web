@@ -301,6 +301,42 @@ the plan; each is asked of you at the next stop.
     stage 6 reads the metadata file with `dtype=str`; the diversity's
     lines share the pattern.
 
+13. **The heatmap at narrow widths, `heatmap.md`, "The size" and "The
+    names on the axes".** Two findings of the review of work package 4,
+    for stop A:
+    - With names of 20 characters, the margins the names need take 270
+      pixels; at that width or less the heatmap is blank, and its export
+      shows the application's error bar. A phone of 320 pixels leaves
+      288 for it before the panel's own padding. Meanwhile, task 5.2
+      gives the heatmap a minimum width and lets it scroll sideways
+      below it, as the tables do. Recommendation: that, or names cut
+      shorter as the width falls.
+    - When the names are dropped, below bands of 12 pixels, the margins
+      kept for them stay, empty: at 640 pixels, 32 populations of long
+      names leave 270 pixels empty and a squeezed grid. Recommendation:
+      when the names are dropped, the margins are made without them.
+14. **Two curves drawn alike in the LD decay's plot, `ldDecay.md` and
+    `line.md`.** The spec numbers each population's group among every
+    population of the metadata file, and the marks repeat every 49
+    groups, so with 50 populations or more, the 1st and the 50th are
+    drawn in one colour and one shape. The line plot now refuses two
+    series drawn alike. Recommendation: the panel numbers the groups
+    among the populations it draws, at most 16. For stop C.
+15. **The key of the diversity in the spec's examples, `diversity.md`
+    (about lines 1366, 1388, 1402, 1405).** They expect the key's
+    options to be `DIVERSITY_DEFAULTS`, which now holds the draw as
+    `null`, while "What goes into its key" leaves the default draw out.
+    The code follows the rule. Recommendation: correct the examples.
+16. **Words of the diversity the spec leaves unwritten**, chosen by the
+    writer of task 6.3, for stop B: `privateAllelesWithoutSmall` with
+    several populations left out, "…an allele they share only with some
+    of those populations counts as private."; `variantsNotInDraw` for
+    two or three populations with different counts, "of the 1,152 and
+    1,100 variants at which each has a value"; its last sentence at no
+    variant, "No variant has every population at 96 called
+    chromosomes…"; and the lock of the draw for one individual, "the one
+    individual … holds 2".
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac

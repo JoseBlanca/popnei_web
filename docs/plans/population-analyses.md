@@ -881,19 +881,19 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   `keptNeeds` in `store.ts` (`store.md`, "The definition of an
   analysis"); the options of the three analyses read by
   `projectFile.ts` (`projectFile.md`, "The versions of the format"). Serves 3. Needs 6.1.
-- [ ] 6.3 The warnings of stage 5, `diversityRows` and `diversityCsv` of
+- [x] 6.3 The warnings of stage 5, `diversityRows` and `diversityCsv` of
   eleven columns, and `script` with the spectrum's lines inside its
   block `if large:` (`diversity.md`, "The warnings", "Its lines of the
   Python script" and "What it shows"; `sfs.md`, "Its lines of the Python
   script"). Serves 4. Needs 6.2 and 6.5.
-- [ ] 6.4 The key version 3 and `keyInputs` without the default draw,
+- [x] 6.4 The key version 3 and `keyInputs` without the default draw,
   in a commit of its own (`diversity.md`, "What goes into its key"): a
   key that held the default draw would make every project file of stage
   4 leave its check numbers uncompared. Serves 5. Needs 6.2.
 - [x] 6.5 `src/core/analyses/sfs.ts`: `spectraOf`, `spectraCsv` and
   `spectrumWarnings` (`sfs.md`, "The module"). Serves 6. Needs 6.1; can
   run beside 6.2 and 6.4.
-- [ ] 6.6 First, in a commit of its own, the check numbers of the
+- [x] 6.6 First, in a commit of its own, the check numbers of the
   distances in `projectFile.md`, "How it is verified", beside the
   fixture: those of `popDists.md`, "How it is verified", at the missing
   data filter at 0.1, which popnei gives at a minimum of 10 as at 20
