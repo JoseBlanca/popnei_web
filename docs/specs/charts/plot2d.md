@@ -186,8 +186,9 @@ and turned along the vertical one, in the margins:
   shares;
 - from stage 5, **an axis of names**, for the heatmap: either axis may
   be drawn from a band scale of `d3-scale`, `ScaleBand<string>`, whose
-  labels are the names, each written as the plot gives it, cut by the
-  plot and never by the base, with no tick marks; and the labels of the
+  labels are the names, each written as the plot's `nameFormat` gives
+  it, cut by the plot and never by the base, the scale keeping the whole
+  names, with no tick marks; and the labels of the
   horizontal axis slanted by `xLabelAngle` degrees, −45 for the
   heatmap, anchored at their end so that a long name runs down and to
   the left of its column;
@@ -375,6 +376,11 @@ export interface AxesOptions {
   /** From stage 5, the angle of the labels of a horizontal axis of
       names, in degrees; 0 when absent. */
   readonly xLabelAngle?: number;
+  /** From stage 5, the label of a name on an axis of names, the name
+      cut as the plot writes it; the name itself when absent. The band
+      scale keeps the whole names, so that two names alike in their
+      first characters stay two rows. */
+  readonly nameFormat?: (name: string) => string;
   /** Whether a tick of either axis is drawn, of those its scale gives;
       all are when absent. */
   readonly tickShown?: (value: number) => boolean;

@@ -335,7 +335,8 @@ which is code and comes with the plan.
 
 - `docs/specs/charts/plot2d.md`: `Frame.axes` takes a band scale of
   names, `ScaleBand<string>` of `d3-scale`, for either axis, drawn with
-  no tick marks and each label cut by the plot as it gives it; an
+  no tick marks and each label cut by the plot with `nameFormat`, the
+  scale keeping the whole names; an
   option of `AxesOptions` that slants the labels of the horizontal axis,
   `xLabelAngle`, −45 for the heatmap; and an empty `xLabel` or `yLabel`
   writes no text.

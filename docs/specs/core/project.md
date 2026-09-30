@@ -806,7 +806,9 @@ three to one of them.
   are left out."; the diversity "so it will have no values, and is left
   out of the count of the private alleles of the others." and "so they
   will have no values, and are left out of the count of the private
-  alleles of the others."
+  alleles of the others." Past three populations the counts are left
+  out: "p3, p5 and 2 more have fewer individuals than the minimum of 20,
+  and are left out."
 
 ### The types of the columns
 

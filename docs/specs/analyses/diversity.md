@@ -434,7 +434,7 @@ every filter changes which genotypes the means are over.
 ```ts
 {
   pops: Pops | "all" | null,
-  options: { minNumIndividuals: number, polyThreshold: number, numCalledAlleles: number | null },
+  options: { minNumIndividuals: number, polyThreshold: number, numCalledAlleles?: number },
 }
 ```
 
@@ -444,10 +444,17 @@ individual of the file that has it, in the order above, as pairs
 individuals the load of the variants file, in every key, fixes; `null`
 when a metadata file is not read, when no column is chosen in it, or
 when the table has no column of that name. `options` are those of the project for
-`diversity`, or the defaults; `numCalledAlleles` is `null` for the
-default draw, and the key holds `null` and not the number, since the
+`diversity`, or the defaults; `numCalledAlleles` is left out of the
+key for the default draw, and not written as the number, since the
 number is made from the ploidy, which the load in every key fixes, and
-from `minNumIndividuals`, which is beside it. It does not read `p.variants`, as keys.md
+from `minNumIndividuals`, which is beside it. It is left out and not
+written `null` so that the fingerprint of the settings of a project
+file saved by stage 4, whose options had no draw, is the one stage 5
+makes for the same settings: the check numbers of such a file are then
+compared, and a difference is told as numbers "calculated in another
+way" by the key version, where a `null` would make every fingerprint of
+stage 4 differ and leave the check uncompared (found by the review of
+the shared specs, 30 September 2026). It does not read `p.variants`, as keys.md
 asks, and so it holds the individuals of the file that are not in the
 variants file too: a change to one of them costs a calculation and shows
 nothing stale.
@@ -503,7 +510,7 @@ What changes the key, which the test of the key checks row by row
 | the type of a column | same |
 | the same table from another file, or with other options of the CSV | same |
 | `minNumIndividuals` or `polyThreshold` | changes; the default draw follows `minNumIndividuals` |
-| `numCalledAlleles` typed, or set back to the default | changes, also when the number typed is the default's: a calculation more, and nothing stale |
+| `numCalledAlleles` typed, or set back to the default | changes, also when the number typed is the default's, which is in the key where the default is not: a calculation more, and nothing stale |
 | the options of another analysis, the reference | same |
 | the key version, the version of popnei | changes |
 
@@ -2305,7 +2312,7 @@ the words of each analysis (above, "Why it cannot run", "The request",
 "The warnings" and "The states"):
 
 - `docs/specs/worker/protocol.md`: `DiversityJob` with `numCalledAlleles`
-  and `popDiversityPops`, and `DiversityResult` with the ten fields of
+  and `popDiversityPops`, and `DiversityResult` with the eleven fields of
   stage 5, as "The TypeScript interface" above has them.
 - `docs/specs/worker/messages.md`: the checks of the new fields: each
   new array of the length of `pops`; `popDiversityPops` names of `pops`,

@@ -122,9 +122,10 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   the diagonal (`docs/specs/charts/heatmap.md`); the line plot takes
   series of points, a line and marks each (`docs/specs/charts/line.md`).
 - **The plot draws what it is given and reduces nothing.** A histogram
-  gets its bins, the LD decay its binned means and the parameters of its
-  fitted curves, which the screen evaluates at the points it draws
-  (`docs/specs/analyses/ldDecay.md`, "The fitted curve"), the heatmap
+  gets its bins, the LD decay its binned means and the points of its
+  fitted curves, which core evaluates from popnei's parameters with
+  popnei's formula (`fittedR2` and `ldDecayCurve` of
+  `docs/specs/analyses/ldDecay.md`, "The fitted curve"), the heatmap
   its names already in their order, the Manhattan and the QQ
   plot points already thinned (below). Binning, ordering the populations
   of the heatmap and thinning are calculations, and calculations are in Rust
@@ -134,7 +135,14 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   popnei's bins and the edges of `numpy.histogram`, which the Python
   script uses for the same bins (`docs/architecture.md`, section 7;
   `docs/specs/analyses/individualChecks.md`). The bins of the statistics
-  of the variants, which can be millions of values, stay popnei's.
+  of the variants, which can be millions of values, stay popnei's. Two
+  more from stage 5, decided by the owner on 30 September 2026: the
+  points of the fitted curve of the LD decay, from popnei's parameters;
+  and the order of the heatmap, made in the calculation worker from
+  popnei's PCoA, the application doing only two things beside it, a
+  negative distance taken as 0 in the matrix it gives the PCoA and the
+  sort of the populations by their projection
+  (`docs/specs/analyses/popDists.md`, "The order of the heatmap").
 - **A value that cannot be drawn, NaN or an infinity, is not drawn and is
   not silently dropped either.** The plot skips it, and the screen, which
   knows what it means, says how many there were. The data of a plot say

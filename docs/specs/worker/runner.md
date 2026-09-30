@@ -1777,8 +1777,9 @@ each spec gives beside them, and written into the tests as literals:
   `panel_pops.csv` with the missing data filter at 0.05 and the default
   draw of 40: the table of stage 5 of `diversity.md`, "How it is
   verified", F, the alleles and the private alleles of each population;
-  the spectra of `docs/specs/analyses/sfs.md`, "The numbers of popnei",
-  p0's first value 44.79323144486922 at no filter, each of 21 values,
+  and the spectra of `docs/specs/analyses/sfs.md`, "The numbers of
+  popnei", from a second job with no filter, p0's first value
+  44.79323144486922, each of 21 values,
   equal to the last digit to those of a call that asks `folded_sfs`
   alone; the progress of the two calls, passes 1 and 2 of 2, and of a
   job whose `popDiversityPops` is empty, one pass of 1; a job with one
