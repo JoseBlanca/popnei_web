@@ -286,7 +286,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen"] as const),
   defaults: DIVERSITY_DEFAULTS,
-  keyVersion: 2,
+  keyVersion: 3,
   filtersRead: Object.freeze({ variants: true, individuals: true }),
   parseOptions,
   keyInputs,
@@ -386,8 +386,15 @@ export function drawOf(p: Project): number | null {
     : null;
 }
 
-/** What the key holds beyond the load and the filters: the populations of
-    the table and the two options. Reads nothing of `p.variants`. */
+/**
+ * What the key holds beyond the load and the filters: the populations of
+ * the table and the options, with the draw only when it was typed. The
+ * default draw is left out, and not written `null`, since the ploidy of
+ * the load and the minimum beside it fix it, and a project file saved by
+ * stage 4, whose options had no draw, then has the fingerprint of its
+ * settings that stage 5 makes, so that its check numbers are compared.
+ * Reads nothing of `p.variants`.
+ */
 function keyInputs(p: Project): JsonObject {
   const options = diversityOptions(p);
   return {
@@ -395,6 +402,9 @@ function keyInputs(p: Project): JsonObject {
     options: {
       minNumIndividuals: options.minNumIndividuals,
       polyThreshold: options.polyThreshold,
+      ...(options.numCalledAlleles === null
+        ? {}
+        : { numCalledAlleles: options.numCalledAlleles }),
     },
   };
 }

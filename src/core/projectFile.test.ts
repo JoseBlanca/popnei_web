@@ -2455,13 +2455,48 @@ function diversityVerdictOfStage3(
   numbers: readonly [number, number, number, number, number, number, number],
   appVersion: string,
 ): CheckVerdict | null {
-  const opened = readProjectFile(
-    fixture("v1-nei-diversity.popnei.json"),
-    "popgen",
-    POPGEN_ANALYSES,
-  );
+  const [
+    numVars,
+    northExp,
+    northObs,
+    northPoly,
+    southExp,
+    southObs,
+    southPoly,
+  ] = numbers;
+  const result: DiversityResult = {
+    analysis: "diversity",
+    pops: ["north", "south"],
+    numIndividuals: Uint32Array.from([3, 3]),
+    unbiasedExpHet: Float64Array.from([northExp, southExp]),
+    obsHet: Float64Array.from([northObs, southObs]),
+    polyRatio: Float64Array.from([northPoly, southPoly]),
+    numVarsWithValue: Uint32Array.from([numVars, numVars]),
+    ...noPopDiversity(2),
+    passStats: {
+      numVars,
+      filtering: {
+        missing_data: { varsProcessed: 1203554, varsKept: numVars },
+      },
+    },
+  };
+  return diversityVerdictOf("v1-nei-diversity.popnei.json", result, appVersion);
+}
+
+/**
+ * The comparison the store of the application, with `POPGEN_ANALYSES` and
+ * the application's version `appVersion`, gives the diversity of the
+ * project of the fixture `file`, once the file's variants file is given
+ * again and read and the diversity ends with `result`.
+ */
+function diversityVerdictOf(
+  file: string,
+  result: DiversityResult,
+  appVersion: string,
+): CheckVerdict | null {
+  const opened = readProjectFile(fixture(file), "popgen", POPGEN_ANALYSES);
   if (!opened.ok) {
-    throw new Error("the fixture of stage 2 does not open");
+    throw new Error("the fixture does not open");
   }
   const sent: { key: string; run: Run<JobResult> }[] = [];
   const store = createStore<Job, JobResult>({
@@ -2488,7 +2523,7 @@ function diversityVerdictOfStage3(
   store.open(opened.value);
   const reference = opened.value.reference;
   if (reference === null) {
-    throw new Error("the fixture of stage 2 has no reference");
+    throw new Error("the fixture has no reference");
   }
   const { read, ...load } = reference.variants;
   store.apply("a variants file was loaded", (p) => ({
@@ -2500,7 +2535,7 @@ function diversityVerdictOfStage3(
     },
   }));
   if (read.kind !== "read") {
-    throw new Error("the fixture of stage 2 has no variants file read");
+    throw new Error("the fixture has no variants file read");
   }
   store.variantsRead(SAMPLE_VARIANTS_ID, read);
   store.startRun("diversity");
@@ -2508,31 +2543,6 @@ function diversityVerdictOfStage3(
   if (request === undefined) {
     throw new Error("no request of the diversity was sent");
   }
-  const [
-    numVars,
-    northExp,
-    northObs,
-    northPoly,
-    southExp,
-    southObs,
-    southPoly,
-  ] = numbers;
-  const result: DiversityResult = {
-    analysis: "diversity",
-    pops: ["north", "south"],
-    numIndividuals: Uint32Array.from([3, 3]),
-    unbiasedExpHet: Float64Array.from([northExp, southExp]),
-    obsHet: Float64Array.from([northObs, southObs]),
-    polyRatio: Float64Array.from([northPoly, southPoly]),
-    numVarsWithValue: Uint32Array.from([numVars, numVars]),
-    ...noPopDiversity(2),
-    passStats: {
-      numVars,
-      filtering: {
-        missing_data: { varsProcessed: 1203554, varsKept: numVars },
-      },
-    },
-  };
   store.runEnded(request.run.id, {
     kind: "done",
     key: request.key,
@@ -2548,13 +2558,13 @@ function diversityVerdictOfStage3(
 }
 
 describe("IP2 D2 the check numbers of a project file of stage 3", () => {
-  test("the diversity of a file saved under key version 1 is compared under key version 2: the same numbers give same, and others name both versions of the application", () => {
+  test("the diversity of a file saved under key version 1 is compared under key version 3: the same numbers give same, and others name both versions of the application", () => {
     const saved = [
       1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977,
     ] as const;
     expect(
       POPGEN_ANALYSES.find((def) => def.id === "diversity")?.keyVersion,
-    ).toBe(2);
+    ).toBe(3);
 
     expect(diversityVerdictOfStage3(saved, "0.2.0")).toStrictEqual({
       kind: "same",
@@ -3548,5 +3558,58 @@ describe("PA6 D7 the project file of stage 5", () => {
         },
       });
     }
+  });
+});
+
+describe("PA6 D5 the check numbers of a project file of stage 4", () => {
+  /** The result of the diversity over All individuals of the fixture, with
+      `numbers`: numVars, then the expected and observed heterozygosity and
+      the proportion polymorphic. */
+  function onePopulationResult(numbers: readonly number[]): DiversityResult {
+    const [numVars = 0, expected = 0, observed = 0, polymorphic = 0] = numbers;
+    return {
+      analysis: "diversity",
+      pops: ["All individuals"],
+      numIndividuals: Uint32Array.from([200]),
+      unbiasedExpHet: Float64Array.from([expected]),
+      obsHet: Float64Array.from([observed]),
+      polyRatio: Float64Array.from([polymorphic]),
+      numVarsWithValue: Uint32Array.from([numVars]),
+      ...noPopDiversity(1),
+      passStats: {
+        numVars,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: numVars },
+        },
+      },
+    };
+  }
+
+  test("the diversity of v1-one-population.popnei.json, saved under key version 2, is compared under key version 3, and a difference is told as calculated in another way", () => {
+    const file = "v1-one-population.popnei.json";
+    expect(fixtureJson(file)).toMatchObject({
+      checks: [{ analysis: "diversity", keyVersion: 2, appVersion: "0.1.0" }],
+    });
+    expect(
+      diversityVerdictOf(
+        file,
+        onePopulationResult(ONE_POPULATION_NUMBERS),
+        "0.2.0",
+      ),
+    ).toStrictEqual({ kind: "same" });
+
+    const verdict = diversityVerdictOf(
+      file,
+      onePopulationResult([1117, ...ONE_POPULATION_NUMBERS.slice(1)]),
+      "0.2.0",
+    );
+    expect(verdict).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: { saved: "0.1.0", now: "0.2.0" },
+    });
+    expect(verdict === null ? null : checkVerdictText(verdict)).toBe(
+      "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
+    );
   });
 });

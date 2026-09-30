@@ -1004,9 +1004,9 @@ describe("WS5 D2 the key", () => {
     expect(keyOfDiversity(referenced)).toBe(baseKey);
   });
 
-  test("the key version, 2, or the version of popnei, changes the key", () => {
-    expect(diversity.keyVersion).toBe(2);
-    const earlier: KeyedDef = { ...diversity, keyVersion: 1 };
+  test("the key version, 3, or the version of popnei, changes the key", () => {
+    expect(diversity.keyVersion).toBe(3);
+    const earlier: KeyedDef = { ...diversity, keyVersion: 2 };
     expect(keyOfDiversity(base, "0.1.0", earlier)).not.toBe(baseKey);
     expect(keyOfDiversity(base, "0.2.0")).not.toBe(baseKey);
   });
@@ -2805,5 +2805,42 @@ if large:
 print(table.to_string())
 `,
     );
+  });
+});
+
+describe("PA6 D5 the key of stage 5", () => {
+  test("keyInputs with the default draw gives no numCalledAlleles, not even null, and with a draw typed gives it", () => {
+    const p = project();
+    expect(diversity.keyInputs(p)).toStrictEqual({
+      pops: populationsOf(p),
+      options: KEY_OPTIONS,
+    });
+    expect(JSON.stringify(diversity.keyInputs(p))).not.toContain(
+      "numCalledAlleles",
+    );
+    expect(diversity.keyInputs(withDiversity(p, 20, 60))).toStrictEqual({
+      pops: populationsOf(p),
+      options: { ...KEY_OPTIONS, numCalledAlleles: 60 },
+    });
+  });
+
+  test("minNumIndividuals changes the key with the default draw, which follows it", () => {
+    const p = project();
+    const at20 = keyOfDiversity(withDiversity(p, 20, null));
+    expect(keyOfDiversity(p)).toBe(at20);
+    expect(keyOfDiversity(withDiversity(p, 10, null))).not.toBe(at20);
+    expect(drawOf(withDiversity(p, 10, null))).toBe(20);
+  });
+
+  test("numCalledAlleles typed changes the key, the default's number included, and set back to the default gives the key of the default again", () => {
+    const p = project();
+    const byDefault = keyOfDiversity(withDiversity(p, 20, null));
+    expect(drawOf(p)).toBe(40);
+    const typed40 = keyOfDiversity(withDiversity(p, 20, 40));
+    expect(typed40).not.toBe(byDefault);
+    expect(keyOfDiversity(withDiversity(p, 20, 60))).not.toBe(typed40);
+    expect(keyOfDiversity(withDiversity(p, 20, 60))).not.toBe(byDefault);
+    // Set back: the options of the default again.
+    expect(keyOfDiversity(withDiversity(p, 20, null))).toBe(byDefault);
   });
 });
