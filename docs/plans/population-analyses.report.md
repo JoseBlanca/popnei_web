@@ -395,6 +395,76 @@ fresh writer's reading. A flow of stage 2 that 6.3 changed was found
 only by the orchestrator's whole check: a writer that is told not to
 run Playwright should be told which flows its change reaches.
 
+## 5. The panel of the distances
+
+Built and reviewed, in f2e523a (5.1), a704da2 (5.2), 026109f, 2f03149
+and 73b2b02 (5.3), 2994fbd (5.4), and e8d2535, 6337523 and 8de5d4f
+(the fixes of the review, in two passes). It waits for your word at
+stop A, below.
+
+### The deliverables, on 8de5d4f
+
+1. `npx vitest run src/core src/ui -t "PA5 D1"`: 57 passed, at least 20
+   asked.
+2. The flows of `e2e/popDists.spec.ts`, 12 in each engine with those the
+   review added (`--list` gives 24); the whole browser check with
+   `--workers=4` "1078 passed", `npm test` "Tests 3458 passed (3458)".
+3. The time of the distances, `PA5 D3`, median of 5 runs from Run to
+   the answer, Chromium 153.0.8010.12 and WebKit 26.6 on this Mac, load
+   3 to 5: `panel.nei` with 3 populations 17 and 14 ms, with 20 of 10
+   individuals 17 and 19 ms; the 19 MB file with 3 populations 118 and
+   118 ms, with 20 of 50 individuals 155 and 144 ms. In `popDists.md`,
+   "How it runs" (73b2b02). At 200 populations, in Chromium: 857 ms
+   from Run to the table on the screen, with 19,900 rows in the page;
+   a change of the measure no longer draws the table again.
+4. What the field of the minimum announces, `PA5 D4`: 2 passed, one in
+   each engine; it does not gather the digits of several edits, as
+   stage 4 saw; on the first edit of a page it holds "151" for "15"
+   and a late "1".
+5. The screenshots of the panel, light and dark, 16 states in
+   `screens/popgen-popdists-*`, the four the review asked for among
+   them; the orchestrator looked at the done state, at 320 pixels, at
+   200 populations, at a pair with no value and at Jost's D in a
+   haploid file.
+
+### The review
+
+Nine reviewers, then `react` and `accessibility` again after the fixes.
+No wrong number, and axe found no violation in 64 runs of every state
+in both engines. Fixed:
+
+- Changing the measure announced "Heatmap of Jost's D" in states with
+  no heatmap, the locked, the ready, and above 200 populations.
+- The downloaded CSV could hold truncated numbers with every test
+  passing; the flow now compares it with the spec's lines.
+- What Jost's D shows was tested only where both measures share one
+  order; the heatmap's least width and its reach by keyboard were
+  guarded only by the screenshots, which GitHub does not run; the
+  focus kept on the measure was checked only in jsdom.
+- A switch of the measure drew the 19,900 rows of 200 populations
+  again (about 270 ms); a notice of another panel did too.
+- The focus dropped to the page when a scrolling frame stopped
+  scrolling, the heatmap's and every table's.
+- At 320 pixels "p0 and p2" wrapped onto three lines; each name now
+  stays whole and the table scrolls, with its line saying so.
+- Shared words moved to the module every panel shares; the refusal of
+  the minimum writes its numbers with commas; popnei's message when
+  the order fails goes to the browser's console.
+
+Not taken: a table that draws only the rows in view, for 200
+populations, since the one such table of the application is a sortable
+grid and the spec asks for a plain table; the page stays usable, at
+857 ms on this Mac. The size of the 19 MB file in `popDists.md`,
+19,161,178 bytes, is that of popnei's earlier release; its present
+release writes 19,161,194.
+
+### How the work of 5 went, for whoever revises a skill or a plan
+
+Four writers' tasks, about 1.1 million tokens with the two rounds of
+fixes; eleven reviewers' passes about 1.1 million. The reviews ran
+three at a time from here, after the owner saw the machine clogged,
+and cost more wall time and no more tokens.
+
 ## Stop A: the panel of the distances, for the owner
 
 ### How to try it
