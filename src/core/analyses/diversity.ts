@@ -32,6 +32,7 @@ import {
   populationsNeeds,
   populationsOf,
   populationsToRun,
+  populationsWithMinimum,
   shown,
 } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -320,13 +321,18 @@ function needs(p: Project): string | null {
 }
 
 /** Builds the request, with the individuals the filters keep that the
-    store gives through `c`, and sends it through `c`. Throws a defect when
-    the variants file is not read or there are no populations to run,
-    which `needs` rules out. */
+    store gives through `c`, and sends it through `c`: the default draw,
+    and the populations with at least the minimum of individuals as those
+    of `calcPopDiversity`, the rule of decision 7 made here and not in the
+    runner. Throws a defect when the variants file is not read or there
+    are no populations to run, which `needs` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   const kept = populationsKept(p, c.individuals);
   if (p.variants === null || kept === null) {
     throw defect("the diversity was run with no populations to run.");
+  }
+  if (p.variants.read.kind !== "read") {
+    throw defect("the diversity was run before its variants file was read.");
   }
   const options = optionsOf(p);
   return c.run({
@@ -337,7 +343,25 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     pops: kept.pops,
     minNumIndividuals: options.minNumIndividuals,
     polyThreshold: options.polyThreshold,
+    numCalledAlleles: defaultDraw(
+      p.variants.read.ploidy,
+      options.minNumIndividuals,
+    ),
+    popDiversityPops: populationsWithMinimum(
+      kept.pops,
+      options.minNumIndividuals,
+    ).withMinimum.map(([pop]) => pop),
   });
+}
+
+/** The smallest draw popnei's `calcPopDiversity` takes. */
+const MIN_DRAW = 2;
+
+/** The default draw of the rarefaction and of the spectrum: the ploidy of
+    the variants file times the minimum number of individuals, at least 2,
+    as the owner decided on 30 September 2026 (decision 5). */
+function defaultDraw(ploidy: number, minNumIndividuals: number): number {
+  return Math.max(MIN_DRAW, ploidy * minNumIndividuals);
 }
 
 /**

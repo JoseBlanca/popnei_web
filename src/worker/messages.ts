@@ -1080,6 +1080,8 @@ function checkDiversityJob(
     "pops",
     "minNumIndividuals",
     "polyThreshold",
+    "numCalledAlleles",
+    "popDiversityPops",
   ]);
   if (wrong !== null) {
     return wrong;
@@ -1108,6 +1110,19 @@ function checkDiversityJob(
   if (!polyThreshold.ok) {
     return polyThreshold;
   }
+  const numCalledAlleles = field(record, "numCalledAlleles", place, isDraw);
+  if (!numCalledAlleles.ok) {
+    return numCalledAlleles;
+  }
+  const popDiversityPops = field(
+    record,
+    "popDiversityPops",
+    place,
+    inOrderOf(pops.value.map(([pop]) => pop)),
+  );
+  if (!popDiversityPops.ok) {
+    return popDiversityPops;
+  }
   return accepted({
     analysis: "diversity",
     fileId: fileId.value,
@@ -1116,7 +1131,49 @@ function checkDiversityJob(
     pops: pops.value,
     minNumIndividuals: minNumIndividuals.value,
     polyThreshold: polyThreshold.value,
+    numCalledAlleles: numCalledAlleles.value,
+    popDiversityPops: popDiversityPops.value,
   });
+}
+
+/** The smallest draw popnei's `calcPopDiversity` takes: a draw of one
+    allele finds one allele whatever the population holds. */
+const MIN_DRAW = 2;
+
+/** The draw of a diversity job, a whole number of 2 or more: popnei
+    refuses a smaller one only at its second call, after a whole first
+    pass, so the range is kept here against the rule of the type. */
+const isDraw: Check<number> = (value, place) =>
+  typeof value === "number" && Number.isInteger(value) && value >= MIN_DRAW
+    ? accepted(value)
+    : wrongType(place, "a whole number of 2 or more", value);
+
+/**
+ * A check of a list of texts each of which is one of `names`, in their
+ * order and each once: the populations given to `calcPopDiversity`, taken
+ * from those of the job. A name not among them, or one out of their order
+ * or twice, is refused as of the wrong type.
+ */
+function inOrderOf(names: readonly string[]): Check<readonly string[]> {
+  return (value, place) => {
+    const texts = listOf(isText)(value, place);
+    if (!texts.ok) {
+      return texts;
+    }
+    let next = 0;
+    for (const name of texts.value) {
+      const at = names.indexOf(name, next);
+      if (at < 0) {
+        return wrongType(
+          place,
+          "a list of populations of the job, in their order and each once",
+          value,
+        );
+      }
+      next = at + 1;
+    }
+    return accepted(texts.value);
+  };
 }
 
 /** The fields of the request of the statistics of each individual,
@@ -1625,6 +1682,17 @@ function checkDiversityResult(
     "obsHet",
     "polyRatio",
     "numVarsWithValue",
+    "fis",
+    "numAllelesMean",
+    "numAllelesInDraw",
+    "privateAllelesTotal",
+    "privateAllelesMean",
+    "privateAllelesInDraw",
+    "numVarsInDraw",
+    "numVarsEveryPop",
+    "numVarsEveryPopInDraw",
+    "numCalledAlleles",
+    "foldedSfs",
     "passStats",
   ]);
   if (wrong !== null) {
@@ -1670,6 +1738,10 @@ function checkDiversityResult(
   if (!numVarsWithValue.ok) {
     return numVarsWithValue;
   }
+  const numbers = checkPopDiversity(record, place, numPops);
+  if (!numbers.ok) {
+    return numbers;
+  }
   const passStats = field(record, "passStats", place, checkPassStats);
   if (!passStats.ok) {
     return passStats;
@@ -1682,7 +1754,153 @@ function checkDiversityResult(
     obsHet: obsHet.value,
     polyRatio: polyRatio.value,
     numVarsWithValue: numVarsWithValue.value,
+    ...numbers.value,
     passStats: passStats.value,
+  });
+}
+
+/** The fields of a diversity result that come from `calcPopDiversity`. */
+type PopDiversityFields = Pick<
+  DiversityResult,
+  | "fis"
+  | "numAllelesMean"
+  | "numAllelesInDraw"
+  | "privateAllelesTotal"
+  | "privateAllelesMean"
+  | "privateAllelesInDraw"
+  | "numVarsInDraw"
+  | "numVarsEveryPop"
+  | "numVarsEveryPopInDraw"
+  | "numCalledAlleles"
+  | "foldedSfs"
+>;
+
+/**
+ * The fields of a diversity result of `calcPopDiversity`, of `numPops`
+ * populations: each array as long as the populations, the two counts of
+ * the variants of every population both `null` or both whole numbers, and
+ * one spectrum per population, each `null` or of `floor(numCalledAlleles
+ * / 2) + 1` values.
+ */
+function checkPopDiversity(
+  record: object,
+  place: Place,
+  numPops: number,
+): Checked<PopDiversityFields> {
+  const fis = field(record, "fis", place, float64Array(numPops));
+  if (!fis.ok) {
+    return fis;
+  }
+  const numAllelesMean = field(
+    record,
+    "numAllelesMean",
+    place,
+    float64Array(numPops),
+  );
+  if (!numAllelesMean.ok) {
+    return numAllelesMean;
+  }
+  const numAllelesInDraw = field(
+    record,
+    "numAllelesInDraw",
+    place,
+    float64Array(numPops),
+  );
+  if (!numAllelesInDraw.ok) {
+    return numAllelesInDraw;
+  }
+  const privateAllelesTotal = field(
+    record,
+    "privateAllelesTotal",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesTotal.ok) {
+    return privateAllelesTotal;
+  }
+  const privateAllelesMean = field(
+    record,
+    "privateAllelesMean",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesMean.ok) {
+    return privateAllelesMean;
+  }
+  const privateAllelesInDraw = field(
+    record,
+    "privateAllelesInDraw",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesInDraw.ok) {
+    return privateAllelesInDraw;
+  }
+  const numVarsInDraw = field(
+    record,
+    "numVarsInDraw",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numVarsInDraw.ok) {
+    return numVarsInDraw;
+  }
+  const numVarsEveryPop = field(
+    record,
+    "numVarsEveryPop",
+    place,
+    isWholeOrNull,
+  );
+  if (!numVarsEveryPop.ok) {
+    return numVarsEveryPop;
+  }
+  const numVarsEveryPopInDraw = field(
+    record,
+    "numVarsEveryPopInDraw",
+    place,
+    isWholeOrNull,
+  );
+  if (!numVarsEveryPopInDraw.ok) {
+    return numVarsEveryPopInDraw;
+  }
+  if (
+    (numVarsEveryPop.value === null) !==
+    (numVarsEveryPopInDraw.value === null)
+  ) {
+    return wrongType(
+      inner(place, "numVarsEveryPopInDraw"),
+      numVarsEveryPop.value === null
+        ? "null, as numVarsEveryPop is"
+        : "a whole number, as numVarsEveryPop is",
+      numVarsEveryPopInDraw.value,
+    );
+  }
+  const numCalledAlleles = field(record, "numCalledAlleles", place, isDraw);
+  if (!numCalledAlleles.ok) {
+    return numCalledAlleles;
+  }
+  const numBins = Math.floor(numCalledAlleles.value / 2) + 1;
+  const foldedSfs = field(
+    record,
+    "foldedSfs",
+    place,
+    listOfLength(numPops, orNull(float64Array(numBins))),
+  );
+  if (!foldedSfs.ok) {
+    return foldedSfs;
+  }
+  return accepted({
+    fis: fis.value,
+    numAllelesMean: numAllelesMean.value,
+    numAllelesInDraw: numAllelesInDraw.value,
+    privateAllelesTotal: privateAllelesTotal.value,
+    privateAllelesMean: privateAllelesMean.value,
+    privateAllelesInDraw: privateAllelesInDraw.value,
+    numVarsInDraw: numVarsInDraw.value,
+    numVarsEveryPop: numVarsEveryPop.value,
+    numVarsEveryPopInDraw: numVarsEveryPopInDraw.value,
+    numCalledAlleles: numCalledAlleles.value,
+    foldedSfs: foldedSfs.value,
   });
 }
 
@@ -2881,6 +3099,20 @@ function listOf<T>(check: Check<T>): Check<readonly T[]> {
       checked.push(one.value);
     }
     return accepted(checked);
+  };
+}
+
+/** A check of a list of `length` elements, each of which passes
+    `check`. */
+function listOfLength<T>(length: number, check: Check<T>): Check<readonly T[]> {
+  return (value, place) => {
+    const checked = listOf(check)(value, place);
+    if (!checked.ok) {
+      return checked;
+    }
+    return checked.value.length === length
+      ? checked
+      : wrongLength(place, length, checked.value.length);
   };
 }
 

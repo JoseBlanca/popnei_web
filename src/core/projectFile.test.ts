@@ -31,6 +31,7 @@ import {
   SAMPLE_VARIANTS_ID,
   TEST_DEFS,
   deepFreeze,
+  noPopDiversity,
   sampleProject,
   wholeProject,
 } from "./testSupport.ts";
@@ -1324,6 +1325,7 @@ describe("WS6 D2 the opening", () => {
       obsHet: Float64Array.from([0.3, NaN]),
       polyRatio: Float64Array.from([0.91, 0.89]),
       numVarsWithValue: Uint32Array.from([1150112, 0]),
+      ...noPopDiversity(2),
       passStats: {
         numVars: 1150112,
         filtering: {
@@ -2521,6 +2523,7 @@ function diversityVerdictOfStage3(
     obsHet: Float64Array.from([northObs, southObs]),
     polyRatio: Float64Array.from([northPoly, southPoly]),
     numVarsWithValue: Uint32Array.from([numVars, numVars]),
+    ...noPopDiversity(2),
     passStats: {
       numVars,
       filtering: {
@@ -3167,6 +3170,7 @@ describe("IP4 D4 the project file of stage 4", () => {
       obsHet: Float64Array.from([0.3541409192154764]),
       polyRatio: Float64Array.from([0.9791666666666666]),
       numVarsWithValue: Uint32Array.from([1152]),
+      ...noPopDiversity(1),
       passStats: {
         numVars: 1152,
         filtering: {

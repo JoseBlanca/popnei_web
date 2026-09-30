@@ -26,7 +26,7 @@ import {
 import type { Project, VariantSource } from "../project.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, noPopDiversity } from "../testSupport.ts";
 import type {
   Cell,
   DiversityJob,
@@ -164,6 +164,7 @@ function result(fields: {
     numVarsWithValue: Uint32Array.from(
       fields.numVarsWithValue ?? fields.pops.map(() => fields.numVars),
     ),
+    ...noPopDiversity(fields.pops.length),
     passStats: {
       numVars: fields.numVars,
       filtering: {
@@ -239,6 +240,8 @@ describe("WS5 D1 the example and the reasons", () => {
         ],
         minNumIndividuals: 20,
         polyThreshold: 0.95,
+        numCalledAlleles: 40,
+        popDiversityPops: [],
       },
     ]);
     const r = result({
@@ -2008,5 +2011,71 @@ describe("IP10 D3 the cases of the one population", () => {
     expect(back).toMatchObject({ kind: "done", key: request.key });
     expect(back?.kind === "done" && back.result).toBe(done);
     expect(sent).toHaveLength(numSent);
+  });
+});
+
+describe("PA6 D3 the populations of calcPopDiversity and the default draw that run sends", () => {
+  /** The worked example with the minimum `minNumIndividuals` and a
+      variants file of ploidy `ploidy`. */
+  function withMinimum(minNumIndividuals: number, ploidy = 2): Project {
+    const p = project();
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { ...p.variants.read, ploidy } },
+      analyses: [
+        {
+          analysis: "diversity",
+          options: { minNumIndividuals, polyThreshold: 0.95 },
+        },
+      ],
+    });
+  }
+
+  /** What run sends of the stage 5: the draw and the populations. */
+  function sentOf(p: Project): readonly [number, readonly string[]] {
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    const [job] = jobs;
+    if (job === undefined || jobs.length !== 1) {
+      throw new Error("run sent no job, or more than one");
+    }
+    return [job.numCalledAlleles, job.popDiversityPops];
+  }
+
+  test("with minNumIndividuals 2, A of 2 individuals is given and B of 1 is not, at a draw of 4 for ploidy 2", () => {
+    expect(sentOf(withMinimum(2))).toEqual([4, ["A"]]);
+  });
+
+  test("with minNumIndividuals 1, A and B in their order, at a draw of 2", () => {
+    expect(sentOf(withMinimum(1))).toEqual([2, ["A", "B"]]);
+  });
+
+  test("with the default of 20, no population, at a draw of 40", () => {
+    expect(sentOf(project())).toEqual([40, []]);
+  });
+
+  test("the draw is the ploidy times the minimum, 80 for ploidy 4 at 20, and never below 2, as at a minimum of 0", () => {
+    expect(sentOf(withMinimum(20, 4))[0]).toBe(80);
+    expect(sentOf(withMinimum(0, 1))).toEqual([2, ["A", "B"]]);
+  });
+
+  test("the populations are counted among the individuals kept: with i1 and i2 kept, A has 1 and is not given at a minimum of 2", () => {
+    const { client, jobs } = recordingClient();
+    diversity.run(withMinimum(2), { ...client, individuals: ["i1", "i2"] });
+    expect(
+      jobs.map((job) => [job.pops, job.popDiversityPops, job.numCalledAlleles]),
+    ).toEqual([
+      [
+        [
+          ["A", ["i1"]],
+          ["B", ["i2"]],
+        ],
+        [],
+        4,
+      ],
+    ]);
   });
 });

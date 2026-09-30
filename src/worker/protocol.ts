@@ -379,10 +379,21 @@ export interface DiversityJob {
   /** The frequency of the commonest allele below which a variant is
       polymorphic, popnei's `polyThreshold`. */
   readonly polyThreshold: number;
+  /** The draw of the rarefaction and of the spectrum, popnei's
+      `numCalledAlleles`: the called alleles of a population at a variant
+      that are drawn, a whole number of 2 or more. */
+  readonly numCalledAlleles: number;
+  /** The populations of `pops` given to popnei's `calcPopDiversity`, those
+      with at least `minNumIndividuals` individuals, in the order of `pops`;
+      empty when none has them, and then there is no second pass. */
+  readonly popDiversityPops: readonly string[];
 }
 
 /** The result of the diversity, every array in the order of the
-    populations of its request. */
+    populations of its request. The fields from `fis` to `foldedSfs` are
+    of popnei's `calcPopDiversity`, and a population not given to it has
+    NaN in each array of numbers, 0 in `numVarsInDraw` and `null` for its
+    spectrum. */
 export interface DiversityResult {
   /** The analysis the result is of. */
   readonly analysis: "diversity";
@@ -398,8 +409,39 @@ export interface DiversityResult {
   readonly polyRatio: Float64Array;
   /** The variants at which each population has a value. */
   readonly numVarsWithValue: Uint32Array;
-  /** The counts of the pass; `numVars` is the variants the filters
-      kept. */
+  /** F, one minus the mean observed heterozygosity over the mean unbiased
+      expected one; NaN for no value. */
+  readonly fis: Float64Array;
+  /** The alleles called per variant, popnei's `numAlleles.mean`. */
+  readonly numAllelesMean: Float64Array;
+  /** The alleles per variant in a draw of `numCalledAlleles`, popnei's
+      `numAlleles.inDraw`. */
+  readonly numAllelesInDraw: Float64Array;
+  /** The private alleles, popnei's `privateAlleles.total`; NaN when they
+      were not asked for, and not 0, which would read as a count. */
+  readonly privateAllelesTotal: Float64Array;
+  /** The private alleles per variant, popnei's `privateAlleles.mean`. */
+  readonly privateAllelesMean: Float64Array;
+  /** The private alleles per variant in a draw, popnei's
+      `privateAlleles.inDraw`. */
+  readonly privateAllelesInDraw: Float64Array;
+  /** The variants at which each population has a value and called at
+      least the draw, popnei's `numVars.inDraw`. */
+  readonly numVarsInDraw: Uint32Array;
+  /** The variants at which every population of the call has a value, the
+      divisor of the private alleles per variant; `null` when the private
+      alleles were not asked for. */
+  readonly numVarsEveryPop: number | null;
+  /** Of those, the variants at which every population called at least
+      the draw; `null` with `numVarsEveryPop`. */
+  readonly numVarsEveryPopInDraw: number | null;
+  /** The draw of the request, which the columns name. */
+  readonly numCalledAlleles: number;
+  /** The folded spectrum of each population, `floor(numCalledAlleles / 2)
+      + 1` values; `null` for a population not given to popnei. */
+  readonly foldedSfs: readonly (Float64Array | null)[];
+  /** The counts of the pass, of the first call when there were two, whose
+      steps are the same; `numVars` is the variants the filters kept. */
   readonly passStats: PassStats;
 }
 

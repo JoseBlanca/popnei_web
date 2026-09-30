@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { fiveIndividualsProject } from "../core/testSupport.ts";
+import { fiveIndividualsProject, noPopDiversity } from "../core/testSupport.ts";
 import type {
   Job,
   JobResult,
@@ -99,6 +99,7 @@ describe("VS5 D1 the store of the page", () => {
         obsHet: Float64Array.from([0.3, 0.4]),
         polyRatio: Float64Array.from([0.9, 0.8]),
         numVarsWithValue: Uint32Array.from([1152, 1152]),
+        ...noPopDiversity(2),
         passStats: MISSING_PASS,
       },
     });

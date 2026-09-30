@@ -15,7 +15,11 @@ import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import { createStore } from "./store.ts";
 import type { AnalysisView, AppState, Store } from "./store.ts";
-import { FIVE_INDIVIDUALS, fiveIndividualsProject } from "./testSupport.ts";
+import {
+  FIVE_INDIVIDUALS,
+  fiveIndividualsProject,
+  noPopDiversity,
+} from "./testSupport.ts";
 import type {
   DiversityResult,
   IndividualChecksResult,
@@ -48,6 +52,7 @@ function diversityResult(pass: PassStats): DiversityResult {
     obsHet: Float64Array.from([0.35]),
     polyRatio: Float64Array.from([0.9]),
     numVarsWithValue: Uint32Array.from([pass.numVars]),
+    ...noPopDiversity(1),
     passStats: pass,
   };
 }

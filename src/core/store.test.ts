@@ -56,6 +56,7 @@ import {
   fakeWriteCountsOf,
   fiveIndividualsProject,
   fiveStats,
+  noPopDiversity,
   sampleProject,
   statsResult,
   writeTestCountsOf,
@@ -6691,6 +6692,7 @@ describe("IP4 D1 a result given back by a read, with the diversity of the applic
       obsHet: Float64Array.from([0.2]),
       polyRatio: Float64Array.from([0.9]),
       numVarsWithValue: Uint32Array.from([100]),
+      ...noPopDiversity(1),
       passStats: { numVars: 100, filtering: {} },
     };
     store.runEnded(request.run.id, { kind: "done", key: request.key, result });

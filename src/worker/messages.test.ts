@@ -50,6 +50,8 @@ const JOB: DiversityJob = {
   ],
   minNumIndividuals: 20,
   polyThreshold: 0.95,
+  numCalledAlleles: 40,
+  popDiversityPops: [],
 };
 
 const RESULT: DiversityResult = {
@@ -60,6 +62,17 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28, Number.NaN]),
   polyRatio: Float64Array.from([0.9, Number.NaN]),
   numVarsWithValue: Uint32Array.from([1152, 0]),
+  fis: Float64Array.from([NaN, NaN]),
+  numAllelesMean: Float64Array.from([NaN, NaN]),
+  numAllelesInDraw: Float64Array.from([NaN, NaN]),
+  privateAllelesTotal: Float64Array.from([NaN, NaN]),
+  privateAllelesMean: Float64Array.from([NaN, NaN]),
+  privateAllelesInDraw: Float64Array.from([NaN, NaN]),
+  numVarsInDraw: Uint32Array.from([0, 0]),
+  numVarsEveryPop: null,
+  numVarsEveryPopInDraw: null,
+  numCalledAlleles: 40,
+  foldedSfs: [null, null],
   passStats: {
     numVars: 1152,
     filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
@@ -1211,18 +1224,39 @@ const passStats: fc.Arbitrary<PassStats> = fc.record({
 });
 
 const diversityResult: fc.Arbitrary<DiversityResult> = fc
-  .array(text, { maxLength: 5 })
-  .chain((pops) =>
-    fc.record({
-      analysis: fc.constant("diversity" as const),
-      pops: fc.constant(pops),
-      numIndividuals: uint32s(pops.length),
-      unbiasedExpHet: float64s(pops.length),
-      obsHet: float64s(pops.length),
-      polyRatio: float64s(pops.length),
-      numVarsWithValue: uint32s(pops.length),
-      passStats,
-    }),
+  .tuple(fc.array(text, { maxLength: 5 }), fc.integer({ min: 2, max: 12 }))
+  .chain(([pops, numCalledAlleles]) =>
+    fc
+      .record({
+        analysis: fc.constant("diversity" as const),
+        pops: fc.constant(pops),
+        numIndividuals: uint32s(pops.length),
+        unbiasedExpHet: float64s(pops.length),
+        obsHet: float64s(pops.length),
+        polyRatio: float64s(pops.length),
+        numVarsWithValue: uint32s(pops.length),
+        fis: float64s(pops.length),
+        numAllelesMean: float64s(pops.length),
+        numAllelesInDraw: float64s(pops.length),
+        privateAllelesTotal: float64s(pops.length),
+        privateAllelesMean: float64s(pops.length),
+        privateAllelesInDraw: float64s(pops.length),
+        numVarsInDraw: uint32s(pops.length),
+        everyPop: fc.option(fc.tuple(whole, whole), { nil: null }),
+        numCalledAlleles: fc.constant(numCalledAlleles),
+        foldedSfs: fc.array(
+          fc.option(float64s(Math.floor(numCalledAlleles / 2) + 1), {
+            nil: null,
+          }),
+          { minLength: pops.length, maxLength: pops.length },
+        ),
+        passStats,
+      })
+      .map(({ everyPop, ...result }) => ({
+        ...result,
+        numVarsEveryPop: everyPop === null ? null : everyPop[0],
+        numVarsEveryPopInDraw: everyPop === null ? null : everyPop[1],
+      })),
   );
 const individualChecksResult: fc.Arbitrary<IndividualChecksResult> = fc
   .array(text, { maxLength: 5 })
@@ -1544,17 +1578,21 @@ const individualsKept = fc.option(fc.array(text, { maxLength: 4 }), {
   nil: null,
 });
 const filters = fc.array(variantFilter, { maxLength: 4 });
-const diversityJob = fc.record({
-  analysis: fc.constant("diversity" as const),
-  fileId: text,
-  filters,
-  individuals: individualsKept,
-  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
-    maxLength: 3,
-  }),
-  minNumIndividuals: number,
-  polyThreshold: number,
-});
+const diversityJob = fc
+  .array(fc.tuple(text, fc.array(text, { maxLength: 3 })), { maxLength: 3 })
+  .chain((pops) =>
+    fc.record({
+      analysis: fc.constant("diversity" as const),
+      fileId: text,
+      filters,
+      individuals: individualsKept,
+      pops: fc.constant(pops),
+      minNumIndividuals: number,
+      polyThreshold: number,
+      numCalledAlleles: fc.integer({ min: 2, max: 4294967295 }),
+      popDiversityPops: fc.subarray(pops.map(([pop]) => pop)),
+    }),
+  );
 const individualChecksJob = fc.record({
   analysis: fc.constant("individualChecks" as const),
   fileId: text,
@@ -2899,6 +2937,238 @@ describe("PA3 D1 the messages of the distances", () => {
         path: "job",
         fields: ["measure"],
       },
+    });
+  });
+});
+
+/** A diversity job of stage 5 over three populations, p0, p2 and p1, all
+    three given to calcPopDiversity. */
+const DIVERSITY_JOB_5: DiversityJob = {
+  ...JOB,
+  pops: [
+    ["p0", ["s000", "s003"]],
+    ["p2", ["s001"]],
+    ["p1", ["s002"]],
+  ],
+  minNumIndividuals: 1,
+  numCalledAlleles: 40,
+  popDiversityPops: ["p0", "p2", "p1"],
+};
+
+/** A diversity result of stage 5 of p2 and p1, given to calcPopDiversity,
+    and p0, of 12 individuals, not given, at the draw of 40: 21 values in
+    each spectrum. The numbers of diversity.md, p0 cut to 12. */
+const DIVERSITY_RESULT_5: DiversityResult = {
+  analysis: "diversity",
+  pops: ["p0", "p2", "p1"],
+  numIndividuals: Uint32Array.of(12, 84, 68),
+  unbiasedExpHet: Float64Array.of(NaN, 0.3440824705971255, 0.3498365468860467),
+  obsHet: Float64Array.of(NaN, 0.3512406974637824, 0.35603713961547323),
+  polyRatio: Float64Array.of(NaN, 0.9105902777777778, 0.9157986111111112),
+  numVarsWithValue: Uint32Array.of(0, 1152, 1152),
+  fis: Float64Array.of(NaN, -0.020803811522959625, -0.017724256612463796),
+  numAllelesMean: Float64Array.of(NaN, 1.9861111111111112, 1.9809027777777777),
+  numAllelesInDraw: Float64Array.of(
+    NaN,
+    1.9595644507442256,
+    1.9582701017879214,
+  ),
+  privateAllelesTotal: Float64Array.of(NaN, 22, 16),
+  privateAllelesMean: Float64Array.of(
+    NaN,
+    0.019097222222222224,
+    0.013888888888888888,
+  ),
+  privateAllelesInDraw: Float64Array.of(
+    NaN,
+    0.038418511541450096,
+    0.037124162585145296,
+  ),
+  numVarsInDraw: Uint32Array.of(0, 1152, 1152),
+  numVarsEveryPop: 1152,
+  numVarsEveryPopInDraw: 1152,
+  numCalledAlleles: 40,
+  foldedSfs: [null, new Float64Array(21), new Float64Array(21)],
+  passStats: {
+    numVars: 1152,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+  },
+};
+
+describe("PA6 D1 the messages of the diversity of stage 5", () => {
+  test("parseToRunner accepts a run of the diversity with the draw and the populations of calcPopDiversity", () => {
+    for (const popDiversityPops of [["p0", "p2", "p1"], ["p2"], []]) {
+      const run = { ...RUN, job: { ...DIVERSITY_JOB_5, popDiversityPops } };
+      expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+    }
+  });
+
+  test("parseFromRunner accepts a result with its spectra, a population not given to calcPopDiversity among them", () => {
+    const message = resultMessage(DIVERSITY_RESULT_5);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a diversity job with numCalledAlleles 1, below popnei's smallest draw, is wrongType, and so are 0 and 2.5", () => {
+    for (const numCalledAlleles of [1, 0, 2.5]) {
+      expect(
+        parseToRunner({
+          ...RUN,
+          job: { ...DIVERSITY_JOB_5, numCalledAlleles },
+        }),
+      ).toMatchObject({
+        ok: false,
+        error: {
+          kind: "wrongType",
+          path: "job.numCalledAlleles",
+          expected: "a whole number of 2 or more",
+        },
+      });
+    }
+  });
+
+  test("a diversity job whose popDiversityPops names a population not in pops is wrongType", () => {
+    const job = { ...DIVERSITY_JOB_5, popDiversityPops: ["p0", "p3"] };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "job.popDiversityPops" },
+    });
+  });
+
+  test("a diversity job whose popDiversityPops holds two populations in another order than theirs, or one twice, is wrongType", () => {
+    for (const popDiversityPops of [
+      ["p2", "p0"],
+      ["p0", "p1", "p2"],
+      ["p2", "p2"],
+    ]) {
+      const job = { ...DIVERSITY_JOB_5, popDiversityPops };
+      expect(parseToRunner({ ...RUN, job })).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: "job.popDiversityPops" },
+      });
+    }
+  });
+
+  test("a diversity job without the two fields of stage 5 is missingFields", () => {
+    const stage4 = Object.fromEntries(
+      Object.entries(DIVERSITY_JOB_5).filter(
+        ([name]) => name !== "numCalledAlleles" && name !== "popDiversityPops",
+      ),
+    );
+    expect(parseToRunner({ ...RUN, job: stage4 })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["numCalledAlleles", "popDiversityPops"],
+      },
+    });
+  });
+
+  test("a diversity result with numVarsEveryPop a number and numVarsEveryPopInDraw null, or the other way round, is wrongType", () => {
+    for (const [numVarsEveryPop, numVarsEveryPopInDraw] of [
+      [1152, null],
+      [null, 1152],
+    ]) {
+      const result = {
+        ...DIVERSITY_RESULT_5,
+        numVarsEveryPop,
+        numVarsEveryPopInDraw,
+      };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: "result.numVarsEveryPopInDraw" },
+      });
+    }
+  });
+
+  test("a diversity result whose foldedSfs holds 20 values for a draw of 40 is wrongLength", () => {
+    const result = {
+      ...DIVERSITY_RESULT_5,
+      foldedSfs: [null, new Float64Array(21), new Float64Array(20)],
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.foldedSfs.2",
+        expected: 21,
+        found: 20,
+      },
+    });
+  });
+
+  test("a diversity result with fewer spectra than populations, or a spectrum that is a list of numbers, is refused", () => {
+    expect(
+      parseFromRunner(
+        resultMessage({ ...DIVERSITY_RESULT_5, foldedSfs: [null, null] }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "result.foldedSfs", expected: 3 },
+    });
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          foldedSfs: [null, new Array<number>(21).fill(0), null],
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.foldedSfs.1" },
+    });
+  });
+
+  test.each([
+    "fis",
+    "numAllelesMean",
+    "numAllelesInDraw",
+    "privateAllelesTotal",
+    "privateAllelesMean",
+    "privateAllelesInDraw",
+  ])(
+    "a diversity result of three populations whose %s holds two values is wrongLength",
+    (name) => {
+      const result = { ...DIVERSITY_RESULT_5, [name]: new Float64Array(2) };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongLength", path: `result.${name}`, expected: 3 },
+      });
+    },
+  );
+
+  test("a diversity result whose numVarsInDraw holds four values, or whose privateAllelesTotal is popnei's Uint32Array, is refused", () => {
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          numVarsInDraw: new Uint32Array(4),
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "result.numVarsInDraw" },
+    });
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          privateAllelesTotal: Uint32Array.of(0, 22, 16),
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.privateAllelesTotal" },
+    });
+  });
+
+  test("a diversity result whose numCalledAlleles is 1 is wrongType", () => {
+    const result = { ...DIVERSITY_RESULT_5, numCalledAlleles: 1 };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numCalledAlleles" },
     });
   });
 });

@@ -139,6 +139,17 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28]),
   polyRatio: Float64Array.from([0.9]),
   numVarsWithValue: Uint32Array.from([1152]),
+  fis: Float64Array.from([0.1]),
+  numAllelesMean: Float64Array.from([1.98]),
+  numAllelesInDraw: Float64Array.from([1.96]),
+  privateAllelesTotal: Float64Array.from([NaN]),
+  privateAllelesMean: Float64Array.from([NaN]),
+  privateAllelesInDraw: Float64Array.from([NaN]),
+  numVarsInDraw: Uint32Array.from([1152]),
+  numVarsEveryPop: null,
+  numVarsEveryPopInDraw: null,
+  numCalledAlleles: 40,
+  foldedSfs: [new Float64Array(21)],
   passStats: {
     numVars: 1152,
     filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
@@ -165,6 +176,8 @@ function job(fileId: string): DiversityJob {
     pops: [["p0", INDIVIDUALS]],
     minNumIndividuals: 20,
     polyThreshold: 0.95,
+    numCalledAlleles: 40,
+    popDiversityPops: ["p0"],
   };
 }
 

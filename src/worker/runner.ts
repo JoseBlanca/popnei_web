@@ -21,6 +21,7 @@ import {
   calcLdAndDistPerPop,
   calcPerIndividualStats,
   calcPerVarDistribs,
+  calcPopDiversity,
   calcPopDists,
   correctDistsByLingoes,
   doPcaFromVariants,
@@ -39,6 +40,8 @@ import type {
   PcoaResult,
   PerVarDistribs,
   PopDists,
+  PopDiversity,
+  PopDiversityStat,
   StatsDistrib,
   Step,
   Variants,
@@ -157,6 +160,20 @@ const DIVERSITY_STATS = [
   "poly_vars_ratio",
 ] as const;
 
+/** The statistics the diversity asks `calcPopDiversity` for, from stage
+    5: F, the alleles, the private alleles and the spectrum. */
+const POP_DIVERSITY_STATS = [
+  "num_alleles",
+  "fis",
+  "private_alleles",
+  "folded_sfs",
+] as const;
+
+/** The statistics asked of `calcPopDiversity` for one population, without
+    the private alleles: one population has every allele it called as
+    private, since no other holds it. */
+const ONE_POP_DIVERSITY_STATS = ["num_alleles", "fis", "folded_sfs"] as const;
+
 /** The statistics of the histograms of the variants, in the order of
     `VariantChecksResult`. */
 const VARIANT_CHECKS_STATS = ["maf", "obs_het", "unbiased_exp_het"] as const;
@@ -260,6 +277,14 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
         result.obsHet,
         result.polyRatio,
         result.numVarsWithValue,
+        result.fis,
+        result.numAllelesMean,
+        result.numAllelesInDraw,
+        result.privateAllelesTotal,
+        result.privateAllelesMean,
+        result.privateAllelesInDraw,
+        result.numVarsInDraw,
+        ...result.foldedSfs.filter((sfs) => sfs !== null),
       ];
     case "individualChecks":
       return [result.missingGtRate, result.obsHetRate];
@@ -702,10 +727,20 @@ function passOf<T>(pass: Pass, consume: (variants: Variants) => T): Answer<T> {
   return { kind: "ok", value };
 }
 
-/** Runs `calcPerVarDistribs` over the populations of the job and makes
-    the `DiversityResult` of it. */
+/**
+ * Runs `calcPerVarDistribs` over the populations of the job and then, when
+ * `popDiversityPops` names any, `calcPopDiversity` over those, a second
+ * pass over the same steps, and makes the `DiversityResult` of both. The
+ * progress of the two calls, each of which popnei tells as pass 1 of 1, is
+ * told as passes 1 and 2 of 2, so that the bar fills once; with no second
+ * call, as pass 1 of 1. The options objects are written with their keys
+ * alone, since popnei refuses a key it does not know, and the populations
+ * with `Object.fromEntries`, which makes a population named `__proto__` a
+ * field of its own.
+ */
 function runDiversity(pass: Pass, job: DiversityJob): Answer<JobResult> {
-  const answer = passOf(pass, (variants) =>
+  const numPasses = job.popDiversityPops.length > 0 ? 2 : 1;
+  const distribs = passOf(passNumbered(pass, 1, numPasses), (variants) =>
     calcPerVarDistribs(variants, {
       pops: Object.fromEntries(job.pops),
       stats: DIVERSITY_STATS,
@@ -713,10 +748,53 @@ function runDiversity(pass: Pass, job: DiversityJob): Answer<JobResult> {
       polyThreshold: job.polyThreshold,
     }),
   );
-  if (answer.kind !== "ok") {
-    return answer;
+  if (distribs.kind !== "ok") {
+    return distribs;
   }
-  return { kind: "ok", value: diversityResultOf(answer.value, job) };
+  if (numPasses === 1) {
+    return { kind: "ok", value: diversityResultOf(distribs.value, null, job) };
+  }
+  const given = new Set(job.popDiversityPops);
+  const stats =
+    job.popDiversityPops.length > 1
+      ? POP_DIVERSITY_STATS
+      : ONE_POP_DIVERSITY_STATS;
+  const diversity = passOf(passNumbered(pass, 2, numPasses), (variants) =>
+    calcPopDiversity(variants, {
+      pops: Object.fromEntries(job.pops.filter(([pop]) => given.has(pop))),
+      stats,
+      numCalledAlleles: job.numCalledAlleles,
+      minNumIndividuals: job.minNumIndividuals,
+    }),
+  );
+  if (diversity.kind !== "ok") {
+    return diversity;
+  }
+  return {
+    kind: "ok",
+    value: diversityResultOf(
+      distribs.value,
+      { result: diversity.value, stats },
+      job,
+    ),
+  };
+}
+
+/** What `calcPopDiversity` gave, and the statistics it was asked for. */
+interface PopDiversityCall {
+  readonly result: PopDiversity;
+  readonly stats: readonly PopDiversityStat[];
+}
+
+/** The pass of `pass` whose progress is told as the pass `number` of
+    `numPasses`, the other two fields as popnei gave them. */
+function passNumbered(pass: Pass, number: number, numPasses: number): Pass {
+  return {
+    ...pass,
+    told: (progress) => {
+      pass.told({ ...progress, pass: number, numPasses });
+    },
+  };
 }
 
 /**
@@ -1177,9 +1255,15 @@ function isOverArrayBuffer(
   return bytes.buffer instanceof ArrayBuffer;
 }
 
-/** The `DiversityResult` of popnei's result, in the order of the job. */
+/**
+ * The `DiversityResult` of popnei's two results, `diversity` `null` when
+ * `calcPopDiversity` was not called, in the order of the job. Throws a
+ * defect when popnei gave no values of a population of the job or of a
+ * statistic asked for.
+ */
 function diversityResultOf(
   distribs: PerVarDistribs,
+  diversity: PopDiversityCall | null,
   job: DiversityJob,
 ): DiversityResult {
   const { obsHet, unbiasedExpHet, polyVarsRatio, passStats } = distribs;
@@ -1200,6 +1284,7 @@ function diversityResultOf(
     obsHet: new Float64Array(numPops),
     polyRatio: new Float64Array(numPops),
     numVarsWithValue: new Uint32Array(numPops),
+    ...popDiversityOf(diversity, job),
     passStats: passStatsOf(passStats, job.filters),
   };
   for (const [at, [pop, individuals]] of job.pops.entries()) {
@@ -1219,6 +1304,121 @@ function diversityResultOf(
     );
   }
   return result;
+}
+
+/** The fields of a `DiversityResult` that `calcPopDiversity` gives. */
+type PopDiversityFields = Pick<
+  DiversityResult,
+  | "fis"
+  | "numAllelesMean"
+  | "numAllelesInDraw"
+  | "privateAllelesTotal"
+  | "privateAllelesMean"
+  | "privateAllelesInDraw"
+  | "numVarsInDraw"
+  | "numVarsEveryPop"
+  | "numVarsEveryPopInDraw"
+  | "numCalledAlleles"
+  | "foldedSfs"
+>;
+
+/**
+ * The fields of a `DiversityResult` that `calcPopDiversity` gives, every
+ * array in the order of the job: NaN, 0 in `numVarsInDraw` and a `null`
+ * spectrum for a population popnei was not given, and for every
+ * population when `call` is `null`; the private alleles NaN, with the
+ * two counts of the variants of every population `null`, when they were
+ * not asked for, for one population. popnei gives its arrays in the order
+ * of its `pops`, found here by name, and its spectra as an object by the
+ * name of the population, read by a plain lookup: popnei's object holds a
+ * population named `__proto__` as its parent and not as a field of its
+ * own, so `Object.hasOwn` would not find it, and what the lookup gives is
+ * checked to be a `Float64Array` instead. Each array is one the runner
+ * made, over a buffer of its own. Throws a defect when popnei gave no
+ * values of a population it was given, `null` for a statistic asked for,
+ * or a spectrum of another length than `floor(numCalledAlleles / 2) + 1`.
+ */
+function popDiversityOf(
+  call: PopDiversityCall | null,
+  job: DiversityJob,
+): PopDiversityFields {
+  const numPops = job.pops.length;
+  const fis = new Float64Array(numPops).fill(NaN);
+  const numAllelesMean = new Float64Array(numPops).fill(NaN);
+  const numAllelesInDraw = new Float64Array(numPops).fill(NaN);
+  const privateAllelesTotal = new Float64Array(numPops).fill(NaN);
+  const privateAllelesMean = new Float64Array(numPops).fill(NaN);
+  const privateAllelesInDraw = new Float64Array(numPops).fill(NaN);
+  const numVarsInDraw = new Uint32Array(numPops);
+  const foldedSfs: (Float64Array | null)[] = job.pops.map(() => null);
+  const diversity = call?.result ?? null;
+  const privateAsked = call?.stats.includes("private_alleles") ?? false;
+  if (diversity !== null) {
+    const numAlleles = diversity.numAlleles;
+    const popneiFis = diversity.fis;
+    const spectra = diversity.foldedSfs;
+    const privateAlleles = privateAsked ? diversity.privateAlleles : null;
+    if (
+      numAlleles === null ||
+      popneiFis === null ||
+      spectra === null ||
+      (privateAsked && privateAlleles === null)
+    ) {
+      throw new Error(
+        "popnei_web defect: calcPopDiversity gave no value of a statistic it was asked for",
+      );
+    }
+    const indexOf = new Map<string, number>(
+      diversity.pops.map((pop, index) => [pop, index]),
+    );
+    const numBins = Math.floor(job.numCalledAlleles / 2) + 1;
+    const given = new Set(job.popDiversityPops);
+    for (const [at, [pop]] of job.pops.entries()) {
+      if (!given.has(pop)) {
+        continue;
+      }
+      const index = indexOf.get(pop);
+      if (index === undefined) {
+        throw new Error(
+          `popnei_web defect: calcPopDiversity gave no values of the population ${JSON.stringify(pop)}`,
+        );
+      }
+      fis[at] = valueAt(popneiFis, index);
+      numAllelesMean[at] = valueAt(numAlleles.mean, index);
+      numAllelesInDraw[at] = valueAt(numAlleles.inDraw, index);
+      if (privateAlleles !== null) {
+        privateAllelesTotal[at] = valueAt(privateAlleles.total, index);
+        privateAllelesMean[at] = valueAt(privateAlleles.mean, index);
+        privateAllelesInDraw[at] = valueAt(privateAlleles.inDraw, index);
+      }
+      numVarsInDraw[at] = valueAt(diversity.numVars.inDraw, index);
+      // A plain lookup, and not Object.hasOwn, which does not find a
+      // population named __proto__ in popnei's object.
+      const sfs: unknown = spectra[pop];
+      if (!(sfs instanceof Float64Array) || sfs.length !== numBins) {
+        throw new Error(
+          `popnei_web defect: calcPopDiversity gave the population ${JSON.stringify(pop)} no spectrum of ${String(numBins)} values`,
+        );
+      }
+      foldedSfs[at] = sfs.slice();
+    }
+  }
+  const everyPopCounted = diversity !== null && privateAsked;
+  return {
+    fis,
+    numAllelesMean,
+    numAllelesInDraw,
+    privateAllelesTotal,
+    privateAllelesMean,
+    privateAllelesInDraw,
+    numVarsInDraw,
+    numVarsEveryPop: everyPopCounted ? diversity.numVarsEveryPop : null,
+    numVarsEveryPopInDraw: everyPopCounted
+      ? diversity.numVarsEveryPopInDraw
+      : null,
+    numCalledAlleles: job.numCalledAlleles,
+    foldedSfs,
+  };
 }
 
 /**

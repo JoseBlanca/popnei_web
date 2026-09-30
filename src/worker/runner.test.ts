@@ -10,8 +10,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
-// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes
-import { Variants } from "popnei";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes, and calls calcPopDiversity itself to compare its spectra with the runner's
+import { Variants, calcPopDiversity, openVars } from "popnei";
 
 import {
   afterAll,
@@ -92,6 +92,9 @@ function missingData(maxAllowedMissingRate: number): VariantFilter {
   return { kind: "missing_data", maxAllowedMissingRate };
 }
 
+/** A diversity job with the defaults, whose populations of 20 individuals
+    or more are given to calcPopDiversity, as core sends them, at the draw
+    of 40. */
 function diversityJob(
   filters: readonly VariantFilter[],
   pops: Pops = panelPops(),
@@ -104,6 +107,10 @@ function diversityJob(
     pops,
     minNumIndividuals: 20,
     polyThreshold: 0.95,
+    numCalledAlleles: 40,
+    popDiversityPops: pops
+      .filter(([, individuals]) => individuals.length >= 20)
+      .map(([pop]) => pop),
   };
 }
 
@@ -237,7 +244,8 @@ describe("WS3 D1 the open and the diversity", () => {
 
   test("told is given popnei's two calls of a diversity over panel.nei, as they came", () => {
     const told: Progress[] = [];
-    const answer = opened("panel.nei").run(diversityJob([]), (progress) => {
+    const onePass = { ...diversityJob([]), popDiversityPops: [] };
+    const answer = opened("panel.nei").run(onePass, (progress) => {
       told.push(progress);
     });
     expect(answer.kind).toBe("ok");
@@ -250,7 +258,7 @@ describe("WS3 D1 the open and the diversity", () => {
   test("told is given 0 then the 87304 bytes of panel.vcf.gz, compressed", () => {
     const told: Progress[] = [];
     opened("panel.vcf.gz").run(
-      diversityJob([missingData(0.05)]),
+      { ...diversityJob([missingData(0.05)]), popDiversityPops: [] },
       (progress) => {
         told.push(progress);
       },
@@ -504,6 +512,14 @@ describe("WS3 D2 what goes wrong: transferablesOf", () => {
       result.obsHet.buffer,
       result.polyRatio.buffer,
       result.numVarsWithValue.buffer,
+      result.fis.buffer,
+      result.numAllelesMean.buffer,
+      result.numAllelesInDraw.buffer,
+      result.privateAllelesTotal.buffer,
+      result.privateAllelesMean.buffer,
+      result.privateAllelesInDraw.buffer,
+      result.numVarsInDraw.buffer,
+      ...result.foldedSfs.map((sfs) => sfs?.buffer),
     ]);
     const shared = new Float64Array(3);
     const twice: DiversityResult = {
@@ -512,7 +528,7 @@ describe("WS3 D2 what goes wrong: transferablesOf", () => {
       polyRatio: shared,
     };
     const buffers = transferablesOf(twice);
-    expect(buffers.length).toBe(4);
+    expect(buffers.length).toBe(14);
     expect(buffers.filter((buffer) => buffer === shared.buffer).length).toBe(1);
   });
 
@@ -1879,11 +1895,11 @@ describe("VS1 D3 the passes of the runner: a file that no longer reads, in the n
 });
 
 describe("VS1 D3 the passes of the runner: transferablesOf", () => {
-  test("of a diversity result, the five buffers of its five arrays, each once", () => {
+  test("of a diversity result, the fifteen buffers of its twelve arrays and three spectra, each once", () => {
     const result = valueOf(opened("panel.nei").run(diversityJob([]), ignore));
     const buffers = transferablesOf(result);
-    expect(buffers.length).toBe(5);
-    expect(new Set(buffers).size).toBe(5);
+    expect(buffers.length).toBe(15);
+    expect(new Set(buffers).size).toBe(15);
   });
 
   test("of the statistics of each individual, the buffers of popnei's two arrays", () => {
@@ -3128,5 +3144,333 @@ describe("PA3 D2 the runner's distances", () => {
         },
       }),
     ).toThrow(/^popnei_web defect: an array of a result is a view/);
+  });
+});
+
+/** The numbers of calcPopDiversity of a diversity result as plain arrays,
+    for `toEqual`. */
+function popDiversityNumbersOf(result: DiversityResult): unknown {
+  return {
+    pops: result.pops,
+    fis: [...result.fis],
+    numAllelesMean: [...result.numAllelesMean],
+    numAllelesInDraw: [...result.numAllelesInDraw],
+    privateAllelesTotal: [...result.privateAllelesTotal],
+    privateAllelesMean: [...result.privateAllelesMean],
+    privateAllelesInDraw: [...result.privateAllelesInDraw],
+    numVarsInDraw: [...result.numVarsInDraw],
+    numVarsEveryPop: result.numVarsEveryPop,
+    numVarsEveryPopInDraw: result.numVarsEveryPopInDraw,
+    numCalledAlleles: result.numCalledAlleles,
+  };
+}
+
+/** The first table of stage 5 of diversity.md, "How it is verified", with
+    the missing data filter at 0.05, at the draw of 40. */
+const POP_DIVERSITY_AT_0_05 = {
+  pops: ["p0", "p2", "p1"],
+  fis: [-0.011344341019483117, -0.020803811522959625, -0.017724256612463796],
+  numAllelesMean: [1.9791666666666667, 1.9861111111111112, 1.9809027777777777],
+  numAllelesInDraw: [
+    1.9646163579517928, 1.9595644507442256, 1.9582701017879214,
+  ],
+  privateAllelesTotal: [0, 1, 0],
+  privateAllelesMean: [0, 0.0008680555555555555, 0],
+  privateAllelesInDraw: [
+    0.0028348059148665707, 0.0031646710919597015, 0.002521711046320405,
+  ],
+  numVarsInDraw: [1152, 1152, 1152],
+  numVarsEveryPop: 1152,
+  numVarsEveryPopInDraw: 1152,
+  numCalledAlleles: 40,
+};
+
+/** The three populations of the panel, named p0, p2 and p1. */
+function threePops(): readonly [Pops[number], Pops[number], Pops[number]] {
+  const [p0, p2, p1] = panelPops();
+  if (p0 === undefined || p2 === undefined || p1 === undefined) {
+    throw new Error("panel_pops.txt has not three populations");
+  }
+  return [p0, p2, p1];
+}
+
+/** The spectra of a result as plain arrays, `null` for none. */
+function spectraOf(result: DiversityResult): (number[] | null)[] {
+  return result.foldedSfs.map((sfs) => (sfs === null ? null : [...sfs]));
+}
+
+describe("PA6 D2 the runner's diversity of stage 5", () => {
+  test("with the missing data filter at 0.05, F, the alleles and the private alleles of the table of stage 5, beside the three numbers of stage 2", () => {
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(0.05)]), ignore),
+    );
+    expect(numbersOf(result)).toEqual(AT_0_05);
+    expect(popDiversityNumbersOf(result)).toEqual(POP_DIVERSITY_AT_0_05);
+  });
+
+  test("with the missing data filter at 1, the table of stage 5 of 1,200 variants", () => {
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(1)]), ignore),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012758486763376542, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [1.9775, 1.9866666666666666, 1.9808333333333332],
+      numAllelesInDraw: [
+        1.9626723071292755, 1.9597096939774163, 1.9588173095272452,
+      ],
+      privateAllelesTotal: [0, 1, 0],
+      privateAllelesMean: [0, 0.0008333333333333334, 0],
+      privateAllelesInDraw: [
+        0.0030782892654586708, 0.003055908632949441, 0.002742968858959168,
+      ],
+      numVarsInDraw: [1200, 1200, 1200],
+      numVarsEveryPop: 1200,
+      numVarsEveryPopInDraw: 1200,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("with the list of 111 before the filter at 0.05, F, the alleles and the private alleles of diversity.md over 1,117 variants", () => {
+    const { of111 } = lists();
+    const result = valueOf(
+      opened("panel.nei").run(diversityWithList(of111), ignore),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.014117401270937968, -0.014870687595523124, -0.011046467292424866,
+      ],
+      numAllelesMean: [1.973142345568487, 1.981199641897941, 1.973142345568487],
+      numAllelesInDraw: [
+        1.9647343026993345, 1.957125180734846, 1.959297105964442,
+      ],
+      privateAllelesTotal: [0, 2, 0],
+      privateAllelesMean: [0, 0.0017905102954341987, 0],
+      privateAllelesInDraw: [
+        0.0030804317646699105, 0.0030584963993553, 0.0021106596894612368,
+      ],
+      numVarsInDraw: [1117, 1117, 1117],
+      numVarsEveryPop: 1117,
+      numVarsEveryPopInDraw: 1117,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("All individuals, one population, gives F and the alleles, and no private alleles, which are not asked for", () => {
+    const runner = createRunner();
+    const individuals = valueOf(
+      runner.open(NEI, { name: "panel.nei", source: bytesOf("panel.nei") }),
+    ).individuals;
+    const job = diversityJob(
+      [missingData(0.05)],
+      [["All individuals", individuals]],
+    );
+    expect(job.popDiversityPops).toEqual(["All individuals"]);
+    const result = valueOf(runner.run(job, ignore));
+    expect(numbersOf(result)).toEqual({
+      pops: ["All individuals"],
+      numIndividuals: [200],
+      unbiasedExpHet: [0.37487834409014364],
+      obsHet: [0.3541409192154764],
+      polyRatio: [0.9791666666666666],
+      numVarsWithValue: [1152],
+      passStats: AT_0_05.passStats,
+    });
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["All individuals"],
+      fis: [0.055317745614243075],
+      numAllelesMean: [2],
+      numAllelesInDraw: [1.992568885944447],
+      privateAllelesTotal: [NaN],
+      privateAllelesMean: [NaN],
+      privateAllelesInDraw: [NaN],
+      numVarsInDraw: [1152],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs[0]?.length).toBe(21);
+  });
+
+  test("p0 cut to 12 individuals and left out of calcPopDiversity has NaN in its six numbers and no spectrum, and p2 and p1 have 22 and 16 private alleles", () => {
+    const [p0, p2, p1] = threePops();
+    const pops: Pops = [["p0", p0[1].slice(0, 12)], p2, p1];
+    const job = diversityJob([missingData(0.05)], pops);
+    expect(job.popDiversityPops).toEqual(["p2", "p1"]);
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, ...POP_DIVERSITY_AT_0_05.fis.slice(1)],
+      numAllelesMean: [NaN, ...POP_DIVERSITY_AT_0_05.numAllelesMean.slice(1)],
+      numAllelesInDraw: [
+        NaN,
+        ...POP_DIVERSITY_AT_0_05.numAllelesInDraw.slice(1),
+      ],
+      privateAllelesTotal: [NaN, 22, 16],
+      privateAllelesMean: [NaN, 0.019097222222222224, 0.013888888888888888],
+      privateAllelesInDraw: [NaN, 0.038418511541450096, 0.037124162585145296],
+      numVarsInDraw: [0, 1152, 1152],
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 1152,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs[0]).toBeNull();
+    expect(result.foldedSfs.slice(1).map((sfs) => sfs?.length)).toEqual([
+      21, 21,
+    ]);
+  });
+
+  test("the spectra with no filter are in the order of the job, of 21 values each, p0's first 44.79323144486922, and equal to those of a call that asks folded_sfs alone", () => {
+    const result = valueOf(opened("panel.nei").run(diversityJob([]), ignore));
+    const spectra = spectraOf(result);
+    expect(spectra.map((sfs) => sfs?.length)).toEqual([21, 21, 21]);
+    expect(spectra[0]?.slice(0, 2)).toEqual([
+      44.79323144486922, 38.07795856907602,
+    ]);
+    expect(spectra[0]?.[20]).toBe(30.355250953099038);
+    expect(spectra[1]?.slice(0, 2)).toEqual([
+      48.34836722710054, 49.07990431264654,
+    ]);
+    expect(spectra[2]?.[0]).toBe(49.419228567305325);
+    // The same call as the spec's, sfs.md, "The numbers of popnei".
+    const variants = openVars(bytesOf("panel.nei"));
+    try {
+      const alone = calcPopDiversity(variants, {
+        pops: Object.fromEntries(panelPops()),
+        numCalledAlleles: 40,
+        minNumIndividuals: 20,
+        stats: ["folded_sfs"],
+      });
+      expect(alone.pops).toEqual(["p0", "p2", "p1"]);
+      expect(spectra).toEqual(
+        alone.pops.map((pop) => [...(alone.foldedSfs?.[pop] ?? [])]),
+      );
+    } finally {
+      variants.free();
+    }
+  });
+
+  test("told is given the calls of the two passes as passes 1 and 2 of 2", () => {
+    const told: Progress[] = [];
+    const answer = opened("panel.nei").run(diversityJob([]), (progress) => {
+      told.push(progress);
+    });
+    expect(answer.kind).toBe("ok");
+    expect(told).toEqual([
+      { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 2 },
+      { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 2 },
+      { bytesRead: 0, numBytes: 261490, pass: 2, numPasses: 2 },
+      { bytesRead: 259376, numBytes: 261490, pass: 2, numPasses: 2 },
+    ]);
+  });
+
+  test("with popDiversityPops empty there is one pass, told as pass 1 of 1, calcPopDiversity is not called, and its numbers are NaN", () => {
+    const told: Progress[] = [];
+    const onePass = { ...diversityJob([]), popDiversityPops: [] };
+    const result = valueOf(
+      opened("panel.nei").run(onePass, (progress) => {
+        told.push(progress);
+      }),
+    );
+    expect(told).toEqual([
+      { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 1 },
+      { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 1 },
+    ]);
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, NaN, NaN],
+      numAllelesMean: [NaN, NaN, NaN],
+      numAllelesInDraw: [NaN, NaN, NaN],
+      privateAllelesTotal: [NaN, NaN, NaN],
+      privateAllelesMean: [NaN, NaN, NaN],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 0, 0],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs).toEqual([null, null, null]);
+  });
+
+  test("one population of a column given to calcPopDiversity has no private alleles asked: NaN in their three arrays and numVarsEveryPop null", () => {
+    const job = {
+      ...diversityJob([missingData(0.05)]),
+      popDiversityPops: ["p2"],
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, POP_DIVERSITY_AT_0_05.fis[1], NaN],
+      numAllelesMean: [NaN, POP_DIVERSITY_AT_0_05.numAllelesMean[1], NaN],
+      numAllelesInDraw: [NaN, POP_DIVERSITY_AT_0_05.numAllelesInDraw[1], NaN],
+      privateAllelesTotal: [NaN, NaN, NaN],
+      privateAllelesMean: [NaN, NaN, NaN],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 1152, 0],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length ?? null)).toEqual([
+      null,
+      21,
+      null,
+    ]);
+  });
+
+  test("populations named 10, 9 and p come back with their numbers and spectra in the order of the job, not in popnei's 9, 10, p", () => {
+    const [p0, p2, p1] = threePops();
+    const named = valueOf(
+      opened("panel.nei").run(
+        diversityJob(
+          [missingData(0.05)],
+          [
+            ["10", p0[1]],
+            ["9", p2[1]],
+            ["p", p1[1]],
+          ],
+        ),
+        ignore,
+      ),
+    );
+    const panel = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(0.05)]), ignore),
+    );
+    expect(popDiversityNumbersOf(named)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      pops: ["10", "9", "p"],
+    });
+    expect(spectraOf(named)).toEqual(spectraOf(panel));
+    expect(spectraOf(named)[0]?.[0]).toBe(40.761955639534804);
+  });
+
+  test("a population named __proto__ has its spectrum and its numbers, which a read with Object.hasOwn would not find", () => {
+    const [p0, p2, p1] = threePops();
+    const result = valueOf(
+      opened("panel.nei").run(
+        diversityJob([missingData(0.05)], [["__proto__", p0[1]], p2, p1]),
+        ignore,
+      ),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      pops: ["__proto__", "p2", "p1"],
+    });
+    expect(spectraOf(result)[0]?.slice(0, 2)).toEqual([
+      40.761955639534804, 36.42942568440002,
+    ]);
+    expect(result.foldedSfs[0]).toBeInstanceOf(Float64Array);
+  });
+
+  test("a draw above the chromosomes of the individuals is popnei's refusal of the second call", () => {
+    const job = { ...diversityJob([]), numCalledAlleles: 401 };
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toContain(
+      "the largest draw this dataset allows is 400",
+    );
   });
 });

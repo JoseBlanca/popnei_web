@@ -49,6 +49,7 @@ import type {
   ColumnType,
   CsvFound,
   CsvOptions,
+  DiversityResult,
   IndividualFilter,
   IndividualsFileError,
   IndividualsTable,
@@ -61,6 +62,44 @@ import type {
   WriteJob,
   Written,
 } from "../worker/protocol.ts";
+
+/**
+ * The fields of a diversity result that popnei's `calcPopDiversity`
+ * gives, from stage 5, for `numPops` populations none of which was given
+ * to it, as when none has the minimum of individuals: NaN in the six
+ * arrays of numbers, 0 variants in the draw, no count of the variants of
+ * every population and no spectrum, at the draw `numCalledAlleles`, 40 by
+ * default. The results written before stage 5 take them unchanged.
+ */
+export function noPopDiversity(
+  numPops: number,
+  numCalledAlleles = 40,
+): Omit<
+  DiversityResult,
+  | "analysis"
+  | "pops"
+  | "numIndividuals"
+  | "unbiasedExpHet"
+  | "obsHet"
+  | "polyRatio"
+  | "numVarsWithValue"
+  | "passStats"
+> {
+  const nan = (): Float64Array => new Float64Array(numPops).fill(NaN);
+  return {
+    fis: nan(),
+    numAllelesMean: nan(),
+    numAllelesInDraw: nan(),
+    privateAllelesTotal: nan(),
+    privateAllelesMean: nan(),
+    privateAllelesInDraw: nan(),
+    numVarsInDraw: new Uint32Array(numPops),
+    numVarsEveryPop: null,
+    numVarsEveryPopInDraw: null,
+    numCalledAlleles,
+    foldedSfs: Array.from({ length: numPops }, () => null),
+  };
+}
 
 /**
  * Freezes a value and everything it holds, so that a function that writes
