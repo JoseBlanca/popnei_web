@@ -10,16 +10,13 @@ the ten decisions the owner made on 30 September 2026 before the specs
 were written, 1 to 10; what the specs decided alone that a user meets;
 what is asked of popnei; and what a measurement will set.
 
-The specs, all written on 30 September 2026 and none yet approved:
+The specs, all written on 30 September 2026 and none yet approved, are
 `docs/specs/analyses/popDists.md` with the heatmap,
 `docs/specs/charts/heatmap.md`; `docs/specs/analyses/diversity.md`,
 revised; `docs/specs/analyses/ldDecay.md` with the line plot,
 `docs/specs/charts/line.md`; and `docs/specs/analyses/sfs.md`, the
-spectrum. The shared specs and documents were brought to them the same
-day: the specs of the calculation worker, of the project and its file,
-of the part of the page that holds the project and the results, of the
-frame of the page and of the plots, and `docs/functionality.md`,
-`docs/build-order.md`, `docs/architecture.md` and the coding skills.
+spectrum; the other specs and documents were brought to them the same
+day.
 
 A few words are used throughout. A **pass** is one reading of the
 variants file from start to end, which on a file of several GB takes
@@ -48,8 +45,11 @@ The **draw** is the number of chromosomes of the rarefaction, which the
 spectrum uses too. The **key** of a result is a hash of everything it
 was calculated from: a change of any of those takes the result off the
 screen, and an undo brings it back from the cache with no calculation.
-A **panel** is the part of the Analyses step that shows one analysis,
-with its Run button; its state before a Run lists the populations the
+The **cache** keeps results in the page, so that an undo brings one
+back with no calculation. A **browser engine** is what runs the page:
+Chromium in Chrome and Edge, WebKit in Safari. A **panel** is the part of the Analyses step that shows one analysis,
+with its Run button, which the panel **locks**, disabled with the
+reason beside it, when the analysis cannot run; its state before a Run lists the populations the
 Run will take. The **check numbers** are a few numbers of a result that
 the project file keeps, so that a project opened again and run says
 whether it gave the same numbers; the **key version** of an analysis is
@@ -59,7 +59,8 @@ way and not blamed on the variants file.
 
 ## What is still the owner's
 
-Nine points, most important first. Each has a meanwhile, with which the
+Nine points, in the order of how much of the specs an answer against
+the recommendation would change, most first. Each has a meanwhile, with which the
 specs are written, so none stops the plan of stage 5; an answer other
 than the recommendation changes the specs it names, and the plan if it
 comes after the code.
@@ -80,10 +81,9 @@ call of popnei, its pass, its draw and its Run
   pass of the spectrum alone, and a field of its own for the draw or the
   diversity's. A user who wants both waits for three passes today, two
   after the issue. A spectrum filled from the diversity's pass, so that
-  the second Run costs nothing, would need the part of the page that
-  holds the results to file the result of one analysis's job under
-  another analysis, which only the counts of the filters of the Variants
-  step do today, and a design first.
+  the second Run costs nothing, would need one calculation to give the
+  results of two analyses, which only the counts of the filters of the
+  Variants step do today, and that needs a design first.
 
 Recommended: a block of the diversity, since every input of the
 spectrum is already an input of the table and the pass is what costs.
@@ -97,28 +97,33 @@ analyses gain.
 ### 12. The calculation worker started again after every LD decay
 
 What is decided: whether the calculation worker is ended and a new one
-started after each LD decay, which is how the tab gets back the memory
-popnei took, since that memory never shrinks while the worker lives
+started after each LD decay. Ending the worker is the only way the tab
+gets back the memory popnei took, since popnei's memory never shrinks
+while its worker lives
 (`docs/specs/analyses/ldDecay.md`, **Open 1**; written as proposed in
 `docs/architecture.md` as point 16 of its section 13). The owner
 decided on 26 September 2026 not to restart the worker between two
-requests, with two exceptions since, a written file and a PCA of more
-than 700 individuals, each once it leaves the memory more than about
-25 MB larger. An LD decay leaves it larger by two things: popnei's
+calculations. Two exceptions were decided since: after a written file,
+and after a PCA of more than 700 individuals, each because it leaves
+more than about 25 MB behind. An LD decay leaves it larger by two things: popnei's
 counts of the pairs at each distance, 16 bytes a base pair and
 population, 4.8 MB for three populations at 100,000 bp; and the
 variants it held within that distance, the larger part. Measured in
 node, the memory grew by 64 MB for 100 individuals and 20,000 variants
 at 100,000 bp, and by 0.4 to 1.1 GB for 1,000 individuals and the same
 variants at 100,000 and 1,000,000 bp, which the tab keeps until the
-next load of the file.
+next load of the variants file.
 
 - **After every LD decay.** The user sees the result as usual; nothing
   loaded is lost, since the page keeps the variants file and the new
   worker opens it again, and the next calculation waits for that, at
   most 49 ms, measured on the `.nei` file of 19 MB and its VCF in
   Chromium 153 and WebKit 26.6 at the end of stage 2, against 0.6 s and
-  more for the LD decay itself on 20,000 variants. From stage 7 the
+  more for the LD decay itself on 20,000 variants, in node. After a
+  new version of the site is put online while the page is open, the
+  restarted worker cannot start, and the user saves the project,
+  reloads the page and picks the variants file again, as after a cancel
+  or a large PCA today. From stage 7 the
   restart would also drop the kinship matrix of the GWAS, which the
   worker keeps between requests, up to 800 MB and minutes to calculate
   again, so the point is decided again then.
@@ -156,7 +161,8 @@ three pairs gave the same Fst to the last digit with p0s left out
 - **Sent to popnei**: each pair it is in is a row of "no value" in the
   table and a crossed cell in the heatmap. A pair with no value makes
   popnei's PCoA refuse the matrix, so the heatmap of every population
-  loses its order by similarity and keeps the file's (decision 2).
+  loses its order by similarity and keeps the order of the metadata
+  file (decision 2).
 
 The numbers of the other pairs are the same in both. Recommended: left
 out, since sending it shows nothing the words do not say and costs the
@@ -193,7 +199,9 @@ to yellow, 256 steps.
 
 - **From 0.** The colours say how far apart the pairs are. On
   `panel.nei` the three pairs, 0.1027 to 0.1096, fall at steps 239, 245
-  and 255: three yellows that look alike, which is true.
+  and 255 of the 256, where 255 is the lightest yellow: three yellows
+  that look alike, which is true, since the three pairs are about
+  equally far apart.
 - **From the smallest distance.** The colours say which pairs are nearer
   than the others; the same three are the darkest, the middle and the
   lightest, and a difference of 0.007 looks as large as one of 0.3.
@@ -225,8 +233,9 @@ once. Meanwhile, the specs are written with it.
 ### 17. A MAF filter on the spectrum: a warning, or left out
 
 What is decided: what the spectrum does when the Variants step has a
-MAF filter, which removes the variants whose rarer allele is rare over
-all the individuals and so empties the first bins (`sfs.md`, **Open
+MAF filter, which removes the variants whose rarer allele is rare in
+all the individuals kept, taken together, and so empties the first
+bins (`sfs.md`, **Open
 2**). On `panel.nei`, the filter at 0.95 removed 25 of the 1,200 variants,
 and the share of p2 at one copy of the rarer allele fell from 0.0426 to
 0.0367.
@@ -249,11 +258,11 @@ What is decided: what a bar of the spectrum measures (`sfs.md`, **Open
 3**). popnei gives, for each count of the rarer allele in the draw, the
 expected number of the population's variants with that count.
 
-- **Shares**: each bar the share of the population's variants that show
-  both alleles in the draw, the variants with one allele only in the
-  table and not drawn, and one vertical scale for every population. The
-  shapes compare across populations with different numbers of variants,
-  1,155.2 for p0 and 1,151.7 for p2 of `panel.nei` at a draw of 40.
+- **Shares**: each bar is a share of the population's variants that
+  show both alleles in the draw, so the bars of a population sum to 1;
+  the variants that show one allele only are in the table and not
+  drawn; one vertical scale serves every population. Populations with
+  different numbers of variants then compare by their shapes.
 - **popnei's expected numbers**, the bar of one allele only drawn or
   not. Two populations with different numbers of variants then differ in
   height for that reason too.
@@ -278,8 +287,9 @@ application has the words for that refusal.
 
 - **Ask popnei**, recommended: the check is popnei's, where the numbers
   are verified, it costs the pass nothing, and it comes with a later
-  release. The same issue would ask popnei to keep a population named
-  `__proto__` in the result of this call, which drops it today.
+  release. The same issue would ask popnei to keep in the result of
+  this call a population named `__proto__`, a name that JavaScript
+  treats specially, which popnei loses today.
 - **Check it in the application**: a pass of its own over the whole
   file, reading the positions, which on a file of several GB is minutes
   more for each Run, for a check popnei could make in its own pass.
@@ -306,8 +316,8 @@ The diversity (`docs/specs/analyses/diversity.md`):
   stages 2 to 4 with a diversity refused at the opening as damaged.
 - The table has 11 columns, F after the proportion of polymorphic
   variants, so that the first five columns of the CSV are those of
-  stages 2 to 4, and the total of the private alleles beside their mean
-  and their rarefied mean.
+  stages 2 to 4; the private alleles have three columns, their total,
+  their mean per variant and that mean rarefied.
 - A draw larger than the chromosomes of the individuals kept locks the
   panel before the Run; without the lock popnei refuses it only after
   the whole first pass.
@@ -492,12 +502,16 @@ Each has a value in its spec meanwhile, and the plan of stage 5
 measures it where its code first meets it:
 
 - **The memory of the LD decay in the browsers**: the growth of the
-  engine and its size 3 s after a Run, with the restart of point 12 and
+  browser and its size 3 s after a Run, with the restart of point 12 and
   without it, in Chromium and WebKit, on a VCF of 20,000 variants and
   1,000 individuals, at 100,000 and 1,000,000 bp; and an LD decay at the
   lock of 1 GB of counts, over a file whose positions are not evenly
   spaced, so that most distances hold a pair, with the time of the fit
-  that follows the pass and tells no progress.
+  that follows the pass and tells no progress; and a file of 1,000
+  individuals with a variant every 100 bp at several million base
+  pairs, since the lock bounds popnei's counts and not the variants it
+  holds within the distance, about 3 to 4 GB there by extrapolation: if
+  a tab closes, the lock counts the individuals as well.
 - **The time of the second pass of the diversity**, while popnei issue
   #4 is open, on `panel.nei` and on the `.nei` file of 19,161,178 bytes
   of `docs/architecture.md` section 13, so that the owner knows what the
