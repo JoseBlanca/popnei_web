@@ -19,6 +19,8 @@ import { countsOf, individualStatsOf } from "../apps.ts";
 import { filterCounts } from "./filterCounts.ts";
 import { individualChecks } from "./individualChecks.ts";
 import { individualsKept } from "../individualsKept.ts";
+import { createKeyMemo, keyOf } from "../keys.ts";
+import type { Key, KeyedDef } from "../keys.ts";
 import {
   emptyProject,
   individualsNeeds,
@@ -1085,6 +1087,157 @@ describe("PA2 D5 the options through setAnalysisOptions", () => {
     expect(ldDecayOptions(p)).toStrictEqual({
       maxDist: 2_000_000,
       maxAllowedMaf: 0.9,
+    });
+  });
+});
+
+/** The key of the LD decay for `p`, with popnei 0.1.0 unless another
+    version is given. */
+function keyOfLd(
+  p: Project,
+  popneiVersion = "0.1.0",
+  def: KeyedDef = ldDecay,
+): Key {
+  return keyOf(def, p, popneiVersion, createKeyMemo());
+}
+
+/** `p` with its parts `parts` replaced, frozen deeply. */
+function changed(p: Project, parts: Partial<Project>): Project {
+  return deepFreeze<Project>({ ...p, ...parts });
+}
+
+describe("PA2 D6 the key of the LD decay", () => {
+  const base = project();
+  const baseKey = keyOfLd(base);
+
+  test("a new load of the variants file, and the ploidy or onlyPassed of a VCF, change it", () => {
+    const variants = base.variants;
+    if (variants === null) {
+      throw new Error("the flow's project has a variants file");
+    }
+    expect(
+      keyOfLd(
+        changed(base, { variants: { ...variants, fileId: "1".repeat(32) } }),
+      ),
+    ).not.toBe(baseKey);
+    const vcf = project({ vcf: true });
+    const vcfVariants = vcf.variants;
+    if (vcfVariants === null) {
+      throw new Error("the VCF project has a variants file");
+    }
+    const vcfKey = keyOfLd(vcf);
+    for (const readOptions of [
+      { ploidy: 4, onlyPassed: true },
+      { ploidy: 2, onlyPassed: false },
+    ]) {
+      expect(
+        keyOfLd(changed(vcf, { variants: { ...vcfVariants, readOptions } })),
+      ).not.toBe(vcfKey);
+    }
+  });
+
+  test("the missing data, observed heterozygosity and MAF filters, turned on or off or their thresholds, change it", () => {
+    const lists: readonly (readonly ProjectVariantFilter[])[] = [
+      [LD_PRUNING],
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.2 }, LD_PRUNING],
+      [MISSING_DATA, { kind: "obs_het", maxAllowedObsHet: 0.5 }, LD_PRUNING],
+      [MISSING_DATA, { kind: "maf", maxAllowedMaf: 0.9 }, LD_PRUNING],
+      [MISSING_DATA, { kind: "maf", maxAllowedMaf: 0.8 }, LD_PRUNING],
+    ];
+    const keys = lists.map((filters) => keyOfLd(project({ filters })));
+    expect(new Set([baseKey, ...keys]).size).toBe(lists.length + 1);
+  });
+
+  test("the LD pruning turned off keeps it", () => {
+    expect(keyOfLd(project({ filters: [MISSING_DATA] }))).toBe(baseKey);
+  });
+
+  test("the LD pruning changed, its r², its distance or no distance, keeps it", () => {
+    const lds: readonly ProjectVariantFilter[] = [
+      { kind: "ld", maxAllowedR2: 0.5, maxDist: 50_000 },
+      { kind: "ld", maxAllowedR2: 0.1, maxDist: 10_000 },
+      { kind: "ld", maxAllowedR2: 0.1, maxDist: null },
+    ];
+    for (const ld of lds) {
+      expect(keyOfLd(project({ filters: [MISSING_DATA, ld] }))).toBe(baseKey);
+    }
+  });
+
+  test("a filter of individuals, a list or a threshold, changes it", () => {
+    const lists: readonly (readonly IndividualFilter[])[] = [
+      [{ kind: "keep", individuals: ["i000", "i050"] }],
+      [{ kind: "remove", individuals: ["i000"] }],
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.2 }],
+    ];
+    const keys = lists.map((individualFilters) =>
+      keyOfLd(project({ individualFilters })),
+    );
+    expect(new Set([baseKey, ...keys]).size).toBe(lists.length + 1);
+  });
+
+  test("the populations change it as for the diversity: another grouping, a cell of the column, the rows in another order, the metadata file removed; onePopulation is the same as no file, and another column with the same populations keeps it", () => {
+    const removed = project({ table: null });
+    const keys = [
+      project({ table: THREE_POPS }),
+      project({
+        table: tableOf(LD_INDIVIDUALS, (_, i) => (i < 49 ? "pop_a" : "pop_b")),
+      }),
+      project({ table: { ...LD_POPS, rows: LD_POPS.rows.toReversed() } }),
+      removed,
+    ].map((p) => keyOfLd(p));
+    expect(new Set([baseKey, ...keys]).size).toBe(5);
+    expect(keyOfLd(project({ onePopulation: true }))).toBe(keyOfLd(removed));
+    const renamed = project({
+      table: { columns: ["IID", "group"], rows: LD_POPS.rows },
+      column: "group",
+    });
+    expect(keyOfLd(renamed)).toBe(baseKey);
+  });
+
+  test("the largest distance, typed or changed, and the maximum MAF change it", () => {
+    const keys = [
+      project({ ld: null }),
+      project({ ld: { maxDist: 200_000 } }),
+      project({ ld: { maxDist: 100_000, maxAllowedMaf: 0.9 } }),
+    ].map((p) => keyOfLd(p));
+    expect(new Set([baseKey, ...keys]).size).toBe(4);
+  });
+
+  test("the options of another analysis and the reference keep it", () => {
+    const variants = base.variants;
+    if (variants === null) {
+      throw new Error("the flow's project has a variants file");
+    }
+    const otherOptions = changed(base, {
+      analyses: [
+        ...base.analyses,
+        {
+          analysis: "diversity",
+          options: { minNumIndividuals: 10, polyThreshold: 0.95 },
+        },
+      ],
+    });
+    const referenced = changed(base, { reference: { variants, checks: [] } });
+    expect(keyOfLd(otherOptions)).toBe(baseKey);
+    expect(keyOfLd(referenced)).toBe(baseKey);
+  });
+
+  test("the key version, 1, or the version of popnei, changes it", () => {
+    expect(ldDecay.keyVersion).toBe(1);
+    const other: KeyedDef = { ...ldDecay, keyVersion: 2 };
+    expect(keyOfLd(base, "0.1.0", other)).not.toBe(baseKey);
+    expect(keyOfLd(base, "0.2.0")).not.toBe(baseKey);
+  });
+
+  test("keyInputs gives the populations, the filters but the LD pruning, and the options, without reading p.variants", () => {
+    expect(ldDecay.keyInputs(changed(base, { variants: null }))).toStrictEqual({
+      pops: [
+        ["pop_a", LD_INDIVIDUALS.slice(0, 50)],
+        ["pop_b", LD_INDIVIDUALS.slice(50)],
+      ],
+      filters: [MISSING_DATA],
+      options: { maxDist: 100_000, maxAllowedMaf: 0.95 },
     });
   });
 });

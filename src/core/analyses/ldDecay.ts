@@ -474,12 +474,26 @@ function readOptions(options: unknown): Result<LdDecayOptions, string> {
   return { ok: true, value: { maxDist, maxAllowedMaf } };
 }
 
-/** What the key holds beyond the load and the filters of individuals.
-    Nothing yet: the populations, the filters of `ldDecayFilters` and the
-    two options come in a commit of their own, with the tests of each row
-    of the table of "What goes into its key". */
-function keyInputs(): JsonObject {
-  return {};
+/**
+ * What the key holds beyond the load and the filters of individuals,
+ * which `keyOf` puts in itself: the populations, as `populationsOf` gives
+ * them; the filters of the variants the job carries, `ldDecayFilters`,
+ * which `keyOf` leaves out since `filtersRead.variants` is false, so that
+ * the LD pruning of the Variants step, which the job does not carry,
+ * keeps the key and the plot; and the two options. The smallest distance
+ * and the number of bins are constants, under the key version. Reads
+ * nothing of `p.variants`, so it answers for any project.
+ */
+function keyInputs(p: Project): JsonObject {
+  const options = ldDecayOptions(p);
+  return {
+    pops: populationsOf(p),
+    filters: ldDecayFilters(p.filters),
+    options: {
+      maxDist: options.maxDist,
+      maxAllowedMaf: options.maxAllowedMaf,
+    },
+  };
 }
 
 /**
