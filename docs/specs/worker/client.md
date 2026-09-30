@@ -444,9 +444,14 @@ that the worker is not started again between requests
 the owner on 30 September 2026, as recommended (point 16 there; point
 12 of `docs/specs/stage-5-open-points.md`). The options not taken: a
 restart above a bound of the individuals and the distance, and no
-restart. The plan of stage 5 measures, in
-Chromium and WebKit, the growth of the engine 3 s after an LD decay with
-the restart and without it, as stage 4 measured the PCA.
+restart. The plan of stage 5 measured it through the application on
+30 September 2026 (`docs/specs/analyses/ldDecay.md`, "How it runs", "In
+the browsers"): an LD decay of 1,000 individuals and 20,000 variants at
+100,000 and 1,000,000 bp grew the engine by 0.40 to 0.45 GB in Chromium
+153 and 0.43 to 0.59 GB in WebKit 26.6, which the tab would keep without
+the restart, 0.55 to 0.78 GB in all; 3 s after the restart the engine
+was back at its size before the Run, 0.14 to 0.15 GB in Chromium and
+0.20 to 0.22 GB in WebKit.
 
 ### Crashes, defects, and every read answered
 

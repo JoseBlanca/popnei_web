@@ -698,12 +698,39 @@ individuals leaves the worker 0.4 to 1.1 GB larger, far above the 25 MB
 after which a written file or a PCA restarts it (`docs/architecture.md`,
 section 13, points 5 and 9). So the client starts the worker again
 after every LD decay, as the owner decided on 30 September 2026 (below,
-"Open points"; `docs/architecture.md`, section 13, point 16). None
-of this was measured in a browser: the plan measures, in Chromium and
-WebKit, the growth of the engine and its size 3 s after a Run on the VCF
-of `e2e/bigVcf.ts` of 20,000 variants and 1,000 individuals, at 100,000
-and at 1,000,000 bp, with the restart and without it, as stage 4
-measured the PCA.
+"Open points"; `docs/architecture.md`, section 13, point 16).
+
+**In the browsers.** The plan of stage 5 measured the LD decay through
+the application in Chromium 153 and WebKit 26.6, on the owner's Mac, an
+Apple M5 Pro with 64 GB and macOS 27.0.1, on 30 September 2026, while
+other tests ran beside it, the load average of 1 minute from 3 to 23
+(PA2 D7 of `e2e/measure.spec.ts`; the report of the plan). The memory is
+that of the engine, the footprints of all its processes summed, and no
+tab closed:
+
+| the file, the populations | the largest distance | the run, Chromium; WebKit | the engine grew by, Chromium; WebKit | when the answer arrived; 3 s after the restart |
+|---|---|---|---|---|
+| 1,000 individuals, 20,000 variants every 1,000 bp, 3 | 100,000 bp | 3.4 to 3.9 s; 7.9 to 8.4 s | 0.40 GB; 0.43 to 0.53 GB | 0.55; 0.15 GB in Chromium, 0.73; 0.20 to 0.21 GB in WebKit |
+| the same | 1,000,000 bp | 12.5 to 19.9 s; 19.1 to 19.6 s | 0.44 to 0.45 GB; 0.49 to 0.59 GB | 0.59; 0.14 to 0.15 GB, 0.78; 0.20 to 0.22 GB |
+| 100 individuals, 20,000 variants at positions drawn at random over 26 Mb, 1 | 25,000,000 bp, the lock | 34.4 s; 30.9 s | 1.12; 1.16 GB | 1.25; 0.13 GB, 1.44; 0.18 GB |
+| the same, 3 | 8,333,333 bp, the lock | 28.2 s; 32.0 s | 0.82; 0.85 GB | 0.95; 0.13 GB, 1.13; 0.19 GB |
+| 1,000 individuals, a variant every 100 bp, 25,000 variants, 3 | 2,000,000 bp | 222 s; 219 s | 1.19; 1.34 GB | 1.34; 0.14 GB, 1.55; 0.25 GB |
+| the same, 45,000 variants | 4,000,000 bp | 857 s; 594 s | 2.27; 2.42 GB | 2.42; 0.14 GB, 2.63; 0.56 GB |
+| the same, 88,334 variants | 8,333,333 bp, the lock | refused for memory after 1,475 s; 1,127 s | 3.90; 3.99 GB | 4.05; 0.14 GB, 4.28; 0.24 GB |
+
+Each of the first two rows is 5 runs; the others one run each. The size
+when the answer arrived, before the worker is ended, is what the tab
+would keep without the restart; 3 s after the restart the engine is
+back where it was before the Run, so the restart gives back all the LD
+decay took. At the lock, the time after the pass, when the bar stands
+full, was 10.8 s for one population and 10.3 s for three in Chromium,
+8.7 and 11.4 s in WebKit, found as the time from the first copy of the
+counts, which raises the memory by 24 bytes a distance, to the answer.
+On the dense file popnei refused at 8,333,333 bp, which the lock allows
+three populations, after 19 to 25 minutes of a pass, when the variants
+it held within the distance reached the 4 GB of the memory of wasm; the
+user sees the words of "Its words", below, and the tab stays. The lock
+bounds the counts and not those variants, as "Why it cannot run" says.
 
 **The time** grows with the pairs, which grow with the density of the
 variants times the largest distance: 1,520,324 pairs a population took
