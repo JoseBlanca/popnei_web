@@ -49,10 +49,11 @@ import {
   csvNumber,
   defect,
   orNull,
+  populationWarnings,
   refusalWords,
 } from "./words.ts";
+import type { PopulationWords } from "./words.ts";
 import type {
-  Cell,
   DiversityResult,
   Job,
   JobResult,
@@ -61,6 +62,13 @@ import type {
 
 /** The id of the analysis. */
 const ID = "diversity";
+
+/** What the diversity calls itself and its result in the warnings of the
+    populations. */
+const DIVERSITY_WORDS: PopulationWords = Object.freeze({
+  leftOutOf: "the diversity",
+  notIn: "the table",
+});
 
 /**
  * The two options of the diversity when the user has set none, popnei's
@@ -340,11 +348,9 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = diversityResultOf(result);
-  const variants = p.variants;
-  if (variants?.read.kind !== "read") {
+  if (p.variants?.read.kind !== "read") {
     throw defect("the warnings of the diversity need a variants file read.");
   }
-  const fileName = escaped(variants.name);
   const min = optionsOf(p).minNumIndividuals;
   const found: Warning[] = [];
   const rows = diversityRows(r);
@@ -382,32 +388,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: withoutValueText(withoutValue, r.passStats.numVars, min),
     });
   }
-  const unassigned = unassignedOf(p);
-  const noPopulation = variants.read.individuals.filter((individual) =>
-    unassigned.has(individual),
-  );
-  if (noPopulation.length > 0) {
-    const one = noPopulation.length === 1;
-    found.push({
-      code: "individualsWithoutPopulation",
-      text: `${counted(noPopulation.length, "individual")} of ${fileName} ${one ? "has" : "have"} no population, and ${one ? "is" : "are"} left out of the diversity: ${namesOf(noPopulation)}. If ${one ? "it belongs" : "they belong"} to one, fill in ${one ? "its" : "their"} population in the metadata file and load it again.`,
-    });
-  }
-  // A population none of whose individuals is in the variants file is
-  // not among these: a metadata file may serve several panels. The one
-  // population is never among them: filters that keep none of it keep
-  // no individual, which the store locks on.
-  const inResult = new Set(r.pops);
-  const missing = onePopulation
-    ? []
-    : toRun.map(([pop]) => pop).filter((pop) => !inResult.has(pop));
-  if (missing.length > 0) {
-    const one = missing.length === 1;
-    found.push({
-      code: "populationNotInResult",
-      text: `${one ? "Population" : "Populations"} ${namesOf(missing)} ${one ? "has" : "have"} no individual among the individuals of ${fileName} that the filters kept, so ${one ? "it is" : "they are"} not in the table.`,
-    });
-  }
+  found.push(...populationWarnings(r.pops, p, DIVERSITY_WORDS));
   return found;
 }
 
@@ -451,25 +432,6 @@ function tooFewOfOneText(
     ? "To have them, loosen the filters of individuals in the Variants step."
     : `The minimum of ${grouped(min)} cannot be changed in this version.`;
   return `${escaped(row.population)}, the one population, has ${counted(row.individuals, "individual")}, and a variant has a value in a population only when at least ${grouped(min)} of its individuals have a called genotype there, so it has no values. ${end}`;
-}
-
-/** The individuals of the table whose cell in the column of the
-    populations is missing, who are in no population; none for the one
-    population. */
-function unassignedOf(p: Project): ReadonlySet<string> {
-  const column = populationsColumn(p);
-  const read = p.individuals?.read;
-  if (column === null || read?.kind !== "read") {
-    return new Set();
-  }
-  const index = read.table.columns.indexOf(column);
-  return new Set(
-    index === -1
-      ? []
-      : read.table.rows
-          .filter((row) => row[index] === null)
-          .map((row) => identifierOf(row[0])),
-  );
 }
 
 /** The text of `variantsWithoutValue`, for its populations with the
@@ -629,15 +591,6 @@ function populationsColumn(p: Project): string | null {
     case "populations":
       return p.individuals === null ? null : p.grouping.column;
   }
-}
-
-/** The name of an individual, the cell of the first column. The reader
-    refuses a row with no name, so a missing one is a defect. */
-function identifierOf(cell: Cell | undefined): string {
-  if (cell === null || cell === undefined) {
-    throw defect("a row of the individuals table has no individual.");
-  }
-  return String(cell);
 }
 
 /** The result as the diversity's own. Throws a defect on the result of

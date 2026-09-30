@@ -1,7 +1,8 @@
 /**
  * What the analyses share: the words of a refusal of popnei, which the
  * diversity and the three analyses of the Variants step give their error
- * states from; the parsing of the options of an analysis that has none;
+ * states from; the two warnings of the populations of the analyses per
+ * population (diversity.md, "The warnings"); the parsing of the options of an analysis that has none;
  * the description of a histogram with the threshold of its filter; and
  * the cells of a CSV (docs/specs/analyses/diversity.md, "Its words";
  * individualChecks.md, "Its words"; variantChecks.md, "The states";
@@ -10,9 +11,18 @@
  */
 
 import type { JsonObject } from "../keys.ts";
-import { counted, escaped, saying, shown } from "../project.ts";
+import {
+  counted,
+  escaped,
+  namesOf,
+  populationsToRun,
+  saying,
+  shown,
+} from "../project.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
+import type { Warning } from "../store.ts";
+import type { Cell } from "../../worker/protocol.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
@@ -407,6 +417,109 @@ export function binsCsv(bins: readonly DescribedBin[]): string {
     ].join(","),
   );
   return [BINS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
+}
+
+/** What an analysis per population calls itself and its result in the
+    two warnings of `populationWarnings`. */
+export interface PopulationWords {
+  /** What the individuals with no population are left out of: "the
+      diversity", "the distances", "the LD decay". */
+  readonly leftOutOf: string;
+  /** What a population the filters emptied is not in: "the table", "the
+      distances", "the plot". */
+  readonly notIn: string;
+}
+
+/** individualsWithoutPopulation and populationNotInResult, in this
+    order, for the populations `pops` of a result and the project of its
+    request: "…, and are left out of ‹leftOutOf›: …" and "…, so it is not
+    in ‹notIn›."; none for the one population. A population none of whose
+    individuals is in the variants file is named by neither, since a
+    metadata file may hold the individuals of several panels. Throws a
+    defect on a project whose variants file is not read, and on a project
+    of association. */
+export function populationWarnings(
+  pops: readonly string[],
+  p: Project,
+  words: PopulationWords,
+): readonly Warning[] {
+  const variants = p.variants;
+  if (variants?.read.kind !== "read") {
+    throw defect("the warnings of the populations need a variants file read.");
+  }
+  const column = populationsColumnOf(p);
+  if (column === null) {
+    return [];
+  }
+  const fileName = escaped(variants.name);
+  const found: Warning[] = [];
+  const unassigned = unassignedOf(p, column);
+  const noPopulation = variants.read.individuals.filter((individual) =>
+    unassigned.has(individual),
+  );
+  if (noPopulation.length > 0) {
+    const one = noPopulation.length === 1;
+    found.push({
+      code: "individualsWithoutPopulation",
+      text: `${counted(noPopulation.length, "individual")} of ${fileName} ${one ? "has" : "have"} no population, and ${one ? "is" : "are"} left out of ${words.leftOutOf}: ${namesOf(noPopulation)}. If ${one ? "it belongs" : "they belong"} to one, fill in ${one ? "its" : "their"} population in the metadata file and load it again.`,
+    });
+  }
+  const inResult = new Set(pops);
+  const missing = (populationsToRun(p) ?? [])
+    .map(([pop]) => pop)
+    .filter((pop) => !inResult.has(pop));
+  if (missing.length > 0) {
+    const one = missing.length === 1;
+    found.push({
+      code: "populationNotInResult",
+      text: `${one ? "Population" : "Populations"} ${namesOf(missing)} ${one ? "has" : "have"} no individual among the individuals of ${fileName} that the filters kept, so ${one ? "it is" : "they are"} not in ${words.notIn}.`,
+    });
+  }
+  return found;
+}
+
+/** The column the populations are taken from, or `null` for the one
+    population, without a metadata file or with the grouping
+    `onePopulation`. Throws a defect on a project of association, which
+    has no analysis per population. */
+function populationsColumnOf(p: Project): string | null {
+  switch (p.grouping.kind) {
+    case "roles":
+      throw defect(
+        "the warnings of the populations were asked of a project of association.",
+      );
+    case "onePopulation":
+      return null;
+    case "populations":
+      return p.individuals === null ? null : p.grouping.column;
+  }
+}
+
+/** The individuals of the table whose cell in `column` is missing, who
+    are in no population; none when the table is not read or has no such
+    column. */
+function unassignedOf(p: Project, column: string): ReadonlySet<string> {
+  const read = p.individuals?.read;
+  if (read?.kind !== "read") {
+    return new Set();
+  }
+  const index = read.table.columns.indexOf(column);
+  return new Set(
+    index === -1
+      ? []
+      : read.table.rows
+          .filter((row) => row[index] === null)
+          .map((row) => identifierOf(row[0])),
+  );
+}
+
+/** The name of an individual, the cell of the first column. The reader
+    refuses a row with no name, so a missing one is a defect. */
+function identifierOf(cell: Cell | undefined): string {
+  if (cell === null || cell === undefined) {
+    throw defect("a row of the individuals table has no individual.");
+  }
+  return String(cell);
 }
 
 /** A number of a result in a CSV: as `String` writes it, or an empty cell
