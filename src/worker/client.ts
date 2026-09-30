@@ -8,9 +8,10 @@
  * The calculation worker holds one load, the variants file of the one
  * `open` it received first; a request on another load ends it and starts
  * another, and so does a write of a file larger than
- * `WRITE_RESTART_BYTES`, or one that popnei refused, and a PCA of more
- * than `PCA_RESTART_INDIVIDUALS` individuals, done or refused, since the
- * memory of its wasm never shrinks. The light worker holds nothing
+ * `WRITE_RESTART_BYTES`, or one that popnei refused, a PCA of more
+ * than `PCA_RESTART_INDIVIDUALS` individuals, done or refused, and every
+ * LD decay, done, refused or ended by a defect, since the memory of its
+ * wasm never shrinks. The light worker holds nothing
  * between two reads of the individuals file.
  */
 
@@ -242,6 +243,18 @@ export function createClient(config: {
     return answer.individuals.length > PCA_RESTART_INDIVIDUALS;
   }
 
+  /** Whether the worker is started again after the run ends done or
+      refused by popnei: a large PCA, and every LD decay, whose blocks of
+      variants and counts leave hundreds of MB in the memory of wasm
+      whatever its size (client.md, "The LD decay, and the restart after
+      it"). */
+  function restartsAfterRun(request: JobRequest): boolean {
+    return (
+      (request.kind === "run" && request.job.analysis === "ldDecay") ||
+      isLargePca(request)
+    );
+  }
+
   function enqueueCalculation(request: CalculationRequest): void {
     const load = loadOf(request);
     switch (calc.life.phase) {
@@ -452,13 +465,14 @@ export function createClient(config: {
           message.id === calc.running.id
         ) {
           const running = calc.running;
-          // popnei refuses a file the memory of the tab does not take, and
-          // a PCA that may have made its matrix, after its wasm grew by
-          // what it built: the worker is started again, after the refusal
-          // was given. A reopenFailed names the file, not the memory.
+          // popnei refuses a file the memory of the tab does not take, a
+          // PCA that may have made its matrix, and an LD decay that may
+          // have made its counts, after its wasm grew by what it built:
+          // the worker is started again, after the refusal was given. A
+          // reopenFailed names the file, not the memory.
           const restart =
             message.kind === "refused" &&
-            (running.kind === "write" || isLargePca(running));
+            (running.kind === "write" || restartsAfterRun(running));
           calc.running = null;
           calc.life.failures = 0;
           finish(
@@ -509,8 +523,9 @@ export function createClient(config: {
           return;
         }
         // A large PCA ends the worker, whose memory of wasm grew by its
-        // matrix of the individuals; the outcome first, as after a write.
-        const restart = isLargePca(run);
+        // matrix of the individuals, and so does every LD decay; the
+        // outcome first, as after a write.
+        const restart = restartsAfterRun(run);
         calc.running = null;
         calc.life.failures = 0;
         run.answer.settle({
@@ -706,8 +721,10 @@ export function createClient(config: {
     const opening = calc.opening;
     calc.running = null;
     if (running !== null) {
-      restartCalculation(openedLoad());
+      // The outcome first, as after a write: a defect thrown after the
+      // pass of an LD decay reaches the store before the worker is ended.
       finish(running, { kind: "failed", error });
+      restartCalculation(openedLoad());
       return;
     }
     if (opening !== null) {

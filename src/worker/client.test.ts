@@ -17,7 +17,10 @@ import {
 import type {
   DiversityJob,
   DiversityResult,
+  Job,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
   Outcome,
   PcaJob,
   PcaMethod,
@@ -2667,11 +2670,12 @@ function pcaResult(method: PcaMethod): PcaResult {
   };
 }
 
-/** Load A read with `numInFile` individuals, a run k1 of the principal
-    components of `job` running on the first worker, and a run k6 waiting. */
+/** Load A read with `numInFile` individuals, a run k1 of `pca`, the
+    principal components or another analysis, running on the first worker,
+    and a run k6 waiting. */
 function pcaAndRun(
   numInFile: number,
-  pca: PcaJob,
+  pca: Job,
 ): ReturnType<typeof setUp> & {
   readonly first: FakeWorker;
   readonly k1: ReturnType<ReturnType<typeof createClient>["run"]>;
@@ -2946,4 +2950,173 @@ describe("IP9 a crash of a worker reaches the console", () => {
       "popnei_web: the calculation worker stopped. trap",
     );
   });
+});
+
+/** An LD decay of two individuals of its list, one in each population. */
+function ldDecayJob(): LdDecayJob {
+  return {
+    analysis: "ldDecay",
+    fileId: "A",
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+    individuals: ["s1", "s2"],
+    pops: [
+      ["pop_a", ["s1"]],
+      ["pop_b", ["s2"]],
+    ],
+    minDist: 1,
+    maxDist: 100_000,
+    numBins: 1,
+    maxAllowedMaf: 0.95,
+  };
+}
+
+/** A result of the LD decay the check of a result takes, of two
+    populations and one bin; the client reads nothing of it but its
+    analysis. */
+function ldDecayResult(): LdDecayResult {
+  return {
+    analysis: "ldDecay",
+    pops: ["pop_a", "pop_b"],
+    numIndividuals: Uint32Array.of(1, 1),
+    numVars: Float64Array.of(432, 432),
+    smallestDist: Float64Array.of(1),
+    largestDist: Float64Array.of(100_000),
+    numPairs: Float64Array.of(29_367, 29_367),
+    meanR2: Float64Array.of(0.5, 0.5),
+    sdR2: Float64Array.of(0.1, 0.1),
+    rhoPerBp: Float64Array.of(NaN, NaN),
+    r2AtZero: Float64Array.of(NaN, NaN),
+    halfDist: Float64Array.of(NaN, NaN),
+    passStats: RESULT.passStats,
+  };
+}
+
+describe("PA2 D4 the restart after an LD decay", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("a result of an LD decay of 2 individuals, a run waiting: the LD decay is done, the worker ended, and a new one opens A again, then runs k6", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: ldDecayResult(),
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "done",
+      key: "k1",
+      result: ldDecayResult(),
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("an LD decay that popnei refused fails with its message, and the worker is started again", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "refused",
+      id: env.k1.id,
+      message: "not enough memory",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "popnei", message: "not enough memory" },
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test('an LD decay ended by a crashed that starts "popnei_web defect: " fails as a defect, and the worker is started again', async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "crashed",
+      message: "popnei_web defect: a population popnei did not give",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: "a population popnei did not give" },
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("an LD decay that ends reopenFailed fails with it, and the worker is not ended", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "reopenFailed",
+      id: env.k1.id,
+      name: "panel.nei",
+      message: "the file could not be read",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "the file could not be read",
+      },
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a result of a diversity ends no worker, and k6 is sent to it", async () => {
+    const env = pcaAndRun(2, job("A"));
+    emit(env.first, resultOf(env.k1.id, "k1"));
+    expect(await now(env.k1.outcome)).toMatchObject({
+      kind: "done",
+      key: "k1",
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test.each([
+    [
+      "a result",
+      "done",
+      { kind: "result", key: "k1", result: ldDecayResult() },
+    ],
+    ["a refused", "failed", { kind: "refused", message: "not enough memory" }],
+    [
+      "a crashed of a defect",
+      "failed",
+      { kind: "crashed", message: "popnei_web defect: a population" },
+    ],
+  ])(
+    "the outcome of an LD decay after %s is given before the restart: when no new worker can be made, the LD decay is %s and then k6 fails",
+    async (_, kind, answer) => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const calculation: FakeWorker[] = [];
+      const client = createClient({
+        calculation: () => {
+          if (calculation.length > 0) {
+            throw new Error("the script of the worker is not served");
+          }
+          const worker = fakeWorker();
+          calculation.push(worker);
+          return worker;
+        },
+        light: fakeWorker,
+        onPopneiReady: () => undefined,
+      });
+      const first = last(calculation);
+      client.addFile("A", FILE_A);
+      client.openVariants({ fileId: "A", ...NEI });
+      emit(first, READY);
+      emit(first, {
+        kind: "opened",
+        id: lastSent(first).id,
+        individuals: names(2),
+        ploidy: 2,
+      });
+      const k1 = client.run("k1", ldDecayJob(), noProgress);
+      const k6 = client.run("k6", job("A"), noProgress);
+      const order: string[] = [];
+      void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+      void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+      emit(first, { ...answer, id: k1.id });
+      await now(k6.outcome);
+      expect(first.terminated).toBe(true);
+      expect(order).toEqual([`k1 ${kind}`, "k6 failed"]);
+    },
+  );
 });
