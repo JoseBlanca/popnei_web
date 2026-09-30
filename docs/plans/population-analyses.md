@@ -675,7 +675,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 - [x] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
   the line plot on `e2e/plots.html` and its flows. Serves 4 and 5. Needs
   4.1.
-- [ ] 4.4 The histogram's three additions for the spectrum:
+- [x] 4.4 The histogram's three additions for the spectrum:
   `Float64Array` counts, `yMax` and `xWholeNumbers` (`histogram.md`, the
   parts its opening dates 30 September 2026). Serves 6. Needs 4.1.
 
@@ -759,7 +759,7 @@ negative distance.
 
 **Tasks:**
 
-- [ ] 5.1 The panel's functions of `popDists.ts`, `popDistsHeatmap`,
+- [x] 5.1 The panel's functions of `popDists.ts`, `popDistsHeatmap`,
   `orderText`, `popDistsDescription`, `popDistsRows`, `popDistsCsv` and
   `tooManyPopulationsText` (`popDists.md`, "The TypeScript interface"
   and "Its words"); the distances in `POPGEN_ANALYSES` after the

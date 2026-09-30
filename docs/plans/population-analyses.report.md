@@ -269,6 +269,67 @@ runner defects by breaking lines, as in work package 2, where the
 fixture's populations were alike: a skill of testing could ask for
 fixtures whose populations differ in every number a test reads.
 
+## 4. The three plots
+
+Done, in 547a0f8 (4.1), 472b089 (4.2), 755b53e (4.4), afebfd6 (4.3),
+4ab9175 and 9659446 (the fixes of the review). The plots are on the
+test page of plots alone; the panels mount them in work packages 5, 7
+and 8.
+
+### The deliverables
+
+1. `npx vitest run src/charts -t "PA4 D1"`: 7 passed, at least 5 asked;
+   the tests of the scatter, the histogram and the base of stage 4 with
+   added lines only; the greps give 2 and 2.
+2. `-t "PA4 D2"`: 25 passed, at least 15.
+3. `-g "PA4 D3"`: 6 passed, 3 in each engine, at least 4.
+4. `-t "PA4 D4"`: 17 passed, at least 12.
+5. `-g "PA4 D5"`: 6 passed, 3 in each engine, at least 6; with the flows
+   the review added, 16 of the plots in all.
+6. `-t "PA4 D6"`: 10 passed, at least 5; the spec's axis of 0 to 0.07 is
+   0 to 0.065 by its own rule (point 1).
+
+On a copy of 4ab9175: `npm test` "Tests 3391 passed (3391)"; Chromium's
+flows passed, and WebKit's failed 7 times with "Target page, context or
+browser has been closed", the browser's own process ended under the
+load of other runs; run alone on the same copy, "527 passed (5.0m)". On
+9659446 in the tree the writer's check gave "1054 passed (6.4m)".
+
+### The review
+
+Seven reviewers (`spec`, `tests`, `stale`, `errors`, `api`,
+`accessibility`, `browser`). The stale reviewer drew 300 random updates
+of each plot against a fresh drawing and found them alike. Fixed:
+
+- Nine changes that move what the user sees passed every test: a value
+  off the centre of its cell, the legend's numbers off the ends of its
+  bar, the numbers under the axis of every existing plot moved onto the
+  ticks, the line plot's legend off its lines, a tooltip left stuck when
+  the pointer leaves; each now fails a flow or a test.
+- The line plot now refuses two series drawn alike; eight values that
+  stood for impossible cases are defects; a line through a point too
+  far to draw no longer breaks the rest of it.
+- The contrast of the heatmap's numbers on every colour of its scale is
+  tested, since it clears 4.5:1 by 0.1 at its worst step.
+- The values centred by an offset of the text, as every other text of
+  the plots, since other programs may ignore the CSS property in the
+  exported file.
+
+Put to you: points 1, 4, 5, 13, 14, 21 and 22, and the right margin of
+the heatmap's names. For stage 6: the export still writes
+`dominant-baseline: auto` on each element, as `charts.md` lists it.
+
+### How the work of 4 went, for whoever revises a skill or a plan
+
+Four writers of about 150,000, 295,000, 135,000 and 310,000 tokens, the
+fixes 360,000; seven reviewers about 850,000. The tests reviewer broke
+the plots' code 88 times and found nine breaks of what a user sees that
+no test caught, as the reviewer of stage 3 found 19 of 88: a plot's
+flows should assert where its texts and marks stand, not only that they
+exist. Seven reviewers, three writers and the orchestrator's checks at
+once clogged the Mac and closed WebKit (the standing rules, "The load
+of the machine").
+
 ## 6. The whole diversity, in the worker and core, with the spectrum
 
 Done, in 88a023d (6.1), e72665f (6.2), d8a328c (6.5), 994bbf9 (6.3),
@@ -541,6 +602,22 @@ the plan; each is asked of you at the next stop.
     `minNumIndividuals` and `polyThreshold`"; the next paragraph adds
     the fields of stage 5. Recommendation: correct it.
 
+21. **Names in capitals cut at the heatmap's left edge, `heatmap.md`,
+    "The names on the axes".** The spec sizes the margins at 7.2 pixels
+    a character, which holds for lower case: a population coded "WMA"
+    loses most of its "W", 8.6 pixels, "MEX" 4, and a 20-character name
+    in capitals 8 to 11, in Chromium and WebKit and in the Linux font
+    of the checks. Recommendation: measure each name's width in the
+    browser before the margins are set, or count 9 pixels a character.
+    For stop A.
+22. **The dashed guide to the half distance, `line.md`, "Its marks".**
+    On the light theme the guide of an orange, sky-blue or yellow
+    population is below 3:1 on white (2.25, 2.31 and 1.32), where their
+    lines and symbols get a grey edge for that reason; the example of
+    `ld.nei`, orange and sky blue, shows both faint. The number is in
+    the legend and the table. Recommendation: the grey edge under the
+    guide too. For stop C.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
@@ -554,6 +631,13 @@ The orchestrator runs its whole checks on a copy of a commit made with
 `playwright.config.ts` changed in the copy (4273 and up): the config
 reuses a server already on 4173, so a check beside a writer's would
 otherwise test the writer's build.
+
+The load of the machine, set on 30 September 2026 after the owner saw
+the Mac clogged: one browser run at a time on the machine, the
+orchestrator's and every agent's; Playwright with `--workers=4`; at most
+three agents at once. A browser check beside others let WebKit's own
+process close under the load, and seven flows failed that way; alone,
+the same copy passed.
 
 ### What every task of this plan is given
 
@@ -588,7 +672,9 @@ TypeScript, React, D3, web workers running popnei's wasm package).
   and the specs say what happens meanwhile.
 - **The browsers.** Firefox does not launch on this Mac. The browser
   check is `POPNEI_TEST_PAGES=1 npm run build && npx playwright test
-  --project=chromium --project=webkit`, never `npm run test:e2e`.
+  --project=chromium --project=webkit --workers=4`, never `npm run
+  test:e2e`, and never with more than four workers: the machine is
+  shared, and a loaded WebKit closes its own process.
 - **The rules of every task** are the plan's "What every prompt of a task
   carries". In short: break each rule of the spec you build once, on a
   scratch copy, and see a test fail, and say how many you broke and how
