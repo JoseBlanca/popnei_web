@@ -407,8 +407,10 @@ point 1 of `docs/specs/analyses/pca.md`).
 
 From stage 5 the client starts the calculation worker again after every
 run of the analysis `ldDecay`, whatever its size: after an outcome
-`done`, and after a refusal of popnei, which may come after the counts
-were made; not after `reopenFailed`, as for a write. The steps are those
+`done`, after a refusal of popnei, which may come after the counts
+were made, and after a defect thrown after the pass, which leaves the
+memory grown as well (a crash and a cancel end the worker anyway); after
+every outcome but `reopenFailed`, as for a write. The steps are those
 of a write, above: the outcome first, then the worker ended, then a new
 one, sent the `open` of the load and the requests that waited.
 
@@ -429,7 +431,9 @@ populations at 10,000,000 bp, set by the distance, and
 (`docs/specs/analyses/ldDecay.md`, "How it runs"), where the bound of a
 write and of a PCA is about 25 MB. A bound on the individuals and the
 distance, as for the PCA, would be passed by almost every file of a
-few hundred individuals, so there is none. It costs the reading of the
+few hundred individuals, so there is none. It costs, as every restart
+does (above, "Cancelling"), the loading of popnei's wasm from the cache
+of the browser and the reading of the
 header of the file, at most 49 ms (`docs/specs/worker/runner.md`, "What
 a restart costs"), against a calculation of 0.6 s and more on 20,000
 variants, and the worker keeps no intermediate result before stage 7.
@@ -805,8 +809,9 @@ walking skeleton, a diversity `Job` and a CSV.
 - **The restart after an LD decay**, from stage 5: a `result` of an
   `ldDecay` job of 2 individuals, with a run k6 waiting: the outcome is
   `done` before the worker is ended, then a new worker, the `open` of A,
-  then k6; a `refused` of such a job restarts it too, and a
-  `reopenFailed` does not; a result of a diversity ends no worker.
+  then k6; a `refused` of such a job restarts it too, and so does a
+  `crashed` that starts "popnei_web defect: ", and a `reopenFailed` does
+  not; a result of a diversity ends no worker.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a

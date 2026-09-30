@@ -548,9 +548,11 @@ its spec.
 `tableNumber` of 0.07500000000000001 is 0.075 and of 0.9500000000000001
 is 0.95; the ticks of a vertical axis of whole numbers for a domain of 0
 to 3 are 0, 1, 2 and 3, and, from stage 5, those of a horizontal axis
-with `xWholeNumbers` for a domain of 0.5 to 20.5 whole numbers alone,
-while the vertical axis of the same plot, from 0 to 0.06, keeps ticks
-that are not whole.
+with `xWholeNumbers` for a domain of 0.5 to 2.5 the whole numbers 1 and
+2 alone, where d3's ticks without it are 0.5, 1, 1.5, 2 and 2.5, while
+the vertical axis of the same plot, from 0 to 0.06, keeps ticks that
+are not whole; a domain of 0.5 to 20.5 cannot test it, since d3 gives
+whole ticks there by itself.
 
 **The SVG, under jsdom**, with the size of the element given by a stub
 of `clientWidth` and `clientHeight` and a `ResizeObserver` the test

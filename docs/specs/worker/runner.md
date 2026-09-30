@@ -454,7 +454,11 @@ step 5, over the same steps of the `Variants`, the runner:
    of the population, each array copied into a new `Float64Array`, read
    by a plain lookup, `foldedSfs[name]`, and checked with `instanceof
    Float64Array`, since popnei's object holds a population named
-   `__proto__` without making it an own field, and a check with
+   `__proto__` without making it an own field: its assignment makes the
+   spectrum the object's parent, so `Object.keys` leaves it out and a
+   plain lookup returns it (node, `js-v0.1.0-dev.3`, populations
+   `__proto__`, p2 and p1 of `panel.nei`, checked again on 30 September
+   2026 after a review had it return `Object.prototype`), and a check with
    `Object.hasOwn` would crash a diversity that ran with such a
    population in stages 3 and 4; a
    population of `pops` not in `popDiversityPops` has NaN in `fis`,

@@ -118,10 +118,12 @@ at 100,000 bp, by 480 MB for 100 individuals and three populations at
 variants at 100,000 and 1,000,000 bp, which the tab keeps until the
 next load of the variants file.
 
-- **After every LD decay.** The user sees the result as usual; nothing
+- **After every LD decay**, after its result, a refusal or a defect,
+  and not after a variants file that can no longer be read. The user sees the result as usual; nothing
   loaded is lost, since the page keeps the variants file and the new
-  worker opens it again, and the next calculation waits for that, at
-  most 49 ms, measured on the `.nei` file of 19 MB and its VCF in
+  worker loads popnei from the cache of the browser and opens the file
+  again, and the next calculation waits for that, at most 49 ms from
+  the start of the new worker to the file opened, measured on the `.nei` file of 19 MB and its VCF in
   Chromium 153 and WebKit 26.6 at the end of stage 2, against 0.6 s and
   more for the LD decay itself on 20,000 variants, in node. After a
   new version of the site is put online while the page is open, the
@@ -293,7 +295,9 @@ application has the words for that refusal.
   are verified, it costs the pass nothing, and it comes with a later
   release. The same issue would ask popnei to keep in the result of
   this call a population named `__proto__`, a name that JavaScript
-  treats specially, which popnei loses today.
+  treats specially, which popnei loses today, and to make it an own key
+  of the spectra of `calcPopDiversity` as well, which today hold it
+  only as the object's parent.
 - **Check it in the application**: a pass of its own over the whole
   file, reading the positions, which on a file of several GB is minutes
   more for each Run, for a check popnei could make in its own pass.
@@ -491,7 +495,8 @@ pairs.
 - **If the owner agrees to point 19**, a second issue: that
   `calcLdAndDistPerPop` refuse a source whose variants are not sorted by
   position, with the message of its LD filter, and keep a population
-  named `__proto__` in its result. Not opened yet.
+  named `__proto__` in its result, and as an own key of the spectra of
+  `calcPopDiversity`. Not opened yet.
 
 popnei's release `js-v0.1.0-dev.3`, which the application has
 installed since stage 4, has every other calculation of the stage, as checked in its code and by running it under node on 30

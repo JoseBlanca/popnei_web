@@ -441,10 +441,12 @@ verified in `plot2d.md`, the export on this histogram.
   the vertical ticks whole numbers for counts of 0 to 3. From stage 5:
   the shares of p0 at n = 40 of `docs/specs/analyses/sfs.md`, "The
   numbers of popnei", as a `Float64Array` over the edges 0.5 to 20.5,
-  with `yMax` 0.05618145165329451, give a vertical domain made round
-  from it and not from p0's largest share, 0.05590275165567829, ticks
-  that are not whole on it, and whole numbers alone on the horizontal
-  axis; a count of −0.1 or NaN, and a `yMax` below the largest count,
+  with `yMax` 0.061, give a vertical domain of 0 to 0.07, made round
+  from it, where p0's largest share, 0.05590275165567829, would give 0
+  to 0.06 (the largest share of the three populations, 0.05618145165329451,
+  gives 0 to 0.06 as well, so it cannot tell the two apart); ticks
+  that are not whole on it; `xWholeNumbers` over the edges 0.5 to 2.5,
+  two bins, the ticks 1 and 2 alone, where d3 would give fractions; a count of −0.1 or NaN, and a `yMax` below the largest count,
   throw.
 
 **The SVG, under jsdom**, with the size of the element given by a stub

@@ -2718,9 +2718,13 @@ approved by the owner; the specs of stage 5 are written with it
 meanwhile:
 
 16. **The calculation worker is started again after every LD decay**,
-   whatever its size, after a result and after a refusal of popnei, as
-   after a large PCA (point 9); not after a file that no longer reads.
-   It is a third exception to point 2. An LD decay leaves the memory of
+   whatever its size, after every outcome but a file that no longer
+   reads: a result, a refusal of popnei and a defect after the pass
+   leave the memory grown alike, and a crash and a cancel end the worker
+   anyway.
+   It is a third exception to point 2; the restart costs what every
+   restart does, popnei's wasm loaded from the cache of the browser and
+   the header of the variants file read. An LD decay leaves the memory of
    wasm larger by the blocks of variants it held, about 0.4 to 0.6 GB
    for 1,000 individuals whatever the distance, and by its counts, up to
    40 bytes × its largest distance × its populations (section 11): in node, 10.6 MB for

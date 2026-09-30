@@ -743,9 +743,15 @@ Beside it, the line of the versions, as the diversity's.
 ### What it sends and reads
 
 What the diversity's panel reads, and the options of `popDists` in the
-project. The field of the minimum and the radio buttons send
-`setAnalysisOptions(p, "popDists", options)` of
-`docs/specs/core/project.md`, each change a command; a minimum typed
+project. The field of the minimum and the radio buttons are each
+`store.apply(description, (p) => setAnalysisOptions(p, popDists, {
+...popDistsOptions(p), ‹the option› }))`, as the options of the
+diversity and the LD decay are, with the descriptions "the minimum
+number of individuals of the distances changed" and "the distance the
+heatmap draws changed"; the first removes the result, whose notice
+reads "The distances between populations were removed because the
+minimum number of individuals of the distances changed. …", and the
+second removes nothing, since the measure is in no key; a minimum typed
 is sent as the PCA's fields send theirs, when the field is left or Enter
 is pressed. It holds no state of the project; the heatmap is mounted as
 `.claude/skills/coding/react.md` says a plot is mounted, with `update`
