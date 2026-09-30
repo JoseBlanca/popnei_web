@@ -2715,6 +2715,17 @@ export function loosenText(one: boolean): string {
   return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
 }
 
+/** The populations the lists of individuals to keep and to remove leave,
+    known from the project alone, since the thresholds on the individuals
+    can only lower them; `null` when the individuals kept or the
+    populations cannot be made. */
+export function populationsByLists(p: Project): Pops | null {
+  const kept = individualsKept(p, null);
+  return kept === null
+    ? null
+    : (populationsKept(p, kept.byLists)?.pops ?? null);
+}
+
 /**
  * The reason when the lists to keep and to remove leave no individual
  * that has a population, known from the project alone: "The lists of
@@ -2728,13 +2739,12 @@ export function loosenText(one: boolean): string {
  * stage 4 are.
  */
 export function populationListsNeeds(p: Project): string | null {
-  const kept = individualsKept(p, null);
-  if (kept === null || p.variants === null) {
+  const left = populationsByLists(p);
+  if (left === null || p.variants === null) {
     return null;
   }
   const column = populationsColumnOf(p);
-  const left = populationsKept(p, kept.byLists);
-  if (column === null || left === null || left.pops.length > 0) {
+  if (column === null || left.length > 0) {
     return null;
   }
   return `The lists of individuals to keep and to remove leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Change the lists in the Variants step.`;
@@ -2915,8 +2925,10 @@ function individualsFileRefusalWords(
   }
 }
 
-/** The most individuals a text names all of (the project spec, Open 3). */
-const MAX_NAMED = 3;
+/** The most individuals or populations a text names all of (the project
+    spec, Open 3), as `namesOf` names them: past it, a text names the
+    first two and how many more, and gives no counts of each. */
+export const MAX_NAMED = 3;
 
 /** Names in words, in their order: all of them when there are at most
     MAX_NAMED, "a, b and c"; otherwise the first two and how many more,

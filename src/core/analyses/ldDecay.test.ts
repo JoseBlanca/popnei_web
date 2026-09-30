@@ -1490,3 +1490,20 @@ describe("PA2 D5 the boundaries of the rules", () => {
     expect(() => ldDecay.needs(association)).toThrow(/^popnei_web defect: /u);
   });
 });
+
+describe("PA6 the small rules of the populations, shared from project.ts", () => {
+  test("three populations of few individuals give fewIndividuals with their counts, as MAX_NAMED of namesOf allows", () => {
+    const three = resultOf([
+      flowPop("p3", { individuals: 12 }),
+      flowPop("p5", { individuals: 8 }),
+      flowPop("p6", { individuals: 5 }),
+    ]);
+    const p = project({
+      table: tableOf(LD_INDIVIDUALS, (_, i) => `p${String(i % 3)}`),
+    });
+    expect(ldDecay.warnings(three, p)[0]).toStrictEqual({
+      code: "fewIndividuals",
+      text: "Populations p3, p5 and p6 have fewer than 20 individuals, 12, 8 and 5. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so their curves lie higher and their half distances are longer than those of a larger population. Compare them with the others with this in mind.",
+    });
+  });
+});

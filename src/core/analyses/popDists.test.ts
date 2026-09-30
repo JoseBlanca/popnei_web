@@ -1303,3 +1303,31 @@ describe("PA3 D5 the key of the distances", () => {
     });
   });
 });
+
+describe("PA6 the small rules of the populations, shared from project.ts and individualsKept.ts", () => {
+  test("tooFewIndividuals of exactly three populations gives their counts, as MAX_NAMED of namesOf allows", () => {
+    const p = project({ table: tableOfSizes([30, 30, 30, 12, 30, 8, 5]) });
+    const r = resultOf(
+      ["p0", "p1", "p2", "p4"],
+      [],
+      [
+        ["p3", 12],
+        ["p5", 8],
+        ["p6", 5],
+      ],
+    );
+    expect(popDists.warnings(r, p)).toStrictEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Populations p3, p5 and p6 have fewer than 20 individuals, 12, 8 and 5, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file.",
+      },
+    ]);
+  });
+
+  test("numCheckNumbers is null with a threshold of observed heterozygosity on the individuals", () => {
+    const p = project({
+      individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.5 }],
+    });
+    expect(popDists.numCheckNumbers(p)).toBeNull();
+  });
+});

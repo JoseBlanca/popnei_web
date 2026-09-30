@@ -12,7 +12,7 @@
  * evaluated at the distances of the plot from popnei's ρ per base pair.
  */
 
-import { individualsKept } from "../individualsKept.ts";
+import { hasIndividualThreshold } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   ONE_POPULATION,
@@ -30,6 +30,8 @@ import {
   populationsOf,
   populationsToRun,
   shown,
+  MAX_NAMED,
+  populationsByLists,
 } from "../project.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import type { Result } from "../result.ts";
@@ -48,7 +50,6 @@ import type {
   Job,
   JobResult,
   LdDecayResult,
-  Pops,
   Run,
   VariantFilter,
 } from "../../worker/protocol.ts";
@@ -554,17 +555,6 @@ function memoryText(numPops: number): string {
   return `${start}: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.`;
 }
 
-/** The populations the lists of individuals to keep and to remove leave,
-    known from the project alone, since the thresholds on the individuals
-    can only lower them; `null` when the individuals kept or the
-    populations cannot be made. */
-function populationsByLists(p: Project): Pops | null {
-  const kept = individualsKept(p, null);
-  return kept === null
-    ? null
-    : (populationsKept(p, kept.byLists)?.pops ?? null);
-}
-
 /** Builds the request, with the individuals the filters keep that the
     store gives through `c`, and sends it through `c`. Throws a defect when
     there are no populations to run, which is also the case of a variants
@@ -780,10 +770,7 @@ const NUMBERS_PER_POPULATION = 3;
     individual, and when a list is one popnei would refuse, as for the
     diversity. */
 function numCheckNumbers(p: Project): number | null {
-  const hasThreshold = p.individualFilters.some(
-    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
-  );
-  if (populationsToRun(p) === null || hasThreshold) {
+  if (populationsToRun(p) === null || hasIndividualThreshold(p)) {
     return null;
   }
   const pops = populationsByLists(p);
@@ -940,6 +927,3 @@ function valueAt(
   }
   return value;
 }
-
-/** The most populations a text names all of, as `namesOf` does. */
-const MAX_NAMED = 3;

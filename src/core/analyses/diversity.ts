@@ -14,7 +14,7 @@
  * file, or one population of every individual, "All individuals".
  */
 
-import { individualsKept } from "../individualsKept.ts";
+import { hasIndividualThreshold, individualsKept } from "../individualsKept.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
@@ -35,6 +35,8 @@ import {
   populationsToRun,
   populationsWithMinimum,
   shown,
+  MAX_NAMED,
+  populationsByLists,
 } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
@@ -838,27 +840,16 @@ function withoutValueText(
   if (pops.length === 1 && first !== undefined) {
     return first.withValue === 0
       ? `${names} has a value at none of ${kept}: at each, fewer than ${grouped(min)} of its individuals have a genotype.`
-      : `${names} has a value at ${grouped(first.withValue)} of ${kept} (${share(first.withValue, numVars)}); at the others fewer than ${grouped(min)} of its individuals have a genotype.`;
+      : `${names} has a value at ${grouped(first.withValue)} of ${kept} (${percentOf(first.withValue, numVars)}); at the others fewer than ${grouped(min)} of its individuals have a genotype.`;
   }
   if (pops.length > MAX_NAMED) {
     return `${names} have a value at fewer than ${kept}; at the others fewer than ${grouped(min)} of their individuals have a genotype.`;
   }
   const counts = listed(pops.map(({ withValue }) => grouped(withValue)));
-  const shares = listed(pops.map(({ withValue }) => share(withValue, numVars)));
+  const shares = listed(
+    pops.map(({ withValue }) => percentOf(withValue, numVars)),
+  );
   return `${names} have a value at ${counts} of ${kept} (${shares}); at the others fewer than ${grouped(min)} of their individuals have a genotype.`;
-}
-
-/** A share as a whole percentage rounded to the nearest, except that a
-    share below 100% is never written 100%, nor one above 0% written 0%. */
-function share(part: number, whole: number): string {
-  const rounded = Math.round((part / whole) * 100);
-  const percent =
-    part < whole && rounded === 100
-      ? 99
-      : part > 0 && rounded === 0
-        ? 1
-        : rounded;
-  return `${String(percent)}%`;
 }
 
 /** The check numbers: the variants kept, then the expected
@@ -883,15 +874,11 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
     on the individuals, whose list needs the statistics of each
     individual, and when a list is one popnei would refuse. */
 function numCheckNumbers(p: Project): number | null {
-  const hasThreshold = p.individualFilters.some(
-    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
-  );
-  if (populationsToRun(p) === null || hasThreshold) {
+  if (populationsToRun(p) === null || hasIndividualThreshold(p)) {
     return null;
   }
-  const kept = individualsKept(p, null);
-  const left = kept === null ? null : populationsKept(p, kept.byLists);
-  return left === null ? null : 1 + NUMBERS_PER_POPULATION * left.pops.length;
+  const left = populationsByLists(p);
+  return left === null ? null : 1 + NUMBERS_PER_POPULATION * left.length;
 }
 
 /** The check numbers of each population: its expected heterozygosity, its
@@ -1035,9 +1022,6 @@ function valueAt(
   }
   return value;
 }
-
-/** The most populations a text names all of, as `namesOf` does. */
-const MAX_NAMED = 3;
 
 /** Words in a list: "a, b and c". */
 function listed(words: readonly string[]): string {

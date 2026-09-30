@@ -13,7 +13,7 @@
  * `populationsWithMinimum` of project.ts, which the diversity calls too.
  */
 
-import { individualsKept } from "../individualsKept.ts";
+import { hasIndividualThreshold } from "../individualsKept.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
@@ -34,6 +34,8 @@ import {
   populationsToRun,
   populationsWithMinimum,
   shown,
+  MAX_NAMED,
+  populationsByLists,
 } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
@@ -104,10 +106,6 @@ const POP_DISTS_WORDS: PopulationWords = Object.freeze({
 /** The start of the reasons of a lock for the one population. */
 const NEED_TWO =
   "The distances between populations need two populations or more";
-
-/** The most populations or pairs a text names all of, as `namesOf`
-    does. */
-const MAX_NAMED = 3;
 
 /** The names of the two measures in the words of the screen. */
 const MEASURE_NAMES: Readonly<Record<ShownMeasure, string>> = Object.freeze({
@@ -279,14 +277,13 @@ function needs(p: Project): string | null {
     and to remove leave have the minimum of individuals, or `null`; with
     the lists named when they took a population below the minimum. */
 function minimumNeeds(p: Project): string | null {
-  const kept = individualsKept(p, null);
   const toRun = populationsToRun(p);
-  const byLists = kept === null ? null : populationsKept(p, kept.byLists);
+  const byLists = populationsByLists(p);
   if (toRun === null || byLists === null) {
     return null;
   }
   const min = popDistsOptions(p).minNumIndividuals;
-  const withMinimum = populationsWithMinimum(byLists.pops, min).withMinimum;
+  const withMinimum = populationsWithMinimum(byLists, min).withMinimum;
   if (withMinimum.length >= 2) {
     return null;
   }
@@ -619,19 +616,15 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
  * locked.
  */
 function numCheckNumbers(p: Project): number | null {
-  const hasThreshold = p.individualFilters.some(
-    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
-  );
-  if (populationsToRun(p) === null || hasThreshold) {
+  if (populationsToRun(p) === null || hasIndividualThreshold(p)) {
     return null;
   }
-  const kept = individualsKept(p, null);
-  const left = kept === null ? null : populationsKept(p, kept.byLists);
+  const left = populationsByLists(p);
   if (left === null) {
     return null;
   }
   const min = popDistsOptions(p).minNumIndividuals;
-  const numPops = populationsWithMinimum(left.pops, min).withMinimum.length;
+  const numPops = populationsWithMinimum(left, min).withMinimum.length;
   return numPops < 2 ? null : 1 + numPops * (numPops - 1);
 }
 

@@ -77,6 +77,15 @@ export interface IndividualsKept {
  * then, statistics of other individuals than those of the variants file,
  * in its order, or with arrays of another length, are a defect, thrown.
  */
+/** Whether the project holds a threshold on the individuals, of missing
+    genotypes or of observed heterozygosity, whose list of the individuals
+    kept needs the statistics of each individual. */
+export function hasIndividualThreshold(p: Project): boolean {
+  return p.individualFilters.some(
+    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
+  );
+}
+
 export function individualsKept(
   p: Project,
   stats: IndividualStats | null,
@@ -85,10 +94,7 @@ export function individualsKept(
     return null;
   }
   const all = fileIndividuals(p);
-  const hasThreshold = p.individualFilters.some(
-    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
-  );
-  const given = hasThreshold ? stats : null;
+  const given = hasIndividualThreshold(p) ? stats : null;
   if (given !== null) {
     checkStats(all, given);
   }
