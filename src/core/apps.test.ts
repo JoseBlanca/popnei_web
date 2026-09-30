@@ -21,6 +21,7 @@ import type {
   IndividualChecksResult,
   Job,
   JobResult,
+  LdDecayResult,
   Outcome,
   PassStats,
   PcaResult,
@@ -158,6 +159,27 @@ describe("VS5 D1 apps.ts", () => {
         ]),
       ),
     ).toBeNull();
+  });
+});
+
+describe("PA2 D5 countsOf of a result of the LD decay", () => {
+  test("countsOf of a result of the LD decay with the passStats of the diversity gives the variants of the file, 1,200, and no counts, since its filters are the project's but the LD pruning", () => {
+    const result: LdDecayResult = {
+      analysis: "ldDecay",
+      pops: ["p0"],
+      numIndividuals: Uint32Array.from([48]),
+      numVars: Float64Array.from([1100]),
+      smallestDist: Float64Array.from([1]),
+      largestDist: Float64Array.from([100]),
+      numPairs: Float64Array.from([10]),
+      meanR2: Float64Array.from([0.2]),
+      sdR2: Float64Array.from([0.1]),
+      rhoPerBp: Float64Array.from([0.01]),
+      r2AtZero: Float64Array.from([0.47]),
+      halfDist: Float64Array.from([50]),
+      passStats: MISSING_PASS,
+    };
+    expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
   });
 });
 
