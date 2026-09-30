@@ -508,3 +508,97 @@ test.describe("PA5 D2 the distances on the screen", () => {
     await expectNoViolations(makeAxeBuilder);
   });
 });
+
+/** What one log of React Aria's live announcer holds: its politeness,
+    its whole text, as a screen reader may take it, and each message it
+    was given, a child of its own. */
+interface LogRead {
+  readonly live: string;
+  readonly text: string;
+  readonly messages: readonly string[];
+}
+
+/** The logs of React Aria's live announcer: the element it puts first in
+    the body, marked `data-live-announcer`, with two children of the role
+    log, one `aria-live="assertive"` and one `"polite"`. The shell's status
+    region is marked so too, and is inside the root of the page, not a
+    child of the body. Empty until React Aria first announces. */
+async function readAnnouncer(page: Page): Promise<LogRead[]> {
+  return page
+    .locator("body > [data-live-announcer] > [role='log']")
+    .evaluateAll((logs) =>
+      logs.map((log) => ({
+        live: log.getAttribute("aria-live") ?? "",
+        text: log.textContent,
+        messages: [...log.children].map((child) => child.textContent),
+      })),
+    );
+}
+
+test.describe("PA5 D4 what a number field announces", () => {
+  test("PA5 D4 the live region of React Aria's NumberField while the minimum of the distances is typed key by key, across two edits", async ({
+    page,
+    browserName,
+  }) => {
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    const field = panel(page).getByLabel(MINIMUM);
+    const steps: { readonly step: string; readonly logs: LogRead[] }[] = [];
+    // Reads the logs after the key `step` and two frames of the page.
+    const read = async (step: string): Promise<void> => {
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                resolve();
+              });
+            });
+          }),
+      );
+      steps.push({ step, logs: await readAnnouncer(page) });
+    };
+
+    // Two edits: 20 replaced by 15, committed with Enter; then 15 by 30.
+    for (const [edit, digits] of [
+      ["first", "15"],
+      ["second", "30"],
+    ] as const) {
+      await field.selectText();
+      await read(`${edit} edit, the number selected`);
+      for (const digit of digits) {
+        await field.press(digit);
+        await read(`${edit} edit, ${digit} typed`);
+      }
+      await field.press("Enter");
+      await expect(field).toHaveValue(digits);
+      await read(`${edit} edit, Enter`);
+    }
+
+    process.stdout.write(
+      `PA5 D4 ${browserName}\n${steps
+        .map(
+          ({ step, logs }) =>
+            `${step}: ${
+              logs.length === 0
+                ? "no region"
+                : logs
+                    .map(
+                      (log) =>
+                        `${log.live} ${JSON.stringify(log.text)} ${JSON.stringify(log.messages)}`,
+                    )
+                    .join("; ")
+            }`,
+        )
+        .join("\n")}\n`,
+    );
+    // The region was read: React Aria made its two logs, and the last
+    // read found them.
+    const last = steps.at(-1)?.logs ?? [];
+    expect(last.map((log) => log.live)).toEqual(["assertive", "polite"]);
+    // React Aria empties its assertive log before each number, but for
+    // its first, which it holds back 100 ms while its logs are added to
+    // the page, and which may then land after the next one: by the end of
+    // the second edit only its number is left.
+    expect(last.map((log) => log.text)).toEqual(["30", ""]);
+  });
+});
