@@ -95,9 +95,13 @@ import {
   testAnalysis,
   drawnCommand,
   jsonObjectOf,
+  populationsProject,
   sampleProject,
   wholeProject,
 } from "./testSupport.ts";
+import { diversity } from "./analyses/diversity.ts";
+import { ldDecay } from "./analyses/ldDecay.ts";
+import { popDists } from "./analyses/popDists.ts";
 
 const NEW_ID = "0123456789abcdef0123456789abcdef";
 
@@ -6880,5 +6884,56 @@ describe("IP9 the words of an xlsx refused", () => {
         error: { path: ["individuals", "read", "error", name] },
       });
     },
+  );
+});
+
+describe("PA6 D7 the options of the three analyses of the populations in a project", () => {
+  test(
+    "every project with options of the diversity, the distances and the LD decay reads back from its JSON equal to itself, with their definitions",
+    () => {
+      const seen = new Map<string, number>();
+      const count = (what: string): void => {
+        seen.set(what, (seen.get(what) ?? 0) + 1);
+      };
+      fc.assert(
+        fc.property(populationsProject, (p) => {
+          for (const { analysis, options } of p.analyses) {
+            count(analysis);
+            if (typeof options["numCalledAlleles"] === "number") {
+              count("a draw typed");
+            }
+            if (options["maxDist"] === null) {
+              count("no largest distance");
+            }
+          }
+          for (const check of p.reference?.checks ?? []) {
+            count(`a check of ${check.analysis}`);
+          }
+          expect(
+            parseProject(JSON.parse(JSON.stringify(p)), "popgen", 1, [
+              diversity,
+              popDists,
+              ldDecay,
+            ]),
+          ).toStrictEqual({ ok: true, value: p });
+        }),
+        { numRuns: 200 },
+      );
+      // The drawn projects reach each analysis, a draw typed, a largest
+      // distance not typed, and a check of each analysis.
+      for (const what of [
+        "diversity",
+        "popDists",
+        "ldDecay",
+        "a draw typed",
+        "no largest distance",
+        "a check of diversity",
+        "a check of popDists",
+        "a check of ldDecay",
+      ]) {
+        expect(seen.get(what) ?? 0, what).toBeGreaterThan(2);
+      }
+    },
+    PROPERTY_TIMEOUT_MS,
   );
 });

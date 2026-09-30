@@ -3387,3 +3387,166 @@ describe("PA6 D3 the options of the three analyses of the populations in a proje
     });
   });
 });
+
+/** The definitions of the application of population genetics with the
+    two analyses of stage 5 that `POPGEN_ANALYSES` does not list yet. */
+const STAGE_5_ANALYSES = [...POPGEN_ANALYSES, popDists, ldDecay];
+
+/** The check numbers of the distances of panel.nei and the column `popcat`
+    of panel_pops.csv with the missing data filter at 0.1: the variants
+    kept, then Fst and D of p0 and p2, of p0 and p1 and of p2 and p1,
+    which popnei js-v0.1.0-dev.3 gives at a minimum of 10 as at 20
+    (docs/specs/core/projectFile.md, "How it is verified"). */
+const DISTANCES_NUMBERS = [
+  1200, 0.10273588423661377, 0.06129813142463423, 0.10496244498389443,
+  0.06354346296076403, 0.10962148955018115, 0.06567052128821259,
+];
+
+/** The project of `v1-stage5-options.popnei.json` once opened, the
+    fingerprint of its check made with the definition of the distances:
+    panel.nei and panel_pops.csv grouped by `popcat`, whose 200 rows are
+    read from e2e/fixtures/panel_pops.csv, the file the fixture names,
+    rather than written out here; the missing data filter at 0.1; the
+    options of the diversity with a draw of 60 typed, of the distances at
+    a minimum of 10 with Jost's D, and of the LD decay within 100000 bp
+    below a major allele frequency of 0.9; and the check of the
+    distances. */
+function stage5OptionsProject(): Project {
+  const pops = readFileSync(
+    new URL("../../e2e/fixtures/panel_pops.csv", import.meta.url),
+    "utf8",
+  )
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((line) => line.split(","));
+  const variants: VariantSource = {
+    fileId: "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+    name: "panel.nei",
+    size: 261490,
+    format: "nei",
+    readOptions: null,
+    read: {
+      kind: "read",
+      individuals: PANEL_INDIVIDUALS,
+      ploidy: 2,
+      numVars: 1200,
+    },
+  };
+  const p: Project = {
+    app: "popgen",
+    variants: null,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [],
+    individualFilters: [],
+    individualFiltersOff: [],
+    individuals: {
+      fileId: "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+      name: "panel_pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
+      read: {
+        kind: "read",
+        table: { columns: ["IID", "popcat"], rows: pops },
+        columns: [{ kind: "identifier" }, { kind: "categorical" }],
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    },
+    grouping: { kind: "populations", column: "popcat" },
+    analyses: [
+      {
+        analysis: "diversity",
+        options: {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: 60,
+        },
+      },
+      {
+        analysis: "popDists",
+        options: { minNumIndividuals: 10, measure: "dest" },
+      },
+      {
+        analysis: "ldDecay",
+        options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+      },
+    ],
+    reference: { variants, checks: [] },
+  };
+  return deepFreeze<Project>({
+    ...p,
+    reference: {
+      variants,
+      checks: [
+        {
+          analysis: "popDists",
+          numbers: DISTANCES_NUMBERS,
+          keyVersion: 1,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+          settings: settingsFingerprint(popDists, p, null, null),
+        },
+      ],
+    },
+  });
+}
+
+describe("PA6 D7 the project file of stage 5", () => {
+  const FILE = "v1-stage5-options.popnei.json";
+
+  test("v1-stage5-options.popnei.json opens into its project, with the options of the three analyses and the 7 check numbers of the distances, and is written back byte for byte", () => {
+    const project = stage5OptionsProject();
+    expect(readProjectFile(fixture(FILE), "popgen", STAGE_5_ANALYSES)).toEqual({
+      ok: true,
+      value: project,
+    });
+    const state: AppState<JobResult> = {
+      ...popgenState(project),
+      analyses: STAGE_5_ANALYSES.map((def) => ({
+        id: def.id,
+        status: { kind: "locked", reason: "Load a variants file." },
+      })),
+    };
+    expect(
+      writeProjectFile(
+        state,
+        STAGE_5_ANALYSES,
+        "0.1.0",
+        "2026-09-30T17:10:25.000Z",
+      ),
+    ).toBe(fixture(FILE));
+  });
+
+  test("the distances at a minimum of 10 over p0, p1 and p2 are refused with 6 check numbers, as with the 3 of two populations", () => {
+    for (const numbers of [
+      DISTANCES_NUMBERS.slice(0, 6),
+      DISTANCES_NUMBERS.slice(0, 3),
+    ]) {
+      const file = JSON.stringify({
+        ...fixtureJson(FILE),
+        checks: [
+          {
+            analysis: "popDists",
+            numbers,
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+          },
+        ],
+      });
+      expect(readProjectFile(file, "popgen", STAGE_5_ANALYSES)).toEqual({
+        ok: false,
+        error: {
+          kind: "header",
+          field: "checks",
+          expected: `7 numbers for the analysis popDists, as many as the rest of the file gives it, and not ${String(numbers.length)}`,
+        },
+      });
+    }
+  });
+});
