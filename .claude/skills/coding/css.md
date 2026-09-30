@@ -78,6 +78,10 @@ there, and the dark theme is the same tokens with other values.
   --chart-bar: #0072b2;
   --chart-axis: #555d68;
   --chart-threshold: #b3261e;
+  /* the text over the colours of viridis in the cells of the heatmap,
+     the same in both themes, as the colours under it are */
+  --chart-text-on-light: #000000;
+  --chart-text-on-dark: #ffffff;
 
   /* spacing: a scale of 0.25rem */
   --space-1: 0.25rem;
@@ -171,7 +175,13 @@ same tokens redefined:
   always light, in such a hidden element.
 - **The colours of the groups of a plot are the same in both themes**;
   the dark block redefines only the bars of a histogram, the axes and
-  the thresholds. `--chart-bar` is the blue of Okabe and Ito, #0072b2,
+  the thresholds. So are, from stage 5, the two colours of the text in
+  the cells of the heatmap, `--chart-text-on-light`, black, over the
+  steps of viridis from 111 to 255, and `--chart-text-on-dark`, white,
+  over those from 0 to 110, since the colour under them is the same in
+  both themes; their least contrast, 4.60:1 at step 110, is above the
+  4.5:1 of text (`docs/specs/charts/heatmap.md`, "The values in the
+  cells"). `--chart-bar` is the blue of Okabe and Ito, #0072b2,
   in the light theme, and their sky blue, #56b4e9, in the dark one, so
   that a filled bar is 5.19:1 on #ffffff and 7.71:1 on #16181b, above the
   3:1 of a mark (`docs/specs/charts/histogram.md`).

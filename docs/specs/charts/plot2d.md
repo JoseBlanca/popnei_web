@@ -11,7 +11,13 @@ it into the SVG and the PNG, and the mark of the point under the
 pointer left out of that file; and after the last review of the
 scatter the same day, the element the pointer went onto given to
 `pointer.leave`, and the round joins of the outlines written on the
-exported file with `stroke-linejoin`. The code of stage 3,
+exported file with `stroke-linejoin`. Revised on 30 September 2026 for
+the plots of stage 5, the heatmap of `docs/specs/charts/heatmap.md` and
+the line plot of `docs/specs/charts/line.md`, and the histograms of the
+spectrum of `docs/specs/analyses/sfs.md`: an axis of names drawn from a
+band scale, its labels slanted when asked, no text for an empty label
+of an axis, and ticks at whole numbers on the horizontal axis alone,
+`xWholeNumbers`; not yet approved by the owner. The code of stage 3,
 `src/charts/plot2d.ts` and `export.ts`, has none of these yet. This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
@@ -171,7 +177,22 @@ and turned along the vertical one, in the margins:
   of `d3-scale`, or the one the plot asks for;
 - for a count, ticks at whole numbers only, written with a comma between
   thousands, "12,000", since a count of 0.5 variants means nothing; the
-  histogram asks for them.
+  histogram asks for them on its vertical axis, `yWholeNumbers`. From
+  stage 5 the same holds for the horizontal axis alone, `xWholeNumbers`:
+  the counts of the rarer allele of the spectrum, whose bars are shares
+  and whose vertical ticks are not whole, and the distances in base
+  pairs of the LD decay, "20,000". One option for each axis, since
+  `tickShown` acts on both axes and would take away the ticks of the
+  shares;
+- from stage 5, **an axis of names**, for the heatmap: either axis may
+  be drawn from a band scale of `d3-scale`, `ScaleBand<string>`, whose
+  labels are the names, each written as the plot gives it, cut by the
+  plot and never by the base, with no tick marks; and the labels of the
+  horizontal axis slanted by `xLabelAngle` degrees, −45 for the
+  heatmap, anchored at their end so that a long name runs down and to
+  the left of its column;
+- an empty `xLabel` or `yLabel` writes no text, from stage 5, since the
+  names of the heatmap say what its rows and columns are.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
@@ -347,8 +368,13 @@ export interface AxesOptions {
   /** The labels of the ticks; the scale's tickFormat when absent. */
   readonly xFormat?: (value: number) => string;
   readonly yFormat?: (value: number) => string;
-  /** Ticks at whole numbers only, with a comma between thousands. */
+  /** Ticks at whole numbers only, with a comma between thousands, on
+      the vertical axis, and, from stage 5, on the horizontal one. */
   readonly yWholeNumbers?: boolean;
+  readonly xWholeNumbers?: boolean;
+  /** From stage 5, the angle of the labels of a horizontal axis of
+      names, in degrees; 0 when absent. */
+  readonly xLabelAngle?: number;
   /** Whether a tick of either axis is drawn, of those its scale gives;
       all are when absent. */
   readonly tickShown?: (value: number) => boolean;
@@ -361,17 +387,18 @@ export interface Frame {
   readonly marks: Selection<SVGGElement, unknown, null, undefined>;
   readonly annotations: Selection<SVGGElement, unknown, null, undefined>;
   readonly legend: Selection<SVGGElement, unknown, null, undefined>;
-  /** Draws the two axes and their labels from the plot's scales. */
+  /** Draws the two axes and their labels from the plot's scales; from
+      stage 5 either may be a band scale of names, drawn with no tick marks. */
   axes(
-    x: ScaleContinuousNumeric<number, number>,
-    y: ScaleContinuousNumeric<number, number>,
+    x: ScaleContinuousNumeric<number, number> | ScaleBand<string>,
+    y: ScaleContinuousNumeric<number, number> | ScaleBand<string>,
     options?: AxesOptions,
   ): void;
 }
 ```
 
-`Selection` is `d3-selection`'s and `ScaleContinuousNumeric` is
-`d3-scale`'s; both stay inside `src/charts`.
+`Selection` is `d3-selection`'s and `ScaleContinuousNumeric` and
+`ScaleBand` are `d3-scale`'s; they stay inside `src/charts`.
 
 What a kind of plot gives the base. `check` throws an `Error` for a
 defect of the caller, data the plot cannot draw by its contract, as
@@ -514,7 +541,10 @@ its spec.
 **Without a DOM, in the project `charts` of Vitest** (`testing.md`):
 `tableNumber` of 0.07500000000000001 is 0.075 and of 0.9500000000000001
 is 0.95; the ticks of a vertical axis of whole numbers for a domain of 0
-to 3 are 0, 1, 2 and 3.
+to 3 are 0, 1, 2 and 3, and, from stage 5, those of a horizontal axis
+with `xWholeNumbers` for a domain of 0.5 to 20.5 whole numbers alone,
+while the vertical axis of the same plot, from 0 to 0.06, keeps ticks
+that are not whole.
 
 **The SVG, under jsdom**, with the size of the element given by a stub
 of `clientWidth` and `clientHeight` and a `ResizeObserver` the test
@@ -546,6 +576,11 @@ calls:
   cancels a waiting draw, and a second `destroy` throws nothing; an
   `update` and a `toSVG` after it throw, and a `toPNG` after it, or of a
   plot never drawn, returns a promise that rejects, and throws nothing;
+- from stage 5, an axis of a band scale of the names p2, p0, p1 draws
+  three labels in that order and no tick line; with `xLabelAngle` −45
+  each label of the horizontal axis has the rotation −45 and the anchor
+  `end`; a name `<b>P1</b>` is text; an empty `xLabel` leaves no text
+  element of the label;
 - a definition with `pointer` gives `rect.chart-overlay`, the last child
   of `chart-frame`, of the size of the frame after a draw and after a
   resize, and of 0 by 0 with `leave` called when the frame has no area;
@@ -613,6 +648,9 @@ September 2026.
 
 ## What this spec asks of other documents
 
+Stage 5, 30 September 2026: nothing more; the heatmap, the line plot
+and the histograms of the spectrum use the additions above.
+
 Written into those documents with this spec, on 26 September 2026:
 
 - `.claude/skills/coding/charts.md`: that every 2D plot makes its handle
@@ -629,7 +667,8 @@ Written into those documents with this spec, on 26 September 2026:
 - What the histogram draws, its margins, its legend and its rows:
   `docs/specs/charts/histogram.md`.
 - The zoom and a grid: with the first plot that has them, the Manhattan
-  plot in stage 7. What the scatter does with the pointer, its nearest
+  plot in stage 7. The heatmap and the line plot of stage 5 have
+  neither. What the scatter does with the pointer, its nearest
   point and its tooltip: `scatter.md`.
 - The buttons of the export, their words and the line of the versions
   beside them: stage 6, with the report.

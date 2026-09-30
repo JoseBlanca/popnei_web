@@ -504,7 +504,19 @@ diploid variants of 200 individuals in three populations of 48, 68 and
   with the wasm package in node: the VCF written as a `.nei` file, the
   populations written as a CSV. The files are committed with the version
   of popnei that made them, so that the continuous integration of the site
-  does not need a checkout of popnei.
+  does not need a checkout of popnei. From stage 5 it makes three more:
+  `panel_split.csv`, the individuals of `panel_pops.csv` with the header
+  `IID,popsplit`, p0 split by the place of its individuals among those
+  of p0 in the file, the first, third and so on in p0a and the others in
+  p0b, 24 each, whose pair gives a negative distance
+  (`docs/specs/analyses/popDists.md`); `ld.nei`, popnei's
+  `tests/reference/ld/ld.vcf.gz` of 100 individuals and two chromosomes
+  of 250 variants every 1,000 bp written with `writeVars`, 68,354 bytes,
+  the VCF copied beside it; and `ld_pops.csv`, `IID,pop`, `i000` to
+  `i049` in `pop_a` and `i050` to `i099` in `pop_b`
+  (`docs/specs/analyses/ldDecay.md`), since the panel cannot test the LD
+  decay: its 1,200 variants lie at positions 1 to 1,200 of one
+  chromosome, and every pair falls in the first bin.
 - A file is given to the page as a user gives it, through the file
   input: `page.getByLabel(...).setInputFiles("e2e/fixtures/panel.nei")`.
 - A flow asserts one or two numbers of a result, as literals, taken from

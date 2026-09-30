@@ -2,7 +2,13 @@
 
 Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole; approved by the owner on 26 September 2026. There is no code in
-`src/charts` yet. This spec gives the first plot of the applications: the
+`src/charts` yet. Revised on 30 September 2026 for the folded site
+frequency spectrum of stage 5 (`docs/specs/analyses/sfs.md`), drawn as
+one histogram per population in the block of the diversity's panel:
+counts that are not whole numbers, a top of the vertical axis the
+screen gives, so that several histograms share one scale, and ticks at
+whole numbers on the horizontal axis when asked; not yet approved by the
+owner. This spec gives the first plot of the applications: the
 function of `src/charts/histogram.ts` that draws a histogram whose bins
 are already counted, and marks which bins the threshold of a filter keeps
 and which it removes. The Variants step draws five histograms with it:
@@ -152,6 +158,16 @@ wide and change where the legend is placed.
   are whole numbers only, written with a comma between thousands,
   "12,000", the base's `yWholeNumbers`. It is linear: a log
   axis cannot show a bin of 0, and the table gives every count.
+- **From stage 5, for the spectrum**, three options. `counts` may be a
+  `Float64Array` of values that are not whole, the shares of the
+  spectrum, and the vertical ticks are then as the scale gives them and
+  not whole numbers only. `yMax`, when given, is the top of the vertical
+  axis before `nice`, in the place of the largest count, so that the
+  histograms of the populations, each a plot of its own, share one
+  scale, the largest share of any of them. `xWholeNumbers` asks the
+  base for ticks at whole numbers on the horizontal axis alone
+  (`plot2d.md`, "The axes"), the counts of the rarer allele, under bars
+  centred on them from edges at the halves, 0.5 to 20.5.
 - **A bin with a count of 0 has no bar.** It is still a row of the table.
 
 ## The TypeScript interface
@@ -173,10 +189,16 @@ export interface HistogramData extends PlotText {
 
   /** The edges of the bins, one more than the bins, finite and increasing. */
   readonly edges: Readonly<Float64Array>;
-  /** The count of each bin, from the left. */
-  readonly counts: Uint32Array;
+  /** The count of each bin, from the left; from stage 5 a Float64Array
+      of values that are not whole, finite and not negative. */
+  readonly counts: Uint32Array | Float64Array;
   /** The threshold of the filter beside the plot, or null for none. */
   readonly threshold: HistogramThreshold | null;
+  /** From stage 5: the top of the vertical axis before nice, at least
+      the largest count; the largest count when absent. */
+  readonly yMax?: number;
+  /** From stage 5: ticks at whole numbers on the horizontal axis. */
+  readonly xWholeNumbers?: boolean;
 }
 
 /**
@@ -210,7 +232,7 @@ export interface HistogramRow {
   readonly from: number;           // the lower edge, as given
   readonly to: number;             // the upper edge, as given
   readonly toIncluded: boolean;    // true for the last bin alone
-  readonly count: number;
+  readonly count: number;           // a whole number, or from stage 5 a share
   readonly state: BinState | null; // null when there is no threshold
 }
 
@@ -223,6 +245,8 @@ defect of the caller and not a state to show (`charts.md`), from the
 `check` of the definition, when `counts` is empty,
 when `edges` is not one longer than `counts`, when an edge is not finite
 or not above the one before, when the threshold's value is not finite,
+from stage 5 when a count of a `Float64Array` is not finite or is
+negative, or `yMax` is below the largest count or not finite,
 and when there are more than `MAX_HISTOGRAM_BINS` bins, 1,000, a constant
 of `src/charts/limits.ts`: 40 bars are drawn as one element each, by a
 join, and a thousand still are, while more would be a histogram no one
@@ -414,7 +438,14 @@ verified in `plot2d.md`, the export on this histogram.
 - Each defect of "The TypeScript interface" throws.
 - The domains of the two scales: the widened horizontal one for a
   threshold of 1.2, and the vertical one of 0 to 1 when every count is 0;
-  the vertical ticks whole numbers for counts of 0 to 3.
+  the vertical ticks whole numbers for counts of 0 to 3. From stage 5:
+  the shares of p0 at n = 40 of `docs/specs/analyses/sfs.md`, "The
+  numbers of popnei", as a `Float64Array` over the edges 0.5 to 20.5,
+  with `yMax` 0.05618145165329451, give a vertical domain made round
+  from it and not from p0's largest share, 0.05590275165567829, ticks
+  that are not whole on it, and whole numbers alone on the horizontal
+  axis; a count of −0.1 or NaN, and a `yMax` below the largest count,
+  throw.
 
 **The SVG, under jsdom**, with the size of the element given by a stub
 of `clientWidth` and `clientHeight` and a `ResizeObserver` the test
@@ -488,6 +519,9 @@ until stage 6.
 
 ## What this spec asks of other documents
 
+Stage 5, 30 September 2026: `xWholeNumbers` of the base, in
+`plot2d.md`, made there the same day.
+
 Written into those documents with the specs of stage 3, on 26 September
 2026, but `src/ui/tokens.css`, which is code and comes with the plan.
 
@@ -532,8 +566,10 @@ September 2026, and are written above as decided:
   `events` when a user asks for it.
 - A threshold set by dragging its line, which the architecture excludes
   (`docs/architecture.md`, section 11): the thresholds are typed.
-- A log axis of the counts, and the histograms of several populations
-  side by side, which stage 5 may need.
+- A log axis of the counts.
+- The histograms of several populations side by side, which the
+  spectrum of stage 5 draws: each is a plot of its own, and the block of
+  the diversity's panel lays them out (`docs/specs/analyses/sfs.md`).
 - The histogram of the proportion of missing genotypes of each variant,
   which comes with popnei's release that has it.
 - The binning of the statistics of each individual, `src/core/histogram.ts`:

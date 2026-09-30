@@ -21,7 +21,14 @@ their last review: the tooltip placed where the pointer reaches it, a
 highlight beyond the names drawn as none, the round joins written on
 the exported file, the zoom of the 3D view set on the camera within
 limits, a colouring by values in 3D as one object per step of viridis,
-and `Pca3dError` in a file with no three.js.
+and `Pca3dError` in a file with no three.js. Revised on 30 September
+2026 with the specs of the plots of stage 5,
+`docs/specs/charts/heatmap.md` and `line.md`: the order of the heatmap
+comes from popnei's principal coordinates and not from a clustering;
+the data of the heatmap and of the line plot; their legends, drawn in
+the SVG since they hold no control; and the lines of the LD decay told
+apart by the legend and the marks of their points, not by labels at
+their ends.
 
 The plots are listed in `docs/functionality.md`: histograms, scatter
 plots, the QQ plot, line plots, the heatmap of Fst, the Manhattan plot,
@@ -108,10 +115,19 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   of its plot: from `PcaResult.projections`, `numComps` wide and row after
   row, it takes the two columns the user chose; from `StatsDistrib`, the
   edges and the counts of one population, at `p * numBins + b`.
+  From stage 5, the heatmap takes the names in the order of the first
+  axis of popnei's principal coordinates of the distance matrix, which
+  the calculation worker makes (`docs/specs/analyses/popDists.md`, "The
+  order of the heatmap"), and the square matrix in that order, NaN on
+  the diagonal (`docs/specs/charts/heatmap.md`); the line plot takes
+  series of points, a line and marks each (`docs/specs/charts/line.md`).
 - **The plot draws what it is given and reduces nothing.** A histogram
-  gets its bins, the LD decay its binned means, the Manhattan and the QQ
-  plot points already thinned (below). Binning, clustering the order of
-  the heatmap and thinning are calculations, and calculations are in Rust
+  gets its bins, the LD decay its binned means and the parameters of its
+  fitted curves, which the screen evaluates at the points it draws
+  (`docs/specs/analyses/ldDecay.md`, "The fitted curve"), the heatmap
+  its names already in their order, the Manhattan and the QQ
+  plot points already thinned (below). Binning, ordering the populations
+  of the heatmap and thinning are calculations, and calculations are in Rust
   where Python gets the same ones, with one exception: the statistics of
   each individual come as one value per individual, a few thousand
   numbers, and core bins them, `src/core/histogram.ts`, with the rule of
@@ -332,9 +348,15 @@ A plot is an image to a screen reader, and has to say what it shows:
   shape, and the legend shows both. Group `i` has colour `i % 7` and
   shape `(i + Math.floor(i / 7)) % 7`, out of the seven filled symbols of
   `d3-shape` (`symbolsFill`), so the first seven groups differ in both
-  and 49 groups have 49 different marks. Where there is room, a group is
-  labelled on the plot as well, as the lines of the LD decay are at their
-  ends. A point in no group, or with no value, is a ring, a circle with
+  and 49 groups have 49 different marks. The lines of the LD decay are
+  told apart by the legend and by the marks of their points, and are
+  not labelled at their ends: on `ld.nei` the curves of its two
+  populations end 0.0008 apart in r², half a pixel on a frame 300 pixels
+  high, and their labels would lie on each other
+  (`docs/specs/charts/line.md`, decided on 30 September 2026). The legend of a plot that holds no
+  control, the histogram's, and from stage 5 the heatmap's and the line
+  plot's, is drawn in the SVG, and so is in the exported file; the
+  scatter's, whose entries are buttons, is HTML of the screen (below). A point in no group, or with no value, is a ring, a circle with
   no fill outlined in `--chart-axis`, drawn first, under every group: a
   mark with no colour of its own, which differs in shape from the seven
   filled symbols. A mark has an area of 64 square pixels, `SYMBOL_AREA`,
