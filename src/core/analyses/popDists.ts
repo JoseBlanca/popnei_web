@@ -212,12 +212,20 @@ function readOptions(options: unknown): Result<PopDistsOptions, string> {
   return { ok: true, value: { minNumIndividuals, measure } };
 }
 
-/** What the key holds beyond the load and the filters. Nothing yet: the
-    populations and the minimum of individuals come in a commit of their
-    own, with the tests of each row of the table of "What goes into its
-    key" (task 3.3 of the plan). */
-function keyInputs(): JsonObject {
-  return {};
+/**
+ * What the key holds beyond the load and the filters, which `keyOf` puts
+ * in itself: the populations, as `populationsOf` gives them and the
+ * diversity's key holds them, and the minimum of individuals. Not the
+ * measure, which only chooses what the heatmap draws, so that a change
+ * of it calculates nothing and takes no result off the screen
+ * (popDists.md, "What goes into its key"). Reads nothing of `p.variants`,
+ * so it answers for any project.
+ */
+function keyInputs(p: Project): JsonObject {
+  return {
+    pops: populationsOf(p),
+    options: { minNumIndividuals: popDistsOptions(p).minNumIndividuals },
+  };
 }
 
 /**

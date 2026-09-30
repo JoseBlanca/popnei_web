@@ -17,6 +17,8 @@ import {
   refusalText,
 } from "./popDists.ts";
 import { individualsKept } from "../individualsKept.ts";
+import { createKeyMemo, keyOf } from "../keys.ts";
+import type { Key, KeyedDef } from "../keys.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import { individualsNeeds, populationsKeptNeeds } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -116,6 +118,7 @@ function project(
     readonly individuals?: readonly string[];
     readonly individualFilters?: readonly IndividualFilter[];
     readonly min?: number;
+    readonly measure?: "fst" | "dest";
     readonly ploidy?: number;
     readonly pending?: boolean;
   } = {},
@@ -181,12 +184,15 @@ function project(
                 : options.column,
           },
     analyses:
-      options.min === undefined
+      options.min === undefined && options.measure === undefined
         ? []
         : [
             {
               analysis: "popDists",
-              options: { minNumIndividuals: options.min, measure: "fst" },
+              options: {
+                minNumIndividuals: options.min ?? 20,
+                measure: options.measure ?? "fst",
+              },
             },
           ],
     reference: null,
@@ -997,5 +1003,278 @@ describe("PA3 D4 script", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+/** The key of the distances for `p`, with popnei 0.1.0 unless another
+    version is given. */
+function keyOfDists(
+  p: Project,
+  popneiVersion = "0.1.0",
+  def: KeyedDef = popDists,
+): Key {
+  return keyOf(def, p, popneiVersion, createKeyMemo());
+}
+
+/** `p` with its parts `parts` replaced, frozen deeply. */
+function changed(p: Project, parts: Partial<Project>): Project {
+  return deepFreeze<Project>({ ...p, ...parts });
+}
+
+/** The variants file of `p`, which the projects of these tests have. */
+function variantsOf(p: Project): NonNullable<Project["variants"]> {
+  if (p.variants === null) {
+    throw new Error("the project has a variants file");
+  }
+  return p.variants;
+}
+
+/** The individuals file of `p`, which the projects of these tests
+    have. */
+function individualsOf(p: Project): NonNullable<Project["individuals"]> {
+  if (p.individuals === null) {
+    throw new Error("the project has an individuals file");
+  }
+  return p.individuals;
+}
+
+/** `panel_pops.csv` with a third column, `other`, and its column of the
+    populations copied into a fourth, `popcopy`. */
+const WIDE_TABLE: IndividualsTable = {
+  columns: ["IID", "popcat", "other", "popcopy"],
+  rows: PANEL_POPS.rows.map((row) => [
+    row[0] ?? null,
+    row[1] ?? null,
+    "x",
+    row[1] ?? null,
+  ]),
+};
+
+describe("PA3 D5 the key of the distances", () => {
+  const base = project();
+  const baseKey = keyOfDists(base);
+
+  test("a new load of the variants file, the same file included, changes it", () => {
+    const variants = variantsOf(base);
+    expect(
+      keyOfDists(
+        changed(base, { variants: { ...variants, fileId: "1".repeat(32) } }),
+      ),
+    ).not.toBe(baseKey);
+  });
+
+  test("the ploidy or onlyPassed of a VCF changes it", () => {
+    const vcf = changed(base, {
+      variants: {
+        ...variantsOf(base),
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed: true },
+      },
+    });
+    const vcfKey = keyOfDists(vcf);
+    for (const readOptions of [
+      { ploidy: 4, onlyPassed: true },
+      { ploidy: 2, onlyPassed: false },
+    ]) {
+      expect(
+        keyOfDists(
+          changed(vcf, { variants: { ...variantsOf(vcf), readOptions } }),
+        ),
+      ).not.toBe(vcfKey);
+    }
+  });
+
+  test("the name of the variants file, or its read recorded, keeps it", () => {
+    const variants = variantsOf(base);
+    expect(
+      keyOfDists(
+        changed(base, { variants: { ...variants, name: "other.nei" } }),
+      ),
+    ).toBe(baseKey);
+    expect(
+      keyOfDists(
+        changed(base, { variants: { ...variants, read: { kind: "pending" } } }),
+      ),
+    ).toBe(baseKey);
+  });
+
+  test("a filter of the variants added or removed, or its threshold, changes it", () => {
+    const keys = [
+      changed(base, { filters: [] }),
+      changed(base, {
+        filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+      }),
+      changed(base, {
+        filters: [
+          { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+          { kind: "maf", maxAllowedMaf: 0.9 },
+        ],
+      }),
+    ].map((p) => keyOfDists(p));
+    expect(new Set([baseKey, ...keys]).size).toBe(4);
+  });
+
+  test("a filter of individuals, a list, a name of it or a threshold, changes it", () => {
+    const lists: readonly (readonly IndividualFilter[])[] = [
+      [{ kind: "keep", individuals: ["s000", "s001"] }],
+      [{ kind: "keep", individuals: ["s000", "s002"] }],
+      [{ kind: "remove", individuals: ["s000"] }],
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.5 }],
+      [{ kind: "missing_data", maxAllowedMissingRate: 0.6 }],
+    ];
+    const keys = lists.map((individualFilters) =>
+      keyOfDists(project({ individualFilters })),
+    );
+    expect(new Set([baseKey, ...keys]).size).toBe(lists.length + 1);
+  });
+
+  test("another column of the populations that groups the individuals otherwise changes it", () => {
+    expect(keyOfDists(project({ table: PANEL_SPLIT }))).not.toBe(baseKey);
+  });
+
+  test("another column that makes the same populations with the same names keeps it", () => {
+    const wide = keyOfDists(project({ table: WIDE_TABLE }));
+    expect(keyOfDists(project({ table: WIDE_TABLE, column: "popcopy" }))).toBe(
+      wide,
+    );
+    expect(wide).toBe(baseKey);
+  });
+
+  test("the metadata file removed with a column chosen, or the grouping onePopulation, changes it, to all", () => {
+    expect(keyOfDists(project({ table: null }))).not.toBe(baseKey);
+    expect(keyOfDists(project({ onePopulation: true }))).not.toBe(baseKey);
+    expect(popDists.keyInputs(project({ table: null }))).toMatchObject({
+      pops: "all",
+    });
+  });
+
+  test("the metadata file removed with onePopulation, or loaded with onePopulation, keeps it: all with the file and without it", () => {
+    const withFile = project({ onePopulation: true });
+    const withoutFile = changed(withFile, { individuals: null });
+    expect(keyOfDists(withoutFile)).toBe(keyOfDists(withFile));
+  });
+
+  test("a cell of the column of the populations changes it, one of an individual not in the variants file included", () => {
+    const moved: IndividualsTable = {
+      ...PANEL_POPS,
+      rows: PANEL_POPS.rows.map((row, i) =>
+        i === 0 ? [row[0] ?? null, "p1"] : row,
+      ),
+    };
+    expect(keyOfDists(project({ table: moved }))).not.toBe(baseKey);
+    const outside = (pop: string): IndividualsTable => ({
+      ...PANEL_POPS,
+      rows: [...PANEL_POPS.rows, ["s999", pop]],
+    });
+    const inVariants = { individuals: PANEL_INDIVIDUALS };
+    expect(
+      keyOfDists(project({ table: outside("p1"), ...inVariants })),
+    ).not.toBe(keyOfDists(project({ table: outside("p2"), ...inVariants })));
+  });
+
+  test("a cell of another column keeps it", () => {
+    const other: IndividualsTable = {
+      ...WIDE_TABLE,
+      rows: WIDE_TABLE.rows.map((row, i) =>
+        i === 0 ? [row[0] ?? null, row[1] ?? null, "y", row[3] ?? null] : row,
+      ),
+    };
+    expect(keyOfDists(project({ table: other }))).toBe(
+      keyOfDists(project({ table: WIDE_TABLE })),
+    );
+  });
+
+  test("the rows of the file in another order change it", () => {
+    const reversed = { ...PANEL_POPS, rows: PANEL_POPS.rows.toReversed() };
+    expect(
+      keyOfDists(project({ table: reversed, individuals: PANEL_INDIVIDUALS })),
+    ).not.toBe(baseKey);
+  });
+
+  test("the type of a column keeps it", () => {
+    const wide = project({ table: WIDE_TABLE });
+    const individuals = individualsOf(wide);
+    if (individuals.read.kind !== "read") {
+      throw new Error("the flow's individuals file is read");
+    }
+    const typed = changed(wide, {
+      individuals: {
+        ...individuals,
+        typesSet: [["other", { kind: "continuous" }]],
+        read: {
+          ...individuals.read,
+          columns: individuals.read.columns.map((column, i) =>
+            i === 2 ? { kind: "continuous" } : column,
+          ),
+        },
+      },
+    });
+    expect(keyOfDists(typed)).toBe(keyOfDists(wide));
+  });
+
+  test("the same table from another file, or with other options of the CSV, keeps it", () => {
+    const individuals = individualsOf(base);
+    const otherFile = changed(base, {
+      individuals: {
+        ...individuals,
+        fileId: "2".repeat(32),
+        name: "other.csv",
+      },
+    });
+    const otherCsv = changed(base, {
+      individuals: {
+        ...individuals,
+        csv: { encoding: "utf-8", separator: ",", decimal: "." },
+      },
+    });
+    expect(keyOfDists(otherFile)).toBe(baseKey);
+    expect(keyOfDists(otherCsv)).toBe(baseKey);
+  });
+
+  test("the minimum of individuals changes it", () => {
+    expect(keyOfDists(project({ min: 10 }))).not.toBe(baseKey);
+    expect(keyOfDists(project({ min: 20 }))).toBe(baseKey);
+  });
+
+  test("the measure the heatmap draws keeps it, so that a change of it calculates nothing", () => {
+    expect(keyOfDists(project({ measure: "dest" }))).toBe(baseKey);
+    expect(keyOfDists(project({ min: 10, measure: "dest" }))).toBe(
+      keyOfDists(project({ min: 10 })),
+    );
+  });
+
+  test("the options of another analysis and the reference keep it", () => {
+    const otherOptions = changed(base, {
+      analyses: [
+        {
+          analysis: "diversity",
+          options: { minNumIndividuals: 10, polyThreshold: 0.95 },
+        },
+      ],
+    });
+    const referenced = changed(base, {
+      reference: { variants: variantsOf(base), checks: [] },
+    });
+    expect(keyOfDists(otherOptions)).toBe(baseKey);
+    expect(keyOfDists(referenced)).toBe(baseKey);
+  });
+
+  test("the key version, 1, or the version of popnei, changes it", () => {
+    expect(popDists.keyVersion).toBe(1);
+    const other: KeyedDef = { ...popDists, keyVersion: 2 };
+    expect(keyOfDists(base, "0.1.0", other)).not.toBe(baseKey);
+    expect(keyOfDists(base, "0.2.0")).not.toBe(baseKey);
+  });
+
+  test("keyInputs gives the populations and the minimum, and not the measure, without reading p.variants", () => {
+    const p = changed(project({ measure: "dest" }), { variants: null });
+    expect(popDists.keyInputs(p)).toStrictEqual({
+      pops: [
+        ["p0", membersOf(PANEL_POPS, "p0")],
+        ["p2", membersOf(PANEL_POPS, "p2")],
+        ["p1", membersOf(PANEL_POPS, "p1")],
+      ],
+      options: { minNumIndividuals: 20 },
+    });
   });
 });
