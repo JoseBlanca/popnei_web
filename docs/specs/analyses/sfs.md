@@ -29,6 +29,23 @@ reading of the variants file from start to end, minutes on a file of
 several GB. The **minimum number of individuals**, 20 by default, is how
 many individuals of a population must have a called genotype at a
 variant for the variant to count for it, popnei's `minNumIndividuals`.
+The words of the application are those of `docs/architecture.md`: a
+**job** is one request the page sends the calculation worker, the second
+thread of the tab where popnei runs; the **Run** button of an analysis
+sends its job; and the **key** of a result is a hash of everything it was
+calculated from, so that a change of any of those takes the result off
+the screen, and the **key version** is a number of the analysis raised
+when its result changes meaning for the same inputs (section 3). The
+**store** is the part of core that holds the project, the cache of the
+results and the state of each analysis (section 9).
+
+The diversity's job makes two passes until popnei issue #4 is closed:
+one of `calcPerVarDistribs`, for the expected and observed
+heterozygosities and the proportion of polymorphic variants, and one of
+`calcPopDiversity`, for F, the alleles, the private alleles and the
+rarefaction; the issue asks popnei to give the first three from
+`calcPopDiversity` too, so that one pass does (decision 4 of
+`docs/specs/stage-5-open-points.md`).
 
 ## What is decided here, and what is asked
 
@@ -36,8 +53,10 @@ The spectrum is part of the diversity: the same call of popnei, the same
 pass, the same size of the draw and the same field that sets it, the
 same Run, and a block of its own in the diversity's panel, below the
 table (**Open 1**, below). Each population's spectrum is drawn as a small
-histogram of its own, the histogram of stage 3 with three additions, and
-the heights are shares of the variants that show both alleles in the
+histogram of its own, the histogram of stage 3 with three additions:
+heights that are not whole numbers, one vertical scale shared by the
+histograms of every population, and ticks at whole counts. The heights
+are shares of the variants that show both alleles in the
 draw, so that populations with different numbers of variants can be
 compared. A MAF filter of the Variants step raises a warning on the
 spectrum and is not left out of its pass (**Open 2**).
@@ -62,12 +81,18 @@ a spectrum of zeros.
 
 Asking for the spectrum in the call that gives the other statistics of
 the diversity changes no value of theirs, as popnei's doc of `stats`
-says and as node showed on `panel.nei` (below), and costs little: on the
-panel in memory, 50 calls each, `calcPopDiversity` took 1.8 to 2.2 ms
-without it and 2.2 to 2.3 ms with it, where a call for the spectrum
-alone took 1.2 ms (node 26.8.2 on an Apple M5 Pro, popnei's release
-`js-v0.1.0-dev.3`, 30 September 2026). On a file read from the disk the
-reading of the pass comes on top of both, the same for each.
+says and as node showed on `panel.nei` (below), and adds no pass: the
+spectrum is counted from the same called alleles as the rest, while the
+variants are read. What it adds is arithmetic, measured on the panel
+held in memory, where no reading from the disk hides it: 50 calls each,
+`calcPopDiversity` took 1.8 to 2.2 ms without the spectrum and 2.2 to
+2.3 ms with it, and a call for the spectrum alone, a pass of its own,
+1.2 ms (node 26.8.2 on an Apple M5 Pro, popnei's release
+`js-v0.1.0-dev.3`, 30 September 2026). On a file of several GB a pass is
+minutes of reading, which a separate call of the spectrum would add and
+the shared call does not; the time of a pass on such a file is to be
+measured by the plan of stage 5 (`docs/specs/stage-5-open-points.md`,
+"Set by a measurement").
 
 So the spectrum is not an analysis of its own, with its key, its job and
 its Run. It is a statistic more of the diversity's call:
@@ -92,9 +117,6 @@ its Run. It is a statistic more of the diversity's call:
   depends on nothing else, so it adds nothing to the key; its arrival in
   the result is one of the changes for which the diversity's key version
   is raised in stage 5.
-
-The options not taken, and what would have to be true for them to win,
-are in **Open 1**.
 
 A population that the diversity leaves out of its call of
 `calcPopDiversity`, one with fewer individuals than the minimum
@@ -138,7 +160,7 @@ One is the spectrum's own:
 
 | code | when | the text |
 |---|---|---|
-| `mafFilterOnSpectrum` | the request's filters hold a MAF filter, and it removed at least one variant, `varsProcessed` above `varsKept` in `passStats.filtering.maf` | "The MAF filter of the Variants step removed 25 of the 1,200 variants it was given, those whose commonest allele is above 0.95 in the individuals kept, taken together. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step." |
+| `mafFilterOnSpectrum` | the request's filters hold a MAF filter, and it removed at least one variant: in `passStats.filtering.maf` of the result, popnei's counts of the pass, the variants the filter was given, `varsProcessed`, are more than those it kept, `varsKept` | "The MAF filter of the Variants step removed 25 of the 1,200 variants it was given, those whose commonest allele is above 0.95 in the individuals kept, taken together. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step." |
 
 The threshold is written as the project holds it, and the numbers with a
 comma between groups of three digits, as `counted` of `project.ts` does.
@@ -197,7 +219,8 @@ both_alleles = spectrum.iloc[1:]
 print((both_alleles / both_alleles.sum()).to_string())
 ```
 
-The 40 is the size of the draw of the project, written with `String`.
+The 40 is the size of the draw of the project, written as a whole
+number.
 
 ### The TypeScript interface
 
@@ -206,8 +229,10 @@ The spectra arrive in the diversity's result, `DiversityResult` of
 `numCalledAlleles`, the size of the draw the request gave, and
 `foldedSfs`, one `Float64Array` per population in the order of `pops`
 of the result, popnei's arrays put back in the request's order as the
-runner puts every array of the diversity. With `numVarsInDraw`, which the
-diversity's result carries for its rarefaction, that is all this module
+runner puts every array of the diversity. With `numVarsInDraw`, popnei's
+`numVars.inDraw`, one whole number per population in the same order,
+which the diversity's result carries for its rarefaction (asked below),
+and `passStats`, which every result carries, that is all this module
 reads.
 
 The functions the block of the panel calls, in
@@ -242,9 +267,9 @@ export function spectraCsv(r: DiversityResult): string;
 export function spectrumWarnings(r: DiversityResult, p: Project): Warning[];
 ```
 
-`spectraOf` keeps its answer by the result in a `WeakMap`, as
-`diversityRows` does, so that the block, drawn again by React, gets the
-same object. It throws a defect, `popnei_web defect: ...`, when an array
+`spectraOf` keeps its answer in a `WeakMap` keyed by the result object,
+as `diversityRows` does, and not in the cache of the store, so that the
+block, drawn again by React for the same result, gets the same object. It throws a defect, `popnei_web defect: ...`, when an array
 of `foldedSfs` does not hold `floor(numCalledAlleles / 2) + 1` values or
 when `foldedSfs` has not one array per population, which would be a
 defect of the runner.
@@ -256,7 +281,8 @@ defect of the runner.
   words", and no histogram. It is not in the CSV.
 - **A population that no variant counted for, or that reached the draw
   at none.** `variantsInDraw` 0, a spectrum of zeros, no shares: a line
-  that says so, and no histogram.
+  that says so, and no histogram; its rows are in the table and the CSV,
+  zeros with empty shares.
 - **A size of the draw above the ploidy times the minimum.** Some
   variants that count for a population may not reach it; on `panel.nei`
   at n = 96, p0, of 48 individuals, reached it at 278 of its 1,200
@@ -292,9 +318,10 @@ most.
 With Vitest, at the highest functions that show each thing:
 
 - **`spectraOf` on a worked example.** A diversity result of two
-  populations with `numCalledAlleles` 4 and `foldedSfs` `[1, 2, 2]` and
-  `[3, 0, 0]`: the first has the shares `[0.5, 0.5]`, the second none
-  and `variantsInDraw` its sum, 3; `largestShare` 0.5. The same object
+  populations with `numCalledAlleles` 4, `numVarsInDraw` `[5, 3]` and
+  `foldedSfs` `[1, 2, 2]` and `[3, 0, 0]`: the first has the shares
+  `[0.5, 0.5]` and `variantsInDraw` 5, the second no shares and
+  `variantsInDraw` 3; `largestShare` 0.5. The same object
   for the same result, compared with `===`. A `foldedSfs` array of 2
   values for n = 4 throws the defect.
 - **`spectrumWarnings`**: no warning without a MAF filter; none with one
@@ -339,14 +366,14 @@ const r = p.calcPopDiversity(v, { pops, numCalledAlleles: 40,
   minNumIndividuals: 20, stats: ["folded_sfs"] });
 ```
 
-| n, filter | population | variants in the draw | bin 0 | bin 1 | bin n / 2 | share at bin 1 | largest share, at bin |
-|---|---|---|---|---|---|---|---|
-| 40, none | p0 | 1,200 | 44.79323144486922 | 38.07795856907602 | 30.355250953099038 | 0.03296202862168288 | 0.05590275165567829, 15 |
-| 40, none | p2 | 1,200 | 48.34836722710054 | 49.07990431264654 | 29.716367046239476 | 0.042616971066566346 | 0.055148953110288834, 11 |
-| 40, none | p1 | 1,200 | 49.419228567305325 | 43.859352021499134 | 31.22705006573954 | 0.03811931601019699 | 0.05618145165329451, 15 |
-| 40, MAF 0.95, 1,175 kept | p0 | 1,175 | 36.44032846059611 | 34.21378678743365 | 30.35525095309904 | 0.030050060302218917 | 0.056720116395990845, 15 |
-| 40, MAF 0.95, 1,175 kept | p2 | 1,175 | 38.38170270726871 | 41.7646232182723 | 29.71636704623948 | 0.03674463390018435 | 0.055878373568248194, 11 |
-| 96, none | p0 | 278 | 4 | 2 | 4 | 0.0072992700729927005 | 0.043795620437956206, 40 |
+| n, filter | population | variants in the draw | bin 0 | bin 1 | bin n / 2 | bins 1 to n / 2, summed | share at bin 1 | largest share, at bin |
+|---|---|---|---|---|---|---|---|---|
+| 40, none | p0 | 1,200 | 44.79323144486922 | 38.07795856907602 | 30.355250953099038 | 1155.2067685551308 | 0.03296202862168288 | 0.05590275165567829, 15 |
+| 40, none | p2 | 1,200 | 48.34836722710054 | 49.07990431264654 | 29.716367046239476 | 1151.6516327728993 | 0.042616971066566346 | 0.055148953110288834, 11 |
+| 40, none | p1 | 1,200 | 49.419228567305325 | 43.859352021499134 | 31.22705006573954 | 1150.580771432695 | 0.03811931601019699 | 0.05618145165329451, 15 |
+| 40, MAF 0.95, 1,175 kept | p0 | 1,175 | 36.44032846059611 | 34.21378678743365 | 30.35525095309904 | 1138.5596715394038 | 0.030050060302218917 | 0.056720116395990845, 15 |
+| 40, MAF 0.95, 1,175 kept | p2 | 1,175 | 38.38170270726871 | 41.7646232182723 | 29.71636704623948 | 1136.618297292731 | 0.03674463390018435 | 0.055878373568248194, 11 |
+| 96, none | p0 | 278 | 4 | 2 | 4 | 274 | 0.0072992700729927005 | 0.043795620437956206, 40 |
 
 The same call with every statistic of the diversity, `num_alleles`,
 `private_alleles`, `variable_vars_ratio`, `fis` and `folded_sfs`, gave
@@ -380,7 +407,8 @@ who reads the spectrum learns where it is set.
   "Copies of the rarer allele among 40 chromosomes", runs from 0.5 to
   n / 2 + 0.5, each bar one count wide and centred on it, with ticks at
   whole numbers; the vertical axis, "Share of the variants with both
-  alleles", runs from 0 to `largestShare` made round, the same in every
+  alleles", runs from 0 to `largestShare` made round by the scale's
+  `nice`, as the histogram's vertical axis is, the same in every
   histogram, so that heights compare across populations. No threshold,
   no legend.
 - **A line under the histograms**: "Each bar is the share of the
@@ -468,7 +496,8 @@ spec:
 - Its call of `calcPopDiversity` names `folded_sfs` among `stats`, and
   its result carries `numCalledAlleles` and `foldedSfs`, one array per
   population in the order of `pops` (above, "The TypeScript
-  interface").
+  interface"), and `numVarsInDraw`, popnei's `numVars.inDraw`, which its
+  rarefaction needs as well.
 - Its `warnings` appends `spectrumWarnings(r, p)` after its own, and its
   panel shows the block of this spec below its table in the state done.
 - Its default size of the draw is never below 2, which popnei refuses:
@@ -525,12 +554,15 @@ pass, its size of the draw and its Run.
   issue #4. A field of its own would let a user draw a spectrum finer
   than 40 chromosomes, which the demographic inference that needs it
   does not do in the application (`docs/functionality.md`, section 10).
-  Filling the spectrum from the diversity's pass, as every pass fills
-  the counts of the filters, would change the store, which knows that
-  one case only, and needs a design first (`docs/architecture.md`,
+  An analysis of its own that is also filled by the diversity's pass,
+  so that a user who ran the diversity waits for nothing more, would
+  change the store: today it puts what one job gives under the key of
+  another analysis in one case only, the counts of the filters that
+  every pass gives, and a second case needs a design first (`docs/architecture.md`,
   section 4: adding an analysis changes nothing else).
 
-Recommended: part of the diversity. Meanwhile, the spec is written so.
+Recommended: part of the diversity. Meanwhile, the implementer builds
+it as part of the diversity, as this spec gives it.
 
 **Open 2. A MAF filter on the spectrum: a warning, or left out of its
 pass.** What is decided: what the spectrum does when the Variants step
@@ -544,11 +576,13 @@ in all the individuals together, and so lowers the first bins.
   3), so the user who sees it set it.
 - **The spectrum reads every filter but the MAF**, as the LD decay reads
   every filter but the LD pruning (decision 8), since the filter removes
-  what the spectrum measures. Then the spectrum cannot come from the
-  diversity's pass whenever a MAF filter is on, and Open 1 falls to an
-  analysis of its own, with its pass, in those projects.
+  what the spectrum measures. Then, whenever a MAF filter is on, the
+  spectrum reads other variants than the table and cannot come from the
+  diversity's pass: it needs a job and a pass of its own, which is the
+  second option of Open 1, at least for those projects.
 
-Recommended: the warning. Meanwhile, the spec is written so.
+Recommended: the warning. Meanwhile, the implementer builds the
+warning, `mafFilterOnSpectrum`.
 
 ## Not in this spec
 
