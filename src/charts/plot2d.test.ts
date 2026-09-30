@@ -7,6 +7,7 @@
  */
 
 import { scaleLinear } from "d3-scale";
+import { scaleBand } from "d3-scale";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { exportSvg } from "./export.ts";
 import { tableNumber } from "./numbers.ts";
@@ -18,6 +19,7 @@ import {
   type Plot2dDefinition,
   type PlotText,
 } from "./plot2d.ts";
+import type { AxesOptions } from "./plot2d.ts";
 
 interface Bars extends PlotText {
   readonly values: readonly number[];
@@ -899,5 +901,220 @@ describe("IP7 D2 the base of the 2D plots, what the export draws beside the SVG"
     expect(written).toContain("fill: rgb(230, 159, 0)");
     handle.destroy();
     style.remove();
+  });
+});
+
+describe("PA4 D1 the base of the 2D plots, ticks at whole numbers on the horizontal axis, without a DOM", () => {
+  test("the whole ticks of a horizontal axis from 0.5 to 2.5 are 1 and 2 alone, where d3 gives the halves too", () => {
+    // A frame 340 wide asks for about 340 / 80, 4, ticks.
+    const x = scaleLinear().domain([0.5, 2.5]).range([0, 340]);
+    expect(x.ticks(4)).toEqual([0.5, 1, 1.5, 2, 2.5]);
+    expect(wholeNumberTicks(x, 4)).toEqual([1, 2]);
+  });
+});
+
+/** Shares over counts from 0.5, the spectrum's shape. */
+interface Shares extends PlotText {
+  readonly xMax: number;
+  readonly xWholeNumbers: boolean;
+}
+
+const shares: Plot2dDefinition<Shares> = {
+  kind: "shares",
+  check() {
+    // any shares are drawn
+  },
+  margin: () => MARGIN,
+  draw(frame, data) {
+    const x = scaleLinear()
+      .domain([0.5, data.xMax])
+      .range([0, frame.innerWidth]);
+    const y = scaleLinear().domain([0, 0.06]).range([frame.innerHeight, 0]);
+    frame.axes(x, y, { xWholeNumbers: data.xWholeNumbers });
+  },
+};
+
+function sharesOf(xMax: number, xWholeNumbers: boolean): Shares {
+  return {
+    title: "Shares",
+    description: "Shares",
+    xLabel: "Count",
+    yLabel: "Share",
+    xMax,
+    xWholeNumbers,
+  };
+}
+
+/** Names on both axes, drawn from band scales, with the options given. */
+interface Names extends PlotText {
+  readonly names: readonly string[];
+  readonly options: AxesOptions;
+}
+
+const names: Plot2dDefinition<Names> = {
+  kind: "names",
+  check() {
+    // any names are drawn
+  },
+  margin: () => MARGIN,
+  draw(frame, data) {
+    const x = scaleBand().domain(data.names).range([0, frame.innerWidth]);
+    const y = scaleBand().domain(data.names).range([0, frame.innerHeight]);
+    frame.axes(x, y, data.options);
+  },
+};
+
+function namesOf(list: readonly string[], options: AxesOptions = {}): Names {
+  return {
+    title: "Names",
+    description: "Names",
+    xLabel: "",
+    yLabel: "",
+    names: list,
+    options,
+  };
+}
+
+/** The text elements of the labels of the ticks of `selector`. */
+function tickTexts(element: HTMLElement, selector: string): Element[] {
+  return [...element.querySelectorAll(`${selector} g.tick text`)];
+}
+
+describe("PA4 D1 the base of the 2D plots, its axes of names and its labels, under jsdom", () => {
+  test("xWholeNumbers gives the horizontal axis from 0.5 to 2.5 the ticks 1 and 2, and the vertical axis keeps ticks that are not whole", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(element, sharesOf(2.5, true), shares);
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["1", "2"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual([
+      "0.00",
+      "0.01",
+      "0.02",
+      "0.03",
+      "0.04",
+      "0.05",
+      "0.06",
+    ]);
+    const halves = sizedElement(400, 300);
+    createPlot2d(halves, sharesOf(2.5, false), shares);
+    expect(tickLabels(halves, "g.chart-axis-x")).toEqual([
+      "0.5",
+      "1.0",
+      "1.5",
+      "2.0",
+      "2.5",
+    ]);
+    // The distances of the LD decay: a comma between thousands.
+    const distances = sizedElement(400, 300);
+    createPlot2d(distances, sharesOf(100_000.5, true), shares);
+    expect(tickLabels(distances, "g.chart-axis-x")).toEqual([
+      "20,000",
+      "40,000",
+      "60,000",
+      "80,000",
+      "100,000",
+    ]);
+  });
+
+  test("an axis of a band scale of p2, p0, p1 draws the three names in that order, each in the middle of its band, and no tick line", () => {
+    const element = sizedElement(400, 300);
+    const handle = createPlot2d(element, namesOf(["a", "b"]), names);
+    handle.update(namesOf(["p2", "p0", "p1"]));
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["p2", "p0", "p1"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(["p2", "p0", "p1"]);
+    expect(element.querySelectorAll("g.chart-axis g.tick")).toHaveLength(6);
+    expect(element.querySelectorAll("g.chart-axis g.tick line")).toHaveLength(
+      0,
+    );
+    // Bands of 340 / 3 pixels across the frame.
+    const middles = [...element.querySelectorAll("g.chart-axis-x g.tick")].map(
+      (tick) =>
+        Number(
+          /translate\(([\d.]+),/.exec(
+            tick.getAttribute("transform") ?? "",
+          )?.[1],
+        ),
+    );
+    expect(middles).toHaveLength(3);
+    for (const [i, middle] of middles.entries()) {
+      expect(middle).toBeCloseTo((340 / 3) * (i + 0.5), 0);
+    }
+  });
+
+  test("with xLabelAngle -45 each name of the horizontal axis is turned by -45 and anchored at its end, and those of the vertical axis are not turned", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(
+      element,
+      namesOf(["p2", "p0", "p1"], { xLabelAngle: -45 }),
+      names,
+    );
+    const xTexts = tickTexts(element, "g.chart-axis-x");
+    expect(xTexts).toHaveLength(3);
+    for (const text of xTexts) {
+      // Turned about the point 8 pixels under its band, where the name ends.
+      expect(text.getAttribute("transform")).toBe("rotate(-45 0 8)");
+      expect(text.getAttribute("text-anchor")).toBe("end");
+    }
+    for (const text of tickTexts(element, "g.chart-axis-y")) {
+      expect(text.getAttribute("transform")).toBeNull();
+    }
+    // Without the option the names are level.
+    const level = sizedElement(400, 300);
+    createPlot2d(level, namesOf(["p2", "p0", "p1"]), names);
+    for (const text of tickTexts(level, "g.chart-axis-x")) {
+      expect(text.getAttribute("transform")).toBeNull();
+      expect(text.getAttribute("text-anchor")).toBeNull();
+    }
+  });
+
+  test("a name <b>P1</b> is text on both axes and no b element is made", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(element, namesOf(["<b>P1</b>", "p2"]), names);
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["<b>P1</b>", "p2"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(["<b>P1</b>", "p2"]);
+    expect(element.querySelector("b")).toBeNull();
+  });
+
+  test("nameFormat writes the names as the plot cuts them, and two names alike in their first characters stay two", () => {
+    const element = sizedElement(400, 300);
+    createPlot2d(
+      element,
+      namesOf(["Population one", "Population two"], {
+        nameFormat: (name) => `${name.slice(0, 5)}…`,
+      }),
+      names,
+    );
+    expect(tickLabels(element, "g.chart-axis-x")).toEqual(["Popul…", "Popul…"]);
+    expect(tickLabels(element, "g.chart-axis-y")).toEqual(["Popul…", "Popul…"]);
+  });
+
+  test("an empty xLabel or yLabel leaves no text element of that label, and a label given later is written under the overlay", () => {
+    const element = sizedElement(400, 300);
+    const { definition } = pointerBars();
+    const handle = createPlot2d(
+      element,
+      { ...barsOf([1, 2]), xLabel: "" },
+      definition,
+    );
+    expect(element.querySelector(".chart-axis-label-x")).toBeNull();
+    expect(element.querySelector(".chart-axis-label-y")?.textContent).toBe(
+      "Count",
+    );
+    handle.update({ ...barsOf([1, 2]), yLabel: "" });
+    expect(element.querySelector(".chart-axis-label-y")).toBeNull();
+    expect(element.querySelector(".chart-axis-label-x")?.textContent).toBe(
+      "Index",
+    );
+    handle.update(barsOf([1, 2]));
+    // Both back, in their order, under the overlay, the last child.
+    const frame = element.querySelector("g.chart-frame");
+    const classes = [...(frame?.children ?? [])].map((child) =>
+      child.getAttribute("class"),
+    );
+    expect(classes.slice(-3)).toEqual([
+      "chart-axis-label chart-axis-label-x",
+      "chart-axis-label chart-axis-label-y",
+      "chart-overlay",
+    ]);
+    expect(element.querySelectorAll("text.chart-axis-label")).toHaveLength(2);
   });
 });

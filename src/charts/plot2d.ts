@@ -12,7 +12,7 @@
  */
 
 import { axisBottom, axisLeft } from "d3-axis";
-import type { ScaleContinuousNumeric } from "d3-scale";
+import type { ScaleBand, ScaleContinuousNumeric } from "d3-scale";
 import { pointer, select } from "d3-selection";
 import type { Selection } from "d3-selection";
 import "./charts.css";
@@ -47,7 +47,11 @@ export interface Margin {
 
 /** How the axes are drawn, beyond what the scales give. */
 export interface AxesOptions {
-  /** The labels of the ticks of the horizontal axis; the scale's tickFormat when absent. */
+  /**
+   * The labels of the ticks of the horizontal axis; when absent, the
+   * scale's tickFormat, or with `xWholeNumbers` the whole numbers with a
+   * comma between thousands, "20,000".
+   */
   readonly xFormat?: (value: number) => string;
   /**
    * The labels of the ticks of the vertical axis; when absent, the
@@ -58,15 +62,42 @@ export interface AxesOptions {
   /** Ticks of the vertical axis at whole numbers only. */
   readonly yWholeNumbers?: boolean;
   /**
-   * Whether a tick of either axis is drawn, of those its scale gives; all
-   * are when absent. The scatter leaves out a tick whose label would not
-   * be a finite number.
+   * Ticks of the horizontal axis at whole numbers only, the counts of the
+   * spectrum and the distances in base pairs of the LD decay, while the
+   * vertical axis keeps the ticks its scale gives.
+   */
+  readonly xWholeNumbers?: boolean;
+  /**
+   * The angle of the labels of the horizontal axis, in degrees, −45 for
+   * the names of the heatmap; a negative angle anchors each label at its
+   * end, so that a long name runs down and to the left of its column. 0,
+   * the labels level, when absent.
+   */
+  readonly xLabelAngle?: number;
+  /**
+   * The label of a name on an axis of names, the name cut as the plot
+   * writes it; the name itself when absent. The band scale keeps the
+   * whole names, so that two names alike in their first characters stay
+   * two rows.
+   */
+  readonly nameFormat?: (name: string) => string;
+  /**
+   * Whether a tick of either axis of numbers is drawn, of those its scale
+   * gives; all are when absent. The scatter leaves out a tick whose label
+   * would not be a finite number. An axis of names draws every name.
    */
   readonly tickShown?: (value: number) => boolean;
 }
 
 /** A group of the SVG, where a plot draws. */
 export type Group = Selection<SVGGElement, unknown, null, undefined>;
+
+/**
+ * The scale an axis is drawn from: of numbers, or of names, a band scale
+ * whose domain is the names in their order, drawn with no tick marks.
+ */
+export type AxisScale =
+  ScaleContinuousNumeric<number, number> | ScaleBand<string>;
 
 /** What the base gives the `draw` of a plot at each draw. */
 export interface Frame {
@@ -85,12 +116,11 @@ export interface Frame {
   readonly annotations: Group;
   /** `chart-legend`, outside the frame, placed from the top left of the SVG. */
   readonly legend: Group;
-  /** Draws the two axes and their labels from the plot's scales. */
-  axes(
-    x: ScaleContinuousNumeric<number, number>,
-    y: ScaleContinuousNumeric<number, number>,
-    options?: AxesOptions,
-  ): void;
+  /**
+   * Draws the two axes from the plot's scales, either of which may be a
+   * band scale of names.
+   */
+  axes(x: AxisScale, y: AxisScale, options?: AxesOptions): void;
 }
 
 /** The frame of the last draw, for what is drawn into the exported copy. */
@@ -153,6 +183,22 @@ const Y_TICK_SPACING = 40;
 const X_LABEL_FROM_BOTTOM = 8;
 /** From the left of the SVG to the baseline of the label of the y axis. */
 const Y_LABEL_FROM_LEFT = 16;
+/**
+ * From an axis of names to its labels, which have no tick mark: the 8
+ * pixels the margins of the heatmap count before its names
+ * (docs/specs/charts/heatmap.md, "The names on the axes").
+ */
+const NAME_PADDING = 8;
+/**
+ * From the horizontal axis of numbers to its labels: the tick of 6 pixels
+ * and the gap of 3 that d3-axis leaves, the point a slanted label turns
+ * about.
+ */
+const NUMBER_LABEL_OFFSET = 9;
+/** The `dy` of d3-axis for the labels of a horizontal axis, level. */
+const LEVEL_LABEL_DY = "0.71em";
+/** The `dy` of a slanted label, which centres it on the line it turns about. */
+const SLANTED_LABEL_DY = "0.32em";
 
 const WHOLE_NUMBER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
@@ -173,6 +219,84 @@ export function wholeNumberTicks(
   count: number,
 ): number[] {
   return scale.ticks(count).filter((tick) => Number.isInteger(tick));
+}
+
+/** Whether `scale` is a band scale of names, which alone has a bandwidth. */
+function isBand(scale: AxisScale): scale is ScaleBand<string> {
+  return "bandwidth" in scale;
+}
+
+/** How one axis is drawn, taken from the options of both. */
+interface AxisDrawing {
+  /** About how many ticks an axis of numbers has. */
+  readonly count: number;
+  /** Ticks at whole numbers only, on an axis of numbers. */
+  readonly wholeNumbers: boolean;
+  /** The labels of the ticks of an axis of numbers. */
+  readonly format: ((value: number) => string) | undefined;
+  /** Whether a tick of an axis of numbers is drawn. */
+  readonly shown: (value: number) => boolean;
+  /** The label of a name of an axis of names. */
+  readonly nameFormat: (name: string) => string;
+}
+
+/**
+ * Draws the axis of `scale` into `group` with `make`, axisBottom or
+ * axisLeft: of names, one label per name of the band scale in its order
+ * and no tick mark; of numbers, the ticks of `drawing`.
+ */
+function drawAxis(
+  group: Group,
+  make: typeof axisBottom,
+  scale: AxisScale,
+  drawing: AxisDrawing,
+): void {
+  if (isBand(scale)) {
+    group.call(
+      make<string>(scale)
+        .tickSize(0)
+        .tickPadding(NAME_PADDING)
+        .tickFormat(drawing.nameFormat),
+    );
+    // d3-axis draws a line at each tick, of no length here; an axis of
+    // names has none at all.
+    group.selectAll("g.tick line").remove();
+    return;
+  }
+  // The count of ticks also sets how many digits the scale's own labels
+  // have, so it stays beside the values of the ticks.
+  const axis = make<number>(scale).ticks(drawing.count);
+  if (drawing.wholeNumbers) {
+    axis
+      .tickValues(wholeNumberTicks(scale, drawing.count).filter(drawing.shown))
+      .tickFormat(drawing.format ?? formatWholeNumber);
+  } else {
+    axis.tickValues(scale.ticks(drawing.count).filter(drawing.shown));
+    if (drawing.format !== undefined) axis.tickFormat(drawing.format);
+  }
+  group.call(axis);
+}
+
+/**
+ * Turns the labels of the horizontal axis in `group` by `angle` degrees,
+ * each about the point under its tick, `offset` pixels below the axis,
+ * and anchored at its end for a negative angle, so that it runs down and
+ * to the left, or at its start for a positive one; an angle of 0 leaves
+ * them level, as d3-axis draws them.
+ */
+function slantLabels(group: Group, angle: number, offset: number): void {
+  const labels = group.selectAll("g.tick text");
+  if (angle === 0) {
+    labels
+      .attr("transform", null)
+      .attr("text-anchor", null)
+      .attr("dy", LEVEL_LABEL_DY);
+    return;
+  }
+  labels
+    .attr("transform", `rotate(${String(angle)} 0 ${String(offset)})`)
+    .attr("text-anchor", angle < 0 ? "end" : "start")
+    .attr("dy", SLANTED_LABEL_DY);
 }
 
 /**
@@ -268,12 +392,7 @@ export function createPlot2d<Data extends PlotText>(
     .attr("class", "chart-marks")
     .attr("clip-path", `url(#${ids.clip})`);
   const annotations = frameGroup.append("g").attr("class", "chart-annotations");
-  const xLabel = frameGroup
-    .append("text")
-    .attr("class", "chart-axis-label chart-axis-label-x");
-  const yLabel = frameGroup
-    .append("text")
-    .attr("class", "chart-axis-label chart-axis-label-y");
+  // The labels of the axes come here, made at each draw by axisLabel.
   // Over everything drawn in the frame, so that it takes the pointer.
   const overlay =
     definition.pointer === undefined
@@ -298,6 +417,29 @@ export function createPlot2d<Data extends PlotText>(
   function writeText(): void {
     title.text(current.title);
     desc.text(current.description);
+  }
+
+  /**
+   * The text of the label of an axis, of the class `chart-axis-label-‹axis›`,
+   * written as text: made before the first element of the frame that
+   * `before` selects, or last when there is none, so that the labels stay
+   * under the overlay; removed, or not made, for an empty label, since the
+   * names of the heatmap say what its rows and columns are.
+   */
+  function axisLabel(
+    axis: "x" | "y",
+    text: string,
+    before: string,
+  ): Selection<SVGTextElement, string, SVGGElement, unknown> {
+    return frameGroup
+      .selectAll<SVGTextElement, string>(`text.chart-axis-label-${axis}`)
+      .data(text === "" ? [] : [text])
+      .join((enter) =>
+        enter
+          .insert("text", before)
+          .attr("class", `chart-axis-label chart-axis-label-${axis}`),
+      )
+      .text((label) => label);
   }
 
   /**
@@ -346,15 +488,13 @@ export function createPlot2d<Data extends PlotText>(
     clip.attr("width", innerWidth).attr("height", innerHeight);
     overlay?.attr("width", innerWidth).attr("height", innerHeight);
     xAxisGroup.attr("transform", `translate(0,${String(innerHeight)})`);
-    xLabel
+    axisLabel("x", current.xLabel, ".chart-axis-label-y, .chart-overlay")
       .attr("x", innerWidth / 2)
-      .attr("y", innerHeight + margin.bottom - X_LABEL_FROM_BOTTOM)
-      .text(current.xLabel);
-    yLabel
+      .attr("y", innerHeight + margin.bottom - X_LABEL_FROM_BOTTOM);
+    axisLabel("y", current.yLabel, ".chart-overlay")
       .attr("transform", "rotate(-90)")
       .attr("x", -innerHeight / 2)
-      .attr("y", -margin.left + Y_LABEL_FROM_LEFT)
-      .text(current.yLabel);
+      .attr("y", -margin.left + Y_LABEL_FROM_LEFT);
 
     const frame: Frame = {
       innerWidth,
@@ -366,24 +506,27 @@ export function createPlot2d<Data extends PlotText>(
       axes(x, y, options = {}) {
         const xCount = Math.max(1, Math.round(innerWidth / X_TICK_SPACING));
         const yCount = Math.max(1, Math.round(innerHeight / Y_TICK_SPACING));
-        // The count of ticks also sets how many digits the scale's own
-        // labels have, so it stays beside the values of the ticks.
         const shown = options.tickShown ?? (() => true);
-        const xAxis = axisBottom<number>(x)
-          .ticks(xCount)
-          .tickValues(x.ticks(xCount).filter(shown));
-        if (options.xFormat !== undefined) xAxis.tickFormat(options.xFormat);
-        const yAxis = axisLeft<number>(y).ticks(yCount);
-        if (options.yWholeNumbers === true) {
-          yAxis
-            .tickValues(wholeNumberTicks(y, yCount).filter(shown))
-            .tickFormat(options.yFormat ?? formatWholeNumber);
-        } else {
-          yAxis.tickValues(y.ticks(yCount).filter(shown));
-          if (options.yFormat !== undefined) yAxis.tickFormat(options.yFormat);
-        }
-        xAxisGroup.call(xAxis);
-        yAxisGroup.call(yAxis);
+        const nameFormat = options.nameFormat ?? ((name: string) => name);
+        drawAxis(xAxisGroup, axisBottom, x, {
+          count: xCount,
+          wholeNumbers: options.xWholeNumbers === true,
+          format: options.xFormat,
+          shown,
+          nameFormat,
+        });
+        drawAxis(yAxisGroup, axisLeft, y, {
+          count: yCount,
+          wholeNumbers: options.yWholeNumbers === true,
+          format: options.yFormat,
+          shown,
+          nameFormat,
+        });
+        slantLabels(
+          xAxisGroup,
+          options.xLabelAngle ?? 0,
+          isBand(x) ? NAME_PADDING : NUMBER_LABEL_OFFSET,
+        );
       },
     };
     definition.draw(frame, current);
