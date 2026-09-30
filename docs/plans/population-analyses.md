@@ -493,7 +493,7 @@ its panel is built.
   read the LD pruning would take the plot off the screen for a filter
   the analysis does not read, and one that missed another filter would
   show a plot of other variants as current. Serves 6. Needs 2.3.
-- [ ] 2.5 The measurements of D7, through the application with a
+- [x] 2.5 The measurements of D7, through the application with a
   placeholder panel (above, "Where the specs are thin"), with
   `e2e/bigVcf.ts` given the spacing and the positions drawn at random
   that they need; the dense file tried at 2,000,000, 4,000,000 and
@@ -903,7 +903,7 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   `wholeProject` of `src/core/testSupport.ts` drawing the options of the
   three analyses. Serves 7. Needs 2.3, 3.2 and 6.2.
 
-- [ ] 6.7 Added on 30 September 2026, from the reviews of work packages
+- [x] 6.7 Added on 30 September 2026, from the reviews of work packages
   2 and 3: the small rules of the populations that the three analyses
   wrote each for itself, gathered into one exported function each, with
   no change to what they give: `MAX_NAMED` beside `namesOf`; whether the

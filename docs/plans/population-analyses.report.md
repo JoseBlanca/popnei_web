@@ -111,6 +111,104 @@ and found no wrong result: for a move of code with nothing a user sees,
 four reviewers would have been enough, `architecture` and `tests`
 among them, which found what mattered.
 
+## 2. The LD decay in the worker and core, and its memory in the browsers
+
+Done as planned, in 2cdbaa8 (task 2.1), a897734 (task 2.2), aefe43c
+(task 2.3), 43720d1 (task 2.4), 3f6d837 (the fixes of the review),
+0e90df9 and 380cd0b (task 2.5). The LD decay is in the list of analyses
+with a panel that is its Run button alone, which task 8.1 replaces.
+
+### The deliverables
+
+1. `npx vitest run src/worker/messages.test.ts -t "PA2 D1"`: 27 passed,
+   at least 5 asked; `PROTOCOL_VERSION = 4`.
+2. `npx vitest run src/worker -t "PA2 D2"`: 12 passed after the fixes, at
+   least 4 asked; the numbers of `ld.nei` to the last digit, and a job of
+   populations of 30 and 70 at other options.
+3. `ld.vcf.gz` 20,505 bytes, `ld.nei` 68,354, `ld_pops.csv` 50 and 50;
+   the other fixtures unchanged by the script.
+4. `npx vitest run src/worker/client.test.ts -t "PA2 D4"`: 9 passed, at
+   least 5 asked.
+5. `npx vitest run src/core -t "PA2 D5"`: 70 passed, at least 35 asked.
+6. `npx vitest run src/core/analyses/ldDecay.test.ts -t "PA2 D6"`: 10
+   passed, at least 8 asked; a `keyInputs` given the LD pruning failed 3
+   of them.
+7. `npx playwright test --project=measure-chromium
+   --project=measure-webkit -g "PA2 D7" --workers=1`: 6 passed, in 1.4
+   hours. The tables below.
+
+### The measurements, PA2 D7
+
+Chromium 153.0.8010.12 and WebKit 26.6, Playwright 1.63.0, on this Mac,
+an Apple M5 Pro with 64 GB, macOS 27.0.1, on 30 September 2026. The load
+of the machine is given, since reviewers ran tests beside part 1: its
+times are high, and its memory does not depend on the load.
+
+Part 1: 1,000 individuals, 20,000 variants a variant every 1,000 bp,
+three populations, five runs each; load 9.7 to 22.6. "At the answer" is
+what the tab would keep without the restart; "after" is 3 s after it.
+
+| distance | engine | run | grew by | at the answer | after the restart |
+|---|---|---|---|---|---|
+| 100,000 bp | Chromium | 3.4 to 3.9 s | 0.40 GB | 0.55 GB | 0.15 GB |
+| 100,000 bp | WebKit | 7.9 to 8.4 s | 0.43 to 0.53 GB | 0.73 GB | 0.20 to 0.21 GB |
+| 1,000,000 bp | Chromium | 12.5 to 19.9 s | 0.44 to 0.45 GB | 0.59 GB | 0.14 to 0.15 GB |
+| 1,000,000 bp | WebKit | 19.1 to 19.6 s | 0.49 to 0.59 GB | 0.78 GB | 0.20 to 0.22 GB |
+
+Part 2, at the lock: 100 individuals, 20,000 variants at positions
+drawn at random over 26 Mb; load 9.6 to 12.8. The tab held in every
+case. "Fit" is the time after the pass, which tells no progress.
+
+| case | Chromium: run, peak, fit | WebKit: run, peak, fit |
+|---|---|---|
+| one population, 25,000,000 bp | 34.4 s, 1.26 GB, 10.8 s | 30.9 s, 1.44 GB, 8.7 s |
+| three populations, 8,333,333 bp | 28.2 s, 0.96 GB, 10.3 s | 32.0 s, 1.13 GB, 11.4 s |
+
+Part 3, the dense file: 1,000 individuals, a variant every 100 bp,
+three populations; load 3.1 to 14.8.
+
+| distance | Chromium: run, peak | WebKit: run, peak |
+|---|---|---|
+| 2,000,000 bp | 222 s, 1.34 GB | 219 s, 1.55 GB |
+| 4,000,000 bp | 857 s, 2.42 GB | 594 s, 2.63 GB |
+| 8,333,333 bp | refused for memory after 1,475 s, 4.05 GB | refused for memory after 1,127 s, 4.28 GB |
+
+No tab closed, so the lock was kept and the numbers went into
+`ldDecay.md`, `client.md` and the architecture (380cd0b). What the dense
+file shows is point 19 below.
+
+### The review
+
+Six reviewers of tasks 2.1 to 2.4; none found a wrong or a stale result,
+and no answer of an ended worker reaches the page. Fixed in 3f6d837:
+
+- The runner's test used two populations of 50 at popnei's defaults, so
+  a runner that gave one population's numbers to the other, or dropped
+  the user's options, passed; 11 such breaks now fail, with a job of 30
+  and 70 at other options.
+- The core tests read the first population and the first bin only; the
+  script's lines were tested at the defaults; seven boundaries were not
+  tested on both sides.
+- The reason of the empty distance, which the spec shows beside its
+  field, has a function the panel can call.
+- The list of warnings of every panel told its items apart by their
+  code, and the LD decay gives several of one code; now by place too.
+- A crash of a diversity gives its failure before the worker is ended,
+  tested; an LD decay joins the randomised test of the client.
+
+Put to you: points 5 to 8. The shared function of the lists of
+individuals, which the review asked for, went into task 6.7.
+
+### How the work of 2 went, for whoever revises a skill or a plan
+
+Four writers of about 220,000, 90,000, 255,000 and 45,000 tokens, the
+fixes 350,000; the six reviewers about 750,000; the measurements 265,000
+and 1.4 hours of the machine, the dense file most of it. Running the
+reviewers of other work packages beside the measurement doubled the
+load and made part 1's times unfit for the spec; a measurement of time
+wants the machine to itself, and the plan's "alone in the tree" should
+say "alone on the machine".
+
 ## 3. The distances between populations, in the worker and core
 
 Done as planned, in 019a180 (task 3.1), bd45140 (task 3.2), 7b1d928
@@ -170,6 +268,71 @@ Three writers, of about 260,000, 240,000 and 45,000 tokens, the fixes
 runner defects by breaking lines, as in work package 2, where the
 fixture's populations were alike: a skill of testing could ask for
 fixtures whose populations differ in every number a test reads.
+
+## 6. The whole diversity, in the worker and core, with the spectrum
+
+Done, in 88a023d (6.1), e72665f (6.2), d8a328c (6.5), 994bbf9 (6.3),
+11e4ad1 and 12e3430 (6.6), 5094f19 (6.4), cc69bfa (6.7, added),
+0d4e198 (a flow of stage 2 at eleven columns), 7288504 and da08cb1 (the
+fixes of the review). The diversity's panel still shows its five
+columns; work package 7 builds the eleven and the spectrum's block.
+
+### The deliverables, checked on 380cd0b
+
+1. `-t "PA6 D1"` in `messages.test.ts`: 17 passed, at least 6 asked.
+2. `-t "PA6 D2"` in `src/worker`: 16 passed after the fixes, at least 10.
+3. `-t "PA6 D3"` in `src/core`: 31 passed, at least 15.
+4. `-t "PA6 D4"` in `src/core`: 14 passed, at least 10.
+5. `-t "PA6 D5"` in `src/core`: 4 passed, at least 4; a project file of
+   stage 4 is still compared under key version 3.
+6. `-t "PA6 D6"` in `src/core`: 14 passed, at least 8.
+7. `-t "PA6 D7"`: 2 in `projectFile.test.ts` and 1 in `project.test.ts`.
+8. On a copy of 380cd0b: `npm test` "Tests 3386 passed (3386)"; the
+   browser check "1050 passed (3.3m)"; the first script 236.54 kB
+   gzipped. The old tests changed where the types of the job and the
+   result demanded (`noPopDiversity` in `testSupport.ts`), where the key
+   version rose, where `tooFewIndividuals` gained "or lower the minimum
+   number of individuals in the options of the diversity" (10 texts),
+   where a single population at the minimum now gets
+   `privateAllelesNeedTwoPopulations` (10 expectations), and the CSV
+   flow of stage 2, now of eleven columns, each value checked against
+   popnei; the five first columns did not change.
+
+Changed in the plan: task 6.7, added from the reviews of work packages
+2 and 3, gathered four small rules the analyses wrote each for itself.
+
+### The review
+
+Six reviewers; none found a wrong or a stale result. The spec reviewer
+reproduced every number of the diversity and the spectrum with popnei
+in node and in its Python, to the last digit. Fixed:
+
+- Every runner test used a draw of twice the minimum, where every
+  population reaches the draw, so a count read from the wrong field,
+  the minimum fixed at 20, or an odd draw that fails would all pass;
+  each now fails, with runs at a draw of 130, 41 and 96 and a minimum
+  of 46.
+- In the fixtures p0 and p1 had the same private alleles, so a swap of
+  the two passed; a result whose populations all differ now guards it.
+- The panel of work package 7 gets the default draw from a function of
+  core, rather than writing its rule again.
+- Two places still called the diversity one pass: a measurement's title
+  and a sentence of the architecture.
+- A doc comment above the wrong function; rules written twice; a
+  property test that timed out under load.
+
+Not taken: the least draw, 2, is still written in core and in the
+worker, since core may import only the worker's types. Put to you:
+points 15 to 18 and 20.
+
+### How the work of 6 went, for whoever revises a skill or a plan
+
+Seven writers' tasks, about 1.5 million tokens with the fixes; six
+reviewers about 760,000. Tasks 6.3, 6.4 and 6.7 went to one writer in
+turn, who knew the diversity by then; each round cost it less than a
+fresh writer's reading. A flow of stage 2 that 6.3 changed was found
+only by the orchestrator's whole check: a writer that is told not to
+run Playwright should be told which flows its change reaches.
 
 ## For the owner, as the work goes
 
@@ -355,6 +518,28 @@ the plan; each is asked of you at the next stop.
     so `script` of a project opened without its variants file loaded
     would stop with an error. The spec guards it with "asked only for an
     analysis that has run"; stage 6 has to keep to that.
+
+19. **The lock of the LD decay and a dense file, `ldDecay.md`, "Why it
+    cannot run".** The lock counts the pairs at every distance, and not
+    the variants within the distance, which grow with the density of
+    the file and the individuals. On a file of 1,000 individuals with a
+    variant every 100 bp, a distance of 8,333,333 bp is inside the lock
+    for three populations; popnei refused it for memory after 25
+    minutes in Chromium and 19 in WebKit, with the tab at about 4 GB.
+    The tab stays, and the user reads the words of a refusal for
+    memory, after a wait with a full bar. 4,000,000 bp ran, in 10 to 14
+    minutes, at 2.4 to 2.6 GB. Options: keep the lock as it is (a rare
+    file and distance, a long wait, no tab lost); or lock also on the
+    individuals times the variants within the distance, which needs the
+    file's density before the Run and changes the spec, its words and
+    the tests. Recommendation: keep the lock, and add to the words of
+    the running state that a large distance on a dense file may take
+    tens of minutes and end in a refusal for memory. For stop C.
+
+20. **A sentence of `runner.md`, "The diversity".** Its first paragraph
+    still says the job holds "the two options of the diversity,
+    `minNumIndividuals` and `polyThreshold`"; the next paragraph adds
+    the fields of stage 5. Recommendation: correct it.
 
 ## The standing rules of this plan, for a session that takes over
 
