@@ -49,10 +49,15 @@ import {
   individualsStepNeeds,
   ONE_POPULATION,
   populationsBeforeRun,
+  populationListsNeeds,
   populationsKept,
+  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
+  populationsWithMinimum,
+  underMinimumText,
+  allEmptiedText,
 } from "./project.ts";
 import type {
   AppId,
@@ -69,12 +74,14 @@ import type {
 } from "./project.ts";
 import type { Result } from "./result.ts";
 import { MAX_UNDO_STEPS, commit, startHistory, undo } from "./history.ts";
+import type { IndividualsKept } from "./individualsKept.ts";
 import type {
   Cell,
   ColumnType,
   CsvOptions,
   IndividualsFileError,
   IndividualsTable,
+  Pops,
 } from "../worker/protocol.ts";
 import {
   columnWarnings,
@@ -5294,6 +5301,216 @@ describe("VS3 D3 the populations, moved from the module of the diversity", () =>
     expect(populationsKept(p, kept)?.emptied).toEqual([]);
     kept.pop();
     expect(populationsKept(p, kept)?.emptied).toEqual(["B"]);
+  });
+});
+
+/** The project of the worked example with the filters of individuals
+    `filters`. */
+function listsProject(filters: Project["individualFilters"]): Project {
+  return deepFreeze<Project>({ ...popsProject(), individualFilters: filters });
+}
+
+/** What the filters keep, `individuals` once known, of the four
+    individuals of the worked example. */
+function knownKept(individuals: readonly string[]): IndividualsKept {
+  return {
+    list: { kind: "known", individuals },
+    byLists: ["i1", "i2", "i3", "i4"],
+    counts: [],
+  };
+}
+
+describe("PA1 D1 the shared functions of the populations, moved from the module of the diversity", () => {
+  test("populationListsNeeds of a list to keep i4, who has no population, gives the reason of the lists, with a threshold after it too; of lists that leave one, or of thresholds alone, none", () => {
+    const reason =
+      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.";
+    expect(
+      populationListsNeeds(
+        listsProject([{ kind: "keep", individuals: ["i4"] }]),
+      ),
+    ).toBe(reason);
+    expect(
+      populationListsNeeds(
+        listsProject([
+          { kind: "keep", individuals: ["i4", "i2"] },
+          { kind: "remove", individuals: ["i1"] },
+        ]),
+      ),
+    ).toBeNull();
+    expect(
+      populationListsNeeds(
+        listsProject([
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+          { kind: "obs_het", maxAllowedObsHet: 0.4 },
+        ]),
+      ),
+    ).toBeNull();
+    expect(
+      populationListsNeeds(
+        listsProject([
+          { kind: "keep", individuals: ["i1", "i2", "i3"] },
+          { kind: "remove", individuals: ["i1", "i2", "i3"] },
+        ]),
+      ),
+    ).toBe(reason);
+    // A threshold after the list does not hide the reason of the lists,
+    // which is known before the statistics are.
+    expect(
+      populationListsNeeds(
+        listsProject([
+          { kind: "keep", individuals: ["i4"] },
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ]),
+      ),
+    ).toBe(reason);
+  });
+
+  test("populationsKeptNeeds locks when the individuals kept leave no population, with the words of all left empty", () => {
+    expect(populationsKeptNeeds(popsProject(), knownKept(["i4"]))).toBe(
+      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(
+      populationsKeptNeeds(popsProject(), knownKept(["i1", "i4"])),
+    ).toBeNull();
+    expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
+      "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
+    );
+    expect(allEmptiedText(2, "pop\tcat", ["A"])).toBe(
+      "The 2 individuals kept have no population in pop\\tcat, so A has no individual left. Loosen the filters of individuals in the Variants step to keep it.",
+    );
+  });
+
+  test("the reason of the lists names the file escaped, and a list popnei would refuse is left to the store", () => {
+    const base = popsProject();
+    if (base.variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const p = deepFreeze<Project>({
+      ...base,
+      variants: { ...base.variants, name: "a\tb.nei" },
+      individualFilters: [{ kind: "remove", individuals: ["i1", "i2", "i3"] }],
+    });
+    expect(populationListsNeeds(p)).toBe(
+      "The lists of individuals to keep and to remove leave none of the individuals of a\\tb.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
+    );
+    expect(
+      populationListsNeeds(
+        listsProject([{ kind: "keep", individuals: ["i9"] }]),
+      ),
+    ).toBeNull();
+  });
+
+  test("lists that remove every individual leave populationListsNeeds null for the one population, the lock being the store's, and populationsKeptNeeds is null for the one population", () => {
+    const noFile = popsProject({ table: null });
+    const onePopulation = popsProject({
+      grouping: { kind: "onePopulation" },
+    });
+    const p = deepFreeze<Project>({
+      ...noFile,
+      individualFilters: [
+        { kind: "remove", individuals: ["i1", "i2", "i3", "i4"] },
+      ],
+    });
+    expect(populationListsNeeds(p)).toBeNull();
+    expect(populationsKeptNeeds(noFile, knownKept(["i4"]))).toBeNull();
+    // Filters that keep none leave no individual, which the store locks
+    // on first with the words of keptNoneReason; populationsKeptNeeds
+    // gives no second text for it.
+    for (const one of [noFile, onePopulation]) {
+      expect(populationsKeptNeeds(one, knownKept([]))).toBeNull();
+    }
+  });
+});
+
+describe("PA1 D1 the populations under the minimum of individuals", () => {
+  const pops: Pops = deepFreeze<Pops>([
+    ["A", ["a1", "a2"]],
+    ["B", ["b1"]],
+    ["C", ["c1", "c2", "c3"]],
+  ]);
+  const consequence = {
+    one: "and is left out.",
+    many: "and are left out.",
+  };
+
+  test("populationsWithMinimum of A of 2, B of 1 and C of 3 individuals at a minimum of 2 gives A and C, and B with 1, in that order", () => {
+    const { withMinimum, under } = populationsWithMinimum(pops, 2);
+    expect(withMinimum).toEqual([
+      ["A", ["a1", "a2"]],
+      ["C", ["c1", "c2", "c3"]],
+    ]);
+    expect(withMinimum[0]).toBe(pops[0]);
+    expect(withMinimum[1]).toBe(pops[2]);
+    expect(under).toEqual([["B", 1]]);
+  });
+
+  test("populationsWithMinimum at a minimum of 0 gives every population, and none under it", () => {
+    const { withMinimum, under } = populationsWithMinimum(pops, 0);
+    expect(withMinimum).toEqual(pops);
+    expect(under).toEqual([]);
+  });
+
+  test("underMinimumText of one population gives its count and the consequence of one", () => {
+    expect(underMinimumText([["p3", 12]], 20, consequence)).toBe(
+      "p3 has 12 individuals, fewer than the minimum of 20, and is left out.",
+    );
+    expect(
+      underMinimumText([["p3", 1]], 1_000, {
+        one: "so it will have no values, and is left out of the count of the private alleles of the others.",
+        many: "so they will have no values, and are left out of the count of the private alleles of the others.",
+      }),
+    ).toBe(
+      "p3 has 1 individual, fewer than the minimum of 1,000, so it will have no values, and is left out of the count of the private alleles of the others.",
+    );
+  });
+
+  test("underMinimumText of two and of three populations gives their counts in their order and the consequence of several", () => {
+    expect(
+      underMinimumText(
+        [
+          ["p3", 12],
+          ["p5", 8],
+        ],
+        20,
+        consequence,
+      ),
+    ).toBe(
+      "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out.",
+    );
+    expect(
+      underMinimumText(
+        [
+          ["p3", 12],
+          ["p5", 8],
+          ["p\t7", 1],
+        ],
+        20,
+        consequence,
+      ),
+    ).toBe(
+      "p3, p5 and p\\t7 have fewer individuals than the minimum of 20, 12, 8 and 1, and are left out.",
+    );
+  });
+
+  test("underMinimumText of four populations names two and how many more, with no counts", () => {
+    expect(
+      underMinimumText(
+        [
+          ["p3", 12],
+          ["p5", 8],
+          ["p6", 3],
+          ["p7", 1],
+        ],
+        20,
+        consequence,
+      ),
+    ).toBe(
+      "p3, p5 and 2 more have fewer individuals than the minimum of 20, and are left out.",
+    );
+  });
+
+  test("underMinimumText of no population is a defect", () => {
+    expect(() => underMinimumText([], 20, consequence)).toThrow(DEFECT);
   });
 });
 

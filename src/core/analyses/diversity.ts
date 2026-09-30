@@ -15,7 +15,6 @@
  */
 
 import { individualsKept } from "../individualsKept.ts";
-import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   ONE_POPULATION,
@@ -26,7 +25,9 @@ import {
   individualsNeeds,
   jobFilters,
   namesOf,
+  populationListsNeeds,
   populationsKept,
+  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
@@ -91,53 +92,6 @@ const OPTIONS_EXPECTED =
 /** The rows of each result, so that a screen drawn again gets the same
     array. */
 const ROWS = new WeakMap<DiversityResult, readonly DiversityRow[]>();
-
-/** The reason of the lock of `keptNeeds`, when the `numKept`
-    individuals kept have no population in the column `column`, which
-    leaves every population, `emptied`, empty: "The 34 individuals kept
-    have no population in popcat, so none of the 2 populations has an
-    individual left. Loosen …", with one population by its name. */
-export function allEmptiedText(
-  numKept: number,
-  column: string,
-  emptied: readonly string[],
-): string {
-  const kept =
-    numKept === 1
-      ? "The one individual kept has"
-      : `The ${counted(numKept, "individual")} kept have`;
-  const [only] = emptied;
-  const left =
-    emptied.length === 1 && only !== undefined
-      ? `${escaped(only)} has no individual left. ${loosenText(true)}`
-      : `none of the ${counted(emptied.length, "population")} has an individual left. ${loosenText(false)}`;
-  return `${kept} no population in ${shown(column)}, so ${left}`;
-}
-
-/** What to do about populations left empty, of one or of several. */
-export function loosenText(one: boolean): string {
-  return `Loosen the filters of individuals in the Variants step to keep ${one ? "it" : "them"}.`;
-}
-
-/** The reason the diversity cannot run for the individuals kept: they
-    leave no population (docs/specs/analyses/diversity.md, "Why it
-    cannot run", decided by the owner at stop B on 27 September 2026);
-    `null` when some population keeps an individual. */
-function keptNeeds(p: Project, kept: IndividualsKept): string | null {
-  const list = kept.list.kind === "known" ? kept.list.individuals : null;
-  const left = populationsKept(p, list);
-  const column = populationsColumn(p);
-  if (
-    list === null ||
-    column === null ||
-    left === null ||
-    left.pops.length > 0 ||
-    left.emptied.length === 0
-  ) {
-    return null;
-  }
-  return allEmptiedText(list.length, column, left.emptied);
-}
 
 /** One row of the table, a number null where popnei gave NaN. */
 export interface DiversityRow {
@@ -270,7 +224,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   parseOptions,
   keyInputs,
   needs,
-  keptNeeds,
+  keptNeeds: populationsKeptNeeds,
   run,
   warnings,
   checkNumbers,
@@ -353,24 +307,7 @@ function needs(p: Project): string | null {
   if (p.grouping.kind === "roles") {
     throw defect("the diversity was given a project of association.");
   }
-  return populationsNeeds(p)?.reason ?? listsNeeds(p);
-}
-
-/** The reason when the lists of individuals to keep and to remove leave
-    no individual that has a population, known from the project alone;
-    `null` otherwise, and when the individuals kept cannot be made, which
-    the store locks on first. */
-function listsNeeds(p: Project): string | null {
-  const kept = individualsKept(p, null);
-  if (kept === null || p.variants === null) {
-    return null;
-  }
-  const column = populationsColumn(p);
-  const left = populationsKept(p, kept.byLists);
-  if (column === null || left === null || left.pops.length > 0) {
-    return null;
-  }
-  return `The lists of individuals to keep and to remove leave none of the individuals of ${escaped(p.variants.name)} that have a population in ${shown(column)}, so no population is left. Change the lists in the Variants step.`;
+  return populationsNeeds(p)?.reason ?? populationListsNeeds(p);
 }
 
 /** Builds the request, with the individuals the filters keep that the

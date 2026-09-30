@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
   DIVERSITY_DEFAULTS,
-  allEmptiedText,
   diversity,
   diversityCsv,
   diversityRows,
@@ -16,7 +15,9 @@ import {
   individualsNeeds,
   loadIndividuals,
   loadVariants,
+  populationListsNeeds,
   populationsKept,
+  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
@@ -24,7 +25,6 @@ import {
   setGrouping,
 } from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
-import type { IndividualsKept } from "../individualsKept.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
@@ -1585,48 +1585,6 @@ describe("VS3 D3 the diversity of stage 3", () => {
     ).toBeNull();
   });
 
-  test("needs of a list to keep i4, who has no population, gives the reason of the lists, with a threshold after it too; of lists that leave one, or of thresholds alone, none", () => {
-    const reason =
-      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.";
-    expect(
-      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i4"] }])),
-    ).toBe(reason);
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i4", "i2"] },
-          { kind: "remove", individuals: ["i1"] },
-        ]),
-      ),
-    ).toBeNull();
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
-          { kind: "obs_het", maxAllowedObsHet: 0.4 },
-        ]),
-      ),
-    ).toBeNull();
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i1", "i2", "i3"] },
-          { kind: "remove", individuals: ["i1", "i2", "i3"] },
-        ]),
-      ),
-    ).toBe(reason);
-    // A threshold after the list does not hide the reason of the lists,
-    // which is known before the statistics are.
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i4"] },
-          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
-        ]),
-      ),
-    ).toBe(reason);
-  });
-
   test("a population of the metadata with more individuals than it has in the variants file, and no filter of individuals, is too small with no advice to loosen the filters", () => {
     // A is i1 and i3 in the metadata, and the variants file holds i1 alone.
     const r = result({
@@ -1706,26 +1664,6 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     );
   });
 
-  test("keptNeeds locks the diversity when the individuals kept leave no population, with the words of all left empty", () => {
-    const kept = (individuals: readonly string[]): IndividualsKept => ({
-      list: { kind: "known", individuals },
-      byLists: ["i1", "i2", "i3", "i4"],
-      counts: [],
-    });
-    const keptNeeds = diversity.keptNeeds;
-    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
-    expect(keptNeeds(project(), kept(["i4"]))).toBe(
-      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
-    );
-    expect(keptNeeds(project(), kept(["i1", "i4"]))).toBeNull();
-    expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
-      "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
-    );
-    expect(allEmptiedText(2, "pop\tcat", ["A"])).toBe(
-      "The 2 individuals kept have no population in pop\\tcat, so A has no individual left. Loosen the filters of individuals in the Variants step to keep it.",
-    );
-  });
-
   test("with thresholds that leave no population, run sends no population, for popnei to refuse", () => {
     const { client, jobs } = keptClient(["i4"]);
     diversity.run(project(), client);
@@ -1734,18 +1672,14 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     ]);
     expect(populationsKept(project(), ["i4"])?.emptied).toEqual(["A", "B"]);
   });
+});
 
-  test("the reason of the lists names the file escaped, and a list popnei would refuse is left to the store", () => {
-    const p = deepFreeze<Project>({
-      ...project({ variantsName: "a\tb.nei" }),
-      individualFilters: [{ kind: "remove", individuals: ["i1", "i2", "i3"] }],
-    });
-    expect(diversity.needs(p)).toBe(
-      "The lists of individuals to keep and to remove leave none of the individuals of a\\tb.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
-    );
-    expect(
-      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i9"] }])),
-    ).toBeNull();
+describe("PA1 D1 the diversity locks with the shared functions of the populations", () => {
+  test("needs gives the reason of populationListsNeeds after that of the column, and keptNeeds is populationsKeptNeeds", () => {
+    const p = filteredProject([{ kind: "keep", individuals: ["i4"] }]);
+    expect(diversity.needs(p)).toBe(populationListsNeeds(p));
+    expect(diversity.needs(p)).not.toBeNull();
+    expect(diversity.keptNeeds).toBe(populationsKeptNeeds);
   });
 });
 
@@ -1903,37 +1837,6 @@ describe("IP4 D1 the one population", () => {
   test("a result without All individuals raises no populationNotInResult for the one population", () => {
     const r = result({ pops: [], numIndividuals: [], numVars: 1000 });
     expect(diversity.warnings(r, noFileProject())).toEqual([]);
-  });
-
-  test("lists that remove every individual leave needs null, the lock being the store's, and keptNeeds is null for the one population", () => {
-    const p = deepFreeze<Project>({
-      ...noFileProject(),
-      individualFilters: [
-        { kind: "remove", individuals: ["i1", "i2", "i3", "i4"] },
-      ],
-    });
-    expect(diversity.needs(p)).toBeNull();
-    const keptNeeds = diversity.keptNeeds;
-    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
-    expect(
-      keptNeeds(noFileProject(), {
-        list: { kind: "known", individuals: ["i4"] },
-        byLists: ["i1", "i2", "i3", "i4"],
-        counts: [],
-      }),
-    ).toBeNull();
-    // Filters that keep none leave no individual, which the store locks
-    // on first with the words of keptNoneReason; keptNeeds gives no
-    // second text for it.
-    for (const one of [noFileProject(), onePopulationProject()]) {
-      expect(
-        keptNeeds(one, {
-          list: { kind: "known", individuals: [] },
-          byLists: ["i1", "i2", "i3", "i4"],
-          counts: [],
-        }),
-      ).toBeNull();
-    }
   });
 
   test("script gives the lines of the one population, with no metadata file and with onePopulation", () => {

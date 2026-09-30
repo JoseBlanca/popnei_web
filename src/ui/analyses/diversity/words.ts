@@ -8,13 +8,13 @@
  */
 
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
-import { loosenText } from "../../../core/analyses/diversity.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import {
   ONE_POPULATION,
   counted,
   escaped,
   grouped,
+  loosenText,
   namesOf,
 } from "../../../core/project.ts";
 import type { PopulationsKept } from "../../../core/project.ts";

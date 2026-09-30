@@ -321,6 +321,14 @@ export type Pops = readonly (readonly [
   individuals: readonly string[],
 ])[];
 
+/** The populations under the minimum of individuals, with their
+    individuals kept, as pairs `[population, numIndividuals]` in the order
+    of the populations they were taken from. */
+export type LeftOut = readonly (readonly [
+  pop: string,
+  numIndividuals: number,
+])[];
+
 /** How many variants one filter of the variants was given in a pass, and
     how many it kept, as popnei's `FilteringStats` has them. */
 export interface FilteringStats {
