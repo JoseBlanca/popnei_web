@@ -25,6 +25,7 @@ import type {
   Outcome,
   PassStats,
   PcaResult,
+  PopDistsResult,
   Run,
   VariantChecksResult,
   VariantDistrib,
@@ -180,6 +181,31 @@ describe("PA2 D5 countsOf of a result of the LD decay", () => {
       passStats: MISSING_PASS,
     };
     expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
+  });
+});
+
+describe("PA3 D4 countsOf of a result of the distances", () => {
+  test("countsOf of a result of the distances between populations with the passStats of the diversity gives the variants of the file, 1,200, and the counts of the same passStats, since its pass has the project's list and filters", () => {
+    const result: PopDistsResult = {
+      analysis: "popDists",
+      pops: ["p0", "p2"],
+      numIndividuals: Uint32Array.from([48, 84]),
+      fst: Float64Array.from([0.10134216885691137]),
+      dest: Float64Array.from([0.060374890860149355]),
+      numVarsPerPair: Uint32Array.from([1152]),
+      order: {
+        fst: { kind: "file", reason: "twoPopulations" },
+        dest: { kind: "file", reason: "twoPopulations" },
+      },
+      leftOut: [],
+      passStats: MISSING_PASS,
+    };
+    const found = countsOf(result);
+    expect(found).toStrictEqual({
+      numVarsRead: 1200,
+      counts: { analysis: "filterCounts", passStats: MISSING_PASS },
+    });
+    expect(found.counts?.passStats).toBe(MISSING_PASS);
   });
 });
 

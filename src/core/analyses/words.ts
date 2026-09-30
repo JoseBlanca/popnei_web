@@ -520,6 +520,20 @@ export function csvField(value: string): string {
   return /[",\n\r]/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
 
+/** A share of `whole` as a whole percentage rounded to the nearest,
+    "56%", as the diversity writes it: a share below all is never written
+    100%, nor one above none 0%. */
+export function percentOf(part: number, whole: number): string {
+  const rounded = Math.round((part / whole) * 100);
+  const percent =
+    part < whole && rounded === 100
+      ? 99
+      : part > 0 && rounded === 0
+        ? 1
+        : rounded;
+  return `${String(percent)}%`;
+}
+
 /** A number of popnei, `null` for a NaN. */
 export function orNull(value: number): number | null {
   return Number.isNaN(value) ? null : value;
