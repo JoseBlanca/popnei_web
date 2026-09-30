@@ -69,7 +69,8 @@ owner decided that day (decisions 3 to 7 of
 private alleles and their values rarefied to a common number of
 chromosomes join the table, from a second call of popnei in the same
 job, `calcPopDiversity`, until popnei issue #4 gives the
-heterozygosities in it; the three options get their fields, the number
+heterozygosities in it, and that call gives the folded site frequency
+spectrum of `docs/specs/analyses/sfs.md` too; the three options get their fields, the number
 of chromosomes of the rarefaction among them; a population with fewer
 individuals than the minimum is left out of that second call; the key
 version is 3, and the check numbers stay as they were. The revision for
@@ -119,8 +120,7 @@ rarefaction draws by default the ploidy times the minimum number of
 individuals, with a field to change it (decision 5); the proportion of
 polymorphic variants is not rarefied (decision 6); and a population
 with fewer individuals than the minimum is left out of the call that
-gives the private alleles (decision 7). Each is written below where it
-applies.
+gives the private alleles (decision 7).
 
 Three words of the documents are used throughout. The **key** of a
 result is a hash of everything it was calculated from; the store shows a
@@ -241,16 +241,21 @@ columns (below, "What goes into its key"). Stage 5 does not wait for it.
 How long the second pass takes is measured by the plan of stage 5
 (`docs/specs/stage-5-open-points.md`, "Set by a measurement").
 
-The folded site frequency spectrum, which `calcPopDiversity` gives as
-well, is an analysis of its own with its own spec,
-`docs/specs/analyses/sfs.md`. The diversity's call does not share a pass
-with it: each analysis is one job under its own key
-(`docs/architecture.md`, section 4), and the diversity does not ask for
-`folded_sfs`. A user who runs both reads the file three times, twice
-once popnei issue #4 is closed. The option not taken, one job for both,
-would be a job of two analyses, which the architecture does not have,
-and whose results would go stale together at a change of the options
-of either.
+The folded site frequency spectrum of each population, which
+`calcPopDiversity` gives as well, is a statistic of the diversity's
+call, as `docs/specs/analyses/sfs.md` gives it and recommends in its
+**Open 1**, which the owner decides: the job asks for `folded_sfs`
+beside the rest, at the same draw and in the same pass, and the panel
+draws the spectra in a block below the table. popnei gives it in that
+call for 0.1 to 0.3 ms more on `panel.nei` held in memory, and no pass
+more (`sfs.md`, "What it does"). The other answer makes the spectrum an
+analysis of its own, with its job, its pass and its Run, and this spec
+then asks popnei for no `folded_sfs`, carries no `foldedSfs`, appends no
+warnings of the spectrum and has no block below its table: a user who
+wants both reads the file three times today, twice once popnei issue #4
+is closed. Until the owner decides, this spec is written with the
+spectrum in it, and the spectrum's module is `src/core/analyses/sfs.ts`
+of that spec, which this module calls.
 
 What a user would see go wrong because of this module, and what each rule
 below prevents: a table of other settings shown as current, when the key
@@ -561,17 +566,19 @@ September 2026: a Run that could only fail taught nothing the line of
 the ready state did not already say. While the list waits for the
 statistics, a Run calculates them first, and then ends locked with those
 words, the Run not sent (`docs/specs/shell.md`, "Diversity was not
-run"). For the one population, `keptNeeds` gives
-`null`: every individual kept is in it, and filters that keep none are
+run"). For the one population, `keptNeeds` gives no reason of this
+kind: every individual kept is in it, and filters that keep none are
 locked first, with the words of `keptNoneReason`.
 
 From stage 5 `keptNeeds` gives a second reason, after that one, for the
 one population too: a draw larger than the chromosomes of the
 individuals kept. popnei refuses it, and only once it has read the
-file: a draw of 401 over the 400 chromosomes of the 200 individuals of
-`panel.nei` was refused after the two calls of its progress that a
-whole pass gives (node 26.8.2, `js-v0.1.0-dev.3`, 30 September 2026),
-so the user would wait two passes for a refusal. popnei counts the
+whole file: a call of `calcPopDiversity` with a draw of 401 over the 400
+chromosomes of the 200 individuals of `panel.nei` told its progress to
+the end of the file before it threw (node 26.8.2, `js-v0.1.0-dev.3`, 30
+September 2026). In the diversity's job that call is the second, so a
+user would wait for both passes to be told the draw is too large. The
+lock is decided by the writer of this revision. popnei counts the
 individuals of its pass, those `filterIndividuals` keeps: a draw of 40
 over a list of 15 was refused, "the largest draw this dataset allows is
 30". So the lock counts the list kept, or every individual of the file
@@ -669,11 +676,12 @@ changes no value of them; then, from stage 5, when `popDiversityPops` is
 not empty, it calls `calcPopDiversity(variants, { pops:
 Object.fromEntries(pops of popDiversityPops), stats, numCalledAlleles,
 minNumIndividuals })` over the same steps, `stats` being `["num_alleles",
-"fis", "private_alleles"]`, or the first two when `popDiversityPops`
-holds one population; and it answers with the result below, every
+"fis", "private_alleles", "folded_sfs"]`, or without `private_alleles`
+when `popDiversityPops` holds one population (`folded_sfs` for the
+spectrum of `docs/specs/analyses/sfs.md`, above); and it answers with the result below, every
 array in the order of the populations of the request, the six of
-`calcPopDiversity` NaN, and its counts 0, for a population not given to
-it.
+`calcPopDiversity` NaN, its counts 0, and its spectrum `null`, for a
+population not given to it.
 
 The progress of the two calls is one run of two passes: the runner
 tells the first call's as `pass` 1 and the second's as `pass` 2, with
@@ -706,9 +714,19 @@ refusal.
   numVarsEveryPop: number | null, // null when the private alleles were not asked
   numVarsEveryPopInDraw: number | null,
   numCalledAlleles: number,       // the draw of the request, which the columns name
+  foldedSfs: readonly (Float64Array | null)[], // foldedSfs of each population, by its
+                                  // name, in the request's order; null when not given
   passStats: PassStats,           // popnei's counts of the first pass
 }
 ```
+
+`numVarsInDraw` is, for each population, the variants at which it has
+a value and called at least the draw, the divisor of its rarefied
+alleles; at the default draw it equals `numVarsWithValue`. When no
+population is given to `calcPopDiversity`, the six arrays of its
+numbers are NaN, `numVarsInDraw` 0, `numVarsEveryPop` and
+`numVarsEveryPopInDraw` `null`, and every entry of `foldedSfs` `null`;
+`numCalledAlleles` is the draw of the request in every case.
 
 `privateAllelesTotal` is a `Float64Array` and not popnei's
 `Uint32Array`, so that a population without private alleles has NaN,
@@ -737,8 +755,8 @@ by a threshold is told by popnei's refusal ("Its words"). Of the
 refusals of `calcPopDiversity`, a draw below 2 cannot be given, since
 `parseOptions` and the field take none; a draw above the chromosomes of
 the individuals kept is locked by `keptNeeds`; a call with no
-population is not made; and the spectrum, which needs a draw, is not
-asked for. The two it cannot see are the filters keeping no variant, "the
+population is not made; and the spectrum, which needs a draw, is
+asked for only with the draw that every request carries. The two it cannot see are the filters keeping no variant, "the
 pass gave no variant: its source gave 1200 and the steps kept none of
 them, ...", and a variants file that holds none, "the pass gave no
 variant and its source holds none: ...", which is also the refusal of a
@@ -796,6 +814,24 @@ individuals of p0 in the panel of the flow below, `s000` to `s071` in
 the order of the file, with the missing data filter at 0.05: popnei gave
 it a value at 641 of the 1,152 variants kept, and at 653 of the 1,200
 with no filter (node, 25 September 2026, `js-v0.1.0-dev.2`).
+
+After these, `warnings` appends `spectrumWarnings(r, p)` of
+`docs/specs/analyses/sfs.md`, the warnings of the spectrum, while the
+spectrum is part of the diversity (its **Open 1**).
+
+A MAF filter of the Variants step raises no warning on the table,
+decided on 30 September 2026 by the writer of this revision. The filter
+removes the variants whose commonest allele, over all the individuals
+kept, is above its threshold, so it raises the heterozygosities, the
+proportion of polymorphic variants and the alleles of every population
+over the variants it leaves; but every filter changes which variants
+the means are over, the caption of the table says they are over the
+variants the filters kept, the MAF filter is off by default in the
+population genetics application (`docs/functionality.md`, section 3),
+and the help says what it does to the table. The spectrum, whose first
+bins it empties, warns (`sfs.md`, `mafFilterOnSpectrum`). The option
+not taken was a warning on the table as well, which would be raised
+for a filter the user turned on.
 
 The warnings of stage 5 follow the rule the owner set for
 `variantsWithoutValue`: `privateAllelesOverFewerVariants` and
@@ -889,7 +925,11 @@ table = pandas.DataFrame({
 # alleles of the others. A private allele needs two populations.
 large = {pop: names for pop, names in pops.items() if len(names) >= 20}
 if large:
-    stats = [popnei.PopDiversityStat.NUM_ALLELES, popnei.PopDiversityStat.FIS]
+    stats = [
+        popnei.PopDiversityStat.NUM_ALLELES,
+        popnei.PopDiversityStat.FIS,
+        popnei.PopDiversityStat.FOLDED_SFS,
+    ]
     if len(large) > 1:
         stats.append(popnei.PopDiversityStat.PRIVATE_ALLELES)
     diversity = popnei.calc_pop_diversity(
@@ -917,7 +957,11 @@ by the module, since with a threshold on the individuals the module
 does not know it until the statistics of each individual are
 calculated, and the script is made from the project. popnei's Python
 `calc_pop_diversity` takes the members of `PopDiversityStat` in `stats`,
-and refuses their names as text. These
+and refuses their names as text. The result of `calc_pop_diversity`
+is named `diversity`, since the lines of the spectrum
+(`docs/specs/analyses/sfs.md`, "Its lines of the Python script") follow
+these and read `diversity.folded_sfs`; they go inside the `if large:`,
+where `diversity` is defined. These
 lines, run with popnei's Python package on 25 September 2026 over the
 files of the flow with the filter at 0.05, printed the numbers of the
 table below, and, as revised for stage 5, on 30 September 2026 with the
@@ -989,13 +1033,16 @@ export interface DiversityResult {
   readonly numVarsEveryPop: number | null;
   readonly numVarsEveryPopInDraw: number | null;
   readonly numCalledAlleles: number;
+  readonly foldedSfs: readonly (Float64Array | null)[];
   readonly passStats: PassStats;
 }
 ```
 
 The check of the result in `messages.md` holds each new array to the
-length of `pops`, as the others, and `numVarsEveryPop` and
-`numVarsEveryPopInDraw` to `null` together.
+length of `pops`, as the others, `numVarsEveryPop` and
+`numVarsEveryPopInDraw` to `null` together, and `foldedSfs` to one
+entry per population, each `null` or of `floor(numCalledAlleles / 2) +
+1` values.
 
 The module exports its definition, an `AnalysisDef` of
 `docs/specs/core/store.md`, the object of functions and constants by
@@ -1207,9 +1254,10 @@ change of a threshold does not walk the table again. The result is a few
 arrays of one number per population, a few hundred bytes. popnei makes
 one pass over the file, reading the `File` by ranges
 (`docs/specs/worker/runner.md`, "The memory"), and from stage 5 two,
-one for each call, until popnei issue #4 is closed; so a Run of the
-diversity takes about twice the time of a Run of stage 4, a gzipped VCF
-decompressed twice. The result of stage 5 is a few arrays more, of one
+one for each call, until popnei issue #4 is closed: a Run of the
+diversity reads the file, and decompresses a gzipped VCF, twice where
+stage 4 read it once, and the time it takes is measured by the plan of
+stage 5. The result of stage 5 is a few arrays more, of one
 number per population.
 
 ### How it is verified
@@ -1477,7 +1525,8 @@ for each population. With the filter at 0.05 and:
 - **p0 cut to its first 12 individuals** and left out, the call over p2
   and p1: private alleles 22 and 16, per variant 0.019097222222222224
   and 0.013888888888888888, rarefied 0.038418511541450096 and
-  0.037124162585145296; the other numbers of p2 and p1 as above. Left
+  0.037124162585145296; their other numbers as in the first table of
+  stage 5, above. Left
   in: `numVarsEveryPop` 0, and the private alleles of all three 0, with
   NaN per variant.
 - **"All individuals"**, the 200 in one population, with the private
@@ -1498,8 +1547,9 @@ for each population. With the filter at 0.05 and:
   individuals at a ploidy of 2…", after the whole pass; 40 over a list
   of 15, "…is 30…".
 
-`numPassesOf("calcPopDiversity")` is 1, and its progress over
-`panel.nei` was the two calls of every pass, `bytesRead` 0 and 259,376.
+`numPassesOf("calcPopDiversity")` is 1, and over `panel.nei` popnei told
+its progress twice, as for every pass of that file, with `bytesRead` 0
+and 259,376.
 
 The Vitest test of the runner, in node with popnei, asserts these
 numbers as literals. The Playwright flow asserts them as the screen shows
@@ -1524,7 +1574,9 @@ runner asserts the table above, from a job whose `individuals` are the
 
 From stage 5 the test of the runner asserts the numbers of stage 5 as
 literals, with the tables of stages 2 and 3 they extend: the two sets,
-the list of 111, "All individuals" without the private alleles, and p0
+the list of 111, "All individuals" with its F and alleles, and NaN in
+its three cells of private alleles and `numVarsEveryPop` `null`, since
+the job does not ask for them, and p0
 cut to 12, with `popDiversityPops` `["p2", "p1"]`, whose result has NaN
 in the six new cells of p0 and the private alleles of p2 and p1 above;
 and that the progress of a job of two calls goes `pass` 1 then 2 of
@@ -1575,7 +1627,8 @@ fields, each a command of `setAnalysisOptions` with the options of
   under it "The default: the ploidy, 2, times the minimum number of
   individuals, 20. The alleles and the private alleles of every
   population are also given for a draw of this many chromosomes, so
-  that populations of different sizes can be compared."; once a number
+  that populations of different sizes can be compared, and the site
+  frequency spectrum below the table is of the same draw."; once a number
   is typed, the line "Typed; the default would be 40." and a button
   "Use the default", which sends `numCalledAlleles` `null`. A number
   typed that is the default's is kept as typed, so the field does not
@@ -1667,7 +1720,7 @@ page shows it beside the download: "Rarefied to 40 chromosomes."
 | locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the individuals kept are known, when the filters keep no individual, or leave no population, in its words (`docs/specs/core/store.md`), or, from stage 5, when the draw is larger than their chromosomes, whose words send the user to the field of this panel; the three fields | go to the step the reason names; change the draw |
 | ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds."; from stage 5, the three fields above the Run button | Run; change the options |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and, from stage 5, "Calculating · pass 1 of 2 · 17% · 0:12" while the job makes two passes, the share being of the whole run; and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`); the three fields, from stage 5 | Stop, which cancels it, and the statistics with it; change the options |
-| done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings"; after an opened project file, the comparison with its check numbers under the table | download |
+| done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings", the spectrum's among them; after an opened project file, the comparison with its check numbers under the table; from stage 5, below the table, the block of the site frequency spectrum of `docs/specs/analyses/sfs.md`, "The block of the panel" | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
 
@@ -1748,9 +1801,10 @@ two, one for each call, which the runner tells as passes 1 and 2 of 2
 file ends a little below the size of the file, 259,376 of the 261,490
 bytes of `panel.nei`, since popnei does not read its head
 (`docs/specs/worker/runner.md`, "Progress"), so the bar may stop at 99%
-and the result replaces it, at the end of the second pass. The words
-"pass 1 of 2" say why the bar, which reaches 49% at the end of the first
-pass, goes on from there and does not start again; until stage 5 no run
+and the result replaces it, at the end of the second pass. The bar is
+of the whole run: it is at 49% when the first pass ends over
+`panel.nei`, and the second pass takes it on from there; "pass 1 of 2"
+and "pass 2 of 2" beside it say which pass is reading. Until stage 5 no run
 made two passes, since the PCA asks popnei for no weights of the
 variants and reads the file once (`docs/specs/analyses/pca.md`, "The
 request").
@@ -1875,7 +1929,9 @@ export function ldOrderText(
   p: Project,
   filter: { readonly name: string; readonly turnOff: string },
 ): string | null;
-``` A VCF is refused
+```
+
+A VCF is refused
 at the first pass and not at its open for its ploidy and for a line it
 cannot read, since popnei
 opens a VCF by its header and reads its lines only in a pass
@@ -1945,7 +2001,10 @@ revised for stage 5:
   population that has a value at fewer variants than the filters kept,
   which its warning reports, has its means over other variants than
   the rest, and a stricter missing data filter keeps the variants most
-  individuals have called; an allele private among the populations of
+  individuals have called; a MAF filter of the Variants step removes
+  the variants whose rarer allele is rare over all the individuals, so
+  it raises the heterozygosities, the proportion of polymorphic variants
+  and the alleles of every population; an allele private among the populations of
   the file may be found in a population that was not sampled; the
   heterozygosities are over the variants of the file, not per site of
   the genome, and cannot be compared with values over all sites, nor
@@ -2209,9 +2268,12 @@ are made in those documents and not here:
   "Rarefaction", that the warning comes when a population reaches the
   draw at fewer variants than it has a value at, which only a draw
   larger than the default gives, in place of "at few of its variants".
-- `docs/specs/analyses/sfs.md`, written beside this revision: the
-  diversity does not ask for `folded_sfs` and shares no pass with the
-  spectrum (above, "What it does").
+- `docs/specs/analyses/sfs.md`, written beside this revision: nothing
+  more; this spec takes what that spec asks of it, the spectrum in the
+  call, `foldedSfs` in the result, its warnings appended and its block
+  below the table, the default draw at 2 or more, the script's result
+  named `diversity`, and a decision on the MAF filter (above, "The
+  warnings"), while its **Open 1** is the owner's.
 - `docs/specs/stage-5-open-points.md`: nothing to decide; the time of
   the second pass, under "Set by a measurement", is this spec's.
 
@@ -2245,17 +2307,36 @@ of the individuals kept: a change of the interface of section 4 of the
 architecture that would lock only when the statistics are already in the
 page, the case the ready state already names.
 
-The revision of stage 5 opens no point for the owner: the five
-decisions it rests on are the owner's of 30 September 2026, and what it
-decides beyond them is written where it applies, with that the writer
-decided it: no private alleles with one population in the call ("The
-populations"), the check numbers as they were ("The check numbers"),
-and the columns of the table and their order ("What it shows").
+The revision of stage 5 opens no point for the owner of its own. It
+rests on the owner's five decisions of 30 September 2026, and on
+**Open 1** of `docs/specs/analyses/sfs.md`, whether the site frequency
+spectrum is part of the diversity, as this spec is written meanwhile,
+or an analysis of its own, which would take `folded_sfs`, `foldedSfs`,
+the spectrum's warnings and its block out of this spec ("What it
+does"). The writer decided these beyond them, each written where it
+applies; the owner may answer any of them otherwise:
+
+- No private alleles when one population alone is in the call ("The
+  populations"). Otherwise the table shows every allele called as
+  private, 2,304 for "All individuals" of `panel.nei`.
+- The check numbers as they were ("The check numbers"). Otherwise every
+  project file of stages 2 to 4 with a diversity is refused at the
+  opening, unless `numCheckNumbers` learns to read the key version saved.
+- The lock of a draw larger than the chromosomes of the individuals
+  kept ("Why it cannot run"). Otherwise the user waits two passes for
+  popnei's refusal.
+- The eleven columns, F after the proportion of polymorphic variants,
+  and the total of the private alleles beside their means ("What it
+  shows"). Otherwise the first five columns of the CSV are no longer
+  those of stages 2 to 4.
+- No warning of a MAF filter on the table ("The warnings"). Otherwise
+  a warning for a filter the user turned on.
 
 ## Not in this spec
 
-- The folded site frequency spectrum, which `calcPopDiversity` also
-  gives: `docs/specs/analyses/sfs.md`.
+- The folded site frequency spectrum, which the same call gives: its
+  module, its warnings, its block of the panel and its lines of the
+  script are `docs/specs/analyses/sfs.md`.
 - The histograms of the statistics of each population, which this
   spec placed in stage 5 until 30 September 2026: stage 5 of
   `docs/build-order.md` does not name them, and no stage has them.
