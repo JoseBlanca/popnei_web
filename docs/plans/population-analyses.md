@@ -312,7 +312,7 @@ the project file (`projectFile.md`).
   the browser check of the start, and passed 40 times out of 40 alone; it
   is made to wait for the scroll of the table's box before the plan's
   first browser check.
-  - [ ] 0.1 That flow made steady, in a commit of its own.
+  - [x] 0.1 That flow made steady, in a commit of its own.
 - **What every review of a work package carries**, from the same
   reports: the reviewers that only read run together, reading at a
   commit; `tests`, `browser` and `accessibility`, which run the page,
@@ -360,7 +360,7 @@ filters emptied in the same words.
 
 **Tasks:**
 
-- [ ] 1.1 `populationListsNeeds` and `populationsKeptNeeds` moved into
+- [x] 1.1 `populationListsNeeds` and `populationsKeptNeeds` moved into
   `src/core/project.ts` from `diversity.ts`, with their tests; and
   `populationsWithMinimum` and `underMinimumText` added (`project.md`,
   "What the analyses per population share from stage 5", its block of
@@ -662,7 +662,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 
 **Tasks:**
 
-- [ ] 4.1 The base: `plot2d.ts` with an axis of names from a band scale,
+- [x] 4.1 The base: `plot2d.ts` with an axis of names from a band scale,
   `xLabelAngle`, `nameFormat`, no text for an empty label, and
   `xWholeNumbers` (`plot2d.md`, "The axes" and "The TypeScript
   interface"); the tokens `--chart-text-on-light` and
