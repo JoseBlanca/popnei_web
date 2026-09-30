@@ -337,6 +337,25 @@ the plan; each is asked of you at the next stop.
     chromosomes…"; and the lock of the draw for one individual, "the one
     individual … holds 2".
 
+17. **The lock of the draw with one haploid individual, `diversity.md`,
+    "Why it cannot run".** The spec says the default draw never locks,
+    since a population of the minimum holds it. In a haploid file at a
+    minimum of 0 or 1, with one individual kept, the default draw is 2
+    chromosomes and the individual holds 1: the whole diversity locks,
+    heterozygosities included, and the user is told to type a draw "of
+    at most 1", which the field refuses. At a minimum of 0 the line of
+    the default draw would also read "2 times 0" while the draw is 2.
+    Recommendation: when the individuals kept hold fewer than 2
+    chromosomes, the first pass runs alone, as when no population has
+    the minimum, with a warning that says why the rarefied columns and
+    the spectrum are empty; and the line of the default says "at least
+    2". For stop B.
+18. **For stage 6, the diversity's script needs the variants file
+    read.** Its draw by default is the file's ploidy times the minimum,
+    so `script` of a project opened without its variants file loaded
+    would stop with an error. The spec guards it with "asked only for an
+    analysis that has run"; stage 6 has to keep to that.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
