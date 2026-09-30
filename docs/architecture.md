@@ -2482,8 +2482,8 @@ the same numbers for everything else but the size of a written file.
   are counted over the individuals kept (section 4): the histograms need
   a pass again, the pass of a check, and the counts come back with the
   next analysis or Count. The pass of the histograms is one call of
-  `calcPerVarDistribs`, as the diversity's is, which took 248 ms in
-  Chromium 153 and 243 ms in WebKit 26.6 over a VCF of 80,692,954 bytes
+  `calcPerVarDistribs`, as the diversity's first call is and its whole
+  run was in stage 4, which took 248 ms in Chromium 153 and 243 ms in WebKit 26.6 over a VCF of 80,692,954 bytes
   on the owner's Mac (`docs/plans/variants-step.report.md`, "The Count
   against the diversity"); the histograms themselves were not timed, and
   over a gzipped VCF of gigabytes the pass takes minutes. The user sets the individuals first, in the

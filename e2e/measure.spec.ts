@@ -2106,11 +2106,13 @@ test.describe("VS5 D5 the measurements of the write", () => {
 // ---------------------------------------------------------------------
 // The Count against the diversity (VS6 D3).
 
-/** The time of one pass of `what`, the Count or the diversity, with the
-    missing data filter at 0.05, on a new page with `file` just loaded,
-    from the run posted to the calculation worker to its answer: the
-    filter put on the Variants opened at the load, and a pass. */
-async function passOnce(
+/** The time of one run of `what`, the Count, one pass, or the
+    diversity, two passes from stage 5 when a population has the minimum
+    of individuals, with the missing data filter at 0.05, on a new page
+    with `file` just loaded, from the run posted to the calculation worker
+    to its answer: the filter put on the Variants opened at the load, and
+    the passes. */
+async function runOnce(
   browser: Browser,
   file: string,
   pops: string,
@@ -2157,7 +2159,7 @@ async function passOnce(
   }
 }
 
-test("VS6 D3 the Count against the diversity: a pass of each with the same filters, on the VCF of 80,692,954 bytes and the .nei file of 19,161,178 bytes", async ({
+test("VS6 D3 the Count against the diversity: a pass of the Count and a run of the diversity, two passes from stage 5, with the same filters, on the VCF of 80,692,954 bytes and the .nei file of 19,161,178 bytes", async ({
   browser,
   browserName,
 }) => {
@@ -2168,11 +2170,11 @@ test("VS6 D3 the Count against the diversity: a pass of each with the same filte
     const file = files[which];
     const counts: number[] = [];
     const diversities: number[] = [];
-    // Each pass on a new page, the Count and the diversity in turn, so
+    // Each run on a new page, the Count and the diversity in turn, so
     // that neither finds the Variants of the other already opened.
     for (let k = 0; k < REPEATS; k++) {
-      counts.push(await passOnce(browser, file, files.pops, "count"));
-      diversities.push(await passOnce(browser, file, files.pops, "diversity"));
+      counts.push(await runOnce(browser, file, files.pops, "count"));
+      diversities.push(await runOnce(browser, file, files.pops, "diversity"));
     }
     rows.push([
       `${which === "vcf" ? "VCF" : ".nei file"} of ${statSync(file).size.toLocaleString("en-US")} bytes`,
@@ -2183,13 +2185,13 @@ test("VS6 D3 the Count against the diversity: a pass of each with the same filte
   }
   report(
     "The Count against the diversity, with the missing data filter at 0.05",
-    `${machine(browser, browserName)}; ${String(REPEATS)} passes of each, each on a new page just after the load, from the run posted to the calculation worker to its answer`,
+    `${machine(browser, browserName)}; ${String(REPEATS)} runs of each, the Count one pass and the diversity two from stage 5, each on a new page just after the load, from the run posted to the calculation worker to its answer`,
     [
       "file",
       "Count, median",
       "Count, range",
-      "diversity, median",
-      "diversity, range",
+      "diversity, two passes, median",
+      "diversity, two passes, range",
       "Count / diversity",
     ],
     rows,
