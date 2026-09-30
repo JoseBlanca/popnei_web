@@ -84,6 +84,14 @@
  * the distances of MEASURE_LD_DENSE, until a tab closes or popnei
  * refuses. A tab that closes is the outcome of its case.
  *
+ * And the time of the distances between populations (PA5 D3, the
+ * open-points file of stage 5, "Set by a measurement";
+ * docs/specs/analyses/popDists.md, "How it runs"), in both engines, each
+ * run from its panel on a new page just after the load: panel.nei and the
+ * .nei file of 19,161,178 bytes, each with three populations and with
+ * twenty, from the run posted to the calculation worker to its answer,
+ * and from the answer to the table of the pairs seen.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -3666,4 +3674,202 @@ test.describe("PA2 D7 the memory and the time of the LD decay", () => {
       rows,
     );
   });
+});
+
+// ---------------------------------------------------------------------
+// The time of the distances between populations (PA5 D3).
+
+/** The CSV of the 200 individuals of panel.nei in twenty populations of
+    ten, in the order of panel_pops.csv: q0 its first ten, q1 the next. */
+function panelTwentyPops(): string {
+  const individuals = readFileSync(join(FIXTURES, "panel_pops.csv"), "utf8")
+    .split("\n")
+    .slice(1)
+    .filter((l) => l !== "")
+    .map((l) => l.split(",")[0] ?? "");
+  expect(individuals).toHaveLength(200);
+  const rows = individuals.map(
+    (individual, i) => `${individual},q${String(Math.floor(i / 10))}\n`,
+  );
+  return `IID,pop\n${rows.join("")}`;
+}
+
+/** One case of the distances: a variants file, its metadata file, the
+    column of the populations, and the minimum typed before the Run, when
+    the default of 20 would leave populations out. */
+interface PopDistsCase {
+  readonly file: string;
+  /** The variants file, as the table names it. */
+  readonly what: string;
+  readonly pops: string;
+  readonly column: string;
+  readonly numPops: number;
+  readonly minimum: string | null;
+}
+
+/** What one run of the distances gave. */
+interface PopDistsRun {
+  /** The answer that ended the request. */
+  readonly answer: string;
+  /** From the run posted to the calculation worker to its answer. */
+  readonly runMs: number;
+  /** From the answer to the table of the pairs seen, which the test
+      polls, so to within the time of a poll. */
+  readonly drawnMs: number;
+}
+
+/** Runs the distances once, on a new page with the case loaded, and
+    times the request to the calculation worker. */
+async function popDistsOnce(
+  browser: Browser,
+  c: PopDistsCase,
+): Promise<PopDistsRun> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await load(page, c.file, c.pops, c.column);
+    await goTo(page, "Analyses");
+    const distances = page.getByRole("region", {
+      name: "Distances between populations",
+      exact: true,
+    });
+    if (c.minimum !== null) {
+      const field = distances.getByLabel(
+        "Individuals with a called genotype needed in each population, per variant",
+      );
+      await field.fill(c.minimum);
+      await field.press("Enter");
+      await expect(field).toHaveValue(c.minimum);
+    }
+    await expect(
+      distances.getByText(new RegExp(`^${String(c.numPops)} populations: `)),
+    ).toBeVisible();
+    const before = (await logOf(page)).length;
+    await distances.getByRole("button", { name: "Run", exact: true }).click();
+    let ended: readonly Logged[] = [];
+    await expect
+      .poll(
+        async () => {
+          ended = (await logOf(page)).slice(before).filter(isCalc);
+          return ended.some((l) => l.event === "in" && ENDS.has(l.kind));
+        },
+        { timeout: 600_000, intervals: [50] },
+      )
+      .toBe(true);
+    const run = ended.find((l) => l.event === "out" && l.kind === "run");
+    const answer = ended.find((l) => l.event === "in" && ENDS.has(l.kind));
+    if (run === undefined || answer === undefined) {
+      throw new Error("no run, or no answer to it, in the log of the worker");
+    }
+    await expect(distances.getByRole("table")).toBeVisible({
+      timeout: 60_000,
+    });
+    const drawn = await page.evaluate(() => performance.now());
+    // Every pair of the populations is a row of the table.
+    await expect(distances.getByRole("rowheader")).toHaveCount(
+      (c.numPops * (c.numPops - 1)) / 2,
+    );
+    return {
+      answer: answer.kind,
+      runMs: answer.t - run.t,
+      drawnMs: drawn - answer.t,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+test("PA5 D3 the time of the distances between populations: panel.nei and the .nei file of 19,161,178 bytes, with three populations and with twenty", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(3_600_000);
+  const big = await bigFiles();
+  const bigTwenty = join(MEASURE_DIR, "big_pops20.csv");
+  await writeFile(bigTwenty, bigVcfPopsCsv(1000, 50));
+  const panelTwenty = join(MEASURE_DIR, "panel_pops20.csv");
+  await writeFile(panelTwenty, panelTwentyPops());
+  const panelNei = join(FIXTURES, "panel.nei");
+  const panelWhat = "panel.nei, 1,200 variants of 200 individuals";
+  const bigWhat = `.nei file of ${BIG_NEI_BYTES.toLocaleString("en-US")} bytes, 20,000 variants of 1,000 individuals`;
+  const cases: readonly PopDistsCase[] = [
+    {
+      file: panelNei,
+      what: panelWhat,
+      pops: join(FIXTURES, "panel_pops.csv"),
+      column: "popcat",
+      numPops: 3,
+      minimum: null,
+    },
+    {
+      file: panelNei,
+      what: panelWhat,
+      pops: panelTwenty,
+      column: "pop",
+      numPops: 20,
+      minimum: "10",
+    },
+    {
+      file: big.nei,
+      what: bigWhat,
+      pops: big.pops,
+      column: "pop",
+      numPops: 3,
+      minimum: null,
+    },
+    {
+      file: big.nei,
+      what: bigWhat,
+      pops: bigTwenty,
+      column: "pop",
+      numPops: 20,
+      minimum: null,
+    },
+  ];
+  const loadBefore = machineLoad();
+  const rows: string[][] = [];
+  for (const c of cases) {
+    const runs: PopDistsRun[] = [];
+    for (let k = 0; k < REPEATS; k++) {
+      const ran = await popDistsOnce(browser, c);
+      expect(ran.answer).toBe("result");
+      runs.push(ran);
+    }
+    const times = runs.map((r) => r.runMs);
+    const drawn = runs.map((r) => r.drawnMs);
+    // A number in every column: each time measured, a request that took
+    // no time being one that was not timed.
+    for (const x of [...times, ...drawn]) {
+      expect(Number.isFinite(x)).toBe(true);
+      expect(x).toBeGreaterThanOrEqual(0);
+    }
+    for (const x of times) expect(x).toBeGreaterThan(0);
+    rows.push([
+      c.what,
+      String(c.numPops),
+      String((c.numPops * (c.numPops - 1)) / 2),
+      c.minimum ?? "20",
+      ...stats(times, ms),
+      ...stats(drawn, ms),
+    ]);
+    process.stdout.write(`${rows.at(-1)?.join(" | ") ?? ""}\n`);
+  }
+  for (const r of rows) {
+    for (const cell of r) expect(cell).toMatch(/\d/);
+  }
+  report(
+    "PA5 D3 the time of the distances between populations",
+    `${machine(browser, browserName)}; the load of the machine, uptime's averages of 1, 5 and 15 minutes, ${loadBefore} before and ${machineLoad()} after; ${String(REPEATS)} runs of each case, each on a new page just after the load, the filters of a new project, the missing data at 0.1; the three populations of panel.nei are those of popcat, 48, 84 and 68 individuals, and those of the large file 334, 333 and 333; the twenty are of 10 and of 50 individuals, in the order of the file`,
+    [
+      "variants file",
+      "populations",
+      "pairs",
+      "minimum of individuals",
+      "run to answer, median",
+      "run to answer, range",
+      "answer to table seen, median",
+      "answer to table seen, range",
+    ],
+    rows,
+  );
 });
