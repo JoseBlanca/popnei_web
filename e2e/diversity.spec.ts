@@ -443,10 +443,10 @@ test("WS8 D2 at 0.05 the download panel.diversity.csv holds the table, and the v
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("panel.diversity.csv");
   expect(await readFile(await download.path(), "utf8")).toBe(
-    "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic\n" +
-      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444\n" +
-      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778\n" +
-      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112\n",
+    "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied\n" +
+      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,-0.011344341019483117,1.9791666666666667,1.9646163579517928,0,0,0.0028348059148665707\n" +
+      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,-0.020803811522959625,1.9861111111111112,1.9595644507442256,1,0.0008680555555555555,0.0031646710919597015\n" +
+      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,-0.017724256612463796,1.9809027777777777,1.9582701017879214,0,0,0.002521711046320405\n",
   );
 });
 
