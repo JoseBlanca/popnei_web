@@ -1,7 +1,7 @@
 # The LD decay of each population
 
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
-analyses of the populations. There is no code of it yet. This spec
+analyses of the populations. This spec
 gives the analysis that shows, for each population, how the linkage
 disequilibrium between two variants falls as the distance between them
 grows, and the distance at which it has fallen to half: the module
@@ -272,8 +272,13 @@ minDist, maxDist, numBins, maxAllowedMaf })`, the options object written
 with these keys alone, since the release refuses a key it does not know;
 the populations put back in the order of the job, as for the diversity,
 since popnei gives them in the order the keys of `pops` iterate in; and
-the result below. It checks that popnei gave every population of the
-job, and that the smallest and largest distance of the bins are the
+the result below, whose fields are popnei's: `numVars` from
+`numVarsPerPop`; `smallestDist` and `largestDist` from the `perPop` of
+the first population; `numPairs`, `meanR2` and `sdR2` from the `perPop`
+of each, one after another; `rhoPerBp`, `r2AtZero` and `halfDist` from
+its `decayPerPop`; and `numIndividuals`, the lengths of the populations
+of the job, which is the n popnei takes. It checks that popnei gave
+every population of the job, and that the smallest and largest distance of the bins are the
 same for every population, which they are by popnei's rule; a
 difference is a defect of ours, thrown.
 
@@ -340,13 +345,24 @@ E[r²] = (10 + ρ) / ((2 + ρ) · (11 + ρ))
 ```
 
 `fittedR2(d, rhoPerBp, n)` writes it with the four operations in
-popnei's order, so that at a distance of 0 it gives popnei's `r2AtZero`
+popnei's order,
+
+```ts
+const rho = d * rhoPerBp;
+const twoPlusRho = 2 + rho;
+const elevenPlusRho = 11 + rho;
+const expected = (10 + rho) / (twoPlusRho * elevenPlusRho);
+const ofTheSample = ((3 + rho) * (12 + 12 * rho + rho * rho)) / (n * twoPlusRho * elevenPlusRho);
+return expected * (1 + ofTheSample);
+```
+
+ so that at a distance of 0 it gives popnei's `r2AtZero`
 to the last bit: 0.46942148760330576 at n of 50, the same number, and at
-the half distance 0.5000000000000889 of it (node, `js-v0.1.0-dev.3`, 30
+the half distance a value 0.5000000000000889 times it (node, `js-v0.1.0-dev.3`, 30
 September 2026). n is the individuals the population was sent with, as
 popnei takes it, and not the individuals called at a pair.
 
-`ldDecayCurve(r, i)` gives the curve of the population `i` at
+`ldDecayCurve(r, i, maxDist)` gives the curve of the population `i` at
 `LD_CURVE_POINTS`, 200, distances evenly spaced from 0 to the largest
 distance, both included, as two `Float64Array`s, or `null` when its ρ
 per base pair is NaN. 200 points put one every 3 pixels of a plot 600
@@ -667,10 +683,11 @@ With Vitest, at the functions of the definition, on frozen projects, as
   "The request", with the missing data filter and without the LD pruning
   the project has on.
 - **`fittedR2`**: at 0 with n 50 and any ρ per base pair,
-  0.46942148760330576 exactly; with n 100, 0.46198347107438015 exactly;
+  0.46942148760330576 exactly, for ρ per base pair 0.00029996668947275404
+  and 0.00030848266256738914; with n 100, 0.46198347107438015 exactly;
   at the half distance of `pop_a`, 7548.08187836982, and its ρ per base
-  pair, 0.00029996668947275404, half of 0.46942148760330576 within
-  1e-12 relative; `ldDecayCurve` of a population with NaN gives `null`,
+  pair, n 50, a value whose ratio to 0.46942148760330576 is 0.5 within
+  1e-12; `ldDecayCurve` of a population with NaN gives `null`,
   and otherwise 200 points from 0 to `maxDist`.
 - **The warnings**, from results written as literals: a population of
   12 individuals gives `fewIndividuals` with its words; `numVars` 1
@@ -791,20 +808,26 @@ individuals it will run on, as the PCA's.
 
 - **The plot**, `createLine` of `docs/specs/charts/line.md`, one series
   per population in the order of the result: the mean r² of each bin
-  with a pair, at the middle of the bin, as its points; its fitted
+  with a pair, at the middle of the bin, (smallest + largest) / 2, 1000.5
+  for the bin from 1 to 2,000, as its points; its fitted
   curve, `ldDecayCurve`, as its line; and a mark at its half distance,
   at the height of half of `r2AtZero`, when the half distance is finite
-  and within the largest distance. The horizontal axis runs from 0 to
+  and at most the largest distance. The horizontal axis runs from 0 to
   the largest distance, "Distance between the two variants (bp)"; the
-  vertical from 0 to the largest value drawn, rounded up to a tenth, at
-  most 1, "Mean r² of the pairs". Each entry of the legend reads
-  "pop_a · half at 7,548 bp", or "pop_a · no curve", or "pop_a · half at
-  1,599,810 bp, beyond the plot". The plot draws the first 49
+  vertical from 0 to the largest value of the points and the curves,
+  rounded up to a tenth, at most 1, and 0 to 1 when nothing is drawn,
+  "Mean r² of the pairs". Each entry of the legend reads
+  "pop_a · half at 7,548 bp"; "pop_a · half at 1,599,810 bp, beyond the
+  plot"; "pop_a · no half distance" for a curve with no half distance,
+  fewer than three individuals; "pop_a · no curve" for pairs with no
+  curve; and "pop_a · no pair". The plot draws the first 49
   populations, `MAX_LINE_SERIES`, and a line under it says how many
   more the tables hold.
 - **The table of the populations**, with the caption "The LD decay of
   each population, over the 500 variants of ld.nei the filters kept,
-  pairs up to 100,000 base pairs apart.":
+  pairs up to 100,000 base pairs apart.", the 500 being
+  `passStats.numVars`, before the maximum MAF of each population, which
+  the column Variants gives:
 
 | column | from |
 |---|---|
@@ -814,7 +837,7 @@ individuals it will run on, as the PCA's.
 | Pairs | the sum of its `numPairs` |
 | Half distance (bp) | `halfDist`, in whole base pairs, "no curve" for NaN |
 | r² at distance 0, of the curve | `r2AtZero`, to four decimals |
-| 4Nr per base pair | `rhoPerBp`, to three significant digits |
+| 4Nr per base pair | `rhoPerBp`, the ρ per base pair, to three significant digits |
 
 - **The table of the bins**, the numbers behind the plot, in a tab
   beside it as the histograms of the Variants step have theirs: the
