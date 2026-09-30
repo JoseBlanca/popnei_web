@@ -248,13 +248,21 @@ order does not wait for what exists:
   at which r² falls to half; the folded site frequency spectrum.
 - **Why in this order:** first what popnei computes today, then what it
   is asked for (section 4), so that the stage never waits on popnei.
-- **Needs of popnei:** the private alleles, the rarefaction and the folded
-  SFS with its projection, if they belong in popnei rather than in the
-  application (section 4); none of them was found on popnei's `main` on
-  24 September 2026. The fall of r² with distance, with the distance at
-  which it falls to half, is on `main` since that day, `LdDecay` in
-  `js/popnei/src/ld.ts`, and is in the release `js-v0.1.0-dev.2`, as
-  was checked on 26 September 2026.
+- **Needs of popnei:** none that stops the stage. popnei's release
+  `js-v0.1.0-dev.3`, which the application already installs, has every
+  calculation of it, as checked in its code and by running it on 30
+  September 2026: the distances without standard errors, `calcPopDists`;
+  the PCoA of their matrix, which orders the heatmap, `doPcoa`; F, the
+  private alleles, the rarefaction and the folded SFS with its
+  projection, `calcPopDiversity`; and the fall of r² with distance, with
+  the fitted curve and the distance at which it falls to half,
+  `calcLdAndDistPerPop`. The owner decided on 30 September 2026 that
+  these are popnei's (section 5, point 2). One ask waits, and does not
+  stop the stage: the expected and observed heterozygosities and the
+  proportion of polymorphic variants from `calcPopDiversity`, so that the
+  diversity reads the variants file once (popnei issue #4, asked on 30
+  September 2026); until then the diversity calls `calcPerVarDistribs` as
+  well, a second pass over the file.
 
 ### Stage 6. Taking the work out
 
@@ -305,8 +313,9 @@ order does not wait for what exists:
 | the histogram of the proportion of missing genotypes per variant: decided on 26 September 2026; the missing rate of `calcPerVarDistribs`, in `js-v0.1.0-dev.3` | functionality.md, section 3 | stage 3 |
 | the density of variants along each chromosome: decided on 26 September 2026; `calcVarDensity`, in `js-v0.1.0-dev.3` | functionality.md, section 3 | stage 3 |
 | the PCoA of the Kosman distances between the individuals: asked of popnei by the owner on 27 September 2026; `doPcoaFromVariants`, in `js-v0.1.0-dev.3` | functionality.md, section 11 | stage 4 |
-| the private alleles, the rarefaction, the folded SFS | functionality.md, section 11 | stage 5 |
-| the fall of r² with distance and the distance at which it falls to half: `LdDecay` in `js/popnei/src/ld.ts`, in the release `js-v0.1.0-dev.2` | functionality.md, section 11 | stage 5 |
+| F, the private alleles, the rarefaction, the folded SFS: popnei's, decided by the owner on 30 September 2026; `calcPopDiversity`, in `js-v0.1.0-dev.2` and `js-v0.1.0-dev.3` | functionality.md, section 11 | stage 5 |
+| the fall of r² with distance, its fitted curve and the distance at which it falls to half: popnei's, decided by the owner on 30 September 2026; `calcLdAndDistPerPop`, in `js-v0.1.0-dev.2` and `js-v0.1.0-dev.3` | functionality.md, section 11 | stage 5 |
+| the expected and observed heterozygosities and the proportion of polymorphic variants from `calcPopDiversity`, so that the diversity is one pass: asked of popnei by the owner on 30 September 2026; not in `js-v0.1.0-dev.3` | popnei issue #4 | stage 5, which does not wait for it |
 | the logistic models of the GWAS | popnei, being written | stage 7 |
 | the thinning of the Manhattan and QQ points, and λ | technology.md; worker.md | stage 7 |
 
@@ -314,9 +323,9 @@ For the rows that say "if", whether the calculation belongs in popnei or
 in the application is decided when the stage is planned. The rule is the
 one of the rest of these documents: a number the user is shown is
 popnei's when it is a calculation of population genetics, and the
-application's when it is only arithmetic on popnei's results, such as F
-from the expected and observed heterozygosity, or a filter of individuals
-by a threshold on popnei's statistics per individual.
+application's when it is only arithmetic on popnei's results, such as a
+filter of individuals by a threshold on popnei's statistics per
+individual.
 
 ## 5. Open points
 
@@ -328,8 +337,13 @@ Each is for the owner, and none stops stage 0 but the first.
    LD decays to half are popnei's calculations, by the rule of section 4;
    needed for stage 5. The regions of a BED file are filtered in popnei,
    decided by the owner on 26 September 2026, since the application
-   cannot filter inside popnei's pass over the file. F is settled by that rule: it is the
-   application's arithmetic on popnei's heterozygosities.
+   cannot filter inside popnei's pass over the file. Closed by the owner
+   on 30 September 2026: the rarefaction and the distance at which the LD
+   decays to half are popnei's, as its release `js-v0.1.0-dev.3` gives
+   them, and so is F, popnei's F_IS, "popnei's F". The option not taken
+   for F, the application's 1 − Ho/He on popnei's heterozygosities, was
+   what this point said until then
+   (`docs/specs/stage-5-open-points.md`).
 3. Whether the association application is published with continuous
    traits alone, before popnei has the logistic models, or waits for
    them; needed for stage 7.
