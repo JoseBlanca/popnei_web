@@ -1,6 +1,6 @@
 # Plan: the analyses of the populations
 
-30 September 2026, a draft for the owner, not yet approved. It builds
+30 September 2026, approved by the owner the same day. It builds
 stage 5 of `docs/build-order.md`: the distances between populations,
 Hudson's Fst and Jost's D of each pair, as a heatmap ordered by
 similarity and a table; the diversity whole, with F, the alleles, the
