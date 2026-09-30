@@ -56,7 +56,7 @@ measures, the order of the heatmap. All of it comes from popnei: the
 distances from one call of `calcPopDists` of `js/popnei/src/pop_dists.ts`,
 the order from `correctDistsByLingoes` and `doPcoa` of
 `js/popnei/src/pcoa.ts`, whose numbers are verified in popnei against R
-and pyNei (`docs/specs/dists.md` of popnei). The application computes
+and pyNei (`docs/specs/dists.md` and `docs/specs/pca.md` of popnei). The application computes
 none of the distances.
 
 **The two measures.** `docs/functionality.md` section 7 names Hudson's
@@ -133,8 +133,12 @@ and the result carries it (below, "The request"):
    `correctDistsByLingoes`, then its corrected distances, the field
    `distances` of its result, to `doPcoa`, and orders the populations by
    their projection on the first component, `projections[i ×
-   numComps]` for the population i, from the smallest to the largest; two equal projections
-   keep the order of the file.
+   numComps]` for the population i, from the smallest to the largest.
+   Two populations at distance 0 of each other, and at equal distances
+   of the others, have projections that differ only by rounding, and
+   come in the order the rounding gives, the same in the application
+   and in Python, since both are popnei's; the sort breaks an exact tie
+   by the order of the file.
 6. **A refusal of popnei at step 5** that none of the steps above
    foresaw, "the linear algebra of the analysis could not be done" among
    those `doPcoa` lists, keeps the order of the file. Reason
@@ -189,7 +193,7 @@ same reasons. The key version is 1.
 
 | change to the project | the key |
 |---|---|
-| any row of the diversity's table of its key, but `polyThreshold` | as there |
+| any row of the diversity's table of its key, but those of the diversity's own options | as there |
 | `minNumIndividuals` | changes |
 | `measure` | same |
 
@@ -544,8 +548,9 @@ order is of a matrix of k × k numbers. The time grows with the variants
 and with the pairs, k × (k − 1) / 2; it is not measured, and the plan of
 stage 5 measures it where its code first runs, on `panel.nei` and on the
 `.nei` file of 19,161,178 bytes of `docs/architecture.md` section 13,
-with three populations and with twenty. The result is 3 × 8 bytes a
-pair and the order, a few kilobytes for twenty populations.
+with three populations and with twenty. The result is 20 bytes a pair,
+two distances and a count, and the orders, a few kilobytes for twenty
+populations.
 
 ### How it is verified
 
@@ -565,9 +570,21 @@ With Vitest, at the functions of the definition, as for the diversity:
 - **The warnings**, each with a fake result: the texts of the table for
   one, two and four populations or pairs; `pairsOnFewerVariants` with
   1,151 of 1,152 as "99%"; `jostHaploid` for a load of ploidy 1.
-- **`popDistsHeatmap`** of a result of p0, p2, p1 with the order `[1, 0,
-  2]` gives the names p2, p0, p1 and the matrix in that order; with the
+- **`popDistsHeatmap`** of a fake result of p0, p2, p1 whose order of
+  Fst is `[1, 0, 2]` and of D `[2, 1, 0]` gives, for Fst, the names p2,
+  p0, p1 and the matrix in that order, and, for D, p1, p2, p0, so that a
+  heatmap that kept one measure's order for the other fails; with the
   order of the file, the names of the result.
+- **`orderText`** of each row of its table, for each measure;
+  **`popDistsDescription`** of the flow's result, of a result with a
+  pair of no value and of one with none, the texts of "Accessibility";
+  **`popDistsRows`** and **`popDistsCsv`** of the flow's result, the rows
+  and the CSV of "What it shows" as literals, a population named `a,"b"`
+  quoted; **`refusalText`** of popnei's message of an empty pass and of
+  one population, as literals.
+- **`numCheckNumbers`** 7 for the flow's project, and `null` with a
+  threshold on the individuals, with no column of the populations, with
+  the variants file pending, and with one population.
 - **`parseOptions`**: the defaults back; a minimum of 0, 2.5 or
   4,294,967,296, a `measure` `"gst"`, a field missing or more, refused.
 - **`script`** of the flow's project gives the lines above, as a literal.
@@ -587,6 +604,12 @@ heatmap"; the runner's spec keeps the script:
 | the same, the filter at 0.05, 1,152 kept | p0, p2 | 0.10134216885691137 | 0.060374890860149355 | 1,152 |
 | | p0, p1 | 0.10408519979159178 | 0.0629752676321236 | 1,152 |
 | | p2, p1 | 0.109114009609083 | 0.06514219873397088 | 1,152 |
+
+A second case of the runner's test gives the populations the names
+"3", "1" and "2", in that order, for p0, p2 and p1: popnei gives them
+back as "1", "2", "3", and the result must hold them as "3", "1", "2"
+with the values above, pair by pair, and the order "1", "3", "2", so
+that putting the pairs back in the order of the job is tested.
 
 The order of both measures, with either filter, is p2, p0, p1: the
 first components of Fst at 0.1 are −0.009930252327517626 for p0,
@@ -623,8 +646,9 @@ at 25, p0a and p0b are left out, and p2 and p1 keep their pair, Fst
 and WebKit: `panel.nei` and `panel_pops.csv`, the column `popcat`; Run;
 the table reads p0 and p2 0.1027, 0.0613, 1,200; the heatmap's rows are
 p2, p0, p1, read from the order of its names in the SVG; the measure set
-to Jost's D redraws the heatmap with its rows in the order of D, and
-the panel never enters its running state; an undo gives Fst back. Then `panel_split.csv`,
+to Jost's D redraws the heatmap with its title and its values, "0.0613"
+in the cell of p2 and p0, and the panel never enters its running state;
+an undo gives Fst back. Then `panel_split.csv`,
 the column `popsplit`: the warning `negativeDistance` with −0.0113 and
 the rows p0b, p0a, p2, p1; the minimum set to 25: the notice of the
 result removed, the ready state naming p0a and p0b as left out, Run,
@@ -641,15 +665,16 @@ title in the notice, the status region and the links of the step, is
 
 ### What it shows
 
-**Its options**, above the Run button:
+**Its options**, above the Run button, in every state:
 
 | option | control | default |
 |---|---|---|
 | the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 1, the field of React Aria that the PCA's fields use | 20, popnei's default |
 | `measure` | a group of two radio buttons, "Distance in the heatmap": "Hudson's Fst" and "Jost's D" | Hudson's Fst, `docs/functionality.md` section 7 |
 
-The radio buttons are shown in the state done too, beside the heatmap,
-since they change it and nothing else.
+The radio buttons are in that one place, with the minimum, in every
+state, so that the keyboard and a screen reader meet one group; a
+change of them redraws the heatmap below and calculates nothing.
 
 **The heatmap**, `createHeatmap` of `docs/specs/charts/heatmap.md`, of
 `popDistsHeatmap(r, measure)`: a square grid of the populations in the
@@ -657,9 +682,7 @@ order of the measure, each cell coloured by the distance of its pair,
 with the value written in it when the cell is large enough. Its title is
 "Hudson's Fst between populations" or "Jost's D between populations".
 Under it, the line of its order, `orderText`. More than
-`MAX_HEATMAP_NAMES` populations, 200, are not drawn, and the line says
-"The heatmap is drawn for up to 200 populations; the table has the 250
-of this result."
+`MAX_HEATMAP_NAMES` populations, 200, are not drawn (**Open 3**).
 
 **The table**, one row per pair, in the order of the result, which is
 the order of the file, with the caption "Distances between the
@@ -724,9 +747,9 @@ order, `orderText`:
 | `pcoa` | "Ordered so that similar populations are together: by the first axis of a principal coordinate analysis of these distances." |
 | `twoPopulations` | none |
 | `noDistance`, one pair or a few | "In the order of the metadata file: the order by similarity needs a distance for every pair, and p0 and p3 have none." |
-| `noDistance`, no pair | "In the order of the metadata file: no pair has a value of Jost's D." |
+| `noDistance`, no pair | "In the order of the metadata file: no pair has a value of Jost's D.", or of Hudson's Fst, by the measure drawn |
 | `allZero` | "In the order of the metadata file: every distance is 0 or below, so no population is closer to one than to another." |
-| `notPlaced` | "In the order of the metadata file, since popnei could not order them: ‹its message›." |
+| `notPlaced` | "In the order of the metadata file: popnei could not order these distances." popnei's message, which names its arguments and calls the populations individuals, is not shown; the tests of the runner assert it. |
 
 The error state: the rows of the diversity's table ("Its words" of
 `diversity.md`), with "the distances between populations" in the place
@@ -767,7 +790,11 @@ The help, for the help drawer of stage 8:
 - The heatmap is one image to a screen reader, with the description of
   `popDistsDescription`: "Heatmap of Hudson's Fst between 3 populations
   of panel.nei, ordered so that similar ones are together: p2, p0, p1.
-  From 0.1027, between p0 and p2, to 0.1096, between p2 and p1." The
+  From 0.1027, between p0 and p2, to 0.1096, between p2 and p1."; with
+  pairs of no value, "… 2 of the 6 pairs have no value."; with none,
+  "Heatmap of Jost's D between 3 populations of panel.nei, in the order
+  of the metadata file: p0, p2, p1. No pair has a value."; the smallest
+  value may be negative, written with its minus sign. The
   table gives every value to a screen reader and to the keyboard; the
   cells are not stops of the Tab key (`docs/specs/charts/heatmap.md`).
 - The table is the diversity's kind of table, a plain `<table>` in the
@@ -815,7 +842,8 @@ populations.
   fixture of a project with them.
 - `docs/specs/entry.md`: `popDists` in `POPGEN_ANALYSES` of
   `src/core/apps.ts`, after the diversity, in the Analyses step of
-  `POPGEN_ANALYSIS_STEPS`.
+  `POPGEN_ANALYSIS_STEPS`, and its title in `src/ui/analyses/titles.ts`
+  (`docs/architecture.md`, section 4).
 - `docs/specs/shell.md`: the title "Distances between populations" in
   the links of the Analyses step, the notice and the status region, and
   the announcement of a change of the measure.
@@ -838,7 +866,7 @@ populations.
   becomes `"popDists"`.
 - `docs/specs/stage-5-open-points.md`: point 1 of "Opened by the specs"
   settled but for the negative distances, which become this spec's
-  **Open 1**; and **Open 2**.
+  **Open 1**; and **Open 2** and **Open 3**.
 
 ## Open points
 
@@ -884,6 +912,25 @@ Recommended: (a), since (b) makes small differences look large, which
 the principle of `docs/functionality.md` section 2, nothing that
 misleads without warning, rules against; the values in the cells and
 the table show the differences (a) draws small. Meanwhile, (a).
+
+**Open 3: many populations.** The table has a row for each pair, so it
+grows as the square of the populations: 250 populations are 31,125
+rows, and a column of 1,000 names chosen as the populations would be
+499,500, which the table of `src/ui/widgets/Table.tsx`, a row of HTML
+each, would take seconds to draw, not measured. The heatmap draws up to
+200 populations, 19,900 pairs. The options:
+
+- (a) Above 200 populations, neither the heatmap nor the table is
+  drawn; the panel says "The heatmap and the table are shown for up to
+  200 populations, and this result has 250. Download the table as CSV
+  to read it.", and the download is offered.
+- (b) Lock the analysis above 200 populations, in the words of a lock.
+  A user who meant to run it on 250 cannot, in this version.
+- (c) Draw the table whatever its size.
+
+Recommended: (a), since the numbers are calculated and can be taken
+out, and a column of names chosen by mistake shows its count at once.
+Meanwhile, (a).
 
 ## Not in this spec
 

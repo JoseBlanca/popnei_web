@@ -77,11 +77,14 @@ same in both themes and in the file, written on each path as its `fill`
 attribute.
 
 The scale runs from 0 to the largest finite value of the matrix, off
-the diagonal (**Open 1**, below): step `viridisStep(max(v, 0), 0, max)`.
-A negative value, which a distance between two populations the data
-cannot tell apart can be (`popDists.md`), takes the colour of 0, and its
-cell and its tooltip write the value. When no value is above 0, every
-finite cell takes step 0 and the bar of the legend is one band, "0". On
+the diagonal (**Open 1**, below). When that largest value is above 0,
+the step of a value v is `viridisStep(max(v, 0), 0, max)`; a negative
+value, which a distance between two populations the data cannot tell
+apart can be (`popDists.md`), takes the colour of 0, and its cell and its
+tooltip write the value. When no value is above 0, the plot calls no
+`viridisStep`, which gives the middle step, 128, for two equal ends and
+throws for a value above its largest: every finite cell takes step 0,
+and the bar of the legend is one band, "0". On
 `panel.nei` the Fst of the three pairs, 0.1027, 0.1050 and 0.1096, are
 at steps 239, 245 and 255 (node, 30 September 2026, with `viridisStep`
 as `marks.ts` has it).
@@ -89,10 +92,11 @@ as `marks.ts` has it).
 ### The values in the cells
 
 The value is written in the middle of its cell when the band is at least
-`CELL_TEXT_MIN`, 44 pixels, meanwhile, refined in the running
-application: "0.1027" at the 12 pixels of the text of the plots is about
-43 pixels wide at 7.2 pixels a character, the width the scatter's legend
-counts (`scatter.md`, "The export"). Below that the cells hold no text,
+`CELL_TEXT_MIN`, 56 pixels, meanwhile, refined in the running
+application: "−0.0113", the longest value, is about 50 pixels wide at
+the 12 pixels of the text of the plots, 7.2 pixels a character, the
+width the scatter's legend counts (`scatter.md`, "The export"), and the
+cell is the band less its gap of 1 pixel. Below that the cells hold no text,
 and the tooltip and the table beside the plot give the values. The
 format is that of the table of `popDists.md`: four decimals, the minus
 sign U+2212 for a negative value, `heatmapNumber` below.
@@ -121,7 +125,8 @@ fixed numbers made from the data, since nothing in a plot measures text
 (`plot2d.md`, "The SVG and its frame"), at 7.2 pixels a character: left,
 8 pixels and 7.2 for each character of the longest name as it is
 written; bottom, 8 pixels and 0.71 of that width, the slant of 45°, and
-8 more; top, 8; right, the legend's, below. When a band is narrower than
+8 more; top, 24, where the name of the value stands over the legend;
+right, the legend's, below. When a band is narrower than
 12 pixels, the size of the text, the names of that axis are not
 written, since they would overlap, and the description says the order
 in words.
@@ -136,7 +141,7 @@ pixels wide and as high as the grid, at most 240 pixels, the largest
 value at its top and 0 at its bottom, each band a rectangle with its
 `fill`, as the bar of the scatter's exported legend is; the two values
 at its ends, in `heatmapNumber`; the name of the value, `valueName`,
-above it. The right margin is 16 pixels, the bar and 4 pixels, and 7.2
+above it, in the top margin. The right margin is 16 pixels, the bar and 4 pixels, and 7.2
 pixels for each character of the longest of the name of the value and
 the two numbers at the ends.
 
@@ -258,10 +263,10 @@ The screen's CSS gives the element its width, that of its container,
 and meanwhile `aspect-ratio: 1 / 1` and a `max-width` of 40rem, refined
 in the running application. At 40rem, 640 pixels at the default size of
 text, with names of 3 characters and the legend of "Hudson's Fst", the
-margins are about 30 pixels left, 31 below and 118 right, and the grid
-about 490 pixels a side: 3 populations give bands of about 164 pixels,
-with their values written, and 12 populations bands of about 41, just
-below `CELL_TEXT_MIN`. At 320 pixels wide, the width of a phone in WCAG
+margins are about 30 pixels left, 31 below, 24 above and 118 right,
+and the grid about 490 pixels a side: 3 populations give bands of about
+164 pixels, with their values written, 8 populations bands of about 61,
+still with them, and 9 of about 54, without. At 320 pixels wide, the width of a phone in WCAG
 2.2, 1.4.10, the grid is about 170 pixels a side. Its PNG at 3 times is
 1,920 pixels wide at 40rem.
 
@@ -272,7 +277,7 @@ below `CELL_TEXT_MIN`. At 320 pixels wide, the width of a phone in WCAG
 - **Every value NaN**, Jost's D at ploidy 1: every cell crossed, no bar
   but the name of the value and "no value".
 - **No value above 0**: every finite cell the colour of 0, the bar one
-  band.
+  band; `viridisStep` is not called.
 - **A negative value**: the colour of 0, and its number with the minus
   sign in the cell and the tooltip.
 - **An `update` to the other measure, or another order**: the paths are
@@ -290,9 +295,9 @@ below `CELL_TEXT_MIN`. At 320 pixels wide, the width of a phone in WCAG
 
 On the page, in the main thread. The heatmap keeps the bands of its last
 draw and the tooltip; the cells are the SVG's paths, at most 257 of
-them, and at most a few hundred texts, since values are written only
-in bands of 44 pixels or more, at most 11 names in a grid of 490
-pixels. A draw is a loop over the cells.
+them, and at most a few dozen texts, since values are written only
+in bands of 56 pixels or more, at most 8 names in a grid of 490
+pixels, 56 texts. A draw is a loop over the cells.
 
 ## How it is verified
 
@@ -306,10 +311,11 @@ the base: the matrix of Fst of `panel.nei` in the order p2, p0, p1, in
 an element of 640 by 640 pixels, gives three paths of cells, of the
 steps 239, 245 and 255, each with the colour of `viridisColour` of its
 step and two cells, and the six values written, "0.1027" in the cells of
-p2 and p0; the names on the vertical axis read p2, p0, p1 from the top;
+p2 and p0; a matrix whose values are all 0 or below gives one path, of
+step 0, and a bar of one band; the names on the vertical axis read p2, p0, p1 from the top;
 the diagonal has no cell. A matrix with a NaN pair gives the path
 `chart-cell-none` with its two cells crossed; a negative value is of
-step 0 and writes "−0.0113"; a band of 30 pixels writes no value; two
+step 0 and writes "−0.0113"; a band of 55 pixels writes no value; two
 names alike, a matrix not symmetric, one name or 201, throw. A move of
 the pointer to the middle of the cell of p2 and p1 shows the tooltip "p2
 and p1" and "Hudson's Fst 0.1096"; to the diagonal or to a gap, none.
