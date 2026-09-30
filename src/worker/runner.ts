@@ -5,8 +5,9 @@
  * which count over the individuals of the list, runs the
  * diversity, the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
- * filters, and the principal components, a PCA or a PCoA, writes the filtered variants as a `.nei` file, and says what to
- * answer when popnei refuses or something breaks
+ * filters, the principal components, a PCA or a PCoA, and the LD decay of
+ * each population, writes the filtered variants as a `.nei` file, and says
+ * what to answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
@@ -15,6 +16,7 @@
  * under Vitest, given the bytes of a file where the worker gives the `File`.
  */
 import {
+  calcLdAndDistPerPop,
   calcPerIndividualStats,
   calcPerVarDistribs,
   doPcaFromVariants,
@@ -26,6 +28,8 @@ import {
   writeVars,
 } from "popnei";
 import type {
+  LdAndDistPerPop,
+  LdBins,
   PassStats as PopneiPassStats,
   PerVarDistribs,
   StatsDistrib,
@@ -48,9 +52,12 @@ import type {
   IndividualChecksResult,
   Job,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
   LoadFormat,
   Opened,
   PassStats,
+  Pops,
   PcaJob,
   PcaResult,
   Progress,
@@ -257,6 +264,19 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
       return [];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
+    case "ldDecay":
+      return [
+        result.numIndividuals,
+        result.numVars,
+        result.smallestDist,
+        result.largestDist,
+        result.numPairs,
+        result.meanR2,
+        result.sdR2,
+        result.rhoPerBp,
+        result.r2AtZero,
+        result.halfDist,
+      ];
   }
 }
 
@@ -416,6 +436,8 @@ export function createRunner(): Runner {
         return runFilterCounts(pass, job);
       case "pca":
         return runPca(pass, job, individuals);
+      case "ldDecay":
+        return runLdDecay(pass, job);
     }
   }
 
@@ -456,6 +478,7 @@ function stepsOf(job: Job): Steps {
     case "variantChecks":
     case "filterCounts":
     case "pca":
+    case "ldDecay":
       return { individuals: job.individuals, filters: job.filters };
   }
 }
@@ -553,25 +576,18 @@ function putFilter(variants: Variants, filter: VariantFilter): void {
 /** Why the runner cannot run a job, or `null` when it can, all defects of
     the page, checked before any step is put: an empty list of individuals,
     which core never sends, since an analysis cannot start when the filters
-    keep no individual; of a diversity, two populations of one name,
-    of which popnei would keep the last; and of the principal components,
-    fewer than 1 component to keep. */
+    keep no individual; of a diversity and of an LD decay, two populations
+    of one name, of which popnei would keep the last; and of the principal
+    components, fewer than 1 component to keep. */
 function whyNotToRun(job: Job): string | null {
   const why = whyNotTheList(stepsOf(job).individuals);
   if (why !== null) {
     return why;
   }
   switch (job.analysis) {
-    case "diversity": {
-      const names = new Set<string>();
-      for (const [name] of job.pops) {
-        if (names.has(name)) {
-          return `two populations named ${JSON.stringify(name)}`;
-        }
-        names.add(name);
-      }
-      return null;
-    }
+    case "diversity":
+    case "ldDecay":
+      return whyNotThePops(job.pops);
     case "pca":
       return job.numCompsKept < 1
         ? `numCompsKept ${String(job.numCompsKept)}: the principal components keep 1 at least`
@@ -581,6 +597,19 @@ function whyNotToRun(job: Job): string | null {
     case "filterCounts":
       return null;
   }
+}
+
+/** Why the populations cannot be given to popnei, or `null`: two of them
+    share a name. */
+function whyNotThePops(pops: Pops): string | null {
+  const names = new Set<string>();
+  for (const [name] of pops) {
+    if (names.has(name)) {
+      return `two populations named ${JSON.stringify(name)}`;
+    }
+    names.add(name);
+  }
+  return null;
 }
 
 /** Why the runner cannot write a job, or `null` when it can: an empty
@@ -768,6 +797,29 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
+}
+
+/**
+ * Runs `calcLdAndDistPerPop` over the populations of the job and makes the
+ * `LdDecayResult` of it. The options object is written with its keys
+ * alone, since popnei refuses a key it does not know, and the populations
+ * with `Object.fromEntries`, which makes a population named `__proto__` a
+ * field of its own.
+ */
+function runLdDecay(pass: Pass, job: LdDecayJob): Answer<JobResult> {
+  const answer = passOf(pass, (variants) =>
+    calcLdAndDistPerPop(variants, {
+      pops: Object.fromEntries(job.pops),
+      minDist: job.minDist,
+      maxDist: job.maxDist,
+      numBins: job.numBins,
+      maxAllowedMaf: job.maxAllowedMaf,
+    }),
+  );
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  return { kind: "ok", value: ldDecayResultOf(answer.value, job) };
 }
 
 /**
@@ -964,6 +1016,107 @@ function diversityResultOf(
     );
   }
   return result;
+}
+
+/**
+ * The `LdDecayResult` of popnei's result, every array in the order of the
+ * job: the bins' distances copied from the first population, and the
+ * numbers of each population found by its name among popnei's own fields.
+ * Throws a defect when popnei gave no values of a population of the job,
+ * as for a population named `__proto__`, which popnei's result holds as the
+ * parent of its objects and not as a field of theirs; when a population
+ * has another number of bins than the job; and when the distances of the
+ * bins differ between two populations, which popnei's rule makes the same.
+ */
+function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
+  const numPops = job.pops.length;
+  const numBins = job.numBins;
+  const first = job.pops[0];
+  if (first === undefined) {
+    throw new Error(
+      "popnei_web defect: calcLdAndDistPerPop gave a result for no population",
+    );
+  }
+  const firstBins = binsOf(ld, first[0], numBins);
+  const result: LdDecayResult = {
+    analysis: "ldDecay",
+    pops: job.pops.map(([pop]) => pop),
+    numIndividuals: new Uint32Array(numPops),
+    numVars: new Float64Array(numPops),
+    smallestDist: firstBins.smallestDist.slice(),
+    largestDist: firstBins.largestDist.slice(),
+    numPairs: new Float64Array(numPops * numBins),
+    meanR2: new Float64Array(numPops * numBins),
+    sdR2: new Float64Array(numPops * numBins),
+    rhoPerBp: new Float64Array(numPops),
+    r2AtZero: new Float64Array(numPops),
+    halfDist: new Float64Array(numPops),
+    passStats: passStatsOf(ld.passStats, job.filters),
+  };
+  for (const [at, [pop, individuals]] of job.pops.entries()) {
+    const bins = binsOf(ld, pop, numBins);
+    if (
+      !sameValues(bins.smallestDist, firstBins.smallestDist) ||
+      !sameValues(bins.largestDist, firstBins.largestDist)
+    ) {
+      throw new Error(
+        `popnei_web defect: the bins of the population ${JSON.stringify(pop)} are not at the distances of those of ${JSON.stringify(first[0])}`,
+      );
+    }
+    const decay = ownValueOf(ld.decayPerPop, pop, "decayPerPop");
+    result.numIndividuals[at] = individuals.length;
+    result.numVars[at] = ownValueOf(ld.numVarsPerPop, pop, "numVarsPerPop");
+    result.numPairs.set(bins.numPairs, at * numBins);
+    result.meanR2.set(bins.meanR2, at * numBins);
+    result.sdR2.set(bins.sdR2, at * numBins);
+    result.rhoPerBp[at] = decay.rhoPerBp;
+    result.r2AtZero[at] = decay.r2AtZero;
+    result.halfDist[at] = decay.halfDist;
+  }
+  return result;
+}
+
+/** The bins popnei gave the population `pop`, each of its five arrays of
+    `numBins` values; throws a defect otherwise. */
+function binsOf(ld: LdAndDistPerPop, pop: string, numBins: number): LdBins {
+  const bins = ownValueOf(ld.perPop, pop, "perPop");
+  for (const array of [
+    bins.smallestDist,
+    bins.largestDist,
+    bins.numPairs,
+    bins.meanR2,
+    bins.sdR2,
+  ]) {
+    if (array.length !== numBins) {
+      throw new Error(
+        `popnei_web defect: popnei gave the population ${JSON.stringify(pop)} ${String(array.length)} bins, not ${String(numBins)}`,
+      );
+    }
+  }
+  return bins;
+}
+
+/** The value of the population `pop` in the object `name` of popnei's
+    result, read only when it is a field of the object itself: a lookup or
+    `in` would find a population named `__proto__` in the object's parent.
+    Throws a defect when popnei gave none. */
+function ownValueOf<T>(
+  record: Readonly<Record<string, T>>,
+  pop: string,
+  name: string,
+): T {
+  const value = Object.hasOwn(record, pop) ? record[pop] : undefined;
+  if (value === undefined) {
+    throw new Error(
+      `popnei_web defect: popnei gave no ${name} of the population ${JSON.stringify(pop)}`,
+    );
+  }
+  return value;
+}
+
+/** Whether two arrays hold the same numbers in the same order. */
+function sameValues(a: Float64Array, b: Float64Array): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i]);
 }
 
 /**

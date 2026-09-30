@@ -30,6 +30,8 @@ import type {
   IndividualsTable,
   Job,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
   LoadFormat,
   Opened,
   PassStats,
@@ -51,7 +53,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -858,6 +860,7 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  ldDecay: true,
 };
 const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   diversity: true,
@@ -865,6 +868,7 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  ldDecay: true,
 };
 const PCA_METHODS: Readonly<Record<PcaMethod, true>> = {
   pca: true,
@@ -1039,6 +1043,8 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkVariantChecksJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
+    case "ldDecay":
+      return checkLdDecayJob(record, place);
   }
 }
 
@@ -1269,6 +1275,69 @@ function checkPcaJob(record: object, place: Place): Checked<PcaJob> {
   });
 }
 
+/** The fields of the request of the LD decay,
+    docs/specs/analyses/ldDecay.md: its pass, its populations, and the four
+    numbers of popnei's options, whose ranges are popnei's to keep. */
+function checkLdDecayJob(record: object, place: Place): Checked<LdDecayJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "pops",
+    "minDist",
+    "maxDist",
+    "numBins",
+    "maxAllowedMaf",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const pops = field(record, "pops", place, listOf(checkPop));
+  if (!pops.ok) {
+    return pops;
+  }
+  const minDist = field(record, "minDist", place, isNumber);
+  if (!minDist.ok) {
+    return minDist;
+  }
+  const maxDist = field(record, "maxDist", place, isNumber);
+  if (!maxDist.ok) {
+    return maxDist;
+  }
+  const numBins = field(record, "numBins", place, isNumber);
+  if (!numBins.ok) {
+    return numBins;
+  }
+  const maxAllowedMaf = field(record, "maxAllowedMaf", place, isNumber);
+  if (!maxAllowedMaf.ok) {
+    return maxAllowedMaf;
+  }
+  return accepted({
+    analysis: "ldDecay",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+    pops: pops.value,
+    minDist: minDist.value,
+    maxDist: maxDist.value,
+    numBins: numBins.value,
+    maxAllowedMaf: maxAllowedMaf.value,
+  });
+}
+
 /** The request of a written file: its format, its pass and the list of
     the individuals kept. */
 function checkWriteJob(value: unknown, place: Place): Checked<WriteJob> {
@@ -1440,6 +1509,8 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkFilterCountsResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
+    case "ldDecay":
+      return checkLdDecayResult(record, place);
   }
 }
 
@@ -2280,6 +2351,113 @@ function checkPcaResult(record: object, place: Place): Checked<PcaResult> {
     numVarsUsed: numVarsUsed.value,
     lingoesConstant: lingoesConstant.value,
     negativeEigenvaluesPercent: negativeEigenvaluesPercent.value,
+    passStats: passStats.value,
+  });
+}
+
+/**
+ * The fields of the LD decay's result, docs/specs/analyses/ldDecay.md: the
+ * bins are as many as `smallestDist` holds, which the runner makes from
+ * the job's `numBins`; `largestDist` is as long, `numPairs`, `meanR2` and
+ * `sdR2` the populations × the bins, and the other arrays one value per
+ * population.
+ */
+function checkLdDecayResult(
+  record: object,
+  place: Place,
+): Checked<LdDecayResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "pops",
+    "numIndividuals",
+    "numVars",
+    "smallestDist",
+    "largestDist",
+    "numPairs",
+    "meanR2",
+    "sdR2",
+    "rhoPerBp",
+    "r2AtZero",
+    "halfDist",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const pops = field(record, "pops", place, listOf(isText));
+  if (!pops.ok) {
+    return pops;
+  }
+  const numPops = pops.value.length;
+  const numIndividuals = field(
+    record,
+    "numIndividuals",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  const numVars = field(record, "numVars", place, float64Array(numPops));
+  if (!numVars.ok) {
+    return numVars;
+  }
+  const smallestDist = field(record, "smallestDist", place, isFloat64Array);
+  if (!smallestDist.ok) {
+    return smallestDist;
+  }
+  const numBins = smallestDist.value.length;
+  const largestDist = field(
+    record,
+    "largestDist",
+    place,
+    float64Array(numBins),
+  );
+  if (!largestDist.ok) {
+    return largestDist;
+  }
+  const ofEveryBin = float64Array(numPops * numBins);
+  const numPairs = field(record, "numPairs", place, ofEveryBin);
+  if (!numPairs.ok) {
+    return numPairs;
+  }
+  const meanR2 = field(record, "meanR2", place, ofEveryBin);
+  if (!meanR2.ok) {
+    return meanR2;
+  }
+  const sdR2 = field(record, "sdR2", place, ofEveryBin);
+  if (!sdR2.ok) {
+    return sdR2;
+  }
+  const rhoPerBp = field(record, "rhoPerBp", place, float64Array(numPops));
+  if (!rhoPerBp.ok) {
+    return rhoPerBp;
+  }
+  const r2AtZero = field(record, "r2AtZero", place, float64Array(numPops));
+  if (!r2AtZero.ok) {
+    return r2AtZero;
+  }
+  const halfDist = field(record, "halfDist", place, float64Array(numPops));
+  if (!halfDist.ok) {
+    return halfDist;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "ldDecay",
+    pops: pops.value,
+    numIndividuals: numIndividuals.value,
+    numVars: numVars.value,
+    smallestDist: smallestDist.value,
+    largestDist: largestDist.value,
+    numPairs: numPairs.value,
+    meanR2: meanR2.value,
+    sdR2: sdR2.value,
+    rhoPerBp: rhoPerBp.value,
+    r2AtZero: r2AtZero.value,
+    halfDist: halfDist.value,
     passStats: passStats.value,
   });
 }

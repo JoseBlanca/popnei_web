@@ -564,6 +564,77 @@ export interface PcaResult {
   readonly passStats: PassStats;
 }
 
+/** The request of the LD decay of each population, popnei's
+    `calcLdAndDistPerPop` over the filters of the Variants step but its LD
+    pruning (docs/specs/analyses/ldDecay.md). */
+export interface LdDecayJob {
+  /** The analysis the request is of. */
+  readonly analysis: "ldDecay";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The project's filters of the variants but the LD pruning, in their
+      order. */
+  readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
+  /** The populations, each with the individuals kept of the variants file
+      it holds, none empty. */
+  readonly pops: Pops;
+  /** The smallest distance of a pair in base pairs, that one included,
+      popnei's `minDist`. */
+  readonly minDist: number;
+  /** The largest distance of a pair in base pairs, that one included,
+      popnei's `maxDist`, which the user types. */
+  readonly maxDist: number;
+  /** How many bins of equal width the distances are cut into, popnei's
+      `numBins`. */
+  readonly numBins: number;
+  /** The largest major allele frequency of a variant in a population that
+      is still counted there, popnei's `maxAllowedMaf`. */
+  readonly maxAllowedMaf: number;
+}
+
+/** The LD decay of each population, every array in the order of the
+    populations of its request. The counts are `Float64Array`s, as popnei
+    gives them, whole numbers up to 2^53. */
+export interface LdDecayResult {
+  /** The analysis the result is of. */
+  readonly analysis: "ldDecay";
+  /** The populations popnei was given. */
+  readonly pops: readonly string[];
+  /** The individuals of each that popnei was given, the n of its curve. */
+  readonly numIndividuals: Uint32Array;
+  /** The variants each population counted at its major allele frequency,
+      popnei's `numVarsPerPop`. */
+  readonly numVars: Float64Array;
+  /** The smallest distance of each bin, `numBins` of them, shared by every
+      population. */
+  readonly smallestDist: Float64Array;
+  /** The largest distance of each bin, as many. */
+  readonly largestDist: Float64Array;
+  /** The pairs in each bin, the populations × the bins, the bins of one
+      population together. */
+  readonly numPairs: Float64Array;
+  /** The mean r² of each bin, as `numPairs`; NaN for a bin with no pair. */
+  readonly meanR2: Float64Array;
+  /** The standard deviation of the r² of each bin, as `numPairs`; NaN for
+      a bin with no pair. */
+  readonly sdR2: Float64Array;
+  /** The fitted ρ per base pair of each population; NaN when no curve was
+      fitted. */
+  readonly rhoPerBp: Float64Array;
+  /** The fitted curve at a distance of 0 of each population; NaN when no
+      curve was fitted. */
+  readonly r2AtZero: Float64Array;
+  /** The distance at which the fitted curve of each population falls to
+      half of its value at 0; NaN when no curve was fitted. */
+  readonly halfDist: Float64Array;
+  /** The counts of the pass. */
+  readonly passStats: PassStats;
+}
+
 /** The request of a calculation, one member per analysis, tagged by
     `analysis`. */
 export type Job =
@@ -571,7 +642,8 @@ export type Job =
   | IndividualChecksJob
   | VariantChecksJob
   | FilterCountsJob
-  | PcaJob;
+  | PcaJob
+  | LdDecayJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -580,7 +652,8 @@ export type JobResult =
   | IndividualChecksResult
   | VariantChecksResult
   | FilterCountsResult
-  | PcaResult;
+  | PcaResult
+  | LdDecayResult;
 
 /**
  * The request of a file of the filtered variants

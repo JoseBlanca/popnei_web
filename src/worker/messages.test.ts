@@ -7,6 +7,8 @@ import type {
   FilterCountsResult,
   IndividualChecksJob,
   IndividualChecksResult,
+  LdDecayJob,
+  LdDecayResult,
   PassStats,
   PcaJob,
   PcaResult,
@@ -138,7 +140,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 3, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 4, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -176,7 +178,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 3 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 4 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -482,7 +484,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 3,
+        protocol: 4,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -497,7 +499,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 3 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 4 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -555,17 +557,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 4 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 4 })).toEqual({
+  test("a ready of protocol 5 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 5 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 4 },
+      error: { kind: "otherProtocol", found: 5 },
     });
   });
 
-  test("a ready of protocol 4 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 4 })).toEqual({
+  test("a ready of protocol 5 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 5 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 4 },
+      error: { kind: "otherProtocol", found: 5 },
     });
   });
 
@@ -573,18 +575,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 4 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 5 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 4,
+          protocol: 5,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 4 },
+        error: { kind: "otherProtocol", found: 5 },
       });
     },
   );
@@ -1172,10 +1174,6 @@ describe("IP2 D1 the worker in the new order: the messages", () => {
       });
     },
   );
-
-  test("the version of the messages is 3", () => {
-    expect(PROTOCOL_VERSION).toBe(3);
-  });
 });
 
 // The messages of the two workers, drawn by fast-check.
@@ -1273,12 +1271,35 @@ const pcaResult: fc.Arbitrary<PcaResult> = fc
       passStats,
     }),
   );
+const ldDecayResult: fc.Arbitrary<LdDecayResult> = fc
+  .record({
+    pops: fc.array(text, { maxLength: 3 }),
+    numBins: fc.nat({ max: 5 }),
+  })
+  .chain(({ pops, numBins }) =>
+    fc.record({
+      analysis: fc.constant("ldDecay" as const),
+      pops: fc.constant(pops),
+      numIndividuals: uint32s(pops.length),
+      numVars: float64s(pops.length),
+      smallestDist: float64s(numBins),
+      largestDist: float64s(numBins),
+      numPairs: float64s(pops.length * numBins),
+      meanR2: float64s(pops.length * numBins),
+      sdR2: float64s(pops.length * numBins),
+      rhoPerBp: float64s(pops.length),
+      r2AtZero: float64s(pops.length),
+      halfDist: float64s(pops.length),
+      passStats,
+    }),
+  );
 const jobResult = fc.oneof(
   diversityResult,
   individualChecksResult,
   variantChecksResult,
   filterCountsResult,
   pcaResult,
+  ldDecayResult,
 );
 const written = fc.nat({ max: 64 }).chain((numBytes) =>
   fc.record({
@@ -1297,7 +1318,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(3),
+    protocol: fc.constant(4),
     popneiVersion: text,
   }),
   fc.record({
@@ -1442,7 +1463,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(3) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(4) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1512,6 +1533,19 @@ const pcaJob = fc.record({
   method: fc.constantFrom("pca" as const, "pcoa" as const),
   numCompsKept: fc.integer(),
 });
+const ldDecayJob = fc.record({
+  analysis: fc.constant("ldDecay" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
+  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
+    maxLength: 3,
+  }),
+  minDist: number,
+  maxDist: number,
+  numBins: number,
+  maxAllowedMaf: number,
+});
 const writeJob = fc.record({
   format: fc.constant("nei" as const),
   fileId: text,
@@ -1545,6 +1579,7 @@ const toRunnerMessage = fc.oneof(
       variantChecksJob,
       filterCountsJob,
       pcaJob,
+      ldDecayJob,
     ),
   }),
   fc.record({
@@ -2254,5 +2289,233 @@ describe("IP4 D2 the binary type of the messages holds texts", () => {
       ok: false,
       error: { kind: "wrongType", path: "read.columns.3.zero" },
     });
+  });
+});
+
+// The job and the result of the LD decay, stage 5, and the version of the
+// messages of stage 5 (docs/specs/worker/messages.md, "How it is
+// verified").
+
+const LD_DECAY_JOB: LdDecayJob = {
+  analysis: "ldDecay",
+  fileId: "load-a",
+  filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+  individuals: null,
+  pops: [
+    ["pop_a", ["i000", "i001"]],
+    ["pop_b", ["i050"]],
+  ],
+  minDist: 1,
+  maxDist: 100000,
+  numBins: 50,
+  maxAllowedMaf: 0.95,
+};
+
+/** A result of the LD decay of two populations and 50 bins, the second
+    population with no curve and its last bin with no pair. */
+const LD_DECAY_RESULT: LdDecayResult = {
+  analysis: "ldDecay",
+  pops: ["pop_a", "pop_b"],
+  numIndividuals: Uint32Array.of(50, 50),
+  numVars: Float64Array.of(432, 432),
+  smallestDist: Float64Array.from({ length: 50 }, (_, i) => 1 + 2000 * i),
+  largestDist: Float64Array.from({ length: 50 }, (_, i) => 2000 * (i + 1)),
+  numPairs: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? 0 : 745 - i,
+  ),
+  meanR2: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? Number.NaN : 0.31 - i / 1000,
+  ),
+  sdR2: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? Number.NaN : 0.28,
+  ),
+  rhoPerBp: Float64Array.of(0.00029996668947275404, Number.NaN),
+  r2AtZero: Float64Array.of(0.46942148760330576, Number.NaN),
+  halfDist: Float64Array.of(7548.08187836982, Number.NaN),
+  passStats: {
+    numVars: 500,
+    filtering: { missing_data: { varsProcessed: 500, varsKept: 500 } },
+  },
+};
+
+describe("PA2 D1 the messages of the LD decay", () => {
+  test.each([
+    ["over every individual", LD_DECAY_JOB],
+    [
+      "with a list of individuals",
+      { ...LD_DECAY_JOB, individuals: ["i000", "i001", "i050"] },
+    ],
+  ])("parseToRunner accepts a run of the LD decay %s", (_name, job) => {
+    const run = { ...RUN, job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test("parseFromRunner accepts a result of the LD decay of two populations and 50 bins", () => {
+    const message = resultMessage(LD_DECAY_RESULT);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a result of two populations and 50 bins with 99 values of meanR2 is wrongLength", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      meanR2: LD_DECAY_RESULT.meanR2.slice(0, 99),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.meanR2",
+        expected: 100,
+        found: 99,
+      },
+    });
+  });
+
+  test.each([
+    ["largestDist", 49],
+    ["numPairs", 99],
+    ["sdR2", 101],
+    ["numVars", 3],
+    ["rhoPerBp", 1],
+    ["r2AtZero", 1],
+    ["halfDist", 3],
+  ])("a result whose %s has %d values is wrongLength", (name, length) => {
+    const result = { ...LD_DECAY_RESULT, [name]: new Float64Array(length) };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: `result.${name}`, found: length },
+    });
+  });
+
+  test("a result whose numIndividuals has one value is wrongLength", () => {
+    const result = { ...LD_DECAY_RESULT, numIndividuals: Uint32Array.of(50) };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.numIndividuals",
+        expected: 2,
+        found: 1,
+      },
+    });
+  });
+
+  test("a result whose smallestDist is a list of numbers is wrongType", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      smallestDist: [...LD_DECAY_RESULT.smallestDist],
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.smallestDist" },
+    });
+  });
+
+  test("a result of 10 bins, whose smallestDist gives the number of bins, is accepted with its other arrays of 10 and 20 values", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      smallestDist: new Float64Array(10),
+      largestDist: new Float64Array(10),
+      numPairs: new Float64Array(20),
+      meanR2: new Float64Array(20),
+      sdR2: new Float64Array(20),
+    };
+    const message = resultMessage(result);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("an ldDecay job without maxDist is missingFields, and one with a field more is extraFields", () => {
+    const without = Object.fromEntries(
+      Object.entries(LD_DECAY_JOB).filter(([name]) => name !== "maxDist"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["maxDist"],
+      },
+    });
+    expect(
+      parseToRunner({ ...RUN, job: { ...LD_DECAY_JOB, ldPruning: false } }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["ldPruning"],
+      },
+    });
+  });
+
+  test.each(["minDist", "maxDist", "numBins", "maxAllowedMaf"])(
+    "an ldDecay job whose %s is a text is wrongType",
+    (name) => {
+      const job = { ...LD_DECAY_JOB, [name]: "100000" };
+      expect(parseToRunner({ ...RUN, job })).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `job.${name}` },
+      });
+    },
+  );
+
+  test("an ldDecay job whose population is not a pair is wrongLength", () => {
+    const job = { ...LD_DECAY_JOB, pops: [["pop_a", ["i000"], "pop_b"]] };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "job.pops.0" },
+    });
+  });
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 3, stage 4's, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 3 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 3 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 5 with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 5 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 5 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    'a ready of protocol "4", from the %s worker, is wrongType',
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: "4" })).toEqual({
+        ok: false,
+        error: {
+          kind: "wrongType",
+          messageKind: "ready",
+          path: "protocol",
+          expected: "a number",
+          found: "string",
+        },
+      });
+    },
+  );
+
+  test("the version of the messages is 4", () => {
+    expect(PROTOCOL_VERSION).toBe(4);
   });
 });

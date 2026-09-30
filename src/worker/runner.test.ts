@@ -30,6 +30,8 @@ import type {
   IndividualChecksJob,
   IndividualChecksResult,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
   PassStats,
   PcaJob,
   PcaResult,
@@ -2701,5 +2703,200 @@ describe("IP10 D3 the cases of pca.md and variantChecks.md in the runner", () =>
     ]);
     expect(result.numVarsUsed).toBe(2);
     expect(result.passStats).toEqual({ numVars: 3, filtering: {} });
+  });
+});
+
+// The LD decay of stage 5, over ld.nei, popnei's reference file of the LD
+// decay, and the two populations of ld_pops.csv, with the missing data
+// filter at 0.1, which keeps its 500 variants, and a largest distance of
+// 100,000 bp: the numbers of docs/specs/analyses/ldDecay.md, "The
+// fixture", given by calcLdAndDistPerPop of js-v0.1.0-dev.3 in node.
+
+/** The populations of ld_pops.csv, pop_a of i000 to i049 and pop_b of
+    i050 to i099, under the names given. */
+function ldPops(nameA = "pop_a", nameB = "pop_b"): Pops {
+  const lines = readFileSync(join(FIXTURES, "ld_pops.csv"), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1);
+  const a: string[] = [];
+  const b: string[] = [];
+  for (const line of lines) {
+    const [individual, pop] = line.split(",");
+    if (individual === undefined || (pop !== "pop_a" && pop !== "pop_b")) {
+      throw new Error(`a line of ld_pops.csv of no population: ${line}`);
+    }
+    (pop === "pop_a" ? a : b).push(individual);
+  }
+  return [
+    [nameA, a],
+    [nameB, b],
+  ];
+}
+
+function ldDecayJob(pops: Pops = ldPops()): LdDecayJob {
+  return {
+    analysis: "ldDecay",
+    fileId: FILE_ID,
+    filters: [missingData(0.1)],
+    individuals: null,
+    pops,
+    minDist: 1,
+    maxDist: 100000,
+    numBins: 50,
+    maxAllowedMaf: 0.95,
+  };
+}
+
+/** The numbers of each population of the table of ldDecay.md, "The
+    fixture", in the order pop_a, pop_b. */
+const LD_TABLE = {
+  numIndividuals: [50, 50],
+  numVars: [432, 432],
+  pairs: [29367, 29367],
+  firstBin: {
+    numPairs: [745, 745],
+    meanR2: [0.3104664289575117, 0.31876304803774247],
+    sdR2: [0.28243883665741665, 0.2814576610764838],
+  },
+  lastBin: {
+    numPairs: [452, 452],
+    meanR2: [0.025953462391956096, 0.03162397044318621],
+  },
+  rhoPerBp: [0.00029996668947275404, 0.00030848266256738914],
+  r2AtZero: [0.46942148760330576, 0.46942148760330576],
+  halfDist: [7548.08187836982, 7339.709512618931],
+};
+
+/** The bin `bin` of the population at `at` of an array of the bins. */
+function binOf(array: Float64Array, at: number, bin: number): number {
+  const value = array[at * 50 + bin];
+  if (value === undefined) {
+    throw new Error(`no bin ${String(bin)} of the population ${String(at)}`);
+  }
+  return value;
+}
+
+/** The sum of the pairs of the bins of the population at `at`. */
+function pairsOf(result: LdDecayResult, at: number): number {
+  return result.numPairs
+    .subarray(at * 50, (at + 1) * 50)
+    .reduce((sum, pairs) => sum + pairs, 0);
+}
+
+describe("PA2 D2 the runner's LD decay", () => {
+  test("the job of the flow over ld.nei gives the numbers of ldDecay.md to the last digit: 432 variants and 29,367 pairs in each population, the half distances, and the first and last bins", () => {
+    const told: Progress[] = [];
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(), (progress) => {
+        told.push(progress);
+      }),
+      "ldDecay",
+    );
+    expect(result.pops).toEqual(["pop_a", "pop_b"]);
+    expect([...result.numIndividuals]).toEqual(LD_TABLE.numIndividuals);
+    expect([...result.numVars]).toEqual(LD_TABLE.numVars);
+    expect([pairsOf(result, 0), pairsOf(result, 1)]).toEqual(LD_TABLE.pairs);
+    expect(result.smallestDist.length).toBe(50);
+    expect(result.largestDist.length).toBe(50);
+    expect([result.smallestDist[0], result.largestDist[0]]).toEqual([1, 2000]);
+    expect([result.smallestDist[49], result.largestDist[49]]).toEqual([
+      98001, 100000,
+    ]);
+    expect(result.numPairs.length).toBe(100);
+    for (const at of [0, 1]) {
+      expect([
+        binOf(result.numPairs, at, 0),
+        binOf(result.meanR2, at, 0),
+        binOf(result.sdR2, at, 0),
+      ]).toEqual([
+        LD_TABLE.firstBin.numPairs[at],
+        LD_TABLE.firstBin.meanR2[at],
+        LD_TABLE.firstBin.sdR2[at],
+      ]);
+      expect([
+        binOf(result.numPairs, at, 49),
+        binOf(result.meanR2, at, 49),
+      ]).toEqual([LD_TABLE.lastBin.numPairs[at], LD_TABLE.lastBin.meanR2[at]]);
+    }
+    expect([...result.rhoPerBp]).toEqual(LD_TABLE.rhoPerBp);
+    expect([...result.r2AtZero]).toEqual(LD_TABLE.r2AtZero);
+    expect([...result.halfDist]).toEqual(LD_TABLE.halfDist);
+    expect(result.passStats).toEqual({
+      numVars: 500,
+      filtering: { missing_data: { varsProcessed: 500, varsKept: 500 } },
+    });
+    expect(told.length).toBeGreaterThan(0);
+    expect(told.every((progress) => progress.numPasses === 1)).toBe(true);
+  });
+
+  test('populations named "10" and "2", which popnei gives back as "2", "10", are held in the order of the job', () => {
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(ldPops("10", "2")), ignore),
+      "ldDecay",
+    );
+    expect(result.pops).toEqual(["10", "2"]);
+    expect([...result.halfDist]).toEqual(LD_TABLE.halfDist);
+    expect([...result.rhoPerBp]).toEqual(LD_TABLE.rhoPerBp);
+    expect([binOf(result.meanR2, 0, 0), binOf(result.meanR2, 1, 0)]).toEqual(
+      LD_TABLE.firstBin.meanR2,
+    );
+    expect([binOf(result.meanR2, 0, 49), binOf(result.meanR2, 1, 49)]).toEqual(
+      LD_TABLE.lastBin.meanR2,
+    );
+  });
+
+  // The only one: given to popnei as a field of its own, by
+  // Object.fromEntries, popnei calculates it and the runner throws; given by
+  // an assignment, popnei would be given no population and refuse.
+  test.each([
+    ["first", ldPops("__proto__", "pop_b")],
+    ["second", ldPops("pop_a", "__proto__")],
+    ["only", ldPops("__proto__", "pop_b").slice(0, 1)],
+  ])(
+    "a population named __proto__, the %s of the job, which popnei's result does not hold as a field of its own, is thrown as a defect",
+    (_place, pops) => {
+      expect(() => opened("ld.nei").run(ldDecayJob(pops), ignore)).toThrow(
+        /^popnei_web defect: popnei gave no (perPop|numVarsPerPop|decayPerPop) of the population "__proto__"$/,
+      );
+    },
+  );
+
+  test("two populations of one name are a badRequest", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    expect(
+      opened("ld.nei").run(ldDecayJob([a, ["pop_a", b[1]]]), ignore),
+    ).toEqual({ kind: "badRequest", message: 'two populations named "pop_a"' });
+  });
+
+  test("transferablesOf of a result of the LD decay: the buffer of each of its ten arrays, each once, and a view of part of a buffer throws", () => {
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(), ignore),
+      "ldDecay",
+    );
+    expect(transferablesOf(result)).toEqual([
+      result.numIndividuals.buffer,
+      result.numVars.buffer,
+      result.smallestDist.buffer,
+      result.largestDist.buffer,
+      result.numPairs.buffer,
+      result.meanR2.buffer,
+      result.sdR2.buffer,
+      result.rhoPerBp.buffer,
+      result.r2AtZero.buffer,
+      result.halfDist.buffer,
+    ]);
+    expect(
+      transferablesOf({ ...result, largestDist: result.smallestDist }).length,
+    ).toBe(9);
+    expect(() =>
+      transferablesOf({
+        ...result,
+        smallestDist: result.numPairs.subarray(0, 50),
+      }),
+    ).toThrow(/^popnei_web defect: an array of a result is a view/);
   });
 });

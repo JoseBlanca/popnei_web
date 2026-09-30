@@ -125,8 +125,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 3, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 3 };
+const READY = { kind: "ready", protocol: 4, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 4 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -1046,11 +1046,11 @@ describe("WS2 D3 the client: starting", () => {
     });
   });
 
-  test("a ready of protocol 2, stage 3's, fails every request with protocolMismatch, and no other worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, fails every request with protocolMismatch, and no other worker is made", async () => {
     const env = setUp();
     env.client.addFile("A", FILE_A);
     const readA = env.client.openVariants({ fileId: "A", ...NEI });
-    emit(last(env.calculation), { kind: "ready", protocol: 2 });
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
     expect(await now(readA.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -1698,7 +1698,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         const index = calculation.length - 1;
         const watched = calculation[index];
         if (watched !== undefined && !watched.readySent && next.chance === 0) {
-          deliver(index, { kind: "ready", protocol: 2 });
+          deliver(index, { kind: "ready", protocol: 3 });
         }
         break;
       }
@@ -2016,11 +2016,11 @@ describe("WS2 D3 the client: crashes, defects, and every read answered, on the l
     expect(env.light).toHaveLength(2);
   });
 
-  test("a ready of protocol 2, stage 3's, fails every read with protocolMismatch, and no other light worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, fails every read with protocolMismatch, and no other light worker is made", async () => {
     const env = setUp();
     env.client.addFile("ind", CSV_FILE);
     const read = env.client.readIndividuals("ind", CSV);
-    emit(last(env.light), { kind: "ready", protocol: 2 });
+    emit(last(env.light), { kind: "ready", protocol: 3 });
     expect(await now(read.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -2513,12 +2513,12 @@ describe("VS1 D5 the write of the client: the restart after a large write", () =
     expect(sentTo(second)).toMatchObject([{ kind: "open", fileId: "B" }]);
   });
 
-  test("a ready of protocol 2, stage 3's, of the worker started again after a large write fails every request with protocolMismatch, and no other worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, of the worker started again after a large write fails every request with protocolMismatch, and no other worker is made", async () => {
     vi.useFakeTimers();
     const env = writeAndRun();
     const w2 = env.client.write("w2", writeJob("A"), noProgress);
     emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
-    emit(last(env.calculation), { kind: "ready", protocol: 2 });
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
     expect(await now(env.k5.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },

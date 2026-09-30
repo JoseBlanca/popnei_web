@@ -96,7 +96,8 @@ export function firstProject(app: "popgen"): Project {
  * and not the statistics of each individual, whose pass has no filter,
  * nor the histograms of the variants, whose pass has the list and no
  * filter of the variants, nor the PCA, whose filters of missing data, MAF
- * and LD can be its own in the place of the project's
+ * and LD can be its own in the place of the project's, nor the LD decay,
+ * whose filters are the project's but the LD pruning
  * (docs/architecture.md, section 4; docs/specs/entry.md).
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
@@ -108,6 +109,7 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
     case "individualChecks":
     case "variantChecks":
     case "pca":
+    case "ldDecay":
       return { numVarsRead, counts: null };
   }
 }
