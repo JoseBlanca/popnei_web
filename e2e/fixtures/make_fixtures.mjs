@@ -11,7 +11,12 @@
 // read, and writes them as a CSV, e2e/fixtures/panel_pops.csv, with the
 // header `IID,popcat`, which the flows give to the individuals file input
 // (docs/specs/worker/runner.md and docs/specs/analyses/diversity.md, "How it
-// is verified"). From panel.nei it writes the statistics of each
+// is verified"). From panel_pops.csv it writes e2e/fixtures/panel_split.csv,
+// the same individuals with the header `IID,popsplit` and p0 split in two by
+// the place of each of its individuals among them, the first, third and so
+// on in p0a and the others in p0b, 24 each, the rest as in `popcat`, whose
+// pair p0a, p0b has a negative distance (docs/specs/analyses/popDists.md,
+// "How it is verified"). From panel.nei it writes the statistics of each
 // individual that popnei's calcPerIndividualStats gives over every variant
 // of the file, with no filter, to
 // e2e/fixtures/panel_individual_stats.json, which the tests of core read,
@@ -151,6 +156,30 @@ writeFileSync(join(fixtures, "panel_pops.csv"), csv);
 console.log(
   `${pops} and panel_pops.csv: ${String(csv.trim().split("\n").length)} lines`,
 );
+
+// The populations with a negative distance: p0 of popcat split by the place
+// of each of its individuals among them, from 0, the even places in p0a and
+// the odd in p0b, and every other individual in its population of popcat.
+let p0Place = 0;
+const splitLines = [
+  "IID,popsplit",
+  ...csv
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((row) => {
+      const [name, pop] = row.split(",");
+      if (pop !== "p0") {
+        return row;
+      }
+      const half = p0Place % 2 === 0 ? "p0a" : "p0b";
+      p0Place += 1;
+      return `${name},${half}`;
+    }),
+];
+const splitPath = join(fixtures, "panel_split.csv");
+writeFileSync(splitPath, `${splitLines.join("\n")}\n`);
+console.log(`${splitPath}: ${String(splitLines.length)} lines`);
 
 // The statistics of each individual of panel.nei, over every variant of
 // the file with no filter, as the application calculates them from 28

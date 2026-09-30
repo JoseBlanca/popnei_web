@@ -564,6 +564,95 @@ export interface PcaResult {
   readonly passStats: PassStats;
 }
 
+/** Why the heatmap of a measure keeps the order of the metadata file:
+    only two populations, a pair with no distance, every distance 0 once a
+    negative one is taken as 0, or a refusal of popnei's PCoA that none of
+    these foresaw (docs/specs/analyses/popDists.md, "The order of the
+    heatmap"). */
+export type FileOrderReason =
+  "twoPopulations" | "noDistance" | "allZero" | "notPlaced";
+
+/** The order of the rows of the heatmap of one measure: the populations
+    along the first axis of popnei's PCoA of the distances, or the order of
+    the metadata file with the reason. */
+export type HeatmapOrder =
+  | {
+      /** Ordered along the first axis of the principal coordinates. */
+      readonly kind: "pcoa";
+      /** The indexes of `pops` of the result, from the top row to the
+          bottom one, each once. */
+      readonly order: Uint32Array;
+    }
+  | {
+      /** In the order of the metadata file. */
+      readonly kind: "file";
+      /** Why, but a refusal of popnei. */
+      readonly reason: Exclude<FileOrderReason, "notPlaced">;
+    }
+  | {
+      /** In the order of the metadata file. */
+      readonly kind: "file";
+      /** popnei refused to place the populations. */
+      readonly reason: "notPlaced";
+      /** popnei's message of the refusal. */
+      readonly message: string;
+    };
+
+/** The request of the distances between populations, Hudson's Fst and
+    Jost's D of each pair from popnei's `calcPopDists`
+    (docs/specs/analyses/popDists.md). */
+export interface PopDistsJob {
+  /** The analysis the request is of. */
+  readonly analysis: "popDists";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The project's filters of the variants, in their order. */
+  readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
+  /** The populations with at least `minNumIndividuals` individuals kept,
+      two or more, in the order of the metadata file. */
+  readonly pops: Pops;
+  /** The populations under the minimum, which the runner copies into the
+      result without reading them. */
+  readonly leftOut: LeftOut;
+  /** How many called genotypes a population needs at a variant for the
+      variant to count for its pairs, popnei's `minNumIndividuals`. */
+  readonly minNumIndividuals: number;
+}
+
+/** The distances between the populations of the request, each array of
+    the pairs in the order (0, 1), (0, 2), …, (1, 2), … of `pops`, and the
+    order of the heatmap of each measure. */
+export interface PopDistsResult {
+  /** The analysis the result is of. */
+  readonly analysis: "popDists";
+  /** The populations, in the order of the request. */
+  readonly pops: readonly string[];
+  /** The individuals of each that popnei was given. */
+  readonly numIndividuals: Uint32Array;
+  /** Hudson's Fst of each pair, k × (k − 1) / 2 of them for the k
+      populations; NaN for a pair with no value. */
+  readonly fst: Float64Array;
+  /** Jost's D of each pair, as `fst`. */
+  readonly dest: Float64Array;
+  /** The variants each pair was calculated over. */
+  readonly numVarsPerPair: Uint32Array;
+  /** The order of the heatmap of each measure. */
+  readonly order: {
+    /** Of Hudson's Fst. */
+    readonly fst: HeatmapOrder;
+    /** Of Jost's D. */
+    readonly dest: HeatmapOrder;
+  };
+  /** The populations under the minimum, as the request gave them. */
+  readonly leftOut: LeftOut;
+  /** The counts of the pass. */
+  readonly passStats: PassStats;
+}
+
 /** The request of the LD decay of each population, popnei's
     `calcLdAndDistPerPop` over the filters of the Variants step but its LD
     pruning (docs/specs/analyses/ldDecay.md). */
@@ -643,6 +732,7 @@ export type Job =
   | VariantChecksJob
   | FilterCountsJob
   | PcaJob
+  | PopDistsJob
   | LdDecayJob;
 
 /** The result of a calculation, one member per analysis, tagged by
@@ -653,6 +743,7 @@ export type JobResult =
   | VariantChecksResult
   | FilterCountsResult
   | PcaResult
+  | PopDistsResult
   | LdDecayResult;
 
 /**

@@ -32,9 +32,11 @@ import type {
   JobResult,
   LdDecayJob,
   LdDecayResult,
+  LeftOut,
   PassStats,
   PcaJob,
   PcaResult,
+  PopDistsJob,
   Pops,
   Progress,
   VariantChecksJob,
@@ -2896,6 +2898,234 @@ describe("PA2 D2 the runner's LD decay", () => {
       transferablesOf({
         ...result,
         smallestDist: result.numPairs.subarray(0, 50),
+      }),
+    ).toThrow(/^popnei_web defect: an array of a result is a view/);
+  });
+});
+
+// The distances between populations of stage 5, over panel.nei and the
+// populations of panel_pops.csv and panel_split.csv: the numbers of
+// docs/specs/analyses/popDists.md, "How it is verified", given by
+// calcPopDists, correctDistsByLingoes and doPcoa of js-v0.1.0-dev.3 in node.
+
+/** The populations of the CSV fixture `name`, in the order they first
+    appear in it. */
+function csvPops(name: string): Pops {
+  const lines = readFileSync(join(FIXTURES, name), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1);
+  const pops = new Map<string, string[]>();
+  for (const line of lines) {
+    const [individual, pop] = line.split(",");
+    if (individual === undefined || pop === undefined) {
+      throw new Error(`a line of ${name} with no comma: ${line}`);
+    }
+    const members = pops.get(pop) ?? [];
+    members.push(individual);
+    pops.set(pop, members);
+  }
+  return [...pops.entries()];
+}
+
+function popDistsJob(
+  pops: Pops,
+  maxAllowedMissingRate = 0.1,
+  leftOut: LeftOut = [],
+  minNumIndividuals = 20,
+): PopDistsJob {
+  return {
+    analysis: "popDists",
+    fileId: FILE_ID,
+    filters: [missingData(maxAllowedMissingRate)],
+    individuals: null,
+    pops,
+    leftOut,
+    minNumIndividuals,
+  };
+}
+
+/** The distances of popDists.md of p0, p2 and p1, in that order, the
+    order of panel_pops.csv, at the missing data filter at 0.1 and 0.05. */
+const DISTS_AT = {
+  "0.1": {
+    fst: [0.10273588423661377, 0.10496244498389443, 0.10962148955018115],
+    dest: [0.06129813142463423, 0.06354346296076403, 0.06567052128821259],
+    numVars: [1200, 1200, 1200],
+  },
+  "0.05": {
+    fst: [0.10134216885691137, 0.10408519979159178, 0.109114009609083],
+    dest: [0.060374890860149355, 0.0629752676321236, 0.06514219873397088],
+    numVars: [1152, 1152, 1152],
+  },
+};
+
+/** The indexes of the order p2, p0, p1 of p0, p2 and p1. */
+const P2_P0_P1 = { kind: "pcoa", order: Uint32Array.of(1, 0, 2) };
+
+describe("PA3 D2 the runner's distances", () => {
+  test("the populations of panel_pops.csv at the missing data filter at 0.1 give the Fst, the D and the variants of each pair of popDists.md to the last digit, and the order p2, p0, p1 of both measures", () => {
+    const told: Progress[] = [];
+    const leftOut: LeftOut = [["p9", 3]];
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob(csvPops("panel_pops.csv"), 0.1, leftOut),
+        (progress) => {
+          told.push(progress);
+        },
+      ),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p0", "p2", "p1"]);
+    expect([...result.numIndividuals]).toEqual([48, 84, 68]);
+    expect([...result.fst]).toEqual(DISTS_AT["0.1"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.1"].dest);
+    expect([...result.numVarsPerPair]).toEqual(DISTS_AT["0.1"].numVars);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    expect(result.leftOut).toBe(leftOut);
+    expect(result.passStats).toEqual({
+      numVars: 1200,
+      filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+    });
+    expect(told.length).toBeGreaterThan(0);
+    expect(told.every((progress) => progress.numPasses === 1)).toBe(true);
+  });
+
+  test("at the missing data filter at 0.05, which keeps 1,152 variants, the pairs of popDists.md and the order p2, p0, p1 of both measures", () => {
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob(csvPops("panel_pops.csv"), 0.05),
+        ignore,
+      ),
+      "popDists",
+    );
+    expect([...result.fst]).toEqual(DISTS_AT["0.05"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.05"].dest);
+    expect([...result.numVarsPerPair]).toEqual(DISTS_AT["0.05"].numVars);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    expect(result.passStats.filtering).toEqual({
+      missing_data: { varsProcessed: 1200, varsKept: 1152 },
+    });
+  });
+
+  test('p0, p2 and p1 named "3", "1" and "2", which popnei gives back as "1", "2", "3", are held as "3", "1", "2" with the values of their pairs, and the order "1", "3", "2"', () => {
+    const [p0, p2, p1] = csvPops("panel_pops.csv");
+    if (p0 === undefined || p2 === undefined || p1 === undefined) {
+      throw new Error("panel_pops.csv has not three populations");
+    }
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob([
+          ["3", p0[1]],
+          ["1", p2[1]],
+          ["2", p1[1]],
+        ]),
+        ignore,
+      ),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["3", "1", "2"]);
+    expect([...result.numIndividuals]).toEqual([48, 84, 68]);
+    // Pair by pair: ("3", "1") is p0 and p2, ("3", "2") p0 and p1, and
+    // ("1", "2") p2 and p1.
+    expect([...result.fst]).toEqual(DISTS_AT["0.1"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.1"].dest);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    const order = result.order.fst;
+    if (order.kind !== "pcoa") {
+      throw new Error("the order is not of the PCoA");
+    }
+    expect([...order.order].map((at) => result.pops[at])).toEqual([
+      "1",
+      "3",
+      "2",
+    ]);
+  });
+
+  test("panel_split.csv gives the negative pair of p0a and p0b of popDists.md and the order p0b, p0a, p2, p1 of both measures", () => {
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(csvPops("panel_split.csv")), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p0a", "p0b", "p2", "p1"]);
+    expect([...result.numIndividuals]).toEqual([24, 24, 84, 68]);
+    expect([...result.fst]).toEqual([
+      -0.011276258310056011, 0.09917164096189776, 0.10284678759499101,
+      0.10123140684986402, 0.1020068488376186, 0.10962148955018115,
+    ]);
+    expect([...result.dest]).toEqual([
+      -0.00601975597295832, 0.05929552377994644, 0.06246325844418998,
+      0.060586547891477244, 0.06181779954501048, 0.06567052128821259,
+    ]);
+    expect([...result.numVarsPerPair]).toEqual(Array(6).fill(1200));
+    const p0bP0aP2P1 = { kind: "pcoa", order: Uint32Array.of(1, 0, 2, 3) };
+    expect(result.order).toEqual({ fst: p0bP0aP2P1, dest: p0bP0aP2P1 });
+  });
+
+  test("panel_split.csv at a minimum of 25, p0a and p0b left out, gives p2 and p1 their pair in the order of the file", () => {
+    const pops = csvPops("panel_split.csv").filter(
+      ([, individuals]) => individuals.length >= 25,
+    );
+    const leftOut: LeftOut = [
+      ["p0a", 24],
+      ["p0b", 24],
+    ];
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(pops, 0.1, leftOut, 25), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p2", "p1"]);
+    expect([...result.fst]).toEqual([0.10962148955018115]);
+    expect([...result.dest]).toEqual([0.06567052128821259]);
+    expect([...result.numVarsPerPair]).toEqual([1200]);
+    const inTheFile = { kind: "file", reason: "twoPopulations" };
+    expect(result.order).toEqual({ fst: inTheFile, dest: inTheFile });
+    expect(result.leftOut).toEqual(leftOut);
+  });
+
+  test("two populations of one name are a badRequest", () => {
+    const [p0, p2] = csvPops("panel_pops.csv");
+    if (p0 === undefined || p2 === undefined) {
+      throw new Error("panel_pops.csv has not two populations");
+    }
+    expect(
+      opened("panel.nei").run(popDistsJob([p0, ["p0", p2[1]]]), ignore),
+    ).toEqual({ kind: "badRequest", message: 'two populations named "p0"' });
+  });
+
+  test("transferablesOf of a result of the distances with orders of the kind pcoa: the buffer of each of its six arrays, each once, one less for an order of the file, and a view of part of a buffer throws", () => {
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(csvPops("panel_pops.csv")), ignore),
+      "popDists",
+    );
+    const { fst, dest } = result.order;
+    if (fst.kind !== "pcoa" || dest.kind !== "pcoa") {
+      throw new Error("the orders are not of the PCoA");
+    }
+    expect(transferablesOf(result)).toEqual([
+      result.numIndividuals.buffer,
+      result.fst.buffer,
+      result.dest.buffer,
+      result.numVarsPerPair.buffer,
+      fst.order.buffer,
+      dest.order.buffer,
+    ]);
+    expect(
+      transferablesOf({
+        ...result,
+        order: { fst, dest: { kind: "file", reason: "noDistance" } },
+      }).length,
+    ).toBe(5);
+    expect(
+      transferablesOf({ ...result, order: { fst, dest: fst } }).length,
+    ).toBe(5);
+    expect(() =>
+      transferablesOf({
+        ...result,
+        order: {
+          fst,
+          dest: { kind: "pcoa", order: new Uint32Array(8).subarray(0, 3) },
+        },
       }),
     ).toThrow(/^popnei_web defect: an array of a result is a view/);
   });

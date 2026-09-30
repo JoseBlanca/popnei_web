@@ -30,14 +30,19 @@ import type {
   IndividualsTable,
   Job,
   JobResult,
+  FileOrderReason,
+  HeatmapOrder,
   LdDecayJob,
   LdDecayResult,
+  LeftOut,
   LoadFormat,
   Opened,
   PassStats,
   PcaJob,
   PcaMethod,
   PcaResult,
+  PopDistsJob,
+  PopDistsResult,
   Separator,
   VariantChecksJob,
   VariantChecksResult,
@@ -860,6 +865,7 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  popDists: true,
   ldDecay: true,
 };
 const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
@@ -868,7 +874,18 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  popDists: true,
   ldDecay: true,
+};
+const HEATMAP_ORDER_KINDS: Readonly<Record<HeatmapOrder["kind"], true>> = {
+  pcoa: true,
+  file: true,
+};
+const FILE_ORDER_REASONS: Readonly<Record<FileOrderReason, true>> = {
+  twoPopulations: true,
+  noDistance: true,
+  allZero: true,
+  notPlaced: true,
 };
 const PCA_METHODS: Readonly<Record<PcaMethod, true>> = {
   pca: true,
@@ -1043,6 +1060,8 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkVariantChecksJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
+    case "popDists":
+      return checkPopDistsJob(record, place);
     case "ldDecay":
       return checkLdDecayJob(record, place);
   }
@@ -1274,6 +1293,82 @@ function checkPcaJob(record: object, place: Place): Checked<PcaJob> {
     numCompsKept: numCompsKept.value,
   });
 }
+
+/** The fields of the request of the distances between populations,
+    docs/specs/analyses/popDists.md: its pass, the populations with the
+    minimum, those left out, and the minimum, whose range is popnei's to
+    keep. */
+function checkPopDistsJob(record: object, place: Place): Checked<PopDistsJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "pops",
+    "leftOut",
+    "minNumIndividuals",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const pops = field(record, "pops", place, listOf(checkPop));
+  if (!pops.ok) {
+    return pops;
+  }
+  const leftOut = field(record, "leftOut", place, checkLeftOut);
+  if (!leftOut.ok) {
+    return leftOut;
+  }
+  const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
+  if (!minNumIndividuals.ok) {
+    return minNumIndividuals;
+  }
+  return accepted({
+    analysis: "popDists",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+    pops: pops.value,
+    leftOut: leftOut.value,
+    minNumIndividuals: minNumIndividuals.value,
+  });
+}
+
+/** The populations left out of the distances, each a pair of its name and
+    the whole number of its individuals kept. */
+const checkLeftOut: Check<LeftOut> = listOf((value, place) => {
+  if (!isList(value)) {
+    return wrongType(
+      place,
+      "a pair of a population and its number of individuals",
+      value,
+    );
+  }
+  if (value.length !== 2) {
+    return wrongLength(place, 2, value.length);
+  }
+  const pop = isText(value[0], inner(place, 0));
+  if (!pop.ok) {
+    return pop;
+  }
+  const numIndividuals = isWhole(value[1], inner(place, 1));
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  return accepted([pop.value, numIndividuals.value] as const);
+});
 
 /** The fields of the request of the LD decay,
     docs/specs/analyses/ldDecay.md: its pass, its populations, and the four
@@ -1509,6 +1604,8 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkFilterCountsResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
+    case "popDists":
+      return checkPopDistsResult(record, place);
     case "ldDecay":
       return checkLdDecayResult(record, place);
   }
@@ -2353,6 +2450,208 @@ function checkPcaResult(record: object, place: Place): Checked<PcaResult> {
     negativeEigenvaluesPercent: negativeEigenvaluesPercent.value,
     passStats: passStats.value,
   });
+}
+
+/**
+ * The fields of the result of the distances between populations,
+ * docs/specs/analyses/popDists.md: `fst`, `dest` and `numVarsPerPair` of
+ * k × (k − 1) / 2 values for the k populations of `pops`, `numIndividuals`
+ * of k, and the order of the heatmap of each measure, each checked against
+ * the k populations.
+ */
+function checkPopDistsResult(
+  record: object,
+  place: Place,
+): Checked<PopDistsResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "pops",
+    "numIndividuals",
+    "fst",
+    "dest",
+    "numVarsPerPair",
+    "order",
+    "leftOut",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const pops = field(record, "pops", place, listOf(isText));
+  if (!pops.ok) {
+    return pops;
+  }
+  const numPops = pops.value.length;
+  const numPairs = (numPops * (numPops - 1)) / 2;
+  const numIndividuals = field(
+    record,
+    "numIndividuals",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  const fst = field(record, "fst", place, float64Array(numPairs));
+  if (!fst.ok) {
+    return fst;
+  }
+  const dest = field(record, "dest", place, float64Array(numPairs));
+  if (!dest.ok) {
+    return dest;
+  }
+  const numVarsPerPair = field(
+    record,
+    "numVarsPerPair",
+    place,
+    uint32Array(numPairs),
+  );
+  if (!numVarsPerPair.ok) {
+    return numVarsPerPair;
+  }
+  const order = field(record, "order", place, checkOrders(numPops));
+  if (!order.ok) {
+    return order;
+  }
+  const leftOut = field(record, "leftOut", place, checkLeftOut);
+  if (!leftOut.ok) {
+    return leftOut;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "popDists",
+    pops: pops.value,
+    numIndividuals: numIndividuals.value,
+    fst: fst.value,
+    dest: dest.value,
+    numVarsPerPair: numVarsPerPair.value,
+    order: order.value,
+    leftOut: leftOut.value,
+    passStats: passStats.value,
+  });
+}
+
+/** A check of the orders of the heatmap of the two measures, of
+    `numPops` populations. */
+function checkOrders(numPops: number): Check<PopDistsResult["order"]> {
+  return (value, place) => {
+    const record = objectWith(value, place, ["fst", "dest"]);
+    if (!record.ok) {
+      return record;
+    }
+    const fst = field(record.value, "fst", place, checkHeatmapOrder(numPops));
+    if (!fst.ok) {
+      return fst;
+    }
+    const dest = field(record.value, "dest", place, checkHeatmapOrder(numPops));
+    if (!dest.ok) {
+      return dest;
+    }
+    return accepted({ fst: fst.value, dest: dest.value });
+  };
+}
+
+/**
+ * A check of the order of the heatmap of one measure, of `numPops`
+ * populations: of the kind `pcoa`, an `order` that holds every index of
+ * the populations once; of the kind `file`, one of the four reasons, with
+ * a `message` for `notPlaced` alone.
+ */
+function checkHeatmapOrder(numPops: number): Check<HeatmapOrder> {
+  return (value, place) => {
+    const tagged = taggedObject(value, place, "kind", HEATMAP_ORDER_KINDS);
+    if (!tagged.ok) {
+      return tagged;
+    }
+    const { record, tag } = tagged.value;
+    switch (tag) {
+      case "pcoa": {
+        const wrong = exactFields(record, place, ["kind", "order"]);
+        if (wrong !== null) {
+          return wrong;
+        }
+        const order = field(record, "order", place, eachIndexOnce(numPops));
+        if (!order.ok) {
+          return order;
+        }
+        return accepted({ kind: tag, order: order.value });
+      }
+      case "file": {
+        // The fields hang on the reason, a message with notPlaced alone, so
+        // the reason is read before them; without one, what is missing is
+        // named among the fields the object has.
+        if (!Object.hasOwn(record, "reason")) {
+          return (
+            exactFields(
+              record,
+              place,
+              Object.hasOwn(record, "message")
+                ? ["kind", "reason", "message"]
+                : ["kind", "reason"],
+            ) ?? wrongType(place, "an object with a reason", record)
+          );
+        }
+        const reason = field(
+          record,
+          "reason",
+          place,
+          oneOf(FILE_ORDER_REASONS),
+        );
+        if (!reason.ok) {
+          return reason;
+        }
+        const wrong = exactFields(
+          record,
+          place,
+          reason.value === "notPlaced"
+            ? ["kind", "reason", "message"]
+            : ["kind", "reason"],
+        );
+        if (wrong !== null) {
+          return wrong;
+        }
+        if (reason.value !== "notPlaced") {
+          return accepted({ kind: tag, reason: reason.value });
+        }
+        const message = field(record, "message", place, isText);
+        if (!message.ok) {
+          return message;
+        }
+        return accepted({
+          kind: tag,
+          reason: reason.value,
+          message: message.value,
+        });
+      }
+    }
+  };
+}
+
+/** A check of a `Uint32Array` that holds each of the indexes 0 to
+    `numPops` − 1 once, in any order; one that holds an index twice, or one
+    beyond them, is refused as of the wrong type. */
+function eachIndexOnce(numPops: number): Check<Uint32Array> {
+  return (value, place) => {
+    const array = uint32Array(numPops)(value, place);
+    if (!array.ok) {
+      return array;
+    }
+    const seen = new Set<number>();
+    for (const index of array.value) {
+      if (index >= numPops || seen.has(index)) {
+        return wrongType(
+          place,
+          `a Uint32Array that holds each index of the ${String(numPops)} populations once`,
+          value,
+        );
+      }
+      seen.add(index);
+    }
+    return accepted(array.value);
+  };
 }
 
 /**

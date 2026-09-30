@@ -5,7 +5,8 @@
  * which count over the individuals of the list, runs the
  * diversity, the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
- * filters, the principal components, a PCA or a PCoA, and the LD decay of
+ * filters, the principal components, a PCA or a PCoA, the distances
+ * between populations with the order of their heatmap, and the LD decay of
  * each population, writes the filtered variants as a `.nei` file, and says
  * what to answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
@@ -16,10 +17,14 @@
  * under Vitest, given the bytes of a file where the worker gives the `File`.
  */
 import {
+  Distances,
   calcLdAndDistPerPop,
   calcPerIndividualStats,
   calcPerVarDistribs,
+  calcPopDists,
+  correctDistsByLingoes,
   doPcaFromVariants,
+  doPcoa,
   doPcoaFromVariants,
   init,
   openVars,
@@ -31,7 +36,9 @@ import type {
   LdAndDistPerPop,
   LdBins,
   PassStats as PopneiPassStats,
+  PcoaResult,
   PerVarDistribs,
+  PopDists,
   StatsDistrib,
   Step,
   Variants,
@@ -48,6 +55,7 @@ import type {
   FilterCountsJob,
   FilterCountsResult,
   FilteringStats,
+  HeatmapOrder,
   IndividualChecksJob,
   IndividualChecksResult,
   Job,
@@ -60,6 +68,8 @@ import type {
   Pops,
   PcaJob,
   PcaResult,
+  PopDistsJob,
+  PopDistsResult,
   Progress,
   VariantChecksJob,
   VariantChecksResult,
@@ -264,6 +274,16 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
       return [];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
+    case "popDists":
+      return [
+        result.numIndividuals,
+        result.fst,
+        result.dest,
+        result.numVarsPerPair,
+        ...[result.order.fst, result.order.dest].flatMap((order) =>
+          order.kind === "pcoa" ? [order.order] : [],
+        ),
+      ];
     case "ldDecay":
       return [
         result.numIndividuals,
@@ -436,6 +456,8 @@ export function createRunner(): Runner {
         return runFilterCounts(pass, job);
       case "pca":
         return runPca(pass, job, individuals);
+      case "popDists":
+        return runPopDists(pass, job);
       case "ldDecay":
         return runLdDecay(pass, job);
     }
@@ -478,6 +500,7 @@ function stepsOf(job: Job): Steps {
     case "variantChecks":
     case "filterCounts":
     case "pca":
+    case "popDists":
     case "ldDecay":
       return { individuals: job.individuals, filters: job.filters };
   }
@@ -576,8 +599,8 @@ function putFilter(variants: Variants, filter: VariantFilter): void {
 /** Why the runner cannot run a job, or `null` when it can, all defects of
     the page, checked before any step is put: an empty list of individuals,
     which core never sends, since an analysis cannot start when the filters
-    keep no individual; of a diversity and of an LD decay, two populations
-    of one name, of which popnei would keep the last; and of the principal
+    keep no individual; of a diversity, of the distances between
+    populations and of an LD decay, two populations of one name, of which popnei would keep the last; and of the principal
     components, fewer than 1 component to keep. */
 function whyNotToRun(job: Job): string | null {
   const why = whyNotTheList(stepsOf(job).individuals);
@@ -586,6 +609,7 @@ function whyNotToRun(job: Job): string | null {
   }
   switch (job.analysis) {
     case "diversity":
+    case "popDists":
     case "ldDecay":
       return whyNotThePops(job.pops);
     case "pca":
@@ -797,6 +821,185 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
+}
+
+/** The measures of the distances between populations asked of popnei,
+    Hudson's Fst and Jost's D, the two of docs/functionality.md, section 7,
+    from the one pass. */
+const POP_DISTS_MEASURES = ["fst", "dest"] as const;
+
+/**
+ * Runs `calcPopDists` over the populations of the job, with no standard
+ * errors, as the owner decided on 30 September 2026, puts its pairs back
+ * in the order of the job, and makes the order of the heatmap of each
+ * measure. The options object is written with its keys alone, since popnei
+ * refuses a key it does not know, and the populations with
+ * `Object.fromEntries`, which makes a population named `__proto__` a field
+ * of its own.
+ */
+function runPopDists(pass: Pass, job: PopDistsJob): Answer<JobResult> {
+  const answer = passOf(pass, (variants) =>
+    calcPopDists(variants, Object.fromEntries(job.pops), {
+      jackknifeGroup: null,
+      measures: POP_DISTS_MEASURES,
+      minNumIndividuals: job.minNumIndividuals,
+    }),
+  );
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  return { kind: "ok", value: popDistsResultOf(answer.value, job) };
+}
+
+/**
+ * The `PopDistsResult` of popnei's result, the pairs in the order of the
+ * job's populations. popnei gives its populations in the order the keys
+ * of the object it was given iterate in, whole numbers first, and its
+ * pairs in that order, so for the job's populations i < j of k, the place
+ * `pairAt(i, j, k)` of each array takes popnei's value of the same two
+ * names at the place of their places in popnei's `pops`. Throws a defect
+ * when popnei gave other populations than the job's, no values of a
+ * measure asked for, or a negative count of variants.
+ */
+function popDistsResultOf(dists: PopDists, job: PopDistsJob): PopDistsResult {
+  const pops = job.pops.map(([pop]) => pop);
+  const numPops = pops.length;
+  const placeInPopnei = new Map<string, number>(
+    dists.pops.map((pop, at) => [pop, at]),
+  );
+  const placesInPopnei = pops.map((pop) => {
+    const at = placeInPopnei.get(pop);
+    if (at === undefined || dists.pops.length !== numPops) {
+      throw new Error(
+        `popnei_web defect: calcPopDists gave the populations ${JSON.stringify(dists.pops)} for ${JSON.stringify(pops)}`,
+      );
+    }
+    return at;
+  });
+  const fstGiven = measureOf(dists, "fst");
+  const destGiven = measureOf(dists, "dest");
+  const numPairs = (numPops * (numPops - 1)) / 2;
+  const fst = new Float64Array(numPairs);
+  const dest = new Float64Array(numPairs);
+  const numVarsPerPair = new Uint32Array(numPairs);
+  for (const [i, atI] of placesInPopnei.entries()) {
+    for (const [j, atJ] of placesInPopnei.entries()) {
+      if (j <= i) {
+        continue;
+      }
+      const given = pairAt(Math.min(atI, atJ), Math.max(atI, atJ), numPops);
+      const place = pairAt(i, j, numPops);
+      fst[place] = numberAt(fstGiven.distVector, given);
+      dest[place] = numberAt(destGiven.distVector, given);
+      const numVars = numberAt(dists.numVars, given);
+      if (numVars < 0) {
+        throw new Error(
+          `popnei_web defect: calcPopDists counted ${String(numVars)} variants for the pair ${JSON.stringify(pops[i])}, ${JSON.stringify(pops[j])}`,
+        );
+      }
+      numVarsPerPair[place] = numVars;
+    }
+  }
+  return {
+    analysis: "popDists",
+    pops,
+    numIndividuals: Uint32Array.from(
+      job.pops,
+      ([, individuals]) => individuals.length,
+    ),
+    fst,
+    dest,
+    numVarsPerPair,
+    order: {
+      fst: heatmapOrderOf(fst, pops, fstGiven.passStats),
+      dest: heatmapOrderOf(dest, pops, destGiven.passStats),
+    },
+    leftOut: job.leftOut,
+    passStats: passStatsOf(dists.passStats, job.filters),
+  };
+}
+
+/** The distances of the measure `measure` of popnei's result, which the
+    runner asked for; throws a defect when popnei gave none. */
+function measureOf(
+  dists: PopDists,
+  measure: (typeof POP_DISTS_MEASURES)[number],
+): Distances {
+  const given = dists[measure];
+  if (given === null) {
+    throw new Error(
+      `popnei_web defect: calcPopDists gave no ${measure}, which was asked for`,
+    );
+  }
+  return given;
+}
+
+/** The place of the pair of the populations i < j of k among the pairs
+    (0, 1), (0, 2), …, (1, 2), …. */
+function pairAt(i: number, j: number, k: number): number {
+  return i * k - (i * (i + 1)) / 2 + j - i - 1;
+}
+
+/** The value at `index` of an array of popnei's; throws a defect when it
+    has none there. */
+function numberAt(array: Float64Array | Int32Array, index: number): number {
+  const value = array[index];
+  if (value === undefined) {
+    throw new Error(
+      `popnei_web defect: an array of popnei's result has no value at ${String(index)}`,
+    );
+  }
+  return value;
+}
+
+/**
+ * The order of the heatmap of one measure, over its distances in the order
+ * of the job, by the six steps of docs/specs/analyses/popDists.md, "The
+ * order of the heatmap": two populations, and a pair with no distance, keep
+ * the order of the file; a negative distance is taken as 0 in the matrix
+ * given to the PCoA alone; every distance 0 then keeps the order of the
+ * file; otherwise popnei's Lingoes' correction and PCoA, the populations
+ * sorted by their projection on the first component, an exact tie broken
+ * by the order of the job; and a refusal of popnei at either of those two
+ * calls keeps the order of the file with popnei's message. What else they
+ * throw, a trap of the wasm, is thrown.
+ */
+function heatmapOrderOf(
+  distVector: Float64Array,
+  pops: readonly string[],
+  passStats: PopneiPassStats,
+): HeatmapOrder {
+  if (pops.length === 2) {
+    return { kind: "file", reason: "twoPopulations" };
+  }
+  if (distVector.some((dist) => Number.isNaN(dist))) {
+    return { kind: "file", reason: "noDistance" };
+  }
+  const clipped = distVector.map((dist) => Math.max(dist, 0));
+  if (clipped.every((dist) => dist === 0)) {
+    return { kind: "file", reason: "allZero" };
+  }
+  const distances = new Distances(clipped, pops, passStats);
+  let pcoa: PcoaResult;
+  try {
+    pcoa = doPcoa(correctDistsByLingoes(distances).distances);
+  } catch (thrown: unknown) {
+    const answer = answerOfThrown(thrown);
+    if (answer.kind !== "refused") {
+      throw thrown;
+    }
+    return { kind: "file", reason: "notPlaced", message: answer.message };
+  }
+  const first = Float64Array.from(pops, (_, at) =>
+    numberAt(pcoa.projections, at * pcoa.numComps),
+  );
+  const order = pops
+    .map((_, at) => at)
+    .toSorted((a, b) => {
+      const apart = numberAt(first, a) - numberAt(first, b);
+      return apart !== 0 ? apart : a - b;
+    });
+  return { kind: "pcoa", order: Uint32Array.from(order) };
 }
 
 /**

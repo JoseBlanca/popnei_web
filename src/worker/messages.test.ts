@@ -5,6 +5,7 @@ import type {
   DiversityResult,
   FilterCountsJob,
   FilterCountsResult,
+  HeatmapOrder,
   IndividualChecksJob,
   IndividualChecksResult,
   LdDecayJob,
@@ -12,6 +13,8 @@ import type {
   PassStats,
   PcaJob,
   PcaResult,
+  PopDistsJob,
+  PopDistsResult,
   VariantChecksJob,
   VariantChecksResult,
   VariantDistrib,
@@ -1293,12 +1296,59 @@ const ldDecayResult: fc.Arbitrary<LdDecayResult> = fc
       passStats,
     }),
   );
+/** An order of the heatmap of `numPops` populations, of each kind. */
+const heatmapOrder = (numPops: number): fc.Arbitrary<HeatmapOrder> =>
+  fc.oneof(
+    fc
+      .shuffledSubarray(
+        Array.from({ length: numPops }, (_, at) => at),
+        { minLength: numPops, maxLength: numPops },
+      )
+      .map((order) => ({
+        kind: "pcoa" as const,
+        order: Uint32Array.from(order),
+      })),
+    fc.record({
+      kind: fc.constant("file" as const),
+      reason: fc.constantFrom(
+        "twoPopulations" as const,
+        "noDistance" as const,
+        "allZero" as const,
+      ),
+    }),
+    fc.record({
+      kind: fc.constant("file" as const),
+      reason: fc.constant("notPlaced" as const),
+      message: text,
+    }),
+  );
+const leftOut = fc.array(fc.tuple(text, whole), { maxLength: 3 });
+const popDistsResult: fc.Arbitrary<PopDistsResult> = fc
+  .array(text, { maxLength: 5 })
+  .chain((pops) => {
+    const numPairs = (pops.length * (pops.length - 1)) / 2;
+    return fc.record({
+      analysis: fc.constant("popDists" as const),
+      pops: fc.constant(pops),
+      numIndividuals: uint32s(pops.length),
+      fst: float64s(numPairs),
+      dest: float64s(numPairs),
+      numVarsPerPair: uint32s(numPairs),
+      order: fc.record({
+        fst: heatmapOrder(pops.length),
+        dest: heatmapOrder(pops.length),
+      }),
+      leftOut,
+      passStats,
+    });
+  });
 const jobResult = fc.oneof(
   diversityResult,
   individualChecksResult,
   variantChecksResult,
   filterCountsResult,
   pcaResult,
+  popDistsResult,
   ldDecayResult,
 );
 const written = fc.nat({ max: 64 }).chain((numBytes) =>
@@ -1533,6 +1583,17 @@ const pcaJob = fc.record({
   method: fc.constantFrom("pca" as const, "pcoa" as const),
   numCompsKept: fc.integer(),
 });
+const popDistsJob = fc.record({
+  analysis: fc.constant("popDists" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
+  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
+    maxLength: 3,
+  }),
+  leftOut,
+  minNumIndividuals: number,
+});
 const ldDecayJob = fc.record({
   analysis: fc.constant("ldDecay" as const),
   fileId: text,
@@ -1579,6 +1640,7 @@ const toRunnerMessage = fc.oneof(
       variantChecksJob,
       filterCountsJob,
       pcaJob,
+      popDistsJob,
       ldDecayJob,
     ),
   }),
@@ -2517,5 +2579,326 @@ describe("PA2 D1 the messages of the LD decay", () => {
 
   test("the version of the messages is 4", () => {
     expect(PROTOCOL_VERSION).toBe(4);
+  });
+});
+
+// The job and the result of the distances between populations, stage 5
+// (docs/specs/worker/messages.md, "How it is verified").
+
+const POP_DISTS_JOB: PopDistsJob = {
+  analysis: "popDists",
+  fileId: "load-a",
+  filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+  individuals: null,
+  pops: [
+    ["p0", ["s000", "s001"]],
+    ["p2", ["s002"]],
+    ["p1", ["s003"]],
+  ],
+  leftOut: [["p3", 12]],
+  minNumIndividuals: 20,
+};
+
+/** A result of the distances of p0, p2 and p1, the numbers of panel.nei at
+    the missing data filter at 0.1, ordered along the first axis of each
+    measure. */
+const POP_DISTS_RESULT: PopDistsResult = {
+  analysis: "popDists",
+  pops: ["p0", "p2", "p1"],
+  numIndividuals: Uint32Array.of(48, 84, 68),
+  fst: Float64Array.of(
+    0.10273588423661377,
+    0.10496244498389443,
+    0.10962148955018115,
+  ),
+  dest: Float64Array.of(
+    0.06129813142463423,
+    0.06354346296076403,
+    0.06567052128821259,
+  ),
+  numVarsPerPair: Uint32Array.of(1200, 1200, 1200),
+  order: {
+    fst: { kind: "pcoa", order: Uint32Array.of(1, 0, 2) },
+    dest: { kind: "pcoa", order: Uint32Array.of(1, 0, 2) },
+  },
+  leftOut: [["p3", 12]],
+  passStats: {
+    numVars: 1200,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+  },
+};
+
+describe("PA3 D1 the messages of the distances", () => {
+  test.each([
+    ["over every individual", POP_DISTS_JOB],
+    [
+      "with a list of individuals and no population left out",
+      {
+        ...POP_DISTS_JOB,
+        individuals: ["s000", "s001", "s002", "s003"],
+        leftOut: [],
+      },
+    ],
+  ])("parseToRunner accepts a run of the distances %s", (_name, job) => {
+    const run = { ...RUN, job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test.each<[string, PopDistsResult["order"]]>([
+    ["of the kind pcoa for both measures", POP_DISTS_RESULT.order],
+    [
+      "of the file, for a pair of no distance and for every distance 0",
+      {
+        fst: { kind: "file", reason: "noDistance" },
+        dest: { kind: "file", reason: "allZero" },
+      },
+    ],
+    [
+      "of the file, for a refusal of popnei, with its message, beside one of the PCoA",
+      {
+        fst: {
+          kind: "file",
+          reason: "notPlaced",
+          message: "popnei: the linear algebra could not be done",
+        },
+        dest: { kind: "pcoa", order: Uint32Array.of(2, 1, 0) },
+      },
+    ],
+  ])(
+    "parseFromRunner accepts a result of the distances with orders %s",
+    (_name, order) => {
+      const message = resultMessage({ ...POP_DISTS_RESULT, order });
+      expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+    },
+  );
+
+  test("parseFromRunner accepts a result of two populations whose orders are twoPopulations", () => {
+    const message = resultMessage({
+      ...POP_DISTS_RESULT,
+      pops: ["p2", "p1"],
+      numIndividuals: Uint32Array.of(84, 68),
+      fst: Float64Array.of(0.10962148955018115),
+      dest: Float64Array.of(0.06567052128821259),
+      numVarsPerPair: Uint32Array.of(1200),
+      order: {
+        fst: { kind: "file", reason: "twoPopulations" },
+        dest: { kind: "file", reason: "twoPopulations" },
+      },
+      leftOut: [
+        ["p0a", 24],
+        ["p0b", 24],
+      ],
+    });
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a result of three populations with two values of fst is wrongLength", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      fst: POP_DISTS_RESULT.fst.slice(0, 2),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.fst",
+        expected: 3,
+        found: 2,
+      },
+    });
+  });
+
+  test.each([
+    ["dest", new Float64Array(4)],
+    ["numVarsPerPair", new Uint32Array(2)],
+    ["numIndividuals", new Uint32Array(2)],
+  ])(
+    "a result of three populations whose %s is not as long is wrongLength",
+    (name, array) => {
+      const result = { ...POP_DISTS_RESULT, [name]: array };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongLength", path: `result.${name}` },
+      });
+    },
+  );
+
+  test("a result whose numVarsPerPair is a Float64Array is wrongType", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      numVarsPerPair: Float64Array.of(1200, 1200, 1200),
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numVarsPerPair" },
+    });
+  });
+
+  test.each([
+    ["[0, 0, 2], which holds 0 twice and 1 never", [0, 0, 2]],
+    ["[0, 1, 3], which holds an index beyond the three populations", [0, 1, 3]],
+  ])("an order of the kind pcoa of %s is refused", (_name, indexes) => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        dest: { kind: "pcoa", order: Uint32Array.from(indexes) },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.order.dest.order",
+        expected:
+          "a Uint32Array that holds each index of the 3 populations once",
+      },
+    });
+  });
+
+  test("an order of the kind pcoa of two indexes for three populations is wrongLength", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "pcoa", order: Uint32Array.of(1, 0) },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.order.fst.order",
+        expected: 3,
+        found: 2,
+      },
+    });
+  });
+
+  test("an order notPlaced without its message is missingFields", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "file", reason: "notPlaced" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "result",
+        path: "result.order.fst",
+        fields: ["message"],
+      },
+    });
+  });
+
+  test("an order of another reason with a message is extraFields", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "file", reason: "noDistance", message: "no distance" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.order.fst",
+        fields: ["message"],
+      },
+    });
+  });
+
+  test("an order of the file whose reason is not one of the four is unknownValue", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        dest: { kind: "file", reason: "notEuclidean" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "unknownValue",
+        path: "result.order.dest.reason",
+        found: "notEuclidean",
+      },
+    });
+  });
+
+  test("an order of a kind that is not pcoa nor file is unknownValue, and a result without the order of dest is missingFields", () => {
+    const tree = {
+      ...POP_DISTS_RESULT,
+      order: { ...POP_DISTS_RESULT.order, fst: { kind: "tree" } },
+    };
+    expect(parseFromRunner(resultMessage(tree))).toMatchObject({
+      ok: false,
+      error: { kind: "unknownValue", path: "result.order.fst.kind" },
+    });
+    const noDest = {
+      ...POP_DISTS_RESULT,
+      order: { fst: POP_DISTS_RESULT.order.fst },
+    };
+    expect(parseFromRunner(resultMessage(noDest))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        path: "result.order",
+        fields: ["dest"],
+      },
+    });
+  });
+
+  test.each([
+    ["a count that is not whole", [["p3", 12.5]], "leftOut.0.1"],
+    ["a name that is a number", [[3, 12]], "leftOut.0.0"],
+  ])(
+    "a job and a result whose leftOut holds %s are wrongType",
+    (_name, left, path) => {
+      expect(
+        parseToRunner({ ...RUN, job: { ...POP_DISTS_JOB, leftOut: left } }),
+      ).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `job.${path}` },
+      });
+      expect(
+        parseFromRunner(resultMessage({ ...POP_DISTS_RESULT, leftOut: left })),
+      ).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `result.${path}` },
+      });
+    },
+  );
+
+  test("a popDists job without leftOut is missingFields, and one with a measure is extraFields", () => {
+    const without = Object.fromEntries(
+      Object.entries(POP_DISTS_JOB).filter(([name]) => name !== "leftOut"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["leftOut"],
+      },
+    });
+    expect(
+      parseToRunner({ ...RUN, job: { ...POP_DISTS_JOB, measure: "fst" } }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["measure"],
+      },
+    });
   });
 });

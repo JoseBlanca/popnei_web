@@ -105,6 +105,7 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
   switch (r.analysis) {
     case "diversity":
     case "filterCounts":
+    case "popDists":
       return { numVarsRead, counts: writeCountsOf(r.passStats) };
     case "individualChecks":
     case "variantChecks":
