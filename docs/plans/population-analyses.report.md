@@ -93,6 +93,19 @@ the plan; each is asked of you at the next stop.
    `project.md`, "What the analyses per population share from stage 5",
    does not name. Recommendation: list them there.
 
+4. **The names under the heatmap's columns, `heatmap.md`, "The grid".**
+   The spec puts the grid at the top left of its frame, and the base of
+   the plots draws the axis of the columns at the foot of the frame.
+   The frame of the panel is taller than it is wide, since the legend
+   takes width on the right, so the names of the columns stand about 90
+   pixels below the last row at 640 by 640 pixels, and about 130 with
+   long names, in Chromium and WebKit (`screens/scratch-heatmap-chromium-panel-640.png`).
+   Recommendation: the grid at the bottom left of the frame, the room
+   left over above it, which puts the names under their columns with no
+   change to the base. The other way is an option of the base that
+   places its horizontal axis, which changes `plot2d.md`. Asked at stop
+   A, where it can be the first round.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac
@@ -100,6 +113,12 @@ restarts, so what the orchestrator gives every writer is kept here.
 Every task's prompt is the text below, then the task's own part: its
 number, what earlier tasks it builds on, and what the owner decided that
 the code does not show.
+
+The orchestrator runs its whole checks on a copy of a commit made with
+`git archive` outside the worktree, with the preview port of
+`playwright.config.ts` changed in the copy (4273 and up): the config
+reuses a server already on 4173, so a check beside a writer's would
+otherwise test the writer's build.
 
 ### What every task of this plan is given
 
