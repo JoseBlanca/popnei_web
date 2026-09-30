@@ -625,7 +625,7 @@ test("IP5 D2 a type and a value coded 1 changed while the diversity by popcat is
     "popcat",
   );
   await goTo(page, "Analyses");
-  const panel = page.getByRole("region", { name: "Diversity" });
+  const panel = page.getByRole("region", { name: "Diversity", exact: true });
   await panel.getByRole("button", { name: "Run" }).click();
   await expect(panel.getByRole("table")).toBeVisible();
 

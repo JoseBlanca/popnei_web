@@ -97,7 +97,7 @@ async function load(
 
 /** The panel of the diversity. */
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** The cells of the row of the population `pop` of the diversity in the
@@ -1145,4 +1145,194 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
     "0.3567",
     "0.9288",
   ]);
+});
+
+/** Every cell of the row of the population `pop` of the diversity, its
+    header left out: the eleven columns of stage 5 but the first. */
+function wholeRow(page: Page, pop: string): Locator {
+  return panel(page)
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
+    .getByRole("cell");
+}
+
+/** The labels of the fields of the diversity. */
+const MINIMUM_FIELD =
+  "Minimum number of individuals with a genotype, a whole number from 0";
+const DRAW_FIELD =
+  "Chromosomes drawn for the rarefaction, a whole number from 2";
+
+/** Types `value` in the field `label` of the diversity and commits it
+    with Enter. */
+async function setField(
+  page: Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  const field = panel(page).getByLabel(label);
+  await field.fill(value);
+  await field.press("Enter");
+  await expect(field).toHaveValue(value);
+}
+
+test("PA7 D1 at 0.05 the row p0 reads to its end 48, 0.3527, 0.3567, 0.9288, −0.0113, 1.9792, 1.9646, 0, 0.0000, 0.0028, and p2 has 1 private allele, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await expectNoViolations(makeAxeBuilder);
+  await run(page);
+  await expect(wholeRow(page, "p0")).toHaveText([
+    "48",
+    "0.3527",
+    "0.3567",
+    "0.9288",
+    "−0.0113",
+    "1.9792",
+    "1.9646",
+    "0",
+    "0.0000",
+    "0.0028",
+  ]);
+  await expect(wholeRow(page, "p2").nth(7)).toHaveText("1");
+  await expect(
+    panel(page).getByText("Rarefied to 40 chromosomes.", { exact: true }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D1 a draw of 96 typed: the column headed with 96 and the warning of p0 at 277 of the 1,152 variants; Use the default then sets the draw back to 40 with the focus on its field, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "96");
+  await expect(
+    panel(page).getByText("Typed; the default would be 40.", { exact: true }),
+  ).toBeVisible();
+  await run(page);
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Alleles per variant, rarefied to 96 chromosomes",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByText(
+      /^Warning: p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value \(24%\), so its rarefied values are over those alone\./,
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  const useDefault = panel(page).getByRole("button", {
+    name: "Use the default",
+  });
+  await useDefault.focus();
+  await page.keyboard.press("Enter");
+  await expect(useDefault).toHaveCount(0);
+  const draw = panel(page).getByLabel(DRAW_FIELD);
+  await expect(draw).toHaveValue("40");
+  await expect(draw).toBeFocused();
+  await expect(
+    panel(page).getByText(
+      /^The diversity was removed because the number of chromosomes of the rarefaction changed\./,
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D1 a minimum of 50 names p0, of 48 individuals, in the ready state, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, MINIMUM_FIELD, "50");
+  await expect(
+    panel(page).getByText(
+      "p0 has 48 individuals, fewer than the minimum of 50, so it will have no values, and is left out of the count of the private alleles of the others.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // The default draw follows the minimum.
+  await expect(panel(page).getByLabel(DRAW_FIELD)).toHaveValue("100");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 three histograms, each headed by its population, of 20 bars, and the table of 21 rows, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  for (const pop of ["p0", "p2", "p1"]) {
+    const group = panel(page).getByRole("group", { name: pop, exact: true });
+    await expect(
+      group.getByRole("heading", { level: 3, name: pop, exact: true }),
+    ).toBeVisible();
+    await expect(group.locator("svg rect.chart-bar")).toHaveCount(20);
+  }
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  await expectNoViolations(makeAxeBuilder);
+
+  await panel(page).getByRole("tab", { name: "Table", exact: true }).click();
+  const table = panel(page).getByRole("table", {
+    name: "The folded site frequency spectrum of each population, as numbers",
+  });
+  await expect(table.locator("tbody tr")).toHaveCount(21);
+  await expect(panel(page).locator("svg rect.chart-bar")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 the MAF filter at 0.95 after the missing data filter at 0.05 gives the warning of the spectrum, 24 of the 1,152 removed, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await page
+    .getByText("Filter the variants by major allele frequency (MAF)", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByLabel("Maximum major allele frequency", { exact: false }),
+  ).toHaveValue("0.95");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(
+    panel(page).getByText(
+      "Warning: The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 at 320 px the block of the spectrum is one histogram to a row and the page does not scroll sideways, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const groups = panel(page).getByRole("group");
+  await expect(groups).toHaveCount(3);
+  await expect(groups.nth(2).locator("svg rect.chart-bar")).toHaveCount(20);
+  const lefts = await groups.evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().left),
+  );
+  expect(new Set(lefts).size).toBe(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expectNoViolations(makeAxeBuilder);
 });

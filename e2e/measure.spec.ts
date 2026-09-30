@@ -92,6 +92,12 @@
  * twenty, from the run posted to the calculation worker to its answer,
  * and from the answer to the table of the pairs seen.
  *
+ * And the time of each of the two passes of a Run of the diversity (PA7
+ * D3, the open-points file of stage 5, "Set by a measurement";
+ * docs/specs/analyses/diversity.md, "How it runs"), in both engines, on
+ * panel.nei and the .nei file of 19,161,178 bytes, with what popnei
+ * issue #4, one pass, would save.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -165,6 +171,8 @@ interface Logged {
   readonly wall: number;
   /** Of a progress, the bytes read. */
   readonly bytesRead?: number;
+  /** Of a progress, the pass it is of, from 1. */
+  readonly pass?: number;
   /** Of a result of the PCA, the variants it used. */
   readonly numVarsUsed?: number;
 }
@@ -217,6 +225,7 @@ function instrument(): void {
         const kind = kindOf(event.data);
         const data = event.data as {
           readonly bytesRead?: unknown;
+          readonly pass?: unknown;
           readonly result?: { readonly numVarsUsed?: unknown };
         };
         const used = data.result?.numVarsUsed;
@@ -229,6 +238,9 @@ function instrument(): void {
           wall: Date.now(),
           ...(kind === "progress" && typeof data.bytesRead === "number"
             ? { bytesRead: data.bytesRead }
+            : {}),
+          ...(kind === "progress" && typeof data.pass === "number"
+            ? { pass: data.pass }
             : {}),
           ...(kind === "result" && typeof used === "number"
             ? { numVarsUsed: used }
@@ -377,7 +389,7 @@ async function load(
 }
 
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** What a run gave: the text of the panel once it ended, and its times
@@ -3869,6 +3881,116 @@ test("PA5 D3 the time of the distances between populations: panel.nei and the .n
       "run to answer, range",
       "answer to table seen, median",
       "answer to table seen, range",
+    ],
+    rows,
+  );
+});
+
+// ---------------------------------------------------------------------
+// The time of the second pass of the diversity (PA7 D3).
+
+/** The times of one run of the diversity of two passes, in
+    milliseconds. */
+interface TwoPasses {
+  /** From the run posted to the calculation worker to the first progress
+      of its second pass: the opening of the file and the first pass,
+      calcPerVarDistribs. */
+  readonly first: number;
+  /** From the first progress of the second pass to the answer: the
+      second pass, calcPopDiversity, and the result posted. */
+  readonly second: number;
+  /** From the run posted to the answer. */
+  readonly run: number;
+}
+
+/** One run of the diversity, with its default options, on a new page
+    with `file` and its populations just loaded, timed by pass from the
+    messages of the calculation worker. */
+async function twoPassesOnce(
+  browser: Browser,
+  file: string,
+  pops: string,
+  column: string,
+): Promise<TwoPasses> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await load(page, file, pops, column);
+    const before = (await logOf(page)).length;
+    const ran = await runAndSettle(page, 240_000);
+    expect(ran.table).toBe(true);
+    const ended = (await logOf(page)).slice(before).filter(isCalc);
+    const run = ended.find((l) => l.event === "out" && l.kind === "run");
+    const second = ended.find((l) => l.kind === "progress" && l.pass === 2);
+    const answer = ended.find((l) => l.event === "in" && ENDS.has(l.kind));
+    if (run === undefined || second === undefined || answer === undefined) {
+      throw new Error(
+        "the run, the first progress of its second pass or its answer is not in the log of the worker",
+      );
+    }
+    return {
+      first: second.t - run.t,
+      second: answer.t - second.t,
+      run: answer.t - run.t,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+test("PA7 D3 the time of each of the two passes of a Run of the diversity, on panel.nei and on the .nei file of 19,161,178 bytes, and what popnei issue #4 would save", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(1_800_000);
+  const big = await bigFiles();
+  const files = [
+    {
+      name: "panel.nei, 1,200 variants of 200 individuals",
+      file: join(FIXTURES, "panel.nei"),
+      pops: join(FIXTURES, "panel_pops.csv"),
+      column: "popcat",
+    },
+    {
+      name: `the .nei file of ${statSync(big.nei).size.toLocaleString("en-US")} bytes, 20,000 variants of 1,000 individuals`,
+      file: big.nei,
+      pops: big.pops,
+      column: "pop",
+    },
+  ];
+  const rows: string[][] = [];
+  for (const { name, file, pops, column } of files) {
+    const times: TwoPasses[] = [];
+    for (let k = 0; k < REPEATS; k++) {
+      times.push(await twoPassesOnce(browser, file, pops, column));
+    }
+    const firsts = times.map((t) => t.first);
+    const seconds = times.map((t) => t.second);
+    const runs = times.map((t) => t.run);
+    // A number measured in every column.
+    for (const t of [...firsts, ...seconds, ...runs]) {
+      expect(Number.isFinite(t) && t > 0).toBe(true);
+    }
+    rows.push([
+      name,
+      ...stats(firsts, ms),
+      ...stats(seconds, ms),
+      ...stats(runs, ms),
+      `${ms(median(firsts))}, ${((100 * median(firsts)) / median(runs)).toFixed(0)}% of the run`,
+    ]);
+  }
+  report(
+    "The two passes of a Run of the diversity",
+    `${machine(browser, browserName)}; ${String(REPEATS)} runs on each file, each on a new page just after the load, with the default options and filters; the first pass from the run posted to the calculation worker to the first progress of the second, the second from there to the answer`,
+    [
+      "file",
+      "first pass, median",
+      "first pass, range",
+      "second pass, median",
+      "second pass, range",
+      "run, median",
+      "run, range",
+      "saved by popnei issue #4, one pass",
     ],
     rows,
   );

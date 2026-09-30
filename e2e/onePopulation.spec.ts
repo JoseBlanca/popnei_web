@@ -106,7 +106,7 @@ async function choosePopulations(page: Page, option: string): Promise<void> {
 }
 
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** The cells of the row of the population `pop` of the diversity in the

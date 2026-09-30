@@ -20,7 +20,7 @@ const SCREENS = join(import.meta.dirname, "..", "screens");
     Analyses step holds the principal components' panel beside it, with
     a Run of its own. */
 function diversityPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** Saves the whole page as `name`, or only the window with `fullPage`

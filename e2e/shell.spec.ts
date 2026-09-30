@@ -770,5 +770,5 @@ test("WS9 D3 while a dialog is open, the status region and the error bar's alert
     Analyses step holds the principal components' panel beside it, with
     a Run of its own. */
 function diversityPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }

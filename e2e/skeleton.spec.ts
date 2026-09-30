@@ -107,7 +107,7 @@ async function setThreshold(page: Page, value: string): Promise<void> {
 
 /** The panel of the diversity. */
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** The cells of the row of the population `pop` of the diversity in the

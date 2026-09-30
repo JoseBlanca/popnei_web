@@ -632,7 +632,7 @@ test("from the keyboard alone, the LD filter set for the PCA, 50000 typed in its
   });
   await expect(
     page
-      .getByRole("region", { name: "Diversity" })
+      .getByRole("region", { name: "Diversity", exact: true })
       .getByRole("button", { name: "Run", exact: true }),
   ).toBeVisible();
 });
@@ -1332,7 +1332,10 @@ test.describe("the line under the bar of a calculation under way", () => {
   }) => {
     await openPanel(page);
     await holdResults(page);
-    const diversity = page.getByRole("region", { name: "Diversity" });
+    const diversity = page.getByRole("region", {
+      name: "Diversity",
+      exact: true,
+    });
     await diversity.getByRole("button", { name: "Run", exact: true }).click();
     await expect(
       diversity.getByRole("progressbar", { name: "Calculating the diversity" }),
@@ -1700,7 +1703,10 @@ test.describe("IP10 D3 the states of the panel", () => {
     await expect(panel.getByRole("progressbar")).toHaveCount(0);
     await expect(stop).toHaveCount(0);
     await expect(status(page)).toContainText("Principal components: stopped.");
-    const diversity = page.getByRole("region", { name: "Diversity" });
+    const diversity = page.getByRole("region", {
+      name: "Diversity",
+      exact: true,
+    });
     await expect(
       diversity.getByRole("button", { name: "Run", exact: true }),
     ).toBeEnabled();
