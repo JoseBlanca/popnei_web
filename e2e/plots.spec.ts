@@ -5,7 +5,9 @@
  * (docs/specs/charts/plot2d.md, "How it is verified"; histogram.md, the
  * legend at 320 pixels). No screen offers the export before stage 6, so
  * the tests call the handle through `page.evaluate`. The scatter and the
- * heatmap are drawn there too, for their pointer and their export.
+ * heatmap are drawn there too, for their pointer and their export, and
+ * the line plot of the LD decay, for its export and the contrast of its
+ * lines.
  */
 
 import { readFile } from "node:fs/promises";
@@ -15,7 +17,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { PngScale } from "../src/charts/types.ts";
 import { test as withAxe } from "./axe.ts";
-import type { HeatmapKind } from "./plotsPage.ts";
+import type { HeatmapKind, LineKind } from "./plotsPage.ts";
 
 /** The fill of a kept bar in the light theme, --chart-bar, #0072b2. */
 const LIGHT_BAR = "rgb(0, 114, 178)";
@@ -1720,5 +1722,264 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
     expect(Math.abs(right - middle), `${text} across`).toBeLessThanOrEqual(8);
     expect(top - axis, `${text} down`).toBeGreaterThanOrEqual(0);
     expect(top - axis, `${text} down`).toBeLessThanOrEqual(12);
+  }
+});
+
+/** The line of pop_a, --chart-cat-1 of Okabe and Ito, #e69f00. */
+const ORANGE: readonly [number, number, number] = [230, 159, 0];
+
+/** Draws the line plot of `kind` in an element of `width` by `height`. */
+async function drawLine(
+  page: Page,
+  width: number,
+  height: number,
+  kind: LineKind,
+): Promise<void> {
+  await page.evaluate(
+    ([w, h, k]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.drawLine(w, h, k);
+    },
+    [width, height, kind] as const,
+  );
+}
+
+/** The channels of "rgb(r, g, b)", as a browser computes a colour, 0 to 255. */
+function channelsOf(colour: string): [number, number, number] {
+  const found = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(colour);
+  if (found === null) throw new Error(`${colour} is not a colour.`);
+  const [red, green, blue] = found
+    .slice(1)
+    .map((part) => Number.parseInt(part, 10));
+  if (red === undefined || green === undefined || blue === undefined) {
+    throw new Error(`${colour} has no three channels.`);
+  }
+  return [red, green, blue];
+}
+
+/** The contrast ratio of two colours by the formula of WCAG 2.2, 1 to 21. */
+function contrastOf(first: string, second: string): number {
+  const luminance = (colour: string): number => {
+    const [red = 0, green = 0, blue = 0] = channelsOf(colour).map((channel) => {
+      const share = channel / 255;
+      return share <= 0.04045
+        ? share / 12.92
+        : ((share + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const [lighter = 0, darker = 0] = [
+    luminance(first),
+    luminance(second),
+  ].toSorted((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light theme: the line of pop_a in rgb(230, 159, 0) on a casing of the colour of the axes, 50 points each, the dashed lines of the half distances, and the legend of both populations, with no var(", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const screenAxis = plots
+      .element()
+      .querySelector("g.chart-axis-x path.domain");
+    if (screenAxis === null) throw new Error("The plot has no axis.");
+    const text = plots.handle().toSVG();
+    const root = new DOMParser().parseFromString(
+      text,
+      "image/svg+xml",
+    ).documentElement;
+    // The value of `property` in the style written on `each`.
+    const styleOf = (each: Element | null, property: string): string =>
+      (each?.getAttribute("style") ?? "")
+        .split(";")
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration.startsWith(`${property}:`))
+        .map((declaration) => declaration.slice(property.length + 1).trim())
+        .join("");
+    const orange = root.querySelector(
+      "g.chart-marks path.chart-line.chart-line-colour-0",
+    );
+    return {
+      text,
+      screenAxisStroke: getComputedStyle(screenAxis).stroke,
+      axisWidth: styleOf(
+        root.querySelector("g.chart-axis-x path.domain"),
+        "stroke-width",
+      ),
+      line: [
+        styleOf(orange, "stroke"),
+        styleOf(orange, "stroke-width"),
+        styleOf(orange, "fill"),
+        styleOf(orange, "stroke-linejoin"),
+      ],
+      casings: [
+        ...root.querySelectorAll("g.chart-marks path.chart-line-casing"),
+      ].map((each) => [
+        styleOf(each, "stroke"),
+        styleOf(each, "stroke-width"),
+        styleOf(each, "fill"),
+      ]),
+      points: [...root.querySelectorAll("g.chart-marks path.chart-points")].map(
+        (path) => (path.getAttribute("d") ?? "").split("M").length - 1,
+      ),
+      markLines: [...root.querySelectorAll("line.chart-mark-line")].map(
+        (line) => [styleOf(line, "stroke"), styleOf(line, "stroke-dasharray")],
+      ),
+      marks: root.querySelectorAll("path.chart-mark").length,
+      legend: [...root.querySelectorAll("g.chart-legend-row")].map((row) => ({
+        text: row.querySelector("text")?.textContent ?? null,
+        fill: styleOf(row.querySelector("text"), "fill"),
+        line: styleOf(row.querySelector("line.chart-line"), "stroke"),
+        casings: row.querySelectorAll("line.chart-line-casing").length,
+      })),
+      ticks: [...root.querySelectorAll("g.chart-axis-x g.tick text")].map(
+        (each) => each.textContent,
+      ),
+    };
+  });
+  // The page is dark: the axis on the screen is in the dark theme.
+  expect(found.screenAxisStroke).toBe("rgb(163, 171, 181)");
+  expect(found.text).not.toContain("var(");
+  // No colour of the dark theme but the sky blue of its bars, which is
+  // pop_b's in both themes.
+  for (const colour of DARK_ONLY.filter((each) => each !== DARK_BAR)) {
+    expect(found.text).not.toContain(colour);
+  }
+  // The class chart-line of the SVG widens nothing: the axis is 1 pixel.
+  expect(found.axisWidth).toBe("1px");
+  expect(found.line).toEqual(["rgb(230, 159, 0)", "2px", "none", "round"]);
+  expect(found.casings).toEqual([
+    [LIGHT_AXIS, "4px", "none"],
+    [LIGHT_AXIS, "4px", "none"],
+  ]);
+  expect(found.points).toEqual([50, 50]);
+  expect(found.markLines).toEqual([
+    ["rgb(230, 159, 0)", "4px, 3px"],
+    ["rgb(86, 180, 233)", "4px, 3px"],
+  ]);
+  expect(found.marks).toBe(2);
+  expect(found.legend).toEqual([
+    {
+      text: "pop_a · half at 7,548 bp",
+      fill: LIGHT_TEXT,
+      line: "rgb(230, 159, 0)",
+      casings: 1,
+    },
+    {
+      text: "pop_b · half at 7,340 bp",
+      fill: LIGHT_TEXT,
+      line: "rgb(86, 180, 233)",
+      casings: 1,
+    },
+  ]);
+  expect(found.ticks).toEqual([
+    "0",
+    "20,000",
+    "40,000",
+    "60,000",
+    "80,000",
+    "100,000",
+  ]);
+});
+
+test("PA4 D5 toPNG(2) of the LD decay in 600 by 375 pixels is a PNG of 1,200 by 750 pixels, orange on the piece of line of the first row of its legend", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const found = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    // The piece of line of the first row, 2 pixels from its left end, in
+    // the pixels of the SVG, from the row's translation.
+    const row = plots.element().querySelector<SVGGElement>(".chart-legend-row");
+    const piece = row?.querySelector("line.chart-line") ?? null;
+    const move = row?.transform.baseVal.consolidate()?.matrix;
+    if (piece === null || move === undefined) {
+      throw new Error("The legend has no row with a line.");
+    }
+    const at = { x: move.e + Number(piece.getAttribute("x1")) + 2, y: move.f };
+    const blob = await plots.handle().toPNG(2);
+    const header = new DataView(await blob.arrayBuffer());
+    const image = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("No context of a canvas.");
+    context.drawImage(image, 0, 0);
+    const pixel = context.getImageData(
+      Math.round(2 * at.x),
+      Math.round(2 * at.y),
+      1,
+      1,
+    ).data;
+    return {
+      type: blob.type,
+      signature: header.getUint32(0),
+      width: header.getUint32(16),
+      height: header.getUint32(20),
+      pixel: [...pixel],
+    };
+  });
+  expect(found.type).toBe("image/png");
+  expect(found.signature).toBe(PNG_SIGNATURE);
+  expect([found.width, found.height]).toEqual([1200, 750]);
+  const [red, green, blue] = found.pixel;
+  expect(Math.abs((red ?? -99) - ORANGE[0])).toBeLessThanOrEqual(8);
+  expect(Math.abs((green ?? -99) - ORANGE[1])).toBeLessThanOrEqual(8);
+  expect(Math.abs((blue ?? -99) - ORANGE[2])).toBeLessThanOrEqual(8);
+});
+
+test("PA4 D5 the lines of the four colours without a casing, green, blue, vermilion and reddish purple, are 3:1 or more on the background of the light and the dark theme", async ({
+  page,
+}) => {
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await openPlots(page);
+    await drawLine(page, 600, 375, "noCasing");
+    const found = await page.evaluate(() => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      const marks = plots.element().querySelector("g.chart-marks");
+      if (marks === null) throw new Error("The plot has no marks.");
+      // The background of the theme, resolved by the browser as rgb().
+      const probe = document.createElement("div");
+      probe.style.color = "var(--color-background)";
+      document.body.append(probe);
+      const background = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        background,
+        lines: [...marks.querySelectorAll("path.chart-line")].map((line) => ({
+          className: line.getAttribute("class"),
+          stroke: getComputedStyle(line).stroke,
+        })),
+        casings: marks.querySelectorAll(".chart-line-casing").length,
+      };
+    });
+    expect(found.background).toBe(
+      theme === "light" ? LIGHT_BACKGROUND : "rgb(22, 24, 27)",
+    );
+    expect(found.casings).toBe(0);
+    expect(found.lines.map((line) => line.className)).toEqual([
+      "chart-line chart-line-colour-2",
+      "chart-line chart-line-colour-4",
+      "chart-line chart-line-colour-5",
+      "chart-line chart-line-colour-6",
+    ]);
+    for (const line of found.lines) {
+      expect(
+        contrastOf(line.stroke, found.background),
+        `${line.stroke} in the ${theme} theme`,
+      ).toBeGreaterThanOrEqual(3);
+    }
   }
 });

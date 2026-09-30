@@ -9,6 +9,7 @@
 import type { PngErrorKind } from "../src/charts/export.ts";
 import type { HeatmapData } from "../src/charts/heatmap.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
+import type { LineData } from "../src/charts/line.ts";
 import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
@@ -53,6 +54,15 @@ export type Pca3dKind =
  * draws, whose bands are too narrow for the names.
  */
 export type HeatmapKind = "panel" | "split" | "long" | "many" | "most";
+
+/**
+ * The data of a line plot of the page: `ld`, the LD decay of
+ * e2e/fixtures/ld.nei in pop_a and pop_b, groups 0 and 1, orange and sky
+ * blue, each with the mean r² of its 50 bins, its fitted curve and a mark
+ * at its half distance; `noCasing`, four series of the groups 2, 4, 5
+ * and 6, whose lines have no casing.
+ */
+export type LineKind = "ld" | "noCasing";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -143,6 +153,16 @@ export interface PlotsPage {
    * `heatmapMargin` and `heatmapScale`, apart from the plot.
    */
   heatmapCell(row: number, column: number): ViewportPoint;
+  /**
+   * Draws the line plot of `kind` in a new element whose content is
+   * `width` by `height` CSS pixels, in place of the plot drawn before, and
+   * returns its handle.
+   */
+  drawLine(
+    width: number,
+    height: number,
+    kind: LineKind,
+  ): ChartHandle<LineData>;
   /** The data of the 3D plot drawn last. */
   pca3dData(): Pca3dData;
   /** Draws the 3D plot again with `highlighted` as the legend's highlight. */
@@ -169,6 +189,7 @@ export interface PlotsPage {
     | ChartHandle<HistogramData>
     | ChartHandle<ScatterData>
     | ChartHandle<HeatmapData>
+    | ChartHandle<LineData>
     | Pca3dHandle;
   /** The handle of the 3D plot drawn last; throws when the last plot is not one. */
   pca3d(): Pca3dHandle;
