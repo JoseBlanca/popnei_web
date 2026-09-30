@@ -3436,6 +3436,97 @@ for (const theme of ["light", "dark"] as const) {
       await savePanel(page, `popgen-popdists-many-${theme}`);
     });
 
+    test("the distances done, Jost's D of a haploid file, every cell with no value", async ({
+      page,
+    }) => {
+      await pickVariants(page, {
+        name: "haploid.vcf",
+        text: smallVcf(9, () => false, "haploid"),
+      });
+      await expect(
+        page.getByRole("main").getByText("9 individuals"),
+      ).toBeVisible();
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("1");
+      await ploidy.press("Enter");
+      await page
+        .getByRole("button", { name: "Read haploid.vcf again with ploidy 1" })
+        .click();
+      await loadSmallPopulations(page);
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Warning: Jost's D has no value/),
+      ).toBeVisible();
+      await chooseRadio(
+        popDistsPanel(page).getByRole("radiogroup", {
+          name: "Distance in the heatmap",
+        }),
+        "Jost's D",
+      );
+      await expect(
+        popDistsPanel(page).getByRole("img", {
+          name: /^Jost's D between populations/,
+        }),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-haploid-jost-${theme}`);
+    });
+
+    test("the distances done, a pair with no value and its line of order", async ({
+      page,
+    }) => {
+      // The individuals of C, the last three, have no called genotype.
+      await pickVariants(page, {
+        name: "c_missing.vcf",
+        text: smallVcf(9, (individual) => individual >= 6, "diploid"),
+      });
+      await expect(
+        page.getByRole("main").getByText("9 individuals"),
+      ).toBeVisible();
+      // The missing data filter would keep no variant.
+      await page
+        .getByText("Filter the variants by missing data", { exact: true })
+        .click();
+      await loadSmallPopulations(page);
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^In the order of the metadata file/),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-no-value-${theme}`);
+    });
+
+    test("the distances done, two populations", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+      await pickIndividuals(page, {
+        name: "two_pops.csv",
+        text: text.replaceAll(/,p1$/gm, ",p2"),
+      });
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByRole("rowheader", { name: "p0 and p2" }),
+      ).toBeVisible({ timeout: 30_000 });
+      await savePanel(page, `popgen-popdists-two-${theme}`);
+    });
+
+    test("the distances done, populations under the minimum left out", async ({
+      page,
+    }) => {
+      await loadSplit(page);
+      await goTo(page, "Analyses");
+      await setMinimum(page, "25");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Warning: Populations p0a and p0b/),
+      ).toBeVisible({ timeout: 30_000 });
+      await savePanel(page, `popgen-popdists-too-few-${theme}`);
+    });
+
     test("the distances done at 320 pixels wide, in the committed font", async ({
       page,
     }) => {
@@ -3511,6 +3602,60 @@ async function loadSplit(page: Page): Promise<void> {
   await expect(
     page.getByRole("main").getByText("p0a, 24 individuals"),
   ).toBeAttached();
+}
+
+/** A VCF of 20 variants and `numIndividuals` individuals, i0, i1, …,
+    haploid or diploid, with the genotypes of the individuals `missing`
+    gives true for left uncalled, and the others drawn from the variant
+    and the individual so that the populations differ. */
+function smallVcf(
+  numIndividuals: number,
+  missing: (individual: number) => boolean,
+  ploidy: "haploid" | "diploid",
+): string {
+  const names = Array.from(
+    { length: numIndividuals },
+    (_, i) => `i${String(i)}`,
+  );
+  const allele = (variant: number, individual: number, copy: number): string =>
+    String(
+      (variant * 7 + individual * 3 + copy * 5) % 11 < 4 + (individual % 3)
+        ? 1
+        : 0,
+    );
+  const lines = Array.from({ length: 20 }, (_, v) => {
+    const genotypes = names.map((_, i) => {
+      if (missing(i)) return ploidy === "haploid" ? "." : "./.";
+      return ploidy === "haploid"
+        ? allele(v, i, 0)
+        : `${allele(v, i, 0)}/${allele(v, i, 1)}`;
+    });
+    return `1\t${String((v + 1) * 1000)}\t.\tA\tC\t.\tPASS\t.\tGT\t${genotypes.join("\t")}`;
+  });
+  return [
+    "##fileformat=VCFv4.2",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
+    ...lines,
+    "",
+  ].join("\n");
+}
+
+/** Loads the metadata file of the small VCF, its nine individuals in A,
+    B and C of three, goes to the Analyses step and sets the minimum of
+    the distances to 2. */
+async function loadSmallPopulations(page: Page): Promise<void> {
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, {
+    name: "small_pops.csv",
+    text: `IID,pop\n${Array.from(
+      { length: 9 },
+      (_, i) => `i${String(i)},${"ABC"[Math.floor(i / 3)] ?? ""}\n`,
+    ).join("")}`,
+  });
+  await choose(page, "Column that defines the populations", "pop");
+  await goTo(page, "Analyses");
+  await setMinimum(page, "2");
 }
 
 /** Types `minimum` in the field of the minimum of the distances, and

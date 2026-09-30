@@ -28,6 +28,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
+import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
@@ -600,5 +601,244 @@ test.describe("PA5 D4 what a number field announces", () => {
     // the page, and which may then land after the next one: by the end of
     // the second edit only its number is left.
     expect(last.map((log) => log.text)).toEqual(["30", ""]);
+  });
+});
+
+/** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as
+    wide as Verdana and wider than the Mac's system font, which a check at
+    320 pixels gives the page, so that it does not rest on the fonts of
+    the machine (the plan of stage 5, "What every prompt of a task
+    carries"). */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** Makes the calculation worker keep its results until
+    `releaseResults`, so that the panel stays in its running state. */
+async function holdResults(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      held: [unknown, Transferable[] | undefined][];
+      release: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.held = [];
+    scope.release = () => {
+      for (const [message, transfer] of scope.held) post(message, transfer);
+      scope.held = [];
+      scope.postMessage = post;
+    };
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") scope.held.push([message, transfer]);
+      else post(message, transfer);
+    };
+  });
+}
+
+/** Keeps every text the status regions of the page hold, in
+    `window.statusTexts`, so that a flow can tell what was announced
+    between two of its steps. */
+function recordStatus(): void {
+  const texts: string[] = [];
+  Object.assign(globalThis, { statusTexts: texts });
+  new MutationObserver(() => {
+    for (const region of document.querySelectorAll("[role='status']")) {
+      const text = region.textContent;
+      if (text !== "" && texts.at(-1) !== text) texts.push(text);
+    }
+  }).observe(document, { childList: true, subtree: true, characterData: true });
+}
+
+/** The texts the status regions held so far. */
+async function statusTexts(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (globalThis as unknown as { statusTexts: string[] }).statusTexts,
+  );
+}
+
+/** Posts the results the calculation worker kept. */
+async function releaseResults(page: Page): Promise<void> {
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    (globalThis as unknown as { release: () => void }).release();
+  });
+}
+
+test.describe("PA5 D2 the review of the panel of the distances", () => {
+  test("PA5 D2 the download of panel.nei holds the spec's three rows, whole", async ({
+    page,
+  }) => {
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await run(page);
+    const downloading = page.waitForEvent("download");
+    await panel(page)
+      .getByRole("button", { name: "Download the table as CSV" })
+      .click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toBe("panel.popdists.csv");
+    expect(await readFile(await download.path(), "utf8")).toBe(
+      "population_1,population_2,fst_hudson,jost_d,num_variants\n" +
+        "p0,p2,0.10273588423661377,0.06129813142463423,1200\n" +
+        "p0,p1,0.10496244498389443,0.06354346296076403,1200\n" +
+        "p2,p1,0.10962148955018115,0.06567052128821259,1200\n",
+    );
+  });
+
+  test("PA5 D2 the arrow key between the measures redraws the heatmap and leaves the focus on Jost's D", async ({
+    page,
+  }) => {
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await run(page);
+    const group = panel(page).getByRole("radiogroup", { name: MEASURE });
+    await group.getByRole("radio", { name: "Hudson's Fst" }).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(heatmap(page, "Jost's D")).toBeVisible();
+    expect(await heatmapValues(page)).toEqual(DEST_CELLS);
+    await expect(group.getByRole("radio", { name: "Jost's D" })).toBeFocused();
+    await expect(status(page)).toContainText("Heatmap of Jost's D");
+  });
+
+  test("PA5 D2 the measure changed while the distances run: the result shows the measure chosen, and nothing is announced before it", async ({
+    page,
+  }) => {
+    await page.addInitScript(recordStatus);
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await holdResults(page);
+    await panel(page).getByRole("button", { name: "Run", exact: true }).click();
+    await expect(panel(page).getByRole("progressbar")).toBeVisible();
+    await chooseMeasure(page, "Jost's D");
+    await expect(panel(page).getByRole("progressbar")).toBeVisible();
+    // A number refused is announced after anything announced before it,
+    // so once it is heard, the measure had its turn.
+    const field = panel(page).getByLabel(MINIMUM);
+    await field.fill("2.5");
+    await field.press("Enter");
+    await expect(status(page)).toContainText("2.5 is not a whole number");
+    expect(
+      (await statusTexts(page)).filter((text) => text.includes("Heatmap of")),
+    ).toEqual([]);
+    await releaseResults(page);
+    await expect(heatmap(page, "Jost's D")).toBeVisible({
+      timeout: RESULT_TIMEOUT,
+    });
+    expect(await heatmapValues(page)).toEqual(DEST_CELLS);
+    expect(await runsPosted(page)).toBe(1);
+  });
+
+  test("PA5 D2 a project file with the distances opened, panel.nei loaded and Run: the same numbers as in the project file, under the table, with its Jost's D", async ({
+    page,
+  }) => {
+    await page.addInitScript(countRuns);
+    await page.goto("popgen.html#variants");
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Open project…" }).click();
+    await (
+      await chooser
+    ).setFiles(
+      join(
+        import.meta.dirname,
+        "..",
+        "src/core/fixtures/projectFile/v1-stage5-options.popnei.json",
+      ),
+    );
+    await pick(page, "Variants file", "panel.nei");
+    await expect(page.getByText(/^200 individuals$/)).toBeVisible();
+    await goTo(page, "Analyses");
+    await run(page);
+    await expect(heatmap(page, "Jost's D")).toBeVisible();
+    await expect(
+      panel(page).getByText(
+        "The same numbers as in the project file: this variants file gives the results the project was saved with.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("PA5 D2 at 320 pixels, in the committed font, names of 20 characters: the frame of the heatmap scrolls, the grid keeps 128 pixels, the Tab key reaches its region, each name of a pair on one line, and axe", async ({
+    page,
+    makeAxeBuilder,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+    const pops = testInfo.outputPath("long_pops.csv");
+    await writeFile(
+      pops,
+      text.replaceAll(/,(p\d)$/gm, ",Valencia_landrace_$1"),
+    );
+    await load(page, "panel.nei", pops, "popcat");
+    await useWideFont(page);
+    await run(page);
+    await expect(
+      panel(page).getByText("Scroll the heatmap sideways to see all of it."),
+    ).toBeVisible();
+    const grid = await panel(page)
+      .locator("svg g.chart-marks")
+      .evaluate((marks) => marks.getBoundingClientRect().width);
+    expect(grid).toBeGreaterThanOrEqual(127);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(320);
+
+    const region = panel(page).getByRole("region", {
+      name: "Hudson's Fst between populations",
+    });
+    await panel(page)
+      .getByRole("radiogroup", { name: MEASURE })
+      .getByRole("radio", { name: "Hudson's Fst" })
+      .focus();
+    await page.keyboard.press("Tab");
+    await expect(region).toBeFocused();
+
+    // Each name of a pair is on one line, "Valencia_landrace_p0 and" on
+    // the first.
+    const lines = await panel(page)
+      .getByRole("rowheader")
+      .first()
+      .locator("span")
+      .evaluateAll((spans) =>
+        spans.map((span) => ({
+          text: span.textContent,
+          lines: new Set(
+            [...span.getClientRects()].map((rect) => Math.round(rect.top)),
+          ).size,
+        })),
+      );
+    expect(lines).toEqual([
+      { text: "Valencia_landrace_p0 and", lines: 1 },
+      { text: "Valencia_landrace_p2", lines: 1 },
+    ]);
+    await expectNoViolations(makeAxeBuilder);
+    const scrollable = await new AxeBuilder({ page })
+      .withRules(["scrollable-region-focusable"])
+      .analyze();
+    expect(scrollable.violations).toEqual([]);
+    expect(scrollable.passes.map((rule) => rule.id)).toContain(
+      "scrollable-region-focusable",
+    );
   });
 });
