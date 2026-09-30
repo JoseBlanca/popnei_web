@@ -59,6 +59,58 @@ called the start below, in the worktree
 - `--project=screens --list` lists 308 tests, the two measurement
   projects 44.
 
+## 1. The populations shared by the three analyses
+
+Done as planned, in cc42122 (task 1.1), 318e555 (task 1.2) and e74247d
+(the fixes of the review). Nothing a user sees changed.
+
+### The deliverables, on e74247d, checked on 472b089
+
+1. `npx vitest run src/core/project.test.ts -t "PA1 D1"`: 10 passed
+   after the tasks, 4 cases moved from `diversity.test.ts` and 6 new,
+   where the plan asks for at least 5 more than the moved; `npx vitest
+   run src/core -t "PA1 D"` gives 18 after the review's fixes. The grep
+   of the four exports of `project.ts` gives 4.
+2. `npx vitest run src/core -t "PA1 D2"`: 6 passed.
+3. On a copy of 472b089: `npm test` "Test Files 81 passed (81)",
+   "Tests 3065 passed (3065)"; the browser check "1044 passed (3.9m)".
+   The lines of old tests that changed are the 4 cases of the locks of
+   the diversity, moved from `diversity.test.ts` to `project.test.ts`
+   with their literals; one test added to `diversity.test.ts`, that the
+   diversity gives the reason of `populationListsNeeds`; and task 0.1's
+   two flows of the PCA's table.
+
+### The review
+
+Six reviewers (`spec`, `tests`, `stale`, `errors`, `api`,
+`architecture`); none found a wrong or a stale result, and the words of
+the diversity are those of stage 4. Fixed in e74247d:
+
+- The column of the populations was worked out in three places, with
+  three answers for a project of association (three reviewers). It is
+  one function of `project.ts` now.
+- One rule for a project of association, stated and tested: the locks
+  give none, the warnings call it a defect.
+- The comment of `populationWarnings` says the distances pass their
+  populations left out for their size as well, with a test of what
+  happens when they do.
+- Four tests the tests reviewer found missing: 5 lines it broke passed
+  every test, and each now fails one. One branch it thought maybe
+  unreachable is reached by a variants file whose individuals have no
+  population, and has its test.
+
+Not taken: a cache on the individuals with no population, which three
+analyses now read; the spec asks for none, and the table is read once
+per result. Left to you: points 2 and 3 below.
+
+### How the work of 1 went, for whoever revises a skill or a plan
+
+Two writers of about 140,000 and 95,000 tokens; the six reviewers about
+390,000 together, the fixes 165,000. The review cost more than the work,
+and found no wrong result: for a move of code with nothing a user sees,
+four reviewers would have been enough, `architecture` and `tests`
+among them, which found what mattered.
+
 ## For the owner, as the work goes
 
 Points found during the work, each with its recommendation. None stops

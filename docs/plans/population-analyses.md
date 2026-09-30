@@ -366,7 +366,7 @@ filters emptied in the same words.
   "What the analyses per population share from stage 5", its block of
   "The TypeScript interface" and "How it is verified"). The diversity
   calls them; its words do not change. Serves 1 and 3.
-- [ ] 1.2 `populationWarnings` in `src/core/analyses/words.ts`, called
+- [x] 1.2 `populationWarnings` in `src/core/analyses/words.ts`, called
   by the diversity (`diversity.md`, "The warnings"). Serves 2 and 3.
   Needs 1.1.
 
@@ -463,7 +463,7 @@ its panel is built.
 
 **Tasks:**
 
-- [ ] 2.1 The worker side, in one commit that keeps every check
+- [x] 2.1 The worker side, in one commit that keeps every check
   passing: `LdDecayJob` and `LdDecayResult` in `protocol.ts`, their
   checks in `messages.ts`, and `PROTOCOL_VERSION` 4, with the tests of
   the version in `messages.test.ts` and `client.test.ts`
@@ -476,7 +476,7 @@ its panel is built.
   with `in` would give a population named `__proto__` NaN with no word
   (`runner.md`, "The LD decay", step 3), so its test is part of this
   task. Serves 1, 2 and 3.
-- [ ] 2.2 The client's restart after every LD decay (`client.md`, "The
+- [x] 2.2 The client's restart after every LD decay (`client.md`, "The
   LD decay, and the restart after it"). Serves 4. Needs 2.1. Can run
   beside 2.3.
 - [ ] 2.3 `src/core/analyses/ldDecay.ts` but its key: "Which variants it
@@ -669,7 +669,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
   `--chart-text-on-dark` in `src/ui/tokens.css` (`css.md`); and
   `MAX_HEATMAP_NAMES` and `MAX_LINE_SERIES` in `src/charts/limits.ts`
   (`heatmap.md` and `line.md`, "The TypeScript interface"). Serves 1.
-- [ ] 4.2 `src/charts/heatmap.ts` and its classes in `charts.css`, from
+- [x] 4.2 `src/charts/heatmap.ts` and its classes in `charts.css`, from
   `heatmap.md` whole; the heatmap on `e2e/plots.html` and its flows.
   Serves 2 and 3. Needs 4.1.
 - [ ] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
