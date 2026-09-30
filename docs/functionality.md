@@ -317,25 +317,44 @@ For each population, over the variants:
 
 - The expected heterozygosity, unbiased (Nei's).
 - The observed heterozygosity.
-- The inbreeding coefficient, F = 1 − Ho/He.
+- The inbreeding coefficient, F = 1 − Ho/He, popnei's F_IS of the
+  population, as the owner decided on 30 September 2026; the option not
+  taken was the application's own arithmetic on the two heterozygosities.
 - The proportion of polymorphic variants, a variant being polymorphic when
   its commonest allele has a frequency below 0.95, the default, as popnei
   counts it.
 - The mean number of alleles per variant.
 - The number of private alleles, alleles found in this population and in
-  no other.
+  no other, counted by popnei over the variants at which every population
+  has enough individuals with a called genotype, 20 by default, the
+  minimum the diversity already uses. A population with fewer
+  individuals than that minimum has no private alleles, and the words
+  beside it say why; it is left out of their calculation, and the private
+  alleles of the others are counted among the populations that remain,
+  which the words say too, as the owner decided on 30 September 2026. Left
+  in, such a population would take every variant out of the count of
+  every population. The option not taken was a warning with no private
+  alleles for any population.
 
 Each is given with the number of individuals of the population beside it.
 
 ### Rarefaction
 
-The number of alleles, the proportion of polymorphic variants and the
-private alleles grow with the number of individuals sampled, so
-populations of 8 and of 60 individuals cannot be compared as they are.
-The application rarefies them to a common sample size, by default the
-size of the smallest population, and gives the raw and the rarefied
-values. It warns when a population is so small that the rarefied values
-of all of them rest on few individuals.
+The number of alleles and the private alleles grow with the number of
+individuals sampled, so populations of 8 and of 60 individuals cannot be
+compared as they are. popnei rarefies them to a common number of
+sampled chromosomes, and the application gives the raw and the rarefied
+values. The number is by default the ploidy times the minimum number of
+individuals the diversity uses, 40 for diploids at the minimum of 20,
+and the user can change it, as the owner decided on 30 September 2026.
+The option not taken, the size of the smallest population, rests every
+population's values on its smallest one, and on `panel.nei` it left the
+rarefied values of population p0 on 278 of its 1,200 variants. The
+proportion of polymorphic variants is not rarefied, as the owner decided
+the same day: on variants of two alleles it is the rarefied number of
+alleles minus 1. The application warns when a population reaches that
+number of chromosomes at few of its variants, since its rarefied values
+then rest on those few.
 
 ### The site frequency spectrum
 
@@ -357,12 +376,37 @@ a plot, with one number that sums it up: the distance at which r² falls
 to half of its maximum. The application warns when a population has few
 individuals, because r² is then biased upwards.
 
+- The plot draws the mean r² of each bin of distance and the curve
+  popnei fitted to the pairs, which the application draws from popnei's
+  parameters of the fit, with a mark at the distance at which the curve
+  falls to half. The distance and the fit are popnei's. The option not
+  taken was the bins alone. The owner decided the plot and the curve on
+  30 September 2026.
+- The largest distance between two variants of a pair has no default,
+  since what fits depends on the genome; the user types it, and the
+  analysis cannot run until then, as with the distance of the LD pruning
+  (section 3), by the owner's rule of no default that depends on the
+  genome.
+- It reads the variants every filter of the Variants step keeps but the
+  LD pruning, which would take out the very pairs it measures, as the
+  owner decided on 30 September 2026. It has no LD filter of its own,
+  where the PCA puts its own in the place of that of the Variants step
+  (section 5). The option not taken was all the filters.
+
 ## 7. Between populations
 
 - A matrix of distances between the populations, with Hudson's Fst as the
-  default and Jost's D as the alternative.
-- Shown as a heatmap, with the populations ordered so that similar ones
-  are together, and as a table.
+  default and Jost's D as the alternative, without standard errors, as
+  the owner decided on 30 September 2026. The option not taken, standard
+  errors when the user types a length of the blocks they are resampled
+  over, needs that length, which depends on how far the LD reaches in the
+  user's genome.
+- Shown as a heatmap and as a table. The heatmap orders the populations
+  along the first axis of popnei's PCoA of the distance matrix, so that
+  similar ones are together, and in the order of the metadata file when
+  popnei cannot place them, as when a pair has no distance, as the owner
+  decided on 30 September 2026. The option not taken was a clustering
+  tree written in the application.
 
 ## 8. The GWAS
 
@@ -530,13 +574,18 @@ has not decided:
 
 - Hudson's Fst between populations.
 - Private alleles per population.
-- Rarefaction of the number of alleles, the proportion of polymorphic
-  variants and the private alleles.
+- Rarefaction of the number of alleles and the private alleles.
 - The inbreeding coefficient F per population.
 - The folded SFS, with projection.
 - The distance at which the LD decays to half.
 - The filters of individuals by missing data and by observed
   heterozygosity.
+
+popnei's release `js-v0.1.0-dev.3` has the first six, as checked on 30
+September 2026: `calcPopDists`; `calcPopDiversity`, with the private
+alleles, the rarefaction, F and the folded SFS; and
+`calcLdAndDistPerPop`, with the fitted curve and its half distance.
+
 - A VCF writer, for the variants after the filters (section 3).
 - The filter of the variants by the regions of a BED file (section 3).
 - The histogram of the proportion of missing genotypes per variant,
@@ -549,6 +598,12 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
 - The PCoA of the Kosman distances between the individuals (section 5),
   asked of popnei by the owner on 27 September 2026, and in
   `js-v0.1.0-dev.3`.
+- The expected and observed heterozygosities and the proportion of
+  polymorphic variants from `calcPopDiversity`, beside its other
+  statistics, so that the diversity reads the variants file once and not
+  twice, asked of popnei by the owner on 30 September 2026 (popnei issue
+  #4). Until popnei has them the diversity calls `calcPerVarDistribs` as
+  well, a second pass over the file.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
 
