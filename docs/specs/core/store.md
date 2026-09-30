@@ -52,7 +52,12 @@ and LD, each following the Variants step by default: why the PCA still
 fills no counts; and the property that no request of the statistics
 carries a filter, which will allow the regions of a BED file once the
 application has that filter. The revisions for stage 4 are approved by the owner on 28 September 2026; they
-change the code of stage 3. The store is the one object of core that
+change the code of stage 3. Revised on 30 September 2026 for stage 5,
+where it names the analyses: the distances between populations and the
+LD decay among those whose `keptNeeds` locks when the individuals kept
+leave no population, the diversity's second reason of `keptNeeds`, and
+which results fill the counts of the filters (`docs/specs/analyses/popDists.md`,
+`diversity.md` and `ldDecay.md`); not yet approved by the owner. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -189,7 +194,7 @@ has the kind `removed` in the code.
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own; and, for that failure, whether a Run of the analysis under its key waited for those statistics when they failed, `waited`, so that the panel says it "was not run" after its Run was pressed and "cannot run" when it was not |
-| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run") | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
+| locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and from stage 5 when it leaves fewer chromosomes than the draw of its rarefaction; the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run"); from stage 5, the distances between populations when the list leaves no population or fewer than two with the minimum of individuals, and the LD decay when it leaves no population (`popDists.md` and `ldDecay.md`) | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
 | ready | none of the above | its key |
 | empty | cannot happen | — |
@@ -705,7 +710,8 @@ into the variants file of the request's load as before
 `docs/specs/worker/protocol.md`, popnei's `passStats`, when the analysis
 of the result is one whose pass has the list of the individuals kept
 and the filters of the variants of its request's project and none of
-its own, the diversity and `filterCounts`, or `null`; `countsOf` tells it by
+its own, the diversity, from the first of its two passes in stage 5,
+the distances between populations and `filterCounts`, or `null`; `countsOf` tells it by
 the analysis of the result, and not by comparing filters. A file
 written always had them, and `write.countsOf` makes its result of
 `filterCounts` from the counts of its pass. It is `null` for the
@@ -718,7 +724,9 @@ Variants step has the project's, but its counts are not given either,
 since telling which PCAs have the project's filters is not worth its
 code. Its number of
 variants of the file is given, `varsProcessed` of its first filter, which
-is the whole file whatever the filter.
+is the whole file whatever the filter. The same holds from stage 5 for
+the LD decay, whose filters are the project's but the LD pruning
+(`ldDecayFilters` of `docs/specs/analyses/ldDecay.md`).
 
 - **The counts of a result go into the cache** when the result ends
   `done`, whatever its analysis, under the key of `filterCounts` for the
@@ -857,8 +865,12 @@ export interface AnalysisDef<J, R> {
   needs(p: Project): string | null;
   /** The reason it cannot run for the individuals kept, a known list that
       keeps some individual, or null; absent for an analysis with none.
-      The diversity's: the list leaves no population; the PCoA's: it
-      keeps more than 9,381 individuals. */
+      The diversity's: the list leaves no population, or, from stage 5,
+      fewer chromosomes than the draw of its rarefaction; the PCoA's: it
+      keeps more than 9,381 individuals; from stage 5, the distances
+      between populations': no population, or fewer than two with the
+      minimum of individuals; the LD decay's: no population. The reason
+      of no population is populationsKeptNeeds of project.ts, shared. */
   keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];

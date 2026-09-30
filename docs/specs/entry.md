@@ -28,6 +28,14 @@ decision that the PCA has its own filters of missing data, MAF and LD,
 each following the Variants step by default: why the PCA still fills
 no counts, and the counts of its pass in the test of `countsOf`, those
 of `docs/specs/analyses/pca.md`. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5 where it names the analyses:
+`popDists` and `ldDecay` join the analyses of `apps.ts`, in the
+Analyses step after the diversity, with their titles in
+`src/ui/analyses/titles.ts`; `countsOf` gives the counts of the pass of
+the distances between populations and none of the LD decay's; the
+folded site frequency spectrum is no analysis of `apps.ts`, since it is
+calculated and shown with the diversity (`docs/specs/analyses/sfs.md`,
+**Open 1**, meanwhile so). Not yet approved by the owner.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for
@@ -301,7 +309,9 @@ population genetics application alone until stage 7:
   - the counts of the filters, a result of `filterCounts`, `{ analysis:
     "filterCounts", passStats }`, for a result whose pass had the list
     of the individuals kept and the filters of the variants of its
-    request's project: the diversity and `filterCounts` itself; `null`
+    request's project: the diversity, whose result carries the counts
+    of the first of its two passes from stage 5, the distances between
+    populations from stage 5, and `filterCounts` itself; `null`
     for the statistics of each individual, whose pass has no filter
     since 28 September 2026, for the histograms of the variants, whose
     pass has no filter of the variants, and,
@@ -310,7 +320,9 @@ population genetics application alone until stage 7:
     the Variants step they are the project's, but telling which is the
     case is not worth its code (`docs/specs/analyses/pca.md`, "Which
     variants it reads"; `docs/specs/analyses/filterCounts.md`, "Which
-    results fill it");
+    results fill it"), and, from stage 5, for the LD decay, whose filters
+    are the project's but the LD pruning (`docs/specs/analyses/ldDecay.md`,
+    "Which variants it reads");
 - **`writeCountsOf`**, the store's `write.countsOf`: the result of
   `filterCounts` made of the `passStats` of a written file, whose pass
   always had the filters of its project;
@@ -695,13 +707,15 @@ stage 2, `DEFAULT_MAX_MISSING_RATE`, `DEFAULT_PLOIDY`,
 ```ts
 /** The analyses of the population genetics application, in the order the
     screens show them: individualChecks, variantChecks, filterCounts,
-    and, from stage 4, pca before diversity. */
+    from stage 4, pca before diversity, and, from stage 5, popDists and
+    ldDecay after it. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[];
 
 /** The step each analysis is shown in. */
 export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>>;
 // { individualChecks: "variants", variantChecks: "variants",
-//   filterCounts: "variants", pca: "analyses", diversity: "analyses" }
+//   filterCounts: "variants", pca: "analyses", diversity: "analyses",
+//   popDists: "analyses", ldDecay: "analyses" }
 
 /** What the pass of a result counted, as the store's countsOf; replaces
     numVarsOf. */
@@ -888,7 +902,10 @@ hand and whose cancels it records.
   to 1,200 and `ld` 1,200 to 548, `numVarsRead` 1,200 and no counts; of
   one whose `passStats` has `missing_data` 1,200 to 1,200 alone, as the
   PCA that follows the filters of a new project gives, `numVarsRead`
-  1,200 and no counts as well. `writeCountsOf` of those counts gives the same result of
+  1,200 and no counts as well; from stage 5, of a result of the
+  distances between populations with the `passStats` of the diversity
+  above, the same counts, and of a result of the LD decay with the same
+  `passStats`, `numVarsRead` 1,200 and no counts. `writeCountsOf` of those counts gives the same result of
   `filterCounts`. `individualStatsOf` of a result of `individualChecks`
   gives its three fields, and of a diversity result throws.
 - **`saveWritten`**, with a fake `downloadFile`: in `done`, the fake is

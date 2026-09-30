@@ -24,6 +24,10 @@ Revised again that day for the owner's decision that the PCA has its
 own filters of missing data, MAF and LD: the PCA reads all the filters
 through its own inputs, and not through the filters of its key; nothing
 of `keys.ts` changes. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5: the LD decay reads every
+filter but the LD pruning, through its own inputs as the PCA does; the
+measure the heatmap of the distances between populations draws is in no
+key; nothing of `keys.ts` changes. Not yet approved by the owner.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
@@ -61,7 +65,7 @@ depend on:
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
 | `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff` | the project, and the definition's `filtersRead` |
-| `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md`) | its `keyInputs` |
+| `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA, and the measure the heatmap of the distances between populations draws (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md` and `popDists.md`) | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
 filters. The checks per variant and per individual of its section 3,
@@ -78,7 +82,13 @@ all the filters too, but its filters of missing data, MAF and LD can be
 its own in the place of the project's, so its definition reads the
 filters of individuals alone, and its `keyInputs` gives the filters of
 the variants its job carries (`docs/specs/analyses/pca.md`, "What goes
-into its key").
+into its key"). The LD decay of stage 5 reads every filter but the LD
+pruning, as the owner decided on 30 September 2026, since the pruning
+removes the pairs in LD it measures; its definition reads the filters of
+individuals alone in the same way, and its `keyInputs` gives the
+project's filters of the variants without the LD pruning, so that a
+change of the pruning keeps its key (`docs/specs/analyses/ldDecay.md`,
+"What goes into its key").
 
 The list of the individuals the filters keep, which core makes from the
 statistics of each individual (`docs/specs/core/individualsKept.md`), is in no key, as the owner approved on
@@ -107,10 +117,12 @@ filters of individuals, `variantFilterNeeds` for one that reads the
 filters of the variants, and the analysis's `needs` gives a reason
 (`docs/specs/core/store.md`, "The state of an analysis"). So no key is
 made, while the LD filter has no distance yet, for what reads the
-filters of the variants, the Count, the diversity and the PCA whose LD
+filters of the variants, the Count, the diversity, the distances
+between populations from stage 5 and the PCA whose LD
 filter follows the step's, the last by its `needs`; the statistics of
 each individual and the histograms of the variants, which do not read
-them, keep their keys.
+them, keep their keys, and so does the LD decay, which reads no LD
+pruning.
 
 ### The canonical form
 

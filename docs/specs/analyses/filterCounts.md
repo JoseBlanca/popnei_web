@@ -33,7 +33,11 @@ counts, and the key version is 2. Revised again that day for the
 owner's decision that the PCA has its own filters of missing data, MAF
 and LD, each following the Variants step by default: why the PCA still
 fills no counts. The revisions for stage 4 are approved by the owner on 28 September 2026; they
-change the code of stage 3.
+change the code of stage 3. Revised on 30 September 2026 for stage 5,
+in the table of "Which results fill it": the distances between
+populations fill the counts, the diversity from the first of its two
+passes, and the LD decay does not, as `docs/specs/analyses/popDists.md`,
+`diversity.md` and `ldDecay.md` have it; not yet approved by the owner.
 
 ## The module
 
@@ -160,10 +164,11 @@ of its request, by the `analysis` of the result:
 
 | the result | the counts |
 |---|---|
-| the diversity, the written file, this analysis | given: each pass has the project's list of the individuals kept and its filters of the variants, in that order |
+| the diversity, the written file, this analysis, and, from stage 5, the distances between populations | given: each pass has the project's list of the individuals kept and its filters of the variants, in that order; the diversity of stage 5 makes two passes over the same steps, and its result carries the counts of the first |
 | the statistics of each individual | not given, from 28 September 2026: their pass has no filter and no list, whatever the project's; until then it had the project's filters of the variants and gave them |
 | the histograms of the variants | not given: their pass has the list and no filter of the variants, whatever the project's; with no filter of the variants in the project their counts would be those of a Count, and they are not given then either, so that one rule, by the analysis, decides |
 | the principal components, stage 4 | not given: its filters of missing data, MAF and LD can be its own in the place of the project's, and then its counts are not those beside the filters (`pcaFilters` of `docs/specs/analyses/pca.md`); a PCA whose filters all follow the Variants step has the project's, and its counts are not given either, since telling which PCAs have the project's filters is not worth its code; the number of variants of the file is given, `varsProcessed` of its first filter |
+| the LD decay, stage 5 | not given: its filters are the project's but the LD pruning, so whenever the LD pruning is on its counts are not those beside the filters (`ldDecayFilters` of `docs/specs/analyses/ldDecay.md`), and, as for the PCA, the counts are not given when it is off either; the number of variants of the file is given |
 
 The store makes of the counts the result `{ analysis: "filterCounts",
 passStats }` and puts it under the key of this analysis for the request's

@@ -96,7 +96,17 @@ column; and the same day with the owner's decisions on stop B of that
 plan (`docs/specs/stage-4-open-points.md`): the words of `notText`,
 and a kind of refusal more, `headerError`, an error of Excel in the
 header of an xlsx; and Open 4 closed for the individuals file, with the
-words of a crash of its reader.
+words of a crash of its reader. Revised on 30 September 2026 for stage
+5, the analyses of the populations, which share more of the
+populations than stage 4 did: the populations under the minimum of
+individuals, split from the others by one function, and named alike in
+the ready state of the diversity and of the distances between
+populations; and the two locks the diversity alone had, the lists of
+individuals leaving no individual with a population and the individuals
+kept leaving no population, made functions here, since the distances
+between populations and the LD decay lock on them too
+(`docs/specs/analyses/popDists.md` and `ldDecay.md`). Not yet approved
+by the owner.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -740,6 +750,63 @@ grouping `onePopulation`, while the file is not read, and while a column
 of that name is chosen and the variants file is not read, since no
 population is looked for until it is. The five give `null` for a
 project of association, which has roles and no populations.
+
+**What the analyses per population share from stage 5.** Three
+analyses read the populations in stage 5, the diversity, the distances
+between populations and the LD decay, and they lock and name the
+populations alike, so the functions that do it are here, where the
+diversity's module had them alone until stage 4; the option not taken
+was each analysis importing the diversity's module, which would tie the
+three to one of them.
+
+- **The lists of individuals leaving no individual with a
+  population**, `populationListsNeeds(p)`: the diversity's reason of
+  stage 3, known from the project alone, "The lists of individuals to
+  keep and to remove leave none of the individuals of panel.nei that
+  have a population in popcat, so no population is left. Change the
+  lists in the Variants step."; `null` for the one population, whose
+  lists that leave nobody the store locks first with the words of
+  `keptNoneReason` (`docs/specs/core/individualsKept.md`).
+- **The individuals kept leaving no population**,
+  `populationsKeptNeeds(p, kept)`, which each of the three gives as its
+  `keptNeeds` or as the first reason of it, in the words the owner
+  decided at stop B on 27 September 2026, "The 34 individuals kept have
+  no population in popcat, so none of the 2 populations has an
+  individual left. Loosen the filters of individuals in the Variants
+  step to keep them.", with the forms of one individual kept and of one
+  population of `docs/specs/analyses/diversity.md`, "Why it cannot run";
+  `null` while the list is not known, when it keeps some population, and
+  for the one population.
+- **The populations under the minimum of individuals**,
+  `populationsWithMinimum(pops, minNumIndividuals)`, which splits
+  populations, as `populationsKept` or `populationsBeforeRun` give them,
+  into those with at least that many individuals and those with fewer,
+  each in the order of `pops`, the second with their counts. A
+  population with fewer individuals than the minimum reaches it at no
+  variant, since the minimum counts the individuals called there, so it
+  has no value in any statistic of popnei that tests it. The diversity
+  leaves it out of its call of `calcPopDiversity`, where it would take
+  every variant out of the private alleles of the others, and keeps it
+  in its table with no values, as the owner decided on 30 September
+  2026 (decision 7 of `docs/specs/stage-5-open-points.md`); the
+  distances between populations leave it out of their request, where
+  every pair it is in would have no value and stop the order of the
+  heatmap (`popDists.md`, whose **Open 4** asks the owner whether they
+  do so). Both find it with this function, so the two never disagree on
+  which populations are under the minimum. The LD decay has no minimum
+  of individuals and does not call it.
+- **The words of the populations under the minimum before a Run**,
+  `underMinimumText(under, minNumIndividuals, consequence)`, which the
+  ready state of both panels shows under the populations it lists:
+  "p3 has 12 individuals, fewer than the minimum of 20, ‹consequence›",
+  and, of two or more, "p3 and p5 have fewer individuals than the
+  minimum of 20, 12 and 8, ‹consequence›", named as `namesOf` names them,
+  with no counts past three. Each analysis gives its consequence, of one
+  population and of several: the distances "and is left out." and "and
+  are left out."; the diversity "so it will have no values, and is left
+  out of the count of the private alleles of the others." and "so they
+  will have no values, and are left out of the count of the private
+  alleles of the others."
 
 ### The types of the columns
 
@@ -1450,6 +1517,37 @@ export function populationsNeeds(p: Project):
   | null;
 ```
 
+From stage 5, what the analyses per population share, of "What the
+analyses per population share from stage 5" above; `LeftOut` is of
+`docs/specs/worker/protocol.md`:
+
+```ts
+/** The reason when the lists to keep and to remove leave no individual
+    that has a population, known from the project alone; null for the
+    one population, when some population keeps an individual, and when
+    the individuals kept cannot be made, which the store locks on first. */
+export function populationListsNeeds(p: Project): string | null;
+
+/** The reason when the individuals kept, once known, leave no
+    population; null while the list is not known, when some population
+    keeps an individual, and for the one population. */
+export function populationsKeptNeeds(p: Project, kept: IndividualsKept): string | null;
+
+/** The populations with at least `minNumIndividuals` individuals, and
+    those with fewer with their counts, each in the order of `pops`. */
+export function populationsWithMinimum(pops: Pops, minNumIndividuals: number):
+  { readonly withMinimum: Pops; readonly under: LeftOut };
+
+/** "p3 has 12 individuals, fewer than the minimum of 20, " and the
+    consequence of one, or the form of several with theirs; `under` not
+    empty. */
+export function underMinimumText(
+  under: LeftOut,
+  minNumIndividuals: number,
+  consequence: { readonly one: string; readonly many: string },
+): string;
+```
+
 Each keeps its answer for the same inputs, so that a table of 10,000
 rows is not walked again each time a screen is drawn: `populationsOf` by
 the table and the name of the column, `populationsToRun` by that and the
@@ -1843,7 +1941,12 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 while a threshold waits for the statistics, those of `byLists`, for a
 column and for the one population alike, as `populationsBeforeRun` was
 tested in the module of the diversity in stage 3; every function `null`
-for a project of association.
+for a project of association. From stage 5: `populationsWithMinimum` of
+A of 2, B of 1 and C of 3 individuals at a minimum of 2 gives A and C,
+and B with 1, in that order, and at 0 every population; `underMinimumText`
+of one, of two and of four populations, the texts above as literals;
+`populationListsNeeds` and `populationsKeptNeeds` each case of the
+diversity's tests of stage 3, moved here with them.
 - **`columnAllows`**, on the worked table of the diversity's spec,
   `i1` to `i4`, with a column `h` of `1,5`, `2`, `2` and a missing cell,
   read with the comma, and a column `st` of `yes`, `no`, `yes` and `no`:
@@ -2075,6 +2178,11 @@ of them changes those texts and their tests, and nothing else.
   design of its own.
 
 ## What this spec asks of other documents
+
+Stage 5, 30 September 2026, made the same day: the three analyses of
+stage 5 call the functions of "What the analyses per population share
+from stage 5" (`docs/specs/analyses/diversity.md`, `popDists.md` and
+`ldDecay.md`).
 
 Stage 4, 27 September 2026:
 

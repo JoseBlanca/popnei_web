@@ -53,6 +53,16 @@ control that had the focus hands it to the `<h1>` of the step.
 Revised again on 29 September 2026 with the owner's decision at stop C 3
 of that plan: a list of links to the analyses under the `<h1>` of the
 Analyses step.
+Revised on 30 September 2026 for stage 5, the analyses of the
+populations: the titles "Distances between populations" and "LD
+decay" in the links of the Analyses step, the notice and the status
+region; an analysis not run after the statistics of each individual for
+its own reasons of the individuals kept; and the announcement of a
+change of the distance the heatmap draws (`docs/specs/analyses/popDists.md`
+and `ldDecay.md`). The folded site frequency spectrum has no title of
+its own: it is a block of the panel of the diversity, as the meanwhile
+of **Open 1** of `docs/specs/analyses/sfs.md` has it. Not yet approved
+by the owner.
 The screen
 spec of what surrounds every step of the population genetics
 application, first built in the walking skeleton of stage 2 (`docs/build-order.md`),
@@ -256,7 +266,8 @@ and the history of the browser say where the user is (2.4.2).
 Under the `<h1>` "Analyses" of the Analyses step, before the first
 panel, a short list of links, one for each analysis shown in the step,
 in the order of their panels, each named by the title of its panel,
-"Principal components" and "Diversity", as the owner decided on 29
+"Principal components" and "Diversity", and from stage 5 "Distances
+between populations" and "LD decay" after them, as the owner decided on 29
 September 2026 (stop C 3 of `docs/specs/stage-4-open-points.md`): once
 there is a PCA, its plot and its table put the diversity about 2,400
 pixels below the heading of the PCA, and nothing on the screen said it
@@ -484,7 +495,7 @@ file its options of the CSV compared by their values:
 | a request of the writing that was current and not being stopped left `runs`, and `write` is `done` | "panel.filtered.nei is written, 19.2 MB; Save it in the Variants step." (`docs/specs/analyses/writeVariants.md`) |
 | the same, and `write` is `noVariant`, a file of no variant, which the store does not keep | "The filters kept none of the variants of panel.nei, so there is nothing to write."; when the pass was given no variant, a variants file with none or a VCF read with only the passed variants with none that passed, the words the Variants step shows for it (`docs/specs/analyses/writeVariants.md`, "Its words"): "panel.nei has no variants, so there is nothing to write. Load another variants file in the Variants step." |
 | the same, and `write` is in the state `error` | "The file could not be written. The Variants step says why." |
-| the request of the statistics of each individual that a Run of an analysis waited for left `runs`, not being stopped, and the analysis is `locked`: the filters of individuals keep no one, or, for the diversity, no population, or, for the PCoA, more than the 9,381 individuals it can hold, and it was not run | its title, " was not run. ", or " were not run. " after a plural title (below), and the reason of the lock, the words beside its disabled Run, `keptNoneReason` or the analysis's `keptNeeds`: "Diversity was not run. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.", "Diversity was not run. The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.", after the end of the statistics, "Statistics of each individual: done." |
+| the request of the statistics of each individual that a Run of an analysis waited for left `runs`, not being stopped, and the analysis is `locked`: the filters of individuals keep no one, or, for the diversity, no population or, from stage 5, fewer chromosomes than its draw, or, for the PCoA, more than the 9,381 individuals it can hold, or, from stage 5, for the distances between populations, no population or fewer than two with the minimum of individuals, and for the LD decay no population, and it was not run | its title, " was not run. ", or " were not run. " after a plural title (below), and the reason of the lock, the words beside its disabled Run, `keptNoneReason` or the analysis's `keptNeeds`: "Diversity was not run. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.", "Diversity was not run. The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.", after the end of the statistics, "Statistics of each individual: done." |
 | the same, and the analysis is in the state `error` with `ofStatistics`: the statistics it waited for could not be calculated, and it was not run | its title and " was not run. The Analyses step says why.", or " were not run. …" after a plural title (below), with the step the analysis is shown in, after the failure of the statistics: "Statistics of each individual could not be calculated. The Variants step says why. Diversity was not run. The Analyses step says why.", "… Principal components were not run. The Analyses step says why.", "… Histograms of the variants were not run. The Variants step says why." |
 | the request of the statistics of each individual that a write waited for left `runs`, not being stopped, and `write` is `locked`: the filters of individuals keep no one, and no file is written | "The file was not written. " and the reason of the lock, the words beside the disabled Write, `keptNoneReason`: "The file was not written. The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step." |
 | a request of the writing that was current and being stopped left `runs` | "Writing the file: stopped." |
@@ -496,7 +507,8 @@ A title names one thing or several, and the verb after it agrees:
 "Principal components", whose nouns are plural, as the owner decided on
 29 September 2026 (stop A 6 of `docs/specs/stage-4-open-points.md`),
 where "was" followed every title and the region said "Histograms of the
-variants was not run.". Each title says which in
+variants was not run.". "Distances between populations", from stage 5,
+is plural too, "were not run", and "LD decay" singular. Each title says which in
 `src/ui/analyses/titles.ts`, beside the words of the title.
 
 The comparison with the project file is part of the end of the
@@ -553,6 +565,7 @@ the shell gives the screens:
 | a file that a step did not load, several dropped at once | the text the step shows for it, whose words are the step's (`docs/specs/steps/variants.md` and `individuals.md`, "Its words") |
 | from stage 3, Apply or Clear of a list of individuals in the Variants step, after which `individualListNeeds` gives a reason it did not give before | the reason as the step shows it under the list, without the end "in the Variants step": "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter." (`docs/specs/steps/variants.md`, "The two lists"); nothing for a list popnei accepts |
 | from stage 4, the switch of the LD pruning turned on in the Variants step, after which `variantFilterNeeds` gives its reason | the reason as the step shows it under the empty field of the distance, without the end "in the Variants step": "The LD pruning of the Variants step needs the distance within which variants are compared. … Type a distance in base pairs, or turn off the LD pruning." (`docs/specs/steps/variants.md`, "The distance of the LD pruning") |
+| from stage 5, the radio buttons "Distance in the heatmap" of the distances between populations set to the other measure, which redraws the heatmap and moves no focus | "Heatmap of Jost's D", or "Heatmap of Hudson's Fst" (`docs/specs/analyses/popDists.md`, "Accessibility") |
 | from stage 4, an undo or a redo, with the button, the keyboard or the notice, after which `variantFilterNeeds` gives a reason it did not give before: the LD pruning back with no distance | the reason whole, as the stepper gives it, since the undo may be pressed on any step, after the words of the undo when it makes no notice, "Undone: the LD pruning changed. The LD pruning of the Variants step needs the distance within which variants are compared. … Type a distance in base pairs, or turn off the LD pruning, in the Variants step.", and alone when it makes one, which is read out by itself; decided by the owner on 29 September 2026 (stop A 3 of `docs/specs/stage-4-open-points.md`) |
 
 Without the first, a user of a screen reader who pressed Ctrl+Z would
@@ -1061,7 +1074,8 @@ flow of the walking skeleton and beside it (`.claude/skills/coding/testing.md`):
   button goes to the step before; the focus is on the `<h1>` of the new
   step.
 - The Analyses step has the list "Analyses of this step" with
-  "Principal components" and "Diversity", in the order of the panels;
+  "Principal components" and "Diversity", and from stage 5 "Distances
+  between populations" and "LD decay", in the order of the panels;
   each link, pressed with the mouse and with Enter, puts the focus on the
   `<h2>` of its panel and leaves the step and the address as they were;
   at 320 pixels wide the list fits with no sideways scroll.
@@ -1166,6 +1180,13 @@ revision, 27 September 2026:
   components", its `<h2>`, in `src/ui/analyses/titles.ts`; the start, the
   end and the stop of a run announced by the shell, "Principal
   components: done.", with the words of this spec.
+- From stage 5, `docs/specs/analyses/popDists.md` and `ldDecay.md`:
+  the titles of their panels, "Distances between populations" and "LD
+  decay", their `<h2>`, in `src/ui/analyses/titles.ts`, the first a
+  plural; the start, the end and the stop of their runs announced by the
+  shell, "Distances between populations: done.", "LD decay was not run.
+  …", with the words of this spec; `diversity.md` and `sfs.md`: no title
+  more, the spectrum being announced with the diversity.
 
 ## Open points
 

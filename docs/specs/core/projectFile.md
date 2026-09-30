@@ -39,7 +39,13 @@ its distance was typed is written with `"maxDist": null`, in version 1;
 and again that day for the owner's decision that the LD filter keeps its
 values while it is off: the filters turned off are written, with their
 values, in `filtersOff` and `individualFiltersOff`, in version 1, and a
-file saved without them opens with nothing kept. The revisions for stage 4 are approved by the owner on 28 September 2026.
+file saved without them opens with nothing kept. The revisions for stage 4 are approved by the owner on 28 September 2026. Revised on 30 September 2026 for stage 5, the analyses of the
+populations: the options of the diversity, of the distances between
+populations and of the LD decay, which their panels set, written in
+version 1; the diversity's key version 3 with its check numbers as they
+were; the check numbers of the two new analyses; and a fixture of a
+project with the options of all three (`docs/specs/analyses/diversity.md`,
+`popDists.md` and `ldDecay.md`). Not yet approved by the owner.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -277,7 +283,10 @@ The options of the analyses are written only for an analysis whose
 options the user set. No screen of stage 2 sets one, the diversity's
 two options keep their defaults (`docs/specs/analyses/diversity.md`,
 "What it does"), so a project of stage 2 writes `"analyses": []`, as the
-example does.
+example does. From stage 5 the panels of the diversity, of the
+distances between populations and of the LD decay have fields for their
+options, and a project whose user set one writes that analysis's
+options, all of its fields, the others at their defaults.
 
 ### What is written of each part
 
@@ -785,12 +794,26 @@ this spec makes precise:
   and their filter join version 1 with popnei's release that filters by
   them; a development version before them refuses a file that has them,
   as it refuses every field it does not write.
+- **Stage 5 does not raise it.** The distances between populations and
+  the LD decay are new ids, which the rule above covers, and the
+  diversity's options gain a field, the chromosomes of the rarefaction,
+  `numCalledAlleles`, which its `parseOptions` of version 1 takes with
+  the two before (`docs/specs/analyses/diversity.md`, "The TypeScript
+  interface"). No project file of stages 2 to 4 holds options of the
+  diversity, which had no field, so no file that opened before is
+  refused.
 - **A change to what an analysis's `checkNumbers` gives**, which numbers
   or their order, raises its key version, so that the numbers of files
   saved before are told as "calculated in another way" and not blamed on
-  the variants file. When F, the inbreeding coefficient, joins the
-  diversity in stage 5, its
-  `checkNumbers` can stay as they are, and then neither changes.
+  the variants file. When F, the inbreeding coefficient, and the other
+  statistics of `calcPopDiversity` joined the diversity in stage 5, its
+  `checkNumbers` stayed as they were, the number of variants and three
+  numbers per population, since more numbers would change their count
+  and every file of stages 2 to 4 with a diversity would be refused at
+  the opening as damaged; its key version was raised to 3 all the same,
+  since the result has new fields, so the check numbers of such a file
+  are compared and a difference is told as numbers "calculated in
+  another way".
 
 ## The TypeScript interface
 
@@ -1014,7 +1037,13 @@ the analyses `done`, `ready` or `removed`.
   the MAF filter at 0.9 and the LD filter at r² 0.2 within 50000, in
   that order, the fixed order of `VARIANT_FILTER_ORDER`, and in
   `individualFiltersOff` the threshold of observed heterozygosity at
-  0.38, no check. Each
+  0.38, no check; and, from stage 5, `v1-stage5-options.popnei.json`,
+  `panel.nei` and `panel_pops.csv` with the column `popcat`, the options
+  of the diversity with a draw of 60 typed, of the distances between
+  populations with a minimum of 10 and the measure `"dest"`, and of the
+  LD decay with a largest distance of 100000 and a largest major allele
+  frequency of 0.9, with the check numbers of the distances, 1 + 3 × 2 =
+  7, as `popDists.md`, "The check numbers", counts them. Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but
@@ -1150,7 +1179,7 @@ check with its own (point E there).
 ## What this spec relies on in the specs written beside it
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
-  of 1, and `checkNumbers` giving its numbers in a fixed order, `null`
+  of 1, of 3 from stage 5, and `checkNumbers` giving its numbers in a fixed order, `null`
   for a NaN, and `numCheckNumbers` their count, as its section "The
   check numbers" has them; a change to them raises its key version; the
   panel shows `checkVerdictText` of the `check` of its `done` state under
@@ -1189,6 +1218,12 @@ check with its own (point E there).
   `individualChecks`, `variantChecks` and `filterCounts`, their key
   versions, and their `checkNumbers` and `numCheckNumbers`, which this
   module writes and checks as any analysis's.
+- The specs of stage 5: the ids `popDists` and `ldDecay`, of key version
+  1, their `checkNumbers`, 1 + k × (k − 1) for k populations of the
+  distances and 1 + 3 × the populations of the LD decay, their
+  `numCheckNumbers`, and their `parseOptions` of version 1, of two fields
+  each (`popDists.md` and `ldDecay.md`, "The TypeScript interface" and
+  "Its options").
 
 These choices of this spec change what a user meets, and the owner may
 wish to overrule them on approving it: an individuals file whose read is
