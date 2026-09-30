@@ -483,6 +483,9 @@ function drawCells(
     .attr("class", (text) => text.className)
     .attr("x", (text) => text.x)
     .attr("y", (text) => text.y)
+    // Centred up by its dy, as every text of the plots is, and not by a
+    // baseline of CSS, which a program that opens the file may ignore.
+    .attr("dy", "0.35em")
     .text((text) => text.text);
 }
 

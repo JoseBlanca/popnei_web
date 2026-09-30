@@ -1461,6 +1461,8 @@ interface FileText {
 /** What toSVG of the heatmap drawn last writes on its cells and texts. */
 interface HeatmapFile {
   readonly hasVar: boolean;
+  /** The values of dominant-baseline written on the texts. */
+  readonly baselines: string[];
   readonly overlays: number;
   readonly hovers: number;
   /** Each path of cells: its fill attribute, and the fill of its style. */
@@ -1499,6 +1501,13 @@ async function heatmapFile(page: Page): Promise<HeatmapFile> {
     const none = root.querySelector("path.chart-cell-none");
     return {
       hasVar: text.includes("var("),
+      baselines: [
+        ...new Set(
+          [...root.querySelectorAll("text")].map((each) =>
+            styleOf(each, "dominant-baseline"),
+          ),
+        ),
+      ],
       overlays: root.querySelectorAll(".chart-overlay").length,
       hovers: root.querySelectorAll(".chart-hover").length,
       cells: [...root.querySelectorAll("path.chart-cells")].map((path) => ({
@@ -1583,6 +1592,10 @@ test("PA4 D3 toSVG of the heatmap of panel.nei, from a dark page, has on each ce
   await drawHeatmap(page, 640, 640, "split");
   const split = await heatmapFile(page);
   expect(split.hasVar).toBe(false);
+  // Every text placed by its dy, none by a baseline of CSS, which a
+  // program that ignores that property would draw about 4 pixels high.
+  expect(panel.baselines).toEqual(["auto"]);
+  expect(split.baselines).toEqual(["auto"]);
   expect(split.cells[0]).toEqual({ attribute: "#440154", fill: VIRIDIS_0 });
   expect(split.texts.filter((each) => each.text === "−0.0113")).toEqual([
     { text: "−0.0113", fill: TEXT_ON_DARK },
