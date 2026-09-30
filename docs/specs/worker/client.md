@@ -23,7 +23,12 @@ specs of stage 4 were made to agree, the restart after a large PCA
 among the exceptions of "Not in this spec"; and on 28 September 2026
 for popnei's release `js-v0.1.0-dev.3`, which `package.json` names from
 the plan of stage 4: the memory of a PCoA, and the wasm of that release,
-72 KB larger gzipped. The revisions for stage 4 are approved by the owner on 28 September 2026. The worker client is the page's one door to the two workers, the threads of the tab
+72 KB larger gzipped. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5: the calculation worker is
+started again after every LD decay (`docs/specs/analyses/ldDecay.md`),
+which is **Open 1** of that spec and a third exception to point 2 of
+section 13 of `docs/architecture.md`, proposed there and not yet
+approved by the owner; this spec is written with it meanwhile. The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -398,6 +403,36 @@ not started again between requests (`docs/architecture.md`, section 13,
 points 2, 5 and 9), decided by the owner on 27 September 2026 (open
 point 1 of `docs/specs/analyses/pca.md`).
 
+### The LD decay, and the restart after it
+
+From stage 5 the client starts the calculation worker again after every
+run of the analysis `ldDecay`, whatever its size: after an outcome
+`done`, and after a refusal of popnei, which may come after the counts
+were made; not after `reopenFailed`, as for a write. The steps are those
+of a write, above: the outcome first, then the worker ended, then a new
+one, sent the `open` of the load and the requests that waited.
+
+An LD decay leaves the memory of wasm larger by 16 bytes × its largest
+distance × its populations, the counts popnei asks for before the pass,
+plus the blocks of variants it held within that distance: in node with
+`js-v0.1.0-dev.3` on 30 September 2026, 64 MB for 100 individuals, and
+0.4 to 1.1 GB for 1,000 individuals and 20,000 variants
+(`docs/specs/analyses/ldDecay.md`, "How it runs"), where the bound of a
+write and of a PCA is about 25 MB. A bound on the individuals and the
+distance, as for the PCA, would be passed by almost every file of a
+few hundred individuals, so there is none. It costs the reading of the
+header of the file, at most 49 ms (`docs/specs/worker/runner.md`, "What
+a restart costs"), against a calculation of 0.6 s and more on 20,000
+variants, and the worker keeps no intermediate result before stage 7.
+
+This is a third exception to the owner's decision of 26 September 2026
+that the worker is not started again between requests
+(`docs/architecture.md`, section 13, points 2, 5 and 9), and it is
+**Open 1** of `ldDecay.md`, which the owner decides; this spec is
+written with the restart meanwhile. The plan of stage 5 measures, in
+Chromium and WebKit, the growth of the engine 3 s after an LD decay with
+the restart and without it, as stage 4 measured the PCA.
+
 ### Crashes, defects, and every read answered
 
 Every request gets its answer or its outcome, exactly once, as the entry
@@ -758,6 +793,11 @@ walking skeleton, a diversity `Job` and a CSV.
   k6. A job of 700 ends no worker; a job with `individuals` `null` over a
   load whose `opened` gave 701 does; a `refused` of such a job restarts
   it too, and a `reopenFailed` does not.
+- **The restart after an LD decay**, from stage 5: a `result` of an
+  `ldDecay` job of 2 individuals, with a run k6 waiting: the outcome is
+  `done` before the worker is ended, then a new worker, the `open` of A,
+  then k6; a `refused` of such a job restarts it too, and a
+  `reopenFailed` does not; a result of a diversity ends no worker.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a
@@ -776,8 +816,8 @@ walking skeleton, a diversity `Job` and a CSV.
   is made, while the light worker still reads. An answer between the two
   failures sets the count back: a failure after it starts a worker again.
   A worker that crashes idle after each `ready`, twice: given up. A
-  `ready` of protocol 2, another than `PROTOCOL_VERSION`, which is 3
-  from stage 4: every request fails with `protocolMismatch`, and no
+  `ready` of protocol 3, another than `PROTOCOL_VERSION`, which is 4
+  from stage 5: every request fails with `protocolMismatch`, and no
   other worker is made.
 - **Properties, with fast-check**, which draws sequences of reads, runs,
   cancels, answers, crashes and timeouts in any order and shrinks a
@@ -814,7 +854,9 @@ was decided by the owner on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5); its bound, `WRITE_RESTART_BYTES`, was set by the
 measurement of 27 September 2026, above. The restart after a large PCA
 was decided by the owner on 27 September 2026 (open point 1 of
-`docs/specs/analyses/pca.md`).
+`docs/specs/analyses/pca.md`). The restart after every LD decay is
+**Open 1** of `docs/specs/analyses/ldDecay.md`, the owner's to decide;
+the spec is written with it meanwhile.
 
 ## Not in this spec
 
@@ -826,8 +868,8 @@ was decided by the owner on 27 September 2026 (open point 1 of
   `docs/specs/entry.md`.
 - Which calculations are cancelled and when: `docs/specs/core/store.md`.
 - Restarting the calculation worker between two requests to give back
-  the memory of wasm, other than after a large write and a large PCA
-  (above): not done, as the
+  the memory of wasm, other than after a large write, a large PCA and,
+  from stage 5, every LD decay (above): not done, as the
   owner settled on 26 September 2026 from what the walking skeleton
   measured (`docs/architecture.md`, section 13, point 2).
 - The intermediate results the calculation worker keeps: none before

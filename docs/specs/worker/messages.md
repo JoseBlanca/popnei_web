@@ -26,7 +26,13 @@ failure to load stops a worker named as popnei's; and on 28 September
 (`docs/architecture.md`, section 2): the job of the statistics of each
 individual has no filter, and those of the histograms of the variants
 and of the counts carry the list of the individuals kept, checked as
-any job's. The revisions for stage 4 are approved by the owner on 28 September 2026. This spec gives
+any job's. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5, the analyses of the
+populations: the checks of the fields the diversity gains, of the jobs
+and results of the distances between populations and of the LD decay
+(`docs/specs/analyses/diversity.md`, `sfs.md`, `popDists.md` and
+`ldDecay.md`), and `PROTOCOL_VERSION` 4; not yet approved by the owner.
+This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
 application that goes through every part once (stage 2), on, the
@@ -280,10 +286,12 @@ check, because they differ in `ready`:
   of another version and not taken for a defect.
 - **`PROTOCOL_VERSION` is raised with any change to a message**, to `Job`
   or `JobResult`, or to a type of `protocol.ts` a message carries. It was
-  1 in the walking skeleton, 2 from stage 3, and is 3 from stage 4,
+  1 in the walking skeleton, 2 from stage 3, 3 from stage 4,
   whose `readIndividuals`, `individuals` and refusals of the reader
   change here, and whose job and result of the PCA join `Job` and
-  `JobResult` (`docs/specs/analyses/pca.md`); one number for the stage.
+  `JobResult` (`docs/specs/analyses/pca.md`), and is 4 from stage 5,
+  whose diversity gains fields and whose distances between populations
+  and LD decay join the unions; one number for the stage.
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -301,7 +309,9 @@ one comparison.
 build a `Job` and read a `JobResult` and core imports no `messages.ts`.
 Each analysis adds one member to each, tagged with its id in the field
 `analysis`, and its spec gives the fields; stage 3 has four, the
-diversity and the three analyses of the Variants step. What every member
+diversity and the three analyses of the Variants step, stage 4 five, and
+stage 5 seven, with the distances between populations and the LD decay.
+What every member
 keeps, decided here:
 
 - **Every `Job` names its pass**: `fileId`, the load id of the variants
@@ -369,7 +379,27 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   `numComps`, and a result of the PCA has `numVarsUsed` a number and
   `lingoesConstant` and `negativeEigenvaluesPercent` `null`, and one of
   the PCoA the other way round; that `numCompsKept` is at least 1 and `numComps` at most
-  `numCompsFound` is core's and the runner's to keep, as a range; the `numBytes` of a `written` is the
+  `numCompsFound` is core's and the runner's to keep, as a range;
+  from stage 5, for the diversity, `popDiversityPops` a list of texts,
+  each a name of the job's `pops`, in its order and once, and
+  `numCalledAlleles` a whole number of 2 or more, popnei's smallest
+  draw, a range the check keeps against its rule of the type, since
+  popnei refuses a smaller draw only in the second call, after a whole
+  first pass; each new array of a result as long as its `pops`,
+  `numVarsEveryPop` and `numVarsEveryPopInDraw` both `null` or both
+  whole numbers, and `foldedSfs` one entry per population, each `null`
+  or a `Float64Array` of `floor(numCalledAlleles / 2) + 1` values; for
+  the distances between populations, `fst`, `dest` and `numVarsPerPair`
+  of k × (k − 1) / 2 values for the k of `pops`, `numIndividuals` of k,
+  each `leftOut` a pair of a text and a whole number, and each `order` of
+  the kind `pcoa` with an `order` that holds every index of `pops` once,
+  or of the kind `file` with one of the four reasons and, for
+  `notPlaced` alone, a `message`; for the LD decay, `smallestDist` and
+  `largestDist` of `numBins` values, `numPairs`, `meanR2` and `sdR2` of
+  `pops` × `numBins`, and `numIndividuals`, `numVars`, `rhoPerBp`,
+  `r2AtZero` and `halfDist` of one value per population, `numBins` of
+  the result being the length of `smallestDist`, which the runner makes
+  from the job's; the `numBytes` of a `written` is the
   `size` of its file, or it is refused as `wrongSize`; the refusals of the reader are the kinds
   its spec gives. That the statistics of each individual are those of the
   individuals of the file, in its order, that a list of individuals is
@@ -389,7 +419,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -541,7 +571,7 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a `run` of each of the five jobs, the principal
+  and of a `.nei` file, a `run` of each of the seven jobs, the principal
   components with the method `"pca"` and with `"pcoa"`, with
   `individuals` `null` and with a list, its `progress`, `{ kind:
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
@@ -585,10 +615,19 @@ File(["…"], "panel.nei")`.
   1,999 numbers for 200 individuals and 10 components, `wrongLength`,
   or whose `explainedVariancePercent` has 9, `wrongLength`; a result of
   the PCA with `numVarsUsed` `null`, `wrongType`; a result of the PCoA
-  with `lingoesConstant` `null`, `wrongType`.
-- **The version**: a `ready` with `protocol: 2`, stage 3's, and no
-  other field gives `otherProtocol` with 2 from both checks of the page,
-  and so does `protocol: 4` with 4; with `protocol: "3"`, `wrongType`.
+  with `lingoesConstant` `null`, `wrongType`; from stage 5, a diversity
+  job with `numCalledAlleles` 1, and one whose `popDiversityPops` names a
+  population not in `pops`, or two in another order than theirs; a
+  diversity result with `numVarsEveryPop` a number and
+  `numVarsEveryPopInDraw` `null`, and one whose `foldedSfs` holds 20
+  values for a draw of 40; a result of the distances of three
+  populations with two values of `fst`, `wrongLength`, an `order` of the
+  kind `pcoa` of `[0, 0, 2]`, and a `notPlaced` without its `message`;
+  a result of the LD decay of two populations and 50 bins with 99 values
+  of `meanR2`, `wrongLength`.
+- **The version**: a `ready` with `protocol: 3`, stage 4's, and no
+  other field gives `otherProtocol` with 3 from both checks of the page,
+  and so does `protocol: 5` with 5; with `protocol: "4"`, `wrongType`.
 - **The xlsx**: a `readIndividuals` whose `csv` is `{}`,
   `missingFields`; a binary type whose `one` is the number 1,
   `wrongType`; a `found` of an xlsx with the fields of a `CsvFound`

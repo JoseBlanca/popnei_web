@@ -33,7 +33,14 @@ by `orderA.mjs` below; and again that day for the owner's decision that
 the PCA has its own filters of missing data, MAF and LD, which follow
 the Variants step by default (`docs/specs/analyses/pca.md`): the tests
 of the PCA made with the job of that spec's flow and its numbers, and
-the test of two individuals with the list before the MAF filter. The revisions for stage 4 are approved by the owner on 28 September 2026. The calculation
+the test of two individuals with the list before the MAF filter. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5, the analyses of the
+populations, as their specs give them: the second call of the
+diversity, `calcPopDiversity`, with the folded site frequency spectrum
+in it, told as the second pass of the run (below, "The diversity" and
+"Progress"); the distances between populations with the order of their
+heatmap; the LD decay; the memory of the LD decay; and their tests.
+Not yet approved by the owner. The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -422,6 +429,54 @@ runner:
    statistic not asked for; the runner asks for all three, so a `null`
    is a defect of ours, thrown.
 
+From stage 5 the job carries two fields more, `numCalledAlleles`, the
+draw of the rarefaction and of the spectrum, and `popDiversityPops`, the
+populations of `pops` with at least `minNumIndividuals` individuals, in
+the order of `pops`, which core chooses (`diversity.md`, "The
+populations"; decision 7 of `docs/specs/stage-5-open-points.md`). After
+step 5, over the same steps of the `Variants`, the runner:
+
+6. When `popDiversityPops` is not empty, calls `calcPopDiversity(variants,
+   { pops, stats, numCalledAlleles, minNumIndividuals })` of
+   `js/popnei/src/diversity.ts`, the options object written with these
+   keys alone, `pops` made with `Object.fromEntries` of the pairs of
+   `job.pops` named in `popDiversityPops`, and `stats` `["num_alleles",
+   "fis", "private_alleles", "folded_sfs"]`, without `"private_alleles"`
+   when `popDiversityPops` holds one population, since one population
+   has every allele it called as private (`diversity.md`, "The
+   populations"). It is a second pass over the file, as the owner
+   decided on 30 September 2026 until popnei issue #4 gives the two
+   heterozygosities and the proportion of polymorphic variants in this
+   call (decision 4). With `popDiversityPops` empty there is no second
+   call and no second pass.
+7. Puts popnei's arrays back in the order of the job, as step 4 does,
+   `foldedSfs` among them, which popnei gives as an object by the name
+   of the population, each array copied into a new `Float64Array`; a
+   population of `pops` not in `popDiversityPops` has NaN in `fis`,
+   `numAllelesMean`, `numAllelesInDraw` and the three of the private
+   alleles, 0 in `numVarsInDraw`, and `null` for its spectrum; the
+   private alleles not asked are NaN for every population, with
+   `numVarsEveryPop` and `numVarsEveryPopInDraw` `null`.
+8. Adds to the result the fields of stage 5: `fis`; `numAllelesMean`
+   and `numAllelesInDraw`, from `numAlleles.mean` and `.inDraw`;
+   `privateAllelesTotal`, `privateAllelesMean` and
+   `privateAllelesInDraw`, from `privateAlleles.total`, `.mean` and
+   `.inDraw`, the total copied into a `Float64Array` so that a
+   population with none asked has NaN and not 0; `numVarsInDraw`, from
+   `numVars.inDraw`; `numVarsEveryPop` and `numVarsEveryPopInDraw`,
+   popnei's; `numCalledAlleles`, the job's; `foldedSfs`; and
+   `passStats` of the first call, since the two passes have the same
+   steps. A statistic asked that popnei gives `null`, or a spectrum
+   whose length is not `floor(numCalledAlleles / 2) + 1`, is a defect of
+   ours, thrown.
+
+The refusals of the second call are answered as any of popnei's
+(below, "What it answers when something goes wrong"). Core keeps from
+the job the two it can foresee, a draw below 2 and a draw above the
+chromosomes of the individuals kept (`diversity.md`, "Why it cannot
+run"); the refusals of the pass come at the first call, whose messages
+the panel reads.
+
 ### The counts of every pass
 
 Every request over the variants gives back the counts of its pass as
@@ -634,6 +689,100 @@ back (decided by the owner on 27 September 2026, "The pruned variants
 are not kept between two PCAs" in `docs/specs/stage-4-open-points.md`),
 so each PCA with an LD filter prunes again inside its one pass.
 
+### The distances between populations
+
+A `popDists` job, from stage 5, holds its pass, the populations with at
+least the minimum of individuals, two or more, `leftOut`, the
+populations under it with their counts, which the runner copies into
+the result unread, and `minNumIndividuals`
+(`docs/specs/analyses/popDists.md`, `PopDistsJob`). After the steps are
+on the `Variants`, the runner:
+
+1. Checks that no two populations share a name, as for the diversity,
+   `badRequest`, and sets the function of the progress.
+2. Calls `calcPopDists(variants, Object.fromEntries(job.pops), {
+   jackknifeGroup: null, measures: ["fst", "dest"], minNumIndividuals
+   })` of `js/popnei/src/pop_dists.ts`, the options written with these
+   keys alone: no standard errors, as the owner decided on 30 September
+   2026 (decision 1), and both measures from the one pass.
+3. Puts the pairs back in the order of the job. popnei gives its
+   populations in the order the keys of `pops` iterate in, and its
+   pairs in that order, (0, 1), (0, 2), …, (1, 2), …; for the job's
+   populations i < j of k, the place `i × k − i × (i + 1) / 2 + j − i −
+   1` of each array of the result takes popnei's value of the same two
+   names, at the place the same formula gives for their places a < b in
+   popnei's `pops`. `fst` and `dest` come from `fst.distVector` and
+   `dest.distVector`, and `numVarsPerPair` from `numVars`, an
+   `Int32Array`, copied into a `Uint32Array`, a negative count being a
+   defect, thrown.
+4. Makes the order of the heatmap of each measure, over the distances
+   in the order of the job, by the six steps of `popDists.md`, "The
+   order of the heatmap": two populations, the order of the file,
+   `twoPopulations`; a pair NaN, `noDistance`; a negative distance
+   taken as 0 in the matrix given to the PCoA alone (its **Open 1**,
+   meanwhile so); every distance 0 then, `allZero`; otherwise `new
+   Distances(vector, pops, passStats)`, `correctDistsByLingoes` of
+   `js/popnei/src/pcoa.ts`, and `doPcoa` of its corrected `distances`,
+   the populations sorted by their projection on the first component,
+   `projections[i × numComps]`, from the smallest, an exact tie broken
+   by the order of the job; and any refusal of those two calls,
+   `notPlaced` with popnei's message. A refusal there is not a refusal
+   of the job, since the distances are calculated: it is caught at its
+   call, as popnei's refusals are, and kept as the reason of the order.
+5. Answers the `PopDistsResult` of `popDists.md`: `pops` and
+   `numIndividuals` of the job, the three arrays of step 3, `order` of
+   each measure, `leftOut` as it came, and `passStats`.
+
+popnei refuses the call, answered `refused`, for what its `@throws`
+lists that core cannot rule out: the refusals of every pass, the file
+with no variant, the filters keeping none, a line of a VCF, a genotype
+of another ploidy, a file not sorted under the LD filter. Without
+standard errors popnei keeps a few sums for each pair, so the memory
+does not grow with the variants.
+
+### The LD decay
+
+An `ldDecay` job, from stage 5, holds its pass, whose filters are the
+project's but the LD pruning, the populations, and `minDist` 1,
+`maxDist`, `numBins` 50 and `maxAllowedMaf`
+(`docs/specs/analyses/ldDecay.md`, `LdDecayJob`). After the steps are on
+the `Variants`, the runner:
+
+1. Checks that no two populations share a name, `badRequest`, and sets
+   the function of the progress.
+2. Calls `calcLdAndDistPerPop(variants, { pops: Object.fromEntries(job.pops),
+   minDist, maxDist, numBins, maxAllowedMaf })` of
+   `js/popnei/src/ld.ts`, the options written with these keys alone,
+   since the release refuses a key it does not know.
+3. Checks that popnei gave every population of the job, in `perPop` and
+   `decayPerPop`, and that the smallest and the largest distance of the
+   bins are the same for every population, as popnei's rule has them;
+   a difference is a defect of ours, thrown. A population named
+   `__proto__` is missing from popnei's result, whose objects the
+   release fills by assigning to them (`perPop[pop] = …` of `ld.ts`),
+   and so is thrown as a defect; it is asked of popnei with the
+   refusal of a source not sorted (`ldDecay.md`, **Open 2**).
+4. Answers the `LdDecayResult` of `ldDecay.md`, every array in the order
+   of the job: `numIndividuals`, the lengths of the job's populations,
+   the n of each curve; `numVars` from `numVarsPerPop`; `smallestDist`
+   and `largestDist` from the bins of the first population; `numPairs`,
+   `meanR2` and `sdR2` from the bins of each, one population after
+   another; `rhoPerBp`, `r2AtZero` and `halfDist` from `decayPerPop`;
+   and `passStats`.
+
+popnei refuses, answered `refused`: the refusals of every pass, and the
+memory of its counts or of the variants within `maxDist`, "this machine
+has not the memory for …", which core's lock of 1 GB keeps from the
+counts (`ldDecay.md`, "Why it cannot run"). A variants file not sorted
+by position is not refused by this call, which counts fewer pairs
+without a word (`ldDecay.md`, "The request", and its **Open 2**). The
+fit of each population comes after the pass and tells no progress, so
+the bar stands at the end of the pass while it runs. The client starts
+the worker again after every LD decay (`docs/specs/worker/client.md`,
+"The LD decay, and the restart after it"), since it leaves the memory
+of wasm larger by 16 bytes × `maxDist` × the populations and more
+(below, "The memory").
+
 ### The written file
 
 A `write` request holds a key and a `WriteJob`: its pass, the filters of
@@ -721,14 +870,16 @@ node on 25 September 2026 over `panel.nei`:
   file as it is, compressed.
 
 `numPassesOf` of `js/popnei/src/passes.ts` is 1 for each function the
-runner calls in stages 3 and 4, `calcPerVarDistribs`,
+runner calls in stages 3 to 5, `calcPerVarDistribs`,
 `calcPerIndividualStats`, `iterBlocks`, `writeVars`, and
-`doPcaFromVariants` with `numPrinComps` 0, and every call of their
+`doPcaFromVariants` with `numPrinComps` 0, and, from stage 5,
+`calcPopDiversity`, `calcPopDists` and `calcLdAndDistPerPop`, and every call of their
 progress carries `numPasses` 1; over `panel.nei` each gave the two calls
 of the diversity, seen in node on 26 and 27 September 2026. The runner
 does not ask `numPassesOf`: popnei's first call, at 0 bytes, comes before
 a byte is read, and carries the passes of the run. No run of stage 4
-makes two passes: the PCA asks for no weights of the variants, which
+makes two passes, and from stage 5 the diversity alone does, by two
+calls of one pass each (below): the PCA asks for no weights of the variants, which
 would make it read the file twice, and the PCoA reads it once,
 `numPassesOf("doPcoaFromVariants")` 1, whose progress over `panel.nei`
 was the same two calls (node, `js-v0.1.0-dev.3`, 28 September 2026). The
@@ -738,6 +889,17 @@ the decomposition of the matrix, which popnei does not report, in
 individuals, the last range of the PCA was told at 0.04 s and the end at
 6.75 s, in node with `js-v0.1.0-dev.2` on 27 September 2026, so the bar stays at the share of the last range
 meanwhile (`pca.md`, "How it runs").
+
+The diversity of stage 5 is one run of two calls, `calcPerVarDistribs`
+and then `calcPopDiversity`, each of which popnei tells as `pass` 1 of
+`numPasses` 1. So for the diversity the runner does not pass the calls
+on unchanged: it tells those of the first call with `pass` 1 and
+`numPasses` 2, and those of the second with `pass` 2 and `numPasses` 2,
+the other two fields as they came, so that the bar fills once over the
+two passes (`diversity.md`, the running state). With no second call,
+when no population has the minimum of individuals, it passes the calls
+on with `numPasses` 1, and the bar is of one pass. Every other run
+passes them on unchanged.
 
 popnei tells no progress of `openVcf` and `openVars`, which read before
 there is a `Variants` to set the function on; an open reads the first range
@@ -767,7 +929,11 @@ buffer: those it builds in steps 4 and 5 of the diversity, the copies of
 the edges of the histograms, and popnei's own arrays of the statistics of
 each individual and of the counts of the bins, which popnei copies out of
 the memory of wasm and never gives as views into it
-(`js/popnei/src/stats.ts`); the function checks it all the same, and an
+(`js/popnei/src/stats.ts`), and, from stage 5, the arrays of the
+diversity's second call, the spectra, the distances and the orders of
+the heatmap and the arrays of the LD decay, which the runner builds in
+the order of the job, including the typed arrays inside `foldedSfs` and
+`order`; the function checks it all the same, and an
 array that is a view of part of a buffer is a defect, thrown (below,
 "Where this departs from the skills"). NaN, the value popnei gives a
 population with no variant of enough data or an individual with no
@@ -1094,6 +1260,20 @@ worker holds, from popnei's README and its doc comments:
   bytes a cell while it reads; at its peak no more than the PCA, 44.4
   bytes a cell measured by popnei (`pca.md`, "How it runs"), whose limit
   is the same 9,381 individuals, of the pass.
+- **The counts of an LD decay**, from stage 5: for each population a
+  count of pairs and a sum of their r² at every distance from 1 to
+  `maxDist`, 16 bytes each, asked for before the pass, and up to 24
+  bytes more a distance at its end, at most 40 bytes a base pair and
+  population, which core bounds at 1 GB; beside them, the blocks of
+  variants the pass holds within `maxDist` of the newest variant, with
+  their genotypes by population. Measured in node with
+  `js-v0.1.0-dev.3` on 30 September 2026, an LD decay grew wasm by 64 MB
+  for 100 individuals and 0.4 to 1.1 GB for 1,000 individuals and
+  20,000 variants (`ldDecay.md`, "How it runs", whose table gives each
+  case), which is why the client starts the worker again after it.
+- **The distances between populations**, from stage 5: a few sums for
+  each pair, and the matrix of the PCoA of the order, k × k numbers for
+  k populations.
 
 The memory of wasm grows to the largest pass it has held and never
 shrinks, and a restart of the worker gives it back
@@ -1108,8 +1288,9 @@ the whole file, and a gzipped VCF is decompressed whole at every pass.
 
 The client ends the calculation worker at a cancel, after a `crashed`,
 when the load changes, from stage 3 after a written file larger than a
-bound, and from stage 4 after a PCA of more individuals than a bound, and
-starts another (`client.md`). What the
+bound, from stage 4 after a PCA of more individuals than a bound, and
+from stage 5 after every LD decay, as proposed to the owner in
+`ldDecay.md`, **Open 1**, and starts another (`client.md`). What the
 new worker pays before its first request:
 
 - **Loading popnei's wasm**, from the browser's cache after the first
@@ -1321,11 +1502,12 @@ The tests of stage 2, each at `open` and `run` of a runner made by
   `correctByLingoes`", its message held as a literal against the pinned
   release, since a change of popnei's words would turn it back into a
   refusal of the user's settings.
-- **`transferablesOf`**: of a result of each of the five analyses, the
+- **`transferablesOf`**: of a result of each of the seven analyses, the
   principal components with their `projections` and
-  `explainedVariancePercent`, one buffer per array, none twice when two
-  fields hold one array; an array that is a view of part of a buffer
-  throws.
+  `explainedVariancePercent`, the diversity of stage 5 with its spectra,
+  the distances with the `order` of the kind `pcoa`, one buffer per
+  array, none twice when two fields hold one array; an array that is a
+  view of part of a buffer throws.
 
 The numbers of stage 3 were given by the same release, on 26 September
 2026, in the folder of the numbers above with `numbers3.mjs`, run as
@@ -1562,6 +1744,41 @@ made by `createRunner`, after the open of `panel.nei`:
   LD filter opens the file again, since its filters are not the
   diversity's, and a second PCA with the same job does not.
 
+The numbers of stage 5 are those the four specs of its analyses give,
+got with `js-v0.1.0-dev.3` in node on 30 September 2026 by the commands
+each spec gives beside them, and written into the tests as literals:
+
+- **The diversity of stage 5**, over `panel.nei` and the populations of
+  `panel_pops.csv` with the missing data filter at 0.05 and the default
+  draw of 40: the table of stage 5 of `diversity.md`, "How it is
+  verified", F, the alleles and the private alleles of each population;
+  the spectra of `docs/specs/analyses/sfs.md`, "The numbers of popnei",
+  p0's first value 44.79323144486922 at no filter, each of 21 values,
+  equal to the last digit to those of a call that asks `folded_sfs`
+  alone; the progress of the two calls, passes 1 and 2 of 2, and of a
+  job whose `popDiversityPops` is empty, one pass of 1; a job with one
+  population in `popDiversityPops`, with no private alleles asked, NaN
+  in their three arrays and `numVarsEveryPop` `null`; and populations
+  named `10`, `9` and `p`, in that order, whose spectra come back in the
+  order of the job, which a runner that took popnei's order, 9, 10, p,
+  would fail.
+- **The distances between populations**: the Fst, the D and the
+  variants of each pair of `popDists.md`, "How it is verified", at the
+  missing data filter at 0.1 and at 0.05, the order p2, p0, p1 of both
+  measures, and the check numbers there; the populations named "3", "1"
+  and "2" for p0, p2 and p1, given back by popnei as "1", "2", "3", held
+  as "3", "1", "2" pair by pair; and the fixture `panel_split.csv`,
+  whose negative pair gives the order p0b, p0a, p2, p1 for both
+  measures. The scripts `dists.mjs` and `order.mjs` of that spec's
+  session are kept beside this spec's `numbers.mjs` by the plan.
+- **The LD decay**, over `e2e/fixtures/ld.nei` and `ld_pops.csv` with
+  the missing data filter at 0.1, `maxDist` 100,000: the numbers of
+  `ldDecay.md`, "How it is verified", 432 variants and 29,367 pairs in
+  each population, the half distances 7548.08187836982 and
+  7339.709512618931, and the first and last bins; populations named
+  "10" and "2", given back by popnei as "2", "10", held in the order of
+  the job; and a population named `__proto__`, thrown as a defect.
+
 ### In the browser
 
 What node does not have, a `File` that popnei reads by ranges with
@@ -1661,6 +1878,18 @@ September 2026 and written here as `docs/architecture.md` has them:
 - **`docs/specs/analyses/diversity.md`**: `individuals` in the place of
   `individualFilters` in its job, and `passStats` in the place of
   `numVars` and `numVarsRead` in its result.
+
+What the specs of stage 5 say, written on 30 September 2026:
+
+- **`docs/specs/analyses/diversity.md` and `sfs.md`**: the two fields
+  of the job and the fields of the result of stage 5, the populations
+  of `popDiversityPops` chosen by core with `populationsWithMinimum` of
+  `src/core/project.ts`, and the spectrum in the diversity's call, as
+  the meanwhile of **Open 1** of `sfs.md`.
+- **`docs/specs/analyses/popDists.md`**: its job and result, the six
+  steps of the order of the heatmap, and its numbers.
+- **`docs/specs/analyses/ldDecay.md`**: its job and result, its checks,
+  its memory and its numbers.
 
 ## Where this departs from the skills
 

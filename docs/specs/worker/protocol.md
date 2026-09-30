@@ -42,6 +42,13 @@ Revised again that day for the owner's decision that the PCA has its
 own filters of missing data, MAF and LD, which follow the Variants step
 by default: the passage on the filters of the PCA says how core gives
 them to popnei. The revisions for stage 4 are approved by the owner on 28 September 2026.
+Revised on 30 September 2026 for stage 5, the analyses of the
+populations, as their specs give the fields: the diversity's job and
+result gain the fields of `calcPopDiversity`, the folded site frequency
+spectrum among them, which rides in the diversity's result
+(`docs/specs/analyses/diversity.md` and `sfs.md`); and the distances
+between populations (`popDists.md`) and the LD decay (`ldDecay.md`)
+join `Job` and `JobResult`. Not yet approved by the owner.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -442,7 +449,12 @@ Variants step, the statistics of each individual
 (`individualChecks.md`), the histograms of the variants
 (`variantChecks.md`) and the counts of the filters (`filterCounts.md`),
 each under `docs/specs/analyses/`. Stage 4 adds the fifth, the principal
-components (`pca.md`). The block below is written from those
+components (`pca.md`). Stage 5 adds the distances between populations
+(`popDists.md`) and the LD decay (`ldDecay.md`), and gives the
+diversity's members the fields of its second call of popnei; the folded
+site frequency spectrum has no member of its own, since it comes in the
+diversity's call and result (`sfs.md`, whose **Open 1** asks the owner
+whether it stays so). The block below is written from those
 specs, which were written at the same time as this one; where one of
 them gives other fields, the spec of the analysis stands and this block
 follows it. The populations are pairs in the order of the file, since
@@ -459,6 +471,8 @@ export interface DiversityJob {
   pops: Pops;                              // only individuals kept, none empty
   minNumIndividuals: number;
   polyThreshold: number;
+  numCalledAlleles: number;                // from stage 5: the draw of the rarefaction and the spectrum, 2 or more
+  popDiversityPops: readonly string[];     // from stage 5: the populations of pops with the minimum, in its order
 }
 
 export interface DiversityResult {
@@ -469,7 +483,20 @@ export interface DiversityResult {
   obsHet: Float64Array;
   polyRatio: Float64Array;
   numVarsWithValue: Uint32Array;
-  passStats: PassStats;                    // in the place of numVars and numVarsRead of stage 2
+  // From stage 5, of calcPopDiversity over popDiversityPops; NaN, or 0
+  // for a count, or null for a spectrum, for a population not given to it.
+  fis: Float64Array;
+  numAllelesMean: Float64Array;
+  numAllelesInDraw: Float64Array;
+  privateAllelesTotal: Float64Array;       // NaN when the private alleles were not asked
+  privateAllelesMean: Float64Array;
+  privateAllelesInDraw: Float64Array;
+  numVarsInDraw: Uint32Array;
+  numVarsEveryPop: number | null;          // null when the private alleles were not asked
+  numVarsEveryPopInDraw: number | null;
+  numCalledAlleles: number;                // the draw of the job
+  foldedSfs: readonly (Float64Array | null)[]; // floor(numCalledAlleles / 2) + 1 values each
+  passStats: PassStats;                    // in the place of numVars and numVarsRead of stage 2; of the first pass
 }
 
 // The statistics of each individual, calcPerIndividualStats, over every
@@ -555,11 +582,79 @@ export interface PcaResult {
   passStats: PassStats;                    // of filters that are not the project's
 }
 
+// The distances between populations, stage 5: Hudson's Fst and Jost's D
+// of each pair from calcPopDists, and the order of the heatmap of each
+// from popnei's PCoA (docs/specs/analyses/popDists.md).
+
+/** Why the heatmap keeps the order of the metadata file. */
+export type FileOrderReason = "twoPopulations" | "noDistance" | "allZero" | "notPlaced";
+
+export type HeatmapOrder =
+  | { kind: "pcoa"; order: Uint32Array }   // indexes of pops, top to bottom
+  | { kind: "file"; reason: Exclude<FileOrderReason, "notPlaced"> }
+  | { kind: "file"; reason: "notPlaced"; message: string }; // popnei's refusal
+
+/** The populations under the minimum of individuals, with their individuals kept. */
+export type LeftOut = readonly (readonly [pop: string, numIndividuals: number])[];
+
+export interface PopDistsJob {
+  analysis: "popDists";
+  fileId: string;
+  filters: readonly VariantFilter[];
+  individuals: readonly string[] | null;
+  pops: Pops;                              // those with the minimum, two or more
+  leftOut: LeftOut;                        // copied into the result, not read by the runner
+  minNumIndividuals: number;
+}
+
+export interface PopDistsResult {
+  analysis: "popDists";
+  pops: readonly string[];                 // in the order of the job
+  numIndividuals: Uint32Array;
+  fst: Float64Array;                       // k × (k − 1) / 2, pairs (0, 1), (0, 2), …, (1, 2), …; NaN for no value
+  dest: Float64Array;
+  numVarsPerPair: Uint32Array;
+  order: { fst: HeatmapOrder; dest: HeatmapOrder };
+  leftOut: LeftOut;
+  passStats: PassStats;
+}
+
+// The LD decay, stage 5: calcLdAndDistPerPop over the filters of the
+// Variants step but its LD pruning (docs/specs/analyses/ldDecay.md).
+export interface LdDecayJob {
+  analysis: "ldDecay";
+  fileId: string;
+  filters: readonly VariantFilter[];       // the project's but the LD pruning
+  individuals: readonly string[] | null;
+  pops: Pops;                              // only individuals kept, none empty
+  minDist: number;                         // 1
+  maxDist: number;                         // typed by the user; no default
+  numBins: number;                         // 50
+  maxAllowedMaf: number;
+}
+
+export interface LdDecayResult {
+  analysis: "ldDecay";
+  pops: readonly string[];                 // in the order of the job
+  numIndividuals: Uint32Array;             // the n of each curve
+  numVars: Float64Array;                   // numVarsPerPop
+  smallestDist: Float64Array;              // numBins, shared by every population
+  largestDist: Float64Array;
+  numPairs: Float64Array;                  // pops × numBins, the bins of one population together
+  meanR2: Float64Array;                    // NaN for a bin with no pair
+  sdR2: Float64Array;
+  rhoPerBp: Float64Array;                  // one per population; NaN when no curve was fitted
+  r2AtZero: Float64Array;
+  halfDist: Float64Array;
+  passStats: PassStats;
+}
+
 export type Job =
-  DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob;
+  | DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob
+  | PopDistsJob | LdDecayJob;
 export type JobResult =
   | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult
-  | PcaResult;
+  | PcaResult | PopDistsResult | LdDecayResult;
 ```
 
 The request of a written file is not a `Job`, since it is not an
