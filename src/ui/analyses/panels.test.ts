@@ -19,14 +19,15 @@ describe("IP8 D3 the panel of the principal components", () => {
     expect(MAX_COLOUR_GROUPS).toBe(MAX_POINT_GROUPS);
   });
 
-  test("the Analyses step shows Principal components, then Diversity, then LD decay, each titled as the shell names it", () => {
+  test("the Analyses step shows Principal components, then Diversity, then Distances between populations, then LD decay, each titled as the shell names it", () => {
     const inStep = POPGEN_ANALYSES.filter(
       (def) => stepOf(def.id) === "analyses",
     ).map((def) => def.id);
-    expect(inStep).toEqual(["pca", "diversity", "ldDecay"]);
+    expect(inStep).toEqual(["pca", "diversity", "popDists", "ldDecay"]);
     expect(inStep.map(titleOf)).toEqual([
       "Principal components",
       "Diversity",
+      "Distances between populations",
       "LD decay",
     ]);
   });

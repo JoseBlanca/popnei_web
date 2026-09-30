@@ -10,6 +10,7 @@ import {
   writeCountsOf,
 } from "./apps.ts";
 import { pca } from "./analyses/pca.ts";
+import { popDists } from "./analyses/popDists.ts";
 import { resultBytes } from "./cache.ts";
 import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
@@ -105,6 +106,15 @@ describe("IP8 D3 the analyses of apps.ts", () => {
   });
 });
 
+describe("PA5 D1 the distances between populations in apps.ts", () => {
+  test("the distances between populations are an analysis of population genetics, in the Analyses step, just after the diversity", () => {
+    const ids = POPGEN_ANALYSES.map((def) => def.id);
+    expect(POPGEN_ANALYSES[ids.indexOf("popDists")]).toBe(popDists);
+    expect(ids.indexOf("popDists")).toBe(ids.indexOf("diversity") + 1);
+    expect(POPGEN_ANALYSIS_STEPS["popDists"]).toBe("analyses");
+  });
+});
+
 describe("VS5 D1 apps.ts", () => {
   test("the first project of population genetics has the missing data filter at 0.1 and nothing else", () => {
     expect(firstProject("popgen")).toEqual({
@@ -113,7 +123,7 @@ describe("VS5 D1 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components, the diversity and the LD decay", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components, the diversity, the distances between populations and the LD decay", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
@@ -122,17 +132,19 @@ describe("VS5 D1 apps.ts", () => {
       "filterCounts",
       "pca",
       "diversity",
+      "popDists",
       "ldDecay",
     ]);
   });
 
-  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components, the diversity and the LD decay in the Analyses step, and no other analysis has one", () => {
+  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components, the diversity, the distances between populations and the LD decay in the Analyses step, and no other analysis has one", () => {
     expect(POPGEN_ANALYSIS_STEPS).toStrictEqual({
       individualChecks: "variants",
       variantChecks: "variants",
       filterCounts: "variants",
       pca: "analyses",
       diversity: "analyses",
+      popDists: "analyses",
       ldDecay: "analyses",
     });
     expect(Object.keys(POPGEN_ANALYSIS_STEPS).toSorted()).toEqual(

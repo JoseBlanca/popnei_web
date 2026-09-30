@@ -12,6 +12,7 @@ import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
+import { popDists } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
@@ -43,8 +44,9 @@ export const DEFAULT_ONLY_PASSED = true;
     the individuals comes first since 28 September 2026, then the
     histograms of the variants and the counts of what each filter kept;
     then the principal components and the diversity, in the Analyses step,
-    the PCA first from stage 4, and the LD decay after them, with the
-    placeholder of its panel until task 8.1 of the plan of stage 5
+    the PCA first from stage 4, and the distances between populations and
+    the LD decay after them, from stage 5, with the placeholders of their
+    panels until tasks 5.2 and 8.1 of the plan of stage 5
     (docs/specs/entry.md, "`src/core/apps.ts`").
     The stepper names the first check in error in this order. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
@@ -54,6 +56,7 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     filterCounts,
     pca,
     diversity,
+    popDists,
     ldDecay,
   ]);
 
@@ -67,7 +70,8 @@ export type StepId = (typeof POPGEN_STEPS)[number];
 
 /** The step each analysis of `POPGEN_ANALYSES` is shown in, by its id: the
     three checks in the Variants step, the principal components, the
-    diversity and the LD decay in the Analyses step.
+    diversity, the distances between populations and the LD decay in the
+    Analyses step.
     The ids are literals of their modules, never names of the user, so an
     object may hold them. */
 export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>> =
@@ -77,6 +81,7 @@ export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>> =
     filterCounts: "variants",
     pca: "analyses",
     diversity: "analyses",
+    popDists: "analyses",
     ldDecay: "analyses",
   });
 

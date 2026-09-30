@@ -29,6 +29,7 @@ import {
 import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import { refusalText as ldDecayRefusalText } from "../../core/analyses/ldDecay.ts";
+import { refusalText as popDistsRefusalText } from "../../core/analyses/popDists.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
@@ -39,6 +40,7 @@ import { readyLines } from "./diversity/words.ts";
 import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
+import { PopDistsPlaceholder } from "./popDists/PopDistsPlaceholder.tsx";
 import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
 
@@ -162,6 +164,38 @@ const PCA: AnalysisUi = Object.freeze({
     crashText(p, individualsRunOn(p, kept)),
 });
 
+/** The placeholder of the panel of the distances between populations,
+    its Run button alone, until task 5.2 of the plan of stage 5 draws its
+    panel, with the field of the minimum, the radio buttons of the
+    measure, the heatmap and the table (docs/specs/analyses/popDists.md,
+    "The panel"): a result draws nothing. */
+const POP_DISTS: AnalysisUi = Object.freeze({
+  title: titleOf("popDists"),
+  name: "the distances between populations",
+  resultName: "the heatmap and the table",
+  plural: true,
+  readyLines: (): readonly string[] => [],
+  refusalText: popDistsRefusalText,
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string =>
+    statisticsFailedWords(
+      error,
+      p,
+      failureText,
+      waited
+        ? "the distances between populations were not run"
+        : "the distances between populations cannot run",
+    ),
+  Results: PopDistsPlaceholder,
+  Options: null,
+  runningLine: (): null => null,
+  workerFailedText: null,
+});
+
 /** The placeholder of the panel of the LD decay, its Run button alone,
     until task 8.1 of the plan of stage 5 draws its panel
     (docs/plans/population-analyses.md, "Where the specs are thin"): the
@@ -215,6 +249,7 @@ function individualsRunOn(p: Project, kept: IndividualsKept | null): number {
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([
   ["pca", PCA],
   ["diversity", DIVERSITY],
+  ["popDists", POP_DISTS],
   ["ldDecay", LD_DECAY],
 ]);
 

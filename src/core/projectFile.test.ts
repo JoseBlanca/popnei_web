@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import { ldDecay } from "./analyses/ldDecay.ts";
 import { popDists } from "./analyses/popDists.ts";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
@@ -3323,9 +3322,9 @@ describe("IP10 D3 the cases of the project file", () => {
 });
 
 describe("PA6 D3 the options of the three analyses of the populations in a project file", () => {
-  /** The definitions of the application with the two analyses of stage 5
-      that `POPGEN_ANALYSES` does not list yet. */
-  const ANALYSES = [...POPGEN_ANALYSES, popDists, ldDecay];
+  /** The definitions of the application, the two analyses of stage 5
+      among them. */
+  const ANALYSES = POPGEN_ANALYSES;
 
   /** The fixture with the diversity's options `diversityOptions`, and
       those of the distances and of the LD decay. */
@@ -3398,9 +3397,9 @@ describe("PA6 D3 the options of the three analyses of the populations in a proje
   });
 });
 
-/** The definitions of the application of population genetics with the
-    two analyses of stage 5 that `POPGEN_ANALYSES` does not list yet. */
-const STAGE_5_ANALYSES = [...POPGEN_ANALYSES, popDists, ldDecay];
+/** The definitions of the application of population genetics, the two
+    analyses of stage 5 among them. */
+const STAGE_5_ANALYSES = POPGEN_ANALYSES;
 
 /** The check numbers of the distances of panel.nei and the column `popcat`
     of panel_pops.csv with the missing data filter at 0.1: the variants

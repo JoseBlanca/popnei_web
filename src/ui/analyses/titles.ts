@@ -22,7 +22,7 @@ import type { ShellWords } from "../shell/words.ts";
 /** The title of every analysis of the applications, by its id: the
     heading of its panel, or of its part of the Variants step
     (docs/specs/analyses/individualChecks.md, variantChecks.md,
-    filterCounts.md, pca.md, diversity.md and ldDecay.md). The principal components
+    filterCounts.md, pca.md, diversity.md, popDists.md and ldDecay.md). The principal components
     have one title whatever their method. */
 const TITLES: ReadonlyMap<AnalysisId, string> = new Map([
   ["individualChecks", "Statistics of each individual"],
@@ -30,17 +30,21 @@ const TITLES: ReadonlyMap<AnalysisId, string> = new Map([
   ["filterCounts", "Counts of the filters"],
   ["pca", "Principal components"],
   ["diversity", "Diversity"],
+  ["popDists", "Distances between populations"],
   ["ldDecay", "LD decay"],
 ]);
 
 /** The analyses whose title names several things, after which the verb
     is plural, "Histograms of the variants were not run." (stop A 6,
-    decided by the owner on 29 September 2026). */
+    decided by the owner on 29 September 2026), and "Distances between
+    populations were not run." from stage 5 (docs/specs/shell.md, "The
+    status region"). */
 const PLURAL_TITLES: ReadonlySet<AnalysisId> = new Set([
   "individualChecks",
   "variantChecks",
   "filterCounts",
   "pca",
+  "popDists",
 ]);
 
 /** Whether the title of the analysis `id` names several things; a
