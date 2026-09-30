@@ -1338,7 +1338,9 @@ test.describe("the line under the bar of a calculation under way", () => {
       diversity.getByRole("progressbar", { name: "Calculating the diversity" }),
     ).toBeVisible();
     await expect(diversity.getByText(/^Calculating · /)).toBeVisible();
-    await expect(diversity.locator("p")).toHaveCount(1);
+    await expect(
+      diversity.getByText(/^The bar shows the reading of/),
+    ).toHaveCount(0);
   });
 });
 

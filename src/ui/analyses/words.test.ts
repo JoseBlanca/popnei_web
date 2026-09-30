@@ -9,6 +9,7 @@ import {
   removedText,
   runningBarLabel,
   runningText,
+  passesOf,
   stoppedText,
   versionsText,
   warningsHeading,
@@ -61,6 +62,7 @@ describe("the words of the frame of an analysis panel", () => {
       seconds: 12,
       waitingFor: null,
       waitsForStatistics: false,
+      passes: null,
     };
     expect(runningText(line)).toBe("Calculating · 35% · 0:12");
     expect(runningText({ ...line, share: null })).toBe("Calculating · 0:12");
@@ -75,12 +77,40 @@ describe("the words of the frame of an analysis panel", () => {
     );
   });
 
+  test("PA7 D1 the line of a run of two passes names the pass it reads, the share being of the whole run, and none before the first progress", () => {
+    const line = {
+      share: 17,
+      seconds: 12,
+      waitingFor: null,
+      waitsForStatistics: false,
+      passes: { pass: 1, numPasses: 2 },
+    };
+    expect(runningText(line)).toBe("Calculating · pass 1 of 2 · 17% · 0:12");
+    expect(
+      runningText({ ...line, share: 62, passes: { pass: 2, numPasses: 2 } }),
+    ).toBe("Calculating · pass 2 of 2 · 62% · 0:12");
+    expect(runningText({ ...line, share: null, passes: null })).toBe(
+      "Calculating · 0:12",
+    );
+    const progress = {
+      bytesRead: 90_000,
+      numBytes: 261_490,
+      pass: 1,
+      numPasses: 2,
+    };
+    expect(passesOf(progress)).toEqual({ pass: 1, numPasses: 2 });
+    expect(progressShare(progress)).toBe(17);
+    expect(passesOf({ ...progress, numPasses: 1 })).toBeNull();
+    expect(passesOf(null)).toBeNull();
+  });
+
   test("VS7 D2 the line and the bar of a Run that waits for the statistics of each individual", () => {
     const line = {
       share: 35,
       seconds: 12,
       waitingFor: null,
       waitsForStatistics: true,
+      passes: null,
     };
     expect(runningText(line)).toBe(
       "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12",

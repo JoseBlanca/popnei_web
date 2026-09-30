@@ -18,6 +18,7 @@
 import type { ComponentType } from "react";
 
 import {
+  diversityOptions,
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
@@ -38,6 +39,7 @@ import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { DiversityOptionsPart } from "./diversity/DiversityOptionsPart.tsx";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
 import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
@@ -141,12 +143,14 @@ const DIVERSITY: AnalysisUi = Object.freeze({
         : p.individuals === null
           ? "noFile"
           : "onePopulation";
-    return pops === null ? [] : readyLines(pops, waits, kind);
+    return pops === null
+      ? []
+      : readyLines(pops, diversityOptions(p).minNumIndividuals, waits, kind);
   },
   refusalText,
   statisticsFailedText,
   Results: DiversityResults,
-  Options: null,
+  Options: DiversityOptionsPart,
   runningLine: (): null => null,
   workerFailedText: null,
 });

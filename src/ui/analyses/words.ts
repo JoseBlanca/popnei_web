@@ -85,6 +85,22 @@ export interface RunningLine {
   /** Whether the calculation is a Run that waits for the statistics of
       each individual, whose share the line then gives. */
   readonly waitsForStatistics: boolean;
+  /** The pass being read of a run of several, from the last progress,
+      `pass` from 1 of `numPasses`; `null` for a run of one pass, or
+      before the first progress. */
+  readonly passes: {
+    readonly pass: number;
+    readonly numPasses: number;
+  } | null;
+}
+
+/** The passes of a run, from its last progress, for the line of a
+    calculation under way: `null` for a run of one pass, whose line names
+    none, or before the first progress. */
+export function passesOf(progress: Progress | null): RunningLine["passes"] {
+  return progress === null || progress.numPasses <= 1
+    ? null
+    : { pass: progress.pass, numPasses: progress.numPasses };
 }
 
 /** The statistics of each individual, as the line of a Run that waits for
@@ -109,7 +125,9 @@ export function runningBarLabel(
   return waitsForStatistics ? STATISTICS_BAR_LABEL : `Calculating ${name}`;
 }
 
-/** The line beside the bar: "Calculating · 35% · 0:12"; "Calculating ·
+/** The line beside the bar: "Calculating · 35% · 0:12", and
+    "Calculating · pass 1 of 2 · 17% · 0:12" while a run of two passes
+    reads its first, the share being of the whole run; "Calculating ·
     0:12" before the first progress; "Waiting for panel.nei to be opened
     again, then calculating · 0:12" after a stop, until the first
     progress; and, while a Run waits for the statistics of each
@@ -122,7 +140,11 @@ export function runningText(line: RunningLine): string {
     ? `calculating ${STATISTICS_WORDS}`
     : "calculating";
   if (line.share !== null) {
-    return `${capitalized(doing)} · ${String(line.share)}% · ${clock}`;
+    const pass =
+      line.passes === null
+        ? ""
+        : ` · pass ${String(line.passes.pass)} of ${String(line.passes.numPasses)}`;
+    return `${capitalized(doing)}${pass} · ${String(line.share)}% · ${clock}`;
   }
   if (line.waitingFor !== null) {
     return `Waiting for ${escaped(line.waitingFor)} to be opened again, then ${doing} · ${clock}`;

@@ -170,6 +170,14 @@ export interface NumberFieldProps {
   /** Called with the number committed, within the bounds and on the
       step, never with an empty field nor with a number refused. */
   readonly onChange: (value: number) => void;
+  /** Called with the number committed when it is the number the field
+      already holds, typed again, which React Aria gives to no
+      `onChange`: for a field whose number, the same, means something else
+      once typed, the draw of the diversity, which is then kept as typed
+      rather than following its default (docs/specs/analyses/diversity.md,
+      "What it shows"). Not called for an arrow key, nor for a number the
+      field refused. */
+  readonly onSameCommitted?: (value: number) => void;
 }
 
 /** A number field with its label, and the line of a number it refused. */
@@ -187,6 +195,7 @@ export function NumberField({
   onCommitReady,
   onTyped,
   onChange,
+  onSameCommitted,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
@@ -217,6 +226,9 @@ export function NumberField({
   // Undo and Redo of the keyboard are then the field's, and otherwise the
   // project's (docs/specs/shell.md, "The header").
   const typed = useRef(false);
+  // Whether the commit under way gave its number to `onChange`, or
+  // refused it: React Aria gives neither for the number the field holds.
+  const answered = useRef(false);
   // The latest onTyped, for the effect below, which runs when the value
   // changes and not when the screen gives another function.
   const typedTo = useRef(onTyped);
@@ -255,11 +267,23 @@ export function NumberField({
       for a character thrown away, whose line then stays. */
   const commitStarts = (): void => {
     if (tabbed.current) return;
+    answered.current = false;
     refusing.current = notTaken.current;
     notTaken.current = false;
     if (!refusing.current) setRefused(null);
   };
   const commitEnds = (): void => {
+    // The number the field holds, typed again and committed.
+    if (
+      onSameCommitted !== undefined &&
+      typed.current &&
+      !refusing.current &&
+      !answered.current &&
+      typedNumber(lastText.current, minValue, maxValue, step, decimals) ===
+        value
+    ) {
+      onSameCommitted(value);
+    }
     refusing.current = false;
     typed.current = false;
     onTyped?.(null);
@@ -307,6 +331,7 @@ export function NumberField({
         if (refusing.current || tabbed.current) return;
         // An empty field gives NaN, which sends nothing.
         if (!Number.isFinite(committed)) return;
+        answered.current = true;
         const checked = checkCommitted(
           committed,
           minValue,

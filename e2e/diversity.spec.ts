@@ -100,13 +100,16 @@ function panel(page: Page): Locator {
   return page.getByRole("region", { name: "Diversity" });
 }
 
-/** The row of the population `pop` of the table of the diversity, as the
-    text of its cells. */
+/** The cells of the row of the population `pop` of the diversity in the
+    first five columns, its header left out: those of stages 2 to 4,
+    which F, sixth from stage 5, and the columns after it leave as they
+    were. */
 function row(page: Page, pop: string): Locator {
   return panel(page)
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
-    .getByRole("cell");
+    .getByRole("cell")
+    .and(page.locator(":nth-child(-n+5)"));
 }
 
 /** Runs the diversity with the Run button, and waits for its table. */
@@ -179,6 +182,12 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
     "Expected heterozygosity (unbiased)",
     "Observed heterozygosity",
     "Proportion of polymorphic variants",
+    "F",
+    "Alleles per variant",
+    "Alleles per variant, rarefied to 40 chromosomes",
+    "Private alleles",
+    "Private alleles per variant",
+    "Private alleles per variant, rarefied to 40 chromosomes",
   ]);
   await expect(panel(page).getByRole("rowheader")).toHaveText([
     "p0",
@@ -203,11 +212,20 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
     "0.3560",
     "0.9158",
   ]);
+  // The options the table was calculated with are those of the fields,
+  // and the draw is said beside the download.
   await expect(
-    panel(page).getByText(
-      "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
-      { exact: true },
+    panel(page).getByLabel(
+      "Minimum number of individuals with a genotype, a whole number from 0",
     ),
+  ).toHaveValue("20");
+  await expect(
+    panel(page).getByLabel(
+      "Frequency of the commonest allele below which a variant is polymorphic, from 0 to 1",
+    ),
+  ).toHaveValue("0.95");
+  await expect(
+    panel(page).getByText("Rarefied to 40 chromosomes.", { exact: true }),
   ).toBeVisible();
   await expect(panel(page).getByText(/^Warning:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
@@ -297,11 +315,16 @@ test("WS8 D2 at 320 px wide the table scrolls in a frame that the Tab key reache
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  // The Tab key goes from the heading, where the run left the focus, to
-  // the frame, and the arrow key scrolls it.
+  // The run left the focus on the heading; the Tab key goes through the
+  // three fields of the options to the frame, and the arrow key scrolls
+  // it.
   await expect(
     page.getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
+  for (let field = 0; field < 3; field++) {
+    await page.keyboard.press("Tab");
+    await expect(page.locator("input:focus")).toHaveCount(1);
+  }
   await page.keyboard.press("Tab");
   await expect(frame).toBeFocused();
   // The arrow key is pressed until the frame scrolls: WebKit 26.6 under
@@ -321,37 +344,45 @@ test("WS8 D2 a table that fits its frame has no line of scrolling, and its frame
   page,
   makeAxeBuilder,
 }) => {
+  // The table of the diversity, of eleven columns from stage 5, is 1,187
+  // px wide at the least on the Mac, wider than the column of 1,024 px of
+  // a window of 1,280 and more, so it fits no window: the table of the
+  // pairs of the distances between populations, of the same widget, is
+  // the one that fits.
   await load(page, "panel.nei", "panel_pops.csv", "popcat");
   await goTo(page, "Analyses");
-  await run(page);
+  const distances = page.getByRole("region", {
+    name: "Distances between populations",
+  });
+  await distances.getByRole("button", { name: "Run", exact: true }).click();
   const caption =
-    "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.";
-  const frame = panel(page).getByRole("region", { name: caption });
-  const line = panel(page).getByText(
+    "Distances between the populations of panel.nei, over the 1,200 variants the filters kept.";
+  await expect(distances.getByRole("table", { name: caption })).toBeVisible();
+  const frame = distances.getByRole("region", { name: caption });
+  const line = distances.getByText(
     "Scroll the table sideways to see all its columns.",
   );
-  await expect(panel(page).getByRole("table", { name: caption })).toBeVisible();
+  const download = distances.getByRole("button", {
+    name: "Download the table as CSV",
+  });
   await expect(frame).toHaveCount(0);
   await expect(line).toHaveCount(0);
-  // The Tab key goes from the heading to the download, past the table.
-  await panel(page)
-    .getByRole("heading", { level: 2, name: "Diversity" })
-    .focus();
-  await page.keyboard.press("Tab");
-  await expect(
-    panel(page).getByRole("button", { name: "Download the table as CSV" }),
-  ).toBeFocused();
+  // Shift+Tab goes back from the download past the table.
+  await download.focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(download).not.toBeFocused();
+  await expect(frame).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
   // Narrowed, the table no longer fits: the frame becomes a region and a
-  // stop of the Tab key, and the line appears.
-  await page.setViewportSize({ width: 320, height: 800 });
+  // stop of the Tab key, and the line appears. The table of the three
+  // pairs is 272 px wide at the least on the Mac, so it fits a window of
+  // 320 px there and not one of 240 px.
+  await page.setViewportSize({ width: 240, height: 800 });
   await expect(frame).toHaveCount(1);
   await expect(line).toBeVisible();
-  await panel(page)
-    .getByRole("heading", { level: 2, name: "Diversity" })
-    .focus();
-  await page.keyboard.press("Tab");
+  await download.focus();
+  await page.keyboard.press("Shift+Tab");
   await expect(frame).toBeFocused();
 
   // Widened again, the line goes; the frame, which has the focus, keeps
@@ -774,13 +805,13 @@ test("WS8 D2 a calculation under way shows its bar, its share and its clock, and
   });
   await expect(bar).toHaveAttribute("aria-valuetext", "99%");
   await expect(
-    panel(page).getByText(/^Calculating · 99% · 0:0\d$/),
+    panel(page).getByText(/^Calculating · pass 2 of 2 · 99% · 0:0\d$/),
   ).toBeVisible();
   // One button, Run then Stop, and the focus stays on it.
   await expect(panel(page).getByRole("button", { name: "Stop" })).toBeFocused();
-  await expect(panel(page).getByText(/^Calculating · 99% · 0:01$/)).toBeVisible(
-    { timeout: 3000 },
-  );
+  await expect(
+    panel(page).getByText(/^Calculating · pass 2 of 2 · 99% · 0:01$/),
+  ).toBeVisible({ timeout: 3000 });
   await expectNoViolations(makeAxeBuilder);
 
   await page.keyboard.press("Enter");

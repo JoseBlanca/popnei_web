@@ -303,6 +303,53 @@ async function holdResults(page: Page): Promise<void> {
   });
 }
 
+/** Makes the calculation worker keep its results back, and the progress
+    of every pass after the first, so that a calculation of two passes
+    stays under way in its first. */
+async function holdAfterFirstPass(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      if (typeof message !== "object" || message === null) {
+        post(message, transfer);
+        return;
+      }
+      const kind = "kind" in message ? message.kind : null;
+      const pass = "pass" in message ? message.pass : null;
+      if (kind === "result") return;
+      if (kind === "progress" && typeof pass === "number" && pass > 1) return;
+      post(message, transfer);
+    };
+  });
+}
+
+/** The panel of the diversity's field `label`, given `value` and
+    committed with Enter. */
+async function setDiversityField(
+  page: Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  const field = diversityPanel(page).getByLabel(label);
+  await field.fill(value);
+  await field.press("Enter");
+  await expect(field).toHaveValue(value);
+}
+
+/** The labels of the three fields of the diversity. */
+const DIVERSITY_MINIMUM =
+  "Minimum number of individuals with a genotype, a whole number from 0";
+const DIVERSITY_DRAW =
+  "Chromosomes drawn for the rarefaction, a whole number from 2";
+
 /** Makes the calculation worker keep back the files it writes and pass
     its progress on, so that a write stays under way. */
 async function holdWritten(page: Page): Promise<void> {
@@ -1485,16 +1532,68 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         diversityPanel(page).getByText(/^3 populations: /),
       ).toBeVisible();
+      // The three fields, the draw the default with its line.
+      await expect(diversityPanel(page).getByLabel(DIVERSITY_DRAW)).toHaveValue(
+        "40",
+      );
+      await expect(
+        diversityPanel(page).getByText(/^The default: the ploidy, 2, /),
+      ).toBeVisible();
       await save(page, `popgen-diversity-ready-${theme}`);
     });
 
-    test("the diversity running, with its bar", async ({ page }) => {
+    test("the diversity ready, a draw typed with Use the default", async ({
+      page,
+    }) => {
       await loadPanelWithPopulations(page);
-      await holdResults(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "96");
+      await expect(
+        diversityPanel(page).getByText("Typed; the default would be 40.", {
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Use the default" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-draw-typed-${theme}`);
+    });
+
+    test("the diversity ready, a population under the minimum", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_MINIMUM, "50");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has 48 individuals, fewer than the minimum of 50, /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-under-minimum-${theme}`);
+    });
+
+    test("the diversity locked by the draw", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "500");
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeDisabled();
+      await save(page, `popgen-diversity-locked-draw-${theme}`);
+    });
+
+    test("the diversity running, with its bar, in the first of its two passes", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await holdAfterFirstPass(page);
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+        page
+          .getByRole("main")
+          .getByText(/^Calculating · pass 1 of 2 · 49% · 0:01$/),
       ).toBeVisible({
         timeout: 3000,
       });
@@ -1562,6 +1661,8 @@ for (const theme of ["light", "dark"] as const) {
 
     test("the diversity done, at 320 px", async ({ page }) => {
       await page.setViewportSize({ width: 320, height: 900 });
+      // In the committed font, as wide as the fonts of Linux.
+      await useWideFont(page);
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
@@ -1572,9 +1673,16 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("main")
           .getByText("Scroll the table sideways to see all its columns."),
       ).toBeVisible();
-      // The frame of the table, reached by the Tab key, with its focus
-      // ring.
-      await page.keyboard.press("Tab");
+      // The frame of the table, reached by the Tab key from the heading
+      // past the three fields, with its focus ring.
+      for (let stop = 0; stop < 4; stop++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(
+        diversityPanel(page).getByRole("region", {
+          name: /^The diversity of each population/,
+        }),
+      ).toBeFocused();
       await save(page, `popgen-diversity-done-320-${theme}`);
     });
 
@@ -1702,7 +1810,9 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+        page
+          .getByRole("main")
+          .getByText(/^Calculating · pass 2 of 2 · 99% · 0:01$/),
       ).toBeVisible({
         timeout: 3000,
       });

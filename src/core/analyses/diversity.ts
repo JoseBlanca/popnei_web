@@ -98,7 +98,7 @@ export const DIVERSITY_DEFAULTS: {
 });
 
 /** The three options of the diversity, as the project holds them. */
-interface DiversityOptions {
+export interface DiversityOptions {
   /** How many individuals of a population need a called genotype at a
       variant for the variant to have a value there. */
   readonly minNumIndividuals: number;
@@ -111,7 +111,7 @@ interface DiversityOptions {
 }
 
 /** The smallest draw popnei's `calcPopDiversity` takes. */
-const MIN_DRAW = 2;
+export const MIN_DRAW = 2;
 
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
@@ -358,16 +358,29 @@ function isWholeFrom(value: unknown, least: number): value is number {
   );
 }
 
+/** The options the project holds, as `readOptions` read them, so that the
+    same options give the same object. */
+const READ = new WeakMap<JsonObject, DiversityOptions>();
+
 /** The options of the project for the diversity, or `DIVERSITY_DEFAULTS`:
     what the fields of the panel show and send back with
-    `setAnalysisOptions`. Throws a defect on options its `parseOptions`
-    would refuse, which no command puts into a project. */
+    `setAnalysisOptions`; the same object while the project holds the
+    same options, which a screen may select. Throws a defect on options
+    its `parseOptions` would refuse, which no command puts into a
+    project. */
 export function diversityOptions(p: Project): DiversityOptions {
-  const read = readOptions(analysisOptions(p, ID, DIVERSITY_DEFAULTS));
+  const stored = analysisOptions(p, ID, DIVERSITY_DEFAULTS);
+  const known = READ.get(stored);
+  if (known !== undefined) {
+    return known;
+  }
+  const read = readOptions(stored);
   if (!read.ok) {
     throw defect("the project holds options of the diversity it refuses.");
   }
-  return read.value;
+  const options = Object.freeze(read.value);
+  READ.set(stored, options);
+  return options;
 }
 
 /** The draw `run` sends: the one typed, or else `defaultDrawOf(p)`. */

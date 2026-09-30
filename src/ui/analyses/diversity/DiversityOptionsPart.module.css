@@ -1,0 +1,15 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+/* The field of the draw, and "Use the default" under it while a draw is
+   typed. */
+.draw {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
