@@ -3,8 +3,12 @@
 Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
 analyses of the populations, and revised the same day when the specs
 of stage 5 were made to agree: its lines of the Python script inside
-the diversity's block `if large:`, and its **Open 1** written with the
-diversity as that spec now has it. Not yet approved by the owner. There
+the diversity's block `if large:`, and its point of whether the
+spectrum is part of the diversity written with the diversity as that
+spec now has it. Its three open points were decided by the owner on 30
+September 2026, each as recommended, and are written below as decided
+(points 11, 17 and 18 of `docs/specs/stage-5-open-points.md`). Not yet
+approved by the owner. There
 is no code of it yet. This spec gives
 the folded site frequency spectrum (SFS) of each population, the part of
 section 6 of `docs/functionality.md` headed "The site frequency
@@ -56,15 +60,17 @@ rarefaction; the issue asks popnei to give the first three from
 The spectrum is part of the diversity: the same call of popnei, the same
 pass, the same size of the draw and the same field that sets it, the
 same Run, and a block of its own in the diversity's panel, below the
-table (**Open 1**, below). Each population's spectrum is drawn as a small
+table, as the owner decided on 30 September 2026 (below, "Open
+points"). Each population's spectrum is drawn as a small
 histogram of its own, the histogram of stage 3 with three additions:
 heights that are not whole numbers, one vertical scale shared by the
 histograms of every population, and ticks at whole counts. The heights
 are shares of the variants that show both alleles in the
 draw, so that populations with different numbers of variants can be
 compared, bin 0 is in the table and not drawn, and every histogram has
-the same vertical scale (**Open 3**). A MAF filter of the Variants step raises a warning on the
-spectrum and is not left out of its pass (**Open 2**).
+the same vertical scale. A MAF filter of the Variants step raises a
+warning on the spectrum and is not left out of its pass. The owner
+decided both on 30 September 2026 (below, "Open points").
 
 ## The module
 
@@ -142,7 +148,8 @@ populations and not, or rarely, in this one, so its size says more of
 the other populations than of this one. It is shown in the table and not
 drawn: the plot draws bins 1 to n / 2.
 
-This section is **Open 3**, below. The height of bin j of a population
+The owner decided on 30 September 2026 that the heights are shares
+(below, "Open points"). The height of bin j of a population
 is its **share**: the value of bin
 j over the sum of bins 1 to n / 2, the variants expected to show both
 alleles in the draw. popnei gives expected numbers of variants, and two
@@ -526,7 +533,7 @@ becomes one table per population when there are many populations.
 
 Each item was made in its document on 30 September 2026, with the
 spectrum a block of the diversity's panel in the diversity's call, as
-the meanwhile of **Open 1**.
+the owner decided the same day.
 
 Of `docs/specs/analyses/diversity.md`, revised for stage 5 beside this
 spec:
@@ -582,82 +589,40 @@ Of the other specs:
 - `docs/functionality.md`, section 6, "The site frequency spectrum": the
   size of the draw is the rarefaction's, the heights are shares of the
   variants with both alleles in the draw, and a MAF filter warns.
-- `docs/specs/stage-5-open-points.md`: the three open points below,
-  under "Opened by the specs".
+- `docs/specs/stage-5-open-points.md`: the three points below, which
+  the owner decided there as points 11, 17 and 18.
 
 ## Open points
 
-**Open 1. The spectrum as part of the diversity, or as an analysis of
-its own.** What is decided: whether the spectrum shares the diversity's
-pass, its size of the draw and its Run.
+This spec has no open point. The three it asked were decided by the
+owner on 30 September 2026, each as recommended, and are written above
+as decided (`docs/specs/stage-5-open-points.md`, points 11, 17 and 18):
 
-- **Part of the diversity**, as this spec is written. One Run and one
-  pass give the table and the spectrum; one number sets the rarefaction
-  and the spectrum; nothing is added to the store or to the list of the
-  analyses. A user who wants the spectrum alone waits for the whole
-  diversity, today two passes of which the spectrum needs one.
-- **An analysis of its own**, with its key, its job and its Run, calling
-  `calcPopDiversity` for `folded_sfs` alone, one pass, and a field of
-  its own for the size of the draw, or the diversity's read by its key.
-  A user who reads both waits for three passes today, two after popnei
-  issue #4. A field of its own would let a user draw a spectrum finer
-  than 40 chromosomes, which the demographic inference that needs it
-  does not do in the application (`docs/functionality.md`, section 10).
-  An analysis of its own that is also filled by the diversity's pass,
-  so that a user who ran the diversity waits for nothing more, would
-  change the store: today it puts what one job gives under the key of
-  another analysis in one case only, the counts of the filters that
-  every pass gives, and a second case needs a design first (`docs/architecture.md`,
-  section 4: adding an analysis changes nothing else).
-
-The first option is not a job of two analyses, whose results a change
-of the options of either would both take off the screen: the spectrum
-is a statistic of the diversity, with no option of its own, and every
-input it has is already an input of the table, so there is no change
-that should take one off the screen and not the other.
-
-Recommended: part of the diversity. Meanwhile, part of the diversity,
-as this spec, `docs/specs/analyses/diversity.md` and every shared
-document are written.
-
-**Open 2. A MAF filter on the spectrum: a warning, or left out of its
-pass.** What is decided: what the spectrum does when the Variants step
-has a MAF filter, which removes the variants whose rarer allele is rare
-in all the individuals together, and so lowers the first bins.
-
-- **A warning**, as this spec is written: the spectrum reads every
-  filter, as the table beside it does, and the warning says what the
-  filter removed and to turn it off. The MAF filter is off by default in
-  the population genetics application (`docs/functionality.md`, section
-  3), so the user who sees it set it.
-- **The spectrum reads every filter but the MAF**, as the LD decay reads
-  every filter but the LD pruning (decision 8), since the filter removes
-  what the spectrum measures. Then, whenever a MAF filter is on, the
-  spectrum reads other variants than the table and cannot come from the
-  diversity's pass: it needs a job and a pass of its own, which is the
-  second option of Open 1, at least for those projects.
-
-Recommended: the warning. Meanwhile, the implementer builds the
-warning, `mafFilterOnSpectrum`.
-
-**Open 3. The heights of the bars.** What is decided: what a bar of the
-spectrum measures. `docs/functionality.md`, section 6, speaks of how
-many variants fall in each bin.
-
-- **Shares**, as this spec is written: each bar the share of the
-  population's variants with both alleles in the draw, bin 0 in the
-  table and not drawn, one vertical scale for every population. The
-  shapes of the spectra compare across populations with different
-  numbers of variants; the numbers of variants are in the line under
-  each heading and in the table.
-- **Expected numbers of variants**, popnei's values as they are, bin 0
-  drawn or not. What a population holds is read off the axis, and two
-  populations with different numbers of variants in the draw differ in
-  height for that reason too, which the shape alone does not show.
-
-Recommended: shares, with bin 0 not drawn. Meanwhile, the implementer
-builds the shares; the table gives both, so the choice moves the plot
-alone.
+1. **The spectrum is part of the diversity**, "OK, a block": the same
+   call of popnei, the same pass, the same size of the draw and its
+   field, the same Run, and a block of the diversity's panel below the
+   table. A user who wants the spectrum alone waits for the whole
+   diversity, today two passes of which the spectrum needs one. The
+   option not taken: an analysis of its own, with its key, its job and
+   its Run, one pass of its own and a field of its own for the size of
+   the draw, for which a user who reads both would wait for three
+   passes today, two after popnei issue #4.
+2. **A MAF filter of the Variants step raises a warning on the
+   spectrum**, `mafFilterOnSpectrum`, "add the warning": the spectrum
+   reads every filter, as the table beside it does, and the warning
+   says what the filter removed and to turn it off. The option not
+   taken: the spectrum reading every filter but the MAF, as the LD decay
+   reads every filter but the LD pruning (decision 8), which would give
+   it other variants than the table whenever a MAF filter is on, and so
+   a job and a pass of its own.
+3. **The heights of the bars are shares**, "OK": each bar the share of
+   the population's variants with both alleles in the draw, bin 0 in
+   the table and not drawn, one vertical scale for every population, so
+   that the shapes of the spectra compare across populations with
+   different numbers of variants; the table gives both. The option not
+   taken: popnei's expected numbers of variants as the heights, bin 0
+   drawn or not, with which two populations with different numbers of
+   variants in the draw differ in height for that reason too.
 
 ## Not in this spec
 

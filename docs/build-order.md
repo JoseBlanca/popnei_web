@@ -248,9 +248,8 @@ order does not wait for what exists:
   are each a module of `docs/architecture.md` section 4 with its panel.
   The spectrum is not a module of its own: it is a statistic of the
   diversity's call of popnei, at the draw of the rarefaction, shown in a
-  block of the diversity's panel below its table, as the specs of 30
-  September 2026 have it while the owner decides whether it stays so
-  (`docs/specs/analyses/sfs.md`, **Open 1**, and point 11 of
+  block of the diversity's panel below its table, as the owner decided
+  on 30 September 2026 (point 11 of
   `docs/specs/stage-5-open-points.md`).
 - **Why in this order:** first what popnei computes today, then what it
   is asked for (section 4), so that the stage never waits on popnei.

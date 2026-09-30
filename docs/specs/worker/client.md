@@ -26,9 +26,9 @@ the plan of stage 4: the memory of a PCoA, and the wasm of that release,
 72 KB larger gzipped. The revisions for stage 4 are approved by the owner on 28 September 2026.
 Revised on 30 September 2026 for stage 5: the calculation worker is
 started again after every LD decay (`docs/specs/analyses/ldDecay.md`),
-which is **Open 1** of that spec and a third exception to point 2 of
-section 13 of `docs/architecture.md`, proposed there and not yet
-approved by the owner; this spec is written with it meanwhile. The worker client is the page's one door to the two workers, the threads of the tab
+a third exception to point 2 of section 13 of `docs/architecture.md`,
+its point 16, approved by the owner on 30 September 2026
+(`docs/specs/stage-5-open-points.md`, point 12). The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -440,9 +440,11 @@ variants, and the worker keeps no intermediate result before stage 7.
 
 This is a third exception to the owner's decision of 26 September 2026
 that the worker is not started again between requests
-(`docs/architecture.md`, section 13, points 2, 5 and 9), and it is
-**Open 1** of `ldDecay.md`, which the owner decides; this spec is
-written with the restart meanwhile. The plan of stage 5 measures, in
+(`docs/architecture.md`, section 13, points 2, 5 and 9), decided by
+the owner on 30 September 2026, as recommended (point 16 there; point
+12 of `docs/specs/stage-5-open-points.md`). The options not taken: a
+restart above a bound of the individuals and the distance, and no
+restart. The plan of stage 5 measures, in
 Chromium and WebKit, the growth of the engine 3 s after an LD decay with
 the restart and without it, as stage 4 measured the PCA.
 
@@ -868,9 +870,9 @@ was decided by the owner on 26 September 2026 (`docs/architecture.md`,
 section 13, point 5); its bound, `WRITE_RESTART_BYTES`, was set by the
 measurement of 27 September 2026, above. The restart after a large PCA
 was decided by the owner on 27 September 2026 (open point 1 of
-`docs/specs/analyses/pca.md`). The restart after every LD decay is
-**Open 1** of `docs/specs/analyses/ldDecay.md`, the owner's to decide;
-the spec is written with it meanwhile.
+`docs/specs/analyses/pca.md`). The restart after every LD decay was
+decided by the owner on 30 September 2026 (`docs/specs/analyses/ldDecay.md`,
+"Open points"; point 12 of `docs/specs/stage-5-open-points.md`).
 
 ## Not in this spec
 

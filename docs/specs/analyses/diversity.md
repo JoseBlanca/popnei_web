@@ -247,18 +247,16 @@ How long the second pass takes is measured by the plan of stage 5
 
 The folded site frequency spectrum of each population, which
 `calcPopDiversity` gives as well, is a statistic of the diversity's
-call, as `docs/specs/analyses/sfs.md` gives it and recommends in its
-**Open 1**, which the owner decides: the job asks for `folded_sfs`
+call, as `docs/specs/analyses/sfs.md` gives it and as the owner
+decided on 30 September 2026, "OK, a block" (point 11 of
+`docs/specs/stage-5-open-points.md`): the job asks for `folded_sfs`
 beside the rest, at the same draw and in the same pass, and the panel
 draws the spectra in a block below the table. popnei gives it in that
 call for 0.1 to 0.3 ms more on `panel.nei` held in memory, and no pass
-more (`sfs.md`, "What it does"). The other answer makes the spectrum an
-analysis of its own, with its job, its pass and its Run, and this spec
-then asks popnei for no `folded_sfs`, carries no `foldedSfs`, appends no
-warnings of the spectrum and has no block below its table: a user who
-wants both reads the file three times today, twice once popnei issue #4
-is closed. Until the owner decides, this spec is written with the
-spectrum in it, and the spectrum's module is `src/core/analyses/sfs.ts`
+more (`sfs.md`, "What it does"). The option not taken made the spectrum
+an analysis of its own, with its job, its pass and its Run: a user who
+wants both would read the file three times today, twice once popnei
+issue #4 is closed. The spectrum's module is `src/core/analyses/sfs.ts`
 of that spec, which this module calls.
 
 What a user would see go wrong because of this module, and what each rule
@@ -868,8 +866,8 @@ it a value at 641 of the 1,152 variants kept, and at 653 of the 1,200
 with no filter (node, 25 September 2026, `js-v0.1.0-dev.2`).
 
 After these, `warnings` appends `spectrumWarnings(r, p)` of
-`docs/specs/analyses/sfs.md`, the warnings of the spectrum, while the
-spectrum is part of the diversity (its **Open 1**).
+`docs/specs/analyses/sfs.md`, the warnings of the spectrum, which is
+part of the diversity.
 
 A MAF filter of the Variants step raises no warning on the table,
 decided on 30 September 2026 by the writer of this revision. The filter
@@ -2349,7 +2347,7 @@ the words of each analysis (above, "Why it cannot run", "The request",
   call, `foldedSfs` in the result, its warnings appended and its block
   below the table, the default draw at 2 or more, the script's result
   named `diversity`, and a decision on the MAF filter (above, "The
-  warnings"), while its **Open 1** is the owner's.
+  warnings").
 - `docs/specs/stage-5-open-points.md`: nothing to decide; the time of
   the second pass, under "Set by a measurement", is this spec's.
 
@@ -2384,12 +2382,13 @@ architecture that would lock only when the statistics are already in the
 page, the case the ready state already names.
 
 The revision of stage 5 opens no point for the owner of its own. It
-rests on the owner's five decisions of 30 September 2026, and on
-**Open 1** of `docs/specs/analyses/sfs.md`, whether the site frequency
-spectrum is part of the diversity, as this spec is written meanwhile,
-or an analysis of its own, which would take `folded_sfs`, `foldedSfs`,
-the spectrum's warnings and its block out of this spec ("What it
-does"). The writer decided these beyond them, each written where it
+rests on the owner's five decisions of 30 September 2026, and on the
+owner's answer of the same day to the first open point of
+`docs/specs/analyses/sfs.md`, point 11 of
+`docs/specs/stage-5-open-points.md`: the site frequency spectrum is
+part of the diversity, and not an analysis of its own, which would have
+taken `folded_sfs`, `foldedSfs`, the spectrum's warnings and its block
+out of this spec ("What it does"). The writer decided these beyond them, each written where it
 applies; the owner may answer any of them otherwise:
 
 - No private alleles when one population alone is in the call ("The

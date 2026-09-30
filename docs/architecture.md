@@ -17,9 +17,9 @@ same day for the order of the filters, the filters of individuals
 first, as the owner decided that day. The revisions for stage 4, of 27
 and 28 September 2026, are approved by the owner on 28 September 2026.
 Revised on 30 September 2026 for the specs of stage 5, in sections 4, 9,
-11 and 13; the new point 16 of section 13, the calculation worker
-started again after every LD decay, is proposed and not yet approved by
-the owner. What was
+11 and 13, not yet approved by the owner but for the new point 16 of
+section 13, the calculation worker started again after every LD decay,
+which the owner approved on 30 September 2026. What was
 revised each time is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -392,9 +392,9 @@ LD decay are two analyses more, each with its module, its panel, its
 job and result, its handler in the runner, and three lines beside them;
 the diversity gains a second call of popnei in its job. The folded site
 frequency spectrum is not an analysis: it is a statistic of the
-diversity's call, shown in a block of the diversity's panel, while the
-owner decides whether it stays so (`docs/specs/analyses/sfs.md`, **Open
-1**). What changes here:
+diversity's call, shown in a block of the diversity's panel, as the
+owner decided on 30 September 2026 (`docs/specs/stage-5-open-points.md`,
+point 11). What changes here:
 
 - **The id of the example of section 4** is `"popDists"`, the id the
   spec of the distances gives, where it was `"fst"`; and the measure the
@@ -405,10 +405,10 @@ owner decides whether it stays so (`docs/specs/analyses/sfs.md`, **Open
 - **Section 11** gains the memory of the LD decay, which grows with the
   largest distance the user types and stays with wasm after the
   analysis.
-- **Section 13, point 16, proposed**: the calculation worker is started
-  again after every LD decay, a third exception to point 2. It is
-  **Open 1** of `docs/specs/analyses/ldDecay.md`, the owner's to decide;
-  the specs are written with it meanwhile.
+- **Section 13, point 16**: the calculation worker is started again
+  after every LD decay, a third exception to point 2, approved by the
+  owner on 30 September 2026 (`docs/specs/stage-5-open-points.md`, point
+  12).
 
 ## 2. The project
 
@@ -919,8 +919,8 @@ its title in `src/ui/analyses/titles.ts`, by which the shell names it.
 Its request and result also join the unions of `protocol.ts`, with their
 check in `messages.ts` and a handler in the runner (section 5), which
 the specs of stages 3 to 5 each added; and, from stage 4, an analysis
-after which the calculation worker is started again, the PCA and, as
-proposed for stage 5, the LD decay (section 13, points 9 and 16), is
+after which the calculation worker is started again, the PCA and, from
+stage 5, the LD decay (section 13, points 9 and 16), is
 named by its id in the client; nothing else changes. The option not
 taken for the last, the definition of the analysis saying whether its
 run restarts the worker, would keep the client out of it, and is
@@ -2392,7 +2392,7 @@ the same numbers for everything else but the size of a written file.
   WebKit and Chromium; if the tab closes, the lock counts the
   individuals × the distance as well.
   That memory stays with wasm after the analysis, so the worker is
-  started again after every LD decay (section 13, point 16, proposed).
+  started again after every LD decay (section 13, point 16).
   None of it has been measured in a browser; the plan of stage 5
   measures it in Chromium and WebKit, as stage 4 measured the PCA.
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
@@ -2404,8 +2404,8 @@ the same numbers for everything else but the size of a written file.
   The calculation worker is restarted when the load of the variant file
   changes (section 5); it is not restarted between requests, as the
   owner settled on 26 September 2026 (section 13, point 2), but after a
-  large written file and after a large PCA (points 5 and 9), and, as
-  proposed for stage 5, after every LD decay (point 16).
+  large written file and after a large PCA (points 5 and 9), and, from
+  stage 5, after every LD decay (point 16).
 - **The downloads**: the wasm package of popnei, 0.79 MB gzipped
   (785.16 KB, release `js-v0.1.0-dev.3`, as Vite measures it in the
   build of the site, 28 September 2026), against 0.71 MB (710.6 KB) for
@@ -2510,7 +2510,7 @@ the same numbers for everything else but the size of a written file.
   (`docs/specs/charts/pca3d.md`, `docs/specs/worker/files.md`). The
   script of each worker is such a file too: a worker started again, after
   a cancel, a crash, a large write, a large PCA (section 13, point 9)
-  or, as proposed for stage 5, any LD decay (point 16),
+  or, from stage 5, any LD decay (point 16),
   fetches its script from the build the page came from, and after a
   deploy cannot start, which the client reports as `couldNotStart`, whose
   words say to reload the page (`docs/specs/core/project.md`, open point
@@ -2712,10 +2712,9 @@ day:
    the variants, which kept the statistics one pass per load whatever
    the regions.
 
-Opened by the revision of 30 September 2026, for stage 5
-(`docs/specs/stage-5-open-points.md`, point 12). Proposed, and not yet
-approved by the owner; the specs of stage 5 are written with it
-meanwhile:
+Opened by the revision of 30 September 2026, for stage 5, and approved
+by the owner the same day, "OK", as recommended
+(`docs/specs/stage-5-open-points.md`, point 12):
 
 16. **The calculation worker is started again after every LD decay**,
    whatever its size, after every outcome but a file that no longer
@@ -2750,7 +2749,7 @@ meanwhile:
    next load of the variants file. It is decided again in stage 7 with
    the kinship, as point 9 is, since a restart after an LD decay would
    then drop a kinship of up to 800 MB (`docs/specs/analyses/ldDecay.md`,
-   **Open 1**; `docs/specs/worker/client.md`, "The LD decay, and the
+   "Open points"; `docs/specs/worker/client.md`, "The LD decay, and the
    restart after it"). The plan of stage 5 measures, in Chromium and
    WebKit, the growth of the engine 3 s after an LD decay with the
    restart and without it.

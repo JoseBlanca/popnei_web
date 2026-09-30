@@ -453,8 +453,8 @@ components (`pca.md`). Stage 5 adds the distances between populations
 (`popDists.md`) and the LD decay (`ldDecay.md`), and gives the
 diversity's members the fields of its second call of popnei; the folded
 site frequency spectrum has no member of its own, since it comes in the
-diversity's call and result (`sfs.md`, whose **Open 1** asks the owner
-whether it stays so). The block below is written from those
+diversity's call and result, as the owner decided on 30 September
+2026 (`sfs.md`, "Open points"). The block below is written from those
 specs, which were written at the same time as this one; where one of
 them gives other fields, the spec of the analysis stands and this block
 follows it. The populations are pairs in the order of the file, since

@@ -4,7 +4,10 @@ Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
 analyses of the populations, and revised the same day when the specs of
 stage 5 were made to agree: its locks and two warnings of the
 populations made by the functions the diversity and the distances
-between populations share. Not yet approved by the owner. This spec
+between populations share. Its two open points were decided by the
+owner on 30 September 2026, each as recommended, and are written below
+as decided (points 12 and 19 of `docs/specs/stage-5-open-points.md`).
+Not yet approved by the owner. This spec
 gives the analysis that shows, for each population, how the linkage
 disequilibrium between two variants falls as the distance between them
 grows, and the distance at which it has fallen to half: the module
@@ -60,8 +63,10 @@ The words of the genetics, from popnei's `js/popnei/src/ld.ts`:
 
 The owner's decisions of 30 September 2026 that this spec takes, 8, 9
 and 10 of `docs/specs/stage-5-open-points.md`, are named where they
-apply. Its own open points are two, **Open 1** and **Open 2**, at the
-end.
+apply, and so are its own two, points 12 and 19 there, the restart of
+the worker after every LD decay and popnei asked to refuse a file not
+sorted by position, decided by the owner the same day (below, "Open
+points").
 
 ## The module
 
@@ -351,8 +356,9 @@ where the sorted file took 0.9 s, since the window then held the whole
 chromosome (node, `js-v0.1.0-dev.3`, 30 September 2026). The
 application cannot tell, since it reads no position, and a check of its
 own would be a second calculation over the file. So popnei is asked to
-refuse such a source in this call as its LD filter does (**Open 2**,
-below).
+refuse such a source in this call as its LD filter does, in popnei
+issue #5, as the owner decided on 30 September 2026 (below, "Open
+points").
 
 ### The fitted curve
 
@@ -616,8 +622,9 @@ result and throw a defect for another's.
 - **A largest distance below the spacing of the variants.** No pair in
   any population, `noPairs` for each, and the plot is empty with its
   axes; the words say to type a larger distance.
-- **A file not sorted by position.** Fewer pairs, no word (above, "The
-  request", and **Open 2**).
+- **A file not sorted by position.** Fewer pairs, no word, until a
+  release of popnei refuses it (above, "The request", and popnei issue
+  #5).
 - **The filters keep no variant.** popnei refuses; the refusal stays
   under the key, so an undo to those settings shows it again
   (`docs/specs/core/store.md`, "A calculation that failed").
@@ -631,8 +638,9 @@ result and throw a defect for another's.
   field, so the population is missing from the result: a job of `a` and
   `__proto__` came back with `a` alone (node, 30 September 2026). The
   runner's check then throws a defect of ours, and the panel shows the
-  words of a defect. It is asked of popnei with **Open 2**, since the
-  cause is in popnei's result and the application cannot mend it.
+  words of a defect. It is asked of popnei in issue #5, with the
+  refusal of a file not sorted, since the cause is in popnei's result
+  and the application cannot mend it.
 
 ### How it runs
 
@@ -684,8 +692,9 @@ followed the third, since the memory of wasm is not given back while the
 worker lives. So an LD decay over a file of 1,000
 individuals leaves the worker 0.4 to 1.1 GB larger, far above the 25 MB
 after which a written file or a PCA restarts it (`docs/architecture.md`,
-section 13, points 5 and 9). Whether the worker is started again after
-every LD decay is **Open 1**, below; meanwhile the client does so. None
+section 13, points 5 and 9). So the client starts the worker again
+after every LD decay, as the owner decided on 30 September 2026 (below,
+"Open points"; `docs/architecture.md`, section 13, point 16). None
 of this was measured in a browser: the plan measures, in Chromium and
 WebKit, the growth of the engine and its size 3 s after a Run on the VCF
 of `e2e/bigVcf.ts` of 20,000 variants and 1,000 individuals, at 100,000
@@ -933,7 +942,7 @@ them, in `refusalText` of this module:
 
 The LD pruning's refusal of a file not sorted never reaches this panel,
 since its job has no LD filter. Once popnei refuses such a file in
-`calcLdAndDistPerPop` (**Open 2**), `refusalText` tests for that message
+`calcLdAndDistPerPop` (popnei issue #5), `refusalText` tests for that message
 with `ldOrderText` and the words of the LD decay before `refusalWords`,
 whose own test of it would tell the user to turn off the LD pruning.
 
@@ -992,7 +1001,8 @@ of the lists and of the individuals kept leaving no population are
 `populationWarnings` of `src/core/analyses/words.ts`
 (`docs/specs/analyses/diversity.md`, "The warnings"), which the three
 analyses per population call. Section 13 of `docs/architecture.md`
-has the restart as point 16, proposed and not yet approved.
+has the restart as point 16, approved by the owner on 30 September
+2026.
 
 - `docs/specs/worker/protocol.md`: `LdDecayJob` and `LdDecayResult`, as
   above, in the unions `Job` and `JobResult`.
@@ -1003,7 +1013,7 @@ has the restart as point 16, proposed and not yet approved.
   `LdDecayResult`, each typed array of the length its populations and
   bins give; and its arrays in the list of those transferred.
 - `docs/specs/worker/client.md`: the restart after every run of the
-  analysis `ldDecay` (**Open 1**), after `done` and after a refusal, as
+  analysis `ldDecay`, after `done` and after a refusal, as
   after a PCA.
 - `docs/specs/core/project.md`: the diversity's reason of the lists
   leaving no individual with a population, and its `keptNeeds`, made
@@ -1021,62 +1031,59 @@ has the restart as point 16, proposed and not yet approved.
 - `docs/specs/shell.md`: the LD decay in the list of the Analyses step,
   and "LD decay was not run" among the announcements.
 - `docs/architecture.md`: section 11, a bullet on the memory of the LD
-  decay with the table above; section 13, a new point for **Open 1** once
-  the owner decides it; section 9, `line.ts` described as the plot of
+  decay with the table above; section 13, point 16, the restart after
+  every LD decay; section 9, `line.ts` described as the plot of
   the LD decay.
 - `docs/functionality.md`, section 6: the option of the largest major
   allele frequency in each population, the lock of the memory, and the
   threshold of 20 individuals of the warning.
 - `.claude/skills/coding/testing.md`: the fixtures `ld.nei` and
   `ld_pops.csv`.
-- `docs/specs/stage-5-open-points.md`: the two open points below, and
-  under "Asked of popnei" the refusal of **Open 2**.
+- `docs/specs/stage-5-open-points.md`: the two points below, which the
+  owner decided there as points 12 and 19, and under "Asked of popnei"
+  popnei issue #5.
 
 ## Open points
 
-1. **Whether the calculation worker is started again after every LD
-   decay.** An LD decay leaves the memory of wasm larger by 16 bytes ×
-   the largest distance × the populations, plus the blocks it held: 64
-   MB for 100 individuals and 0.4 to 1.1 GB for 1,000 in the table of
-   "How it runs", in node. The owner decided on 26 September 2026 not to
+This spec has no open point. The two it asked were decided by the
+owner on 30 September 2026, each as recommended, and are written above
+as decided (`docs/specs/stage-5-open-points.md`, points 12 and 19):
+
+1. **The calculation worker is started again after every LD decay**,
+   "OK". An LD decay leaves the memory of wasm larger by 16 bytes × the
+   largest distance × the populations, plus the blocks it held: 64 MB
+   for 100 individuals and 0.4 to 1.1 GB for 1,000 in the table of "How
+   it runs", in node. The owner decided on 26 September 2026 not to
    restart the worker between requests, and made two exceptions, a
-   written file and a PCA that leave wasm more than about 25 MB larger,
-   the size below which a PCA of 700 individuals left the engines 11 to
-   18 MB larger (`docs/architecture.md`, section 13, points 2, 5 and 9). The options:
-   - **After every LD decay**, recommended. It costs at most 49 ms, from
-     the start of a new worker to the file opened, measured at the end of
-     the walking skeleton in Chromium 153 and WebKit 26.6 on the owner's
-     Mac (`docs/specs/worker/runner.md`, "What a restart costs"), against a calculation of 0.6 s
-     and more on 20,000 variants, and the worker keeps no intermediate
-     result before stage 7. It needs no bound, which the table shows
-     would be passed by almost any file of a few hundred individuals.
-   - **Above a bound of the memory**, as for the PCA: a bound on the
-     individuals and the distance that the plan would have to measure,
-     for a restart that would happen almost always.
-   - **Never**: the tab keeps up to a gigabyte after one LD decay of
-     1,000 individuals until the next load of the variants file.
-
-   Meanwhile the client restarts after every LD decay, and the plan
+   written file and a PCA that leave wasm more than about 25 MB larger
+   (`docs/architecture.md`, section 13, points 2, 5 and 9); this is a
+   third, point 16 there. It costs at most 49 ms, from the start of a
+   new worker to the file opened, measured at the end of the walking
+   skeleton in Chromium 153 and WebKit 26.6 on the owner's Mac
+   (`docs/specs/worker/runner.md`, "What a restart costs"), against a
+   calculation of 0.6 s and more on 20,000 variants, and the worker
+   keeps no intermediate result before stage 7. The options not taken:
+   a restart above a bound of the individuals and the distance, as for
+   the PCA, which almost any file of a few hundred individuals would
+   pass and which the plan would have to measure; and no restart, which
+   leaves the tab up to a gigabyte larger after one LD decay of 1,000
+   individuals until the next load of the variants file. The plan
    measures both in the browsers.
-2. **A variants file not sorted by position gives fewer pairs, with no
-   word.** popnei's `calcLdAndDistPerPop` does not refuse such a file,
-   where its LD filter does (above, "The request"). The options:
-   - **Ask popnei to refuse it in this call**, with the message of its LD
-     filter, which `ldOrderText` already turns into the user's words, as
-     "The LD decay needs the variants of each chromosome together and in
-     the order of their positions, and ld.vcf.gz does not have them so:
-     …". Recommended: the check is popnei's, where the numbers are
-     verified, and it costs its pass nothing. A new release and a new URL
-     in `package.json` bring it.
-   - **Check it in the application**, which would read the positions in a
-     pass of its own, `iterBlocks`, over the whole file, a second pass
-     for a check.
-   - **Leave it**, with a line of the help.
-
-   Meanwhile the application ships with the line of the help, and the
-   issue is opened in popnei by the orchestrator if the owner agrees.
-   Stage 5 does not wait for it: the refusal comes with a later release
-   of popnei, and the panel's words for it are then `ldOrderText`'s.
+2. **popnei is asked to refuse a variants file not sorted by position
+   in this call**, "yes, popnei should refuse non-sorted files in those
+   cases. open an issue": popnei issue #5, opened on 30 September 2026,
+   asks `calcLdAndDistPerPop` for the refusal of its LD filter, which
+   `ldOrderText` already turns into the user's words, as "The LD decay
+   needs the variants of each chromosome together and in the order of
+   their positions, and ld.vcf.gz does not have them so: …". The check
+   is popnei's, where the numbers are verified, and it costs its pass
+   nothing. Stage 5 does not wait for it: the application ships with
+   the line of the help, and the refusal comes with a later release of
+   popnei and a new URL in `package.json`, the panel's words for it
+   then `ldOrderText`'s. The options not taken: a check in the
+   application, which would read the positions in a pass of its own,
+   `iterBlocks`, over the whole file, a second pass for a check; and
+   leaving it, with a line of the help alone.
 
 ## Not in this spec
 

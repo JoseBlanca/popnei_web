@@ -791,8 +791,8 @@ three to one of them.
   2026 (decision 7 of `docs/specs/stage-5-open-points.md`); the
   distances between populations leave it out of their request, where
   every pair it is in would have no value and stop the order of the
-  heatmap (`popDists.md`, whose **Open 4** asks the owner whether they
-  do so). Both find it with this function, so the two never disagree on
+  heatmap, as the owner decided on 30 September 2026 (`popDists.md`,
+  "Open points"; point 13 of `docs/specs/stage-5-open-points.md`). Both find it with this function, so the two never disagree on
   which populations are under the minimum. The LD decay has no minimum
   of individuals and does not call it.
 - **The words of the populations under the minimum before a Run**,

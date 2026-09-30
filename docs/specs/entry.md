@@ -34,8 +34,8 @@ Analyses step after the diversity, with their titles in
 `src/ui/analyses/titles.ts`; `countsOf` gives the counts of the pass of
 the distances between populations and none of the LD decay's; the
 folded site frequency spectrum is no analysis of `apps.ts`, since it is
-calculated and shown with the diversity (`docs/specs/analyses/sfs.md`,
-**Open 1**, meanwhile so). Not yet approved by the owner.
+calculated and shown with the diversity, as the owner decided on 30
+September 2026 (`docs/specs/analyses/sfs.md`, "Open points"). Not yet approved by the owner.
 This spec gives
 the page of the population genetics application, `popgen.html`, and its
 entry, the code that runs once when the page opens and keeps working for

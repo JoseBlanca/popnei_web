@@ -60,8 +60,9 @@ region; an analysis not run after the statistics of each individual for
 its own reasons of the individuals kept; and the announcement of a
 change of the distance the heatmap draws (`docs/specs/analyses/popDists.md`
 and `ldDecay.md`). The folded site frequency spectrum has no title of
-its own: it is a block of the panel of the diversity, as the meanwhile
-of **Open 1** of `docs/specs/analyses/sfs.md` has it. Not yet approved
+its own: it is a block of the panel of the diversity, as the owner
+decided on 30 September 2026 (`docs/specs/analyses/sfs.md`, "Open
+points"). Not yet approved
 by the owner.
 The screen
 spec of what surrounds every step of the population genetics

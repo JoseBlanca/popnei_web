@@ -379,18 +379,22 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   rarefaction draws, set by its one field.
 - It is calculated in the same call of popnei as the rest of the
   diversity, and shown below the diversity's table, in one Run and one
-  pass; whether it is instead an analysis of its own is point 11 of
-  `docs/specs/stage-5-open-points.md`, and meanwhile it is part of the
-  diversity.
+  pass, as the owner decided on 30 September 2026 (point 11 of
+  `docs/specs/stage-5-open-points.md`). The option not taken was an
+  analysis of its own, with a pass and a Run of its own.
 - The height of each bar is the share of the population's variants that
   show both alleles in the draw, the variants with one allele only in
   the table and not drawn, so that populations with different numbers
   of variants compare by their shapes; the table gives popnei's expected
-  numbers of variants as well (point 18 there, meanwhile so).
+  numbers of variants as well (point 18 there, decided by the owner on
+  30 September 2026). The option not taken was popnei's expected
+  numbers as the heights.
 - A MAF filter of the Variants step removes the variants whose rarer
   allele is rare over all the individuals, and so empties the first bins
   of the spectrum; the application warns of it and says to turn it off
-  (point 17 there, meanwhile so).
+  (point 17 there, decided by the owner on 30 September 2026). The
+  option not taken was the spectrum reading every filter but the MAF,
+  with a pass of its own.
 
 ### LD decay
 
@@ -438,8 +442,11 @@ individuals, because r² is then biased upwards.
   with a called genotype, 20 by default, which a field changes, since
   populations of 5 to 15 are common in collections of varieties and
   breeds. A population with fewer individuals than the minimum is left
-  out and named, since every pair it is in would have no value; this
-  is point 13 of `docs/specs/stage-5-open-points.md`, meanwhile so. The option not taken, standard
+  out and named, since every pair it is in would have no value, as the
+  owner decided on 30 September 2026 (point 13 of
+  `docs/specs/stage-5-open-points.md`; the option not taken, sending it
+  to popnei, would give the heatmap the order of the metadata file).
+  The option not taken for the errors of the distances, standard
   errors when the user types a length of the blocks they are resampled
   over, needs that length, which depends on how far the LD reaches in the
   user's genome.
@@ -455,7 +462,9 @@ individuals, because r² is then biased upwards.
   Lingoes' method before the PCoA, which leaves its first axis as it
   was; a negative distance, which two populations the variants cannot
   tell apart give, is taken as 0 for the order alone and shown as popnei
-  gave it (point 14 there, meanwhile so).
+  gave it (point 14 there, decided by the owner on 30 September 2026;
+  the option not taken was the order of the metadata file whenever a
+  distance is negative).
 
 ## 8. The GWAS
 
@@ -635,9 +644,10 @@ September 2026: `calcPopDists`; `calcPopDiversity`, with the private
 alleles, the rarefaction, F and the folded SFS; and
 `calcLdAndDistPerPop`, with the fitted curve and its half distance.
 `calcLdAndDistPerPop` does not refuse a variants file whose variants are
-not sorted by position, and counts fewer pairs without a word; whether
-popnei is asked to refuse it, as its LD filter does, is point 19 of
-`docs/specs/stage-5-open-points.md`.
+not sorted by position, and counts fewer pairs without a word; popnei
+is asked to refuse it, as its LD filter does, in popnei issue #5, as
+the owner decided on 30 September 2026 (point 19 of
+`docs/specs/stage-5-open-points.md`).
 
 - A VCF writer, for the variants after the filters (section 3).
 - The filter of the variants by the regions of a BED file (section 3).

@@ -728,8 +728,8 @@ on the `Variants`, the runner:
    in the order of the job, by the six steps of `popDists.md`, "The
    order of the heatmap": two populations, the order of the file,
    `twoPopulations`; a pair NaN, `noDistance`; a negative distance
-   taken as 0 in the matrix given to the PCoA alone (its **Open 1**,
-   meanwhile so); every distance 0 then, `allZero`; otherwise `new
+   taken as 0 in the matrix given to the PCoA alone, as the owner
+   decided on 30 September 2026; every distance 0 then, `allZero`; otherwise `new
    Distances(vector, pops, passStats)`, `correctDistsByLingoes` of
    `js/popnei/src/pcoa.ts`, and `doPcoa` of its corrected `distances`,
    the populations sorted by their projection on the first component,
@@ -776,7 +776,7 @@ the `Variants`, the runner:
    `__proto__` is missing from popnei's result, whose objects the
    release fills by assigning to them (`perPop[pop] = …` of `ld.ts`),
    and so is thrown as a defect; it is asked of popnei with the
-   refusal of a source not sorted (`ldDecay.md`, **Open 2**).
+   refusal of a source not sorted, in popnei issue #5.
 4. Answers the `LdDecayResult` of `ldDecay.md`, every array in the order
    of the job: `numIndividuals`, the lengths of the job's populations,
    the n of each curve; `numVars` from `numVarsPerPop`; `smallestDist`
@@ -792,7 +792,8 @@ memory of its counts or of the variants within `maxDist`, "this machine
 has not the memory for …", which core's lock of 1 GB keeps from the
 counts (`ldDecay.md`, "Why it cannot run"). A variants file not sorted
 by position is not refused by this call, which counts fewer pairs
-without a word (`ldDecay.md`, "The request", and its **Open 2**). The
+without a word until a release of popnei has the refusal that popnei
+issue #5 asks for (`ldDecay.md`, "The request"). The
 fit of each population comes after the pass and tells no progress, so
 the bar stands at the end of the pass while it runs. The client starts
 the worker again after every LD decay (`docs/specs/worker/client.md`,
@@ -1318,8 +1319,9 @@ the whole file, and a gzipped VCF is decompressed whole at every pass.
 The client ends the calculation worker at a cancel, after a `crashed`,
 when the load changes, from stage 3 after a written file larger than a
 bound, from stage 4 after a PCA of more individuals than a bound, and
-from stage 5 after every LD decay, as proposed to the owner in
-`ldDecay.md`, **Open 1**, and starts another (`client.md`). What the
+from stage 5 after every LD decay, as the owner decided on 30
+September 2026 (`ldDecay.md`, "Open points"), and starts another
+(`client.md`). What the
 new worker pays before its first request:
 
 - **Loading popnei's wasm**, from the browser's cache after the first
@@ -1915,7 +1917,7 @@ What the specs of stage 5 say, written on 30 September 2026:
   of the job and the fields of the result of stage 5, the populations
   of `popDiversityPops` chosen by core with `populationsWithMinimum` of
   `src/core/project.ts`, and the spectrum in the diversity's call, as
-  the meanwhile of **Open 1** of `sfs.md`.
+  the owner decided on 30 September 2026 (`sfs.md`, "Open points").
 - **`docs/specs/analyses/popDists.md`**: its job and result, the six
   steps of the order of the heatmap, and its numbers.
 - **`docs/specs/analyses/ldDecay.md`**: its job and result, its checks,

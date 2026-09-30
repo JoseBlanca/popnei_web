@@ -4,7 +4,10 @@ Written on 30 September 2026, for stage 5 of `docs/build-order.md`, the
 analyses of the populations; not yet approved by the owner, and no code
 of it exists. Revised the same day when the specs of stage 5 were made
 to agree: the populations under the minimum split, and named before a
-Run, by the functions of `project.ts` the diversity calls too. This spec gives the module
+Run, by the functions of `project.ts` the diversity calls too. Its
+four open points were decided by the owner on 30 September 2026, each
+as recommended, and are written below as decided (points 13 to 16 of
+`docs/specs/stage-5-open-points.md`). This spec gives the module
 `src/core/analyses/popDists.ts`, which says what the distances between
 the populations are calculated from, when they cannot run, what they
 ask of the calculation worker, what they warn of, and what they keep in
@@ -80,8 +83,8 @@ at a variant loses it in every pair it is in, and the other pairs keep
 it. So two pairs can be over different variants, and the table gives
 each its count.
 
-**A population with fewer individuals than the minimum is left out**
-(**Open 4**, below).
+**A population with fewer individuals than the minimum is left out**,
+as the owner decided on 30 September 2026 (below, "Open points").
 Such a population can reach the minimum at no variant, so popnei gives
 every pair it is in no value, NaN, and counts 0 variants for it: on
 `panel.nei`, with p0 cut to 12 individuals, the pairs of p0 with p2 and
@@ -118,8 +121,8 @@ and the result carries it (below, "The request"):
    missing genotypes spread over different variants can give, and Jost's
    D at ploidy 1, which has no value for any pair (below, "The
    warnings").
-3. **A negative distance is taken as 0 for the order alone** (**Open 1**,
-   below). popnei gives a negative Fst or D for two populations the
+3. **A negative distance is taken as 0 for the order alone**, as the
+   owner decided on 30 September 2026 (below, "Open points"). popnei gives a negative Fst or D for two populations the
    dataset cannot tell apart, the correction for the sample doing its
    work, and does not clamp it (the doc comment of `calcPopDists`);
    `doPcoa` and `correctDistsByLingoes` refuse it. The table and the
@@ -163,7 +166,7 @@ both matrices. The option not taken, the order of the file whenever the
 matrix is not Euclidean, would lose the order for most datasets of more
 than three populations. This settles point 1 of "Opened by the specs" of
 `docs/specs/stage-5-open-points.md` but for the negative distances,
-which are **Open 1**.
+which the owner decided as its point 14.
 
 The sign of the first axis is popnei's rule, the projection of the
 largest absolute value positive, so the order is the same in every
@@ -696,7 +699,8 @@ order of the measure, each cell coloured by the distance of its pair,
 with the value written in it when the cell is large enough. Its title is
 "Hudson's Fst between populations" or "Jost's D between populations".
 Under it, the line of its order, `orderText`. More than
-`MAX_HEATMAP_NAMES` populations, 200, are not drawn (**Open 3**).
+`MAX_HEATMAP_NAMES` populations, 200, are not drawn, as the owner
+decided on 30 September 2026 (below, "Open points").
 
 **The table**, one row per pair, in the order of the result, which is
 the order of the file, with the caption "Distances between the
@@ -892,113 +896,83 @@ warnings").
   field and the populations under it left out; the table of the pairs
   with both measures and the number of variants of each; the order of
   the heatmap with Lingoes' correction, and a negative distance taken as
-  0 for it once **Open 1** is answered.
+  0 for it.
 - `docs/architecture.md`, section 4: the id of the example, `"fst"`,
   becomes `"popDists"`.
 - `docs/specs/stage-5-open-points.md`: point 1 of "Opened by the specs"
-  settled but for the negative distances, which become this spec's
-  **Open 1**; and **Open 2**, **Open 3** and **Open 4**.
+  settled but for the negative distances; and the four points below,
+  which the owner decided there as points 13 to 16.
 
 ## Open points
 
-**Open 1: a negative distance, for the order of the heatmap.** popnei
-gives a negative Fst or Jost's D for two populations the variants cannot
-tell apart, and its PCoA refuses a negative distance, as it refuses a
-pair with no distance. On `panel.nei`, p0 split in two halves of 24
-gives an Fst of −0.0113 between them. The options:
+This spec has no open point. The four it asked were decided by the
+owner on 30 September 2026, each as recommended, and are written above
+as decided (`docs/specs/stage-5-open-points.md`, points 13 to 16):
 
-- (a) Take a negative value as 0 in the matrix given to the PCoA, and in
-  nothing else: the table, the tooltip and the cell show popnei's
-  value, and the warning says the order treats it as 0. The order is
-  kept for every matrix but the rare one with a pair of no value. It is
-  the application's arithmetic on popnei's numbers, one comparison with
-  0, for the order and never for a number shown.
-- (b) Keep the order of the metadata file whenever a distance is
-  negative, as for a pair with no value. The application computes
-  nothing; a dataset with two close populations, the case where the
-  order helps most, loses its order for every population.
-
-Recommended: (a), since a negative estimate of a distance is an estimate
-of 0 that sampling pushed below it, and one close pair would otherwise
-take the order from all the others. Meanwhile, (a). With (b), step 3 of
-"The order of the heatmap" becomes a reason `negative` of the order of
-the file, and the Python lines lose the `clip`.
-
-**Open 2: where the colours of the heatmap start.** The colour of a cell
-runs from the darkest of viridis at a distance of 0 to the lightest at
-the largest distance of the matrix (`docs/specs/charts/heatmap.md`,
-"The colours"). The options:
-
-- (a) From 0, as the spec has it: the colours say how far apart the
-  pairs are. On `panel.nei` the three pairs, 0.1027 to 0.1096, fall at
-  steps 239, 245 and 255 of the 256 colours of viridis, which runs from
-  dark purple to yellow: three yellows that look alike, which is true,
-  since the three populations are about equally far apart.
-- (b) From the smallest distance of the matrix: the colours say which
-  pairs are nearer than the others. The same three pairs are the
-  darkest, the middle and the lightest colour, and a difference of 0.007
-  looks as large as one of 0.3 would in another dataset.
-
-Recommended: (a), since (b) makes small differences look large, which
-the principle of `docs/functionality.md` section 2, nothing that
-misleads without warning, rules against; the values in the cells and
-the table show the differences (a) draws small. Meanwhile, (a).
-
-**Open 3: many populations.** The table has a row for each pair, so it
-grows as the square of the populations: 250 populations are 31,125
-rows, and a column of 1,000 names chosen as the populations would be
-499,500, which the table of `src/ui/widgets/Table.tsx`, a row of HTML
-each, would take seconds to draw, not measured. The heatmap draws up to
-200 populations, 19,900 pairs. The options:
-
-- (a) Above 200 populations, neither the heatmap nor the table is
-  drawn; the panel says "The heatmap and the table are shown for up to
-  200 populations, and this result has 250. Download the table as CSV
-  to read it.", and the download is offered.
-- (b) Lock the analysis above 200 populations, in the words of a lock.
-  A user who meant to run it on 250 cannot, in this version.
-- (c) Draw the table whatever its size.
-
-Recommended: (a), since the numbers are calculated and can be taken
-out, and a column of names chosen by mistake shows its count at once.
-Meanwhile, (a).
-
-**Open 4: a population with fewer individuals than the minimum.**
-`calcPopDists` has a `minNumIndividuals` of its own, 20 by default,
-and tests it for each pair at each variant: a variant counts for a pair
-only when both populations have that many called genotypes there
-(`PopDists.numVars` of `js/popnei/src/pop_dists.ts`; `min_num_individuals`
-in `crates/popnei/src/pop_dists.rs`). A population of fewer individuals
-reaches it at no variant, so every pair it is in counts 0 variants and
-has no value, NaN, for both measures; the other pairs are not touched.
-On `panel.nei`, with 10 individuals of p0 made a population of their
-own, p0s, and p0 left with 38 (node, `js-v0.1.0-dev.3`, 30 September
-2026): the three pairs of p0s counted 0 variants and gave NaN; p0 and
-p2 gave an Fst of 0.10614095340778874, p0 and p1 0.1071478341274544 and
-p2 and p1 0.10962148955018115, each over 1,200 variants, the same to the
-last digit as with p0s left out of the call. With the minimum at 10,
-p0s had values, its pairs over 875 variants, Fst 0.0456 with p0. The
-options:
-
-- (a) Leave it out of the request, as above: named in the ready state
-  before a Run and by `tooFewIndividuals` after it, with the minimum to
-  lower. The table and the heatmap hold the populations that have
-  values, and the heatmap keeps its order by similarity. It is the
-  owner's rule for the private alleles, decision 7 of
-  `docs/specs/stage-5-open-points.md`, applied to a new case.
-- (b) Send it: its pairs are rows of "no value" in the table and
-  crossed cells in the heatmap, and, since a pair with no value keeps
-  the order of the metadata file (decision 2), the heatmap of every
-  population loses its order by similarity. The warning
-  `pairWithoutDistance` names its pairs, and the words say to lower the
-  minimum.
-
-The numbers of the other pairs are the same in both. Recommended: (a),
-since (b) shows nothing more than (a) says in words and costs the order
-of the whole heatmap. Meanwhile, (a). With (b), `run` sends every
-population, `leftOut` and `tooFewIndividuals` go, the lock of fewer
-than two populations with the minimum stays, and the Python lines lose
-the test `len(names) >= 20` for `if names`.
+1. **A negative distance is taken as 0 for the order of the heatmap**,
+   "OK" (point 14 there). popnei gives a negative Fst or Jost's D for
+   two populations the variants cannot tell apart, and its PCoA refuses
+   a negative distance; on `panel.nei`, p0 split in two halves of 24
+   gives an Fst of −0.0113 between them. The value is taken as 0 in the
+   matrix given to the PCoA and in nothing else: the table, the tooltip
+   and the cell show popnei's value, and the warning says the order
+   treats it as 0. It is the application's arithmetic on popnei's
+   numbers, one comparison with 0, for the order and never for a number
+   shown; a negative estimate of a distance is an estimate of 0 that
+   sampling pushed below it. The option not taken: the order of the
+   metadata file whenever a distance is negative, with which a dataset
+   with two close populations, the case where the order helps most,
+   loses its order for every population.
+2. **The colours of the heatmap start at 0**, "yes, at 0" (point 15
+   there): from the darkest of viridis at a distance of 0 to the
+   lightest at the largest distance of the matrix
+   (`docs/specs/charts/heatmap.md`, "The colours"), so the colours say
+   how far apart the pairs are. On `panel.nei` the three pairs, 0.1027
+   to 0.1096, fall at steps 239, 245 and 255 of the 256 colours of
+   viridis, which runs from dark purple to yellow: three yellows that
+   look alike, which is true, since the three populations are about
+   equally far apart; the values in the cells and the table show the
+   differences. The option not taken: from the smallest distance of the
+   matrix, with which a difference of 0.007 looks as large as one of 0.3
+   would in another dataset, against the principle of
+   `docs/functionality.md` section 2, nothing that misleads without
+   warning.
+3. **Above 200 populations, neither the heatmap nor the table is
+   drawn** (point 16 there): the panel says "The heatmap and the table
+   are shown for up to 200 populations, and this result has 250.
+   Download the table as CSV to read it.", and the download is offered.
+   The table has a row for each pair, so it grows as the square of the
+   populations: 250 populations are 31,125 rows, and a column of 1,000
+   names chosen as the populations would be 499,500, which the table of
+   `src/ui/widgets/Table.tsx`, a row of HTML each, would take seconds to
+   draw, not measured; the heatmap draws up to 200 populations, 19,900
+   pairs. The owner's words: "whatever, more than 50 populations is
+   already too much for this app"; the bound stays at 200, the most the
+   heatmap draws. The options not taken: the analysis locked above 200
+   populations, and the table drawn whatever its size.
+4. **A population with fewer individuals than the minimum is left out
+   of the request**, "leave it out" (point 13 there), named in the ready
+   state before a Run and by `tooFewIndividuals` after it, with the
+   minimum to lower; the table and the heatmap hold the populations that
+   have values, and the heatmap keeps its order by similarity. It is the
+   owner's rule for the private alleles, decision 7, applied to a new
+   case. `calcPopDists` counts a variant for a pair only when both
+   populations have its `minNumIndividuals` of called genotypes there
+   (`PopDists.numVars` of `js/popnei/src/pop_dists.ts`;
+   `min_num_individuals` in `crates/popnei/src/pop_dists.rs`), so a
+   population of fewer individuals has no value in any pair, and leaving
+   it out changes no other number. On `panel.nei`, with 10 individuals
+   of p0 made a population of their own, p0s, and p0 left with 38 (node,
+   `js-v0.1.0-dev.3`, 30 September 2026): the three pairs of p0s counted
+   0 variants and gave NaN; p0 and p2 gave an Fst of
+   0.10614095340778874, p0 and p1 0.1071478341274544 and p2 and p1
+   0.10962148955018115, each over 1,200 variants, the same to the last
+   digit as with p0s left out of the call. With the minimum at 10, p0s
+   had values, its pairs over 875 variants, Fst 0.0456 with p0. The
+   option not taken: sending it, with its pairs rows of "no value" in
+   the table and crossed cells in the heatmap, and, since a pair with no
+   value keeps the order of the metadata file (decision 2), the heatmap
+   of every population without its order by similarity.
 
 ## Not in this spec
 

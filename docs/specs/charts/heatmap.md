@@ -77,7 +77,8 @@ same in both themes and in the file, written on each path as its `fill`
 attribute.
 
 The scale runs from 0 to the largest finite value of the matrix, off
-the diagonal (**Open 1**, below). When that largest value is above 0,
+the diagonal, as the owner decided on 30 September 2026 (below, "Open
+points"). When that largest value is above 0,
 the step of a value v is `viridisStep(max(v, 0), 0, max)`; a negative
 value, which a distance between two populations the data cannot tell
 apart can be (`popDists.md`), takes the colour of 0, and its cell and its
@@ -352,10 +353,13 @@ which is code and comes with the plan.
 
 ## Open points
 
-**Open 1: where the colours start.** From 0, as above, or from the
-smallest value of the matrix. It is **Open 2** of
-`docs/specs/analyses/popDists.md`, asked there with its options once,
-since it changes what the distances look like; meanwhile, from 0.
+This spec has no open point. The one it had, where the colours start,
+was decided by the owner on 30 September 2026, as recommended: from 0,
+as above, "yes, at 0". It was asked with its options in
+`docs/specs/analyses/popDists.md`, since it changes what the distances
+look like, and is decided there and as point 15 of
+`docs/specs/stage-5-open-points.md`. The option not taken: from the
+smallest value of the matrix.
 
 ## Not in this spec
 
