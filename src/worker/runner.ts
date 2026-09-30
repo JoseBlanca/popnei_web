@@ -52,6 +52,7 @@ import type {
 import type { Result } from "../core/result.ts";
 import { DEFECT_START, messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
+import { SHOWN_MEASURES } from "./protocol.ts";
 import type {
   DiversityJob,
   DiversityResult,
@@ -74,6 +75,7 @@ import type {
   PopDistsJob,
   PopDistsResult,
   Progress,
+  ShownMeasure,
   VariantChecksJob,
   VariantChecksResult,
   VariantDistrib,
@@ -902,9 +904,8 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
 }
 
 /** The measures of the distances between populations asked of popnei,
-    Hudson's Fst and Jost's D, the two of docs/functionality.md, section 7,
-    from the one pass. */
-const POP_DISTS_MEASURES = ["fst", "dest"] as const;
+    those the application shows, from the one pass. */
+const POP_DISTS_MEASURES = SHOWN_MEASURES;
 
 /**
  * Runs `calcPopDists` over the populations of the job, with no standard
@@ -999,10 +1000,7 @@ function popDistsResultOf(dists: PopDists, job: PopDistsJob): PopDistsResult {
 
 /** The distances of the measure `measure` of popnei's result, which the
     runner asked for; throws a defect when popnei gave none. */
-function measureOf(
-  dists: PopDists,
-  measure: (typeof POP_DISTS_MEASURES)[number],
-): Distances {
+function measureOf(dists: PopDists, measure: ShownMeasure): Distances {
   const given = dists[measure];
   if (given === null) {
     throw new Error(

@@ -621,6 +621,31 @@ describe("PA3 D4 the warnings", () => {
     ]);
   });
 
+  test("tooFewIndividuals of two populations, one of them reduced by the filters of individuals, offers to loosen them", () => {
+    const p = project({ table: tableOfSizes([30, 30, 30, 12, 30, 8]) });
+    const r = resultOf(
+      ["p0", "p1", "p2", "p4"],
+      [],
+      [
+        ["p3", 12],
+        ["p5", 6],
+      ],
+    );
+    expect(warningsOf(r, p, "tooFewIndividuals")).toStrictEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Populations p3 and p5 have fewer than 20 individuals, 12 and 6, so they are left out of the distances. To include them, lower the minimum of individuals, merge each with another population in the metadata file, or loosen the filters of individuals in the Variants step.",
+      },
+    ]);
+  });
+
+  test("a population left out that is not among the populations to run is a defect", () => {
+    const r = resultOf(["p0", "p2", "p1"], [], [["p9", 3]]);
+    expect(() => popDists.warnings(r, project())).toThrow(
+      /^popnei_web defect: the distances left out "p9"/u,
+    );
+  });
+
   test("tooFewIndividuals of four populations names two and counts none", () => {
     const p = project({ table: tableOfSizes([30, 30, 30, 12, 30, 8, 5, 3]) });
     const r = resultOf(

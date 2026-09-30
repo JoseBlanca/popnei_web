@@ -606,6 +606,14 @@ export interface PcaResult {
   readonly passStats: PassStats;
 }
 
+/** The measures of the distances between populations the application
+    shows, Hudson's Fst and Jost's D, the two of docs/functionality.md,
+    section 7, as popnei names them. */
+export const SHOWN_MEASURES = ["fst", "dest"] as const;
+
+/** One of the measures shown. */
+export type ShownMeasure = (typeof SHOWN_MEASURES)[number];
+
 /** Why the heatmap of a measure keeps the order of the metadata file:
     only two populations, a pair with no distance, every distance 0 once a
     negative one is taken as 0, or a refusal of popnei's PCoA that none of
@@ -682,13 +690,8 @@ export interface PopDistsResult {
   readonly dest: Float64Array;
   /** The variants each pair was calculated over. */
   readonly numVarsPerPair: Uint32Array;
-  /** The order of the heatmap of each measure. */
-  readonly order: {
-    /** Of Hudson's Fst. */
-    readonly fst: HeatmapOrder;
-    /** Of Jost's D. */
-    readonly dest: HeatmapOrder;
-  };
+  /** The order of the heatmap of each measure shown. */
+  readonly order: Readonly<Record<ShownMeasure, HeatmapOrder>>;
   /** The populations under the minimum, as the request gave them. */
   readonly leftOut: LeftOut;
   /** The counts of the pass. */

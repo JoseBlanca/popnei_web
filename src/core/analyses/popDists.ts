@@ -41,6 +41,7 @@ import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
 import {
   CHANGE_SETTINGS,
   defect,
+  fourDecimals,
   orNull,
   percentOf,
   populationWarnings,
@@ -53,6 +54,7 @@ import type {
   Pops,
   PopDistsResult,
   Run,
+  ShownMeasure,
 } from "../../worker/protocol.ts";
 
 /** The id of the analysis. */
@@ -68,7 +70,7 @@ export interface PopDistsOptions {
   readonly minNumIndividuals: number;
   /** The measure the heatmap draws, Hudson's Fst or Jost's D; the table
       shows both, and a change of it calculates nothing. */
-  readonly measure: "fst" | "dest";
+  readonly measure: ShownMeasure;
 }
 
 /**
@@ -108,7 +110,7 @@ const NEED_TWO =
 const MAX_NAMED = 3;
 
 /** The names of the two measures in the words of the screen. */
-const MEASURE_NAMES: Readonly<Record<"fst" | "dest", string>> = Object.freeze({
+const MEASURE_NAMES: Readonly<Record<ShownMeasure, string>> = Object.freeze({
   fst: "Hudson's Fst",
   dest: "Jost's D",
 });
@@ -261,7 +263,14 @@ function needs(p: Project): string | null {
   const [only] = toRun ?? [];
   const column = populationsColumnOf(p);
   if (toRun?.length === 1 && only !== undefined && column !== null) {
-    return `The column ${shown(column)} of ${escaped(p.individuals.name)} gives the individuals of ${escaped(p.variants?.name ?? "")} one population, ${shown(only[0])}, and the distances need two or more. Choose another column, or fill in this one and load the file again, in the Individuals step.`;
+    // populationsToRun gives populations only once the variants file is
+    // read.
+    if (p.variants === null) {
+      throw defect(
+        "the distances were given populations with no variants file.",
+      );
+    }
+    return `The column ${shown(column)} of ${escaped(p.individuals.name)} gives the individuals of ${escaped(p.variants.name)} one population, ${shown(only[0])}, and the distances need two or more. Choose another column, or fill in this one and load the file again, in the Individuals step.`;
   }
   return minimumNeeds(p);
 }
@@ -367,8 +376,8 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   });
 }
 
-/** One pair of a result: the places of its two populations in `pops`,
-    and its values. */
+/** One pair of a result: the names of its two populations, in the order
+    of `pops`, and its values. */
 interface Pair {
   /** The name of the first population. */
   readonly first: string;
@@ -448,15 +457,23 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
     offering to loosen the filters of individuals when they took
     individuals from one of them, as the diversity finds it. */
 function tooFewText(r: PopDistsResult, p: Project, min: number): string {
+  const toRun = populationsToRun(p);
+  if (toRun === null) {
+    throw defect("the warnings of the distances were given no populations.");
+  }
   const sizes = new Map(
-    (populationsToRun(p) ?? []).map(([pop, individuals]) => [
-      pop,
-      individuals.length,
-    ]),
+    toRun.map(([pop, individuals]) => [pop, individuals.length]),
   );
-  const filtered = r.leftOut.some(
-    ([pop, numIndividuals]) => numIndividuals < (sizes.get(pop) ?? 0),
-  );
+  const filtered = r.leftOut.some(([pop, numIndividuals]) => {
+    const size = sizes.get(pop);
+    // `run` takes the populations left out from those to run.
+    if (size === undefined) {
+      throw defect(
+        `the distances left out ${JSON.stringify(pop)}, which is not among the populations to run.`,
+      );
+    }
+    return numIndividuals < size;
+  });
   const names = namesOf(r.leftOut.map(([pop]) => pop));
   const [only] = r.leftOut;
   if (r.leftOut.length === 1 && only !== undefined) {
@@ -550,13 +567,6 @@ function pairsNamed(pairs: readonly Pair[]): string {
   }
   const named = pairs.map(pairName);
   return `${named.slice(0, -1).join(", ")}, and ${named.at(-1) ?? ""}`;
-}
-
-/** A value for the screen, to four decimals, with the minus sign U+2212
-    for a negative one: "−0.0113". */
-function fourDecimals(value: number): string {
-  const text = Math.abs(value).toFixed(4);
-  return value < 0 ? `\u2212${text}` : text;
 }
 
 /** The pairs of a result, in its order, (0, 1), (0, 2), …, (1, 2), … of

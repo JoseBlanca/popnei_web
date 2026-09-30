@@ -140,8 +140,10 @@ function ignore(): void {
   // The progress, which these tests do not look at.
 }
 
-/** What the runner answers the job over panel.nei. */
-function run(): ReturnType<ReturnType<typeof createRunner>["run"]> {
+/** What the runner answers the job `job` over panel.nei. */
+function run(
+  job: PopDistsJob = JOB,
+): ReturnType<ReturnType<typeof createRunner>["run"]> {
   const runner = createRunner();
   const opened = runner.open(
     { fileId: FILE_ID, format: "nei", readOptions: null },
@@ -151,12 +153,12 @@ function run(): ReturnType<ReturnType<typeof createRunner>["run"]> {
     },
   );
   expect(opened.kind).toBe("ok");
-  return runner.run(JOB, ignore);
+  return runner.run(job, ignore);
 }
 
-/** The result of the job, which has to be of the distances. */
-function resultOfRun(): PopDistsResult {
-  const answer = run();
+/** The result of the job `job`, which has to be of the distances. */
+function resultOfRun(job: PopDistsJob = JOB): PopDistsResult {
+  const answer = run(job);
   if (answer.kind !== "ok" || answer.value.analysis !== "popDists") {
     throw new Error(`the answer is ${JSON.stringify(answer)}`);
   }
@@ -265,5 +267,38 @@ describe("PA3 D2 the runner's distances: popnei's answer checked", () => {
     expect(() => run()).toThrow(
       "popnei_web defect: calcPopDists gave no dest, which was asked for",
     );
+  });
+});
+
+describe("PA3 D2 the runner's distances: popnei's pairs put back in the order of the job", () => {
+  test("the counts of variants of each pair follow popnei's order of the names 3, 1 and 2, and are put back in the job's", () => {
+    const [p0, p2, p1] = panelPops();
+    if (p0 === undefined || p2 === undefined || p1 === undefined) {
+      throw new Error("panel_pops.csv has three populations");
+    }
+    const job: PopDistsJob = {
+      ...JOB,
+      pops: [
+        ["3", p0[1]],
+        ["1", p2[1]],
+        ["2", p1[1]],
+      ],
+    };
+    // popnei orders the names 1, 2, 3: its pairs are (1, 2), (1, 3) and
+    // (2, 3), and the job's (3, 1), (3, 2) and (1, 2).
+    tampering.numVars = [10, 20, 30];
+    const result = resultOfRun(job);
+    expect(result.pops).toEqual(["3", "1", "2"]);
+    expect(result.numVarsPerPair).toEqual(Uint32Array.of(20, 30, 10));
+  });
+});
+
+describe("PA3 D2 the runner's distances: an exact tie of the first axis", () => {
+  test("p2 and p1, at 0 of each other and 0.3 from p0, have the same projection, and keep the order of the file, p2 before p1", () => {
+    tampering.fst = [0.3, 0.3, 0];
+    expect(resultOfRun().order.fst).toEqual({
+      kind: "pcoa",
+      order: Uint32Array.of(1, 2, 0),
+    });
   });
 });

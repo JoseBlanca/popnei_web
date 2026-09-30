@@ -534,6 +534,14 @@ export function percentOf(part: number, whole: number): string {
   return `${String(percent)}%`;
 }
 
+/** A number for the screen, to four decimals, a negative one with the
+    minus sign U+2212, "−0.0113", and one that rounds to 0 written
+    "0.0000", whatever its sign, as the PCA writes its coordinates. */
+export function fourDecimals(value: number): string {
+  const text = Math.abs(value).toFixed(4);
+  return value < 0 && text !== "0.0000" ? `\u2212${text}` : text;
+}
+
 /** A number of popnei, `null` for a NaN. */
 export function orNull(value: number): number | null {
   return Number.isNaN(value) ? null : value;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { populationWarnings } from "./words.ts";
+import { fourDecimals, percentOf, populationWarnings } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import type { Project } from "../project.ts";
 import { deepFreeze } from "../testSupport.ts";
@@ -204,5 +204,39 @@ describe("PA1 D2 the warnings of the populations", () => {
     expect(() => populationWarnings([], rolesNoFile, DIVERSITY)).toThrow(
       "popnei_web defect:",
     );
+  });
+});
+
+describe("PA3 D4 percentOf", () => {
+  test("5 of 1,152 is 1%, the rounding to 0 of a share above none", () => {
+    expect(percentOf(5, 1152)).toBe("1%");
+  });
+
+  test("0 of 1,152 is 0%", () => {
+    expect(percentOf(0, 1152)).toBe("0%");
+  });
+
+  test("1,151 of 1,152 is 99%, the rounding to 100 of a share below all, and 1,152 of 1,152 is 100%", () => {
+    expect(percentOf(1151, 1152)).toBe("99%");
+    expect(percentOf(1152, 1152)).toBe("100%");
+  });
+
+  test("641 of 1,152 is 56%, rounded to the nearest", () => {
+    expect(percentOf(641, 1152)).toBe("56%");
+  });
+});
+
+describe("PA3 D4 fourDecimals", () => {
+  test("−0.1027 is written with the minus sign U+2212", () => {
+    expect(fourDecimals(-0.10273588423661377)).toBe("\u22120.1027");
+  });
+
+  test("−0.00004, which rounds to 0, is written 0.0000, with no sign", () => {
+    expect(fourDecimals(-0.00004)).toBe("0.0000");
+  });
+
+  test("0 is 0.0000, and 0.10962148955018115 is 0.1096", () => {
+    expect(fourDecimals(0)).toBe("0.0000");
+    expect(fourDecimals(0.10962148955018115)).toBe("0.1096");
   });
 });
