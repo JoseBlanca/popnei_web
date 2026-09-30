@@ -272,7 +272,7 @@ function notTakenWhy(text: string, words: NotTakenWords): string {
     characters[0] ??
     "";
   const name =
-    named === " " || named === " " ? "A space" : `‘${escaped(named)}’`;
+    named === " " || named === "\u00a0" ? "A space" : `‘${escaped(named)}’`;
   return `${name} ${words.other}`;
 }
 

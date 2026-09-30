@@ -138,16 +138,24 @@ function distanceText(value: number | null): string {
   return value === null ? "no value" : fourDecimals(value);
 }
 
-/** The cells of a row of the table: the pair, "p0 and p2", its names
-    escaped as a text shows a name of the user's files; its two distances;
+/** The two names of the pair of a row, escaped as a text shows a name of
+    the user's files, which the cell of the pair writes with "and" between
+    them. */
+export function pairNames(row: PopDistsRow): readonly [string, string] {
+  return [escaped(row.first), escaped(row.second)];
+}
+
+/** The cells of a row of the table after the pair: its two distances,
     and its variants with a comma between groups of three digits. */
+export function numberCells(row: PopDistsRow): readonly string[] {
+  return [distanceText(row.fst), distanceText(row.dest), grouped(row.numVars)];
+}
+
+/** The cells of a row of the table as text: the pair, "p0 and p2", of
+    `pairNames`, then `numberCells`. */
 export function rowCells(row: PopDistsRow): readonly string[] {
-  return [
-    `${escaped(row.first)} and ${escaped(row.second)}`,
-    distanceText(row.fst),
-    distanceText(row.dest),
-    grouped(row.numVars),
-  ];
+  const [first, second] = pairNames(row);
+  return [`${first} and ${second}`, ...numberCells(row)];
 }
 
 /** The name of the download of the table: the stem of the variants

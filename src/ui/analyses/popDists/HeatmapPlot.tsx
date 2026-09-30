@@ -16,12 +16,13 @@
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { createHeatmap, heatmapMargin } from "../../../charts/heatmap.ts";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import type { ChartHandle } from "../../../charts/types.ts";
 import { classOf } from "../../classOf.ts";
+import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
 import styles from "./PopDistsResults.module.css";
 import { HEATMAP_SCROLL_TEXT } from "./words.ts";
 
@@ -50,9 +51,9 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<ChartHandle<HeatmapData> | null>(null);
   // Whether the heatmap is wider than its frame, which the browser
-  // measures and React does not: kept up to date by a ResizeObserver,
-  // which also reports the first size of what it observes.
-  const [scrolls, setScrolls] = useState(false);
+  // measures and React does not, and what the frame is then.
+  const frame = useSidewaysFrame(frameRef);
+  const scrolls = frame.scrolls;
 
   useEffect(() => {
     const element = containerRef.current;
@@ -71,20 +72,6 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
     };
   }, []);
 
-  useEffect(() => {
-    const frame = frameRef.current;
-    const element = containerRef.current;
-    if (frame === null || element === null) return;
-    const observer = new ResizeObserver(() => {
-      setScrolls(frame.scrollWidth > frame.clientWidth);
-    });
-    observer.observe(frame);
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   const margin = heatmapMargin(data);
   const minWidth = Math.ceil(margin.left + margin.right + GRID_MIN_WIDTH);
 
@@ -98,10 +85,9 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
       <div
         ref={frameRef}
         className={classOf(styles, "heatmapScroll")}
-        {...(scrolls && {
-          role: "region",
+        {...frame.attributes}
+        {...(frame.attributes.role !== undefined && {
           "aria-label": data.title,
-          tabIndex: 0,
         })}
       >
         {/* The least width is the heatmap's, from its data, in the

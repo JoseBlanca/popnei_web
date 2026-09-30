@@ -19,7 +19,12 @@ import { popDists, popDistsOptions } from "../../../core/analyses/popDists.ts";
 import { setAnalysisOptions } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { Key } from "../../../core/keys.ts";
-import type { AnalysisStatus, AppState, Store } from "../../../core/store.ts";
+import type {
+  AnalysisStatus,
+  AppState,
+  Notice,
+  Store,
+} from "../../../core/store.ts";
 import { sampleProject } from "../../../core/testSupport.ts";
 import type {
   JobResult,
@@ -30,16 +35,24 @@ import type {
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import type { Announcer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
+import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { PopDistsOptionsPart } from "./PopDistsOptionsPart.tsx";
 import { PopDistsResults } from "./PopDistsResults.tsx";
-import { rowCells } from "./words.ts";
+import { Table } from "../../widgets/Table.tsx";
+import type * as TableModule from "../../widgets/Table.tsx";
+import { numberCells } from "./words.ts";
 import type * as WordsModule from "./words.ts";
 
-// The cells of the rows of the table are made by rowCells, counted here
-// so that a test sees when the rows are made again.
+// The cells of the rows of the table are made by numberCells, and the
+// table drawn by Table, each counted here
+// so that a test sees when the rows are made or the table drawn again.
+vi.mock("../../widgets/Table.tsx", async (importOriginal) => {
+  const table = await importOriginal<typeof TableModule>();
+  return { ...table, Table: vi.fn(table.Table) };
+});
 vi.mock("./words.ts", async (importOriginal) => {
   const words = await importOriginal<typeof WordsModule>();
-  return { ...words, rowCells: vi.fn(words.rowCells) };
+  return { ...words, numberCells: vi.fn(words.numberCells) };
 });
 
 declare global {
@@ -81,10 +94,17 @@ const KEY = "a key of the tests" as Key;
     the distances the state `status`, for the parts of the panel, which
     read the project, the version of popnei and that state alone. */
 function testStore(): Store<JobResult, Blob> {
-  let state = {
+  let state: Record<string, unknown> & { readonly project: Project } = {
     project,
     popneiVersion: "0.1.0-dev.3",
     analyses: [{ id: "popDists", status }],
+    notice: null,
+    individualsKept: null,
+    runs: [],
+  };
+  showNotice = (notice) => {
+    state = { ...state, notice };
+    for (const listener of listeners) listener();
   };
   const store = {
     getState: () => state,
@@ -107,6 +127,10 @@ function testStore(): Store<JobResult, Blob> {
     getState: () => AppState<JobResult, Blob>;
   };
 }
+
+/** Puts `notice` in the state of the last store made, as a change of
+    another analysis does, and tells the screens. */
+let showNotice: (notice: Notice | null) => void = () => undefined;
 
 /** An announcer that keeps what it is given. */
 const ANNOUNCER = {
@@ -509,13 +533,38 @@ describe("PA5 the result of the distances, drawn by React", () => {
     expect(tableRows()[0]).toEqual(["p0 and p2", "0.1027", "0.0613", "1,200"]);
   });
 
+  test("PA5 D1 under the panel's frame, drawn again when a notice comes and goes, the table is not drawn again nor its rows made", () => {
+    status = doneWith(FLOW);
+    draw(createElement(AnalysisPanel, { id: "popDists" }));
+    expect(heatmapSvg()).not.toBeNull();
+    const drawn = vi.mocked(Table).mock.calls.length;
+    const made = vi.mocked(numberCells).mock.calls.length;
+    expect(drawn).toBeGreaterThanOrEqual(1);
+    act(() => {
+      showNotice({
+        cause: { kind: "command", description: "the MAF filter changed" },
+        removed: ["diversity"],
+        leftBehind: [],
+        stopped: ["diversity"],
+        writeLeftBehind: false,
+        writeStopped: false,
+        writeDiscarded: false,
+      });
+    });
+    act(() => {
+      showNotice(null);
+    });
+    expect(vi.mocked(Table).mock.calls.length).toBe(drawn);
+    expect(vi.mocked(numberCells).mock.calls.length).toBe(made);
+  });
+
   test("PA5 D1 a change of the measure makes no row of the table again", () => {
     const store = drawResult(FLOW);
-    const made = vi.mocked(rowCells).mock.calls.length;
+    const made = vi.mocked(numberCells).mock.calls.length;
     expect(made).toBeGreaterThanOrEqual(3);
     setMeasure(store, "dest");
     setMeasure(store, "fst");
-    expect(vi.mocked(rowCells).mock.calls.length).toBe(made);
+    expect(vi.mocked(numberCells).mock.calls.length).toBe(made);
   });
 
   test("PA5 D1 Jost's D in its own order: the heatmap and its description follow it", () => {
@@ -572,6 +621,13 @@ describe("PA5 the result of the distances, drawn by React", () => {
       "p0 and",
       "p2",
     ]);
+  });
+
+  test("PA5 D1 the cell of the pair writes its names escaped, as the text of the row does", () => {
+    drawResult(resultOf(["p1‮", "p2"], [0.1096], [0.0657], null));
+    expect(container.querySelector("tbody th")?.textContent).toBe(
+      "p1\\u202e and p2",
+    );
   });
 
   test("two populations have no line of order", () => {

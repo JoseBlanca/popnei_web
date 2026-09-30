@@ -15,11 +15,13 @@
  * caption, so that the arrow keys scroll it; a frame that did so while
  * the table fits would stop the Tab key on nothing and read the caption
  * twice. Whether it fits is measured again at every change of size of
- * the frame or of the table.
+ * the frame or of the table; a frame that stops scrolling while it has
+ * the focus keeps it (`sidewaysFrame.ts`).
  */
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 
 import { classOf } from "../classOf.ts";
+import { useSidewaysFrame } from "./sidewaysFrame.ts";
 import styles from "./Table.module.css";
 
 /** A column of the table. */
@@ -63,22 +65,10 @@ export function Table({
 }: TableProps): React.JSX.Element {
   const captionId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Whether the table is wider than its frame, which the browser measures
-  // and React does not: kept up to date by a ResizeObserver, which also
-  // reports the first size of what it observes.
-  const [scrolls, setScrolls] = useState(false);
-  useEffect(() => {
-    const frame = scrollRef.current;
-    if (frame === null) return;
-    const observer = new ResizeObserver(() => {
-      setScrolls(frame.scrollWidth > frame.clientWidth);
-    });
-    observer.observe(frame);
-    for (const child of Array.from(frame.children)) observer.observe(child);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+  // Whether the table is wider than its frame, which the browser
+  // measures and React does not, and what the frame is then.
+  const frame = useSidewaysFrame(scrollRef);
+  const scrolls = frame.scrolls;
 
   return (
     <div className={classOf(styles, "frame")}>
@@ -95,11 +85,9 @@ export function Table({
       <div
         ref={scrollRef}
         className={classOf(styles, "scroll")}
-        {...(scrolls && {
-          role: "region",
+        {...frame.attributes}
+        {...(frame.attributes.role !== undefined && {
           "aria-labelledby": captionId,
-          tabIndex: 0,
-          "data-scrolls": true,
         })}
       >
         <table aria-labelledby={captionId} className={classOf(styles, "table")}>

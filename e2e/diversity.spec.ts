@@ -354,10 +354,15 @@ test("WS8 D2 a table that fits its frame has no line of scrolling, and its frame
   await page.keyboard.press("Tab");
   await expect(frame).toBeFocused();
 
-  // Widened again, they go.
+  // Widened again, the line goes; the frame, which has the focus, keeps
+  // it, out of the order of the Tab key, and is no region once the focus
+  // leaves it.
   await page.setViewportSize({ width: 1280, height: 800 });
-  await expect(frame).toHaveCount(0);
   await expect(line).toHaveCount(0);
+  await expect(frame).toBeFocused();
+  await expect(frame).toHaveAttribute("tabindex", "-1");
+  await page.keyboard.press("Tab");
+  await expect(frame).toHaveCount(0);
 });
 
 test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({

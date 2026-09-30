@@ -8,6 +8,8 @@ import {
   csvName,
   heatmapTitle,
   measureAnnounced,
+  numberCells,
+  pairNames,
   readyLines,
   rowCells,
 } from "./words.ts";
@@ -87,6 +89,19 @@ describe("PA5 D1 the table of the panel of the distances", () => {
     expect(captionText(1200, "panel.nei")).toBe(
       "Distances between the populations of panel.nei, over the 1,200 variants the filters kept.",
     );
+  });
+
+  test("the pair's two names are escaped once, for the text of the row and for its cell", () => {
+    const row = {
+      first: "p1‮",
+      second: "p2",
+      fst: 0.1,
+      dest: 0.06,
+      numVars: 12,
+    };
+    expect(pairNames(row)).toEqual(["p1\\u202e", "p2"]);
+    expect(rowCells(row)[0]).toBe("p1\\u202e and p2");
+    expect(numberCells(row)).toEqual(["0.1000", "0.0600", "12"]);
   });
 
   test("a row reads the pair, both distances to four decimals, a negative one with its minus sign, no value, and its variants", () => {

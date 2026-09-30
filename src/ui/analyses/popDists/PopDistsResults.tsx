@@ -14,7 +14,7 @@
  * the part of the heatmap reads it and is drawn again; the rows of the
  * table, up to 19,900 of them, are made once for each result.
  */
-import { useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 
 import type { HeatmapData } from "../../../charts/heatmap.ts";
 import {
@@ -28,7 +28,6 @@ import {
   tooManyPopulationsText,
 } from "../../../core/analyses/popDists.ts";
 import type { PopDistsRow } from "../../../core/analyses/popDists.ts";
-import { escaped } from "../../../core/project.ts";
 import type { PopDistsResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
@@ -41,7 +40,13 @@ import { versionsText } from "../words.ts";
 import { HeatmapPlot } from "./HeatmapPlot.tsx";
 import { warnNotPlaced } from "./notPlaced.ts";
 import styles from "./PopDistsResults.module.css";
-import { captionText, csvName, heatmapTitle, rowCells } from "./words.ts";
+import {
+  captionText,
+  csvName,
+  heatmapTitle,
+  numberCells,
+  pairNames,
+} from "./words.ts";
 
 /** The columns of the table (the spec, "What it shows"). */
 const COLUMNS: readonly TableColumn[] = Object.freeze([
@@ -144,15 +149,21 @@ function DistancesHeatmap({
   );
 }
 
-/** The table of the pairs, whose rows are made once for the result. */
-function PairsTable({ result, variantsName }: PartProps): React.JSX.Element {
+/** The table of the pairs, whose rows are made once for the result, and
+    which is not drawn again while its result and the name of the variants
+    file are the same: the frame of the panel is drawn again when a notice
+    comes or goes, and the table of 200 populations has 19,900 rows. */
+const PairsTable = memo(function PairsTable({
+  result,
+  variantsName,
+}: PartProps): React.JSX.Element {
   const rows = useMemo(
     (): readonly TableRow[] =>
       popDistsRows(result).map((row) => ({
         // The null character is in no name of a file, so it parts the
         // two names of the pair without making two pairs alike.
         id: `${row.first}\u0000${row.second}`,
-        cells: [pairCell(row), ...rowCells(row).slice(1)],
+        cells: [pairCell(row), ...numberCells(row)],
       })),
     [result],
   );
@@ -163,15 +174,17 @@ function PairsTable({ result, variantsName }: PartProps): React.JSX.Element {
       rows={rows}
     />
   );
-}
+});
 
-/** The pair of a row, "p0 and p2", each name kept whole on its line and
-    the line broken, when the column is narrow, only after "and". */
+/** The pair of a row, "p0 and p2", of `pairNames`, each name kept whole
+    on its line and the line broken, when the column is narrow, only after
+    "and". */
 function pairCell(row: PopDistsRow): React.JSX.Element {
+  const [first, second] = pairNames(row);
   return (
     <>
-      <span className={classOf(styles, "name")}>{escaped(row.first)} and</span>{" "}
-      <span className={classOf(styles, "name")}>{escaped(row.second)}</span>
+      <span className={classOf(styles, "name")}>{first} and</span>{" "}
+      <span className={classOf(styles, "name")}>{second}</span>
     </>
   );
 }

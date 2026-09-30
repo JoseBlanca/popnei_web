@@ -779,6 +779,67 @@ test.describe("PA5 D2 the review of the panel of the distances", () => {
     ).toBeVisible();
   });
 
+  test("PA5 D2 the frames of the heatmap and of the table scroll with the arrow keys at 320 pixels, and keep the focus when the page widens to 1280", async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+    const pops = testInfo.outputPath("long_pops.csv");
+    await writeFile(
+      pops,
+      text.replaceAll(/,(p\d)$/gm, ",Valencia_landrace_$1"),
+    );
+    await load(page, "panel.nei", pops, "popcat");
+    await useWideFont(page);
+    await run(page);
+    const frames = [
+      panel(page).getByRole("region", {
+        name: "Hudson's Fst between populations",
+      }),
+      panel(page).getByRole("region", {
+        name: "Distances between the populations of panel.nei, over the 1,200 variants the filters kept.",
+      }),
+    ];
+    for (const frame of frames) {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await expect(frame).toBeVisible();
+      await frame.focus();
+      await expect(frame).toBeFocused();
+      // Pressed until the frame scrolls, as the diversity's flow does:
+      // WebKit 26.6 under Playwright lets a first press go by.
+      await expect
+        .poll(async () => {
+          await page.keyboard.press("ArrowRight");
+          return frame.evaluate((element) => element.scrollLeft);
+        })
+        .toBeGreaterThan(0);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await expect
+        .poll(() =>
+          frame.evaluate(
+            (element) => element.scrollWidth > element.clientWidth,
+          ),
+        )
+        .toBe(false);
+      // A frame after the one that stopped scrolling.
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(resolve)),
+      );
+      await expect(frame).toBeFocused();
+      expect(
+        await page.evaluate(() => document.activeElement === document.body),
+      ).toBe(false);
+      // Out of the order of the Tab key, and no region, once the focus
+      // leaves it.
+      const element = await frame.elementHandle();
+      await page.keyboard.press("Tab");
+      await expect
+        .poll(() => element.evaluate((e) => e.hasAttribute("tabindex")))
+        .toBe(false);
+      await expect(frame).toHaveCount(0);
+    }
+  });
+
   test("PA5 D2 at 320 pixels, in the committed font, names of 20 characters: the frame of the heatmap scrolls, the grid keeps 128 pixels, the Tab key reaches its region, each name of a pair on one line, and axe", async ({
     page,
     makeAxeBuilder,
