@@ -130,9 +130,10 @@ and the result carries it (below, "The request"):
    `doPcoa` refuses it, and no population is closer to one than to
    another. Reason `allZero`.
 5. **Otherwise**, the runner gives the distances to
-   `correctDistsByLingoes`, then its corrected distances to `doPcoa`,
-   and orders the populations by their projection on the first
-   component, from the smallest to the largest; two equal projections
+   `correctDistsByLingoes`, then its corrected distances, the field
+   `distances` of its result, to `doPcoa`, and orders the populations by
+   their projection on the first component, `projections[i ×
+   numComps]` for the population i, from the smallest to the largest; two equal projections
    keep the order of the file.
 6. **A refusal of popnei at step 5** that none of the steps above
    foresaw, "the linear algebra of the analysis could not be done" among
@@ -182,8 +183,8 @@ diversity's key holds it; `minNumIndividuals` is the project's, or the
 default. Not in the key: `measure`, which only chooses what the heatmap
 draws, as the colouring of the PCA is left out of its key
 (`docs/architecture.md`, section 4, "An option that changes only how a
-result is drawn"), so a change of it is a command, a step of Undo, that
-removes no result; and what the diversity leaves out of its key, for the
+result is drawn"), so a change of it is saved in the project and undone
+by Undo like any other change, and takes no result off the screen; and what the diversity leaves out of its key, for the
 same reasons. The key version is 1.
 
 | change to the project | the key |
@@ -243,10 +244,11 @@ that do not, `leftOut`, and sends:
 }
 ```
 
-`leftOut` is not used by the runner, which copies it into the result:
-`warnings` gets the result and the project, and not the list of the
-individuals kept, so the result carries the populations left out with
-their counts after the filters of individuals. Fewer than two
+`leftOut` is not used by the runner, which copies it into the result.
+The warning that names the populations left out is made from the result
+and the project alone, and the project cannot say how many individuals
+of each population the filters of individuals kept; so the result
+carries those populations with their counts. Fewer than two
 populations in `pops` is a defect of `run`, thrown, which `needs` and
 `keptNeeds` keep from happening.
 
@@ -264,14 +266,20 @@ calcPopDists(variants, Object.fromEntries(pops), {
 })
 ```
 
-and puts the pairs back in the order of the job. popnei gives its
+The fields of popnei's `PopDists` it reads are `pops`, the names in
+popnei's order; `fst.distVector` and `dest.distVector`, one value a
+pair; `numVars`, an `Int32Array` of the variants of each pair, never
+negative, copied into a `Uint32Array`; and `passStats`. It puts the
+pairs back in the order of the job. popnei gives its
 populations in the order the keys of `pops` iterate in, which puts
 names that are whole numbers first, in numeric order (runner.md, "The
 diversity", step 4), and its pairs in that order, (0, 1), (0, 2), …,
 (1, 2), …; the runner builds each array in the order of the job's
 populations, the pair of the job's populations i < j at the place `i ×
 k − i × (i + 1) / 2 + j − i − 1` for k populations, taking popnei's
-value of the same two populations. Then it makes the order of each
+value of the same two populations: with a and b the places of the two
+names in popnei's `pops`, a < b, the value at that formula for a and b.
+`numIndividuals` is the length of each population of the job. Then it makes the order of each
 measure, as "The order of the heatmap" says, over the distances in the
 order of the job, with `new Distances(vector, pops, passStats)` of
 popnei, and answers:
@@ -372,7 +380,9 @@ print(pandas.DataFrame({
     "num_variants": dists.num_vars,
 }).to_string(index=False))
 # The order of the heatmap: the first axis of the principal coordinates of
-# each matrix, a negative distance taken as 0 and Lingoes' correction applied
+# each matrix, a negative distance taken as 0 and Lingoes' correction applied.
+# With a pair of no distance, or every distance 0, do_pcoa raises: the heatmap
+# then keeps the order of the metadata file.
 for name, measure in [("fst_hudson", dists.fst), ("jost_d", dists.dest)]:
     corrected = popnei.correct_dists_by_lingoes(popnei.Distances(
         dist_vector=measure.dist_vector.clip(min=0), names=measure.names,
@@ -382,10 +392,11 @@ for name, measure in [("fst_hudson", dists.fst), ("jost_d", dists.dest)]:
 ```
 
 The line `len(names) >= 20` leaves out the populations under the
-minimum and those left empty, as `run` does. The order is printed for
-three populations or more; with two, or a pair with no value, `do_pcoa`
-raises, and the script says so in a comment in place of the loop, "#
-The heatmap keeps the order of the metadata file: ‹the reason›." These
+minimum and those left empty, as `run` does. `script` is given the project and not the result, so it writes the
+loop whatever the order of the result was; with a pair of no value, or
+every distance 0, `do_pcoa` raises in Python where the application kept
+the order of the file, and the comment above the loop says so. With two populations the
+loop prints an order of two, which the heatmap does not follow. These
 lines, run with popnei's Python package at its commit `eae29a2` on 30
 September 2026, printed the numbers and the order of "How it is
 verified", for `popcat` and for the fixture `panel_split.csv`. The one
@@ -518,7 +529,10 @@ the same distances (node, 30 September 2026).
   the order of the file in the table, and in the order of the file where
   the heatmap keeps it; the runner undoes popnei's order.
 - **The filters keep no variant.** popnei refuses the call; the error
-  state says so, in the diversity's words for the distances.
+  state says "The filters kept none of the variants of panel.nei, so
+  there is no variant to calculate the distances between populations
+  over. Loosen the filters in the Variants step.", the diversity's row
+  for the distances.
 
 ### How it runs
 
@@ -858,8 +872,9 @@ the largest distance of the matrix (`docs/specs/charts/heatmap.md`,
 
 - (a) From 0, as the spec has it: the colours say how far apart the
   pairs are. On `panel.nei` the three pairs, 0.1027 to 0.1096, fall at
-  steps 239, 245 and 255 of 256, three yellows that look alike, which
-  is true: the three populations are about equally far apart.
+  steps 239, 245 and 255 of the 256 colours of viridis, which runs from
+  dark purple to yellow: three yellows that look alike, which is true,
+  since the three populations are about equally far apart.
 - (b) From the smallest distance of the matrix: the colours say which
   pairs are nearer than the others. The same three pairs are the
   darkest, the middle and the lightest colour, and a difference of 0.007
