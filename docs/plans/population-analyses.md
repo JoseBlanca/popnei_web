@@ -1,6 +1,7 @@
 # Plan: the analyses of the populations
 
-30 September 2026, approved by the owner the same day. It builds
+30 September 2026, approved by the owner the same day; under way from
+30 September 2026 on the branch `plan/population-analyses`. It builds
 stage 5 of `docs/build-order.md`: the distances between populations,
 Hudson's Fst and Jost's D of each pair, as a heatmap ordered by
 similarity and a table; the diversity whole, with F, the alleles, the
@@ -305,6 +306,13 @@ the project file (`projectFile.md`).
     detached commit; a flow that fails once is run 20 times in the
     engine where it failed before it is called flaky or fixed;
   - the answer gives the tokens the subagent used, for the report.
+- **Task 0.1, added on 30 September 2026** (the report, "Before the
+  first task"): the flow `IP10 D3 the keyboard moves through the table
+  cell by cell` of `e2e/pcaResults.spec.ts` failed once in Chromium in
+  the browser check of the start, and passed 40 times out of 40 alone; it
+  is made to wait for the scroll of the table's box before the plan's
+  first browser check.
+  - [ ] 0.1 That flow made steady, in a commit of its own.
 - **What every review of a work package carries**, from the same
   reports: the reviewers that only read run together, reading at a
   commit; `tests`, `browser` and `accessibility`, which run the page,
