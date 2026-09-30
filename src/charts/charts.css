@@ -238,3 +238,38 @@
 .chart-pca3d-label-text {
   text-anchor: start;
 }
+
+/* The cells of the heatmap with no value: no fill, outlined, and crossed
+   from corner to corner, so that such a cell is told by its shape and not
+   by a missing colour. The cells with a value are filled with the colour
+   of viridis of their step, written on their path, the same in both
+   themes (docs/specs/charts/heatmap.md, "The cells"). */
+.chart-cell-none {
+  fill: none;
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+/* The value in a cell of the heatmap, black on the steps of viridis from
+   111 to 255 and white on those from 0 to 110, whichever has the larger
+   contrast with the cell, at least 4.60:1 (heatmap.md, "The values in the
+   cells"). */
+.chart-cell-text {
+  font-size: 12px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.chart-cell-text-dark {
+  fill: var(--chart-text-on-light);
+}
+
+.chart-cell-text-light {
+  fill: var(--chart-text-on-dark);
+}
+
+/* The texts of the legend of the heatmap start right of its bar, and the
+   name of the value above it. */
+.chart-heatmap .chart-legend-text {
+  text-anchor: start;
+}

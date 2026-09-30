@@ -7,6 +7,7 @@
  */
 
 import type { PngErrorKind } from "../src/charts/export.ts";
+import type { HeatmapData } from "../src/charts/heatmap.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
 import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
@@ -41,6 +42,17 @@ export type Pca3dKind =
   | "swapped"
   | "markup"
   | "thousand";
+
+/**
+ * The data of a heatmap of the page: `panel`, Hudson's Fst of panel.nei
+ * between p2, p0 and p1, in that order; `split`, the Fst of p0b, p0a, p2
+ * and p1 of panel_split.csv, whose pair p0a and p0b is negative, with the
+ * pair p0b and p2 given no value; `long`, eight names of 20 to 26
+ * characters, the longer ones cut on the axes; `many`, 40 names, whose
+ * bands are too narrow for the values; `most`, the 200 names a heatmap
+ * draws, whose bands are too narrow for the names.
+ */
+export type HeatmapKind = "panel" | "split" | "long" | "many" | "most";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -115,6 +127,22 @@ export interface PlotsPage {
    * 0.5, nearer a camera above; the others are those of the scatter.
    */
   drawPca3d(width: number, height: number, kind: Pca3dKind): Promise<void>;
+  /**
+   * Draws the heatmap of `kind` in a new element whose content is `width`
+   * by `height` CSS pixels, with a padding of 8, `position: relative`, in
+   * place of the plot drawn before, and returns its handle.
+   */
+  drawHeatmap(
+    width: number,
+    height: number,
+    kind: HeatmapKind,
+  ): ChartHandle<HeatmapData>;
+  /**
+   * Where the middle of the cell of `row` and `column` of the heatmap
+   * drawn last is in the viewport, computed by the page with
+   * `heatmapMargin` and `heatmapScale`, apart from the plot.
+   */
+  heatmapCell(row: number, column: number): ViewportPoint;
   /** The data of the 3D plot drawn last. */
   pca3dData(): Pca3dData;
   /** Draws the 3D plot again with `highlighted` as the legend's highlight. */
@@ -137,7 +165,11 @@ export interface PlotsPage {
   /** The element of the plot drawn last; throws when none was drawn. */
   element(): HTMLElement;
   /** The handle of the plot drawn last; throws when none was drawn. */
-  handle(): ChartHandle<HistogramData> | ChartHandle<ScatterData> | Pca3dHandle;
+  handle():
+    | ChartHandle<HistogramData>
+    | ChartHandle<ScatterData>
+    | ChartHandle<HeatmapData>
+    | Pca3dHandle;
   /** The handle of the 3D plot drawn last; throws when the last plot is not one. */
   pca3d(): Pca3dHandle;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */

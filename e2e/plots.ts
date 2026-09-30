@@ -8,11 +8,20 @@
  * coordinate, loaded with `import()` as the screen loads it
  * (docs/specs/charts/pca3d.md, "How it is verified"). No screen offers the
  * export before stage 6, nor the scatter and the 3D plot before the PCA
- * panel, so this page is where they are seen working in a browser.
+ * panel, so this page is where they are seen working in a browser. From
+ * stage 5, the heatmap of the distances between populations
+ * (docs/specs/charts/heatmap.md, "How it is verified"), with Hudson's Fst
+ * of panel.nei as literals.
  */
 
 import "../src/ui/tokens.css";
 import { PngError } from "../src/charts/export.ts";
+import {
+  createHeatmap,
+  heatmapMargin,
+  heatmapScale,
+} from "../src/charts/heatmap.ts";
+import type { HeatmapData } from "../src/charts/heatmap.ts";
 import { createHistogram } from "../src/charts/histogram.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
 import { NO_GROUP } from "../src/charts/marks.ts";
@@ -26,7 +35,7 @@ import {
 } from "../src/charts/scatter.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
-import type { Pca3dKind, PlotsPage } from "./plotsPage.ts";
+import type { HeatmapKind, Pca3dKind, PlotsPage } from "./plotsPage.ts";
 
 /**
  * The edges of the default 40 bins over [0, 1] as popnei gives them,
@@ -392,6 +401,100 @@ function pca3dDataOf(kind: Pca3dKind): Pca3dData {
   }
 }
 
+/** A square matrix, row by row, from the values of its upper triangle. */
+function matrixOf(size: number, upper: readonly number[]): Float64Array {
+  const values = new Float64Array(size * size).fill(Number.NaN);
+  let next = 0;
+  for (let row = 0; row < size; row++) {
+    for (let column = row + 1; column < size; column++) {
+      const value = upper[next] ?? Number.NaN;
+      next += 1;
+      values[row * size + column] = value;
+      values[column * size + row] = value;
+    }
+  }
+  return values;
+}
+
+/** A heatmap of Hudson's Fst between `names`, from the upper triangle. */
+function heatmapOf(
+  names: readonly string[],
+  upper: readonly number[],
+): HeatmapData {
+  return {
+    title: "Distances between populations",
+    description: `Hudson's Fst between ${String(names.length)} populations, for the tests.`,
+    xLabel: "",
+    yLabel: "",
+    names,
+    values: matrixOf(names.length, upper),
+    valueName: "Hudson's Fst",
+  };
+}
+
+/**
+ * Values between 0.02 and 0.2 for the `count` pairs of a larger matrix,
+ * by a linear congruential generator, so that every engine draws the same.
+ */
+function spread(count: number): number[] {
+  let state = 24680;
+  return Array.from({ length: count }, () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return 0.02 + 0.18 * (state / 2 ** 32);
+  });
+}
+
+/** The data of each kind of heatmap of the page. */
+function heatmapDataOf(kind: HeatmapKind): HeatmapData {
+  switch (kind) {
+    case "panel":
+      // Hudson's Fst of panel.nei and panel_pops.csv, the filter of
+      // missing data at 0.1, as popnei js-v0.1.0-dev.3 gives them
+      // (docs/specs/analyses/popDists.md): p2 and p0, p2 and p1, p0 and p1.
+      return heatmapOf(
+        ["p2", "p0", "p1"],
+        [0.10273588423661377, 0.10962148955018115, 0.10496244498389443],
+      );
+    case "split":
+      // The same with p0 split, panel_split.csv, in the order of the
+      // heatmap: p0b and p0a, p0b and p2 (given no value here), p0b and
+      // p1, p0a and p2, p0a and p1, p2 and p1.
+      return heatmapOf(
+        ["p0b", "p0a", "p2", "p1"],
+        [
+          -0.011276258310056011,
+          Number.NaN,
+          0.1020068488376186,
+          0.09917164096189776,
+          0.10284678759499101,
+          0.10962148955018115,
+        ],
+      );
+    case "long": {
+      const names = [
+        "Andes_highland_2019",
+        "Andes_lowland_valley_2020",
+        "Coastal_north_2018",
+        "Coastal_south_landrace",
+        "Mesoamerica_wild_A",
+        "Mesoamerica_wild_B_2021",
+        "Yucatan_peninsula_cultivar",
+        "Amazonia_basin_2017",
+      ];
+      return heatmapOf(names, spread((names.length * (names.length - 1)) / 2));
+    }
+    case "many":
+    case "most": {
+      const count = kind === "many" ? 40 : 200;
+      const names = Array.from(
+        { length: count },
+        (_v, at) => `pop${String(at + 1)}`,
+      );
+      return heatmapOf(names, spread((count * (count - 1)) / 2));
+    }
+  }
+}
+
 /** A plot of the page: its element and its handle. */
 type Drawn =
   | {
@@ -403,6 +506,12 @@ type Drawn =
       readonly kind: "scatter";
       readonly element: HTMLElement;
       readonly handle: ChartHandle<ScatterData>;
+    }
+  | {
+      readonly kind: "heatmap";
+      readonly element: HTMLElement;
+      readonly handle: ChartHandle<HeatmapData>;
+      readonly data: HeatmapData;
     }
   | {
       readonly kind: "pca3d";
@@ -435,6 +544,14 @@ function lastScatter(): Extract<Drawn, { kind: "scatter" }> {
   const plot = last();
   if (plot.kind !== "scatter") {
     throw new Error("popnei_web defect: the plot drawn last is no scatter.");
+  }
+  return plot;
+}
+
+function lastHeatmap(): Extract<Drawn, { kind: "heatmap" }> {
+  const plot = last();
+  if (plot.kind !== "heatmap") {
+    throw new Error("popnei_web defect: the plot drawn last is no heatmap.");
   }
   return plot;
 }
@@ -635,6 +752,48 @@ const page: PlotsPage = {
     }
     element.remove();
     return { create, createCall, highlight, highlightCall };
+  },
+  drawHeatmap(width, height, kind) {
+    const element = newElement(width, height, SCATTER_PADDING);
+    const data = heatmapDataOf(kind);
+    const handle = createHeatmap(element, data);
+    drawn = { kind: "heatmap", element, handle, data };
+    return handle;
+  },
+  heatmapCell(row, column) {
+    const { element, data } = lastHeatmap();
+    const style = getComputedStyle(element);
+    const padLeft = Number.parseFloat(style.paddingLeft);
+    const padTop = Number.parseFloat(style.paddingTop);
+    const margin = heatmapMargin(data);
+    const innerWidth =
+      element.clientWidth -
+      padLeft -
+      Number.parseFloat(style.paddingRight) -
+      margin.left -
+      margin.right;
+    const innerHeight =
+      element.clientHeight -
+      padTop -
+      Number.parseFloat(style.paddingBottom) -
+      margin.top -
+      margin.bottom;
+    const scale = heatmapScale(data.names, innerWidth, innerHeight);
+    const middle = (index: number): number => {
+      const name = data.names[index];
+      const start = name === undefined ? undefined : scale(name);
+      if (start === undefined) {
+        throw new Error(
+          `popnei_web defect: the heatmap has no name ${String(index)}.`,
+        );
+      }
+      return start + scale.bandwidth() / 2;
+    };
+    const box = element.getBoundingClientRect();
+    return {
+      x: box.left + padLeft + margin.left + middle(column),
+      y: box.top + padTop + margin.top + middle(row),
+    };
   },
   webgl() {
     const context = document.createElement("canvas").getContext("webgl2");

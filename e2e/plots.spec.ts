@@ -4,13 +4,18 @@
  * e2e/fixtures/panel.nei at the size a test sets
  * (docs/specs/charts/plot2d.md, "How it is verified"; histogram.md, the
  * legend at 320 pixels). No screen offers the export before stage 6, so
- * the tests call the handle through `page.evaluate`.
+ * the tests call the handle through `page.evaluate`. The scatter and the
+ * heatmap are drawn there too, for their pointer and their export.
  */
 
+import { readFile } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { PngScale } from "../src/charts/types.ts";
+import { test as withAxe } from "./axe.ts";
+import type { HeatmapKind } from "./plotsPage.ts";
 
 /** The fill of a kept bar in the light theme, --chart-bar, #0072b2. */
 const LIGHT_BAR = "rgb(0, 114, 178)";
@@ -1373,4 +1378,347 @@ test("IP7 D3 the times of the scatter of 9,381 points: from createScatter to the
       "",
     ].join("\n"),
   );
+});
+
+// ---------------------------------------------------------------------
+// The heatmap of the distances between populations
+// (docs/specs/charts/heatmap.md, "How it is verified", "In Playwright"):
+// what jsdom cannot see, the colours the exported file carries, where
+// the tooltip lands and where the names and the legend lie in the SVG.
+
+/**
+ * The colours of viridis of the steps of the Fst of panel.nei, 239, 245
+ * and 255, and of step 0, of interpolateViridis of d3-scale-chromatic
+ * 3.1.0, "#d5e21a", "#e5e419", "#fde725" and "#440154".
+ */
+const VIRIDIS_239 = "rgb(213, 226, 26)";
+const VIRIDIS_245 = "rgb(229, 228, 25)";
+const VIRIDIS_255 = "rgb(253, 231, 37)";
+const VIRIDIS_0 = "rgb(68, 1, 84)";
+/** The text over the cells, black and white in both themes. */
+const TEXT_ON_LIGHT = "rgb(0, 0, 0)";
+const TEXT_ON_DARK = "rgb(255, 255, 255)";
+
+/** The fonts of DejaVu Sans, the font of Ubuntu's runners, as wide as Verdana. */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text, and of the plots. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(
+        fileURLToPath(new URL(`fixtures/fonts/${file}`, import.meta.url)),
+      );
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** Draws the heatmap of `kind` in an element of `width` by `height`. */
+async function drawHeatmap(
+  page: Page,
+  width: number,
+  height: number,
+  kind: HeatmapKind,
+): Promise<void> {
+  await page.evaluate(
+    ([w, h, k]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.drawHeatmap(w, h, k);
+    },
+    [width, height, kind] as const,
+  );
+}
+
+/** Where the middle of a cell of the heatmap is in the viewport. */
+async function cellAt(page: Page, row: number, column: number): Promise<At> {
+  return page.evaluate(
+    ([r, c]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      return plots.heatmapCell(r, c);
+    },
+    [row, column] as const,
+  );
+}
+
+/** A text of the exported heatmap and the fill of its style. */
+interface FileText {
+  readonly text: string | null;
+  readonly fill: string;
+}
+
+/** What toSVG of the heatmap drawn last writes on its cells and texts. */
+interface HeatmapFile {
+  readonly hasVar: boolean;
+  readonly overlays: number;
+  readonly hovers: number;
+  /** Each path of cells: its fill attribute, and the fill of its style. */
+  readonly cells: {
+    readonly attribute: string | null;
+    readonly fill: string;
+  }[];
+  /** Each value in a cell. */
+  readonly texts: FileText[];
+  /** The stroke and the fill of the path of the cells with no value. */
+  readonly none: { readonly stroke: string; readonly fill: string } | null;
+  /** The fill of the style of each band of the legend, from the top. */
+  readonly bands: string[];
+  /** The texts of the legend. */
+  readonly legend: FileText[];
+}
+
+/** Calls toSVG of the heatmap drawn last, and reads the file. */
+async function heatmapFile(page: Page): Promise<HeatmapFile> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const text = plots.handle().toSVG();
+    const root = new DOMParser().parseFromString(
+      text,
+      "image/svg+xml",
+    ).documentElement;
+    // The value of `property` in the style written on `each`.
+    const styleOf = (each: Element, property: string): string =>
+      (each.getAttribute("style") ?? "")
+        .split(";")
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration.startsWith(`${property}:`))
+        .map((declaration) => declaration.slice(property.length + 1).trim())
+        .join("");
+    const none = root.querySelector("path.chart-cell-none");
+    return {
+      hasVar: text.includes("var("),
+      overlays: root.querySelectorAll(".chart-overlay").length,
+      hovers: root.querySelectorAll(".chart-hover").length,
+      cells: [...root.querySelectorAll("path.chart-cells")].map((path) => ({
+        attribute: path.getAttribute("fill"),
+        fill: styleOf(path, "fill"),
+      })),
+      texts: [...root.querySelectorAll("text.chart-cell-text")].map((each) => ({
+        text: each.textContent,
+        fill: styleOf(each, "fill"),
+      })),
+      none:
+        none === null
+          ? null
+          : { stroke: styleOf(none, "stroke"), fill: styleOf(none, "fill") },
+      bands: [...root.querySelectorAll("rect.chart-legend-band")]
+        .toSorted(
+          (a, b) => Number(a.getAttribute("y")) - Number(b.getAttribute("y")),
+        )
+        .map((band) => styleOf(band, "fill")),
+      legend: [...root.querySelectorAll("text.chart-legend-text")].map(
+        (each) => ({ text: each.textContent, fill: styleOf(each, "fill") }),
+      ),
+    };
+  });
+}
+
+test("PA4 D3 toSVG of the heatmap of panel.nei, from a dark page, has on each cell and band its colour of viridis, on each value its black or white, no var(, no overlay and no mark of the hover", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await openPlots(page);
+  await drawHeatmap(page, 640, 640, "panel");
+  const cell = await cellAt(page, 0, 2);
+  await page.mouse.move(cell.x, cell.y);
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
+
+  const panel = await heatmapFile(page);
+  expect(panel.hasVar).toBe(false);
+  expect(panel.overlays).toBe(0);
+  expect(panel.hovers).toBe(0);
+  expect(panel.cells).toEqual([
+    { attribute: "#d5e21a", fill: VIRIDIS_239 },
+    { attribute: "#e5e419", fill: VIRIDIS_245 },
+    { attribute: "#fde725", fill: VIRIDIS_255 },
+  ]);
+  expect(panel.texts).toHaveLength(6);
+  for (const each of panel.texts) expect(each.fill).toBe(TEXT_ON_LIGHT);
+  expect(panel.none).toBeNull();
+  expect(panel.bands).toHaveLength(32);
+  // The top band stands for the steps 248 to 255, the bottom one for 0
+  // to 7, each the colour of its middle step, 252 and 4, "#f6e620" and
+  // "#46075a".
+  expect(panel.bands[0]).toBe("rgb(246, 230, 32)");
+  expect(panel.bands[31]).toBe("rgb(70, 7, 90)");
+  expect(panel.legend).toEqual([
+    { text: "Hudson's Fst", fill: LIGHT_TEXT },
+    { text: "0.1096", fill: LIGHT_TEXT },
+    { text: "0.0000", fill: LIGHT_TEXT },
+  ]);
+
+  // The split panel: a negative pair in white on the colour of 0, and a
+  // pair with no value, outlined in the colour of the axes.
+  await drawHeatmap(page, 640, 640, "split");
+  const split = await heatmapFile(page);
+  expect(split.hasVar).toBe(false);
+  expect(split.cells[0]).toEqual({ attribute: "#440154", fill: VIRIDIS_0 });
+  expect(split.texts.filter((each) => each.text === "−0.0113")).toEqual([
+    { text: "−0.0113", fill: TEXT_ON_DARK },
+    { text: "−0.0113", fill: TEXT_ON_DARK },
+  ]);
+  expect(split.texts).toHaveLength(10);
+  expect(split.none).toEqual({ stroke: LIGHT_AXIS, fill: "none" });
+});
+
+withAxe(
+  "PA4 D3 the pointer on the cell of p2 and p1 outlines it and shows its tooltip beside its middle, Escape hides it, and axe finds nothing",
+  async ({ page, makeAxeBuilder }) => {
+    await openPlots(page);
+    await drawHeatmap(page, 640, 640, "panel");
+    const tooltip = page.locator(".chart-tooltip");
+    const cell = await cellAt(page, 0, 2);
+
+    await page.mouse.move(cell.x, cell.y);
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip.locator("div")).toHaveText([
+      "p2 and p1",
+      "Hudson's Fst 0.1096",
+    ]);
+    await expect(tooltip).toHaveAttribute("aria-hidden", "true");
+    const box = await tooltip.boundingBox();
+    if (box === null) throw new Error("The tooltip is not laid out.");
+    expect(box.x).toBeCloseTo(cell.x + TOOLTIP_OFFSET, 0);
+    expect(box.y).toBeCloseTo(cell.y + TOOLTIP_OFFSET, 0);
+    const outline = await page
+      .locator("#plots path.chart-hover")
+      .evaluate((path) => {
+        const style = getComputedStyle(path);
+        const rect = path.getBoundingClientRect();
+        return {
+          stroke: style.stroke,
+          width: style.strokeWidth,
+          x: rect.x + rect.width / 2,
+          y: rect.y + rect.height / 2,
+        };
+      });
+    expect(outline.stroke).toBe(LIGHT_TEXT);
+    expect(outline.width).toBe("2px");
+    expect(outline.x).toBeCloseTo(cell.x, 0);
+    expect(outline.y).toBeCloseTo(cell.y, 0);
+    expect(await makeAxeBuilder().analyze()).toHaveProperty("violations", []);
+
+    // The pointer moved onto the tooltip keeps it.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+      steps: 5,
+    });
+    await expect(tooltip).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tooltip).toBeHidden();
+    await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+
+    // The diagonal, the cell of p0 and p0, shows none.
+    const diagonal = await cellAt(page, 1, 1);
+    await page.mouse.move(diagonal.x, diagonal.y, { steps: 5 });
+    await expect(tooltip).toBeHidden();
+    expect(await makeAxeBuilder().analyze()).toHaveProperty("violations", []);
+  },
+);
+
+test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and left of the rows, and the legend, lie inside the SVG, each slanted name ending under its column", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await useWideFont(page);
+  await drawHeatmap(page, 640, 640, "long");
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    if (svg === null) throw new Error("The plot has no SVG.");
+    const frame = svg.getBoundingClientRect();
+    // left, top, right and bottom in the pixels of the SVG.
+    const boxOf = (each: Element): number[] => {
+      const rect = each.getBoundingClientRect();
+      return [
+        rect.left - frame.left,
+        rect.top - frame.top,
+        rect.right - frame.left,
+        rect.bottom - frame.top,
+      ];
+    };
+    const texts = (selector: string): Element[] => [
+      ...svg.querySelectorAll(selector),
+    ];
+    // Where the axis of the columns meets the middle of each column: the
+    // origin of its tick, which d3-axis translates there.
+    const origin = (each: Element): number[] => {
+      const tick = each.parentElement;
+      const matrix = tick instanceof SVGGElement ? tick.getScreenCTM() : null;
+      return matrix === null
+        ? [Number.NaN, Number.NaN]
+        : [matrix.e - frame.left, matrix.f - frame.top];
+    };
+    return {
+      width: frame.width,
+      height: frame.height,
+      font: getComputedStyle(svg).fontFamily,
+      columns: texts("g.chart-axis-x g.tick text").map((each) => ({
+        text: each.textContent,
+        box: boxOf(each),
+        origin: origin(each),
+      })),
+      rows: texts("g.chart-axis-y g.tick text").map((each) => ({
+        text: each.textContent,
+        box: boxOf(each),
+      })),
+      legend: texts("g.chart-legend text").map((each) => boxOf(each)),
+      values: texts("text.chart-legend-value").map((each) => boxOf(each)),
+      bars: texts("rect.chart-legend-band").map((each) => boxOf(each)),
+    };
+  });
+  expect(found.font).toContain("Wide test font");
+  const names = [
+    "Andes_highland_2019",
+    "Andes_lowland_valle…",
+    "Coastal_north_2018",
+    "Coastal_south_landr…",
+    "Mesoamerica_wild_A",
+    "Mesoamerica_wild_B_…",
+    "Yucatan_peninsula_c…",
+    "Amazonia_basin_2017",
+  ];
+  expect(found.columns.map((column) => column.text)).toEqual(names);
+  expect(found.rows.map((row) => row.text)).toEqual(names);
+  const inside = ([left, top, right, bottom]: number[]): boolean =>
+    left !== undefined &&
+    top !== undefined &&
+    right !== undefined &&
+    bottom !== undefined &&
+    left >= 0 &&
+    top >= 0 &&
+    right <= found.width &&
+    bottom <= found.height;
+  for (const { text, box } of [...found.columns, ...found.rows]) {
+    expect(inside(box), `${text} at ${box.join(", ")}`).toBe(true);
+  }
+  for (const box of found.legend) {
+    expect(inside(box), `legend at ${box.join(", ")}`).toBe(true);
+  }
+  // The two numbers of the legend start right of its bar.
+  const barRight = Math.max(...found.bars.map(([, , right = 0]) => right));
+  expect(found.values).toHaveLength(2);
+  for (const [left = 0] of found.values) {
+    expect(left).toBeGreaterThanOrEqual(barRight);
+  }
+  // A slanted name ends where its column meets the axis: its right edge
+  // within 8 pixels of the middle of the column, and its top from 0 to
+  // 12 pixels below the axis.
+  for (const { text, box, origin } of found.columns) {
+    const [, top = Number.NaN, right = Number.NaN] = box;
+    const [middle = Number.NaN, axis = Number.NaN] = origin;
+    expect(Math.abs(right - middle), `${text} across`).toBeLessThanOrEqual(8);
+    expect(top - axis, `${text} down`).toBeGreaterThanOrEqual(0);
+    expect(top - axis, `${text} down`).toBeLessThanOrEqual(12);
+  }
 });
