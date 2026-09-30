@@ -1338,9 +1338,19 @@ one pass over the file, reading the `File` by ranges
 (`docs/specs/worker/runner.md`, "The memory"), and from stage 5 two,
 one for each call, until popnei issue #4 is closed: a Run of the
 diversity reads the file, and decompresses a gzipped VCF, twice where
-stage 4 read it once, and the time it takes is measured by the plan of
-stage 5. The result of stage 5 is a few arrays more, of one
-number per population.
+stage 4 read it once. The plan of stage 5 measured it on 30 September
+2026 (`PA7 D3` of `e2e/measure.spec.ts`), on an Apple M5 Pro with the
+built site, five runs of each, each on a new page just after the load,
+with the default options, the first pass timed from the Run posted to the
+calculation worker to the first progress of the second, and the second
+from there to the answer. On the `.nei` file of 19,161,194 bytes, 20,000
+variants of 1,000 individuals, a Run took 257 ms in Chromium 153, a first
+pass of 136 and a second of 122, and 261 ms in WebKit 26.6, 139 and 123:
+one pass, as popnei issue #4 asks, would save the first, about half the
+Run. On `panel.nei` a Run took 19 ms in Chromium and 24 in WebKit, too
+short for its passes to be told apart by the progress, which a file this
+small gives once a pass. The result of stage 5 is a few arrays more, of
+one number per population.
 
 ### How it is verified
 
