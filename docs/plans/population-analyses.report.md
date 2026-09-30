@@ -111,6 +111,66 @@ and found no wrong result: for a move of code with nothing a user sees,
 four reviewers would have been enough, `architecture` and `tests`
 among them, which found what mattered.
 
+## 3. The distances between populations, in the worker and core
+
+Done as planned, in 019a180 (task 3.1), bd45140 (task 3.2), 7b1d928
+(task 3.3) and bbe5ddf (the fixes of the review). No screen shows the
+distances yet; work package 5 builds their panel.
+
+### The deliverables, on bbe5ddf
+
+1. `npx vitest run src/worker/messages.test.ts -t "PA3 D1"`: 21 passed,
+   where the plan asks at least 5.
+2. `npx vitest run src/worker -t "PA3 D2"`: 18 passed after the fixes,
+   at least 6 asked. Every Fst, D, count of variants and order of
+   `popDists.md` matched popnei to the last digit, the names "3", "1"
+   and "2" held pair by pair among them.
+3. `e2e/fixtures/panel_split.csv`: header `IID,popsplit`, 200 rows, 24
+   of `p0a` and 24 of `p0b`.
+4. `npx vitest run src/core -t "PA3 D4"`: 65 passed, at least 30 asked.
+5. `npx vitest run src/core/analyses/popDists.test.ts -t "PA3 D5"`: 19
+   passed, at least 14 asked; a `keyInputs` given the measure failed 2
+   of them.
+
+On a copy of bbe5ddf: format, types and lint pass; `npm test` "Tests
+3355 passed (3355)"; the browser check "1050 passed (4.5m)"; the page's
+first script 232.14 kB gzipped, against 229.89 kB on the start.
+
+The refusal of popnei's PCoA, which the spec calls `notPlaced`, is
+reached by no real matrix; a test file stands in for popnei and gives
+the runner made matrices, and the errors reviewer ran popnei's own PCoA
+on an infinite, a huge and a tiny distance and saw each refused as the
+application expects.
+
+### The review
+
+Six reviewers; none found a wrong or a stale result, and a population
+named `__proto__` works in the distances. Fixed in bbe5ddf:
+
+- Two rules of the runner that no test guarded: the count of variants
+  of each pair given to the right two populations, and a tie of the
+  PCoA broken by the order of the file, which popnei does give, on the
+  distances 0.3, 0.3 and 0.
+- Two branches of the warnings without a test: the owner's rule of
+  shares at 1%, and the advice to loosen the filters when they emptied
+  a population among several.
+- Two values that stood in for a case the code rules out, now defects;
+  a comment that called names places.
+- One writing of four decimals for the whole application, a value that
+  rounds to zero written "0.0000" as the PCA writes it, and one type
+  for the two measures.
+
+Put to you: points 10, 11 and 12 below. Gathered into task 6.7, added
+to the plan: the small rules the three analyses wrote each for itself.
+
+### How the work of 3 went, for whoever revises a skill or a plan
+
+Three writers, of about 260,000, 240,000 and 45,000 tokens, the fixes
+300,000; six reviewers about 690,000. The tests reviewer found both
+runner defects by breaking lines, as in work package 2, where the
+fixture's populations were alike: a skill of testing could ask for
+fixtures whose populations differ in every number a test reads.
+
 ## For the owner, as the work goes
 
 Points found during the work, each with its recommendation. None stops

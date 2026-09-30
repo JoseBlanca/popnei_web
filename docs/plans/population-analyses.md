@@ -592,7 +592,7 @@ a population under the minimum, and has its warnings and check numbers.
   the analyses whose `keptNeeds` locks (`store.md`); `countsOf` with
   their counts (`entry.md`; `filterCounts.md`). Not in `POPGEN_ANALYSES`
   until task 5.1. Serves 4. Needs 3.1 and work package 1.
-- [ ] 3.3 The key of the distances, `keyInputs`, and its tests, in a
+- [x] 3.3 The key of the distances, `keyInputs`, and its tests, in a
   commit of its own (`popDists.md`, "What goes into its key"): a key
   that held the measure would calculate again at each change of it.
   Serves 5. Needs 3.2.
@@ -874,7 +874,7 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   read with `Object.hasOwn` would crash a diversity with a population
   named `__proto__`, which ran in stages 3 and 4 (`runner.md`, step 7),
   so its test is part of this task. Serves 1, 2 and 8. Needs 3.1.
-- [ ] 6.2 The options: `parseOptions` with its three fields,
+- [x] 6.2 The options: `parseOptions` with its three fields,
   `diversityOptions`, `drawOf`, and the lock of the draw in `needs` and
   `keptNeeds` (`diversity.md`, the options of "What it does", "Why it
   cannot run" and "The TypeScript interface"); the doc comment of
@@ -890,7 +890,7 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   in a commit of its own (`diversity.md`, "What goes into its key"): a
   key that held the default draw would make every project file of stage
   4 leave its check numbers uncompared. Serves 5. Needs 6.2.
-- [ ] 6.5 `src/core/analyses/sfs.ts`: `spectraOf`, `spectraCsv` and
+- [x] 6.5 `src/core/analyses/sfs.ts`: `spectraOf`, `spectraCsv` and
   `spectrumWarnings` (`sfs.md`, "The module"). Serves 6. Needs 6.1; can
   run beside 6.2 and 6.4.
 - [ ] 6.6 First, in a commit of its own, the check numbers of the
