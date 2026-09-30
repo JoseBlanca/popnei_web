@@ -2452,8 +2452,8 @@ function isTableFrozen(table: IndividualsTable): boolean {
 }
 
 /** The name of an individual, the cell of the first column. The reader
-    refuses a row with no name, so a missing one is a defect. */
-function identifierOf(cell: Cell | undefined): string {
+    refuses a row with no name, so a missing one is a defect, thrown. */
+export function identifierOf(cell: Cell | undefined): string {
   if (cell === null || cell === undefined) {
     throw defect("a row of the individuals table has no individual.");
   }
@@ -2724,7 +2724,8 @@ export function loosenText(one: boolean): string {
  * whose lists that leave nobody the store locks on first with the words
  * of `keptNoneReason`; when some population keeps an individual; when the
  * individuals kept cannot be made, which the store locks on first; and
- * for a project of association.
+ * for a project of association, as the functions of the populations of
+ * stage 4 are.
  */
 export function populationListsNeeds(p: Project): string | null {
   const kept = individualsKept(p, null);
@@ -2744,7 +2745,8 @@ export function populationListsNeeds(p: Project): string | null {
  * in the words the owner decided at stop B on 27 September 2026, those of
  * `allEmptiedText`. `null` while the list is not known, when some
  * population keeps an individual, for the one population, and for a
- * project of association. A list that keeps no individual the store locks
+ * project of association, as the functions of the populations of stage 4
+ * are. A list that keeps no individual the store locks
  * on first, with the words of `keptNoneReason`, and never asks of this.
  */
 export function populationsKeptNeeds(
@@ -2765,8 +2767,10 @@ export function populationsKeptNeeds(
 
 /** The column the populations are taken from, or `null` when no column
     is chosen, for the one population, without a metadata file or with the
-    grouping `onePopulation`, and for a project of association. */
-function populationsColumnOf(p: Project): string | null {
+    grouping `onePopulation`, and for a project of association, whose
+    grouping has roles; an analysis per population, which is never given
+    one, throws its own defect on it. */
+export function populationsColumnOf(p: Project): string | null {
   switch (p.grouping.kind) {
     case "roles":
     case "onePopulation":

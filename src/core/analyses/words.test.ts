@@ -140,6 +140,30 @@ describe("PA1 D2 the warnings of the populations", () => {
     ]);
   });
 
+  test("with the words of the distances, a population left out for its size is in pops and is not named, and the name of the variants file is escaped", () => {
+    // The distances pass the populations of their result and those left
+    // out under the minimum, here B, which populationNotInResult does not
+    // name; D, with no individual kept, it does.
+    const base = project(["i1", "i2", "i3", "i4", "i7"]);
+    if (base.variants === null) {
+      throw new Error("the project of the test has a variants file");
+    }
+    const p = deepFreeze<Project>({
+      ...base,
+      variants: { ...base.variants, name: "a\tb.nei" },
+    });
+    expect(populationWarnings(["A", "B"], p, DISTANCES)).toEqual([
+      {
+        code: "individualsWithoutPopulation",
+        text: "1 individual of a\\tb.nei has no population, and is left out of the distances: i4. If it belongs to one, fill in its population in the metadata file and load it again.",
+      },
+      {
+        code: "populationNotInResult",
+        text: "Population D has no individual among the individuals of a\\tb.nei that the filters kept, so it is not in the distances.",
+      },
+    ]);
+  });
+
   test("gives none for the one population, without a metadata file and with the grouping onePopulation", () => {
     const withFile = project(["i1", "i2", "i4"]);
     const noFile = deepFreeze<Project>({ ...withFile, individuals: null });
@@ -170,6 +194,14 @@ describe("PA1 D2 the warnings of the populations", () => {
       grouping: { kind: "roles", roles: [] },
     });
     expect(() => populationWarnings([], roles, DIVERSITY)).toThrow(
+      "popnei_web defect:",
+    );
+    const rolesNoFile = deepFreeze<Project>({
+      ...roles,
+      app: "gwas",
+      individuals: null,
+    });
+    expect(() => populationWarnings([], rolesNoFile, DIVERSITY)).toThrow(
       "popnei_web defect:",
     );
   });

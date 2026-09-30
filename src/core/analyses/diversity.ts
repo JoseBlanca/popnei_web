@@ -27,6 +27,7 @@ import {
   namesOf,
   populationListsNeeds,
   populationsKept,
+  populationsColumnOf,
   populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
@@ -578,19 +579,14 @@ function optionsOf(p: Project): DiversityOptions {
   return read.value;
 }
 
-/** The column the populations are taken from, or `null` when no column
-    is chosen and for the one population, without a metadata file or with
-    the grouping `onePopulation`. Throws a defect on a project of
-    association, which has no diversity. */
+/** The column the populations are taken from, `populationsColumnOf` of
+    project.ts. Throws a defect on a project of association, which has no
+    diversity. */
 function populationsColumn(p: Project): string | null {
-  switch (p.grouping.kind) {
-    case "roles":
-      throw defect("the diversity was given a project of association.");
-    case "onePopulation":
-      return null;
-    case "populations":
-      return p.individuals === null ? null : p.grouping.column;
+  if (p.grouping.kind === "roles") {
+    throw defect("the diversity was given a project of association.");
   }
+  return populationsColumnOf(p);
 }
 
 /** The result as the diversity's own. Throws a defect on the result of

@@ -15,7 +15,6 @@ import {
   individualsNeeds,
   loadIndividuals,
   loadVariants,
-  populationListsNeeds,
   populationsKept,
   populationsKeptNeeds,
   populationsNeeds,
@@ -1675,10 +1674,11 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
 });
 
 describe("PA1 D1 the diversity locks with the shared functions of the populations", () => {
-  test("needs gives the reason of populationListsNeeds after that of the column, and keptNeeds is populationsKeptNeeds", () => {
+  test("needs gives the reason of the lists, that of populationListsNeeds, and keptNeeds is populationsKeptNeeds", () => {
     const p = filteredProject([{ kind: "keep", individuals: ["i4"] }]);
-    expect(diversity.needs(p)).toBe(populationListsNeeds(p));
-    expect(diversity.needs(p)).not.toBeNull();
+    expect(diversity.needs(p)).toBe(
+      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
+    );
     expect(diversity.keptNeeds).toBe(populationsKeptNeeds);
   });
 });

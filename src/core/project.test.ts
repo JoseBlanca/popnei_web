@@ -5041,6 +5041,14 @@ describe("IP4 D1 the populations", () => {
         }),
       ).toBeNull();
       expect(populationsNeeds(project)).toBeNull();
+      expect(populationListsNeeds(project)).toBeNull();
+      expect(
+        populationsKeptNeeds(project, {
+          list: { kind: "known", individuals: ["i4"] },
+          byLists: ["i1", "i2", "i3", "i4"],
+          counts: [],
+        }),
+      ).toBeNull();
     }
   });
 
@@ -5372,6 +5380,14 @@ describe("PA1 D1 the shared functions of the populations, moved from the module 
     expect(
       populationsKeptNeeds(popsProject(), knownKept(["i1", "i4"])),
     ).toBeNull();
+    // No individual of the variants file has a population, so there is no
+    // population to empty: the lock is populationsNeeds's, noPopulation.
+    expect(
+      populationsKeptNeeds(
+        popsProject({ individuals: ["i4"] }),
+        knownKept(["i4"]),
+      ),
+    ).toBeNull();
     expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
       "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
     );
@@ -5427,13 +5443,14 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
     ["A", ["a1", "a2"]],
     ["B", ["b1"]],
     ["C", ["c1", "c2", "c3"]],
+    ["D", ["d1"]],
   ]);
   const consequence = {
     one: "and is left out.",
     many: "and are left out.",
   };
 
-  test("populationsWithMinimum of A of 2, B of 1 and C of 3 individuals at a minimum of 2 gives A and C, and B with 1, in that order", () => {
+  test("populationsWithMinimum of A of 2, B of 1, C of 3 and D of 1 individuals at a minimum of 2 gives A and C, and B and D with 1, each in that order", () => {
     const { withMinimum, under } = populationsWithMinimum(pops, 2);
     expect(withMinimum).toEqual([
       ["A", ["a1", "a2"]],
@@ -5441,7 +5458,10 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
     ]);
     expect(withMinimum[0]).toBe(pops[0]);
     expect(withMinimum[1]).toBe(pops[2]);
-    expect(under).toEqual([["B", 1]]);
+    expect(under).toEqual([
+      ["B", 1],
+      ["D", 1],
+    ]);
   });
 
   test("populationsWithMinimum at a minimum of 0 gives every population, and none under it", () => {
@@ -5453,6 +5473,9 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
   test("underMinimumText of one population gives its count and the consequence of one", () => {
     expect(underMinimumText([["p3", 12]], 20, consequence)).toBe(
       "p3 has 12 individuals, fewer than the minimum of 20, and is left out.",
+    );
+    expect(underMinimumText([["p\t3", 12]], 20, consequence)).toBe(
+      "p\\t3 has 12 individuals, fewer than the minimum of 20, and is left out.",
     );
     expect(
       underMinimumText([["p3", 1]], 1_000, {

@@ -2,8 +2,9 @@
  * What the analyses share: the words of a refusal of popnei, which the
  * diversity and the three analyses of the Variants step give their error
  * states from; the two warnings of the populations of the analyses per
- * population (diversity.md, "The warnings"); the parsing of the options of an analysis that has none;
- * the description of a histogram with the threshold of its filter; and
+ * population (diversity.md, "The warnings"); the parsing of the options
+ * of an analysis that has none; the description of a histogram with the
+ * threshold of its filter; and
  * the cells of a CSV (docs/specs/analyses/diversity.md, "Its words";
  * individualChecks.md, "Its words"; variantChecks.md, "The states";
  * filterCounts.md, "The states"; docs/specs/charts/histogram.md, "The
@@ -14,7 +15,9 @@ import type { JsonObject } from "../keys.ts";
 import {
   counted,
   escaped,
+  identifierOf,
   namesOf,
+  populationsColumnOf,
   populationsToRun,
   saying,
   shown,
@@ -22,7 +25,6 @@ import {
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
-import type { Cell } from "../../worker/protocol.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
@@ -431,13 +433,18 @@ export interface PopulationWords {
 }
 
 /** individualsWithoutPopulation and populationNotInResult, in this
-    order, for the populations `pops` of a result and the project of its
-    request: "…, and are left out of ‹leftOutOf›: …" and "…, so it is not
-    in ‹notIn›."; none for the one population. A population none of whose
+    order, for the project of a request and `pops`, every population the
+    result accounts for, those left out for their size included: the
+    distances between populations pass the populations of their result and
+    those of its `leftOut` (popDists.md, "The warnings"), so a population
+    under the minimum is not named as one the filters emptied. The words:
+    "…, and are left out of ‹leftOutOf›: …" and "…, so it is not in
+    ‹notIn›."; none for the one population. A population none of whose
     individuals is in the variants file is named by neither, since a
     metadata file may hold the individuals of several panels. Throws a
     defect on a project whose variants file is not read, and on a project
-    of association. */
+    of association, which has no analysis per population, where the
+    functions of the populations of project.ts give null. */
 export function populationWarnings(
   pops: readonly string[],
   p: Project,
@@ -446,6 +453,11 @@ export function populationWarnings(
   const variants = p.variants;
   if (variants?.read.kind !== "read") {
     throw defect("the warnings of the populations need a variants file read.");
+  }
+  if (p.grouping.kind === "roles") {
+    throw defect(
+      "the warnings of the populations were asked of a project of association.",
+    );
   }
   const column = populationsColumnOf(p);
   if (column === null) {
@@ -478,23 +490,6 @@ export function populationWarnings(
   return found;
 }
 
-/** The column the populations are taken from, or `null` for the one
-    population, without a metadata file or with the grouping
-    `onePopulation`. Throws a defect on a project of association, which
-    has no analysis per population. */
-function populationsColumnOf(p: Project): string | null {
-  switch (p.grouping.kind) {
-    case "roles":
-      throw defect(
-        "the warnings of the populations were asked of a project of association.",
-      );
-    case "onePopulation":
-      return null;
-    case "populations":
-      return p.individuals === null ? null : p.grouping.column;
-  }
-}
-
 /** The individuals of the table whose cell in `column` is missing, who
     are in no population; none when the table is not read or has no such
     column. */
@@ -511,15 +506,6 @@ function unassignedOf(p: Project, column: string): ReadonlySet<string> {
           .filter((row) => row[index] === null)
           .map((row) => identifierOf(row[0])),
   );
-}
-
-/** The name of an individual, the cell of the first column. The reader
-    refuses a row with no name, so a missing one is a defect. */
-function identifierOf(cell: Cell | undefined): string {
-  if (cell === null || cell === undefined) {
-    throw defect("a row of the individuals table has no individual.");
-  }
-  return String(cell);
 }
 
 /** A number of a result in a CSV: as `String` writes it, or an empty cell
