@@ -469,9 +469,10 @@ and cost more wall time and no more tokens.
 
 ### How to try it
 
-In a terminal, in the worktree
-`/Users/jose/devel/popnei_web/.claude/worktrees/population-analyses`,
-run `npm run dev` and open the address it prints, then the population
+In a terminal, in the checkout made for this stop,
+`/Users/jose/devel/popnei_web/.claude/worktrees/stop-a`, which holds
+the branch at fe54787 and not the work that goes on meanwhile, run
+`npm run dev` and open the address it prints, then the population
 genetics application. Load `e2e/fixtures/panel.nei` in the Variants
 step and `e2e/fixtures/panel_pops.csv` in the Individuals step, with
 its column `popcat`; in the Analyses step, "Distances between
