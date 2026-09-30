@@ -4,7 +4,8 @@
  * columns, the rarefied ones naming the draw of the result, and the
  * download of the table as CSV with, beside it, the draw the rarefied
  * columns are of, which the headers of the CSV do not name, and the line
- * of the versions. The frame of `AnalysisPanel.tsx` draws the warnings
+ * of the versions; below them, the block of the spectrum of each
+ * population, `SpectrumBlock.tsx`. The frame of `AnalysisPanel.tsx` draws the warnings
  * above it, and gives the words of the comparison with the check numbers,
  * drawn under the table.
  */
@@ -21,6 +22,7 @@ import type { TableColumn } from "../../widgets/Table.tsx";
 import type { ResultsProps } from "../panels.ts";
 import { versionsText } from "../words.ts";
 import styles from "./DiversityResults.module.css";
+import { SpectrumBlock } from "./SpectrumBlock.tsx";
 import {
   captionText,
   csvName,
@@ -88,6 +90,7 @@ export function DiversityResults({
           {versionsText(popneiVersion, APP_VERSION)}
         </p>
       </div>
+      <SpectrumBlock result={result} variantsName={variantsName} />
     </div>
   );
 }

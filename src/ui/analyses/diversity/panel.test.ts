@@ -560,3 +560,154 @@ describe("PA7 D1 the diversity running, drawn by React", () => {
     expect(container.textContent).not.toContain("pass");
   });
 });
+
+/** The flow's result with the spectra of the worked example of sfs.md at
+    a draw of `n`: p0 with shares, p2 with one allele only in the draw,
+    and p1 not calculated. */
+function withSpectra(n: number): DiversityResult {
+  const numBins = Math.floor(n / 2) + 1;
+  const p0 = new Float64Array(numBins).fill(2);
+  p0[0] = 1;
+  const p2 = new Float64Array(numBins);
+  p2[0] = 3;
+  return {
+    ...flowResult(n),
+    numVarsInDraw: Uint32Array.from([5, 3, 0]),
+    foldedSfs: [p0, p2, null],
+  };
+}
+
+describe("PA7 D2 the block of the spectrum, drawn by React", () => {
+  test("its caption, a group per population named by its heading, one histogram for the population with shares, the lines of the others, and the line under them", () => {
+    draw(
+      createElement(DiversityResults, { result: withSpectra(4), check: null }),
+    );
+    expect(container.textContent).toContain(
+      "The folded site frequency spectrum of each population, in a draw of 4 of its chromosomes at each variant, over the 1,152 variants of panel.nei the filters kept.",
+    );
+    const groups = [...container.querySelectorAll('[role="group"]')];
+    expect(
+      groups.map(
+        (g) =>
+          document.getElementById(g.getAttribute("aria-labelledby") ?? "")
+            ?.textContent,
+      ),
+    ).toEqual(["p0", "p2", "p1"]);
+    expect(
+      [...container.querySelectorAll("h3")].map((h) => h.textContent),
+    ).toEqual(["p0", "p2", "p1"]);
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
+    expect(groups[0]?.querySelector("svg desc")?.textContent).toBe(
+      "The spectrum of p0: 5 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.5000, at 1.",
+    );
+    expect(groups[0]?.textContent).toContain(
+      "5 variants in the draw, about 4 of them with both alleles",
+    );
+    expect(groups[1]?.textContent).toContain(
+      "Every variant of p2 in the draw shows one allele only, so its spectrum has no bar.",
+    );
+    expect(groups[2]?.textContent).toContain(
+      "p1 has 68 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
+    );
+    expect(container.textContent).toContain(
+      "The last bar, 2, holds one count where the others hold two, such as 1 and 3",
+    );
+    expect(
+      [...container.querySelectorAll("button")].map((b) => b.textContent),
+    ).toContain("Download the spectrum as CSV");
+  });
+
+  test("the tab of the table shows a row per count and two columns per population calculated, and the histogram goes with its tab and comes back", () => {
+    draw(
+      createElement(DiversityResults, { result: withSpectra(4), check: null }),
+    );
+    const tabs = [...container.querySelectorAll('[role="tab"]')];
+    expect(tabs.map((t) => t.textContent)).toEqual(["Histograms", "Table"]);
+    const table = tabs[1];
+    if (!(table instanceof HTMLElement)) throw new Error("no tab of the table");
+    act(() => {
+      table.focus();
+    });
+    act(() => {
+      table.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      table.click();
+    });
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    const spectrum = [...container.querySelectorAll("table")].find((t) =>
+      t.textContent.includes("Copies of the rarer allele"),
+    );
+    expect(
+      [...(spectrum?.querySelectorAll("thead th") ?? [])].map(
+        (th) => th.textContent,
+      ),
+    ).toEqual([
+      "Copies of the rarer allele",
+      "p0, variants",
+      "p0, share",
+      "p2, variants",
+      "p2, share",
+    ]);
+    expect(
+      [...(spectrum?.querySelectorAll("tbody tr") ?? [])].map((row) =>
+        [...row.children].map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ["0", "1.0", "not drawn", "3.0", "not drawn"],
+      ["1", "2.0", "0.5000", "0.0", "no value"],
+      ["2", "2.0", "0.5000", "0.0", "no value"],
+    ]);
+  });
+
+  test("a draw of more bars than a histogram draws gives the line in their place, and the table stays", () => {
+    draw(
+      createElement(DiversityResults, {
+        result: withSpectra(2400),
+        check: null,
+      }),
+    );
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    expect(container.textContent).toContain(
+      "A draw of 2,400 chromosomes gives 1,200 bars per population, too many to draw. The table and the CSV hold them.",
+    );
+  });
+
+  test("the histogram leaves nothing behind when the result leaves the page", () => {
+    draw(
+      createElement(DiversityResults, { result: withSpectra(40), check: null }),
+    );
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
+    act(() => {
+      root.render(createElement("div"));
+    });
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+  });
+});
+
+describe("PA7 D2 the histograms of the spectrum share one vertical scale", () => {
+  test("each histogram's vertical axis runs to the largest share of any population, made round", () => {
+    // jsdom lays nothing out: the plots are given the size a browser
+    // would, which they read.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(448);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(336);
+    const r = withSpectra(4);
+    // p2 with shares 0.25 and 0.75, the largest of the two populations.
+    const p2 = Float64Array.from([1, 1, 3]);
+    draw(
+      createElement(DiversityResults, {
+        result: { ...r, foldedSfs: [r.foldedSfs[0] ?? null, p2, null] },
+        check: null,
+      }),
+    );
+    const tops = [...container.querySelectorAll("svg")].map((svg) =>
+      Math.max(
+        ...[...svg.querySelectorAll(".chart-axis-y .tick text")].map((t) =>
+          Number(t.textContent),
+        ),
+      ),
+    );
+    expect(tops).toHaveLength(2);
+    // 0.75, made round by the scale's `nice`, and not p0's own 0.5.
+    expect(tops[0]).toBeCloseTo(0.8, 10);
+    expect(tops[1]).toBeCloseTo(0.8, 10);
+  });
+});

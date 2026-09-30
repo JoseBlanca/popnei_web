@@ -1605,7 +1605,44 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      // The block of the spectrum under the table, a histogram for each
+      // of the three populations.
+      await expect(
+        diversityPanel(page).getByRole("group", { name: "p1" }).locator("svg"),
+      ).toBeVisible();
       await save(page, `popgen-diversity-done-${theme}`);
+    });
+
+    test("the diversity done, the table of the spectrum", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("tab", { name: "Table" }).click();
+      await expect(
+        diversityPanel(page).getByRole("columnheader", { name: "p0, share" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-table-${theme}`);
+    });
+
+    test("the diversity done, the warning of the MAF filter on the spectrum", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByLabel("Maximum major allele frequency", { exact: false }),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        diversityPanel(page).getByText(/^Warning: The MAF filter of the /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-maf-${theme}`);
     });
 
     test("the diversity done, with a warning", async ({ page }) => {
