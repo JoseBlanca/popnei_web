@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   DIVERSITY_DEFAULTS,
+  defaultDrawOf,
   diversity,
   diversityCsv,
   diversityOptions,
@@ -2842,5 +2843,69 @@ describe("PA6 D5 the key of stage 5", () => {
     expect(keyOfDiversity(withDiversity(p, 20, 60))).not.toBe(byDefault);
     // Set back: the options of the default again.
     expect(keyOfDiversity(withDiversity(p, 20, null))).toBe(byDefault);
+  });
+});
+
+describe("PA6 D4 the rows and the CSV of stage 5, each population its own numbers", () => {
+  /** A result whose six numbers of stage 5 differ in every population, so
+      that a row read from another population's place fails. */
+  const r: DiversityResult = {
+    ...FLOW_RESULT_STAGE_5,
+    fis: Float64Array.from([-0.01, -0.02, -0.03]),
+    numAllelesMean: Float64Array.from([1.1, 1.2, 1.3]),
+    numAllelesInDraw: Float64Array.from([1.01, 1.02, 1.03]),
+    privateAllelesTotal: Float64Array.from([3, 1, 2]),
+    privateAllelesMean: Float64Array.from([0.3, 0.1, 0.2]),
+    privateAllelesInDraw: Float64Array.from([0.03, 0.01, 0.02]),
+  };
+
+  test("diversityRows gives each population the numbers at its own place", () => {
+    expect(
+      diversityRows(r).map((row) => [
+        row.population,
+        row.f,
+        row.allelesPerVariant,
+        row.allelesPerVariantRarefied,
+        row.privateAlleles,
+        row.privateAllelesPerVariant,
+        row.privateAllelesPerVariantRarefied,
+      ]),
+    ).toEqual([
+      ["p0", -0.01, 1.1, 1.01, 3, 0.3, 0.03],
+      ["p2", -0.02, 1.2, 1.02, 1, 0.1, 0.01],
+      ["p1", -0.03, 1.3, 1.03, 2, 0.2, 0.02],
+    ]);
+  });
+
+  test("diversityCsv writes each population's numbers on its own row", () => {
+    expect(diversityCsv(r).split("\n").slice(1)).toEqual([
+      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,-0.01,1.1,1.01,3,0.3,0.03",
+      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,-0.02,1.2,1.02,1,0.1,0.01",
+      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,-0.03,1.3,1.03,2,0.2,0.02",
+      "",
+    ]);
+  });
+});
+
+describe("PA6 D3 the default draw", () => {
+  test("defaultDrawOf is the ploidy times the minimum, at least 2, whatever draw is typed, and drawOf gives it while none is", () => {
+    const p = project();
+    expect(defaultDrawOf(withDiversity(p, 20, null))).toBe(40);
+    expect(defaultDrawOf(withDiversity(p, 20, 60))).toBe(40);
+    expect(defaultDrawOf(withDiversity(p, 0, null))).toBe(2);
+    expect(drawOf(withDiversity(p, 0, null))).toBe(2);
+    expect(drawOf(withDiversity(p, 20, 60))).toBe(60);
+  });
+
+  test("defaultDrawOf is null while the variants file is not read", () => {
+    const p = project();
+    if (p.variants === null) {
+      throw new Error("the project of project() has a variants file");
+    }
+    const pending = deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { kind: "pending" } },
+    });
+    expect(defaultDrawOf(pending)).toBeNull();
   });
 });

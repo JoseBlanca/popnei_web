@@ -3529,3 +3529,97 @@ describe("PA6 D2 the runner's diversity of stage 5", () => {
     );
   });
 });
+
+describe("PA6 D2 the runner's diversity of stage 5, at other draws and minimums", () => {
+  // The numbers of popnei js-v0.1.0-dev.3 in node, 30 September 2026, by
+  // calcPopDiversity over panel.nei and the populations p0, p2 and p1 with
+  // the statistics the runner asks, at each draw and minimum.
+
+  test("a draw of 130, above the 96 chromosomes of p0: numVarsInDraw is popnei's inDraw and not withData, and the counts of every population are each their own", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      numCalledAlleles: 130,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012758486763376542, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [1.9775, 1.9866666666666666, 1.9808333333333332],
+      numAllelesInDraw: [NaN, 1.9853334175992314, 1.9794430186763494],
+      privateAllelesTotal: [0, 1, 0],
+      privateAllelesMean: [0, 0.0008333333333333334, 0],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 1200, 1027],
+      numVarsEveryPop: 1200,
+      numVarsEveryPopInDraw: 0,
+      numCalledAlleles: 130,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([66, 66, 66]);
+  });
+
+  test("a minimum of 46 reaches the second call: p0's F and the private alleles of 1,001 variants", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      minNumIndividuals: 46,
+    };
+    expect(job.popDiversityPops).toEqual(["p0", "p2", "p1"]);
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012034766430304433, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [
+        1.979020979020979, 1.9866666666666666, 1.9808333333333332,
+      ],
+      numAllelesInDraw: [
+        1.9639672902859708, 1.9597096939774163, 1.9588173095272452,
+      ],
+      privateAllelesTotal: [0, 0, 0],
+      privateAllelesMean: [0, 0, 0],
+      privateAllelesInDraw: [
+        0.0030310457247010817, 0.002306061734860746, 0.002943478707386431,
+      ],
+      numVarsInDraw: [1001, 1200, 1200],
+      numVarsEveryPop: 1001,
+      numVarsEveryPopInDraw: 1001,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("an odd draw, 41, gives spectra of 21 values, floor(41 / 2) + 1", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)]),
+      numCalledAlleles: 41,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([21, 21, 21]);
+    expect([...result.numAllelesInDraw]).toEqual([
+      1.9653614127402348, 1.9605319113532742, 1.9591501457278342,
+    ]);
+  });
+
+  test("the draw of 96 of diversity.md: the rarefied alleles, p0 in the draw at 277 variants, and 277 for every population", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)]),
+      numCalledAlleles: 96,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      numAllelesInDraw: [
+        1.9855595667870036, 1.981752674879213, 1.9779693674030254,
+      ],
+      privateAllelesInDraw: [
+        0.0000011386298901610201, 0.00031549574772689635, 7.803443099134099e-7,
+      ],
+      numVarsInDraw: [277, 1152, 1152],
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 277,
+      numCalledAlleles: 96,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([49, 49, 49]);
+  });
+});

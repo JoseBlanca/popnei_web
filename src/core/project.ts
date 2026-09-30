@@ -2930,6 +2930,11 @@ function individualsFileRefusalWords(
     first two and how many more, and gives no counts of each. */
 export const MAX_NAMED = 3;
 
+/** The largest whole number popnei takes for a minimum of individuals or
+    a draw, 2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's `arguments.ts`:
+    the bound of the options of the diversity and of the distances. */
+export const LARGEST_WHOLE_NUMBER = 4_294_967_295;
+
 /** Names in words, in their order: all of them when there are at most
     MAX_NAMED, "a, b and c"; otherwise the first two and how many more,
     "a, b and 10 more"; each escaped and cut, an empty one "an empty

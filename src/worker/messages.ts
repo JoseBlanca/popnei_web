@@ -21,6 +21,7 @@ import type {
   CsvOptions,
   DiversityJob,
   DiversityResult,
+  PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
   FilteringStats,
@@ -1758,22 +1759,6 @@ function checkDiversityResult(
     passStats: passStats.value,
   });
 }
-
-/** The fields of a diversity result that come from `calcPopDiversity`. */
-type PopDiversityFields = Pick<
-  DiversityResult,
-  | "fis"
-  | "numAllelesMean"
-  | "numAllelesInDraw"
-  | "privateAllelesTotal"
-  | "privateAllelesMean"
-  | "privateAllelesInDraw"
-  | "numVarsInDraw"
-  | "numVarsEveryPop"
-  | "numVarsEveryPopInDraw"
-  | "numCalledAlleles"
-  | "foldedSfs"
->;
 
 /**
  * The fields of a diversity result of `calcPopDiversity`, of `numPops`

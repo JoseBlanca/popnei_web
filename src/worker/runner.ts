@@ -56,6 +56,7 @@ import { SHOWN_MEASURES } from "./protocol.ts";
 import type {
   DiversityJob,
   DiversityResult,
+  PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
   FilteringStats,
@@ -1303,22 +1304,6 @@ function diversityResultOf(
   }
   return result;
 }
-
-/** The fields of a `DiversityResult` that `calcPopDiversity` gives. */
-type PopDiversityFields = Pick<
-  DiversityResult,
-  | "fis"
-  | "numAllelesMean"
-  | "numAllelesInDraw"
-  | "privateAllelesTotal"
-  | "privateAllelesMean"
-  | "privateAllelesInDraw"
-  | "numVarsInDraw"
-  | "numVarsEveryPop"
-  | "numVarsEveryPopInDraw"
-  | "numCalledAlleles"
-  | "foldedSfs"
->;
 
 /**
  * The fields of a `DiversityResult` that `calcPopDiversity` gives, every

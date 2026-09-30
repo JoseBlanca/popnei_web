@@ -445,6 +445,23 @@ export interface DiversityResult {
   readonly passStats: PassStats;
 }
 
+/** The fields of a `DiversityResult` that come from `calcPopDiversity`,
+    which the runner makes and `messages.ts` checks. */
+export type PopDiversityFields = Pick<
+  DiversityResult,
+  | "fis"
+  | "numAllelesMean"
+  | "numAllelesInDraw"
+  | "privateAllelesTotal"
+  | "privateAllelesMean"
+  | "privateAllelesInDraw"
+  | "numVarsInDraw"
+  | "numVarsEveryPop"
+  | "numVarsEveryPopInDraw"
+  | "numCalledAlleles"
+  | "foldedSfs"
+>;
+
 /** The request of the statistics of each individual, popnei's
     `calcPerIndividualStats`, over every variant and every individual of
     the file, with no filter (docs/specs/analyses/individualChecks.md). */

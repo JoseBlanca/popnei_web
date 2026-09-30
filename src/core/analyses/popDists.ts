@@ -34,6 +34,7 @@ import {
   populationsToRun,
   populationsWithMinimum,
   shown,
+  LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
   populationsByLists,
 } from "../project.ts";
@@ -85,11 +86,6 @@ export const POP_DISTS_DEFAULTS: {
   readonly minNumIndividuals: 20;
   readonly measure: "fst";
 } = Object.freeze({ minNumIndividuals: 20, measure: "fst" });
-
-/** The largest `minNumIndividuals` popnei's `calcPopDists` accepts,
-    2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's `arguments.ts`, the
-    diversity's bound too. */
-const MAX_MIN_NUM_INDIVIDUALS = 4_294_967_295;
 
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
@@ -204,7 +200,7 @@ function readOptions(options: unknown): Result<PopDistsOptions, string> {
     typeof minNumIndividuals !== "number" ||
     !Number.isInteger(minNumIndividuals) ||
     minNumIndividuals < 0 ||
-    minNumIndividuals > MAX_MIN_NUM_INDIVIDUALS ||
+    minNumIndividuals > LARGEST_WHOLE_NUMBER ||
     (measure !== "fst" && measure !== "dest")
   ) {
     return refused;

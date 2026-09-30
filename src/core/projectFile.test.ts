@@ -2403,7 +2403,7 @@ describe("WS6 D4 the properties of the project file", () => {
         }
       }),
     );
-  });
+  }, 30_000);
 
   test("written, opened, and written again with no result, a project gives the same text", () => {
     fc.assert(

@@ -35,7 +35,9 @@ import {
   populationsToRun,
   populationsWithMinimum,
   shown,
+  LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
+  bothOf,
   populationsByLists,
 } from "../project.ts";
 import type { Project } from "../project.ts";
@@ -107,11 +109,6 @@ interface DiversityOptions {
       them, or `null` for the default draw. */
   readonly numCalledAlleles: number | null;
 }
-
-/** The largest whole number popnei takes for `minNumIndividuals` and
-    `numCalledAlleles`, 2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's
-    `arguments.ts`. */
-const LARGEST_WHOLE_NUMBER = 4_294_967_295;
 
 /** The smallest draw popnei's `calcPopDiversity` takes. */
 const MIN_DRAW = 2;
@@ -373,18 +370,20 @@ export function diversityOptions(p: Project): DiversityOptions {
   return read.value;
 }
 
-/** The draw `run` sends: the one typed, or the ploidy of the variants
-    file times the minimum, at least 2, as the owner decided on 30
-    September 2026 (decision 5); `null` for the default while the
-    variants file is not read, whose ploidy is then not known. */
+/** The draw `run` sends: the one typed, or else `defaultDrawOf(p)`. */
 export function drawOf(p: Project): number | null {
-  const { minNumIndividuals, numCalledAlleles } = diversityOptions(p);
-  if (numCalledAlleles !== null) {
-    return numCalledAlleles;
-  }
+  return diversityOptions(p).numCalledAlleles ?? defaultDrawOf(p);
+}
+
+/** The default draw, whatever draw is typed: the ploidy of the variants
+    file times the minimum, at least 2, as the owner decided on 30
+    September 2026 (decision 5), which the panel shows beside a draw
+    typed; `null` while the variants file is not read, whose ploidy is
+    then not known. */
+export function defaultDrawOf(p: Project): number | null {
   const read = p.variants?.read;
   return read?.kind === "read"
-    ? Math.max(MIN_DRAW, read.ploidy * minNumIndividuals)
+    ? Math.max(MIN_DRAW, read.ploidy * diversityOptions(p).minNumIndividuals)
     : null;
 }
 
@@ -683,7 +682,7 @@ function tooFewText(
   }
   const counts =
     rows.length <= MAX_NAMED
-      ? `, ${listed(rows.map((row) => grouped(row.individuals)))}`
+      ? `, ${bothOf(rows.map((row) => grouped(row.individuals)))}`
       : "";
   return `Populations ${names} have fewer than ${grouped(min)} individuals${counts}, and ${rule}, so they have no values. To have them, merge each with another population ${end}`;
 }
@@ -811,11 +810,11 @@ function notInDrawFirst(
     return `${names} reach ${draw} called chromosomes at fewer than the variants at which they have a value, so their rarefied values are over those alone.`;
   }
   const withValue = pops.map((pop) => pop.withValue);
-  const counts = listed(pops.map(({ inDraw }) => grouped(inDraw)));
+  const counts = bothOf(pops.map(({ inDraw }) => grouped(inDraw)));
   const of = withValue.every((count) => count === withValue[0])
     ? `the ${grouped(first?.withValue ?? 0)} variants at which they have a value`
-    : `the ${listed(withValue.map(grouped))} variants at which each has a value`;
-  const shares = listed(
+    : `the ${bothOf(withValue.map(grouped))} variants at which each has a value`;
+  const shares = bothOf(
     pops.map(({ inDraw, withValue: all }) => percentOf(inDraw, all)),
   );
   return `${names} reach ${draw} called chromosomes at ${counts} of ${of} (${shares}), so their rarefied values are over those alone.`;
@@ -845,8 +844,8 @@ function withoutValueText(
   if (pops.length > MAX_NAMED) {
     return `${names} have a value at fewer than ${kept}; at the others fewer than ${grouped(min)} of their individuals have a genotype.`;
   }
-  const counts = listed(pops.map(({ withValue }) => grouped(withValue)));
-  const shares = listed(
+  const counts = bothOf(pops.map(({ withValue }) => grouped(withValue)));
+  const shares = bothOf(
     pops.map(({ withValue }) => percentOf(withValue, numVars)),
   );
   return `${names} have a value at ${counts} of ${kept} (${shares}); at the others fewer than ${grouped(min)} of their individuals have a genotype.`;
@@ -1021,12 +1020,4 @@ function valueAt(
     throw defect(`the result of the diversity has no ${name} at ${String(i)}.`);
   }
   return value;
-}
-
-/** Words in a list: "a, b and c". */
-function listed(words: readonly string[]): string {
-  const last = words.at(-1) ?? "";
-  return words.length < 2
-    ? last
-    : `${words.slice(0, -1).join(", ")} and ${last}`;
 }
