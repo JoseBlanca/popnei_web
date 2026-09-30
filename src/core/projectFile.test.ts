@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
+import { ldDecay } from "./analyses/ldDecay.ts";
+import { popDists } from "./analyses/popDists.ts";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import {
@@ -3307,5 +3309,81 @@ describe("IP10 D3 the cases of the project file", () => {
     expect(individualsNeeds(opening.value)).toBe(
       "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
     );
+  });
+});
+
+describe("PA6 D3 the options of the three analyses of the populations in a project file", () => {
+  /** The definitions of the application with the two analyses of stage 5
+      that `POPGEN_ANALYSES` does not list yet. */
+  const ANALYSES = [...POPGEN_ANALYSES, popDists, ldDecay];
+
+  /** The fixture with the diversity's options `diversityOptions`, and
+      those of the distances and of the LD decay. */
+  function withOptions(diversityOptions: unknown): string {
+    return JSON.stringify({
+      ...fixtureJson("v1-nei-diversity.popnei.json"),
+      analyses: [
+        { analysis: "diversity", options: diversityOptions },
+        {
+          analysis: "popDists",
+          options: { minNumIndividuals: 10, measure: "dest" },
+        },
+        {
+          analysis: "ldDecay",
+          options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+        },
+      ],
+    });
+  }
+
+  test("a file with a draw of 60 typed, the distances at 10 and dest, and the LD decay at 100000 and 0.9 opens with them", () => {
+    const opened = readProjectFile(
+      withOptions({
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        numCalledAlleles: 60,
+      }),
+      "popgen",
+      ANALYSES,
+    );
+    expect(opened.ok && opened.value.analyses).toEqual([
+      {
+        analysis: "diversity",
+        options: {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: 60,
+        },
+      },
+      {
+        analysis: "popDists",
+        options: { minNumIndividuals: 10, measure: "dest" },
+      },
+      {
+        analysis: "ldDecay",
+        options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+      },
+    ]);
+  });
+
+  test("the diversity's two options of before stage 5, with no draw, are refused with what they should be", () => {
+    expect(
+      readProjectFile(
+        withOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }),
+        "popgen",
+        ANALYSES,
+      ),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "project",
+        error: {
+          kind: "wrongValue",
+          path: ["analyses", 0, "options"],
+          expected:
+            "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else",
+        },
+      },
+    });
   });
 });

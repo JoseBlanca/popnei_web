@@ -15,6 +15,7 @@
  */
 
 import { individualsKept } from "../individualsKept.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
   ONE_POPULATION,
@@ -73,31 +74,48 @@ const DIVERSITY_WORDS: PopulationWords = Object.freeze({
 });
 
 /**
- * The two options of the diversity when the user has set none, popnei's
- * own defaults of `calcPerVarDistribs`: a variant has a value in a
+ * The three options of the diversity when the user has set none: popnei's
+ * own defaults of `calcPerVarDistribs`, a variant has a value in a
  * population only when at least 20 of its individuals have a called
  * genotype there, and is polymorphic when its commonest allele is below
- * 0.95.
+ * 0.95; and the default draw of the rarefaction, `null`, which `drawOf`
+ * makes from the ploidy of the variants file and the minimum.
  */
 export const DIVERSITY_DEFAULTS: {
   readonly minNumIndividuals: 20;
   readonly polyThreshold: 0.95;
-} = Object.freeze({ minNumIndividuals: 20, polyThreshold: 0.95 });
+  readonly numCalledAlleles: null;
+} = Object.freeze({
+  minNumIndividuals: 20,
+  polyThreshold: 0.95,
+  numCalledAlleles: null,
+});
 
-/** The two options of the diversity, as the module reads them. */
+/** The three options of the diversity, as the project holds them. */
 interface DiversityOptions {
+  /** How many individuals of a population need a called genotype at a
+      variant for the variant to have a value there. */
   readonly minNumIndividuals: number;
+  /** The frequency of the commonest allele below which a variant is
+      polymorphic in a population. */
   readonly polyThreshold: number;
+  /** The chromosomes of the draw of the rarefaction as the user typed
+      them, or `null` for the default draw. */
+  readonly numCalledAlleles: number | null;
 }
 
-/** The largest `minNumIndividuals` popnei's `calcPerVarDistribs` accepts,
-    2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's `arguments.ts`. */
-const MAX_MIN_NUM_INDIVIDUALS = 4_294_967_295;
+/** The largest whole number popnei takes for `minNumIndividuals` and
+    `numCalledAlleles`, 2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's
+    `arguments.ts`. */
+const LARGEST_WHOLE_NUMBER = 4_294_967_295;
+
+/** The smallest draw popnei's `calcPopDiversity` takes. */
+const MIN_DRAW = 2;
 
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
 const OPTIONS_EXPECTED =
-  "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
+  "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else";
 
 /** The rows of each result, so that a screen drawn again gets the same
     array. */
@@ -234,7 +252,7 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
   parseOptions,
   keyInputs,
   needs,
-  keptNeeds: populationsKeptNeeds,
+  keptNeeds,
   run,
   warnings,
   checkNumbers,
@@ -244,9 +262,10 @@ export const diversity: AnalysisDef<Job, JobResult> = Object.freeze({
 
 /**
  * Checks the options of the diversity read from a project file and gives
- * them back as an object of exactly the two fields: `minNumIndividuals`, a
- * whole number from 0 to 4,294,967,295, and `polyThreshold`, a number
- * from 0 to 1. Every version of the format reads them in the same way,
+ * them back as an object of exactly the three fields: `minNumIndividuals`,
+ * a whole number from 0 to 4,294,967,295; `polyThreshold`, a number from
+ * 0 to 1; and `numCalledAlleles`, `null` or a whole number from 2 to
+ * 4,294,967,295. Every version of the format reads them in the same way,
  * so the version the store passes is not read.
  */
 function parseOptions(options: unknown): Result<JsonObject, string> {
@@ -254,7 +273,7 @@ function parseOptions(options: unknown): Result<JsonObject, string> {
   return read.ok ? { ok: true, value: { ...read.value } } : read;
 }
 
-/** The two options read from `options`, or what they should be. */
+/** The three options read from `options`, or what they should be. */
 function readOptions(options: unknown): Result<DiversityOptions, string> {
   const refused = { ok: false, error: OPTIONS_EXPECTED } as const;
   if (
@@ -264,35 +283,74 @@ function readOptions(options: unknown): Result<DiversityOptions, string> {
   ) {
     return refused;
   }
-  const fields = Object.keys(options);
   if (
-    fields.length !== 2 ||
+    Reflect.ownKeys(options).length !== 3 ||
     !Object.hasOwn(options, "minNumIndividuals") ||
-    !Object.hasOwn(options, "polyThreshold")
+    !Object.hasOwn(options, "polyThreshold") ||
+    !Object.hasOwn(options, "numCalledAlleles")
   ) {
     return refused;
   }
   const minNumIndividuals: unknown = Reflect.get(options, "minNumIndividuals");
   const polyThreshold: unknown = Reflect.get(options, "polyThreshold");
+  const numCalledAlleles: unknown = Reflect.get(options, "numCalledAlleles");
   if (
-    typeof minNumIndividuals !== "number" ||
-    !Number.isInteger(minNumIndividuals) ||
-    minNumIndividuals < 0 ||
-    minNumIndividuals > MAX_MIN_NUM_INDIVIDUALS ||
+    !isWholeFrom(minNumIndividuals, 0) ||
     typeof polyThreshold !== "number" ||
     !Number.isFinite(polyThreshold) ||
     polyThreshold < 0 ||
-    polyThreshold > 1
+    polyThreshold > 1 ||
+    (numCalledAlleles !== null && !isWholeFrom(numCalledAlleles, MIN_DRAW))
   ) {
     return refused;
   }
-  return { ok: true, value: { minNumIndividuals, polyThreshold } };
+  return {
+    ok: true,
+    value: { minNumIndividuals, polyThreshold, numCalledAlleles },
+  };
+}
+
+/** Whether `value` is a whole number from `least` to 4,294,967,295. */
+function isWholeFrom(value: unknown, least: number): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= least &&
+    value <= LARGEST_WHOLE_NUMBER
+  );
+}
+
+/** The options of the project for the diversity, or `DIVERSITY_DEFAULTS`:
+    what the fields of the panel show and send back with
+    `setAnalysisOptions`. Throws a defect on options its `parseOptions`
+    would refuse, which no command puts into a project. */
+export function diversityOptions(p: Project): DiversityOptions {
+  const read = readOptions(analysisOptions(p, ID, DIVERSITY_DEFAULTS));
+  if (!read.ok) {
+    throw defect("the project holds options of the diversity it refuses.");
+  }
+  return read.value;
+}
+
+/** The draw `run` sends: the one typed, or the ploidy of the variants
+    file times the minimum, at least 2, as the owner decided on 30
+    September 2026 (decision 5); `null` for the default while the
+    variants file is not read, whose ploidy is then not known. */
+export function drawOf(p: Project): number | null {
+  const { minNumIndividuals, numCalledAlleles } = diversityOptions(p);
+  if (numCalledAlleles !== null) {
+    return numCalledAlleles;
+  }
+  const read = p.variants?.read;
+  return read?.kind === "read"
+    ? Math.max(MIN_DRAW, read.ploidy * minNumIndividuals)
+    : null;
 }
 
 /** What the key holds beyond the load and the filters: the populations of
     the table and the two options. Reads nothing of `p.variants`. */
 function keyInputs(p: Project): JsonObject {
-  const options = optionsOf(p);
+  const options = diversityOptions(p);
   return {
     pops: populationsOf(p),
     options: {
@@ -304,11 +362,12 @@ function keyInputs(p: Project): JsonObject {
 
 /** The first reason the diversity cannot run beyond those every analysis
     shares and the lists of individuals popnei would refuse, or `null`:
-    the individuals file, the column of the populations, and the lists
-    to keep and to remove leaving no population of a column; without a
-    metadata file, or with the grouping `onePopulation`, only the first
-    can lock. Throws a defect on a project of association whose
-    individuals file is read. */
+    the individuals file, the column of the populations, the lists to
+    keep and to remove leaving no population of a column, and, last, a
+    draw larger than the chromosomes of the individuals those lists keep;
+    without a metadata file, or with the grouping `onePopulation`, only
+    the first and the last can lock. Throws a defect on a project of
+    association whose individuals file is read. */
 function needs(p: Project): string | null {
   const reason = individualsNeeds(p);
   if (reason !== null) {
@@ -317,7 +376,85 @@ function needs(p: Project): string | null {
   if (p.grouping.kind === "roles") {
     throw defect("the diversity was given a project of association.");
   }
-  return populationsNeeds(p)?.reason ?? populationListsNeeds(p);
+  const populations = populationsNeeds(p)?.reason ?? populationListsNeeds(p);
+  const kept = individualsKept(p, null);
+  if (populations !== null || kept === null || p.variants === null) {
+    return populations;
+  }
+  // The lists took some individual of the file only when they keep fewer.
+  const listed =
+    p.variants.read.kind === "read" &&
+    kept.byLists.length < p.variants.read.individuals.length;
+  return listed
+    ? drawNeeds(
+        p,
+        kept.byLists,
+        "the lists of individuals keep",
+        ", or change the lists in the Variants step",
+      )
+    : drawNeeds(p, kept.byLists, `of ${escaped(p.variants.name)}`, "");
+}
+
+/**
+ * The reason the diversity cannot run for the individuals kept, `kept`,
+ * whose list is known and keeps some individual, or `null`: the list
+ * leaves no population, `populationsKeptNeeds`; or it holds fewer
+ * chromosomes than the draw of the rarefaction while some population of
+ * the request has the minimum of individuals, told only when the list is
+ * shorter than the individuals the lists to keep and to remove keep,
+ * which `needs` counts. `null` while the list is not known.
+ */
+function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+  const noPopulation = populationsKeptNeeds(p, kept);
+  if (noPopulation !== null) {
+    return noPopulation;
+  }
+  const list = kept.list.kind === "known" ? kept.list.individuals : null;
+  if (list === null || list.length >= kept.byLists.length) {
+    return null;
+  }
+  return drawNeeds(
+    p,
+    list,
+    "the filters of individuals keep",
+    ", or loosen the filters of individuals in the Variants step",
+  );
+}
+
+/**
+ * The reason of a draw larger than the chromosomes of `individuals`,
+ * which popnei refuses at the first range it reads of the second pass, or
+ * `null`; `null` too when no population of the request made of them has
+ * the minimum of individuals, since `calcPopDiversity` is then not
+ * called. `whose` says which individuals they are, after "the 45
+ * individuals", and `orElse` what else the user can do, after "in the
+ * options of the diversity".
+ */
+function drawNeeds(
+  p: Project,
+  individuals: readonly string[],
+  whose: string,
+  orElse: string,
+): string | null {
+  const read = p.variants?.read;
+  const draw = drawOf(p);
+  const left = populationsKept(p, individuals);
+  if (read?.kind !== "read" || draw === null || left === null) {
+    return null;
+  }
+  const chromosomes = individuals.length * read.ploidy;
+  const { withMinimum } = populationsWithMinimum(
+    left.pops,
+    diversityOptions(p).minNumIndividuals,
+  );
+  if (draw <= chromosomes || withMinimum.length === 0) {
+    return null;
+  }
+  const hold =
+    individuals.length === 1
+      ? `the one individual ${whose} holds`
+      : `the ${grouped(individuals.length)} individuals ${whose} hold`;
+  return `The rarefaction draws ${grouped(draw)} chromosomes, and ${hold} ${grouped(chromosomes)} at a ploidy of ${String(read.ploidy)}. Type a number of chromosomes of at most ${grouped(chromosomes)} in the options of the diversity${orElse}.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the
@@ -334,7 +471,11 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants.read.kind !== "read") {
     throw defect("the diversity was run before its variants file was read.");
   }
-  const options = optionsOf(p);
+  const options = diversityOptions(p);
+  const draw = drawOf(p);
+  if (draw === null) {
+    throw defect("the diversity was run with no draw.");
+  }
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
@@ -343,25 +484,12 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     pops: kept.pops,
     minNumIndividuals: options.minNumIndividuals,
     polyThreshold: options.polyThreshold,
-    numCalledAlleles: defaultDraw(
-      p.variants.read.ploidy,
-      options.minNumIndividuals,
-    ),
+    numCalledAlleles: draw,
     popDiversityPops: populationsWithMinimum(
       kept.pops,
       options.minNumIndividuals,
     ).withMinimum.map(([pop]) => pop),
   });
-}
-
-/** The smallest draw popnei's `calcPopDiversity` takes. */
-const MIN_DRAW = 2;
-
-/** The default draw of the rarefaction and of the spectrum: the ploidy of
-    the variants file times the minimum number of individuals, at least 2,
-    as the owner decided on 30 September 2026 (decision 5). */
-function defaultDraw(ploidy: number, minNumIndividuals: number): number {
-  return Math.max(MIN_DRAW, ploidy * minNumIndividuals);
 }
 
 /**
@@ -376,7 +504,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   if (p.variants?.read.kind !== "read") {
     throw defect("the warnings of the diversity need a variants file read.");
   }
-  const min = optionsOf(p).minNumIndividuals;
+  const min = diversityOptions(p).minNumIndividuals;
   const found: Warning[] = [];
   const rows = diversityRows(r);
   const toRun = populationsToRun(p) ?? [];
@@ -545,7 +673,7 @@ const NUMBERS_PER_POPULATION = 3;
  * populations, since it is asked only of an analysis that has run.
  */
 function script(p: Project): string {
-  const options = optionsOf(p);
+  const options = diversityOptions(p);
   return [
     ...scriptPops(p),
     "diversity = popnei.calc_per_var_distribs(",
@@ -590,17 +718,6 @@ function scriptPops(p: Project): readonly string[] {
     "pops = {pop: [i for i in names if i in kept] for pop, names in pops.items()}",
     "pops = {pop: names for pop, names in pops.items() if names}",
   ];
-}
-
-/** The options of the project for the diversity, or the defaults. Throws
-    a defect on options its `parseOptions` would refuse, which no command
-    puts into a project. */
-function optionsOf(p: Project): DiversityOptions {
-  const read = readOptions(analysisOptions(p, ID, DIVERSITY_DEFAULTS));
-  if (!read.ok) {
-    throw defect("the project holds options of the diversity it refuses.");
-  }
-  return read.value;
 }
 
 /** The column the populations are taken from, `populationsColumnOf` of

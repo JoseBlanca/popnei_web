@@ -3,11 +3,14 @@ import {
   DIVERSITY_DEFAULTS,
   diversity,
   diversityCsv,
+  diversityOptions,
   diversityRows,
+  drawOf,
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "../apps.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import {
@@ -37,6 +40,23 @@ import type {
   Outcome,
   Run,
 } from "../../worker/protocol.ts";
+
+/** What the options should be, the words of `parseOptions` for any
+    options it refuses. */
+const OPTIONS_EXPECTED =
+  "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else";
+
+/** The options the key holds for the defaults: the default draw is left
+    out of the key, since the load and the minimum fix it. */
+const KEY_OPTIONS = { minNumIndividuals: 20, polyThreshold: 0.95 };
+
+/** The `keptNeeds` of the diversity, which it has. */
+function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+  if (diversity.keptNeeds === undefined) {
+    throw new Error("the diversity has a keptNeeds");
+  }
+  return diversity.keptNeeds(p, kept);
+}
 
 const VARIANTS_ID = "00112233445566778899aabbccddeeff";
 const INDIVIDUALS_ID = "ffeeddccbbaa99887766554433221100";
@@ -284,7 +304,7 @@ describe("WS5 D1 the example and the reasons", () => {
         ["B", ["i2"]],
         ["C", ["i5"]],
       ],
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
     expect(diversity.checkNumbers(r)).toEqual([
       1000,
@@ -395,85 +415,6 @@ describe("WS5 D1 the example and the reasons", () => {
 });
 
 describe("WS5 D3 the rest of the module", () => {
-  const EXPECTED =
-    "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
-
-  test("parseOptions gives the defaults back", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }, 1),
-    ).toEqual({
-      ok: true,
-      value: { minNumIndividuals: 20, polyThreshold: 0.95 },
-    });
-  });
-
-  test("parseOptions takes a minNumIndividuals of 4,294,967,295", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 4_294_967_295, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({
-      ok: true,
-      value: { minNumIndividuals: 4_294_967_295, polyThreshold: 0.95 },
-    });
-  });
-
-  test("parseOptions refuses a missing field", () => {
-    expect(diversity.parseOptions({ minNumIndividuals: 20 }, 1)).toEqual({
-      ok: false,
-      error: EXPECTED,
-    });
-  });
-
-  test("parseOptions refuses a field more", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 20, polyThreshold: 0.95, stats: [] },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of 2.5", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 2.5, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of -1", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: -1, polyThreshold: 0.95 }, 1),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of 4,294,967,296", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 4_294_967_296, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a polyThreshold of 1.5", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 1.5 }, 1),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a polyThreshold that is a text", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 20, polyThreshold: "0.95" },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
   /** A project of one population, p0a, of the first 20 individuals, and
       its result with `withValue` of the 1,152 variants kept. */
   function p0a(withValue: number): {
@@ -972,13 +913,22 @@ describe("WS5 D2 the key", () => {
     const withOptions = (options: {
       readonly minNumIndividuals: number;
       readonly polyThreshold: number;
+      readonly numCalledAlleles: null;
     }): Project =>
       deepFreeze<Project>({
         ...base,
         analyses: [{ analysis: "diversity", options }],
       });
-    const fewer = withOptions({ minNumIndividuals: 10, polyThreshold: 0.95 });
-    const lower = withOptions({ minNumIndividuals: 20, polyThreshold: 0.9 });
+    const fewer = withOptions({
+      minNumIndividuals: 10,
+      polyThreshold: 0.95,
+      numCalledAlleles: null,
+    });
+    const lower = withOptions({
+      minNumIndividuals: 20,
+      polyThreshold: 0.9,
+      numCalledAlleles: null,
+    });
     expect(keyOfDiversity(fewer)).not.toBe(baseKey);
     expect(keyOfDiversity(lower)).not.toBe(baseKey);
   });
@@ -1019,7 +969,7 @@ describe("WS5 D2 the key", () => {
     const p = withVariantsUnreadable(emptyProject("popgen"));
     expect(diversity.keyInputs(p)).toEqual({
       pops: "all",
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
   });
 
@@ -1036,7 +986,7 @@ describe("WS5 D2 the key", () => {
     );
     expect(diversity.keyInputs(pending)).toEqual({
       pops: null,
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
   });
 });
@@ -1262,7 +1212,11 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
       analyses: [
         {
           analysis: "diversity",
-          options: { minNumIndividuals: 10, polyThreshold: 0.9 },
+          options: {
+            minNumIndividuals: 10,
+            polyThreshold: 0.9,
+            numCalledAlleles: null,
+          },
         },
       ],
     });
@@ -1379,16 +1333,14 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
   });
 
   test("parseOptions refuses a polyThreshold of -0.1 or NaN, and options that are null, without throwing", () => {
-    const expected =
-      "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
     for (const options of [
-      { minNumIndividuals: 20, polyThreshold: -0.1 },
-      { minNumIndividuals: 20, polyThreshold: NaN },
+      { minNumIndividuals: 20, polyThreshold: -0.1, numCalledAlleles: null },
+      { minNumIndividuals: 20, polyThreshold: NaN, numCalledAlleles: null },
       null,
     ]) {
       expect(diversity.parseOptions(options, 1)).toEqual({
         ok: false,
-        error: expected,
+        error: OPTIONS_EXPECTED,
       });
     }
   });
@@ -1677,12 +1629,19 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
 });
 
 describe("PA1 D1 the diversity locks with the shared functions of the populations", () => {
-  test("needs gives the reason of the lists, that of populationListsNeeds, and keptNeeds is populationsKeptNeeds", () => {
+  test("needs gives the reason of the lists, that of populationListsNeeds, and keptNeeds that of populationsKeptNeeds", () => {
     const p = filteredProject([{ kind: "keep", individuals: ["i4"] }]);
     expect(diversity.needs(p)).toBe(
       "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
     );
-    expect(diversity.keptNeeds).toBe(populationsKeptNeeds);
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i4"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    const reason = populationsKeptNeeds(project(), kept);
+    expect(reason).not.toBeNull();
+    expect(keptNeeds(project(), kept)).toBe(reason);
   });
 });
 
@@ -1749,7 +1708,7 @@ describe("IP4 D1 the one population", () => {
     expect(diversity.needs(p)).toBeNull();
     expect(diversity.keyInputs(p)).toEqual({
       pops: "all",
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
     const whole = recordingClient();
     diversity.run(p, whole.client);
@@ -2028,7 +1987,11 @@ describe("PA6 D3 the populations of calcPopDiversity and the default draw that r
       analyses: [
         {
           analysis: "diversity",
-          options: { minNumIndividuals, polyThreshold: 0.95 },
+          options: {
+            minNumIndividuals,
+            polyThreshold: 0.95,
+            numCalledAlleles: null,
+          },
         },
       ],
     });
@@ -2077,5 +2040,289 @@ describe("PA6 D3 the populations of calcPopDiversity and the default draw that r
         4,
       ],
     ]);
+  });
+});
+
+/** The project `p` with the options of the diversity: the minimum
+    `minNumIndividuals` and the draw `numCalledAlleles`, `null` for the
+    default. */
+function withDiversity(
+  p: Project,
+  minNumIndividuals: number,
+  numCalledAlleles: number | null,
+): Project {
+  return deepFreeze<Project>({
+    ...p,
+    analyses: [
+      {
+        analysis: "diversity",
+        options: { minNumIndividuals, polyThreshold: 0.95, numCalledAlleles },
+      },
+    ],
+  });
+}
+
+/** What `parseOptions` gives for options it refuses. */
+const REFUSED = { ok: false, error: OPTIONS_EXPECTED };
+
+describe("PA6 D3 parseOptions of the three options", () => {
+  test("gives the defaults back, the default draw as null, in a new object", () => {
+    const given = {
+      minNumIndividuals: 20,
+      polyThreshold: 0.95,
+      numCalledAlleles: null,
+    };
+    const read = diversity.parseOptions(given, 1);
+    expect(read).toStrictEqual({ ok: true, value: given });
+    expect(read.ok && read.value).not.toBe(given);
+    expect(diversity.parseOptions(DIVERSITY_DEFAULTS, 1)).toStrictEqual({
+      ok: true,
+      value: { ...DIVERSITY_DEFAULTS },
+    });
+  });
+
+  test("takes a minNumIndividuals of 0 and of 4,294,967,295", () => {
+    for (const minNumIndividuals of [0, 4_294_967_295]) {
+      const options = {
+        minNumIndividuals,
+        polyThreshold: 0.95,
+        numCalledAlleles: null,
+      };
+      expect(diversity.parseOptions(options, 1)).toStrictEqual({
+        ok: true,
+        value: options,
+      });
+    }
+  });
+
+  test("takes a numCalledAlleles of 2 and of 4,294,967,295", () => {
+    for (const numCalledAlleles of [2, 4_294_967_295]) {
+      const options = {
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        numCalledAlleles,
+      };
+      expect(diversity.parseOptions(options, 1)).toStrictEqual({
+        ok: true,
+        value: options,
+      });
+    }
+  });
+
+  test("refuses each field missing", () => {
+    for (const options of [
+      { polyThreshold: 0.95, numCalledAlleles: null },
+      { minNumIndividuals: 20, numCalledAlleles: null },
+      { minNumIndividuals: 20, polyThreshold: 0.95, stats: null },
+      // The draw inherited, not a field of its own.
+      Object.assign(Object.create({ numCalledAlleles: null }), {
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        stats: null,
+      }),
+    ]) {
+      expect(diversity.parseOptions(options, 1)).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a field more", () => {
+    expect(
+      diversity.parseOptions(
+        {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: null,
+          stats: [],
+        },
+        1,
+      ),
+    ).toStrictEqual(REFUSED);
+  });
+
+  test("refuses a minNumIndividuals of 2.5, of -1 and of 4,294,967,296", () => {
+    for (const minNumIndividuals of [2.5, -1, 4_294_967_296]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals, polyThreshold: 0.95, numCalledAlleles: null },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a polyThreshold of 1.5 and one that is a text", () => {
+    for (const polyThreshold of [1.5, "0.95"]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals: 20, polyThreshold, numCalledAlleles: null },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a numCalledAlleles of 1, 0, 2.5, 4,294,967,296, a text, and undefined", () => {
+    for (const numCalledAlleles of [
+      1,
+      0,
+      2.5,
+      4_294_967_296,
+      "40",
+      undefined,
+    ]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals: 20, polyThreshold: 0.95, numCalledAlleles },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses the two fields of stage 2 alone", () => {
+    expect(
+      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }, 1),
+    ).toStrictEqual(REFUSED);
+  });
+
+  test("diversityOptions gives the defaults of a project with no entry, and the entry of one with it", () => {
+    expect(diversityOptions(project())).toStrictEqual({
+      ...DIVERSITY_DEFAULTS,
+    });
+    expect(diversityOptions(withDiversity(project(), 10, 60))).toStrictEqual({
+      minNumIndividuals: 10,
+      polyThreshold: 0.95,
+      numCalledAlleles: 60,
+    });
+  });
+});
+
+describe("PA6 D3 the draw of drawOf and run", () => {
+  /** The project of the worked example with its variants file of ploidy
+      `ploidy`. */
+  function ofPloidy(ploidy: number): Project {
+    const p = project();
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { ...p.variants.read, ploidy } },
+    });
+  }
+
+  test("a draw typed, 7, is sent as typed whatever the minimum", () => {
+    for (const min of [1, 2, 20]) {
+      const { client, jobs } = recordingClient();
+      diversity.run(withDiversity(project(), min, 7), client);
+      expect(jobs.map((job) => job.numCalledAlleles)).toEqual([7]);
+    }
+  });
+
+  test("drawOf of ploidy 4 and the minimum 20 gives 80, and of ploidy 1 and the minimum 0 gives 2", () => {
+    expect(drawOf(ofPloidy(4))).toBe(80);
+    expect(drawOf(withDiversity(ofPloidy(1), 0, null))).toBe(2);
+  });
+
+  test("drawOf of the default follows the minimum, 20 at a minimum of 10 for diploids, and a draw typed does not", () => {
+    expect(drawOf(withDiversity(project(), 10, null))).toBe(20);
+    expect(drawOf(withDiversity(project(), 10, 60))).toBe(60);
+  });
+
+  test("drawOf of the default is null while the variants file is not read, and a draw typed is given", () => {
+    const p = project();
+    if (p.variants === null) {
+      throw new Error("the project of project() has a variants file");
+    }
+    const pending = deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { kind: "pending" } },
+    });
+    expect(drawOf(pending)).toBeNull();
+    expect(drawOf(withDiversity(pending, 20, 9))).toBe(9);
+  });
+});
+
+describe("PA6 D3 the lock of the draw", () => {
+  test("a draw of 9 over the 4 individuals of the variants file, 8 chromosomes, locks in needs with the words of no list", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 9))).toBe(
+      "The rarefaction draws 9 chromosomes, and the 4 individuals of panel.nei hold 8 at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+    );
+  });
+
+  test("a draw of 8 does not lock", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 8))).toBeNull();
+  });
+
+  test("with a list to remove i4 and a draw of 7, needs locks with the words of the lists", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "remove", individuals: ["i4"] }]),
+      2,
+      7,
+    );
+    expect(diversity.needs(p)).toBe(
+      "The rarefaction draws 7 chromosomes, and the 3 individuals the lists of individuals keep hold 6 at a ploidy of 2. Type a number of chromosomes of at most 6 in the options of the diversity, or change the lists in the Variants step.",
+    );
+  });
+
+  test("with no population of the minimum there is no lock: the default draw at 20, and a draw of 9 at 20", () => {
+    expect(diversity.needs(project())).toBeNull();
+    expect(diversity.needs(withDiversity(project(), 20, 9))).toBeNull();
+  });
+
+  test("the one population locks too, with no metadata file", () => {
+    const p = withDiversity(
+      deepFreeze<Project>({ ...project(), individuals: null }),
+      2,
+      9,
+    );
+    expect(diversity.needs(p)).toBe(
+      "The rarefaction draws 9 chromosomes, and the 4 individuals of panel.nei hold 8 at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+    );
+  });
+
+  test("keptNeeds with a threshold, the individuals kept i1 and i3 and a draw of 5, locks with the words of the filters", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      2,
+      5,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1", "i3"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(diversity.needs(p)).toBeNull();
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 5 chromosomes, and the 2 individuals the filters of individuals keep hold 4 at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds of one individual kept says the one individual", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      1,
+      3,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 3 chromosomes, and the one individual the filters of individuals keep holds 2 at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds leaves to needs the list null, a list as long as the lists keep, and a list not known", () => {
+    const p = withDiversity(project(), 2, 9);
+    const byLists = ["i1", "i2", "i3", "i4"];
+    for (const list of [
+      { kind: "known", individuals: null },
+      { kind: "known", individuals: byLists },
+      { kind: "needsStatistics" },
+    ] as const) {
+      expect(keptNeeds(p, { list, byLists, counts: [] })).toBeNull();
+    }
   });
 });
