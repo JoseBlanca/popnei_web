@@ -23,10 +23,26 @@ import type { Chart } from "./types.ts";
 export interface HistogramData extends PlotText {
   /** The edges of the bins, one more than the bins, finite and increasing. */
   readonly edges: Readonly<Float64Array>;
-  /** The count of each bin, from the left. */
-  readonly counts: Uint32Array;
+  /**
+   * The count of each bin, from the left: whole numbers, with vertical
+   * ticks at whole numbers only; or shares that are not whole, the folded
+   * spectrum of a population, finite and not negative, with the ticks the
+   * scale gives.
+   */
+  readonly counts: Uint32Array | Float64Array;
   /** The threshold of the filter beside the plot, or null for none. */
   readonly threshold: HistogramThreshold | null;
+  /**
+   * The top of the vertical axis before it is made round, at least the
+   * largest count, so that the histograms of several populations share one
+   * scale; the largest count when absent.
+   */
+  readonly yMax?: number;
+  /**
+   * Ticks at whole numbers on the horizontal axis, the copies of the rarer
+   * allele under bars centred on them from edges at the halves.
+   */
+  readonly xWholeNumbers?: boolean;
 }
 
 /**
@@ -59,7 +75,7 @@ export interface HistogramRow {
   readonly to: number;
   /** Whether the bin holds its upper edge: true for the last bin alone. */
   readonly toIncluded: boolean;
-  /** How many values the bin holds. */
+  /** How many values the bin holds, or its share for a spectrum. */
   readonly count: number;
   /** What the threshold does to the bin; null when there is no threshold. */
   readonly state: BinState | null;
@@ -109,8 +125,9 @@ function nextUp(value: number): number {
 /**
  * Throws an `Error`, a defect of the caller, for data the histogram
  * cannot draw by its contract: no bin, edges that are not one more than
- * the counts, an edge not finite or not above the one before, a
- * threshold that is not finite, or more than MAX_HISTOGRAM_BINS bins.
+ * the counts, an edge not finite or not above the one before, a count
+ * not finite or negative, a threshold that is not finite, a yMax not
+ * finite or below the largest count, or more than MAX_HISTOGRAM_BINS bins.
  */
 function checkHistogram(data: HistogramData): void {
   const numBins = data.counts.length;
@@ -140,6 +157,27 @@ function checkHistogram(data: HistogramData): void {
       );
     }
     before = edge;
+  }
+  let largest = 0;
+  for (const [index, count] of data.counts.entries()) {
+    if (!Number.isFinite(count) || count < 0) {
+      throw new Error(
+        `popnei_web defect: the count ${String(index)} of a histogram is ${String(count)}, not a finite number at least 0.`,
+      );
+    }
+    largest = Math.max(largest, count);
+  }
+  if (data.yMax !== undefined) {
+    if (!Number.isFinite(data.yMax)) {
+      throw new Error(
+        `popnei_web defect: the yMax of a histogram is ${String(data.yMax)}, not a finite number.`,
+      );
+    }
+    if (data.yMax < largest) {
+      throw new Error(
+        `popnei_web defect: the yMax of a histogram, ${String(data.yMax)}, is below the largest count, ${String(largest)}.`,
+      );
+    }
   }
   if (data.threshold !== null && !Number.isFinite(data.threshold.value)) {
     throw new Error(
@@ -209,7 +247,7 @@ export function histogramRows(data: HistogramData): HistogramRow[] {
 export interface HistogramScales {
   /** The statistic, from the first edge to the last, widened to take the threshold. */
   readonly x: ScaleLinear<number, number>;
-  /** The count, from 0 to the largest count made round, or to 1 when every count is 0. */
+  /** The count, from 0 to yMax or the largest count made round, or to 1 when that is 0. */
   readonly y: ScaleLinear<number, number>;
 }
 
@@ -217,9 +255,9 @@ export interface HistogramScales {
  * The scales of a histogram drawn over `innerWidth` by `innerHeight`,
  * whose data the check has accepted. The horizontal one runs from the
  * first edge to the last, and further to take a threshold outside them,
- * so that its line is always drawn; the vertical one from 0 to the
- * largest count, made round by `nice`, and from 0 to 1 when every count
- * is 0.
+ * so that its line is always drawn; the vertical one from 0 to yMax, or
+ * to the largest count when there is none, made round by `nice`, and
+ * from 0 to 1 when that top is 0.
  */
 export function histogramScales(
   data: HistogramData,
@@ -233,9 +271,9 @@ export function histogramScales(
     high = Math.max(high, data.threshold.value);
   }
   const x = scaleLinear().domain([low, high]).range([0, innerWidth]);
-  const largest = Math.max(...data.counts);
+  const top = data.yMax ?? Math.max(...data.counts);
   const y = scaleLinear()
-    .domain([0, largest > 0 ? largest : 1])
+    .domain([0, top > 0 ? top : 1])
     .range([innerHeight, 0])
     .nice();
   return { x, y };
@@ -394,7 +432,10 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
     .select("text")
     .text((row) => row.text);
 
-  frame.axes(x, y, { yWholeNumbers: true });
+  frame.axes(x, y, {
+    yWholeNumbers: data.counts instanceof Uint32Array,
+    xWholeNumbers: data.xWholeNumbers === true,
+  });
 }
 
 /** The definition of the histogram, which the base of the 2D plots draws. */
@@ -411,8 +452,9 @@ const histogramDefinition: Plot2dDefinition<HistogramData> = {
  *
  * Throws an `Error`, a defect of the caller, here and in `update`, for no
  * bin, edges that are not one more than the counts, an edge not finite or
- * not above the one before, a threshold that is not finite, and more than
- * MAX_HISTOGRAM_BINS bins.
+ * not above the one before, a count not finite or negative, a threshold
+ * that is not finite, a yMax not finite or below the largest count, and
+ * more than MAX_HISTOGRAM_BINS bins.
  */
 export const createHistogram: Chart<HistogramData> = (element, data) =>
   createPlot2d(element, data, histogramDefinition);
