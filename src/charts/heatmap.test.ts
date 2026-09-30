@@ -600,6 +600,52 @@ describe("PA4 D2 the heatmap under jsdom, the cell under the pointer", () => {
     expect(element.querySelector("path.chart-hover")).toBeNull();
   });
 
+  test("a mouse that leaves the plot onto the page hides the tooltip and the outline; one that leaves onto the tooltip keeps them", () => {
+    const element = sizedElement(640, 640);
+    createHeatmap(element, panel());
+    const [x, y] = middleOf(0, 2);
+    const outside = document.createElement("p");
+    document.body.append(outside);
+    const leave = (to: EventTarget | null): void => {
+      overlayOf(element).dispatchEvent(
+        new PointerEvent("pointerleave", {
+          pointerType: "mouse",
+          relatedTarget: to,
+        }),
+      );
+    };
+    moveTo(element, x, y);
+    const tooltip = element.querySelector("div.chart-tooltip");
+    leave(tooltip);
+    expect(tooltipText(element)).toEqual(["p2 and p1", "Hudson's Fst 0.1096"]);
+    expect(element.querySelector("path.chart-hover")).not.toBeNull();
+    leave(outside);
+    expect(tooltipText(element)).toBeNull();
+    expect(element.querySelector("path.chart-hover")).toBeNull();
+  });
+
+  test("a tap on a cell shows its tooltip, and the finger lifted from the screen keeps it", () => {
+    const element = sizedElement(640, 640);
+    createHeatmap(element, panel());
+    const [x, y] = middleOf(1, 2);
+    overlayOf(element).dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerType: "touch",
+        clientX: x,
+        clientY: y,
+        bubbles: true,
+      }),
+    );
+    expect(tooltipText(element)).toEqual(["p0 and p1", "Hudson's Fst 0.1050"]);
+    overlayOf(element).dispatchEvent(
+      new PointerEvent("pointerleave", {
+        pointerType: "touch",
+        relatedTarget: null,
+      }),
+    );
+    expect(tooltipText(element)).toEqual(["p0 and p1", "Hudson's Fst 0.1050"]);
+  });
+
   test("destroy removes the tooltip with the SVG, and a second destroy throws nothing", () => {
     const element = sizedElement(640, 640);
     const handle = createHeatmap(element, panel());

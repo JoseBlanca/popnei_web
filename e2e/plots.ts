@@ -602,6 +602,15 @@ function ldCurveAt(
 /** The data of each kind of line plot of the page. */
 function lineDataOf(kind: LineKind): LineData {
   switch (kind) {
+    case "oneMark": {
+      const ld = lineDataOf("ld");
+      return {
+        ...ld,
+        series: ld.series.map((series, at) =>
+          at === 0 ? series : { ...series, marks: [] },
+        ),
+      };
+    }
     case "ld":
       return {
         title: "LD decay",
@@ -980,6 +989,15 @@ const page: PlotsPage = {
     const handle = createLine(element, lineDataOf(kind));
     drawn = { kind: "line", element, handle };
     return handle;
+  },
+  lineUpdate(kind) {
+    const plot = last();
+    if (plot.kind !== "line") {
+      throw new Error(
+        "popnei_web defect: the plot drawn last is no line plot.",
+      );
+    }
+    plot.handle.update(lineDataOf(kind));
   },
   webgl() {
     const context = document.createElement("canvas").getContext("webgl2");

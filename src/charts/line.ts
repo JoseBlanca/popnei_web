@@ -22,6 +22,7 @@ import {
   groupMark,
   groupSymbol,
   isOutlined,
+  NO_GROUP,
   PATH_DIGITS,
   SYMBOL_AREA,
   symbolPath,
@@ -58,7 +59,8 @@ export interface LineSeries {
   readonly label: string;
   /**
    * Its group for the colour and the shape, by the rule of the scatter:
-   * a whole number from 0, one series per group.
+   * a whole number from 0, one series per mark: groups 0 and 49 have one
+   * colour and one shape, and are refused together.
    */
   readonly group: number;
   /** Drawn one mark each; a point with NaN, or outside the ranges, skipped. */
@@ -125,7 +127,8 @@ function checkXY(what: string, xy: XY): void {
  * Throws an `Error`, a defect of the caller, for data the line plot cannot
  * draw by its contract: a range whose ends are not finite or not in
  * order; points or a line whose two arrays differ in length; a group that
- * is not a whole number from 0, or two series of one group; more than
+ * is not a whole number from 0, or two series of one mark, colour and
+ * shape, as groups 0 and 49 are; more than
  * MAX_LINE_SERIES series; and more than MAX_SVG_POINTS points and
  * positions of lines together.
  */
@@ -137,7 +140,9 @@ function checkLine(data: LineData): void {
       `popnei_web defect: a line plot was given ${String(data.series.length)} series, more than the ${String(MAX_LINE_SERIES)} it draws.`,
     );
   }
-  const groups = new Set<number>();
+  // The mark of each series, its colour and its symbol, or the ring of
+  // NO_GROUP: groups 0 and 49 are both orange circles.
+  const marks = new Map<string, number>();
   let numPositions = 0;
   for (const series of data.series) {
     const { group } = series;
@@ -146,12 +151,17 @@ function checkLine(data: LineData): void {
         `popnei_web defect: the series "${series.label}" of a line plot is of group ${String(group)}, not a whole number from 0.`,
       );
     }
-    if (groups.has(group)) {
+    const mark =
+      group === NO_GROUP
+        ? "none"
+        : `${String(groupMark(group).colour)}-${String(groupMark(group).symbol)}`;
+    const other = marks.get(mark);
+    if (other !== undefined) {
       throw new Error(
-        `popnei_web defect: two series of a line plot are of group ${String(group)}, and would be drawn alike.`,
+        `popnei_web defect: two series of a line plot, of the groups ${String(other)} and ${String(group)}, have one colour and one shape, and would be drawn alike.`,
       );
     }
-    groups.add(group);
+    marks.set(mark, group);
     checkXY(`points of the series "${series.label}"`, series.points);
     numPositions += series.points.x.length;
     if (series.line !== null) {
@@ -210,17 +220,27 @@ function marksPaths(
     const key = String(group);
     if (series.line !== null) {
       const { x: lineX, y: lineY } = series.line;
-      const at = (index: number): [number, number] => [
-        lineX[index] ?? Number.NaN,
-        lineY[index] ?? Number.NaN,
-      ];
+      // The pixels of each position; NaN where a value is not finite, or
+      // scales beyond the numbers a pixel can be, 1e308 on an axis of 0
+      // to 1, which would write "Infinity" into the path and stop the
+      // browser drawing the rest of it.
+      const at = (index: number): [number, number] => {
+        const valueX = lineX[index];
+        const valueY = lineY[index];
+        if (valueX === undefined || valueY === undefined) {
+          throw new Error(
+            `popnei_web defect: the line of the series "${series.label}" has no position ${String(index)}.`,
+          );
+        }
+        return [x(valueX), y(valueY)];
+      };
       const d = shape
         .defined((index) => {
-          const [valueX, valueY] = at(index);
-          return Number.isFinite(valueX) && Number.isFinite(valueY);
+          const [pixelX, pixelY] = at(index);
+          return Number.isFinite(pixelX) && Number.isFinite(pixelY);
         })
-        .x((index) => x(at(index)[0]))
-        .y((index) => y(at(index)[1]))(
+        .x((index) => at(index)[0])
+        .y((index) => at(index)[1])(
         Array.from({ length: lineX.length }, (_each, index) => index),
       );
       if (d !== null && d !== "") {
@@ -242,7 +262,12 @@ function marksPaths(
     let drawn = false;
     const symbol = groupSymbol(group);
     for (const [index, valueX] of series.points.x.entries()) {
-      const valueY = series.points.y[index] ?? Number.NaN;
+      const valueY = series.points.y[index];
+      if (valueY === undefined) {
+        throw new Error(
+          `popnei_web defect: the points of the series "${series.label}" have no value up at ${String(index)}.`,
+        );
+      }
       if (!within(valueX, data.xDomain) || !within(valueY, data.yDomain)) {
         continue;
       }
@@ -401,7 +426,8 @@ const lineDefinition: Plot2dDefinition<LineData> = {
  * Throws an `Error`, a defect of the caller, here and in `update`, for a
  * range whose ends are not finite or not in order; for points or a line
  * whose two arrays differ in length; for a group that is not a whole
- * number from 0, and for two series of one group; for more than
+ * number from 0, and for two series of one mark, colour and shape, as
+ * groups 0 and 49 are; for more than
  * MAX_LINE_SERIES series; and for more than MAX_SVG_POINTS points and
  * positions of lines together.
  */

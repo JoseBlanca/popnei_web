@@ -59,10 +59,11 @@ export type HeatmapKind = "panel" | "split" | "long" | "many" | "most";
  * The data of a line plot of the page: `ld`, the LD decay of
  * e2e/fixtures/ld.nei in pop_a and pop_b, groups 0 and 1, orange and sky
  * blue, each with the mean r² of its 50 bins, its fitted curve and a mark
- * at its half distance; `noCasing`, four series of the groups 2, 4, 5
- * and 6, whose lines have no casing.
+ * at its half distance; `oneMark`, the same with the mark of pop_a
+ * alone; `noCasing`, four series of the groups 2, 4, 5 and 6, whose lines
+ * have no casing.
  */
-export type LineKind = "ld" | "noCasing";
+export type LineKind = "ld" | "oneMark" | "noCasing";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -163,6 +164,8 @@ export interface PlotsPage {
     height: number,
     kind: LineKind,
   ): ChartHandle<LineData>;
+  /** Gives the line plot drawn last the data of `kind` by its `update`. */
+  lineUpdate(kind: LineKind): void;
   /** The data of the 3D plot drawn last. */
   pca3dData(): Pca3dData;
   /** Draws the 3D plot again with `highlighted` as the legend's highlight. */

@@ -164,6 +164,20 @@ export function axisName(name: string): string {
     : `${characters.slice(0, NAME_WHOLE - 1).join("")}${ELLIPSIS}`;
 }
 
+/**
+ * Where the band of `name` starts, in pixels of the frame; throws an
+ * `Error`, a defect, for a name that is not one of the scale's.
+ */
+function bandStart(scale: ScaleBand<string>, name: string): number {
+  const start = scale(name);
+  if (start === undefined) {
+    throw new Error(
+      `popnei_web defect: the heatmap has no band of the name ${JSON.stringify(name)}.`,
+    );
+  }
+  return start;
+}
+
 /** The value of the cell of row `row` and column `column`. */
 function valueAt(data: HeatmapData, row: number, column: number): number {
   const value = data.values[row * data.names.length + column];
@@ -402,10 +416,10 @@ function drawCells(
   let hasNone = false;
   const texts: CellText[] = [];
   for (const [row, rowName] of names.entries()) {
-    const top = scale(rowName) ?? 0;
+    const top = bandStart(scale, rowName);
     for (const [column, columnName] of names.entries()) {
       if (row === column) continue;
-      const left = scale(columnName) ?? 0;
+      const left = bandStart(scale, columnName);
       const value = valueAt(data, row, column);
       if (!Number.isFinite(value)) {
         none.rect(left, top, width, width);
@@ -432,12 +446,12 @@ function drawCells(
       }
     }
   }
-  const paths: CellsPath[] = [...steps.keys()]
-    .toSorted((a, b) => a - b)
-    .map((step) => ({
+  const paths: CellsPath[] = [...steps.entries()]
+    .toSorted(([a], [b]) => a - b)
+    .map(([step, path]) => ({
       key: String(step),
       fill: viridisColour(step),
-      d: steps.get(step)?.toString() ?? "",
+      d: path.toString(),
     }));
 
   // The cells under the path of none and under the values, which the
@@ -624,8 +638,8 @@ export const createHeatmap: Chart<HeatmapData> = (element, data) => {
     const value = valueAt(drawn.data, cell.row, cell.column);
     hovered = cell;
     dismissed = null;
-    const left = drawn.scale(columnName) ?? 0;
-    const top = drawn.scale(rowName) ?? 0;
+    const left = bandStart(drawn.scale, columnName);
+    const top = bandStart(drawn.scale, rowName);
     const width = drawn.scale.bandwidth();
     const outline = pathRound(PATH_DIGITS);
     outline.rect(left, top, width, width);

@@ -350,6 +350,19 @@ describe("PA4 D4 the line plot under jsdom, the values it does not draw", () => 
     );
   });
 
+  test("a finite value of the line that scales beyond the pixels a number holds, 1e308 up, breaks the line there and writes no Infinity", () => {
+    const element = sizedElement();
+    const series: LineSeries = {
+      ...seriesOf(2),
+      line: xy([0, 20, 40, 60, 80], [0.5, 0.4, 1e308, 0.3, 0.2]),
+    };
+    createLine(element, lineOf([series]));
+    const line = inMarks(element, "path.chart-line")[0];
+    expect(line?.getAttribute("d")).toBe(
+      "M0,159.5L104.8,191.4M314.4,223.3L419.2,255.2",
+    );
+  });
+
   test("a NaN in line.y breaks the line into two parts, two M commands", () => {
     const element = sizedElement();
     const series: LineSeries = {
@@ -494,6 +507,16 @@ describe("PA4 D4 the line plot under jsdom, its refusals", () => {
     expect(() =>
       createLine(element, lineOf([seriesOf(3, "a"), seriesOf(3, "b")])),
     ).toThrow(/popnei_web defect/);
+  });
+
+  test("two series of one mark, groups 0 and 49, orange circles both, are refused, and groups 0 and 48 drawn", () => {
+    const element = sizedElement();
+    expect(() =>
+      createLine(element, lineOf([seriesOf(0, "a"), seriesOf(49, "b")])),
+    ).toThrow(/popnei_web defect/);
+    expect(element.children).toHaveLength(0);
+    createLine(element, lineOf([seriesOf(0, "a"), seriesOf(48, "b")]));
+    expect(legendTexts(element)).toHaveLength(2);
   });
 
   test("50 series are refused and 49 drawn", () => {

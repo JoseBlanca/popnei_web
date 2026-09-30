@@ -1531,6 +1531,25 @@ test("PA4 D3 toSVG of the heatmap of panel.nei, from a dark page, has on each ce
   await page.emulateMedia({ colorScheme: "dark" });
   await openPlots(page);
   await drawHeatmap(page, 640, 640, "panel");
+  // Each value in the middle of its cell: the middle of its box within a
+  // pixel of the point it is written at, across and up.
+  const offsets = await page
+    .locator("#plots text.chart-cell-text")
+    .evaluateAll((texts) =>
+      texts.map((text) => {
+        if (!(text instanceof SVGTextElement)) return [Number.NaN];
+        const box = text.getBBox();
+        return [
+          box.x + box.width / 2 - Number(text.getAttribute("x")),
+          box.y + box.height / 2 - Number(text.getAttribute("y")),
+        ];
+      }),
+    );
+  expect(offsets).toHaveLength(6);
+  for (const [across = Number.NaN, up = Number.NaN] of offsets) {
+    expect(Math.abs(across)).toBeLessThanOrEqual(1);
+    expect(Math.abs(up)).toBeLessThanOrEqual(1);
+  }
   const cell = await cellAt(page, 0, 2);
   await page.mouse.move(cell.x, cell.y);
   await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
@@ -1676,6 +1695,7 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
       })),
       legend: texts("g.chart-legend text").map((each) => boxOf(each)),
       values: texts("text.chart-legend-value").map((each) => boxOf(each)),
+      titles: texts("text.chart-legend-title").map((each) => boxOf(each)),
       bars: texts("rect.chart-legend-band").map((each) => boxOf(each)),
     };
   });
@@ -1713,6 +1733,26 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
   for (const [left = 0] of found.values) {
     expect(left).toBeGreaterThanOrEqual(barRight);
   }
+  // The largest value at the top end of the bar and 0 at its bottom end,
+  // the middle of each within 12 pixels of its end on the bar's side, and
+  // the name of the value wholly above the bar.
+  const barTop = Math.min(...found.bars.map(([, top = 0]) => top));
+  const barBottom = Math.max(...found.bars.map(([, , , bottom = 0]) => bottom));
+  const middleOf = ([, top = 0, , bottom = 0]: number[]): number =>
+    (top + bottom) / 2;
+  const [largest = [], zero = []] = found.values;
+  expect(
+    middleOf(largest) - barTop,
+    "the largest value",
+  ).toBeGreaterThanOrEqual(0);
+  expect(middleOf(largest) - barTop, "the largest value").toBeLessThanOrEqual(
+    12,
+  );
+  expect(barBottom - middleOf(zero), "0").toBeGreaterThanOrEqual(0);
+  expect(barBottom - middleOf(zero), "0").toBeLessThanOrEqual(12);
+  expect(found.titles).toHaveLength(1);
+  const [, , , titleBottom = Infinity] = found.titles[0] ?? [];
+  expect(titleBottom, "the name of the value").toBeLessThanOrEqual(barTop);
   // A slanted name ends where its column meets the axis: its right edge
   // within 8 pixels of the middle of the column, and its top from 0 to
   // 12 pixels below the axis.
@@ -1982,4 +2022,87 @@ test("PA4 D5 the lines of the four colours without a casing, green, blue, vermil
       ).toBeGreaterThanOrEqual(3);
     }
   }
+});
+
+// ---------------------------------------------------------------------
+// Where the text of the plots lands, which jsdom cannot lay out and the
+// review of work package 4 found no flow holding: the labels under the
+// horizontal axis of every 2D plot, and the legend of the line plot.
+
+test("PA4 D1 the labels of the ticks under the horizontal axis of the histogram lie below the axis, the top of the box of each below its line", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await draw(page, 600, 375);
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const axis = plots.element().querySelector("g.chart-axis-x");
+    if (axis === null) throw new Error("The histogram has no horizontal axis.");
+    const domain = axis.querySelector("path.domain");
+    if (domain === null) throw new Error("The horizontal axis has no line.");
+    // The line of the axis is the top of its path, whose box reaches 6
+    // pixels lower at its two ends, where d3-axis draws the outer ticks;
+    // the box of a label, the ascent of its font above its digits, comes
+    // within half a pixel of that.
+    return {
+      axis: domain.getBoundingClientRect().top,
+      labels: [...axis.querySelectorAll("g.tick text")].map((text) => ({
+        text: text.textContent,
+        top: text.getBoundingClientRect().top,
+      })),
+    };
+  });
+  expect(found.labels.length).toBeGreaterThanOrEqual(3);
+  for (const label of found.labels) {
+    expect(label.top, label.text).toBeGreaterThanOrEqual(found.axis + 1);
+  }
+});
+
+test("PA4 D5 each row of the legend of the LD decay has its mark and its text on its piece of line, and an update that adds a half distance draws its mark over every dashed line", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const rows = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const middle = (each: Element | null): number => {
+      if (each === null) return Number.NaN;
+      const rect = each.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    };
+    return [...plots.element().querySelectorAll(".chart-legend-row")].map(
+      (row) => ({
+        line: middle(row.querySelector("line.chart-line")),
+        mark: middle(row.querySelector("path.chart-points")),
+        text: middle(row.querySelector("text.chart-legend-text")),
+      }),
+    );
+  });
+  expect(rows).toHaveLength(2);
+  for (const row of rows) {
+    expect(Math.abs(row.mark - row.line), "the mark").toBeLessThanOrEqual(1);
+    expect(Math.abs(row.text - row.line), "the text").toBeLessThanOrEqual(1);
+  }
+
+  // pop_a alone with its half distance, then both: the dashed line of
+  // pop_b enters after the mark of pop_a, which is raised over it.
+  await drawLine(page, 600, 375, "oneMark");
+  await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    plots.lineUpdate("ld");
+  });
+  const order = await page
+    .locator("#plots g.chart-annotations > *")
+    .evaluateAll((children) =>
+      children.map((child) => child.getAttribute("class")?.split(" ")[0]),
+    );
+  expect(order).toEqual([
+    "chart-mark-line",
+    "chart-mark-line",
+    "chart-points",
+    "chart-points",
+  ]);
 });
