@@ -2,8 +2,9 @@
  * The LD decay of each population: which variants it reads, when it
  * cannot run, the request it sends, the curve fitted to each population,
  * its warnings, its check numbers, its lines of the Python script, the
- * rows and the CSV of its two tables, and the words of popnei's refusal
- * (docs/specs/analyses/ldDecay.md, "The module").
+ * rows and the CSV of its two tables, the words of its plot, the labels
+ * of the legend and the description, and the words of popnei's refusal
+ * (docs/specs/analyses/ldDecay.md, "The module" and "The panel").
  *
  * The numbers are popnei's, from one call of `calcLdAndDistPerPop` in the
  * calculation worker: the bins of each population, its ρ per base pair,
@@ -389,6 +390,151 @@ export function ldBinsCsv(r: LdDecayResult): string {
     ].join(","),
   );
   return [BINS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
+}
+
+/** The half distances written to three significant digits, below this
+    many base pairs; from it, in whole base pairs (ldDecay.md, "What it
+    shows"). */
+const WHOLE_BP_FROM = 10;
+
+/** The most decimals `toFixed` writes. */
+const MAX_DECIMALS = 100;
+
+/**
+ * A number of the screen to three significant digits, with no exponent,
+ * the zeros that make the three kept: "0.247", "0.000300", "1.50". A
+ * negative one starts with "-"; 0 is "0.00".
+ */
+export function threeSignificant(value: number): string {
+  // The exponent of the number once rounded to three digits, so that
+  // 9.996 counts as 10.0 and 0.0009996 as 0.00100.
+  const exponent = Number(value.toExponential(2).split("e")[1]);
+  return value.toFixed(Math.min(MAX_DECIMALS, Math.max(0, 2 - exponent)));
+}
+
+/**
+ * A half distance as the legend and the table write it, without its
+ * unit: below 10 bp to three significant digits, "0.247", and from 10 bp
+ * in whole base pairs with a comma between thousands, "7,548", a number
+ * that rounds to 10 at three digits counting as 10.
+ */
+export function halfDistText(halfDist: number): string {
+  const three = threeSignificant(halfDist);
+  return Number(three) < WHOLE_BP_FROM ? three : grouped(Math.round(halfDist));
+}
+
+/** What the plot shows of the half distance of a population: drawn as a
+    mark, beyond the largest distance, or none, with no pair or no
+    curve. */
+type HalfShown =
+  | { readonly kind: "drawn"; readonly halfDist: number }
+  | { readonly kind: "beyond"; readonly halfDist: number }
+  | { readonly kind: "noPair" }
+  | { readonly kind: "noCurve" };
+
+/** What the plot shows of the half distance of the population `i` of
+    `r`, at a largest distance of `maxDist`. */
+function halfShownOf(r: LdDecayResult, i: number, maxDist: number): HalfShown {
+  if (pairsOf(r, i) === 0) {
+    return { kind: "noPair" };
+  }
+  const halfDist = valueAt(r.halfDist, i, "halfDist");
+  if (!Number.isFinite(halfDist)) {
+    return { kind: "noCurve" };
+  }
+  return halfDist > maxDist
+    ? { kind: "beyond", halfDist }
+    : { kind: "drawn", halfDist };
+}
+
+/**
+ * The label of the population `i` of `r` in the legend of the plot, at a
+ * largest distance of `maxDist` (ldDecay.md, "What it shows"): "pop_a ·
+ * half at 7,548 bp"; "pop_a · half at 1,599,810 bp, beyond the plot";
+ * "pop_a · no curve" for pairs with no curve; "pop_a · no pair". Throws a
+ * defect on a population the result does not have.
+ */
+export function ldLegendLabel(
+  r: LdDecayResult,
+  i: number,
+  maxDist: number,
+): string {
+  const name = namesOf([popAt(r, i)]);
+  const half = halfShownOf(r, i, maxDist);
+  switch (half.kind) {
+    case "drawn":
+      return `${name} · half at ${halfDistText(half.halfDist)} bp`;
+    case "beyond":
+      return `${name} · half at ${halfDistText(half.halfDist)} bp, beyond the plot`;
+    case "noPair":
+      return `${name} · no pair`;
+    case "noCurve":
+      return `${name} · no curve`;
+  }
+}
+
+/**
+ * The description of the plot for a screen reader, at a largest distance
+ * of `maxDist` (ldDecay.md, "Accessibility"): "The mean r² of pairs of
+ * variants against their distance, in 50 bins up to 100,000 base pairs,
+ * for 2 populations, with the curve fitted to each. The curve falls to
+ * half at 7,548 bp in pop_a and 7,340 bp in pop_b." It describes the
+ * populations the plot draws, the first `LD_PLOT_MAX_POPS`, "for the
+ * first 16 of the 17 populations"; a half distance beyond the plot is
+ * said to be, "(beyond the plot)"; and the populations with no pair or no
+ * curve are named in a sentence each, the curve then fitted "to each that
+ * has one". One population has "its fitted curve", or none.
+ */
+export function ldDecayDescription(r: LdDecayResult, maxDist: number): string {
+  const numPops = r.pops.length;
+  const drawn = r.pops.slice(0, LD_PLOT_MAX_POPS);
+  const halves = drawn.map((pop, i) => ({
+    pop,
+    half: halfShownOf(r, i, maxDist),
+  }));
+  const which =
+    numPops > LD_PLOT_MAX_POPS
+      ? `the first ${grouped(drawn.length)} of the ${grouped(numPops)} populations`
+      : counted(numPops, "population");
+  const at = halves.flatMap(({ pop, half }): readonly string[] => {
+    switch (half.kind) {
+      case "drawn":
+        return [`${halfDistText(half.halfDist)} bp in ${namesOf([pop])}`];
+      case "beyond":
+        return [
+          `${halfDistText(half.halfDist)} bp in ${namesOf([pop])} (beyond the plot)`,
+        ];
+      case "noPair":
+      case "noCurve":
+        return [];
+    }
+  });
+  const fitted =
+    halves.length === 1
+      ? at.length === 1
+        ? ", with its fitted curve"
+        : ""
+      : at.length === halves.length
+        ? ", with the curve fitted to each"
+        : ", with the curve fitted to each that has one";
+  const start = `The mean r² of pairs of variants against their distance, in ${counted(r.smallestDist.length, "bin")} up to ${grouped(maxDist)} base pairs, for ${which}${fitted}.`;
+  const sentences = [start];
+  if (at.length > 0) {
+    sentences.push(`The curve falls to half at ${bothOf(at)}.`);
+  }
+  const lacking = (kind: "noPair" | "noCurve", what: string): void => {
+    const names = halves
+      .filter(({ half }) => half.kind === kind)
+      .map(({ pop }) => pop);
+    if (names.length > 0) {
+      sentences.push(
+        `${namesOf(names)} ${names.length === 1 ? "has" : "have"} ${what}.`,
+      );
+    }
+  };
+  lacking("noPair", "no pair");
+  lacking("noCurve", "no curve");
+  return sentences.join(" ");
 }
 
 /**
@@ -911,6 +1057,15 @@ function pairsOf(r: LdDecayResult, i: number): number {
     pairs += valueAt(r.numPairs, i * numBins + bin, "numPairs");
   }
   return pairs;
+}
+
+/** The name of the population `i` of `r`; one missing is a defect. */
+function popAt(r: LdDecayResult, i: number): string {
+  const pop = r.pops[i];
+  if (pop === undefined) {
+    throw defect(`the result of the LD decay has no population ${String(i)}.`);
+  }
+  return pop;
 }
 
 /** The element `i` of an array of a result; one missing is a defect, as

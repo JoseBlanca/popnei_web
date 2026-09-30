@@ -9,6 +9,7 @@ import {
   variantsKept,
   writeCountsOf,
 } from "./apps.ts";
+import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
 import { resultBytes } from "./cache.ts";
@@ -112,6 +113,15 @@ describe("PA5 D1 the distances between populations in apps.ts", () => {
     expect(POPGEN_ANALYSES[ids.indexOf("popDists")]).toBe(popDists);
     expect(ids.indexOf("popDists")).toBe(ids.indexOf("diversity") + 1);
     expect(POPGEN_ANALYSIS_STEPS["popDists"]).toBe("analyses");
+  });
+});
+
+describe("PA8 D1 the LD decay in apps.ts", () => {
+  test("the LD decay is the last analysis of population genetics, in the Analyses step, just after the distances between populations", () => {
+    const ids = POPGEN_ANALYSES.map((def) => def.id);
+    expect(POPGEN_ANALYSES.at(-1)).toBe(ldDecay);
+    expect(ids.indexOf("ldDecay")).toBe(ids.indexOf("popDists") + 1);
+    expect(POPGEN_ANALYSIS_STEPS["ldDecay"]).toBe("analyses");
   });
 });
 

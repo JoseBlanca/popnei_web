@@ -57,10 +57,12 @@ describe("VS5 D1 the words of the shell of the page", () => {
 });
 
 /** A state of the store with the distances between populations alone, in
-    the state `status`, and the requests `runs`. */
+    the state `status`, and the requests `runs`; or the analysis `id`
+    alone. */
 function distancesState(
   status: AnalysisStatus<JobResult>,
   runs: readonly RunView[],
+  id = "popDists",
 ): AppState<JobResult, unknown> {
   return {
     project: firstProject("popgen"),
@@ -68,7 +70,7 @@ function distancesState(
     redo: null,
     historyMoves: 0,
     popneiVersion: "0.1.0",
-    analyses: [{ id: "popDists", status }],
+    analyses: [{ id, status }],
     runs,
     notice: null,
     individualsKept: null,
@@ -137,5 +139,70 @@ describe("PA5 D1 the words of the shell for the distances between populations", 
         SHELL_WORDS,
       ),
     ).toEqual([`Distances between populations were not run. ${reason}`]);
+  });
+});
+
+const KEY_L: Key = keyFromWire("e".repeat(64));
+
+describe("PA8 D1 the words of the shell for the LD decay", () => {
+  test("the title is LD decay, which names one thing, in the Analyses step", () => {
+    expect(SHELL_WORDS.title("ldDecay")).toBe("LD decay");
+    expect(SHELL_WORDS.plural("ldDecay")).toBe(false);
+    expect(SHELL_WORDS.stepOf("ldDecay")).toBe("analyses");
+  });
+
+  test("the status region says the LD decay is calculating, and, after the statistics it waited for, that it was not run, with the singular verb", () => {
+    const run: RunView = {
+      runId: 1,
+      analysis: "ldDecay",
+      key: KEY_L,
+      current: true,
+      stopping: false,
+      afterStop: false,
+      progress: null,
+    };
+    expect(
+      announcementsOf(
+        distancesState({ kind: "ready", key: KEY_L }, [], "ldDecay"),
+        distancesState(
+          {
+            kind: "running",
+            key: KEY_L,
+            runId: 1,
+            progress: null,
+            waitsForStatistics: false,
+          },
+          [run],
+          "ldDecay",
+        ),
+        SHELL_WORDS,
+      ),
+    ).toEqual(["LD decay: calculating."]);
+
+    const statistics: RunView = {
+      ...run,
+      runId: 2,
+      analysis: "individualChecks",
+      key: KEY_S,
+    };
+    const reason =
+      "The 34 individuals kept have no population in ld_pops.csv, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.";
+    expect(
+      announcementsOf(
+        distancesState(
+          {
+            kind: "running",
+            key: KEY_L,
+            runId: 2,
+            progress: null,
+            waitsForStatistics: true,
+          },
+          [statistics],
+          "ldDecay",
+        ),
+        distancesState({ kind: "locked", reason }, [], "ldDecay"),
+        SHELL_WORDS,
+      ),
+    ).toEqual([`LD decay was not run. ${reason}`]);
   });
 });

@@ -43,6 +43,12 @@ import { DiversityOptionsPart } from "./diversity/DiversityOptionsPart.tsx";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
 import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
+import {
+  LD_DECAY_NAME,
+  LD_DECAY_RESULT_NAME,
+  fitLine,
+  readyLines as ldDecayReadyLines,
+} from "./ldDecay/words.ts";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
 import { PopDistsOptionsPart } from "./popDists/PopDistsOptionsPart.tsx";
@@ -218,17 +224,17 @@ const POP_DISTS: AnalysisUi = Object.freeze({
   workerFailedText: null,
 });
 
-/** The placeholder of the panel of the LD decay, its Run button alone,
-    until task 8.1 of the plan of stage 5 draws its panel
-    (docs/plans/population-analyses.md, "Where the specs are thin"): the
-    measurements of its memory run it from here, with its options set by
-    a project file, and a result draws nothing. */
+/** The panel of the LD decay (docs/specs/analyses/ldDecay.md, "The
+    panel"): its words, the lines of its ready state and the line under
+    the bar; its options and the component of its result, the plot and
+    the two tables, come with task 8.2 of the plan of stage 5, and until
+    then it has no options and draws nothing of a result. */
 const LD_DECAY: AnalysisUi = Object.freeze({
   title: titleOf("ldDecay"),
-  name: "the LD decay",
-  resultName: "the plot and the tables",
+  name: LD_DECAY_NAME,
+  resultName: LD_DECAY_RESULT_NAME,
   plural: false,
-  readyLines: (): readonly string[] => [],
+  readyLines: ldDecayReadyLines,
   refusalText: ldDecayRefusalText,
   statisticsFailedText: (
     error: AnalysisError,
@@ -244,7 +250,8 @@ const LD_DECAY: AnalysisUi = Object.freeze({
     ),
   Results: LdDecayPlaceholder,
   Options: null,
-  runningLine: (): null => null,
+  runningLine: (p: Project): string | null =>
+    p.variants === null ? null : fitLine(p.variants.name),
   workerFailedText: null,
 });
 
