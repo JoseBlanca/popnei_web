@@ -196,6 +196,21 @@ the plan; each is asked of you at the next stop.
    of a file and the PCA already had. Recommendation: write it in
    `client.md` for every request.
 
+9. **Two sentences of the distances' warnings, `popDists.md`, "The
+   warnings".** The writer changed two, for stop A:
+   - `tooFewIndividuals`, when the filters of individuals took some of
+     the population. The spec: "To include it, lower the minimum of
+     individuals, or merge it with another population in the metadata
+     file, or loosen the filters of individuals in the Variants step."
+     The code: "To include it, lower the minimum of individuals, merge
+     it with another population in the metadata file, or loosen the
+     filters of individuals in the Variants step."
+   - `negativeDistance` of several pairs. The spec ends "…as if the
+     distance were 0, and shows the value."; the code "…and shows the
+     values."
+   Recommendation: the code's, one list with one "or", and the plural
+   for several pairs; the spec then says so.
+
 ## The standing rules of this plan, for a session that takes over
 
 Not for the owner. The scratchpad of a session is lost when the Mac

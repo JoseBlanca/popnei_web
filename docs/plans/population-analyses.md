@@ -479,7 +479,7 @@ its panel is built.
 - [x] 2.2 The client's restart after every LD decay (`client.md`, "The
   LD decay, and the restart after it"). Serves 4. Needs 2.1. Can run
   beside 2.3.
-- [ ] 2.3 `src/core/analyses/ldDecay.ts` but its key: "Which variants it
+- [x] 2.3 `src/core/analyses/ldDecay.ts` but its key: "Which variants it
   reads", "The populations", "Its options", "Why it cannot run", "The
   request", "The fitted curve", "The warnings", "The check numbers",
   "Its lines of the Python script", "The TypeScript interface" and "Its
@@ -488,7 +488,7 @@ its panel is built.
   of `src/core/apps.ts` with no counts for it (`entry.md`;
   `filterCounts.md`, "Which results fill it"). It is not in
   `POPGEN_ANALYSES` until task 8.1. Serves 5. Needs 2.1.
-- [ ] 2.4 The key of the LD decay, `keyInputs`, and its tests, in a
+- [x] 2.4 The key of the LD decay, `keyInputs`, and its tests, in a
   commit of its own (`ldDecay.md`, "What goes into its key"): a key that
   read the LD pruning would take the plot off the screen for a filter
   the analysis does not read, and one that missed another filter would
@@ -574,7 +574,7 @@ a population under the minimum, and has its warnings and check numbers.
 
 **Tasks:**
 
-- [ ] 3.1 `PopDistsJob`, `PopDistsResult`, `HeatmapOrder`,
+- [x] 3.1 `PopDistsJob`, `PopDistsResult`, `HeatmapOrder`,
   `FileOrderReason` and `LeftOut` in `protocol.ts` and their checks in
   `messages.ts` (`protocol.md`; `messages.md`, "The checks"); "The
   distances between populations" of `runner.md`, the pairs put back in
@@ -584,7 +584,7 @@ a population under the minimum, and has its warnings and check numbers.
   the table to the wrong two populations with no error, so the test of
   the names "3", "1" and "2" is part of this task. Serves 1, 2 and 3.
   Needs 2.1.
-- [ ] 3.2 `src/core/analyses/popDists.ts` but its key and the panel's
+- [x] 3.2 `src/core/analyses/popDists.ts` but its key and the panel's
   functions: "What it does", "Why it cannot run", "The request", "The
   warnings", "The check numbers", "Its lines of the Python script", "The
   TypeScript interface" (`parseOptions`, `popDistsOptions`,
@@ -672,7 +672,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 - [x] 4.2 `src/charts/heatmap.ts` and its classes in `charts.css`, from
   `heatmap.md` whole; the heatmap on `e2e/plots.html` and its flows.
   Serves 2 and 3. Needs 4.1.
-- [ ] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
+- [x] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
   the line plot on `e2e/plots.html` and its flows. Serves 4 and 5. Needs
   4.1.
 - [ ] 4.4 The histogram's three additions for the spectrum:
@@ -864,7 +864,7 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
 
 **Tasks:**
 
-- [ ] 6.1 The second call, across the layers in one commit that keeps
+- [x] 6.1 The second call, across the layers in one commit that keeps
   the application working: the two fields of the job and the eleven of
   the result in `protocol.ts` and their checks in `messages.ts`;
   `calcPopDiversity` in the runner, steps 6 to 8 of "The diversity" of
