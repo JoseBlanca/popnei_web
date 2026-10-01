@@ -620,7 +620,7 @@ of 5, and the page stays usable.
 ### How the work of 8 went, for whoever revises a skill or a plan
 
 Three tasks by two writers, about 226,000 and 420,000 tokens; the fixes
-of the review 160,000 more; ten reviewers' passes about 1.2 million.
+of the review 160,000 more; ten reviewers' passes about 1.36 million.
 Two agents wrote into one directory named `copy` of the shared
 scratchpad, and one emptied the worktree's `node_modules` through a
 link left there: a copy for breaking lines belongs under `$TMPDIR` with
