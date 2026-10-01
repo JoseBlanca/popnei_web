@@ -81,20 +81,44 @@ export interface HistogramRow {
   readonly state: BinState | null;
 }
 
-/** The margins without a threshold, in CSS pixels. */
-const MARGIN_WITHOUT_THRESHOLD: Margin = {
-  top: 12,
-  right: 16,
-  bottom: 44,
-  left: 60,
-};
-/** The margins with a threshold, whose top holds the three rows of the legend. */
-const MARGIN_WITH_THRESHOLD: Margin = {
-  top: 56,
-  right: 16,
-  bottom: 44,
-  left: 60,
-};
+/** The top margin without a threshold, in CSS pixels. */
+const TOP_WITHOUT_THRESHOLD = 12;
+/** The top margin with a threshold, which holds the three rows of the legend. */
+const TOP_WITH_THRESHOLD = 56;
+const RIGHT_MARGIN = 16;
+const BOTTOM_MARGIN = 44;
+/**
+ * The left margin while the numbers of the vertical axis have at most
+ * four characters, "0.06" or "240".
+ */
+const LEFT_MARGIN = 60;
+/**
+ * The left of the left margin, which the label of the vertical axis
+ * takes: its text of 13 pixels, written 16 pixels from the left, and a
+ * gap before the numbers of the ticks.
+ */
+const Y_LABEL_BAND = 22;
+/**
+ * From the end of a number of the vertical axis to the frame: the tick
+ * of 6 pixels and the gap of 3 of d3-axis.
+ */
+const Y_TICK_OFFSET = 9;
+/**
+ * The width counted for a character of a number of an axis, of 12
+ * pixels, since nothing in a plot measures text; the heatmap counts its
+ * names the same way.
+ */
+const CHARACTER_WIDTH = 7.2;
+/**
+ * The most ticks the vertical axis is counted with for its margin, those
+ * of a frame 640 pixels high. The margin does not know the height, and
+ * more ticks give the shares more decimals, never fewer.
+ */
+const MOST_Y_TICKS = 16;
+
+const WHOLE_NUMBER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
 
 /** From the top of the SVG to the middle of the first row of the legend. */
 const LEGEND_FIRST_ROW = 12;
@@ -357,10 +381,34 @@ function legendRowsOf(threshold: HistogramThreshold | null): LegendRow[] {
   ];
 }
 
+/**
+ * The longest number the vertical axis of `data` may write, the top of
+ * the axis: a count with a comma between thousands, "12,000", or a share
+ * with the decimals of the most ticks, "0.045".
+ */
+function longestYTick(data: HistogramData): string {
+  const { y } = histogramScales(data, 1, 1);
+  const top = y.domain()[1] ?? 1;
+  return data.counts instanceof Uint32Array
+    ? WHOLE_NUMBER.format(top)
+    : y.tickFormat(MOST_Y_TICKS)(top);
+}
+
+/**
+ * The margins of the histogram of `data`: the top larger with a
+ * threshold, for the legend, and the left 60 pixels, or more when the
+ * numbers of the vertical axis are longer than four characters, so that
+ * they do not reach the label of the axis. The numbers are counted at 7.2
+ * pixels a character and not measured.
+ */
 function histogramMargin(data: HistogramData): Margin {
-  return data.threshold === null
-    ? MARGIN_WITHOUT_THRESHOLD
-    : MARGIN_WITH_THRESHOLD;
+  const ticksWidth = longestYTick(data).length * CHARACTER_WIDTH;
+  return {
+    top: data.threshold === null ? TOP_WITHOUT_THRESHOLD : TOP_WITH_THRESHOLD,
+    right: RIGHT_MARGIN,
+    bottom: BOTTOM_MARGIN,
+    left: Math.max(LEFT_MARGIN, Y_LABEL_BAND + ticksWidth + Y_TICK_OFFSET),
+  };
 }
 
 function drawHistogram(frame: Frame, data: HistogramData): void {

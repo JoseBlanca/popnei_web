@@ -1401,3 +1401,75 @@ test("PA7 D2 the download of the spectrum saves panel.sfs.csv, its header and th
   // 21 lines of each of the three populations, a header and the end.
   expect(lines).toHaveLength(1 + 3 * 21 + 1);
 });
+
+/** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as
+    wide as Verdana and wider than the Mac's system font, which a check of
+    what the text of a plot reaches gives the page, so that it does not
+    rest on the fonts of the machine (the plan of stage 5, "What every
+    prompt of a task carries"). */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** In each histogram of the spectrum, the numbers of the vertical axis
+    and the pixels from the right of the label of the axis to the left of
+    the number nearest to it, on the screen. */
+async function ticksAndLabel(
+  page: Page,
+): Promise<{ readonly ticks: string[]; readonly gap: number }[]> {
+  return panel(page)
+    .getByRole("group")
+    .locator("svg.chart-histogram")
+    .evaluateAll((svgs) =>
+      svgs.map((svg) => {
+        const label = svg.querySelector(".chart-axis-label-y");
+        const ticks = [...svg.querySelectorAll(".chart-axis-y .tick text")];
+        if (label === null || ticks.length === 0) {
+          throw new Error("A histogram has no label or no tick to measure.");
+        }
+        const right = label.getBoundingClientRect().right;
+        return {
+          ticks: ticks.map((tick) => tick.textContent),
+          gap: Math.min(
+            ...ticks.map((tick) => tick.getBoundingClientRect().left - right),
+          ),
+        };
+      }),
+    );
+}
+
+test("at a draw of 96 the numbers of the vertical axis of each histogram, of three decimals, lie right of the label of the axis, in the wide font too", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "96");
+  await run(page);
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  for (const wide of [false, true]) {
+    if (wide) await useWideFont(page);
+    const measured = await ticksAndLabel(page);
+    expect(measured).toHaveLength(3);
+    for (const { ticks, gap } of measured) {
+      // The defect this guards: numbers of five characters, "0.035".
+      expect(ticks.some((tick) => tick.length === 5)).toBe(true);
+      expect(Number.isFinite(gap)).toBe(true);
+      expect(gap).toBeGreaterThanOrEqual(2);
+    }
+  }
+});

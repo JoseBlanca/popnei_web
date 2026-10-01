@@ -738,6 +738,42 @@ describe("PA4 D6 the histogram of the spectrum, under jsdom", () => {
   });
 });
 
+describe("the left margin of the histogram follows the numbers of its vertical axis", () => {
+  const frameOf = (element: HTMLElement): string | null | undefined =>
+    element.querySelector("g.chart-frame")?.getAttribute("transform");
+
+  test("shares up to 0.5, of at most four characters at any height, keep the margin of 60", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, spectrumOf(Float64Array.from([0.5, 0.3, 0.2])));
+    expect(frameOf(element)).toBe("translate(60,12)");
+  });
+
+  test("shares up to 0.044 under a yMax of 0.936 keep 60, and alone, with ticks up to 0.045, five characters, get 67", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(
+      element,
+      spectrumOf(Float64Array.from([0.044, 0.02, 0.936]), { yMax: 0.936 }),
+    );
+    expect(frameOf(element)).toBe("translate(60,12)");
+    const narrow = sizedElement(600, 375);
+    createHistogram(narrow, spectrumOf(Float64Array.from([0.044, 0.02])));
+    // The label's 22 pixels, five characters at 7.2 and the tick's 9.
+    expect(frameOf(narrow)).toBe("translate(67,12)");
+  });
+
+  test("counts up to 240 keep the margin of 60, and counts up to 12,000, six characters, get 74.2", () => {
+    const element = sizedElement(600, 375);
+    const edges = Float64Array.from([0, 0.5, 1]);
+    const handle = createHistogram(
+      element,
+      histogramOf(Uint32Array.from([240, 3]), null, edges),
+    );
+    expect(frameOf(element)).toBe("translate(60,12)");
+    handle.update(histogramOf(Uint32Array.from([12000, 3]), null, edges));
+    expect(frameOf(element)).toBe("translate(74.2,12)");
+  });
+});
+
 describe("PA4 D6 the histogram of the spectrum, its defects", () => {
   test("a share of -0.1 is refused", () => {
     expectRefused(
