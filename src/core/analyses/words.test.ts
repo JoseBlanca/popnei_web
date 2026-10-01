@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { fourDecimals, percentOf, populationWarnings } from "./words.ts";
+import {
+  csvField,
+  csvNumber,
+  fourDecimals,
+  percentOf,
+  populationWarnings,
+} from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import type { Project } from "../project.ts";
 import { deepFreeze } from "../testSupport.ts";
@@ -238,5 +244,45 @@ describe("PA3 D4 fourDecimals", () => {
   test("0 is 0.0000, and 0.10962148955018115 is 0.1096", () => {
     expect(fourDecimals(0)).toBe("0.0000");
     expect(fourDecimals(0.10962148955018115)).toBe("0.1096");
+  });
+});
+
+describe("PA10 csvField, a cell of text of every CSV of the application", () => {
+  test("a name that starts with =, +, - or @ is written with a quote before it, so that a spreadsheet does not run it as a formula", () => {
+    expect(csvField("=p1")).toBe("'=p1");
+    expect(csvField("+p1")).toBe("'+p1");
+    expect(csvField("-p1")).toBe("'-p1");
+    expect(csvField("@p1")).toBe("'@p1");
+    expect(csvField('=HYPERLINK("http://x")')).toBe(
+      '"\'=HYPERLINK(""http://x"")"',
+    );
+    expect(csvField("=a,b")).toBe('"\'=a,b"');
+  });
+
+  test("a name that is a negative number is still a name, and has the quote", () => {
+    expect(csvField("-1")).toBe("'-1");
+    expect(csvField("-0.0128")).toBe("'-0.0128");
+  });
+
+  test("a name that holds one of the four after its first character, an empty one and a plain one are written as they are", () => {
+    expect(csvField("p=1")).toBe("p=1");
+    expect(csvField("p-1")).toBe("p-1");
+    expect(csvField("a@b")).toBe("a@b");
+    expect(csvField(" =p1")).toBe(" =p1");
+    expect(csvField("")).toBe("");
+    expect(csvField("p1")).toBe("p1");
+    expect(csvField("'p1")).toBe("'p1");
+  });
+
+  test("a name with a comma, a quote or a new line is quoted as RFC 4180 has it", () => {
+    expect(csvField('a,"b"')).toBe('"a,""b"""');
+    expect(csvField("a\nb")).toBe('"a\nb"');
+    expect(csvField("a\rb")).toBe('"a\rb"');
+  });
+
+  test("csvNumber writes a negative number as a number, with no quote before it", () => {
+    expect(csvNumber(-0.0128)).toBe("-0.0128");
+    expect(csvNumber(0.5)).toBe("0.5");
+    expect(csvNumber(null)).toBe("");
   });
 });

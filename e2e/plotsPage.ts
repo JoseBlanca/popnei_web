@@ -51,9 +51,11 @@ export type Pca3dKind =
  * pair p0b and p2 given no value; `long`, eight names of 20 to 26
  * characters, the longer ones cut on the axes; `many`, 40 names, whose
  * bands are too narrow for the values; `most`, the 200 names a heatmap
- * draws, whose bands are too narrow for the names.
+ * draws, whose bands are too narrow for the names; `capitals`, three
+ * names in capitals, "MEX", one of 20 characters and "PER".
  */
-export type HeatmapKind = "panel" | "split" | "long" | "many" | "most";
+export type HeatmapKind =
+  "panel" | "split" | "long" | "many" | "most" | "capitals";
 
 /**
  * The data of a line plot of the page: `ld`, the LD decay of

@@ -26,20 +26,22 @@ import {
   individualsNeeds,
   jobFilters,
   namesOf,
-  populationListsNeeds,
   populationsKept,
-  populationsColumnOf,
-  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
-  populationsWithMinimum,
   shown,
   LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
   bothOf,
-  populationsByLists,
 } from "../project.ts";
+import {
+  populationListsNeeds,
+  populationsColumnOf,
+  populationsKeptNeeds,
+  populationsWithMinimum,
+  populationsByLists,
+} from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
 import type {

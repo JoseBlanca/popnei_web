@@ -349,7 +349,7 @@ test.describe("PA5 D2 the distances on the screen", () => {
     await expect(panel(page).getByRole("table")).toHaveCount(0);
     await expect(
       panel(page).getByText(
-        "p0a and p0b have fewer individuals than the minimum of 25, 24 and 24, and are left out.",
+        "p0a and p0b have 24 and 24 individuals, fewer than the minimum of 25, and are left out.",
       ),
     ).toBeVisible();
     await expectNoViolations(makeAxeBuilder);

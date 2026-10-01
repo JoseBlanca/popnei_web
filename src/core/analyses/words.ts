@@ -17,11 +17,11 @@ import {
   escaped,
   identifierOf,
   namesOf,
-  populationsColumnOf,
   populationsToRun,
   saying,
   shown,
 } from "../project.ts";
+import { populationsColumnOf } from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
@@ -514,10 +514,20 @@ export function csvNumber(value: number | null): string {
   return value === null ? "" : String(value);
 }
 
-/** A field of a CSV, quoted when it holds a comma, a quote or a new line,
-    its quotes doubled, as RFC 4180 has it. */
+/**
+ * A cell of text of a CSV, the name of a population, of an individual or
+ * of a column of the user's files: with a quote, ', before it when it
+ * starts with "=", "+", "-" or "@", so that a spreadsheet that opens the
+ * file shows the name and does not run it as a formula; then quoted when
+ * it holds a comma, a quote or a new line, its quotes doubled, as RFC
+ * 4180 has it. Every CSV of the application writes its cells of text
+ * through it, and none of its numbers, which `csvNumber` and `String`
+ * write, so that a negative number stays a number (diversity.md, "What
+ * it shows").
+ */
 export function csvField(value: string): string {
-  return /[",\n\r]/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  const text = /^[=+\-@]/u.test(value) ? `'${value}` : value;
+  return /[",\n\r]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 /** A share of `whole` as a whole percentage rounded to the nearest,

@@ -24,19 +24,21 @@ import {
   individualsNeeds,
   jobFilters,
   namesOf,
-  populationListsNeeds,
-  populationsColumnOf,
   populationsKept,
-  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
-  populationsWithMinimum,
   shown,
   LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
-  populationsByLists,
 } from "../project.ts";
+import {
+  populationListsNeeds,
+  populationsColumnOf,
+  populationsKeptNeeds,
+  populationsWithMinimum,
+  populationsByLists,
+} from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
@@ -250,9 +252,10 @@ function keyInputs(p: Project): JsonObject {
  * file, the column of the populations and the lists leaving no
  * population, as for the diversity; no metadata file, or the grouping
  * `onePopulation`, which give one population; a column that gives the
- * individuals of the variants file one population; and fewer than two
- * populations with the minimum of individuals among the individuals the
- * lists to keep and to remove keep. Throws a defect on a project of
+ * individuals of the variants file one population; the lists of
+ * individuals to keep and to remove leaving an individual to one
+ * population alone; and fewer than two populations with the minimum of
+ * individuals among the two or more those lists leave. Throws a defect on a project of
  * association whose individuals file is read.
  */
 function needs(p: Project): string | null {
@@ -289,14 +292,24 @@ function needs(p: Project): string | null {
   return minimumNeeds(p);
 }
 
-/** The reason when fewer than two populations of those the lists to keep
-    and to remove leave have the minimum of individuals, or `null`; with
-    the lists named when they took a population below the minimum. */
+/** The reason when the lists to keep and to remove leave one population,
+    which names the lists and not the minimum, since the others have no
+    individual; the reason when fewer than two of the populations they
+    leave have the minimum of individuals, with the lists named when they
+    took a population below it; or `null`. */
 function minimumNeeds(p: Project): string | null {
   const toRun = populationsToRun(p);
   const byLists = populationsByLists(p);
   if (toRun === null || byLists === null) {
     return null;
+  }
+  const [onlyLeft] = byLists;
+  if (byLists.length === 1 && onlyLeft !== undefined) {
+    return onePopulationLeftText(
+      "lists",
+      onlyLeft[0],
+      "Change the lists in the Variants step.",
+    );
   }
   const min = popDistsOptions(p).minNumIndividuals;
   const withMinimum = populationsWithMinimum(byLists, min).withMinimum;
@@ -308,9 +321,27 @@ function minimumNeeds(p: Project): string | null {
     ([pop]) => !byListsNames.has(pop),
   );
   const end = listsTookSome
-    ? "Lower the minimum of individuals below, merge populations in the metadata file, or change the lists of individuals in the Variants step."
-    : "Lower the minimum of individuals below, or merge populations in the metadata file.";
+    ? `${LOWER_THE_MINIMUM}, merge populations in the metadata file, or change the lists of individuals in the Variants step.`
+    : `${LOWER_THE_MINIMUM}, or merge populations in the metadata file.`;
   return minimumText(withMinimum, min, "", end);
+}
+
+/** The start of the advice of a lock by the minimum, which names the
+    field as its label does, "Individuals with a called genotype needed in
+    each population, per variant", and says where it is, above the Run
+    button. */
+const LOWER_THE_MINIMUM = "Lower the number of individuals needed, above";
+
+/** The words of a lock when the lists of individuals, or the filters of
+    individuals, `what`, leave an individual to the one population `pop`:
+    the others have none, so the minimum is not named, and `end` says
+    what to do. */
+function onePopulationLeftText(
+  what: "lists" | "filters",
+  pop: string,
+  end: string,
+): string {
+  return `The ${what} of individuals leave one population, ${namesOf([pop])}, and the distances need two or more. ${end}`;
 }
 
 /** The words of a lock for fewer than two populations with the minimum
@@ -335,8 +366,9 @@ function minimumText(
  * The reason the distances cannot run for the individuals kept, `kept`,
  * whose list is known and keeps some individual, or `null`: the list
  * leaves no population, `populationsKeptNeeds`, the diversity's reason;
- * or it leaves fewer than two populations with the minimum of
- * individuals. `null` while the list is not known, and for the one
+ * it leaves one, in words that name the filters of individuals; or it
+ * leaves fewer than two populations with the minimum of individuals.
+ * `null` while the list is not known, and for the one
  * population, which `needs` locks on first.
  */
 function keptNeeds(p: Project, kept: IndividualsKept): string | null {
@@ -349,6 +381,14 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
   if (left === null || populationsColumnOf(p) === null) {
     return null;
   }
+  const [onlyLeft] = left.pops;
+  if (left.pops.length === 1 && onlyLeft !== undefined) {
+    return onePopulationLeftText(
+      "filters",
+      onlyLeft[0],
+      "Loosen the filters of individuals in the Variants step.",
+    );
+  }
   const min = popDistsOptions(p).minNumIndividuals;
   const withMinimum = populationsWithMinimum(left.pops, min).withMinimum;
   return withMinimum.length >= 2
@@ -357,7 +397,7 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
         withMinimum,
         min,
         " among the individuals the filters keep",
-        "Lower the minimum of individuals below, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.",
+        `${LOWER_THE_MINIMUM}, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.`,
       );
 }
 
@@ -409,7 +449,8 @@ interface Pair {
  * in this order: the populations left out for their size; the
  * individuals of the variants file with no population, and the
  * populations the filters of individuals emptied; the pairs with no
- * variant; the pairs over fewer variants than the filters kept; the pairs
+ * variant; the pairs with variants and no Fst; the pairs over fewer
+ * variants than the filters kept; the pairs
  * with a negative distance; Jost's D at ploidy 1. Throws a defect on a
  * project whose variants file is not read, and on a project of
  * association.
@@ -443,6 +484,15 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: withoutDistanceText(withoutDistance, min),
     });
   }
+  const withoutFst = pairs.filter(
+    (pair) => pair.numVars > 0 && Number.isNaN(pair.fst),
+  );
+  if (withoutFst.length > 0) {
+    found.push({
+      code: "fstWithoutValue",
+      text: withoutFstText(withoutFst),
+    });
+  }
   const numVars = r.passStats.numVars;
   const onFewer = pairs.filter(
     (pair) => pair.numVars > 0 && pair.numVars < numVars,
@@ -455,7 +505,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   }
   const negative = pairs.filter((pair) => pair.fst < 0 || pair.dest < 0);
   if (negative.length > 0) {
-    found.push({ code: "negativeDistance", text: negativeText(negative) });
+    found.push({ code: "negativeDistance", text: negativeText(negative, r) });
   }
   if (variants.read.ploidy === 1) {
     found.push({
@@ -509,7 +559,13 @@ function tooFewText(r: PopDistsResult, p: Project, min: number): string {
 
 /** The text of `pairWithoutDistance`, for its pairs. */
 function withoutDistanceText(pairs: readonly Pair[], min: number): string {
-  const rule = `no variant at which both have ${counted(min, "individual")} with a called genotype`;
+  // At a minimum of 0 or 1 a variant counts where both have one called
+  // genotype, and "0 individuals with a called genotype" says nothing.
+  const both =
+    min <= 1
+      ? "a called genotype"
+      : `${counted(min, "individual")} with a called genotype`;
+  const rule = `no variant at which both have ${both}`;
   const [only] = pairs;
   if (pairs.length === 1 && only !== undefined) {
     return `${pairName(only)} have ${rule}, so the pair has no distance.`;
@@ -520,8 +576,24 @@ function withoutDistanceText(pairs: readonly Pair[], min: number): string {
   return `The pairs ${pairsNamed(pairs)}${close} have ${rule}, so they have no distance.`;
 }
 
+/** The text of `fstWithoutValue`, for its pairs, which counted variants
+    and have no Hudson's Fst: popnei gives none where its divisor is 0,
+    the two populations sharing one allele at every variant counted for
+    them. */
+function withoutFstText(pairs: readonly Pair[]): string {
+  const rule = "share one allele at every variant counted for them";
+  const [only] = pairs;
+  if (pairs.length === 1 && only !== undefined) {
+    return `${pairName(only)} ${rule}, so ${MEASURE_NAMES.fst} has no value (0/0).`;
+  }
+  const close = pairs.length <= MAX_NAMED ? "," : "";
+  return `The pairs ${pairsNamed(pairs)}${close} ${rule}, so ${MEASURE_NAMES.fst} has no value for them (0/0).`;
+}
+
 /** The text of `pairsOnFewerVariants`, for its pairs, of `numPairs` in
-    the result, over fewer than the `numVars` variants the filters kept. */
+    the result, over fewer than the `numVars` variants the filters kept;
+    when they are every pair of several, "All 6 pairs", with no clause of
+    the other variants. */
 function onFewerText(
   pairs: readonly Pair[],
   numPairs: number,
@@ -529,7 +601,13 @@ function onFewerText(
   min: number,
 ): string {
   const kept = `the ${grouped(numVars)} variants kept`;
-  const others = `at the others, one of the two populations has fewer than ${counted(min, "individual")} with a called genotype.`;
+  // At a minimum of 0 or 1 a variant is lost only where a population has
+  // nothing called.
+  const short =
+    min <= 1
+      ? "no called genotype"
+      : `fewer than ${counted(min, "individual")} with a called genotype`;
+  const others = `at the others, one of the two populations has ${short}.`;
   const fewest = pairs.reduce((least, pair) =>
     pair.numVars < least.numVars ? pair : least,
   );
@@ -537,29 +615,48 @@ function onFewerText(
   if (pairs.length === 1) {
     return `The pair ${pairName(fewest)} is over ${grouped(fewest.numVars)} of ${kept} (${share}): ${others}`;
   }
-  return `${grouped(pairs.length)} of the ${grouped(numPairs)} pairs are over fewer than ${kept}, down to ${grouped(fewest.numVars)} (${share}) for ${pairName(fewest)}: ${others}`;
+  const downTo = `are over fewer than ${kept}, down to ${grouped(fewest.numVars)} (${share}) for ${pairName(fewest)}`;
+  return pairs.length === numPairs
+    ? `All ${grouped(numPairs)} pairs ${downTo}.`
+    : `${grouped(pairs.length)} of the ${grouped(numPairs)} pairs ${downTo}: ${others}`;
 }
 
-/** The text of `negativeDistance`, for its pairs, naming only the
-    measures that are negative in one of them. */
-function negativeText(pairs: readonly Pair[]): string {
+/**
+ * The text of `negativeDistance`, for its pairs of the result `r`, naming
+ * only the measures that are negative in one of them. Its last sentence
+ * says what the heatmap does with them: that it orders them as if the
+ * distance were 0 when a heatmap is drawn, `POP_DISTS_MAX_SHOWN`
+ * populations or fewer, and a measure it names is ordered by similarity;
+ * that it shows the value when every measure it names keeps the order of
+ * the file; and nothing when no heatmap is drawn.
+ */
+function negativeText(pairs: readonly Pair[], r: PopDistsResult): string {
   const fst = pairs.some((pair) => pair.fst < 0);
   const dest = pairs.some((pair) => pair.dest < 0);
-  const order =
-    "The heatmap orders them as if the distance were 0, and shows the";
   const [only] = pairs;
-  if (pairs.length === 1 && only !== undefined) {
+  const one = pairs.length === 1 && only !== undefined;
+  const bySimilarity =
+    (fst && r.order.fst.kind === "pcoa") ||
+    (dest && r.order.dest.kind === "pcoa");
+  const shows = `shows the ${one ? "value" : "values"}.`;
+  const heatmap =
+    r.pops.length > POP_DISTS_MAX_SHOWN
+      ? ""
+      : bySimilarity
+        ? ` The heatmap orders them as if the distance were 0, and ${shows}`
+        : ` The heatmap ${shows}`;
+  if (one) {
     const values = [
       ...(fst ? [`${MEASURE_NAMES.fst}, ${fourDecimals(only.fst)}`] : []),
       ...(dest ? [`${MEASURE_NAMES.dest}, ${fourDecimals(only.dest)}`] : []),
     ];
-    return `${pairName(only)} have a negative ${values.join(", and ")}: the variants cannot tell the two apart. ${order} value.`;
+    return `${pairName(only)} have a negative ${values.join(", and ")}: the variants cannot tell the two apart.${heatmap}`;
   }
   const measures = [
     ...(fst ? [MEASURE_NAMES.fst] : []),
     ...(dest ? [MEASURE_NAMES.dest] : []),
   ].join(" or ");
-  return `${grouped(pairs.length)} pairs have a negative ${measures}, ${pairsNamed(pairs)}: the variants cannot tell their two populations apart. ${order} values.`;
+  return `${grouped(pairs.length)} pairs have a negative ${measures}, ${pairsNamed(pairs)}: the variants cannot tell their two populations apart.${heatmap}`;
 }
 
 /** A pair in words, "p0 and p3". */
@@ -649,8 +746,11 @@ function numCheckNumbers(p: Project): number | null {
  * orders with popnei's Python API, after the lines that open `variants`
  * and read the table `individuals`: the populations of the column
  * narrowed to the individuals of `variants`, those under the minimum left
- * out; the call; the table of the pairs; and the order of the heatmap of
- * each measure. Throws a defect on a project with no column of the
+ * out, and those left empty at a minimum of 0; the call; the table of
+ * the pairs; and the order of the heatmap of each measure, by the six
+ * steps of the calculation worker (popDists.md, "The order of the
+ * heatmap"), so that the lines print an order wherever the application
+ * shows one. Throws a defect on a project with no column of the
  * populations, since it is asked only of an analysis that has run.
  */
 function script(p: Project): string {
@@ -662,7 +762,11 @@ function script(p: Project): string {
     throw defect("the script of the distances was asked with no populations.");
   }
   const name = JSON.stringify(column);
-  const min = String(popDistsOptions(p).minNumIndividuals);
+  const minimum = popDistsOptions(p).minNumIndividuals;
+  const min = String(minimum);
+  // A population left empty, which popnei refuses, is left out at a
+  // minimum of 0 too.
+  const atLeast = String(Math.max(minimum, 1));
   return [
     `# The distances between populations, from the column ${name}`,
     "pops = {}",
@@ -671,7 +775,7 @@ function script(p: Project): string {
     "        pops.setdefault(pop, []).append(individual)",
     "kept = set(variants.individuals)",
     "pops = {pop: [i for i in names if i in kept] for pop, names in pops.items()}",
-    `pops = {pop: names for pop, names in pops.items() if len(names) >= ${min}}`,
+    `pops = {pop: names for pop, names in pops.items() if len(names) >= ${atLeast}}`,
     "dists = popnei.calc_pop_dists(",
     '    variants, pops, jackknife_group=None, measures=["fst", "dest"],',
     `    min_num_individuals=${min},`,
@@ -684,16 +788,24 @@ function script(p: Project): string {
     '    "jost_d": dists.dest.dist_vector,',
     '    "num_variants": dists.num_vars,',
     "}).to_string(index=False))",
-    "# The order of the heatmap: the first axis of the principal coordinates of",
-    "# each matrix, a negative distance taken as 0 and Lingoes' correction applied.",
-    "# With a pair of no distance, or every distance 0, do_pcoa raises: the heatmap",
-    "# then keeps the order of the metadata file.",
+    "# The order of the heatmap of each measure. It is the order of the metadata",
+    "# file for two populations, with a pair of no distance, when no distance is",
+    "# above 0, and when popnei cannot place the populations; otherwise the first",
+    "# axis of the principal coordinates of the distances, a negative one taken as",
+    "# 0 and Lingoes' correction applied.",
     'for name, measure in [("fst_hudson", dists.fst), ("jost_d", dists.dest)]:',
-    "    corrected = popnei.correct_dists_by_lingoes(popnei.Distances(",
-    "        dist_vector=measure.dist_vector.clip(min=0), names=measure.names,",
-    "    ))",
-    "    first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]",
-    '    print(name, first.sort_values(kind="stable").index.tolist())',
+    "    values = measure.dist_vector.clip(min=0)",
+    "    order = list(dists.pops)",
+    "    if len(order) > 2 and not pandas.isna(values).any() and values.any():",
+    "        try:",
+    "            corrected = popnei.correct_dists_by_lingoes(",
+    "                popnei.Distances(dist_vector=values, names=measure.names)",
+    "            )",
+    "            first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]",
+    '            order = first.sort_values(kind="stable").index.tolist()',
+    "        except ValueError:",
+    "            pass",
+    "    print(name, order)",
   ]
     .map((line) => `${line}\n`)
     .join("");

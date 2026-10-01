@@ -7,13 +7,16 @@
  * the base of the 2D plots, plot2d.ts, which gives it its SVG, its size,
  * its axes of names, its handle and its export; it draws the cells, one
  * path per step of viridis, the values, the legend, and the tooltip of
- * the cell under the pointer.
+ * the cell under the pointer. The grid stands at the bottom left of the
+ * frame, so that the names the base writes at the foot of the frame are
+ * right under their columns.
  */
 
 import type { Path } from "d3-path";
 import { pathRound } from "d3-path";
 import { scaleBand } from "d3-scale";
 import type { ScaleBand } from "d3-scale";
+import type { ExportSize } from "./export.ts";
 import { createTooltip } from "./hover.ts";
 import { MAX_HEATMAP_NAMES } from "./limits.ts";
 import { PATH_DIGITS, viridisColour, viridisStep } from "./marks.ts";
@@ -58,8 +61,20 @@ export const CELL_TEXT_MIN = 56;
  */
 const NAMES_MIN = 12;
 
-/** The width counted for a character of the text of the plots, at 12 pixels. */
+/**
+ * The width counted for a character of the legend, at 12 pixels: its
+ * texts are numbers and the name of a measure.
+ */
 const CHARACTER_WIDTH = 7.2;
+
+/**
+ * The width counted for a character of a name of the axes, at 12 pixels:
+ * 9, since at 7.2 a name in capitals, "MEX" or 20 of them, was cut at the
+ * left edge of the plot. A name made mostly of "W" and "M", wider than 9
+ * pixels each, still loses a few pixels: "WMA" 3.2 (heatmap.md, "The
+ * names on the axes").
+ */
+const NAME_CHARACTER_WIDTH = 9;
 
 /** The longest name written whole, in characters; a longer one is cut. */
 const NAME_WHOLE = 20;
@@ -233,20 +248,21 @@ function legendValues(data: HeatmapData): string[] {
 }
 
 /**
- * The margins of the heatmap for `data`, fixed numbers made from the
- * data at 7.2 pixels a character, since nothing in a plot measures text:
- * left, 8 pixels and the longest name as written; bottom, 8 pixels, 0.71
- * of that width, the slant of 45°, and 8 more; top, 24, for the name of
- * the value; right, 16 pixels, the bar, 4 pixels and the longest of the
- * name of the value and the texts at the ends of the bar
- * (heatmap.md, "The names on the axes" and "The legend").
+ * The margins of the heatmap for `data` with its names written, fixed
+ * numbers made from the data, since nothing in a plot measures text:
+ * left, 8 pixels and the longest name as written, at 9 pixels a
+ * character; bottom, 8 pixels, 0.71 of that width, the slant of 45°, and
+ * 8 more; top, 24; right, 16 pixels, the bar, 4 pixels and the longest
+ * of the name of the value and the texts at the ends of the bar, at 7.2
+ * pixels a character (heatmap.md, "The names on the axes" and "The
+ * legend").
  */
-export function heatmapMargin(data: HeatmapData): Margin {
+function marginWithNames(data: HeatmapData): Margin {
   const longestName = Math.max(
     0,
     ...data.names.map((name) => Array.from(axisName(name)).length),
   );
-  const namesWidth = longestName * CHARACTER_WIDTH;
+  const namesWidth = longestName * NAME_CHARACTER_WIDTH;
   const longestLegend = Math.max(
     Array.from(data.valueName).length,
     ...legendValues(data).map((text) => text.length),
@@ -261,23 +277,59 @@ export function heatmapMargin(data: HeatmapData): Margin {
 }
 
 /**
+ * Whether the heatmap of `data` in an element of `size` writes the names
+ * of its axes: when a band of the grid, with the margins the names take,
+ * is of 12 pixels or more. Decided with those margins and not with the
+ * wider grid that the margins without names leave, in which a band of 12
+ * pixels would ask for the margins of the names back.
+ */
+export function writesNames(data: HeatmapData, size: ExportSize): boolean {
+  const margin = marginWithNames(data);
+  const scale = heatmapScale(
+    data.names,
+    size.width - margin.left - margin.right,
+    size.height - margin.top - margin.bottom,
+  );
+  return scale.step() >= NAMES_MIN;
+}
+
+/**
+ * The margins of the heatmap for `data`: those of its names and its
+ * legend, `marginWithNames`; in an element of `size` whose bands are too
+ * narrow for the names, which are then not written, the left margin and
+ * the bottom one are 8 pixels, so that the grid takes the room of the
+ * names. Without a size, the margins with the names, from which the
+ * screen makes the least width of the heatmap.
+ */
+export function heatmapMargin(data: HeatmapData, size?: ExportSize): Margin {
+  const margin = marginWithNames(data);
+  if (size === undefined || writesNames(data, size)) {
+    return margin;
+  }
+  return { ...margin, bottom: BOTTOM_PADDING, left: NAME_PADDING };
+}
+
+/**
  * The band scale of the names over the side of the grid, the smaller of
- * the frame's width and height, so that the cells are square, with a gap
- * of 1 pixel between two cells: the inner padding of 1 pixel over the
- * band, which gives a band of (side + 1) / names. When the band would be
- * below 2 pixels the cells touch, with no gap, since a gap of 1 pixel
- * would be most of each cell.
+ * the frame's width and height and never below 0, so that the cells are
+ * square, with a gap of 1 pixel between two cells: the inner padding of 1
+ * pixel over the band, which gives a band of (side + 1) / names. When the
+ * band would be below 2 pixels the cells touch, with no gap, since a gap
+ * of 1 pixel would be most of each cell. The scale starts at `start`: 0
+ * for the columns, from the left of the frame, and for the rows the
+ * height of the frame less the side, so that the grid ends at its foot.
  */
 export function heatmapScale(
   names: readonly string[],
   innerWidth: number,
   innerHeight: number,
+  start = 0,
 ): ScaleBand<string> {
-  const side = Math.min(innerWidth, innerHeight);
+  const side = Math.max(0, Math.min(innerWidth, innerHeight));
   const gap = names.length / (side + 1);
   return scaleBand()
     .domain(names)
-    .range([0, side])
+    .range([start, start + side])
     .paddingInner(gap <= 0.5 ? gap : 0)
     .paddingOuter(0);
 }
@@ -360,29 +412,41 @@ interface Cell {
   readonly column: number;
 }
 
+/**
+ * The two band scales of a grid: `columns` from the left of the frame,
+ * and `rows` down to its foot, with the same bands.
+ */
+interface GridScales {
+  readonly columns: ScaleBand<string>;
+  readonly rows: ScaleBand<string>;
+}
+
 /** What the last draw left for the pointer: the bands, and on what data. */
 interface LastDraw {
   readonly data: HeatmapData;
-  readonly scale: ScaleBand<string>;
+  readonly scales: GridScales;
+  /** The top of the grid in the frame: its height less the side. */
+  readonly top: number;
   readonly margin: Margin;
   readonly annotations: Group;
 }
 
 /**
  * The cell of `drawn` under (x, y) of the frame, found by division: none
- * in a gap between two cells, in the room right of or under the grid,
+ * in a gap between two cells, in the room right of or above the grid,
  * and on the diagonal.
  */
 function cellAt(drawn: LastDraw, x: number, y: number): Cell | null {
-  const step = drawn.scale.step();
-  const width = drawn.scale.bandwidth();
+  const step = drawn.scales.columns.step();
+  const width = drawn.scales.columns.bandwidth();
   const numNames = drawn.data.names.length;
+  const down = y - drawn.top;
   const column = Math.floor(x / step);
-  const row = Math.floor(y / step);
+  const row = Math.floor(down / step);
   if (
     !(column >= 0 && column < numNames && row >= 0 && row < numNames) ||
     x - column * step >= width ||
-    y - row * step >= width ||
+    down - row * step >= width ||
     row === column
   ) {
     return null;
@@ -401,25 +465,21 @@ function paddingOf(element: HTMLElement): { left: number; top: number } {
 }
 
 /** Draws the cells, the paths of their steps, the path of none and the values. */
-function drawCells(
-  frame: Frame,
-  data: HeatmapData,
-  scale: ScaleBand<string>,
-): void {
+function drawCells(frame: Frame, data: HeatmapData, scales: GridScales): void {
   const { names } = data;
   const largest = largestOf(data);
-  const width = scale.bandwidth();
-  const band = scale.step();
+  const width = scales.columns.bandwidth();
+  const band = scales.columns.step();
   const writesValues = band >= CELL_TEXT_MIN;
   const steps = new Map<number, Path>();
   const none = pathRound(PATH_DIGITS);
   let hasNone = false;
   const texts: CellText[] = [];
   for (const [row, rowName] of names.entries()) {
-    const top = bandStart(scale, rowName);
+    const top = bandStart(scales.rows, rowName);
     for (const [column, columnName] of names.entries()) {
       if (row === column) continue;
-      const left = bandStart(scale, columnName);
+      const left = bandStart(scales.columns, columnName);
       const value = valueAt(data, row, column);
       if (!Number.isFinite(value)) {
         none.rect(left, top, width, width);
@@ -490,15 +550,21 @@ function drawCells(
 }
 
 /**
- * Draws the legend from the top left of the SVG, right of the grid: the
- * name of the value above; a bar of 32 bands of viridis as high as the
- * grid, at most 240 pixels, the largest value at its top and 0 at its
- * bottom, one band of step 0 when no value is above 0, none when no value
- * is finite; and the texts at its ends, or "no value".
+ * Draws the legend from the top left of the SVG, right of the grid of
+ * side `side` whose top is `top` pixels down the frame: the name of the
+ * value above; a bar of 32 bands of viridis from the top of the grid, as
+ * high as the grid, at most 240 pixels, the largest value at its top and
+ * 0 at its bottom, one band of step 0 when no value is above 0, none when
+ * no value is finite; and the texts at its ends, or "no value".
  */
-function drawLegend(frame: Frame, data: HeatmapData, side: number): void {
+function drawLegend(
+  frame: Frame,
+  data: HeatmapData,
+  side: number,
+  top: number,
+): void {
   const barLeft = frame.margin.left + side + LEGEND_GAP;
-  const barTop = frame.margin.top;
+  const barTop = frame.margin.top + top;
   const barHeight = Math.min(side, BAR_MAX_HEIGHT);
   const textLeft = barLeft + BAR_WIDTH + BAR_TEXT_GAP;
   const finite = hasFinite(data);
@@ -641,9 +707,9 @@ export const createHeatmap: Chart<HeatmapData> = (element, data) => {
     const value = valueAt(drawn.data, cell.row, cell.column);
     hovered = cell;
     dismissed = null;
-    const left = bandStart(drawn.scale, columnName);
-    const top = bandStart(drawn.scale, rowName);
-    const width = drawn.scale.bandwidth();
+    const left = bandStart(drawn.scales.columns, columnName);
+    const top = bandStart(drawn.scales.rows, rowName);
+    const width = drawn.scales.columns.bandwidth();
     const outline = pathRound(PATH_DIGITS);
     outline.rect(left, top, width, width);
     drawn.annotations
@@ -668,31 +734,53 @@ export const createHeatmap: Chart<HeatmapData> = (element, data) => {
   }
 
   function draw(frame: Frame, drawnData: HeatmapData): void {
-    const scale = heatmapScale(
-      drawnData.names,
-      frame.innerWidth,
-      frame.innerHeight,
-    );
     const side = Math.min(frame.innerWidth, frame.innerHeight);
-    drawCells(frame, drawnData, scale);
-    drawLegend(frame, drawnData, side);
-    // Below 12 pixels a band has no room for its name: the axes are
-    // drawn with no name, and the description says the order.
-    const axisScale =
-      scale.step() >= NAMES_MIN
-        ? scale
-        : scaleBand().domain([]).range([0, side]);
-    frame.axes(axisScale, axisScale, {
-      xLabelAngle: NAME_ANGLE,
-      nameFormat: axisName,
+    // The grid at the bottom left of the frame: the room left over is
+    // right of it or above it.
+    const top = frame.innerHeight - side;
+    const scales: GridScales = {
+      columns: heatmapScale(
+        drawnData.names,
+        frame.innerWidth,
+        frame.innerHeight,
+      ),
+      rows: heatmapScale(
+        drawnData.names,
+        frame.innerWidth,
+        frame.innerHeight,
+        top,
+      ),
+    };
+    drawCells(frame, drawnData, scales);
+    drawLegend(frame, drawnData, side, top);
+    // Bands too narrow for the names: the axes are drawn with no name,
+    // in the margins made without them, and the description says the
+    // order. The size of the element is the frame and its margins.
+    const named = writesNames(drawnData, {
+      width: frame.innerWidth + frame.margin.left + frame.margin.right,
+      height: frame.innerHeight + frame.margin.top + frame.margin.bottom,
     });
+    // An axis with no name keeps its line along its side of the grid.
+    const noColumns = scaleBand().domain([]).range([0, side]);
+    const noRows = scaleBand()
+      .domain([])
+      .range([top, top + side]);
+    frame.axes(
+      named ? scales.columns : noColumns,
+      named ? scales.rows : noRows,
+      {
+        xLabelAngle: NAME_ANGLE,
+        nameFormat: axisName,
+      },
+    );
     // The cell under the pointer may have moved: the next movement of the
     // pointer finds it again.
     dismissed = null;
     clearHover();
     last = {
       data: drawnData,
-      scale,
+      scales,
+      top,
       margin: frame.margin,
       annotations: frame.annotations,
     };

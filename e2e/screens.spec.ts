@@ -3539,7 +3539,9 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await setMinimum(page, "25");
       await expect(
-        popDistsPanel(page).getByText(/^p0a and p0b have fewer individuals/),
+        popDistsPanel(page).getByText(
+          /^p0a and p0b have 24 and 24 individuals/,
+        ),
       ).toBeVisible();
       await savePanel(page, `popgen-popdists-ready-under-${theme}`);
     });
@@ -3656,6 +3658,43 @@ for (const theme of ["light", "dark"] as const) {
         ),
       ).toBeVisible({ timeout: 30_000 });
       await savePanel(page, `popgen-popdists-many-${theme}`);
+    });
+
+    test("the distances done, 100 populations, whose names the heatmap does not write", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      // Two individuals in each of 100 populations, q0 to q99.
+      await pickIndividuals(page, {
+        name: "pops100.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 200 },
+          (_, i) =>
+            `s${String(i).padStart(3, "0")},q${String(Math.floor(i / 2))}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setMinimum(page, "2");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByRole("img", {
+          name: /^Hudson's Fst between populations/,
+        }),
+      ).toBeVisible({ timeout: 30_000 });
+      await popDistsPanel(page)
+        .getByRole("img", { name: /^Hudson's Fst between populations/ })
+        .scrollIntoViewIfNeeded();
+      await page
+        .locator(".chart-heatmap")
+        .first()
+        .screenshot({
+          path: join(SCREENS, `popgen-popdists-hundred-${theme}.png`),
+        });
     });
 
     test("the distances done, Jost's D of a haploid file, every cell with no value", async ({

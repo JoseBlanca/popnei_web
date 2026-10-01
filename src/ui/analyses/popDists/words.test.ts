@@ -62,7 +62,7 @@ describe("PA5 D1 the ready state of the panel of the distances", () => {
       readyLines(kept({ p0: 48, p3: 12, p2: 84, p5: 8 }), 20, false),
     ).toEqual([
       "2 populations: p0, 48 individuals; p2, 84 individuals",
-      "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out.",
+      "p3 and p5 have 12 and 8 individuals, fewer than the minimum of 20, and are left out.",
     ]);
   });
 

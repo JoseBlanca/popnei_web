@@ -20,7 +20,8 @@ import { individualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
-import { individualsNeeds, populationsKeptNeeds } from "../project.ts";
+import { individualsNeeds } from "../project.ts";
+import { populationsKeptNeeds } from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Warning, WorkerClient } from "../store.ts";
 import { deepFreeze } from "../testSupport.ts";
@@ -252,12 +253,17 @@ interface PairOf {
 
 /** A fake result of the populations `pops`, each of 30 individuals, with
     the pairs `pairs` in the order of the result, 0.1 and 0.06 over 1,200
-    variants where a pair gives none, and the populations `leftOut`. */
+    variants where a pair gives none, the populations `leftOut`, and the
+    orders `order` of the heatmap, those of the file unless given. */
 function resultOf(
   pops: readonly string[],
   pairs: readonly PairOf[] = [],
   leftOut: LeftOut = [],
   passStats: PassStats = FLOW_PASS,
+  order: PopDistsResult["order"] = {
+    fst: { kind: "file", reason: "twoPopulations" },
+    dest: { kind: "file", reason: "twoPopulations" },
+  },
 ): PopDistsResult {
   const numPairs = (pops.length * (pops.length - 1)) / 2;
   const all = Array.from({ length: numPairs }, (_, i) => pairs[i] ?? {});
@@ -268,10 +274,7 @@ function resultOf(
     fst: Float64Array.from(all.map((pair) => pair.fst ?? 0.1)),
     dest: Float64Array.from(all.map((pair) => pair.dest ?? 0.06)),
     numVarsPerPair: Uint32Array.from(all.map((pair) => pair.numVars ?? 1200)),
-    order: {
-      fst: { kind: "file", reason: "twoPopulations" },
-      dest: { kind: "file", reason: "twoPopulations" },
-    },
+    order,
     leftOut,
     passStats,
   };
@@ -377,7 +380,7 @@ describe("PA3 D4 the worked example", () => {
 
   test("with the minimum at 2, needs gives that only A has 2 individuals or more", () => {
     expect(popDists.needs(exampleProject(2))).toBe(
-      "Only A has 2 individuals or more, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file.",
+      "Only A has 2 individuals or more, and a variant counts for a pair of populations only where both have 2 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in the metadata file.",
     );
   });
 
@@ -391,7 +394,7 @@ describe("PA3 D4 the worked example", () => {
       },
       {
         code: "negativeDistance",
-        text: "A and B have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value.",
+        text: "A and B have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap shows the value.",
       },
     ]);
     expect(popDists.checkNumbers(r)).toStrictEqual([1200, -0.01, 0.02]);
@@ -451,10 +454,10 @@ describe("PA3 D4 needs", () => {
 
   test("at a minimum of 70, only p2 of 84 has it; at 100, none", () => {
     expect(popDists.needs(project({ min: 70 }))).toBe(
-      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file.",
+      "Only p2 has 70 individuals or more, and a variant counts for a pair of populations only where both have 70 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in the metadata file.",
     );
     expect(popDists.needs(project({ min: 100 }))).toBe(
-      "No population has 100 individuals or more, and a variant counts for a pair of populations only where both have 100 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file.",
+      "No population has 100 individuals or more, and a variant counts for a pair of populations only where both have 100 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in the metadata file.",
     );
   });
 
@@ -467,7 +470,7 @@ describe("PA3 D4 needs", () => {
       individualFilters: [{ kind: "keep", individuals: keep }],
     });
     expect(popDists.needs(p)).toBe(
-      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, merge populations in the metadata file, or change the lists of individuals in the Variants step.",
+      "Only p0 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, merge populations in the metadata file, or change the lists of individuals in the Variants step.",
     );
   });
 
@@ -485,7 +488,7 @@ describe("PA3 D4 keptNeeds", () => {
       ...membersOf(PANEL_POPS, "p2"),
     ];
     expect(keptNeeds(p, keptWith(p, list))).toBe(
-      "Only p2 has 20 individuals or more among the individuals the filters keep, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.",
+      "Only p2 has 20 individuals or more among the individuals the filters keep, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.",
     );
   });
 
@@ -793,6 +796,9 @@ describe("PA3 D4 the warnings", () => {
     const two = resultOf(
       ["p0", "p2", "p1"],
       [{ fst: -0.01 }, { dest: -0.002 }],
+      [],
+      FLOW_PASS,
+      { fst: pcoa([0, 1, 2]), dest: pcoa([0, 1, 2]) },
     );
     expect(warningsOf(two, project(), "negativeDistance")).toStrictEqual([
       {
@@ -805,6 +811,9 @@ describe("PA3 D4 the warnings", () => {
     const four = resultOf(
       ["p0", "p1", "p2", "p3"],
       [negative, negative, negative, negative],
+      [],
+      FLOW_PASS,
+      { fst: pcoa([0, 1, 2, 3]), dest: pcoa([0, 1, 2, 3]) },
     );
     expect(warningsOf(four, p, "negativeDistance")).toStrictEqual([
       {
@@ -859,6 +868,32 @@ describe("PA3 D4 the warnings", () => {
       "individualsWithoutPopulation",
       "populationNotInResult",
       "pairWithoutDistance",
+      "jostHaploid",
+    ]);
+    const three = project({
+      table: {
+        columns: ["IID", "pop"],
+        rows: [...tableOfSizes([30, 30, 30, 12]).rows, ["s102", null]],
+      },
+      ploidy: 1,
+    });
+    const every = resultOf(
+      ["p0", "p1", "p2"],
+      [
+        { fst: Number.NaN, dest: Number.NaN, numVars: 0 },
+        { fst: Number.NaN, dest: Number.NaN, numVars: 12 },
+        { fst: -0.01, dest: Number.NaN, numVars: 641 },
+      ],
+      [["p3", 12]],
+      pass,
+    );
+    expect(popDists.warnings(every, three).map((w) => w.code)).toStrictEqual([
+      "tooFewIndividuals",
+      "individualsWithoutPopulation",
+      "pairWithoutDistance",
+      "fstWithoutValue",
+      "pairsOnFewerVariants",
+      "negativeDistance",
       "jostHaploid",
     ]);
   });
@@ -1015,19 +1050,302 @@ describe("PA3 D4 script", () => {
         '    "jost_d": dists.dest.dist_vector,',
         '    "num_variants": dists.num_vars,',
         "}).to_string(index=False))",
-        "# The order of the heatmap: the first axis of the principal coordinates of",
-        "# each matrix, a negative distance taken as 0 and Lingoes' correction applied.",
-        "# With a pair of no distance, or every distance 0, do_pcoa raises: the heatmap",
-        "# then keeps the order of the metadata file.",
+        "# The order of the heatmap of each measure. It is the order of the metadata",
+        "# file for two populations, with a pair of no distance, when no distance is",
+        "# above 0, and when popnei cannot place the populations; otherwise the first",
+        "# axis of the principal coordinates of the distances, a negative one taken as",
+        "# 0 and Lingoes' correction applied.",
         'for name, measure in [("fst_hudson", dists.fst), ("jost_d", dists.dest)]:',
-        "    corrected = popnei.correct_dists_by_lingoes(popnei.Distances(",
-        "        dist_vector=measure.dist_vector.clip(min=0), names=measure.names,",
-        "    ))",
-        "    first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]",
-        '    print(name, first.sort_values(kind="stable").index.tolist())',
+        "    values = measure.dist_vector.clip(min=0)",
+        "    order = list(dists.pops)",
+        "    if len(order) > 2 and not pandas.isna(values).any() and values.any():",
+        "        try:",
+        "            corrected = popnei.correct_dists_by_lingoes(",
+        "                popnei.Distances(dist_vector=values, names=measure.names)",
+        "            )",
+        "            first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]",
+        '            order = first.sort_values(kind="stable").index.tolist()',
+        "        except ValueError:",
+        "            pass",
+        "    print(name, order)",
         "",
       ].join("\n"),
     );
+  });
+
+  test("PA10 at a minimum of 0 keeps a population only when it holds an individual, and gives popnei the 0", () => {
+    const lines = popDists.script(project({ min: 0 })).split("\n");
+    expect(lines).toContain(
+      "pops = {pop: names for pop, names in pops.items() if len(names) >= 1}",
+    );
+    expect(lines).toContain("    min_num_individuals=0,");
+    const atOne = popDists.script(project({ min: 1 })).split("\n");
+    expect(atOne).toContain(
+      "pops = {pop: names for pop, names in pops.items() if len(names) >= 1}",
+    );
+    expect(atOne).toContain("    min_num_individuals=1,");
+  });
+});
+
+/** The orders of both measures along the PCoA, in the order of the
+    result. */
+function bothPcoa(numPops: number): PopDistsResult["order"] {
+  const order = Array.from({ length: numPops }, (_, i) => i);
+  return { fst: pcoa(order), dest: pcoa(order) };
+}
+
+describe("PA10 the owner's decisions of 1 October 2026 on the locks of the distances", () => {
+  test("the lists of individuals leaving one population lock with words of their own, at any minimum", () => {
+    for (const min of [0, 1, 2, 20]) {
+      const p = project({
+        table: EXAMPLE_TABLE,
+        tableName: "pops.csv",
+        column: "pop",
+        individuals: ["i1", "i2", "i3", "i4"],
+        individualFilters: [{ kind: "remove", individuals: ["i2"] }],
+        min,
+      });
+      expect(popDists.needs(p)).toBe(
+        "The lists of individuals leave one population, A, and the distances need two or more. Change the lists in the Variants step.",
+      );
+    }
+  });
+
+  test("the lists leaving p0 alone of panel.nei name it, and not the minimum", () => {
+    const p = project({
+      individualFilters: [
+        { kind: "keep", individuals: membersOf(PANEL_POPS, "p0") },
+      ],
+    });
+    expect(popDists.needs(p)).toBe(
+      "The lists of individuals leave one population, p0, and the distances need two or more. Change the lists in the Variants step.",
+    );
+  });
+
+  test("the individuals kept leaving one population lock with the words of the filters, at any minimum", () => {
+    for (const min of [0, 1, 20, 100]) {
+      const p = project({ min });
+      const kept = keptWith(p, membersOf(PANEL_POPS, "p2"));
+      expect(keptNeeds(p, kept)).toBe(
+        "The filters of individuals leave one population, p2, and the distances need two or more. Loosen the filters of individuals in the Variants step.",
+      );
+    }
+  });
+});
+
+describe("PA10 the owner's decisions of 1 October 2026 on the warnings of the distances", () => {
+  const none = { fst: Number.NaN, dest: Number.NaN, numVars: 0 };
+  const fewer: PassStats = { numVars: 1152, filtering: {} };
+
+  test("pairWithoutDistance at a minimum of 0 or 1 counts no individuals", () => {
+    for (const min of [0, 1]) {
+      const p = project({ min });
+      const one = resultOf(["p0", "p2", "p1"], [none]);
+      expect(warningsOf(one, p, "pairWithoutDistance")).toStrictEqual([
+        {
+          code: "pairWithoutDistance",
+          text: "p0 and p2 have no variant at which both have a called genotype, so the pair has no distance.",
+        },
+      ]);
+      const two = resultOf(["p0", "p2", "p1"], [none, none]);
+      expect(warningsOf(two, p, "pairWithoutDistance")).toStrictEqual([
+        {
+          code: "pairWithoutDistance",
+          text: "The pairs p0 and p2, and p0 and p1, have no variant at which both have a called genotype, so they have no distance.",
+        },
+      ]);
+    }
+  });
+
+  test("pairWithoutDistance at a minimum of 2 counts them", () => {
+    const one = resultOf(["p0", "p2", "p1"], [none]);
+    const [warning] = warningsOf(
+      one,
+      project({ min: 2 }),
+      "pairWithoutDistance",
+    );
+    expect(warning?.text).toBe(
+      "p0 and p2 have no variant at which both have 2 individuals with a called genotype, so the pair has no distance.",
+    );
+  });
+
+  test("pairsOnFewerVariants at a minimum of 0 or 1 says a population has no called genotype", () => {
+    for (const min of [0, 1]) {
+      const r = resultOf(
+        ["p0", "p2", "p1"],
+        [{ numVars: 641 }, { numVars: 1152 }, { numVars: 1152 }],
+        [],
+        fewer,
+      );
+      const [warning] = warningsOf(r, project({ min }), "pairsOnFewerVariants");
+      expect(warning?.text).toBe(
+        "The pair p0 and p2 is over 641 of the 1,152 variants kept (56%): at the others, one of the two populations has no called genotype.",
+      );
+    }
+  });
+
+  test("pairsOnFewerVariants of every pair of three says All, with no clause of the others", () => {
+    const r = resultOf(
+      ["p0", "p2", "p1"],
+      [{ numVars: 1000 }, { numVars: 641 }, { numVars: 900 }],
+      [],
+      fewer,
+    );
+    expect(warningsOf(r, project(), "pairsOnFewerVariants")).toStrictEqual([
+      {
+        code: "pairsOnFewerVariants",
+        text: "All 3 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p1.",
+      },
+    ]);
+  });
+
+  test("pairsOnFewerVariants of two of three pairs keeps the clause of the others", () => {
+    const r = resultOf(
+      ["p0", "p2", "p1"],
+      [{ numVars: 1000 }, { numVars: 641 }, { numVars: 1152 }],
+      [],
+      fewer,
+    );
+    const [warning] = warningsOf(r, project(), "pairsOnFewerVariants");
+    expect(warning?.text).toBe(
+      "2 of the 3 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p1: at the others, one of the two populations has fewer than 20 individuals with a called genotype.",
+    );
+  });
+
+  test("pairsOnFewerVariants of the one pair of two populations keeps the words of one pair", () => {
+    const r = resultOf(["p0", "p2"], [{ numVars: 641 }], [], fewer);
+    const [warning] = warningsOf(r, project(), "pairsOnFewerVariants");
+    expect(warning?.text).toBe(
+      "The pair p0 and p2 is over 641 of the 1,152 variants kept (56%): at the others, one of the two populations has fewer than 20 individuals with a called genotype.",
+    );
+  });
+
+  test("fstWithoutValue of one pair with variants and no Fst", () => {
+    const r = resultOf(
+      ["p0", "p2", "p1"],
+      [{ numVars: 1200 }, { fst: Number.NaN, numVars: 12 }],
+    );
+    expect(warningsOf(r, project(), "fstWithoutValue")).toStrictEqual([
+      {
+        code: "fstWithoutValue",
+        text: "p0 and p1 share one allele at every variant counted for them, so Hudson's Fst has no value (0/0).",
+      },
+    ]);
+  });
+
+  test("fstWithoutValue of two pairs, and of four, which names two", () => {
+    const shared = { fst: Number.NaN, numVars: 12 };
+    const two = resultOf(["p0", "p2", "p1"], [shared, shared]);
+    expect(warningsOf(two, project(), "fstWithoutValue")).toStrictEqual([
+      {
+        code: "fstWithoutValue",
+        text: "The pairs p0 and p2, and p0 and p1, share one allele at every variant counted for them, so Hudson's Fst has no value for them (0/0).",
+      },
+    ]);
+    const p = project({ table: tableOfSizes([30, 30, 30, 30]) });
+    const four = resultOf(
+      ["p0", "p1", "p2", "p3"],
+      [shared, shared, shared, shared],
+    );
+    expect(warningsOf(four, p, "fstWithoutValue")).toStrictEqual([
+      {
+        code: "fstWithoutValue",
+        text: "The pairs p0 and p1, p0 and p2 and 2 more share one allele at every variant counted for them, so Hudson's Fst has no value for them (0/0).",
+      },
+    ]);
+  });
+
+  test("fstWithoutValue is not raised for a pair with no variant, nor for a Jost's D with no value", () => {
+    const r = resultOf(
+      ["p0", "p2", "p1"],
+      [none, { dest: Number.NaN, numVars: 12 }],
+    );
+    expect(warningsOf(r, project(), "fstWithoutValue")).toStrictEqual([]);
+  });
+
+  test("negativeDistance says the heatmap shows the value when it keeps the order of the file, for each reason", () => {
+    const reasons: readonly HeatmapOrder[] = [
+      { kind: "file", reason: "noDistance" },
+      { kind: "file", reason: "allZero" },
+      { kind: "file", reason: "notPlaced", message: "popnei: no" },
+    ];
+    for (const order of reasons) {
+      const r = resultOf(["p0", "p2", "p1"], [{ fst: -0.01 }], [], FLOW_PASS, {
+        fst: order,
+        dest: order,
+      });
+      const [warning] = warningsOf(r, project(), "negativeDistance");
+      expect(warning?.text).toBe(
+        "p0 and p2 have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap shows the value.",
+      );
+    }
+    const two = resultOf(["p0", "p2"], [{ fst: -0.01, dest: -0.002 }]);
+    const [ofTwo] = warningsOf(two, project(), "negativeDistance");
+    expect(ofTwo?.text).toBe(
+      "p0 and p2 have a negative Hudson's Fst, −0.0100, and Jost's D, −0.0020: the variants cannot tell the two apart. The heatmap shows the value.",
+    );
+  });
+
+  test("negativeDistance of several pairs in the order of the file says the heatmap shows the values", () => {
+    const r = resultOf(
+      ["p0", "p2", "p1"],
+      [{ fst: -0.01 }, { fst: -0.002 }],
+      [],
+      FLOW_PASS,
+      {
+        fst: { kind: "file", reason: "allZero" },
+        dest: { kind: "file", reason: "allZero" },
+      },
+    );
+    const [warning] = warningsOf(r, project(), "negativeDistance");
+    expect(warning?.text).toBe(
+      "2 pairs have a negative Hudson's Fst, p0 and p2, and p0 and p1: the variants cannot tell their two populations apart. The heatmap shows the values.",
+    );
+  });
+
+  test("negativeDistance reads the order of the measures it names: a negative Fst in the order of the file beside a D ordered by similarity shows the value", () => {
+    const r = resultOf(["p0", "p2", "p1"], [{ fst: -0.01 }], [], FLOW_PASS, {
+      fst: { kind: "file", reason: "noDistance" },
+      dest: pcoa([0, 1, 2]),
+    });
+    const [warning] = warningsOf(r, project(), "negativeDistance");
+    expect(warning?.text).toBe(
+      "p0 and p2 have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap shows the value.",
+    );
+    const ordered = resultOf(
+      ["p0", "p2", "p1"],
+      [{ fst: -0.01 }],
+      [],
+      FLOW_PASS,
+      { fst: pcoa([0, 1, 2]), dest: { kind: "file", reason: "noDistance" } },
+    );
+    const [ofOrdered] = warningsOf(ordered, project(), "negativeDistance");
+    expect(ofOrdered?.text).toBe(
+      "p0 and p2 have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value.",
+    );
+  });
+
+  test("negativeDistance of 201 populations, whose heatmap is not drawn, says nothing of the heatmap; of 200 it does", () => {
+    for (const [numPops, end] of [
+      [201, ""],
+      [
+        200,
+        " The heatmap orders them as if the distance were 0, and shows the value.",
+      ],
+    ] as const) {
+      const pops = Array.from({ length: numPops }, (_, i) => `q${String(i)}`);
+      const r = resultOf(
+        pops,
+        [{ fst: -0.01 }],
+        [],
+        FLOW_PASS,
+        bothPcoa(numPops),
+      );
+      const [warning] = warningsOf(r, project(), "negativeDistance");
+      expect(warning?.text).toBe(
+        `q0 and q1 have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart.${end}`,
+      );
+    }
   });
 });
 

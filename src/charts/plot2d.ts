@@ -158,8 +158,12 @@ export interface Plot2dDefinition<Data extends PlotText> {
   readonly kind: string;
   /** Throws an `Error` for data the plot cannot draw by its contract. */
   readonly check: (data: Data) => void;
-  /** The margins, which can depend on the data, a legend or none. */
-  readonly margin: (data: Data) => Margin;
+  /**
+   * The margins, which can depend on the data, a legend or none, and on
+   * the size of the element, above 0 by 0: the heatmap makes them without
+   * its names when the size leaves the names no room.
+   */
+  readonly margin: (data: Data, size: ExportSize) => Margin;
   /** Draws the whole plot; called any number of times with the same arguments. */
   readonly draw: (frame: Frame, data: Data) => void;
   /**
@@ -464,7 +468,7 @@ export function createPlot2d<Data extends PlotText>(
    * frame when the margins leave it no area.
    */
   function drawAt(size: ExportSize): void {
-    const margin = definition.margin(current);
+    const margin = definition.margin(current, size);
     const innerWidth = size.width - margin.left - margin.right;
     const innerHeight = size.height - margin.top - margin.bottom;
     if (innerWidth <= 0 || innerHeight <= 0) {

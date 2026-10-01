@@ -17,9 +17,11 @@ import {
   counted,
   escaped,
   grouped,
+} from "../../../core/project.ts";
+import {
   populationsWithMinimum,
   underMinimumText,
-} from "../../../core/project.ts";
+} from "../../../core/populations.ts";
 import type { PopulationsKept } from "../../../core/project.ts";
 import { MIN_DRAW } from "../../../worker/protocol.ts";
 import { numberText } from "../../widgets/committedNumber.ts";

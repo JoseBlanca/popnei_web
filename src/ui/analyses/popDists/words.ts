@@ -18,13 +18,11 @@ import type { JobResult, ShownMeasure } from "../../../worker/protocol.ts";
 import type { PopDistsRow } from "../../../core/analyses/popDists.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
+import { counted, escaped, grouped } from "../../../core/project.ts";
 import {
-  counted,
-  escaped,
-  grouped,
   populationsWithMinimum,
   underMinimumText,
-} from "../../../core/project.ts";
+} from "../../../core/populations.ts";
 import type { PopulationsKept } from "../../../core/project.ts";
 import {
   WAITS_FOR_STATISTICS_TEXT,

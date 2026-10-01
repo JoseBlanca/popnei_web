@@ -184,6 +184,22 @@ describe("PA6 D6 the spectrum's module: spectraCsv", () => {
   });
 });
 
+describe("PA10 spectraCsv and a name a spreadsheet would run as a formula", () => {
+  test("a population named +north is written with a quote before it", () => {
+    const r = result({
+      pops: ["+north"],
+      numCalledAlleles: 2,
+      numVarsInDraw: [2],
+      foldedSfs: [[1, 1]],
+    });
+    expect(spectraCsv(r)).toBe(
+      "population,rarer_allele,variants,share\n" +
+        "'+north,0,1,\n" +
+        "'+north,1,1,1\n",
+    );
+  });
+});
+
 describe("PA6 D6 the spectrum's module: spectrumWarnings", () => {
   test("no warning without a MAF filter", () => {
     const p = projectWith([

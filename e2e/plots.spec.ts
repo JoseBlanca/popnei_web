@@ -1778,6 +1778,135 @@ test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and 
   }
 });
 
+/** Where the grid, the axis of the columns and the names of the heatmap
+    drawn last lie, in the pixels of its SVG. */
+interface HeatmapLayout {
+  readonly width: number;
+  readonly height: number;
+  /** The top and the bottom of the cells. */
+  readonly gridTop: number;
+  readonly gridBottom: number;
+  /** The top of each name under the columns. */
+  readonly columnTops: number[];
+  /** The left edge of each name left of the rows, with the name. */
+  readonly rows: { readonly text: string | null; readonly left: number }[];
+  /** The top of the bar of the legend. */
+  readonly barTop: number;
+  /** The top of the axis of the rows, its line and its names. */
+  readonly rowAxisTop: number;
+}
+
+/** Reads the layout of the heatmap drawn last. */
+async function heatmapLayout(page: Page): Promise<HeatmapLayout> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    if (svg === null) throw new Error("The plot has no SVG.");
+    const frame = svg.getBoundingClientRect();
+    const boxes = (selector: string): DOMRect[] =>
+      [...svg.querySelectorAll(selector)].map((each) =>
+        each.getBoundingClientRect(),
+      );
+    const cells = boxes("path.chart-cells, path.chart-cell-none");
+    return {
+      width: frame.width,
+      height: frame.height,
+      gridTop: Math.min(...cells.map((box) => box.top)) - frame.top,
+      gridBottom: Math.max(...cells.map((box) => box.bottom)) - frame.top,
+      columnTops: boxes("g.chart-axis-x g.tick text").map(
+        (box) => box.top - frame.top,
+      ),
+      rows: [...svg.querySelectorAll("g.chart-axis-y g.tick text")].map(
+        (each) => ({
+          text: each.textContent,
+          left: each.getBoundingClientRect().left - frame.left,
+        }),
+      ),
+      barTop:
+        Math.min(...boxes("rect.chart-legend-band").map((box) => box.top)) -
+        frame.top,
+      rowAxisTop:
+        Math.min(...boxes("g.chart-axis-y").map((box) => box.top)) - frame.top,
+    };
+  });
+}
+
+test("PA10 the grid of the heatmap stands at the foot of its frame: the names of the columns start within 14 pixels under the last row, where they stood 90 pixels and more below it, and the bar of the legend starts level with the grid", async ({
+  page,
+}) => {
+  await openPlots(page);
+  for (const kind of ["panel", "long"] as const) {
+    await drawHeatmap(page, 640, 640, kind);
+    const layout = await heatmapLayout(page);
+    expect(layout.columnTops.length, kind).toBeGreaterThan(0);
+    for (const top of layout.columnTops) {
+      expect(top - layout.gridBottom, kind).toBeGreaterThanOrEqual(0);
+      expect(top - layout.gridBottom, kind).toBeLessThanOrEqual(14);
+    }
+    // The frame is higher than the grid is wide, the legend taking width:
+    // the room left over is above the grid.
+    expect(layout.gridTop, kind).toBeGreaterThan(60);
+    expect(Math.abs(layout.barTop - layout.gridTop), kind).toBeLessThanOrEqual(
+      1,
+    );
+  }
+});
+
+test("PA10 names in capitals, of 3 and of 20 characters, are not cut at the left edge of the heatmap, in the font of the machine and in DejaVu Sans", async ({
+  page,
+}) => {
+  await openPlots(page);
+  for (const wide of [false, true]) {
+    if (wide) await useWideFont(page);
+    await drawHeatmap(page, 640, 640, "capitals");
+    const layout = await heatmapLayout(page);
+    expect(layout.rows.map((row) => row.text)).toEqual([
+      "MEX",
+      "MESOAMERICA_WILD_ABC",
+      "PER",
+    ]);
+    for (const row of layout.rows) {
+      expect(
+        row.left,
+        `${String(row.text)}, DejaVu Sans ${String(wide)}`,
+      ).toBeGreaterThanOrEqual(0);
+    }
+  }
+});
+
+test("PA10 the heatmap of 200 names, too many to write, gives the grid the margins of the names: it starts 8 pixels from the left of the SVG and ends 8 from its foot, with the line of the rows along it", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawHeatmap(page, 640, 640, "most");
+  const layout = await heatmapLayout(page);
+  expect(layout.columnTops).toEqual([]);
+  expect(layout.rows).toEqual([]);
+  expect(layout.gridBottom).toBeCloseTo(640 - 8, 0);
+  // The line of the axis of the rows runs along the grid, and not up
+  // the room left over above it.
+  expect(layout.gridTop).toBeGreaterThan(60);
+  expect(Math.abs(layout.rowAxisTop - layout.gridTop)).toBeLessThanOrEqual(1);
+  const left = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    const cells = svg?.querySelector("path.chart-cells");
+    if (svg === null || cells === null || cells === undefined) {
+      throw new Error("The plot has no cells.");
+    }
+    return (
+      Math.min(
+        ...[...svg.querySelectorAll("path.chart-cells")].map(
+          (each) => each.getBoundingClientRect().left,
+        ),
+      ) - svg.getBoundingClientRect().left
+    );
+  });
+  expect(left).toBeCloseTo(8, 0);
+});
+
 /** The line of pop_a, --chart-cat-1 of Okabe and Ito, #e69f00. */
 const ORANGE: readonly [number, number, number] = [230, 159, 0];
 

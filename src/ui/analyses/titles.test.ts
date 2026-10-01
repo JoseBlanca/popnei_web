@@ -122,7 +122,7 @@ describe("PA5 D1 the words of the shell for the distances between populations", 
       key: KEY_S,
     };
     const reason =
-      "Only p1 has 20 individuals or more among the individuals the filters keep, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.";
+      "Only p1 has 20 individuals or more among the individuals the filters keep, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, merge populations in the metadata file, or loosen the filters of individuals in the Variants step.";
     expect(
       announcementsOf(
         distancesState(

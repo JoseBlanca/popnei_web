@@ -10,8 +10,8 @@
  * The element is never narrower than the margins of the names and the
  * legend, which the heatmap gives from its data, and a grid of
  * `GRID_MIN_WIDTH` pixels a side: with names of 20 characters the
- * margins take 270 pixels, and at that width or less the grid would have
- * no room at all. Below that width the frame scrolls sideways, as a
+ * margins take 306 pixels, and at that width or less the grid would have
+ * no room for its names. Below that width the frame scrolls sideways, as a
  * table does, and while it does, and only then, a line over it says so
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
@@ -31,10 +31,9 @@ import { HEATMAP_SCROLL_TEXT } from "./words.ts";
  * not shrink: 128, three bands of 43 pixels, which hold the names of
  * the axes and no values. A page 320 pixels wide gives the panel 288,
  * and the heatmap of panel.nei, with names of 2 characters and the
- * legend of "Hudson's Fst", takes 148 of them in margins, leaving a grid
- * of 140: at 160 it scrolled sideways by 20 pixels. Meanwhile, refined
- * in the running application with the width of 40rem and the 56 pixels
- * under which a cell holds no value (heatmap.md, "The size").
+ * legend of "Hudson's Fst", takes 144.4 of them in margins, leaving a
+ * grid of 143: at 160 it scrolled sideways. The owner kept it on 1
+ * October 2026 (heatmap.md, "The size").
  */
 const GRID_MIN_WIDTH = 128;
 
@@ -54,6 +53,8 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const frame = useSidewaysFrame(frameRef);
   const scrolls = frame.scrolls;
 
+  // The margins with the names, which the heatmap keeps down to this
+  // width.
   const margin = heatmapMargin(data);
   const minWidth = Math.ceil(margin.left + margin.right + GRID_MIN_WIDTH);
 

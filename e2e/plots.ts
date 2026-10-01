@@ -492,6 +492,11 @@ function heatmapDataOf(kind: HeatmapKind): HeatmapData {
       ];
       return heatmapOf(names, spread((names.length * (names.length - 1)) / 2));
     }
+    case "capitals":
+      // Names in capitals, of 3 and of 20 characters, which the margins
+      // counted at 7.2 pixels a character cut at the left edge of the
+      // plot (heatmap.md, "The names on the axes").
+      return heatmapOf(["MEX", "MESOAMERICA_WILD_ABC", "PER"], spread(3));
     case "many":
     case "most": {
       const count = kind === "many" ? 40 : 200;
@@ -954,20 +959,16 @@ const page: PlotsPage = {
     const style = getComputedStyle(element);
     const padLeft = Number.parseFloat(style.paddingLeft);
     const padTop = Number.parseFloat(style.paddingTop);
-    const margin = heatmapMargin(data);
-    const innerWidth =
-      element.clientWidth -
-      padLeft -
-      Number.parseFloat(style.paddingRight) -
-      margin.left -
-      margin.right;
-    const innerHeight =
-      element.clientHeight -
-      padTop -
-      Number.parseFloat(style.paddingBottom) -
-      margin.top -
-      margin.bottom;
+    const width =
+      element.clientWidth - padLeft - Number.parseFloat(style.paddingRight);
+    const height =
+      element.clientHeight - padTop - Number.parseFloat(style.paddingBottom);
+    const margin = heatmapMargin(data, { width, height });
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
     const scale = heatmapScale(data.names, innerWidth, innerHeight);
+    // The grid stands at the foot of the frame.
+    const gridTop = innerHeight - Math.min(innerWidth, innerHeight);
     const middle = (index: number): number => {
       const name = data.names[index];
       const start = name === undefined ? undefined : scale(name);
@@ -981,7 +982,7 @@ const page: PlotsPage = {
     const box = element.getBoundingClientRect();
     return {
       x: box.left + padLeft + margin.left + middle(column),
-      y: box.top + padTop + margin.top + middle(row),
+      y: box.top + padTop + margin.top + gridTop + middle(row),
     };
   },
   drawLine(width, height, kind) {

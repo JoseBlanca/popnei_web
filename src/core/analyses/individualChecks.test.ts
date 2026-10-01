@@ -390,6 +390,19 @@ describe("VS3 D1 the statistics of each individual: the rest of the module", () 
     );
   });
 
+  test("PA10 individualChecksCsv writes an individual named @home with a quote before it, and its numbers as numbers", () => {
+    const r = result({
+      individuals: ["@home"],
+      missingGtRate: [0.25],
+      obsHetRate: [0.125],
+      numVars: 4,
+    });
+    expect(individualChecksCsv(r)).toBe(
+      "individual,missing_genotypes,observed_heterozygosity\n" +
+        "'@home,0.25,0.125\n",
+    );
+  });
+
   test("individualChecksCsv quotes a name with a carriage return, which ends a line of a CSV", () => {
     const r = result({
       individuals: ["a\rb"],

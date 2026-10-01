@@ -49,16 +49,18 @@ import {
   individualsStepNeeds,
   ONE_POPULATION,
   populationsBeforeRun,
-  populationListsNeeds,
   populationsKept,
-  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
+} from "./project.ts";
+import {
+  populationListsNeeds,
+  populationsKeptNeeds,
   populationsWithMinimum,
   underMinimumText,
   allEmptiedText,
-} from "./project.ts";
+} from "./populations.ts";
 import type {
   AppId,
   ColumnTypeOf,
@@ -5502,7 +5504,7 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
         consequence,
       ),
     ).toBe(
-      "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out.",
+      "p3 and p5 have 12 and 8 individuals, fewer than the minimum of 20, and are left out.",
     );
     expect(
       underMinimumText(
@@ -5515,7 +5517,7 @@ describe("PA1 D1 the populations under the minimum of individuals", () => {
         consequence,
       ),
     ).toBe(
-      "p3, p5 and p\\t7 have fewer individuals than the minimum of 20, 12, 8 and 1, and are left out.",
+      "p3, p5 and p\\t7 have 12, 8 and 1 individuals, fewer than the minimum of 20, and are left out.",
     );
   });
 

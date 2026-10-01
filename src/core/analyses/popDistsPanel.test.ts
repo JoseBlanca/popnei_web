@@ -377,6 +377,15 @@ describe("PA5 D1 popDistsRows and popDistsCsv", () => {
   });
 });
 
+describe("PA10 popDistsCsv and a name a spreadsheet would run as a formula", () => {
+  test("populations named =p1 and -p2 are written with a quote before them, and a negative Fst stays a number", () => {
+    const r = resultOf(["=p1", "-p2"], [-0.0128], [0.5], TWO);
+    expect(popDistsCsv(r)).toBe(
+      "population_1,population_2,fst_hudson,jost_d,num_variants\n'=p1,'-p2,-0.0128,0.5,1200\n",
+    );
+  });
+});
+
 describe("PA5 D1 tooManyPopulationsText", () => {
   test("201 populations", () => {
     expect(tooManyPopulationsText(manyPops(201))).toBe(

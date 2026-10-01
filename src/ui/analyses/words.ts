@@ -18,10 +18,10 @@ import {
   counted,
   escaped,
   grouped,
-  loosenText,
   namesOf,
   saying,
 } from "../../core/project.ts";
+import { loosenText } from "../../core/populations.ts";
 import type { Notice } from "../../core/store.ts";
 import type { Pops, Progress, RunError } from "../../worker/protocol.ts";
 import { capitalized, undoneOrRedone } from "../sentences.ts";

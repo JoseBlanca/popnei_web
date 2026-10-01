@@ -267,7 +267,7 @@ describe("PA7 D1 the words of the options of the diversity", () => {
       ),
     ).toEqual([
       "4 populations: p0, 48 individuals; p3, 12 individuals; p1, 68 individuals; p5, 8 individuals",
-      "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, so they will have no values, and are left out of the count of the private alleles of the others.",
+      "p3 and p5 have 12 and 8 individuals, fewer than the minimum of 20, so they will have no values, and are left out of the count of the private alleles of the others.",
       "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
       "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
     ]);
@@ -292,7 +292,7 @@ describe("PA7 D1 the words of the options of the diversity", () => {
     expect(
       readyLines({ pops, emptied: [] }, 100, false, "populations")[1],
     ).toBe(
-      "p0, p3 and p1 have fewer individuals than the minimum of 100, 48, 12 and 68, so they will have no values.",
+      "p0, p3 and p1 have 48, 12 and 68 individuals, fewer than the minimum of 100, so they will have no values.",
     );
     expect(
       readyLines(

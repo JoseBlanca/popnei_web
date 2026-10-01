@@ -20,13 +20,13 @@ import {
   loadIndividuals,
   loadVariants,
   populationsKept,
-  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
   removeIndividuals,
   setGrouping,
 } from "../project.ts";
+import { populationsKeptNeeds } from "../populations.ts";
 import type { Project, VariantSource } from "../project.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, Warning, WorkerClient } from "../store.ts";
@@ -599,6 +599,15 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
 "a,""b""",3,,,,,,,,,
 `,
     );
+  });
+
+  test("PA10 diversityCsv writes a population named =SUM(A1) with a quote before it", () => {
+    const r = result({
+      pops: ["=SUM(A1)"],
+      numIndividuals: [3],
+      numVars: 10,
+    });
+    expect(diversityCsv(r).split("\n")[1]).toBe("'=SUM(A1),3,,,,,,,,,");
   });
 
   test("WS8 D2 refusalText of a pass over a file with no variant says the file has none", () => {
