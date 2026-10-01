@@ -465,6 +465,84 @@ fixes; eleven reviewers' passes about 1.1 million. The reviews ran
 three at a time from here, after the owner saw the machine clogged,
 and cost more wall time and no more tokens.
 
+## 7. The panel of the diversity, whole, and the block of the spectrum
+
+Built and reviewed, in 104c802 (7.1), 0c89f28 (7.2), 972458b and
+17b2ac5 (7.3), and f4d6764 and 506b03b (the fixes of the review, in two
+passes). It waits for your word at stop B, below.
+
+The session that ran the plan was lost in the night of 30 September
+2026, while the fixes of the review were being made: the Mac was under
+a load of 30 to 40 from processes of the system, and the browser check
+of the fixes never ended. Their code was in the tree, not committed. A
+new session read the lost one's record, had each of the 20 fixes
+checked against the code, and went on from there on 1 October.
+
+### The deliverables, on f4d6764
+
+Checked on a copy of f4d6764 outside the worktree, on 1 October 2026:
+`format:check`, `typecheck` and `lint` exit 0; `npm test` "Tests 3530
+passed (3530)"; the browser check with `--workers=4` "1094 passed
+(4.8m)"; `npm run screens` "360 passed". The first script of the page
+is 834.71 kB, 249.29 kB gzipped, beside 229.89 kB at the start.
+
+1. `-g "PA7 D1"`: 8 passed, 4 in each engine.
+2. `-g "PA7 D2"`: 8 passed, 4 in each engine, at least 4 asked.
+3. The time of the two passes, `PA7 D3`, median of 5 runs, Chromium
+   153.0.8010.12 and WebKit 26.6 on this Mac (Apple M5 Pro, 64 GB),
+   load 1.7 to 2.6. On the 19 MB file: the first pass 136 and 139 ms,
+   the second 122 and 123 ms, the Run 257 and 261 ms. One pass, which
+   popnei issue #4 would allow, would save about 53% of the Run in both.
+   On `panel.nei` the Run takes 19 and 24 ms, and the split between the
+   passes is not reliable on a file that small. In `diversity.md`, "How
+   it runs" (17b2ac5). The tests reviewer measured it again: 137 and
+   123 ms in Chromium, 140 and 122 in WebKit.
+4. The screenshots of the panel, light and dark, in
+   `screens/popgen-diversity-*`: the eight states the plan asks and
+   five of the block of the spectrum that the review asked for. The
+   orchestrator looked at the done state and at a typed draw of 96.
+
+### The review
+
+Eight reviewers, then `react` again after the fixes; `accessibility`
+runs again with the review of work package 8. No wrong number: the spec
+reviewer matched every number of the panel and of the spectrum against
+popnei's. axe found no violation in any state. Fixed:
+
+- One histogram that failed would have taken the whole panel with it,
+  its table, its fields and Run. Each histogram now fails alone.
+- The spectrum of p0 drawn under the heading of p2 passed every test,
+  since the flow counted 20 bars, which every population has. The flow
+  now reads each histogram's own largest share.
+- The download of the spectrum, the histograms' horizontal axis, the
+  ranges of the three fields and the limit of 1,000 bars had no test.
+- The spectrum's table dropped a population with no spectrum without a
+  word; it now keeps its columns with "no value".
+- Whether a draw counted as typed depended on how the number was
+  entered: an arrow key marked it, a paste did not.
+- In every number field of the application, older than this stage:
+  "0,1" typed, the text selected with Shift and an arrow, and Enter,
+  gave 1 with no refusal of the comma (506b03b).
+- The ready state spoke of the private alleles "of the others" when
+  there were no other populations.
+- Small: the refusal of "2,400" in the draw now says why; the least
+  draw, 2, is written once; one component draws the histograms of the
+  Variants step and of the spectrum.
+
+Left: the third line a population with no spectrum can show (no variant
+with both alleles) has no screenshot, since no fixture reaches it; its
+words are tested.
+
+### How the work of 7 went, for whoever revises a skill or a plan
+
+Three writer's tasks by one writer, about 580,000 tokens with the first
+round of fixes; six of the nine reviewers' passes, those whose count
+is known, about 680,000; the session that
+finished the fixes 200,000. What the lost session's writer was told was
+only in the session; the new one recovered it from the transcript under
+`~/.claude/projects/`, which survives a lost session where the
+scratchpad may not. A brief of fixes belongs in a file of the branch.
+
 ## Stop A: the panel of the distances, for the owner
 
 ### How to try it
@@ -833,6 +911,53 @@ the plan; each is asked of you at the next stop.
     `ld.nei`, orange and sky blue, shows both faint. The number is in
     the legend and the table. Recommendation: the grey edge under the
     guide too. For stop C.
+
+23. **The description of the LD decay's plot, `ldDecay.md`,
+    "Accessibility".** The spec gives the words a screen reader hears
+    of the plot for the plain case alone. The writer of task 8.1 chose
+    the others: "for the first 16 of the 17 populations", "(beyond the
+    plot)" after a half distance past the largest distance, "with the
+    curve fitted to each that has one", "with its fitted curve" for one
+    population, and a sentence each for the populations with no pair
+    and with no curve. Recommendation: judge them at stop C, and write
+    them into the spec.
+24. **The notice of an LD decay removed, `shell.md`.** It reads "…brings
+    back the LD decay as it was". The words "the plot and the tables"
+    would need the shared sentence to take a singular analysis with a
+    plural result, which it cannot. Recommendation: keep "the LD
+    decay". For stop C.
+25. **A constant shared by the worker's messages and core,
+    `docs/architecture.md` section 9.** The least draw of the
+    rarefaction, 2, was written in five places; the review had it
+    written once, beside the messages of the calculation worker, where
+    core and the panel now read it (f4d6764). The architecture and the
+    coding skill say core imports "the types" of that file; a constant
+    is a value. The lint allows it, and nothing of the worker is
+    loaded by it. Recommendation: "and its constants" added to both
+    sentences. The other way is to take the change back and keep the
+    number in five places.
+26. **The labels of the spectrum's histograms, `histogram.md`, the
+    margins.** Two defects seen in the pictures, in Chromium and
+    WebKit, for stop B:
+    - With a typed draw of 96 the numbers of the vertical axis have
+      three decimals ("0.035") and ran over the axis's label by 1 to
+      2.4 pixels. Fixed in e0be338: the left margin, 60 pixels in the
+      spec "meanwhile", grows with the longest number, and the gap is
+      now 4.6 to 7 pixels. The histograms of the Variants step did not
+      change. Recommendation: accept it, and the spec says "The left
+      margin is 60 pixels, or, when the longest number of the vertical
+      axis has more than four characters, 22 pixels, 7.2 a character
+      and 9."
+    - On a screen of 320 pixels the label under the histogram, "Copies
+      of the rarer allele among 40 chromosomes", is 278 to 326 pixels
+      long in a plot of about 281, and its end is cut. Not fixed: two
+      lines need a deeper margin under the plot, which the spec fixes
+      at 44 pixels. Options: the base of the plots breaks a label
+      longer than the plot into two lines and adds 16 pixels below, a
+      change of `plot2d.md` and `histogram.md`; or a shorter label on
+      narrow screens, "Copies of the rarer allele", with the draw
+      already in the caption, a change of `sfs.md`. Recommendation: the
+      first, since it mends every plot with a long label.
 
 ## The standing rules of this plan, for a session that takes over
 
