@@ -6,13 +6,65 @@ branch `plan/population-analyses`, which is not merged and not pushed.
 
 ## Where the plan stands
 
-Under way, from 30 September 2026.
+Done on 1 October 2026, on the branch `plan/population-analyses`, 115
+commits ahead of `main`, not merged and not pushed. What it asks of you
+is the order to merge it into `main`, and then the order to push `main`.
 
-The owner tried the three screens on 1 October 2026, in Firefox, with
-their own data, and answered "everything is OK, go on": the three
-screens are accepted, and every recommendation of stops A, B and C and
-of the points 1 to 26 is taken. They are carried out as work package
-10, added to the plan that day.
+**What exists now that did not.** In the population genetics
+application, three analyses of the populations, each a panel of the
+Analyses step:
+
+- the distances between populations, Hudson's Fst and Jost's D of each
+  pair, as a heatmap ordered by popnei's PCoA of the matrix and a table
+  with its download;
+- the diversity whole: the eleven columns, F and the private alleles
+  with their rarefied values among them, three options, and the folded
+  site frequency spectrum of each population in a block under the table,
+  as histograms on one scale and a table;
+- the LD decay of each population: its bins, its fitted curve and its
+  half distance, as a line plot and two tables, with the calculation
+  worker started again after every run to give its memory back.
+
+Every decision you took at the three stops is in the specs and in the
+code (work package 10, below).
+
+**How it was checked**, on a copy of 3441772 outside the worktree, on
+1 October 2026, on this Mac: `format:check`, `typecheck` and `lint` exit
+0; `npm test` "Tests 3676 passed (3676)", none skipped; the browser
+check in Chromium and WebKit "1142 passed (5.3m)", the probe's 52 among
+them; `npm run screens` "392 passed"; `npm pkg get dependencies.popnei`
+prints the URL of `js-v0.1.0-dev.3`; core holds no clock, timer,
+randomness, `await` or import of popnei. The first script of the page is
+860.40 kB, 257.44 kB gzipped, against 229.89 kB at the start: 27.55 kB
+more for the three panels and their plots. The map of the cases,
+`docs/plans/population-analyses.cases.md`, matches 273 of the 277 cases
+of the specs of stage 5 to a test; the other 4 are listed there with
+their reasons.
+
+**What was not checked here.** Firefox does not launch on this Mac, so
+no flow of this stage has run in it; you tried the three screens in it
+by hand. The push of `main` runs the flows in Firefox for the first
+time, and on the fonts of Linux: a flow that fails there is fixed on
+`main` before anything else. Stage 4 found that Firefox on GitHub's
+runners has no WebGL and that its pixels and fonts differ.
+
+**What is left open:**
+
+- popnei issue #4: the diversity makes two passes, about 53% of its Run
+  on the 19 MB file, until a release of popnei gives the
+  heterozygosities in `calcPopDiversity`.
+- popnei issue #5: a variants file not sorted by position gives the LD
+  decay fewer pairs with no word; its help says the file must be sorted.
+- Two results popnei documents and its present release never gives are
+  errors of the application, not words on the screen: a curve with no
+  half distance, and a bin with pairs and no mean.
+- For stage 6: the script's reading of the metadata file with
+  `dtype=str` (point 12), and the diversity's script needing the
+  variants file read (point 18).
+- For stage 8, the help: the help of the PCA and the Variants step
+  points to the LD decay to choose the distance (C10).
+- The open points of earlier stages stay as they were: the bound of the
+  cache, how far back undo goes, the words of the project file.
 
 ### Words the report uses
 
@@ -631,6 +683,94 @@ Two agents wrote into one directory named `copy` of the shared
 scratchpad, and one emptied the worktree's `node_modules` through a
 link left there: a copy for breaking lines belongs under `$TMPDIR` with
 a name of its owner's, which the briefs now say.
+
+## 9. The end of the stage
+
+Done, in 31463bf, df686cb and dd2b1c5 (9.1, the documents), and
+c197382, 8bbd21a, 6d078ef and 3441772 (9.2, the map of the cases).
+
+1. The whole, on a copy of 3441772: the checks at the top of this
+   report. Of the flows a deliverable names: `PA4 D` 16 passed, `PA5 D`
+   28, `PA7 D` 16, `PA8 D` 22; `PA1` has unit tests alone.
+2. The documents. Nine of the specs of stage 5 have a section "What this
+   spec asks of other documents", and every item of them is done: in
+   `docs/architecture.md`, `docs/functionality.md`, `docs/build-order.md`,
+   the skills `charts.md`, `css.md` and `testing.md`, and the code it
+   names. Section 11 of the architecture holds the numbers of tasks
+   2.5, 5.3 and 7.3, and section 7 the sentence that the order of the
+   heatmap and the curve of the LD decay are made outside the plots.
+   Three sentences of `functionality.md` were corrected, one of which
+   said the spectrum costs no second pass. `build-order.md` marks no
+   stage as built, so it marks none here.
+3. The map of the cases: 277 items, 273 matched to a test, 17 tests
+   written for them, each seen to fail with its code broken; the 4 left
+   are listed in the map. It found two sentences of `sfs.md` and
+   `ldDecay.md` left behind by the reviews, corrected on 1 October. It
+   is written by `node docs/plans/population-analyses.cases.mjs` from
+   its parts, and `--check` says whether a later commit moved a test.
+
+## 10. The owner's decisions at the three stops
+
+Done, in 8566e0a (10.1, the distances, the heatmap and what the three
+analyses share), 6f59edf and bf01654 (10.2, the LD decay and the line
+plot), 52629ad, f0615b8, c02895b and 36946b4 (10.3, the diversity, the
+spectrum and the base of the plots), each after its specs, and 1dcc84b
+to c1cd1ee (the fixes of the review, 10.4).
+
+### What came out other than as written
+
+Every decision is in a spec and in the code; B1, the table of eleven
+columns that scrolls sideways, stays as it was, as you decided. These
+came out other than the report's recommendation said, and you may want
+to look:
+
+- **A9** was an error of the report: the LD decay does not read the LD
+  pruning, so it never locks on its empty distance; only the distances
+  do, and `steps/variants.md` now says so.
+- **A1.** "The heatmap orders them as if the distance were 0" follows
+  which measures have negative distances, not which one is drawn, since
+  the warning is made once for both.
+- **A3 and point 10** each needed a second sentence that the
+  recommendation did not give; the writer wrote the parallel one.
+- **Point 21.** The names' margins count 9 pixels a character, not a
+  measurement, which the rules of the plots do not allow. "WMA" still
+  loses about 3 pixels of its "W", where it lost 8.6.
+- **C2.** The legend goes above the plot when the frame is narrower
+  than 300 pixels or a line of it is very long; names are cut after 15
+  characters.
+- **B3.** One population, or a largest population that holds fewer than
+  2 chromosomes, still lock at all the individuals kept, since a draw of
+  1 cannot be typed.
+- **Point 14** went further than its recommendation: each population
+  keeps its colour and shape of the PCA up to 49 populations, and is
+  numbered among the 16 drawn only above that.
+- **Point 26** too: an axis label longer than its plot goes on two
+  lines, the vertical one as well, but only when it would also run past
+  the margins; and once broken it stays broken, since two labels that
+  broke and unbroke in turn never settled.
+
+### The review
+
+Six reviewers, `spec`, `stale` with `errors`, `accessibility` with
+`ux`, `react` and `tests`. No wrong number, and axe found no violation
+in 64 runs, three panels in two themes, two widths and both engines.
+The spec reviewer found all 53 decisions and points accounted for.
+Fixed:
+
+- A population name with a hidden character, a right-to-left mark for
+  one, was cut in the middle of its escape in the LD decay's legend.
+- A blank band of 115 pixels above the heatmap's grid, 40% of the plot
+  at 320 pixels: the plot is now as high as its grid.
+- On a page of 320 pixels, the headers of a table that scrolls sideways
+  wrapped word by word; the LD decay's took five lines. They now keep
+  one line on a narrow page.
+- With the browser's text at 32 pixels, an empty band beside the LD
+  decay's legend.
+- Eight lines of the new code that no test guarded, among them the
+  quote before a name such as "=SUM(A1)" in the LD decay's two
+  downloads, and the ready line that would have told one haploid
+  individual to type a draw the field refuses.
+- Stale sentences in five specs and three comments.
 
 ## Stop A: the panel of the distances, for the owner
 

@@ -1,7 +1,6 @@
 # Plan: the analyses of the populations
 
-30 September 2026, approved by the owner the same day; under way from
-30 September 2026 on the branch `plan/population-analyses`. It builds
+30 September 2026, approved by the owner the same day; done on 1 October 2026 on the branch `plan/population-analyses`. It builds
 stage 5 of `docs/build-order.md`: the distances between populations,
 Hudson's Fst and Jost's D of each pair, as a heatmap ordered by
 similarity and a table; the diversity whole, with F, the alleles, the
@@ -1105,7 +1104,7 @@ findings are fixed.
 - [x] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
   points 1, 15, 16, 17, 20, 25 and 26. B1 stays as it is. After 10.1,
   whose shared words it uses.
-- [ ] 10.4 The review of 10.1 to 10.3: `spec`, `tests`, `stale`,
+- [x] 10.4 The review of 10.1 to 10.3: `spec`, `tests`, `stale`,
   `errors`, `react`, `accessibility` and `ux`, and its fixes.
 
 Points 12 and 18 are for stage 6 and C10 for task 9.1.
@@ -1147,7 +1146,7 @@ specs of stage 5 matched to a test.
 
 **Tasks:**
 
-- [ ] 9.1 The documents, and the final checks, with a sentence of
+- [x] 9.1 The documents, and the final checks, with a sentence of
   section 7 of `docs/architecture.md` that the order of the heatmap and
   the curve of the LD decay are made outside the plots, found missing
   by the review of work package 3. Serves 1 and 2.
