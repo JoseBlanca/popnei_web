@@ -244,8 +244,19 @@ and turned along the vertical one, in the margins:
   frame of the histogram was 16 pixels lower for the label under it.
   The two decisions read each other, since a second line under the
   frame makes it lower and one along it makes it narrower: the base
-  decides them again, at most three times, until neither changes. A
-  label that fits is drawn on one line, with the definition's margins.
+  decides them again until neither changes, and a label broken in one
+  round stays broken in the next, so that it ends within three rounds.
+  Without that rule the two can take turns when the left margin is the
+  narrower one, as beside the legend of a line plot at the right: the
+  vertical label's second line widens the left margin and gives the
+  label under the frame 8 pixels more of room, which can let it fit
+  on one line, and the frame, 16 pixels higher, can then let the
+  vertical label fit too, which takes the 8 pixels back. With margins
+  of 16, 200, 40 and 40 pixels, labels of 51 and 41 characters took
+  turns at 507 by 316 pixels, among other sizes, and three rounds ended
+  with the vertical label broken where it fits. In that case alone a
+  label that would fit is on two lines; otherwise a label that fits is
+  drawn on one line, with the definition's margins.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
