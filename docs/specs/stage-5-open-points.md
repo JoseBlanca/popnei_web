@@ -418,9 +418,9 @@ the stage.
   16 populations lay over the points; and, for point 5 alone, a right
   margin of 28 pixels with the legend left inside. Within this
   decision, the task that built it chose that in an element too narrow
-  to leave the frame 300 pixels the legend stands under the plot, since
-  on a screen of 320 pixels a margin at the right would leave a frame
-  of 34.
+  to leave the frame 300 pixels the legend stands above the plot, where
+  the histograms have theirs, since on a screen of 320 pixels a margin
+  at the right would leave a frame of 34.
 - **C3. The warning of a half distance below the pairs says what to
   do.** It ends "Type a smaller largest distance to see the decay
   within them." Not taken: the warning as it was, which ended at what

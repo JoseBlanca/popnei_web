@@ -69,15 +69,18 @@ group `i` has the colour `i % 7` of Okabe and Ito and the shape
   shows both (WCAG 2.2, success criterion 1.4.1). It stands in a margin
   at the right of the frame, its rows from the top of the frame down,
   while that leaves the frame 300 pixels wide or more; in a narrower
-  element it stands under the plot, below the label of the horizontal
-  axis, its rows from the left edge of the SVG, since a margin at the
-  right would leave little or no plot: on a screen of 320 pixels the
-  legend of `ld.nei`, 226 pixels wide, would leave a frame of 34. The
-  owner decided the legend outside the frame on 1 October 2026 (C2);
-  inside it, at the top right, the last rows of 16 populations lay over
-  the points, and a long label would have covered most of the plot.
-  The legend under a narrow plot is the choice of the task that built
-  it, within that decision.
+  element it stands above the plot, in the top margin, where the
+  histogram has its legend, its rows from the top left corner of the
+  SVG, since a margin at the right would leave little or no plot: on a
+  screen of 320 pixels the legend of `ld.nei`, 226 pixels wide, would
+  leave a frame of 34. The owner decided the legend outside the frame
+  on 1 October 2026 (C2); inside it, at the top right, the last rows of
+  16 populations lay over the points, and a long label would have
+  covered most of the plot. The legend above a narrow plot is the
+  choice of the task that built it, within that decision; under the
+  plot it would stand between the numbers of the horizontal axis and
+  the label of that axis, which the base writes at the foot of the
+  bottom margin.
 
 The lines are drawn first, then the points, then the marks, series by
 series in their order within each, so that no line covers a point.
@@ -87,23 +90,24 @@ The legend is in the SVG, and so in the exported file with no
 and not HTML of the screen, as the scatter's is: the scatter's legend is
 made of buttons that highlight a population, which must be outside the
 SVG to be reached by the keyboard, and this legend has no control.
+
 **The room of the legend** is counted and not measured, as the margins
 of every plot are (`plot2d.md`): a label is taken to be 7.5 pixels wide
 for each of its characters, at the 12 pixels of the text of a legend,
-which holds a name in capitals in the fonts of macOS and of Linux; a
-row is its piece of line, 24 pixels, 6 more, and its label. At the
-right, the legend starts 12 pixels from the frame, and the right margin
-is those 12, the longest row and 4 more, and never less than 28 pixels:
-with
-the 16 the plot had, the last number of the axis of the LD decay,
-"100,000", was cut by 3.5 to 7.5 pixels at the right edge of the SVG in
-Chromium and WebKit (point 5). Under the plot, the right margin is 28
-pixels, the bottom margin grows by 8 pixels and 18 for each row, and
-the longest row needs an element as wide as it and 8 pixels on each
-side. The
-screen gives the element the height the legend under the plot needs,
-and a width that holds its longest row, from `lineLegendRoom`, below;
-what an element too small does is in "The cases".
+which held the labels of two populations named in 16 capitals,
+"MESOAMERICA_WILD", in the system font of macOS and in DejaVu Sans, the
+font of the Linux of the checks; a row is its piece of line, 24 pixels,
+6 more, and its label. At the right, the legend starts 12 pixels from
+the frame, and the right margin is those 12, the longest row and 4
+more, and never less than 28 pixels: with the 16 the plot had, the last
+number of the axis of the LD decay, "100,000", was cut by 3.5 to 7.5
+pixels at the right edge of the SVG in Chromium and WebKit (point 5).
+Above the plot, the right margin is 28 pixels, the top margin grows by
+8 pixels and 18 for each row, and the longest row needs an element as
+wide as it and 8 pixels on each side. The screen gives the element the
+height the legend above the plot needs, and a width that holds its
+longest row, from `lineLegendRoom`, below; what an element too small
+does is in "The cases".
 
 `charts.md`, "Accessibility", has the lines of the LD decay labelled at
 their ends; the legend takes that place, since the curves of the LD
@@ -191,13 +195,13 @@ export interface XY {
 /** What the legend of `data` asks of the element, in CSS pixels, for
     the screen that sizes it. */
 export interface LineLegendRoom {
-  /** The legend stands under the plot in an element narrower than this. */
-  readonly belowUnder: number;
-  /** What the legend under the plot adds to the height of the element. */
-  readonly belowHeight: number;
+  /** The legend stands above the plot in an element narrower than this. */
+  readonly narrowUnder: number;
+  /** What the legend above the plot adds to the height of the element. */
+  readonly narrowHeight: number;
   /** The least width of an element that holds the longest row of the
-      legend under the plot. */
-  readonly belowWidth: number;
+      legend above the plot. */
+  readonly narrowWidth: number;
 }
 export function lineLegendRoom(data: LineData): LineLegendRoom;
 
@@ -248,10 +252,11 @@ every dashed line under every mark. In `chart-legend`, one
 line, 24 pixels, on a casing for a light colour, its mark at the middle
 of the piece, and its text, anchored at its start, 6 pixels after the
 piece. At the right of the frame the rows start 12 pixels from it, the
-first 8 pixels below its top; under the plot they start 8 pixels from
-the left edge of the SVG, the first 8 pixels below the bottom margin of
-44. `chart-legend` has `data-place`, "right" or "below". The legend is
-placed without measuring its text, as the histogram's is.
+first 8 pixels below its top; above the plot they start 8 pixels from
+the left edge of the SVG, the first 8 pixels below its top, and the
+frame starts 12 pixels under the last. `chart-legend` has `data-place`,
+"right" or "above". The legend is placed without measuring its text, as
+the histogram's is.
 
 The classes the plot adds to `charts.css`, colours from the tokens:
 
@@ -266,8 +271,8 @@ The classes the plot adds to `charts.css`, colours from the tokens:
 
 The margins are 12 at the top, 44 at the bottom and 60 at the left, in
 CSS pixels, as the histogram's without a threshold, named constants of
-`line.ts`; the right margin, and the bottom one with the legend under
-the plot, are those of "The room of the legend", above, and so depend
+`line.ts`; the right margin, and the top one with the legend above the
+plot, are those of "The room of the legend", above, and so depend
 on the data and on the width of the element, which the base gives the
 definition's `margin` with the data from 1 October 2026 (`plot2d.md`,
 `Plot2dDefinition`).
@@ -290,12 +295,12 @@ definition's `margin` with the data from 1 October 2026 (`plot2d.md`,
   (`docs/specs/analyses/ldDecay.md`, "Its words", with their check in
   its "How it is verified"). How the legend holds more is left for the
   running application, checked with 3 and with 16.
-- **An element too low for the legend under the plot**, one the screen
-  did not make `belowHeight` higher: the margins leave the frame no
+- **An element too low for the legend above the plot**, one the screen
+  did not make `narrowHeight` higher: the margins leave the frame no
   height, and the base draws nothing, as for any element not larger
   than its margins (`plot2d.md`). The panel of the LD decay makes its
-  element higher by `belowHeight` exactly when it is narrower than
-  `belowUnder`, and never narrower than `belowWidth`, below which it
+  element higher by `narrowHeight` exactly when it is narrower than
+  `narrowUnder`, and never narrower than `narrowWidth`, below which it
   scrolls sideways in its frame as it does under 320 pixels.
 - **A label longer than its room**, wider than 7.5 pixels a character:
   cut by the right edge of the SVG. The LD decay cuts the names of its
@@ -332,13 +337,12 @@ element stubbed at 600 by 375:
 - the legend at 600 by 375 with labels of 24 characters: `data-place`
   "right", a right margin of 226 pixels, 12, 24, 6, 180 and 4, and the
   rows from 12 pixels right of the frame; at 320 by 404 the same data
-  give `data-place` "below", a right margin of 28, a bottom margin of
-  88 and the rows from 8 pixels right of the left edge;
-  `lineLegendRoom` of those data gives `belowUnder` 586, the left
-  margin of 60, a frame of 300 and the 226, `belowHeight` 44 and
-  `belowWidth` 226; a series more makes the right margin no
-  larger and the bottom one 18 larger; with no series, a right margin
-  of 28;
+  give `data-place` "above", a right margin of 28, a top margin of 56
+  and the rows from 8 pixels right of the left edge and 8 below the
+  top; `lineLegendRoom` of those data gives `narrowUnder` 586, the left
+  margin of 60, a frame of 300 and the 226, `narrowHeight` 44 and
+  `narrowWidth` 226; a series more makes the right margin no larger
+  and `narrowHeight` 18 larger; with no series, a right margin of 28;
 - the order in `chart-marks`: every line before every set of points;
 - a NaN in `points.y` leaves that point out of the path; a NaN in
   `line.y` breaks the path into two parts, two `M` commands;
@@ -356,9 +360,10 @@ decay of `ld.nei` with its numbers as literals from
 `chart-line-colour-0` with the stroke `rgb(230, 159, 0)` and a casing,
 the casings of the two dashed lines, and the legend in the file;
 `toPNG(2)` of the plot; that no text of the legend or of the axes
-passes the right edge of the SVG at 600 pixels, with the legend at the
-right, and at 320, with the legend under the plot, in the committed
-font, and that no row of the legend lies over the frame. A test of the tokens
+passes the right edge of the SVG at 700 pixels, with the legend at the
+right, and at 320, with the legend above the plot, in the committed
+font, for the labels of `ld.nei` and for two of 16 capitals, and that
+no row of the legend lies over the frame. A test of the tokens
 checks the four colours without a casing at 3:1 or more on the
 background of each theme, as the scatter's test does for the marks.
 
@@ -375,7 +380,7 @@ too (`docs/specs/analyses/sfs.md`).
 - `docs/specs/charts/plot2d.md`, `Plot2dDefinition`: nothing more. The
   size of the element that `margin` is given from 1 October 2026, added
   there for the heatmap, is what the legend of this plot reads to stand
-  at the right of a wide element and under a narrow one.
+  at the right of a wide element and above the plot in a narrow one.
 - `.claude/skills/coding/charts.md`, "Accessibility": that the lines of
   the LD decay are told apart by the legend and the marks of their
   points, not by labels at their ends, for the reason of "What the user
