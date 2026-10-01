@@ -717,7 +717,8 @@ A9. **Two sentences of other specs.** `steps/variants.md` (about lines
 In a terminal, in the checkout made for this stop,
 `/Users/jose/devel/popnei_web/.claude/worktrees/stop-b`, which holds
 the branch at fa345dd, run `npm run dev` and open the address it
-prints, then the population genetics application. Load
+prints, then that address followed by `popgen.html`, the population genetics
+application, since the front page has no link to it yet. Load
 `e2e/fixtures/panel.nei` in the Variants step and
 `e2e/fixtures/panel_pops.csv` in the Individuals step, with its column
 `popcat`; in the Analyses step, "Diversity", Run. For the warning of
@@ -797,7 +798,8 @@ In a terminal, in the checkout made for this stop,
 `/Users/jose/devel/popnei_web/.claude/worktrees/stop-c`, which holds
 the branch as it stood on 1 October 2026 after the review of the LD
 decay, and so serves for stops A and B too, run `npm run dev` and open
-the address it prints, then the population genetics application. Load
+the address it prints, then that address followed by `popgen.html`, the population genetics
+application, since the front page has no link to it yet. Load
 `e2e/fixtures/ld.nei` in the Variants step and
 `e2e/fixtures/ld_pops.csv` in the Individuals step, with its column
 `pop`; in the Analyses step, "LD decay", type 100000 as the largest
