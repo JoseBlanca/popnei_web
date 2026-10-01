@@ -20,6 +20,7 @@ import {
   analysisOptions,
   bothOf,
   counted,
+  escaped,
   grouped,
   individualsNeeds,
   namesOf,
@@ -138,9 +139,20 @@ const LD_DECAY_WORDS: PopulationWords = Object.freeze({
   notIn: "the plot",
 });
 
-/** The reason of the largest distance not typed. */
+/** Why the largest distance has to be typed, which stands beside its
+    field while it is empty, and nowhere else (ldDecay.md, "Why it cannot
+    run"). */
 const NO_DISTANCE =
   "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs.";
+
+/** The reason beside the Run button while the largest distance is not
+    typed: where to type it, the field saying why. */
+const NO_DISTANCE_RUN = "Type the largest distance, above.";
+
+/** A name of a population is written whole in the legend of the plot up
+    to this many characters, and cut with "…" above them, so that the
+    legend, beside the plot, leaves the plot its room. */
+export const LD_LEGEND_NAME_LENGTH = 16;
 
 /** The start of popnei's refusal for the memory of the counts or of the
     variants within the largest distance. */
@@ -201,6 +213,7 @@ export function ldDecayFilters(
 export function maxDistReason(p: Project): string | null {
   const maxDist = ldDecayOptions(p).maxDist;
   if (maxDist === null) {
+    // Why it has to be typed; `needs` says only where.
     return NO_DISTANCE;
   }
   // No population is left when the populations cannot be made yet, which
@@ -224,14 +237,14 @@ export function maxDistFor(numPops: number): number {
 /** The line under the plot when the result has more than
     `LD_PLOT_MAX_POPS` populations, which the plot leaves out: "The plot
     draws the first 16 of the 17 populations, in the order of the table.
-    The tables below hold all 17."; `null` otherwise. */
+    The two tables hold all 17."; `null` otherwise. */
 export function ldPlotOmittedText(r: LdDecayResult): string | null {
   const numPops = r.pops.length;
   if (numPops <= LD_PLOT_MAX_POPS) {
     return null;
   }
   const all = grouped(numPops);
-  return `The plot draws the first ${String(LD_PLOT_MAX_POPS)} of the ${all} populations, in the order of the table. The tables below hold all ${all}.`;
+  return `The plot draws the first ${String(LD_PLOT_MAX_POPS)} of the ${all} populations, in the order of the table. The two tables hold all ${all}.`;
 }
 
 /**
@@ -535,19 +548,31 @@ export function ldHalfMark(
     : null;
 }
 
+/** A name of a population as the legend of the plot writes it: escaped,
+    whole up to `LD_LEGEND_NAME_LENGTH` characters, and above them cut
+    after one fewer, with "…". */
+function legendName(pop: string): string {
+  const characters = Array.from(escaped(pop));
+  return characters.length > LD_LEGEND_NAME_LENGTH
+    ? `${characters.slice(0, LD_LEGEND_NAME_LENGTH - 1).join("")}…`
+    : characters.join("");
+}
+
 /**
  * The label of the population `i` of `r` in the legend of the plot, at a
  * largest distance of `maxDist` (ldDecay.md, "What it shows"): "pop_a ·
  * half at 7,548 bp"; "pop_a · half at 1,599,810 bp, beyond the plot";
- * "pop_a · no curve" for pairs with no curve; "pop_a · no pair". Throws a
- * defect on a population the result does not have.
+ * "pop_a · no curve" for pairs with no curve; "pop_a · no pair". A name of
+ * more than 16 characters is cut, "Solanum_pimpine… · no pair"; the table
+ * of the populations has it whole. Throws a defect on a population the
+ * result does not have.
  */
 export function ldLegendLabel(
   r: LdDecayResult,
   i: number,
   maxDist: number,
 ): string {
-  const name = namesOf([popAt(r, i)]);
+  const name = legendName(popAt(r, i));
   const half = halfShownOf(r, i, maxDist);
   switch (half.kind) {
     case "drawn":
@@ -650,6 +675,22 @@ export function refusalText(message: string, p: Project): string {
 }
 
 /**
+ * The words of a calculation worker that stopped with no answer during an
+ * LD decay, for the error state of the panel of the project `p`
+ * (ldDecay.md, "Its words"): a browser can end the calculation for lack
+ * of memory before popnei can refuse, so they name the memory, a smaller
+ * distance and fewer individuals, and not only another run, which may
+ * take many minutes and end the same way. Throws a defect on a project
+ * with no variants file.
+ */
+export function crashText(p: Project): string {
+  if (p.variants === null) {
+    throw defect("crashText was given a project with no variants file.");
+  }
+  return `The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the filters of individuals in the Variants step, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, load ${escaped(p.variants.name)} again in the Variants step.`;
+}
+
+/**
  * The definition of the LD decay, as the store knows it: the filters of
  * individuals in its key through `keyOf`, and the filters of the variants
  * through `keyInputs`, as `ldDecayFilters` gives them, so that the store
@@ -749,7 +790,8 @@ function keyInputs(p: Project): JsonObject {
  * The first reason the LD decay cannot run beyond those the store asks of
  * every analysis that reads the filters of individuals, or `null`: the
  * individuals file, the column of the populations and the lists leaving
- * no population, as for the diversity; the largest distance not typed;
+ * no population, as for the diversity; the largest distance not typed,
+ * in the words that say where to type it, the field saying why;
  * and a largest distance whose counts would take more than
  * `LD_DECAY_MAX_BYTES` for the populations the lists to keep and to
  * remove leave. The LD pruning of the Variants step, which it does not
@@ -768,7 +810,9 @@ function needs(p: Project): string | null {
   if (populations !== null) {
     return populations;
   }
-  return maxDistReason(p);
+  return ldDecayOptions(p).maxDist === null
+    ? NO_DISTANCE_RUN
+    : maxDistReason(p);
 }
 
 /** The reason of the lock of the memory for `numPops` populations. */
@@ -810,7 +854,8 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
 /**
  * The warnings of a result, given the project its request was made from,
  * in this order: populations of fewer than 20 individuals, in one
- * warning; then, one warning for each population, those with no pair,
+ * warning, which says to compare them with the others only when the
+ * result has others; then, one warning for each population, those with no pair,
  * those with pairs and no curve, those whose half distance lies beyond
  * their furthest pairs, and those whose half distance lies below their
  * closest; then individuals of the variants file with no population, and
@@ -834,7 +879,11 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   if (few.length > 0) {
     found.push({
       code: "fewIndividuals",
-      text: fewIndividualsText(few, populationsOf(p) === "all"),
+      text: fewIndividualsText(
+        few,
+        populationsOf(p) === "all",
+        few.length < rows.length,
+      ),
     });
   }
   for (const row of rows) {
@@ -867,33 +916,44 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
 }
 
 /** The text of `fewIndividuals`, for its populations; `one` for the one
-    population of every individual, which is not called a population. */
-function fewIndividualsText(rows: readonly LdDecayRow[], one: boolean): string {
+    population of every individual, which is not called a population;
+    `others` when the result has populations of 20 individuals or more,
+    to compare these with. A population of one or two individuals has no
+    curve, so the words say "when it has one". */
+function fewIndividualsText(
+  rows: readonly LdDecayRow[],
+  one: boolean,
+  others: boolean,
+): string {
   const threshold = grouped(LD_DECAY_FEW_INDIVIDUALS);
   const chance = `With fewer than ${threshold}, r² is higher than in the population by chance alone, more than the fitted curve corrects for`;
   const [first] = rows;
   if (rows.length === 1 && first !== undefined) {
     const name = shown(first.population);
     const subject = one ? name : `Population ${name}`;
-    return `${subject} has ${counted(first.individuals, "individual")}. ${chance}, so its curve lies higher and its half distance is longer than those of a larger population. Compare it with the others with this in mind.`;
+    return `${subject} has ${counted(first.individuals, "individual")}. ${chance}, so its curve, when it has one, lies higher and its half distance is longer than those of a larger population.${others ? " Compare it with the others with this in mind." : ""}`;
   }
   const names = namesOf(rows.map((row) => row.population));
   const counts =
     rows.length <= MAX_NAMED
       ? `, ${bothOf(rows.map((row) => grouped(row.individuals)))}`
       : "";
-  return `Populations ${names} have fewer than ${threshold} individuals${counts}. ${chance}, so their curves lie higher and their half distances are longer than those of a larger population. Compare them with the others with this in mind.`;
+  return `Populations ${names} have fewer than ${threshold} individuals${counts}. ${chance}, so their curves, when they have one, lie higher and their half distances are longer than those of a larger population.${others ? " Compare them with the others with this in mind." : ""}`;
 }
 
-/** The text of `noPairs` for the population of `row`: fewer than two of
-    its variants pass its maximum MAF, or no two of them are within the
-    largest distance. */
+/** The text of `noPairs` for the population of `row`: it has fewer than
+    two individuals, which no distance mends, since r² needs two; fewer
+    than two of its variants pass its maximum MAF; or no two of them are
+    within the largest distance. */
 function noPairsText(
   row: LdDecayRow,
   maxDist: number,
   maxAllowedMaf: number,
 ): string {
   const start = `${shown(row.population)} has no pair of variants to measure:`;
+  if (row.individuals < 2) {
+    return `${start} it has ${counted(row.individuals, "individual")}, and r² needs two or more.`;
+  }
   return row.variants < 2
     ? `${start} fewer than two of its variants pass its maximum major allele frequency of ${String(maxAllowedMaf)}.`
     : `${start} no two of its ${grouped(row.variants)} variants on one chromosome are within ${grouped(maxDist)} base pairs of each other with a value of r². Type a larger distance.`;
@@ -922,7 +982,7 @@ function beyondPairsText(
   if (halfDist <= furthest) {
     return null;
   }
-  const start = `The curve of ${shown(row.population)} falls to half at ${bp(halfDist)} bp, beyond`;
+  const start = `The curve of ${shown(row.population)} falls to half at ${halfDistText(halfDist)} bp, beyond`;
   const notMeasured =
     "so that distance is where the curve would reach and not where pairs were measured";
   return halfDist > maxDist
@@ -947,8 +1007,7 @@ function belowPairsText(
   if (halfDist >= closest) {
     return null;
   }
-  const at = halfDist < 1 ? "within 1 bp" : `at ${bp(halfDist)} bp`;
-  return `The curve of ${shown(row.population)} falls to half ${at}, closer than the closest pairs counted, in the bin from ${bp(closest)} bp: r² is already low at the shortest distances of this file, and the half distance says only that LD falls within them.`;
+  return `The curve of ${shown(row.population)} falls to half at ${halfDistText(halfDist)} bp, closer than the closest pairs counted, in the bin from ${bp(closest)} bp: r² is already low at the shortest distances of this file, and the half distance says only that LD falls within them. Type a smaller largest distance to see the decay within them.`;
 }
 
 /** The first and the last bin of the population `i` that hold a pair, or
@@ -969,7 +1028,8 @@ function binsWithPairs(
   return first === null || last === null ? null : { first, last };
 }
 
-/** A distance in whole base pairs with a comma between thousands. */
+/** A distance of a bin in whole base pairs with a comma between
+    thousands; a half distance is written by `halfDistText`. */
 function bp(dist: number): string {
   return grouped(Math.round(dist));
 }

@@ -3202,4 +3202,43 @@ describe("PA2 D4 the restart after an LD decay", () => {
     expect(first.terminated).toBe(true);
     expect(order).toEqual(["k1 failed", "k6 failed"]);
   });
+
+  test("PA10 a crashed of any other message during a diversity gives its outcome first as well: when no new worker can be made, the diversity fails as workerFailed and then k6 fails", async () => {
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "opened",
+      id: lastSent(first).id,
+      individuals: names(2),
+      ploidy: 2,
+    });
+    const k1 = client.run("k1", job("A"), noProgress);
+    const k6 = client.run("k6", job("A"), noProgress);
+    const order: string[] = [];
+    void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+    void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+    emit(first, { kind: "crashed", message: "unreachable executed" });
+    await now(k6.outcome);
+    expect(await now(k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "unreachable executed" },
+    });
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["k1 failed", "k6 failed"]);
+  });
 });

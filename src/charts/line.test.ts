@@ -3,8 +3,9 @@
  * it builds under jsdom and its refusals. jsdom lays nothing out and has
  * no ResizeObserver, so the tests give the size of the element with stubs
  * of clientWidth and clientHeight, 600 by 375, which the base reads when
- * the plot is made: with the margins of 12, 16, 44 and 60 pixels, a frame
- * of 524 by 319. How the plot looks, its export and the contrast of its
+ * the plot is made: with the margins of 12, 44 and 60 pixels and, at the
+ * right, the 76 of a legend whose labels have four characters, "pop0", a
+ * frame of 464 by 319. How the plot looks, its export and the contrast of its
  * colours are checked in Playwright, e2e/plots.spec.ts.
  */
 
@@ -13,12 +14,18 @@ import { symbolsFill } from "d3-shape";
 import type { SymbolType } from "d3-shape";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MAX_LINE_SERIES, MAX_SVG_POINTS } from "./limits.ts";
-import { createLine } from "./line.ts";
+import { createLine, lineLegendRoom } from "./line.ts";
 import type { LineData, LineSeries, XY } from "./line.ts";
 import { drawSymbolAt, SYMBOL_AREA } from "./marks.ts";
 
-/** The frame of an element of 600 by 375, less the margins. */
-const INNER_WIDTH = 600 - 60 - 16;
+/** The right margin of a legend at the right of the frame whose longest
+    label has four characters: 12 to its rows, their piece of line of 24,
+    6, the label at 7.5 pixels a character, and 4. */
+const RIGHT_OF_FOUR = 12 + 24 + 6 + 30 + 4;
+
+/** The frame of an element of 600 by 375, less the margins, with such a
+    legend. */
+const INNER_WIDTH = 600 - 60 - RIGHT_OF_FOUR;
 const INNER_HEIGHT = 375 - 12 - 44;
 
 function xy(x: readonly number[], y: readonly number[]): XY {
@@ -162,7 +169,7 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     expect(inMarks(element, "path.chart-line-casing")).toHaveLength(2);
     // The four positions at the scales, with one decimal.
     expect(lines[0]?.getAttribute("d")).toBe(
-      "M0,159.5L131,191.4L262,223.3L524,287.1",
+      "M0,159.5L116,191.4L232,223.3L464,287.1",
     );
     // Each casing is the path of its line, drawn just before it.
     expect(marksOrder(element).slice(0, 4)).toEqual([
@@ -212,9 +219,9 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     expect(inMarks(element, "path.chart-line-casing")).toHaveLength(2);
   });
 
-  test("each mark is a dashed line from the bottom of the frame up to its y in the colour of its series, and the mark of the series at 1.5 times the area at its top", () => {
+  test("each mark is a dashed line from the bottom of the frame up to its y in the colour of its series, on a casing of the same ends for a light colour, and the mark of the series at 1.5 times the area at its top", () => {
     const element = sizedElement();
-    createLine(element, lineOf([seriesOf(0), seriesOf(1)]));
+    const handle = createLine(element, lineOf([seriesOf(0), seriesOf(1)]));
     const lines = [
       ...element.querySelectorAll("g.chart-annotations > line.chart-mark-line"),
     ];
@@ -252,11 +259,62 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
     expect(marks[1]?.getAttribute("d")).toBe(
       symbolsAt(symbolsFill[1], 1.5 * SYMBOL_AREA, [[40, 0.25]]),
     );
-    // The marks are drawn over their dashed lines.
-    const annotations = [
-      ...element.querySelectorAll("g.chart-annotations > *"),
-    ].map((each) => each.tagName);
-    expect(annotations).toEqual(["line", "line", "path", "path"]);
+    // Orange and sky blue are light colours: a casing each, of the ends of
+    // its dashed line.
+    const casings = [
+      ...element.querySelectorAll(
+        "g.chart-annotations > line.chart-mark-casing",
+      ),
+    ];
+    expect(
+      casings.map((line) => [
+        line.getAttribute("class"),
+        Number(line.getAttribute("x1")),
+        Number(line.getAttribute("x2")),
+        Number(line.getAttribute("y1")),
+        Number(line.getAttribute("y2")),
+      ]),
+    ).toEqual([
+      ["chart-mark-casing", px(40), px(40), INNER_HEIGHT, py(0.25)],
+      ["chart-mark-casing", px(40), px(40), INNER_HEIGHT, py(0.25)],
+    ]);
+    // The casings under the dashed lines, and the marks over them.
+    const annotations = (): (string | undefined)[] =>
+      [...element.querySelectorAll("g.chart-annotations > *")].map(
+        (each) => each.getAttribute("class")?.split(" ")[0],
+      );
+    expect(annotations()).toEqual([
+      "chart-mark-casing",
+      "chart-mark-casing",
+      "chart-mark-line",
+      "chart-mark-line",
+      "chart-points",
+      "chart-points",
+    ]);
+    // Green is not light: its mark has no casing, also when its series is
+    // added by an update, and the order holds.
+    handle.update(lineOf([seriesOf(0), seriesOf(1), seriesOf(2)]));
+    expect(annotations()).toEqual([
+      "chart-mark-casing",
+      "chart-mark-casing",
+      "chart-mark-line",
+      "chart-mark-line",
+      "chart-mark-line",
+      "chart-points",
+      "chart-points",
+      "chart-points",
+    ]);
+    handle.update(lineOf([seriesOf(2)]));
+    expect(annotations()).toEqual(["chart-mark-line", "chart-points"]);
+    // A casing that enters after a dashed line is put under it.
+    handle.update(lineOf([seriesOf(2), seriesOf(0)]));
+    expect(annotations()).toEqual([
+      "chart-mark-casing",
+      "chart-mark-line",
+      "chart-mark-line",
+      "chart-points",
+      "chart-points",
+    ]);
   });
 
   test("the legend has a row per series in their order, its label as text, its mark, and its piece of line on a casing for a light colour", () => {
@@ -288,12 +346,124 @@ describe("PA4 D4 the line plot under jsdom, its SVG", () => {
         "chart-legend-text",
       ],
     ]);
-    // A row every 18 pixels from 8 pixels below the top of the frame, at
-    // the right edge of the frame, less 8.
-    expect(rows.map((row) => row.getAttribute("transform"))).toEqual([
-      `translate(${String(60 + INNER_WIDTH - 8)},${String(12 + 8 + 9)})`,
-      `translate(${String(60 + INNER_WIDTH - 8)},${String(12 + 8 + 9 + 18)})`,
+    // In each row the piece of line from 0 to 24, its mark at its middle,
+    // and the text 6 pixels after it.
+    const first = rows[0];
+    expect(
+      [...(first?.querySelectorAll("line") ?? [])].map((line) => [
+        line.getAttribute("x1"),
+        line.getAttribute("x2"),
+      ]),
+    ).toEqual([
+      ["0", "24"],
+      ["0", "24"],
     ]);
+    expect(first?.querySelector("path")?.getAttribute("transform")).toBe(
+      "translate(12,0)",
+    );
+    expect(first?.querySelector("text")?.getAttribute("x")).toBe("30");
+  });
+
+  /** Two series whose longer label has 24 characters. */
+  const flow = (): LineData =>
+    lineOf([seriesOf(0, "pop_a · half at 7,548 bp"), seriesOf(1, "pop_b")]);
+
+  /** The transforms of the rows of the legend, in order. */
+  function rowPlaces(element: HTMLElement): (string | null)[] {
+    return [...element.querySelectorAll("g.chart-legend-row")].map((row) =>
+      row.getAttribute("transform"),
+    );
+  }
+
+  /** The width and the height of the clip of the frame. */
+  function frameSize(element: HTMLElement): (number | null)[] {
+    const clip = element.querySelector("clipPath rect");
+    return [
+      Number(clip?.getAttribute("width")),
+      Number(clip?.getAttribute("height")),
+    ];
+  }
+
+  test("PA10 at 600 by 375 the legend of labels of 24 characters stands at the right of the frame, in a right margin of 226 pixels, its rows from 12 pixels right of the frame and 8 below its top", () => {
+    const element = sizedElement();
+    createLine(element, flow());
+    expect(
+      element.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("right");
+    // 600 less the left margin of 60 and 12, 24, 6, 180 and 4 at the right.
+    expect(frameSize(element)).toEqual([600 - 60 - 226, 375 - 12 - 44]);
+    expect(rowPlaces(element)).toEqual([
+      `translate(${String(600 - 226 + 12)},${String(12 + 8 + 9)})`,
+      `translate(${String(600 - 226 + 12)},${String(12 + 8 + 9 + 18)})`,
+    ]);
+  });
+
+  test("PA10 at 320 by 404 the same legend stands above the plot: a right margin of 28, a top margin of 56, and its rows from 8 pixels right of the left edge and 8 below the top of the SVG, the frame 12 pixels under the last", () => {
+    const element = sizedElement(320, 404);
+    createLine(element, flow());
+    expect(
+      element.querySelector("g.chart-legend")?.getAttribute("data-place"),
+    ).toBe("above");
+    expect(frameSize(element)).toEqual([320 - 60 - 28, 404 - 56 - 44]);
+    expect(element.querySelector("svg > g")?.getAttribute("transform")).toBe(
+      "translate(60,56)",
+    );
+    expect(rowPlaces(element)).toEqual(["translate(8,17)", "translate(8,35)"]);
+  });
+
+  test("PA10 the legend goes above the plot in an element narrower than narrowUnder, 586 pixels for labels of 24 characters, and not at 586", () => {
+    expect(lineLegendRoom(flow())).toEqual({
+      narrowUnder: 586,
+      narrowHeight: 44,
+      narrowWidth: 226,
+    });
+    const place = (width: number): string | null | undefined => {
+      const element = sizedElement(width, 500);
+      createLine(element, flow());
+      return element
+        .querySelector("g.chart-legend")
+        ?.getAttribute("data-place");
+    };
+    expect(place(586)).toBe("right");
+    expect(place(585)).toBe("above");
+  });
+
+  test("PA10 a series more with a shorter label makes the right margin no larger and the legend above the plot 18 pixels higher; with no series the right margin is 28 and the legend asks nothing", () => {
+    const three = lineOf([...flow().series, seriesOf(2, "pop_c")]);
+    expect(lineLegendRoom(three)).toEqual({
+      narrowUnder: 586,
+      narrowHeight: 62,
+      narrowWidth: 226,
+    });
+    expect(lineLegendRoom(lineOf([]))).toEqual({
+      narrowUnder: 60 + 300 + 28,
+      narrowHeight: 0,
+      narrowWidth: 0,
+    });
+    const element = sizedElement();
+    createLine(element, lineOf([]));
+    expect(frameSize(element)).toEqual([600 - 60 - 28, 375 - 12 - 44]);
+    const short = sizedElement();
+    createLine(short, lineOf([seriesOf(0, "")]));
+    // A legend whose labels are empty still has its pieces of line.
+    expect(frameSize(short)).toEqual([600 - 60 - 46, 375 - 12 - 44]);
+  });
+
+  test("PA10 an update to labels that no longer fit at the right moves the legend above the plot, and back", () => {
+    const element = sizedElement(600, 500);
+    const handle = createLine(element, flow());
+    const place = (): string | null | undefined =>
+      element.querySelector("g.chart-legend")?.getAttribute("data-place");
+    expect(place()).toBe("right");
+    handle.update(
+      lineOf([
+        seriesOf(0, "Solanum_pimpine… · half at 1,599,810 bp, beyond the plot"),
+      ]),
+    );
+    expect(place()).toBe("above");
+    expect(frameSize(element)).toEqual([600 - 60 - 28, 500 - 12 - 44 - 26]);
+    handle.update(flow());
+    expect(place()).toBe("right");
   });
 
   test("in the marks every line comes before every set of points, after an update that adds a series too", () => {
@@ -359,7 +529,7 @@ describe("PA4 D4 the line plot under jsdom, the values it does not draw", () => 
     createLine(element, lineOf([series]));
     const line = inMarks(element, "path.chart-line")[0];
     expect(line?.getAttribute("d")).toBe(
-      "M0,159.5L104.8,191.4M314.4,223.3L419.2,255.2",
+      "M0,159.5L92.8,191.4M278.4,223.3L371.2,255.2",
     );
   });
 
@@ -373,7 +543,7 @@ describe("PA4 D4 the line plot under jsdom, the values it does not draw", () => 
     const line = inMarks(element, "path.chart-line")[0];
     expect(parts(line)).toBe(2);
     expect(line?.getAttribute("d")).toBe(
-      "M0,159.5L104.8,191.4M314.4,223.3L419.2,255.2",
+      "M0,159.5L92.8,191.4M278.4,223.3L371.2,255.2",
     );
   });
 

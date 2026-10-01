@@ -1079,17 +1079,27 @@ function heatmapOrderOf(
   return { kind: "pcoa", order: Uint32Array.from(order) };
 }
 
+/** The name the runner gives popnei for the population at the place
+    `at` of an LD decay's job: `p0`, `p1`, …. */
+function ldPopName(at: number): string {
+  return `p${String(at)}`;
+}
+
 /**
  * Runs `calcLdAndDistPerPop` over the populations of the job and makes the
  * `LdDecayResult` of it. The options object is written with its keys
- * alone, since popnei refuses a key it does not know, and the populations
- * with `Object.fromEntries`, which makes a population named `__proto__` a
- * field of its own.
+ * alone, since popnei refuses a key it does not know. popnei is given the
+ * populations under names of the runner's own, `p0`, `p1`, … by their
+ * place in the job, and not under the job's: popnei's result loses a
+ * population named `__proto__`, which it holds as the parent of its
+ * objects and not as a field of theirs (runner.md, "The LD decay").
  */
 function runLdDecay(pass: Pass, job: LdDecayJob): Answer<JobResult> {
   const answer = passOf(pass, (variants) =>
     calcLdAndDistPerPop(variants, {
-      pops: Object.fromEntries(job.pops),
+      pops: Object.fromEntries(
+        job.pops.map(([, individuals], at) => [ldPopName(at), individuals]),
+      ),
       minDist: job.minDist,
       maxDist: job.maxDist,
       numBins: job.numBins,
@@ -1406,13 +1416,14 @@ function popDiversityOf(
 
 /**
  * The `LdDecayResult` of popnei's result, every array in the order of the
- * job: the bins' distances copied from the first population, and the
- * numbers of each population found by its name among popnei's own fields.
- * Throws a defect when popnei gave no values of a population of the job,
- * as for a population named `__proto__`, which popnei's result holds as the
- * parent of its objects and not as a field of theirs; when a population
- * has another number of bins than the job; and when the distances of the
- * bins differ between two populations, which popnei's rule makes the same.
+ * job and the populations under the job's names: the bins' distances
+ * copied from the first population, and the numbers of the population at
+ * each place found among popnei's own fields by the name the runner sent
+ * it under, `ldPopName`. Throws a defect, which names the population as
+ * the job does, when popnei gave no values of a population it was sent;
+ * when a population has another number of bins than the job; and when the
+ * distances of the bins differ between two populations, which popnei's
+ * rule makes the same.
  */
 function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
   const numPops = job.pops.length;
@@ -1423,7 +1434,7 @@ function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
       "popnei_web defect: calcLdAndDistPerPop gave a result for no population",
     );
   }
-  const firstBins = binsOf(ld, first[0], numBins);
+  const firstBins = binsOf(ld, 0, first[0], numBins);
   const result: LdDecayResult = {
     analysis: "ldDecay",
     pops: job.pops.map(([pop]) => pop),
@@ -1440,7 +1451,7 @@ function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
     passStats: passStatsOf(ld.passStats, job.filters),
   };
   for (const [at, [pop, individuals]] of job.pops.entries()) {
-    const bins = binsOf(ld, pop, numBins);
+    const bins = binsOf(ld, at, pop, numBins);
     if (
       !sameValues(bins.smallestDist, firstBins.smallestDist) ||
       !sameValues(bins.largestDist, firstBins.largestDist)
@@ -1449,9 +1460,9 @@ function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
         `popnei_web defect: the bins of the population ${JSON.stringify(pop)} are not at the distances of those of ${JSON.stringify(first[0])}`,
       );
     }
-    const decay = ownValueOf(ld.decayPerPop, pop, "decayPerPop");
+    const decay = ownValueOf(ld.decayPerPop, at, pop, "decayPerPop");
     result.numIndividuals[at] = individuals.length;
-    result.numVars[at] = ownValueOf(ld.numVarsPerPop, pop, "numVarsPerPop");
+    result.numVars[at] = ownValueOf(ld.numVarsPerPop, at, pop, "numVarsPerPop");
     result.numPairs.set(bins.numPairs, at * numBins);
     result.meanR2.set(bins.meanR2, at * numBins);
     result.sdR2.set(bins.sdR2, at * numBins);
@@ -1462,10 +1473,16 @@ function ldDecayResultOf(ld: LdAndDistPerPop, job: LdDecayJob): LdDecayResult {
   return result;
 }
 
-/** The bins popnei gave the population `pop`, each of its five arrays of
-    `numBins` values; throws a defect otherwise. */
-function binsOf(ld: LdAndDistPerPop, pop: string, numBins: number): LdBins {
-  const bins = ownValueOf(ld.perPop, pop, "perPop");
+/** The bins popnei gave the population at the place `at` of the job,
+    which the job names `pop`, each of its five arrays of `numBins` values;
+    throws a defect otherwise. */
+function binsOf(
+  ld: LdAndDistPerPop,
+  at: number,
+  pop: string,
+  numBins: number,
+): LdBins {
+  const bins = ownValueOf(ld.perPop, at, pop, "perPop");
   for (const array of [
     bins.smallestDist,
     bins.largestDist,
@@ -1482,16 +1499,18 @@ function binsOf(ld: LdAndDistPerPop, pop: string, numBins: number): LdBins {
   return bins;
 }
 
-/** The value of the population `pop` in the object `name` of popnei's
-    result, read only when it is a field of the object itself: a lookup or
-    `in` would find a population named `__proto__` in the object's parent.
-    Throws a defect when popnei gave none. */
+/** The value of the population at the place `at` of the job, which the
+    job names `pop`, in the object `name` of popnei's result, under the
+    name the runner sent it, and read only when it is a field of the object
+    itself. Throws a defect when popnei gave none. */
 function ownValueOf<T>(
   record: Readonly<Record<string, T>>,
+  at: number,
   pop: string,
   name: string,
 ): T {
-  const value = Object.hasOwn(record, pop) ? record[pop] : undefined;
+  const sent = ldPopName(at);
+  const value = Object.hasOwn(record, sent) ? record[sent] : undefined;
   if (value === undefined) {
     throw new Error(
       `popnei_web defect: popnei gave no ${name} of the population ${JSON.stringify(pop)}`,

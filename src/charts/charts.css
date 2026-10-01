@@ -331,3 +331,18 @@
   stroke-width: 1px;
   stroke-dasharray: 4 3;
 }
+
+/* The casing under the dashed line of a mark of one of the three light
+   colours: the same dashes, 3 pixels wide, in the colour of the axes
+   (line.md, "What the user sees"). */
+.chart-mark-casing {
+  stroke: var(--chart-axis);
+  stroke-width: 3px;
+  stroke-dasharray: 4 3;
+}
+
+/* The texts of the legend of the line plot start after the piece of line
+   of their row. */
+.chart.chart-line .chart-legend-text {
+  text-anchor: start;
+}

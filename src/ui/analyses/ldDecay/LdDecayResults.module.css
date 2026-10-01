@@ -31,10 +31,12 @@
 
 /* A plot wider than the page scrolls sideways, and the page does not
    (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
-   shows the focus. */
+   shows the focus. The frame is a container, so that the plot in it can
+   tell, by 100cqi, how wide the frame is. */
 .plotScroll {
   min-inline-size: 0;
   overflow-x: auto;
+  container-type: inline-size;
 }
 
 .plotScroll:focus-visible {
@@ -45,20 +47,36 @@
 /* The element of the line plot: its width from the panel, up to 48rem,
    and its height from its ratio of 16 by 10, as the histograms of the
    Variants step, and never lower than 22.5rem: the legend of 16
-   populations takes 296 pixels of the frame, a row every 18 from 8 below
-   its top, and the margins above and below the frame 56
+   populations at the right of the frame takes 296 pixels, a row every 18
+   from 8 below the top of the frame, 12 below that of the element
    (docs/specs/charts/line.md, "The cases"). Never narrower than 20rem:
    the label of its horizontal axis, 258 pixels wide in the fonts of
-   Linux, is centred on the frame, 22 pixels right of the middle of the
+   Linux, is centred on the frame, 16 pixels right of the middle of the
    element, and at the 288 pixels a page of 320 gives the panel its end
-   was cut by 7. Meanwhile, refined in the running application. */
+   was cut.
+
+   The three lengths --legend-narrow-… are what the legend of the plot
+   asks, which LinePlot.tsx sets from lineLegendRoom of the plot. In an
+   element narrower than --legend-narrow-under the plot draws its legend
+   above the frame, and the element is higher by --legend-narrow-height:
+   the clamp is that height when the width of the element, the frame's
+   up to 48rem, is under that bound, and 0 otherwise, a difference of a
+   pixel times 10,000 being more than any legend. The element is never
+   narrower than the longest row of that legend, --legend-narrow-width. */
 .plot {
   position: relative;
   inline-size: 100%;
   max-inline-size: 48rem;
-  min-inline-size: 20rem;
+  min-inline-size: max(20rem, var(--legend-narrow-width, 0px));
   aspect-ratio: 16 / 10;
-  min-block-size: 22.5rem;
+  min-block-size: calc(
+    22.5rem +
+      clamp(
+        0px,
+        (var(--legend-narrow-under, 0px) - min(100cqi, 48rem)) * 10000,
+        var(--legend-narrow-height, 0px)
+      )
+  );
 }
 
 .line {

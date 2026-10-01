@@ -74,17 +74,17 @@ describe("PA8 D1 the ready state of the LD decay", () => {
     ]);
   });
 
-  test("the line under the bar says the curves are fitted once the file is read", () => {
+  test("the line under the bar says the curves are fitted once the file is read, and, PA10, that a large distance on a file of close variants may take tens of minutes and end refused", () => {
     expect(fitLine("ld.nei")).toBe(
-      "The bar shows the reading of ld.nei. The curves are fitted once it is read.",
+      "The bar shows the reading of ld.nei. The curves are fitted once it is read. With a large distance on a file whose variants are close together, the reading may take tens of minutes and may end with the LD decay refused for lack of memory.",
     );
   });
 });
 
 describe("PA8 D1 the tables of the LD decay", () => {
-  test("the caption and the columns of the table of the populations are the spec's", () => {
+  test("the caption and the columns of the table of the populations are the spec's: PA10, the caption says what the r² at distance 0 depends on", () => {
     expect(captionText(500, "ld.nei", 100_000)).toBe(
-      "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart.",
+      "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
     );
     expect(LD_DECAY_COLUMNS).toEqual([
       "Population",

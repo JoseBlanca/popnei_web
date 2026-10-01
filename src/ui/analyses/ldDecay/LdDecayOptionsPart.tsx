@@ -6,10 +6,13 @@
  * population, two number fields that stay enabled while the panel is
  * locked or running, since the distance typed unlocks it and a change of
  * either leaves the calculation behind. Each is one command, of
- * `commands.ts`. While no distance is typed, or the one typed is more
- * than the memory of a browser tab allows the populations, the reason of
- * the lock stands beside the field and describes it, whatever reason the
- * Run button gives; a distance committed that the memory does not allow
+ * `commands.ts`. While no distance is typed, why it has to be typed
+ * stands beside the field as a line of help, the user having done nothing
+ * wrong yet, and the Run button says only where to type it; while the one
+ * typed is more than the memory of a browser tab allows the populations,
+ * the reason of the lock stands there as a problem, with its mark. Either
+ * describes the field, whatever reason the Run button gives; a distance
+ * committed that the memory does not allow
  * is announced with that reason, since the focus is then on the field or
  * past it, and the reason appears beside it and under Run with no word
  * to a screen reader: once, when the lock turns on, and not at each
@@ -96,9 +99,14 @@ export function LdDecayOptionsPart(): React.JSX.Element {
             if (reason !== null && reason !== before) announce(reason);
           }}
         />
-        {distanceReason !== null && (
-          <Problem id={reasonId}>{distanceReason}</Problem>
-        )}
+        {distanceReason !== null &&
+          (maxDist === null ? (
+            <p id={reasonId} className={classOf(styles, "help")}>
+              {distanceReason}
+            </p>
+          ) : (
+            <Problem id={reasonId}>{distanceReason}</Problem>
+          ))}
       </div>
       <NumberField
         label={MAX_MAF_LABEL}

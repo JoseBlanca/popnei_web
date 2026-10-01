@@ -17,6 +17,14 @@
  * twice. Whether it fits is measured again at every change of size of
  * the frame or of the table; a frame that stops scrolling while it has
  * the focus keeps it (`sidewaysFrame.ts`).
+ *
+ * A table of many rows, the bins of the LD decay, 50 for each population,
+ * is given `limitedHeight`: its frame is then at most as high as that of
+ * `SortableTable.tsx`, 28rem or 70% of the window, and scrolls down inside
+ * it with the row of the headers kept in view, so that the table does not
+ * push what follows it thousands of pixels down. While the table is higher
+ * than the frame, a line says so and the Tab key reaches the frame, as
+ * when it scrolls sideways.
  */
 import { useId, useRef } from "react";
 
@@ -55,19 +63,32 @@ export interface TableProps {
   readonly columns: readonly TableColumn[];
   /** Its rows. */
   readonly rows: readonly TableRow[];
+  /** Whether its frame has a limited height and scrolls down, its
+      headers kept in view: for a table of many rows. */
+  readonly limitedHeight?: boolean;
 }
+
+/** The line under the caption while the table is wider than its frame. */
+export const SCROLL_SIDEWAYS_TEXT =
+  "Scroll the table sideways to see all its columns.";
+
+/** The line under the caption while a table of limited height is higher
+    than its frame. */
+export const SCROLL_DOWN_TEXT = "Scroll the table to see all its rows.";
 
 /** A table with its caption. */
 export function Table({
   caption,
   columns,
   rows,
+  limitedHeight = false,
 }: TableProps): React.JSX.Element {
   const captionId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Whether the table is wider than its frame, which the browser
-  // measures and React does not, and what the frame is then.
-  const frame = useSidewaysFrame(scrollRef);
+  // Whether the table is wider than its frame, or higher than a frame of
+  // limited height, which the browser measures and React does not, and
+  // what the frame is then.
+  const frame = useSidewaysFrame(scrollRef, limitedHeight);
   const scrolls = frame.scrolls;
 
   return (
@@ -76,15 +97,20 @@ export function Table({
         {caption}
       </p>
       {scrolls && (
-        <p className={classOf(styles, "scrollLine")}>
-          Scroll the table sideways to see all its columns.
-        </p>
+        <p className={classOf(styles, "scrollLine")}>{SCROLL_SIDEWAYS_TEXT}</p>
+      )}
+      {frame.scrollsDown && (
+        <p className={classOf(styles, "scrollLine")}>{SCROLL_DOWN_TEXT}</p>
       )}
       {/* A frame that scrolls is reached by the Tab key, so that a user
           of the keyboard scrolls it with the arrow keys (WCAG 2.1.1). */}
       <div
         ref={scrollRef}
-        className={classOf(styles, "scroll")}
+        className={
+          limitedHeight
+            ? `${classOf(styles, "scroll")} ${classOf(styles, "limited")}`
+            : classOf(styles, "scroll")
+        }
         {...frame.attributes}
         {...(frame.attributes.role !== undefined && {
           "aria-labelledby": captionId,

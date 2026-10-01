@@ -2919,18 +2919,28 @@ describe("PA2 D2 the runner's LD decay", () => {
     ]);
   });
 
-  // The only one: given to popnei as a field of its own, by
-  // Object.fromEntries, popnei calculates it and the runner throws; given by
-  // an assignment, popnei would be given no population and refuse.
+  // popnei's result loses a population of that name, so the runner gives
+  // popnei names of its own and puts the job's back by their place.
   test.each([
-    ["first", ldPops("__proto__", "pop_b")],
-    ["second", ldPops("pop_a", "__proto__")],
-    ["only", ldPops("__proto__", "pop_b").slice(0, 1)],
+    ["first", ldPops("__proto__", "pop_b"), ldPops()],
+    ["second", ldPops("pop_a", "__proto__"), ldPops()],
+    ["only", ldPops("__proto__", "pop_b").slice(0, 1), ldPops().slice(0, 1)],
   ])(
-    "a population named __proto__, the %s of the job, which popnei's result does not hold as a field of its own, is thrown as a defect",
-    (_place, pops) => {
-      expect(() => opened("ld.nei").run(ldDecayJob(pops), ignore)).toThrow(
-        /^popnei_web defect: popnei gave no (perPop|numVarsPerPop|decayPerPop) of the population "__proto__"$/,
+    "a population named __proto__, the %s of the job, has its name in the result and the numbers of the same individuals under another name, every array value by value",
+    (_place, pops, plain) => {
+      const result = resultOf(
+        opened("ld.nei").run(ldDecayJob(pops), ignore),
+        "ldDecay",
+      );
+      const expected = resultOf(
+        opened("ld.nei").run(ldDecayJob(plain), ignore),
+        "ldDecay",
+      );
+      expect(result.pops).toEqual(pops.map(([pop]) => pop));
+      expect(result.pops).toContain("__proto__");
+      expect({ ...result, pops: expected.pops }).toEqual(expected);
+      expect([...result.halfDist]).toEqual(
+        LD_TABLE.halfDist.slice(0, pops.length),
       );
     },
   );

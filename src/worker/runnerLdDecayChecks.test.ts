@@ -3,10 +3,11 @@
  * (docs/specs/worker/runner.md, "The LD decay"; docs/specs/analyses/
  * ldDecay.md, "The request"): every population has the number of bins of
  * the job, and the bins of every population are at the distances of those
- * of the first. popnei's rule makes both hold, so no real file breaks
- * them: popnei is mocked, `calcLdAndDistPerPop` runs over ld.nei, and the
- * bins of the second population are then replaced by bins made for the
- * case.
+ * of the first; and its check that popnei gave every population it was
+ * sent. popnei's rule makes them hold, so no real file breaks them:
+ * popnei is mocked, `calcLdAndDistPerPop` runs over ld.nei, and the bins
+ * of the second population, which the runner sends popnei as `p1`, are
+ * then replaced by bins made for the case, or its values left out.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,7 +21,20 @@ import { createRunner, loadPopnei } from "./runner.ts";
 /** How the bins of the second population are changed; not while `null`. */
 const tampering: {
   change: ((bins: Popnei.LdBins) => Popnei.LdBins) | null;
-} = { change: null };
+  /** The object of popnei's result the second population is left out of. */
+  leaveOutOf: "perPop" | "numVarsPerPop" | "decayPerPop" | null;
+  /** The names popnei was sent the populations under, at the last call. */
+  sent: readonly string[];
+} = { change: null, leaveOutOf: null, sent: [] };
+
+/** `record` without its field `p1`. */
+function withoutSecond<T>(
+  record: Readonly<Record<string, T>>,
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([name]) => name !== "p1"),
+  );
+}
 
 vi.mock("popnei", async (importOriginal) => {
   const original = await importOriginal<typeof Popnei>();
@@ -29,13 +43,28 @@ vi.mock("popnei", async (importOriginal) => {
     calcLdAndDistPerPop: (
       ...args: Parameters<typeof original.calcLdAndDistPerPop>
     ): Popnei.LdAndDistPerPop => {
+      tampering.sent = Object.keys(args[1]?.pops ?? {});
       const given = original.calcLdAndDistPerPop(...args);
+      const out = tampering.leaveOutOf;
+      switch (out) {
+        case "perPop":
+          return { ...given, perPop: withoutSecond(given.perPop) };
+        case "numVarsPerPop":
+          return {
+            ...given,
+            numVarsPerPop: withoutSecond(given.numVarsPerPop),
+          };
+        case "decayPerPop":
+          return { ...given, decayPerPop: withoutSecond(given.decayPerPop) };
+        case null:
+          break;
+      }
       const change = tampering.change;
-      const bins = given.perPop["pop_b"];
+      const bins = given.perPop["p1"];
       if (change === null || bins === undefined) {
         return given;
       }
-      return { ...given, perPop: { ...given.perPop, pop_b: change(bins) } };
+      return { ...given, perPop: { ...given.perPop, p1: change(bins) } };
     },
   };
 });
@@ -49,6 +78,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   tampering.change = null;
+  tampering.leaveOutOf = null;
 });
 
 /** The individuals of ld.nei, i000 to i099. */
@@ -93,9 +123,20 @@ function run(): ReturnType<ReturnType<typeof createRunner>["run"]> {
 }
 
 describe("PA2 D2 the runner's LD decay: its checks of popnei's answer", () => {
-  test("popnei's answer unchanged passes both checks", () => {
+  test("popnei's answer unchanged passes the checks, and popnei was sent the populations as p0 and p1, the runner's own names", () => {
     expect(run().kind).toBe("ok");
+    expect(tampering.sent).toEqual(["p0", "p1"]);
   });
+
+  test.each(["perPop", "numVarsPerPop", "decayPerPop"] as const)(
+    "a population popnei gave no %s of is thrown as a defect that names it as the job does",
+    (name) => {
+      tampering.leaveOutOf = name;
+      expect(run).toThrow(
+        `popnei_web defect: popnei gave no ${name} of the population "pop_b"`,
+      );
+    },
+  );
 
   test("bins of the second population at other distances than those of the first are thrown as a defect", () => {
     tampering.change = (bins) => ({

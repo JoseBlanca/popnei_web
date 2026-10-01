@@ -9,7 +9,9 @@
  * a region that takes the focus, out of the order of the Tab key, until
  * the focus leaves it: taking its `tabindex` away would send the focus to
  * the body of the page (WCAG 2.4.3). Shared by `Table.tsx` and the
- * heatmap of the distances between populations.
+ * heatmap of the distances between populations. A frame of limited
+ * height, that of a table of many rows, is followed the same way for what
+ * it holds being higher than it, when asked with `down`.
  */
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
@@ -27,16 +29,23 @@ export interface SidewaysFrameAttributes {
 export interface SidewaysFrame {
   /** Whether what it holds is wider than it. */
   readonly scrolls: boolean;
+  /** Whether what it holds is higher than it; false unless asked with
+      `down`. */
+  readonly scrollsDown: boolean;
   /** Its attributes, to spread on it with those of its name. */
   readonly attributes: SidewaysFrameAttributes;
 }
 
 /** Follows the frame `frameRef` and what it holds, and gives whether it
-    scrolls and its attributes. */
+    scrolls and its attributes; with `down`, for a frame of limited height,
+    whether it scrolls down too, which makes it a stop of the Tab key as
+    scrolling sideways does. */
 export function useSidewaysFrame(
   frameRef: RefObject<HTMLElement | null>,
+  down = false,
 ): SidewaysFrame {
   const [scrolls, setScrolls] = useState(false);
+  const [scrollsDown, setScrollsDown] = useState(false);
   // Whether it stopped scrolling while it had the focus, and has it still.
   const [kept, setKept] = useState(false);
   useEffect(() => {
@@ -44,23 +53,29 @@ export function useSidewaysFrame(
     if (frame === null) return;
     const observer = new ResizeObserver(() => {
       const wider = frame.scrollWidth > frame.clientWidth;
+      const higher = down && frame.scrollHeight > frame.clientHeight;
       setScrolls(wider);
-      if (!wider && document.activeElement === frame) setKept(true);
+      setScrollsDown(higher);
+      if (!wider && !higher && document.activeElement === frame) setKept(true);
     });
     observer.observe(frame);
     for (const child of Array.from(frame.children)) observer.observe(child);
     return () => {
       observer.disconnect();
     };
-  }, [frameRef]);
+  }, [frameRef, down]);
 
   const onBlur = (): void => {
     setKept(false);
   };
+  // `data-scrolls` marks the two side edges with a shadow, so it is for a
+  // frame that scrolls sideways alone.
   const attributes: SidewaysFrameAttributes = scrolls
     ? { role: "region", tabIndex: 0, "data-scrolls": true, onBlur }
-    : kept
-      ? { role: "region", tabIndex: -1, onBlur }
-      : {};
-  return { scrolls, attributes };
+    : scrollsDown
+      ? { role: "region", tabIndex: 0, onBlur }
+      : kept
+        ? { role: "region", tabIndex: -1, onBlur }
+        : {};
+  return { scrolls, scrollsDown, attributes };
 }

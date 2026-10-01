@@ -250,9 +250,17 @@ const PRUNING =
   "The LD pruning of the Variants step is not applied here: it removes the pairs of variants in LD that this analysis measures. The other filters of the Variants step are.";
 
 describe("PA8 the options of the LD decay, drawn by React", () => {
-  test("the distance is empty until typed, with the reason of the lock beside it, which describes the field before the line under it; the frequency shows 0.95", () => {
+  test("the distance is empty until typed, with why it has to be typed beside it, PA10 as a line of help with no mark of a problem, which describes the field before the line under it; the frequency shows 0.95", () => {
     draw(createElement(LdDecayOptionsPart));
     const [distance, frequency] = fields();
+    const [reasonId] = (distance.getAttribute("aria-describedby") ?? "").split(
+      " ",
+    );
+    const reason = document.getElementById(reasonId ?? "");
+    expect(reason?.tagName).toBe("P");
+    expect(reason?.className).toMatch(/^_help_\w+$/u);
+    expect(reason?.querySelector("svg")).toBeNull();
+    expect(container.querySelector("svg")).toBeNull();
     expect(distance.value).toBe("");
     expect(frequency.value).toBe("0.95");
     expect(
@@ -338,6 +346,13 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(announced).toEqual([reason]);
     expect(container.textContent).toContain(reason);
     expect(container.textContent).not.toContain(NO_DISTANCE);
+    // PA10 the reason of the memory keeps the mark of a problem.
+    const [reasonId] = (
+      fields()[0].getAttribute("aria-describedby") ?? ""
+    ).split(" ");
+    const shown = document.getElementById(reasonId ?? "");
+    expect(shown?.className).toMatch(/^_problem_\w+$/u);
+    expect(shown?.querySelector("svg")).not.toBeNull();
     expect(
       (fields()[0].getAttribute("aria-describedby") ?? "")
         .split(" ")
@@ -680,6 +695,33 @@ function chooseTab(name: string): void {
 }
 
 describe("PA8 the result of the LD decay, drawn by React", () => {
+  test("PA10 the table of the populations comes before the tabs, and the downloads after them, also with the table of the bins shown, which alone is in a frame of limited height", () => {
+    drawResult(TWO);
+    const before = (first: Element | null, second: Element | null): boolean =>
+      first !== null &&
+      second !== null &&
+      (first.compareDocumentPosition(second) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0;
+    const tablist = container.querySelector('[role="tablist"]');
+    const button = container.querySelector("button");
+    expect(before(container.querySelector("table"), tablist)).toBe(true);
+    expect(before(tablist, container.querySelector("svg"))).toBe(true);
+    expect(before(container.querySelector("svg"), button)).toBe(true);
+    expect(container.querySelectorAll('[class*="_limited_"]')).toHaveLength(0);
+    chooseTab("Table of the bins");
+    const [populations, bins] = container.querySelectorAll("table");
+    expect(populations?.querySelectorAll("thead th")).toHaveLength(7);
+    expect(bins?.querySelectorAll("thead th")).toHaveLength(6);
+    expect(before(populations ?? null, tablist)).toBe(true);
+    expect(before(tablist, bins ?? null)).toBe(true);
+    expect(before(bins ?? null, button)).toBe(true);
+    expect(bins?.parentElement?.className).toMatch(
+      /^_scroll_\w+ _limited_\w+$/u,
+    );
+    expect(populations?.parentElement?.className).toMatch(/^_scroll_\w+$/u);
+  });
+
   test("one plot, selected in its tabs, with its title, its description and a row of the legend for each population; the table of the populations; and the two downloads with the line of the versions", () => {
     drawResult(TWO);
     expect(tabs().map((tab) => tab.textContent)).toEqual([
@@ -702,7 +744,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       ),
     ).toEqual(["pop_a · half at 7,548 bp", "pop_b · half at 7,548 bp"]);
     expect(container.textContent).toContain(
-      "The LD decay of each population, over the 500 variants of panel.nei the filters kept, pairs up to 100,000 base pairs apart.",
+      "The LD decay of each population, over the 500 variants of panel.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
     );
     expect(
       [...container.querySelectorAll("thead th")].map((th) => th.textContent),
@@ -739,7 +781,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
     chooseTab("Table of the bins");
     expect(tabs()[1]?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelectorAll("svg")).toHaveLength(0);
-    const [bins, populations] = container.querySelectorAll("table");
+    const [populations, bins] = container.querySelectorAll("table");
     expect(populations).toBeDefined();
     expect(
       [...(bins?.querySelectorAll("thead th") ?? [])].map(
@@ -791,7 +833,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       ),
     ).toEqual(names(16));
     expect(container.textContent).toContain(
-      "The plot draws the first 16 of the 17 populations, in the order of the table. The tables below hold all 17.",
+      "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
     );
     expect(tableRows().map((row) => row[0])).toEqual(names(17));
   });
@@ -917,6 +959,25 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
     expect(svg?.querySelector("desc")?.textContent).toContain(
       "up to 200,000 base pairs",
     );
+  });
+
+  test("PA10 a calculation that stopped with no answer shows the words of the LD decay, which name the memory, a smaller distance and fewer individuals, and not the words every analysis shares", () => {
+    project = projectOf(TWO.pops);
+    status = {
+      kind: "error",
+      key: KEY,
+      error: {
+        kind: "failed",
+        error: { kind: "workerFailed", message: "out of memory" },
+      },
+      ofStatistics: false,
+      waited: false,
+    };
+    draw(createElement(AnalysisPanel, { id: "ldDecay" }));
+    expect(container.textContent).toContain(
+      "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the filters of individuals in the Variants step, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, load panel.nei again in the Variants step.",
+    );
+    expect(container.textContent).not.toContain("Run it again.");
   });
 
   test("a result of another analysis, or one shown with no largest distance, is a defect", () => {

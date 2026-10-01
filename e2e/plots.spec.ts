@@ -2013,9 +2013,17 @@ test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light 
       markLines: [...root.querySelectorAll("line.chart-mark-line")].map(
         (line) => [styleOf(line, "stroke"), styleOf(line, "stroke-dasharray")],
       ),
+      markCasings: [...root.querySelectorAll("line.chart-mark-casing")].map(
+        (line) => [
+          styleOf(line, "stroke"),
+          styleOf(line, "stroke-width"),
+          styleOf(line, "stroke-dasharray"),
+        ],
+      ),
       marks: root.querySelectorAll("path.chart-mark").length,
       legend: [...root.querySelectorAll("g.chart-legend-row")].map((row) => ({
         text: row.querySelector("text")?.textContent ?? null,
+        anchor: styleOf(row.querySelector("text"), "text-anchor"),
         fill: styleOf(row.querySelector("text"), "fill"),
         line: styleOf(row.querySelector("line.chart-line"), "stroke"),
         casings: row.querySelectorAll("line.chart-line-casing").length,
@@ -2045,16 +2053,24 @@ test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light 
     ["rgb(230, 159, 0)", "4px, 3px"],
     ["rgb(86, 180, 233)", "4px, 3px"],
   ]);
+  // Orange and sky blue are below 3:1 on white: each dashed line has its
+  // casing in the colour of the axes, of the same dashes.
+  expect(found.markCasings).toEqual([
+    [LIGHT_AXIS, "3px", "4px, 3px"],
+    [LIGHT_AXIS, "3px", "4px, 3px"],
+  ]);
   expect(found.marks).toBe(2);
   expect(found.legend).toEqual([
     {
       text: "pop_a · half at 7,548 bp",
+      anchor: "start",
       fill: LIGHT_TEXT,
       line: "rgb(230, 159, 0)",
       casings: 1,
     },
     {
       text: "pop_b · half at 7,340 bp",
+      anchor: "start",
       fill: LIGHT_TEXT,
       line: "rgb(86, 180, 233)",
       casings: 1,
@@ -2242,9 +2258,130 @@ test("PA4 D5 each row of the legend of the LD decay has its mark and its text on
       children.map((child) => child.getAttribute("class")?.split(" ")[0]),
     );
   expect(order).toEqual([
+    "chart-mark-casing",
+    "chart-mark-casing",
     "chart-mark-line",
     "chart-mark-line",
     "chart-points",
     "chart-points",
   ]);
 });
+
+/** Where the legend of the line plot drawn last and the texts of its axes
+    lie, in the pixels of the page. */
+interface LegendPlaces {
+  readonly place: string | null;
+  /** The box of the SVG. */
+  readonly svg: Box;
+  /** The box of the frame, from its clip. */
+  readonly frame: Box;
+  /** The box of each row of the legend, and of its text. */
+  readonly rows: readonly { readonly row: Box; readonly text: Box }[];
+  /** The box of the label of each tick of the horizontal axis. */
+  readonly ticks: readonly Box[];
+  /** The box of the label of the horizontal axis. */
+  readonly xLabel: Box;
+}
+
+/** A box of the page. */
+interface Box {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+async function legendPlaces(page: Page): Promise<LegendPlaces> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const element = plots.element();
+    const boxOf = (each: Element | null): Box => {
+      if (each === null) throw new Error("The plot lacks a part.");
+      const { left, right, top, bottom } = each.getBoundingClientRect();
+      return { left, right, top, bottom };
+    };
+    const marks = element.querySelector("g.chart-marks");
+    // The frame is the box of the horizontal axis's line across, and of
+    // the vertical one's up.
+    const across = boxOf(element.querySelector("g.chart-axis-x path.domain"));
+    const up = boxOf(element.querySelector("g.chart-axis-y path.domain"));
+    if (marks === null) throw new Error("The plot has no marks.");
+    return {
+      place:
+        element.querySelector("g.chart-legend")?.getAttribute("data-place") ??
+        null,
+      svg: boxOf(element.querySelector("svg")),
+      frame: {
+        left: across.left,
+        right: across.right,
+        top: up.top,
+        bottom: up.bottom,
+      },
+      rows: [...element.querySelectorAll("g.chart-legend-row")].map((row) => ({
+        row: boxOf(row),
+        text: boxOf(row.querySelector("text")),
+      })),
+      ticks: [...element.querySelectorAll("g.chart-axis-x g.tick text")].map(
+        boxOf,
+      ),
+      xLabel: boxOf(element.querySelector("text.chart-axis-label-x")),
+    };
+  });
+}
+
+for (const kind of ["ld", "capitals"] as const) {
+  test(`PA10 in the committed font the legend of the LD decay, ${kind}, stands at the right of the frame at 700 pixels and above the plot at 320, no row of it over the frame, and no text of it or of the horizontal axis past the edges of the SVG`, async ({
+    page,
+  }) => {
+    await openPlots(page);
+    await useWideFont(page);
+
+    await drawLine(page, 700, 375, kind);
+    const wide = await legendPlaces(page);
+    expect(wide.place).toBe("right");
+    expect(wide.rows).toHaveLength(2);
+    for (const { row, text } of wide.rows) {
+      expect(row.left, "a row right of the frame").toBeGreaterThan(
+        wide.frame.right,
+      );
+      expect(row.top, "a row below the top of the frame").toBeGreaterThan(
+        wide.frame.top,
+      );
+      expect(text.right, "a text within the SVG").toBeLessThanOrEqual(
+        wide.svg.right,
+      );
+      expect(row.bottom).toBeLessThanOrEqual(wide.svg.bottom);
+    }
+    for (const tick of wide.ticks) {
+      expect(tick.right).toBeLessThanOrEqual(wide.svg.right);
+    }
+
+    // 44 pixels more than the 360 of the panel, for the two rows.
+    await drawLine(page, 320, 404, kind);
+    const narrow = await legendPlaces(page);
+    expect(narrow.place).toBe("above");
+    expect(narrow.rows).toHaveLength(2);
+    for (const { row, text } of narrow.rows) {
+      expect(row.bottom, "a row above the frame").toBeLessThan(
+        narrow.frame.top,
+      );
+      expect(row.top).toBeGreaterThanOrEqual(narrow.svg.top);
+      expect(row.left).toBeGreaterThanOrEqual(narrow.svg.left);
+      expect(text.right, "a text within the SVG").toBeLessThanOrEqual(
+        narrow.svg.right,
+      );
+    }
+    // The label of the horizontal axis keeps its place under the ticks.
+    expect(narrow.xLabel.bottom).toBeLessThanOrEqual(narrow.svg.bottom);
+    expect(narrow.xLabel.top).toBeGreaterThan(narrow.frame.bottom);
+    // The last number of the axis, "100,000", has its room at the right.
+    const last = narrow.ticks.at(-1);
+    expect(narrow.ticks.length).toBeGreaterThanOrEqual(2);
+    expect(last?.right).toBeLessThanOrEqual(narrow.svg.right);
+    // The frame keeps its height: 404 less 12, 44 and the 44 of the legend.
+    expect(
+      Math.round(narrow.frame.bottom - narrow.frame.top),
+    ).toBeGreaterThanOrEqual(300);
+  });
+}

@@ -63,9 +63,11 @@ export type HeatmapKind =
  * blue, each with the mean r² of its 50 bins, its fitted curve and a mark
  * at its half distance; `oneMark`, the same with the mark of pop_a
  * alone; `noCasing`, four series of the groups 2, 4, 5 and 6, whose lines
- * have no casing.
+ * have no casing; `capitals`, the LD decay with the two populations named
+ * in 16 capitals, "MESOAMERICA_WILD", the widest labels a legend that
+ * counts 7.5 pixels a character has to hold.
  */
-export type LineKind = "ld" | "oneMark" | "noCasing";
+export type LineKind = "ld" | "oneMark" | "noCasing" | "capitals";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {

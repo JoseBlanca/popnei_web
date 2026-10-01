@@ -1,14 +1,16 @@
 /**
  * The result of the LD decay (docs/specs/analyses/ldDecay.md, "What it
- * shows"): two tabs, the plot, selected when the result is drawn, with
- * the mean r² of each bin, the fitted curve and the half distance of each
- * population, and under it, past 16 populations, the line that says which
- * it drew; and the table of the bins, the numbers behind the plot. Under
- * the tabs, the table of the populations, and the downloads of the two
- * tables as CSV with the line of the versions beside them. The frame of
- * `AnalysisPanel.tsx` draws the warnings above it, and gives the words of
- * the comparison with the check numbers, drawn under the table of the
- * populations. Which tab is selected is the result's own state, kept
+ * shows"), in the order the owner decided on 1 October 2026: the table of
+ * the populations, whose half distances are what is read first; under it
+ * two tabs, the plot, selected when the result is drawn, with the mean r²
+ * of each bin, the fitted curve and the half distance of each population,
+ * and under it, past 16 populations, the line that says which it drew;
+ * and the table of the bins, the numbers behind the plot, 50 rows for
+ * each population, in a frame of limited height; and under the tabs the
+ * downloads of the two tables as CSV with the line of the versions beside
+ * them. The frame of `AnalysisPanel.tsx` draws the warnings above it, and
+ * gives the words of the comparison with the check numbers, drawn under
+ * the table of the populations. Which tab is selected is the result's own state, kept
  * while it is drawn. The plot is inside an error boundary of its own, so
  * that a plot that throws takes neither the fields, the tables nor the
  * downloads with it.
@@ -83,8 +85,8 @@ const POPULATION_COLUMNS = columnsOf(LD_DECAY_COLUMNS);
 /** The columns of the table of the bins. */
 const BIN_COLUMNS = columnsOf(LD_BIN_COLUMNS);
 
-/** The plot and the table of its bins in their tabs, the table of the
-    populations, and the downloads. */
+/** The table of the populations, the plot and the table of its bins in
+    their tabs, and the downloads. */
 export function LdDecayResults({
   result,
   check,
@@ -109,6 +111,12 @@ export function LdDecayResults({
 
   return (
     <div className={classOf(styles, "results")}>
+      <PopulationsTable
+        result={result}
+        maxDist={maxDist}
+        variantsName={variantsName}
+      />
+      {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
       <Tabs<LdTab>
         label={LD_TABS_LABEL}
         selected={tab}
@@ -130,12 +138,6 @@ export function LdDecayResults({
           },
         ]}
       />
-      <PopulationsTable
-        result={result}
-        maxDist={maxDist}
-        variantsName={variantsName}
-      />
-      {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
       <div className={classOf(styles, "download")}>
         <Button
           label={LD_DECAY_CSV_LABEL}
@@ -197,8 +199,9 @@ function DecayPlot({ result, maxDist }: PartProps): React.JSX.Element {
 }
 
 /** The table of the bins: a row for each population and bin, the bins of
-    a population together; not drawn again while its result and the
-    largest distance are the same, as the table of the populations. */
+    a population together, in a frame of limited height that scrolls with
+    its headers in view; not drawn again while its result and the largest
+    distance are the same, as the table of the populations. */
 const BinsTable = memo(function BinsTable({
   result,
   maxDist,
@@ -219,6 +222,7 @@ const BinsTable = memo(function BinsTable({
       caption={binsCaptionText(numBins, maxDist)}
       columns={BIN_COLUMNS}
       rows={rows}
+      limitedHeight
     />
   );
 });

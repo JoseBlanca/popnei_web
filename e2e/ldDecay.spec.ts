@@ -52,6 +52,9 @@ const FREQUENCY =
   "Maximum major allele frequency in each population, from 0.5 to 1";
 const NO_DISTANCE =
   "The LD decay needs the largest distance between the two variants of a pair. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs.";
+const NO_DISTANCE_RUN = "Type the largest distance, above.";
+const FIT_LINE =
+  "The bar shows the reading of ld.nei. The curves are fitted once it is read. With a large distance on a file whose variants are close together, the reading may take tens of minutes and may end with the LD decay refused for lack of memory.";
 const PRUNING_LINE =
   "The LD pruning of the Variants step is not applied here: it removes the pairs of variants in LD that this analysis measures. The other filters of the Variants step are.";
 
@@ -274,6 +277,59 @@ function halfDistance(page: Page, pop: string): Locator {
     .nth(3);
 }
 
+/** The table of the bins, named by its caption. */
+function binsTable(page: Page): Locator {
+  return panel(page).getByRole("table", { name: /^The \d+ bins/ });
+}
+
+/** The frame the table of the bins scrolls in, a region named by the
+    caption of the table while the table is higher than it. */
+function binsFrame(page: Page): Locator {
+  return panel(page).getByRole("region", { name: /^The \d+ bins/ });
+}
+
+/** The top and the bottom of `locator` on the page. */
+async function edgesOf(
+  locator: Locator,
+): Promise<{ readonly top: number; readonly bottom: number }> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("The element is not drawn.");
+  return { top: box.y, bottom: box.y + box.height };
+}
+
+/** Checks that the table of the bins, of `rows` rows with its header, is
+    in a frame lower than it, and that after the frame is scrolled to its
+    end its header is still at the top of the frame, and its last row in
+    view. */
+async function expectBinsFramed(page: Page, rows: number): Promise<void> {
+  const table = binsTable(page);
+  const frame = binsFrame(page);
+  await expect(table.getByRole("row")).toHaveCount(rows);
+  await expect(
+    panel(page).getByText("Scroll the table to see all its rows."),
+  ).toBeVisible();
+  const sizes = await frame.evaluate((element) => ({
+    held: element.scrollHeight,
+    shown: element.clientHeight,
+  }));
+  // At most 28rem, 448 pixels, and two lines of a border.
+  expect(sizes.shown).toBeLessThanOrEqual(450);
+  expect(sizes.held).toBeGreaterThan(sizes.shown);
+  await frame.evaluate((element) => {
+    element.scrollTo(0, element.scrollHeight);
+  });
+  const frameEdges = await edgesOf(frame);
+  const header = await edgesOf(
+    table.getByRole("columnheader", { name: "Mean r²" }),
+  );
+  expect(header.top).toBeGreaterThanOrEqual(frameEdges.top);
+  expect(header.top).toBeLessThan(frameEdges.top + 4);
+  const last = await edgesOf(table.getByRole("row").last());
+  expect(last.bottom).toBeLessThanOrEqual(frameEdges.bottom + 1);
+  // The last row lies under the header, not behind it.
+  expect(last.top).toBeGreaterThanOrEqual(header.bottom - 1);
+}
+
 /** Types `distance` key by key in the field of the largest distance, and
     commits it with Enter. */
 async function setDistance(page: Page, distance: string): Promise<void> {
@@ -299,7 +355,7 @@ function removedNotice(page: Page): Locator {
 }
 
 test.describe("PA8 D2 the LD decay on the screen", () => {
-  test("PA8 D2 ld.nei with its two populations: the lock of the distance beside the field and the Run button, no key sends anything while it is empty, 100000 typed, Run with the keyboard, the plot, 7,548 and 7,340 bp and no warning, the tabs and the downloads", async ({
+  test("PA8 D2 ld.nei with its two populations: why the distance has to be typed beside the field and where beside the Run button, no key sends anything while it is empty, 100000 typed, Run with the keyboard, the plot, 7,548 and 7,340 bp and no warning, the tabs and the downloads", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -307,16 +363,21 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     const distance = panel(page).getByLabel(DISTANCE);
     const frequency = panel(page).getByLabel(FREQUENCY);
 
-    // Locked: the reason beside the field, which it describes before
-    // the line under it, and beside the disabled Run.
+    // Locked: why the distance has to be typed beside the field alone,
+    // which it describes before the line under it, as a line of help with
+    // no mark of a problem; and beside the disabled Run, where to type it.
     await expect(distance).toHaveValue("");
     await expect(frequency).toHaveValue("0.95");
-    await expect(panel(page).getByText(NO_DISTANCE)).toHaveCount(2);
+    await expect(panel(page).getByText(NO_DISTANCE)).toHaveCount(1);
+    await expect(panel(page).getByText(NO_DISTANCE).locator("svg")).toHaveCount(
+      0,
+    );
     await expect(distance).toHaveAccessibleDescription(
       new RegExp(`^${NO_DISTANCE.replaceAll(".", "\\.")} How far to look`),
     );
     await expect(runButton(page)).toBeDisabled();
-    await expect(runButton(page)).toHaveAccessibleDescription(NO_DISTANCE);
+    await expect(runButton(page)).toHaveAccessibleDescription(NO_DISTANCE_RUN);
+    await expect(panel(page).getByText(NO_DISTANCE_RUN)).toHaveCount(1);
     await expectNoViolations(makeAxeBuilder);
 
     // No key sends anything while the distance is empty: the keys that
@@ -340,7 +401,7 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     await expect(distance).toBeFocused();
     await expect(distance).toHaveValue("");
     await expect(runButton(page)).toBeDisabled();
-    await expect(panel(page).getByText(NO_DISTANCE)).toHaveCount(2);
+    await expect(panel(page).getByText(NO_DISTANCE)).toHaveCount(1);
     await expect(removedNotice(page)).toHaveCount(0);
 
     // 100,000 typed key by key, with its comma, is refused, and the
@@ -374,6 +435,7 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     await page.keyboard.press("Tab");
     await expect(frequency).toBeFocused();
     await expect(panel(page).getByText(NO_DISTANCE)).toHaveCount(0);
+    await expect(panel(page).getByText(NO_DISTANCE_RUN)).toHaveCount(0);
     await page.keyboard.press("Tab");
     await expect(runButton(page)).toBeFocused();
     await expect(
@@ -395,6 +457,24 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
       "pop_a · half at 7,548 bp",
       "pop_b · half at 7,340 bp",
     ]);
+    // The legend stands at the right of the frame, on this wide page.
+    await expect(panel(page).locator("g.chart-legend")).toHaveAttribute(
+      "data-place",
+      "right",
+    );
+    // The table of the populations stands above the tabs, with the
+    // caption that says what its r² at distance 0 is.
+    const tablist = panel(page).getByRole("tablist", {
+      name: "Mean r² against the distance",
+    });
+    expect((await edgesOf(populations(page))).bottom).toBeLessThanOrEqual(
+      (await edgesOf(tablist)).top,
+    );
+    await expect(
+      panel(page).getByText(
+        "The LD decay of each population, over the 500 variants of ld.nei the filters kept, pairs up to 100,000 base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.",
+      ),
+    ).toBeVisible();
     await expect(panel(page).getByText(/^Warning/)).toHaveCount(0);
     await expect(panel(page).getByText(/warnings?$/)).toHaveCount(0);
     // The Run button went with the focus on it: the heading has it.
@@ -426,6 +506,23 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     ]);
     await expect(plot(page)).toHaveCount(0);
     await expectNoViolations(makeAxeBuilder);
+    // The table of the bins is in a frame lower than it, which the Tab
+    // key reaches after the tabs and the arrow keys scroll, and the table
+    // of the populations stays above the tabs.
+    expect((await edgesOf(populations(page))).bottom).toBeLessThanOrEqual(
+      (await edgesOf(tablist)).top,
+    );
+    await page.keyboard.press("Tab");
+    await expect(binsFrame(page)).toBeFocused();
+    await expect
+      .poll(async () => {
+        await page.keyboard.press("ArrowDown");
+        return binsFrame(page).evaluate((element) => element.scrollTop);
+      })
+      .toBeGreaterThan(0);
+    await expectBinsFramed(page, 101);
+    await expectNoViolations(makeAxeBuilder);
+    await binsTab.focus();
     await page.keyboard.press("ArrowLeft");
     await expect(plotTab).toHaveAttribute("aria-selected", "true");
     await expect(plot(page)).toBeVisible();
@@ -485,7 +582,7 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     await expect(first).toBeFocused();
   });
 
-  test("PA8 D2 17 populations of 5 or 6 individuals: 16 rows in the legend, q0 to q15, the line of the populations the plot leaves out, and 17 rows in the table", async ({
+  test("PA8 D2 17 populations of 5 or 6 individuals: 16 rows in the legend, q0 to q15, the line of the populations the plot leaves out, 17 rows in the table, and the 850 bins in a frame whose header stays in view", async ({
     page,
     makeAxeBuilder,
   }) => {
@@ -504,17 +601,27 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     ).toEqual(Array.from({ length: 16 }, (_, i) => `q${String(i)}`));
     await expect(
       panel(page).getByText(
-        "The plot draws the first 16 of the 17 populations, in the order of the table. The tables below hold all 17.",
+        "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
       ),
     ).toBeVisible();
+    // Every row of the legend is in the picture, at the right of the frame.
+    const svg = await edgesOf(panel(page).locator("svg.chart-line"));
+    const lastRow = await edgesOf(
+      panel(page).locator("g.chart-legend-row").last(),
+    );
+    expect(lastRow.bottom).toBeLessThanOrEqual(svg.bottom);
     await expect(populations(page).getByRole("rowheader")).toHaveText(
       Array.from({ length: 17 }, (_, i) => `q${String(i)}`),
     );
     await expect(
       panel(page).getByText(
-        /^Warning: Populations q0, q1 and 15 more have fewer than 20 individuals\./,
+        /^Warning: Populations q0, q1 and 15 more have fewer than 20 individuals\..* longer than those of a larger population\.$/,
       ),
     ).toBeVisible();
+    await expectNoViolations(makeAxeBuilder);
+    await panel(page).getByRole("tab", { name: "Table of the bins" }).click();
+    await expectBinsFramed(page, 851);
+    await expect(populations(page).getByRole("rowheader")).toHaveCount(17);
     await expectNoViolations(makeAxeBuilder);
   });
 });
@@ -551,11 +658,7 @@ test.describe("PA8 D2 the states of the LD decay with no result, and its plot on
     await expect(
       panel(page).getByRole("button", { name: "Stop", exact: true }),
     ).toBeVisible();
-    await expect(
-      panel(page).getByText(
-        "The bar shows the reading of ld.nei. The curves are fitted once it is read.",
-      ),
-    ).toBeVisible();
+    await expect(panel(page).getByText(FIT_LINE)).toBeVisible();
     await expect(panel(page).getByText(/^Calculating · /)).toBeVisible();
     await expectNoViolations(makeAxeBuilder);
     await releaseResults(page);
@@ -602,6 +705,20 @@ test.describe("PA8 D2 the states of the LD decay with no result, and its plot on
     await expect(
       panel(page).getByText("Scroll the plot sideways to see all of it."),
     ).toBeVisible();
+    // On this narrow page the legend stands above the plot, every row of
+    // it in the picture, and the frame of the plot keeps its height.
+    await expect(panel(page).locator("g.chart-legend")).toHaveAttribute(
+      "data-place",
+      "above",
+    );
+    const picture = await edgesOf(panel(page).locator("svg.chart-line"));
+    const rows = panel(page).locator("g.chart-legend-row");
+    expect((await edgesOf(rows.first())).top).toBeGreaterThanOrEqual(
+      picture.top,
+    );
+    const up = await edgesOf(panel(page).locator("g.chart-axis-y path.domain"));
+    expect((await edgesOf(rows.last())).bottom).toBeLessThan(up.top);
+    expect(up.bottom - up.top).toBeGreaterThanOrEqual(300);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(320);
@@ -689,6 +806,26 @@ test.describe("PA8 D2 the warnings of a panel on a narrow page", () => {
     ).toHaveCount(2, { timeout: RESULT_TIMEOUT });
     await expect(populations(page)).toBeVisible();
     await expect.poll(() => pageWidth(page)).toBeLessThanOrEqual(320);
+    // The legend, above the plot, has the names cut after 15 characters,
+    // and each text of it ends inside the picture, which scrolls sideways
+    // in its frame; the table has the names whole.
+    const texts = panel(page).locator("g.chart-legend-row text");
+    await expect(texts).toHaveText([
+      /^Solanum_pimpine… · half at [\d,]+ bp, beyond the plot$/,
+      /^Solanum_pimpine… · half at [\d,]+ bp, beyond the plot$/,
+    ]);
+    const svgRight = await panel(page)
+      .locator("svg.chart-line")
+      .evaluate((svg) => svg.getBoundingClientRect().right);
+    for (const text of await texts.all()) {
+      expect(
+        await text.evaluate((each) => each.getBoundingClientRect().right),
+      ).toBeLessThanOrEqual(svgRight);
+    }
+    await expect(populations(page).getByRole("rowheader")).toHaveText([
+      `${LONG_STEM}wild1`,
+      `${LONG_STEM}weed2`,
+    ]);
     await expectNoViolations(makeAxeBuilder);
   });
 

@@ -616,6 +616,17 @@ function lineDataOf(kind: LineKind): LineData {
         ),
       };
     }
+    case "capitals": {
+      const ld = lineDataOf("ld");
+      const names = ["MESOAMERICA_WILD", "ANDES_LANDRACE_B"];
+      return {
+        ...ld,
+        series: ld.series.map((series, at) => ({
+          ...series,
+          label: series.label.replace(/^pop_[ab]/u, names[at] ?? ""),
+        })),
+      };
+    }
     case "ld":
       return {
         title: "LD decay",

@@ -2,8 +2,10 @@
  * The line plot (docs/specs/charts/line.md): a few series of numbers
  * against a numeric horizontal axis, each series drawn as its points, a
  * line and marks at chosen places along it, in the colour and the shape
- * of its group, with a legend in the SVG. The LD decay draws one series
- * per population: the mean r² of its bins as the points, its fitted curve
+ * of its group, with a legend in the SVG, outside the frame: at its right
+ * in a wide element and above the plot in a narrow one. The LD decay draws
+ * one series
+ * for each population: the mean r² of its bins as the points, its fitted curve
  * as the line, and a mark at its half distance; the plot knows nothing of
  * distances or of r². It is drawn on the base of the 2D plots, plot2d.ts,
  * which gives it its SVG, its size, its axes, its handle and its export,
@@ -27,6 +29,7 @@ import {
   SYMBOL_AREA,
   symbolPath,
 } from "./marks.ts";
+import type { ExportSize } from "./export.ts";
 import { createPlot2d } from "./plot2d.ts";
 import type { Frame, Margin, Plot2dDefinition, PlotText } from "./plot2d.ts";
 import type { Chart } from "./types.ts";
@@ -81,28 +84,119 @@ export interface XY {
 }
 
 /**
- * The margins of the line plot, in CSS pixels, as the histogram's without
- * a threshold; the legend is inside the frame and asks for none.
+ * What the legend of a line plot asks of the element, in CSS pixels, for
+ * the screen that gives the element its size.
+ */
+export interface LineLegendRoom {
+  /** The legend stands above the plot in an element narrower than this. */
+  readonly narrowUnder: number;
+  /** What the legend above the plot adds to the height of the element. */
+  readonly narrowHeight: number;
+  /**
+   * The least width of an element that holds the longest row of the
+   * legend above the plot.
+   */
+  readonly narrowWidth: number;
+}
+
+/**
+ * The margins of the line plot with no legend, in CSS pixels: the top, the
+ * bottom and the left as the histogram's without a threshold, and at the
+ * right the room of the last number of the horizontal axis, "100,000",
+ * which 16 pixels cut. The legend widens the right one, or deepens the top
+ * one, where the histogram has its legend too.
  */
 export const LINE_MARGIN: Margin = {
   top: 12,
-  right: 16,
+  right: 28,
   bottom: 44,
   left: 60,
 };
 
 /** The area of the mark at the top of a mark's line: 1.5 times a point's. */
 const MARK_AREA = 1.5 * SYMBOL_AREA;
-/** From the top of the frame to the top of the first row of the legend. */
+/**
+ * From the top of the frame, at its right, or from the top of the SVG,
+ * above the plot, to the top of the first row of the legend.
+ */
 const LEGEND_TOP = 8;
 /** From the top of one row of the legend to the top of the next. */
 const LEGEND_ROW = 18;
-/** From the right edge of the frame to the right end of a row's line. */
-const LEGEND_RIGHT = 8;
+/** From the right edge of the frame to the start of a row at its right. */
+const LEGEND_FROM_FRAME = 12;
+/** From the end of the longest row at the right to the edge of the SVG. */
+const LEGEND_END = 4;
+/** From each side edge of the SVG to a row above the plot. */
+const LEGEND_FROM_EDGE = 8;
 /** The length of the piece of line of a row, with its mark at its middle. */
 const LEGEND_LINE = 24;
-/** Between the start of a row's piece of line and the end of its text. */
+/** Between the end of a row's piece of line and the start of its text. */
 const LEGEND_GAP = 6;
+/**
+ * The width a character of a label is taken to have, at the 12 pixels of
+ * the text of a legend: the labels are not measured, and 7.5 pixels holds
+ * a name in capitals in the fonts of macOS and of Linux.
+ */
+const LEGEND_CHARACTER = 7.5;
+/**
+ * The legend stands at the right of the frame while that leaves the frame
+ * this wide, and above the plot otherwise.
+ */
+const MIN_FRAME_WIDTH = 300;
+
+/** The width of the longest row of the legend: its piece of line, the gap
+    and its label, by the count of its characters. */
+function legendRowWidth(data: LineData): number {
+  let longest = 0;
+  for (const series of data.series) {
+    longest = Math.max(longest, Array.from(series.label).length);
+  }
+  return LEGEND_LINE + LEGEND_GAP + Math.ceil(LEGEND_CHARACTER * longest);
+}
+
+/** The right margin with the legend at the right of the frame. */
+function rightWithLegend(data: LineData): number {
+  return data.series.length === 0
+    ? LINE_MARGIN.right
+    : Math.max(
+        LINE_MARGIN.right,
+        LEGEND_FROM_FRAME + legendRowWidth(data) + LEGEND_END,
+      );
+}
+
+/**
+ * What the legend of `data` asks of the element: the width under which it
+ * stands above the plot, the left margin, a frame of 300 pixels and the
+ * right margin of the legend; the height it then adds, 8 pixels and 18 a
+ * row; and the width its longest row then needs, with 8 pixels on each
+ * side. A screen makes its element `narrowHeight` higher when it is
+ * narrower than `narrowUnder`, and never narrower than `narrowWidth`.
+ */
+export function lineLegendRoom(data: LineData): LineLegendRoom {
+  const rows = data.series.length;
+  return {
+    narrowUnder: LINE_MARGIN.left + MIN_FRAME_WIDTH + rightWithLegend(data),
+    narrowHeight: rows === 0 ? 0 : LEGEND_TOP + LEGEND_ROW * rows,
+    narrowWidth: rows === 0 ? 0 : 2 * LEGEND_FROM_EDGE + legendRowWidth(data),
+  };
+}
+
+/** Whether the legend of `data` stands above the plot in an element
+    `width` pixels wide. */
+function legendAbove(data: LineData, width: number): boolean {
+  return width < lineLegendRoom(data).narrowUnder;
+}
+
+/** The margins for `data` in an element of `size`: the legend at the
+    right, or above the plot in a narrow element. */
+function lineMargin(data: LineData, size: ExportSize): Margin {
+  return legendAbove(data, size.width)
+    ? {
+        ...LINE_MARGIN,
+        top: LINE_MARGIN.top + lineLegendRoom(data).narrowHeight,
+      }
+    : { ...LINE_MARGIN, right: rightWithLegend(data) };
+}
 
 /** Throws the defect of a range of an axis that is not finite and in order. */
 function checkDomain(axis: string, domain: readonly [number, number]): void {
@@ -319,15 +413,25 @@ function markPath(group: number, x: number, y: number): string {
 }
 
 /**
- * The legend: a row per series in their order, from the top right corner
- * of the frame, each with its piece of line, on a casing for a light
- * colour, its mark at the middle of that piece, and its text ending before
- * it. It is placed without measuring its text.
+ * The legend, outside the frame: a row per series in their order, each
+ * with its piece of line, on a casing for a light colour, its mark at the
+ * middle of that piece, and its text after it. The rows stand at the right
+ * of the frame, from its top down, or, in a narrow element, above the
+ * plot, from the top left corner of the SVG; `data-place` of the group
+ * says which. It is placed without measuring its text.
  */
 function drawLegend(frame: Frame, data: LineData): void {
-  const right = frame.margin.left + frame.innerWidth - LEGEND_RIGHT;
-  const top = frame.margin.top + LEGEND_TOP + LEGEND_ROW / 2;
+  const { margin } = frame;
+  const above = legendAbove(
+    data,
+    margin.left + frame.innerWidth + margin.right,
+  );
+  const left = above
+    ? LEGEND_FROM_EDGE
+    : margin.left + frame.innerWidth + LEGEND_FROM_FRAME;
+  const top = (above ? 0 : margin.top) + LEGEND_TOP + LEGEND_ROW / 2;
   frame.legend
+    .attr("data-place", above ? "above" : "right")
     .selectAll<SVGGElement, LineSeries>("g.chart-legend-row")
     .data(data.series, (series) => String(series.group))
     .join("g")
@@ -335,7 +439,7 @@ function drawLegend(frame: Frame, data: LineData): void {
     .attr(
       "transform",
       (_series, index) =>
-        `translate(${String(right)},${String(top + index * LEGEND_ROW)})`,
+        `translate(${String(left)},${String(top + index * LEGEND_ROW)})`,
     )
     .each(function drawRow(series) {
       // A row is drawn anew each time: a series keeps its group, but its
@@ -347,8 +451,8 @@ function drawLegend(frame: Frame, data: LineData): void {
         row
           .append("line")
           .attr("class", className)
-          .attr("x1", -LEGEND_LINE)
-          .attr("x2", 0)
+          .attr("x1", 0)
+          .attr("x2", LEGEND_LINE)
           .attr("y1", 0)
           .attr("y2", 0);
       };
@@ -357,12 +461,12 @@ function drawLegend(frame: Frame, data: LineData): void {
       row
         .append("path")
         .attr("class", `chart-points ${groupColourClass(group)}`)
-        .attr("transform", `translate(${String(-LEGEND_LINE / 2)},0)`)
+        .attr("transform", `translate(${String(LEGEND_LINE / 2)},0)`)
         .attr("d", symbolPath(group));
       row
         .append("text")
         .attr("class", "chart-legend-text")
-        .attr("x", -(LEGEND_LINE + LEGEND_GAP))
+        .attr("x", LEGEND_LINE + LEGEND_GAP)
         .attr("dy", "0.35em")
         .text(series.label);
     });
@@ -382,6 +486,21 @@ function drawLine(frame: Frame, data: LineData): void {
     .attr("d", (path) => path.d);
 
   const marks = drawnMarks(data, x, y);
+  // The dashed line of a light colour, below 3:1 on the light background,
+  // has a casing as the line of its series has, under every dashed line.
+  frame.annotations
+    .selectAll<SVGLineElement, DrawnMark>("line.chart-mark-casing")
+    .data(
+      marks.filter((mark) => isOutlined(mark.group)),
+      (mark) => mark.key,
+    )
+    .join("line")
+    .attr("class", "chart-mark-casing")
+    .attr("x1", (mark) => mark.x)
+    .attr("x2", (mark) => mark.x)
+    .attr("y1", frame.innerHeight)
+    .attr("y2", (mark) => mark.y)
+    .lower();
   frame.annotations
     .selectAll<SVGLineElement, DrawnMark>("line.chart-mark-line")
     .data(marks, (mark) => mark.key)
@@ -415,7 +534,7 @@ function drawLine(frame: Frame, data: LineData): void {
 const lineDefinition: Plot2dDefinition<LineData> = {
   kind: "line",
   check: checkLine,
-  margin: () => LINE_MARGIN,
+  margin: lineMargin,
   draw: drawLine,
 };
 

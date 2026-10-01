@@ -3835,13 +3835,13 @@ for (const theme of ["light", "dark"] as const) {
       await savePanel(page, `popgen-popdists-320-long-names-${theme}`);
     });
 
-    test("the LD decay locked by the distance not typed, with the reason beside the field and the Run button", async ({
+    test("the LD decay locked by the distance not typed, with why beside the field and where beside the Run button", async ({
       page,
     }) => {
       await loadLd(page);
       await expect(
         ldDecayPanel(page).getByRole("button", { name: "Run" }),
-      ).toHaveAccessibleDescription(/^The LD decay needs the largest distance/);
+      ).toHaveAccessibleDescription("Type the largest distance, above.");
       await expect(
         ldDecayPanel(page).getByLabel(LD_DISTANCE),
       ).toHaveAccessibleDescription(
@@ -3898,7 +3898,7 @@ for (const theme of ["light", "dark"] as const) {
       ).toBeVisible({ timeout: 5000 });
       await expect(
         ldDecayPanel(page).getByText(
-          "The bar shows the reading of ld.nei. The curves are fitted once it is read.",
+          /^The bar shows the reading of ld\.nei\. The curves are fitted once it is read\. With a large distance /,
         ),
       ).toBeVisible();
       await saveLdPanel(page, `popgen-lddecay-running-${theme}`);
@@ -3924,6 +3924,26 @@ for (const theme of ["light", "dark"] as const) {
       await saveLdPanel(page, `popgen-lddecay-bins-${theme}`);
     });
 
+    test("the LD decay done, the table of the bins scrolled in its frame, its header in view", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await ldDecayPanel(page)
+        .getByRole("tab", { name: "Table of the bins" })
+        .click();
+      const frame = ldDecayPanel(page).getByRole("region", {
+        name: /^The 50 bins/,
+      });
+      await frame.focus();
+      await frame.evaluate((element) => {
+        element.scrollTo(0, 1200);
+      });
+      await expect(
+        ldDecayPanel(page).getByRole("columnheader", { name: "Mean r²" }),
+      ).toBeInViewport();
+      await saveLdPanel(page, `popgen-lddecay-bins-scrolled-${theme}`);
+    });
+
     test("the LD decay done with 17 populations of 5 or 6 individuals: the warning of few individuals, 16 in the plot and its line", async ({
       page,
     }) => {
@@ -3945,7 +3965,7 @@ for (const theme of ["light", "dark"] as const) {
       await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         ldDecayPanel(page).getByText(
-          "The plot draws the first 16 of the 17 populations, in the order of the table. The tables below hold all 17.",
+          "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
         ),
       ).toBeVisible({ timeout: 30_000 });
       await expect(
@@ -3963,7 +3983,7 @@ for (const theme of ["light", "dark"] as const) {
       await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         ldDecayPanel(page)
-          .getByText(/^Warning: The curve of p0 falls to half within 1 bp/)
+          .getByText(/^Warning: The curve of p0 falls to half at 0\.247 bp/)
           .first(),
       ).toBeVisible({ timeout: 30_000 });
       await saveLdPanel(page, `popgen-lddecay-half-below-${theme}`);

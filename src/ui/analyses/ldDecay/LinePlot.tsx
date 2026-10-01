@@ -13,10 +13,17 @@
  * frame, a region named "Plot of the LD decay", and not by the title of
  * the plot, "LD decay", which is the name of the panel's own region, so
  * that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
+ *
+ * The legend of the plot stands at the right of its frame in a wide
+ * element and above the plot in a narrow one (line.md, "The room of the
+ * legend"). The plot does not set the size of its element, so the mount
+ * gives the CSS of the panel what the legend asks, `lineLegendRoom`, as
+ * three lengths: the width under which the legend goes above the plot,
+ * the height it then adds, and the width its longest row then needs.
  */
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 
-import { createLine } from "../../../charts/line.ts";
+import { createLine, lineLegendRoom } from "../../../charts/line.ts";
 import type { LineData } from "../../../charts/line.ts";
 import { classOf } from "../../classOf.ts";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
@@ -32,10 +39,27 @@ export interface LinePlotProps {
   readonly data: LineData;
 }
 
+/** The lengths the CSS of the panel reads, by their names there. */
+type LegendLengths = React.CSSProperties &
+  Record<
+    | "--legend-narrow-under"
+    | "--legend-narrow-height"
+    | "--legend-narrow-width",
+    string
+  >;
+
 /** The frame of the line plot, and the plot in it. */
 export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
   const containerRef = usePlot(createLine, data);
+  const legend = useMemo((): LegendLengths => {
+    const room = lineLegendRoom(data);
+    return {
+      "--legend-narrow-under": `${String(room.narrowUnder)}px`,
+      "--legend-narrow-height": `${String(room.narrowHeight)}px`,
+      "--legend-narrow-width": `${String(room.narrowWidth)}px`,
+    };
+  }, [data]);
   // Whether the plot is wider than its frame, which the browser measures
   // and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);
@@ -55,7 +79,11 @@ export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
           "aria-label": PLOT_FRAME_NAME,
         })}
       >
-        <div ref={containerRef} className={classOf(styles, "plot")} />
+        <div
+          ref={containerRef}
+          className={classOf(styles, "plot")}
+          style={legend}
+        />
       </div>
     </div>
   );

@@ -97,21 +97,28 @@ export function pruningLine(p: Project): string | null {
 }
 
 /** The line under the bar of a calculation under way: the bar shows the
-    reading of the file alone, and the curves are fitted after it. */
+    reading of the file alone, and the curves are fitted after it; and
+    what a large distance may cost on a file whose variants are close
+    together, which the lock of the memory does not bound and the
+    application cannot know before the Run. */
 export function fitLine(variantsName: string): string {
-  return `The bar shows the reading of ${escaped(variantsName)}. The curves are fitted once it is read.`;
+  return `The bar shows the reading of ${escaped(variantsName)}. The curves are fitted once it is read. With a large distance on a file whose variants are close together, the reading may take tens of minutes and may end with the LD decay refused for lack of memory.`;
 }
 
 /** The caption of the table of the populations: "The LD decay of each
     population, over the 500 variants of ld.nei the filters kept, pairs
-    up to 100,000 base pairs apart.", `numVars` being the variants of the
-    pass, before the maximum MAF of each population. */
+    up to 100,000 base pairs apart. The r² at distance 0 is where the
+    fitted curve starts, which depends on the number of individuals of
+    the population alone.", `numVars` being the variants of the pass,
+    before the maximum MAF of each population. The second sentence keeps
+    a user from reading that column, the same for every population of one
+    size, as a result. */
 export function captionText(
   numVars: number,
   variantsName: string,
   maxDist: number,
 ): string {
-  return `The LD decay of each population, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept, pairs up to ${grouped(maxDist)} base pairs apart.`;
+  return `The LD decay of each population, over the ${counted(numVars, "variant")} of ${escaped(variantsName)} the filters kept, pairs up to ${grouped(maxDist)} base pairs apart. The r² at distance 0 is where the fitted curve starts, which depends on the number of individuals of the population alone.`;
 }
 
 /** The headers of the columns of the table of the populations. */

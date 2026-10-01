@@ -31,6 +31,7 @@ import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
 import {
   LD_DECAY_NAME,
+  crashText as ldDecayCrashText,
   refusalText as ldDecayRefusalText,
 } from "../../core/analyses/ldDecay.ts";
 import {
@@ -226,7 +227,9 @@ const POP_DISTS: AnalysisUi = Object.freeze({
 /** The panel of the LD decay (docs/specs/analyses/ldDecay.md, "The
     panel"): its words, the lines of its ready state and the line under
     the bar, which is all the user has while the curves are fitted; its
-    two options; and its result, the plot and the two tables. */
+    two options; its result, the plot and the two tables; and its own
+    words of a worker that stopped with no answer, which name the memory
+    and not only another run. */
 const LD_DECAY: AnalysisUi = Object.freeze({
   title: titleOf("ldDecay"),
   name: LD_DECAY_NAME,
@@ -255,7 +258,7 @@ const LD_DECAY: AnalysisUi = Object.freeze({
   Options: LdDecayOptionsPart,
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : fitLine(p.variants.name),
-  workerFailedText: null,
+  workerFailedText: (p: Project): string => ldDecayCrashText(p),
 });
 
 /** The individuals a calculation of the project `p` ran on, those the

@@ -299,6 +299,29 @@ describe("PA8 D1 the labels of the legend", () => {
     ]);
   });
 
+  test("PA10 a name of 16 characters is whole, and one of 17 is cut after 15 with an ellipsis, in each kind of label", () => {
+    const sixteen = "Solanum_pimpinel";
+    const longer = "Solanum_pimpinellifolium_from_N_Ecuador_a";
+    const r = resultOf(
+      [
+        popOf(sixteen, 412.6),
+        popOf("Solanum_pimpinell", 412.6),
+        popOf(longer, 1599810.0655818006),
+        popOf(longer + "b", NAN),
+        popOf(longer + "c", NAN, 0),
+      ],
+      SMALLEST,
+      LARGEST,
+    );
+    expect([0, 1, 2, 3, 4].map((i) => ldLegendLabel(r, i, 1000))).toEqual([
+      "Solanum_pimpinel · half at 413 bp",
+      "Solanum_pimpine… · half at 413 bp",
+      "Solanum_pimpine… · half at 1,599,810 bp, beyond the plot",
+      "Solanum_pimpine… · no curve",
+      "Solanum_pimpine… · no pair",
+    ]);
+  });
+
   test("a population with no pair is said to have none even with a half distance, and one the result does not have is a defect", () => {
     const r = resultOf([popOf("pop_a", 412.6, 0)], SMALLEST, LARGEST);
     expect(ldLegendLabel(r, 0, 1000)).toBe("pop_a · no pair");
