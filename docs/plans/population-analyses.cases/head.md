@@ -62,25 +62,14 @@ check it.
 
 ## Where a spec and the code differ
 
-Two points, each a sentence of a spec that the code does not do:
-
-- `docs/specs/analyses/sfs.md`, "The cases", says of a population under
-  the minimum of individuals, which has no spectrum, "It is not in the
-  table nor in the CSV." The CSV leaves it out, but the table of the
-  block keeps its two columns, with "no value" in every cell: the review
-  of work package 7 made it so, since the table had dropped such a
-  population without a word (`docs/plans/population-analyses.report.md`,
-  work package 7, "The review"), and the spec was not changed with it.
-  "What it shows" of the same spec gives the table "for each population,
-  two columns", which agrees with the code. The recommendation is to
-  correct the case to "Its columns in the table read "no value", and it
-  is not in the CSV."
-- `docs/specs/analyses/ldDecay.md`, "How it is verified", gives the line
-  under the plot of 17 populations as "…in the order of the table. The
-  two tables hold all 17.", where "Its words" of the same spec, the code
-  and its tests have "…in the order of the table of the populations. The
-  two tables hold all 17." The recommendation is to correct the sentence
-  of "How it is verified".
+None now. The map found two sentences of the specs that the code did
+not do, and both were corrected to what the reviews had made, on 1
+October 2026: in `docs/specs/analyses/sfs.md`, "The cases", a
+population under the minimum keeps its two columns in the spectrum's
+table, with "no value", and is not in the CSV; in
+`docs/specs/analyses/ldDecay.md`, "How it is verified", the line under
+the plot of 17 populations reads "…in the order of the table of the
+populations."
 
 The point the map of 1 October found first, the vertical axis of the
 spectrum in `docs/specs/charts/histogram.md`, 0 to 0.07 where the code

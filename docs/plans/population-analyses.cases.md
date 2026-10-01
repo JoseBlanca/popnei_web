@@ -52,7 +52,7 @@ once `main` is pushed.
 
 An item counts as reached when a test reaches all of it. The items that
 are not are in "Left without a test", at the end, each with its reason.
-Of the 277 items, 272 are reached and 5 not; the
+Of the 277 items, 273 are reached and 4 not; the
 tests cited are 392, 17 of them added for the map. A spec
 whose revision changed no item of the two sections has 0 items in the
 table below; its section says what the revision changed and which tests
@@ -67,7 +67,7 @@ check it.
 | the counts of the filters, `docs/specs/analyses/filterCounts.md` | 0 | 0 |
 | the distances between populations, `docs/specs/analyses/popDists.md` | 56 | 56 |
 | the diversity, `docs/specs/analyses/diversity.md` | 48 | 48 |
-| the site frequency spectrum, `docs/specs/analyses/sfs.md` | 26 | 24 |
+| the site frequency spectrum, `docs/specs/analyses/sfs.md` | 26 | 25 |
 | the LD decay, `docs/specs/analyses/ldDecay.md` | 40 | 38 |
 | the protocol, `docs/specs/worker/protocol.md` | 0 | 0 |
 | the messages, `docs/specs/worker/messages.md` | 13 | 13 |
@@ -79,29 +79,18 @@ check it.
 | the line plot, `docs/specs/charts/line.md` | 23 | 22 |
 | the entry, `docs/specs/entry.md` | 2 | 2 |
 | the shell, `docs/specs/shell.md` | 3 | 3 |
-| all | 277 | 272 |
+| all | 277 | 273 |
 
 ## Where a spec and the code differ
 
-Two points, each a sentence of a spec that the code does not do:
-
-- `docs/specs/analyses/sfs.md`, "The cases", says of a population under
-  the minimum of individuals, which has no spectrum, "It is not in the
-  table nor in the CSV." The CSV leaves it out, but the table of the
-  block keeps its two columns, with "no value" in every cell: the review
-  of work package 7 made it so, since the table had dropped such a
-  population without a word (`docs/plans/population-analyses.report.md`,
-  work package 7, "The review"), and the spec was not changed with it.
-  "What it shows" of the same spec gives the table "for each population,
-  two columns", which agrees with the code. The recommendation is to
-  correct the case to "Its columns in the table read "no value", and it
-  is not in the CSV."
-- `docs/specs/analyses/ldDecay.md`, "How it is verified", gives the line
-  under the plot of 17 populations as "…in the order of the table. The
-  two tables hold all 17.", where "Its words" of the same spec, the code
-  and its tests have "…in the order of the table of the populations. The
-  two tables hold all 17." The recommendation is to correct the sentence
-  of "How it is verified".
+None now. The map found two sentences of the specs that the code did
+not do, and both were corrected to what the reviews had made, on 1
+October 2026: in `docs/specs/analyses/sfs.md`, "The cases", a
+population under the minimum keeps its two columns in the spectrum's
+table, with "no value", and is not in the CSV; in
+`docs/specs/analyses/ldDecay.md`, "How it is verified", the line under
+the plot of 17 populations reads "…in the order of the table of the
+populations."
 
 The point the map of 1 October found first, the vertical axis of the
 spectrum in `docs/specs/charts/histogram.md`, 0 to 0.07 where the code
@@ -349,7 +338,7 @@ section below.
 
 ## The site frequency spectrum
 
-`docs/specs/analyses/sfs.md`, "The cases" and "How it is verified": 26 items, 24 with a test that reaches all of it.
+`docs/specs/analyses/sfs.md`, "The cases" and "How it is verified": 26 items, 25 with a test that reaches all of it.
 
 The tests are named by these short names of their files: `sfs:` for `src/core/analyses/sfs.test.ts`; `sw:` for `src/ui/analyses/diversity/spectrumWords.test.ts`; `dui:` for `src/ui/analyses/diversity/panel.test.ts`; `div:` for `src/core/analyses/diversity.test.ts`; `run:` for `src/worker/runner.test.ts`; `e2e:` for `e2e/diversity.spec.ts`.
 
@@ -362,36 +351,36 @@ so its tests are among the diversity's.
 | item | test | note |
 |---|---|---|
 | A population under the minimum: not in popnei's call, `calculated` false; in the block a line with the words of the minimum, from the diversity's options, and no histogram (340) | `run:3380` "p0 cut to 12 individuals and left out of calcPopDiversity has NaN in its six numbers and no spectrum, …"; `sfs:63` "a population not given to popnei is not calculated and not in the CSV"; `sw:80` "the lines in place of a histogram: …"; `dui:647` "its caption, a group per population named by its heading, one histogram for the population with shares, …" | |
-| It is not in the table nor in the CSV (344) | in part: `sfs:63` "a population not given to popnei is not calculated and not in the CSV" | the CSV leaves it out; the table keeps its two columns with "no value", as `dui:738` "the tab of the table shows a row per count and two columns per population, no value in those of a population not calculated, …" checks: "Where a spec and the code differ", above |
-| Populations that hold fewer than 2 chromosomes between them, one haploid individual: no call, the minimum and `calculated` false; its line says it holds fewer than 2 chromosomes (346) | `div:2523` "run sends it with no population for calcPopDiversity, the first pass alone, and the draw of 2"; `sw:80` "the lines in place of a histogram: …" | |
-| A population that no variant counted for, or that reached the draw at none: `variantsInDraw` 0, a spectrum of zeros, no shares, a line, no histogram; its rows in the table and the CSV, zeros with empty shares (352) | `sfs:149` "a population calculated that reached the draw at no variant has a spectrum of zeros and no shares, and its rows of zeros with empty shares in the CSV", added; `sw:80` "the lines in place of a histogram: …"; `sw:119` "the columns and cells of the table, and the name of the download"; `run:3747` "a draw of 130 gives p0, whose 96 chromosomes never reach it, …", added | |
-| A size of the draw above the ploidy times the minimum: on `panel.nei` at n = 96, p0 reached it at 278 of its 1,200 variants, a spectrum of whole numbers; the line of each population gives its variants in the draw, and the diversity's warning names it (356) | `run:3701` "a draw of 96 with no filter: p0, of 48 individuals, reaches it at 278 of its 1,200 variants, …", added; `sw:56` "the line under a heading, and the description of the histogram with its largest share"; `div:2717` "p0 in a draw of 96 at 277 of its 1,152 variants gives variantsNotInDraw with 24%, …" | |
-| An odd size of the draw: `floor(n / 2) + 1` bins, 21 for 41; the line about the half height of the last bin left out (363) | `run:3619` "an odd draw, 41, gives spectra of 21 values, floor(41 / 2) + 1"; `sfs:134` "an odd draw gives floor(n / 2) + 1 bins, the last with its share"; `sw:104` "the axis, the line under the histograms of an even and an odd draw, and too many bars" | |
-| More than 1,000 bins drawn, a draw above 2,001: no histograms, the block says why, the table and the CSV hold every bin (366) | `dui:781` "a draw of more bars than a histogram draws gives the line in their place, and the table stays"; `dui:1018` "the bar limit: a draw of 2,000 draws its 1,000 bars, and one of 2,002 does not"; `sw:104` "the axis, the line under the histograms of an even and an odd draw, and too many bars" | |
-| The filters keep no variant: popnei refuses the diversity's call, the panel shows the diversity's error, and the block is not shown (370) | `div:665` "refusalText of an empty pass tells to loosen the filters"; `run:853` "filters that keep no variant are refused with popnei's counts of the pass" | the block is part of the result, which a refusal does not have |
-| Every variant of a population the same allele in the draw: no shares, a line (372) | `sfs:90` "the worked example: the shares, the variants in the draw and the largest share"; `sw:80` "the lines in place of a histogram: …" | |
-| One population, "All individuals": one histogram, the same words; `panel.nei` as one population, a spectrum of 21 bins over its 1,200 variants at n = 41 (374) | `run:3713` "All individuals at a draw of 41 with no filter: one spectrum of 21 values over the 1,200 variants", added; `run:3344` "All individuals, one population, gives F and the alleles, …" | |
+| In the table its two columns hold "no value"; it is not in the CSV (345) | `sfs:63` "a population not given to popnei is not calculated and not in the CSV"; `dui:738` "the tab of the table shows a row per count and two columns per population, no value in those of a population not calculated, …" | the spec corrected to the code on 1 October 2026 |
+| Populations that hold fewer than 2 chromosomes between them, one haploid individual: no call, the minimum and `calculated` false; its line says it holds fewer than 2 chromosomes (347) | `div:2523` "run sends it with no population for calcPopDiversity, the first pass alone, and the draw of 2"; `sw:80` "the lines in place of a histogram: …" | |
+| A population that no variant counted for, or that reached the draw at none: `variantsInDraw` 0, a spectrum of zeros, no shares, a line, no histogram; its rows in the table and the CSV, zeros with empty shares (353) | `sfs:149` "a population calculated that reached the draw at no variant has a spectrum of zeros and no shares, and its rows of zeros with empty shares in the CSV", added; `sw:80` "the lines in place of a histogram: …"; `sw:119` "the columns and cells of the table, and the name of the download"; `run:3747` "a draw of 130 gives p0, whose 96 chromosomes never reach it, …", added | |
+| A size of the draw above the ploidy times the minimum: on `panel.nei` at n = 96, p0 reached it at 278 of its 1,200 variants, a spectrum of whole numbers; the line of each population gives its variants in the draw, and the diversity's warning names it (357) | `run:3701` "a draw of 96 with no filter: p0, of 48 individuals, reaches it at 278 of its 1,200 variants, …", added; `sw:56` "the line under a heading, and the description of the histogram with its largest share"; `div:2717` "p0 in a draw of 96 at 277 of its 1,152 variants gives variantsNotInDraw with 24%, …" | |
+| An odd size of the draw: `floor(n / 2) + 1` bins, 21 for 41; the line about the half height of the last bin left out (364) | `run:3619` "an odd draw, 41, gives spectra of 21 values, floor(41 / 2) + 1"; `sfs:134` "an odd draw gives floor(n / 2) + 1 bins, the last with its share"; `sw:104` "the axis, the line under the histograms of an even and an odd draw, and too many bars" | |
+| More than 1,000 bins drawn, a draw above 2,001: no histograms, the block says why, the table and the CSV hold every bin (367) | `dui:781` "a draw of more bars than a histogram draws gives the line in their place, and the table stays"; `dui:1018` "the bar limit: a draw of 2,000 draws its 1,000 bars, and one of 2,002 does not"; `sw:104` "the axis, the line under the histograms of an even and an odd draw, and too many bars" | |
+| The filters keep no variant: popnei refuses the diversity's call, the panel shows the diversity's error, and the block is not shown (371) | `div:665` "refusalText of an empty pass tells to loosen the filters"; `run:853` "filters that keep no variant are refused with popnei's counts of the pass" | the block is part of the result, which a refusal does not have |
+| Every variant of a population the same allele in the draw: no shares, a line (373) | `sfs:90` "the worked example: the shares, the variants in the draw and the largest share"; `sw:80` "the lines in place of a histogram: …" | |
+| One population, "All individuals": one histogram, the same words; `panel.nei` as one population, a spectrum of 21 bins over its 1,200 variants at n = 41 (375) | `run:3713` "All individuals at a draw of 41 with no filter: one spectrum of 21 values over the 1,200 variants", added; `run:3344` "All individuals, one population, gives F and the alleles, …" | |
 
 ### How it is verified
 
 | item | test | note |
 |---|---|---|
-| `spectraOf` of a population not calculated: `calculated` false, `expected` empty, `shares` `null`, left out of the CSV (390) | `sfs:63` "a population not given to popnei is not calculated and not in the CSV" | |
-| `spectraOf` on the worked example: the shares `[0.5, 0.5]` and 5, no shares and 3, `largestShare` 0.5 (394) | `sfs:90` "the worked example: the shares, the variants in the draw and the largest share" | |
-| the same object for the same result (398) | `sfs:106` "the same object for the same result" | |
-| a `foldedSfs` of 2 values for n = 4 throws the defect (399) | `sfs:111` "a spectrum of 2 values for a draw of 4 is a defect" | |
-| `noSpectrumLine` of a population not calculated: the words of the minimum, and of fewer than 2 chromosomes (401) | `sw:80` "the lines in place of a histogram: …" | |
-| `spectrumWarnings`: none without a MAF filter (405) | `sfs:233` "no warning without a MAF filter" | |
-| none with one that kept every variant it was given (405) | `sfs:240` "no warning for a MAF filter that kept every variant it was given" | |
-| the MAF filter at 0.95, 1,152 given and 1,128 kept: the text to the letter (406) | `sfs:264` "the text of the flow's MAF filter at 0.95, to the letter" | |
-| `spectraCsv` on the worked example, to the letter (410) | `sfs:189` "the worked example, to the letter" | |
-| The numbers of popnei at n = 40 with no filter: the shares of p0 at bins 1 and 20, of p2 at bin 1, and `largestShare` 0.05618145165329451 (411) | `sfs:325` "panel.nei at a draw of 40 with no filter" | |
-| The runner: `foldedSfs` in the request's order, 21 values each, p0's first two values, and equal to a call that asks `folded_sfs` alone (416) | `run:3408` "the spectra with no filter are in the order of the job, of 21 values each, …" | |
-| The flow of the diversity goes on to the block: three histograms, each titled with its population, 20 bars each, and the table of 21 rows (423) | `e2e:1372` "PA7 D2 three histograms, each headed by its population, of 20 bars, and the table of 21 rows, and axe" | in Chromium and WebKit |
-| with the MAF filter at 0.95 after the missing data filter at 0.05, the warning "…it removed 24 of the 1,152 it was given. …" in the block, after its caption, and not among the warnings above the table (426) | `e2e:1435` "PA7 D2 the MAF filter at 0.95 after the missing data filter at 0.05 gives the warning of the spectrum, …" | in Chromium and WebKit |
-| the heading "Site frequency spectrum" at level 3 and those of the populations at level 4 (429) | `e2e:1372` "PA7 D2 three histograms, each headed by its population, …" | in Chromium and WebKit |
-| the description of p0's histogram starting "1,152 variants in the draw" (430) | in part: `e2e:1372` "PA7 D2 three histograms, each headed by its population, …" | the flow runs at the default missing data filter, 0.1, and reads each description whole from "1,200 variants in the draw"; no flow reads it at the filter at 0.05 |
-| the block at 320 pixels wide, and axe (432) | `e2e:1467` "PA7 D2 at 320 px the block of the spectrum is one histogram to a row and the page does not scroll sideways, and axe" | both themes are the pictures of `npm run screens`, which the owner looked at, at stop B |
+| `spectraOf` of a population not calculated: `calculated` false, `expected` empty, `shares` `null`, left out of the CSV (391) | `sfs:63` "a population not given to popnei is not calculated and not in the CSV" | |
+| `spectraOf` on the worked example: the shares `[0.5, 0.5]` and 5, no shares and 3, `largestShare` 0.5 (395) | `sfs:90` "the worked example: the shares, the variants in the draw and the largest share" | |
+| the same object for the same result (399) | `sfs:106` "the same object for the same result" | |
+| a `foldedSfs` of 2 values for n = 4 throws the defect (400) | `sfs:111` "a spectrum of 2 values for a draw of 4 is a defect" | |
+| `noSpectrumLine` of a population not calculated: the words of the minimum, and of fewer than 2 chromosomes (402) | `sw:80` "the lines in place of a histogram: …" | |
+| `spectrumWarnings`: none without a MAF filter (406) | `sfs:233` "no warning without a MAF filter" | |
+| none with one that kept every variant it was given (406) | `sfs:240` "no warning for a MAF filter that kept every variant it was given" | |
+| the MAF filter at 0.95, 1,152 given and 1,128 kept: the text to the letter (407) | `sfs:264` "the text of the flow's MAF filter at 0.95, to the letter" | |
+| `spectraCsv` on the worked example, to the letter (411) | `sfs:189` "the worked example, to the letter" | |
+| The numbers of popnei at n = 40 with no filter: the shares of p0 at bins 1 and 20, of p2 at bin 1, and `largestShare` 0.05618145165329451 (412) | `sfs:325` "panel.nei at a draw of 40 with no filter" | |
+| The runner: `foldedSfs` in the request's order, 21 values each, p0's first two values, and equal to a call that asks `folded_sfs` alone (417) | `run:3408` "the spectra with no filter are in the order of the job, of 21 values each, …" | |
+| The flow of the diversity goes on to the block: three histograms, each titled with its population, 20 bars each, and the table of 21 rows (424) | `e2e:1372` "PA7 D2 three histograms, each headed by its population, of 20 bars, and the table of 21 rows, and axe" | in Chromium and WebKit |
+| with the MAF filter at 0.95 after the missing data filter at 0.05, the warning "…it removed 24 of the 1,152 it was given. …" in the block, after its caption, and not among the warnings above the table (427) | `e2e:1435` "PA7 D2 the MAF filter at 0.95 after the missing data filter at 0.05 gives the warning of the spectrum, …" | in Chromium and WebKit |
+| the heading "Site frequency spectrum" at level 3 and those of the populations at level 4 (430) | `e2e:1372` "PA7 D2 three histograms, each headed by its population, …" | in Chromium and WebKit |
+| the description of p0's histogram starting "1,152 variants in the draw" (431) | in part: `e2e:1372` "PA7 D2 three histograms, each headed by its population, …" | the flow runs at the default missing data filter, 0.1, and reads each description whole from "1,200 variants in the draw"; no flow reads it at the filter at 0.05 |
+| the block at 320 pixels wide, and axe (433) | `e2e:1467` "PA7 D2 at 320 px the block of the spectrum is one histogram to a row and the page does not scroll sideways, and axe" | both themes are the pictures of `npm run screens`, which the owner looked at, at stop B |
 
 ## The LD decay
 
@@ -449,7 +438,7 @@ The spec was written for stage 5 and is mapped whole.
 | the populations in the order of the job when named "10", "2" (836) | `run:2851` "populations named "10" and "2", which popnei gives back as "2", "10", are held in the order of the job" | |
 | the same numbers for a population named `__proto__` (837) | `run:2924` "a population named __proto__, the %s of the job, …" | |
 | The flow over `ld.nei` and `ld_pops.csv`: why the distance has to be typed, 100000 typed, Run, the table above the tabs, the plot, "7,548" and "7,340", no warning, axe in every state, the keyboard path (840) | `e2e:358` "PA8 D2 ld.nei with its two populations: …" | in Chromium and WebKit |
-| The flow of 17 populations of 5 or 6: 16 rows in the legend, the line of the populations left out, 17 rows in the table, the 850 bins in a frame whose header stays in view (848) | `e2e:585` "PA8 D2 17 populations of 5 or 6 individuals: …" | in Chromium and WebKit; the line reads "…in the order of the table of the populations…", as "Its words" and `ldPlotOmittedText` have it, where this paragraph of the spec says "in the order of the table": "Where a spec and the code differ", above |
+| The flow of 17 populations of 5 or 6: 16 rows in the legend, the line of the populations left out, 17 rows in the table, the 850 bins in a frame whose header stays in view (848) | `e2e:585` "PA8 D2 17 populations of 5 or 6 individuals: …" | in Chromium and WebKit; the line reads "…in the order of the table of the populations…", as "Its words" and `ldPlotOmittedText` have it, as this paragraph of the spec now says too |
 
 The numbers after the table, of the VCF, of the missing data filter at
 0.05 and of popnei's own reference against R, are what popnei gave on
@@ -735,8 +724,7 @@ Each is in the table of its spec above, where its row says what a test reaches o
 
 | spec | item | reason |
 |---|---|---|
-| the site frequency spectrum | It is not in the table nor in the CSV (344) | the CSV leaves it out; the table keeps its two columns with "no value", as `dui:738` "the tab of the table shows a row per count and two columns per population, no value in those of a population not calculated, …" checks: "Where a spec and the code differ", above |
-| the site frequency spectrum | the description of p0's histogram starting "1,152 variants in the draw" (430) | the flow runs at the default missing data filter, 0.1, and reads each description whole from "1,200 variants in the draw"; no flow reads it at the filter at 0.05 |
+| the site frequency spectrum | the description of p0's histogram starting "1,152 variants in the draw" (431) | the flow runs at the default missing data filter, 0.1, and reads each description whole from "1,200 variants in the draw"; no flow reads it at the filter at 0.05 |
 | the LD decay | A population whose variants all fail its MAF: its bins empty, `numVars` 0, `noPairs` says why; the others not affected (659) | the words, from results written as literals; no fixture has a population all of whose variants fail its MAF, so popnei's empty bins of it are not run |
 | the LD decay | A file not sorted by position: fewer pairs, no word, until a release of popnei refuses it (665) | what the release of popnei does with such a file, which popnei issue #5 asks to change; the application adds nothing to test, and no unsorted fixture is committed |
 | the line plot | More series than the legend has room for in the frame: the rows run below the frame's bottom, one every 18 pixels; so the screen gives no more series than its frame holds rows (287) | the tests reach the plot's part, a row every 18 pixels and as many rows as series, 49 of them; no test asserts that the rows past the frame are cut. That the LD decay draws at most 16 populations, and its words for those left out, are the screen's, and are mapped with `docs/specs/analyses/ldDecay.md`, above, in the flow of 17 populations; how the legend holds more is left by the spec for the running application, so nothing is asked of the owner here |

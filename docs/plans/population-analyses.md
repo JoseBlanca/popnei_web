@@ -1151,7 +1151,7 @@ specs of stage 5 matched to a test.
   section 7 of `docs/architecture.md` that the order of the heatmap and
   the curve of the LD decay are made outside the plots, found missing
   by the review of work package 3. Serves 1 and 2.
-- [ ] 9.2 The map of the cases, and the tests it finds missing. Serves
+- [x] 9.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 9.1.
 
 ## At the end
