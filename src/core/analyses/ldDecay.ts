@@ -24,17 +24,19 @@ import {
   grouped,
   individualsNeeds,
   namesOf,
-  populationListsNeeds,
-  populationsColumnOf,
   populationsKept,
-  populationsKeptNeeds,
   populationsNeeds,
   populationsOf,
   populationsToRun,
   shown,
   MAX_NAMED,
-  populationsByLists,
 } from "../project.ts";
+import {
+  populationListsNeeds,
+  populationsByLists,
+  populationsColumnOf,
+  populationsKeptNeeds,
+} from "../populations.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";

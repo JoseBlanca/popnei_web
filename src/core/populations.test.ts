@@ -39,13 +39,10 @@ describe("PA10 the modules of the populations do not import each other", () => {
     ).toEqual(['import type { IndividualsKept } from "./individualsKept.ts";']);
   });
 
-  // To be tightened to no statement at all when the module of the LD
-  // decay imports its four functions from populations.ts and the line
-  // is removed from project.ts.
-  test("project.ts takes nothing of populations.ts but the four names it exports again for the LD decay", () => {
-    expect(statementsFrom(sourceOf("project.ts"), "./populations.ts")).toEqual([
-      'export { populationListsNeeds, populationsByLists, populationsColumnOf, populationsKeptNeeds, } from "./populations.ts";',
-    ]);
+  test("project.ts takes nothing of populations.ts", () => {
+    expect(statementsFrom(sourceOf("project.ts"), "./populations.ts")).toEqual(
+      [],
+    );
   });
 
   test("individualsKept.ts takes nothing of populations.ts", () => {

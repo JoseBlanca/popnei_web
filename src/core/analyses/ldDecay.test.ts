@@ -26,10 +26,10 @@ import { individualChecks } from "./individualChecks.ts";
 import { individualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
+import { populationsKeptNeeds } from "../populations.ts";
 import {
   emptyProject,
   individualsNeeds,
-  populationsKeptNeeds,
   setAnalysisOptions,
 } from "../project.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";

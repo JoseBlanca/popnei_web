@@ -771,13 +771,7 @@ the top of either module and made with a function of the other could
 have stopped the page at load, which the review of the plan showed on a
 scratch copy. `populations.ts` imports `project.ts` and
 `individualsKept.ts`, and neither imports it; `project.ts` imports
-`individualsKept.ts` for its types alone. One line is left to remove:
-the module of the LD decay, which another task of the plan was changing
-that day, still imports four of the functions from `project.ts`,
-`populationListsNeeds`, `populationsKeptNeeds`, `populationsColumnOf`
-and `populationsByLists`, so `project.ts` exports those four again from
-`populations.ts` until that module imports them from `populations.ts`
-itself, and while it does the two modules still import each other.
+`individualsKept.ts` for its types alone.
 
 - **The lists of individuals leaving no individual with a
   population**, `populationListsNeeds(p)`: the diversity's reason of

@@ -2684,17 +2684,8 @@ function needOf(kind: PopulationsNeed["kind"], words: string): PopulationsNeed {
 // What the analyses per population share from stage 5 is in
 // populations.ts (the project spec, "What the analyses per population
 // share from stage 5"), which imports this module and individualsKept.ts,
-// so that this module imports individualsKept.ts for its types alone.
-// The four names below are exported again from here only until the module
-// of the LD decay, src/core/analyses/ldDecay.ts, imports them from
-// populations.ts; the line is then removed, and with it the last import
-// that makes this module and populations.ts import each other.
-export {
-  populationListsNeeds,
-  populationsByLists,
-  populationsColumnOf,
-  populationsKeptNeeds,
-} from "./populations.ts";
+// so that this module imports individualsKept.ts for its types alone,
+// and nothing of populations.ts.
 
 /** The separator a read used, as the Individuals step names it. */
 const SEPARATOR_NAMES: Readonly<Record<CsvFound["separator"], string>> = {
