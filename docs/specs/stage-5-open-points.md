@@ -403,7 +403,8 @@ the stage.
   the bins in a frame.** The result is the table of the populations,
   then the tabs of the plot and of the table of the bins, then the
   downloads; the table of the bins, 50 rows for each population, is in
-  a frame at most 24rem high whose header row stays in view, and the
+  a frame at most 28rem high, or 70% of the window, as the tables of
+  the individuals have, whose header row stays in view, and the
   line of the populations the plot leaves out ends "The two tables hold
   all 17." Not taken: the table of the bins with no frame, as it was
   built, with which the table of the populations and the downloads

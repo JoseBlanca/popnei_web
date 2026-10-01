@@ -1000,10 +1000,11 @@ populations.
   beside it, as the histograms of the Variants step have theirs: the
   population, the distances of the bin, its pairs, its mean r² and its
   standard deviation, "no pair" for a bin without one. It has 50 rows
-  for each population, 5,000 for 100, so it is drawn in a frame at most
-  24rem high, 384 pixels at the default size of text, that scrolls
-  inside the tab, and its header row stays at the top of the frame
-  while it does (C1).
+  for each population, 5,000 for 100, so it is drawn in a frame that
+  scrolls inside the tab, as high at most as the box of the tables of
+  the individuals, 28rem, 448 pixels at the default size of text, or
+  70% of the height of the window when that is less, and its header row
+  stays at the top of the frame while it does (C1).
 - **The table of the populations**, above the tabs, with the caption
   "The LD decay of each population, over the 500 variants of ld.nei the
   filters kept, pairs up to 100,000 base pairs apart. The r² at
