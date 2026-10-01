@@ -8,7 +8,14 @@
  *   empty; 100,000 typed with its comma is refused; 100000 typed, Run,
  *   the plot, "7,548" and "7,340" in the column "Half distance (bp)" and
  *   no warning; the path of the keyboard, the two fields, Run, the tabs
- *   of the plot and the table, the downloads.
+ *   of the plot and the table, the downloads, each file read and its
+ *   first lines compared with popnei's numbers of the spec.
+ * - The states a result is not in: locked by the memory of the counts,
+ *   with the reason beside the field and said by the status region;
+ *   running, with the line of the fit; and popnei's refusal of filters
+ *   that keep no variant.
+ * - At 320 pixels the frame of the plot is reached by the Tab key and
+ *   scrolled by the arrow keys.
  * - 17 populations of 5 or 6 individuals: 16 rows in the legend, the line
  *   of the populations the plot leaves out, and 17 rows in the table.
  * - The key on the screen: the LD pruning of the Variants step turned on
@@ -22,6 +29,7 @@
  * its scripts run. The numbers are popnei's of the spec, as the screen
  * rounds them; nothing is read from the pixels of the plot.
  */
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
@@ -83,6 +91,81 @@ function count(): void {
     }
   }
   globalThis.Worker = CountedWorker;
+  // The media type of every file the page hands the browser to save.
+  const types: string[] = [];
+  Object.assign(globalThis, { savedTypes: types });
+  const createObjectURL = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = (object: Blob | MediaSource): string => {
+    if (object instanceof Blob) types.push(object.type);
+    return createObjectURL(object);
+  };
+}
+
+/** The media types of the files the page handed the browser to save. */
+async function savedTypes(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (globalThis as unknown as { savedTypes: string[] }).savedTypes,
+  );
+}
+
+/** The lines of the file of a download, read where the browser saved
+    it. */
+async function linesOf(download: {
+  path(): Promise<string>;
+}): Promise<string[]> {
+  return (await readFile(await download.path(), "utf8")).split("\n");
+}
+
+/** The shell's status region, the last of the page's two. */
+function status(page: Page): Locator {
+  return page.getByRole("status").last();
+}
+
+/** Makes the calculation worker keep its results until its `release` is
+    called, so that the panel stays in its running state. */
+async function holdResults(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+      held: [unknown, Transferable[] | undefined][];
+      release: () => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.held = [];
+    scope.release = () => {
+      for (const [message, transfer] of scope.held) post(message, transfer);
+      scope.held = [];
+      scope.postMessage = post;
+    };
+    scope.postMessage = (message, transfer) => {
+      const kind =
+        typeof message === "object" && message !== null && "kind" in message
+          ? message.kind
+          : null;
+      if (kind === "result") scope.held.push([message, transfer]);
+      else post(message, transfer);
+    };
+  });
+}
+
+/** Lets the results the calculation worker kept go to the page, from a
+    timer of the worker, so that this call has its answer first: the page
+    ends the worker of an LD decay as soon as its result arrives, and in
+    WebKit 26.6 a call that posted the result itself failed 2 times in 6,
+    its worker closed before it answered. */
+async function releaseResults(page: Page): Promise<void> {
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    setTimeout(() => {
+      (globalThis as unknown as { release: () => void }).release();
+    }, 0);
+  });
 }
 
 /** What the page counted so far. */
@@ -353,12 +436,42 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     await first.focus();
     const one = page.waitForEvent("download");
     await page.keyboard.press("Enter");
-    expect((await one).suggestedFilename()).toBe("ld.ld_decay.csv");
+    const populationsFile = await one;
+    expect(populationsFile.suggestedFilename()).toBe("ld.ld_decay.csv");
+    // Every digit of popnei's numbers of the spec, a line for each
+    // population and the new line that ends the last.
+    expect(await linesOf(populationsFile)).toEqual([
+      "population,individuals,variants,pairs,half_distance_bp,r2_at_distance_0,rho_per_bp",
+      "pop_a,50,432,29367,7548.08187836982,0.46942148760330576,0.00029996668947275404",
+      "pop_b,50,432,29367,7339.709512618931,0.46942148760330576,0.00030848266256738914",
+      "",
+    ]);
     await page.keyboard.press("Tab");
     await expect(second).toBeFocused();
     const two = page.waitForEvent("download");
     await page.keyboard.press("Enter");
-    expect((await two).suggestedFilename()).toBe("ld.ld_decay_bins.csv");
+    const binsFile = await two;
+    expect(binsFile.suggestedFilename()).toBe("ld.ld_decay_bins.csv");
+    const binLines = await linesOf(binsFile);
+    // The header, 50 bins for each population, and the last new line.
+    expect(binLines).toHaveLength(102);
+    expect(binLines.slice(0, 2)).toEqual([
+      "population,smallest_dist,largest_dist,num_pairs,mean_r2,sd_r2",
+      "pop_a,1,2000,745,0.3104664289575117,0.28243883665741665",
+    ]);
+    expect(binLines[50]).toMatch(
+      /^pop_a,98001,100000,452,0\.025953462391956096,0\.\d+$/,
+    );
+    expect(binLines[51]).toBe(
+      "pop_b,1,2000,745,0.31876304803774247,0.2814576610764838",
+    );
+    expect(binLines[100]).toMatch(
+      /^pop_b,98001,100000,452,0\.03162397044318621,0\.\d+$/,
+    );
+    expect(await savedTypes(page)).toEqual([
+      "text/csv;charset=utf-8",
+      "text/csv;charset=utf-8",
+    ]);
     // No stop of the Tab key lies between the tabs and the first download
     // but the panel of the tab shown.
     await plotTab.focus();
@@ -398,6 +511,107 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
         /^Warning: Populations q0, q1 and 15 more have fewer than 20 individuals\./,
       ),
     ).toBeVisible();
+    await expectNoViolations(makeAxeBuilder);
+  });
+});
+
+test.describe("PA8 D2 the states of the LD decay with no result, and its plot on a narrow page", () => {
+  test("PA8 D2 a distance above what the memory allows locks the panel, with the reason beside the field, under Run and said by the status region; a calculation under way shows the line of the fit; filters that keep no variant show popnei's refusal", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await load(page, "ld_pops.csv");
+    const distance = panel(page).getByLabel(DISTANCE);
+    const memory =
+      "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.";
+
+    // Locked by the memory: one base pair above what two populations
+    // are allowed.
+    await setDistance(page, "12500001");
+    await expect(panel(page).getByText(memory)).toHaveCount(2);
+    await expect(runButton(page)).toBeDisabled();
+    await expect(runButton(page)).toHaveAccessibleDescription(memory);
+    await expect(distance).toHaveAccessibleDescription(
+      /^With 2 populations, the largest distance can be at most 12,500,000 base pairs: .* How far to look for pairs\./,
+    );
+    await expect(status(page)).toHaveText(memory);
+    await expectNoViolations(makeAxeBuilder);
+    await setDistance(page, "12500000");
+    await expect(panel(page).getByText(memory)).toHaveCount(0);
+    await expect(runButton(page)).toBeEnabled();
+
+    // Running: the bar, and under it the line of what it does not show.
+    await setDistance(page, "100000");
+    await holdResults(page);
+    await runButton(page).click();
+    await expect(
+      panel(page).getByRole("button", { name: "Stop", exact: true }),
+    ).toBeVisible();
+    await expect(
+      panel(page).getByText(
+        "The bar shows the reading of ld.nei. The curves are fitted once it is read.",
+      ),
+    ).toBeVisible();
+    await expect(panel(page).getByText(/^Calculating · /)).toBeVisible();
+    await expectNoViolations(makeAxeBuilder);
+    await releaseResults(page);
+    await expect(populations(page)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(
+      panel(page).getByText(/The curves are fitted once it is read/),
+    ).toHaveCount(0);
+
+    // The error: a MAF filter of the Variants step that keeps no variant.
+    await goTo(page, "Variants");
+    await page
+      .getByText("Filter the variants by major allele frequency (MAF)", {
+        exact: true,
+      })
+      .click();
+    const threshold = page.getByLabel("Maximum major allele frequency", {
+      exact: false,
+    });
+    await threshold.fill("0.4");
+    await threshold.press("Enter");
+    await goTo(page, "Analyses");
+    await runButton(page).click();
+    await expect(
+      panel(page).getByText(
+        "The filters kept none of the variants of ld.nei, so there is no variant to calculate the LD decay over. Loosen the filters in the Variants step.",
+      ),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(runButton(page)).toHaveCount(0);
+    await expect(populations(page)).toHaveCount(0);
+    await expectNoViolations(makeAxeBuilder);
+  });
+
+  test("PA8 D2 at 320 pixels the frame of the plot is the stop of the Tab key after the tabs, scrolled sideways by the arrow keys, and the page does not scroll sideways", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await load(page, "ld_pops.csv");
+    await runTo100000(page);
+    const frame = panel(page).getByRole("region", {
+      name: "Plot of the LD decay",
+    });
+    await expect(frame).toBeVisible();
+    await expect(
+      panel(page).getByText("Scroll the plot sideways to see all of it."),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(320);
+    await panel(page).getByRole("tab", { name: "Plot" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(frame).toBeFocused();
+    // Pressed until the frame scrolls, as the flow of the distances does:
+    // WebKit 26.6 under Playwright lets a first press go by.
+    await expect
+      .poll(async () => {
+        await page.keyboard.press("ArrowRight");
+        return frame.evaluate((element) => element.scrollLeft);
+      })
+      .toBeGreaterThan(0);
     await expectNoViolations(makeAxeBuilder);
   });
 });

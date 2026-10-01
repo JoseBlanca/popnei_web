@@ -3956,6 +3956,37 @@ for (const theme of ["light", "dark"] as const) {
       await saveLdPanel(page, `popgen-lddecay-no-variant-${theme}`);
     });
 
+    test("the LD decay done, two names of 45 characters alike in their first 40, and half distances beyond the plot", async ({
+      page,
+    }) => {
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const stem = "Solanum_pimpinellifolium_from_N_Ecuador_";
+      await pickIndividuals(page, {
+        name: "long_pops.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) =>
+            `i${String(i).padStart(3, "0")},${stem}${i < 50 ? "wild1" : "weed2"}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      // The variants are 1,000 bp apart: within 2,000 bp the curves fitted
+      // fall to half beyond the plot.
+      await setLdDistance(page, "2000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^Warning: .* beyond the 2,000 base pairs/,
+        ),
+      ).toHaveCount(2, { timeout: 30_000 });
+      await saveLdPanel(page, `popgen-lddecay-long-names-${theme}`);
+    });
+
     test("the LD decay done at 320 pixels wide, in the committed font", async ({
       page,
     }) => {

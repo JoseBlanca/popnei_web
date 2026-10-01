@@ -782,9 +782,7 @@ test.describe("stop C 3 the links to the analyses under the heading of the Analy
       name: "Analyses of this step",
     });
     const links = list.getByRole("link");
-    // The distances between populations and the LD decay have the
-    // placeholders of their panels until tasks 5.2 and 8.1 of the plan of
-    // stage 5, their titles and their Run buttons.
+    // The four panels of the step, in their order.
     await expect(links).toHaveText([
       "Principal components",
       "Diversity",

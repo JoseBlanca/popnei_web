@@ -2793,9 +2793,10 @@ async function savedProject(
 }
 
 /** The project file at `base` with the PCA's options `options`, written
-    beside it with `suffix`: the placeholder panel of the PCA has no
-    options yet, so a PCoA and the PCA's own LD filter are set by the
-    project the application opens. */
+    beside it with `suffix`, so that the measurement sets a PCoA and the
+    PCA's own LD filter by the project the application opens, and types
+    in no field: it was first taken while the panel of the PCA had no
+    options. */
 async function projectWithPca(
   base: string,
   suffix: string,
