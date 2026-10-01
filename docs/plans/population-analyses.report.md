@@ -706,6 +706,88 @@ B8. **A sentence of `diversity.md`** still calls the width of the table
     default would be the ploidy of the variants file times…") is the
     writer's. Recommendation: correct the first; judge the second.
 
+## Stop C: the LD decay, for the owner
+
+How to try it is written here once the fixes of its review are in.
+
+### What to judge
+
+- The panel as a whole: the field of the largest distance, empty until
+  typed, with the reason why it has no default; the field of the
+  frequency; the line that says the LD pruning is not applied; the
+  running state, whose bar stands full while the curves are fitted;
+  the plot with its legend and the guides to the half distances; the
+  table of the populations; the table of the bins in its tab; the two
+  downloads.
+- The writers' choices of the open-points file that it shows: the
+  largest major allele frequency as an option, the warning of few
+  individuals below 20, the lock at 1 GB with the numbers of work
+  package 2, and at most 16 populations drawn.
+- Points 5, 6, 7, 14, 19, 22, 23 and 24 below.
+
+### Decisions, each with the recommendation
+
+C1. **The table of the bins takes the screen.** In its tab it holds 50
+    rows for each population, with no frame of its own: with two
+    populations the table of the populations and the downloads start
+    about 3,600 pixels down, and with 100 populations the page holds
+    5,000 rows. The spec says only "in a tab beside it as the
+    histograms have theirs". Recommendation: the table of the
+    populations above the tabs, since the half distances are what is
+    read first, and the table of the bins in a frame of limited height
+    whose header stays in view. The line "The tables below hold all
+    17", the spec's, then reads "The two tables hold all 17".
+C2. **The legend over the points.** `line.md` puts the legend inside the
+    frame, at the top right; with 16 populations its last rows lie over
+    the points, and a name of 40 characters with "half at 1,599,810 bp,
+    beyond the plot" would cover most of the plot. Recommendation: the
+    legend in a margin at the right of the plot, outside the frame,
+    which also gives the last number of the axis, "100,000", its room
+    (point 5); names cut at about 16 characters in the legend, whole in
+    the table.
+C3. **The warning when every pair falls in the first bin.** With a
+    largest distance far beyond the furthest pairs, each population is
+    one point at the left edge, and the warning ends "the half distance
+    says only that LD falls within them". Recommendation: it adds
+    "Type a smaller largest distance to see the decay within them".
+C4. **A half distance below 10 bp written two ways.** The legend and the
+    table write "3.40"; the warning, "at 3 bp". The spec asks both: "the
+    distances in whole base pairs" of the warnings, and three
+    significant digits below 10 bp. Recommendation: three significant
+    digits in the warnings too.
+C5. **The frequency with two decimals.** The field refuses 0.975, which
+    popnei and a project file accept; the spec gives no decimals. The
+    MAF filter of the Variants step also takes two. Recommendation:
+    keep two, and write it in the spec.
+C6. **The words when the calculation dies.** When the browser ends the
+    calculation for lack of memory before popnei can refuse, the user
+    reads "The calculation stopped unexpectedly. Run it again…", which
+    repeats a run of perhaps many minutes. Recommendation: words of its
+    own for the LD decay, as the PCA has, naming a smaller distance and
+    fewer individuals.
+C7. **The column "r² at distance 0, of the curve"** is the same number
+    for every population of one size (0.5785 for each of 6
+    individuals), since the curve's start depends on the sample size
+    alone. A user may read it as a result. Recommendation: keep the
+    column and say so in the caption; or keep it in the CSV alone.
+C8. **The reason of the empty distance** is drawn as an error, red with
+    its icon, before the user has done anything, and twice, beside the
+    field and under Run, as the spec asks; at 320 pixels that is 14
+    lines. Recommendation: beside the field alone, in the plain style
+    of a line of help, and under Run "Type the largest distance,
+    above".
+C9. **Small words.** "Compare them with the others with this in mind"
+    when every population has few individuals: no others. The field
+    shows "100000" with no commas while the panel writes "100,000"
+    everywhere else; the fields of the application all do so, since a
+    comma typed is refused. Recommendation: the first sentence dropped
+    when all are small; the second kept.
+C10. **Three sentences of other specs** say the help of the PCA and of
+    the Variants step will point to the LD decay "once it exists"
+    (`pca.md`, `steps/variants.md`, `stage-4-open-points.md`). It
+    exists; the help is stage 8. Recommendation: reword the three in
+    the documents of the end of this stage.
+
 ## For the owner, as the work goes
 
 Points found during the work, each with its recommendation. None stops
