@@ -837,6 +837,64 @@ describe("PA7 D1 the number of the default, typed, pasted or stepped to", () => 
   });
 });
 
+/** Presses `key` with Shift held on the element that has the focus. */
+function pressWithShift(key: string): void {
+  act(() => {
+    for (const type of ["keydown", "keyup"]) {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent(type, {
+          key,
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  });
+}
+
+describe("PA7 D1 a key pressed with Shift commits nothing, the second pass of the review of work package 7", () => {
+  // React Aria takes a key only with the very modifiers it names, so an
+  // arrow, Page Up or Down, or Enter with Shift commits nothing: the
+  // field must keep what was typed, and a character thrown away, for the
+  // commit that follows.
+  for (const key of ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Enter"]) {
+    test(`a comma thrown away is still refused after Shift+${key}`, () => {
+      draw(createElement(DiversityOptionsPart));
+      const input = fields().threshold;
+      act(() => {
+        input.focus();
+        input.setSelectionRange(0, input.value.length);
+      });
+      typeKeys(input, "0,1");
+      pressWithShift(key);
+      press("Enter");
+      expect(container.textContent).toContain(
+        "Write the decimals with a point, 0.1 and not 0,1; the frequency stays 0.95.",
+      );
+      expect(diversityOptions(project).polyThreshold).toBe(0.95);
+      expect(applied).toEqual([]);
+    });
+
+    test(`the default's number typed is still kept as typed after Shift+${key}`, () => {
+      draw(createElement(DiversityOptionsPart));
+      const input = fields().draw;
+      act(() => {
+        input.focus();
+        input.setSelectionRange(0, input.value.length);
+      });
+      typeKeys(input, "40");
+      pressWithShift(key);
+      expect(applied).toEqual([]);
+      press("Enter");
+      expect(diversityOptions(project).numCalledAlleles).toBe(40);
+      expect(applied).toEqual([
+        "the number of chromosomes of the rarefaction changed",
+      ]);
+    });
+  }
+});
+
 describe("PA7 D2 the block of the spectrum, the review of work package 7", () => {
   test("a histogram that throws leaves its heading alone, and the other histograms, the table, the fields and the download stay", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);

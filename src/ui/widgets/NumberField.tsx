@@ -532,11 +532,16 @@ function FieldInput({
     };
   }, [state, onCommitReady, onCommitStarts, onCommitEnds]);
 
+  // React Aria takes a key only with no modifier held, Shift among them:
+  // Shift and an arrow, which selects the text in a browser, or Shift and
+  // Enter commit nothing, and what was typed, with a character thrown
+  // away, waits for the commit that follows.
   const isCommitKey = (event: React.KeyboardEvent): boolean =>
     COMMIT_KEYS.has(event.key) &&
     !event.altKey &&
     !event.ctrlKey &&
-    !event.metaKey;
+    !event.metaKey &&
+    !event.shiftKey;
   const isStepKey = (event: React.KeyboardEvent): boolean =>
     isCommitKey(event) && event.key !== "Enter";
 
