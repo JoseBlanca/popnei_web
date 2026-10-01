@@ -386,6 +386,115 @@ The modules and two sentences of the specs:
   report said the LD decay locks too; it does not, since it does not
   read the LD pruning (decision 8), and the sentence says so.
 
+## Decided by the owner on 1 October 2026: the LD decay and the line plot
+
+The owner tried the panel of the LD decay that day, in Firefox, with
+their own data, at the third stop of the plan of stage 5, and took each
+recommendation of the plan's report as it was written
+(`docs/plans/population-analyses.report.md`, "Stop C: the LD decay, for
+the owner", and "For the owner, as the work goes"). The points keep
+their names there, C1 to C9 of the stop and the numbered points 5 to
+24. The specs changed are `docs/specs/analyses/ldDecay.md`,
+`docs/specs/charts/line.md`, `docs/specs/worker/runner.md` and
+`docs/specs/worker/client.md`. C10 is with the documents of the end of
+the stage.
+
+- **C1. The table of the populations above the tabs, and the table of
+  the bins in a frame.** The result is the table of the populations,
+  then the tabs of the plot and of the table of the bins, then the
+  downloads; the table of the bins, 50 rows for each population, is in
+  a frame at most 24rem high whose header row stays in view, and the
+  line of the populations the plot leaves out ends "The two tables hold
+  all 17." Not taken: the table of the bins with no frame, as it was
+  built, with which the table of the populations and the downloads
+  started about 3,600 pixels down for two populations.
+- **C2, with point 5. The legend of the line plot outside its frame.**
+  The legend stands in a margin at the right of the frame, which is
+  never less than 28 pixels, so the last number of the axis, "100,000",
+  has its room; in the legend a name is cut after 15 characters with
+  "…" when it has more than 16, and the table has it whole. Not taken:
+  the legend inside the frame, at the top right, where the last rows of
+  16 populations lay over the points; and, for point 5 alone, a right
+  margin of 28 pixels with the legend left inside. Within this
+  decision, the task that built it chose that in an element too narrow
+  to leave the frame 300 pixels the legend stands under the plot, since
+  on a screen of 320 pixels a margin at the right would leave a frame
+  of 34.
+- **C3. The warning of a half distance below the pairs says what to
+  do.** It ends "Type a smaller largest distance to see the decay
+  within them." Not taken: the warning as it was, which ended at what
+  the half distance says.
+- **C4. A half distance is written one way.** The warnings write a half
+  distance as the legend and the table do, to three significant digits
+  below 10 bp, "at 3.40 bp", "at 0.247 bp", and no longer "within 1 bp"
+  below 1. Not taken: whole base pairs in the warnings, "at 3 bp"
+  beside a table that says "3.40".
+- **C5. The frequency has two decimals.** The field of the maximum
+  major allele frequency takes two decimals, as the MAF filter of the
+  Variants step does. Not taken: as many decimals as popnei and a
+  project file take, 0.975 among them.
+- **C6. Words of its own when the calculation stops with no answer.**
+  "The calculation stopped unexpectedly, perhaps because the LD decay
+  needed more memory than the browser tab could give. Type a smaller
+  largest distance, or keep fewer individuals …" Not taken: the words
+  every analysis shares, "Run it again…", which repeat a run of perhaps
+  many minutes.
+- **C7. The column "r² at distance 0, of the curve" stays**, and the
+  caption says that it depends on the number of individuals of the
+  population alone. Not taken: the number in the CSV alone.
+- **C8. Why the distance has to be typed stands beside its field
+  alone**, as a line of help and not as an error, and under Run the
+  reason is "Type the largest distance, above." The reason of the lock
+  of the memory stays as it was, beside the field and under Run, as an
+  error, and said once to a screen reader. Not taken: the long reason
+  twice, in red with its mark, before the user has done anything, 14
+  lines on a screen of 320 pixels.
+- **C9. Two small things of the words.** The warning of few individuals
+  drops "Compare them with the others with this in mind." when every
+  population has fewer than 20, since there are no others. The field of
+  the distance keeps its digits with no comma, "100000", as every
+  number field of the application, since a comma typed is refused. Not
+  taken: the sentence always; commas in the field.
+- **Point 6. A population named `__proto__` runs.** The calculation
+  worker gives popnei names of its own for the populations, `p0`, `p1`,
+  …, and puts the user's names back by their place. Not taken: waiting
+  for popnei issue #5, with the LD decay failing meanwhile as an error
+  of the application at every run. The issue still asks popnei to keep
+  such a name.
+- **Point 7. The warnings of the LD decay.** The warnings of no pair,
+  of no curve and of a half distance beyond or below the pairs are one
+  for each population, which the spec now says; a population of one
+  individual is told that r² needs two or more, and not to type a
+  larger distance; and the warning of few individuals says "its curve,
+  when it has one". Not taken: one warning that names several
+  populations without their numbers.
+- **Point 8. The order after a crash.** The request the calculation
+  worker was running gets its failure first, and the new worker is
+  started after it, for every request, which `client.md` now says. Not
+  taken: the order written for the LD decay alone.
+- **Point 14. Two populations never drawn alike in the LD decay.** With
+  up to 49 populations in the metadata file each keeps the mark of its
+  place among them, as in the PCA; with more, the marks are numbered
+  among the 16 the plot draws. Not taken: the place among every
+  population always, with which the 1st and the 50th share a colour and
+  a shape.
+- **Point 19. The lock of the memory stays as it is**, and the running
+  state says that a large distance on a file whose variants are close
+  together may take tens of minutes and end refused for lack of memory.
+  Not taken: a lock on the individuals times the variants within the
+  distance as well, which needs the density of the file before the Run.
+- **Point 22. The dashed line to a half distance has a grey edge** for
+  the three colours below 3 to 1 on white, orange, sky blue and yellow,
+  as their lines and points have. Not taken: the dashed line as it was,
+  2.25, 2.31 and 1.32 to 1.
+- **Point 23. The description of the plot for a screen reader** is as
+  task 8.1 of the plan wrote it for the cases the spec did not give,
+  now in the spec. Not taken: other words.
+- **Point 24. The notice of an LD decay removed keeps "the LD decay"**,
+  "Undo brings back the LD decay as it was". Not taken: "the plot and
+  the tables", which the shared sentence cannot say after an analysis
+  named in the singular.
+
 ## Decided by the writers of the specs, for the owner to overrule
 
 Each is written in its spec with its reason and the option not taken;
@@ -586,7 +695,9 @@ pairs.
   `calcPopDiversity` as every other population is: today the first loses
   it, and the second holds it where a lookup by that name finds it but
   a list of the populations of the result does not. Stage 5 does not
-  wait for it.
+  wait for it: from 1 October 2026 the calculation worker gives popnei
+  names of its own for the populations of an LD decay (above, point 6
+  of the owner's decisions of that day).
 
 popnei's release `js-v0.1.0-dev.3`, which the application has
 installed since stage 4, has every other calculation of the stage, as checked in its code and by running it under node on 30

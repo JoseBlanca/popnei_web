@@ -484,6 +484,19 @@ whatever breaks, a promise rejected with nothing to handle it among the
 causes, which fires no `error` event on the page
 (`docs/specs/worker/messages.md`, "A worker that cannot go on").
 
+In every row that ends the worker, the request it was running, a run
+of any analysis or a write, gets its failure first, and the worker is
+ended and a new one started after it, so that the failure reaches the
+store before anything the new worker does, and reaches it even when no
+new worker can be made. It is the order of an answer followed by a
+restart, above, written here for every request on 1 October 2026, as
+the owner decided (`docs/specs/stage-5-open-points.md`, "Decided by the
+owner on 1 October 2026: the LD decay and the line plot", point 8): the
+spec asked it of the LD decay alone, and the client had started the new
+worker first for the runs of the other analyses. A crash during an
+`open` is the one case that is not a request running: the new worker is
+started, and then the read and the runs that waited on it fail.
+
 The requests that were waiting stay in the queue and go to the new
 worker, so a crash costs the one request that was running. A crash with
 no request running, in a worker that was idle, only starts the worker
@@ -830,7 +843,10 @@ walking skeleton, a diversity `Job` and a CSV.
 - **Failures**, one test for each row of the table above, with what the
   running request gets, that the waiting ones reach the new worker, and
   that a message of the old worker, posted after it was ended, changes
-  nothing.
+  nothing. The order: with a `Worker` that cannot be made again, a
+  `crashed` of a defect during a diversity, with a run k6 waiting,
+  fails the diversity as a defect and then k6; and the same for a
+  `crashed` of any other message, which fails it as `workerFailed`.
 - **Starting.** No `ready` in 30 seconds of the fake timers: a second
   worker is made; no `ready` again: every request fails with
   `couldNotStart`, a request after it too, at once, and no third worker
