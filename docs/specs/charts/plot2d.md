@@ -223,7 +223,7 @@ and turned along the vertical one, in the margins:
   not broken, and one that fits is drawn as before, on one line and
   with the definition's margins, so no plot whose label fits changes.
   On a screen of 320 pixels "Copies of the rarer allele among 40
-  chromosomes", 46 characters, was 278 to 326 pixels long under a frame
+  chromosomes", 47 characters, was 278 to 326 pixels long under a frame
   of about 205 pixels in an SVG of 281, and its end was cut. The option
   not taken was a shorter label on narrow screens, which mends one plot
   and not every plot with a long label;
