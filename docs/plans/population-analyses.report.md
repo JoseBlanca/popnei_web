@@ -6,64 +6,105 @@ branch `plan/population-analyses`, which is not merged and not pushed.
 
 ## Where the plan stands
 
-Done on 1 October 2026, on the branch `plan/population-analyses`, 115
-commits ahead of `main`, not merged and not pushed. What it asks of you
-is the order to merge it into `main`, and then the order to push `main`.
+The plan is done, on 1 October 2026. Its work is on the branch
+`plan/population-analyses`, 115 commits ahead of `main` (183 files, most
+of them tests and specs), not merged and not pushed. It asks of you the
+order to merge the branch into `main`, and then the order to push
+`main` to GitHub.
 
-**What exists now that did not.** In the population genetics
-application, three analyses of the populations, each a panel of the
-Analyses step:
+### What the population genetics application now does
 
-- the distances between populations, Hudson's Fst and Jost's D of each
-  pair, as a heatmap ordered by popnei's PCoA of the matrix and a table
-  with its download;
-- the diversity whole: the eleven columns, F and the private alleles
-  with their rarefied values among them, three options, and the folded
-  site frequency spectrum of each population in a block under the table,
-  as histograms on one scale and a table;
-- the LD decay of each population: its bins, its fitted curve and its
-  half distance, as a line plot and two tables, with the calculation
-  worker started again after every run to give its memory back.
+Three analyses of the populations, each a panel of the Analyses step:
 
-Every decision you took at the three stops is in the specs and in the
-code (work package 10, below).
+- **The distances between populations**: Hudson's Fst and Jost's D of
+  each pair, as a heatmap whose rows are ordered by popnei's PCoA of the
+  matrix, and a table of the pairs with its download.
+- **The diversity, whole**: eleven columns, F and the private alleles
+  with their rarefied values among them; three options, the minimum of
+  individuals, the threshold of polymorphism and the number of
+  chromosomes drawn for the rarefaction; and under the table the folded
+  site frequency spectrum of each population, as histograms on one
+  scale and as a table.
+- **The LD decay** of each population: the mean r² in 50 bins of
+  distance, the fitted curve, and the distance at which it falls to
+  half, as a line plot and two tables. A Run of it holds a lot of
+  memory, which a browser gives back only when the program that did the
+  calculation in the background is ended, so the application ends and
+  restarts that program after every LD decay.
 
-**How it was checked**, on a copy of 3441772 outside the worktree, on
-1 October 2026, on this Mac: `format:check`, `typecheck` and `lint` exit
-0; `npm test` "Tests 3676 passed (3676)", none skipped; the browser
-check in Chromium and WebKit "1142 passed (5.3m)", the probe's 52 among
-them; `npm run screens` "392 passed"; `npm pkg get dependencies.popnei`
-prints the URL of `js-v0.1.0-dev.3`; core holds no clock, timer,
-randomness, `await` or import of popnei. The first script of the page is
-860.40 kB, 257.44 kB gzipped, against 229.89 kB at the start: 27.55 kB
-more for the three panels and their plots. The map of the cases,
-`docs/plans/population-analyses.cases.md`, matches 273 of the 277 cases
-of the specs of stage 5 to a test; the other 4 are listed there with
-their reasons.
+You tried the three panels in Firefox on 1 October and took every
+recommendation the report made at its three stops (the sections "Stop
+A", "Stop B" and "Stop C" below, and the numbered points of "For the
+owner, as the work goes"). Each is in the specs and in the code. Eight
+came out a little other than the recommendation read, none against
+what you decided: they are in section 10, "What came out other than as
+written".
 
-**What was not checked here.** Firefox does not launch on this Mac, so
-no flow of this stage has run in it; you tried the three screens in it
-by hand. The push of `main` runs the flows in Firefox for the first
-time, and on the fonts of Linux: a flow that fails there is fixed on
-`main` before anything else. Stage 4 found that Firefox on GitHub's
-runners has no WebGL and that its pixels and fonts differ.
+### How it was checked
 
-**What is left open:**
+On a copy of the last commit of code, 3441772, on this Mac, on 1 October
+2026:
 
-- popnei issue #4: the diversity makes two passes, about 53% of its Run
-  on the 19 MB file, until a release of popnei gives the
-  heterozygosities in `calcPopDiversity`.
-- popnei issue #5: a variants file not sorted by position gives the LD
-  decay fewer pairs with no word; its help says the file must be sorted.
-- Two results popnei documents and its present release never gives are
-  errors of the application, not words on the screen: a curve with no
-  half distance, and a bin with pairs and no mean.
-- For stage 6: the script's reading of the metadata file with
-  `dtype=str` (point 12), and the diversity's script needing the
-  variants file read (point 18).
-- For stage 8, the help: the help of the PCA and the Variants step
-  points to the LD decay to choose the distance (C10).
-- The open points of earlier stages stay as they were: the bound of the
+- the format, the types and the lint pass;
+- the 3,676 unit tests pass, none skipped;
+- the 1,142 tests that drive the page in a browser pass in Chromium and
+  in WebKit, the engine of Safari, among them the 52 that check popnei's
+  wasm in each;
+- the 392 screenshots are taken with no error, and those of each state
+  were looked at;
+- `package.json` still names popnei's release `js-v0.1.0-dev.3`;
+- every case that the specs of stage 5 list, 277 in all, was matched to
+  a test that gives the case and checks its outcome, in
+  `docs/plans/population-analyses.cases.md`. 273 have one. The 4 that
+  have none: a population whose variants all fail the MAF filter in the
+  LD decay, which no test file holds; a variants file not sorted by
+  position, which is popnei issue #5; a count of the spectrum's table
+  at the filter of 0.05, read at 0.1 instead; and the most series a
+  line plot's legend has room for, which the LD decay's limit of 16
+  keeps from being reached.
+
+The page's first download grew from 229.89 kB to 257.44 kB, compressed,
+as the browser fetches it: 12% more for three panels and two new
+plots, about a fifth of a second on a slow mobile connection.
+
+### What was not checked here
+
+Firefox does not start under the test tool on this Mac, so no test of
+this stage has run in Firefox; you tried the three panels in it by
+hand. The push of `main` runs every test in Firefox for the first time
+for this stage, on GitHub's machines, which run Linux and draw text with
+other fonts. At stage 4 the first such run failed 33 of about 1,550
+tests: 3 were defects of the application, among them a page 784 pixels
+wide on a phone, and 30 were tests that assumed the Mac's fonts or a 3D
+drawing Firefox there does not have. It took two more pushes, on 29 and
+30 September, before the site was deployed. A test that fails there is
+fixed on `main` first, before anything else is done; this stage's tests
+were written to hold on Linux's fonts, and its screens draw no 3D.
+
+### What is left open
+
+None of these stops the merge.
+
+- **popnei issue #4.** The diversity reads the variants file twice: the
+  second reading is about half its Run, 122 of 257 ms on the 19 MB test
+  file in Chromium on this Mac. A release of popnei that gives the
+  heterozygosities in one call removes it.
+- **popnei issue #5.** A variants file not sorted by position gives the
+  LD decay fewer pairs, and the user is not told. The help will say the
+  file must be sorted.
+- **Two results that popnei's documentation allows and its present
+  release never gives**, an LD curve with no half distance and a bin
+  with pairs and no mean: the panel would show its message of an error
+  of the application. They are to be given words when a release of
+  popnei gives them.
+- **For stage 6, the Python script:** it must read the metadata file
+  with every column as text, since popnei's Python refuses populations
+  named by numbers; and the diversity's lines need the variants file
+  read.
+- **For stage 8, the help:** the help of the PCA and of the Variants
+  step will send the user to the LD decay to choose the distance of the
+  LD pruning.
+- The open points of earlier stages are as they were: the bound of the
   cache, how far back undo goes, the words of the project file.
 
 ### Words the report uses
@@ -719,35 +760,48 @@ to c1cd1ee (the fixes of the review, 10.4).
 
 ### What came out other than as written
 
-Every decision is in a spec and in the code; B1, the table of eleven
-columns that scrolls sideways, stays as it was, as you decided. These
-came out other than the report's recommendation said, and you may want
-to look:
+Every decision is in a spec and in the code, and the table of the
+diversity's eleven columns, which scrolls sideways, stays as it was, as
+you decided. Eight came out a little other than the recommendation
+read; the code letter of each is the report's, in the stops below:
 
-- **A9** was an error of the report: the LD decay does not read the LD
-  pruning, so it never locks on its empty distance; only the distances
-  do, and `steps/variants.md` now says so.
-- **A1.** "The heatmap orders them as if the distance were 0" follows
-  which measures have negative distances, not which one is drawn, since
-  the warning is made once for both.
-- **A3 and point 10** each needed a second sentence that the
-  recommendation did not give; the writer wrote the parallel one.
-- **Point 21.** The names' margins count 9 pixels a character, not a
-  measurement, which the rules of the plots do not allow. "WMA" still
-  loses about 3 pixels of its "W", where it lost 8.6.
-- **C2.** The legend goes above the plot when the frame is narrower
-  than 300 pixels or a line of it is very long; names are cut after 15
-  characters.
-- **B3.** One population, or a largest population that holds fewer than
-  2 chromosomes, still lock at all the individuals kept, since a draw of
-  1 cannot be typed.
-- **Point 14** went further than its recommendation: each population
-  keeps its colour and shape of the PCA up to 49 populations, and is
-  numbered among the 16 drawn only above that.
-- **Point 26** too: an axis label longer than its plot goes on two
-  lines, the vertical one as well, but only when it would also run past
-  the margins; and once broken it stays broken, since two labels that
-  broke and unbroke in turn never settled.
+- **The lock of the distances when the LD pruning has no distance
+  (A9).** The report said the LD decay locks too, keeping its Run button
+  off until a distance is typed in the Variants step. It does not: the
+  LD decay never applies the LD pruning, so it does not wait for its
+  distance. Only the distances lock, and the spec of the Variants step
+  says so.
+- **The warning of negative distances (A1).** Its last sentence,
+  "The heatmap orders them as if the distance were 0", is said when the
+  measure with negative pairs is the one ordered by the PCoA, and not
+  by which of the two measures is on the screen, since one warning
+  serves both.
+- **The warnings at a minimum of 0 or 1, and the lock when the lists
+  leave one population (A3, point 10).** Each needed a second sentence
+  for the case beside it, which the recommendation did not give; the
+  writer wrote it the same way.
+- **Names in capitals under the heatmap (point 21).** The room for the
+  names is counted at 9 pixels a character and not measured in the
+  browser, since the plots are drawn before the font is known. A name
+  in capitals such as "WMA" still loses about 3 pixels of its "W" at
+  the left edge, where it lost 8.6.
+- **The LD decay's legend (C2).** It stands at the right of the plot,
+  and goes above it when the plot is narrower than 300 pixels, a phone,
+  or when a line of the legend is too long for the side. Names are cut
+  after 15 characters in the legend and whole in the table.
+- **The lock of the draw of the rarefaction (B3).** It now counts the
+  chromosomes of the largest population, as recommended, but where
+  there is one population, or the largest holds a single chromosome,
+  it counts all the individuals kept as before, since the field cannot
+  take a draw of 1.
+- **The marks of the LD decay's curves (point 14)** go further than the
+  recommendation: each population keeps the colour and shape it has in
+  the PCA up to 49 populations, and above that they are numbered among
+  the 16 drawn.
+- **An axis label longer than its plot (point 26)** goes on two lines,
+  the vertical label too, but only when it would also run over the
+  margins. Once on two lines it stays so, because two labels that each
+  gave the other room in turn never settled.
 
 ### The review
 
