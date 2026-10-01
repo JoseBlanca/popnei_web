@@ -2295,10 +2295,9 @@ The help, for the drawer of stage 8:
   the genome of the species, and differs from one species to another.
   It starts at r² 0.1, lower than the 0.3 of the Variants step, since
   on popnei's test file popnei at 0.1 keeps no more variants than
-  plink at 0.3 does. Once the
-  application has the LD decay, stage 5 of `docs/build-order.md`, which
-  gives the distance at which r² falls to half, the help points to it as
-  the way to choose the distance.
+  plink at 0.3 does. The help points to the LD decay, built in stage 5
+  of `docs/build-order.md`, which gives the distance at which r² falls
+  to half, as the way to choose the distance.
 - The 3D view, which the panel opens on, and the 2D plot, one button
   away, which shows two components at a time and needs no WebGL.
 - When not to trust it: with no LD filter, a linked region can make a

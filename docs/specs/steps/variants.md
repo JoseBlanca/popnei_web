@@ -1164,8 +1164,8 @@ fixed order, over the individuals the filters of individuals keep,
 which act first, and that the MAF is of
 the major allele; that the distance of the LD pruning has no default,
 because how far linkage disequilibrium extends differs from one
-species, and one genome, to another, and that the LD decay of stage 5,
-once it exists, is the way to choose it, as the help of the PCA says of
+species, and one genome, to another, and that the LD decay, built in
+stage 5, is the way to choose it, as the help of the PCA says of
 its own LD filter; that the PCA follows these filters unless its own
 are set in its panel; that the histograms of the variants are over every
 variant of the file and the individuals kept, and the statistics of
