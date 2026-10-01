@@ -3987,6 +3987,40 @@ for (const theme of ["light", "dark"] as const) {
       await saveLdPanel(page, `popgen-lddecay-long-names-${theme}`);
     });
 
+    test("the LD decay done at 320 pixels wide, two names of 45 characters in its warnings", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const stem = "Solanum_pimpinellifolium_from_N_Ecuador_";
+      await pickIndividuals(page, {
+        name: "long_pops.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) =>
+            `i${String(i).padStart(3, "0")},${stem}${i < 50 ? "wild1" : "weed2"}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "2000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^Warning: .* beyond the 2,000 base pairs/,
+        ),
+      ).toHaveCount(2, { timeout: 30_000 });
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      await saveLdPanel(page, `popgen-lddecay-long-names-320-${theme}`);
+    });
+
     test("the LD decay done at 320 pixels wide, in the committed font", async ({
       page,
     }) => {

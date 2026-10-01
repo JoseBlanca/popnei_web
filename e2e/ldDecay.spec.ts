@@ -16,6 +16,10 @@
  *   that keep no variant.
  * - At 320 pixels the frame of the plot is reached by the Tab key and
  *   scrolled by the arrow keys.
+ * - At 320 pixels, with population names of 45 characters, the warnings
+ *   of the LD decay, of the diversity and of the distances between
+ *   populations, which share the frame of the panels, do not make the
+ *   page scroll sideways.
  * - 17 populations of 5 or 6 individuals: 16 rows in the legend, the line
  *   of the populations the plot leaves out, and 17 rows in the table.
  * - The key on the screen: the LD pruning of the Variants step turned on
@@ -614,6 +618,98 @@ test.describe("PA8 D2 the states of the LD decay with no result, and its plot on
       .toBeGreaterThan(0);
     await expectNoViolations(makeAxeBuilder);
   });
+});
+
+/** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as
+    wide as Verdana and wider than the Mac's system font, which a check at
+    320 pixels gives the page, so that it does not rest on the fonts of
+    the machine (the plan of stage 5, "What every prompt of a task
+    carries"). */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** The width of what the page holds, 320 on a page of 320 pixels that
+    does not scroll sideways. */
+async function pageWidth(page: Page): Promise<number> {
+  return page.evaluate(() => document.documentElement.scrollWidth);
+}
+
+/** The 40 characters two long names share. */
+const LONG_STEM = "Solanum_pimpinellifolium_from_N_Ecuador_";
+
+/** A metadata file of ld.nei whose populations have names of 45
+    characters alike in their first 40: the individuals from `tinyFrom`
+    on in a third, and the others in two halves. */
+function longNames(tinyFrom: number): {
+  readonly name: string;
+  readonly text: string;
+} {
+  const popOf = (i: number): string =>
+    i >= tinyFrom ? "tiny3" : i < tinyFrom / 2 ? "wild1" : "weed2";
+  return {
+    name: "long_pops.csv",
+    text: `IID,pop\n${Array.from(
+      { length: 100 },
+      (_, i) => `i${String(i).padStart(3, "0")},${LONG_STEM}${popOf(i)}\n`,
+    ).join("")}`,
+  };
+}
+
+test.describe("PA8 D2 the warnings of a panel on a narrow page", () => {
+  test("PA8 D2 at 320 pixels, in the committed font, the warnings of the LD decay that name populations of 45 characters do not make the page scroll sideways", async ({
+    page,
+    makeAxeBuilder,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await load(page, longNames(100));
+    await useWideFont(page);
+    expect(await pageWidth(page)).toBeLessThanOrEqual(320);
+    // Within 2,000 bp each curve falls to half beyond the plot, and its
+    // warning names its population.
+    await setDistance(page, "2000");
+    await runButton(page).click();
+    await expect(
+      panel(page).getByText(/^Warning: .* beyond the 2,000 base pairs/),
+    ).toHaveCount(2, { timeout: RESULT_TIMEOUT });
+    await expect(populations(page)).toBeVisible();
+    await expect.poll(() => pageWidth(page)).toBeLessThanOrEqual(320);
+    await expectNoViolations(makeAxeBuilder);
+  });
+
+  for (const analysis of ["Diversity", "Distances between populations"]) {
+    test(`PA8 D2 at 320 pixels, in the committed font, the warning of ${analysis} that names a population of 45 characters does not make the page scroll sideways`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      // The third population has 10 individuals, under the minimum of 20
+      // of both analyses, which warn of it by its name.
+      await load(page, longNames(90));
+      await useWideFont(page);
+      expect(await pageWidth(page)).toBeLessThanOrEqual(320);
+      const region = page.getByRole("region", { name: analysis, exact: true });
+      await region.getByRole("button", { name: "Run", exact: true }).click();
+      await expect(
+        region.getByText(/^Warning: .*Solanum_pimpinellifolium/).first(),
+      ).toBeVisible({ timeout: RESULT_TIMEOUT });
+      await expect.poll(() => pageWidth(page)).toBeLessThanOrEqual(320);
+    });
+  }
 });
 
 test.describe("PA8 D3 the key of the LD decay on the screen, and its restart", () => {
