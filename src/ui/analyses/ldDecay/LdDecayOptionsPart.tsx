@@ -6,9 +6,13 @@
  * population, two number fields that stay enabled while the panel is
  * locked or running, since the distance typed unlocks it and a change of
  * either leaves the calculation behind. Each is one command, of
- * `commands.ts`. While no distance is typed, the reason of the lock
- * stands beside the field and describes it, whatever reason the Run
- * button gives. Under the fields, while the LD pruning of the Variants
+ * `commands.ts`. While no distance is typed, or the one typed is more
+ * than the memory of a browser tab allows the populations, the reason of
+ * the lock stands beside the field and describes it, whatever reason the
+ * Run button gives; a distance committed that the memory does not allow
+ * is announced with that reason, since the focus is then on the field or
+ * past it, and the reason appears beside it and under Run with no word
+ * to a screen reader. Under the fields, while the LD pruning of the Variants
  * step is on, the line that says it is not applied here, also over a plot
  * shown, which the pruning turned on does not remove.
  */
@@ -84,6 +88,8 @@ export function LdDecayOptionsPart(): React.JSX.Element {
           onRefused={announce}
           onChange={(typed) => {
             apply(maxDistCommand(typed));
+            const reason = maxDistReason(store.getState().project);
+            if (reason !== null) announce(reason);
           }}
         />
         {distanceReason !== null && (

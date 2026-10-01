@@ -42,7 +42,6 @@ import {
   csvField,
   csvNumber,
   defect,
-  orNull,
   populationWarnings,
   refusalWords,
 } from "./words.ts";
@@ -126,13 +125,16 @@ export const MAX_MAX_ALLOWED_MAF = 1;
 
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
-const OPTIONS_EXPECTED =
-  "the largest distance of a pair, a whole number of base pairs from 50 to 9,007,199,254,740,991 or null, and the largest major allele frequency in each population, a number from 0.5 to 1, and nothing else";
+const OPTIONS_EXPECTED = `the largest distance of a pair, a whole number of base pairs from ${grouped(MIN_MAX_DIST)} to ${grouped(MAX_DIST_TAKEN)} or null, and the largest major allele frequency in each population, a number from ${String(MIN_MAX_ALLOWED_MAF)} to ${String(MAX_MAX_ALLOWED_MAF)}, and nothing else`;
+
+/** The analysis in the middle of a sentence, in the warnings of the
+    populations and in the words of its panel. */
+export const LD_DECAY_NAME = "the LD decay";
 
 /** What the LD decay calls itself and its result in the warnings of the
     populations. */
 const LD_DECAY_WORDS: PopulationWords = Object.freeze({
-  leftOutOf: "the LD decay",
+  leftOutOf: LD_DECAY_NAME,
   notIn: "the plot",
 });
 
@@ -188,12 +190,28 @@ export function ldDecayFilters(
   return made;
 }
 
-/** The reason of the largest distance not typed, or `null` once it is:
-    `needs` gives it after the reasons of the populations, and the panel
-    shows it beside the field of the distance whenever it holds
-    (ldDecay.md, "Why it cannot run"). */
+/**
+ * The reason the largest distance locks the LD decay, or `null` when it
+ * does not: the distance not typed; or a distance whose counts would take
+ * more than `LD_DECAY_MAX_BYTES` for the populations the lists to keep
+ * and to remove leave. `needs` gives it after the reasons of the
+ * populations, and the panel shows it beside the field of the distance
+ * whenever it holds (ldDecay.md, "Why it cannot run").
+ */
 export function maxDistReason(p: Project): string | null {
-  return ldDecayOptions(p).maxDist === null ? NO_DISTANCE : null;
+  const maxDist = ldDecayOptions(p).maxDist;
+  if (maxDist === null) {
+    return NO_DISTANCE;
+  }
+  // No population is left when the populations cannot be made yet, which
+  // `needs` locks on first, and when the lists to keep and to remove
+  // leave nobody of the one population, "All individuals", which
+  // `populationListsNeeds` leaves to the store's lock of the filters that
+  // keep no individual, asked after `needs`: no memory to bound.
+  const numPops = populationsByLists(p)?.length ?? 0;
+  return numPops > 0 && maxDist > maxDistFor(numPops)
+    ? memoryText(numPops)
+    : null;
 }
 
 /** The largest distance the memory allows for `numPops` populations, the
@@ -248,11 +266,12 @@ export function ldDecayCurve(
   i: number,
   maxDist: number,
 ): { readonly x: Float64Array; readonly y: Float64Array } | null {
-  const rhoPerBp = valueAt(r.rhoPerBp, i, "rhoPerBp");
+  const curve = curveOf(r, i);
   const numIndividuals = valueAt(r.numIndividuals, i, "numIndividuals");
-  if (Number.isNaN(rhoPerBp)) {
+  if (curve === null) {
     return null;
   }
+  const rhoPerBp = curve.rhoPerBp;
   const x = new Float64Array(LD_CURVE_POINTS);
   const y = new Float64Array(LD_CURVE_POINTS);
   const last = LD_CURVE_POINTS - 1;
@@ -262,6 +281,37 @@ export function ldDecayCurve(
     y[point] = fittedR2(dist, rhoPerBp, numIndividuals);
   }
   return { x, y };
+}
+
+/** The three numbers of the fitted curve of a population. */
+interface Curve {
+  readonly rhoPerBp: number;
+  readonly r2AtZero: number;
+  readonly halfDist: number;
+}
+
+/**
+ * The fitted curve of the population `i` of `r`, or `null` when popnei
+ * fitted it none: the one place that says whether a population has a
+ * curve, by its ρ per base pair, for the plot, the legend, the
+ * description, the tables and the warning `noCurve`. popnei gives the
+ * three numbers of a curve together or none of them; a result with some
+ * and not the others, which popnei's documents allow for a population of
+ * two individuals and the release `js-v0.1.0-dev.3` did not give (node, 1
+ * October 2026: two individuals of ld.nei gave 7,651 pairs and none of
+ * the three), has no words in ldDecay.md, and is a defect thrown here.
+ */
+function curveOf(r: LdDecayResult, i: number): Curve | null {
+  const rhoPerBp = valueAt(r.rhoPerBp, i, "rhoPerBp");
+  const r2AtZero = valueAt(r.r2AtZero, i, "r2AtZero");
+  const halfDist = valueAt(r.halfDist, i, "halfDist");
+  const none = Number.isNaN(rhoPerBp);
+  if (Number.isNaN(r2AtZero) !== none || Number.isNaN(halfDist) !== none) {
+    throw defect(
+      `the result of the LD decay gives the population ${String(i)} a ρ per base pair of ${String(rhoPerBp)}, an r² at 0 of ${String(r2AtZero)} and a half distance of ${String(halfDist)}, a curve in part.`,
+    );
+  }
+  return none ? null : { rhoPerBp, r2AtZero, halfDist };
 }
 
 /** One row of the table of the populations, a number `null` where popnei
@@ -295,17 +345,18 @@ export function ldDecayRows(r: LdDecayResult): readonly LdDecayRow[] {
     return kept;
   }
   const rows = Object.freeze(
-    r.pops.map((population, i): LdDecayRow =>
-      Object.freeze({
+    r.pops.map((population, i): LdDecayRow => {
+      const curve = curveOf(r, i);
+      return Object.freeze({
         population,
         individuals: valueAt(r.numIndividuals, i, "numIndividuals"),
         variants: valueAt(r.numVars, i, "numVars"),
         pairs: pairsOf(r, i),
-        halfDist: orNull(valueAt(r.halfDist, i, "halfDist")),
-        r2AtZero: orNull(valueAt(r.r2AtZero, i, "r2AtZero")),
-        rhoPerBp: orNull(valueAt(r.rhoPerBp, i, "rhoPerBp")),
-      }),
-    ),
+        halfDist: curve?.halfDist ?? null,
+        r2AtZero: curve?.r2AtZero ?? null,
+        rhoPerBp: curve?.rhoPerBp ?? null,
+      });
+    }),
   );
   ROWS.set(r, rows);
   return rows;
@@ -332,7 +383,10 @@ export interface LdBinRow {
 const BIN_ROWS = new WeakMap<LdDecayResult, readonly LdBinRow[]>();
 
 /** One row per population and bin, the bins of a population together, in
-    the order of the result; the same array for the same result. */
+    the order of the result; the same array for the same result. popnei
+    gives a bin with a pair its mean r² and its standard deviation, 0 for
+    one pair (node, `js-v0.1.0-dev.3`, 1 October 2026); a bin with pairs
+    and without either is a defect thrown here. */
 export function ldBinRows(r: LdDecayResult): readonly LdBinRow[] {
   const kept = BIN_ROWS.get(r);
   if (kept !== undefined) {
@@ -343,13 +397,21 @@ export function ldBinRows(r: LdDecayResult): readonly LdBinRow[] {
     r.pops.flatMap((population, i) =>
       Array.from({ length: numBins }, (_, bin): LdBinRow => {
         const at = i * numBins + bin;
+        const pairs = valueAt(r.numPairs, at, "numPairs");
+        const meanR2 = valueAt(r.meanR2, at, "meanR2");
+        const sdR2 = valueAt(r.sdR2, at, "sdR2");
+        if (pairs > 0 && (Number.isNaN(meanR2) || Number.isNaN(sdR2))) {
+          throw defect(
+            `the result of the LD decay gives the bin ${String(bin)} of the population ${String(i)} ${String(pairs)} pairs, a mean r² of ${String(meanR2)} and a standard deviation of ${String(sdR2)}.`,
+          );
+        }
         return Object.freeze({
           population,
           from: valueAt(r.smallestDist, bin, "smallestDist"),
           to: valueAt(r.largestDist, bin, "largestDist"),
-          pairs: valueAt(r.numPairs, at, "numPairs"),
-          meanR2: orNull(valueAt(r.meanR2, at, "meanR2")),
-          sdR2: orNull(valueAt(r.sdR2, at, "sdR2")),
+          pairs,
+          meanR2: pairs > 0 ? meanR2 : null,
+          sdR2: pairs > 0 ? sdR2 : null,
         });
       }),
     ),
@@ -448,13 +510,29 @@ function halfShownOf(r: LdDecayResult, i: number, maxDist: number): HalfShown {
   if (pairsOf(r, i) === 0) {
     return { kind: "noPair" };
   }
-  const halfDist = valueAt(r.halfDist, i, "halfDist");
-  if (!Number.isFinite(halfDist)) {
+  const curve = curveOf(r, i);
+  if (curve === null) {
     return { kind: "noCurve" };
   }
-  return halfDist > maxDist
-    ? { kind: "beyond", halfDist }
-    : { kind: "drawn", halfDist };
+  return curve.halfDist > maxDist
+    ? { kind: "beyond", halfDist: curve.halfDist }
+    : { kind: "drawn", halfDist: curve.halfDist };
+}
+
+/** The mark of the half distance of the population `i` of `r` on the
+    plot, at a largest distance of `maxDist`: at its half distance, at half
+    of its r² at 0, when the plot reaches it; `null` when the legend says
+    the half distance is beyond the plot, or the population has no pair
+    or no curve. */
+export function ldHalfMark(
+  r: LdDecayResult,
+  i: number,
+  maxDist: number,
+): { readonly x: number; readonly y: number } | null {
+  const curve = curveOf(r, i);
+  return curve !== null && halfShownOf(r, i, maxDist).kind === "drawn"
+    ? { x: curve.halfDist, y: curve.r2AtZero / 2 }
+    : null;
 }
 
 /**
@@ -690,15 +768,7 @@ function needs(p: Project): string | null {
   if (populations !== null) {
     return populations;
   }
-  const distance = maxDistReason(p);
-  const maxDist = ldDecayOptions(p).maxDist;
-  if (distance !== null || maxDist === null) {
-    return distance;
-  }
-  const numPops = populationsByLists(p)?.length ?? 0;
-  return numPops > 0 && maxDist > maxDistFor(numPops)
-    ? memoryText(numPops)
-    : null;
+  return maxDistReason(p);
 }
 
 /** The reason of the lock of the memory for `numPops` populations. */
@@ -1081,7 +1151,7 @@ function popAt(r: LdDecayResult, i: number): string {
 /** The element `i` of an array of a result; one missing is a defect, as
     every array of a result has the length its populations and bins
     give. */
-function valueAt(
+export function valueAt(
   values: Uint32Array | Float64Array,
   i: number,
   name: string,

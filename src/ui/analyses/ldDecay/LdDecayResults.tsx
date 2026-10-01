@@ -9,7 +9,9 @@
  * `AnalysisPanel.tsx` draws the warnings above it, and gives the words of
  * the comparison with the check numbers, drawn under the table of the
  * populations. Which tab is selected is the result's own state, kept
- * while it is drawn.
+ * while it is drawn. The plot is inside an error boundary of its own, so
+ * that a plot that throws takes neither the fields, the tables nor the
+ * downloads with it.
  *
  * The rows of the two tables are made once for each result: the frame of
  * the panel is drawn again when a notice comes or goes, and the table of
@@ -26,9 +28,11 @@ import {
   ldDecayRows,
   ldPlotOmittedText,
 } from "../../../core/analyses/ldDecay.ts";
+import { populationsOf } from "../../../core/project.ts";
 import type { LdDecayResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
+import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { PLOT_TAB, TABLE_TAB } from "../../steps/variants/histogramWords.ts";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
@@ -46,6 +50,7 @@ import {
   LD_DECAY_COLUMNS,
   LD_DECAY_CSV_LABEL,
   LD_TABS_LABEL,
+  PLOT_FRAME_NAME,
   binsCaptionText,
   captionText,
   ldBinCells,
@@ -112,7 +117,11 @@ export function LdDecayResults({
           {
             id: PLOT_ID,
             label: PLOT_TAB,
-            content: <DecayPlot result={result} maxDist={maxDist} />,
+            content: (
+              <ErrorBoundary level={3} heading={PLOT_FRAME_NAME}>
+                <DecayPlot result={result} maxDist={maxDist} />
+              </ErrorBoundary>
+            ),
           },
           {
             id: BINS_ID,
@@ -170,9 +179,13 @@ function DecayPlot({ result, maxDist }: PartProps): React.JSX.Element {
   // The same data while the result and the distance are the same, so
   // that the plot is not drawn again on every render (react.md, "Mounting
   // a plot").
+  // The populations of the project give each population its colour and
+  // its shape: the same frozen value while the metadata file and the
+  // column are the same.
+  const pops = useAppState((s) => populationsOf(s.project));
   const data = useMemo(
-    (): LineData => ldDecayPlotData(result, maxDist),
-    [result, maxDist],
+    (): LineData => ldDecayPlotData(result, maxDist, pops),
+    [result, maxDist, pops],
   );
   const omitted = ldPlotOmittedText(result);
   return (
@@ -184,8 +197,12 @@ function DecayPlot({ result, maxDist }: PartProps): React.JSX.Element {
 }
 
 /** The table of the bins: a row for each population and bin, the bins of
-    a population together. */
-function BinsTable({ result, maxDist }: PartProps): React.JSX.Element {
+    a population together; not drawn again while its result and the
+    largest distance are the same, as the table of the populations. */
+const BinsTable = memo(function BinsTable({
+  result,
+  maxDist,
+}: PartProps): React.JSX.Element {
   const numBins = result.smallestDist.length;
   const rows = useMemo(
     (): readonly TableRow[] =>
@@ -204,7 +221,7 @@ function BinsTable({ result, maxDist }: PartProps): React.JSX.Element {
       rows={rows}
     />
   );
-}
+});
 
 /** The table of the populations, which is not drawn again while its
     result, the largest distance and the name of the variants file are

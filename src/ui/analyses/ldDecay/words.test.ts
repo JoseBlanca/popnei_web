@@ -8,6 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 import { individualsKept } from "../../../core/individualsKept.ts";
+import { panelOf } from "../panels.ts";
 import type { Project } from "../../../core/project.ts";
 import { deepFreeze, sampleProject } from "../../../core/testSupport.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
@@ -21,7 +22,6 @@ import {
   ldDecayCells,
   ldDecayCsvName,
   pruningLine,
-  readyLines,
 } from "./words.ts";
 
 /** The sample project, panel.nei of four individuals, with the filters of
@@ -40,6 +40,9 @@ const MISSING_DATA = {
   kind: "missing_data",
   maxAllowedMissingRate: 0.1,
 } as const;
+
+/** The lines of the ready state of the panel of the LD decay. */
+const readyLines = panelOf("ldDecay").readyLines;
 
 describe("PA8 D1 the ready state of the LD decay", () => {
   test("the line under the options says the LD pruning of the Variants step is not applied while it is on, with or without its distance, and the lines of the ready state are the individuals of the run", () => {

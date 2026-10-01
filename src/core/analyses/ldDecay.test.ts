@@ -8,9 +8,12 @@ import {
   ldDecay,
   ldDecayCsv,
   ldDecayCurve,
+  ldDecayDescription,
   ldDecayFilters,
   ldDecayOptions,
   ldDecayRows,
+  ldHalfMark,
+  ldLegendLabel,
   ldPlotOmittedText,
   maxDistFor,
   maxDistReason,
@@ -394,6 +397,15 @@ describe("PA2 D5 needs", () => {
     );
   });
 
+  test("review of PA8: with the one population and lists that remove every individual, which the store locks on after it, no memory is bounded and it gives null, whatever the distance", () => {
+    const p = project({
+      table: null,
+      ld: { maxDist: 9_007_199_254_740_991 },
+      individualFilters: [{ kind: "remove", individuals: LD_INDIVIDUALS }],
+    });
+    expect(ldDecay.needs(p)).toBeNull();
+  });
+
   test("gives the reason of the lists of individuals leaving no individual with a population, before the largest distance", () => {
     const table = tableOf(LD_INDIVIDUALS, (name) =>
       name === "i099" ? null : "pop_a",
@@ -654,8 +666,68 @@ describe("PA2 D5 fittedR2 and ldDecayCurve", () => {
   });
 
   test("ldDecayCurve of a population with no curve gives null", () => {
-    const r = resultOf([flowPop("p0", { rhoPerBp: Number.NaN })]);
+    const r = resultOf([
+      flowPop("p0", { rhoPerBp: Number.NaN, halfDist: Number.NaN }),
+    ]);
     expect(ldDecayCurve(r, 0, 100_000)).toBeNull();
+    expect(ldHalfMark(r, 0, 100_000)).toBeNull();
+  });
+
+  test("review of PA8: a curve in part is a defect wherever the result is read: a ρ per base pair with no half distance, a half distance with no ρ, an r² at 0 with neither", () => {
+    const parts: readonly Partial<PopOf>[] = [
+      { rhoPerBp: 0.0003, halfDist: Number.NaN },
+      { rhoPerBp: Number.NaN, halfDist: 7000 },
+      { rhoPerBp: 0.0003, r2AtZero: Number.NaN },
+    ];
+    for (const part of parts) {
+      const r = resultOf([flowPop("p0", part)]);
+      const defect = /^popnei_web defect: .* a curve in part\.$/u;
+      expect(() => ldDecayRows(r)).toThrow(defect);
+      expect(() => ldDecayCurve(r, 0, 100_000)).toThrow(defect);
+      expect(() => ldLegendLabel(r, 0, 100_000)).toThrow(defect);
+      expect(() => ldDecayDescription(r, 100_000)).toThrow(defect);
+      expect(() => ldDecayCsv(r)).toThrow(defect);
+    }
+  });
+
+  test("review of PA8: a bin with pairs and no mean r², or no standard deviation, is a defect; a bin of one pair has both", () => {
+    const whole = resultOf([flowPop("p0", { pairs: pairsIn([0, 3]) })]);
+    expect(ldBinRows(whole)[3]).toStrictEqual({
+      population: "p0",
+      from: 6001,
+      to: 8000,
+      pairs: 10,
+      meanR2: 0.2,
+      sdR2: 0.1,
+    });
+    expect(ldBinRows(whole)[1]?.meanR2).toBeNull();
+    for (const lacking of ["meanR2", "sdR2"] as const) {
+      const r = resultOf([flowPop("p0", { pairs: pairsIn([0, 3]) })]);
+      r[lacking][3] = Number.NaN;
+      expect(() => ldBinRows(r)).toThrow(
+        /^popnei_web defect: the result of the LD decay gives the bin 3 of the population 0 10 pairs/u,
+      );
+      expect(() => ldBinsCsv(r)).toThrow(/^popnei_web defect: /u);
+    }
+  });
+
+  test("review of PA8: the mark of the half distance is at half of the r² at 0 when the plot reaches it, at the largest distance too, and none beyond it or with no pair", () => {
+    const r = resultOf([
+      flowPop("pop_a", { halfDist: 7548.08187836982 }),
+      flowPop("pop_b", { halfDist: 100_000 }),
+      flowPop("pop_c", { halfDist: 100_000.5 }),
+      { name: "pop_d", rhoPerBp: Number.NaN, halfDist: Number.NaN },
+    ]);
+    expect(ldHalfMark(r, 0, 100_000)).toStrictEqual({
+      x: 7548.08187836982,
+      y: 0.23471074380165288,
+    });
+    expect(ldHalfMark(r, 1, 100_000)).toStrictEqual({
+      x: 100_000,
+      y: 0.23471074380165288,
+    });
+    expect(ldHalfMark(r, 2, 100_000)).toBeNull();
+    expect(ldHalfMark(r, 3, 100_000)).toBeNull();
   });
 
   test("ldDecayCurve gives 200 points evenly spaced from 0 to the largest distance, and the curve at each", () => {
@@ -907,7 +979,9 @@ describe("PA2 D5 checkNumbers", () => {
   });
 
   test("gives null for a half distance of NaN, numCheckNumbers counts 1 + 3 × the populations, and a result of another analysis throws a defect", () => {
-    const r = resultOf([flowPop("pop_a", { halfDist: Number.NaN })]);
+    const r = resultOf([
+      flowPop("pop_a", { rhoPerBp: Number.NaN, halfDist: Number.NaN }),
+    ]);
     expect(ldDecay.checkNumbers(r)).toStrictEqual([500, 432, 29367, null]);
     expect(ldDecay.numCheckNumbers(project())).toBe(7);
     expect(ldDecay.numCheckNumbers(project({ table: null }))).toBe(4);
@@ -1311,9 +1385,22 @@ describe("PA2 D5 maxDistReason, the reason beside the field of the distance", ()
       NO_DISTANCE,
     );
     expect(maxDistReason(project())).toBeNull();
+  });
+
+  test("review of PA8: gives the reason of the memory for a distance typed above what the populations allow, the words of the lock, and null at the most they allow or while the populations cannot be made", () => {
     expect(
-      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 9_000_000 } })),
+      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 8_333_334 } })),
+    ).toBe(
+      "With 3 populations, the largest distance can be at most 8,333,333 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.",
+    );
+    expect(
+      maxDistReason(project({ table: THREE_POPS, ld: { maxDist: 8_333_333 } })),
     ).toBeNull();
+    expect(
+      maxDistReason(project({ column: null, ld: { maxDist: 99_000_000 } })),
+    ).toBeNull();
+    const locked = project({ table: THREE_POPS, ld: { maxDist: 8_333_334 } });
+    expect(ldDecay.needs(locked)).toBe(maxDistReason(locked));
   });
 });
 

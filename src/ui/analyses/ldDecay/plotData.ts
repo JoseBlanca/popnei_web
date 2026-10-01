@@ -1,22 +1,26 @@
 /**
- * The data of the line plot of the LD decay, made from the result and the
- * largest distance (docs/specs/analyses/ldDecay.md, "What it shows", the
- * plot): one series per population drawn, the first `LD_PLOT_MAX_POPS` of
- * the result in its order, with the mean r² of each bin with a pair at
- * the middle of the bin as its points, its fitted curve as its line, and
- * a mark at its half distance, at half of its r² at 0; the ranges of the
- * two axes; the labels of the legend and the description of core. Pure,
- * so that a test in node checks it.
+ * The data of the line plot of the LD decay, made from the result, the
+ * largest distance and the populations of the project
+ * (docs/specs/analyses/ldDecay.md, "What it shows", the plot): one series
+ * per population drawn, the first `LD_PLOT_MAX_POPS` of the result in its
+ * order, with the mean r² of each bin with a pair at the middle of the
+ * bin as its points, its fitted curve as its line, and a mark at its half
+ * distance, at half of its r² at 0; the group of each, its colour and
+ * its shape; the ranges of the two axes; the labels of the legend and
+ * the description of core. Pure, so that a test in node checks it.
  */
 
 import {
   LD_PLOT_MAX_POPS,
   ldDecayCurve,
   ldDecayDescription,
+  ldHalfMark,
   ldLegendLabel,
+  valueAt,
 } from "../../../core/analyses/ldDecay.ts";
+import { MAX_LINE_SERIES } from "../../../charts/limits.ts";
 import type { LineData, LineSeries } from "../../../charts/line.ts";
-import type { LdDecayResult } from "../../../worker/protocol.ts";
+import type { LdDecayResult, Pops } from "../../../worker/protocol.ts";
 import { LD_PLOT_TITLE, LD_X_LABEL, LD_Y_LABEL } from "./words.ts";
 
 /** The top of the vertical axis when nothing above 0 is drawn. */
@@ -57,70 +61,75 @@ function pointsOf(r: LdDecayResult, i: number): LineSeries["points"] {
   const y: number[] = [];
   for (let bin = 0; bin < numBins; bin++) {
     const at = i * numBins + bin;
-    const pairs = r.numPairs[at];
-    const meanR2 = r.meanR2[at];
-    const smallest = r.smallestDist[bin];
-    const largest = r.largestDist[bin];
-    if (
-      pairs === undefined ||
-      meanR2 === undefined ||
-      smallest === undefined ||
-      largest === undefined
-    ) {
-      throw new Error(
-        `popnei_web defect: the result of the LD decay has no bin ${String(bin)} for the population ${String(i)}.`,
+    if (valueAt(r.numPairs, at, "numPairs") > 0) {
+      x.push(
+        (valueAt(r.smallestDist, bin, "smallestDist") +
+          valueAt(r.largestDist, bin, "largestDist")) /
+          2,
       );
-    }
-    if (pairs > 0) {
-      x.push((smallest + largest) / 2);
-      y.push(meanR2);
+      y.push(valueAt(r.meanR2, at, "meanR2"));
     }
   }
   return { x: Float64Array.from(x), y: Float64Array.from(y) };
 }
 
-/** The mark of the population `i` of `r`: at its half distance, at half
-    of its r² at 0, when the half distance is finite and at most
-    `maxDist`; none otherwise. */
-function marksOf(
-  r: LdDecayResult,
-  i: number,
-  maxDist: number,
-): LineSeries["marks"] {
-  const halfDist = r.halfDist[i];
-  const r2AtZero = r.r2AtZero[i];
-  if (halfDist === undefined || r2AtZero === undefined) {
-    throw new Error(
-      `popnei_web defect: the result of the LD decay has no curve for the population ${String(i)}.`,
-    );
+/**
+ * The group of each population `drawn`, its colour and its shape
+ * (ldDecay.md, "What it shows"): its place among the populations of the
+ * project, `populationsOf(p)`, whether or not the filters empty those
+ * before it, so that it has one mark here and in the principal
+ * components, which number their groups the same way (`pcaColours` of
+ * core). The marks repeat every `MAX_LINE_SERIES` groups, 49, and two
+ * series of one mark are refused by the line plot; so with more
+ * populations than that in the project, and for the one population of
+ * every individual, the group is the place among the populations drawn
+ * (point 14 of docs/plans/population-analyses.report.md). Throws a
+ * defect on a population drawn that the project does not have, since a
+ * result is shown under the key of its populations.
+ */
+export function ldGroups(
+  drawn: readonly string[],
+  pops: Pops | "all" | null,
+): readonly number[] {
+  if (pops === null || pops === "all" || pops.length > MAX_LINE_SERIES) {
+    return drawn.map((_pop, i) => i);
   }
-  return Number.isFinite(halfDist) && halfDist <= maxDist
-    ? [{ x: halfDist, y: r2AtZero / 2 }]
-    : [];
+  const placeOf = new Map(pops.map(([name], place) => [name, place]));
+  return drawn.map((pop) => {
+    const place = placeOf.get(pop);
+    if (place === undefined) {
+      throw new Error(
+        "popnei_web defect: the plot of the LD decay draws a population the project does not have.",
+      );
+    }
+    return place;
+  });
 }
 
 /**
- * The data of the plot of `r` at the largest distance `maxDist`: the
- * first `LD_PLOT_MAX_POPS` populations, in the order of the result; the
- * horizontal axis from 0 to `maxDist`, in whole base pairs, and the
- * vertical from 0 to `ldYTop` of the points and the curves.
- *
- * The group of each series, its colour and its shape, is its place among
- * the populations drawn, 0 to 15, and not among every population of the
- * metadata file, as ldDecay.md has it: the marks repeat every 49 groups,
- * and with 50 populations or more two curves drawn would share one mark,
- * which the line plot refuses (point 14 of
- * docs/plans/population-analyses.report.md, for the owner at stop C).
+ * The data of the plot of `r` at the largest distance `maxDist`, for a
+ * project whose populations are `pops`, `populationsOf(p)`: the first
+ * `LD_PLOT_MAX_POPS` populations, in the order of the result, each in the
+ * group `ldGroups` gives it; the horizontal axis from 0 to `maxDist`, in
+ * whole base pairs, and the vertical from 0 to `ldYTop` of the points,
+ * the curves and the marks.
  */
-export function ldDecayPlotData(r: LdDecayResult, maxDist: number): LineData {
+export function ldDecayPlotData(
+  r: LdDecayResult,
+  maxDist: number,
+  pops: Pops | "all" | null,
+): LineData {
   const drawn = r.pops.slice(0, LD_PLOT_MAX_POPS);
-  const series = drawn.map((_pop, i): LineSeries => ({
-    label: ldLegendLabel(r, i, maxDist),
-    group: i,
-    points: pointsOf(r, i),
-    line: ldDecayCurve(r, i, maxDist),
-    marks: marksOf(r, i, maxDist),
-  }));
+  const series = ldGroups(drawn, pops).map((group, i): LineSeries => {
+    const mark = ldHalfMark(r, i, maxDist);
+    return {
+      label: ldLegendLabel(r, i, maxDist),
+      group,
+      points: pointsOf(r, i),
+      line: ldDecayCurve(r, i, maxDist),
+      marks: mark === null ? [] : [mark],
+    };
+  });
   const top = ldYTop(
     series.flatMap((one) => [
       ...one.points.y,

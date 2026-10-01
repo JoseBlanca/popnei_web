@@ -16,13 +16,13 @@
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
  */
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { createHeatmap, heatmapMargin } from "../../../charts/heatmap.ts";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
-import type { ChartHandle } from "../../../charts/types.ts";
 import { classOf } from "../../classOf.ts";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
+import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./PopDistsResults.module.css";
 import { HEATMAP_SCROLL_TEXT } from "./words.ts";
 
@@ -48,29 +48,11 @@ export interface HeatmapPlotProps {
 /** The frame of the heatmap, and the heatmap in it. */
 export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const plotRef = useRef<ChartHandle<HeatmapData> | null>(null);
+  const containerRef = usePlot(createHeatmap, data);
   // Whether the heatmap is wider than its frame, which the browser
   // measures and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);
   const scrolls = frame.scrolls;
-
-  useEffect(() => {
-    const element = containerRef.current;
-    if (element === null) return;
-    if (plotRef.current === null) {
-      plotRef.current = createHeatmap(element, data);
-    } else {
-      plotRef.current.update(data);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    return () => {
-      plotRef.current?.destroy();
-      plotRef.current = null;
-    };
-  }, []);
 
   const margin = heatmapMargin(data);
   const minWidth = Math.ceil(margin.left + margin.right + GRID_MIN_WIDTH);

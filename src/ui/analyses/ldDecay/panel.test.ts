@@ -24,11 +24,13 @@ import type {
   Notice,
   Store,
 } from "../../../core/store.ts";
-import { sampleProject } from "../../../core/testSupport.ts";
+import { deepFreeze, sampleProject } from "../../../core/testSupport.ts";
 import type { JobResult, LdDecayResult } from "../../../worker/protocol.ts";
 import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import type { Announcer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
+import { createLine } from "../../../charts/line.ts";
+import type * as LineModule from "../../../charts/line.ts";
 import { Table } from "../../widgets/Table.tsx";
 import type * as TableModule from "../../widgets/Table.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
@@ -40,6 +42,12 @@ import { LdDecayResults } from "./LdDecayResults.tsx";
 vi.mock("../../widgets/Table.tsx", async (importOriginal) => {
   const table = await importOriginal<typeof TableModule>();
   return { ...table, Table: vi.fn(table.Table) };
+});
+
+// The line plot is made by createLine, which a test makes throw.
+vi.mock("../../../charts/line.ts", async (importOriginal) => {
+  const line = await importOriginal<typeof LineModule>();
+  return { ...line, createLine: vi.fn(line.createLine) };
 });
 
 declare global {
@@ -191,15 +199,13 @@ function select(input: HTMLInputElement): HTMLInputElement {
   return input;
 }
 
-/** Presses `key` on the element that has the focus. */
-function press(key: string): void {
+/** Presses `key` on the element that has the focus, with the Ctrl key
+    held when `ctrlKey`. */
+function press(key: string, ctrlKey = false): void {
+  const keys = { key, ctrlKey, bubbles: true, cancelable: true };
   act(() => {
-    document.activeElement?.dispatchEvent(
-      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
-    );
-    document.activeElement?.dispatchEvent(
-      new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
-    );
+    document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", keys));
+    document.activeElement?.dispatchEvent(new KeyboardEvent("keyup", keys));
   });
 }
 
@@ -294,6 +300,90 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(applied).toEqual([]);
     expect(ldDecayOptions(project).maxDist).toBeNull();
     expect(container.textContent).toContain(NO_DISTANCE);
+  });
+
+  test("review of PA8: Escape and Ctrl+Z over digits typed in the empty distance leave it empty, and not with the text NaN, and send nothing", () => {
+    draw(createElement(LdDecayOptionsPart));
+    const [distance] = fields();
+    for (const back of [
+      (): void => {
+        press("Escape");
+      },
+      (): void => {
+        press("z", true);
+      },
+    ]) {
+      select(distance);
+      typeKeys(distance, "1234");
+      expect(distance.value).toBe("1234");
+      back();
+      expect(distance.value).toBe("");
+      press("Enter");
+      expect(distance.value).toBe("");
+    }
+    expect(applied).toEqual([]);
+    expect(ldDecayOptions(project).maxDist).toBeNull();
+  });
+
+  test("review of PA8: a distance typed above what the memory allows the two populations is committed, and its reason stands beside the field, describes it before the line under it, and is announced; a distance the memory allows takes the reason away with no word", () => {
+    const reason =
+      "With 2 populations, the largest distance can be at most 12,500,000 base pairs: the pairs are counted at every distance up to it, in up to 40 bytes for each base pair and population, and more than 1 GB of such counts may not fit in the memory of a browser tab. Type a smaller distance, or calculate it with popnei in Python, outside the browser.";
+    draw(createElement(LdDecayOptionsPart));
+    const [distance] = fields();
+    select(distance);
+    typeKeys(distance, "12500001");
+    press("Enter");
+    expect(applied).toEqual(["the largest distance of the LD decay changed"]);
+    expect(ldDecayOptions(project).maxDist).toBe(12_500_001);
+    expect(announced).toEqual([reason]);
+    expect(container.textContent).toContain(reason);
+    expect(container.textContent).not.toContain(NO_DISTANCE);
+    expect(
+      (fields()[0].getAttribute("aria-describedby") ?? "")
+        .split(" ")
+        .map((id) => document.getElementById(id)?.textContent.slice(0, 22)),
+    ).toEqual(["With 2 populations, th", "How far to look for pa"]);
+    select(fields()[0]);
+    typeKeys(fields()[0], "12500000");
+    press("Enter");
+    expect(ldDecayOptions(project).maxDist).toBe(12_500_000);
+    expect(announced).toEqual([reason]);
+    expect(container.textContent).not.toContain(reason);
+  });
+
+  test("review of PA8: 12345 is taken as typed; the Up arrow moves 100000 to 100001 and 0.8 to 0.81, a command each; 9007199254740993 is refused as it was typed", () => {
+    draw(createElement(LdDecayOptionsPart));
+    const [distance, frequency] = fields();
+    select(distance);
+    typeKeys(distance, "12345");
+    press("Enter");
+    expect(ldDecayOptions(project).maxDist).toBe(12_345);
+    select(distance);
+    typeKeys(distance, "100000");
+    press("Enter");
+    press("ArrowUp");
+    expect(ldDecayOptions(project).maxDist).toBe(100_001);
+    expect(fields()[0].value).toBe("100001");
+    select(frequency);
+    typeKeys(frequency, "0.8");
+    press("Enter");
+    press("ArrowUp");
+    expect(ldDecayOptions(project).maxAllowedMaf).toBe(0.81);
+    expect(applied).toEqual([
+      "the largest distance of the LD decay changed",
+      "the largest distance of the LD decay changed",
+      "the largest distance of the LD decay changed",
+      "the maximum major allele frequency of the LD decay changed",
+      "the maximum major allele frequency of the LD decay changed",
+    ]);
+    select(fields()[0]);
+    typeKeys(fields()[0], "9007199254740993");
+    press("Enter");
+    expect(container.textContent).toContain(
+      "9007199254740993 is more than 9007199254740991; the distance stays 100001.",
+    );
+    expect(ldDecayOptions(project).maxDist).toBe(100_001);
+    expect(applied).toHaveLength(5);
   });
 
   test("a distance typed is one command at Enter, with the frequency kept, and the reason goes", () => {
@@ -482,13 +572,50 @@ function doneWith(r: LdDecayResult): AnalysisStatus<JobResult> {
   return { kind: "done", key: KEY, result: r, warnings: [], check: null };
 }
 
+/** The sample project with a largest distance of 100,000 bp, and a
+    metadata file whose column pop holds the populations `pops`, in
+    their order, one individual in each. */
+function projectOf(pops: readonly string[]): Project {
+  const sample = sampleProject();
+  if (sample.individuals?.read.kind !== "read" || sample.variants === null) {
+    throw new Error("the sample project has no metadata file read");
+  }
+  const names = pops.map((_, i) => `i${String(i + 1)}`);
+  // Frozen deeply, as the project of the store is: the populations of a
+  // frozen table are one value, which the plot's selector gives back.
+  return setAnalysisOptions(
+    deepFreeze<Project>({
+      ...sample,
+      variants: {
+        ...sample.variants,
+        read: { kind: "read", individuals: names, ploidy: 2, numVars: null },
+      },
+      individualFilters: [],
+      individuals: {
+        ...sample.individuals,
+        read: {
+          ...sample.individuals.read,
+          table: {
+            columns: sample.individuals.read.table.columns,
+            rows: pops.map((pop, i) => [names[i] ?? "", pop, "1", null]),
+          },
+        },
+      },
+      grouping: { kind: "populations", column: "pop" },
+    }),
+    ldDecay,
+    { maxDist: 100_000, maxAllowedMaf: 0.95 },
+  );
+}
+
 /** Draws the result `r` with no comparison, in a project whose largest
-    distance is 100,000 bp. */
-function drawResult(r: LdDecayResult): Store<JobResult, Blob> {
-  project = setAnalysisOptions(project, ldDecay, {
-    maxDist: 100_000,
-    maxAllowedMaf: 0.95,
-  });
+    distance is 100,000 bp and whose populations are those of the result,
+    or `pops`. */
+function drawResult(
+  r: LdDecayResult,
+  pops: readonly string[] = r.pops,
+): Store<JobResult, Blob> {
+  project = projectOf(pops);
   return draw(createElement(LdDecayResults, { result: r, check: null }));
 }
 
@@ -644,10 +771,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
   });
 
   test("the comparison with the check numbers of a project file is drawn under the table of the populations", () => {
-    project = setAnalysisOptions(project, ldDecay, {
-      maxDist: 100_000,
-      maxAllowedMaf: 0.95,
-    });
+    project = projectOf(TWO.pops);
     draw(
       createElement(LdDecayResults, {
         result: TWO,
@@ -660,11 +784,65 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
     );
   });
 
-  test("under the panel's frame, drawn again when a notice comes and goes, the plot is the same SVG and the table of the populations is not drawn again", () => {
-    project = setAnalysisOptions(project, ldDecay, {
-      maxDist: 100_000,
-      maxAllowedMaf: 0.95,
+  test("review of PA8: each population has the colour and the shape of its place among the populations of the project, here the second and the fourth of five, and not of its place in the plot", () => {
+    drawResult(TWO, ["p_first", "pop_a", "p_gone", "pop_b", "p_last"]);
+    expect(
+      [...container.querySelectorAll("g.chart-marks > path.chart-points")].map(
+        (path) => path.getAttribute("class"),
+      ),
+    ).toEqual(["chart-points chart-colour-1", "chart-points chart-colour-3"]);
+  });
+
+  test("review of PA8: a plot that throws leaves the heading of its part in its place, and the tabs, the table of the populations and the downloads as they were", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.mocked(createLine).mockImplementation(() => {
+      throw new Error("popnei_web defect: the line plot of the tests throws.");
     });
+    drawResult(TWO);
+    vi.mocked(createLine).mockRestore();
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    expect(container.querySelector("h3")?.textContent).toBe(
+      "Plot of the LD decay",
+    );
+    expect(tabs().map((tab) => tab.textContent)).toEqual([
+      "Plot",
+      "Table of the bins",
+    ]);
+    expect(tableRows().map((row) => row[0])).toEqual(["pop_a", "pop_b"]);
+    expect(container.querySelectorAll("button")).toHaveLength(2);
+    chooseTab("Table of the bins");
+    expect(container.querySelectorAll("table")).toHaveLength(2);
+    error.mockRestore();
+  });
+
+  test("review of PA8: with the table of the bins shown, a notice that comes and goes draws neither table again", () => {
+    project = projectOf(TWO.pops);
+    status = doneWith(TWO);
+    draw(createElement(AnalysisPanel, { id: "ldDecay" }));
+    chooseTab("Table of the bins");
+    expect(container.querySelectorAll("table")).toHaveLength(2);
+    const drawn = vi.mocked(Table).mock.calls.length;
+    act(() => {
+      showNotice({
+        cause: { kind: "command", description: "the MAF filter changed" },
+        removed: ["diversity"],
+        leftBehind: [],
+        stopped: ["diversity"],
+        writeLeftBehind: false,
+        writeStopped: false,
+        writeDiscarded: false,
+      });
+    });
+    act(() => {
+      showNotice(null);
+    });
+    expect(vi.mocked(Table).mock.calls.length).toBe(drawn);
+  });
+
+  test("under the panel's frame, drawn again when a notice comes and goes, the plot is the same SVG and the table of the populations is not drawn again", () => {
+    project = projectOf(TWO.pops);
     status = doneWith(TWO);
     draw(createElement(AnalysisPanel, { id: "ldDecay" }));
     const svg = container.querySelector("svg");

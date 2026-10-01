@@ -1,9 +1,9 @@
 /**
  * The mount of the line plot of the LD decay, `createLine` of
  * src/charts/line.ts (react.md, "Mounting a plot";
- * docs/specs/charts/line.md): created once in its element, updated when
- * its data change, and destroyed when it leaves the page, as when the tab
- * of the table of the bins is chosen. The element holds nothing React
+ * docs/specs/charts/line.md), by `usePlot`: created once in its element,
+ * updated when its data change, and destroyed when it leaves the page, as
+ * when the tab of the table of the bins is chosen. The element holds nothing React
  * draws, and its size comes from the CSS of the panel.
  *
  * The element is never narrower than the label of its horizontal axis
@@ -14,13 +14,13 @@
  * the plot, "LD decay", which is the name of the panel's own region, so
  * that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
  */
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { createLine } from "../../../charts/line.ts";
 import type { LineData } from "../../../charts/line.ts";
-import type { ChartHandle } from "../../../charts/types.ts";
 import { classOf } from "../../classOf.ts";
 import { useSidewaysFrame } from "../../widgets/sidewaysFrame.ts";
+import { usePlot } from "../../widgets/usePlot.ts";
 import styles from "./LdDecayResults.module.css";
 import { PLOT_FRAME_NAME, PLOT_SCROLL_TEXT } from "./words.ts";
 
@@ -35,28 +35,10 @@ export interface LinePlotProps {
 /** The frame of the line plot, and the plot in it. */
 export function LinePlot({ data }: LinePlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const plotRef = useRef<ChartHandle<LineData> | null>(null);
+  const containerRef = usePlot(createLine, data);
   // Whether the plot is wider than its frame, which the browser measures
   // and React does not, and what the frame is then.
   const frame = useSidewaysFrame(frameRef);
-
-  useEffect(() => {
-    const element = containerRef.current;
-    if (element === null) return;
-    if (plotRef.current === null) {
-      plotRef.current = createLine(element, data);
-    } else {
-      plotRef.current.update(data);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    return () => {
-      plotRef.current?.destroy();
-      plotRef.current = null;
-    };
-  }, []);
 
   return (
     <div className={classOf(styles, "plotFrame")}>

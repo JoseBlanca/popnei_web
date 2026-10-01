@@ -380,7 +380,9 @@ export function NumberField({
         }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
-        committedText={numberText(value)}
+        // An empty field, given NaN, holds no text: "NaN" is no number
+        // of the field to put back.
+        committedText={Number.isNaN(value) ? "" : numberText(value)}
         isTyped={() => typed.current}
         onRevert={revert}
         onPasted={(text) => {

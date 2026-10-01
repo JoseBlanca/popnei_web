@@ -11,28 +11,20 @@
  */
 import type { LdBinRow, LdDecayRow } from "../../../core/analyses/ldDecay.ts";
 import {
+  MAX_MAX_ALLOWED_MAF,
+  MIN_MAX_ALLOWED_MAF,
+  MIN_MAX_DIST,
   halfDistText,
   threeSignificant,
 } from "../../../core/analyses/ldDecay.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import type { IndividualsKept } from "../../../core/individualsKept.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
-import { readyLines as individualsLines } from "../pca/words.ts";
 import { refusedWhy } from "../words.ts";
 import type { NotTakenWords } from "../words.ts";
-
-/** The analysis in the middle of a sentence. */
-export const LD_DECAY_NAME = "the LD decay";
-
-/** Its result in the middle of a sentence, as the words of a result
-    removed say Undo brings it back: "Undo brings back the LD decay as it
-    was". The plot and the tables would ask for "they were" after an
-    analysis named in the singular, which `removedText` cannot say. */
-export const LD_DECAY_RESULT_NAME = "the LD decay";
 
 /** The title of the plot, the `<title>` of its SVG. */
 export const LD_PLOT_TITLE = "LD decay";
@@ -45,8 +37,7 @@ export const LD_Y_LABEL = "Mean r² of the pairs";
 
 /** The label of the field of the largest distance, with its unit and
     its least value. */
-export const MAX_DIST_LABEL =
-  "Largest distance between the two variants of a pair, in base pairs, from 50";
+export const MAX_DIST_LABEL = `Largest distance between the two variants of a pair, in base pairs, from ${String(MIN_MAX_DIST)}`;
 
 /** The line under the field of the largest distance. */
 export const MAX_DIST_LINE =
@@ -59,8 +50,7 @@ export const MAX_DIST_DESCRIPTION =
 
 /** The label of the field of the maximum major allele frequency, with
     its range. */
-export const MAX_MAF_LABEL =
-  "Maximum major allele frequency in each population, from 0.5 to 1";
+export const MAX_MAF_LABEL = `Maximum major allele frequency in each population, from ${String(MIN_MAX_ALLOWED_MAF)} to ${String(MAX_MAX_ALLOWED_MAF)}`;
 
 /** The line under the field of the maximum major allele frequency. */
 export const MAX_MAF_LINE =
@@ -104,20 +94,6 @@ export function pruningLine(p: Project): string | null {
   return p.filters.some((filter) => filter.kind === "ld")
     ? LD_PRUNING_LINE
     : null;
-}
-
-/**
- * The lines of the ready state, and of the state of a result removed:
- * the individuals a run will take, as the PCA's, "100 individuals of
- * ld.nei", and, while a threshold on the individuals waits for their
- * statistics, the line that Run calculates them first. None without a
- * variants file read or individuals kept, which lock the analysis.
- */
-export function readyLines(
-  p: Project,
-  kept: IndividualsKept | null,
-): readonly string[] {
-  return individualsLines(p, kept);
 }
 
 /** The line under the bar of a calculation under way: the bar shows the
@@ -186,9 +162,6 @@ export const LD_DECAY_CSV_LABEL =
 /** The label of the download of the table of the bins. */
 export const LD_BINS_CSV_LABEL = "Download the table of the bins as CSV";
 
-/** A number of popnei that is missing where a population has pairs. */
-const NO_VALUE = "no value";
-
 /** The cell of a population or a bin with no pair. */
 const NO_PAIR = "no pair";
 
@@ -225,18 +198,17 @@ function distanceText(dist: number): string {
 /**
  * The cells of a row of the table of the bins as text: the population,
  * escaped; the two distances of the bin; its pairs; its mean r² and the
- * standard deviation, to four decimals, "no pair" for a bin without one
- * and "no value" for a number popnei did not give a bin with pairs.
+ * standard deviation, to four decimals, "no pair" for a bin without
+ * one: core gives a bin with pairs both numbers, or throws a defect.
  */
 export function ldBinCells(row: LdBinRow): readonly string[] {
-  const none = row.pairs === 0 ? NO_PAIR : NO_VALUE;
   return [
     escaped(row.population),
     distanceText(row.from),
     distanceText(row.to),
     grouped(row.pairs),
-    row.meanR2 === null ? none : fourDecimals(row.meanR2),
-    row.sdR2 === null ? none : fourDecimals(row.sdR2),
+    row.meanR2 === null ? NO_PAIR : fourDecimals(row.meanR2),
+    row.sdR2 === null ? NO_PAIR : fourDecimals(row.sdR2),
   ];
 }
 

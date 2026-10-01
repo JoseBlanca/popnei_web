@@ -29,7 +29,10 @@ import {
 } from "../../core/analyses/pca.ts";
 import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
-import { refusalText as ldDecayRefusalText } from "../../core/analyses/ldDecay.ts";
+import {
+  LD_DECAY_NAME,
+  refusalText as ldDecayRefusalText,
+} from "../../core/analyses/ldDecay.ts";
 import {
   popDistsOptions,
   refusalText as popDistsRefusalText,
@@ -44,12 +47,7 @@ import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
 import { LdDecayOptionsPart } from "./ldDecay/LdDecayOptionsPart.tsx";
 import { LdDecayResults } from "./ldDecay/LdDecayResults.tsx";
-import {
-  LD_DECAY_NAME,
-  LD_DECAY_RESULT_NAME,
-  fitLine,
-  readyLines as ldDecayReadyLines,
-} from "./ldDecay/words.ts";
+import { fitLine } from "./ldDecay/words.ts";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
 import { PopDistsOptionsPart } from "./popDists/PopDistsOptionsPart.tsx";
@@ -232,9 +230,14 @@ const POP_DISTS: AnalysisUi = Object.freeze({
 const LD_DECAY: AnalysisUi = Object.freeze({
   title: titleOf("ldDecay"),
   name: LD_DECAY_NAME,
-  resultName: LD_DECAY_RESULT_NAME,
+  // Its result has the name of the analysis, "Undo brings back the LD
+  // decay as it was": the plot and the tables would ask for "they were"
+  // after an analysis named in the singular, which `removedText` cannot
+  // say.
+  resultName: LD_DECAY_NAME,
   plural: false,
-  readyLines: ldDecayReadyLines,
+  // The individuals a run will take, as the principal components'.
+  readyLines: pcaReadyLines,
   refusalText: ldDecayRefusalText,
   statisticsFailedText: (
     error: AnalysisError,
