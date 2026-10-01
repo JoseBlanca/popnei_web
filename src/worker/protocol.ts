@@ -623,6 +623,12 @@ export interface PcaResult {
   readonly passStats: PassStats;
 }
 
+/** The smallest draw popnei's `calcPopDiversity` takes: a draw of one
+    allele finds one allele whatever the population holds. The one place
+    the number is written: the check of a diversity job, the options of
+    the project and the field of the panel read it here. */
+export const MIN_DRAW = 2;
+
 /** The measures of the distances between populations the application
     shows, Hudson's Fst and Jost's D, the two of docs/functionality.md,
     section 7, as popnei names them. */

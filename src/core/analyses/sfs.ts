@@ -20,6 +20,9 @@ import type { DiversityResult } from "../../worker/protocol.ts";
 export interface SpectrumOfPop {
   /** The name of the population. */
   readonly population: string;
+  /** The individuals of the population the calculation took, which the
+      line of a population left out of the call names. */
+  readonly numIndividuals: number;
   /** False for a population not given to calcPopDiversity, under the
       minimum of individuals: then variantsInDraw is 0, expected is empty
       and shares null. */
@@ -51,6 +54,7 @@ const SPECTRA = new WeakMap<DiversityResult, Spectra>();
 /**
  * The spectra of a diversity result; the same object for the same result.
  * Throws a defect when `foldedSfs` has not one entry per population, or
+ * `numIndividuals` no value for one, or
  * an array of it that is not `null` has not `floor(numCalledAlleles / 2)
  * + 1` values, or `numVarsInDraw` has no value for a population: a defect
  * of the runner.
@@ -67,10 +71,17 @@ export function spectraOf(r: DiversityResult): Spectra {
   }
   const numBins = Math.floor(r.numCalledAlleles / 2) + 1;
   const pops = r.pops.map((population, i): SpectrumOfPop => {
+    const numIndividuals = r.numIndividuals[i];
+    if (numIndividuals === undefined) {
+      throw defect(
+        `the result of the diversity has no numIndividuals at ${String(i)}.`,
+      );
+    }
     const expected = r.foldedSfs[i];
     if (expected === undefined || expected === null) {
       return Object.freeze({
         population,
+        numIndividuals,
         calculated: false,
         variantsInDraw: 0,
         expected: new Float64Array(0),
@@ -90,6 +101,7 @@ export function spectraOf(r: DiversityResult): Spectra {
     }
     return Object.freeze({
       population,
+      numIndividuals,
       calculated: true,
       variantsInDraw,
       expected,

@@ -42,7 +42,8 @@ import {
   thresholdRefusedText,
 } from "../../steps/variants/words.ts";
 import { followCommand, methodCommand, ownValueCommand } from "./commands.ts";
-import type { OptionCommand, OwnValue } from "./commands.ts";
+import type { OptionCommand } from "../optionCommand.ts";
+import type { OwnValue } from "./commands.ts";
 import styles from "./PcaOptionsPart.module.css";
 import {
   METHOD_ITEMS,

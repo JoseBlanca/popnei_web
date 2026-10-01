@@ -22,6 +22,7 @@ import {
 
 const P0: SpectrumOfPop = {
   population: "p0",
+  numIndividuals: 30,
   calculated: true,
   variantsInDraw: 5,
   expected: Float64Array.from([1, 2, 2]),
@@ -29,6 +30,7 @@ const P0: SpectrumOfPop = {
 };
 const P1: SpectrumOfPop = {
   population: "p1",
+  numIndividuals: 30,
   calculated: true,
   variantsInDraw: 3,
   expected: Float64Array.from([3, 0, 0]),
@@ -36,6 +38,7 @@ const P1: SpectrumOfPop = {
 };
 const P3: SpectrumOfPop = {
   population: "p3",
+  numIndividuals: 12,
   calculated: false,
   variantsInDraw: 0,
   expected: new Float64Array(0),
@@ -73,16 +76,16 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
   });
 
   test("the lines in place of a histogram: not calculated, no variant in the draw, one allele only, and none for a population with shares", () => {
-    expect(noSpectrumLine(P3, 12, 20, 40)).toBe(
+    expect(noSpectrumLine(P3, 20, 40)).toBe(
       "p3 has 12 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
     );
-    expect(noSpectrumLine(EMPTY, 30, 20, 40)).toBe(
+    expect(noSpectrumLine(EMPTY, 20, 40)).toBe(
       "p4 has no variant with 40 called chromosomes, so it has no spectrum.",
     );
-    expect(noSpectrumLine(P1, 30, 20, 4)).toBe(
+    expect(noSpectrumLine(P1, 20, 4)).toBe(
       "Every variant of p1 in the draw shows one allele only, so its spectrum has no bar.",
     );
-    expect(noSpectrumLine(P0, 30, 20, 4)).toBeNull();
+    expect(noSpectrumLine(P0, 20, 4)).toBeNull();
   });
 
   test("the axis, the line under the histograms of an even and an odd draw, and too many bars", () => {
@@ -105,6 +108,16 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
     expect(populationCells(P0, 0)).toEqual(["1.0", "not drawn"]);
     expect(populationCells(P0, 1)).toEqual(["2.0", "0.5000"]);
     expect(populationCells(P1, 2)).toEqual(["0.0", "no value"]);
+    // A population not calculated keeps its columns, with no value.
+    expect(populationCells(P3, 0)).toEqual(["no value", "no value"]);
+    expect(populationCells(P3, 1)).toEqual(["no value", "no value"]);
+    // The expected numbers with a comma between thousands.
+    expect(
+      populationCells(
+        { ...P0, expected: Float64Array.from([1234.56, 2, 2]) },
+        0,
+      ),
+    ).toEqual(["1,234.6", "not drawn"]);
     expect(spectrumCsvName("panel.vcf.gz")).toBe("panel.sfs.csv");
   });
 });

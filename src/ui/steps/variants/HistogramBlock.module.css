@@ -22,12 +22,3 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
-
-/* The element the plot draws in, whose size the plot reads
-   (docs/specs/charts/histogram.md, "The size"); as narrow as its
-   parent, as the block, whatever width the SVG in it was drawn at. */
-.plot {
-  inline-size: 100%;
-  min-inline-size: 0;
-  aspect-ratio: 16 / 10;
-}

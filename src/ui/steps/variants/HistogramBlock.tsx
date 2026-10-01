@@ -19,11 +19,11 @@ import type { HistogramData, HistogramRow } from "../../../charts/histogram.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
 import { Button } from "../../widgets/Button.tsx";
+import { HistogramPlot } from "../../widgets/HistogramPlot.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn } from "../../widgets/Table.tsx";
 import { Tabs } from "../../widgets/Tabs.tsx";
 import styles from "./HistogramBlock.module.css";
-import { HistogramPlot } from "./HistogramPlot.tsx";
 import {
   BINS_CSV_LABEL,
   BINS_LINE,

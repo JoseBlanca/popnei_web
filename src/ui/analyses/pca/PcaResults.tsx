@@ -50,7 +50,7 @@ import type { ResultsProps } from "../panels.ts";
 import { resultOf, statusOf } from "../status.ts";
 import { versionsText } from "../words.ts";
 import { axisCommand, colourCommand, viewCommand } from "./commands.ts";
-import type { OptionCommand } from "./commands.ts";
+import type { OptionCommand } from "../optionCommand.ts";
 import { notesAppeared, notesOf } from "./notes.ts";
 import { Pca3dView } from "./Pca3dView.tsx";
 import type { Pca3dFailure } from "./Pca3dView.tsx";

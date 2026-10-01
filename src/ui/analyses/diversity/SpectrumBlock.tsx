@@ -4,16 +4,27 @@
  * the panel"): its caption; two tabs, "Histograms", selected when the
  * block is drawn, with one histogram per population on one vertical scale,
  * each in a group named by the heading of its population, or the line
- * that says why it has none, and the line under them; and "Table", the
- * expected numbers and the shares of every population; under them the
- * download of the spectrum as CSV. Which tab is selected is the block's
- * own state, kept while it is drawn.
+ * that says why it has none, and the line under them while any population
+ * has a histogram; and "Table", the expected numbers and the shares of
+ * every population; under them the download of the spectrum as CSV. A
+ * draw of more bars than a histogram draws gives its line in place of the
+ * histograms, and the lines of the populations with none under it. Which
+ * tab is selected is the block's own state, kept while it is drawn.
+ *
+ * Each population's histogram is inside an error boundary of its own, so
+ * that one that throws takes neither the others nor the table, the fields
+ * and the Run of the panel with it.
  *
  * The histograms go in a grid of as many columns as the width holds, each
  * at least 28rem wide, one column at the width of a phone: the spec leaves
  * their layout to the running application.
+ *
+ * The block is not drawn again while its result, the name of the variants
+ * file and the minimum are the same: the frame of the panel is drawn
+ * again when a notice comes or goes, and the table of a draw of 20,000
+ * has 10,001 rows.
  */
-import { useId, useMemo, useState } from "react";
+import { memo, useId, useMemo, useState } from "react";
 
 import type { HistogramData } from "../../../charts/histogram.ts";
 import { MAX_HISTOGRAM_BINS } from "../../../charts/limits.ts";
@@ -24,13 +35,14 @@ import { escaped } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
+import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
 import { useAppState } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
+import { HistogramPlot } from "../../widgets/HistogramPlot.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn, TableRow } from "../../widgets/Table.tsx";
 import { Tabs } from "../../widgets/Tabs.tsx";
 import styles from "./SpectrumBlock.module.css";
-import { SpectrumPlot } from "./SpectrumPlot.tsx";
 import {
   COUNT_COLUMN,
   HISTOGRAMS_TAB,
@@ -66,7 +78,7 @@ export interface SpectrumBlockProps {
 }
 
 /** The block of the spectrum of each population. */
-export function SpectrumBlock({
+export const SpectrumBlock = memo(function SpectrumBlock({
   result,
   variantsName,
 }: SpectrumBlockProps): React.JSX.Element {
@@ -77,52 +89,58 @@ export function SpectrumBlock({
     (s) => diversityOptions(s.project).minNumIndividuals,
   );
   const spectra = spectraOf(result);
-  const n = spectra.numCalledAlleles;
-  const tooMany = Math.floor(n / 2) > MAX_HISTOGRAM_BINS;
+  const draw = spectra.numCalledAlleles;
+  const tooMany = Math.floor(draw / 2) > MAX_HISTOGRAM_BINS;
+  const anyShares = spectra.pops.some((pop) => pop.shares !== null);
 
   const download = (): void => {
     downloadText(spectrumCsvName(variantsName), spectraCsv(result), "text/csv");
   };
 
+  const histograms = (
+    <div className={classOf(styles, "histograms")}>
+      {tooMany && (
+        <p className={classOf(styles, "line")}>{tooManyBarsLine(draw)}</p>
+      )}
+      <div className={classOf(styles, "plots")}>
+        {spectra.pops.map((pop) => {
+          const noSpectrum = noSpectrumLine(pop, minimum, draw);
+          // Above the bars a histogram draws, a population with a
+          // spectrum has no group: the line above says so for all.
+          if (tooMany && noSpectrum === null) return null;
+          return (
+            <ErrorBoundary
+              key={pop.population}
+              level={3}
+              heading={escaped(pop.population)}
+            >
+              <PopulationSpectrum
+                pop={pop}
+                numCalledAlleles={draw}
+                yMax={spectra.largestShare}
+                noSpectrum={noSpectrum}
+              />
+            </ErrorBoundary>
+          );
+        })}
+      </div>
+      {!tooMany && anyShares && (
+        <p className={classOf(styles, "muted")}>{underHistogramsLine(draw)}</p>
+      )}
+    </div>
+  );
+
   return (
     <section aria-labelledby={captionId} className={classOf(styles, "block")}>
       <p id={captionId} className={classOf(styles, "caption")}>
-        {spectrumCaption(n, result.passStats.numVars, variantsName)}
+        {spectrumCaption(draw, result.passStats.numVars, variantsName)}
       </p>
       <Tabs<SpectrumTab>
         label={SPECTRUM_TABS_LABEL}
         selected={tab}
         onChange={setTab}
         tabs={[
-          {
-            id: HISTOGRAMS_ID,
-            label: HISTOGRAMS_TAB,
-            content: tooMany ? (
-              <p className={classOf(styles, "line")}>{tooManyBarsLine(n)}</p>
-            ) : (
-              <div className={classOf(styles, "histograms")}>
-                <div className={classOf(styles, "plots")}>
-                  {spectra.pops.map((pop, i) => (
-                    <PopulationSpectrum
-                      key={pop.population}
-                      pop={pop}
-                      numCalledAlleles={n}
-                      yMax={spectra.largestShare}
-                      noSpectrum={noSpectrumLine(
-                        pop,
-                        result.numIndividuals[i] ?? 0,
-                        minimum,
-                        n,
-                      )}
-                    />
-                  ))}
-                </div>
-                <p className={classOf(styles, "muted")}>
-                  {underHistogramsLine(n)}
-                </p>
-              </div>
-            ),
-          },
+          { id: HISTOGRAMS_ID, label: HISTOGRAMS_TAB, content: histograms },
           {
             id: TABLE_ID,
             label: SPECTRUM_TABLE_TAB,
@@ -135,7 +153,7 @@ export function SpectrumBlock({
       </div>
     </section>
   );
-}
+});
 
 /** What the spectrum of one population is drawn with. */
 interface PopulationSpectrumProps {
@@ -159,6 +177,7 @@ function PopulationSpectrum({
   noSpectrum,
 }: PopulationSpectrumProps): React.JSX.Element {
   const headingId = useId();
+  const shares = pop.shares;
   return (
     <div
       role="group"
@@ -168,11 +187,12 @@ function PopulationSpectrum({
       <h3 id={headingId} className={classOf(styles, "heading")}>
         {escaped(pop.population)}
       </h3>
-      {noSpectrum === null ? (
+      {noSpectrum === null && shares !== null ? (
         <>
           <p className={classOf(styles, "muted")}>{drawLineOf(pop)}</p>
           <SpectrumHistogram
             pop={pop}
+            shares={shares}
             numCalledAlleles={numCalledAlleles}
             yMax={yMax}
           />
@@ -184,16 +204,28 @@ function PopulationSpectrum({
   );
 }
 
+/** What the histogram of a population is drawn with. */
+interface SpectrumHistogramProps {
+  /** Its spectrum. */
+  readonly pop: SpectrumOfPop;
+  /** Its shares, which a population with a histogram has. */
+  readonly shares: Float64Array;
+  /** The size of the draw. */
+  readonly numCalledAlleles: number;
+  /** The top of every vertical axis. */
+  readonly yMax: number;
+}
+
 /** The histogram of a population with shares, its data made once for
     its spectrum and the shared top, so that it is not drawn again on
     every render (react.md, "Mounting a plot"). */
 function SpectrumHistogram({
   pop,
+  shares,
   numCalledAlleles,
   yMax,
-}: Omit<PopulationSpectrumProps, "noSpectrum">): React.JSX.Element {
+}: SpectrumHistogramProps): React.JSX.Element {
   const data = useMemo((): HistogramData => {
-    const shares = pop.shares ?? new Float64Array(0);
     // Each bar one count wide and centred on it, from 0.5 to n / 2 + 0.5.
     const edges = Float64Array.from(
       { length: shares.length + 1 },
@@ -210,13 +242,13 @@ function SpectrumHistogram({
       yMax,
       xWholeNumbers: true,
     };
-  }, [pop, numCalledAlleles, yMax]);
-  return <SpectrumPlot data={data} />;
+  }, [pop, shares, numCalledAlleles, yMax]);
+  return <HistogramPlot data={data} shape="tall" />;
 }
 
 /** The table of the spectra: a row per count of the rarer allele, 0 to
-    n / 2, and two columns per population calculated, made once for the
-    result. */
+    n / 2, and two columns per population, "no value" in those of a
+    population not calculated, made once for the result. */
 function SpectrumTable({
   result,
 }: {
@@ -224,10 +256,9 @@ function SpectrumTable({
 }): React.JSX.Element {
   const { columns, rows } = useMemo(() => {
     const spectra = spectraOf(result);
-    const shown = spectra.pops.filter((pop) => pop.calculated);
     const tableColumns: TableColumn[] = [
       { id: "count", label: COUNT_COLUMN, isRowHeader: true, isNumeric: true },
-      ...shown.flatMap((pop, i) =>
+      ...spectra.pops.flatMap((pop, i) =>
         populationColumns(pop.population).map((label, j): TableColumn => ({
           id: `pop${String(i)}_${String(j)}`,
           label,
@@ -241,7 +272,7 @@ function SpectrumTable({
         id: String(count),
         cells: [
           String(count),
-          ...shown.flatMap((pop) => populationCells(pop, count)),
+          ...spectra.pops.flatMap((pop) => populationCells(pop, count)),
         ],
       }),
     );

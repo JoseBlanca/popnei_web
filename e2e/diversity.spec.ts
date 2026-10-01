@@ -746,6 +746,17 @@ test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's word
     page.getByRole("main").getByText("12 individuals"),
   ).toBeVisible();
   await goTo(page, "Analyses");
+  // The default draw of a tetraploid file, from its ploidy.
+  await expect(
+    panel(page).getByText(
+      /^The default: the ploidy, 4, times the minimum number of individuals, 20\. /,
+    ),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByLabel(
+      "Chromosomes drawn for the rarefaction, a whole number from 2",
+    ),
+  ).toHaveValue("80");
   await run(page);
   await expect(
     panel(page).getByRole("heading", { level: 3, name: "1 warning" }),
@@ -1212,7 +1223,7 @@ test("PA7 D1 a draw of 96 typed: the column headed with 96 and the warning of p0
   await goTo(page, "Analyses");
   await setField(page, DRAW_FIELD, "96");
   await expect(
-    panel(page).getByText("Typed; the default would be 40.", { exact: true }),
+    panel(page).getByText(/^Typed; the default would be 40\. The alleles/),
   ).toBeVisible();
   await run(page);
   await expect(
@@ -1227,6 +1238,20 @@ test("PA7 D1 a draw of 96 typed: the column headed with 96 and the warning of p0
     ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
+
+  // The block of the spectrum is of the same draw.
+  const p0 = panel(page).getByRole("group", { name: "p0", exact: true });
+  await expect(p0.locator("svg desc")).toHaveText(
+    / in 48 bars from 1 to 48 copies of the rarer allele; /,
+  );
+  await expect(p0.locator("svg .chart-axis-label-x")).toHaveText(
+    "Copies of the rarer allele among 96 chromosomes",
+  );
+  await expect(
+    panel(page).getByText(
+      /^The folded site frequency spectrum of each population, in a draw of 96 /,
+    ),
+  ).toBeVisible();
 
   const useDefault = panel(page).getByRole("button", {
     name: "Use the default",
@@ -1270,12 +1295,32 @@ test("PA7 D2 three histograms, each headed by its population, of 20 bars, and th
   await load(page, "panel.nei", "panel_pops.csv", "popcat");
   await goTo(page, "Analyses");
   await run(page);
-  for (const pop of ["p0", "p2", "p1"]) {
+  // Each histogram draws its own population: the description of its
+  // SVG, with its largest share and where.
+  const described = [
+    ["p0", "about 1,155", "0.0559, at 15"],
+    ["p2", "about 1,152", "0.0551, at 11"],
+    ["p1", "about 1,151", "0.0562, at 15"],
+  ] as const;
+  for (const [pop, both, largest] of described) {
     const group = panel(page).getByRole("group", { name: pop, exact: true });
     await expect(
       group.getByRole("heading", { level: 3, name: pop, exact: true }),
     ).toBeVisible();
     await expect(group.locator("svg rect.chart-bar")).toHaveCount(20);
+    await expect(group.locator("svg desc")).toHaveText(
+      `The spectrum of ${pop}: 1,200 variants in the draw of 40 chromosomes, ${both} with both alleles, in 20 bars from 1 to 20 copies of the rarer allele; the largest share, ${largest}.`,
+    );
+    // The horizontal axis: ticks at whole counts, and its label.
+    await expect(group.locator("svg .chart-axis-x .tick text")).toHaveText([
+      "5",
+      "10",
+      "15",
+      "20",
+    ]);
+    await expect(group.locator("svg .chart-axis-label-x")).toHaveText(
+      "Copies of the rarer allele among 40 chromosomes",
+    );
   }
   await expect(panel(page).getByRole("group")).toHaveCount(3);
   await expectNoViolations(makeAxeBuilder);
@@ -1335,4 +1380,24 @@ test("PA7 D2 at 320 px the block of the spectrum is one histogram to a row and t
     ),
   ).toBe(true);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 the download of the spectrum saves panel.sfs.csv, its header and the counts of p0 as popnei gives them", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const downloading = page.waitForEvent("download");
+  await panel(page)
+    .getByRole("button", { name: "Download the spectrum as CSV" })
+    .click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("panel.sfs.csv");
+  const lines = (await readFile(await download.path(), "utf8")).split("\n");
+  expect(lines[0]).toBe("population,rarer_allele,variants,share");
+  expect(lines[1]).toBe("p0,0,44.79323144486922,");
+  expect(lines[2]).toMatch(/^p0,1,38\.07795856907602,0\.03/);
+  // 21 lines of each of the three populations, a header and the end.
+  expect(lines).toHaveLength(1 + 3 * 21 + 1);
 });

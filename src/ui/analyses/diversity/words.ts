@@ -21,6 +21,7 @@ import {
   underMinimumText,
 } from "../../../core/project.ts";
 import type { PopulationsKept } from "../../../core/project.ts";
+import { MIN_DRAW } from "../../../worker/protocol.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
 import {
@@ -44,8 +45,7 @@ export const THRESHOLD_LABEL =
   "Frequency of the commonest allele below which a variant is polymorphic, from 0 to 1";
 
 /** The label of the field of the draw of the rarefaction. */
-export const DRAW_LABEL =
-  "Chromosomes drawn for the rarefaction, a whole number from 2";
+export const DRAW_LABEL = `Chromosomes drawn for the rarefaction, a whole number from ${String(MIN_DRAW)}`;
 
 /** The button beside a draw typed, which sets the draw back to its
     default. */
@@ -66,18 +66,28 @@ export const DRAW_DESCRIPTION =
   "the number of chromosomes of the rarefaction changed";
 
 /** What the field of the draw needs to say where its number comes
-    from. */
-export interface DrawLineFacts {
+    from: whether a draw was typed, the minimum of the options, and,
+    once the variants file is read, its ploidy and the default draw. */
+export type DrawLineFacts = {
   /** Whether the draw in use was typed, and is not the default. */
   readonly typed: boolean;
-  /** The ploidy of the variants file, `null` while it is not read. */
-  readonly ploidy: number | null;
   /** The minimum number of individuals of the options. */
   readonly minNumIndividuals: number;
-  /** The default draw, `defaultDrawOf`, `null` while the variants file is
-      not read. */
-  readonly defaultDraw: number | null;
-}
+} & (
+  | { readonly kind: "unread" }
+  | {
+      readonly kind: "read";
+      /** The ploidy of the variants file. */
+      readonly ploidy: number;
+      /** The default draw, `defaultDrawOf`. */
+      readonly defaultDraw: number;
+    }
+);
+
+/** What the draw is for, after the line of the default or of a number
+    typed, since a draw typed sets the spectrum as well. */
+const DRAW_PURPOSE =
+  "The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.";
 
 /**
  * The line under the field of the draw: while it is the default, "The
@@ -87,19 +97,19 @@ export interface DrawLineFacts {
  * individuals, 20."; once a number is typed, "Typed; the default would be
  * 40.", or, before the variants file is read, "Typed; the default would
  * be the ploidy of the variants file times the minimum number of
- * individuals, 20."
+ * individuals, 20.", each with what the draw is for.
  */
 export function drawLine(facts: DrawLineFacts): string {
   const minimum = grouped(facts.minNumIndividuals);
   if (facts.typed) {
-    return facts.defaultDraw === null
-      ? `Typed; the default would be the ploidy of the variants file times the minimum number of individuals, ${minimum}.`
-      : `Typed; the default would be ${grouped(facts.defaultDraw)}.`;
+    return facts.kind === "unread"
+      ? `Typed; the default would be the ploidy of the variants file times the minimum number of individuals, ${minimum}. ${DRAW_PURPOSE}`
+      : `Typed; the default would be ${grouped(facts.defaultDraw)}. ${DRAW_PURPOSE}`;
   }
-  if (facts.ploidy === null) {
+  if (facts.kind === "unread") {
     return `The default: the ploidy of the variants file times the minimum number of individuals, ${minimum}.`;
   }
-  return `The default: the ploidy, ${grouped(facts.ploidy)}, times the minimum number of individuals, ${minimum}. The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.`;
+  return `The default: the ploidy, ${grouped(facts.ploidy)}, times the minimum number of individuals, ${minimum}. ${DRAW_PURPOSE}`;
 }
 
 /** What the field of the threshold says of a character it threw away. */
@@ -123,7 +133,8 @@ export function thresholdRefusedText(
 
 /** What the field of the draw says of a character it threw away. */
 const DRAW_NOT_TAKEN: NotTakenWords = Object.freeze({
-  comma: "Write the number of chromosomes as a whole number, 40 and not 40,0",
+  comma:
+    "Write the number of chromosomes with digits alone, 2400 and not 2,400 or 40,0",
   other:
     "cannot be typed in the number of chromosomes, which is a whole number, as 40",
 });
@@ -233,11 +244,12 @@ const UNDER_MINIMUM = Object.freeze({
   many: "so they will have no values, and are left out of the count of the private alleles of the others.",
 });
 
-/** What it says of the one population under the minimum, which has no
-    others to count private alleles against. */
-const ONE_UNDER_MINIMUM = Object.freeze({
+/** What it says of the populations under the minimum when no private
+    alleles are counted: the one population, or fewer than two
+    populations of the minimum. */
+const NO_OTHERS_UNDER_MINIMUM = Object.freeze({
   one: "so it will have no values.",
-  many: "so it will have no values.",
+  many: "so they will have no values.",
 });
 
 /** What the populations of a run are: every individual in one
@@ -264,8 +276,14 @@ export function readyLines(
   kind: PopulationsKind,
 ): readonly string[] {
   const [one] = kept.pops;
-  const { under } = populationsWithMinimum(kept.pops, minNumIndividuals);
+  const { withMinimum, under } = populationsWithMinimum(
+    kept.pops,
+    minNumIndividuals,
+  );
   const onePopulation = kind !== "populations" && one !== undefined;
+  // Private alleles are counted among two populations of the minimum or
+  // more: with fewer, a population under it is left out of no count.
+  const noOthers = onePopulation || withMinimum.length < 2;
   return [
     ...(onePopulation
       ? [onePopulationText(one[1].length)]
@@ -278,7 +296,7 @@ export function readyLines(
           underMinimumText(
             under,
             minNumIndividuals,
-            onePopulation ? ONE_UNDER_MINIMUM : UNDER_MINIMUM,
+            noOthers ? NO_OTHERS_UNDER_MINIMUM : UNDER_MINIMUM,
           ),
         ]
       : []),

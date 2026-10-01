@@ -8,34 +8,30 @@
  */
 import { popDists, popDistsOptions } from "../../../core/analyses/popDists.ts";
 import type { PopDistsOptions } from "../../../core/analyses/popDists.ts";
-import { setAnalysisOptions } from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
 import type { ShownMeasure } from "../../../worker/protocol.ts";
+import { optionCommand } from "../optionCommand.ts";
+import type { OptionCommand, OptionsOf } from "../optionCommand.ts";
 import { MEASURE_DESCRIPTION, MINIMUM_DESCRIPTION } from "./words.ts";
 
-/** A command of the store, with its description. */
-export interface OptionCommand {
-  /** The words that end the notice of the results it removes. */
-  readonly description: string;
-  /** The new project, of the project it is given. */
-  readonly command: (p: Project) => Project;
-}
+/** The options of the distances, as the commands read and write them. */
+const POP_DISTS_OPTIONS: OptionsOf<PopDistsOptions> = Object.freeze({
+  analysis: popDists,
+  read: popDistsOptions,
+  json: (o: PopDistsOptions) => ({
+    minNumIndividuals: o.minNumIndividuals,
+    measure: o.measure,
+  }),
+});
 
 /** The command that sets `change` in the options the project has. */
 function withOptions(
   description: string,
   change: Partial<PopDistsOptions>,
 ): OptionCommand {
-  return {
-    description,
-    command: (p) => {
-      const next = { ...popDistsOptions(p), ...change };
-      return setAnalysisOptions(p, popDists, {
-        minNumIndividuals: next.minNumIndividuals,
-        measure: next.measure,
-      });
-    },
-  };
+  return optionCommand(POP_DISTS_OPTIONS, description, (o) => ({
+    ...o,
+    ...change,
+  }));
 }
 
 /** The minimum number of individuals, which removes the result. */

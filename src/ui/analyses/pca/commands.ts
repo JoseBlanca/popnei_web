@@ -13,9 +13,9 @@ import {
 } from "../../../core/analyses/pca.ts";
 import type { PcaOptions } from "../../../core/analyses/pca.ts";
 import type { JsonObject } from "../../../core/keys.ts";
-import { setAnalysisOptions } from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
+import { optionCommand } from "../optionCommand.ts";
+import type { OptionCommand, OptionsOf } from "../optionCommand.ts";
 import {
   AXES_DESCRIPTION,
   COLOUR_DESCRIPTION,
@@ -26,14 +26,6 @@ import {
   viewDescription,
 } from "./words.ts";
 import type { OwnFilterKind } from "./words.ts";
-
-/** A command of the store, with its description. */
-export interface OptionCommand {
-  /** The words that end the notice of the results it removes. */
-  readonly description: string;
-  /** The new project, of the project it is given. */
-  readonly command: (p: Project) => Project;
-}
 
 /** The options as the JSON object `parseOptions` reads. */
 function optionsJson(o: PcaOptions): JsonObject {
@@ -55,17 +47,21 @@ function optionsJson(o: PcaOptions): JsonObject {
   };
 }
 
+/** The options of the principal components, as the commands read and
+    write them. */
+const PCA_OPTIONS: OptionsOf<PcaOptions> = Object.freeze({
+  analysis: pca,
+  read: pcaOptions,
+  json: optionsJson,
+});
+
 /** The command that changes the options of the project as `change` makes
     them of those it has. */
 function withOptions(
   description: string,
   change: (o: PcaOptions) => PcaOptions,
 ): OptionCommand {
-  return {
-    description,
-    command: (p) =>
-      setAnalysisOptions(p, pca, optionsJson(change(pcaOptions(p)))),
-  };
+  return optionCommand(PCA_OPTIONS, description, change);
 }
 
 /** The method. */

@@ -54,13 +54,3 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
-
-/* The element the plot draws in, whose size the plot reads: 4 by 3, and
-   never lower than 18rem, so that the label of the vertical axis fits
-   along it at the width of a phone. */
-.plot {
-  inline-size: 100%;
-  min-inline-size: 0;
-  aspect-ratio: 4 / 3;
-  min-block-size: 18rem;
-}

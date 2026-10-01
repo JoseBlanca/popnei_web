@@ -14,6 +14,7 @@
  */
 
 import type { Result } from "../core/result.ts";
+import { MIN_DRAW } from "./protocol.ts";
 import type {
   Cell,
   ColumnType,
@@ -1137,17 +1138,13 @@ function checkDiversityJob(
   });
 }
 
-/** The smallest draw popnei's `calcPopDiversity` takes: a draw of one
-    allele finds one allele whatever the population holds. */
-const MIN_DRAW = 2;
-
 /** The draw of a diversity job, a whole number of 2 or more: popnei
     refuses a smaller one only at its second call, after a whole first
     pass, so the range is kept here against the rule of the type. */
 const isDraw: Check<number> = (value, place) =>
   typeof value === "number" && Number.isInteger(value) && value >= MIN_DRAW
     ? accepted(value)
-    : wrongType(place, "a whole number of 2 or more", value);
+    : wrongType(place, `a whole number of ${String(MIN_DRAW)} or more`, value);
 
 /**
  * A check of a list of texts each of which is one of `names`, in their

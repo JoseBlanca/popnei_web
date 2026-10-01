@@ -73,7 +73,18 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(p3?.variantsInDraw).toBe(0);
     expect(p3?.expected).toEqual(new Float64Array(0));
     expect(p3?.shares).toBeNull();
+    expect(p3?.numIndividuals).toBe(50);
     expect(spectraCsv(r)).toBe(spectraCsv(workedExample()));
+  });
+
+  test("PA7 D2 each spectrum carries the individuals of its population, and a result with none for a population is a defect", () => {
+    const r = workedExample();
+    expect(spectraOf(r).pops.map((pop) => pop.numIndividuals)).toEqual([
+      50, 50,
+    ]);
+    expect(() =>
+      spectraOf({ ...workedExample(), numIndividuals: new Uint32Array(1) }),
+    ).toThrow(/^popnei_web defect: /);
   });
 
   test("the worked example: the shares, the variants in the draw and the largest share", () => {

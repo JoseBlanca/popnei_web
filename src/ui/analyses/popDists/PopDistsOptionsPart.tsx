@@ -21,7 +21,7 @@ import { RadioGroup } from "../../widgets/RadioGroup.tsx";
 import { statusOf } from "../status.ts";
 import { minimumRefusedText } from "../words.ts";
 import { measureCommand, minimumCommand } from "./commands.ts";
-import type { OptionCommand } from "./commands.ts";
+import type { OptionCommand } from "../optionCommand.ts";
 import styles from "./PopDistsOptionsPart.module.css";
 import {
   MEASURE_ITEMS,

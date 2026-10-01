@@ -62,6 +62,7 @@ import {
   refusalWords,
 } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
+import { MIN_DRAW } from "../../worker/protocol.ts";
 import type {
   DiversityResult,
   Job,
@@ -110,13 +111,9 @@ export interface DiversityOptions {
   readonly numCalledAlleles: number | null;
 }
 
-/** The smallest draw popnei's `calcPopDiversity` takes. */
-export const MIN_DRAW = 2;
-
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
-const OPTIONS_EXPECTED =
-  "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else";
+const OPTIONS_EXPECTED = `the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from ${String(MIN_DRAW)} to 4,294,967,295, and nothing else`;
 
 /** The rows of each result, so that a screen drawn again gets the same
     array. */

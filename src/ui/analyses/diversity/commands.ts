@@ -11,38 +11,34 @@ import {
   diversityOptions,
 } from "../../../core/analyses/diversity.ts";
 import type { DiversityOptions } from "../../../core/analyses/diversity.ts";
-import { setAnalysisOptions } from "../../../core/project.ts";
-import type { Project } from "../../../core/project.ts";
+import { optionCommand } from "../optionCommand.ts";
+import type { OptionCommand, OptionsOf } from "../optionCommand.ts";
 import {
   DRAW_DESCRIPTION,
   MINIMUM_DESCRIPTION,
   THRESHOLD_DESCRIPTION,
 } from "./words.ts";
 
-/** A command of the store, with its description. */
-export interface OptionCommand {
-  /** The words that end the notice of the result it removes. */
-  readonly description: string;
-  /** The new project, of the project it is given. */
-  readonly command: (p: Project) => Project;
-}
+/** The options of the diversity, as the commands read and write them. */
+const DIVERSITY_OPTIONS: OptionsOf<DiversityOptions> = Object.freeze({
+  analysis: diversity,
+  read: diversityOptions,
+  json: (o: DiversityOptions) => ({
+    minNumIndividuals: o.minNumIndividuals,
+    polyThreshold: o.polyThreshold,
+    numCalledAlleles: o.numCalledAlleles,
+  }),
+});
 
 /** The command that sets `change` in the options the project has. */
 function withOptions(
   description: string,
   change: Partial<DiversityOptions>,
 ): OptionCommand {
-  return {
-    description,
-    command: (p) => {
-      const next = { ...diversityOptions(p), ...change };
-      return setAnalysisOptions(p, diversity, {
-        minNumIndividuals: next.minNumIndividuals,
-        polyThreshold: next.polyThreshold,
-        numCalledAlleles: next.numCalledAlleles,
-      });
-    },
-  };
+  return optionCommand(DIVERSITY_OPTIONS, description, (o) => ({
+    ...o,
+    ...change,
+  }));
 }
 
 /** The minimum number of individuals with a called genotype. */

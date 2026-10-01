@@ -74,7 +74,8 @@ describe("PA7 D1 the ready state of the diversity reads the minimum of its optio
     const p = minimumCommand(2).command(diploid());
     const lines = panelOf("diversity").readyLines(p, individualsKept(p, null));
     expect(lines).toContain(
-      "P2 has 1 individual, fewer than the minimum of 2, so it will have no values, and is left out of the count of the private alleles of the others.",
+      // P1 alone has the minimum, so no private alleles are counted.
+      "P2 has 1 individual, fewer than the minimum of 2, so it will have no values.",
     );
     const reached = minimumCommand(1).command(diploid());
     expect(

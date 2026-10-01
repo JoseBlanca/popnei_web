@@ -1549,9 +1549,7 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await setDiversityField(page, DIVERSITY_DRAW, "96");
       await expect(
-        diversityPanel(page).getByText("Typed; the default would be 40.", {
-          exact: true,
-        }),
+        diversityPanel(page).getByText(/^Typed; the default would be 40\. /),
       ).toBeVisible();
       await expect(
         diversityPanel(page).getByRole("button", { name: "Use the default" }),
@@ -1622,6 +1620,83 @@ for (const theme of ["light", "dark"] as const) {
         diversityPanel(page).getByRole("columnheader", { name: "p0, share" }),
       ).toBeVisible();
       await save(page, `popgen-diversity-spectrum-table-${theme}`);
+    });
+
+    /** Runs the diversity of panel.nei and popcat with the field `label`
+        at `value`, and waits for its table. */
+    async function runWith(
+      page: Page,
+      label: string,
+      value: string,
+    ): Promise<void> {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, label, value);
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+    }
+
+    test("the diversity done, a population under the minimum with no spectrum", async ({
+      page,
+    }) => {
+      await runWith(page, DIVERSITY_MINIMUM, "50");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has 48 individuals, fewer than the 50 /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-under-minimum-${theme}`);
+    });
+
+    test("the diversity done, a population with no variant in the draw", async ({
+      page,
+    }) => {
+      await runWith(page, DIVERSITY_DRAW, "120");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has no variant with 120 called chromosomes/,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-none-in-draw-${theme}`);
+    });
+
+    test("the diversity done, a draw of more bars than a histogram draws", async ({
+      page,
+    }, testInfo) => {
+      // 1,100 individuals in one population hold 2,200 chromosomes, so
+      // that a draw of 2,002, of 1,001 bars, can be run: panel.nei's 200
+      // hold 400.
+      const path = testInfo.outputPath("draw2002.vcf");
+      await writeBigVcf(path, 100, 1100);
+      await pickVariants(page, { path });
+      await expect(
+        page.getByRole("main").getByText("1,100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "2002");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        diversityPanel(page).getByText(
+          /^A draw of 2,002 chromosomes gives 1,001 bars /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-too-many-${theme}`);
+    });
+
+    test("the diversity done, an odd draw", async ({ page }) => {
+      await runWith(page, DIVERSITY_DRAW, "39");
+      await expect(
+        diversityPanel(page).getByText(/^Each bar is the share /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-odd-${theme}`);
+    });
+
+    test("the diversity done with a draw typed", async ({ page }) => {
+      await runWith(page, DIVERSITY_DRAW, "96");
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Use the default" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-typed-${theme}`);
     });
 
     test("the diversity done, the warning of the MAF filter on the spectrum", async ({

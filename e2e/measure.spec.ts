@@ -12,7 +12,7 @@
  *   deleted after the pick, which a File on the disk cannot read.
  * - The restart (runner.md, "What a restart costs"): a new worker's start
  *   to its opened, a run whose filters changed, and a pass, on the VCF of
- *   80,692,954 bytes and the .nei file of 19,161,178 bytes.
+ *   80,692,954 bytes and the .nei file of 19,161,194 bytes.
  * - The metadata file of 10,000 rows, in Chromium
  *   (docs/specs/worker/individuals.md, "How it runs"): the pick to the
  *   columns shown, and whether a click is answered meanwhile.
@@ -24,7 +24,7 @@
  * the median and the range:
  *
  * - The memory of the tab, in Chromium, from the Chrome DevTools
- *   Protocol, with the .nei file of 19,161,178 bytes loaded and the
+ *   Protocol, with the .nei file of 19,161,194 bytes loaded and the
  *   diversity done, for the bound of the cache
  *   (docs/specs/core/cache.md, Open 1).
  * - The points an SVG plot can hold, 10,000 to 200,000 drawn as one path
@@ -39,7 +39,7 @@
  * And those of the writing of the filtered variants of stage 3 (VS5 D5,
  * docs/specs/analyses/writeVariants.md, "To be measured"), in both
  * engines, run on one worker so that one browser runs at a time: the
- * write of the .nei file of 19,161,178 bytes and of a file ten times
+ * write of the .nei file of 19,161,194 bytes and of a file ten times
  * larger, 200,000 variants, each MEASURE_REPEATS times, with the time
  * and the memory of the engine, the footprints of all its processes, at
  * each moment of the write; and the largest file written, the variants
@@ -50,7 +50,7 @@
  * And the Count against the diversity (VS6 D3,
  * docs/specs/analyses/filterCounts.md, "The request"): a pass of each
  * with the missing data filter at 0.05, on the VCF of 80,692,954 bytes
- * and the .nei file of 19,161,178 bytes, each on a new page just after
+ * and the .nei file of 19,161,194 bytes, each on a new page just after
  * the load, and the ratio of their medians.
  *
  * And the time of columnAllows (IP5 D4, docs/specs/core/project.md, "How
@@ -88,14 +88,14 @@
  * open-points file of stage 5, "Set by a measurement";
  * docs/specs/analyses/popDists.md, "How it runs"), in both engines, each
  * run from its panel on a new page just after the load: panel.nei and the
- * .nei file of 19,161,178 bytes, each with three populations and with
+ * .nei file of 19,161,194 bytes, each with three populations and with
  * twenty, from the run posted to the calculation worker to its answer,
  * and from the answer to the table of the pairs seen.
  *
  * And the time of each of the two passes of a Run of the diversity (PA7
  * D3, the open-points file of stage 5, "Set by a measurement";
  * docs/specs/analyses/diversity.md, "How it runs"), in both engines, on
- * panel.nei and the .nei file of 19,161,178 bytes, with what popnei
+ * panel.nei and the .nei file of 19,161,194 bytes, with what popnei
  * issue #4, one pass, would save.
  *
  * The time to write and read a project file, and to make a key, is
@@ -3938,7 +3938,7 @@ async function twoPassesOnce(
   }
 }
 
-test("PA7 D3 the time of each of the two passes of a Run of the diversity, on panel.nei and on the .nei file of 19,161,178 bytes, and what popnei issue #4 would save", async ({
+test("PA7 D3 the time of each of the two passes of a Run of the diversity, on panel.nei and on the .nei file of 19,161,194 bytes, and what popnei issue #4 would save", async ({
   browser,
   browserName,
 }) => {

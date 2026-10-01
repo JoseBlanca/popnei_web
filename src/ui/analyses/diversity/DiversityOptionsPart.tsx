@@ -15,12 +15,12 @@
 import { useRef } from "react";
 
 import {
-  MIN_DRAW,
   defaultDrawOf,
   diversityOptions,
   drawOf,
 } from "../../../core/analyses/diversity.ts";
 import { LARGEST_WHOLE_NUMBER } from "../../../core/project.ts";
+import { MIN_DRAW } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
@@ -28,7 +28,7 @@ import { Button } from "../../widgets/Button.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { minimumRefusedText } from "../words.ts";
 import { drawCommand, minimumCommand, thresholdCommand } from "./commands.ts";
-import type { OptionCommand } from "./commands.ts";
+import type { OptionCommand } from "../optionCommand.ts";
 import styles from "./DiversityOptionsPart.module.css";
 import {
   DRAW_LABEL,
@@ -106,12 +106,21 @@ export function DiversityOptionsPart(): React.JSX.Element {
           minValue={MIN_DRAW}
           maxValue={LARGEST_WHOLE_NUMBER}
           step={1}
-          description={drawLine({
-            typed,
-            ploidy,
-            minNumIndividuals: options.minNumIndividuals,
-            defaultDraw,
-          })}
+          description={drawLine(
+            ploidy === null || defaultDraw === null
+              ? {
+                  kind: "unread",
+                  typed,
+                  minNumIndividuals: options.minNumIndividuals,
+                }
+              : {
+                  kind: "read",
+                  typed,
+                  minNumIndividuals: options.minNumIndividuals,
+                  ploidy,
+                  defaultDraw,
+                },
+          )}
           refusedText={drawRefusedText}
           onRefused={announce}
           onChange={(value) => {

@@ -1341,6 +1341,13 @@ test.describe("the line under the bar of a calculation under way", () => {
       diversity.getByRole("progressbar", { name: "Calculating the diversity" }),
     ).toBeVisible();
     await expect(diversity.getByText(/^Calculating · /)).toBeVisible();
+    // The part of the calculation under way, the parent of its bar, holds
+    // one line; the fields of the options above it have lines of their
+    // own.
+    const running = diversity
+      .getByRole("progressbar", { name: "Calculating the diversity" })
+      .locator("xpath=..");
+    await expect(running.locator("p")).toHaveCount(1);
     await expect(
       diversity.getByText(/^The bar shows the reading of/),
     ).toHaveCount(0);

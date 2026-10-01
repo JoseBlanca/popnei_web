@@ -42,18 +42,17 @@ export function drawLineOf(pop: SpectrumOfPop): string {
 /**
  * The line that stands in place of the histogram of a population that has
  * none, or `null` for one that has: left out of the call for fewer
- * individuals, `numIndividuals`, than the minimum, `minNumIndividuals`;
- * no variant in the draw; or no variant with both alleles in it.
+ * individuals than the minimum, `minNumIndividuals`; no variant in the
+ * draw; or no variant with both alleles in it.
  */
 export function noSpectrumLine(
   pop: SpectrumOfPop,
-  numIndividuals: number,
   minNumIndividuals: number,
   numCalledAlleles: number,
 ): string | null {
   const name = escaped(pop.population);
   if (!pop.calculated) {
-    return `${name} has ${counted(numIndividuals, "individual")}, fewer than the ${grouped(minNumIndividuals)} a variant needs to count for a population, so it has no spectrum.`;
+    return `${name} has ${counted(pop.numIndividuals, "individual")}, fewer than the ${grouped(minNumIndividuals)} a variant needs to count for a population, so it has no spectrum.`;
   }
   if (pop.variantsInDraw === 0) {
     return `${name} has no variant with ${grouped(numCalledAlleles)} called chromosomes, so it has no spectrum.`;
@@ -102,9 +101,9 @@ export function spectrumDescription(
 /** The line under the histograms; its second sentence, of the last bar
     that holds one count, only when the draw is even. */
 export function underHistogramsLine(numCalledAlleles: number): string {
-  const n = grouped(numCalledAlleles);
+  const draw = grouped(numCalledAlleles);
   const half = Math.floor(numCalledAlleles / 2);
-  const first = `Each bar is the share of the population's variants, among those that show both alleles in a draw of ${n} chromosomes, whose rarer allele is expected in that many of the ${n}.`;
+  const first = `Each bar is the share of the population's variants, among those that show both alleles in a draw of ${draw} chromosomes, whose rarer allele is expected in that many of the ${draw}.`;
   const last =
     numCalledAlleles % 2 === 0
       ? ` The last bar, ${grouped(half)}, holds one count where the others hold two, such as 1 and ${grouped(numCalledAlleles - 1)}, so it is about half as tall.`
@@ -140,17 +139,26 @@ export function populationColumns(
   return [`${name}, variants`, `${name}, share`];
 }
 
+/** An expected number of variants to one decimal, with a comma between
+    groups of three digits, as every count of the panel. */
+const ONE_DECIMAL = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
 /** The two cells of a population at the count `count`: the expected
     number of variants to one decimal, and the share to four decimals,
     "not drawn" for bin 0 and "no value" for a population with no
-    shares. */
+    shares; both "no value" for a population not calculated, which keeps
+    its columns. */
 export function populationCells(
   pop: SpectrumOfPop,
   count: number,
 ): readonly [string, string] {
+  if (!pop.calculated) return ["no value", "no value"];
   const variants = pop.expected[count];
   const variantsText =
-    variants === undefined ? "no value" : variants.toFixed(1);
+    variants === undefined ? "no value" : ONE_DECIMAL.format(variants);
   if (count === 0) return [variantsText, "not drawn"];
   const share = pop.shares?.[count - 1];
   return [variantsText, share === undefined ? "no value" : fourDecimals(share)];

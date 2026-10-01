@@ -271,6 +271,39 @@ describe("PA7 D1 the words of the options of the diversity", () => {
       "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it.",
       "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds.",
     ]);
+    // With no other population to count private alleles against, the
+    // shorter words: one population of the minimum, or none.
+    expect(
+      readyLines(
+        {
+          pops: [
+            ["p0", s(48)],
+            ["p3", s(12)],
+          ],
+          emptied: [],
+        },
+        20,
+        false,
+        "populations",
+      )[1],
+    ).toBe(
+      "p3 has 12 individuals, fewer than the minimum of 20, so it will have no values.",
+    );
+    expect(
+      readyLines({ pops, emptied: [] }, 100, false, "populations")[1],
+    ).toBe(
+      "p0, p3 and p1 have fewer individuals than the minimum of 100, 48, 12 and 68, so they will have no values.",
+    );
+    expect(
+      readyLines(
+        { pops: [["p3", s(12)]], emptied: [] },
+        20,
+        false,
+        "populations",
+      )[1],
+    ).toBe(
+      "p3 has 12 individuals, fewer than the minimum of 20, so it will have no values.",
+    );
     // A population of the minimum exactly is not under it.
     expect(readyLines({ pops, emptied: [] }, 12, false, "populations")).toEqual(
       [
@@ -282,6 +315,7 @@ describe("PA7 D1 the words of the options of the diversity", () => {
   test("the line of the default draw, from the ploidy and the minimum, and before the variants file is read", () => {
     expect(
       drawLine({
+        kind: "read",
         typed: false,
         ploidy: 2,
         minNumIndividuals: 20,
@@ -291,12 +325,7 @@ describe("PA7 D1 the words of the options of the diversity", () => {
       "The default: the ploidy, 2, times the minimum number of individuals, 20. The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.",
     );
     expect(
-      drawLine({
-        typed: false,
-        ploidy: null,
-        minNumIndividuals: 20,
-        defaultDraw: null,
-      }),
+      drawLine({ kind: "unread", typed: false, minNumIndividuals: 20 }),
     ).toBe(
       "The default: the ploidy of the variants file times the minimum number of individuals, 20.",
     );
@@ -305,21 +334,19 @@ describe("PA7 D1 the words of the options of the diversity", () => {
   test("a draw typed says what the default would be", () => {
     expect(
       drawLine({
+        kind: "read",
         typed: true,
         ploidy: 4,
         minNumIndividuals: 1000,
         defaultDraw: 4000,
       }),
-    ).toBe("Typed; the default would be 4,000.");
-    expect(
-      drawLine({
-        typed: true,
-        ploidy: null,
-        minNumIndividuals: 20,
-        defaultDraw: null,
-      }),
     ).toBe(
-      "Typed; the default would be the ploidy of the variants file times the minimum number of individuals, 20.",
+      "Typed; the default would be 4,000. The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.",
+    );
+    expect(
+      drawLine({ kind: "unread", typed: true, minNumIndividuals: 20 }),
+    ).toBe(
+      "Typed; the default would be the ploidy of the variants file times the minimum number of individuals, 20. The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.",
     );
   });
 
@@ -357,7 +384,7 @@ describe("PA7 D1 the words of the options of the diversity", () => {
       drawRefusedText({ kind: "offStep", typed: "2.5", decimals: 0 }, 40),
     ).toBe("2.5 is not a whole number; the number of chromosomes stays 40.");
     expect(drawRefusedText({ kind: "notTaken", text: "," }, 40)).toBe(
-      "Write the number of chromosomes as a whole number, 40 and not 40,0; the number of chromosomes stays 40.",
+      "Write the number of chromosomes with digits alone, 2400 and not 2,400 or 40,0; the number of chromosomes stays 40.",
     );
     expect(
       drawRefusedText(

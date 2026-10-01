@@ -175,8 +175,9 @@ export interface NumberFieldProps {
       `onChange`: for a field whose number, the same, means something else
       once typed, the draw of the diversity, which is then kept as typed
       rather than following its default (docs/specs/analyses/diversity.md,
-      "What it shows"). Not called for an arrow key, nor for a number the
-      field refused. */
+      "What it shows"). Called for a number pasted over the whole field,
+      as for one typed; not for an arrow key or Page Up and Down, whose
+      number is not typed, nor for a number the field refused. */
   readonly onSameCommitted?: (value: number) => void;
 }
 
@@ -229,6 +230,12 @@ export function NumberField({
   // Whether the commit under way gave its number to `onChange`, or
   // refused it: React Aria gives neither for the number the field holds.
   const answered = useRef(false);
+  // Whether the commit under way is of a key that steps the number, an
+  // arrow key or Page Up and Down, whose number is not one typed.
+  const stepping = useRef(false);
+  // Whether a text was pasted over the whole field since the last commit,
+  // which React Aria commits as if it were typed.
+  const pasted = useRef(false);
   // The latest onTyped, for the effect below, which runs when the value
   // changes and not when the screen gives another function.
   const typedTo = useRef(onTyped);
@@ -276,7 +283,8 @@ export function NumberField({
     // The number the field holds, typed again and committed.
     if (
       onSameCommitted !== undefined &&
-      typed.current &&
+      (typed.current || pasted.current) &&
+      !stepping.current &&
       !refusing.current &&
       !answered.current &&
       typedNumber(lastText.current, minValue, maxValue, step, decimals) ===
@@ -285,6 +293,8 @@ export function NumberField({
       onSameCommitted(value);
     }
     refusing.current = false;
+    stepping.current = false;
+    pasted.current = false;
     typed.current = false;
     onTyped?.(null);
   };
@@ -375,6 +385,10 @@ export function NumberField({
         onRevert={revert}
         onPasted={(text) => {
           lastText.current = text;
+          pasted.current = true;
+        }}
+        onStepKey={() => {
+          stepping.current = true;
         }}
         onText={(text) => {
           lastText.current = text;
@@ -410,6 +424,9 @@ interface FieldInputProps {
   readonly onMended: () => void;
   /** Called before React Aria commits, and after. */
   readonly onCommitStarts: () => void;
+  /** Called before the commit of a key that steps the number, an arrow
+      key or Page Up and Down. */
+  readonly onStepKey: () => void;
   readonly onCommitEnds: () => void;
   /** Called with true once the Tab key has committed, and with false once
       the blur that follows it has. */
@@ -447,6 +464,7 @@ function FieldInput({
   onNotTakenPending,
   onMended,
   onCommitStarts,
+  onStepKey,
   onCommitEnds,
   onTabbed,
   onCommitReady,
@@ -601,6 +619,7 @@ function FieldInput({
           event.stopPropagation();
           return;
         }
+        if (isStepKey(event)) onStepKey();
         if (isCommitKey(event)) onCommitStarts();
       }}
       onKeyDown={(event) => {

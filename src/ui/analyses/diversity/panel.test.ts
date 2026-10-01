@@ -20,7 +20,12 @@ import {
 import { setAnalysisOptions } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { Key } from "../../../core/keys.ts";
-import type { AnalysisStatus, AppState, Store } from "../../../core/store.ts";
+import type {
+  AnalysisStatus,
+  AppState,
+  Notice,
+  Store,
+} from "../../../core/store.ts";
 import { sampleProject } from "../../../core/testSupport.ts";
 import type {
   DiversityResult,
@@ -33,6 +38,36 @@ import { StoreProvider } from "../../store.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
 import { DiversityOptionsPart } from "./DiversityOptionsPart.tsx";
 import { DiversityResults } from "./DiversityResults.tsx";
+import { noSpectrumLine } from "./spectrumWords.ts";
+import type * as SpectrumWordsModule from "./spectrumWords.ts";
+import type * as HistogramModule from "../../../charts/histogram.ts";
+
+// The lines of the populations of the spectrum are made by
+// noSpectrumLine, counted here so that a test sees when the block is
+// drawn again.
+vi.mock("./spectrumWords.ts", async (importOriginal) => {
+  const words = await importOriginal<typeof SpectrumWordsModule>();
+  return { ...words, noSpectrumLine: vi.fn(words.noSpectrumLine) };
+});
+
+/** The histogram of the population whose spectrum then throws, as a
+    defect of the plot would; none when `null`. */
+const plots = vi.hoisted(() => ({ throwsFor: null as string | null }));
+vi.mock("../../../charts/histogram.ts", async (importOriginal) => {
+  const histogram = await importOriginal<typeof HistogramModule>();
+  return {
+    ...histogram,
+    createHistogram: (
+      ...args: Parameters<typeof histogram.createHistogram>
+    ): ReturnType<typeof histogram.createHistogram> => {
+      const throwsFor = plots.throwsFor;
+      if (throwsFor !== null && args[1].title.endsWith(throwsFor)) {
+        throw new Error("popnei_web defect: a histogram of the test threw.");
+      }
+      return histogram.createHistogram(...args);
+    },
+  };
+});
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -77,6 +112,10 @@ function testStore(): Store<JobResult, Blob> {
     individualsKept: null,
     runs: [],
   };
+  showNotice = (notice) => {
+    state = { ...state, notice };
+    for (const listener of listeners) listener();
+  };
   const store = {
     getState: () => state,
     subscribe: (listener: () => void) => {
@@ -100,6 +139,10 @@ function testStore(): Store<JobResult, Blob> {
   };
 }
 
+/** Puts `notice` in the state of the last store made, as a change of
+    another analysis does, and tells the screens. */
+let showNotice: (notice: Notice | null) => void = () => undefined;
+
 /** An announcer that keeps what it is given. */
 const ANNOUNCER = {
   announce: (text: string) => {
@@ -117,6 +160,7 @@ beforeEach(() => {
   // The sample project with no options of any analysis: its own options
   // of the diversity are not those of the diversity of stage 5.
   project = { ...sampleProject(), analyses: [] };
+  plots.throwsFor = null;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -244,6 +288,11 @@ function typeAndEnter(input: HTMLInputElement, text: string): void {
   press("Enter");
 }
 
+/** What the line under the field of the draw says of the draw, whether
+    it is the default or typed. */
+const SPECTRUM_SENTENCE =
+  " The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.";
+
 /** The line of the default draw of the sample project, diploid, at the
     minimum of 20. */
 const DEFAULT_LINE =
@@ -307,13 +356,17 @@ describe("PA7 D1 the options of the diversity, drawn by React", () => {
       "the number of chromosomes of the rarefaction changed",
     ]);
     expect(diversityOptions(project).numCalledAlleles).toBe(96);
-    expect(describedAs(fields().draw)).toBe("Typed; the default would be 40.");
+    expect(describedAs(fields().draw)).toBe(
+      `Typed; the default would be 40.${SPECTRUM_SENTENCE}`,
+    );
     const useDefault = button("Use the default");
     expect(useDefault).not.toBeNull();
     // A change of the minimum leaves the draw typed as it is.
     typeAndEnter(fields().minimum, "30");
     expect(fields().draw.value).toBe("96");
-    expect(describedAs(fields().draw)).toBe("Typed; the default would be 60.");
+    expect(describedAs(fields().draw)).toBe(
+      `Typed; the default would be 60.${SPECTRUM_SENTENCE}`,
+    );
 
     act(() => {
       button("Use the default")?.focus();
@@ -373,7 +426,7 @@ describe("PA7 D1 the options of the diversity, drawn by React", () => {
       [
         fields().draw,
         "4,0",
-        "Write the number of chromosomes as a whole number, 40 and not 40,0; the number of chromosomes stays 40.",
+        "Write the number of chromosomes with digits alone, 2400 and not 2,400 or 40,0; the number of chromosomes stays 40.",
       ],
     ] as const;
     for (const [input, text, line] of lines) {
@@ -572,6 +625,8 @@ function withSpectra(n: number): DiversityResult {
   p2[0] = 3;
   return {
     ...flowResult(n),
+    // p1 cut to 12 individuals, under the minimum of 20.
+    numIndividuals: Uint32Array.from([48, 84, 12]),
     numVarsInDraw: Uint32Array.from([5, 3, 0]),
     foldedSfs: [p0, p2, null],
   };
@@ -607,7 +662,7 @@ describe("PA7 D2 the block of the spectrum, drawn by React", () => {
       "Every variant of p2 in the draw shows one allele only, so its spectrum has no bar.",
     );
     expect(groups[2]?.textContent).toContain(
-      "p1 has 68 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
+      "p1 has 12 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
     );
     expect(container.textContent).toContain(
       "The last bar, 2, holds one count where the others hold two, such as 1 and 3",
@@ -617,7 +672,7 @@ describe("PA7 D2 the block of the spectrum, drawn by React", () => {
     ).toContain("Download the spectrum as CSV");
   });
 
-  test("the tab of the table shows a row per count and two columns per population calculated, and the histogram goes with its tab and comes back", () => {
+  test("the tab of the table shows a row per count and two columns per population, no value in those of a population not calculated, and the histogram goes with its tab and comes back", () => {
     draw(
       createElement(DiversityResults, { result: withSpectra(4), check: null }),
     );
@@ -646,15 +701,17 @@ describe("PA7 D2 the block of the spectrum, drawn by React", () => {
       "p0, share",
       "p2, variants",
       "p2, share",
+      "p1, variants",
+      "p1, share",
     ]);
     expect(
       [...(spectrum?.querySelectorAll("tbody tr") ?? [])].map((row) =>
         [...row.children].map((cell) => cell.textContent),
       ),
     ).toEqual([
-      ["0", "1.0", "not drawn", "3.0", "not drawn"],
-      ["1", "2.0", "0.5000", "0.0", "no value"],
-      ["2", "2.0", "0.5000", "0.0", "no value"],
+      ["0", "1.0", "not drawn", "3.0", "not drawn", "no value", "no value"],
+      ["1", "2.0", "0.5000", "0.0", "no value", "no value", "no value"],
+      ["2", "2.0", "0.5000", "0.0", "no value", "no value", "no value"],
     ]);
   });
 
@@ -706,8 +763,228 @@ describe("PA7 D2 the histograms of the spectrum share one vertical scale", () =>
       ),
     );
     expect(tops).toHaveLength(2);
+    // Each histogram draws its own population.
+    const groups = [...container.querySelectorAll('[role="group"]')];
+    expect(groups[1]?.querySelector("svg desc")?.textContent).toBe(
+      "The spectrum of p2: 3 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.7500, at 2.",
+    );
     // 0.75, made round by the scale's `nice`, and not p0's own 0.5.
     expect(tops[0]).toBeCloseTo(0.8, 10);
     expect(tops[1]).toBeCloseTo(0.8, 10);
+  });
+});
+
+/** Pastes `text` over the whole of `input`, as the browser does with the
+    clipboard: a `paste` event that holds it. */
+function pasteOver(input: HTMLInputElement, text: string): void {
+  act(() => {
+    input.focus();
+    input.setSelectionRange(0, input.value.length);
+  });
+  act(() => {
+    const event = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", {
+      value: { getData: () => text },
+    });
+    input.dispatchEvent(event);
+  });
+}
+
+describe("PA7 D1 the number of the default, typed, pasted or stepped to", () => {
+  test("the default's number pasted over the whole field is kept as typed, as typing it is", () => {
+    draw(createElement(DiversityOptionsPart));
+    pasteOver(fields().draw, "40");
+    expect(diversityOptions(project).numCalledAlleles).toBe(40);
+    expect(applied).toEqual([
+      "the number of chromosomes of the rarefaction changed",
+    ]);
+  });
+
+  test("an arrow key that steps to the default's number does not mark the draw typed", () => {
+    draw(createElement(DiversityOptionsPart));
+    const input = fields().draw;
+    act(() => {
+      input.focus();
+      input.setSelectionRange(0, input.value.length);
+    });
+    typeKeys(input, "39");
+    press("ArrowUp");
+    expect(input.value).toBe("40");
+    expect(diversityOptions(project).numCalledAlleles).toBeNull();
+    expect(applied).toEqual([]);
+  });
+
+  test("the Down arrow at the least draw, with the default's number typed and not committed, does not mark the draw typed", () => {
+    // A minimum of 1 individual makes the default draw 2, the least one:
+    // the arrow steps nowhere, and commits the number the field holds.
+    project = setAnalysisOptions(project, diversity, {
+      minNumIndividuals: 1,
+      polyThreshold: 0.95,
+      numCalledAlleles: null,
+    });
+    draw(createElement(DiversityOptionsPart));
+    const input = fields().draw;
+    expect(input.value).toBe("2");
+    act(() => {
+      input.focus();
+      input.setSelectionRange(0, input.value.length);
+    });
+    typeKeys(input, "2");
+    press("ArrowDown");
+    expect(input.value).toBe("2");
+    expect(diversityOptions(project).numCalledAlleles).toBeNull();
+    expect(applied).toEqual([]);
+  });
+});
+
+describe("PA7 D2 the block of the spectrum, the review of work package 7", () => {
+  test("a histogram that throws leaves its heading alone, and the other histograms, the table, the fields and the download stay", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const r = withSpectra(4);
+    plots.throwsFor = "p2";
+    status = {
+      kind: "done",
+      key: KEY,
+      result: {
+        ...r,
+        numVarsInDraw: Uint32Array.from([5, 3, 4]),
+        foldedSfs: [
+          r.foldedSfs[0] ?? null,
+          Float64Array.from([1, 1, 3]),
+          Float64Array.from([1, 2, 2]),
+        ],
+      },
+      warnings: [],
+      check: null,
+    };
+    draw(createElement(AnalysisPanel, { id: "diversity" }));
+    expect(
+      [...container.querySelectorAll("h3")].map((h) => h.textContent),
+    ).toEqual(["p0", "p2", "p1"]);
+    expect(container.querySelectorAll("svg")).toHaveLength(2);
+    expect(container.querySelectorAll('[role="group"]')).toHaveLength(2);
+    expect(container.textContent).toContain(
+      "The diversity of each population, over the 1,152 variants of panel.nei the filters kept.",
+    );
+    expect(container.querySelectorAll("input[data-number-field]")).toHaveLength(
+      3,
+    );
+    expect(
+      [...container.querySelectorAll("button")].map((b) => b.textContent),
+    ).toContain("Download the spectrum as CSV");
+  });
+
+  test("above the bars a histogram draws, the line of too many bars and, under it, the lines of the populations with no spectrum", () => {
+    draw(
+      createElement(DiversityResults, {
+        result: withSpectra(2400),
+        check: null,
+      }),
+    );
+    expect(container.textContent).toContain(
+      "A draw of 2,400 chromosomes gives 1,200 bars per population, too many to draw.",
+    );
+    expect(
+      [...container.querySelectorAll("h3")].map((h) => h.textContent),
+    ).toEqual(["p2", "p1"]);
+    expect(container.textContent).toContain(
+      "Every variant of p2 in the draw shows one allele only, so its spectrum has no bar.",
+    );
+    expect(container.textContent).toContain(
+      "p1 has 12 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
+    );
+    expect(container.textContent).not.toContain("Each bar is the share");
+  });
+
+  test("the bar limit: a draw of 2,000 draws its 1,000 bars, and one of 2,002 does not", () => {
+    draw(
+      createElement(DiversityResults, {
+        result: withSpectra(2000),
+        check: null,
+      }),
+    );
+    expect(container.querySelectorAll("svg")).toHaveLength(1);
+    expect(container.textContent).not.toContain("too many to draw");
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    draw(
+      createElement(DiversityResults, {
+        result: withSpectra(2002),
+        check: null,
+      }),
+    );
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    expect(container.textContent).toContain(
+      "A draw of 2,002 chromosomes gives 1,001 bars per population, too many to draw.",
+    );
+  });
+
+  test("with no population with a histogram, no line of what each bar is", () => {
+    const r = withSpectra(4);
+    draw(
+      createElement(DiversityResults, {
+        result: {
+          ...r,
+          foldedSfs: [
+            Float64Array.from([5, 0, 0]),
+            r.foldedSfs[1] ?? null,
+            null,
+          ],
+        },
+        check: null,
+      }),
+    );
+    expect(container.querySelectorAll("svg")).toHaveLength(0);
+    expect(container.textContent).not.toContain("Each bar is the share");
+  });
+
+  test("under the panel's frame, drawn again when a notice comes and goes, the block is not drawn again", () => {
+    status = {
+      kind: "done",
+      key: KEY,
+      result: withSpectra(40),
+      warnings: [],
+      check: null,
+    };
+    draw(createElement(AnalysisPanel, { id: "diversity" }));
+    const made = vi.mocked(noSpectrumLine).mock.calls.length;
+    expect(made).toBeGreaterThanOrEqual(3);
+    act(() => {
+      showNotice({
+        cause: { kind: "command", description: "the MAF filter changed" },
+        removed: ["pca"],
+        leftBehind: [],
+        stopped: [],
+        writeLeftBehind: false,
+        writeStopped: false,
+        writeDiscarded: false,
+      });
+    });
+    act(() => {
+      showNotice(null);
+    });
+    expect(vi.mocked(noSpectrumLine).mock.calls.length).toBe(made);
+  });
+});
+
+describe("PA7 D1 the ranges of the fields of the diversity", () => {
+  test("0 in the minimum, 1 in the frequency and 4294967295 in the draw are taken, and the Up arrow moves the frequency by 0.01", () => {
+    draw(createElement(DiversityOptionsPart));
+    typeAndEnter(fields().minimum, "0");
+    typeAndEnter(fields().threshold, "1");
+    typeAndEnter(fields().draw, "4294967295");
+    expect(diversityOptions(project)).toEqual({
+      minNumIndividuals: 0,
+      polyThreshold: 1,
+      numCalledAlleles: 4294967295,
+    });
+    typeAndEnter(fields().threshold, "0.95");
+    act(() => {
+      fields().threshold.focus();
+    });
+    press("ArrowUp");
+    expect(diversityOptions(project).polyThreshold).toBe(0.96);
   });
 });
