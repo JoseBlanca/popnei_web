@@ -276,8 +276,8 @@ give the principal components that go into the GWAS as covariates.
   Variants step, with the reason said beside the field and beside the
   Run button. Decided by the owner on 27 September 2026 for the PCA's
   pruning, and kept for its own LD filter; the option not taken, a
-  default of 50,000 base pairs. The LD decay of section 6, once it
-  exists, is the way to choose it. The LD filter of the dataset has no
+  default of 50,000 base pairs. The LD decay of section 6 is the way to
+  choose it. The LD filter of the dataset has no
   default distance either (section 3). Each PCA with an LD filter
   prunes again inside its one pass over the file: popnei has no way to keep the variants a
   pruning left and to give them to the next PCA, and a PCA reads the
@@ -378,8 +378,9 @@ have their minor allele in 1, 2, ... of the sampled chromosomes.
   projected down to a common number of chromosomes, the same number the
   rarefaction draws, set by its one field.
 - It is calculated in the same call of popnei as the rest of the
-  diversity, and shown below the diversity's table, in one Run and one
-  pass, as the owner decided on 30 September 2026 (point 11 of
+  diversity, and shown below the diversity's table, in the diversity's
+  Run and with no pass of its own, as the owner decided on 30 September
+  2026 (point 11 of
   `docs/specs/stage-5-open-points.md`). The option not taken was an
   analysis of its own, with a pass and a Run of its own.
 - The height of each bar is the share of the population's variants that
@@ -452,7 +453,11 @@ individuals, because r² is then biased upwards.
   user's genome.
 - Shown as a heatmap of the measure the user picks and as a table of
   the pairs, each with both measures and the number of variants it was
-  calculated over. The heatmap orders the populations
+  calculated over, up to 200 populations; above 200 neither is drawn,
+  the panel says how many populations there are, and the table is
+  downloaded as CSV (point 16 of `docs/specs/stage-5-open-points.md`,
+  decided by the owner on 30 September 2026). The heatmap orders the
+  populations
   along the first axis of popnei's PCoA of the distance matrix, so that
   similar ones are together, and in the order of the metadata file when
   popnei cannot place them, as when a pair has no distance, as the owner
