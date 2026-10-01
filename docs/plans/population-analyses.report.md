@@ -629,6 +629,23 @@ A9. **Two sentences of other specs.** `steps/variants.md` (about lines
 
 ## Stop B: the diversity and the spectrum, for the owner
 
+### How to try it
+
+In a terminal, in the checkout made for this stop,
+`/Users/jose/devel/popnei_web/.claude/worktrees/stop-b`, which holds
+the branch at fa345dd, run `npm run dev` and open the address it
+prints, then the population genetics application. Load
+`e2e/fixtures/panel.nei` in the Variants step and
+`e2e/fixtures/panel_pops.csv` in the Individuals step, with its column
+`popcat`; in the Analyses step, "Diversity", Run. For the warning of
+the variants outside the draw, type 96 in the third field and Run
+again; for a population under the minimum, load
+`e2e/fixtures/panel_split.csv` with the column `popsplit` and set the
+minimum at 25. That checkout also holds the panel of the distances of
+stop A as it stands, and the panel of the LD decay before its review,
+which is stop C's and not to be judged yet. The checks ran Chromium
+and WebKit only: try it in Firefox and Safari by hand too.
+
 ### What to judge
 
 - The panel of the diversity whole: the three fields (the minimum, the
