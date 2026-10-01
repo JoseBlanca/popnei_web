@@ -1230,10 +1230,20 @@ describe("PA10 the base of the 2D plots, a label of the horizontal axis on two l
       },
       spectrumLike,
     );
-    // 384 − 60 − 16 = 308 would hold the 338.4 counted pixels of the label,
+    // 384 − 60 − 16 = 308 would hold the 333.7 counted pixels of the label,
     // with 16 of margin on each side; 384 − 76 − 16 = 292 does not.
     expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(2);
     expect(draws.at(-1)).toEqual({ innerWidth: 292, innerHeight: 216 });
+  });
+
+  test("at 288 by 288 Expected heterozygosity (unbiased), 34 characters, counted at 7.1 pixels, fits the 122 pixels of half its frame and its margin, and stays one line", () => {
+    const element = sizedElement(288, 288);
+    createPlot2d(
+      element,
+      withLabel("Expected heterozygosity (unbiased)"),
+      spectrumLike,
+    );
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(0);
   });
 
   test("a label with no space stays one line, and one that fits, Major allele frequency, too", () => {

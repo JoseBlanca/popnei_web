@@ -191,10 +191,11 @@ const Y_LABEL_FROM_LEFT = 16;
  * The width counted for a character of the label of an axis, of 13
  * pixels, since nothing in a plot measures text: the label of the
  * spectrum took 6.0 pixels a character in the font of the Mac and 7.1 in
- * DejaVu Sans, the font of the checks at 320 pixels (plot2d.md, "The
+ * DejaVu Sans, the font of the checks at 320 pixels, the widest; at 7.2
+ * a label of the Variants step that fits was broken (plot2d.md, "The
  * axes").
  */
-const LABEL_CHARACTER_WIDTH = 7.2;
+const LABEL_CHARACTER_WIDTH = 7.1;
 /**
  * From one line of a label of the horizontal axis on two lines to the
  * next, and what the base adds to the bottom margin for the second.
