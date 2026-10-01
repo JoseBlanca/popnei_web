@@ -850,7 +850,8 @@ metadata file the test writes, `IID,pop` with the individual `i000` to
 `i099` in the population `q` and its number modulo 17, `q0` to `q16`,
 17 populations of 5 or 6 individuals; types 100000; runs; and sees 16
 rows in the legend of the plot, `q0` to `q15`, the line "The plot draws
-the first 16 of the 17 populations, in the order of the table. The two
+the first 16 of the 17 populations, in the order of the table of the
+populations. The two
 tables hold all 17.", 17 rows in the table of the populations, and, in
 its tab, the table of the bins in a frame lower than its 850 rows, its
 header still in view after the frame is scrolled to its end.

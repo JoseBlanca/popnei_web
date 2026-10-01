@@ -341,8 +341,9 @@ defect of the runner.
   popnei's call (decision 7), `calculated` false; in the block, a line
   with the words of "Its words", which take the minimum from the
   diversity's options in the project, as its warning
-  `tooFewIndividuals` does, and no histogram. It is not in the table nor
-  in the CSV.
+  `tooFewIndividuals` does, and no histogram. In the table its two
+  columns hold "no value", since the review of work package 7 of the
+  plan of stage 5 (f4d6764); it is not in the CSV.
 - **Populations that hold fewer than 2 chromosomes between them**, one
   haploid individual: the diversity makes no call of `calcPopDiversity`
   (`diversity.md`, "Why it cannot run"), so the population has the
