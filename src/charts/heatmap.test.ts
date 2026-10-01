@@ -484,6 +484,58 @@ describe("PA4 D2 the heatmap under jsdom, its cells, values and names", () => {
     expect(textOf("0.0613")).toBe(p2p0);
     expect(legendTexts(element)).toEqual(["Jost's D", "0.0657", "0.0000"]);
   });
+
+  test("two names: a grid of two by two, the one pair drawn in its two cells, and the bar from 0 to its value", () => {
+    const element = sizedElement(640, 640);
+    createHeatmap(element, heatmapOf(["p2", "p1"], [FST_P2_P1]));
+    expect(axisNames(element, "g.chart-axis-y")).toEqual(["p2", "p1"]);
+    expect(axisNames(element, "g.chart-axis-x")).toEqual(["p2", "p1"]);
+    expect(cellPaths(element)).toEqual([[viridisColour(255), 2]]);
+    expect(cellTexts(element).map((text) => text.text)).toEqual([
+      "0.1096",
+      "0.1096",
+    ]);
+    expect(element.querySelector("path.chart-cell-none")).toBeNull();
+    expect(element.querySelectorAll("rect.chart-legend-band")).toHaveLength(32);
+    expect(legendTexts(element)).toEqual(["Hudson's Fst", "0.1096", "0.0000"]);
+  });
+
+  test("an update to another order of the same names, p0, p2, p1 for p2, p0, p1: the names of both axes in the new order, each value in the cell of its pair, in the same SVG and the same texts", () => {
+    const element = sizedElement(640, 640);
+    const handle = createHeatmap(element, panel());
+    const svg = element.querySelector("svg");
+    const textsOf = (value: string): Element[] =>
+      [...element.querySelectorAll("text.chart-cell-text")].filter(
+        (text) => text.textContent === value,
+      );
+    const texts = new Set(element.querySelectorAll("text.chart-cell-text"));
+    const before = textsOf("0.1050");
+    handle.update(
+      heatmapOf(["p0", "p2", "p1"], [FST_P0_P2, FST_P0_P1, FST_P2_P1]),
+    );
+    expect(element.querySelector("svg")).toBe(svg);
+    // The six texts are those of before, each kept by its row and column.
+    const after = [...element.querySelectorAll("text.chart-cell-text")];
+    expect(after).toHaveLength(6);
+    expect(after.every((text) => texts.has(text))).toBe(true);
+    // The two of p0 and p1 are the elements that held that pair before.
+    expect(new Set(textsOf("0.1050"))).toEqual(new Set(before));
+    expect(textsOf("0.1050").every((text) => before.includes(text))).toBe(true);
+    expect(axisNames(element, "g.chart-axis-y")).toEqual(["p0", "p2", "p1"]);
+    expect(axisNames(element, "g.chart-axis-x")).toEqual(["p0", "p2", "p1"]);
+    // p0 and p1, 0.1050, are now the first and the third: row 0, column 2.
+    const width = PANEL_BAND - 1;
+    const p0p1 = cellTexts(element).filter((text) => text.text === "0.1050");
+    expect(p0p1.map((text) => [text.x, text.y])).toEqual([
+      [2 * PANEL_BAND + width / 2, width / 2],
+      [width / 2, 2 * PANEL_BAND + width / 2],
+    ]);
+    expect(cellPaths(element)).toEqual([
+      [viridisColour(239), 2],
+      [viridisColour(245), 2],
+      [viridisColour(255), 2],
+    ]);
+  });
 });
 
 describe("PA4 D2 the heatmap under jsdom, its refusals", () => {
@@ -576,6 +628,21 @@ describe("PA4 D2 the heatmap under jsdom, the cell under the pointer", () => {
     expect(tooltipText(element)).toEqual([
       "p2 and p1",
       "Hudson's Fst: no value",
+    ]);
+  });
+
+  test('a negative value is written with the minus sign in the tooltip, "Hudson\'s Fst −0.0113"', () => {
+    const element = sizedElement(640, 640);
+    createHeatmap(
+      element,
+      heatmapOf(["p0a", "p0b", "p1"], [FST_P0A_P0B, 0.1028, 0.102]),
+    );
+    // Names of 3 characters: the left margin is 8 + 3 × 7.2, 29.6.
+    const band = (640 - 29.6 - 118.4 + 1) / 3;
+    moveTo(element, 1.5 * band - 0.5, 0.5 * band - 0.5);
+    expect(tooltipText(element)).toEqual([
+      "p0a and p0b",
+      "Hudson's Fst −0.0113",
     ]);
   });
 
