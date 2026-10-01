@@ -209,10 +209,14 @@ and turned along the vertical one, in the margins:
   centred under the frame, so it fits while half its width is at most
   the room from the middle of the frame to the nearer side of the SVG,
   the half of the frame and the left or the right margin. Its width is
-  counted, 7.2 pixels a character, and not measured, as the margins
+  counted, 7.1 pixels a character, and not measured, as the margins
   are: at its 13 pixels the label of the spectrum took 6.0 pixels a
   character in the font of the Mac and 7.1 in DejaVu Sans, the font of
-  the checks at 320 pixels, in Chromium and WebKit. A label that does
+  the checks at 320 pixels, in Chromium and WebKit, the widest of the
+  two. At 7.2, the count of the numbers of the axes, "Expected
+  heterozygosity (unbiased)", 34 characters under a histogram of the
+  Variants step at 320 pixels, counted 122.4 pixels of half width
+  against 122 of room and was broken, where it fits. A label that does
   not fit is broken at the space nearest its middle, the two lines
   centred under the frame and 16 pixels apart, and the base adds 16
   pixels to the bottom margin the definition gave, so that the frame is
