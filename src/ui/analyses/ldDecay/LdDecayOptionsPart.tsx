@@ -12,7 +12,8 @@
  * Run button gives; a distance committed that the memory does not allow
  * is announced with that reason, since the focus is then on the field or
  * past it, and the reason appears beside it and under Run with no word
- * to a screen reader. Under the fields, while the LD pruning of the Variants
+ * to a screen reader: once, when the lock turns on, and not at each
+ * distance committed while it holds, an arrow key among them. Under the fields, while the LD pruning of the Variants
  * step is on, the line that says it is not applied here, also over a plot
  * shown, which the pruning turned on does not remove.
  */
@@ -87,9 +88,12 @@ export function LdDecayOptionsPart(): React.JSX.Element {
           refusedText={distanceRefusedText}
           onRefused={announce}
           onChange={(typed) => {
+            // Said when the commit turns the lock on, or changes its
+            // reason, and not again while the same reason holds.
+            const before = maxDistReason(store.getState().project);
             apply(maxDistCommand(typed));
             const reason = maxDistReason(store.getState().project);
-            if (reason !== null) announce(reason);
+            if (reason !== null && reason !== before) announce(reason);
           }}
         />
         {distanceReason !== null && (

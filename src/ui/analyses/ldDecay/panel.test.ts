@@ -351,6 +351,38 @@ describe("PA8 the options of the LD decay, drawn by React", () => {
     expect(container.textContent).not.toContain(reason);
   });
 
+  test("review of PA8, second pass: the reason of the memory is announced when the lock turns on, once, and not at each distance committed while it holds; under the limit and above it again, it is announced again", () => {
+    draw(createElement(LdDecayOptionsPart));
+    const [distance] = fields();
+    select(distance);
+    typeKeys(distance, "12500001");
+    press("Enter");
+    press("ArrowUp");
+    press("ArrowUp");
+    press("ArrowUp");
+    expect(ldDecayOptions(project).maxDist).toBe(12_500_004);
+    select(fields()[0]);
+    typeKeys(fields()[0], "13000000");
+    press("Tab");
+    // The focus leaves the field, as the browser moves it after the Tab
+    // key, which jsdom does not.
+    act(() => {
+      fields()[0].blur();
+    });
+    expect(ldDecayOptions(project).maxDist).toBe(13_000_000);
+    expect(applied).toHaveLength(5);
+    expect(announced).toHaveLength(1);
+    expect(announced[0]).toMatch(/^With 2 populations, the largest distance/);
+    select(fields()[0]);
+    typeKeys(fields()[0], "12500000");
+    press("Enter");
+    expect(announced).toHaveLength(1);
+    press("ArrowUp");
+    expect(ldDecayOptions(project).maxDist).toBe(12_500_001);
+    expect(announced).toHaveLength(2);
+    expect(announced[1]).toBe(announced[0]);
+  });
+
   test("review of PA8: 12345 is taken as typed; the Up arrow moves 100000 to 100001 and 0.8 to 0.81, a command each; 9007199254740993 is refused as it was typed", () => {
     draw(createElement(LdDecayOptionsPart));
     const [distance, frequency] = fields();
