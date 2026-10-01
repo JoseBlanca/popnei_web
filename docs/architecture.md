@@ -2245,7 +2245,9 @@ installed into `node_modules/` from its release, as popnei is (section
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
 from `core` or `ui`. From stage 4 core imports, of `src/worker`, the
-types of `protocol.ts` and the pure functions of
+types of `protocol.ts` and its constants, the least draw of the
+rarefaction the first, written once beside the messages that check it
+(the owner, 1 October 2026), and the pure functions of
 `src/worker/individuals/columnTypes.ts`, which read the number a cell
 holds and the types a column allows, so that the project and the reader
 cannot disagree on them (`docs/specs/core/project.md`, `columnAllows`). Only `src/worker/runner.ts` calls popnei, apart

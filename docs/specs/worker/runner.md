@@ -369,9 +369,10 @@ would read as popnei's message.
 A diversity job holds its pass, the load id, the filters of the variants
 and the list of the individuals kept, the populations, as pairs of a
 name and its individuals in the order of the individuals file, only
-individuals kept and none empty, and the two options of the diversity,
+individuals kept and none empty, and, until stage 5, the two options
+the diversity then had,
 `minNumIndividuals` and `polyThreshold` (`docs/specs/analyses/diversity.md`,
-`DiversityJob`). After the steps are on the `Variants` (above), the
+`DiversityJob`); the two fields stage 5 adds are below, after step 5. After the steps are on the `Variants` (above), the
 runner:
 
 1. Checks the job: no two populations of one name, since the object
@@ -448,7 +449,11 @@ step 5, over the same steps of the `Variants`, the runner:
    decided on 30 September 2026 until popnei issue #4 gives the two
    heterozygosities and the proportion of polymorphic variants in this
    call (decision 4). With `popDiversityPops` empty there is no second
-   call and no second pass.
+   call and no second pass: core sends it empty when no population has
+   the minimum of individuals and, from 1 October 2026, when the
+   populations hold fewer than 2 chromosomes between them, the least
+   draw (`diversity.md`, "Why it cannot run"); the runner does the same
+   for both and knows neither reason.
 7. Puts popnei's arrays back in the order of the job, as step 4 does,
    `foldedSfs` among them, which popnei gives as an object by the name
    of the population, each array copied into a new `Float64Array`, read

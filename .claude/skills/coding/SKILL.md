@@ -53,7 +53,7 @@ import:
 
 | layer | may import | must not import |
 |---|---|---|
-| `src/core` | itself; the types of `src/worker/protocol.ts`; from stage 4, `src/worker/individuals/columnTypes.ts`, the reader's pure functions of the numbers and the types of a column, for `columnAllows` and the colours of the PCA (`configs.md`); the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
+| `src/core` | itself; the types of `src/worker/protocol.ts` and its constants; from stage 4, `src/worker/individuals/columnTypes.ts`, the reader's pure functions of the numbers and the types of a column, for `columnAllows` and the colours of the PCA (`configs.md`); the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
 | `src/worker` | itself; `popnei`, in `runner.ts` only; `xlsx_rs`, the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
 | `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, `src/worker/filesRunner.ts`, D3, three.js, a value of `popnei` |
@@ -76,7 +76,11 @@ The reasons:
   comes to core as data, in a message of the calculation worker.
 - **`src/worker/protocol.ts` and `src/worker/messages.ts` import nothing
   of ours** but the types of popnei and of `src/core/result.ts`, so that
-  both sides can import them and no cycle forms. `protocol.ts` holds no
+  both sides can import them and no cycle forms. Core imports the types
+  of `protocol.ts` and its constants, a number that the check of a
+  message and core must agree on, as the least draw of the rarefaction,
+  `MIN_DRAW`, which is then written once; decided by the owner on 1
+  October 2026. A constant loads nothing of the worker. `protocol.ts` holds no
   type of the DOM either, since core imports it and is checked with none;
   the messages, which carry a `File`, are in `messages.ts`, which only the
   client and the runners import (`worker.md`).

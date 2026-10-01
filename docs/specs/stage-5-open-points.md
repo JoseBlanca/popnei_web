@@ -496,6 +496,106 @@ the stage.
   the tables", which the shared sentence cannot say after an analysis
   named in the singular.
 
+## Decided by the owner on 1 October 2026: the diversity, the spectrum and the histogram
+
+The owner tried the panel of the diversity that day, in Firefox, with
+their own data, at the second stop of the plan of stage 5, and took
+each recommendation of the plan's report as it was written
+(`docs/plans/population-analyses.report.md`, "Stop B: the diversity and
+the spectrum, for the owner", and "For the owner, as the work goes").
+The points keep their names there, B1 to B8 of the stop and the
+numbered points. The specs changed are
+`docs/specs/analyses/diversity.md`, `sfs.md` and a row of `popDists.md`,
+`docs/specs/charts/histogram.md` and `plot2d.md`, a sentence of
+`docs/specs/worker/runner.md`, and a sentence each of
+`docs/architecture.md`, section 9, and the coding skill.
+
+- **B1. The table of eleven columns stays as it is.** It is 1,187
+  pixels wide at the least, wider than the column of the page on any
+  window, so it scrolls sideways, and its last column, the rarefied
+  private alleles, is seen only once it is scrolled. Not taken: shorter
+  headers, or two tables.
+- **B2. "Use the default" is drawn as a link**, at the end of the line
+  under the field of the draw. It stays a button for the keyboard and
+  a screen reader. Not taken: a button under the field, which looked
+  like the Run button under it.
+- **B3. The lock of the draw counts the largest population.** A draw
+  larger than the chromosomes of the largest population locks the
+  panel, "at most 168" on `panel.nei`, and, below that, the panel names
+  before a Run the populations that hold fewer chromosomes than the
+  draw, which will have no rarefied values and no spectrum. Not taken:
+  the lock at the chromosomes of every individual kept, 400 on
+  `panel.nei`, under which a draw from 169 to 400 ran both passes and
+  gave no rarefied value and no spectrum to any population. Within
+  this decision, the task that built it kept the older count in one
+  case the recommendation did not foresee: a haploid file whose
+  populations have one individual each, where "at most 1" is a number
+  the field refuses.
+- **B4. The warning of the MAF filter on the spectrum is said in the
+  block of the spectrum**, at the end of its caption. Not taken: among
+  the warnings above the diversity's table, about 500 pixels above the
+  histograms. It is then no longer counted among the diversity's
+  warnings, and the script of stage 6 takes it from the spectrum's own
+  function.
+- **B5. The default's own number typed over the default still removes
+  the table**, and the notice says why: "…because the number of
+  chromosomes of the rarefaction is now a typed one, and no longer
+  follows the minimum number of individuals". Not taken: "…changed",
+  where no number the user saw had changed.
+- **B6. What a screen reader hears of the spectrum.** The description
+  of each histogram starts at its numbers and does not repeat its
+  title, and the block has a heading, "Site frequency spectrum", with
+  the headings of the populations one level under it. Not taken: the
+  title heard twice, and the populations right under "Diversity".
+- **B7. One label for the minimum of individuals in the diversity and
+  in the distances**, "Individuals with a called genotype needed in
+  each population, per variant", with a line under each field that says
+  it is for that analysis alone. Of the two labels the distances' was
+  kept, since it says where the number is counted; the diversity's was
+  "Minimum number of individuals with a genotype, a whole number from
+  0". Not taken: two labels for the same number.
+- **B8. Two things of `diversity.md`.** The sentence that called the
+  width of the table of eleven columns "not measured" gives the 1,187
+  pixels; and the line under the field of a draw typed before the
+  variants file is read, "Typed; the default would be the ploidy of the
+  variants file times the minimum number of individuals, 20.", written
+  with the code, is in the spec. Not taken: other words.
+- **Point 1. The example of the vertical axis in `histogram.md`** reads
+  0 to 0.065, which the rule of the spec gives, where it read 0 to
+  0.07. Not taken: a rounding to 5 ticks, which would change the
+  histograms of the Variants step. The plan's deliverable `PA4 D6`
+  quotes the same number, and is the plan's to correct.
+- **Point 15. The examples of the key in `diversity.md`** give the
+  options without the default draw, as its rule does. Not taken: the
+  rule changed to the examples.
+- **Point 16. The words the code chose where the spec had none** are in
+  the spec: the private alleles counted without several populations,
+  the variants outside the draw for populations with different counts
+  and for none, and the lock of the draw for one individual. Not taken:
+  other words.
+- **Point 17. One haploid individual no longer locks the diversity.**
+  When the populations hold fewer than 2 chromosomes between them, the
+  heterozygosities and the proportion of polymorphic variants are
+  calculated, in one pass, and a warning says why the alleles, the
+  private alleles, the rarefied values and the spectrum have no value;
+  and the line of the default draw says "and at least 2" when the
+  ploidy times the minimum is below 2. Not taken: the lock, which told
+  the user to type a draw "of at most 1", a number the field refuses.
+- **Point 20. A sentence of `runner.md`** says that the two options are
+  those the diversity had until stage 5. Not taken: the sentence as it
+  was, which read as the whole job.
+- **Point 25. Core imports the constants of the file of the worker's
+  jobs, as well as its types**, the least draw of the rarefaction the
+  first, so that the number is written once. Not taken: the number
+  written in five places.
+- **Point 26. The margins of a histogram.** The left margin follows
+  the longest number of the vertical axis; and the base of the plots
+  writes on two lines a label of the horizontal axis that would not
+  fit, with 16 pixels more below, which mends the label under the
+  histograms of the spectrum on a screen of 320 pixels. Not taken: a
+  shorter label on narrow screens, which mends one plot alone. The
+  label along the vertical axis fits there and is left on one line.
+
 ## Decided by the writers of the specs, for the owner to overrule
 
 Each is written in its spec with its reason and the option not taken;
@@ -518,10 +618,11 @@ The diversity (`docs/specs/analyses/diversity.md`):
   their mean per variant and that mean rarefied.
 - A draw larger than the chromosomes of the individuals kept locks the
   panel before the Run; without the lock popnei refuses it only after
-  the whole first pass.
+  the whole first pass. From 1 October 2026 the lock is at the
+  chromosomes of the largest population (B3, above).
 - A MAF filter raises no warning on the table, since every filter
   changes the variants the means are over; the spectrum warns (point
-  17).
+  17), in its block from 1 October 2026 (B4, above).
 - The warning of variants outside the draw comes whenever one variant
   is outside it, the owner's rule of 25 September 2026 for the variants
   without a value, and `docs/functionality.md` says so where it said "at
