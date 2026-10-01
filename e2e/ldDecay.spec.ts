@@ -735,6 +735,81 @@ test.describe("PA8 D2 the states of the LD decay with no result, and its plot on
       .toBeGreaterThan(0);
     await expectNoViolations(makeAxeBuilder);
   });
+
+  test("the review of PA10: at 320 pixels, in the committed font, the table of the populations scrolls sideways with each header on one line, and at 1280 pixels, before and after, it fits with its headers wrapped", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await load(page, "ld_pops.csv");
+    await useWideFont(page);
+    await runTo100000(page);
+    const frame = panel(page).getByRole("region", {
+      name: /^The LD decay of each population/,
+    });
+    await expect(frame).toHaveCount(0);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await expect(frame).toBeVisible();
+    const headers = populations(page).getByRole("columnheader");
+    const heights = await headers.evaluateAll((cells) =>
+      cells.map((cell) => cell.getBoundingClientRect().height),
+    );
+    // One line of 24 pixels and its padding of 4 above and below, where
+    // "r² at distance 0, of the curve" took five lines, 105 pixels.
+    expect(heights).toHaveLength(7);
+    for (const height of heights) expect(height).toBeLessThanOrEqual(34);
+    // Scrolled to its end, the table stays there when the page changes
+    // its width and the frame is measured again.
+    await frame.evaluate((element) => {
+      element.scrollTo({ left: element.scrollWidth });
+    });
+    await page.setViewportSize({ width: 330, height: 900 });
+    await expect
+      .poll(() =>
+        frame.evaluate(
+          (element) =>
+            element.scrollWidth - element.clientWidth - element.scrollLeft,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    // Back at 1280 pixels the table fits again with its headers wrapped,
+    // as it did before, and does not scroll; it is one of the widths at
+    // which a header stays wrapped whether the table scrolls or not.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(frame).toHaveCount(0);
+    await expect(headers.first()).toHaveCSS("white-space", "normal");
+  });
+
+  test("the review of PA10: at a text of 24 and of 32 pixels the plot's element is higher by the legend's rows exactly when the legend stands above the plot", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await load(page, "ld_pops.csv");
+    await runTo100000(page);
+    for (const root of [24, 32]) {
+      await page.evaluate((size) => {
+        document.documentElement.style.fontSize = `${String(size)}px`;
+      }, root);
+      const legend = panel(page).locator("g.chart-legend");
+      // The element of the plot, never narrower than 20rem: at 32 pixels
+      // its 640 hold the 586 the legend of ld.nei asks at the right of
+      // the frame, and at 24 its 480 do not.
+      const place = root === 32 ? "right" : "above";
+      await expect(legend).toHaveAttribute("data-place", place);
+      const element = panel(page).locator("svg.chart-line").locator("..");
+      const size = await element.evaluate((node) => ({
+        width: node.clientWidth,
+        height: node.clientHeight,
+      }));
+      expect(size.width).toBe(20 * root);
+      // 16 by 10, never lower than 22.5rem, and 44 pixels higher, 8 and
+      // two rows of 18, with the legend above.
+      const unlegended = Math.max((size.width * 10) / 16, 22.5 * root);
+      expect(size.height).toBeCloseTo(
+        unlegended + (place === "above" ? 44 : 0),
+        0,
+      );
+    }
+  });
 });
 
 /** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as

@@ -36,6 +36,28 @@ export interface SidewaysFrame {
   readonly attributes: SidewaysFrameAttributes;
 }
 
+/**
+ * Whether what `frame` holds is wider than it, as it would be with the
+ * headers of a table wrapped: on a narrow page the headers of a table
+ * that scrolls sideways stay on one line (Table.module.css), which widens
+ * it, so measured as drawn a table that scrolled would go on scrolling
+ * after the page widened, where with its headers wrapped it fits, as the
+ * table of the distances between populations of panel.nei did on a page
+ * of 340 pixels after one of 320, 352 pixels wide in a frame of 308. So the mark of a frame that scrolls is taken off for the
+ * measure and put back, with how far it was scrolled, within the one
+ * task, before the page is drawn.
+ */
+function widerWhenWrapped(frame: HTMLElement): boolean {
+  const marked = frame.getAttribute("data-scrolls");
+  if (marked === null) return frame.scrollWidth > frame.clientWidth;
+  const scrolled = frame.scrollLeft;
+  frame.removeAttribute("data-scrolls");
+  const wider = frame.scrollWidth > frame.clientWidth;
+  frame.setAttribute("data-scrolls", marked);
+  frame.scrollTo({ left: scrolled });
+  return wider;
+}
+
 /** Follows the frame `frameRef` and what it holds, and gives whether it
     scrolls and its attributes; with `down`, for a frame of limited height,
     whether it scrolls down too, which makes it a stop of the Tab key as
@@ -52,7 +74,7 @@ export function useSidewaysFrame(
     const frame = frameRef.current;
     if (frame === null) return;
     const observer = new ResizeObserver(() => {
-      const wider = frame.scrollWidth > frame.clientWidth;
+      const wider = widerWhenWrapped(frame);
       const higher = down && frame.scrollHeight > frame.clientHeight;
       setScrolls(wider);
       setScrollsDown(higher);

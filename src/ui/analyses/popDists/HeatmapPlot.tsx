@@ -4,8 +4,10 @@
  * docs/specs/charts/heatmap.md): created once in its element, updated
  * when its data change, the other measure among them, and destroyed when
  * it leaves the page. The element holds nothing React draws; its width
- * comes from the CSS of the panel, and its height from its ratio of 1 by
- * 1.
+ * comes from the CSS of the panel, and its height is that width less the
+ * left and the right margins of the heatmap and with the top and the
+ * bottom ones added, so that the square grid fills the frame from its
+ * top to the names under its columns (heatmap.md, "The size").
  *
  * The element is never narrower than the margins of the names and the
  * legend, which the heatmap gives from its data, and a grid of
@@ -16,7 +18,7 @@
  * and the Tab key reaches the frame, a region named by the title of the
  * heatmap, so that the arrow keys scroll it (WCAG 1.4.10 and 2.1.1).
  */
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 
 import { createHeatmap, heatmapMargin } from "../../../charts/heatmap.ts";
 import type { HeatmapData } from "../../../charts/heatmap.ts";
@@ -44,6 +46,10 @@ export interface HeatmapPlotProps {
   readonly data: HeatmapData;
 }
 
+/** The lengths the CSS of the panel reads, by their names there. */
+type HeatmapLengths = React.CSSProperties &
+  Record<"--heatmap-least-width" | "--heatmap-beyond-width", string>;
+
 /** The frame of the heatmap, and the heatmap in it. */
 export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -54,9 +60,17 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
   const scrolls = frame.scrolls;
 
   // The margins with the names, which the heatmap keeps down to this
-  // width.
-  const margin = heatmapMargin(data);
-  const minWidth = Math.ceil(margin.left + margin.right + GRID_MIN_WIDTH);
+  // width, and by which its height exceeds its width: a grid as wide as
+  // the frame, and as high.
+  const lengths = useMemo((): HeatmapLengths => {
+    const margin = heatmapMargin(data);
+    const minWidth = Math.ceil(margin.left + margin.right + GRID_MIN_WIDTH);
+    const beyond = margin.top + margin.bottom - margin.left - margin.right;
+    return {
+      "--heatmap-least-width": `${String(minWidth)}px`,
+      "--heatmap-beyond-width": `${String(beyond)}px`,
+    };
+  }, [data]);
 
   return (
     <div className={classOf(styles, "heatmapFrame")}>
@@ -73,12 +87,12 @@ export function HeatmapPlot({ data }: HeatmapPlotProps): React.JSX.Element {
           "aria-label": data.title,
         })}
       >
-        {/* The least width is the heatmap's, from its data, in the
-            pixels its margins are counted in. */}
+        {/* The least width and the height are the heatmap's, from its
+            data, in the pixels its margins are counted in. */}
         <div
           ref={containerRef}
           className={classOf(styles, "heatmap")}
-          style={{ minInlineSize: `${String(minWidth)}px` }}
+          style={lengths}
         />
       </div>
     </div>

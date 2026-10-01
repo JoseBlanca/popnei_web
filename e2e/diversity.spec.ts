@@ -1288,6 +1288,26 @@ test("PA7 D1 a minimum of 50 names p0, of 48 individuals, in the ready state, an
   await expectNoViolations(makeAxeBuilder);
 });
 
+test("the review of PA10: at 1,280 pixels, in the committed font, the table of the diversity scrolls sideways and keeps its headers wrapped, so that more of its columns are in view", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await useWideFont(page);
+  await run(page);
+  await expect(
+    panel(page).getByRole("region", {
+      name: /^The diversity of each population/,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Expected heterozygosity (unbiased)",
+    }),
+  ).toHaveCSS("white-space", "normal");
+});
+
 test("PA10 a draw of 120 names p0, whose 96 chromosomes are fewer, before the Run, a draw of 168 runs, and one of 169 locks at the 168 of p2, and axe", async ({
   page,
   makeAxeBuilder,

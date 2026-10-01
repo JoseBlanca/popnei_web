@@ -31,10 +31,12 @@
 
 /* A heatmap wider than the page scrolls sideways, and the page does not
    (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
-   shows the focus. */
+   shows the focus. The frame is a container, so that the heatmap in it
+   can tell, by 100cqi, how wide the frame is. */
 .heatmapScroll {
   min-inline-size: 0;
   overflow-x: auto;
+  container-type: inline-size;
 }
 
 .heatmapScroll:focus-visible {
@@ -43,15 +45,22 @@
 }
 
 /* The element of the heatmap: its width from the panel, up to 40rem,
-   and its height from its ratio of 1 by 1, meanwhile, refined in the
-   running application (docs/specs/charts/heatmap.md, "The size"); the
-   tooltip is placed inside it. Its least width is given by the page,
-   from the margins of its names. */
+   and never below its least width, --heatmap-least-width; and its
+   height that width with --heatmap-beyond-width added, the top and the
+   bottom margins less the left and the right ones, which HeatmapPlot.tsx
+   sets from the margins of its names, so that the square grid fills its
+   frame and the names stand under their columns
+   (docs/specs/charts/heatmap.md, "The size"). A square element left
+   the room above the grid blank. The tooltip is placed inside it. */
 .heatmap {
   position: relative;
   inline-size: 100%;
   max-inline-size: 40rem;
-  aspect-ratio: 1 / 1;
+  min-inline-size: var(--heatmap-least-width, 0px);
+  block-size: calc(
+    max(min(100cqi, 40rem), var(--heatmap-least-width, 0px)) +
+      var(--heatmap-beyond-width, 0px)
+  );
 }
 
 /* A name of the pair, with "and" after the first, kept on one line: a

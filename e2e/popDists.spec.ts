@@ -779,6 +779,68 @@ test.describe("PA5 D2 the review of the panel of the distances", () => {
     ).toBeVisible();
   });
 
+  test("the review of PA10: the grid of the heatmap fills its frame, from 24 pixels under the top of its picture down to the names under its columns, at 1280 and at 320 pixels", async ({
+    page,
+  }) => {
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await useWideFont(page);
+    await run(page);
+    for (const width of [1280, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const picture = heatmap(page, "Hudson's Fst");
+      await expect(picture).toBeVisible();
+      const grid = await picture.evaluate((svg) => {
+        // The union of the paths of the cells, one per step of viridis.
+        const rects = [...svg.querySelectorAll("path.chart-cells")].map(
+          (path) => path.getBoundingClientRect(),
+        );
+        if (rects.length === 0) throw new Error("The heatmap has no cells.");
+        const top = Math.min(...rects.map((rect) => rect.top));
+        const bottom = Math.max(...rects.map((rect) => rect.bottom));
+        const left = Math.min(...rects.map((rect) => rect.left));
+        const right = Math.max(...rects.map((rect) => rect.right));
+        const outer = svg.getBoundingClientRect();
+        return {
+          top: top - outer.top,
+          width: right - left,
+          height: bottom - top,
+          below: outer.bottom - bottom,
+        };
+      });
+      // The top margin of the heatmap, 24 pixels, and nothing more above
+      // the first row.
+      expect(Math.abs(grid.top - 24)).toBeLessThanOrEqual(1);
+      expect(Math.abs(grid.height - grid.width)).toBeLessThanOrEqual(1);
+      // Under the grid only the bottom margin, the names: 8 pixels, 0.71
+      // of the 18 of names of 2 characters, and 8.
+      expect(grid.below).toBeLessThanOrEqual(30);
+    }
+  });
+
+  test("the review of PA10: in the committed font the table of the pairs scrolls at 320 pixels with its headers on one line, and at 340 fits with them wrapped, also after 320", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 340, height: 900 });
+    await load(page, "panel.nei", "panel_pops.csv", "popcat");
+    await useWideFont(page);
+    await run(page);
+    const frame = panel(page).getByRole("region", {
+      name: /^Distances between the populations of panel\.nei/,
+    });
+    const header = panel(page).getByRole("columnheader", {
+      name: "Hudson's Fst",
+    });
+    // At 340 pixels the 308 of the frame hold the table, its headers
+    // wrapped; on one line they take 352.
+    await expect(frame).toHaveCount(0);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await expect(frame).toBeVisible();
+    await expect(header).toHaveCSS("white-space", "nowrap");
+    await page.setViewportSize({ width: 340, height: 900 });
+    await expect(frame).toHaveCount(0);
+    await expect(header).toHaveCSS("white-space", "normal");
+  });
+
   test("PA5 D2 the frames of the heatmap and of the table scroll with the arrow keys at 320 pixels, and keep the focus when the page widens to 1280", async ({
     page,
   }, testInfo) => {
