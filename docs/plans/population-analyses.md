@@ -1100,7 +1100,7 @@ findings are fixed.
   11, 13 and 21; and what the three analyses share: point 2 (the module
   `src/core/populations.ts`), point 3, and A7 in the writer of every
   CSV.
-- [ ] 10.2 The LD decay and the line plot: C1 to C9 and points 5, 6, 7,
+- [x] 10.2 The LD decay and the line plot: C1 to C9 and points 5, 6, 7,
   8, 14, 19, 22, 23 and 24. Beside 10.1, in other files.
 - [ ] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
   points 1, 15, 16, 17, 20, 25 and 26. B1 stays as it is. After 10.1,
