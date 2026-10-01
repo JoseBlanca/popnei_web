@@ -125,7 +125,12 @@ margins"): the SVG takes the size of the element, the margins of the
 plot hold its axes and their labels, and the frame is the rest, of
 `innerWidth` by `innerHeight`, which the base gives the plot. The
 margins are the definition's, a function of the data, since the
-histogram's top margin is larger when it draws a legend; they are fixed
+histogram's top margin is larger when it draws a legend, and, from 1
+October 2026, of the size of the element, which the base gives with the
+data, since the heatmap makes its margins without its names when the
+size leaves them no room (`docs/specs/charts/heatmap.md`, "The names on
+the axes"); a plot whose margins do not depend on the size does not
+read it. They are fixed
 numbers and not measured from the text, because jsdom, the DOM of the
 unit tests, cannot measure text, and a browser can measure it only once its fonts
 are loaded. So the text of every plot has a size in pixels in
@@ -422,7 +427,8 @@ export interface Plot2dDefinition<Data extends PlotText> {
   /** The name in the class of the SVG, chart-‹kind›: "histogram". */
   readonly kind: string;
   readonly check: (data: Data) => void;
-  readonly margin: (data: Data) => Margin;
+  /** The margins for `data` in an element of `size`, above 0 by 0. */
+  readonly margin: (data: Data, size: ExportSize) => Margin;
   readonly draw: (frame: Frame, data: Data) => void;
   /** The base makes the overlay and calls these, in the pixels of the frame. */
   readonly pointer?: {
@@ -657,7 +663,12 @@ September 2026.
 ## What this spec asks of other documents
 
 Stage 5, 30 September 2026: nothing more; the heatmap, the line plot
-and the histograms of the spectrum use the additions above.
+and the histograms of the spectrum use the additions above. On 1 October
+2026 the size of the element was added to what the definition's `margin`
+is given, for the owner's decision that the heatmap makes its margins
+without the names it does not write (`docs/specs/stage-5-open-points.md`,
+"Decided by the owner on 1 October 2026: the distances, the heatmap and
+what the analyses share").
 
 Written into those documents with this spec, on 26 September 2026:
 

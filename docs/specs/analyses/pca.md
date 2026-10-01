@@ -2108,7 +2108,11 @@ are these.
   `String` writes them, and a field that holds a comma, a quote or a new
   line written between double quotes, each quote inside doubled, as the
   common rule of CSV files, RFC 4180, has it, so that a spreadsheet opens
-  it into the right columns.
+  it into the right columns; from 1 October 2026 a name, of an
+  individual, of a group or of the column of the colours, that starts
+  with "=", "+", "-" or "@" has a quote, ', before it, as in every CSV
+  of the application (`diversity.md`, "What it shows"), and a number of a
+  continuous column is written as a number.
 - **The notes**: the note of the colours, of the axes, of the marks past
   49 groups, and of the missing genotypes, under the plot; they are not
   warnings, and have no count on the heading.

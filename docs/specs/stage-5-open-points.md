@@ -255,6 +255,137 @@ application, a pass of its own over the whole file reading the
 positions, minutes more for each Run on a file of several GB; and
 leaving it, with a line of the help alone.
 
+## Decided by the owner on 1 October 2026: the distances, the heatmap and what the analyses share
+
+On 1 October 2026 the owner tried the panel of the distances between
+populations as built, in Firefox, with their own data, at the first
+stop of `docs/plans/population-analyses.md`, and took every
+recommendation of the plan's report as written. The report,
+`docs/plans/population-analyses.report.md`, names them A1 to A9, under
+"Stop A", and by number under "For the owner, as the work goes"; each
+is below under what it decides, with its name there. The specs changed
+are `docs/specs/analyses/popDists.md`, `docs/specs/charts/heatmap.md`
+and `plot2d.md`, `docs/specs/core/project.md`, and a sentence each of
+`docs/specs/analyses/diversity.md`, `pca.md` and
+`docs/specs/steps/variants.md`.
+
+The warnings and the locks of the distances (`popDists.md`, "The
+warnings" and "Why it cannot run"):
+
+- **The warning of a negative distance says what the heatmap does only
+  when it does it** (A1). "The heatmap orders them as if the distance
+  were 0, and shows the value." is written when a heatmap is drawn, 200
+  populations or fewer, and a measure the warning names is ordered by
+  similarity; with the order of the metadata file, "The heatmap shows
+  the value."; above 200 populations, where no heatmap is drawn,
+  nothing. The warning is made once for a result, so it reads the
+  orders of the measures it names, not the measure the radio buttons
+  draw. Not taken: the sentence as it was, in every case.
+- **A pair with variants and no Fst has a warning of its own** (A2),
+  "p0 and p2 share one allele at every variant counted for them, so
+  Hudson's Fst has no value (0/0)." popnei gives no Fst where its
+  divisor is 0. Not taken: "no value" in the table beside a count of
+  variants, unexplained.
+- **At a minimum of 0 or 1 the warnings do not count individuals**
+  (A3): "p0 and p3 have no variant at which both have a called
+  genotype, so the pair has no distance.", and, for the pairs over fewer
+  variants, "at the others, one of the two populations has no called
+  genotype." Not taken: "fewer than 0 individuals with a called
+  genotype".
+- **The lock's advice names the field as its label does, and where it
+  is** (A4): "Lower the number of individuals needed, above". Not
+  taken: "Lower the minimum of individuals below", the field being
+  above the Run button and labelled "Individuals with a called genotype
+  needed in each population, per variant".
+- **When every pair is over fewer variants, the warning says "All"**
+  (A6): "All 20,100 pairs are over fewer than the 1,152 variants kept,
+  down to 641 (56%) for p0 and p3.", without the clause "at the
+  others, …". Not taken: "20,100 of the 20,100 pairs … at the
+  others, …".
+- **Two sentences of the warnings are the code's** (point 9): the
+  advice of a population left out, when the filters of individuals took
+  some of it, is one list with one "or", "lower the minimum of
+  individuals, merge it with another population in the metadata file,
+  or loosen the filters of individuals in the Variants step"; and the
+  warning of several negative pairs ends "shows the values". Not taken:
+  the spec's two "or" and its singular.
+- **The lists or the filters of individuals leaving one population
+  lock with words of their own** (point 10): "The lists of individuals
+  leave one population, p0, and the distances need two or more. Change
+  the lists in the Variants step.", and, known once the individuals
+  kept are, "The filters of individuals leave one population, p0, and
+  the distances need two or more. Loosen the filters of individuals in
+  the Variants step." The words of the minimum are given only when two
+  populations or more are left. Not taken: "Only p0 has 20 individuals
+  or more … Lower the minimum…", which cannot help when the others have
+  no individual.
+
+What both panels say before a Run, and every download:
+
+- **The populations under the minimum, of two or three** (A5): "p0a and
+  p0b have 24 and 24 individuals, fewer than the minimum of 25, and are
+  left out", in the distances and, with its own consequence, in the
+  diversity (`project.md`, `underMinimumText`). Not taken: "…have fewer
+  individuals than the minimum of 25, 24 and 24, …", which reads as
+  three minimums.
+- **A name that a spreadsheet would run as a formula is written with a
+  quote before it** (A7): in every CSV of the application, a cell of
+  text that starts with "=", "+", "-" or "@", the name of a population,
+  of an individual or of a column, is written `'=p1`; a number is never
+  changed, so `-0.0128` stays a number (`diversity.md`, "What it
+  shows"). Not taken: the names as they are.
+
+The Python script of the distances (`popDists.md`, "Its lines of the
+Python script"):
+
+- **The lines follow the six steps of the application's order, and keep
+  a population only when it holds an individual** (point 11). Run in
+  popnei's Python on 1 October 2026 they gave the application's numbers
+  and orders, also where the lines of 30 September raised: at a minimum
+  of 0 with a population left empty, on a pair of no value, on
+  distances all 0 or below, and with two populations. Not taken: lines
+  that raise where the application gives a result.
+
+The heatmap (`heatmap.md`):
+
+- **The grid is at the bottom left of its frame** (point 4), so that
+  the names of the columns stand right under them. Not taken: the grid
+  at the top, with the names 90 to 130 pixels below the last row at 640
+  pixels; an option of the base of the plots that places the axis.
+- **The heatmap has a least width, and scrolls sideways below it** (A8
+  and point 13): the margins of its names and its legend and a grid of
+  128 pixels; the box scrolls as the tables do and is reached with the
+  Tab key. Not taken: names cut shorter as the width falls.
+- **When the names are not written, the margins are made without them**
+  (point 13), so the grid takes the room: below bands of 12 pixels, 8
+  pixels left and below. Not taken: the margins kept empty, 270 pixels
+  of 640 with 32 populations of long names.
+- **A name is counted at 9 pixels a character in the margins** (point
+  21), where it was 7.2. The recommendation offered a measurement of
+  each name in the browser, or 9 pixels; the measurement was not taken,
+  since it needs the font loaded and a browser, which the tests of the
+  plots do not have (`.claude/skills/coding/charts.md`, "The margins").
+  At 9 pixels a name of 20 capitals fits, and "WMA", made of the two
+  widest letters, still loses 3.2 pixels of its "W", where it lost 8.6.
+- **The 56 pixels under which a cell holds no value, and the width of
+  40rem**, the two values the spec gave as "meanwhile", are kept.
+
+The modules and two sentences of the specs:
+
+- **The functions the three analyses share are in a module of their
+  own, `src/core/populations.ts`** (point 2), so that `project.ts` and
+  `individualsKept.ts` no longer import each other, and the helpers
+  beside them are listed in the spec (point 3; `project.md`, "What the
+  analyses per population share from stage 5"). Not taken: the functions
+  left in `project.ts`, where a constant added at the top of either
+  module could stop the page at load.
+- **Two sentences corrected** (A9): `steps/variants.md` names the
+  distances among what an empty distance of the LD pruning locks; and
+  the interface of `popDists.md` lists `MEASURE_NAMES`,
+  `PopDistsHeatmap` and `orderText` giving none for two populations. The
+  report said the LD decay locks too; it does not, since it does not
+  read the LD pruning (decision 8), and the sentence says so.
+
 ## Decided by the writers of the specs, for the owner to overrule
 
 Each is written in its spec with its reason and the option not taken;

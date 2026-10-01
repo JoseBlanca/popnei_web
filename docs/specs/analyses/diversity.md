@@ -1795,7 +1795,17 @@ project file is made (`docs/specs/core/projectFile.md`,
 order mark (below, "Not in this spec"): a header row, one row per
 population, the numbers as `String` writes them, which reads back as the
 same number in any program, and an empty cell for no value; a field with
-a comma, a quote or a new line is quoted, as RFC 4180 has it. For the
+a comma, a quote or a new line is quoted, as RFC 4180 has it. A cell of
+text, the name of a population, of an individual or of a column of the
+user's files, that starts with "=", "+", "-" or "@" is written with a
+quote, ', before it, `'=p1`, in every CSV of the application, as the
+owner decided on 1 October 2026: a spreadsheet that opens the file runs
+a cell that starts so as a formula, and the quote is what spreadsheets
+advise against it. The one function that writes a cell of text,
+`csvField` of `src/core/analyses/words.ts`, does it, before the quoting
+of RFC 4180; a number is never written through it, so a negative
+number, `-0.0128`, stays a number. The option not taken: the names
+written as they are. For the
 flow with the filter at 0.05:
 
 ```

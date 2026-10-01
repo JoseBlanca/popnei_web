@@ -14,7 +14,15 @@ this spec asks of other documents"). It takes from the scatter,
 `src/charts/marks.ts` and the tooltip of `src/charts/hover.ts`. It
 develops the row `src/charts/` of section 9 of `docs/architecture.md`,
 where `heatmap.ts` is listed, and depends on
-`.claude/skills/coding/charts.md`, `css.md` and `testing.md`.
+`.claude/skills/coding/charts.md`, `css.md` and `testing.md`. Revised
+on 1 October 2026, with the plot built, for what the owner decided that
+day after trying the panel of the distances, each recommendation of the
+plan's report taken as written (`docs/specs/stage-5-open-points.md`,
+"Decided by the owner on 1 October 2026: the distances, the heatmap and
+what the analyses share"): the grid at the bottom left of its frame;
+the margins of the names at 9 pixels a character, and made without the
+names when the names are not written; and the least width of the
+heatmap, below which it scrolls sideways.
 
 The words of the web this spec needs are those of the scatter's spec,
 which it uses as that spec defines them: SVG and `<path>`, the base, a
@@ -52,8 +60,15 @@ same (`charts.md`, "The contract of a plot").
 
 One band for each name, from `scaleBand` of `d3-scale`, over the side of
 the grid, the smaller of the frame's width and height, so that the cells
-are square; the grid sits at the top left of the frame, and the room
-left over lies right of it or under it. A gap of 1 pixel separates the
+are square; the grid sits at the bottom left of the frame, and the room
+left over lies right of it or above it, as the owner decided on 1
+October 2026. The base draws the axis of the columns at the foot of the
+frame (`plot2d.md`, "The axes"), so a grid at the bottom has the names
+of its columns right under them; with the grid at the top, as this spec
+had it until then, the names stood about 90 pixels below the last row
+at 640 by 640 pixels, and about 130 with long names, since the legend
+takes width and leaves the frame taller than wide. The option not
+taken: an option of the base that places its horizontal axis. A gap of 1 pixel separates the
 cells, `paddingInner` of the band scale at one pixel over the band, so
 that two cells of close colours are still seen as two. The numbers of
 the paths are rounded to a tenth of a pixel, `pathRound(1)` of
@@ -122,15 +137,35 @@ rows are, and the base writes no text for an empty label.
 
 A name is written whole up to 20 characters, and cut after 19 with an
 ellipsis, "…", above them; the tooltip gives it whole. The margins are
-fixed numbers made from the data, since nothing in a plot measures text
-(`plot2d.md`, "The SVG and its frame"), at 7.2 pixels a character: left,
-8 pixels and 7.2 for each character of the longest name as it is
-written; bottom, 8 pixels and 0.71 of that width, the slant of 45°, and
-8 more; top, 24, where the name of the value stands over the legend;
-right, the legend's, below. When a band is narrower than
-12 pixels, the size of the text, the names of that axis are not
-written, since they would overlap, and the description says the order
-in words.
+fixed numbers made from the data and the size of the element, since
+nothing in a plot measures text (`plot2d.md`, "The SVG and its frame"),
+with a name counted at 9 pixels a character: left, 8 pixels and 9 for
+each character of the longest name as it is written; bottom, 8 pixels
+and 0.71 of that width, the slant of 45°, and 8 more; top, 24; right,
+the legend's, below.
+
+The 9 pixels are the owner's decision of 1 October 2026. At 7.2 pixels
+a character, the width this spec counted until then and the one the
+legend still counts, a name in capitals was cut at the left edge of the
+plot: "WMA" lost 8.6 pixels, most of its "W", "MEX" 4, and a name of 20
+capitals 8 to 11, in Chromium and WebKit and in the Linux font of the
+checks. At 9, "MEX" and the 20 capitals fit, and "WMA", 30.2 pixels
+wide, still loses 3.2: 9 pixels is less than a "W" or an "M" takes, so
+a name made mostly of them is cut by a few pixels. The option not
+taken, each name measured in the browser before the margins are set,
+would fit every name, and needs the font loaded and a browser, which
+the tests under jsdom do not have (`charts.md`, "The margins").
+
+When a band is narrower than 12 pixels, the size of the text, with the
+margins of the names, the names are not written on either axis, since
+they would overlap, and the description says the order in words. The
+margins are then made without the names, as the owner decided on 1
+October 2026: left, 8 pixels, and bottom, 8, so that the grid takes the
+room; until then the margins of the names stayed, empty, and at 640
+pixels 32 populations of long names left 270 pixels empty beside a
+squeezed grid. Whether the names are written is decided once, with the
+margins of the names, and not again with the wider grid, in which a
+band of 12 pixels or more would ask for the margins back.
 
 ### The legend
 
@@ -138,11 +173,13 @@ Drawn by the plot inside the SVG, in `chart-legend`, on the screen and
 in the file alike: the heatmap's legend has nothing to press, where the
 scatter's is buttons and so HTML of the screen (`scatter.md`, "The
 legend, drawn by the screen"). It is a bar of 32 bands of viridis, 12
-pixels wide and as high as the grid, at most 240 pixels, the largest
-value at its top and 0 at its bottom, each band a rectangle with its
-`fill`, as the bar of the scatter's exported legend is; the two values
-at its ends, in `heatmapNumber`; the name of the value, `valueName`,
-above it, in the top margin. The right margin is 16 pixels, the bar and 4 pixels, and 7.2
+pixels wide and as high as the grid, at most 240 pixels, its top at the
+top of the grid, the largest value at its top and 0 at its bottom, each
+band a rectangle with its `fill`, as the bar of the scatter's exported
+legend is; the two values at its ends, in `heatmapNumber`; the name of
+the value, `valueName`, above it, in the top margin or, when the frame
+is higher than the grid, in the room left over above the grid. The
+right margin is 16 pixels, the bar and 4 pixels, and 7.2
 pixels for each character of the longest of the name of the value and
 the two numbers at the ends.
 
@@ -151,7 +188,7 @@ the two numbers at the ends.
 The base makes the overlay and gives the plot the position of the
 pointer (`plot2d.md`). The cell under it is the band of each axis that
 holds that position, found by division; the gaps between cells and the
-room right of or under the grid are no cell, and neither is the
+room right of or above the grid are no cell, and neither is the
 diagonal. Then, as the scatter does for its point:
 
 - **The tooltip**, `createTooltip` of `hover.ts`, with two lines, "p0
@@ -264,12 +301,29 @@ The screen's CSS gives the element its width, that of its container,
 and meanwhile `aspect-ratio: 1 / 1` and a `max-width` of 40rem, refined
 in the running application. At 40rem, 640 pixels at the default size of
 text, with names of 3 characters and the legend of "Hudson's Fst", the
-margins are about 30 pixels left, 31 below, 24 above and 118 right,
-and the grid about 490 pixels a side: 3 populations give bands of about
-164 pixels, with their values written, 8 populations bands of about 61,
-still with them, and 9 of about 54, without. At 320 pixels wide, the width of a phone in WCAG
-2.2, 1.4.10, the grid is about 170 pixels a side. Its PNG at 3 times is
-1,920 pixels wide at 40rem.
+margins are 35 pixels left, about 35 below, 24 above and about 118
+right, and the grid about 487 pixels a side: 3 populations give bands of
+about 163 pixels, with their values written, 8 populations bands of
+about 61, still with them, and 9 of about 54, without. At 320 pixels
+wide, the width of a phone in WCAG 2.2, 1.4.10, the grid is about 167
+pixels a side. Its PNG at 3 times is 1,920 pixels wide at 40rem.
+
+**The least width.** The screen gives the element a least width, the
+left and the right margins of the heatmap with its names, which the
+plot gives for its data, `heatmapMargin`, and a grid of 128 pixels,
+three bands of 43 that hold the names and no values. Below that width
+the box of the heatmap scrolls sideways, as the tables do, and the page
+does not (1.4.10); while it scrolls, a line over it says so, "Scroll
+the heatmap sideways to see all of it.", and the Tab key reaches the
+box, named by the title of the heatmap, so that the arrow keys scroll
+it (2.1.1). With names of 20 characters the two margins take 306 pixels
+and the least width is 434, more than the 288 a page of 320 pixels
+leaves the panel, so that heatmap scrolls on a phone; with the names of
+`panel.nei`, 2 characters, it is 273 and fits. The owner decided it on
+1 October 2026, keeping what the panel had meanwhile; without it, at
+the width of the margins or less the heatmap was blank and its export
+showed the application's error bar. The option not taken: names cut
+shorter as the width falls.
 
 ## The cases
 
@@ -284,8 +338,11 @@ still with them, and 9 of about 54, without. At 320 pixels wide, the width of a 
 - **An `update` to the other measure, or another order**: the paths are
   joined by their steps and the texts by their row and column, in the
   same SVG; the tooltip is hidden.
-- **A band below 12 pixels**: no names on the axes; below
-  `CELL_TEXT_MIN`, no values in the cells.
+- **A band below 12 pixels**: no names on the axes, and the margins made
+  without them; below `CELL_TEXT_MIN`, no values in the cells.
+- **An element no larger than the margins of the names**: the band with
+  them is below 12 pixels, so the heatmap is drawn without names, in the
+  margins made without them.
 - **A name with markup in it**, `<b>P1</b>`: written as text on the axis
   and in the tooltip; no `b` element is made.
 - **`destroy`, a size of 0, a frame with no area, data the plot refuses
@@ -297,7 +354,7 @@ still with them, and 9 of about 54, without. At 320 pixels wide, the width of a 
 On the page, in the main thread. The heatmap keeps the bands of its last
 draw and the tooltip; the cells are the SVG's paths, at most 257 of
 them, and at most a few dozen texts, since values are written only
-in bands of 56 pixels or more, at most 8 names in a grid of 490
+in bands of 56 pixels or more, at most 8 names in a grid of 487
 pixels, 56 texts. A draw is a loop over the cells.
 
 ## How it is verified
@@ -314,7 +371,16 @@ steps 239, 245 and 255, each with the colour of `viridisColour` of its
 step and two cells, and the six values written, "0.1027" in the cells of
 p2 and p0; a matrix whose values are all 0 or below gives one path, of
 step 0, and a bar of one band; the names on the vertical axis read p2, p0, p1 from the top;
-the diagonal has no cell. A matrix with a NaN pair gives the path
+the diagonal has no cell; the grid of that element, 487 pixels a side in
+a frame 581 high, starts 94 pixels below the top of the frame and ends
+at its foot, the bar of the legend starts level with it, and a move of
+the pointer to the room above the grid shows no tooltip. The margins of
+names of 3 characters are 35 pixels left and 8 + 0.71 × 27 + 8 below,
+and of a name of 25 characters those of 20. 60 names of 20 characters
+in an element of 640 by 640 pixels, whose bands with the margins of the
+names would be of about 5 pixels, are drawn with no name, in margins of
+8 pixels left and below; so are the names of `panel.nei` in an element
+of 150 by 150 pixels, less than their margins. A matrix with a NaN pair gives the path
 `chart-cell-none` with its two cells crossed; a negative value is of
 step 0 and writes "−0.0113"; a band of 55 pixels writes no value; two
 names alike, a matrix not symmetric, one name or 201, throw. A move of
@@ -334,6 +400,10 @@ in the running application (`popDists.md`, "How it is verified").
 Made in those documents on 30 September 2026, but `src/ui/tokens.css`,
 which is code and comes with the plan.
 
+- `docs/specs/charts/plot2d.md`, on 1 October 2026: the definition's
+  `margin` is given the size of the element with the data, so that the
+  heatmap makes its margins without the names when they are not
+  written.
 - `docs/specs/charts/plot2d.md`: `Frame.axes` takes a band scale of
   names, `ScaleBand<string>` of `d3-scale`, for either axis, drawn with
   no tick marks and each label cut by the plot with `nameFormat`, the
@@ -359,7 +429,9 @@ as above, "yes, at 0". It was asked with its options in
 `docs/specs/analyses/popDists.md`, since it changes what the distances
 look like, and is decided there and as point 15 of
 `docs/specs/stage-5-open-points.md`. The option not taken: from the
-smallest value of the matrix.
+smallest value of the matrix. The two values this spec gave as
+"meanwhile", the 56 pixels under which a cell holds no value and the
+width of 40rem, the owner tried on 1 October 2026 and kept.
 
 ## Not in this spec
 

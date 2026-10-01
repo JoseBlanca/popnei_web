@@ -401,7 +401,10 @@ While the distance is empty, popnei cannot be given the filter, and
 `variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
 which locks what reads the filters of the variants: in this step, the
 Count and the writing of the filtered variants; in the Analyses step,
-the diversity and the PCA. The statistics of each individual, which read no filter, and the
+the diversity, the distances between populations, and the PCA while its
+LD filter follows the step; the LD decay, which does not read the LD
+pruning, is not locked (corrected on 1 October 2026: the sentence named
+the diversity and the PCA alone). The statistics of each individual, which read no filter, and the
 histograms of the variants, which read the filters of individuals alone,
 can still be calculated, so that the user can look at the data while
 choosing; until 28 September 2026 the statistics were locked too. The reason stands whole under the field
