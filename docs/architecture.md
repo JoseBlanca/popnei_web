@@ -2126,6 +2126,11 @@ src/core/
   individualsKept.ts
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
+  populations.ts    from stage 5, what the analyses per population share:
+                    the locks when no population is left, the populations
+                    under the minimum of individuals and their words; it
+                    imports project.ts and individualsKept.ts, and neither
+                    imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store

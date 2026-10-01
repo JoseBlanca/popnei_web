@@ -10,7 +10,8 @@
  * each measure, which the worker makes with popnei's PCoA. This module
  * computes none of them. A population with fewer individuals than the
  * minimum is left out of the request and named in a warning, by
- * `populationsWithMinimum` of project.ts, which the diversity calls too.
+ * `populationsWithMinimum` of populations.ts, which the diversity calls
+ * too.
  */
 
 import { hasIndividualThreshold } from "../individualsKept.ts";

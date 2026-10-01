@@ -166,10 +166,11 @@ export function spectraCsv(r: DiversityResult): string {
 const MAF_KEEPS_ALL = 1;
 
 /**
- * The warnings of the spectrum, which the diversity's warnings append,
- * given the project `p` the request of `r` was made from: a MAF filter
- * with a threshold below 1 that removed at least one of the variants it
- * was given, as the counts of the pass of `r` have them.
+ * The warnings of the spectrum, which the block of the spectrum writes
+ * at the end of its caption, given the project `p` the request of `r`
+ * was made from: a MAF filter with a threshold below 1 that removed at
+ * least one of the variants it was given, as the counts of the pass of
+ * `r` have them.
  */
 export function spectrumWarnings(r: DiversityResult, p: Project): Warning[] {
   const filter = p.filters.find((f) => f.kind === "maf");

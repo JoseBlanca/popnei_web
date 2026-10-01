@@ -624,8 +624,9 @@ spec:
   population in the order of `pops` (above, "The TypeScript
   interface"), and `numVarsInDraw`, popnei's `numVars.inDraw`, which its
   rarefaction needs as well.
-- Its `warnings` appends `spectrumWarnings(r, p)` after its own, and its
-  panel shows the block of this spec below its table in the state done.
+- Its panel shows the block of this spec below its table in the state
+  done, and the block ends its caption with `spectrumWarnings(r, p)`,
+  which its `warnings` does not append, from 1 October 2026 (B4).
 - Its default size of the draw is never below 2, which popnei refuses:
   the ploidy times a minimum of 0, or of 1 for a haploid dataset, gives
   less.

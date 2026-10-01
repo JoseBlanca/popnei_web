@@ -826,7 +826,8 @@ With Vitest, at the functions of the definition, on frozen projects, as
   literal.
 - **`ldPlotOmittedText`** of a fake result of 17 populations gives "The
   plot draws the first 16 of the 17 populations, in the order of the
-  table. The two tables hold all 17.", and of 16 `null`.
+  table of the populations. The two tables hold all 17.", and of 16
+  `null`.
 
 In node, at `createRunner` of the runner, with the popnei of the
 release, as `docs/specs/worker/runner.md` tests the diversity: the job
@@ -995,7 +996,8 @@ populations.
   the plot holds, so that none is drawn without its name. With more, a
   line under the plot, `ldPlotOmittedText`, says which it drew and
   where the others are: "The plot draws the first 16 of the 20
-  populations, in the order of the table. The two tables hold all 20."
+  populations, in the order of the table of the populations. The two
+  tables hold all 20."
 - **The table of the bins**, the numbers behind the plot, in the tab
   beside it, as the histograms of the Variants step have theirs: the
   population, the distances of the bin, its pairs, its mean r² and its
@@ -1061,8 +1063,8 @@ tab of the plot or the table.
 
 The locked reasons and the warnings are those of the module. Under the
 plot, with more than 16 populations, `ldPlotOmittedText`: "The plot
-draws the first 16 of the 20 populations, in the order of the table.
-The two tables hold all 20.", the count of `r.pops` with a comma
+draws the first 16 of the 20 populations, in the order of the table of
+the populations. The two tables hold all 20.", the count of `r.pops` with a comma
 between thousands. The error
 state is the diversity's table (`diversity.md`, "Its words"), made by
 `refusalWords` of `src/core/analyses/words.ts` with the words of the LD

@@ -95,14 +95,14 @@ export interface AnalysisDef<J, R> {
   /** The reason it cannot run for the individuals kept, `kept`, whose
       list is known and keeps some individual, in the words beside its
       Run, or `null`; absent for an analysis with none. The diversity's:
-      the list leaves no population, or, from stage 5, fewer chromosomes
-      than the draw of its rarefaction while some population has the
-      minimum of individuals; the PCoA's: it keeps more than 9,381
-      individuals; from stage 5, the distances between populations': no
-      population, or fewer than two with the minimum of individuals; the
-      LD decay's: no population. The reason of no population is
-      `populationsKeptNeeds` of project.ts, shared (store.md, "The state
-      of an analysis"). */
+      the list leaves no population, or, from stage 5, its largest
+      population holds fewer chromosomes than the draw of its
+      rarefaction while some population has the minimum of individuals;
+      the PCoA's: it keeps more than 9,381 individuals; from stage 5, the
+      distances between populations': no population, or fewer than two
+      with the minimum of individuals; the LD decay's: no population. The
+      reason of no population is `populationsKeptNeeds` of
+      populations.ts, shared (store.md, "The state of an analysis"). */
   readonly keptNeeds?: (p: Project, kept: IndividualsKept) => string | null;
   /** Builds its request and sends it through `c`, which the store binds
       to its key, and returns the handle without waiting on it. */

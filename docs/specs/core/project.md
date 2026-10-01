@@ -2004,10 +2004,8 @@ literals; `populationListsNeeds` and `populationsKeptNeeds` each case of
 the diversity's tests of stage 3, moved there with them. In the tests of
 `populations.ts`: the helpers, on the worked table, `populationsByLists`
 giving A and B, A alone with a list to remove i2, and none with a list
-to keep i4; and, read from the text of `project.ts`, it imports nothing of `individualsKept.ts` but
-types, and of `populations.ts` nothing but the four names it exports
-again for the LD decay, a test to be tightened to nothing when that line
-is removed, so that the three do not come to import each other again.
+to keep i4; and, read from the text of `project.ts`, it imports nothing
+of `individualsKept.ts` but types, and nothing of `populations.ts`.
 - **`columnAllows`**, on the worked table of the diversity's spec,
   `i1` to `i4`, with a column `h` of `1,5`, `2`, `2` and a missing cell,
   read with the comma, and a column `st` of `yes`, `no`, `yes` and `no`:

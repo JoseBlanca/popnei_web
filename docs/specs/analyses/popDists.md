@@ -921,6 +921,7 @@ title in the notice, the status region and the links of the step, is
 | option | control | default |
 |---|---|---|
 | the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 0, as the diversity's, the field of React Aria that the PCA's fields use; under it, from 1 October 2026, the line "This minimum is for the distances alone: the diversity has its own." | 20, popnei's default |
+| `measure` | a group of two radio buttons, "Distance in the heatmap": "Hudson's Fst" and "Jost's D" | Hudson's Fst, `docs/functionality.md` section 7 |
 
 The field of the diversity has the same label from 1 October 2026, as
 the owner decided that day (B7 of the stop of the diversity,
@@ -929,7 +930,6 @@ popnei, each with its own value, and until then the diversity's read
 "Minimum number of individuals with a genotype, a whole number from 0".
 This label was the one kept, and the line under each field says that it
 is for that analysis alone.
-| `measure` | a group of two radio buttons, "Distance in the heatmap": "Hudson's Fst" and "Jost's D" | Hudson's Fst, `docs/functionality.md` section 7 |
 
 The radio buttons are in that one place, with the minimum, in every
 state, so that the keyboard and a screen reader meet one group; a
