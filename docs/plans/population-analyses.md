@@ -1059,7 +1059,7 @@ task 8.1 shares; and, if a tab closed in task 2.5, the owner's answer.
   16 populations, the two tables in their tabs, the downloads, the
   states, "Its words" and "Accessibility"; the states of D4 in
   `e2e/screens.spec.ts`. Serves 4. Needs 8.1 and 4.3.
-- [ ] 8.3 The flows of D2 and D3 in `e2e/ldDecay.spec.ts`. Serves 2 and
+- [x] 8.3 The flows of D2 and D3 in `e2e/ldDecay.spec.ts`. Serves 2 and
   3. Needs 8.2.
 - [ ] 8.4 Stop C: the owner tries the LD decay, in Firefox and Safari by
   hand as well, and judges the writers' choices of the open-points file
