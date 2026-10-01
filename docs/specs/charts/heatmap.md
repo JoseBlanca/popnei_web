@@ -298,11 +298,19 @@ written from their tokens as the base writes every colour.
 ## The size
 
 The screen's CSS gives the element its width, that of its container,
-and meanwhile `aspect-ratio: 1 / 1` and a `max-width` of 40rem, refined
-in the running application. At 40rem, 640 pixels at the default size of
-text, with names of 3 characters and the legend of "Hudson's Fst", the
-margins are 35 pixels left, about 35 below, 24 above and about 118
-right, and the grid about 487 pixels a side: 3 populations give bands of
+up to a `max-width` of 40rem, and a height of that width less the left
+and the right margins and with the top and the bottom ones added, the
+margins of `heatmapMargin` with the names: so the grid, as wide as the
+frame, is as high as it, and fills it from its top to the names under
+its columns. The element was square until 1 October 2026, and with the
+grid at the bottom of its frame (above, "The cells", point 4 of the
+owner's decisions that day) the room left over lay above the grid,
+blank, 115 pixels on a page of 1,280 pixels, 18% of the plot, and 40%
+of it on a page of 320, as the review of that work measured. At 40rem,
+640 pixels at the default size of text, with names of 3 characters and
+the legend of "Hudson's Fst", the margins are 35 pixels left, about 35
+below, 24 above and about 118 right, the grid about 487 pixels a side,
+and the element about 546 high: 3 populations give bands of
 about 163 pixels, with their values written, 8 populations bands of
 about 61, still with them, and 9 of about 54, without. At 320 pixels
 wide, the width of a phone in WCAG 2.2, 1.4.10, the grid is about 167
