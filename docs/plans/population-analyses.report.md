@@ -543,6 +543,89 @@ only in the session; the new one recovered it from the transcript under
 `~/.claude/projects/`, which survives a lost session where the
 scratchpad may not. A brief of fixes belongs in a file of the branch.
 
+## 8. The panel of the LD decay
+
+Built and reviewed, in c904c10 (8.1), 0941712 (8.2), 721d523 (8.3), and
+12880ef, 92f1084, ba5e4b4 and e148e6e (the fixes of the review, in two
+passes). It waits for your word at stop C, below.
+
+### The deliverables, on e148e6e
+
+Checked on a copy of e148e6e outside the worktree, on 1 October 2026:
+`format:check`, `typecheck` and `lint` exit 0; `npm test` "Tests 3579
+passed (3579)"; the browser check with `--workers=4` "1114 passed
+(4.9m)"; `npm run screens` "386 passed". The first script of the page
+is 851.58 kB, 254.49 kB gzipped, beside 229.89 kB at the start.
+
+1. `npx vitest run src/core src/ui -t "PA8 D1"`: 34 passed, at least
+   10 asked.
+2. `-g "PA8 D2"`: 14 passed, 7 in each engine, at least 4 asked.
+3. `-g "PA8 D3"`: 4 passed, 2 in each engine. Its flow of the key fails
+   when the key reads the LD pruning, and its flow of the restart when
+   the calculation worker is not started again, both tried by the tests
+   reviewer.
+4. The screenshots, light and dark, in `screens/popgen-lddecay-*`: the
+   eleven states of the writer and two of two populations with names of
+   45 characters, at 1,280 and 320 pixels. The orchestrator looked at
+   the done state, at 17 populations and at the long names.
+
+### The review
+
+Eight reviewers, then `react` and `accessibility` again after the
+fixes. No wrong number: the spec reviewer ran popnei on `ld.nei` and
+matched the tables, the legend and the CSVs to the last digit. axe
+found no violation in any state, in both engines and both themes.
+Fixed:
+
+- The empty field of the distance showed "NaN" after Escape or Ctrl+Z.
+- A distance too large for the memory turned Run off with its reason
+  under Run alone, and a screen reader said nothing. The reason now
+  stands beside the field, describes it, and is said once when the
+  lock turns on.
+- A failure of the plot would have taken the fields, the tables and
+  the downloads with it; the plot now fails alone.
+- A population could have another colour and shape here than in the
+  PCA, when a filter emptied the populations before it. Up to 49
+  populations each keeps the mark of its place in the metadata file,
+  as the spec asks; above 49 the marks are numbered among the 16 drawn
+  (point 14).
+- With the tab of the bins open, a change in any other panel drew its
+  table again.
+- On a screen of 320 pixels, a warning that names a population of 40
+  characters or more widened the whole Analyses step to 425 pixels, in
+  the LD decay, the diversity and the distances alike. Fixed in the
+  frame the three share, each with its flow.
+- Without a test: the top of the plot's vertical axis, what the two
+  downloads hold, the steps and bounds of the two fields, the plot's
+  frame at 320 pixels by keyboard. A curve cut at the top of the plot
+  passed every test before.
+- Small: "has this population a curve?" asked one way in the legend,
+  the table and the warnings; one piece of code mounts the three kinds
+  of plot; the bounds of the options written once.
+
+Not taken: a lock by the memory brought on by Undo or Redo is not
+said, though the field is described by it when next reached; the rules
+of the layout of this panel and of the distances' stay two files, since
+the styles of two components cannot share rules as they are organised.
+
+Two results that popnei documents and its present release never gives
+are now errors of the application and not words on the screen: a curve
+with no half distance, and a bin with pairs and no mean. They would
+stop the panel; they are for the release of popnei that gives them.
+
+The table of the bins with 100 populations, 5,000 rows: the tab opens
+in 115 ms in Chromium 153 and 207 ms in WebKit 26.6 on this Mac, median
+of 5, and the page stays usable.
+
+### How the work of 8 went, for whoever revises a skill or a plan
+
+Three tasks by two writers, about 226,000 and 420,000 tokens; the fixes
+of the review 160,000 more; ten reviewers' passes about 1.2 million.
+Two agents wrote into one directory named `copy` of the shared
+scratchpad, and one emptied the worktree's `node_modules` through a
+link left there: a copy for breaking lines belongs under `$TMPDIR` with
+a name of its owner's, which the briefs now say.
+
 ## Stop A: the panel of the distances, for the owner
 
 ### How to try it
@@ -708,7 +791,21 @@ B8. **A sentence of `diversity.md`** still calls the width of the table
 
 ## Stop C: the LD decay, for the owner
 
-How to try it is written here once the fixes of its review are in.
+### How to try it
+
+In a terminal, in the checkout made for this stop,
+`/Users/jose/devel/popnei_web/.claude/worktrees/stop-c`, which holds
+the branch as it stood on 1 October 2026 after the review of the LD
+decay, and so serves for stops A and B too, run `npm run dev` and open
+the address it prints, then the population genetics application. Load
+`e2e/fixtures/ld.nei` in the Variants step and
+`e2e/fixtures/ld_pops.csv` in the Individuals step, with its column
+`pop`; in the Analyses step, "LD decay", type 100000 as the largest
+distance and Run. For the lock by the memory, type 12500001. For the
+warning of a half distance below the pairs, load
+`e2e/fixtures/panel.nei` with `e2e/fixtures/panel_pops.csv` and its
+column `popcat`. The checks ran Chromium and WebKit only: try it in
+Firefox and Safari by hand too.
 
 ### What to judge
 
