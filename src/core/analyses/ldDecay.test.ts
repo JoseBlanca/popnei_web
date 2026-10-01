@@ -1200,7 +1200,7 @@ describe("PA2 D5 ldPlotOmittedText", () => {
 
   test("of 17 populations says the plot draws the first 16", () => {
     expect(ldPlotOmittedText(named(17))).toBe(
-      "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
+      "The plot draws the first 16 of the 17 populations, in the order of the table of the populations. The two tables hold all 17.",
     );
   });
 

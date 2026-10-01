@@ -4669,8 +4669,10 @@ const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
 
 /** The characters of a value, each as a text shows it: a hidden one
     escaped, `\n`, `‮`, `\u{e0001}`, and any other as it is, a
-    quote and a backslash among them. */
-function escapedCharacters(value: string): string[] {
+    quote and a backslash among them. A text that cuts a value at a length
+    of its own counts and cuts these, so that it never stops inside an
+    escape. */
+export function escapedCharacters(value: string): readonly string[] {
   return Array.from(value, (character) => {
     if (!HIDDEN.test(character)) {
       return character;

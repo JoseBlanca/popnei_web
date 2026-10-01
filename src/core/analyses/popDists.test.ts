@@ -704,6 +704,25 @@ describe("PA3 D4 the warnings", () => {
     ]);
   });
 
+  test("the review of PA10: pairWithoutDistance and fstWithoutValue of three pairs, the most named whole, close the list with a comma", () => {
+    const none = { fst: Number.NaN, dest: Number.NaN, numVars: 0 };
+    const r = resultOf(["p0", "p2", "p1"], [none, none, none]);
+    expect(warningsOf(r, project(), "pairWithoutDistance")).toStrictEqual([
+      {
+        code: "pairWithoutDistance",
+        text: "The pairs p0 and p2, p0 and p1, and p2 and p1, have no variant at which both have 20 individuals with a called genotype, so they have no distance.",
+      },
+    ]);
+    const shared = { fst: Number.NaN, numVars: 12 };
+    const three = resultOf(["p0", "p2", "p1"], [shared, shared, shared]);
+    expect(warningsOf(three, project(), "fstWithoutValue")).toStrictEqual([
+      {
+        code: "fstWithoutValue",
+        text: "The pairs p0 and p2, p0 and p1, and p2 and p1, share one allele at every variant counted for them, so Hudson's Fst has no value for them (0/0).",
+      },
+    ]);
+  });
+
   test("pairWithoutDistance of four pairs names two", () => {
     const none = { fst: Number.NaN, dest: Number.NaN, numVars: 0 };
     const p = project({ table: tableOfSizes([30, 30, 30, 30]) });
@@ -1322,6 +1341,17 @@ describe("PA10 the owner's decisions of 1 October 2026 on the warnings of the di
     const [ofOrdered] = warningsOf(ordered, project(), "negativeDistance");
     expect(ofOrdered?.text).toBe(
       "p0 and p2 have a negative Hudson's Fst, −0.0100: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value.",
+    );
+  });
+
+  test("the review of PA10: the mirror case, a negative Jost's D alone in the order of the file beside an Fst ordered by similarity, shows the value", () => {
+    const r = resultOf(["p0", "p2", "p1"], [{ dest: -0.002 }], [], FLOW_PASS, {
+      fst: pcoa([0, 1, 2]),
+      dest: { kind: "file", reason: "noDistance" },
+    });
+    const [warning] = warningsOf(r, project(), "negativeDistance");
+    expect(warning?.text).toBe(
+      "p0 and p2 have a negative Jost's D, −0.0020: the variants cannot tell the two apart. The heatmap shows the value.",
     );
   });
 

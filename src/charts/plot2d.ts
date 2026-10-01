@@ -516,26 +516,31 @@ export function createPlot2d<Data extends PlotText>(
     // A label too long for one line takes a second, and the frame gives
     // it the room, below for the horizontal one and on the left for the
     // vertical one (plot2d.md, "The axes"). Each changes the room of the
-    // other, so they are decided again until neither changes; a label
-    // only ever gains a line, so three rounds are enough.
+    // other, so they are decided again until neither changes. A second
+    // line along the frame can give the label under it the room it
+    // lacked, when the left margin is the narrower, and the two would
+    // then take turns; so a label broken in one round stays broken, each
+    // gains a line at most once, and three rounds are enough.
     let lines: readonly string[] = [current.xLabel];
     let yLines: readonly string[] = [current.yLabel];
     let margin: Margin = given;
     for (let round = 0; round < 3; round += 1) {
       const width = size.width - margin.left - margin.right;
       const height = size.height - margin.top - margin.bottom;
-      const nextX = labelLines(
+      const fittedX = labelLines(
         current.xLabel,
         width,
         margin.left,
         margin.right,
       );
-      const nextY = labelLines(
+      const fittedY = labelLines(
         current.yLabel,
         height,
         margin.top,
         margin.bottom,
       );
+      const nextX = lines.length > fittedX.length ? lines : fittedX;
+      const nextY = yLines.length > fittedY.length ? yLines : fittedY;
       const same =
         nextX.length === lines.length && nextY.length === yLines.length;
       lines = nextX;

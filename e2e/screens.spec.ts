@@ -3978,7 +3978,7 @@ for (const theme of ["light", "dark"] as const) {
       await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
         ldDecayPanel(page).getByText(
-          "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
+          "The plot draws the first 16 of the 17 populations, in the order of the table of the populations. The two tables hold all 17.",
         ),
       ).toBeVisible({ timeout: 30_000 });
       await expect(

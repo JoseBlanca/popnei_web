@@ -601,7 +601,7 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     ).toEqual(Array.from({ length: 16 }, (_, i) => `q${String(i)}`));
     await expect(
       panel(page).getByText(
-        "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
+        "The plot draws the first 16 of the 17 populations, in the order of the table of the populations. The two tables hold all 17.",
       ),
     ).toBeVisible();
     // Every row of the legend is in the picture, at the right of the frame.

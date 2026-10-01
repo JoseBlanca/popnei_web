@@ -833,7 +833,7 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       ),
     ).toEqual(names(16));
     expect(container.textContent).toContain(
-      "The plot draws the first 16 of the 17 populations, in the order of the table. The two tables hold all 17.",
+      "The plot draws the first 16 of the 17 populations, in the order of the table of the populations. The two tables hold all 17.",
     );
     expect(tableRows().map((row) => row[0])).toEqual(names(17));
   });

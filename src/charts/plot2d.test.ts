@@ -13,6 +13,7 @@ import { exportSvg } from "./export.ts";
 import { tableNumber } from "./numbers.ts";
 import {
   createPlot2d,
+  labelLines,
   wholeNumberTicks,
   type ExportFrame,
   type Margin,
@@ -1244,6 +1245,48 @@ describe("PA10 the base of the 2D plots, a label of the horizontal axis on two l
       spectrumLike,
     );
     expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(0);
+  });
+
+  test("the review of PA10: with a legend's margin at the right the two decisions take turns, and a label once broken stays broken, so that they end", () => {
+    // With 200 pixels at the right and 40 at the left, the vertical
+    // label's second line widens the left margin, the nearer side, and
+    // gives the label under the frame 8 pixels more of room; at 507 by
+    // 316 that is the 0.45 pixel it lacked, and its single line would
+    // shorten the frame again, so that the two would take turns.
+    draws.length = 0;
+    margins.length = 0;
+    const xLabel = "Hudson's Fst between populations of the first group";
+    const yLabel = "Mean r squared of the pairs in each bin a";
+    expect([xLabel.length, yLabel.length]).toEqual([51, 41]);
+    const element = sizedElement(507, 316);
+    createPlot2d(
+      element,
+      { ...barsOf([1, 2]), xLabel, yLabel },
+      {
+        ...bars,
+        margin: () => ({ top: 16, right: 200, bottom: 40, left: 40 }),
+      },
+    );
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(2);
+    expect(
+      element.querySelectorAll("text.chart-axis-label-y tspan"),
+    ).toHaveLength(2);
+    expect(margins.at(-1)).toEqual({
+      top: 16,
+      right: 200,
+      bottom: 56,
+      left: 56,
+    });
+    expect(draws.at(-1)).toEqual({ innerWidth: 251, innerHeight: 244 });
+  });
+
+  test("the review of PA10: labelLines keeps a label whose counted half width is exactly its room on one line, and breaks it at the first of two spaces equally far from its middle", () => {
+    // 20 characters at 7.1 pixels, 71 of half width; 110 / 2 + 16 = 71.
+    const twenty = "aaaaaaaaa bbbbbbbbbb";
+    expect(labelLines(twenty, 110, 16, 30)).toEqual([twenty]);
+    expect(labelLines(twenty, 108, 16, 30)).toHaveLength(2);
+    // Spaces at 3 and 5 of 8 characters, each 1 from the middle at 4.
+    expect(labelLines("abc d ef", 0, 0, 0)).toEqual(["abc ", "d ef"]);
   });
 
   test("a label with no space stays one line, and one that fits, Major allele frequency, too", () => {

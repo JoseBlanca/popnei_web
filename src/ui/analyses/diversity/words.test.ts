@@ -409,6 +409,46 @@ describe("PA7 D1 the words of the options of the diversity", () => {
     ]);
   });
 
+  test("the review of PA10: three populations short of the draw are named with their counts", () => {
+    const pops = [
+      ["p0", Array.from({ length: 48 }, (_, i) => `a${String(i)}`)],
+      ["p2", Array.from({ length: 84 }, (_, i) => `b${String(i)}`)],
+      ["p1", Array.from({ length: 68 }, (_, i) => `c${String(i)}`)],
+    ] as const;
+    expect(
+      readyLines({ pops, emptied: [] }, 20, false, "populations", {
+        numCalledAlleles: 170,
+        ploidy: 2,
+      }).slice(1),
+    ).toEqual([
+      "p0, p2 and p1 hold 96, 168 and 136 chromosomes, fewer than the 170 the rarefaction draws, so they will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+    ]);
+  });
+
+  test("the review of PA10: one haploid individual, which holds fewer than 2 chromosomes, takes no draw, and the ready state has no line of the draw", () => {
+    const pops = [["p0", ["a0"]]] as const;
+    expect(
+      readyLines({ pops, emptied: [] }, 1, false, "populations", {
+        numCalledAlleles: 2,
+        ploidy: 1,
+      }),
+    ).toEqual(["1 population: p0, 1 individual"]);
+  });
+
+  test("the review of PA10: at the ploidy 2 and a minimum of 1 the default is 2, the least draw, and the line does not say at least 2", () => {
+    expect(
+      drawLine({
+        kind: "read",
+        typed: false,
+        ploidy: 2,
+        minNumIndividuals: 1,
+        defaultDraw: 2,
+      }),
+    ).toMatch(
+      /^The default: the ploidy, 2, times the minimum number of individuals, 1\. The alleles/,
+    );
+  });
+
   test("a draw typed says what the default would be", () => {
     expect(
       drawLine({

@@ -242,6 +242,38 @@ describe("PA8 D1 ldDecayCsv and ldBinsCsv", () => {
         "pop_b,751,1000,2,0.09,0.04\n",
     );
   });
+
+  test("the review of PA10: a population whose name starts as a formula, =p1 or -p2, is written after a quote in both CSVs, so that a spreadsheet reads it as text", () => {
+    const r = resultOf(
+      [
+        { ...POP_A, name: "=p1" },
+        { ...POP_B, name: "-p2" },
+      ],
+      SMALLEST,
+      LARGEST,
+    );
+    expect(ldDecayCsv(r)).toBe(
+      "population,individuals,variants,pairs,half_distance_bp,r2_at_distance_0,rho_per_bp\n" +
+        "'=p1,30,120,20,412.6,0.4,0.0021\n" +
+        "'-p2,45,98,12,8.3456,0.37,0.0034\n",
+    );
+    expect(
+      ldBinsCsv(r)
+        .split("\n")
+        .map((line) => line.split(",")[0]),
+    ).toEqual([
+      "population",
+      "'=p1",
+      "'=p1",
+      "'=p1",
+      "'=p1",
+      "'-p2",
+      "'-p2",
+      "'-p2",
+      "'-p2",
+      "",
+    ]);
+  });
 });
 
 describe("PA8 D1 the half distance as the legend and the table write it", () => {
@@ -319,6 +351,21 @@ describe("PA8 D1 the labels of the legend", () => {
       "Solanum_pimpine… · half at 1,599,810 bp, beyond the plot",
       "Solanum_pimpine… · no curve",
       "Solanum_pimpine… · no pair",
+    ]);
+  });
+
+  test("the review of PA10: an escape counts as one character and is never cut, in a name of 16 characters with U+202E and in a longer one with \\u0007", () => {
+    const r = resultOf(
+      [
+        popOf("Solanum_pimpi‮xx", 412.6),
+        popOf("Solanum_pimpin\u0007ellifolium", 412.6),
+      ],
+      SMALLEST,
+      LARGEST,
+    );
+    expect([0, 1].map((i) => ldLegendLabel(r, i, 1000))).toEqual([
+      "Solanum_pimpi\\u202exx · half at 413 bp",
+      "Solanum_pimpin\\u0007… · half at 413 bp",
     ]);
   });
 

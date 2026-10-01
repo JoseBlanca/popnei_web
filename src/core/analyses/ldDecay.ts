@@ -21,6 +21,7 @@ import {
   bothOf,
   counted,
   escaped,
+  escapedCharacters,
   grouped,
   individualsNeeds,
   namesOf,
@@ -238,15 +239,15 @@ export function maxDistFor(numPops: number): number {
 
 /** The line under the plot when the result has more than
     `LD_PLOT_MAX_POPS` populations, which the plot leaves out: "The plot
-    draws the first 16 of the 17 populations, in the order of the table.
-    The two tables hold all 17."; `null` otherwise. */
+    draws the first 16 of the 17 populations, in the order of the table of
+    the populations. The two tables hold all 17."; `null` otherwise. */
 export function ldPlotOmittedText(r: LdDecayResult): string | null {
   const numPops = r.pops.length;
   if (numPops <= LD_PLOT_MAX_POPS) {
     return null;
   }
   const all = grouped(numPops);
-  return `The plot draws the first ${String(LD_PLOT_MAX_POPS)} of the ${all} populations, in the order of the table. The two tables hold all ${all}.`;
+  return `The plot draws the first ${String(LD_PLOT_MAX_POPS)} of the ${all} populations, in the order of the table of the populations. The two tables hold all ${all}.`;
 }
 
 /**
@@ -551,10 +552,11 @@ export function ldHalfMark(
 }
 
 /** A name of a population as the legend of the plot writes it: escaped,
-    whole up to `LD_LEGEND_NAME_LENGTH` characters, and above them cut
-    after one fewer, with "…". */
+    whole up to `LD_LEGEND_NAME_LENGTH` characters, an escape counted as
+    one, and above them cut after one fewer, with "…", never inside an
+    escape. */
 function legendName(pop: string): string {
-  const characters = Array.from(escaped(pop));
+  const characters = escapedCharacters(pop);
   return characters.length > LD_LEGEND_NAME_LENGTH
     ? `${characters.slice(0, LD_LEGEND_NAME_LENGTH - 1).join("")}…`
     : characters.join("");

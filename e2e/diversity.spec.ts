@@ -1311,6 +1311,20 @@ test("PA10 a draw of 120 names p0, whose 96 chromosomes are fewer, before the Ru
   const run = panel(page).getByRole("button", { name: "Run", exact: true });
   await setField(page, DRAW_FIELD, "168");
   await expect(run).toBeEnabled();
+  // The draw of 168 runs: p2 has its rarefied values, and p0 and p1, of
+  // 96 and 136 chromosomes, have none.
+  await run.click();
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Alleles per variant, rarefied to 168 chromosomes",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(wholeRow(page, "p2").nth(6)).toHaveText(/^\d\.\d{4}$/);
+  for (const pop of ["p0", "p1"]) {
+    await expect(wholeRow(page, pop).nth(6)).toHaveText("no value");
+    await expect(wholeRow(page, pop).nth(9)).toHaveText("no value");
+  }
   await setField(page, DRAW_FIELD, "169");
   await expect(run).toBeDisabled();
   await expect(run).toHaveAccessibleDescription(
