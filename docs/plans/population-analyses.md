@@ -1096,7 +1096,7 @@ findings are fixed.
 
 **Tasks:**
 
-- [ ] 10.1 The distances and the heatmap: A1 to A9 and points 4, 9, 10,
+- [x] 10.1 The distances and the heatmap: A1 to A9 and points 4, 9, 10,
   11, 13 and 21; and what the three analyses share: point 2 (the module
   `src/core/populations.ts`), point 3, and A7 in the writer of every
   CSV.
