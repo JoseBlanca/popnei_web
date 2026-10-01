@@ -1053,7 +1053,7 @@ task 8.1 shares; and, if a tab closed in task 2.5, the owner's answer.
   entry in `panels.ts` (`entry.md`); the shell's words for it
   (`shell.md`); the placeholder panel of task 2.5 taken out. Serves 1.
   Needs 2.4, 5.1 and 7.1.
-- [ ] 8.2 The panel of `src/ui/analyses/ldDecay/`, from `ldDecay.md`,
+- [x] 8.2 The panel of `src/ui/analyses/ldDecay/`, from `ldDecay.md`,
   "The panel": the two fields, the empty distance as the PCA's, the line
   of the LD pruning, the plot mounted with `ldDecayCurve`, the line past
   16 populations, the two tables in their tabs, the downloads, the
