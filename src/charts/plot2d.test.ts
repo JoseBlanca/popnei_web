@@ -1118,3 +1118,132 @@ describe("PA4 D1 the base of the 2D plots, its axes of names and its labels, und
     expect(element.querySelectorAll("text.chart-axis-label")).toHaveLength(2);
   });
 });
+
+describe("PA10 the base of the 2D plots, a label of the horizontal axis on two lines when one would not fit", () => {
+  /** The margins of the histogram of the spectrum, without a threshold. */
+  const SPECTRUM_MARGIN: Margin = { top: 12, right: 16, bottom: 44, left: 60 };
+  const spectrumLike: Plot2dDefinition<Bars> = {
+    ...bars,
+    margin: () => SPECTRUM_MARGIN,
+  };
+  const LONG = "Copies of the rarer allele among 40 chromosomes";
+
+  function withLabel(xLabel: string): Bars {
+    return { ...barsOf([1, 2]), xLabel };
+  }
+  function labelOf(element: HTMLElement): SVGTextElement | null {
+    return element.querySelector<SVGTextElement>("text.chart-axis-label-x");
+  }
+
+  test("at 600 by 375 the label is one text with no line inside, and the frame keeps the margins given", () => {
+    draws.length = 0;
+    margins.length = 0;
+    const element = sizedElement(600, 375);
+    createPlot2d(element, withLabel(LONG), spectrumLike);
+    const label = labelOf(element);
+    expect(label?.textContent).toBe(LONG);
+    expect(label?.querySelectorAll("tspan")).toHaveLength(0);
+    expect(Number(label?.getAttribute("y"))).toBe(319 + 44 - 8);
+    expect(draws.at(-1)?.innerHeight).toBe(319);
+    expect(margins.at(-1)?.bottom).toBe(44);
+  });
+
+  test("at 281 by 288 it is two lines, centred under the frame, the second 16 pixels under the first and 8 above the bottom, with 16 pixels more of margin", () => {
+    draws.length = 0;
+    margins.length = 0;
+    const element = sizedElement(281, 288);
+    const handle = createPlot2d(element, withLabel(LONG), spectrumLike);
+    const label = labelOf(element);
+    const lines = [...(label?.querySelectorAll("tspan") ?? [])];
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "Copies of the rarer allele ",
+      "among 40 chromosomes",
+    ]);
+    // The text of the label is the label.
+    expect(label?.textContent).toBe(LONG);
+    // A frame of 281 − 60 − 16 = 205 wide, and 288 − 12 − 44 − 16 = 216 high.
+    expect(draws.at(-1)).toEqual({ innerWidth: 205, innerHeight: 216 });
+    expect(margins.at(-1)?.bottom).toBe(60);
+    for (const line of lines)
+      expect(Number(line.getAttribute("x"))).toBe(102.5);
+    expect(Number(label?.getAttribute("y"))).toBe(216 + 60 - 8 - 16);
+    expect(lines[0]?.getAttribute("dy")).toBeNull();
+    expect(Number(lines[1]?.getAttribute("dy"))).toBe(16);
+    // A resize back to 600 by 375 gives one line and the frame of 319.
+    FakeObserver.made.at(-1)?.resize(600, 375);
+    runFrames();
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(0);
+    expect(labelOf(element)?.textContent).toBe(LONG);
+    expect(draws.at(-1)?.innerHeight).toBe(319);
+    handle.destroy();
+  });
+
+  test("at 281 by 288 the vertical label of the spectrum is two lines too, with 16 pixels more of left margin, and the label under the frame stays on two", () => {
+    draws.length = 0;
+    margins.length = 0;
+    const element = sizedElement(281, 288);
+    createPlot2d(
+      element,
+      {
+        ...withLabel(LONG),
+        yLabel: "Share of the variants with both alleles",
+      },
+      spectrumLike,
+    );
+    const label = element.querySelector("text.chart-axis-label-y");
+    const lines = [...(label?.querySelectorAll("tspan") ?? [])];
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "Share of the variants ",
+      "with both alleles",
+    ]);
+    expect(label?.textContent).toBe("Share of the variants with both alleles");
+    // 281 − 76 − 16 = 189 wide, and 288 − 12 − 60 = 216 high.
+    expect(draws.at(-1)).toEqual({ innerWidth: 189, innerHeight: 216 });
+    expect(margins.at(-1)).toEqual({
+      top: 12,
+      right: 16,
+      bottom: 60,
+      left: 76,
+    });
+    // The first line 16 pixels from the left of the SVG, the second 16
+    // further, both centred along the frame.
+    expect(Number(label?.getAttribute("y"))).toBe(-76 + 16);
+    for (const line of lines) expect(Number(line.getAttribute("x"))).toBe(-108);
+    expect(Number(lines[1]?.getAttribute("dy"))).toBe(16);
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(2);
+    // "Count" fits, and stays one line.
+    const other = sizedElement(281, 288);
+    createPlot2d(other, withLabel(LONG), spectrumLike);
+    expect(
+      other.querySelectorAll("text.chart-axis-label-y tspan"),
+    ).toHaveLength(0);
+  });
+
+  test("at 384 by 288 the label under the frame fits until the vertical label takes 16 pixels of its width, and then is two lines", () => {
+    draws.length = 0;
+    const element = sizedElement(384, 288);
+    createPlot2d(
+      element,
+      {
+        ...withLabel(LONG),
+        yLabel: "Share of the variants with both alleles",
+      },
+      spectrumLike,
+    );
+    // 384 − 60 − 16 = 308 would hold the 338.4 counted pixels of the label,
+    // with 16 of margin on each side; 384 − 76 − 16 = 292 does not.
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(2);
+    expect(draws.at(-1)).toEqual({ innerWidth: 292, innerHeight: 216 });
+  });
+
+  test("a label with no space stays one line, and one that fits, Major allele frequency, too", () => {
+    const element = sizedElement(281, 288);
+    createPlot2d(element, withLabel("x".repeat(46)), spectrumLike);
+    expect(labelOf(element)?.querySelectorAll("tspan")).toHaveLength(0);
+    const other = sizedElement(281, 288);
+    draws.length = 0;
+    createPlot2d(other, withLabel("Major allele frequency"), spectrumLike);
+    expect(labelOf(other)?.querySelectorAll("tspan")).toHaveLength(0);
+    expect(draws.at(-1)?.innerHeight).toBe(232);
+  });
+});

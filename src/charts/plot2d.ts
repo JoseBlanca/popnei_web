@@ -188,6 +188,19 @@ const X_LABEL_FROM_BOTTOM = 8;
 /** From the left of the SVG to the baseline of the label of the y axis. */
 const Y_LABEL_FROM_LEFT = 16;
 /**
+ * The width counted for a character of the label of an axis, of 13
+ * pixels, since nothing in a plot measures text: the label of the
+ * spectrum took 6.0 pixels a character in the font of the Mac and 7.1 in
+ * DejaVu Sans, the font of the checks at 320 pixels (plot2d.md, "The
+ * axes").
+ */
+const LABEL_CHARACTER_WIDTH = 7.2;
+/**
+ * From one line of a label of the horizontal axis on two lines to the
+ * next, and what the base adds to the bottom margin for the second.
+ */
+const LABEL_LINE = 16;
+/**
  * From an axis of names to its labels, which have no tick mark: the 8
  * pixels the margins of the heatmap count before its names
  * (docs/specs/charts/heatmap.md, "The names on the axes").
@@ -301,6 +314,36 @@ function slantLabels(group: Group, angle: number, offset: number): void {
     .attr("transform", `rotate(${String(angle)} 0 ${String(offset)})`)
     .attr("text-anchor", angle < 0 ? "end" : "start")
     .attr("dy", SLANTED_LABEL_DY);
+}
+
+/**
+ * The label of an axis as the base writes it, centred along a frame
+ * `length` pixels long with `before` and `after` pixels of margin at its
+ * two ends: on one line while half its counted width fits from the
+ * middle of the frame to the nearer side of the SVG; otherwise on two,
+ * broken at the space nearest its middle, the first keeping its space so
+ * that the text of the label is the label. A label with no space is one
+ * line whatever its width.
+ */
+export function labelLines(
+  label: string,
+  length: number,
+  before: number,
+  after: number,
+): readonly string[] {
+  const room = length / 2 + Math.min(before, after);
+  if ((label.length * LABEL_CHARACTER_WIDTH) / 2 <= room) return [label];
+  const middle = label.length / 2;
+  let at = -1;
+  for (let i = 0; i < label.length; i += 1) {
+    if (
+      label[i] === " " &&
+      (at < 0 || Math.abs(i - middle) < Math.abs(at - middle))
+    ) {
+      at = i;
+    }
+  }
+  return at < 0 ? [label] : [label.slice(0, at + 1), label.slice(at + 1)];
 }
 
 /**
@@ -468,7 +511,41 @@ export function createPlot2d<Data extends PlotText>(
    * frame when the margins leave it no area.
    */
   function drawAt(size: ExportSize): void {
-    const margin = definition.margin(current, size);
+    const given = definition.margin(current, size);
+    // A label too long for one line takes a second, and the frame gives
+    // it the room, below for the horizontal one and on the left for the
+    // vertical one (plot2d.md, "The axes"). Each changes the room of the
+    // other, so they are decided again until neither changes; a label
+    // only ever gains a line, so three rounds are enough.
+    let lines: readonly string[] = [current.xLabel];
+    let yLines: readonly string[] = [current.yLabel];
+    let margin: Margin = given;
+    for (let round = 0; round < 3; round += 1) {
+      const width = size.width - margin.left - margin.right;
+      const height = size.height - margin.top - margin.bottom;
+      const nextX = labelLines(
+        current.xLabel,
+        width,
+        margin.left,
+        margin.right,
+      );
+      const nextY = labelLines(
+        current.yLabel,
+        height,
+        margin.top,
+        margin.bottom,
+      );
+      const same =
+        nextX.length === lines.length && nextY.length === yLines.length;
+      lines = nextX;
+      yLines = nextY;
+      margin = {
+        ...given,
+        bottom: given.bottom + LABEL_LINE * (lines.length - 1),
+        left: given.left + LABEL_LINE * (yLines.length - 1),
+      };
+      if (same && round > 0) break;
+    }
     const innerWidth = size.width - margin.left - margin.right;
     const innerHeight = size.height - margin.top - margin.bottom;
     if (innerWidth <= 0 || innerHeight <= 0) {
@@ -492,13 +569,46 @@ export function createPlot2d<Data extends PlotText>(
     clip.attr("width", innerWidth).attr("height", innerHeight);
     overlay?.attr("width", innerWidth).attr("height", innerHeight);
     xAxisGroup.attr("transform", `translate(0,${String(innerHeight)})`);
-    axisLabel("x", current.xLabel, ".chart-axis-label-y, .chart-overlay")
+    const xLabel = axisLabel(
+      "x",
+      current.xLabel,
+      ".chart-axis-label-y, .chart-overlay",
+    )
       .attr("x", innerWidth / 2)
-      .attr("y", innerHeight + margin.bottom - X_LABEL_FROM_BOTTOM);
-    axisLabel("y", current.yLabel, ".chart-overlay")
+      .attr(
+        "y",
+        innerHeight +
+          margin.bottom -
+          X_LABEL_FROM_BOTTOM -
+          LABEL_LINE * (lines.length - 1),
+      );
+    // One line is the text itself; two are a tspan each, centred under
+    // the frame, the last where the one line would be.
+    if (lines.length > 1) {
+      xLabel
+        .text(null)
+        .selectAll("tspan")
+        .data(lines)
+        .join("tspan")
+        .attr("x", innerWidth / 2)
+        .attr("dy", (_line, i) => (i === 0 ? null : LABEL_LINE))
+        .text((line) => line);
+    }
+    const yLabel = axisLabel("y", current.yLabel, ".chart-overlay")
       .attr("transform", "rotate(-90)")
       .attr("x", -innerHeight / 2)
       .attr("y", -margin.left + Y_LABEL_FROM_LEFT);
+    // Turned, the second line goes right of the first, toward the frame.
+    if (yLines.length > 1) {
+      yLabel
+        .text(null)
+        .selectAll("tspan")
+        .data(yLines)
+        .join("tspan")
+        .attr("x", -innerHeight / 2)
+        .attr("dy", (_line, i) => (i === 0 ? null : LABEL_LINE))
+        .text((line) => line);
+    }
 
     const frame: Frame = {
       innerWidth,

@@ -1544,3 +1544,50 @@ test("at a draw of 96 the numbers of the vertical axis of each histogram, of thr
     }
   }
 });
+
+test("PA10 at 320 px, in the wide font, the label under each histogram of the spectrum is on two lines inside its SVG, and so is the label along its vertical axis", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  await useWideFont(page);
+  const measured = await panel(page)
+    .getByRole("group")
+    .locator("svg.chart-histogram")
+    .evaluateAll((svgs) =>
+      svgs.map((svg) => {
+        const box = svg.getBoundingClientRect();
+        const inside = (selector: string): boolean => {
+          const label = svg.querySelector(selector);
+          if (label === null) return false;
+          const r = label.getBoundingClientRect();
+          return (
+            r.width > 0 &&
+            r.left >= box.left - 0.5 &&
+            r.right <= box.right + 0.5 &&
+            r.top >= box.top - 0.5 &&
+            r.bottom <= box.bottom + 0.5
+          );
+        };
+        return {
+          lines: [...svg.querySelectorAll(".chart-axis-label-x tspan")].map(
+            (line) => line.textContent,
+          ),
+          x: inside(".chart-axis-label-x"),
+          y: inside(".chart-axis-label-y"),
+        };
+      }),
+    );
+  expect(measured).toHaveLength(3);
+  for (const { lines, x, y } of measured) {
+    expect(lines).toEqual([
+      "Copies of the rarer allele ",
+      "among 40 chromosomes",
+    ]);
+    expect(x).toBe(true);
+    expect(y).toBe(true);
+  }
+});
