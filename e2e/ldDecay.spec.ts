@@ -1028,3 +1028,32 @@ test.describe("PA8 D3 the key of the LD decay on the screen, and its restart", (
     await expect(halfDistance(page, "pop_a")).toHaveText("7,548");
   });
 });
+
+// shell.md, "How it is checked": each link of the Analyses step, pressed
+// with Enter too. The flow of stop C 3 in pca.spec.ts presses Enter on
+// the others, and that of popDists.spec.ts on the distances.
+test.describe("the map of the cases of stage 5: the link of the LD decay", () => {
+  test("the link LD decay of the Analyses step, pressed with Enter, puts the focus on the heading of its panel, with the step and the address kept", async ({
+    page,
+  }) => {
+    await load(page, "ld_pops.csv");
+    const link = page
+      .getByRole("navigation", { name: "Analyses of this step" })
+      .getByRole("link", { name: "LD decay" });
+    const heading = panel(page).getByRole("heading", {
+      level: 2,
+      name: "LD decay",
+    });
+    const stepHeading = page.getByRole("heading", {
+      level: 1,
+      name: "Analyses",
+    });
+    await stepHeading.focus();
+    await link.focus();
+    await page.keyboard.press("Enter");
+    await expect(heading).toBeFocused();
+    await expect(heading).toBeInViewport();
+    expect(new URL(page.url()).hash).toBe("#analyses");
+    await expect(stepHeading).toBeVisible();
+  });
+});

@@ -144,6 +144,35 @@ describe("PA6 D6 the spectrum's module: spectraOf", () => {
     expect(spectraOf(r).largestShare).toBe(0.75);
   });
 
+  // The case "A population that no variant counted for, or that reached
+  // the draw at none" of sfs.md.
+  test("a population calculated that reached the draw at no variant has a spectrum of zeros and no shares, and its rows of zeros with empty shares in the CSV", () => {
+    const r = result({
+      pops: ["p0", "p4"],
+      numCalledAlleles: 4,
+      numVarsInDraw: [5, 0],
+      foldedSfs: [
+        [1, 2, 2],
+        [0, 0, 0],
+      ],
+    });
+    const p4 = spectraOf(r).pops[1];
+    expect(p4?.calculated).toBe(true);
+    expect(p4?.variantsInDraw).toBe(0);
+    expect(p4?.expected).toEqual(Float64Array.from([0, 0, 0]));
+    expect(p4?.shares).toBeNull();
+    expect(spectraOf(r).largestShare).toBe(0.5);
+    expect(spectraCsv(r)).toBe(
+      "population,rarer_allele,variants,share\n" +
+        "p0,0,1,\n" +
+        "p0,1,2,0.5\n" +
+        "p0,2,2,0.5\n" +
+        "p4,0,0,\n" +
+        "p4,1,0,\n" +
+        "p4,2,0,\n",
+    );
+  });
+
   test("with no population calculated the largest share is 0", () => {
     const r = result({
       pops: ["p0", "p1"],

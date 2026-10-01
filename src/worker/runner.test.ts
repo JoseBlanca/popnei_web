@@ -3174,6 +3174,23 @@ describe("PA3 D2 the runner's distances", () => {
     ).toEqual({ kind: "badRequest", message: 'two populations named "p0"' });
   });
 
+  // The case "Jost's D at ploidy 1" of popDists.md: popnei gives no D for
+  // a genotype of one allele, and the Fst of the same file its values.
+  test("a haploid VCF read with ploidy 1 gives every Jost's D as no value, in the order of the file by noDistance, and Hudson's Fst its values, ordered by the PCoA", () => {
+    const { runner, pops } = haploidRunner();
+    const result = resultOf(
+      runner.run(popDistsJob(pops, 0.1, [], 1), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["a", "b", "c"]);
+    expect([...result.numVarsPerPair]).toEqual([12, 12, 12]);
+    expect([...result.dest].every(Number.isNaN)).toBe(true);
+    expect(result.order.dest).toEqual({ kind: "file", reason: "noDistance" });
+    expect([...result.fst].every((fst) => Number.isFinite(fst))).toBe(true);
+    expect([...result.fst].some((fst) => fst > 0)).toBe(true);
+    expect(result.order.fst.kind).toBe("pcoa");
+  });
+
   test("transferablesOf of a result of the distances with orders of the kind pcoa: the buffer of each of its six arrays, each once, one less for an order of the file, and a view of part of a buffer throws", () => {
     const result = resultOf(
       opened("panel.nei").run(popDistsJob(csvPops("panel_pops.csv")), ignore),
@@ -3631,5 +3648,193 @@ describe("PA6 D2 the runner's diversity of stage 5, at other draws and minimums"
       numCalledAlleles: 96,
     });
     expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([49, 49, 49]);
+  });
+});
+
+// The cases of the specs of stage 5 that no test reached, found by the
+// map of the cases, docs/plans/population-analyses.cases.md.
+
+/** A runner with a haploid VCF of nine individuals and 12 variants opened
+    with ploidy 1, and its three populations a, b and c of three each:
+    population a carries the alternative allele at the first four
+    variants, b at the next four and c at the last four, in two of its
+    three individuals, so that every pair of populations differs. */
+function haploidRunner(): { readonly runner: Runner; readonly pops: Pops } {
+  const names = ["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"];
+  const lines = Array.from({ length: 12 }, (_, v) => {
+    const carrier = Math.floor(v / 4);
+    const genotypes = names.map((_, i) => {
+      const inCarrier = Math.floor(i / 3) === carrier;
+      const against = i % 3 === v % 3;
+      return inCarrier && !against ? "1" : "0";
+    });
+    return `1\t${String((v + 1) * 100)}\t.\tA\tG\t.\tPASS\t.\tGT\t${genotypes.join("\t")}`;
+  });
+  const vcf =
+    '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+    `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}\n` +
+    lines.join("\n") +
+    "\n";
+  const runner = createRunner();
+  const open = runner.open(
+    {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: { ploidy: 1, onlyPassed: true },
+    },
+    { name: "haploid.vcf", source: new TextEncoder().encode(vcf) },
+  );
+  expect(open.kind).toBe("ok");
+  return {
+    runner,
+    pops: [
+      ["a", names.slice(0, 3)],
+      ["b", names.slice(3, 6)],
+      ["c", names.slice(6, 9)],
+    ],
+  };
+}
+
+describe("the map of the cases of stage 5: the runner's diversity and spectrum", () => {
+  // sfs.md, "The cases": a size of the draw above the ploidy times the
+  // minimum, with no filter.
+  test("a draw of 96 with no filter: p0, of 48 individuals, reaches it at 278 of its 1,200 variants, and its spectrum is of whole numbers, 4, 2 and 4 at the counts 0, 1 and 48, and 274 from 1 to 48", () => {
+    const job: DiversityJob = { ...diversityJob([]), numCalledAlleles: 96 };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numVarsInDraw[0]).toBe(278);
+    const p0 = [...(result.foldedSfs[0] ?? [])];
+    expect(p0).toHaveLength(49);
+    expect(p0.every((count) => Number.isInteger(count))).toBe(true);
+    expect([p0[0], p0[1], p0[48]]).toEqual([4, 2, 4]);
+    expect(p0.slice(1).reduce((sum, count) => sum + count, 0)).toBe(274);
+  });
+
+  // sfs.md, "The cases": one population, "All individuals".
+  test("All individuals at a draw of 41 with no filter: one spectrum of 21 values over the 1,200 variants", () => {
+    const runner = createRunner();
+    const individuals = valueOf(
+      runner.open(NEI, { name: "panel.nei", source: bytesOf("panel.nei") }),
+    ).individuals;
+    const job: DiversityJob = {
+      ...diversityJob([], [["All individuals", individuals]]),
+      numCalledAlleles: 41,
+    };
+    const result = valueOf(runner.run(job, ignore));
+    expect(result.pops).toEqual(["All individuals"]);
+    expect([...result.numVarsInDraw]).toEqual([1200]);
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([21]);
+    // The spectrum of the draw of 41, which a draw of 40, also of 21
+    // values, would not give.
+    const variants = openVars(bytesOf("panel.nei"));
+    try {
+      const spectrumAt = (numCalledAlleles: number): number[] => [
+        ...(calcPopDiversity(variants, {
+          pops: { "All individuals": individuals },
+          numCalledAlleles,
+          minNumIndividuals: 20,
+          stats: ["folded_sfs"],
+        }).foldedSfs?.["All individuals"] ?? []),
+      ];
+      expect(spectraOf(result)).toEqual([spectrumAt(41)]);
+      expect(spectrumAt(41)).not.toEqual(spectrumAt(40));
+    } finally {
+      variants.free();
+    }
+  });
+
+  // diversity.md, "The cases": a draw typed above a population's
+  // chromosomes, and at most those of the largest population.
+  test("a draw of 130 gives p0, whose 96 chromosomes never reach it, no rarefied value and a spectrum of zeros, and p2 a spectrum that is not", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      numCalledAlleles: 130,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numAllelesInDraw[0]).toBeNaN();
+    const [p0, p2] = spectraOf(result);
+    expect(p0).toHaveLength(66);
+    expect(p0?.every((count) => count === 0)).toBe(true);
+    expect(p2?.some((count) => count > 0)).toBe(true);
+  });
+
+  // diversity.md, "The cases": a haploid VCF.
+  test("a haploid VCF read with ploidy 1 gives F no value in every population, and the alleles their values", () => {
+    const { runner, pops } = haploidRunner();
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.1)], pops),
+      minNumIndividuals: 3,
+      numCalledAlleles: 3,
+      popDiversityPops: ["a", "b", "c"],
+    };
+    const result = valueOf(runner.run(job, ignore));
+    expect(result.pops).toEqual(["a", "b", "c"]);
+    expect([...result.fis].every(Number.isNaN)).toBe(true);
+    expect([...result.numAllelesMean].every((n) => n > 1)).toBe(true);
+  });
+
+  // diversity.md, "How it is verified": p0 cut to its first 12
+  // individuals and left in the call.
+  test("p0 cut to 12 individuals and left in calcPopDiversity: no variant at which every population has a value, the private alleles of all three 0, and none per variant", () => {
+    const [p0, p2, p1] = threePops();
+    const pops: Pops = [["p0", p0[1].slice(0, 12)], p2, p1];
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)], pops),
+      popDiversityPops: ["p0", "p2", "p1"],
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numVarsEveryPop).toBe(0);
+    expect([...result.privateAllelesTotal]).toEqual([0, 0, 0]);
+    expect([...result.privateAllelesMean]).toEqual([NaN, NaN, NaN]);
+  });
+
+  // diversity.md, "How it is verified": the refusals of the draw, 40 over
+  // a list of 15.
+  test("a draw of 40 over a list of 15 individuals is popnei's refusal, whose largest draw is 30", () => {
+    const [p0] = threePops();
+    const fifteen = p0[1].slice(0, 15);
+    const job: DiversityJob = {
+      ...diversityJob([], [["p0", fifteen]]),
+      individuals: fifteen,
+      minNumIndividuals: 1,
+      popDiversityPops: ["p0"],
+    };
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toContain(
+      "the largest draw this dataset allows is 30",
+    );
+  });
+});
+
+describe("the map of the cases of stage 5: the runner's LD decay", () => {
+  // ldDecay.md, "The cases": a population of 1 or 2 individuals.
+  test("a population of two individuals gives every pair an r² of 1 and no curve", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob([["two", a[1].slice(0, 2)], b]), ignore),
+      "ldDecay",
+    );
+    const means = [...result.meanR2.subarray(0, 50)].filter(
+      (_, bin) => binOf(result.numPairs, 0, bin) > 0,
+    );
+    expect(means.length).toBeGreaterThan(0);
+    expect(means.every((mean) => Math.abs(mean - 1) < 1e-12)).toBe(true);
+    expect(result.halfDist[0]).toBeNaN();
+    expect(result.rhoPerBp[0]).toBeNaN();
+    expect(result.halfDist[1]).not.toBeNaN();
+  });
+
+  // ldDecay.md, "The cases": a largest distance below the spacing of the
+  // variants, 1,000 bp in ld.nei.
+  test("a largest distance of 500 bp, below the 1,000 bp between the variants of ld.nei, gives no pair in any population", () => {
+    const result = resultOf(
+      opened("ld.nei").run({ ...ldDecayJob(), maxDist: 500 }, ignore),
+      "ldDecay",
+    );
+    expect([pairsOf(result, 0), pairsOf(result, 1)]).toEqual([0, 0]);
+    expect([...result.halfDist]).toEqual([NaN, NaN]);
   });
 });

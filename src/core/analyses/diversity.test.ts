@@ -2482,6 +2482,7 @@ describe("PA10 populations that hold fewer than 2 chromosomes", () => {
     individuals: readonly string[],
     draw: number | null,
     pops: readonly string[] | null,
+    minNumIndividuals = 1,
   ): Project {
     const p =
       pops === null
@@ -2498,7 +2499,7 @@ describe("PA10 populations that hold fewer than 2 chromosomes", () => {
         ...p,
         variants: { ...p.variants, read: { ...p.variants.read, ploidy: 1 } },
       }),
-      1,
+      minNumIndividuals,
       draw,
     );
   }
@@ -2550,6 +2551,20 @@ describe("PA10 populations that hold fewer than 2 chromosomes", () => {
     expect(diversity.needs(haploid(two, 3, ["A", "B"]))).toBe(
       "The rarefaction draws 3 chromosomes, and the 2 individuals of panel.nei hold 2 at a ploidy of 1. Type a number of chromosomes of at most 2 in the options of the diversity.",
     );
+  });
+
+  // The case "One haploid individual, at a minimum of 0 or 1" of
+  // diversity.md, at 0.
+  test("at a minimum of 0, one haploid individual does not lock either, and run sends the draw of 2 with no population for calcPopDiversity", () => {
+    expect(diversity.needs(haploid(["i1"], null, null, 0))).toBeNull();
+    expect(sentOf(haploid(["i1"], null, null, 0))).toEqual([2, []]);
+  });
+
+  // The case "A haploid VCF" of diversity.md: the default draw is the
+  // minimum.
+  test("a haploid VCF at the minimum of 20 has the default draw of 20, the minimum", () => {
+    expect(defaultDrawOf(haploid(["i1"], null, null, 20))).toBe(20);
+    expect(drawOf(haploid(["i1"], null, null, 20))).toBe(20);
   });
 
   test("a result of two haploid individuals in two populations gives no tooFewChromosomesForDraw", () => {
@@ -2732,6 +2747,37 @@ describe("PA6 D4 the warnings of stage 5", () => {
       {
         code: "variantsNotInDraw",
         text: `${first} The rarefied private alleles are over the 277 variants at which every population reaches 96.`,
+      },
+    ]);
+  });
+
+  test("the last sentence of variantsNotInDraw over the one variant at which every population reaches the draw, and over none", () => {
+    const names = ["p0", "p2", "p1"];
+    const sizes = [48, 84, 68];
+    const p = projectOfSizes(names, sizes);
+    const first =
+      "p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value (24%), so its rarefied values are over those alone.";
+    const atEveryPop = (inDraw: number): readonly Warning[] =>
+      warningsOf(
+        stage5Result(names, sizes, {
+          numCalledAlleles: 96,
+          numVarsInDraw: Uint32Array.from([277, 1152, 1152]),
+          numVarsEveryPop: 1152,
+          numVarsEveryPopInDraw: inDraw,
+        }),
+        p,
+        "variantsNotInDraw",
+      );
+    expect(atEveryPop(1)).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: `${first} The rarefied private alleles are over the one variant at which every population reaches 96.`,
+      },
+    ]);
+    expect(atEveryPop(0)).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: `${first} No variant has every population at 96 called chromosomes, so there are no rarefied private alleles.`,
       },
     ]);
   });
