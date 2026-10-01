@@ -1619,6 +1619,10 @@ behaviour is the one this spec gives:
 export function shown(value: string): string;
 /** A value of a file, the name of a file among them, escaped and not cut. */
 export function escaped(value: string): string;
+/** The characters of a value of a file, each as `escaped` writes it, an
+    escape as one, so that a text that cuts a value at its own length,
+    the legend of the LD decay among them, never cuts inside an escape. */
+export function escapedCharacters(value: string): readonly string[];
 /** Names in words: all when three or fewer, "a, b and c"; otherwise the
     first two and how many more, "a, b and 10 more". */
 export function namesOf(names: readonly string[]): string;
