@@ -8,6 +8,12 @@ branch `plan/population-analyses`, which is not merged and not pushed.
 
 Under way, from 30 September 2026.
 
+The owner tried the three screens on 1 October 2026, in Firefox, with
+their own data, and answered "everything is OK, go on": the three
+screens are accepted, and every recommendation of stops A, B and C and
+of the points 1 to 26 is taken. They are carried out as work package
+10, added to the plan that day.
+
 ### Words the report uses
 
 - **The open-points file** is `docs/specs/stage-5-open-points.md`, where

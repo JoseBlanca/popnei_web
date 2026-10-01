@@ -778,7 +778,7 @@ negative distance.
   populations of the 19 MB file. Serves 2 and 3. Needs 5.2.
 - [x] 5.4 The flow of D4, over the field of the minimum. Serves 4.
   Needs 5.2; runs after 5.3, since both run Playwright.
-- [ ] 5.5 Stop A: the owner tries the panel of the distances, in
+- [x] 5.5 Stop A: the owner tries the panel of the distances, in
   Firefox and Safari by hand as well, and judges the writers' choices of
   the open-points file that it shows: the field of the minimum with its
   default of 20, the measure left out of the key, the panel after the
@@ -979,7 +979,7 @@ its table and its CSV.
 - [x] 7.3 The flows of D1 and D2, extending `e2e/diversity.spec.ts` and
   `diversityKept.spec.ts`; the measurement of D3. Serves 1, 2 and 3.
   Needs 7.2.
-- [ ] 7.4 Stop B: the owner tries the diversity and the spectrum, in
+- [x] 7.4 Stop B: the owner tries the diversity and the spectrum, in
   Firefox and Safari by hand as well, and judges the writers' choices of
   the open-points file that they show: no private alleles for one
   population, the check numbers as they were, eleven columns with F
@@ -1061,7 +1061,7 @@ task 8.1 shares; and, if a tab closed in task 2.5, the owner's answer.
   `e2e/screens.spec.ts`. Serves 4. Needs 8.1 and 4.3.
 - [x] 8.3 The flows of D2 and D3 in `e2e/ldDecay.spec.ts`. Serves 2 and
   3. Needs 8.2.
-- [ ] 8.4 Stop C: the owner tries the LD decay, in Firefox and Safari by
+- [x] 8.4 Stop C: the owner tries the LD decay, in Firefox and Safari by
   hand as well, and judges the writers' choices of the open-points file
   that it shows: the largest major allele frequency as an option, the
   warning of few individuals below 20, the lock at 1 GB with the
@@ -1075,6 +1075,40 @@ The field of the distance is empty until typed, and the PCA's field
 found that React Aria's field turns an empty field into `NaN` or keeps
 the last number; the flow of the keyboard checks that no key sends
 anything while it is empty.
+
+## 10. The owner's decisions at the three stops
+
+Added on 1 October 2026. The owner tried the three screens that day, in
+Firefox, with their own data, found them right, and took every
+recommendation of the report: the decisions A1 to A9, B1 to B8 and C1 to
+C10 and the numbered points 1 to 26 of "For the owner, as the work
+goes". Several reach `src/core`, the worker and `src/charts`, so they
+are tasks and not rounds of a screen. In each task a spec is changed
+first, in a commit of its own, to say what the recommendation says, and
+the code follows with its tests; the open-points file records each
+decision with the option not taken.
+
+**Deliverables:** every recommendation is in a spec and in the code, or
+is listed in the report with the reason it is not; the checks of work
+package 9, deliverable 1, pass; the screenshots of the three panels are
+taken again and looked at; the review of task 10.4 has run and its
+findings are fixed.
+
+**Tasks:**
+
+- [ ] 10.1 The distances and the heatmap: A1 to A9 and points 4, 9, 10,
+  11, 13 and 21; and what the three analyses share: point 2 (the module
+  `src/core/populations.ts`), point 3, and A7 in the writer of every
+  CSV.
+- [ ] 10.2 The LD decay and the line plot: C1 to C9 and points 5, 6, 7,
+  8, 14, 19, 22, 23 and 24. Beside 10.1, in other files.
+- [ ] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
+  points 1, 15, 16, 17, 20, 25 and 26. B1 stays as it is. After 10.1,
+  whose shared words it uses.
+- [ ] 10.4 The review of 10.1 to 10.3: `spec`, `tests`, `stale`,
+  `errors`, `react`, `accessibility` and `ux`, and its fixes.
+
+Points 12 and 18 are for stage 6 and C10 for task 9.1.
 
 ## 9. The end of the stage
 
