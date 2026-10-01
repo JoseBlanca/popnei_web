@@ -2000,14 +2000,17 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 while a threshold waits for the statistics, those of `byLists`, for a
 column and for the one population alike, as `populationsBeforeRun` was
 tested in the module of the diversity in stage 3; every function `null`
-for a project of association. From stage 5, in the tests of
-`src/core/populations.ts`: `populationsWithMinimum` of
+for a project of association. From stage 5, of the functions of
+`src/core/populations.ts`, tested where they were, in the tests of
+`project.ts`: `populationsWithMinimum` of
 A of 2, B of 1 and C of 3 individuals at a minimum of 2 gives A and C,
 and B with 1, in that order, and at 0 every population; `underMinimumText`
 of one, of two, of three and of four populations, the texts above as
 literals; `populationListsNeeds` and `populationsKeptNeeds` each case of
-the diversity's tests of stage 3, moved there with them; and, read from
-the text of `project.ts`, it imports nothing of `individualsKept.ts` but
+the diversity's tests of stage 3, moved there with them. In the tests of
+`populations.ts`: the helpers, on the worked table, `populationsByLists`
+giving A and B, A alone with a list to remove i2, and none with a list
+to keep i4; and, read from the text of `project.ts`, it imports nothing of `individualsKept.ts` but
 types, and of `populations.ts` nothing but the four names it exports
 again for the LD decay, a test to be tightened to nothing when that line
 is removed, so that the three do not come to import each other again.

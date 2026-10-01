@@ -371,16 +371,17 @@ steps 239, 245 and 255, each with the colour of `viridisColour` of its
 step and two cells, and the six values written, "0.1027" in the cells of
 p2 and p0; a matrix whose values are all 0 or below gives one path, of
 step 0, and a bar of one band; the names on the vertical axis read p2, p0, p1 from the top;
-the diagonal has no cell; the grid of that element, 487 pixels a side in
-a frame 581 high, starts 94 pixels below the top of the frame and ends
-at its foot, the bar of the legend starts level with it, and a move of
-the pointer to the room above the grid shows no tooltip. The margins of
-names of 3 characters are 35 pixels left and 8 + 0.71 × 27 + 8 below,
-and of a name of 25 characters those of 20. 60 names of 20 characters
-in an element of 640 by 640 pixels, whose bands with the margins of the
-names would be of about 5 pixels, are drawn with no name, in margins of
-8 pixels left and below; so are the names of `panel.nei` in an element
-of 150 by 150 pixels, less than their margins. A matrix with a NaN pair gives the path
+the diagonal has no cell; the grid of that element, 495.6 pixels a side
+in a frame 587.2 high, starts 91.6 pixels below the top of the frame and
+ends at its foot, the bar of the legend starts level with it, and a move
+of the pointer to the room above the grid shows no tooltip. The margins
+of those names, of 2 characters, are 26 pixels left and 8 + 0.71 × 18 +
+8 below, and of a name of 30 characters those of 20. 60 names of 20
+characters in an element of 640 by 640 pixels, whose bands with the
+margins of the names would be of about 5 pixels, are drawn with no name,
+in margins of 8 pixels left and below; so are the names of `panel.nei`
+in an element of 140 by 140 pixels, narrower than the 144.4 pixels of
+their left and right margins. A matrix with a NaN pair gives the path
 `chart-cell-none` with its two cells crossed; a negative value is of
 step 0 and writes "−0.0113"; a band of 55 pixels writes no value; two
 names alike, a matrix not symmetric, one name or 201, throw. A move of
