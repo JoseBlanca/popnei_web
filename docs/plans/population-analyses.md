@@ -654,7 +654,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 6. `PA4 D6 the histogram of the spectrum`. Check: `npx vitest run
    src/charts -t "PA4 D6"` passes at least 5 tests, from
    `histogram.md`, "How it is verified", the parts of stage 5: the
-   shares of p0 with `yMax` 0.061 giving 0 to 0.07 (1), ticks that are
+   shares of p0 with `yMax` 0.061 giving 0 to 0.065 (1, corrected from 0.07 by the owner's decision of 1 October 2026, point 1), ticks that are
    not whole (1), `xWholeNumbers` over 0.5 to 2.5 (1), and a count of
    −0.1, NaN and a `yMax` below the largest count refused (at least 2).
 
@@ -1102,7 +1102,7 @@ findings are fixed.
   CSV.
 - [x] 10.2 The LD decay and the line plot: C1 to C9 and points 5, 6, 7,
   8, 14, 19, 22, 23 and 24. Beside 10.1, in other files.
-- [ ] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
+- [x] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
   points 1, 15, 16, 17, 20, 25 and 26. B1 stays as it is. After 10.1,
   whose shared words it uses.
 - [ ] 10.4 The review of 10.1 to 10.3: `spec`, `tests`, `stale`,
