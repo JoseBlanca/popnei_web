@@ -1,9 +1,13 @@
 /**
  * The block of the folded site frequency spectrum, below the table of the
  * diversity in its state done (docs/specs/analyses/sfs.md, "The block of
- * the panel"): its caption; two tabs, "Histograms", selected when the
+ * the panel"): its heading, which names it as a region of the page; its
+ * caption, which the warning of a MAF filter on the spectrum ends, said
+ * here beside the histograms and not among the warnings above the table;
+ * two tabs, "Histograms", selected when the
  * block is drawn, with one histogram per population on one vertical scale,
- * each in a group named by the heading of its population, or the line
+ * each in a group named by the heading of its population, one level
+ * under the block's, or the line
  * that says why it has none, and the line under them while any population
  * has a histogram; and "Table", the expected numbers and the shares of
  * every population; under them the download of the spectrum as CSV. A
@@ -20,7 +24,7 @@
  * their layout to the running application.
  *
  * The block is not drawn again while its result, the name of the variants
- * file and the minimum are the same: the frame of the panel is drawn
+ * file, the minimum and the words of its warning are the same: the frame of the panel is drawn
  * again when a notice comes or goes, and the table of a draw of 20,000
  * has 10,001 rows.
  */
@@ -29,7 +33,11 @@ import { memo, useId, useMemo, useState } from "react";
 import type { HistogramData } from "../../../charts/histogram.ts";
 import { MAX_HISTOGRAM_BINS } from "../../../charts/limits.ts";
 import { diversityOptions } from "../../../core/analyses/diversity.ts";
-import { spectraCsv, spectraOf } from "../../../core/analyses/sfs.ts";
+import {
+  spectraCsv,
+  spectraOf,
+  spectrumWarnings,
+} from "../../../core/analyses/sfs.ts";
 import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import { escaped } from "../../../core/project.ts";
 import type { DiversityResult } from "../../../worker/protocol.ts";
@@ -42,11 +50,13 @@ import { HistogramPlot } from "../../widgets/HistogramPlot.tsx";
 import { Table } from "../../widgets/Table.tsx";
 import type { TableColumn, TableRow } from "../../widgets/Table.tsx";
 import { Tabs } from "../../widgets/Tabs.tsx";
+import { Warning } from "../../widgets/Warning.tsx";
 import styles from "./SpectrumBlock.module.css";
 import {
   COUNT_COLUMN,
   HISTOGRAMS_TAB,
   SPECTRUM_CSV_LABEL,
+  SPECTRUM_HEADING,
   SPECTRUM_TABLE_CAPTION,
   SPECTRUM_TABLE_TAB,
   SPECTRUM_TABS_LABEL,
@@ -82,8 +92,16 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   result,
   variantsName,
 }: SpectrumBlockProps): React.JSX.Element {
-  const captionId = useId();
+  const headingId = useId();
   const [tab, setTab] = useState<SpectrumTab>(HISTOGRAMS_ID);
+  // The warnings of the spectrum, of the project the result is shown
+  // under; their words and not the project, so that a change of the
+  // project that keeps the result does not draw the block again.
+  const warning = useAppState((s) =>
+    spectrumWarnings(result, s.project)
+      .map((found) => found.text)
+      .join(" "),
+  );
   // The result is shown under the key of the options it was made with.
   const minimum = useAppState(
     (s) => diversityOptions(s.project).minNumIndividuals,
@@ -111,7 +129,7 @@ export const SpectrumBlock = memo(function SpectrumBlock({
           return (
             <ErrorBoundary
               key={pop.population}
-              level={3}
+              level={4}
               heading={escaped(pop.population)}
             >
               <PopulationSpectrum
@@ -131,10 +149,16 @@ export const SpectrumBlock = memo(function SpectrumBlock({
   );
 
   return (
-    <section aria-labelledby={captionId} className={classOf(styles, "block")}>
-      <p id={captionId} className={classOf(styles, "caption")}>
-        {spectrumCaption(draw, result.passStats.numVars, variantsName)}
-      </p>
+    <section aria-labelledby={headingId} className={classOf(styles, "block")}>
+      <h3 id={headingId} className={classOf(styles, "blockHeading")}>
+        {SPECTRUM_HEADING}
+      </h3>
+      <div className={classOf(styles, "captionBox")}>
+        <p className={classOf(styles, "caption")}>
+          {spectrumCaption(draw, result.passStats.numVars, variantsName)}
+        </p>
+        {warning !== "" && <Warning>{warning}</Warning>}
+      </div>
       <Tabs<SpectrumTab>
         label={SPECTRUM_TABS_LABEL}
         selected={tab}
@@ -184,9 +208,9 @@ function PopulationSpectrum({
       aria-labelledby={headingId}
       className={classOf(styles, "population")}
     >
-      <h3 id={headingId} className={classOf(styles, "heading")}>
+      <h4 id={headingId} className={classOf(styles, "heading")}>
         {escaped(pop.population)}
-      </h3>
+      </h4>
       {noSpectrum === null && shares !== null ? (
         <>
           <p className={classOf(styles, "muted")}>{drawLineOf(pop)}</p>

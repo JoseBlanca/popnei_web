@@ -26,8 +26,9 @@ export interface ErrorBoundaryProps {
   readonly heading: string | null;
   /** The level of the heading: 1 for a step, the default, 2 for an
       analysis panel inside the Analyses step, 3 for a part of a check
-      of the Variants step. */
-  readonly level?: 1 | 2 | 3;
+      of the Variants step, 4 for the spectrum of a population, under
+      the heading of its block. */
+  readonly level?: 1 | 2 | 3 | 4;
   /** The body of the step. */
   readonly children: ReactNode;
 }
@@ -53,6 +54,8 @@ export class ErrorBoundary extends Component<
       if (this.props.heading === null) return null;
       // It takes the focus when the step changes, as the step's own does.
       switch (this.props.level) {
+        case 4:
+          return <h4 tabIndex={-1}>{this.props.heading}</h4>;
         case 3:
           return <h3 tabIndex={-1}>{this.props.heading}</h3>;
         case 2:

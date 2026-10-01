@@ -1,6 +1,7 @@
 /**
  * The words of the block of the spectrum in the panel of the diversity
- * (docs/specs/analyses/sfs.md, "The block of the panel"): its caption,
+ * (docs/specs/analyses/sfs.md, "The block of the panel"): its heading,
+ * its caption,
  * the line under the heading of each population or the line that stands
  * in place of its histogram, the axes and the description of a histogram,
  * the line under the histograms, the line of a draw with too many bars,
@@ -11,6 +12,12 @@ import type { SpectrumOfPop } from "../../../core/analyses/sfs.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import { counted, escaped, grouped } from "../../../core/project.ts";
+import { MIN_DRAW } from "../../../worker/protocol.ts";
+
+/** The heading of the block, which names its region of the page, so
+    that a screen reader that moves by headings hears what the headings
+    of the populations under it are of. */
+export const SPECTRUM_HEADING = "Site frequency spectrum";
 
 /** The caption of the block: "The folded site frequency spectrum of each
     population, in a draw of 40 of its chromosomes at each variant, over
@@ -42,7 +49,9 @@ export function drawLineOf(pop: SpectrumOfPop): string {
 /**
  * The line that stands in place of the histogram of a population that has
  * none, or `null` for one that has: left out of the call for fewer
- * individuals than the minimum, `minNumIndividuals`; no variant in the
+ * individuals than the minimum, `minNumIndividuals`; with the minimum and
+ * not in the call, which is not made when the populations hold fewer than
+ * 2 chromosomes between them, one haploid individual; no variant in the
  * draw; or no variant with both alleles in it.
  */
 export function noSpectrumLine(
@@ -51,6 +60,9 @@ export function noSpectrumLine(
   numCalledAlleles: number,
 ): string | null {
   const name = escaped(pop.population);
+  if (!pop.calculated && pop.numIndividuals >= minNumIndividuals) {
+    return `${name} holds fewer than ${String(MIN_DRAW)} chromosomes, the least a draw takes, so it has no spectrum.`;
+  }
   if (!pop.calculated) {
     return `${name} has ${counted(pop.numIndividuals, "individual")}, fewer than the ${grouped(minNumIndividuals)} a variant needs to count for a population, so it has no spectrum.`;
   }
@@ -72,11 +84,11 @@ export function xLabelOf(numCalledAlleles: number): string {
 /** The label of the vertical axis, the same in every histogram. */
 export const SPECTRUM_Y_LABEL = "Share of the variants with both alleles";
 
-/** The description of a histogram, its text alternative: "The spectrum of
-    p0: 1,200 variants in the draw of 40 chromosomes, about 1,155 with both
-    alleles, in 20 bars from 1 to 20 copies of the rarer allele; the
-    largest share, 0.0559, at 15." A defect for a population with no
-    shares, which draws no histogram. */
+/** The description of a histogram, read after its title, "The spectrum
+    of p0", which it does not repeat: "1,200 variants in the draw of 40
+    chromosomes, about 1,155 with both alleles, in 20 bars from 1 to 20
+    copies of the rarer allele; the largest share, 0.0559, at 15." A
+    defect for a population with no shares, which draws no histogram. */
 export function spectrumDescription(
   pop: SpectrumOfPop,
   numCalledAlleles: number,
@@ -95,7 +107,7 @@ export function spectrumDescription(
       at = i + 1;
     }
   });
-  return `The spectrum of ${escaped(pop.population)}: ${counted(pop.variantsInDraw, "variant")} in the draw of ${counted(numCalledAlleles, "chromosome")}, about ${grouped(Math.round(bothAllelesOf(pop)))} with both alleles, in ${counted(shares.length, "bar")} from 1 to ${grouped(shares.length)} copies of the rarer allele; the largest share, ${fourDecimals(largest)}, at ${grouped(at)}.`;
+  return `${counted(pop.variantsInDraw, "variant")} in the draw of ${counted(numCalledAlleles, "chromosome")}, about ${grouped(Math.round(bothAllelesOf(pop)))} with both alleles, in ${counted(shares.length, "bar")} from 1 to ${grouped(shares.length)} copies of the rarer allele; the largest share, ${fourDecimals(largest)}, at ${grouped(at)}.`;
 }
 
 /** The line under the histograms; its second sentence, of the last bar

@@ -51,7 +51,6 @@ import type {
   WorkerClient,
 } from "../store.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
-import { spectrumWarnings } from "./sfs.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
   CHANGE_SETTINGS,
@@ -422,11 +421,25 @@ function keyInputs(p: Project): JsonObject {
   };
 }
 
+/**
+ * Whether populations of the sizes `sizes`, in individuals, hold fewer
+ * chromosomes between them, at the ploidy `ploidy`, than the least draw,
+ * 2: one haploid individual. No draw can be taken from them, so
+ * `calcPopDiversity` is not called for them, the diversity is not locked
+ * by its draw, and a warning says why the numbers of that call are
+ * missing (the spec, "Why it cannot run").
+ */
+export function holdNoDraw(sizes: readonly number[], ploidy: number): boolean {
+  const individuals = sizes.reduce((sum, size) => sum + size, 0);
+  return individuals * ploidy < MIN_DRAW;
+}
+
 /** The first reason the diversity cannot run beyond those every analysis
     shares and the lists of individuals popnei would refuse, or `null`:
     the individuals file, the column of the populations, the lists to
     keep and to remove leaving no population of a column, and, last, a
-    draw larger than the chromosomes of the individuals those lists keep;
+    draw larger than the chromosomes of the largest population those
+    lists keep;
     without a metadata file, or with the grouping `onePopulation`, only
     the first and the last can lock. Throws a defect on a project of
     association whose individuals file is read. */
@@ -448,23 +461,27 @@ function needs(p: Project): string | null {
     p.variants.read.kind === "read" &&
     kept.byLists.length < p.variants.read.individuals.length;
   return listed
-    ? drawNeeds(
-        p,
-        kept.byLists,
-        "the lists of individuals keep",
-        ", or change the lists in the Variants step",
-      )
-    : drawNeeds(p, kept.byLists, `of ${escaped(p.variants.name)}`, "");
+    ? drawNeeds(p, kept.byLists, {
+        individuals: "the lists of individuals keep",
+        population: " the lists of individuals keep",
+        orElse: ", or change the lists in the Variants step",
+      })
+    : drawNeeds(p, kept.byLists, {
+        individuals: `of ${escaped(p.variants.name)}`,
+        population: "",
+        orElse: "",
+      });
 }
 
 /**
  * The reason the diversity cannot run for the individuals kept, `kept`,
  * whose list is known and keeps some individual, or `null`: the list
- * leaves no population, `populationsKeptNeeds`; or it holds fewer
- * chromosomes than the draw of the rarefaction while some population of
- * the request has the minimum of individuals, told only when the list is
- * shorter than the individuals the lists to keep and to remove keep,
- * which `needs` counts. `null` while the list is not known.
+ * leaves no population, `populationsKeptNeeds`; or its largest
+ * population holds fewer chromosomes than the draw of the rarefaction
+ * while some population of the request has the minimum of individuals,
+ * told only when the list is shorter than the individuals the lists to
+ * keep and to remove keep, which `needs` counts. `null` while the list
+ * is not known.
  */
 function keptNeeds(p: Project, kept: IndividualsKept): string | null {
   const noPopulation = populationsKeptNeeds(p, kept);
@@ -475,28 +492,48 @@ function keptNeeds(p: Project, kept: IndividualsKept): string | null {
   if (list === null || list.length >= kept.byLists.length) {
     return null;
   }
-  return drawNeeds(
-    p,
-    list,
-    "the filters of individuals keep",
-    ", or loosen the filters of individuals in the Variants step",
-  );
+  return drawNeeds(p, list, {
+    individuals: "the filters of individuals keep",
+    population: " the filters of individuals keep",
+    orElse: ", or loosen the filters of individuals in the Variants step",
+  });
+}
+
+/** The words of a lock of the draw that say whose chromosomes it
+    counts. */
+interface DrawWords {
+  /** Which individuals they are, after "the 45 individuals": "of
+      panel.nei", "the lists of individuals keep". */
+  readonly individuals: string;
+  /** What keeps the largest population, after "the largest population":
+      " the lists of individuals keep", or nothing. */
+  readonly population: string;
+  /** What else the user can do, after "in the options of the
+      diversity". */
+  readonly orElse: string;
 }
 
 /**
- * The reason of a draw larger than the chromosomes of `individuals`,
- * which popnei refuses at the first range it reads of the second pass, or
- * `null`; `null` too when no population of the request made of them has
- * the minimum of individuals, since `calcPopDiversity` is then not
- * called. `whose` says which individuals they are, after "the 45
- * individuals", and `orElse` what else the user can do, after "in the
- * options of the diversity".
+ * The reason of a draw larger than the chromosomes of the largest
+ * population the individuals `individuals` leave, which no population
+ * can then reach, so that none would have a rarefied value or a
+ * spectrum, or `null` (the owner, 1 October 2026). popnei refuses a draw
+ * above the chromosomes of every individual, at the first range it reads
+ * of the second pass; the largest population holds no more, so the lock
+ * keeps those draws from it too.
+ *
+ * `null` when no population of the request made of them has the minimum
+ * of individuals, since `calcPopDiversity` is then not called, and when
+ * the populations hold fewer than 2 chromosomes between them,
+ * `holdNoDraw`, when it is not called either. For the one population,
+ * and when the largest population holds fewer than 2 chromosomes, where
+ * "at most 1" is a number the field refuses, the lock counts the
+ * individuals, and its words name them and not a population.
  */
 function drawNeeds(
   p: Project,
   individuals: readonly string[],
-  whose: string,
-  orElse: string,
+  words: DrawWords,
 ): string | null {
   const read = p.variants?.read;
   const draw = drawOf(p);
@@ -504,26 +541,55 @@ function drawNeeds(
   if (read?.kind !== "read" || draw === null || left === null) {
     return null;
   }
-  const chromosomes = individuals.length * read.ploidy;
   const { withMinimum } = populationsWithMinimum(
     left.pops,
     diversityOptions(p).minNumIndividuals,
   );
-  if (draw <= chromosomes || withMinimum.length === 0) {
+  const sizes = left.pops.map(([, members]) => members.length);
+  if (withMinimum.length === 0 || holdNoDraw(sizes, read.ploidy)) {
     return null;
   }
-  const hold =
-    individuals.length === 1
-      ? `the one individual ${whose} holds`
-      : `the ${grouped(individuals.length)} individuals ${whose} hold`;
-  return `The rarefaction draws ${grouped(draw)} chromosomes, and ${hold} ${grouped(chromosomes)} at a ploidy of ${String(read.ploidy)}. Type a number of chromosomes of at most ${grouped(chromosomes)} in the options of the diversity${orElse}.`;
+  const size = Math.max(...sizes);
+  // The first of the largest populations, in the order of the request.
+  const largest = left.pops.find(([, members]) => members.length === size);
+  const start = `The rarefaction draws ${grouped(draw)} chromosomes, and`;
+  const ploidy = `at a ploidy of ${String(read.ploidy)}`;
+  if (
+    populationsOf(p) === "all" ||
+    largest === undefined ||
+    size * read.ploidy < MIN_DRAW
+  ) {
+    const chromosomes = individuals.length * read.ploidy;
+    if (draw <= chromosomes) {
+      return null;
+    }
+    const hold =
+      individuals.length === 1
+        ? `the one individual ${words.individuals} holds`
+        : `the ${grouped(individuals.length)} individuals ${words.individuals} hold`;
+    return `${start} ${hold} ${grouped(chromosomes)} ${ploidy}. ${atMost(chromosomes, words)}`;
+  }
+  const chromosomes = size * read.ploidy;
+  if (draw <= chromosomes) {
+    return null;
+  }
+  const its =
+    size === 1 ? "its one individual" : `its ${grouped(size)} individuals`;
+  return `${start} the largest population${words.population}, ${namesOf([largest[0]])}, holds ${grouped(chromosomes)}, those of ${its} ${ploidy}. ${atMost(chromosomes, words)}`;
+}
+
+/** What a lock of the draw tells the user to do: "Type a number of
+    chromosomes of at most 168 in the options of the diversity." */
+function atMost(chromosomes: number, words: DrawWords): string {
+  return `Type a number of chromosomes of at most ${grouped(chromosomes)} in the options of the diversity${words.orElse}.`;
 }
 
 /** Builds the request, with the individuals the filters keep that the
     store gives through `c`, and sends it through `c`: the default draw,
     and the populations with at least the minimum of individuals as those
     of `calcPopDiversity`, the rule of decision 7 made here and not in the
-    runner. Throws a defect when the variants file is not read or there
+    runner, or none when the populations hold fewer than 2 chromosomes
+    between them, `holdNoDraw`. Throws a defect when the variants file is not read or there
     are no populations to run, which `needs` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   const kept = populationsKept(p, c.individuals);
@@ -547,10 +613,15 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     minNumIndividuals: options.minNumIndividuals,
     polyThreshold: options.polyThreshold,
     numCalledAlleles: draw,
-    popDiversityPops: populationsWithMinimum(
-      kept.pops,
-      options.minNumIndividuals,
-    ).withMinimum.map(([pop]) => pop),
+    popDiversityPops: holdNoDraw(
+      kept.pops.map(([, members]) => members.length),
+      p.variants.read.ploidy,
+    )
+      ? []
+      : populationsWithMinimum(
+          kept.pops,
+          options.minNumIndividuals,
+        ).withMinimum.map(([pop]) => pop),
   });
 }
 
@@ -563,9 +634,13 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  * alleles counted without the populations of too few individuals, with
  * one population only, or over fewer variants than the filters kept,
  * populations that reach the draw at fewer variants than they have a
- * value at, and F in a haploid file; then the warnings of the spectrum.
- * The populations given to `calcPopDiversity` are found as `run` chose
- * them, from `numIndividuals` and the minimum.
+ * value at, or, in the place of those of the private alleles and of the
+ * draw, populations that hold fewer than 2 chromosomes, for which
+ * `calcPopDiversity` was not called; and F in a haploid file. The
+ * warning of the spectrum is not among them: its block says it
+ * (docs/specs/analyses/sfs.md). The populations given to
+ * `calcPopDiversity` are found as `run` chose them, from
+ * `numIndividuals`, the minimum and the ploidy.
  */
 function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = diversityResultOf(result);
@@ -611,16 +686,29 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
     });
   }
   found.push(...populationWarnings(r.pops, p, DIVERSITY_WORDS));
-  found.push(...privateAllelesWarnings(r, rows, min, onePopulation));
-  const notInDraw = counts.filter(
-    ({ row, withValue, inDraw }) =>
-      row.individuals >= min && inDraw < withValue,
-  );
-  if (notInDraw.length > 0) {
+  const notCalled =
+    rows.some((row) => row.individuals >= min) &&
+    holdNoDraw(
+      rows.map((row) => row.individuals),
+      read.ploidy,
+    );
+  if (notCalled) {
     found.push({
-      code: "variantsNotInDraw",
-      text: notInDrawText(notInDraw, r),
+      code: "tooFewChromosomesForDraw",
+      text: `The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw ${String(MIN_DRAW)} or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value.`,
     });
+  } else {
+    found.push(...privateAllelesWarnings(r, rows, min, onePopulation));
+    const notInDraw = counts.filter(
+      ({ row, withValue, inDraw }) =>
+        row.individuals >= min && inDraw < withValue,
+    );
+    if (notInDraw.length > 0) {
+      found.push({
+        code: "variantsNotInDraw",
+        text: notInDrawText(notInDraw, r),
+      });
+    }
   }
   if (read.ploidy === 1) {
     found.push({
@@ -628,7 +716,6 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
       text: `The variants of ${escaped(p.variants.name)} have a ploidy of 1, and a genotype of one allele cannot be heterozygous, so F has no value.`,
     });
   }
-  found.push(...spectrumWarnings(r, p));
   return found;
 }
 

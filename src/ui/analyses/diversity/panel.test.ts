@@ -648,13 +648,28 @@ describe("PA7 D2 the block of the spectrum, drawn by React", () => {
             ?.textContent,
       ),
     ).toEqual(["p0", "p2", "p1"]);
+    // The heading of the block, which names its region, and those of the
+    // populations one level under it.
     expect(
       [...container.querySelectorAll("h3")].map((h) => h.textContent),
+    ).toEqual(["Site frequency spectrum"]);
+    const region = container.querySelector("section[aria-labelledby]");
+    expect(
+      document.getElementById(region?.getAttribute("aria-labelledby") ?? "")
+        ?.textContent,
+    ).toBe("Site frequency spectrum");
+    expect(
+      [...container.querySelectorAll("h4")].map((h) => h.textContent),
     ).toEqual(["p0", "p2", "p1"]);
     expect(container.querySelectorAll("svg")).toHaveLength(1);
-    expect(groups[0]?.querySelector("svg desc")?.textContent).toBe(
-      "The spectrum of p0: 5 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.5000, at 1.",
+    expect(groups[0]?.querySelector("svg title")?.textContent).toBe(
+      "The spectrum of p0",
     );
+    expect(groups[0]?.querySelector("svg desc")?.textContent).toBe(
+      "5 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.5000, at 1.",
+    );
+    // No MAF filter in the project: the caption ends at its own words.
+    expect(container.textContent).not.toContain("Warning:");
     expect(groups[0]?.textContent).toContain(
       "5 variants in the draw, about 4 of them with both alleles",
     );
@@ -670,6 +685,43 @@ describe("PA7 D2 the block of the spectrum, drawn by React", () => {
     expect(
       [...container.querySelectorAll("button")].map((b) => b.textContent),
     ).toContain("Download the spectrum as CSV");
+  });
+
+  test("with a MAF filter that removed variants, the warning of the spectrum ends the caption of the block, and with one that removed none it is not there", () => {
+    project = {
+      ...project,
+      filters: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+        { kind: "maf", maxAllowedMaf: 0.95 },
+      ],
+    };
+    const filtered = (varsKept: number): DiversityResult => ({
+      ...withSpectra(4),
+      passStats: {
+        numVars: varsKept,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: 1152 },
+          maf: { varsProcessed: 1152, varsKept },
+        },
+      },
+    });
+    draw(
+      createElement(DiversityResults, { result: filtered(1128), check: null }),
+    );
+    const block = container.querySelector("section[aria-labelledby]");
+    const caption = block?.querySelector("p")?.parentElement;
+    expect(caption?.textContent).toBe(
+      "The folded site frequency spectrum of each population, in a draw of 4 of its chromosomes at each variant, over the 1,128 variants of panel.nei the filters kept. The number of chromosomes is set above the table, with the rarefaction." +
+        "Warning: The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
+    );
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    draw(
+      createElement(DiversityResults, { result: filtered(1152), check: null }),
+    );
+    expect(container.textContent).not.toContain("Warning:");
   });
 
   test("the tab of the table shows a row per count and two columns per population, no value in those of a population not calculated, and the histogram goes with its tab and comes back", () => {
@@ -766,7 +818,7 @@ describe("PA7 D2 the histograms of the spectrum share one vertical scale", () =>
     // Each histogram draws its own population.
     const groups = [...container.querySelectorAll('[role="group"]')];
     expect(groups[1]?.querySelector("svg desc")?.textContent).toBe(
-      "The spectrum of p2: 3 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.7500, at 2.",
+      "3 variants in the draw of 4 chromosomes, about 4 with both alleles, in 2 bars from 1 to 2 copies of the rarer allele; the largest share, 0.7500, at 2.",
     );
     // 0.75, made round by the scale's `nice`, and not p0's own 0.5.
     expect(tops[0]).toBeCloseTo(0.8, 10);
@@ -916,8 +968,10 @@ describe("PA7 D2 the block of the spectrum, the review of work package 7", () =>
       check: null,
     };
     draw(createElement(AnalysisPanel, { id: "diversity" }));
+    // The population whose histogram threw keeps its heading, at the
+    // level of the others.
     expect(
-      [...container.querySelectorAll("h3")].map((h) => h.textContent),
+      [...container.querySelectorAll("h4")].map((h) => h.textContent),
     ).toEqual(["p0", "p2", "p1"]);
     expect(container.querySelectorAll("svg")).toHaveLength(2);
     expect(container.querySelectorAll('[role="group"]')).toHaveLength(2);
@@ -943,7 +997,7 @@ describe("PA7 D2 the block of the spectrum, the review of work package 7", () =>
       "A draw of 2,400 chromosomes gives 1,200 bars per population, too many to draw.",
     );
     expect(
-      [...container.querySelectorAll("h3")].map((h) => h.textContent),
+      [...container.querySelectorAll("h4")].map((h) => h.textContent),
     ).toEqual(["p2", "p1"]);
     expect(container.textContent).toContain(
       "Every variant of p2 in the draw shows one allele only, so its spectrum has no bar.",

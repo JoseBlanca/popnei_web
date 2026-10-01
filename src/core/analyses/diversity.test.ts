@@ -28,6 +28,7 @@ import {
 } from "../project.ts";
 import { populationsKeptNeeds } from "../populations.ts";
 import type { Project, VariantSource } from "../project.ts";
+import { spectrumWarnings } from "./sfs.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, Warning, WorkerClient } from "../store.ts";
 import { deepFreeze, noPopDiversity } from "../testSupport.ts";
@@ -2341,24 +2342,51 @@ describe("PA6 D3 the draw of drawOf and run", () => {
 });
 
 describe("PA6 D3 the lock of the draw", () => {
-  test("a draw of 9 over the 4 individuals of the variants file, 8 chromosomes, locks in needs with the words of no list", () => {
-    expect(diversity.needs(withDiversity(project(), 2, 9))).toBe(
-      "The rarefaction draws 9 chromosomes, and the 4 individuals of panel.nei hold 8 at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+  test("a draw of 5 over A, the largest population, of 2 individuals and 4 chromosomes, locks in needs with the words of no list, which name A", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 5))).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
     );
   });
 
-  test("a draw of 8 does not lock", () => {
-    expect(diversity.needs(withDiversity(project(), 2, 8))).toBeNull();
+  test("a draw of 4, which A holds, does not lock, and one of 8, which the 4 individuals of the variants file hold and no population does, locks", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 4))).toBeNull();
+    expect(diversity.needs(withDiversity(project(), 2, 8))).toBe(
+      "The rarefaction draws 8 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+    );
   });
 
-  test("with a list to remove i4 and a draw of 7, needs locks with the words of the lists", () => {
+  test("with a list to remove i3, A and B of one individual each, and a draw of 3, needs locks with the words of the lists, which name A, the first of the two", () => {
     const p = withDiversity(
-      filteredProject([{ kind: "remove", individuals: ["i4"] }]),
-      2,
-      7,
+      filteredProject([{ kind: "remove", individuals: ["i3"] }]),
+      1,
+      3,
     );
     expect(diversity.needs(p)).toBe(
-      "The rarefaction draws 7 chromosomes, and the 3 individuals the lists of individuals keep hold 6 at a ploidy of 2. Type a number of chromosomes of at most 6 in the options of the diversity, or change the lists in the Variants step.",
+      "The rarefaction draws 3 chromosomes, and the largest population the lists of individuals keep, A, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or change the lists in the Variants step.",
+    );
+  });
+
+  test("on populations of 48, 84 and 68 individuals, as panel.nei's, a draw of 168 does not lock and one of 169 names p2, its 168 and its 84 individuals", () => {
+    const p = projectOfSizes(["p0", "p2", "p1"], [48, 84, 68]);
+    expect(diversity.needs(withDiversity(p, 20, 168))).toBeNull();
+    expect(diversity.needs(withDiversity(p, 20, 169))).toBe(
+      "The rarefaction draws 169 chromosomes, and the largest population, p2, holds 168, those of its 84 individuals at a ploidy of 2. Type a number of chromosomes of at most 168 in the options of the diversity.",
+    );
+  });
+
+  test("the one population of one individual the lists keep, at a draw of 3, locks with the one individual", () => {
+    const p = withDiversity(
+      deepFreeze<Project>({
+        ...filteredProject([
+          { kind: "remove", individuals: ["i2", "i3", "i4"] },
+        ]),
+        individuals: null,
+      }),
+      1,
+      3,
+    );
+    expect(diversity.needs(p)).toBe(
+      "The rarefaction draws 3 chromosomes, and the one individual the lists of individuals keep holds 2 at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or change the lists in the Variants step.",
     );
   });
 
@@ -2367,15 +2395,15 @@ describe("PA6 D3 the lock of the draw", () => {
     expect(diversity.needs(withDiversity(project(), 20, 9))).toBeNull();
   });
 
-  test("the one population locks too, with no metadata file", () => {
-    const p = withDiversity(
-      deepFreeze<Project>({ ...project(), individuals: null }),
-      2,
-      9,
-    );
-    expect(diversity.needs(p)).toBe(
+  test("the one population locks too, with no metadata file, at its individuals: a draw of 9 over the 4, and not one of 8", () => {
+    const onePopulation = deepFreeze<Project>({
+      ...project(),
+      individuals: null,
+    });
+    expect(diversity.needs(withDiversity(onePopulation, 2, 9))).toBe(
       "The rarefaction draws 9 chromosomes, and the 4 individuals of panel.nei hold 8 at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
     );
+    expect(diversity.needs(withDiversity(onePopulation, 2, 8))).toBeNull();
   });
 
   test("keptNeeds with a threshold, the individuals kept i1 and i3 and a draw of 5, locks with the words of the filters", () => {
@@ -2389,15 +2417,37 @@ describe("PA6 D3 the lock of the draw", () => {
       byLists: ["i1", "i2", "i3", "i4"],
       counts: [],
     };
-    expect(diversity.needs(p)).toBeNull();
     expect(keptNeeds(p, kept)).toBe(
-      "The rarefaction draws 5 chromosomes, and the 2 individuals the filters of individuals keep hold 4 at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+      "The rarefaction draws 5 chromosomes, and the largest population the filters of individuals keep, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
     );
   });
 
-  test("keptNeeds of one individual kept says the one individual", () => {
+  test("keptNeeds with the individuals kept i1 and i2, A and B of one each, and a draw of 3, names A and its one individual", () => {
     const p = withDiversity(
       filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      1,
+      3,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1", "i2"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    // A holds 4 among the individuals the lists keep, which needs counts.
+    expect(diversity.needs(p)).toBeNull();
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 3 chromosomes, and the largest population the filters of individuals keep, A, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds of the one population with one individual kept says the one individual", () => {
+    const p = withDiversity(
+      deepFreeze<Project>({
+        ...filteredProject([
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ]),
+        individuals: null,
+      }),
       1,
       3,
     );
@@ -2421,6 +2471,91 @@ describe("PA6 D3 the lock of the draw", () => {
     ] as const) {
       expect(keptNeeds(p, { list, byLists, counts: [] })).toBeNull();
     }
+  });
+});
+
+describe("PA10 populations that hold fewer than 2 chromosomes", () => {
+  /** A project whose variants file, of ploidy 1, holds `individuals`,
+      with the minimum 1 and the draw `draw`: with `pops`, a population
+      for each individual in a column; without, no metadata file. */
+  function haploid(
+    individuals: readonly string[],
+    draw: number | null,
+    pops: readonly string[] | null,
+  ): Project {
+    const p =
+      pops === null
+        ? deepFreeze<Project>({
+            ...project({ individuals }),
+            individuals: null,
+          })
+        : project({ individuals, table: tableOf(individuals, pops) });
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return withDiversity(
+      deepFreeze<Project>({
+        ...p,
+        variants: { ...p.variants, read: { ...p.variants.read, ploidy: 1 } },
+      }),
+      1,
+      draw,
+    );
+  }
+
+  /** The draw and the populations of calcPopDiversity that run sends. */
+  function sentOf(p: Project): readonly [number, readonly string[]] {
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    const [job] = jobs;
+    if (job === undefined || jobs.length !== 1) {
+      throw new Error("run sent no job, or more than one");
+    }
+    return [job.numCalledAlleles, job.popDiversityPops];
+  }
+
+  test("one haploid individual does not lock, at the default draw of 2 and at a draw typed of 5", () => {
+    expect(diversity.needs(haploid(["i1"], null, null))).toBeNull();
+    expect(diversity.needs(haploid(["i1"], 5, null))).toBeNull();
+  });
+
+  test("run sends it with no population for calcPopDiversity, the first pass alone, and the draw of 2", () => {
+    expect(sentOf(haploid(["i1"], null, null))).toEqual([2, []]);
+  });
+
+  test("its result gives tooFewChromosomesForDraw and noFInHaploid, and neither the warning of one population nor that of the draw", () => {
+    const p = haploid(["i1"], null, null);
+    const r = result({
+      pops: ["All individuals"],
+      numIndividuals: [1],
+      numVars: 1152,
+    });
+    const found = diversity.warnings(
+      { ...r, numVarsInDraw: Uint32Array.from([0]), numCalledAlleles: 2 },
+      p,
+    );
+    expect(found.map((w) => w.code)).toEqual([
+      "tooFewChromosomesForDraw",
+      "noFInHaploid",
+    ]);
+    expect(found[0]?.text).toBe(
+      "The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw 2 or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value.",
+    );
+  });
+
+  test("two haploid individuals in two populations run at the default draw, with both populations, and a draw of 3 locks at the 2 chromosomes of the individuals", () => {
+    const two = ["i1", "i2"];
+    expect(diversity.needs(haploid(two, null, ["A", "B"]))).toBeNull();
+    expect(sentOf(haploid(two, null, ["A", "B"]))).toEqual([2, ["A", "B"]]);
+    expect(diversity.needs(haploid(two, 3, ["A", "B"]))).toBe(
+      "The rarefaction draws 3 chromosomes, and the 2 individuals of panel.nei hold 2 at a ploidy of 1. Type a number of chromosomes of at most 2 in the options of the diversity.",
+    );
+  });
+
+  test("a result of two haploid individuals in two populations gives no tooFewChromosomesForDraw", () => {
+    const p = haploid(["i1", "i2"], null, ["A", "B"]);
+    const r = result({ pops: ["A", "B"], numIndividuals: [1, 1], numVars: 9 });
+    expect(warningsOf(r, p, "tooFewChromosomesForDraw")).toEqual([]);
   });
 });
 
@@ -2641,7 +2776,7 @@ describe("PA6 D4 the warnings of stage 5", () => {
     ]);
   });
 
-  test("a variants file of ploidy 1 gives noFInHaploid, before the warning of the spectrum", () => {
+  test("a variants file of ploidy 1 gives noFInHaploid, the last warning, the spectrum's being said in its block and not here", () => {
     const vcf = vcfProject("panel.vcf.gz", false);
     if (vcf.variants?.read.kind !== "read") {
       throw new Error("the project of vcfProject has a variants file read");
@@ -2666,8 +2801,13 @@ describe("PA6 D4 the warnings of stage 5", () => {
       diversity
         .warnings(r, p)
         .map((w) => w.code)
-        .slice(-2),
-    ).toEqual(["noFInHaploid", "mafFilterOnSpectrum"]);
+        .slice(-1),
+    ).toEqual(["noFInHaploid"]);
+    expect(warningsOf(r, p, "mafFilterOnSpectrum")).toEqual([]);
+    // The spectrum's own function still gives it, for its block.
+    expect(spectrumWarnings(r, p).map((w) => w.code)).toEqual([
+      "mafFilterOnSpectrum",
+    ]);
     expect(warningsOf(r, p, "noFInHaploid")).toEqual([
       {
         code: "noFInHaploid",

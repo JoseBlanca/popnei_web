@@ -70,7 +70,9 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
         6,
       ),
     ).toBe(
-      "The spectrum of p0: 5 variants in the draw of 6 chromosomes, about 4 with both alleles, in 3 bars from 1 to 3 copies of the rarer allele; the largest share, 0.5000, at 2.",
+      // It starts at its numbers: the title of the plot, "The spectrum of
+      // p0", is read before it.
+      "5 variants in the draw of 6 chromosomes, about 4 with both alleles, in 3 bars from 1 to 3 copies of the rarer allele; the largest share, 0.5000, at 2.",
     );
     expect(() => spectrumDescription(P1, 4)).toThrow(/popnei_web defect/);
   });
@@ -78,6 +80,17 @@ describe("PA7 D2 the words of the block of the spectrum", () => {
   test("the lines in place of a histogram: not calculated, no variant in the draw, one allele only, and none for a population with shares", () => {
     expect(noSpectrumLine(P3, 20, 40)).toBe(
       "p3 has 12 individuals, fewer than the 20 a variant needs to count for a population, so it has no spectrum.",
+    );
+    // With the minimum of individuals and not calculated: the populations
+    // hold fewer than 2 chromosomes, one haploid individual.
+    expect(
+      noSpectrumLine(
+        { ...P3, population: "All individuals", numIndividuals: 1 },
+        1,
+        2,
+      ),
+    ).toBe(
+      "All individuals holds fewer than 2 chromosomes, the least a draw takes, so it has no spectrum.",
     );
     expect(noSpectrumLine(EMPTY, 20, 40)).toBe(
       "p4 has no variant with 40 called chromosomes, so it has no spectrum.",

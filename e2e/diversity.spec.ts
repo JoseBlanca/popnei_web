@@ -1302,14 +1302,31 @@ test("PA7 D2 three histograms, each headed by its population, of 20 bars, and th
     ["p2", "about 1,152", "0.0551, at 11"],
     ["p1", "about 1,151", "0.0562, at 15"],
   ] as const;
+  // The block is a region named by its heading, and the heading of each
+  // population is one level under it.
+  const block = panel(page).getByRole("region", {
+    name: "Site frequency spectrum",
+  });
+  await expect(
+    block.getByRole("heading", { level: 3, name: "Site frequency spectrum" }),
+  ).toBeVisible();
+  await expect(block.getByRole("heading", { level: 4 })).toHaveText([
+    "p0",
+    "p2",
+    "p1",
+  ]);
   for (const [pop, both, largest] of described) {
     const group = panel(page).getByRole("group", { name: pop, exact: true });
     await expect(
-      group.getByRole("heading", { level: 3, name: pop, exact: true }),
+      group.getByRole("heading", { level: 4, name: pop, exact: true }),
     ).toBeVisible();
     await expect(group.locator("svg rect.chart-bar")).toHaveCount(20);
+    // The description starts at its numbers, after the title.
+    await expect(group.locator("svg title")).toHaveText(
+      `The spectrum of ${pop}`,
+    );
     await expect(group.locator("svg desc")).toHaveText(
-      `The spectrum of ${pop}: 1,200 variants in the draw of 40 chromosomes, ${both} with both alleles, in 20 bars from 1 to 20 copies of the rarer allele; the largest share, ${largest}.`,
+      `1,200 variants in the draw of 40 chromosomes, ${both} with both alleles, in 20 bars from 1 to 20 copies of the rarer allele; the largest share, ${largest}.`,
     );
     // The horizontal axis: ticks at whole counts, and its label.
     await expect(group.locator("svg .chart-axis-x .tick text")).toHaveText([
@@ -1350,11 +1367,18 @@ test("PA7 D2 the MAF filter at 0.95 after the missing data filter at 0.05 gives 
   ).toHaveValue("0.95");
   await goTo(page, "Analyses");
   await run(page);
+  // In the block of the spectrum, after its caption, and not among the
+  // warnings above the table, which this result has none of.
   await expect(
-    panel(page).getByText(
-      "Warning: The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
-      { exact: true },
-    ),
+    panel(page).getByRole("heading", { name: /warning/ }),
+  ).toHaveCount(0);
+  await expect(
+    panel(page)
+      .getByRole("region", { name: "Site frequency spectrum" })
+      .getByText(
+        "Warning: The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
+        { exact: true },
+      ),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 });
