@@ -42,7 +42,8 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { DiversityOptionsPart } from "./diversity/DiversityOptionsPart.tsx";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
-import { LdDecayPlaceholder } from "./ldDecay/LdDecayPlaceholder.tsx";
+import { LdDecayOptionsPart } from "./ldDecay/LdDecayOptionsPart.tsx";
+import { LdDecayResults } from "./ldDecay/LdDecayResults.tsx";
 import {
   LD_DECAY_NAME,
   LD_DECAY_RESULT_NAME,
@@ -226,9 +227,8 @@ const POP_DISTS: AnalysisUi = Object.freeze({
 
 /** The panel of the LD decay (docs/specs/analyses/ldDecay.md, "The
     panel"): its words, the lines of its ready state and the line under
-    the bar; its options and the component of its result, the plot and
-    the two tables, come with task 8.2 of the plan of stage 5, and until
-    then it has no options and draws nothing of a result. */
+    the bar, which is all the user has while the curves are fitted; its
+    two options; and its result, the plot and the two tables. */
 const LD_DECAY: AnalysisUi = Object.freeze({
   title: titleOf("ldDecay"),
   name: LD_DECAY_NAME,
@@ -248,8 +248,8 @@ const LD_DECAY: AnalysisUi = Object.freeze({
       failureText,
       waited ? "the LD decay was not run" : "the LD decay cannot run",
     ),
-  Results: LdDecayPlaceholder,
-  Options: null,
+  Results: LdDecayResults,
+  Options: LdDecayOptionsPart,
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : fitLine(p.variants.name),
   workerFailedText: null,

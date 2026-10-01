@@ -107,12 +107,22 @@ export const LD_PLOT_MAX_POPS = 16;
     24 for the three arrays of the distances that hold a pair. */
 const BYTES_PER_BP_AND_POP = 40;
 
-/** The largest distance popnei takes, 2^53 − 1. */
-const MAX_DIST_TAKEN = Number.MAX_SAFE_INTEGER;
+/** The largest distance popnei takes, 2^53 − 1, the most the field of
+    the largest distance takes. */
+export const MAX_DIST_TAKEN = Number.MAX_SAFE_INTEGER;
 
 /** The smallest largest distance, the number of bins, so that each bin
-    spans one base pair at least. */
-const MIN_MAX_DIST = LD_DECAY_NUM_BINS;
+    spans one base pair at least; the least the field of the largest
+    distance takes. */
+export const MIN_MAX_DIST = LD_DECAY_NUM_BINS;
+
+/** The least `maxAllowedMaf` the options take: below it no variant of two
+    alleles passes, since its major allele frequency is at least 0.5
+    (ldDecay.md, "Its options"). */
+export const MIN_MAX_ALLOWED_MAF = 0.5;
+
+/** The largest `maxAllowedMaf` the options take, a frequency. */
+export const MAX_MAX_ALLOWED_MAF = 1;
 
 /** What the options should be, the end of "‹the field› should be ‹…›" of
     `projectErrorText`. */
@@ -627,8 +637,8 @@ function readOptions(options: unknown): Result<LdDecayOptions, string> {
     !isDistance ||
     typeof maxAllowedMaf !== "number" ||
     !Number.isFinite(maxAllowedMaf) ||
-    maxAllowedMaf < 0.5 ||
-    maxAllowedMaf > 1
+    maxAllowedMaf < MIN_MAX_ALLOWED_MAF ||
+    maxAllowedMaf > MAX_MAX_ALLOWED_MAF
   ) {
     return refused;
   }

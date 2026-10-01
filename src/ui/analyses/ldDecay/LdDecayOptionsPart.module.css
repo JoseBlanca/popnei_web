@@ -1,0 +1,19 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+/* The field of the largest distance, and under it, while no distance is
+   typed, the reason the analysis cannot run. */
+.distance {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

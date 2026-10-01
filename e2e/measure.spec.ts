@@ -73,8 +73,8 @@
  *
  * And the memory and the time of the LD decay (PA2 D7, the open-points
  * file of stage 5, "Set by a measurement"; docs/specs/analyses/ldDecay.md,
- * "How it runs"), in both engines, each run from the placeholder of its
- * panel on a new page, with its largest distance set by a project file:
+ * "How it runs"), in both engines, each run from its panel on a new
+ * page, with its largest distance set by a project file:
  * the growth of the engine and its size when the answer arrives, which
  * the tab would keep without the restart after it, and 3 s after the
  * restart, on a VCF of 20,000 variants and 1,000 individuals at 100,000
@@ -2813,8 +2813,8 @@ async function projectWithPca(
 
 /** The project file at `base` with the LD decay's largest distance
     `maxDist`, and its maximum MAF at its default, 0.95, written beside it
-    with `suffix`: the placeholder of the LD decay's panel has no options
-    until task 8.1 of the plan of stage 5. */
+    with `suffix`, so that the measurement types in no field: it was
+    first taken while the panel of the LD decay had no options. */
 async function projectWithLdDecay(
   base: string,
   suffix: string,
@@ -3247,8 +3247,8 @@ interface LdRun {
 }
 
 /** Opens the project file at `project` on a new page, loads the variants
-    file at `variants` that it asks for, and runs the LD decay from the
-    placeholder of its panel in the Analyses step, with the memory of the
+    file at `variants` that it asks for, and runs the LD decay from its
+    panel in the Analyses step, with the memory of the
     engine sampled every `pauseMs` and the time of a sample; the pass
     ended at the first of the last `numPops` rises of the memory. */
 async function ldDecayOnce(
@@ -3488,7 +3488,7 @@ function ldHead(
   const fit = withFit
     ? `; after the pass popnei copies the counts of each population in turn and fits its curve, with no progress, and the memory rises once for each population: a rise is a run of samples each more than ${mb(STEP_RISE)} above the one before, of more than ${mb(FIT_RISE)} in all, and the time after the pass is from the first sample of the first of the last rises, one for each population, to the answer`
     : "";
-  return `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; ${what}; each LD decay run from the placeholder of its panel on a new page, after the project file that sets its largest distance opened and the file loaded; the memory is the footprints of the engine's processes summed, a sample every ${String(pauseMs)} ms and the time of a sample${fit}`;
+  return `${machine(browser, browserName)}, macOS ${macOs()}; load averages ${loadBefore} before and ${machineLoad()} after; ${what}; each LD decay run from its panel on a new page, after the project file that sets its largest distance opened and the file loaded; the memory is the footprints of the engine's processes summed, a sample every ${String(pauseMs)} ms and the time of a sample${fit}`;
 }
 
 test.describe("PA2 D7 the memory and the time of the LD decay", () => {

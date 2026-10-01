@@ -3795,7 +3795,255 @@ for (const theme of ["light", "dark"] as const) {
         .toBeLessThanOrEqual(320);
       await savePanel(page, `popgen-popdists-320-long-names-${theme}`);
     });
+
+    test("the LD decay locked by the distance not typed, with the reason beside the field and the Run button", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription(/^The LD decay needs the largest distance/);
+      await expect(
+        ldDecayPanel(page).getByLabel(LD_DISTANCE),
+      ).toHaveAccessibleDescription(
+        /^The LD decay needs the largest distance .* How far to look for pairs\./,
+      );
+      await saveLdPanel(page, `popgen-lddecay-locked-distance-${theme}`);
+    });
+
+    test("the LD decay locked by the memory of the counts", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      // One base pair above the 12,500,000 the memory allows two
+      // populations.
+      await setLdDistance(page, "12500001");
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription(
+        /^With 2 populations, the largest distance can be at most 12,500,000 base pairs/,
+      );
+      await saveLdPanel(page, `popgen-lddecay-locked-memory-${theme}`);
+    });
+
+    test("the LD decay ready, with the line of the LD pruning of the Variants step", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^The LD pruning of the Variants step is not applied here/,
+        ),
+      ).toBeVisible();
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeEnabled();
+      await saveLdPanel(page, `popgen-lddecay-ready-pruning-${theme}`);
+    });
+
+    test("the LD decay running, with the line of the fit", async ({ page }) => {
+      await loadLd(page);
+      await setLdDistance(page, "100000");
+      await holdResults(page);
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(/^Calculating · \d+% · 0:0[1-9]$/),
+      ).toBeVisible({ timeout: 5000 });
+      await expect(
+        ldDecayPanel(page).getByText(
+          "The bar shows the reading of ld.nei. The curves are fitted once it is read.",
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-running-${theme}`);
+    });
+
+    test("the LD decay done, the plot with its legend and the table of the populations", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await saveLdPanel(page, `popgen-lddecay-done-${theme}`);
+    });
+
+    test("the LD decay done, the table of the bins in its tab", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await ldDecayPanel(page)
+        .getByRole("tab", { name: "Table of the bins" })
+        .click();
+      await expect(
+        ldDecayPanel(page).getByRole("columnheader", { name: "Mean r²" }),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-bins-${theme}`);
+    });
+
+    test("the LD decay done with 17 populations of 5 or 6 individuals: the warning of few individuals, 16 in the plot and its line", async ({
+      page,
+    }) => {
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "pops17.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) => `i${String(i).padStart(3, "0")},q${String(i % 17)}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          "The plot draws the first 16 of the 17 populations, in the order of the table. The tables below hold all 17.",
+        ),
+      ).toBeVisible({ timeout: 30_000 });
+      await expect(
+        ldDecayPanel(page).getByText(/^Warning: .*fewer than 20 individuals/),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-few-individuals-${theme}`);
+    });
+
+    test("the LD decay done on panel.nei, each half distance below the closest pairs", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page)
+          .getByText(/^Warning: The curve of p0 falls to half within 1 bp/)
+          .first(),
+      ).toBeVisible({ timeout: 30_000 });
+      await saveLdPanel(page, `popgen-lddecay-half-below-${theme}`);
+    });
+
+    test("the LD decay in error, the filters keep no variant", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.4");
+      await threshold.press("Enter");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^The filters kept none of the variants of ld\.nei/,
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-no-variant-${theme}`);
+    });
+
+    test("the LD decay done at 320 pixels wide, in the committed font", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await ldDecayDone(page);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      // The plot keeps the width the label of its axis needs, and its
+      // frame scrolls sideways, not the page.
+      await expect(
+        ldDecayPanel(page).getByText(
+          "Scroll the plot sideways to see all of it.",
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-320-${theme}`);
+    });
+
+    test("the LD decay locked at 320 pixels wide, in the committed font", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await loadLd(page);
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeDisabled();
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      await saveLdPanel(page, `popgen-lddecay-320-locked-${theme}`);
+    });
   });
+}
+
+/** The panel of the LD decay, its region named by its heading. */
+function ldDecayPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "LD decay", exact: true });
+}
+
+/** Saves the panel of the LD decay alone as `name`: the Analyses step
+    holds the other three panels above it. */
+async function saveLdPanel(page: Page, name: string): Promise<void> {
+  await ldDecayPanel(page).screenshot({ path: join(SCREENS, `${name}.png`) });
+}
+
+/** The label of the field of the largest distance of the LD decay. */
+const LD_DISTANCE =
+  "Largest distance between the two variants of a pair, in base pairs, from 50";
+
+/** Loads ld.nei and ld_pops.csv, chooses the column pop, its two
+    populations of 50, and goes to the Analyses step. */
+async function loadLd(page: Page): Promise<void> {
+  await pickVariants(page, "ld.nei");
+  await expect(
+    page.getByRole("main").getByText("100 individuals"),
+  ).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, "ld_pops.csv");
+  await choose(page, "Column that defines the populations", "pop");
+  await expect(
+    page.getByRole("main").getByText("pop_a, 50 individuals"),
+  ).toBeAttached();
+  await goTo(page, "Analyses");
+}
+
+/** Types `distance` in the field of the largest distance of the LD decay,
+    and commits it with Enter. */
+async function setLdDistance(page: Page, distance: string): Promise<void> {
+  const field = ldDecayPanel(page).getByLabel(LD_DISTANCE);
+  await field.fill(distance);
+  await field.press("Enter");
+  await expect(field).toHaveValue(distance);
+}
+
+/** Loads ld.nei with its two populations, runs the LD decay up to
+    100,000 bp, and waits for the plot and the table of the populations. */
+async function ldDecayDone(page: Page): Promise<void> {
+  await loadLd(page);
+  await setLdDistance(page, "100000");
+  await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    ldDecayPanel(page).getByRole("cell", { name: "7,548", exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    ldDecayPanel(page).getByRole("img", { name: "LD decay" }),
+  ).toBeVisible();
 }
 
 /** The panel of the distances between populations, its region named by

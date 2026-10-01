@@ -1,0 +1,81 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as the panel, and never wider, so that a plot drawn wide does
+   not hold the column of the panel at its width after the window
+   narrows, and a table wider than the page scrolls in its own frame
+   (WCAG 1.4.10). */
+.results {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.plotPart {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.plotFrame {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.scrollLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A plot wider than the page scrolls sideways, and the page does not
+   (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
+   shows the focus. */
+.plotScroll {
+  min-inline-size: 0;
+  overflow-x: auto;
+}
+
+.plotScroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The element of the line plot: its width from the panel, up to 48rem,
+   and its height from its ratio of 16 by 10, as the histograms of the
+   Variants step, and never lower than 22.5rem: the legend of 16
+   populations takes 296 pixels of the frame, a row every 18 from 8 below
+   its top, and the margins above and below the frame 56
+   (docs/specs/charts/line.md, "The cases"). Never narrower than 20rem:
+   the label of its horizontal axis, 258 pixels wide in the fonts of
+   Linux, is centred on the frame, 22 pixels right of the middle of the
+   element, and at the 288 pixels a page of 320 gives the panel its end
+   was cut by 7. Meanwhile, refined in the running application. */
+.plot {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 48rem;
+  min-inline-size: 20rem;
+  aspect-ratio: 16 / 10;
+  min-block-size: 22.5rem;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The two buttons and the line of the versions side by side, wrapping
+   when there is no room. */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

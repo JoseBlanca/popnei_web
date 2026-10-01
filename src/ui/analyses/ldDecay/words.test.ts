@@ -20,6 +20,7 @@ import {
   ldBinsCsvName,
   ldDecayCells,
   ldDecayCsvName,
+  pruningLine,
   readyLines,
 } from "./words.ts";
 
@@ -41,22 +42,25 @@ const MISSING_DATA = {
 } as const;
 
 describe("PA8 D1 the ready state of the LD decay", () => {
-  test("says the LD pruning of the Variants step is not applied while it is on, with or without its distance, and then the individuals of the run", () => {
+  test("the line under the options says the LD pruning of the Variants step is not applied while it is on, with or without its distance, and the lines of the ready state are the individuals of the run", () => {
     for (const maxDist of [50_000, null]) {
       const p = project([
         MISSING_DATA,
         { kind: "ld", maxAllowedR2: 0.1, maxDist },
       ]);
-      expect(readyLines(p, individualsKept(p, null))).toEqual([
+      expect(pruningLine(p)).toBe(
         "The LD pruning of the Variants step is not applied here: it removes the pairs of variants in LD that this analysis measures. The other filters of the Variants step are.",
+      );
+      expect(readyLines(p, individualsKept(p, null))).toEqual([
         "4 individuals of panel.nei",
       ]);
     }
     expect(LD_PRUNING_LINE).toMatch(/^The LD pruning of the Variants step/);
   });
 
-  test("without the LD pruning gives the individuals alone, and, while a threshold waits for the statistics, those the lists keep and the line that Run calculates them first", () => {
+  test("without the LD pruning there is no line of it, and the ready state gives the individuals, and, while a threshold waits for the statistics, those the lists keep and the line that Run calculates them first", () => {
     const p = project([MISSING_DATA]);
+    expect(pruningLine(p)).toBeNull();
     expect(readyLines(p, individualsKept(p, null))).toEqual([
       "4 individuals of panel.nei",
     ]);
