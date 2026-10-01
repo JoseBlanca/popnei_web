@@ -27,6 +27,7 @@ import {
   MEASURE_ITEMS,
   MEASURE_LABEL,
   MINIMUM_LABEL,
+  MINIMUM_LINE,
   measureAnnouncement,
 } from "./words.ts";
 
@@ -49,6 +50,7 @@ export function PopDistsOptionsPart(): React.JSX.Element {
         minValue={0}
         maxValue={LARGEST_WHOLE_NUMBER}
         step={1}
+        description={MINIMUM_LINE}
         refusedText={minimumRefusedText}
         onRefused={(text) => {
           announcer.announce(text);

@@ -31,6 +31,30 @@
   cursor: default;
 }
 
+/* A button that looks like a link, in a line of text: no border and no
+   background, the colour of the links and underlined, at the size of the
+   text around it. Inline in a sentence, it needs no target of its own
+   size (WCAG 2.2, 2.5.8, the exception of a target in a sentence). */
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link[data-hovered] {
+  text-decoration-thickness: 2px;
+}
+
+.link[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+
 /* A button and its description, side by side, wrapping when there is no
    room. */
 .described {

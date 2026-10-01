@@ -216,7 +216,7 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
   // and the draw is said beside the download.
   await expect(
     panel(page).getByLabel(
-      "Minimum number of individuals with a genotype, a whole number from 0",
+      "Individuals with a called genotype needed in each population, per variant",
     ),
   ).toHaveValue("20");
   await expect(
@@ -1169,7 +1169,7 @@ function wholeRow(page: Page, pop: string): Locator {
 
 /** The labels of the fields of the diversity. */
 const MINIMUM_FIELD =
-  "Minimum number of individuals with a genotype, a whole number from 0";
+  "Individuals with a called genotype needed in each population, per variant";
 const DRAW_FIELD =
   "Chromosomes drawn for the rarefaction, a whole number from 2";
 
@@ -1286,6 +1286,53 @@ test("PA7 D1 a minimum of 50 names p0, of 48 individuals, in the ready state, an
   // The default draw follows the minimum.
   await expect(panel(page).getByLabel(DRAW_FIELD)).toHaveValue("100");
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA10 a draw of 120 names p0, whose 96 chromosomes are fewer, before the Run, a draw of 168 runs, and one of 169 locks at the 168 of p2, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "120");
+  await expect(
+    panel(page).getByText(
+      "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // "Use the default" is a button drawn as a link, at the end of the line
+  // under the field.
+  const useDefault = panel(page).getByRole("button", {
+    name: "Use the default",
+  });
+  await expect(useDefault).toHaveCSS("text-decoration-line", "underline");
+  await expect(useDefault).toHaveCSS("border-top-style", "none");
+  const run = panel(page).getByRole("button", { name: "Run", exact: true });
+  await setField(page, DRAW_FIELD, "168");
+  await expect(run).toBeEnabled();
+  await setField(page, DRAW_FIELD, "169");
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(
+    "The rarefaction draws 169 chromosomes, and the largest population, p2, holds 168, those of its 84 individuals at a ploidy of 2. Type a number of chromosomes of at most 168 in the options of the diversity.",
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA10 the default's own number typed over the default removes the table, and the notice says the draw is now typed", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const field = panel(page).getByLabel(DRAW_FIELD);
+  await field.fill("40");
+  await field.press("Enter");
+  await expect(
+    panel(page).getByText(
+      /^The diversity was removed because the number of chromosomes of the rarefaction is now a typed one, and no longer follows the minimum number of individuals\./,
+    ),
+  ).toBeVisible();
 });
 
 test("PA7 D2 three histograms, each headed by its population, of 20 bars, and the table of 21 rows, and axe", async ({

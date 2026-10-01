@@ -9,14 +9,18 @@
  * node checks them; the panel draws them.
  */
 
+import { holdNoDraw } from "../../../core/analyses/diversity.ts";
 import type { DiversityRow } from "../../../core/analyses/diversity.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
 import {
+  MAX_NAMED,
   ONE_POPULATION,
+  bothOf,
   counted,
   escaped,
   grouped,
+  namesOf,
 } from "../../../core/project.ts";
 import {
   populationsWithMinimum,
@@ -34,13 +38,17 @@ import {
 } from "../words.ts";
 import type { NotTakenWords } from "../words.ts";
 
-/** The label of the field of the minimum of individuals. */
+/** The label of the field of the minimum of individuals, the one the
+    field of the distances between populations has too, since the two are
+    the same number of popnei, each with its own value (the owner, 1
+    October 2026). */
 export const MINIMUM_LABEL =
-  "Minimum number of individuals with a genotype, a whole number from 0";
+  "Individuals with a called genotype needed in each population, per variant";
 
-/** The line under the field of the minimum. */
+/** The line under the field of the minimum, which says it is for the
+    diversity alone. */
 export const MINIMUM_LINE =
-  "A variant has a value in a population only when at least this many of its individuals have a called genotype there. A population with fewer individuals has no values.";
+  "A variant has a value in a population only when at least this many of its individuals have a called genotype there. A population with fewer individuals has no values. This minimum is for the diversity alone: the distances between populations have their own.";
 
 /** The label of the field of the threshold of polymorphism. */
 export const THRESHOLD_LABEL =
@@ -66,6 +74,11 @@ export const THRESHOLD_DESCRIPTION =
     default set back. */
 export const DRAW_DESCRIPTION =
   "the number of chromosomes of the rarefaction changed";
+
+/** The description of the default's own number typed over the default
+    draw, which changes no number of the field. */
+export const TYPED_DRAW_DESCRIPTION =
+  "the number of chromosomes of the rarefaction is now a typed one, and no longer follows the minimum number of individuals";
 
 /** What the field of the draw needs to say where its number comes
     from: whether a draw was typed, the minimum of the options, and,
@@ -102,7 +115,14 @@ const DRAW_PURPOSE =
  * individuals, 20.", each with what the draw is for.
  */
 export function drawLine(facts: DrawLineFacts): string {
-  const minimum = grouped(facts.minNumIndividuals);
+  // Below the least draw the default is the least draw, and says so.
+  const atLeast =
+    (facts.kind === "unread"
+      ? facts.minNumIndividuals
+      : facts.ploidy * facts.minNumIndividuals) < MIN_DRAW
+      ? `, and at least ${String(MIN_DRAW)}`
+      : "";
+  const minimum = `${grouped(facts.minNumIndividuals)}${atLeast}`;
   if (facts.typed) {
     return facts.kind === "unread"
       ? `Typed; the default would be the ploidy of the variants file times the minimum number of individuals, ${minimum}. ${DRAW_PURPOSE}`
@@ -254,6 +274,44 @@ const NO_OTHERS_UNDER_MINIMUM = Object.freeze({
   many: "so they will have no values.",
 });
 
+/** What the ready state needs of the draw to name the populations that
+    hold fewer chromosomes than it: the draw `run` sends and the ploidy of
+    the variants file. */
+export interface DrawFacts {
+  readonly numCalledAlleles: number;
+  readonly ploidy: number;
+}
+
+/**
+ * The line of the populations of `withMinimum` that hold fewer
+ * chromosomes than the draw, their individuals times the ploidy, which
+ * will have no rarefied values and no spectrum (the owner, 1 October
+ * 2026), or `null` for none: "p0 holds 96 chromosomes, fewer than the 120
+ * the rarefaction draws, …"; of two or three, with their counts; of more,
+ * the first two and how many more, with no counts.
+ */
+function shortOfDrawText(
+  withMinimum: readonly (readonly [string, readonly string[]])[],
+  draw: DrawFacts,
+): string | null {
+  const short = withMinimum
+    .map(([pop, members]) => [pop, members.length * draw.ploidy] as const)
+    .filter(([, chromosomes]) => chromosomes < draw.numCalledAlleles);
+  const [only] = short;
+  if (only === undefined) return null;
+  const drawn = `the ${grouped(draw.numCalledAlleles)} the rarefaction draws`;
+  const advice = "Lower the number of chromosomes, above, to have them.";
+  if (short.length === 1) {
+    return `${namesOf([only[0]])} holds ${counted(only[1], "chromosome")}, fewer than ${drawn}, so it will have no rarefied values and no spectrum. ${advice}`;
+  }
+  const names = namesOf(short.map(([pop]) => pop));
+  const hold =
+    short.length <= MAX_NAMED
+      ? `hold ${bothOf(short.map(([, chromosomes]) => grouped(chromosomes)))} chromosomes, fewer than ${drawn}`
+      : `hold fewer chromosomes than ${drawn}`;
+  return `${names} ${hold}, so they will have no rarefied values and no spectrum. ${advice}`;
+}
+
 /** What the populations of a run are: every individual in one
     population, without a metadata file or with one, or populations. */
 export type PopulationsKind = "noFile" | "onePopulation" | "populations";
@@ -266,6 +324,9 @@ export type PopulationsKind = "noFile" | "onePopulation" | "populations";
  * `minNumIndividuals`, which will have no values, "p3 has 12
  * individuals, fewer than the minimum of 20, so it will have no values,
  * and is left out of the count of the private alleles of the others.";
+ * with `draw`, the populations of the minimum that hold fewer
+ * chromosomes than it, `shortOfDrawText`, unless the populations hold
+ * fewer than 2 between them, when no draw is taken;
  * the populations the filters of individuals leave empty, when any; and,
  * when `waitsForStatistics`, a threshold on the individuals waiting for
  * the statistics of each individual, the line that says Run calculates
@@ -276,6 +337,7 @@ export function readyLines(
   minNumIndividuals: number,
   waitsForStatistics: boolean,
   kind: PopulationsKind,
+  draw: DrawFacts | null = null,
 ): readonly string[] {
   const [one] = kept.pops;
   const { withMinimum, under } = populationsWithMinimum(
@@ -286,6 +348,14 @@ export function readyLines(
   // Private alleles are counted among two populations of the minimum or
   // more: with fewer, a population under it is left out of no count.
   const noOthers = onePopulation || withMinimum.length < 2;
+  const shortOfDraw =
+    draw === null ||
+    holdNoDraw(
+      kept.pops.map(([, members]) => members.length),
+      draw.ploidy,
+    )
+      ? null
+      : shortOfDrawText(withMinimum, draw);
   return [
     ...(onePopulation
       ? [onePopulationText(one[1].length)]
@@ -302,6 +372,7 @@ export function readyLines(
           ),
         ]
       : []),
+    ...(shortOfDraw === null ? [] : [shortOfDraw]),
     ...(kept.emptied.length > 0 ? [emptiedText(kept.emptied)] : []),
     ...(waitsForStatistics ? [WAITS_FOR_STATISTICS_TEXT] : []),
   ];

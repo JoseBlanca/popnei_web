@@ -30,9 +30,15 @@ import {
   populationsText,
 } from "../words.ts";
 
-/** The label of the field of the minimum of individuals. */
+/** The label of the field of the minimum of individuals, the one the
+    field of the diversity has too (the owner, 1 October 2026). */
 export const MINIMUM_LABEL =
   "Individuals with a called genotype needed in each population, per variant";
+
+/** The line under the field of the minimum, which says it is for the
+    distances alone. */
+export const MINIMUM_LINE =
+  "This minimum is for the distances alone: the diversity has its own.";
 
 /** The label of the radio buttons of the measure the heatmap draws. */
 export const MEASURE_LABEL = "Distance in the heatmap";

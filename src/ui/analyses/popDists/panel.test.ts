@@ -329,6 +329,21 @@ describe("PA5 the options of the distances, drawn by React", () => {
     draw(createElement(PopDistsOptionsPart));
     const input = selectMinimum();
     expect(input.value).toBe("20");
+    // The label the diversity's field has too, and the line that says
+    // this one is for the distances alone.
+    expect(
+      container.querySelector(`label[for="${input.id}"]`)?.textContent,
+    ).toBe(
+      "Individuals with a called genotype needed in each population, per variant",
+    );
+    expect(
+      (input.getAttribute("aria-describedby") ?? "")
+        .split(" ")
+        .map((id) => document.getElementById(id)?.textContent)
+        .join(" "),
+    ).toBe(
+      "This minimum is for the distances alone: the diversity has its own.",
+    );
     typeKeys(input, "12");
     expect(applied).toEqual([]);
     press("Enter");

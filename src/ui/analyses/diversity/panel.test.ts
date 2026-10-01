@@ -293,6 +293,11 @@ function typeAndEnter(input: HTMLInputElement, text: string): void {
 const SPECTRUM_SENTENCE =
   " The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.";
 
+/** The description of the default's own number typed over the default
+    draw, which changes no number of the field. */
+const TYPED_DEFAULT =
+  "the number of chromosomes of the rarefaction is now a typed one, and no longer follows the minimum number of individuals";
+
 /** The line of the default draw of the sample project, diploid, at the
     minimum of 20. */
 const DEFAULT_LINE =
@@ -308,12 +313,12 @@ describe("PA7 D1 the options of the diversity, drawn by React", () => {
     expect(
       [...container.querySelectorAll("label")].map((l) => l.textContent),
     ).toEqual([
-      "Minimum number of individuals with a genotype, a whole number from 0",
+      "Individuals with a called genotype needed in each population, per variant",
       "Frequency of the commonest allele below which a variant is polymorphic, from 0 to 1",
       "Chromosomes drawn for the rarefaction, a whole number from 2",
     ]);
     expect(describedAs(minimum)).toBe(
-      "A variant has a value in a population only when at least this many of its individuals have a called genotype there. A population with fewer individuals has no values.",
+      "A variant has a value in a population only when at least this many of its individuals have a called genotype there. A population with fewer individuals has no values. This minimum is for the diversity alone: the distances between populations have their own.",
     );
     expect(describedAs(drawField)).toBe(DEFAULT_LINE);
     expect(button("Use the default")).toBeNull();
@@ -361,6 +366,12 @@ describe("PA7 D1 the options of the diversity, drawn by React", () => {
     );
     const useDefault = button("Use the default");
     expect(useDefault).not.toBeNull();
+    // Drawn as a link at the end of the line under the field, and no part
+    // of what the field is described by.
+    expect(useDefault?.className).toMatch(/link/);
+    expect(useDefault?.closest("p")?.textContent).toBe(
+      `Typed; the default would be 40.${SPECTRUM_SENTENCE} Use the default`,
+    );
     // A change of the minimum leaves the draw typed as it is.
     typeAndEnter(fields().minimum, "30");
     expect(fields().draw.value).toBe("96");
@@ -381,11 +392,11 @@ describe("PA7 D1 the options of the diversity, drawn by React", () => {
     expect(document.activeElement).toBe(fields().draw);
   });
 
-  test("the number of the default typed is kept as typed, so that the draw does not follow the minimum", () => {
+  test("the number of the default typed is kept as typed, so that the draw does not follow the minimum, and the notice says it is now typed", () => {
     draw(createElement(DiversityOptionsPart));
     typeAndEnter(fields().draw, "40");
     expect(applied).toEqual([
-      "the number of chromosomes of the rarefaction changed",
+      "the number of chromosomes of the rarefaction is now a typed one, and no longer follows the minimum number of individuals",
     ]);
     expect(diversityOptions(project).numCalledAlleles).toBe(40);
     expect(button("Use the default")).not.toBeNull();
@@ -847,9 +858,7 @@ describe("PA7 D1 the number of the default, typed, pasted or stepped to", () => 
     draw(createElement(DiversityOptionsPart));
     pasteOver(fields().draw, "40");
     expect(diversityOptions(project).numCalledAlleles).toBe(40);
-    expect(applied).toEqual([
-      "the number of chromosomes of the rarefaction changed",
-    ]);
+    expect(applied).toEqual([TYPED_DEFAULT]);
   });
 
   test("an arrow key that steps to the default's number does not mark the draw typed", () => {
@@ -940,9 +949,7 @@ describe("PA7 D1 a key pressed with Shift commits nothing, the second pass of th
       expect(applied).toEqual([]);
       press("Enter");
       expect(diversityOptions(project).numCalledAlleles).toBe(40);
-      expect(applied).toEqual([
-        "the number of chromosomes of the rarefaction changed",
-      ]);
+      expect(applied).toEqual([TYPED_DEFAULT]);
     });
   }
 });

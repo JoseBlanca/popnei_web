@@ -19,6 +19,7 @@ import type { ComponentType } from "react";
 
 import {
   diversityOptions,
+  drawOf,
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
@@ -149,9 +150,20 @@ const DIVERSITY: AnalysisUi = Object.freeze({
         : p.individuals === null
           ? "noFile"
           : "onePopulation";
-    return pops === null
-      ? []
-      : readyLines(pops, diversityOptions(p).minNumIndividuals, waits, kind);
+    if (pops === null) return [];
+    // The draw and the ploidy, which name the populations short of the
+    // draw; the variants file is read whenever these lines are drawn.
+    const numCalledAlleles = drawOf(p);
+    const read = p.variants?.read;
+    return readyLines(
+      pops,
+      diversityOptions(p).minNumIndividuals,
+      waits,
+      kind,
+      numCalledAlleles === null || read?.kind !== "read"
+        ? null
+        : { numCalledAlleles, ploidy: read.ploidy },
+    );
   },
   refusalText,
   statisticsFailedText,

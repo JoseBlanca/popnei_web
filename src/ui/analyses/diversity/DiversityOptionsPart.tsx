@@ -7,12 +7,15 @@
  * change of any of them can unlock it or leaves the calculation behind.
  * Each is one command, of `commands.ts`. The field of the draw shows the
  * draw in use, and says under it where it comes from: the default, the
- * ploidy times the minimum, or a number typed, with "Use the default"
- * beside it, which sets the draw back and gives the focus to the field,
- * since the button goes (diversity.md, "Accessibility"). A number typed
- * that is the default's is kept as typed.
+ * ploidy times the minimum, or a number typed, with "Use the default" at
+ * the end of that line, a button drawn as a link, which sets the draw back
+ * and gives the focus to the field, since the button goes (diversity.md,
+ * "Accessibility"). The line is drawn here and not by the field, so that
+ * the button can stand in it and be no part of what the field is
+ * described by. A number typed that is the default's is kept as typed,
+ * with a description of its own, since no number changed.
  */
-import { useRef } from "react";
+import { useId, useRef } from "react";
 
 import {
   defaultDrawOf,
@@ -27,7 +30,12 @@ import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
 import { minimumRefusedText } from "../words.ts";
-import { drawCommand, minimumCommand, thresholdCommand } from "./commands.ts";
+import {
+  drawCommand,
+  minimumCommand,
+  thresholdCommand,
+  typedDrawCommand,
+} from "./commands.ts";
 import type { OptionCommand } from "../optionCommand.ts";
 import styles from "./DiversityOptionsPart.module.css";
 import {
@@ -60,6 +68,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
       : null,
   );
   const drawRef = useRef<HTMLDivElement>(null);
+  const lineId = useId();
   const typed = options.numCalledAlleles !== null;
 
   const apply = (step: OptionCommand): void => {
@@ -106,21 +115,7 @@ export function DiversityOptionsPart(): React.JSX.Element {
           minValue={MIN_DRAW}
           maxValue={LARGEST_WHOLE_NUMBER}
           step={1}
-          description={drawLine(
-            ploidy === null || defaultDraw === null
-              ? {
-                  kind: "unread",
-                  typed,
-                  minNumIndividuals: options.minNumIndividuals,
-                }
-              : {
-                  kind: "read",
-                  typed,
-                  minNumIndividuals: options.minNumIndividuals,
-                  ploidy,
-                  defaultDraw,
-                },
-          )}
+          describedBy={lineId}
           refusedText={drawRefusedText}
           onRefused={announce}
           onChange={(value) => {
@@ -130,22 +125,45 @@ export function DiversityOptionsPart(): React.JSX.Element {
             // The default's number typed is kept as typed, so that the
             // draw does not follow a later change of the minimum without
             // the user knowing.
-            if (!typed) apply(drawCommand(value));
+            if (!typed) apply(typedDrawCommand(value));
           }}
         />
-        {typed && (
-          <Button
-            label={USE_DEFAULT_LABEL}
-            onPress={() => {
-              // The button goes with the draw typed: the focus goes to the
-              // field of the draw, and not to the top of the page.
-              drawRef.current
-                ?.querySelector<HTMLInputElement>("input")
-                ?.focus();
-              apply(drawCommand(null));
-            }}
-          />
-        )}
+        <p className={classOf(styles, "line")}>
+          <span id={lineId}>
+            {drawLine(
+              ploidy === null || defaultDraw === null
+                ? {
+                    kind: "unread",
+                    typed,
+                    minNumIndividuals: options.minNumIndividuals,
+                  }
+                : {
+                    kind: "read",
+                    typed,
+                    minNumIndividuals: options.minNumIndividuals,
+                    ploidy,
+                    defaultDraw,
+                  },
+            )}
+          </span>
+          {typed && (
+            <>
+              {" "}
+              <Button
+                label={USE_DEFAULT_LABEL}
+                look="link"
+                onPress={() => {
+                  // The button goes with the draw typed: the focus goes to
+                  // the field of the draw, and not to the top of the page.
+                  drawRef.current
+                    ?.querySelector<HTMLInputElement>("input")
+                    ?.focus();
+                  apply(drawCommand(null));
+                }}
+              />
+            </>
+          )}
+        </p>
       </div>
     </div>
   );

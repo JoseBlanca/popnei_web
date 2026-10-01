@@ -16,6 +16,7 @@ import type { OptionCommand, OptionsOf } from "../optionCommand.ts";
 import {
   DRAW_DESCRIPTION,
   MINIMUM_DESCRIPTION,
+  TYPED_DRAW_DESCRIPTION,
   THRESHOLD_DESCRIPTION,
 } from "./words.ts";
 
@@ -56,4 +57,12 @@ export function thresholdCommand(polyThreshold: number): OptionCommand {
     default draw, which "Use the default" sends. */
 export function drawCommand(numCalledAlleles: number | null): OptionCommand {
   return withOptions(DRAW_DESCRIPTION, { numCalledAlleles });
+}
+
+/** The default's own number typed over the default draw: the number of
+    the field is the same, and the draw is now typed, so it no longer
+    follows the minimum; its description says so, where "changed" would
+    name a change the user did not see (the owner, 1 October 2026). */
+export function typedDrawCommand(numCalledAlleles: number): OptionCommand {
+  return withOptions(TYPED_DRAW_DESCRIPTION, { numCalledAlleles });
 }

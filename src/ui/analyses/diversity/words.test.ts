@@ -331,6 +331,84 @@ describe("PA7 D1 the words of the options of the diversity", () => {
     );
   });
 
+  test("PA10 below 2, the least draw, the line of the default says and at least 2", () => {
+    expect(
+      drawLine({
+        kind: "read",
+        typed: false,
+        ploidy: 1,
+        minNumIndividuals: 0,
+        defaultDraw: 2,
+      }),
+    ).toBe(
+      "The default: the ploidy, 1, times the minimum number of individuals, 0, and at least 2. The alleles and the private alleles of every population are also given for a draw of this many chromosomes, so that populations of different sizes can be compared, and the site frequency spectrum below the table is of the same draw.",
+    );
+    expect(
+      drawLine({ kind: "unread", typed: false, minNumIndividuals: 1 }),
+    ).toBe(
+      "The default: the ploidy of the variants file times the minimum number of individuals, 1, and at least 2.",
+    );
+    expect(
+      drawLine({ kind: "unread", typed: true, minNumIndividuals: 0 }),
+    ).toMatch(
+      /^Typed; the default would be the ploidy of the variants file times the minimum number of individuals, 0, and at least 2\. /,
+    );
+  });
+
+  test("PA10 the ready state names the populations of the minimum that hold fewer chromosomes than the draw, one, two or three, and more", () => {
+    const pops = [
+      ["p0", Array.from({ length: 48 }, (_, i) => `a${String(i)}`)],
+      ["p2", Array.from({ length: 84 }, (_, i) => `b${String(i)}`)],
+      ["p1", Array.from({ length: 68 }, (_, i) => `c${String(i)}`)],
+    ] as const;
+    const kept = { pops, emptied: [] };
+    expect(
+      readyLines(kept, 20, false, "populations", {
+        numCalledAlleles: 120,
+        ploidy: 2,
+      }).slice(1),
+    ).toEqual([
+      "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+    ]);
+    expect(
+      readyLines(kept, 20, false, "populations", {
+        numCalledAlleles: 150,
+        ploidy: 2,
+      }).slice(1),
+    ).toEqual([
+      "p0 and p1 hold 96 and 136 chromosomes, fewer than the 150 the rarefaction draws, so they will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+    ]);
+    // At the draw a population holds, and at the default, no line.
+    expect(
+      readyLines(kept, 20, false, "populations", {
+        numCalledAlleles: 96,
+        ploidy: 2,
+      }),
+    ).toHaveLength(1);
+    // A population under the minimum is named by its own line, not this.
+    expect(
+      readyLines(kept, 50, false, "populations", {
+        numCalledAlleles: 120,
+        ploidy: 2,
+      }).slice(1),
+    ).toEqual([
+      "p0 has 48 individuals, fewer than the minimum of 50, so it will have no values, and is left out of the count of the private alleles of the others.",
+    ]);
+    const four = [
+      ...pops,
+      ["p3", Array.from({ length: 30 }, (_, i) => `d${String(i)}`)],
+      ["p5", Array.from({ length: 20 }, (_, i) => `e${String(i)}`)],
+    ] as const;
+    expect(
+      readyLines({ pops: four, emptied: [] }, 20, false, "populations", {
+        numCalledAlleles: 160,
+        ploidy: 2,
+      }).slice(1),
+    ).toEqual([
+      "p0, p1 and 2 more hold fewer chromosomes than the 160 the rarefaction draws, so they will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+    ]);
+  });
+
   test("a draw typed says what the default would be", () => {
     expect(
       drawLine({

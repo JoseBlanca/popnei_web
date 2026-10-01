@@ -346,7 +346,7 @@ async function setDiversityField(
 
 /** The labels of the three fields of the diversity. */
 const DIVERSITY_MINIMUM =
-  "Minimum number of individuals with a genotype, a whole number from 0";
+  "Individuals with a called genotype needed in each population, per variant";
 const DIVERSITY_DRAW =
   "Chromosomes drawn for the rarefaction, a whole number from 2";
 
@@ -1574,11 +1574,24 @@ for (const theme of ["light", "dark"] as const) {
     test("the diversity locked by the draw", async ({ page }) => {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
-      await setDiversityField(page, DIVERSITY_DRAW, "500");
+      // One more than the 168 chromosomes of p2, the largest population.
+      await setDiversityField(page, DIVERSITY_DRAW, "169");
       await expect(
         diversityPanel(page).getByRole("button", { name: "Run" }),
       ).toBeDisabled();
       await save(page, `popgen-diversity-locked-draw-${theme}`);
+    });
+
+    test("the diversity ready, a population short of the draw", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "120");
+      await expect(
+        diversityPanel(page).getByText(/^p0 holds 96 chromosomes, /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-short-of-draw-${theme}`);
     });
 
     test("the diversity running, with its bar, in the first of its two passes", async ({
