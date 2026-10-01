@@ -311,7 +311,9 @@ The bottom margin is 16 pixels deeper, 60, when the base writes the
 label of the horizontal axis on two lines, which it does when one line
 would not fit (`plot2d.md`, "The axes"): "Copies of the rarer allele
 among 40 chromosomes" under a histogram of the spectrum on a screen of
-320 pixels.
+320 pixels. The left margin is 16 pixels deeper in the same way when
+the label of the vertical axis is on two lines: "Share of the variants
+with both alleles" along the same histogram.
 
 
 ### Colours and the two themes

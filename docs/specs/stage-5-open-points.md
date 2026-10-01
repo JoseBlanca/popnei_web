@@ -594,7 +594,10 @@ numbered points. The specs changed are
   fit, with 16 pixels more below, which mends the label under the
   histograms of the spectrum on a screen of 320 pixels. Not taken: a
   shorter label on narrow screens, which mends one plot alone. The
-  label along the vertical axis fits there and is left on one line.
+  label along the vertical axis, which the report said also looked cut,
+  ran 3.8 pixels above its SVG in the font of the checks once the frame
+  was lower, and the base treats it the same way: two lines, and 16
+  pixels more of left margin.
 
 ## Decided by the writers of the specs, for the owner to overrule
 

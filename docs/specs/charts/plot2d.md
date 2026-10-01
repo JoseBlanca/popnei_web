@@ -226,11 +226,22 @@ and turned along the vertical one, in the margins:
   chromosomes", 46 characters, was 278 to 326 pixels long under a frame
   of about 205 pixels in an SVG of 281, and its end was cut. The option
   not taken was a shorter label on narrow screens, which mends one plot
-  and not every plot with a long label. The label of the vertical axis
-  is not broken: the longest, "Share of the variants with both
-  alleles", fits along its histogram, which is never lower than 288
-  pixels (`docs/specs/analyses/sfs.md`), 240 pixels long in DejaVu Sans
-  in the picture of the panel at 320 pixels.
+  and not every plot with a long label;
+- **the label of the vertical axis is treated the same way**, centred
+  along the frame and turned: it fits while half its counted width is at
+  most half the height of the frame and the top or the bottom margin,
+  whichever is smaller; otherwise it is broken at the space nearest its
+  middle into two lines 16 pixels apart, the first 16 pixels from the
+  left of the SVG as the one line is, and the base adds 16 pixels to the
+  left margin, so that the numbers of the axis keep their room. The
+  owner's report said that this label "also looks cut" at 320 pixels:
+  "Share of the variants with both alleles", 247.6 pixels long in DejaVu
+  Sans, ran 3.8 pixels above the top of its SVG, in Chromium, once the
+  frame of the histogram was 16 pixels lower for the label under it.
+  The two decisions read each other, since a second line under the
+  frame makes it lower and one along it makes it narrower: the base
+  decides them again, at most three times, until neither changes. A
+  label that fits is drawn on one line, with the definition's margins.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
@@ -627,6 +638,11 @@ calls:
   the label; a resize back to 600 by 375 gives one line and the frame
   of 319 again; a label of 46 characters with no space stays one line
   at 281 pixels; "Major allele frequency" stays one line at 281;
+- from 1 October 2026, with the same margins, in an element of 281 by
+  288 pixels the vertical label "Share of the variants with both
+  alleles" is two lines, "Share of the variants " and "with both
+  alleles", the left margin given to `draw` 76 and the frame 189 pixels
+  wide, the label under it on two lines as well; "Count" stays one line;
 - an `update` redraws in the same `<svg>` element;
 - a title `<b>P1</b>` is text in the `<title>`, and no `b` element
   exists;
