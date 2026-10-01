@@ -2000,7 +2000,15 @@ for the smallest part of it.
   anyway. `.claude/skills/coding/charts.md`, which gives every binning to
   Rust, is corrected so. The option not taken, a histogram of the
   individuals in popnei, would cost a request to popnei and a release for
-  every change of the bins.
+  every change of the bins. From stage 5 the order of the heatmap and
+  the curve of the LD decay are made outside the plots as well: the
+  calculation worker orders the populations of the heatmap from popnei's
+  PCoA of the distances, after Lingoes' correction
+  (`docs/specs/analyses/popDists.md`, "The order of the heatmap"), and
+  core gives the points of each population's fitted curve from popnei's
+  parameters of the fit, by popnei's formula
+  (`docs/specs/analyses/ldDecay.md`, "The fitted curve"). The heatmap
+  and the line plot draw the order and the points they are given.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2408,6 +2416,27 @@ the same numbers for everything else but the size of a written file.
   That memory stays with wasm after the analysis, so the worker is
   started again after every LD decay (section 13, point 16), which gave
   all of it back in both engines.
+- **The distances between populations take one pass**, and their time
+  grows with the variants and with the pairs of populations. Measured
+  through the application on 30 September 2026, in Chromium 153 and
+  WebKit 26.6 on the owner's Mac, an Apple M5 Pro with 64 GB, on the
+  built site, from the Run to the answer of the calculation worker, the
+  median of five runs (`docs/specs/analyses/popDists.md`, "How it
+  runs"): on `panel.nei`, 1,200 variants of 200 individuals, 17 and 14
+  ms with three populations, and 17 and 19 ms with twenty of 10
+  individuals; on the `.nei` file of 19 MB of section 13, 20,000
+  variants of 1,000 individuals, 118 and 118 ms with three populations,
+  and 155 and 144 ms with twenty of 50 individuals, the pass taking most
+  of it.
+- **The diversity takes two passes from stage 5**, one for each of its
+  calls of popnei, until popnei issue #4 lets it make one. Measured the
+  same way on 30 September 2026 on the same file of 19 MB, with the
+  default options, the first pass timed to the first progress of the
+  second (`docs/specs/analyses/diversity.md`, "How it runs"): a Run took
+  257 ms in Chromium 153, a first pass of 136 ms and a second of 122 ms,
+  and 261 ms in WebKit 26.6, 139 and 123 ms. One pass would save the
+  first, about half of the Run. On `panel.nei` a Run took 19 ms in
+  Chromium and 24 ms in WebKit.
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
