@@ -164,7 +164,7 @@ would show "Loading…" for ever. It does three things:
 
 The guard puts on the window one object, `window.__startGuard`, with
 `tooOld`, the result of the test, and `remove()`, which takes its two
-listeners off; `src/ui/popgen.tsx` declares its type with `declare
+listeners off; `src/ui/pageStart.tsx` declares its type with `declare
 global`. Decided here, not by the owner.
 
 ### At the opening
@@ -172,7 +172,13 @@ global`. Decided here, not by the owner.
 The entry, `src/ui/popgen.tsx`, does these in this order, all in one
 run of its code, so that no message of a worker can arrive before
 everything that listens to it exists, since the browser delivers a
-message only after the code that is running has finished:
+message only after the code that is running has finished. Since 5
+October 2026 steps 1 and 2, the store joined to the worker client of
+steps 3 and 4, the reads of step 6 and the root of step 7 are functions
+of `src/ui/pageStart.tsx`, `startPage`, `connectStore`, `syncReads` and
+`renderApplication`, which the entry of `popgen2.html`, `src/ui/popgen2.tsx`,
+calls too, with a store of its own, `createPopgen2Store`, no saving and
+no shell:
 
 1. It calls `window.__startGuard.remove()`, stops there when `tooOld`
    is true, and puts its own listeners on the window (below, "The errors

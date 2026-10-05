@@ -166,7 +166,9 @@ day:
 - After every change of the project, the entry of the page, the code
   that starts when the page opens, makes the store and the workers and
   joins them, asks for the read of each file whose read is pending and
-  has none under way (section 6, "Who asks for a read").
+  has none under way (section 6, "Who asks for a read"). From 5 October
+  2026 the entry of `popgen2.html` also starts by itself the summary of
+  the variants file once the file is read (section 5).
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
 - The notice offers the reverse of what caused it: Undo after a command
@@ -1267,7 +1269,14 @@ The page and each worker talk through typed messages
   2.2, success criterion 2.2.1). A request that waits leaves the queue at
   no cost, and one that runs ends its worker, a restart (below) that opens
   the variants file again; the calculation of the new settings starts when
-  the user asks for it, as every calculation does. An undo while the
+  the user asks for it, as every calculation of `popgen.html` does. On
+  `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts` starts the
+  summary of the variants file by itself, once for each key: when the
+  file is read, again after a read with other options, which is a new
+  load and a new key, and at the user's Count again; not again after a
+  failure or a Stop under the same key. After a Stop the store's state is
+  `ready`, as before any run, and the keys `autoRuns.ts` remembers,
+  `startedUnder`, are the one record that the count was stopped. An undo while the
   notice is up gives the keys back, and the requests go on. A change of
   the load of the variant file is the exception, below. The store holds the handle of every run and cancels
   them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
@@ -2219,9 +2228,30 @@ src/charts/
   pca3dError.ts     the ways the 3D view cannot be drawn, with no three.js
   export.ts         SVG and PNG
 src/ui/
-  popgen.tsx        the entry of the population genetics page: it makes the
-                    store, with popgenStore.ts, and the workers, joins
-                    them, and draws the shell
+  pageStart.tsx     the opening both entries of population genetics
+                    share: the guard taken over, the listeners of the
+                    errors, the error bar, the store joined to the worker
+                    client, the reads, and the root of the application
+  startGuard.js     the start guard, plain script, which a plugin of
+                    vite.config.ts puts inline in each page that has the
+                    comment <!-- the start guard -->
+  popgen.tsx        the entry of the population genetics page: with
+                    pageStart.tsx, it makes the store, with
+                    popgenStore.ts, and the workers, joins them, and draws
+                    the shell
+  popgen2.tsx       from 5 October 2026, the entry of popgen2.html, the new
+                    page: with pageStart.tsx, its store, the announcements,
+                    the analyses that start by themselves, and the page,
+                    with no stepper, no saving and no shell
+  popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES and no
+                    counts, statistics or writing; apart from the entry,
+                    so that a test in node makes it
+  autoRuns.ts       the analyses popgen2.html starts by itself, once for
+                    each key, and which keys were started, from which the
+                    page tells a count stopped
+  variants/         the screens of popgen2.html: the opening of the
+                    variants file, the summary of what it holds, the page
+                    that holds them, and their words
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -2239,9 +2269,10 @@ src/ui/
                     words.ts, the words of the shell made from the store;
                     and shellWords.tsx, which gives the components of the
                     shell what those words need of the application
-  runs.ts           awaits the outcome of each run core starts, and hands
-                    it to the store, which cancels the runs no longer
-                    asked for (section 5)
+  runs.ts           awaits the outcome of each run core starts, at a Run
+                    or, on popgen2.html, by autoRuns.ts, and hands it to
+                    the store, which cancels the runs no longer asked for
+                    (section 5)
   runSeconds.ts     the clock of a calculation under way, the seconds
                     since the start runs.ts noted, which the panel of an
                     analysis and the writing of the Variants step show
@@ -2266,7 +2297,7 @@ src/ui/
   tokens.css        the design tokens
 src/probe/          the probe of stage 0, a page of its own outside the
                     layers, that checks a deploy still loads popnei
-index.html popgen.html gwas.html probe.html
+index.html popgen.html popgen2.html gwas.html probe.html
                     the pages, at the root of the repository, so that the
                     build writes them to the root of dist/
 docs/
