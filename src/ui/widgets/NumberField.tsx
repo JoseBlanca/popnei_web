@@ -8,7 +8,8 @@
  * why and what is kept, which the screen is handed to announce
  * (committedNumber.ts; docs/specs/steps/variants.md, "A number the two
  * fields do not take"). The line goes at the next commit, whatever it
- * holds. A field left empty gives nothing and shows again the value it
+ * holds. A screen can draw that line elsewhere, `refusedIn`, where it
+ * moves nothing the user may be clicking as the field loses the focus. A field left empty gives nothing and shows again the value it
  * had, with no line. It takes no separator of thousands, so that a number
  * written with the decimal mark of another language, 0,05 in English or
  * 0.05 in Spanish, is no number, and not 5.
@@ -50,7 +51,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
   NumberField as AriaNumberField,
   Input,
@@ -147,6 +148,13 @@ export interface NumberFieldProps {
       threw away, from the reason and the value it keeps, the one it shows
       again: "10 is more than 1; the threshold stays 0.1." */
   readonly refusedText: (refusal: NumberRefusal, kept: number) => string;
+  /** The element the line of a refusal is drawn into, instead of under
+      the field: for a screen with something under the field that a
+      click takes the focus to, and which the line, appearing at that
+      blur, would move from under the pointer, so that the click is lost.
+      `null` until the screen has drawn the element; the line waits for
+      it. */
+  readonly refusedIn?: Element | null;
   /** Called with that line when it appears, so that the screen announces
       it: the focus is on the field or past it, where a screen reader
       would not read it. */
@@ -192,6 +200,7 @@ export function NumberField({
   describedBy,
   description,
   refusedText,
+  refusedIn,
   onRefused,
   onCommitReady,
   onTyped,
@@ -312,8 +321,12 @@ export function NumberField({
   // line under the field after it (the spec, "Accessibility"). Given by
   // the page and not by React Aria's slot of a description, which it
   // would put before the line of the refusal.
+  const refusedLine =
+    refused === null || refusedIn === null ? null : (
+      <Problem id={refusedId}>{refused}</Problem>
+    );
   const describers = [
-    ...(refused !== null ? [refusedId] : []),
+    ...(refusedLine !== null ? [refusedId] : []),
     ...(describedBy !== undefined && describedBy !== "" ? [describedBy] : []),
     ...(description !== undefined ? [descriptionId] : []),
   ];
@@ -409,7 +422,9 @@ export function NumberField({
           {description}
         </p>
       )}
-      {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
+      {refusedIn === undefined || refusedIn === null
+        ? refusedLine
+        : refusedLine !== null && createPortal(refusedLine, refusedIn)}
     </AriaNumberField>
   );
 }

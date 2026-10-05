@@ -4,9 +4,10 @@
  * is dropped on the zone, or picked with the button, which opens the file
  * picker of the system, since dropping a file cannot be done with a
  * keyboard. What the screen shows of the file goes in the zone, before
- * the button, and what can be done with it, a Remove, after; the button
- * is the same element whatever the zone holds, so that the focus stays on
- * it after a pick.
+ * the button, or, for a line that changes as the file is read, under it;
+ * what can be done with the file, a Remove, goes after the button; the
+ * button is the same element whatever the zone holds, so that the focus
+ * stays on it after a pick.
  *
  * React Aria's zone also holds a button of its own, hidden, which takes a
  * file pasted into it; it comes first in the order of the Tab key, and
@@ -44,6 +45,11 @@ export interface FileZoneProps {
   readonly children?: React.ReactNode;
   /** What can be done with the file, after the button. */
   readonly actions?: React.ReactNode;
+  /** A line of the file under the button, for a screen whose line changes
+      height as the file is read: a read that starts as a field above
+      loses the focus to a click on the button would otherwise move the
+      button from under the pointer, and the click would be lost. */
+  readonly status?: React.ReactNode;
 }
 
 /** A zone to drop a file on, with the button that picks one. */
@@ -56,6 +62,7 @@ export function FileZone({
   buttonRef,
   children,
   actions,
+  status,
 }: FileZoneProps): React.JSX.Element {
   const onDrop = (event: { readonly items: readonly DropItem[] }): void => {
     const dropped = droppedOf(event.items.map((item) => item.kind));
@@ -99,6 +106,9 @@ export function FileZone({
         </FileTrigger>
         {actions}
       </div>
+      {status !== undefined && (
+        <div className={classOf(styles, "content")}>{status}</div>
+      )}
     </DropZone>
   );
 }

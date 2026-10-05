@@ -11,7 +11,7 @@
  * individuals on the chromosome "1"; bad_position.vcf.gz is refused at
  * line 84, whose position is `x80`.
  */
-import { readFile } from "node:fs/promises";
+import { copyFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
@@ -353,6 +353,98 @@ test("OV2 with a ploidy typed and not committed, the first click on the box of t
   await expect(
     page.getByRole("checkbox", { name: PASSED_LABEL }),
   ).not.toBeChecked();
+});
+
+/** A name of 24 characters, on which, at 320 pixels, the line "Reading
+    <name>." took one row more than the line "<name> is open." (the
+    review of 5 October 2026). */
+const NAME_24 = `${"a".repeat(17)}.vcf.gz`;
+
+for (const typed of ["3", "300"]) {
+  test(`OV2 at 320 pixels, with a file of a long name open and the ploidy ${typed} typed, the first click on the open button opens the file picker`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const vcf = testInfo.outputPath(NAME_24);
+    await copyFile(join(FIXTURES, "panel.vcf.gz"), vcf);
+    await openPage(page);
+    await pick(page, vcf);
+    await expectPanelCounted(page);
+    await ploidyField(page).fill(typed);
+    const before = await openButton(page).boundingBox();
+
+    const chooser = page.waitForEvent("filechooser", { timeout: 5_000 });
+    await openButton(page).click();
+    await chooser;
+    // Nothing above the button changed height as the field lost the
+    // focus, whether its number was taken or refused.
+    expect((await openButton(page).boundingBox())?.y).toBe(before?.y);
+  });
+}
+
+test("OV2 at 320 pixels, with a ploidy typed that the field refuses, the first click on the box of the passed variants unticks it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expectPanelCounted(page);
+  await ploidyField(page).fill("300");
+  const label = page.getByText(PASSED_LABEL, { exact: true });
+  const before = await label.boundingBox();
+
+  await label.click();
+
+  await expect(
+    page.getByRole("checkbox", { name: PASSED_LABEL }),
+  ).not.toBeChecked();
+  await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
+  // The line of the refusal pushed nothing above the box.
+  expect((await label.boundingBox())?.y).toBe(before?.y);
+});
+
+test("OV2 a file dropped with a ploidy typed is read with it, and the file open before is not read again", async ({
+  page,
+}) => {
+  // Every text the status region holds, in order.
+  await page.addInitScript(() => {
+    const texts: string[] = [];
+    Reflect.set(window, "statusTexts", texts);
+    new MutationObserver(() => {
+      for (const region of document.querySelectorAll("[role=status]")) {
+        const text = region.textContent;
+        if (text !== "" && texts.at(-1) !== text) texts.push(text);
+      }
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+  });
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expectPanelCounted(page);
+  await ploidyField(page).fill("3");
+
+  const vcf = await readFile(join(FIXTURES, "panel.vcf.gz"));
+  await drop(page, [{ name: "other.vcf.gz", bytes: [...vcf] }]);
+
+  await expect(
+    summary(page).getByText(/^Ploidy 3, as set under How a VCF is read/u),
+  ).toBeVisible();
+  await expect(summary(page).getByText("other.vcf.gz")).toBeVisible();
+  await expectPanelCounted(page);
+  const statusTexts = (): Promise<string[]> =>
+    page.evaluate(() => Reflect.get(window, "statusTexts") as string[]);
+  await expect
+    .poll(async () => (await statusTexts()).join(" "))
+    .toContain("other.vcf.gz: 1,200 variants on 1 chromosome.");
+  // The file open before was not read again with the new ploidy.
+  const said = (await statusTexts()).join(" ");
+  expect(said).toContain(
+    "Reading other.vcf.gz, with ploidy 3 and only the variants with PASS or . in the FILTER column.",
+  );
+  expect(said).not.toContain("Reading panel.vcf.gz, with ploidy 3");
 });
 
 test("OV2 the options set are kept when a .nei file is opened, and the next VCF is read with them", async ({

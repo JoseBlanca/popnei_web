@@ -26,6 +26,12 @@
   padding-block-start: var(--space-2);
 }
 
+/* The place of the line of a ploidy refused, under the zone: no box of
+   its own, so that, empty, it adds no gap to the section. */
+.slot {
+  display: contents;
+}
+
 /* The count of the variants: its heading, its words or its table, and
    its button. */
 .count {

@@ -4,10 +4,13 @@
  * VCF is read with, the ploidy and the passed variants, since they apply
  * before a file is opened, and whose change reads an open VCF again;
  * then the button "Open a variants file…" in a zone that also takes a
- * dropped or pasted file, with one line on the file open, being read or
- * not opened; and below it what went wrong with an opening: a file
- * refused by its name, several files at once, a file popnei could not
- * read. It reads the project from the store and sends it the commands of
+ * dropped or pasted file, with one line under the button on the file
+ * open, being read or not opened; and below the zone a ploidy the field
+ * refused and what went wrong with an opening: a file refused by its
+ * name, several files at once, a file popnei could not read. Nothing
+ * that changes as the ploidy field loses the focus is above the box or
+ * the button, so that the click that takes the focus from it is not
+ * lost. It reads the project from the store and sends it the commands of
  * the Variants step; what it holds itself is the options the user last
  * set, kept when a `.nei` file is opened, and the words of a file it did
  * not open.
@@ -89,6 +92,14 @@ export function OpenVariants({
   const [options, setOptions] = useState<VcfReadOptions>(DEFAULT_READ_OPTIONS);
   const optionsNow = useRef(options);
   const commitPloidy = useRef<(() => void) | null>(null);
+  // Whether a new file is being opened: a ploidy committed then is kept
+  // for it, and the file open before is not read again.
+  const opening = useRef(false);
+
+  // The element the line of a ploidy refused is drawn into, once drawn.
+  const [ploidyRefusedIn, setPloidyRefusedIn] = useState<HTMLElement | null>(
+    null,
+  );
 
   // The words of a file not opened, until the next opening, or until the
   // load they were said beside is no longer the project's.
@@ -120,10 +131,15 @@ export function OpenVariants({
       return;
     }
     setRefusal(null);
-    // A number still being typed in the ploidy is committed first, which
-    // reads an open VCF again before the new file replaces it: a file
-    // dropped from the desktop leaves the focus in the field.
-    commitPloidy.current?.();
+    // A number still being typed in the ploidy is committed first, for
+    // the new file, since a file dropped from the desktop leaves the
+    // focus in the field; the file it replaces is not read again.
+    opening.current = true;
+    try {
+      commitPloidy.current?.();
+    } finally {
+      opening.current = false;
+    }
     const load: VariantLoad = {
       fileId: files.addFile(file),
       name: file.name,
@@ -136,10 +152,12 @@ export function OpenVariants({
   };
 
   /** The options changed to `next`: kept for the next VCF, and an open
-      VCF is read again with them, the same file under a new load. */
+      VCF is read again with them, the same file under a new load, unless
+      a new file is being opened. */
   const change = (next: VcfReadOptions): void => {
     optionsNow.current = next;
     setOptions(next);
+    if (opening.current) return;
     const open = store.getState().project.variants;
     const file = open === null ? null : files.fileOf(open.fileId);
     if (open?.format !== "vcf" || file === null) return;
@@ -177,6 +195,7 @@ export function OpenVariants({
           step={1}
           description={PLOIDY_DESCRIPTION}
           refusedText={ploidyRefusedText}
+          refusedIn={ploidyRefusedIn}
           onRefused={(text) => {
             announcer.announce(text);
           }}
@@ -205,26 +224,32 @@ export function OpenVariants({
           refuse(NOT_FILES_WORDS[dropped]);
         }}
         buttonRef={buttonRef}
-      >
-        {/* One line in every state, so that a read that starts, at a
-            commit of the ploidy as the focus leaves it, does not move the
-            button under a click. */}
-        <p className={classOf(styles, "line")}>
-          {variants === null ? (
-            <span className={classOf(styles, "mutedText")}>{DROP_HINT}</span>
-          ) : variants.read.kind === "pending" ? (
-            <>
-              {`Reading ${escaped(variants.name)}.`}{" "}
-              <ReadingTime
-                key={variants.fileId}
-                className={classOf(styles, "mutedText")}
-              />
-            </>
-          ) : (
-            openLine(variants)
-          )}
-        </p>
-      </FileZone>
+        status={
+          // Under the button, since a read starts as the ploidy is
+          // committed when the focus leaves it, and "Reading …" and
+          // "… is open." wrap at different widths: above the button, the
+          // line would move it from under a click.
+          <p className={classOf(styles, "line")}>
+            {variants === null ? (
+              <span className={classOf(styles, "mutedText")}>{DROP_HINT}</span>
+            ) : variants.read.kind === "pending" ? (
+              <>
+                {`Reading ${escaped(variants.name)}.`}{" "}
+                <ReadingTime
+                  key={variants.fileId}
+                  className={classOf(styles, "mutedText")}
+                />
+              </>
+            ) : (
+              openLine(variants)
+            )}
+          </p>
+        }
+      />
+      {/* The line of a ploidy refused, drawn here and not under the
+          field, where, appearing as the field loses the focus to a click
+          on the box or the button, it would move them from under it. */}
+      <div ref={setPloidyRefusedIn} className={classOf(styles, "slot")} />
       {refusalText !== null && <Problem>{refusalText}</Problem>}
       {failed && reason !== null && <Problem>{reason}</Problem>}
     </section>

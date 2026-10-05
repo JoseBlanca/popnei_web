@@ -4444,6 +4444,20 @@ for (const theme of ["light", "dark"] as const) {
         ).toBeVisible();
         await save(page, `popgen2-count-stopped${at}-${theme}`);
       });
+
+      test("a ploidy refused", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+        ).toBeVisible();
+        const ploidy = page.getByRole("textbox", {
+          name: "Ploidy of the VCF, from 1 to 255",
+        });
+        await ploidy.fill("300");
+        await ploidy.press("Enter");
+        await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
+        await save(page, `popgen2-ploidy-refused${at}-${theme}`);
+      });
     });
   }
 }
