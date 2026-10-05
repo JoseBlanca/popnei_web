@@ -866,12 +866,13 @@ export interface AnalysisDef<J, R> {
   /** The reason it cannot run for the individuals kept, a known list that
       keeps some individual, or null; absent for an analysis with none.
       The diversity's: the list leaves no population, or, from stage 5,
-      fewer chromosomes than the draw of its rarefaction while some
-      population has the minimum of individuals; the PCoA's: it
-      keeps more than 9,381 individuals; from stage 5, the distances
-      between populations': no population, or fewer than two with the
-      minimum of individuals; the LD decay's: no population. The reason
-      of no population is populationsKeptNeeds of project.ts, shared. */
+      its largest population holds fewer chromosomes than the draw of
+      its rarefaction while some population has the minimum of
+      individuals; the PCoA's: it keeps more than 9,381 individuals; from
+      stage 5, the distances between populations': no population, or
+      fewer than two with the minimum of individuals; the LD decay's: no
+      population. The reason of no population is populationsKeptNeeds of
+      populations.ts, shared. */
   keptNeeds?(p: Project, kept: IndividualsKept): string | null;
   run(p: Project, c: WorkerClient<J, R>): Run<R>;
   warnings(r: R, p: Project): readonly Warning[];

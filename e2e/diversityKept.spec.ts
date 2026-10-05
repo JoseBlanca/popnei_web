@@ -167,19 +167,23 @@ async function calculateStatistics(page: Page): Promise<void> {
 }
 
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 function line(page: Page, text: string): Locator {
   return panel(page).getByText(text, { exact: true });
 }
 
-/** The cells of the row of the population `pop`, its header left out. */
+/** The cells of the row of the population `pop` of the diversity in the
+    first five columns, its header left out: those of stages 2 to 4,
+    which F, sixth from stage 5, and the columns after it leave as they
+    were. */
 function row(page: Page, pop: string): Locator {
   return panel(page)
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
-    .getByRole("cell");
+    .getByRole("cell")
+    .and(page.locator(":nth-child(-n+5)"));
 }
 
 function status(page: Page): Locator {
@@ -506,5 +510,23 @@ test("IP2 D3, VS7 D2 a threshold that leaves both populations empty locks the di
   await expect(run).toHaveAccessibleDescription(reason);
   await expect(line(page, reason)).toBeVisible();
   await expect(panel(page).getByText(/^\d+ populations?:/)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D1 with the thresholds at 0.03 and 0.38, p0 of 29 individuals has F −0.0141, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat", "0.05");
+  await thresholds(page);
+  await goTo(page, "Analyses");
+  await panel(page).getByRole("button", { name: "Run" }).click();
+  const p0 = panel(page)
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: "p0", exact: true }) })
+    .getByRole("cell");
+  // The statistics of each individual first, then the table.
+  await expect(p0.first()).toHaveText("29", { timeout: 15_000 });
+  await expect(p0.nth(4)).toHaveText("−0.0141");
   await expectNoViolations(makeAxeBuilder);
 });

@@ -689,11 +689,15 @@ test.describe("IP10 D3 the table of the individuals", () => {
     await page.keyboard.press("ArrowDown");
     await expect.poll(focused).toBe("gridcell s002 p0");
 
-    await table.evaluate((grid) => {
-      grid.scrollTo(0, grid.scrollHeight);
-    });
+    // Scrolled again at each try: a scroll given while the table is still
+    // growing its rows stops short of the end, as it did once in Chromium.
     await expect
-      .poll(() => table.evaluate((grid) => grid.scrollTop))
+      .poll(() =>
+        table.evaluate((grid) => {
+          grid.scrollTo(0, grid.scrollHeight);
+          return grid.scrollTop;
+        }),
+      )
       .toBeGreaterThan(500);
     // The last rows drawn, and the header at the top of the box.
     await expect(table.getByRole("row", { name: /^s199/ })).toHaveCount(1);
@@ -734,9 +738,16 @@ test.describe("IP10 D3 the table of the individuals", () => {
     await expect(firstRow.getByRole("gridcell").first()).toHaveText("2060");
     await expectNoViolations(makeAxeBuilder);
     // The last three rows, once the box is scrolled to its end.
-    await table.evaluate((grid) => {
-      grid.scrollTo(0, grid.scrollHeight);
-    });
+    // Scrolled again at each try until the box is at its end, for the same
+    // reason as in the flow of the keyboard above.
+    await expect
+      .poll(() =>
+        table.evaluate((grid) => {
+          grid.scrollTo(0, grid.scrollHeight);
+          return grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 1;
+        }),
+      )
+      .toBe(true);
     const rows = table.getByRole("row");
     await expect(rows.last().getByRole("rowheader")).toBeVisible();
     // Polled: the table draws only the rows in view, and draws the last

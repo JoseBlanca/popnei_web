@@ -170,6 +170,15 @@ export interface NumberFieldProps {
   /** Called with the number committed, within the bounds and on the
       step, never with an empty field nor with a number refused. */
   readonly onChange: (value: number) => void;
+  /** Called with the number committed when it is the number the field
+      already holds, typed again, which React Aria gives to no
+      `onChange`: for a field whose number, the same, means something else
+      once typed, the draw of the diversity, which is then kept as typed
+      rather than following its default (docs/specs/analyses/diversity.md,
+      "What it shows"). Called for a number pasted over the whole field,
+      as for one typed; not for an arrow key or Page Up and Down, whose
+      number is not typed, nor for a number the field refused. */
+  readonly onSameCommitted?: (value: number) => void;
 }
 
 /** A number field with its label, and the line of a number it refused. */
@@ -187,6 +196,7 @@ export function NumberField({
   onCommitReady,
   onTyped,
   onChange,
+  onSameCommitted,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
@@ -217,6 +227,15 @@ export function NumberField({
   // Undo and Redo of the keyboard are then the field's, and otherwise the
   // project's (docs/specs/shell.md, "The header").
   const typed = useRef(false);
+  // Whether the commit under way gave its number to `onChange`, or
+  // refused it: React Aria gives neither for the number the field holds.
+  const answered = useRef(false);
+  // Whether the commit under way is of a key that steps the number, an
+  // arrow key or Page Up and Down, whose number is not one typed.
+  const stepping = useRef(false);
+  // Whether a text was pasted over the whole field since the last commit,
+  // which React Aria commits as if it were typed.
+  const pasted = useRef(false);
   // The latest onTyped, for the effect below, which runs when the value
   // changes and not when the screen gives another function.
   const typedTo = useRef(onTyped);
@@ -255,12 +274,27 @@ export function NumberField({
       for a character thrown away, whose line then stays. */
   const commitStarts = (): void => {
     if (tabbed.current) return;
+    answered.current = false;
     refusing.current = notTaken.current;
     notTaken.current = false;
     if (!refusing.current) setRefused(null);
   };
   const commitEnds = (): void => {
+    // The number the field holds, typed again and committed.
+    if (
+      onSameCommitted !== undefined &&
+      (typed.current || pasted.current) &&
+      !stepping.current &&
+      !refusing.current &&
+      !answered.current &&
+      typedNumber(lastText.current, minValue, maxValue, step, decimals) ===
+        value
+    ) {
+      onSameCommitted(value);
+    }
     refusing.current = false;
+    stepping.current = false;
+    pasted.current = false;
     typed.current = false;
     onTyped?.(null);
   };
@@ -307,6 +341,7 @@ export function NumberField({
         if (refusing.current || tabbed.current) return;
         // An empty field gives NaN, which sends nothing.
         if (!Number.isFinite(committed)) return;
+        answered.current = true;
         const checked = checkCommitted(
           committed,
           minValue,
@@ -345,11 +380,17 @@ export function NumberField({
         }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
-        committedText={numberText(value)}
+        // An empty field, given NaN, holds no text: "NaN" is no number
+        // of the field to put back.
+        committedText={Number.isNaN(value) ? "" : numberText(value)}
         isTyped={() => typed.current}
         onRevert={revert}
         onPasted={(text) => {
           lastText.current = text;
+          pasted.current = true;
+        }}
+        onStepKey={() => {
+          stepping.current = true;
         }}
         onText={(text) => {
           lastText.current = text;
@@ -385,6 +426,9 @@ interface FieldInputProps {
   readonly onMended: () => void;
   /** Called before React Aria commits, and after. */
   readonly onCommitStarts: () => void;
+  /** Called before the commit of a key that steps the number, an arrow
+      key or Page Up and Down. */
+  readonly onStepKey: () => void;
   readonly onCommitEnds: () => void;
   /** Called with true once the Tab key has committed, and with false once
       the blur that follows it has. */
@@ -422,6 +466,7 @@ function FieldInput({
   onNotTakenPending,
   onMended,
   onCommitStarts,
+  onStepKey,
   onCommitEnds,
   onTabbed,
   onCommitReady,
@@ -489,11 +534,16 @@ function FieldInput({
     };
   }, [state, onCommitReady, onCommitStarts, onCommitEnds]);
 
+  // React Aria takes a key only with no modifier held, Shift among them:
+  // Shift and an arrow, which selects the text in a browser, or Shift and
+  // Enter commit nothing, and what was typed, with a character thrown
+  // away, waits for the commit that follows.
   const isCommitKey = (event: React.KeyboardEvent): boolean =>
     COMMIT_KEYS.has(event.key) &&
     !event.altKey &&
     !event.ctrlKey &&
-    !event.metaKey;
+    !event.metaKey &&
+    !event.shiftKey;
   const isStepKey = (event: React.KeyboardEvent): boolean =>
     isCommitKey(event) && event.key !== "Enter";
 
@@ -576,6 +626,7 @@ function FieldInput({
           event.stopPropagation();
           return;
         }
+        if (isStepKey(event)) onStepKey();
         if (isCommitKey(event)) onCommitStarts();
       }}
       onKeyDown={(event) => {

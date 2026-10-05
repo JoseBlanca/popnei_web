@@ -159,11 +159,11 @@ the disabled Run button: "The LD filter of the PCA needs the distance
 within which variants are compared. It has no default, because it
 depends on how far linkage disequilibrium extends in the genome of your
 species. Type a distance in base pairs, or set the LD filter of the PCA
-back to as in the Variants step." The help says the same, and points to
-the LD decay of stage 5, once it exists, as the way to choose the
-distance. While the PCA's LD filter follows the Variants step, the
-step's LD filter with no distance locks the PCA with the step's words
-(point 16).
+back to as in the Variants step." The help, written in stage 8, says
+the same, and points to the LD decay, built in stage 5, as the way to
+choose the distance. While the PCA's LD filter follows the Variants
+step, the step's LD filter with no distance locks the PCA with the
+step's words (point 16).
 
 In the specs, the option `ld` of the PCA holds whether it follows the
 step, `follow`, and its own r² and distance, the distance `null` until

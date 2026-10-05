@@ -55,6 +55,30 @@
   outline-offset: var(--focus-offset);
 }
 
+/* The frame of a table of many rows: at most as high as the box of the
+   sortable table, 28rem or 70% of the window (SortableTable.module.css),
+   beyond which the rows scroll in it and not in the page, inside a line
+   that shows where it ends. */
+.limited {
+  max-block-size: min(70vh, 28rem);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* The headers of such a table stay at the top of the frame while the
+   rows scroll under them, so each has the background that hides the rows.
+   The line under a header is a shadow inside it and not its border: with
+   the borders of the table collapsed, the border of a header that stays
+   in place scrolls away with the rows. */
+.limited .header {
+  position: sticky;
+  inset-block-start: 0;
+  border-block-end: 0;
+  background: var(--color-background);
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
 .table {
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
@@ -109,4 +133,19 @@
 .rowHeader.numeric,
 .cell.numeric {
   white-space: nowrap;
+}
+
+/* On a narrow page, while the table scrolls sideways anyway, a header
+   stays on one line: wrapped word by word in a column a few words wide
+   it gained nothing and made the row of the headers higher, as "r² at
+   distance 0, of the curve" of the LD decay was on five lines, 105
+   pixels, on a page of 320 pixels. A table that fits only with its
+   headers wrapped does not scroll, and keeps them wrapped. On a wide page
+   the headers of a table that scrolls still wrap, so that more of its
+   columns are in view: the diversity's eleven at 1,280 pixels show eight
+   wrapped and five on one line. */
+@media (width < 30em) {
+  .scroll[data-scrolls] .header {
+    white-space: nowrap;
+  }
 }

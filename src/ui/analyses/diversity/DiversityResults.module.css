@@ -1,8 +1,12 @@
 /* The tokens are those of src/ui/tokens.css. */
 
+/* As wide as the panel, and never wider: the histograms of the spectrum
+   would otherwise hold the column at the width they were drawn at. */
 .results {
   display: grid;
   gap: var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .line {

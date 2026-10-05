@@ -11,7 +11,12 @@
 // read, and writes them as a CSV, e2e/fixtures/panel_pops.csv, with the
 // header `IID,popcat`, which the flows give to the individuals file input
 // (docs/specs/worker/runner.md and docs/specs/analyses/diversity.md, "How it
-// is verified"). From panel.nei it writes the statistics of each
+// is verified"). From panel_pops.csv it writes e2e/fixtures/panel_split.csv,
+// the same individuals with the header `IID,popsplit` and p0 split in two by
+// the place of each of its individuals among them, the first, third and so
+// on in p0a and the others in p0b, 24 each, the rest as in `popcat`, whose
+// pair p0a, p0b has a negative distance (docs/specs/analyses/popDists.md,
+// "How it is verified"). From panel.nei it writes the statistics of each
 // individual that popnei's calcPerIndividualStats gives over every variant
 // of the file, with no filter, to
 // e2e/fixtures/panel_individual_stats.json, which the tests of core read,
@@ -25,7 +30,14 @@
 // PCA's own LD filter at r² 0.1 within 50,000 base pairs, cut to its first
 // 10 components as the calculation worker cuts it, to
 // e2e/fixtures/panel_pca.json, which the tests of the panel's functions of
-// core read.
+// core read. For the LD decay, whose curve the panel cannot show, since its
+// variants lie at positions 1 to 1,200 of one chromosome, it copies
+// popnei's tests/reference/ld/ld.vcf.gz, 100 diploid individuals and two
+// chromosomes of 250 variants every 1,000 bp, byte for byte to
+// e2e/fixtures/ld.vcf.gz, writes it as the vars file e2e/fixtures/ld.nei,
+// and writes its two populations, `i000` to `i049` in `pop_a` and `i050` to
+// `i099` in `pop_b`, to e2e/fixtures/ld_pops.csv with the header `IID,pop`
+// (docs/specs/analyses/ldDecay.md, "The fixture").
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -34,7 +46,8 @@
 // worktree: `POPNEI=/Users/jose/devel/popnei node e2e/fixtures/make_fixtures.mjs`.
 //
 // The three vars files, panel.nei, its copy in public/probe/ and
-// tetraploid.nei, are written only when the script is given `--nei`; the
+// tetraploid.nei, are written only when the script is given `--nei`, and
+// ld.nei at every run, 68,354 bytes with popnei js-v0.1.0-dev.3; the
 // statistics and the PCA are calculated from the panel.nei on disk either
 // way. The tests pin the sizes of the committed files, 261,490 and 16,194
 // bytes, written by popnei 0.1.0 on 24 September 2026, and popnei
@@ -102,6 +115,25 @@ if (process.argv.includes("--nei")) {
   console.log("the vars files left as they are; --nei writes them again");
 }
 
+// The file of the LD decay: popnei's VCF copied, written as a vars file,
+// and its two populations of 50 as a CSV, in the order of the file.
+copyFileSync(
+  join(popnei, "tests", "reference", "ld", "ld.vcf.gz"),
+  join(fixtures, "ld.vcf.gz"),
+);
+writeFixture("ld.vcf.gz", {}, [join(fixtures, "ld.nei")]);
+const ldIndividuals = Array.from(
+  { length: 100 },
+  (_, i) => `i${String(i).padStart(3, "0")}`,
+);
+const ldPopsLines = [
+  "IID,pop",
+  ...ldIndividuals.map((name, i) => `${name},${i < 50 ? "pop_a" : "pop_b"}`),
+];
+const ldPopsPath = join(fixtures, "ld_pops.csv");
+writeFileSync(ldPopsPath, `${ldPopsLines.join("\n")}\n`);
+console.log(`${ldPopsPath}: ${String(ldPopsLines.length)} lines`);
+
 // The populations: the copy, and the same rows as a CSV. The names hold no
 // comma nor quote, so no cell is quoted; a name that did would stop here.
 const pops = join(fixtures, "panel_pops.txt");
@@ -124,6 +156,30 @@ writeFileSync(join(fixtures, "panel_pops.csv"), csv);
 console.log(
   `${pops} and panel_pops.csv: ${String(csv.trim().split("\n").length)} lines`,
 );
+
+// The populations with a negative distance: p0 of popcat split by the place
+// of each of its individuals among them, from 0, the even places in p0a and
+// the odd in p0b, and every other individual in its population of popcat.
+let p0Place = 0;
+const splitLines = [
+  "IID,popsplit",
+  ...csv
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((row) => {
+      const [name, pop] = row.split(",");
+      if (pop !== "p0") {
+        return row;
+      }
+      const half = p0Place % 2 === 0 ? "p0a" : "p0b";
+      p0Place += 1;
+      return `${name},${half}`;
+    }),
+];
+const splitPath = join(fixtures, "panel_split.csv");
+writeFileSync(splitPath, `${splitLines.join("\n")}\n`);
+console.log(`${splitPath}: ${String(splitLines.length)} lines`);
 
 // The statistics of each individual of panel.nei, over every variant of
 // the file with no filter, as the application calculates them from 28

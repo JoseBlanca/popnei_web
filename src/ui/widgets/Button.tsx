@@ -13,7 +13,10 @@
  * do, which is shown in a tooltip on hover and on the focus of the
  * keyboard and is its description as well, as Undo and Redo have
  * (docs/specs/shell.md, "The header"); a button given both is described
- * by the two, the description first.
+ * by the two, the description first. A button may look like a link, in a
+ * line of text, as "Use the default" of the diversity does, so that it is
+ * not taken for the button of a step; it keeps the role and the keys of a
+ * button, since it changes the project and goes nowhere.
  */
 import { useId } from "react";
 import { Button as AriaButton } from "react-aria-components";
@@ -74,6 +77,9 @@ interface ButtonBaseProps {
   /** Whether it takes the focus when it is drawn, as the OK of a dialog
       that says what went wrong does; false when absent. */
   readonly autoFocus?: boolean;
+  /** How it looks: a button, the default, or a link in a line of text,
+      with no border, underlined and in the colour of the links. */
+  readonly look?: "button" | "link";
 }
 
 /** A button with its words. */
@@ -89,6 +95,7 @@ export function Button({
   descriptionName = "",
   isSubmit = false,
   autoFocus = false,
+  look = "button",
 }: ButtonProps): React.JSX.Element {
   const ownId = useId();
   const descriptionId = givenId ?? ownId;
@@ -101,7 +108,7 @@ export function Button({
         ].filter((id) => id !== undefined);
         return (
           <AriaButton
-            className={classOf(styles, "button")}
+            className={classOf(styles, look === "link" ? "link" : "button")}
             isDisabled={isDisabled}
             type={isSubmit ? "submit" : "button"}
             autoFocus={autoFocus}

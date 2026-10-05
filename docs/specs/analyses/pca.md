@@ -2108,7 +2108,11 @@ are these.
   `String` writes them, and a field that holds a comma, a quote or a new
   line written between double quotes, each quote inside doubled, as the
   common rule of CSV files, RFC 4180, has it, so that a spreadsheet opens
-  it into the right columns.
+  it into the right columns; from 1 October 2026 a name, of an
+  individual, of a group or of the column of the colours, that starts
+  with "=", "+", "-" or "@" has a quote, ', before it, as in every CSV
+  of the application (`diversity.md`, "What it shows"), and a number of a
+  continuous column is written as a number.
 - **The notes**: the note of the colours, of the axes, of the marks past
   49 groups, and of the missing genotypes, under the plot; they are not
   warnings, and have no count on the heading.
@@ -2291,10 +2295,9 @@ The help, for the drawer of stage 8:
   the genome of the species, and differs from one species to another.
   It starts at r² 0.1, lower than the 0.3 of the Variants step, since
   on popnei's test file popnei at 0.1 keeps no more variants than
-  plink at 0.3 does. Once the
-  application has the LD decay, stage 5 of `docs/build-order.md`, which
-  gives the distance at which r² falls to half, the help points to it as
-  the way to choose the distance.
+  plink at 0.3 does. The help points to the LD decay, built in stage 5
+  of `docs/build-order.md`, which gives the distance at which r² falls
+  to half, as the way to choose the distance.
 - The 3D view, which the panel opens on, and the 2D plot, one button
   away, which shows two components at a time and needs no WebGL.
 - When not to trust it: with no LD filter, a linked region can make a

@@ -14,6 +14,7 @@
  */
 
 import type { Result } from "../core/result.ts";
+import { MIN_DRAW } from "./protocol.ts";
 import type {
   Cell,
   ColumnType,
@@ -21,6 +22,7 @@ import type {
   CsvOptions,
   DiversityJob,
   DiversityResult,
+  PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
   FilteringStats,
@@ -30,12 +32,19 @@ import type {
   IndividualsTable,
   Job,
   JobResult,
+  FileOrderReason,
+  HeatmapOrder,
+  LdDecayJob,
+  LdDecayResult,
+  LeftOut,
   LoadFormat,
   Opened,
   PassStats,
   PcaJob,
   PcaMethod,
   PcaResult,
+  PopDistsJob,
+  PopDistsResult,
   Separator,
   VariantChecksJob,
   VariantChecksResult,
@@ -51,7 +60,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -858,6 +867,8 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  popDists: true,
+  ldDecay: true,
 };
 const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   diversity: true,
@@ -865,6 +876,18 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   pca: true,
+  popDists: true,
+  ldDecay: true,
+};
+const HEATMAP_ORDER_KINDS: Readonly<Record<HeatmapOrder["kind"], true>> = {
+  pcoa: true,
+  file: true,
+};
+const FILE_ORDER_REASONS: Readonly<Record<FileOrderReason, true>> = {
+  twoPopulations: true,
+  noDistance: true,
+  allZero: true,
+  notPlaced: true,
 };
 const PCA_METHODS: Readonly<Record<PcaMethod, true>> = {
   pca: true,
@@ -1039,6 +1062,10 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkVariantChecksJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
+    case "popDists":
+      return checkPopDistsJob(record, place);
+    case "ldDecay":
+      return checkLdDecayJob(record, place);
   }
 }
 
@@ -1055,6 +1082,8 @@ function checkDiversityJob(
     "pops",
     "minNumIndividuals",
     "polyThreshold",
+    "numCalledAlleles",
+    "popDiversityPops",
   ]);
   if (wrong !== null) {
     return wrong;
@@ -1083,6 +1112,19 @@ function checkDiversityJob(
   if (!polyThreshold.ok) {
     return polyThreshold;
   }
+  const numCalledAlleles = field(record, "numCalledAlleles", place, isDraw);
+  if (!numCalledAlleles.ok) {
+    return numCalledAlleles;
+  }
+  const popDiversityPops = field(
+    record,
+    "popDiversityPops",
+    place,
+    inOrderOf(pops.value.map(([pop]) => pop)),
+  );
+  if (!popDiversityPops.ok) {
+    return popDiversityPops;
+  }
   return accepted({
     analysis: "diversity",
     fileId: fileId.value,
@@ -1091,7 +1133,45 @@ function checkDiversityJob(
     pops: pops.value,
     minNumIndividuals: minNumIndividuals.value,
     polyThreshold: polyThreshold.value,
+    numCalledAlleles: numCalledAlleles.value,
+    popDiversityPops: popDiversityPops.value,
   });
+}
+
+/** The draw of a diversity job, a whole number of 2 or more: popnei
+    refuses a smaller one only at its second call, after a whole first
+    pass, so the range is kept here against the rule of the type. */
+const isDraw: Check<number> = (value, place) =>
+  typeof value === "number" && Number.isInteger(value) && value >= MIN_DRAW
+    ? accepted(value)
+    : wrongType(place, `a whole number of ${String(MIN_DRAW)} or more`, value);
+
+/**
+ * A check of a list of texts each of which is one of `names`, in their
+ * order and each once: the populations given to `calcPopDiversity`, taken
+ * from those of the job. A name not among them, or one out of their order
+ * or twice, is refused as of the wrong type.
+ */
+function inOrderOf(names: readonly string[]): Check<readonly string[]> {
+  return (value, place) => {
+    const texts = listOf(isText)(value, place);
+    if (!texts.ok) {
+      return texts;
+    }
+    let next = 0;
+    for (const name of texts.value) {
+      const at = names.indexOf(name, next);
+      if (at < 0) {
+        return wrongType(
+          place,
+          "a list of populations of the job, in their order and each once",
+          value,
+        );
+      }
+      next = at + 1;
+    }
+    return accepted(texts.value);
+  };
 }
 
 /** The fields of the request of the statistics of each individual,
@@ -1269,6 +1349,145 @@ function checkPcaJob(record: object, place: Place): Checked<PcaJob> {
   });
 }
 
+/** The fields of the request of the distances between populations,
+    docs/specs/analyses/popDists.md: its pass, the populations with the
+    minimum, those left out, and the minimum, whose range is popnei's to
+    keep. */
+function checkPopDistsJob(record: object, place: Place): Checked<PopDistsJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "pops",
+    "leftOut",
+    "minNumIndividuals",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const pops = field(record, "pops", place, listOf(checkPop));
+  if (!pops.ok) {
+    return pops;
+  }
+  const leftOut = field(record, "leftOut", place, checkLeftOut);
+  if (!leftOut.ok) {
+    return leftOut;
+  }
+  const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
+  if (!minNumIndividuals.ok) {
+    return minNumIndividuals;
+  }
+  return accepted({
+    analysis: "popDists",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+    pops: pops.value,
+    leftOut: leftOut.value,
+    minNumIndividuals: minNumIndividuals.value,
+  });
+}
+
+/** The populations left out of the distances, each a pair of its name and
+    the whole number of its individuals kept. */
+const checkLeftOut: Check<LeftOut> = listOf((value, place) => {
+  if (!isList(value)) {
+    return wrongType(
+      place,
+      "a pair of a population and its number of individuals",
+      value,
+    );
+  }
+  if (value.length !== 2) {
+    return wrongLength(place, 2, value.length);
+  }
+  const pop = isText(value[0], inner(place, 0));
+  if (!pop.ok) {
+    return pop;
+  }
+  const numIndividuals = isWhole(value[1], inner(place, 1));
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  return accepted([pop.value, numIndividuals.value] as const);
+});
+
+/** The fields of the request of the LD decay,
+    docs/specs/analyses/ldDecay.md: its pass, its populations, and the four
+    numbers of popnei's options, whose ranges are popnei's to keep. */
+function checkLdDecayJob(record: object, place: Place): Checked<LdDecayJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "individuals",
+    "pops",
+    "minDist",
+    "maxDist",
+    "numBins",
+    "maxAllowedMaf",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, listOf(checkVariantFilter));
+  if (!filters.ok) {
+    return filters;
+  }
+  const individuals = field(record, "individuals", place, isTextsOrNull);
+  if (!individuals.ok) {
+    return individuals;
+  }
+  const pops = field(record, "pops", place, listOf(checkPop));
+  if (!pops.ok) {
+    return pops;
+  }
+  const minDist = field(record, "minDist", place, isNumber);
+  if (!minDist.ok) {
+    return minDist;
+  }
+  const maxDist = field(record, "maxDist", place, isNumber);
+  if (!maxDist.ok) {
+    return maxDist;
+  }
+  const numBins = field(record, "numBins", place, isNumber);
+  if (!numBins.ok) {
+    return numBins;
+  }
+  const maxAllowedMaf = field(record, "maxAllowedMaf", place, isNumber);
+  if (!maxAllowedMaf.ok) {
+    return maxAllowedMaf;
+  }
+  return accepted({
+    analysis: "ldDecay",
+    fileId: fileId.value,
+    filters: filters.value,
+    individuals: individuals.value,
+    pops: pops.value,
+    minDist: minDist.value,
+    maxDist: maxDist.value,
+    numBins: numBins.value,
+    maxAllowedMaf: maxAllowedMaf.value,
+  });
+}
+
 /** The request of a written file: its format, its pass and the list of
     the individuals kept. */
 function checkWriteJob(value: unknown, place: Place): Checked<WriteJob> {
@@ -1440,6 +1659,10 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkFilterCountsResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
+    case "popDists":
+      return checkPopDistsResult(record, place);
+    case "ldDecay":
+      return checkLdDecayResult(record, place);
   }
 }
 
@@ -1457,6 +1680,17 @@ function checkDiversityResult(
     "obsHet",
     "polyRatio",
     "numVarsWithValue",
+    "fis",
+    "numAllelesMean",
+    "numAllelesInDraw",
+    "privateAllelesTotal",
+    "privateAllelesMean",
+    "privateAllelesInDraw",
+    "numVarsInDraw",
+    "numVarsEveryPop",
+    "numVarsEveryPopInDraw",
+    "numCalledAlleles",
+    "foldedSfs",
     "passStats",
   ]);
   if (wrong !== null) {
@@ -1502,6 +1736,10 @@ function checkDiversityResult(
   if (!numVarsWithValue.ok) {
     return numVarsWithValue;
   }
+  const numbers = checkPopDiversity(record, place, numPops);
+  if (!numbers.ok) {
+    return numbers;
+  }
   const passStats = field(record, "passStats", place, checkPassStats);
   if (!passStats.ok) {
     return passStats;
@@ -1514,7 +1752,137 @@ function checkDiversityResult(
     obsHet: obsHet.value,
     polyRatio: polyRatio.value,
     numVarsWithValue: numVarsWithValue.value,
+    ...numbers.value,
     passStats: passStats.value,
+  });
+}
+
+/**
+ * The fields of a diversity result of `calcPopDiversity`, of `numPops`
+ * populations: each array as long as the populations, the two counts of
+ * the variants of every population both `null` or both whole numbers, and
+ * one spectrum per population, each `null` or of `floor(numCalledAlleles
+ * / 2) + 1` values.
+ */
+function checkPopDiversity(
+  record: object,
+  place: Place,
+  numPops: number,
+): Checked<PopDiversityFields> {
+  const fis = field(record, "fis", place, float64Array(numPops));
+  if (!fis.ok) {
+    return fis;
+  }
+  const numAllelesMean = field(
+    record,
+    "numAllelesMean",
+    place,
+    float64Array(numPops),
+  );
+  if (!numAllelesMean.ok) {
+    return numAllelesMean;
+  }
+  const numAllelesInDraw = field(
+    record,
+    "numAllelesInDraw",
+    place,
+    float64Array(numPops),
+  );
+  if (!numAllelesInDraw.ok) {
+    return numAllelesInDraw;
+  }
+  const privateAllelesTotal = field(
+    record,
+    "privateAllelesTotal",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesTotal.ok) {
+    return privateAllelesTotal;
+  }
+  const privateAllelesMean = field(
+    record,
+    "privateAllelesMean",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesMean.ok) {
+    return privateAllelesMean;
+  }
+  const privateAllelesInDraw = field(
+    record,
+    "privateAllelesInDraw",
+    place,
+    float64Array(numPops),
+  );
+  if (!privateAllelesInDraw.ok) {
+    return privateAllelesInDraw;
+  }
+  const numVarsInDraw = field(
+    record,
+    "numVarsInDraw",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numVarsInDraw.ok) {
+    return numVarsInDraw;
+  }
+  const numVarsEveryPop = field(
+    record,
+    "numVarsEveryPop",
+    place,
+    isWholeOrNull,
+  );
+  if (!numVarsEveryPop.ok) {
+    return numVarsEveryPop;
+  }
+  const numVarsEveryPopInDraw = field(
+    record,
+    "numVarsEveryPopInDraw",
+    place,
+    isWholeOrNull,
+  );
+  if (!numVarsEveryPopInDraw.ok) {
+    return numVarsEveryPopInDraw;
+  }
+  if (
+    (numVarsEveryPop.value === null) !==
+    (numVarsEveryPopInDraw.value === null)
+  ) {
+    return wrongType(
+      inner(place, "numVarsEveryPopInDraw"),
+      numVarsEveryPop.value === null
+        ? "null, as numVarsEveryPop is"
+        : "a whole number, as numVarsEveryPop is",
+      numVarsEveryPopInDraw.value,
+    );
+  }
+  const numCalledAlleles = field(record, "numCalledAlleles", place, isDraw);
+  if (!numCalledAlleles.ok) {
+    return numCalledAlleles;
+  }
+  const numBins = Math.floor(numCalledAlleles.value / 2) + 1;
+  const foldedSfs = field(
+    record,
+    "foldedSfs",
+    place,
+    listOfLength(numPops, orNull(float64Array(numBins))),
+  );
+  if (!foldedSfs.ok) {
+    return foldedSfs;
+  }
+  return accepted({
+    fis: fis.value,
+    numAllelesMean: numAllelesMean.value,
+    numAllelesInDraw: numAllelesInDraw.value,
+    privateAllelesTotal: privateAllelesTotal.value,
+    privateAllelesMean: privateAllelesMean.value,
+    privateAllelesInDraw: privateAllelesInDraw.value,
+    numVarsInDraw: numVarsInDraw.value,
+    numVarsEveryPop: numVarsEveryPop.value,
+    numVarsEveryPopInDraw: numVarsEveryPopInDraw.value,
+    numCalledAlleles: numCalledAlleles.value,
+    foldedSfs: foldedSfs.value,
   });
 }
 
@@ -2284,6 +2652,315 @@ function checkPcaResult(record: object, place: Place): Checked<PcaResult> {
   });
 }
 
+/**
+ * The fields of the result of the distances between populations,
+ * docs/specs/analyses/popDists.md: `fst`, `dest` and `numVarsPerPair` of
+ * k × (k − 1) / 2 values for the k populations of `pops`, `numIndividuals`
+ * of k, and the order of the heatmap of each measure, each checked against
+ * the k populations.
+ */
+function checkPopDistsResult(
+  record: object,
+  place: Place,
+): Checked<PopDistsResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "pops",
+    "numIndividuals",
+    "fst",
+    "dest",
+    "numVarsPerPair",
+    "order",
+    "leftOut",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const pops = field(record, "pops", place, listOf(isText));
+  if (!pops.ok) {
+    return pops;
+  }
+  const numPops = pops.value.length;
+  const numPairs = (numPops * (numPops - 1)) / 2;
+  const numIndividuals = field(
+    record,
+    "numIndividuals",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  const fst = field(record, "fst", place, float64Array(numPairs));
+  if (!fst.ok) {
+    return fst;
+  }
+  const dest = field(record, "dest", place, float64Array(numPairs));
+  if (!dest.ok) {
+    return dest;
+  }
+  const numVarsPerPair = field(
+    record,
+    "numVarsPerPair",
+    place,
+    uint32Array(numPairs),
+  );
+  if (!numVarsPerPair.ok) {
+    return numVarsPerPair;
+  }
+  const order = field(record, "order", place, checkOrders(numPops));
+  if (!order.ok) {
+    return order;
+  }
+  const leftOut = field(record, "leftOut", place, checkLeftOut);
+  if (!leftOut.ok) {
+    return leftOut;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "popDists",
+    pops: pops.value,
+    numIndividuals: numIndividuals.value,
+    fst: fst.value,
+    dest: dest.value,
+    numVarsPerPair: numVarsPerPair.value,
+    order: order.value,
+    leftOut: leftOut.value,
+    passStats: passStats.value,
+  });
+}
+
+/** A check of the orders of the heatmap of the two measures, of
+    `numPops` populations. */
+function checkOrders(numPops: number): Check<PopDistsResult["order"]> {
+  return (value, place) => {
+    const record = objectWith(value, place, ["fst", "dest"]);
+    if (!record.ok) {
+      return record;
+    }
+    const fst = field(record.value, "fst", place, checkHeatmapOrder(numPops));
+    if (!fst.ok) {
+      return fst;
+    }
+    const dest = field(record.value, "dest", place, checkHeatmapOrder(numPops));
+    if (!dest.ok) {
+      return dest;
+    }
+    return accepted({ fst: fst.value, dest: dest.value });
+  };
+}
+
+/**
+ * A check of the order of the heatmap of one measure, of `numPops`
+ * populations: of the kind `pcoa`, an `order` that holds every index of
+ * the populations once; of the kind `file`, one of the four reasons, with
+ * a `message` for `notPlaced` alone.
+ */
+function checkHeatmapOrder(numPops: number): Check<HeatmapOrder> {
+  return (value, place) => {
+    const tagged = taggedObject(value, place, "kind", HEATMAP_ORDER_KINDS);
+    if (!tagged.ok) {
+      return tagged;
+    }
+    const { record, tag } = tagged.value;
+    switch (tag) {
+      case "pcoa": {
+        const wrong = exactFields(record, place, ["kind", "order"]);
+        if (wrong !== null) {
+          return wrong;
+        }
+        const order = field(record, "order", place, eachIndexOnce(numPops));
+        if (!order.ok) {
+          return order;
+        }
+        return accepted({ kind: tag, order: order.value });
+      }
+      case "file": {
+        // The fields hang on the reason, a message with notPlaced alone, so
+        // the reason is read before them; without one, what is missing is
+        // named among the fields the object has.
+        if (!Object.hasOwn(record, "reason")) {
+          return (
+            exactFields(
+              record,
+              place,
+              Object.hasOwn(record, "message")
+                ? ["kind", "reason", "message"]
+                : ["kind", "reason"],
+            ) ?? wrongType(place, "an object with a reason", record)
+          );
+        }
+        const reason = field(
+          record,
+          "reason",
+          place,
+          oneOf(FILE_ORDER_REASONS),
+        );
+        if (!reason.ok) {
+          return reason;
+        }
+        const wrong = exactFields(
+          record,
+          place,
+          reason.value === "notPlaced"
+            ? ["kind", "reason", "message"]
+            : ["kind", "reason"],
+        );
+        if (wrong !== null) {
+          return wrong;
+        }
+        if (reason.value !== "notPlaced") {
+          return accepted({ kind: tag, reason: reason.value });
+        }
+        const message = field(record, "message", place, isText);
+        if (!message.ok) {
+          return message;
+        }
+        return accepted({
+          kind: tag,
+          reason: reason.value,
+          message: message.value,
+        });
+      }
+    }
+  };
+}
+
+/** A check of a `Uint32Array` that holds each of the indexes 0 to
+    `numPops` − 1 once, in any order; one that holds an index twice, or one
+    beyond them, is refused as of the wrong type. */
+function eachIndexOnce(numPops: number): Check<Uint32Array> {
+  return (value, place) => {
+    const array = uint32Array(numPops)(value, place);
+    if (!array.ok) {
+      return array;
+    }
+    const seen = new Set<number>();
+    for (const index of array.value) {
+      if (index >= numPops || seen.has(index)) {
+        return wrongType(
+          place,
+          `a Uint32Array that holds each index of the ${String(numPops)} populations once`,
+          value,
+        );
+      }
+      seen.add(index);
+    }
+    return accepted(array.value);
+  };
+}
+
+/**
+ * The fields of the LD decay's result, docs/specs/analyses/ldDecay.md: the
+ * bins are as many as `smallestDist` holds, which the runner makes from
+ * the job's `numBins`; `largestDist` is as long, `numPairs`, `meanR2` and
+ * `sdR2` the populations × the bins, and the other arrays one value per
+ * population.
+ */
+function checkLdDecayResult(
+  record: object,
+  place: Place,
+): Checked<LdDecayResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "pops",
+    "numIndividuals",
+    "numVars",
+    "smallestDist",
+    "largestDist",
+    "numPairs",
+    "meanR2",
+    "sdR2",
+    "rhoPerBp",
+    "r2AtZero",
+    "halfDist",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const pops = field(record, "pops", place, listOf(isText));
+  if (!pops.ok) {
+    return pops;
+  }
+  const numPops = pops.value.length;
+  const numIndividuals = field(
+    record,
+    "numIndividuals",
+    place,
+    uint32Array(numPops),
+  );
+  if (!numIndividuals.ok) {
+    return numIndividuals;
+  }
+  const numVars = field(record, "numVars", place, float64Array(numPops));
+  if (!numVars.ok) {
+    return numVars;
+  }
+  const smallestDist = field(record, "smallestDist", place, isFloat64Array);
+  if (!smallestDist.ok) {
+    return smallestDist;
+  }
+  const numBins = smallestDist.value.length;
+  const largestDist = field(
+    record,
+    "largestDist",
+    place,
+    float64Array(numBins),
+  );
+  if (!largestDist.ok) {
+    return largestDist;
+  }
+  const ofEveryBin = float64Array(numPops * numBins);
+  const numPairs = field(record, "numPairs", place, ofEveryBin);
+  if (!numPairs.ok) {
+    return numPairs;
+  }
+  const meanR2 = field(record, "meanR2", place, ofEveryBin);
+  if (!meanR2.ok) {
+    return meanR2;
+  }
+  const sdR2 = field(record, "sdR2", place, ofEveryBin);
+  if (!sdR2.ok) {
+    return sdR2;
+  }
+  const rhoPerBp = field(record, "rhoPerBp", place, float64Array(numPops));
+  if (!rhoPerBp.ok) {
+    return rhoPerBp;
+  }
+  const r2AtZero = field(record, "r2AtZero", place, float64Array(numPops));
+  if (!r2AtZero.ok) {
+    return r2AtZero;
+  }
+  const halfDist = field(record, "halfDist", place, float64Array(numPops));
+  if (!halfDist.ok) {
+    return halfDist;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "ldDecay",
+    pops: pops.value,
+    numIndividuals: numIndividuals.value,
+    numVars: numVars.value,
+    smallestDist: smallestDist.value,
+    largestDist: largestDist.value,
+    numPairs: numPairs.value,
+    meanR2: meanR2.value,
+    sdR2: sdR2.value,
+    rhoPerBp: rhoPerBp.value,
+    r2AtZero: r2AtZero.value,
+    halfDist: halfDist.value,
+    passStats: passStats.value,
+  });
+}
+
 /** The one field of an object besides its `kind`, checked by `check`,
     when the object has these two fields and no other. */
 function onlyField<T>(
@@ -2404,6 +3081,20 @@ function listOf<T>(check: Check<T>): Check<readonly T[]> {
       checked.push(one.value);
     }
     return accepted(checked);
+  };
+}
+
+/** A check of a list of `length` elements, each of which passes
+    `check`. */
+function listOfLength<T>(length: number, check: Check<T>): Check<readonly T[]> {
+  return (value, place) => {
+    const checked = listOf(check)(value, place);
+    if (!checked.ok) {
+      return checked;
+    }
+    return checked.value.length === length
+      ? checked
+      : wrongLength(place, length, checked.value.length);
   };
 }
 

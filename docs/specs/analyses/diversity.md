@@ -79,6 +79,16 @@ under the minimum split, named in the ready state, and the locks and
 two warnings of the populations made by functions the distances between
 populations and the LD decay share. The revision for
 stage 5 is approved by the owner on 30 September 2026.
+Revised on 1 October 2026 for what the owner decided that day, after
+trying the panel as built (`docs/specs/stage-5-open-points.md`,
+"Decided by the owner on 1 October 2026: the diversity, the spectrum
+and the histogram"): the lock of the draw counts the chromosomes of the
+largest population, and the ready state names the populations that hold
+fewer than the draw; populations that hold fewer than 2 chromosomes
+between them run the first call alone, with a warning; the warning of
+the spectrum is said in its block; and, in the panel, the label of the
+minimum, "Use the default" as a link, and the notice of a draw typed
+with the default's number.
 The code of stage 2 is in
 `src/core/analyses/diversity.ts`. This spec gives the first analysis of the population genetics
 application, in its form for the walking skeleton and, from stage 5,
@@ -295,8 +305,8 @@ of the three has a field in the panel:
   takes, as the owner decided on 30 September 2026 (decision 5). The
   project holds `numCalledAlleles` `null` for this default, and `run`
   makes the number from the ploidy of the variants file, which the load
-  fixes, and the minimum; a number the user types is kept as typed,
-  and no longer follows the minimum. At the default every variant with
+  fixes, and the minimum, 2 when their product is below it; a number
+  the user types is kept as typed, and no longer follows the minimum. At the default every variant with
   a value in a population is in its draw, whenever the ploidy times the
   minimum is 2 or more: a value asks for at least the
   minimum times the ploidy called alleles, which is the draw, so the
@@ -580,43 +590,95 @@ run"). For the one population, `keptNeeds` gives no reason of this
 kind: every individual kept is in it, and filters that keep none are
 locked first, with the words of `keptNoneReason`.
 
-From stage 5 a draw larger than the chromosomes of the individuals
-kept locks the diversity, for the one population too, decided by the
-writer of this revision. popnei refuses such a draw at the first range
-it reads: a call of `calcPopDiversity` with a draw of 401 over the 400
-chromosomes of the 200 individuals of `panel.nei` told its progress at
-0 and 2,224 bytes of 261,490 and threw (node 26.8.2, `js-v0.1.0-dev.3`,
-30 September 2026). In the diversity's job that call is the second, so
-without the lock a user would wait for the whole first pass to be told
-the draw is too large. popnei counts the individuals of its pass, those
-`filterIndividuals` keeps: a draw of 40 over a list of 15 was refused,
-"the largest draw this dataset allows is 30". So the lock counts
-individuals times the ploidy, and locks only when some population of
-the request has the minimum of individuals, since otherwise
-`calcPopDiversity` is not called; the default draw never locks, since
-a population of the minimum holds it. It is in two places, so that it
-comes before a Run whenever the project alone tells it:
+From stage 5 a draw larger than the chromosomes of the largest
+population locks the diversity, as the owner decided on 1 October 2026
+(B3 of the stop of the diversity; `docs/specs/stage-5-open-points.md`).
+The chromosomes of a population are its individuals times the ploidy,
+and a population that holds fewer than the draw reaches it at no
+variant: it has no rarefied value and no spectrum. So a draw above the
+largest population gives those to no population, after two passes: on
+`panel.nei`, whose largest population, p2, has 84 individuals and 168
+chromosomes, any draw from 169 up. The lock is only when some
+population of the request has the minimum of individuals, since
+otherwise `calcPopDiversity` is not called; the largest population is
+then one of them. For the one population the largest is every
+individual kept. The default draw never locks, since a population of
+the minimum holds it, but in the case of the paragraph after the next,
+which does not lock either.
 
-- **`needs`**, last, counts `byLists`, the individuals the lists to
-  keep and to remove keep, every individual of the file with no list
-  (`docs/specs/core/individualsKept.md`), which the thresholds on the
-  individuals can only make fewer. So a draw above them locks with no
-  statistics calculated: "The rarefaction draws 401 chromosomes, and
-  the 200 individuals of panel.nei hold 400 at a ploidy of 2. Type a
-  number of chromosomes of at most 400 in the options of the
-  diversity.", with no list; with a list, "…and the 45 individuals the
-  lists of individuals keep hold 90 at a ploidy of 2. Type a number of
-  chromosomes of at most 90 in the options of the diversity, or change
-  the lists in the Variants step."
-- **`keptNeeds`**, after its reason of no population, counts the list
-  kept once the thresholds have made it, as the PCoA's `keptNeeds`
-  counts its individuals (`docs/specs/analyses/pca.md`, "Why it cannot
-  run"), and gives a reason only when that list is shorter than
-  `byLists`, which `needs` has already counted: "The rarefaction draws
-  100 chromosomes, and the 45 individuals the filters of individuals
-  keep hold 90 at a ploidy of 2. Type a number of chromosomes of at most
-  90 in the options of the diversity, or loosen the filters of
-  individuals in the Variants step."
+Until 1 October 2026 the lock, decided by the writer of the revision of
+stage 5, counted the chromosomes of every individual kept, 400 on
+`panel.nei`, which is what popnei refuses: a call of `calcPopDiversity`
+with a draw of 401 over the 400 chromosomes of the 200 individuals of
+`panel.nei` told its progress at 0 and 2,224 bytes of 261,490 and threw
+(node 26.8.2, `js-v0.1.0-dev.3`, 30 September 2026), and a draw of 40
+over a list of 15 was refused, "the largest draw this dataset allows is
+30"; in the diversity's job that call is the second, so without a lock
+a user would wait for the whole first pass to be told the draw is too
+large. The largest population never holds more than the individuals
+kept, so the lock of 1 October keeps every such draw from popnei too.
+That older lock stays in one case, where the advice of the new one
+could not be followed: when the largest population holds fewer than 2
+chromosomes, in a haploid file whose populations have one individual
+each, at a minimum of 0 or 1, "at most 1" is a number the field
+refuses, and the lock then counts the individuals kept, as before.
+
+**Populations that hold fewer than 2 chromosomes between them do not
+lock**, whatever the draw, as the owner decided on 1 October 2026
+(point 17 of the plan's report): one haploid individual in a population
+of its own, at a minimum of 0 or 1. No draw can be taken from one
+chromosome, the least draw being 2, so `run` sends `popDiversityPops`
+empty, the job makes the first pass alone, as when no population has
+the minimum, and the warning `tooFewChromosomesForDraw` says why six
+columns and the spectrum are empty (below, "The warnings"). Until that
+day the diversity locked there, the heterozygosities with the rest, and
+told the user to type a draw "of at most 1".
+
+The lock is in two places, so that it comes before a Run whenever the
+project alone tells it:
+
+- **`needs`**, last, counts the populations of `byLists`, the
+  individuals the lists to keep and to remove keep, every individual of
+  the file with no list (`docs/specs/core/individualsKept.md`), which
+  the thresholds on the individuals can only make fewer. So a draw
+  above the largest of them locks with no statistics calculated: "The
+  rarefaction draws 169 chromosomes, and the largest population, p2,
+  holds 168, those of its 84 individuals at a ploidy of 2. Type a
+  number of chromosomes of at most 168 in the options of the
+  diversity."; with a list, "…and the largest population the lists of
+  individuals keep, p2, holds 60, those of its 30 individuals at a
+  ploidy of 2. Type a number of chromosomes of at most 60 in the
+  options of the diversity, or change the lists in the Variants step."
+  A population of one individual: "…holds 2, those of its one
+  individual at a ploidy of 2." For the one population, and where the
+  lock counts the individuals kept: "The rarefaction draws 401
+  chromosomes, and the 200 individuals of panel.nei hold 400 at a
+  ploidy of 2. Type a number of chromosomes of at most 400 in the
+  options of the diversity.", and, with a list, "…and the 45
+  individuals the lists of individuals keep hold 90 at a ploidy of 2.
+  Type a number of chromosomes of at most 90 in the options of the
+  diversity, or change the lists in the Variants step."; of one
+  individual, "…and the one individual the lists of individuals keep
+  holds 2 at a ploidy of 2. …", the words of the writer of the code,
+  which the owner took on 1 October 2026 (point 16).
+- **`keptNeeds`**, after its reason of no population, counts the
+  populations of the list kept once the thresholds have made it, as the
+  PCoA's `keptNeeds` counts its individuals
+  (`docs/specs/analyses/pca.md`, "Why it cannot run"), and gives a
+  reason only when that list is shorter than `byLists`, which `needs`
+  has already counted: "The rarefaction draws 100 chromosomes, and the
+  largest population the filters of individuals keep, p2, holds 96,
+  those of its 48 individuals at a ploidy of 2. Type a number of
+  chromosomes of at most 96 in the options of the diversity, or loosen
+  the filters of individuals in the Variants step."; for the one
+  population, "The rarefaction draws 100 chromosomes, and the 45
+  individuals the filters of individuals keep hold 90 at a ploidy of 2.
+  Type a number of chromosomes of at most 90 in the options of the
+  diversity, or loosen the filters of individuals in the Variants
+  step."
+
+When several populations are the largest, the first of them in the
+order of the request is named.
 
 The owner decided on 25 September 2026 that the metadata file, and a
 column of populations chosen in it, are required in stage 2, and
@@ -640,7 +702,7 @@ Individuals step shows it at its select (`docs/specs/steps/individuals.md`,
 lists last. The individuals the lists keep are `byLists` of
 `individualsKept` (`docs/specs/core/individualsKept.md`), known with no
 statistics. From stage 5 the row of the lists is
-`populationListsNeeds(p)` of `project.ts`, and the reason of the
+`populationListsNeeds(p)` of `populations.ts`, and the reason of the
 individuals kept leaving no population, which `keptNeeds` gives first,
 is `populationsKeptNeeds(p, kept)`, with the same words, since the
 distances between populations and the LD decay lock on them too
@@ -681,10 +743,12 @@ it only when `needs` gives `null`, so the variants file is read.
 
 `popDiversityPops` is made by `run` from the individuals of each
 population it sends, the names of `withMinimum` of
-`populationsWithMinimum(pops, minNumIndividuals)` of `project.ts`, the
+`populationsWithMinimum(pops, minNumIndividuals)` of `populations.ts`, the
 function the distances between populations split their populations
 with too, so the rule of decision 7 is core's, made once, and the runner
-only follows it.
+only follows it. It is empty as well when the populations `run` sends
+hold fewer than 2 chromosomes between them, their individuals times the
+ploidy, from 1 October 2026 (above, "Why it cannot run").
 
 The field `individualFilters` of stage 2, always empty there, becomes
 `individuals`, the list the filters make, as the architecture has every
@@ -784,7 +848,9 @@ population when the lists of individuals leave none. No population left
 by a threshold is told by popnei's refusal ("Its words"). Of the
 refusals of `calcPopDiversity`, a draw below 2 cannot be given, since
 `parseOptions` and the field take none; a draw above the chromosomes of
-the individuals kept is locked by `needs` and `keptNeeds`; a call with no
+the individuals kept is locked by `needs` and `keptNeeds`, whose lock
+is at that number or below it, and is not sent when the populations
+hold fewer than 2 chromosomes; a call with no
 population is not made; and the spectrum, which needs a draw, is
 asked for only with the draw that every request carries. The two it cannot see are the filters keeping no variant, "the
 pass gave no variant: its source gave 1200 and the steps kept none of
@@ -808,10 +874,11 @@ first two and how many more.
 | `variantsWithoutValue` | a population with enough individuals has a value at fewer variants than `numVars`, whatever the number skipped | "p0a has a value at 641 of the 1,152 variants kept (56%); at the others fewer than 20 of its individuals have a genotype." With two or three: "p0a and p0b have a value at 641 and 1,100 of the 1,152 variants kept (56% and 95%); at the others fewer than 20 of their individuals have a genotype." With more than three, the first two and how many more, with no counts: "p0a, p0b and 3 more have a value at fewer than the 1,152 variants kept; at the others fewer than 20 of their individuals have a genotype." When it is none of them: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype." |
 | `individualsWithoutPopulation` | individuals of the variants file have a missing cell in the column; never for the one population, which holds every one | "5 individuals of panel.nei have no population, and are left out of the diversity: s001, s002 and 3 more. If they belong to one, fill in their population in the metadata file and load it again." |
 | `populationNotInResult` | a population of `populationsToRun(p)`, which has individuals in the variants file, is not in `r.pops`; never for the one population, since filters that keep none of it keep no individual, which locks the diversity or stops its Run in the words of `keptNoneReason` (`docs/specs/core/individualsKept.md`) | "Population p9 has no individual among the individuals of panel.nei that the filters kept, so it is not in the table." |
-| `privateAllelesWithoutSmall` | from stage 5: populations are left out of `popDiversityPops` for their size, and it holds two or more | "The private alleles of p0, p2 and p1 are counted among these populations alone, without p3, which has fewer than 20 individuals: an allele they share only with p3 counts as private." With more than three counted, "The private alleles of the 7 populations with 20 individuals or more are counted among them alone, without p3 and p5, …"; the populations left out are named as `project.md` names individuals |
+| `privateAllelesWithoutSmall` | from stage 5: populations are left out of `popDiversityPops` for their size, and it holds two or more | "The private alleles of p0, p2 and p1 are counted among these populations alone, without p3, which has fewer than 20 individuals: an allele they share only with p3 counts as private." With several left out: "…, without p3 and p5, which have fewer than 20 individuals: an allele they share only with some of those populations counts as private." With more than three counted, "The private alleles of the 7 populations with 20 individuals or more are counted among them alone, without p3 and p5, …"; the populations left out are named as `project.md` names individuals |
 | `privateAllelesNeedTwoPopulations` | from stage 5: `popDiversityPops` holds one population | For the one population: "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles. Choose a column that defines the populations in the Individuals step to count them." For a column: "Only p2 has 20 individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does." |
 | `privateAllelesOverFewerVariants` | from stage 5: the private alleles were counted, over fewer variants than `numVars`, `numVarsEveryPop` below it | "The private alleles are counted over the 641 of the 1,152 variants kept (56%) at which every population has a value; at the others, fewer than 20 individuals of some population have a genotype." When it is none: "The private alleles are counted over the variants at which every population has a value, and there is none among the 1,152 kept: at each, fewer than 20 individuals of some population have a genotype. So no population has private alleles." |
-| `variantsNotInDraw` | from stage 5: a population given to `calcPopDiversity` reached the draw at fewer variants than it has a value at, `numVarsInDraw` below `numVarsWithValue`, which only a draw larger than the ploidy times the minimum gives, or the draw of 2 at a minimum of 0, or of 1 in a haploid file, where a variant with one allele called has a value | "p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value (24%), so its rarefied values are over those alone." With two or three, and more than three, as `variantsWithoutValue` lists them. When it is none: "p0 reaches 96 called chromosomes at none of the variants at which it has a value, so it has no rarefied values. Lower the number of chromosomes of the rarefaction in the options of the diversity.", the last sentence left out at a draw of 2, the smallest. When the rarefied private alleles are over fewer variants than the others, `numVarsEveryPopInDraw` below `numVarsEveryPop`, a last sentence: "The rarefied private alleles are over the 277 variants at which every population reaches 96." |
+| `variantsNotInDraw` | from stage 5: a population given to `calcPopDiversity` reached the draw at fewer variants than it has a value at, `numVarsInDraw` below `numVarsWithValue`, which only a draw larger than the ploidy times the minimum gives, or the draw of 2 at a minimum of 0, or of 1 in a haploid file, where a variant with one allele called has a value | "p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value (24%), so its rarefied values are over those alone." With two or three, as `variantsWithoutValue` lists them, "p0 and p1 reach 96 called chromosomes at 277 and 1,100 of the 1,152 variants at which they have a value (24% and 95%), so their rarefied values are over those alone.", and, when they have a value at different numbers of variants, "…at 277 and 1,000 of the 1,152 and 1,100 variants at which each has a value (24% and 91%), …"; with more than three, "p0, p1 and 2 more reach 96 called chromosomes at fewer than the variants at which they have a value, so their rarefied values are over those alone." When it is none: "p0 reaches 96 called chromosomes at none of the variants at which it has a value, so it has no rarefied values. Lower the number of chromosomes of the rarefaction in the options of the diversity.", the last sentence left out at a draw of 2, the smallest. When the rarefied private alleles are over fewer variants than the others, `numVarsEveryPopInDraw` below `numVarsEveryPop`, a last sentence: "The rarefied private alleles are over the 277 variants at which every population reaches 96.", "…over the one variant at which…" for one, and, for none, "No variant has every population at 96 called chromosomes, so there are no rarefied private alleles." |
+| `tooFewChromosomesForDraw` | from 1 October 2026: some population of the result has the minimum of individuals, and the populations hold fewer than 2 chromosomes between them, so `run` sent `popDiversityPops` empty; in its place, none of the three warnings of the private alleles nor `variantsNotInDraw` is raised | "The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw 2 or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value." |
 | `noFInHaploid` | from stage 5: the variants file has a ploidy of 1 | "The variants of panel.vcf.gz have a ploidy of 1, and a genotype of one allele cannot be heterozygous, so F has no value." |
 
 The owner decided on 25 September 2026 that `variantsWithoutValue` is
@@ -865,9 +932,12 @@ the order of the file, with the missing data filter at 0.05: popnei gave
 it a value at 641 of the 1,152 variants kept, and at 653 of the 1,200
 with no filter (node, 25 September 2026, `js-v0.1.0-dev.2`).
 
-After these, `warnings` appends `spectrumWarnings(r, p)` of
-`docs/specs/analyses/sfs.md`, the warnings of the spectrum, which is
-part of the diversity.
+The warning of the spectrum, `spectrumWarnings(r, p)` of
+`docs/specs/analyses/sfs.md`, is not among them from 1 October 2026:
+the block of the spectrum says it, at the end of its caption, beside
+the histograms it is about, as the owner decided that day (B4). Until
+then `warnings` appended it, and it stood above the table, about 500
+pixels above the histograms.
 
 A MAF filter of the Variants step raises no warning on the table,
 decided on 30 September 2026 by the writer of this revision. The filter
@@ -885,10 +955,11 @@ for a filter the user turned on.
 
 The populations that were given to `calcPopDiversity` are not in the
 result: `warnings` finds them as `run` chose them, from
-`r.numIndividuals` and `minNumIndividuals` of `p`, the project of the
-request, so the three warnings that depend on them,
-`privateAllelesWithoutSmall`, `privateAllelesNeedTwoPopulations` and
-`variantsNotInDraw`, need no field more.
+`r.numIndividuals`, `minNumIndividuals` of `p`, the project of the
+request, and the ploidy of its variants file, so the warnings that
+depend on them, `privateAllelesWithoutSmall`,
+`privateAllelesNeedTwoPopulations`, `variantsNotInDraw` and
+`tooFewChromosomesForDraw`, need no field more.
 
 The warnings of stage 5 follow the rule the owner set for
 `variantsWithoutValue`: `privateAllelesOverFewerVariants` and
@@ -1257,12 +1328,19 @@ version 1 in the same way (`docs/architecture.md`, section 12).
   diploids at a minimum of 10, and the populations of
   `popDiversityPops` are those with 10 individuals or more; a draw the
   user typed stays as typed.
-- **A draw the user typed above a population's chromosomes, and below
-  those of the individuals kept.** popnei gives that population no
-  rarefied value, and `variantsNotInDraw` says it reaches the draw at
-  none of its variants.
+- **A draw the user typed above a population's chromosomes, and at most
+  those of the largest population.** popnei gives that population no
+  rarefied value and a spectrum of zeros; the ready state names it
+  before the Run, and `variantsNotInDraw` says after it that it reaches
+  the draw at none of its variants. Above the largest population, the
+  diversity is locked.
 - **A haploid VCF.** The default draw is the minimum, 20; F is NaN for
   every population, and `noFInHaploid` says why.
+- **One haploid individual, at a minimum of 0 or 1.** The populations
+  hold 1 chromosome, fewer than the least draw: the diversity is not
+  locked, the run is one pass, the six numbers of `calcPopDiversity`
+  are "no value" and the spectrum is not drawn, with
+  `tooFewChromosomesForDraw` and `noFInHaploid`.
 - **A population of 20 to a few more, with missing data.** Some variants
   have fewer than 20 called genotypes in it and no value; on the panel
   file, `p0a`, the first 20 individuals of p0, had a value at 653 of
@@ -1338,9 +1416,19 @@ one pass over the file, reading the `File` by ranges
 (`docs/specs/worker/runner.md`, "The memory"), and from stage 5 two,
 one for each call, until popnei issue #4 is closed: a Run of the
 diversity reads the file, and decompresses a gzipped VCF, twice where
-stage 4 read it once, and the time it takes is measured by the plan of
-stage 5. The result of stage 5 is a few arrays more, of one
-number per population.
+stage 4 read it once. The plan of stage 5 measured it on 30 September
+2026 (`PA7 D3` of `e2e/measure.spec.ts`), on an Apple M5 Pro with the
+built site, five runs of each, each on a new page just after the load,
+with the default options, the first pass timed from the Run posted to the
+calculation worker to the first progress of the second, and the second
+from there to the answer. On the `.nei` file of 19,161,194 bytes, 20,000
+variants of 1,000 individuals, a Run took 257 ms in Chromium 153, a first
+pass of 136 and a second of 122, and 261 ms in WebKit 26.6, 139 and 123:
+one pass, as popnei issue #4 asks, would save the first, about half the
+Run. On `panel.nei` a Run took 19 ms in Chromium and 24 in WebKit, too
+short for its passes to be told apart by the progress, which a file this
+small gives once a pass. The result of stage 5 is a few arrays more, of
+one number per population.
 
 ### How it is verified
 
@@ -1363,8 +1451,10 @@ definition, on frozen projects, as
   of the table above for these names, the first "Populations A and B have
   fewer than 20 individuals, 2 and 1, ...", and none for C, none of whose
   individuals is in the variants file; `keyInputs` gives `{ pops: [["A", ["i1", "i3"]], ["B",
-  ["i2"]], ["C", ["i5"]]], options: DIVERSITY_DEFAULTS }`, the populations
-  of the table and not those sent; `checkNumbers` gives `[numVars, null,
+  ["i2"]], ["C", ["i5"]]], options: { minNumIndividuals: 20,
+  polyThreshold: 0.95 } }`, the populations of the table and not those
+  sent, and the options without the default draw, as "What goes into
+  its key" has it; `checkNumbers` gives `[numVars, null,
   null, null, null, null, null]`, and `numCheckNumbers` 7 for the two
   populations sent, and `null` with a threshold on the individuals, with
   no column of the populations, and with the variants file pending.
@@ -1385,7 +1475,8 @@ definition, on frozen projects, as
   `null` for a project whose individuals file is not read.
 - **The one population**, from stage 4. In the project of the worked
   example with no metadata file, the grouping `pop` kept: `needs` gives
-  `null`; `keyInputs` gives `{ pops: "all", options: DIVERSITY_DEFAULTS }`;
+  `null`; `keyInputs` gives `{ pops: "all", options: { minNumIndividuals:
+  20, polyThreshold: 0.95 } }`;
   `run` sends `pops` `[["All individuals", ["i1", "i2", "i3", "i4"]]]`,
   and, with `c.individuals` `["i1", "i3"]`, `[["All individuals", ["i1",
   "i3"]]]`; `numCheckNumbers` gives 4; the key is the same with the
@@ -1399,10 +1490,11 @@ definition, on frozen projects, as
 - **The key**: for each row of the table of what changes the key, two
   projects that differ in it, and `keyOf` equal or not as the row says;
   `keyInputs` of `emptyProject("popgen")`, which has no metadata file,
-  gives `{ pops: "all", options: DIVERSITY_DEFAULTS }`, the one
-  population, as `populationsOf` of `docs/specs/core/project.md` gives
+  gives `{ pops: "all", options: { minNumIndividuals: 20,
+  polyThreshold: 0.95 } }`, the one population, as `populationsOf` of `docs/specs/core/project.md` gives
   it, and of a project whose metadata file is pending `{ pops: null,
-  options: DIVERSITY_DEFAULTS }`, each without reading `p.variants`,
+  options: { minNumIndividuals: 20, polyThreshold: 0.95 } }`, each
+  without reading `p.variants`,
   which the test makes a getter that throws. The empty project's was
   `null` here until 29 September 2026, when the spec took the code, as
   the owner decided.
@@ -1418,16 +1510,36 @@ definition, on frozen projects, as
   and 2; with the default 20, `[]`. With a draw typed, 7, `run` sends
   7 whatever the minimum. `drawOf` of a project of ploidy 4 and the
   minimum 20 gives 80, and of ploidy 1 and the minimum 0 gives 2.
-- **The lock of the draw**, from stage 5: in the worked example with
-  `minNumIndividuals` 2 and a draw typed of 9, `needs` gives, the four
-  individuals of the variants file holding 8 at ploidy 2, the reason
-  with no list, whole, with the name of the variants file of the
-  example; with a draw of 8, `null`; with a list to remove `["i4"]` and
-  a draw of 7, the reason of a list; with the default draw and
-  `minNumIndividuals` 20, `null`, since no population has 20.
-  `keptNeeds` with a threshold, the individuals kept `["i1", "i3"]` and
-  a draw of 5, gives the reason of the filters, whole, and with the
-  individuals kept `null` and a draw of 9, `null`, left to `needs`.
+- **The lock of the draw**, from 1 October 2026: in the worked example
+  with `minNumIndividuals` 2 and a draw typed of 5, `needs` gives, A
+  being the largest population, its two individuals holding 4 at
+  ploidy 2, the reason with no list, whole, which names A; with a draw
+  of 4, `null`, and of 8, which the four individuals of the variants
+  file hold, the reason again; with a list to remove `["i3"]`, A and B
+  of one individual each, `minNumIndividuals` 1 and a draw of 3, the
+  reason of a list, which names A, the first of the two, and "its one
+  individual"; with the default draw and `minNumIndividuals` 20,
+  `null`, since no population has 20. `keptNeeds` with a threshold,
+  the individuals kept `["i1", "i2"]`, `minNumIndividuals` 1 and a
+  draw of 3, gives the reason of the filters, whole, and with the
+  individuals kept `null` and a draw of 9, `null`, left to `needs`. On
+  the populations of `panel.nei`, a draw of 168 gives `null` and one of
+  169 the reason that names p2, 168 and its 84 individuals. With no
+  metadata file, the one population, at `minNumIndividuals` 2, a draw
+  of 9 over the four individuals gives the reason of the individuals,
+  "the 4 individuals of ‹the file› hold 8", and of 8 `null`.
+- **Fewer than 2 chromosomes**, from 1 October 2026: a variants file of
+  ploidy 1 with one individual and no metadata file, at
+  `minNumIndividuals` 1: `needs` gives `null` at the default draw, 2,
+  and at a draw typed of 5; `run` sends `popDiversityPops` `[]` and
+  `numCalledAlleles` 2; a result of that one individual, the six
+  arrays NaN, gives `tooFewChromosomesForDraw` and `noFInHaploid`, and
+  neither `privateAllelesNeedTwoPopulations` nor `variantsNotInDraw`.
+  With two haploid individuals in two populations of a column, one
+  each, at `minNumIndividuals` 1: the default draw, 2, runs, with
+  `popDiversityPops` both; a draw typed of 3 gives the reason that
+  counts the individuals, "the 2 individuals of ‹the file› hold 2 at a
+  ploidy of 1 … at most 2".
 - **The warnings of stage 5**, from results written as literals: a
   result with a population of 12 individuals among others of 20 or more gives
   `privateAllelesWithoutSmall` naming it, after `tooFewIndividuals`; a
@@ -1439,7 +1551,12 @@ definition, on frozen projects, as
   none; p0 with `numVarsInDraw` 277 of `numVarsWithValue` 1,152 and a
   draw of 96 gives `variantsNotInDraw` with "(24%)", and, with
   `numVarsEveryPopInDraw` 277 of `numVarsEveryPop` 1,152, its last
-  sentence; a variants file of ploidy 1 gives `noFInHaploid`.
+  sentence, of one variant and of none in their words; two populations
+  with a value at 1,152 and 1,100 variants, "at which each has a
+  value"; two populations left out of the private alleles, "some of
+  those populations"; a variants file of ploidy 1 gives `noFInHaploid`.
+  No result gives the warning of the spectrum, with a MAF filter that
+  removed variants in its `passStats` too.
 - **`diversityRows`** of a result with NaN in `privateAllelesTotal`
   gives `null` in the three cells of the private alleles, and not 0.
 - **`warnings`** of a result with a population `p0a` of 20 whose
@@ -1700,10 +1817,20 @@ below 0.95." From stage 5 the fields say it, and the line goes.
 fields, each a command of `setAnalysisOptions` with the options of
 `diversityOptions(p)` and the one changed:
 
-- "Minimum number of individuals with a genotype, a whole number from
-  0", 20; under it, "A variant has a value in a population only when at
-  least this many of its individuals have a called genotype there. A
-  population with fewer individuals has no values."
+- "Individuals with a called genotype needed in each population, per
+  variant", 20; under it, "A variant has a value in a population only
+  when at least this many of its individuals have a called genotype
+  there. A population with fewer individuals has no values. This
+  minimum is for the diversity alone: the distances between populations
+  have their own." The label is the one the field of the distances
+  between populations has (`docs/specs/analyses/popDists.md`, "What it
+  shows"), as the owner decided on 1 October 2026 (B7): the two fields
+  are the same number of popnei, 20 in both and set apart, and until
+  that day this one read "Minimum number of individuals with a genotype,
+  a whole number from 0". Of the two labels, the distances' was kept,
+  since it says that the number is counted at each variant, among the
+  individuals with a called genotype, and in each population; the last
+  sentence of the line says that the two fields are two numbers.
 - "Frequency of the commonest allele below which a variant is
   polymorphic, from 0 to 1", 0.95.
 - "Chromosomes drawn for the rarefaction, a whole number from 2", which
@@ -1712,20 +1839,36 @@ fields, each a command of `setAnalysisOptions` with the options of
   individuals, 20. The alleles and the private alleles of every
   population are also given for a draw of this many chromosomes, so
   that populations of different sizes can be compared, and the site
-  frequency spectrum below the table is of the same draw."; once a number
-  is typed, the line "Typed; the default would be 40." and a button
-  "Use the default", which sends `numCalledAlleles` `null`. While the
-  variants file is not read and the draw is the default, `drawOf` gives
-  `null`, the field is empty, and the line under it says "The default:
-  the ploidy of the variants file times the minimum number of
-  individuals, 20." A number
+  frequency spectrum below the table is of the same draw."; when the
+  ploidy times the minimum is below 2, the least draw, the first
+  sentence says so, "The default: the ploidy, 1, times the minimum
+  number of individuals, 0, and at least 2.", from 1 October 2026
+  (point 17 of the plan's report), where it read "1 times 0" beside a
+  draw of 2. Once a number is typed, the line is "Typed; the default
+  would be 40.", with the same sentence of what the draw is for after
+  it, and, at the end of the line, "Use the default", which sends
+  `numCalledAlleles` `null`: a button drawn as a link, with no border,
+  in the colour of the links and underlined, as the owner decided on 1
+  October 2026 (B2), since as a button under the field it looked like
+  the Run button under it. While the variants file is not read and the
+  draw is the default, `drawOf` gives `null`, the field is empty, and
+  the line under it says "The default: the ploidy of the variants file
+  times the minimum number of individuals, 20.", with "and at least 2"
+  at a minimum of 0 or 1; with a draw typed, "Typed; the default would
+  be the ploidy of the variants file times the minimum number of
+  individuals, 20.", and what the draw is for, the words of the writer
+  of the code, which the owner took on 1 October 2026 (B8). A number
   typed that is the default's is kept as typed, so the field does not
-  follow a later change of the minimum without the user knowing.
+  follow a later change of the minimum without the user knowing: its
+  command removes the table and a Run calculates the same numbers
+  again, under another key, and the description of that command says
+  what changed, since the number did not (below, "Its words"; B5).
 
 The fields follow the rules of the number fields of the Variants step,
 "A number the fields do not take" and "A character the fields do not
-take" of `docs/specs/steps/variants.md`, with their nouns, "the
-minimum", "the frequency" and "the number of chromosomes": "1 is less
+take" of `docs/specs/steps/variants.md`; the minimum takes whole
+numbers from 0, which its label no longer says and its refusals do; with
+their nouns, "the minimum", "the frequency" and "the number of chromosomes": "1 is less
 than 2; the number of chromosomes stays 40.", "2.5 is not a whole
 number; the minimum stays 20.", and the frequency takes two decimals,
 as the threshold of the MAF does. The fields are there in every state
@@ -1785,7 +1928,17 @@ project file is made (`docs/specs/core/projectFile.md`,
 order mark (below, "Not in this spec"): a header row, one row per
 population, the numbers as `String` writes them, which reads back as the
 same number in any program, and an empty cell for no value; a field with
-a comma, a quote or a new line is quoted, as RFC 4180 has it. For the
+a comma, a quote or a new line is quoted, as RFC 4180 has it. A cell of
+text, the name of a population, of an individual or of a column of the
+user's files, that starts with "=", "+", "-" or "@" is written with a
+quote, ', before it, `'=p1`, in every CSV of the application, as the
+owner decided on 1 October 2026: a spreadsheet that opens the file runs
+a cell that starts so as a formula, and the quote is what spreadsheets
+advise against it. The one function that writes a cell of text,
+`csvField` of `src/core/analyses/words.ts`, does it, before the quoting
+of RFC 4180; a number is never written through it, so a negative
+number, `-0.0128`, stays a number. The option not taken: the names
+written as they are. For the
 flow with the filter at 0.05:
 
 ```
@@ -1805,10 +1958,10 @@ page shows it beside the download: "Rarefied to 40 chromosomes."
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason (`docs/specs/core/store.md`, "The state of an analysis") | |
-| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the individuals kept are known, when the filters keep no individual, or leave no population, in its words (`docs/specs/core/store.md`), or, from stage 5, when the draw is larger than their chromosomes, whose words send the user to the field of this panel; the three fields | go to the step the reason names; change the draw |
-| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds."; from stage 5, the populations under the minimum of individuals named after them, by `underMinimumText` of `project.ts` as the distances between populations name theirs, "p3 has 12 individuals, fewer than the minimum of 20, so it will have no values, and is left out of the count of the private alleles of the others."; and the three fields above the Run button | Run; change the options |
+| locked | the reason the store gives, as text beside a Run button that is disabled and described by it: "Choose the column that defines the populations, or all individuals in one population, in the Individuals step."; or the store's, once the individuals kept are known, when the filters keep no individual, or leave no population, in its words (`docs/specs/core/store.md`), or, from stage 5, when the draw is larger than the chromosomes of the largest population, whose words send the user to the field of this panel; the three fields | go to the step the reason names; change the draw |
+| ready | a Run button, and the populations it will run on with their sizes, "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68 individuals", the noun with each count so that no number is read as another thing, from `populationsBeforeRun` of `project.ts` with the individuals kept that the store gives; for the one population, "1 population, All individuals: 200 individuals", and, without a metadata file, the line "No metadata file: every individual is in one population.", the words of the Individuals step, so that a user who meant to load one learns it here; a population left empty is named after them, with what to do, since the panel is in the Analyses step and the filters in the Variants step, "p9 has no individual left after the filters of individuals, and is left out. Loosen the filters of individuals in the Variants step to keep it."; several populations left empty are named together, "p1 and p2 have no individual left after the filters of individuals, and are left out. Loosen the filters of individuals in the Variants step to keep them.", as `namesOf` of `project.ts` names them; and when the filters leave no population the diversity is locked, with those words whole beside the disabled Run (above, "Why it cannot run"); while a threshold on the individuals waits for the statistics of each individual, the populations the lists keep, before that threshold, and the line "Run calculates the statistics of each individual first, and the populations may lose individuals to the thresholds."; from stage 5, the populations under the minimum of individuals named after them, by `underMinimumText` of `populations.ts` as the distances between populations name theirs, "p3 has 12 individuals, fewer than the minimum of 20, so it will have no values, and is left out of the count of the private alleles of the others."; from 1 October 2026 (B3), after those, the populations with the minimum that hold fewer chromosomes than the draw, their individuals times the ploidy, "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.", of two or three "p0 and p1 hold 96 and 136 chromosomes, fewer than the 150 the rarefaction draws, so they will have no rarefied values and no spectrum. …", and of more than three, with no counts, "p0, p1 and 2 more hold fewer chromosomes than the 150 the rarefaction draws, so they …"; and the three fields above the Run button | Run; change the options |
 | running | a progress bar, "Calculating · 35% · 0:12", from the last `progress` of its `RunView`, and, from stage 5, "Calculating · pass 1 of 2 · 17% · 0:12" while the job makes two passes, the share being of the whole run; and the time since it started, counted every second; before the first `progress`, and while the request waits in the queue, the bar has no value and is drawn hatched over its whole length and still, since a bar that moved by itself through a long calculation would be motion the user cannot stop (WCAG 2.2.2), and the clock shows the calculation goes on, "Calculating · 0:12"; after a stop or a change of the load, when the store marks the request `afterStop`, "Waiting for panel.nei to be opened again, then calculating · 0:12"; while the statistics of each individual that it waits for are calculated, "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12", with their progress, the bar labelled "Calculating the statistics of each individual", since its share is theirs, and after a stop "Waiting for panel.nei to be opened again, then calculating the statistics of each individual, which the thresholds of the individuals need · 0:12"; the clock starts again at 0:00 when the statistics end and the request of the diversity is sent, with the words of its own calculation, as the part of the writing does (`docs/specs/analyses/writeVariants.md`); the three fields, from stage 5 | Stop, which cancels it, and the statistics with it; change the options |
-| done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings", the spectrum's among them; after an opened project file, the comparison with its check numbers under the table; from stage 5, below the table, the block of the site frequency spectrum of `docs/specs/analyses/sfs.md`, "The block of the panel" | download |
+| done | the table and its download; the warnings above the table, each as a sentence, with their count on the heading, "2 warnings", the spectrum's not among them, since its block says it; after an opened project file, the comparison with its check numbers under the table; from stage 5, below the table, the block of the site frequency spectrum of `docs/specs/analyses/sfs.md`, "The block of the panel" | download |
 | results removed | the words of the change that removed it, below, and, beside the Run button, the populations it will run on, as in the state ready | Run; the Undo or Redo of the notice or of the header |
 | error | what happened and what to do, below; a refusal of popnei stays for these settings, and Run is not offered, since popnei would refuse them again; nor after `reopenFailed`, a variants file the browser can no longer read, which fails again until it is loaded again | Run again after another failure; change the settings after a refusal; load the file again after `reopenFailed` |
 
@@ -2044,7 +2197,16 @@ the notice and the words of "results removed" give, are "the minimum
 number of individuals of the diversity changed", "the frequency below
 which a variant is polymorphic changed" and "the number of chromosomes
 of the rarefaction changed"; setting the draw back to its default is
-the last.
+the last. A fourth, from 1 October 2026 (B5), is for the default's own
+number typed over the default, 40 over 40, which changes no number of
+the field: "the number of chromosomes of the rarefaction is now a typed
+one, and no longer follows the minimum number of individuals", so that
+the notice reads "Diversity removed because the number of chromosomes
+of the rarefaction is now a typed one, and no longer follows the
+minimum number of individuals", where "changed" was not true of
+anything the user saw. The option not taken was to keep the table,
+which the key does not allow: the typed draw is in the key and the
+default is not ("What goes into its key").
 
 The help, a few lines of Markdown for the help drawer of stage 8, as
 revised for stage 5:
@@ -2128,8 +2290,13 @@ moves.
   the frame shows the populations, their individuals and the start of
   the expected heterozygosity.
   These widths are of the five columns of stages 2 to 4, measured on
-  28 September 2026; the eleven of stage 5 make the table wider, by a
-  width not measured, and it scrolls in its frame on more windows.
+  28 September 2026; with the eleven of stage 5 the table is 1,187 px
+  wide at the least on the Mac, in Chromium and WebKit, its headers
+  wrapped as far as they go, wider than the column of 1,024 px of the
+  page, so it scrolls sideways in its frame on every window, and the
+  rarefied private alleles, its last column, are not seen until it is
+  scrolled. The owner saw it so on 1 October 2026 and left it (B1); a
+  narrower table would need shorter headers or two tables.
   The owner decided on 28 September 2026 that the headers wrap. While
   the table is
   wider than its frame, and only then, three things say so and let it be
@@ -2186,9 +2353,13 @@ moves.
   it. What the wrapper announces is for the plan of stage 5 and its
   review to look at, with a screen reader, and a change it calls for is
   made in the wrapper, for every number field at once.
-- "Use the default" goes when it is pressed, the draw being the default
+- "Use the default" is a button, with the role and the keys of one,
+  whatever its look, since it changes the project and goes nowhere. It
+  goes when it is pressed, the draw being the default
   again, and the focus moves to the field of the draw, so that a user
-  of the keyboard is not sent to the top of the page (2.4.3).
+  of the keyboard is not sent to the top of the page (2.4.3). It is no
+  part of the description of the field, which a screen reader reads
+  without it.
 - The keyboard: in the order of the screen, the three fields and "Use
   the default" when it is there, the Run or Stop button, the
   warnings, the table, the download; the line of the versions beside it
@@ -2419,6 +2590,14 @@ of the individuals kept: a change of the interface of section 4 of the
 architecture that would lock only when the statistics are already in the
 page, the case the ready state already names.
 
+On 1 October 2026 the owner tried the panel as built and took every
+recommendation of the plan's report, which are written above where each
+applies and gathered in `docs/specs/stage-5-open-points.md`, "Decided by
+the owner on 1 October 2026: the diversity, the spectrum and the
+histogram": the eleven columns stay as they are; the writers' decisions
+listed below stand, the lock of the draw now at the largest population;
+and no point is open.
+
 The revision of stage 5 opens no point for the owner of its own. It
 rests on the owner's five decisions of 30 September 2026, and on the
 owner's answer of the same day to the first open point of
@@ -2437,7 +2616,8 @@ applies; the owner may answer any of them otherwise:
   opening, unless `numCheckNumbers` learns to read the key version saved.
 - The lock of a draw larger than the chromosomes of the individuals
   kept ("Why it cannot run"). Otherwise the user waits a whole pass
-  for popnei's refusal.
+  for popnei's refusal. The owner made it stricter on 1 October 2026:
+  larger than the chromosomes of the largest population.
 - The eleven columns, F after the proportion of polymorphic variants,
   and the total of the private alleles beside their means ("What it
   shows"). Otherwise the first five columns of the CSV are no longer

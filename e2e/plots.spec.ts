@@ -4,13 +4,20 @@
  * e2e/fixtures/panel.nei at the size a test sets
  * (docs/specs/charts/plot2d.md, "How it is verified"; histogram.md, the
  * legend at 320 pixels). No screen offers the export before stage 6, so
- * the tests call the handle through `page.evaluate`.
+ * the tests call the handle through `page.evaluate`. The scatter and the
+ * heatmap are drawn there too, for their pointer and their export, and
+ * the line plot of the LD decay, for its export and the contrast of its
+ * lines.
  */
 
+import { readFile } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type { PngScale } from "../src/charts/types.ts";
+import { test as withAxe } from "./axe.ts";
+import type { HeatmapKind, LineKind } from "./plotsPage.ts";
 
 /** The fill of a kept bar in the light theme, --chart-bar, #0072b2. */
 const LIGHT_BAR = "rgb(0, 114, 178)";
@@ -1374,3 +1381,1007 @@ test("IP7 D3 the times of the scatter of 9,381 points: from createScatter to the
     ].join("\n"),
   );
 });
+
+// ---------------------------------------------------------------------
+// The heatmap of the distances between populations
+// (docs/specs/charts/heatmap.md, "How it is verified", "In Playwright"):
+// what jsdom cannot see, the colours the exported file carries, where
+// the tooltip lands and where the names and the legend lie in the SVG.
+
+/**
+ * The colours of viridis of the steps of the Fst of panel.nei, 239, 245
+ * and 255, and of step 0, of interpolateViridis of d3-scale-chromatic
+ * 3.1.0, "#d5e21a", "#e5e419", "#fde725" and "#440154".
+ */
+const VIRIDIS_239 = "rgb(213, 226, 26)";
+const VIRIDIS_245 = "rgb(229, 228, 25)";
+const VIRIDIS_255 = "rgb(253, 231, 37)";
+const VIRIDIS_0 = "rgb(68, 1, 84)";
+/** The text over the cells, black and white in both themes. */
+const TEXT_ON_LIGHT = "rgb(0, 0, 0)";
+const TEXT_ON_DARK = "rgb(255, 255, 255)";
+
+/** The fonts of DejaVu Sans, the font of Ubuntu's runners, as wide as Verdana. */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text, and of the plots. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(
+        fileURLToPath(new URL(`fixtures/fonts/${file}`, import.meta.url)),
+      );
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** Draws the heatmap of `kind` in an element of `width` by `height`. */
+async function drawHeatmap(
+  page: Page,
+  width: number,
+  height: number,
+  kind: HeatmapKind,
+): Promise<void> {
+  await page.evaluate(
+    ([w, h, k]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.drawHeatmap(w, h, k);
+    },
+    [width, height, kind] as const,
+  );
+}
+
+/** Where the middle of a cell of the heatmap is in the viewport. */
+async function cellAt(page: Page, row: number, column: number): Promise<At> {
+  return page.evaluate(
+    ([r, c]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      return plots.heatmapCell(r, c);
+    },
+    [row, column] as const,
+  );
+}
+
+/** A text of the exported heatmap and the fill of its style. */
+interface FileText {
+  readonly text: string | null;
+  readonly fill: string;
+}
+
+/** What toSVG of the heatmap drawn last writes on its cells and texts. */
+interface HeatmapFile {
+  readonly hasVar: boolean;
+  /** The values of dominant-baseline written on the texts. */
+  readonly baselines: string[];
+  readonly overlays: number;
+  readonly hovers: number;
+  /** Each path of cells: its fill attribute, and the fill of its style. */
+  readonly cells: {
+    readonly attribute: string | null;
+    readonly fill: string;
+  }[];
+  /** Each value in a cell. */
+  readonly texts: FileText[];
+  /** The stroke and the fill of the path of the cells with no value. */
+  readonly none: { readonly stroke: string; readonly fill: string } | null;
+  /** The fill of the style of each band of the legend, from the top. */
+  readonly bands: string[];
+  /** The texts of the legend. */
+  readonly legend: FileText[];
+}
+
+/** Calls toSVG of the heatmap drawn last, and reads the file. */
+async function heatmapFile(page: Page): Promise<HeatmapFile> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const text = plots.handle().toSVG();
+    const root = new DOMParser().parseFromString(
+      text,
+      "image/svg+xml",
+    ).documentElement;
+    // The value of `property` in the style written on `each`.
+    const styleOf = (each: Element, property: string): string =>
+      (each.getAttribute("style") ?? "")
+        .split(";")
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration.startsWith(`${property}:`))
+        .map((declaration) => declaration.slice(property.length + 1).trim())
+        .join("");
+    const none = root.querySelector("path.chart-cell-none");
+    return {
+      hasVar: text.includes("var("),
+      baselines: [
+        ...new Set(
+          [...root.querySelectorAll("text")].map((each) =>
+            styleOf(each, "dominant-baseline"),
+          ),
+        ),
+      ],
+      overlays: root.querySelectorAll(".chart-overlay").length,
+      hovers: root.querySelectorAll(".chart-hover").length,
+      cells: [...root.querySelectorAll("path.chart-cells")].map((path) => ({
+        attribute: path.getAttribute("fill"),
+        fill: styleOf(path, "fill"),
+      })),
+      texts: [...root.querySelectorAll("text.chart-cell-text")].map((each) => ({
+        text: each.textContent,
+        fill: styleOf(each, "fill"),
+      })),
+      none:
+        none === null
+          ? null
+          : { stroke: styleOf(none, "stroke"), fill: styleOf(none, "fill") },
+      bands: [...root.querySelectorAll("rect.chart-legend-band")]
+        .toSorted(
+          (a, b) => Number(a.getAttribute("y")) - Number(b.getAttribute("y")),
+        )
+        .map((band) => styleOf(band, "fill")),
+      legend: [...root.querySelectorAll("text.chart-legend-text")].map(
+        (each) => ({ text: each.textContent, fill: styleOf(each, "fill") }),
+      ),
+    };
+  });
+}
+
+test("PA4 D3 toSVG of the heatmap of panel.nei, from a dark page, has on each cell and band its colour of viridis, on each value its black or white, no var(, no overlay and no mark of the hover", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await openPlots(page);
+  await drawHeatmap(page, 640, 640, "panel");
+  // Each value in the middle of its cell: the middle of its box within a
+  // pixel of the point it is written at, across and up.
+  const offsets = await page
+    .locator("#plots text.chart-cell-text")
+    .evaluateAll((texts) =>
+      texts.map((text) => {
+        if (!(text instanceof SVGTextElement)) return [Number.NaN];
+        const box = text.getBBox();
+        return [
+          box.x + box.width / 2 - Number(text.getAttribute("x")),
+          box.y + box.height / 2 - Number(text.getAttribute("y")),
+        ];
+      }),
+    );
+  expect(offsets).toHaveLength(6);
+  for (const [across = Number.NaN, up = Number.NaN] of offsets) {
+    expect(Math.abs(across)).toBeLessThanOrEqual(1);
+    expect(Math.abs(up)).toBeLessThanOrEqual(1);
+  }
+  const cell = await cellAt(page, 0, 2);
+  await page.mouse.move(cell.x, cell.y);
+  await expect(page.locator("#plots path.chart-hover")).toHaveCount(1);
+
+  const panel = await heatmapFile(page);
+  expect(panel.hasVar).toBe(false);
+  expect(panel.overlays).toBe(0);
+  expect(panel.hovers).toBe(0);
+  expect(panel.cells).toEqual([
+    { attribute: "#d5e21a", fill: VIRIDIS_239 },
+    { attribute: "#e5e419", fill: VIRIDIS_245 },
+    { attribute: "#fde725", fill: VIRIDIS_255 },
+  ]);
+  expect(panel.texts).toHaveLength(6);
+  for (const each of panel.texts) expect(each.fill).toBe(TEXT_ON_LIGHT);
+  expect(panel.none).toBeNull();
+  expect(panel.bands).toHaveLength(32);
+  // The top band stands for the steps 248 to 255, the bottom one for 0
+  // to 7, each the colour of its middle step, 252 and 4, "#f6e620" and
+  // "#46075a".
+  expect(panel.bands[0]).toBe("rgb(246, 230, 32)");
+  expect(panel.bands[31]).toBe("rgb(70, 7, 90)");
+  expect(panel.legend).toEqual([
+    { text: "Hudson's Fst", fill: LIGHT_TEXT },
+    { text: "0.1096", fill: LIGHT_TEXT },
+    { text: "0.0000", fill: LIGHT_TEXT },
+  ]);
+
+  // The split panel: a negative pair in white on the colour of 0, and a
+  // pair with no value, outlined in the colour of the axes.
+  await drawHeatmap(page, 640, 640, "split");
+  const split = await heatmapFile(page);
+  expect(split.hasVar).toBe(false);
+  // Every text placed by its dy, none by a baseline of CSS, which a
+  // program that ignores that property would draw about 4 pixels high.
+  expect(panel.baselines).toEqual(["auto"]);
+  expect(split.baselines).toEqual(["auto"]);
+  expect(split.cells[0]).toEqual({ attribute: "#440154", fill: VIRIDIS_0 });
+  expect(split.texts.filter((each) => each.text === "−0.0113")).toEqual([
+    { text: "−0.0113", fill: TEXT_ON_DARK },
+    { text: "−0.0113", fill: TEXT_ON_DARK },
+  ]);
+  expect(split.texts).toHaveLength(10);
+  expect(split.none).toEqual({ stroke: LIGHT_AXIS, fill: "none" });
+});
+
+withAxe(
+  "PA4 D3 the pointer on the cell of p2 and p1 outlines it and shows its tooltip beside its middle, Escape hides it, and axe finds nothing",
+  async ({ page, makeAxeBuilder }) => {
+    await openPlots(page);
+    await drawHeatmap(page, 640, 640, "panel");
+    const tooltip = page.locator(".chart-tooltip");
+    const cell = await cellAt(page, 0, 2);
+
+    await page.mouse.move(cell.x, cell.y);
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip.locator("div")).toHaveText([
+      "p2 and p1",
+      "Hudson's Fst 0.1096",
+    ]);
+    await expect(tooltip).toHaveAttribute("aria-hidden", "true");
+    const box = await tooltip.boundingBox();
+    if (box === null) throw new Error("The tooltip is not laid out.");
+    expect(box.x).toBeCloseTo(cell.x + TOOLTIP_OFFSET, 0);
+    expect(box.y).toBeCloseTo(cell.y + TOOLTIP_OFFSET, 0);
+    const outline = await page
+      .locator("#plots path.chart-hover")
+      .evaluate((path) => {
+        const style = getComputedStyle(path);
+        const rect = path.getBoundingClientRect();
+        return {
+          stroke: style.stroke,
+          width: style.strokeWidth,
+          x: rect.x + rect.width / 2,
+          y: rect.y + rect.height / 2,
+        };
+      });
+    expect(outline.stroke).toBe(LIGHT_TEXT);
+    expect(outline.width).toBe("2px");
+    expect(outline.x).toBeCloseTo(cell.x, 0);
+    expect(outline.y).toBeCloseTo(cell.y, 0);
+    expect(await makeAxeBuilder().analyze()).toHaveProperty("violations", []);
+
+    // The pointer moved onto the tooltip keeps it.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+      steps: 5,
+    });
+    await expect(tooltip).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tooltip).toBeHidden();
+    await expect(page.locator("#plots path.chart-hover")).toHaveCount(0);
+
+    // The diagonal, the cell of p0 and p0, shows none.
+    const diagonal = await cellAt(page, 1, 1);
+    await page.mouse.move(diagonal.x, diagonal.y, { steps: 5 });
+    await expect(tooltip).toBeHidden();
+    expect(await makeAxeBuilder().analyze()).toHaveProperty("violations", []);
+  },
+);
+
+test("PA4 D3 in DejaVu Sans, names of up to 26 characters under the columns and left of the rows, and the legend, lie inside the SVG, each slanted name ending under its column", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await useWideFont(page);
+  await drawHeatmap(page, 640, 640, "long");
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    if (svg === null) throw new Error("The plot has no SVG.");
+    const frame = svg.getBoundingClientRect();
+    // left, top, right and bottom in the pixels of the SVG.
+    const boxOf = (each: Element): number[] => {
+      const rect = each.getBoundingClientRect();
+      return [
+        rect.left - frame.left,
+        rect.top - frame.top,
+        rect.right - frame.left,
+        rect.bottom - frame.top,
+      ];
+    };
+    const texts = (selector: string): Element[] => [
+      ...svg.querySelectorAll(selector),
+    ];
+    // Where the axis of the columns meets the middle of each column: the
+    // origin of its tick, which d3-axis translates there.
+    const origin = (each: Element): number[] => {
+      const tick = each.parentElement;
+      const matrix = tick instanceof SVGGElement ? tick.getScreenCTM() : null;
+      return matrix === null
+        ? [Number.NaN, Number.NaN]
+        : [matrix.e - frame.left, matrix.f - frame.top];
+    };
+    return {
+      width: frame.width,
+      height: frame.height,
+      font: getComputedStyle(svg).fontFamily,
+      columns: texts("g.chart-axis-x g.tick text").map((each) => ({
+        text: each.textContent,
+        box: boxOf(each),
+        origin: origin(each),
+      })),
+      rows: texts("g.chart-axis-y g.tick text").map((each) => ({
+        text: each.textContent,
+        box: boxOf(each),
+      })),
+      legend: texts("g.chart-legend text").map((each) => boxOf(each)),
+      values: texts("text.chart-legend-value").map((each) => boxOf(each)),
+      titles: texts("text.chart-legend-title").map((each) => boxOf(each)),
+      bars: texts("rect.chart-legend-band").map((each) => boxOf(each)),
+    };
+  });
+  expect(found.font).toContain("Wide test font");
+  const names = [
+    "Andes_highland_2019",
+    "Andes_lowland_valle…",
+    "Coastal_north_2018",
+    "Coastal_south_landr…",
+    "Mesoamerica_wild_A",
+    "Mesoamerica_wild_B_…",
+    "Yucatan_peninsula_c…",
+    "Amazonia_basin_2017",
+  ];
+  expect(found.columns.map((column) => column.text)).toEqual(names);
+  expect(found.rows.map((row) => row.text)).toEqual(names);
+  const inside = ([left, top, right, bottom]: number[]): boolean =>
+    left !== undefined &&
+    top !== undefined &&
+    right !== undefined &&
+    bottom !== undefined &&
+    left >= 0 &&
+    top >= 0 &&
+    right <= found.width &&
+    bottom <= found.height;
+  for (const { text, box } of [...found.columns, ...found.rows]) {
+    expect(inside(box), `${text} at ${box.join(", ")}`).toBe(true);
+  }
+  for (const box of found.legend) {
+    expect(inside(box), `legend at ${box.join(", ")}`).toBe(true);
+  }
+  // The two numbers of the legend start right of its bar.
+  const barRight = Math.max(...found.bars.map(([, , right = 0]) => right));
+  expect(found.values).toHaveLength(2);
+  for (const [left = 0] of found.values) {
+    expect(left).toBeGreaterThanOrEqual(barRight);
+  }
+  // The largest value at the top end of the bar and 0 at its bottom end,
+  // the middle of each within 12 pixels of its end on the bar's side, and
+  // the name of the value wholly above the bar.
+  const barTop = Math.min(...found.bars.map(([, top = 0]) => top));
+  const barBottom = Math.max(...found.bars.map(([, , , bottom = 0]) => bottom));
+  const middleOf = ([, top = 0, , bottom = 0]: number[]): number =>
+    (top + bottom) / 2;
+  const [largest = [], zero = []] = found.values;
+  expect(
+    middleOf(largest) - barTop,
+    "the largest value",
+  ).toBeGreaterThanOrEqual(0);
+  expect(middleOf(largest) - barTop, "the largest value").toBeLessThanOrEqual(
+    12,
+  );
+  expect(barBottom - middleOf(zero), "0").toBeGreaterThanOrEqual(0);
+  expect(barBottom - middleOf(zero), "0").toBeLessThanOrEqual(12);
+  expect(found.titles).toHaveLength(1);
+  const [, , , titleBottom = Infinity] = found.titles[0] ?? [];
+  expect(titleBottom, "the name of the value").toBeLessThanOrEqual(barTop);
+  // A slanted name ends where its column meets the axis: its right edge
+  // within 8 pixels of the middle of the column, and its top from 0 to
+  // 12 pixels below the axis.
+  for (const { text, box, origin } of found.columns) {
+    const [, top = Number.NaN, right = Number.NaN] = box;
+    const [middle = Number.NaN, axis = Number.NaN] = origin;
+    expect(Math.abs(right - middle), `${text} across`).toBeLessThanOrEqual(8);
+    expect(top - axis, `${text} down`).toBeGreaterThanOrEqual(0);
+    expect(top - axis, `${text} down`).toBeLessThanOrEqual(12);
+  }
+});
+
+/** Where the grid, the axis of the columns and the names of the heatmap
+    drawn last lie, in the pixels of its SVG. */
+interface HeatmapLayout {
+  readonly width: number;
+  readonly height: number;
+  /** The top and the bottom of the cells. */
+  readonly gridTop: number;
+  readonly gridBottom: number;
+  /** The top of each name under the columns. */
+  readonly columnTops: number[];
+  /** The left edge of each name left of the rows, with the name. */
+  readonly rows: { readonly text: string | null; readonly left: number }[];
+  /** The top of the bar of the legend. */
+  readonly barTop: number;
+  /** The top of the axis of the rows, its line and its names. */
+  readonly rowAxisTop: number;
+}
+
+/** Reads the layout of the heatmap drawn last. */
+async function heatmapLayout(page: Page): Promise<HeatmapLayout> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    if (svg === null) throw new Error("The plot has no SVG.");
+    const frame = svg.getBoundingClientRect();
+    const boxes = (selector: string): DOMRect[] =>
+      [...svg.querySelectorAll(selector)].map((each) =>
+        each.getBoundingClientRect(),
+      );
+    const cells = boxes("path.chart-cells, path.chart-cell-none");
+    return {
+      width: frame.width,
+      height: frame.height,
+      gridTop: Math.min(...cells.map((box) => box.top)) - frame.top,
+      gridBottom: Math.max(...cells.map((box) => box.bottom)) - frame.top,
+      columnTops: boxes("g.chart-axis-x g.tick text").map(
+        (box) => box.top - frame.top,
+      ),
+      rows: [...svg.querySelectorAll("g.chart-axis-y g.tick text")].map(
+        (each) => ({
+          text: each.textContent,
+          left: each.getBoundingClientRect().left - frame.left,
+        }),
+      ),
+      barTop:
+        Math.min(...boxes("rect.chart-legend-band").map((box) => box.top)) -
+        frame.top,
+      rowAxisTop:
+        Math.min(...boxes("g.chart-axis-y").map((box) => box.top)) - frame.top,
+    };
+  });
+}
+
+test("PA10 the grid of the heatmap stands at the foot of its frame: the names of the columns start within 14 pixels under the last row, where they stood 90 pixels and more below it, and the bar of the legend starts level with the grid", async ({
+  page,
+}) => {
+  await openPlots(page);
+  for (const kind of ["panel", "long"] as const) {
+    await drawHeatmap(page, 640, 640, kind);
+    const layout = await heatmapLayout(page);
+    expect(layout.columnTops.length, kind).toBeGreaterThan(0);
+    for (const top of layout.columnTops) {
+      expect(top - layout.gridBottom, kind).toBeGreaterThanOrEqual(0);
+      expect(top - layout.gridBottom, kind).toBeLessThanOrEqual(14);
+    }
+    // The frame is higher than the grid is wide, the legend taking width:
+    // the room left over is above the grid.
+    expect(layout.gridTop, kind).toBeGreaterThan(60);
+    expect(Math.abs(layout.barTop - layout.gridTop), kind).toBeLessThanOrEqual(
+      1,
+    );
+  }
+});
+
+test("PA10 names in capitals, of 3 and of 20 characters, are not cut at the left edge of the heatmap, in the font of the machine and in DejaVu Sans", async ({
+  page,
+}) => {
+  await openPlots(page);
+  for (const wide of [false, true]) {
+    if (wide) await useWideFont(page);
+    await drawHeatmap(page, 640, 640, "capitals");
+    const layout = await heatmapLayout(page);
+    expect(layout.rows.map((row) => row.text)).toEqual([
+      "MEX",
+      "MESOAMERICA_WILD_ABC",
+      "PER",
+    ]);
+    for (const row of layout.rows) {
+      expect(
+        row.left,
+        `${String(row.text)}, DejaVu Sans ${String(wide)}`,
+      ).toBeGreaterThanOrEqual(0);
+    }
+  }
+});
+
+test("PA10 the heatmap of 200 names, too many to write, gives the grid the margins of the names: it starts 8 pixels from the left of the SVG and ends 8 from its foot, with the line of the rows along it", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawHeatmap(page, 640, 640, "most");
+  const layout = await heatmapLayout(page);
+  expect(layout.columnTops).toEqual([]);
+  expect(layout.rows).toEqual([]);
+  expect(layout.gridBottom).toBeCloseTo(640 - 8, 0);
+  // The line of the axis of the rows runs along the grid, and not up
+  // the room left over above it.
+  expect(layout.gridTop).toBeGreaterThan(60);
+  expect(Math.abs(layout.rowAxisTop - layout.gridTop)).toBeLessThanOrEqual(1);
+  const left = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const svg = plots.element().querySelector("svg");
+    const cells = svg?.querySelector("path.chart-cells");
+    if (svg === null || cells === null || cells === undefined) {
+      throw new Error("The plot has no cells.");
+    }
+    return (
+      Math.min(
+        ...[...svg.querySelectorAll("path.chart-cells")].map(
+          (each) => each.getBoundingClientRect().left,
+        ),
+      ) - svg.getBoundingClientRect().left
+    );
+  });
+  expect(left).toBeCloseTo(8, 0);
+});
+
+/** The line of pop_a, --chart-cat-1 of Okabe and Ito, #e69f00. */
+const ORANGE: readonly [number, number, number] = [230, 159, 0];
+
+/** Draws the line plot of `kind` in an element of `width` by `height`. */
+async function drawLine(
+  page: Page,
+  width: number,
+  height: number,
+  kind: LineKind,
+): Promise<void> {
+  await page.evaluate(
+    ([w, h, k]) => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      plots.drawLine(w, h, k);
+    },
+    [width, height, kind] as const,
+  );
+}
+
+/** The channels of "rgb(r, g, b)", as a browser computes a colour, 0 to 255. */
+function channelsOf(colour: string): [number, number, number] {
+  const found = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(colour);
+  if (found === null) throw new Error(`${colour} is not a colour.`);
+  const [red, green, blue] = found
+    .slice(1)
+    .map((part) => Number.parseInt(part, 10));
+  if (red === undefined || green === undefined || blue === undefined) {
+    throw new Error(`${colour} has no three channels.`);
+  }
+  return [red, green, blue];
+}
+
+/** The contrast ratio of two colours by the formula of WCAG 2.2, 1 to 21. */
+function contrastOf(first: string, second: string): number {
+  const luminance = (colour: string): number => {
+    const [red = 0, green = 0, blue = 0] = channelsOf(colour).map((channel) => {
+      const share = channel / 255;
+      return share <= 0.04045
+        ? share / 12.92
+        : ((share + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const [lighter = 0, darker = 0] = [
+    luminance(first),
+    luminance(second),
+  ].toSorted((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+test("PA4 D5 toSVG of the LD decay of ld.nei, from a dark page, is in the light theme: the line of pop_a in rgb(230, 159, 0) on a casing of the colour of the axes, 50 points each, the dashed lines of the half distances, and the legend of both populations, with no var(", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const screenAxis = plots
+      .element()
+      .querySelector("g.chart-axis-x path.domain");
+    if (screenAxis === null) throw new Error("The plot has no axis.");
+    const text = plots.handle().toSVG();
+    const root = new DOMParser().parseFromString(
+      text,
+      "image/svg+xml",
+    ).documentElement;
+    // The value of `property` in the style written on `each`.
+    const styleOf = (each: Element | null, property: string): string =>
+      (each?.getAttribute("style") ?? "")
+        .split(";")
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration.startsWith(`${property}:`))
+        .map((declaration) => declaration.slice(property.length + 1).trim())
+        .join("");
+    const orange = root.querySelector(
+      "g.chart-marks path.chart-line.chart-line-colour-0",
+    );
+    return {
+      text,
+      screenAxisStroke: getComputedStyle(screenAxis).stroke,
+      axisWidth: styleOf(
+        root.querySelector("g.chart-axis-x path.domain"),
+        "stroke-width",
+      ),
+      line: [
+        styleOf(orange, "stroke"),
+        styleOf(orange, "stroke-width"),
+        styleOf(orange, "fill"),
+        styleOf(orange, "stroke-linejoin"),
+      ],
+      casings: [
+        ...root.querySelectorAll("g.chart-marks path.chart-line-casing"),
+      ].map((each) => [
+        styleOf(each, "stroke"),
+        styleOf(each, "stroke-width"),
+        styleOf(each, "fill"),
+      ]),
+      points: [...root.querySelectorAll("g.chart-marks path.chart-points")].map(
+        (path) => (path.getAttribute("d") ?? "").split("M").length - 1,
+      ),
+      markLines: [...root.querySelectorAll("line.chart-mark-line")].map(
+        (line) => [styleOf(line, "stroke"), styleOf(line, "stroke-dasharray")],
+      ),
+      markCasings: [...root.querySelectorAll("line.chart-mark-casing")].map(
+        (line) => [
+          styleOf(line, "stroke"),
+          styleOf(line, "stroke-width"),
+          styleOf(line, "stroke-dasharray"),
+        ],
+      ),
+      marks: root.querySelectorAll("path.chart-mark").length,
+      legend: [...root.querySelectorAll("g.chart-legend-row")].map((row) => ({
+        text: row.querySelector("text")?.textContent ?? null,
+        anchor: styleOf(row.querySelector("text"), "text-anchor"),
+        fill: styleOf(row.querySelector("text"), "fill"),
+        line: styleOf(row.querySelector("line.chart-line"), "stroke"),
+        casings: row.querySelectorAll("line.chart-line-casing").length,
+      })),
+      ticks: [...root.querySelectorAll("g.chart-axis-x g.tick text")].map(
+        (each) => each.textContent,
+      ),
+    };
+  });
+  // The page is dark: the axis on the screen is in the dark theme.
+  expect(found.screenAxisStroke).toBe("rgb(163, 171, 181)");
+  expect(found.text).not.toContain("var(");
+  // No colour of the dark theme but the sky blue of its bars, which is
+  // pop_b's in both themes.
+  for (const colour of DARK_ONLY.filter((each) => each !== DARK_BAR)) {
+    expect(found.text).not.toContain(colour);
+  }
+  // The class chart-line of the SVG widens nothing: the axis is 1 pixel.
+  expect(found.axisWidth).toBe("1px");
+  expect(found.line).toEqual(["rgb(230, 159, 0)", "2px", "none", "round"]);
+  expect(found.casings).toEqual([
+    [LIGHT_AXIS, "4px", "none"],
+    [LIGHT_AXIS, "4px", "none"],
+  ]);
+  expect(found.points).toEqual([50, 50]);
+  expect(found.markLines).toEqual([
+    ["rgb(230, 159, 0)", "4px, 3px"],
+    ["rgb(86, 180, 233)", "4px, 3px"],
+  ]);
+  // Orange and sky blue are below 3:1 on white: each dashed line has its
+  // casing in the colour of the axes, of the same dashes.
+  expect(found.markCasings).toEqual([
+    [LIGHT_AXIS, "3px", "4px, 3px"],
+    [LIGHT_AXIS, "3px", "4px, 3px"],
+  ]);
+  expect(found.marks).toBe(2);
+  expect(found.legend).toEqual([
+    {
+      text: "pop_a · half at 7,548 bp",
+      anchor: "start",
+      fill: LIGHT_TEXT,
+      line: "rgb(230, 159, 0)",
+      casings: 1,
+    },
+    {
+      text: "pop_b · half at 7,340 bp",
+      anchor: "start",
+      fill: LIGHT_TEXT,
+      line: "rgb(86, 180, 233)",
+      casings: 1,
+    },
+  ]);
+  expect(found.ticks).toEqual([
+    "0",
+    "20,000",
+    "40,000",
+    "60,000",
+    "80,000",
+    "100,000",
+  ]);
+});
+
+test("PA4 D5 toPNG(2) of the LD decay in 600 by 375 pixels is a PNG of 1,200 by 750 pixels, orange on the piece of line of the first row of its legend", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const found = await page.evaluate(async () => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    // The piece of line of the first row, 2 pixels from its left end, in
+    // the pixels of the SVG, from the row's translation.
+    const row = plots.element().querySelector<SVGGElement>(".chart-legend-row");
+    const piece = row?.querySelector("line.chart-line") ?? null;
+    const move = row?.transform.baseVal.consolidate()?.matrix;
+    if (piece === null || move === undefined) {
+      throw new Error("The legend has no row with a line.");
+    }
+    const at = { x: move.e + Number(piece.getAttribute("x1")) + 2, y: move.f };
+    const blob = await plots.handle().toPNG(2);
+    const header = new DataView(await blob.arrayBuffer());
+    const image = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (context === null) throw new Error("No context of a canvas.");
+    context.drawImage(image, 0, 0);
+    const pixel = context.getImageData(
+      Math.round(2 * at.x),
+      Math.round(2 * at.y),
+      1,
+      1,
+    ).data;
+    return {
+      type: blob.type,
+      signature: header.getUint32(0),
+      width: header.getUint32(16),
+      height: header.getUint32(20),
+      pixel: [...pixel],
+    };
+  });
+  expect(found.type).toBe("image/png");
+  expect(found.signature).toBe(PNG_SIGNATURE);
+  expect([found.width, found.height]).toEqual([1200, 750]);
+  const [red, green, blue] = found.pixel;
+  expect(Math.abs((red ?? -99) - ORANGE[0])).toBeLessThanOrEqual(8);
+  expect(Math.abs((green ?? -99) - ORANGE[1])).toBeLessThanOrEqual(8);
+  expect(Math.abs((blue ?? -99) - ORANGE[2])).toBeLessThanOrEqual(8);
+});
+
+test("PA4 D5 the lines of the four colours without a casing, green, blue, vermilion and reddish purple, are 3:1 or more on the background of the light and the dark theme", async ({
+  page,
+}) => {
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await openPlots(page);
+    await drawLine(page, 600, 375, "noCasing");
+    const found = await page.evaluate(() => {
+      const plots = window.plotsPage;
+      if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+      const marks = plots.element().querySelector("g.chart-marks");
+      if (marks === null) throw new Error("The plot has no marks.");
+      // The background of the theme, resolved by the browser as rgb().
+      const probe = document.createElement("div");
+      probe.style.color = "var(--color-background)";
+      document.body.append(probe);
+      const background = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        background,
+        lines: [...marks.querySelectorAll("path.chart-line")].map((line) => ({
+          className: line.getAttribute("class"),
+          stroke: getComputedStyle(line).stroke,
+        })),
+        casings: marks.querySelectorAll(".chart-line-casing").length,
+      };
+    });
+    expect(found.background).toBe(
+      theme === "light" ? LIGHT_BACKGROUND : "rgb(22, 24, 27)",
+    );
+    expect(found.casings).toBe(0);
+    expect(found.lines.map((line) => line.className)).toEqual([
+      "chart-line chart-line-colour-2",
+      "chart-line chart-line-colour-4",
+      "chart-line chart-line-colour-5",
+      "chart-line chart-line-colour-6",
+    ]);
+    for (const line of found.lines) {
+      expect(
+        contrastOf(line.stroke, found.background),
+        `${line.stroke} in the ${theme} theme`,
+      ).toBeGreaterThanOrEqual(3);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------
+// Where the text of the plots lands, which jsdom cannot lay out and the
+// review of work package 4 found no flow holding: the labels under the
+// horizontal axis of every 2D plot, and the legend of the line plot.
+
+test("PA4 D1 the labels of the ticks under the horizontal axis of the histogram lie below the axis, the top of the box of each below its line", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await draw(page, 600, 375);
+  const found = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const axis = plots.element().querySelector("g.chart-axis-x");
+    if (axis === null) throw new Error("The histogram has no horizontal axis.");
+    const domain = axis.querySelector("path.domain");
+    if (domain === null) throw new Error("The horizontal axis has no line.");
+    // The line of the axis is the top of its path, whose box reaches 6
+    // pixels lower at its two ends, where d3-axis draws the outer ticks;
+    // the box of a label, the ascent of its font above its digits, comes
+    // within half a pixel of that.
+    return {
+      axis: domain.getBoundingClientRect().top,
+      labels: [...axis.querySelectorAll("g.tick text")].map((text) => ({
+        text: text.textContent,
+        top: text.getBoundingClientRect().top,
+      })),
+    };
+  });
+  expect(found.labels.length).toBeGreaterThanOrEqual(3);
+  for (const label of found.labels) {
+    expect(label.top, label.text).toBeGreaterThanOrEqual(found.axis + 1);
+  }
+});
+
+test("PA4 D5 each row of the legend of the LD decay has its mark and its text on its piece of line, and an update that adds a half distance draws its mark over every dashed line", async ({
+  page,
+}) => {
+  await openPlots(page);
+  await drawLine(page, 600, 375, "ld");
+  const rows = await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const middle = (each: Element | null): number => {
+      if (each === null) return Number.NaN;
+      const rect = each.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    };
+    return [...plots.element().querySelectorAll(".chart-legend-row")].map(
+      (row) => ({
+        line: middle(row.querySelector("line.chart-line")),
+        mark: middle(row.querySelector("path.chart-points")),
+        text: middle(row.querySelector("text.chart-legend-text")),
+      }),
+    );
+  });
+  expect(rows).toHaveLength(2);
+  for (const row of rows) {
+    expect(Math.abs(row.mark - row.line), "the mark").toBeLessThanOrEqual(1);
+    expect(Math.abs(row.text - row.line), "the text").toBeLessThanOrEqual(1);
+  }
+
+  // pop_a alone with its half distance, then both: the dashed line of
+  // pop_b enters after the mark of pop_a, which is raised over it.
+  await drawLine(page, 600, 375, "oneMark");
+  await page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    plots.lineUpdate("ld");
+  });
+  const order = await page
+    .locator("#plots g.chart-annotations > *")
+    .evaluateAll((children) =>
+      children.map((child) => child.getAttribute("class")?.split(" ")[0]),
+    );
+  expect(order).toEqual([
+    "chart-mark-casing",
+    "chart-mark-casing",
+    "chart-mark-line",
+    "chart-mark-line",
+    "chart-points",
+    "chart-points",
+  ]);
+});
+
+/** Where the legend of the line plot drawn last and the texts of its axes
+    lie, in the pixels of the page. */
+interface LegendPlaces {
+  readonly place: string | null;
+  /** The box of the SVG. */
+  readonly svg: Box;
+  /** The box of the frame, from its clip. */
+  readonly frame: Box;
+  /** The box of each row of the legend, and of its text. */
+  readonly rows: readonly { readonly row: Box; readonly text: Box }[];
+  /** The box of the label of each tick of the horizontal axis. */
+  readonly ticks: readonly Box[];
+  /** The box of the label of the horizontal axis. */
+  readonly xLabel: Box;
+}
+
+/** A box of the page. */
+interface Box {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+async function legendPlaces(page: Page): Promise<LegendPlaces> {
+  return page.evaluate(() => {
+    const plots = window.plotsPage;
+    if (plots === undefined) throw new Error("e2e/plots.html has not run.");
+    const element = plots.element();
+    const boxOf = (each: Element | null): Box => {
+      if (each === null) throw new Error("The plot lacks a part.");
+      const { left, right, top, bottom } = each.getBoundingClientRect();
+      return { left, right, top, bottom };
+    };
+    const marks = element.querySelector("g.chart-marks");
+    // The frame is the box of the horizontal axis's line across, and of
+    // the vertical one's up.
+    const across = boxOf(element.querySelector("g.chart-axis-x path.domain"));
+    const up = boxOf(element.querySelector("g.chart-axis-y path.domain"));
+    if (marks === null) throw new Error("The plot has no marks.");
+    return {
+      place:
+        element.querySelector("g.chart-legend")?.getAttribute("data-place") ??
+        null,
+      svg: boxOf(element.querySelector("svg")),
+      frame: {
+        left: across.left,
+        right: across.right,
+        top: up.top,
+        bottom: up.bottom,
+      },
+      rows: [...element.querySelectorAll("g.chart-legend-row")].map((row) => ({
+        row: boxOf(row),
+        text: boxOf(row.querySelector("text")),
+      })),
+      ticks: [...element.querySelectorAll("g.chart-axis-x g.tick text")].map(
+        boxOf,
+      ),
+      xLabel: boxOf(element.querySelector("text.chart-axis-label-x")),
+    };
+  });
+}
+
+for (const kind of ["ld", "capitals"] as const) {
+  test(`PA10 in the committed font the legend of the LD decay, ${kind}, stands at the right of the frame at 700 pixels and above the plot at 320, no row of it over the frame, and no text of it or of the horizontal axis past the edges of the SVG`, async ({
+    page,
+  }) => {
+    await openPlots(page);
+    await useWideFont(page);
+
+    await drawLine(page, 700, 375, kind);
+    const wide = await legendPlaces(page);
+    expect(wide.place).toBe("right");
+    expect(wide.rows).toHaveLength(2);
+    for (const { row, text } of wide.rows) {
+      expect(row.left, "a row right of the frame").toBeGreaterThan(
+        wide.frame.right,
+      );
+      expect(row.top, "a row below the top of the frame").toBeGreaterThan(
+        wide.frame.top,
+      );
+      expect(text.right, "a text within the SVG").toBeLessThanOrEqual(
+        wide.svg.right,
+      );
+      expect(row.bottom).toBeLessThanOrEqual(wide.svg.bottom);
+    }
+    for (const tick of wide.ticks) {
+      expect(tick.right).toBeLessThanOrEqual(wide.svg.right);
+    }
+
+    // 44 pixels more than the 360 of the panel, for the two rows.
+    await drawLine(page, 320, 404, kind);
+    const narrow = await legendPlaces(page);
+    expect(narrow.place).toBe("above");
+    expect(narrow.rows).toHaveLength(2);
+    for (const { row, text } of narrow.rows) {
+      expect(row.bottom, "a row above the frame").toBeLessThan(
+        narrow.frame.top,
+      );
+      expect(row.top).toBeGreaterThanOrEqual(narrow.svg.top);
+      expect(row.left).toBeGreaterThanOrEqual(narrow.svg.left);
+      expect(text.right, "a text within the SVG").toBeLessThanOrEqual(
+        narrow.svg.right,
+      );
+    }
+    // The label of the horizontal axis keeps its place under the ticks.
+    expect(narrow.xLabel.bottom).toBeLessThanOrEqual(narrow.svg.bottom);
+    expect(narrow.xLabel.top).toBeGreaterThan(narrow.frame.bottom);
+    // The last number of the axis, "100,000", has its room at the right.
+    const last = narrow.ticks.at(-1);
+    expect(narrow.ticks.length).toBeGreaterThanOrEqual(2);
+    expect(last?.right).toBeLessThanOrEqual(narrow.svg.right);
+    // The frame keeps its height: 404 less 12, 44 and the 44 of the legend.
+    expect(
+      Math.round(narrow.frame.bottom - narrow.frame.top),
+    ).toBeGreaterThanOrEqual(300);
+  });
+}

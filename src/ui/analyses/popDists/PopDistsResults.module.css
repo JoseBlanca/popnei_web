@@ -1,0 +1,90 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as the panel, and never wider: without `min-inline-size: 0`
+   the least width of the heatmap would hold the column of the panel at
+   that width, and the page would scroll sideways where the frame of the
+   heatmap should (WCAG 1.4.10). */
+.results {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.heatmapPart {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.heatmapFrame {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.scrollLine {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A heatmap wider than the page scrolls sideways, and the page does not
+   (WCAG 1.4.10). While it does, the Tab key reaches the frame, so it
+   shows the focus. The frame is a container, so that the heatmap in it
+   can tell, by 100cqi, how wide the frame is. */
+.heatmapScroll {
+  min-inline-size: 0;
+  overflow-x: auto;
+  container-type: inline-size;
+}
+
+.heatmapScroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The element of the heatmap: its width from the panel, up to 40rem,
+   and never below its least width, --heatmap-least-width; and its
+   height that width with --heatmap-beyond-width added, the top and the
+   bottom margins less the left and the right ones, which HeatmapPlot.tsx
+   sets from the margins of its names, so that the square grid fills its
+   frame and the names stand under their columns
+   (docs/specs/charts/heatmap.md, "The size"). A square element left
+   the room above the grid blank. The tooltip is placed inside it. */
+.heatmap {
+  position: relative;
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  min-inline-size: var(--heatmap-least-width, 0px);
+  block-size: calc(
+    max(min(100cqi, 40rem), var(--heatmap-least-width, 0px)) +
+      var(--heatmap-beyond-width, 0px)
+  );
+}
+
+/* A name of the pair, with "and" after the first, kept on one line: a
+   narrow column breaks the pair after "and", and never inside a name,
+   which the column then makes room for. */
+.name {
+  white-space: nowrap;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The button and the line of the versions side by side, wrapping when
+   there is no room. */
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

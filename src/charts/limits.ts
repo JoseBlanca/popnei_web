@@ -36,3 +36,18 @@ export const MAX_SVG_POINTS = 50_000;
  * TypeScript interface").
  */
 export const MAX_POINT_GROUPS = 1000;
+
+/**
+ * The most names a heatmap draws: 200 names make 39,800 cells off the
+ * diagonal, drawn as one path per step of viridis; more is a defect of the
+ * caller (docs/specs/charts/heatmap.md, "The TypeScript interface").
+ */
+export const MAX_HEATMAP_NAMES = 200;
+
+/**
+ * The most series a line plot draws: 49, the number of different marks
+ * the rule of the groups gives, seven colours by seven shapes, so that no
+ * two series look alike; more is a defect of the caller
+ * (docs/specs/charts/line.md, "The TypeScript interface").
+ */
+export const MAX_LINE_SERIES = 49;

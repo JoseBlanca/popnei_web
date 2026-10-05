@@ -1,0 +1,23 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+/* The field of the draw, and the line under it, which "Use the default"
+   ends while a draw is typed: as close to the field as the line of the
+   other fields is to theirs. */
+.draw {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+/* The line under the field of the draw, as the field draws its own. */
+.line {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

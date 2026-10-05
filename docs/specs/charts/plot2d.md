@@ -17,8 +17,12 @@ the line plot of `docs/specs/charts/line.md`, and the histograms of the
 spectrum of `docs/specs/analyses/sfs.md`: an axis of names drawn from a
 band scale, its labels slanted when asked, no text for an empty label
 of an axis, and ticks at whole numbers on the horizontal axis alone,
-`xWholeNumbers`; approved by the owner on 30 September 2026. The code of stage 3,
-`src/charts/plot2d.ts` and `export.ts`, has none of these yet. This spec gives
+`xWholeNumbers`; approved by the owner on 30 September 2026. Revised on
+1 October 2026 for two decisions of the owner of that day: the size of
+the element given to the margins, for the heatmap, and the label of the
+horizontal axis written on two lines when one would not fit, for the
+histograms of the spectrum on a screen of 320 pixels
+(`docs/specs/stage-5-open-points.md`). This spec gives
 `src/charts/plot2d.ts`, the function that every plot drawn in two
 dimensions makes its handle with: the histogram of
 `docs/specs/charts/histogram.md` now, and the scatter plot of the PCA,
@@ -125,7 +129,12 @@ margins"): the SVG takes the size of the element, the margins of the
 plot hold its axes and their labels, and the frame is the rest, of
 `innerWidth` by `innerHeight`, which the base gives the plot. The
 margins are the definition's, a function of the data, since the
-histogram's top margin is larger when it draws a legend; they are fixed
+histogram's top margin is larger when it draws a legend, and, from 1
+October 2026, of the size of the element, which the base gives with the
+data, since the heatmap makes its margins without its names when the
+size leaves them no room (`docs/specs/charts/heatmap.md`, "The names on
+the axes"); a plot whose margins do not depend on the size does not
+read it. They are fixed
 numbers and not measured from the text, because jsdom, the DOM of the
 unit tests, cannot measure text, and a browser can measure it only once its fonts
 are loaded. So the text of every plot has a size in pixels in
@@ -193,7 +202,61 @@ and turned along the vertical one, in the margins:
   heatmap, anchored at their end so that a long name runs down and to
   the left of its column;
 - an empty `xLabel` or `yLabel` writes no text, from stage 5, since the
-  names of the heatmap say what its rows and columns are.
+  names of the heatmap say what its rows and columns are;
+- from 1 October 2026, **a label of the horizontal axis that would not
+  fit is written on two lines**, as the owner decided that day (point 26
+  of the report of `docs/plans/population-analyses.md`). The label is
+  centred under the frame, so it fits while half its width is at most
+  the room from the middle of the frame to the nearer side of the SVG,
+  the half of the frame and the left or the right margin. Its width is
+  counted, 7.1 pixels a character, and not measured, as the margins
+  are: at its 13 pixels the label of the spectrum took 6.0 pixels a
+  character in the font of the Mac and 7.1 in DejaVu Sans, the font of
+  the checks at 320 pixels, in Chromium and WebKit, the widest of the
+  two. At 7.2, the count of the numbers of the axes, "Expected
+  heterozygosity (unbiased)", 34 characters under a histogram of the
+  Variants step at 320 pixels, counted 122.4 pixels of half width
+  against 122 of room and was broken, where it fits. A label that does
+  not fit is broken at the space nearest its middle, the two lines
+  centred under the frame and 16 pixels apart, and the base adds 16
+  pixels to the bottom margin the definition gave, so that the frame is
+  16 pixels lower and the second line stands where the one line did, 8
+  pixels above the bottom of the SVG. `Frame.margin` is the margin as
+  drawn. The first line keeps its space at its end, so that the text of
+  the label, read from the SVG, is the label. A label with no space is
+  not broken, and one that fits is drawn as before, on one line and
+  with the definition's margins, so no plot whose label fits changes.
+  On a screen of 320 pixels "Copies of the rarer allele among 40
+  chromosomes", 47 characters, was 278 to 326 pixels long under a frame
+  of about 205 pixels in an SVG of 281, and its end was cut. The option
+  not taken was a shorter label on narrow screens, which mends one plot
+  and not every plot with a long label;
+- **the label of the vertical axis is treated the same way**, centred
+  along the frame and turned: it fits while half its counted width is at
+  most half the height of the frame and the top or the bottom margin,
+  whichever is smaller; otherwise it is broken at the space nearest its
+  middle into two lines 16 pixels apart, the first 16 pixels from the
+  left of the SVG as the one line is, and the base adds 16 pixels to the
+  left margin, so that the numbers of the axis keep their room. The
+  owner's report said that this label "also looks cut" at 320 pixels:
+  "Share of the variants with both alleles", 247.6 pixels long in DejaVu
+  Sans, ran 3.8 pixels above the top of its SVG, in Chromium, once the
+  frame of the histogram was 16 pixels lower for the label under it.
+  The two decisions read each other, since a second line under the
+  frame makes it lower and one along it makes it narrower: the base
+  decides them again until neither changes, and a label broken in one
+  round stays broken in the next, so that it ends within three rounds.
+  Without that rule the two can take turns when the left margin is the
+  narrower one, as beside the legend of a line plot at the right: the
+  vertical label's second line widens the left margin and gives the
+  label under the frame 8 pixels more of room, which can let it fit
+  on one line, and the frame, 16 pixels higher, can then let the
+  vertical label fit too, which takes the 8 pixels back. With margins
+  of 16, 200, 40 and 40 pixels, labels of 51 and 41 characters took
+  turns at 507 by 316 pixels, among other sizes, and three rounds ended
+  with the vertical label broken where it fits. In that case alone a
+  label that would fit is on two lines; otherwise a label that fits is
+  drawn on one line, with the definition's margins.
 
 The grid, `chart-grid`, stays empty until a plot asks for one.
 
@@ -422,7 +485,8 @@ export interface Plot2dDefinition<Data extends PlotText> {
   /** The name in the class of the SVG, chart-‹kind›: "histogram". */
   readonly kind: string;
   readonly check: (data: Data) => void;
-  readonly margin: (data: Data) => Margin;
+  /** The margins for `data` in an element of `size`, above 0 by 0. */
+  readonly margin: (data: Data, size: ExportSize) => Margin;
   readonly draw: (frame: Frame, data: Data) => void;
   /** The base makes the overlay and calls these, in the pixels of the frame. */
   readonly pointer?: {
@@ -577,6 +641,23 @@ calls:
 - `width`, `height` and the `viewBox` of the SVG at the size of the last
   draw, and the frame of `innerWidth` by `innerHeight` of that size less
   the margins;
+- from 1 October 2026, with margins of 12, 16, 44 and 60 pixels, top,
+  right, bottom and left: in an element of 600 by 375 pixels the label
+  "Copies of the rarer allele among 40 chromosomes" is one text with no
+  line of its own inside, and the frame is 319 pixels high; in one of
+  281 by 288 pixels it is two lines, "Copies of the rarer allele " and
+  "among 40 chromosomes", both centred under the frame, the second 16
+  pixels under the first and 8 above the bottom of the SVG, the frame
+  216 pixels high, 16 fewer than the margins alone leave, the margin
+  given to `draw` with a bottom of 60, and the text of the label still
+  the label; a resize back to 600 by 375 gives one line and the frame
+  of 319 again; a label of 46 characters with no space stays one line
+  at 281 pixels; "Major allele frequency" stays one line at 281;
+- from 1 October 2026, with the same margins, in an element of 281 by
+  288 pixels the vertical label "Share of the variants with both
+  alleles" is two lines, "Share of the variants " and "with both
+  alleles", the left margin given to `draw` 76 and the frame 189 pixels
+  wide, the label under it on two lines as well; "Count" stays one line;
 - an `update` redraws in the same `<svg>` element;
 - a title `<b>P1</b>` is text in the `<title>`, and no `b` element
   exists;
@@ -657,7 +738,14 @@ September 2026.
 ## What this spec asks of other documents
 
 Stage 5, 30 September 2026: nothing more; the heatmap, the line plot
-and the histograms of the spectrum use the additions above.
+and the histograms of the spectrum use the additions above. On 1
+October 2026 `docs/specs/charts/histogram.md` was given the 16 pixels
+that a label on two lines adds to its bottom margin. On 1 October
+2026 the size of the element was added to what the definition's `margin`
+is given, for the owner's decision that the heatmap makes its margins
+without the names it does not write (`docs/specs/stage-5-open-points.md`,
+"Decided by the owner on 1 October 2026: the distances, the heatmap and
+what the analyses share").
 
 Written into those documents with this spec, on 26 September 2026:
 

@@ -7,7 +7,19 @@ to agree: the populations under the minimum split, and named before a
 Run, by the functions of `project.ts` the diversity calls too. Its
 four open points were decided by the owner on 30 September 2026, each
 as recommended, and are written below as decided (points 13 to 16 of
-`docs/specs/stage-5-open-points.md`). This spec gives the module
+`docs/specs/stage-5-open-points.md`). Revised on 1 October 2026, with
+the module and the panel built, for what the owner decided that day
+after trying the panel, each recommendation of the plan's report taken
+as written (`docs/specs/stage-5-open-points.md`, "Decided by the owner
+on 1 October 2026: the distances, the heatmap and what the analyses
+share"): the words of four warnings and a warning for a pair whose Fst
+has no value though it has variants; the lock when the lists of
+individuals leave one population, and its advice; the lines of the
+Python script, which follow the steps of the order of the heatmap; a
+name that a spreadsheet would run as a formula written with a quote
+before it in the CSV; and the functions the analyses share moved from
+`project.ts` to `src/core/populations.ts`, still specified in
+`docs/specs/core/project.md`. This spec gives the module
 `src/core/analyses/popDists.ts`, which says what the distances between
 the populations are calculated from, when they cannot run, what they
 ask of the calculation worker, what they warn of, and what they keep in
@@ -211,23 +223,41 @@ the first of these, in the words the panel shows beside its Run button:
 | no metadata file: one population, "All individuals" | "The distances between populations need two populations or more, and without a metadata file every individual is in one. Load a metadata file, and choose the column that defines the populations, in the Individuals step." |
 | the grouping `onePopulation` | "The distances between populations need two populations or more, and all individuals are in one population. Choose the column that defines the populations in the Individuals step." |
 | the column gives one population to the individuals of the variants file, `populationsToRun` of length 1 | "The column popcat of pops.csv gives the individuals of panel.nei one population, p0, and the distances need two or more. Choose another column, or fill in this one and load the file again, in the Individuals step." |
-| fewer than two populations of `populationsKept(p, byLists)`, the individuals the lists to keep and to remove keep, have the minimum of individuals, `withMinimum` of `populationsWithMinimum` of `project.md`; `minimumNeeds` | "Only p1 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the minimum of individuals below, or merge populations in the metadata file." With none: "No population has 20 individuals or more, and …", the rest the same. |
+| the lists of individuals to keep and to remove leave an individual to one population alone, `populationsKept(p, byLists)` of length 1 | "The lists of individuals leave one population, p0, and the distances need two or more. Change the lists in the Variants step." |
+| the lists leave two populations or more, and fewer than two of them have the minimum of individuals, `withMinimum` of `populationsWithMinimum` of `project.md`; `minimumNeeds` | "Only p1 has 20 individuals or more, and a variant counts for a pair of populations only where both have 20 individuals with a called genotype, so no pair has a distance. Lower the number of individuals needed, above, or merge populations in the metadata file." With none: "No population has 20 individuals or more, and …", the rest the same. |
 
 The last row names one population, or none; with the lists of
 individuals as the reason some of them fell below the minimum, the words
-end "…, merge populations in the metadata file, or change the lists of
-individuals in the Variants step." The minimum is read from the options
-of the project.
+end "Lower the number of individuals needed, above, merge populations in
+the metadata file, or change the lists of individuals in the Variants
+step." The minimum is read from the options of the project. The advice
+names the field as its label does, "Individuals with a called genotype
+needed in each population, per variant", and says where it is, above
+the Run button; until 1 October 2026 it read "Lower the minimum of
+individuals below".
+
+The row of the one population the lists leave is the owner's decision
+of 1 October 2026. Before it the last row answered that case too, "Only
+p0 has 20 individuals or more … Lower the minimum of individuals below,
+merge populations…", which could not help, since the other populations
+had no individual at all, and which read "Only p0 has 0 individuals or
+more" at a minimum of 0. With it the words of the minimum are given
+only when two populations or more are left, each with an individual, so
+they are never given at a minimum of 0 or 1.
 
 `keptNeeds(p, kept)`, which the store asks once the list of the
 individuals kept is known and keeps some (`docs/specs/core/store.md`,
 "The state of an analysis"), gives `populationsKeptNeeds(p, kept)` of
 `project.md`, the diversity's reason, when the list leaves no
-population, and otherwise the last row's words when
-fewer than two populations of `populationsKept(p, kept.list.individuals)`,
-the list being known, have the minimum, with "among the individuals the filters keep" after "20
-individuals or more" and the ending "…, or loosen the filters of
-individuals in the Variants step." So a Run that waited for the
+population; when it leaves one, `populationsKept(p,
+kept.list.individuals)` of length 1, "The filters of individuals leave
+one population, p0, and the distances need two or more. Loosen the
+filters of individuals in the Variants step."; and otherwise the last
+row's words when fewer than two of the populations it leaves have the
+minimum, with "among the individuals the filters keep" after "20
+individuals or more" and the ending "Lower the number of individuals
+needed, above, merge populations in the metadata file, or loosen the
+filters of individuals in the Variants step." So a Run that waited for the
 statistics of each individual ends locked, with nothing sent, when the
 thresholds leave fewer than two such populations, as the diversity's
 does when they leave none.
@@ -337,13 +367,37 @@ how many more.
 
 | code | when | the text |
 |---|---|---|
-| `tooFewIndividuals` | `r.leftOut` is not empty | "Population p3 has 12 individuals, fewer than the minimum of 20, so it is left out of the distances. To include it, lower the minimum of individuals, or merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file." With more than three, "Populations p3, p5 and 4 more have fewer than 20 individuals, …", with no counts. When the filters of individuals removed some of the individuals of one of them, as the diversity finds it, the last sentence ends "…in the metadata file, or loosen the filters of individuals in the Variants step." |
+| `tooFewIndividuals` | `r.leftOut` is not empty | "Population p3 has 12 individuals, fewer than the minimum of 20, so it is left out of the distances. To include it, lower the minimum of individuals, or merge it with another population in the metadata file." With two or three: "Populations p3 and p5 have fewer than 20 individuals, 12 and 8, so they are left out of the distances. To include them, lower the minimum of individuals, or merge each with another population in the metadata file." With more than three, "Populations p3, p5 and 4 more have fewer than 20 individuals, …", with no counts. When the filters of individuals removed some of the individuals of one of them, as the diversity finds it, the last sentence is one list with one "or": "To include it, lower the minimum of individuals, merge it with another population in the metadata file, or loosen the filters of individuals in the Variants step." |
 | `individualsWithoutPopulation` | as the diversity's | the diversity's words, "…and are left out of the distances. …" |
 | `populationNotInResult` | a population of `populationsToRun(p)` is in neither `r.pops` nor `r.leftOut`: the filters of individuals left it none | the diversity's words, "…so it is not in the distances." |
-| `pairWithoutDistance` | a pair counted 0 variants | "p0 and p3 have no variant at which both have 20 individuals with a called genotype, so the pair has no distance." With two or three pairs, "The pairs p0 and p3, and p1 and p3, have no variant …, so they have no distance."; with more, "The pairs p0 and p3, p1 and p3 and 4 more have …". |
-| `pairsOnFewerVariants` | a pair counted more than 0 and fewer than `passStats.numVars` | "3 of the 6 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p3: at the others, one of the two populations has fewer than 20 individuals with a called genotype." With one pair, "The pair p0 and p3 is over 641 of the 1,152 variants kept (56%): at the others, …". The share is written as the diversity writes it, never 100% below all nor 0% above none. |
-| `negativeDistance` | a pair has a negative value of either measure | "p0a and p0b have a negative Hudson's Fst, −0.0113, and Jost's D, −0.0060: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value." With more pairs, "3 pairs have a negative Hudson's Fst or Jost's D, …: the variants cannot tell their two populations apart. …", naming the pairs as above. The measure that is not negative is left out of the words. |
+| `pairWithoutDistance` | a pair counted 0 variants | "p0 and p3 have no variant at which both have 20 individuals with a called genotype, so the pair has no distance." With two or three pairs, "The pairs p0 and p3, and p1 and p3, have no variant …, so they have no distance."; with more, "The pairs p0 and p3, p1 and p3 and 4 more have …". At a minimum of 0 or 1, "p0 and p3 have no variant at which both have a called genotype, so the pair has no distance." |
+| `fstWithoutValue` | a pair counted more than 0 variants and its Fst is NaN | "p0 and p2 share one allele at every variant counted for them, so Hudson's Fst has no value (0/0)." With two or three pairs, "The pairs p0 and p2, and p1 and p2, share one allele at every variant counted for them, so Hudson's Fst has no value for them (0/0)."; with more, "The pairs p0 and p2, p1 and p2 and 4 more share …". |
+| `pairsOnFewerVariants` | a pair counted more than 0 and fewer than `passStats.numVars` | "3 of the 6 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p3: at the others, one of the two populations has fewer than 20 individuals with a called genotype." With one pair, "The pair p0 and p3 is over 641 of the 1,152 variants kept (56%): at the others, …". With every pair of the result, when it has more than one, "All 20,100 pairs are over fewer than the 1,152 variants kept, down to 641 (56%) for p0 and p3.", with no clause of the others. At a minimum of 0 or 1 the clause of the others reads "at the others, one of the two populations has no called genotype." The share is written as the diversity writes it, never 100% below all nor 0% above none. |
+| `negativeDistance` | a pair has a negative value of either measure | "p0a and p0b have a negative Hudson's Fst, −0.0113, and Jost's D, −0.0060: the variants cannot tell the two apart. The heatmap orders them as if the distance were 0, and shows the value." With more pairs, "3 pairs have a negative Hudson's Fst or Jost's D, …: the variants cannot tell their two populations apart. The heatmap orders them as if the distance were 0, and shows the values.", naming the pairs as above. The measure that is not negative is left out of the words. The last sentence says what the heatmap does, and changes with it (below). |
 | `jostHaploid` | the ploidy of the load is 1 | "Jost's D has no value for panel.nei, whose genotypes have one allele each: it compares two heterozygosities, and a haploid individual has none. Hudson's Fst has its values." |
+
+**The last sentence of `negativeDistance`**, as the owner decided on 1
+October 2026. "The heatmap orders them as if the distance were 0, and
+shows the value." is written when the result has `POP_DISTS_MAX_SHOWN`
+populations or fewer, so that a heatmap is drawn, and the order of a
+measure the warning names as negative is by similarity, of the kind
+`pcoa`. When no measure it names is ordered so, with two populations, a
+pair of no value or every distance 0 or below, it is "The heatmap shows
+the value.", or "…the values." of several pairs. Above
+`POP_DISTS_MAX_SHOWN` populations, where no heatmap is drawn, there is
+no last sentence. Until then the warning said that the heatmap orders
+them in all three cases. The warning is made once for a result, and the
+measure the heatmap draws is not in the key, so the sentence reads the
+orders of the measures it names and not the measure drawn.
+
+**A pair whose Fst has no value though it has variants**,
+`fstWithoutValue`, as the owner decided on 1 October 2026. popnei gives
+no Hudson's Fst where its divisor is 0 (`crates/popnei/src/pop_dists.rs`,
+the doc comment of the measures), which is a pair whose two populations
+share one allele at every variant counted for them; until then the
+table showed "no value" beside a count of variants, 12 in the case the
+review found, with no warning. Jost's D at ploidy 1 has its own warning,
+`jostHaploid`.
 
 `individualsWithoutPopulation` and `populationNotInResult` are made by
 `populationWarnings` of `src/core/analyses/words.ts`, which the
@@ -400,28 +454,57 @@ print(pandas.DataFrame({
     "jost_d": dists.dest.dist_vector,
     "num_variants": dists.num_vars,
 }).to_string(index=False))
-# The order of the heatmap: the first axis of the principal coordinates of
-# each matrix, a negative distance taken as 0 and Lingoes' correction applied.
-# With a pair of no distance, or every distance 0, do_pcoa raises: the heatmap
-# then keeps the order of the metadata file.
+# The order of the heatmap of each measure. It is the order of the metadata
+# file for two populations, with a pair of no distance, when no distance is
+# above 0, and when popnei cannot place the populations; otherwise the first
+# axis of the principal coordinates of the distances, a negative one taken as
+# 0 and Lingoes' correction applied.
 for name, measure in [("fst_hudson", dists.fst), ("jost_d", dists.dest)]:
-    corrected = popnei.correct_dists_by_lingoes(popnei.Distances(
-        dist_vector=measure.dist_vector.clip(min=0), names=measure.names,
-    ))
-    first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]
-    print(name, first.sort_values(kind="stable").index.tolist())
+    values = measure.dist_vector.clip(min=0)
+    order = list(dists.pops)
+    if len(order) > 2 and not pandas.isna(values).any() and values.any():
+        try:
+            corrected = popnei.correct_dists_by_lingoes(
+                popnei.Distances(dist_vector=values, names=measure.names)
+            )
+            first = popnei.do_pcoa(corrected.dists).projections.iloc[:, 0]
+            order = first.sort_values(kind="stable").index.tolist()
+        except ValueError:
+            pass
+    print(name, order)
 ```
 
 The line `len(names) >= 20` leaves out the populations under the
-minimum and those left empty, as `run` does. `script` is given the project and not the result, so it writes the
-loop whatever the order of the result was; with a pair of no value, or
-every distance 0, `do_pcoa` raises in Python where the application kept
-the order of the file, and the comment above the loop says so. With two populations the
-loop prints an order of two, which the heatmap does not follow. These
-lines, run with popnei's Python package at its commit `eae29a2` on 30
-September 2026, printed the numbers and the order of "How it is
-verified", for `popcat` and for the fixture `panel_split.csv`. The one
-population never reaches `script`, since it locks the analysis.
+minimum and those left empty, as `run` does; at a minimum of 0 it is
+written `len(names) >= 1`, the call keeping `min_num_individuals=0`, so
+that a population left empty, which popnei refuses, is still left out.
+`script` is given the project and not the result, so it writes the loop
+whatever the order of the result was, and the loop follows the six steps
+of "The order of the heatmap", as the owner decided on 1 October 2026:
+it keeps the order of `dists.pops`, that of the metadata file, for two
+populations (step 1), with a pair of no value, Jost's D of a haploid
+file among them (step 2), when no distance is above 0 once the negative
+ones are taken as 0 (steps 3 and 4), and when popnei refuses the matrix
+with a `ValueError` (step 6); otherwise it prints the order of step 5.
+Until then the loop called `correct_dists_by_lingoes` and `do_pcoa`
+whatever the distances, and raised where the application gave a result,
+or, with two populations, printed an order the heatmap does not follow.
+
+These lines, run with popnei's Python package at its commit `eae29a2`
+on 1 October 2026, by `/Users/jose/devel/popnei/.venv/bin/python` after
+lines that open `e2e/fixtures/panel.nei` with `popnei.open_vars`, filter
+it with `variants.filter_by_missing_data(0.1)` and read the metadata
+file with `pandas.read_csv(…, dtype=str)`, printed the numbers and the
+order of "How it is verified" for `popcat` and for the fixture
+`panel_split.csv`, and, for `panel_split.csv` at a minimum of 25, the
+one pair and the order p2, p1; with a population added whose one
+individual is not in the variants file, at a minimum of 0, the numbers
+and the order of `popcat`. The loop alone, given distances of three
+populations a, b and c made with `popnei.Distances`, printed a, b, c
+for a pair of no value, for every pair of no value and for the
+distances 0, −0.1 and 0, and a, c, b for the distances 0.3, 0.1 and
+0.25. The one population never reaches `script`, since it locks the
+analysis.
 
 ### The TypeScript interface
 
@@ -477,6 +560,12 @@ export interface PopDistsOptions {
 }
 export const POP_DISTS_DEFAULTS: { readonly minNumIndividuals: 20; readonly measure: "fst" };
 
+/** The names of the two measures on the screen, "Hudson's Fst" and
+    "Jost's D": in the warnings, the line of the order and the description,
+    and, in the panel, the title of the heatmap, the radio buttons and the
+    headers of the table. */
+export const MEASURE_NAMES: Readonly<Record<"fst" | "dest", string>>;
+
 /** The options of the project for popDists, or the defaults. */
 export function popDistsOptions(p: Project): PopDistsOptions;
 
@@ -494,13 +583,19 @@ export function popDistsRows(r: PopDistsResult): readonly PopDistsRow[];
 /** The table as the text of a CSV file (the panel, "What it shows"). */
 export function popDistsCsv(r: PopDistsResult): string;
 
-/** The data of the heatmap of `measure`: the populations in its order,
+/** The data of the heatmap of one measure: the populations in its order,
     and the square matrix in that order, NaN on the diagonal. */
-export function popDistsHeatmap(r: PopDistsResult, measure: "fst" | "dest"):
-  { readonly names: readonly string[]; readonly values: Float64Array };
+export interface PopDistsHeatmap {
+  readonly names: readonly string[];   // top to bottom and left to right
+  readonly values: Float64Array;       // names.length × names.length, row by row
+}
+/** The data of the heatmap of `measure`; the same object for the same
+    result and measure. */
+export function popDistsHeatmap(r: PopDistsResult, measure: "fst" | "dest"): PopDistsHeatmap;
 
-/** The line under the heatmap that says how it is ordered (the panel, "Its words"). */
-export function orderText(r: PopDistsResult, measure: "fst" | "dest"): string;
+/** The line under the heatmap that says how it is ordered (the panel,
+    "Its words"); null for two populations, which have no line. */
+export function orderText(r: PopDistsResult, measure: "fst" | "dest"): string | null;
 
 /** The description of the heatmap for a screen reader (the panel, "Accessibility"). */
 export function popDistsDescription(r: PopDistsResult, measure: "fst" | "dest", fileName: string): string;
@@ -551,6 +646,12 @@ calls gave the same numbers at 0 as at 1, to the last digit (node,
   under a new key.
 - **Every population but one under the minimum.** Locked by
   `minimumNeeds`, or, known only after the thresholds, by `keptNeeds`.
+- **The lists or the filters of individuals leave one population.**
+  Locked with the words of the one population left, which name the
+  lists or the filters and not the minimum.
+- **A pair with variants and no Fst.** Its row says "no value" beside
+  its count of variants; `fstWithoutValue`; the heatmap of Fst keeps the
+  order of the file, by the reason `noDistance`.
 - **Two populations.** One pair; the heatmap is a grid of two, in the
   order of the file, and has no line of order.
 - **A pair with no variant in common.** Its row says "no value"; the
@@ -582,10 +683,22 @@ One pass over the file, `numPassesOf("calcPopDists")` 1 in popnei's
 pass. Without standard errors popnei keeps a few sums for each pair,
 so the memory does not grow with the variants, and the PCoA of the
 order is of a matrix of k × k numbers. The time grows with the variants
-and with the pairs, k × (k − 1) / 2; it is not measured, and the plan of
-stage 5 measures it where its code first runs, on `panel.nei` and on the
-`.nei` file of 19,161,178 bytes of `docs/architecture.md` section 13,
-with three populations and with twenty. The result is 20 bytes a pair,
+and with the pairs, k × (k − 1) / 2. Measured on 30 September 2026 by
+`PA5 D3` of `e2e/measure.spec.ts`, on the built site, on an Apple M5
+Pro of 64 GB with a load average of 3 to 4, from the run posted to the
+calculation worker to its answer, the median of five runs, each on a new
+page:
+
+| variants file | populations, pairs | Chromium 153 | WebKit 26.6 |
+|---|---|---|---|
+| `panel.nei`, 1,200 variants of 200 individuals | 3, 3 | 17 ms | 14 ms |
+| | 20 of 10 individuals, the minimum at 10; 190 | 17 ms | 19 ms |
+| the `.nei` file of 19,161,178 bytes of `docs/architecture.md` section 13, 20,000 variants of 1,000 individuals | 3, 3 | 118 ms | 118 ms |
+| | 20 of 50 individuals; 190 | 155 ms | 144 ms |
+
+So the pass takes most of the time, and twenty populations add about a
+third to it on the large file; the table is on the screen within 50 ms
+of the answer in both engines. The result is 20 bytes a pair,
 two distances and a count, and the orders, a few kilobytes for twenty
 populations.
 
@@ -597,16 +710,30 @@ With Vitest, at the functions of the definition, as for the diversity:
   with `i1` to `i4` in the variants file and `pop` giving A to i1 and
   i3, B to i2 and C to i5, and the minimum set to 1: `run` sends `pops`
   `[["A", ["i1", "i3"]], ["B", ["i2"]]]` and `leftOut` `[]`; with the
-  minimum at 2, `needs` gives "Only A has 2 individuals or more, …".
+  minimum at 2, `needs` gives "Only A has 2 individuals or more, …",
+  ending "Lower the number of individuals needed, above, or merge
+  populations in the metadata file."; with a list to remove that names
+  i2, "The lists of individuals leave one population, A, and the
+  distances need two or more. Change the lists in the Variants step.",
+  at the minimum of 1 and at 0.
   A fake result of A and B with an Fst of −0.01 and a D of 0.02 gives
   `negativeDistance` naming Fst alone; `checkNumbers` gives `[numVars,
   −0.01, 0.02]`; `numCheckNumbers` 3.
 - **The locks**, a case for each row of `needs`, `keptNeeds` with a
-  list that leaves one population with the minimum, and the key, a pair
-  of projects for each row of its table.
+  list that leaves one population with the minimum among two, and with a
+  list that leaves one population alone, and the key, a pair of projects
+  for each row of its table.
 - **The warnings**, each with a fake result: the texts of the table for
   one, two and four populations or pairs; `pairsOnFewerVariants` with
-  1,151 of 1,152 as "99%"; `jostHaploid` for a load of ploidy 1.
+  1,151 of 1,152 as "99%", and with every pair of three as "All 3 pairs
+  are over fewer than …" ending at the pair named; `pairWithoutDistance`
+  and `pairsOnFewerVariants` at a minimum of 0 and of 1, with no count of
+  individuals; `fstWithoutValue` for a pair of 12 variants whose Fst is
+  NaN, and none for a pair of 0 variants; `negativeDistance` with an
+  order `pcoa`, with each order of the file, "The heatmap shows the
+  value.", with Fst negative and ordered by the file while D is not
+  negative and ordered `pcoa`, the same, and with 201 populations, the
+  text ending "…apart."; `jostHaploid` for a load of ploidy 1.
 - **`popDistsHeatmap`** of a fake result of p0, p2, p1 whose order of
   Fst is `[1, 0, 2]` and of D `[2, 1, 0]` gives, for Fst, the names p2,
   p0, p1 and the matrix in that order, and, for D, p1, p2, p0, so that a
@@ -617,7 +744,7 @@ With Vitest, at the functions of the definition, as for the diversity:
   pair of no value and of one with none, the texts of "Accessibility";
   **`popDistsRows`** and **`popDistsCsv`** of the flow's result, the rows
   and the CSV of "What it shows" as literals, a population named `a,"b"`
-  quoted; **`refusalText`** of popnei's message of an empty pass and of
+  quoted, and one named `=p1` written `'=p1`; **`refusalText`** of popnei's message of an empty pass and of
   one population, as literals.
 - **`numCheckNumbers`** 7 for the flow's project, and `null` with a
   threshold on the individuals, with no column of the populations, with
@@ -626,7 +753,9 @@ With Vitest, at the functions of the definition, as for the diversity:
   4,294,967,295 taken, as the diversity's `parseOptions` takes them; a
   minimum of −1, 2.5 or 4,294,967,296, a `measure` `"gst"`, a field
   missing or more, refused.
-- **`script`** of the flow's project gives the lines above, as a literal.
+- **`script`** of the flow's project gives the lines above, as a
+  literal; at a minimum of 0, `len(names) >= 1` and
+  `min_num_individuals=0`.
 - **`tooManyPopulationsText`** of a fake result of 201 populations
   gives "The heatmap and the table are shown for up to 200 populations,
   and this result has 201. Download the table as CSV to read it.", of
@@ -791,8 +920,16 @@ title in the notice, the status region and the links of the step, is
 
 | option | control | default |
 |---|---|---|
-| the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 0, as the diversity's, the field of React Aria that the PCA's fields use | 20, popnei's default |
+| the minimum of individuals | a number field, "Individuals with a called genotype needed in each population, per variant", whole numbers from 0, as the diversity's, the field of React Aria that the PCA's fields use; under it, from 1 October 2026, the line "This minimum is for the distances alone: the diversity has its own." | 20, popnei's default |
 | `measure` | a group of two radio buttons, "Distance in the heatmap": "Hudson's Fst" and "Jost's D" | Hudson's Fst, `docs/functionality.md` section 7 |
+
+The field of the diversity has the same label from 1 October 2026, as
+the owner decided that day (B7 of the stop of the diversity,
+`docs/specs/stage-5-open-points.md`): the two are the same number of
+popnei, each with its own value, and until then the diversity's read
+"Minimum number of individuals with a genotype, a whole number from 0".
+This label was the one kept, and the line under each field says that it
+is for that analysis alone.
 
 The radio buttons are in that one place, with the minimum, in every
 state, so that the keyboard and a screen reader meet one group; a
@@ -833,7 +970,11 @@ between thousands.
 **The download**, "Download the table as CSV", `panel.popdists.csv`,
 named as the diversity names its file, with the text of `popDistsCsv`:
 a header row, one row per pair, the numbers as `String` writes them and
-an empty cell for no value, quoted as RFC 4180 has it. For the flow:
+an empty cell for no value, quoted as RFC 4180 has it, and a name that
+starts with "=", "+", "-" or "@" written with a quote, ', before it, as
+every CSV of the application writes a cell of text since 1 October 2026
+(`diversity.md`, "What it shows"), so that a spreadsheet does not run
+the name as a formula. For the flow:
 
 ```
 population_1,population_2,fst_hudson,jost_d,num_variants
@@ -850,7 +991,7 @@ Beside it, the line of the versions, as the diversity's.
 |---|---|---|
 | empty | cannot happen: until the variants file is read the analysis is locked with a reason | |
 | locked | the reason, beside a disabled Run button that it describes, as the diversity's; the field of the minimum stays enabled, since lowering it can unlock | go where the reason says; change the minimum |
-| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have fewer individuals than the minimum of 20, 12 and 8, and are left out." | Run; change the options |
+| ready | Run, the options, and the populations it will run on with their sizes, as the diversity's ready state, from `populationsBeforeRun`; the populations under the minimum named after them by `underMinimumText` of `project.md`, as the diversity names its own, "p3 has 12 individuals, fewer than the minimum of 20, and is left out.", or together, "p3 and p5 have 12 and 8 individuals, fewer than the minimum of 20, and are left out." | Run; change the options |
 | running | the diversity's bar and clock, "Calculating · 35% · 0:12", the bar labelled "Calculating the distances between populations", and its words while it waits for the statistics of each individual | Stop |
 | done | the warnings above, each as a sentence, with their count; the heatmap, its line of order and its radio buttons; the table and its download; the comparison of an opened project file under the table. Above 200 populations, the line of `tooManyPopulationsText` and the download in place of the heatmap, its line of order and the table | change the measure; download |
 | results removed | the diversity's words, with `resultName` "the heatmap and the table": "The distances between populations were removed because the filter of the variants by missing data changed. Undo brings back the heatmap and the table as they were, with no calculation; Run calculates new ones for the new settings." | Run; Undo or Redo |
@@ -976,7 +1117,8 @@ populations.
 ## What this spec asks of other documents
 
 Made in those documents on 30 September 2026. The rule of the
-populations under the minimum is one function of `project.ts`,
+populations under the minimum is one function of `project.ts`, from 1
+October 2026 of `src/core/populations.ts`,
 `populationsWithMinimum`, which the diversity calls too, with the words
 of the ready state of both panels, `underMinimumText`; the reason of the
 lists and the individuals kept leaving no population is

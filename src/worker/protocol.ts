@@ -321,6 +321,14 @@ export type Pops = readonly (readonly [
   individuals: readonly string[],
 ])[];
 
+/** The populations under the minimum of individuals, with their
+    individuals kept, as pairs `[population, numIndividuals]` in the order
+    of the populations they were taken from. */
+export type LeftOut = readonly (readonly [
+  pop: string,
+  numIndividuals: number,
+])[];
+
 /** How many variants one filter of the variants was given in a pass, and
     how many it kept, as popnei's `FilteringStats` has them. */
 export interface FilteringStats {
@@ -371,10 +379,21 @@ export interface DiversityJob {
   /** The frequency of the commonest allele below which a variant is
       polymorphic, popnei's `polyThreshold`. */
   readonly polyThreshold: number;
+  /** The draw of the rarefaction and of the spectrum, popnei's
+      `numCalledAlleles`: the called alleles of a population at a variant
+      that are drawn, a whole number of 2 or more. */
+  readonly numCalledAlleles: number;
+  /** The populations of `pops` given to popnei's `calcPopDiversity`, those
+      with at least `minNumIndividuals` individuals, in the order of `pops`;
+      empty when none has them, and then there is no second pass. */
+  readonly popDiversityPops: readonly string[];
 }
 
 /** The result of the diversity, every array in the order of the
-    populations of its request. */
+    populations of its request. The fields from `fis` to `foldedSfs` are
+    of popnei's `calcPopDiversity`, and a population not given to it has
+    NaN in each array of numbers, 0 in `numVarsInDraw` and `null` for its
+    spectrum. */
 export interface DiversityResult {
   /** The analysis the result is of. */
   readonly analysis: "diversity";
@@ -390,10 +409,58 @@ export interface DiversityResult {
   readonly polyRatio: Float64Array;
   /** The variants at which each population has a value. */
   readonly numVarsWithValue: Uint32Array;
-  /** The counts of the pass; `numVars` is the variants the filters
-      kept. */
+  /** F, one minus the mean observed heterozygosity over the mean unbiased
+      expected one; NaN for no value. */
+  readonly fis: Float64Array;
+  /** The alleles called per variant, popnei's `numAlleles.mean`. */
+  readonly numAllelesMean: Float64Array;
+  /** The alleles per variant in a draw of `numCalledAlleles`, popnei's
+      `numAlleles.inDraw`. */
+  readonly numAllelesInDraw: Float64Array;
+  /** The private alleles, popnei's `privateAlleles.total`; NaN when they
+      were not asked for, and not 0, which would read as a count. */
+  readonly privateAllelesTotal: Float64Array;
+  /** The private alleles per variant, popnei's `privateAlleles.mean`. */
+  readonly privateAllelesMean: Float64Array;
+  /** The private alleles per variant in a draw, popnei's
+      `privateAlleles.inDraw`. */
+  readonly privateAllelesInDraw: Float64Array;
+  /** The variants at which each population has a value and called at
+      least the draw, popnei's `numVars.inDraw`. */
+  readonly numVarsInDraw: Uint32Array;
+  /** The variants at which every population of the call has a value, the
+      divisor of the private alleles per variant; `null` when the private
+      alleles were not asked for. */
+  readonly numVarsEveryPop: number | null;
+  /** Of those, the variants at which every population called at least
+      the draw; `null` with `numVarsEveryPop`. */
+  readonly numVarsEveryPopInDraw: number | null;
+  /** The draw of the request, which the columns name. */
+  readonly numCalledAlleles: number;
+  /** The folded spectrum of each population, `floor(numCalledAlleles / 2)
+      + 1` values; `null` for a population not given to popnei. */
+  readonly foldedSfs: readonly (Float64Array | null)[];
+  /** The counts of the pass, of the first call when there were two, whose
+      steps are the same; `numVars` is the variants the filters kept. */
   readonly passStats: PassStats;
 }
+
+/** The fields of a `DiversityResult` that come from `calcPopDiversity`,
+    which the runner makes and `messages.ts` checks. */
+export type PopDiversityFields = Pick<
+  DiversityResult,
+  | "fis"
+  | "numAllelesMean"
+  | "numAllelesInDraw"
+  | "privateAllelesTotal"
+  | "privateAllelesMean"
+  | "privateAllelesInDraw"
+  | "numVarsInDraw"
+  | "numVarsEveryPop"
+  | "numVarsEveryPopInDraw"
+  | "numCalledAlleles"
+  | "foldedSfs"
+>;
 
 /** The request of the statistics of each individual, popnei's
     `calcPerIndividualStats`, over every variant and every individual of
@@ -556,6 +623,175 @@ export interface PcaResult {
   readonly passStats: PassStats;
 }
 
+/** The smallest draw popnei's `calcPopDiversity` takes: a draw of one
+    allele finds one allele whatever the population holds. The one place
+    the number is written: the check of a diversity job, the options of
+    the project and the field of the panel read it here. */
+export const MIN_DRAW = 2;
+
+/** The measures of the distances between populations the application
+    shows, Hudson's Fst and Jost's D, the two of docs/functionality.md,
+    section 7, as popnei names them. */
+export const SHOWN_MEASURES = ["fst", "dest"] as const;
+
+/** One of the measures shown. */
+export type ShownMeasure = (typeof SHOWN_MEASURES)[number];
+
+/** Why the heatmap of a measure keeps the order of the metadata file:
+    only two populations, a pair with no distance, every distance 0 once a
+    negative one is taken as 0, or a refusal of popnei's PCoA that none of
+    these foresaw (docs/specs/analyses/popDists.md, "The order of the
+    heatmap"). */
+export type FileOrderReason =
+  "twoPopulations" | "noDistance" | "allZero" | "notPlaced";
+
+/** The order of the rows of the heatmap of one measure: the populations
+    along the first axis of popnei's PCoA of the distances, or the order of
+    the metadata file with the reason. */
+export type HeatmapOrder =
+  | {
+      /** Ordered along the first axis of the principal coordinates. */
+      readonly kind: "pcoa";
+      /** The indexes of `pops` of the result, from the top row to the
+          bottom one, each once. */
+      readonly order: Uint32Array;
+    }
+  | {
+      /** In the order of the metadata file. */
+      readonly kind: "file";
+      /** Why, but a refusal of popnei. */
+      readonly reason: Exclude<FileOrderReason, "notPlaced">;
+    }
+  | {
+      /** In the order of the metadata file. */
+      readonly kind: "file";
+      /** popnei refused to place the populations. */
+      readonly reason: "notPlaced";
+      /** popnei's message of the refusal. */
+      readonly message: string;
+    };
+
+/** The request of the distances between populations, Hudson's Fst and
+    Jost's D of each pair from popnei's `calcPopDists`
+    (docs/specs/analyses/popDists.md). */
+export interface PopDistsJob {
+  /** The analysis the request is of. */
+  readonly analysis: "popDists";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The project's filters of the variants, in their order. */
+  readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
+  /** The populations with at least `minNumIndividuals` individuals kept,
+      two or more, in the order of the metadata file. */
+  readonly pops: Pops;
+  /** The populations under the minimum, which the runner copies into the
+      result without reading them. */
+  readonly leftOut: LeftOut;
+  /** How many called genotypes a population needs at a variant for the
+      variant to count for its pairs, popnei's `minNumIndividuals`. */
+  readonly minNumIndividuals: number;
+}
+
+/** The distances between the populations of the request, each array of
+    the pairs in the order (0, 1), (0, 2), …, (1, 2), … of `pops`, and the
+    order of the heatmap of each measure. */
+export interface PopDistsResult {
+  /** The analysis the result is of. */
+  readonly analysis: "popDists";
+  /** The populations, in the order of the request. */
+  readonly pops: readonly string[];
+  /** The individuals of each that popnei was given. */
+  readonly numIndividuals: Uint32Array;
+  /** Hudson's Fst of each pair, k × (k − 1) / 2 of them for the k
+      populations; NaN for a pair with no value. */
+  readonly fst: Float64Array;
+  /** Jost's D of each pair, as `fst`. */
+  readonly dest: Float64Array;
+  /** The variants each pair was calculated over. */
+  readonly numVarsPerPair: Uint32Array;
+  /** The order of the heatmap of each measure shown. */
+  readonly order: Readonly<Record<ShownMeasure, HeatmapOrder>>;
+  /** The populations under the minimum, as the request gave them. */
+  readonly leftOut: LeftOut;
+  /** The counts of the pass. */
+  readonly passStats: PassStats;
+}
+
+/** The request of the LD decay of each population, popnei's
+    `calcLdAndDistPerPop` over the filters of the Variants step but its LD
+    pruning (docs/specs/analyses/ldDecay.md). */
+export interface LdDecayJob {
+  /** The analysis the request is of. */
+  readonly analysis: "ldDecay";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** The project's filters of the variants but the LD pruning, in their
+      order. */
+  readonly filters: readonly VariantFilter[];
+  /** The individuals kept, in the order of the variants file, which the
+      runner puts before the filters; `null` when the filters of the
+      individuals remove nobody, and never empty. */
+  readonly individuals: readonly string[] | null;
+  /** The populations, each with the individuals kept of the variants file
+      it holds, none empty. */
+  readonly pops: Pops;
+  /** The smallest distance of a pair in base pairs, that one included,
+      popnei's `minDist`. */
+  readonly minDist: number;
+  /** The largest distance of a pair in base pairs, that one included,
+      popnei's `maxDist`, which the user types. */
+  readonly maxDist: number;
+  /** How many bins of equal width the distances are cut into, popnei's
+      `numBins`. */
+  readonly numBins: number;
+  /** The largest major allele frequency of a variant in a population that
+      is still counted there, popnei's `maxAllowedMaf`. */
+  readonly maxAllowedMaf: number;
+}
+
+/** The LD decay of each population, every array in the order of the
+    populations of its request. The counts are `Float64Array`s, as popnei
+    gives them, whole numbers up to 2^53. */
+export interface LdDecayResult {
+  /** The analysis the result is of. */
+  readonly analysis: "ldDecay";
+  /** The populations popnei was given. */
+  readonly pops: readonly string[];
+  /** The individuals of each that popnei was given, the n of its curve. */
+  readonly numIndividuals: Uint32Array;
+  /** The variants each population counted at its major allele frequency,
+      popnei's `numVarsPerPop`. */
+  readonly numVars: Float64Array;
+  /** The smallest distance of each bin, `numBins` of them, shared by every
+      population. */
+  readonly smallestDist: Float64Array;
+  /** The largest distance of each bin, as many. */
+  readonly largestDist: Float64Array;
+  /** The pairs in each bin, the populations × the bins, the bins of one
+      population together. */
+  readonly numPairs: Float64Array;
+  /** The mean r² of each bin, as `numPairs`; NaN for a bin with no pair. */
+  readonly meanR2: Float64Array;
+  /** The standard deviation of the r² of each bin, as `numPairs`; NaN for
+      a bin with no pair. */
+  readonly sdR2: Float64Array;
+  /** The fitted ρ per base pair of each population; NaN when no curve was
+      fitted. */
+  readonly rhoPerBp: Float64Array;
+  /** The fitted curve at a distance of 0 of each population; NaN when no
+      curve was fitted. */
+  readonly r2AtZero: Float64Array;
+  /** The distance at which the fitted curve of each population falls to
+      half of its value at 0; NaN when no curve was fitted. */
+  readonly halfDist: Float64Array;
+  /** The counts of the pass. */
+  readonly passStats: PassStats;
+}
+
 /** The request of a calculation, one member per analysis, tagged by
     `analysis`. */
 export type Job =
@@ -563,7 +799,9 @@ export type Job =
   | IndividualChecksJob
   | VariantChecksJob
   | FilterCountsJob
-  | PcaJob;
+  | PcaJob
+  | PopDistsJob
+  | LdDecayJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -572,7 +810,9 @@ export type JobResult =
   | IndividualChecksResult
   | VariantChecksResult
   | FilterCountsResult
-  | PcaResult;
+  | PcaResult
+  | PopDistsResult
+  | LdDecayResult;
 
 /**
  * The request of a file of the filtered variants

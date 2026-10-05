@@ -10,8 +10,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
-// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes
-import { Variants } from "popnei";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes, and calls calcPopDiversity itself to compare its spectra with the runner's
+import { Variants, calcPopDiversity, openVars } from "popnei";
 
 import {
   afterAll,
@@ -30,9 +30,13 @@ import type {
   IndividualChecksJob,
   IndividualChecksResult,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
+  LeftOut,
   PassStats,
   PcaJob,
   PcaResult,
+  PopDistsJob,
   Pops,
   Progress,
   VariantChecksJob,
@@ -88,6 +92,9 @@ function missingData(maxAllowedMissingRate: number): VariantFilter {
   return { kind: "missing_data", maxAllowedMissingRate };
 }
 
+/** A diversity job with the defaults, whose populations of 20 individuals
+    or more are given to calcPopDiversity, as core sends them, at the draw
+    of 40. */
 function diversityJob(
   filters: readonly VariantFilter[],
   pops: Pops = panelPops(),
@@ -100,6 +107,10 @@ function diversityJob(
     pops,
     minNumIndividuals: 20,
     polyThreshold: 0.95,
+    numCalledAlleles: 40,
+    popDiversityPops: pops
+      .filter(([, individuals]) => individuals.length >= 20)
+      .map(([pop]) => pop),
   };
 }
 
@@ -233,7 +244,8 @@ describe("WS3 D1 the open and the diversity", () => {
 
   test("told is given popnei's two calls of a diversity over panel.nei, as they came", () => {
     const told: Progress[] = [];
-    const answer = opened("panel.nei").run(diversityJob([]), (progress) => {
+    const onePass = { ...diversityJob([]), popDiversityPops: [] };
+    const answer = opened("panel.nei").run(onePass, (progress) => {
       told.push(progress);
     });
     expect(answer.kind).toBe("ok");
@@ -246,7 +258,7 @@ describe("WS3 D1 the open and the diversity", () => {
   test("told is given 0 then the 87304 bytes of panel.vcf.gz, compressed", () => {
     const told: Progress[] = [];
     opened("panel.vcf.gz").run(
-      diversityJob([missingData(0.05)]),
+      { ...diversityJob([missingData(0.05)]), popDiversityPops: [] },
       (progress) => {
         told.push(progress);
       },
@@ -500,6 +512,14 @@ describe("WS3 D2 what goes wrong: transferablesOf", () => {
       result.obsHet.buffer,
       result.polyRatio.buffer,
       result.numVarsWithValue.buffer,
+      result.fis.buffer,
+      result.numAllelesMean.buffer,
+      result.numAllelesInDraw.buffer,
+      result.privateAllelesTotal.buffer,
+      result.privateAllelesMean.buffer,
+      result.privateAllelesInDraw.buffer,
+      result.numVarsInDraw.buffer,
+      ...result.foldedSfs.map((sfs) => sfs?.buffer),
     ]);
     const shared = new Float64Array(3);
     const twice: DiversityResult = {
@@ -508,7 +528,7 @@ describe("WS3 D2 what goes wrong: transferablesOf", () => {
       polyRatio: shared,
     };
     const buffers = transferablesOf(twice);
-    expect(buffers.length).toBe(4);
+    expect(buffers.length).toBe(14);
     expect(buffers.filter((buffer) => buffer === shared.buffer).length).toBe(1);
   });
 
@@ -1875,11 +1895,11 @@ describe("VS1 D3 the passes of the runner: a file that no longer reads, in the n
 });
 
 describe("VS1 D3 the passes of the runner: transferablesOf", () => {
-  test("of a diversity result, the five buffers of its five arrays, each once", () => {
+  test("of a diversity result, the fifteen buffers of its twelve arrays and three spectra, each once", () => {
     const result = valueOf(opened("panel.nei").run(diversityJob([]), ignore));
     const buffers = transferablesOf(result);
-    expect(buffers.length).toBe(5);
-    expect(new Set(buffers).size).toBe(5);
+    expect(buffers.length).toBe(15);
+    expect(new Set(buffers).size).toBe(15);
   });
 
   test("of the statistics of each individual, the buffers of popnei's two arrays", () => {
@@ -2701,5 +2721,1120 @@ describe("IP10 D3 the cases of pca.md and variantChecks.md in the runner", () =>
     ]);
     expect(result.numVarsUsed).toBe(2);
     expect(result.passStats).toEqual({ numVars: 3, filtering: {} });
+  });
+});
+
+// The LD decay of stage 5, over ld.nei, popnei's reference file of the LD
+// decay, and the two populations of ld_pops.csv, with the missing data
+// filter at 0.1, which keeps its 500 variants, and a largest distance of
+// 100,000 bp: the numbers of docs/specs/analyses/ldDecay.md, "The
+// fixture", given by calcLdAndDistPerPop of js-v0.1.0-dev.3 in node.
+
+/** The populations of ld_pops.csv, pop_a of i000 to i049 and pop_b of
+    i050 to i099, under the names given. */
+function ldPops(nameA = "pop_a", nameB = "pop_b"): Pops {
+  const lines = readFileSync(join(FIXTURES, "ld_pops.csv"), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1);
+  const a: string[] = [];
+  const b: string[] = [];
+  for (const line of lines) {
+    const [individual, pop] = line.split(",");
+    if (individual === undefined || (pop !== "pop_a" && pop !== "pop_b")) {
+      throw new Error(`a line of ld_pops.csv of no population: ${line}`);
+    }
+    (pop === "pop_a" ? a : b).push(individual);
+  }
+  return [
+    [nameA, a],
+    [nameB, b],
+  ];
+}
+
+function ldDecayJob(pops: Pops = ldPops()): LdDecayJob {
+  return {
+    analysis: "ldDecay",
+    fileId: FILE_ID,
+    filters: [missingData(0.1)],
+    individuals: null,
+    pops,
+    minDist: 1,
+    maxDist: 100000,
+    numBins: 50,
+    maxAllowedMaf: 0.95,
+  };
+}
+
+/** The numbers of each population of the table of ldDecay.md, "The
+    fixture", in the order pop_a, pop_b. */
+const LD_TABLE = {
+  numIndividuals: [50, 50],
+  numVars: [432, 432],
+  pairs: [29367, 29367],
+  firstBin: {
+    numPairs: [745, 745],
+    meanR2: [0.3104664289575117, 0.31876304803774247],
+    sdR2: [0.28243883665741665, 0.2814576610764838],
+  },
+  lastBin: {
+    numPairs: [452, 452],
+    meanR2: [0.025953462391956096, 0.03162397044318621],
+  },
+  rhoPerBp: [0.00029996668947275404, 0.00030848266256738914],
+  r2AtZero: [0.46942148760330576, 0.46942148760330576],
+  halfDist: [7548.08187836982, 7339.709512618931],
+};
+
+/** The bin `bin` of the population at `at` of an array of the bins. */
+function binOf(array: Float64Array, at: number, bin: number): number {
+  const value = array[at * 50 + bin];
+  if (value === undefined) {
+    throw new Error(`no bin ${String(bin)} of the population ${String(at)}`);
+  }
+  return value;
+}
+
+/** The sum of the pairs of the bins of the population at `at`. */
+function pairsOf(result: LdDecayResult, at: number): number {
+  return result.numPairs
+    .subarray(at * 50, (at + 1) * 50)
+    .reduce((sum, pairs) => sum + pairs, 0);
+}
+
+describe("PA2 D2 the runner's LD decay", () => {
+  test("the job of the flow over ld.nei gives the numbers of ldDecay.md to the last digit: 432 variants and 29,367 pairs in each population, the half distances, and the first and last bins", () => {
+    const told: Progress[] = [];
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(), (progress) => {
+        told.push(progress);
+      }),
+      "ldDecay",
+    );
+    expect(result.pops).toEqual(["pop_a", "pop_b"]);
+    expect([...result.numIndividuals]).toEqual(LD_TABLE.numIndividuals);
+    expect([...result.numVars]).toEqual(LD_TABLE.numVars);
+    expect([pairsOf(result, 0), pairsOf(result, 1)]).toEqual(LD_TABLE.pairs);
+    expect(result.smallestDist.length).toBe(50);
+    expect(result.largestDist.length).toBe(50);
+    expect([result.smallestDist[0], result.largestDist[0]]).toEqual([1, 2000]);
+    expect([result.smallestDist[49], result.largestDist[49]]).toEqual([
+      98001, 100000,
+    ]);
+    expect(result.numPairs.length).toBe(100);
+    for (const at of [0, 1]) {
+      expect([
+        binOf(result.numPairs, at, 0),
+        binOf(result.meanR2, at, 0),
+        binOf(result.sdR2, at, 0),
+      ]).toEqual([
+        LD_TABLE.firstBin.numPairs[at],
+        LD_TABLE.firstBin.meanR2[at],
+        LD_TABLE.firstBin.sdR2[at],
+      ]);
+      expect([
+        binOf(result.numPairs, at, 49),
+        binOf(result.meanR2, at, 49),
+      ]).toEqual([LD_TABLE.lastBin.numPairs[at], LD_TABLE.lastBin.meanR2[at]]);
+    }
+    expect([...result.rhoPerBp]).toEqual(LD_TABLE.rhoPerBp);
+    expect([...result.r2AtZero]).toEqual(LD_TABLE.r2AtZero);
+    expect([...result.halfDist]).toEqual(LD_TABLE.halfDist);
+    expect(result.passStats).toEqual({
+      numVars: 500,
+      filtering: { missing_data: { varsProcessed: 500, varsKept: 500 } },
+    });
+    expect(told.length).toBeGreaterThan(0);
+    expect(told.every((progress) => progress.numPasses === 1)).toBe(true);
+  });
+
+  test('populations named "10" and "2", which popnei gives back as "2", "10", are held in the order of the job', () => {
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(ldPops("10", "2")), ignore),
+      "ldDecay",
+    );
+    expect(result.pops).toEqual(["10", "2"]);
+    expect([...result.halfDist]).toEqual(LD_TABLE.halfDist);
+    expect([...result.rhoPerBp]).toEqual(LD_TABLE.rhoPerBp);
+    expect([binOf(result.meanR2, 0, 0), binOf(result.meanR2, 1, 0)]).toEqual(
+      LD_TABLE.firstBin.meanR2,
+    );
+    expect([binOf(result.meanR2, 0, 49), binOf(result.meanR2, 1, 49)]).toEqual(
+      LD_TABLE.lastBin.meanR2,
+    );
+  });
+
+  test("populations of 30 and 70, a maximum MAF of 0.8, a smallest distance of 1,000 and 20 bins are each passed on: popnei's numbers of that job to the last digit", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    const everyone = [...a[1], ...b[1]];
+    const job: LdDecayJob = {
+      ...ldDecayJob([
+        ["pop_a", everyone.slice(0, 30)],
+        ["pop_b", everyone.slice(30)],
+      ]),
+      minDist: 1000,
+      numBins: 20,
+      maxAllowedMaf: 0.8,
+    };
+    const result = resultOf(opened("ld.nei").run(job, ignore), "ldDecay");
+    // From calcLdAndDistPerPop of js-v0.1.0-dev.3 in node, 30 September
+    // 2026, over ld.nei with the missing data filter at 0.1 and this job.
+    expect([...result.numIndividuals]).toEqual([30, 70]);
+    expect([...result.numVars]).toEqual([380, 419]);
+    expect(result.smallestDist.length).toBe(20);
+    expect(result.numPairs.length).toBe(40);
+    const pairs = [0, 1].map((at) =>
+      result.numPairs
+        .subarray(at * 20, (at + 1) * 20)
+        .reduce((sum, n) => sum + n, 0),
+    );
+    expect(pairs).toEqual([22721, 27598]);
+    expect([result.smallestDist[0], result.largestDist[0]]).toEqual([
+      1000, 5950,
+    ]);
+    expect([result.smallestDist[19], result.largestDist[19]]).toEqual([
+      95051, 100000,
+    ]);
+    expect([result.numPairs[0], result.numPairs[20]]).toEqual([1432, 1737]);
+    expect([result.meanR2[0], result.meanR2[20]]).toEqual([
+      0.3223283873712064, 0.2951918679844314,
+    ]);
+    expect([result.sdR2[0], result.sdR2[20]]).toEqual([
+      0.28459515863794016, 0.26644810520149775,
+    ]);
+    expect([result.numPairs[39], result.meanR2[39]]).toEqual([
+      1067, 0.02320785441270928,
+    ]);
+    expect([...result.rhoPerBp]).toEqual([
+      0.0002770516279266476, 0.00031026461693426104,
+    ]);
+    expect([...result.r2AtZero]).toEqual([
+      0.47933884297520657, 0.46517119244391963,
+    ]);
+    expect([...result.halfDist]).toEqual([
+      8705.048775242918, 7104.846292628652,
+    ]);
+  });
+
+  // popnei's result loses a population of that name, so the runner gives
+  // popnei names of its own and puts the job's back by their place.
+  test.each([
+    ["first", ldPops("__proto__", "pop_b"), ldPops()],
+    ["second", ldPops("pop_a", "__proto__"), ldPops()],
+    ["only", ldPops("__proto__", "pop_b").slice(0, 1), ldPops().slice(0, 1)],
+  ])(
+    "a population named __proto__, the %s of the job, has its name in the result and the numbers of the same individuals under another name, every array value by value",
+    (_place, pops, plain) => {
+      const result = resultOf(
+        opened("ld.nei").run(ldDecayJob(pops), ignore),
+        "ldDecay",
+      );
+      const expected = resultOf(
+        opened("ld.nei").run(ldDecayJob(plain), ignore),
+        "ldDecay",
+      );
+      expect(result.pops).toEqual(pops.map(([pop]) => pop));
+      expect(result.pops).toContain("__proto__");
+      expect({ ...result, pops: expected.pops }).toEqual(expected);
+      expect([...result.halfDist]).toEqual(
+        LD_TABLE.halfDist.slice(0, pops.length),
+      );
+    },
+  );
+
+  test("two populations of one name are a badRequest", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    expect(
+      opened("ld.nei").run(ldDecayJob([a, ["pop_a", b[1]]]), ignore),
+    ).toEqual({ kind: "badRequest", message: 'two populations named "pop_a"' });
+  });
+
+  test("transferablesOf of a result of the LD decay: the buffer of each of its ten arrays, each once, and a view of part of a buffer throws", () => {
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob(), ignore),
+      "ldDecay",
+    );
+    expect(transferablesOf(result)).toEqual([
+      result.numIndividuals.buffer,
+      result.numVars.buffer,
+      result.smallestDist.buffer,
+      result.largestDist.buffer,
+      result.numPairs.buffer,
+      result.meanR2.buffer,
+      result.sdR2.buffer,
+      result.rhoPerBp.buffer,
+      result.r2AtZero.buffer,
+      result.halfDist.buffer,
+    ]);
+    expect(
+      transferablesOf({ ...result, largestDist: result.smallestDist }).length,
+    ).toBe(9);
+    expect(() =>
+      transferablesOf({
+        ...result,
+        smallestDist: result.numPairs.subarray(0, 50),
+      }),
+    ).toThrow(/^popnei_web defect: an array of a result is a view/);
+  });
+});
+
+// The distances between populations of stage 5, over panel.nei and the
+// populations of panel_pops.csv and panel_split.csv: the numbers of
+// docs/specs/analyses/popDists.md, "How it is verified", given by
+// calcPopDists, correctDistsByLingoes and doPcoa of js-v0.1.0-dev.3 in node.
+
+/** The populations of the CSV fixture `name`, in the order they first
+    appear in it. */
+function csvPops(name: string): Pops {
+  const lines = readFileSync(join(FIXTURES, name), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1);
+  const pops = new Map<string, string[]>();
+  for (const line of lines) {
+    const [individual, pop] = line.split(",");
+    if (individual === undefined || pop === undefined) {
+      throw new Error(`a line of ${name} with no comma: ${line}`);
+    }
+    const members = pops.get(pop) ?? [];
+    members.push(individual);
+    pops.set(pop, members);
+  }
+  return [...pops.entries()];
+}
+
+function popDistsJob(
+  pops: Pops,
+  maxAllowedMissingRate = 0.1,
+  leftOut: LeftOut = [],
+  minNumIndividuals = 20,
+): PopDistsJob {
+  return {
+    analysis: "popDists",
+    fileId: FILE_ID,
+    filters: [missingData(maxAllowedMissingRate)],
+    individuals: null,
+    pops,
+    leftOut,
+    minNumIndividuals,
+  };
+}
+
+/** The distances of popDists.md of p0, p2 and p1, in that order, the
+    order of panel_pops.csv, at the missing data filter at 0.1 and 0.05. */
+const DISTS_AT = {
+  "0.1": {
+    fst: [0.10273588423661377, 0.10496244498389443, 0.10962148955018115],
+    dest: [0.06129813142463423, 0.06354346296076403, 0.06567052128821259],
+    numVars: [1200, 1200, 1200],
+  },
+  "0.05": {
+    fst: [0.10134216885691137, 0.10408519979159178, 0.109114009609083],
+    dest: [0.060374890860149355, 0.0629752676321236, 0.06514219873397088],
+    numVars: [1152, 1152, 1152],
+  },
+};
+
+/** The indexes of the order p2, p0, p1 of p0, p2 and p1. */
+const P2_P0_P1 = { kind: "pcoa", order: Uint32Array.of(1, 0, 2) };
+
+describe("PA3 D2 the runner's distances", () => {
+  test("the populations of panel_pops.csv at the missing data filter at 0.1 give the Fst, the D and the variants of each pair of popDists.md to the last digit, and the order p2, p0, p1 of both measures", () => {
+    const told: Progress[] = [];
+    const leftOut: LeftOut = [["p9", 3]];
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob(csvPops("panel_pops.csv"), 0.1, leftOut),
+        (progress) => {
+          told.push(progress);
+        },
+      ),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p0", "p2", "p1"]);
+    expect([...result.numIndividuals]).toEqual([48, 84, 68]);
+    expect([...result.fst]).toEqual(DISTS_AT["0.1"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.1"].dest);
+    expect([...result.numVarsPerPair]).toEqual(DISTS_AT["0.1"].numVars);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    expect(result.leftOut).toBe(leftOut);
+    expect(result.passStats).toEqual({
+      numVars: 1200,
+      filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+    });
+    expect(told.length).toBeGreaterThan(0);
+    expect(told.every((progress) => progress.numPasses === 1)).toBe(true);
+  });
+
+  test("at the missing data filter at 0.05, which keeps 1,152 variants, the pairs of popDists.md and the order p2, p0, p1 of both measures", () => {
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob(csvPops("panel_pops.csv"), 0.05),
+        ignore,
+      ),
+      "popDists",
+    );
+    expect([...result.fst]).toEqual(DISTS_AT["0.05"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.05"].dest);
+    expect([...result.numVarsPerPair]).toEqual(DISTS_AT["0.05"].numVars);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    expect(result.passStats.filtering).toEqual({
+      missing_data: { varsProcessed: 1200, varsKept: 1152 },
+    });
+  });
+
+  test('p0, p2 and p1 named "3", "1" and "2", which popnei gives back as "1", "2", "3", are held as "3", "1", "2" with the values of their pairs, and the order "1", "3", "2"', () => {
+    const [p0, p2, p1] = csvPops("panel_pops.csv");
+    if (p0 === undefined || p2 === undefined || p1 === undefined) {
+      throw new Error("panel_pops.csv has not three populations");
+    }
+    const result = resultOf(
+      opened("panel.nei").run(
+        popDistsJob([
+          ["3", p0[1]],
+          ["1", p2[1]],
+          ["2", p1[1]],
+        ]),
+        ignore,
+      ),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["3", "1", "2"]);
+    expect([...result.numIndividuals]).toEqual([48, 84, 68]);
+    // Pair by pair: ("3", "1") is p0 and p2, ("3", "2") p0 and p1, and
+    // ("1", "2") p2 and p1.
+    expect([...result.fst]).toEqual(DISTS_AT["0.1"].fst);
+    expect([...result.dest]).toEqual(DISTS_AT["0.1"].dest);
+    expect(result.order).toEqual({ fst: P2_P0_P1, dest: P2_P0_P1 });
+    const order = result.order.fst;
+    if (order.kind !== "pcoa") {
+      throw new Error("the order is not of the PCoA");
+    }
+    expect([...order.order].map((at) => result.pops[at])).toEqual([
+      "1",
+      "3",
+      "2",
+    ]);
+  });
+
+  test("panel_split.csv gives the negative pair of p0a and p0b of popDists.md and the order p0b, p0a, p2, p1 of both measures", () => {
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(csvPops("panel_split.csv")), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p0a", "p0b", "p2", "p1"]);
+    expect([...result.numIndividuals]).toEqual([24, 24, 84, 68]);
+    expect([...result.fst]).toEqual([
+      -0.011276258310056011, 0.09917164096189776, 0.10284678759499101,
+      0.10123140684986402, 0.1020068488376186, 0.10962148955018115,
+    ]);
+    expect([...result.dest]).toEqual([
+      -0.00601975597295832, 0.05929552377994644, 0.06246325844418998,
+      0.060586547891477244, 0.06181779954501048, 0.06567052128821259,
+    ]);
+    expect([...result.numVarsPerPair]).toEqual(Array(6).fill(1200));
+    const p0bP0aP2P1 = { kind: "pcoa", order: Uint32Array.of(1, 0, 2, 3) };
+    expect(result.order).toEqual({ fst: p0bP0aP2P1, dest: p0bP0aP2P1 });
+  });
+
+  test("panel_split.csv at a minimum of 25, p0a and p0b left out, gives p2 and p1 their pair in the order of the file", () => {
+    const pops = csvPops("panel_split.csv").filter(
+      ([, individuals]) => individuals.length >= 25,
+    );
+    const leftOut: LeftOut = [
+      ["p0a", 24],
+      ["p0b", 24],
+    ];
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(pops, 0.1, leftOut, 25), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["p2", "p1"]);
+    expect([...result.fst]).toEqual([0.10962148955018115]);
+    expect([...result.dest]).toEqual([0.06567052128821259]);
+    expect([...result.numVarsPerPair]).toEqual([1200]);
+    const inTheFile = { kind: "file", reason: "twoPopulations" };
+    expect(result.order).toEqual({ fst: inTheFile, dest: inTheFile });
+    expect(result.leftOut).toEqual(leftOut);
+  });
+
+  test("two populations of one name are a badRequest", () => {
+    const [p0, p2] = csvPops("panel_pops.csv");
+    if (p0 === undefined || p2 === undefined) {
+      throw new Error("panel_pops.csv has not two populations");
+    }
+    expect(
+      opened("panel.nei").run(popDistsJob([p0, ["p0", p2[1]]]), ignore),
+    ).toEqual({ kind: "badRequest", message: 'two populations named "p0"' });
+  });
+
+  // The case "Jost's D at ploidy 1" of popDists.md: popnei gives no D for
+  // a genotype of one allele, and the Fst of the same file its values.
+  test("a haploid VCF read with ploidy 1 gives every Jost's D as no value, in the order of the file by noDistance, and Hudson's Fst its values, ordered by the PCoA", () => {
+    const { runner, pops } = haploidRunner();
+    const result = resultOf(
+      runner.run(popDistsJob(pops, 0.1, [], 1), ignore),
+      "popDists",
+    );
+    expect(result.pops).toEqual(["a", "b", "c"]);
+    expect([...result.numVarsPerPair]).toEqual([12, 12, 12]);
+    expect([...result.dest].every(Number.isNaN)).toBe(true);
+    expect(result.order.dest).toEqual({ kind: "file", reason: "noDistance" });
+    expect([...result.fst].every((fst) => Number.isFinite(fst))).toBe(true);
+    expect([...result.fst].some((fst) => fst > 0)).toBe(true);
+    expect(result.order.fst.kind).toBe("pcoa");
+  });
+
+  test("transferablesOf of a result of the distances with orders of the kind pcoa: the buffer of each of its six arrays, each once, one less for an order of the file, and a view of part of a buffer throws", () => {
+    const result = resultOf(
+      opened("panel.nei").run(popDistsJob(csvPops("panel_pops.csv")), ignore),
+      "popDists",
+    );
+    const { fst, dest } = result.order;
+    if (fst.kind !== "pcoa" || dest.kind !== "pcoa") {
+      throw new Error("the orders are not of the PCoA");
+    }
+    expect(transferablesOf(result)).toEqual([
+      result.numIndividuals.buffer,
+      result.fst.buffer,
+      result.dest.buffer,
+      result.numVarsPerPair.buffer,
+      fst.order.buffer,
+      dest.order.buffer,
+    ]);
+    expect(
+      transferablesOf({
+        ...result,
+        order: { fst, dest: { kind: "file", reason: "noDistance" } },
+      }).length,
+    ).toBe(5);
+    expect(
+      transferablesOf({ ...result, order: { fst, dest: fst } }).length,
+    ).toBe(5);
+    expect(() =>
+      transferablesOf({
+        ...result,
+        order: {
+          fst,
+          dest: { kind: "pcoa", order: new Uint32Array(8).subarray(0, 3) },
+        },
+      }),
+    ).toThrow(/^popnei_web defect: an array of a result is a view/);
+  });
+});
+
+/** The numbers of calcPopDiversity of a diversity result as plain arrays,
+    for `toEqual`. */
+function popDiversityNumbersOf(result: DiversityResult): unknown {
+  return {
+    pops: result.pops,
+    fis: [...result.fis],
+    numAllelesMean: [...result.numAllelesMean],
+    numAllelesInDraw: [...result.numAllelesInDraw],
+    privateAllelesTotal: [...result.privateAllelesTotal],
+    privateAllelesMean: [...result.privateAllelesMean],
+    privateAllelesInDraw: [...result.privateAllelesInDraw],
+    numVarsInDraw: [...result.numVarsInDraw],
+    numVarsEveryPop: result.numVarsEveryPop,
+    numVarsEveryPopInDraw: result.numVarsEveryPopInDraw,
+    numCalledAlleles: result.numCalledAlleles,
+  };
+}
+
+/** The first table of stage 5 of diversity.md, "How it is verified", with
+    the missing data filter at 0.05, at the draw of 40. */
+const POP_DIVERSITY_AT_0_05 = {
+  pops: ["p0", "p2", "p1"],
+  fis: [-0.011344341019483117, -0.020803811522959625, -0.017724256612463796],
+  numAllelesMean: [1.9791666666666667, 1.9861111111111112, 1.9809027777777777],
+  numAllelesInDraw: [
+    1.9646163579517928, 1.9595644507442256, 1.9582701017879214,
+  ],
+  privateAllelesTotal: [0, 1, 0],
+  privateAllelesMean: [0, 0.0008680555555555555, 0],
+  privateAllelesInDraw: [
+    0.0028348059148665707, 0.0031646710919597015, 0.002521711046320405,
+  ],
+  numVarsInDraw: [1152, 1152, 1152],
+  numVarsEveryPop: 1152,
+  numVarsEveryPopInDraw: 1152,
+  numCalledAlleles: 40,
+};
+
+/** The three populations of the panel, named p0, p2 and p1. */
+function threePops(): readonly [Pops[number], Pops[number], Pops[number]] {
+  const [p0, p2, p1] = panelPops();
+  if (p0 === undefined || p2 === undefined || p1 === undefined) {
+    throw new Error("panel_pops.txt has not three populations");
+  }
+  return [p0, p2, p1];
+}
+
+/** The spectra of a result as plain arrays, `null` for none. */
+function spectraOf(result: DiversityResult): (number[] | null)[] {
+  return result.foldedSfs.map((sfs) => (sfs === null ? null : [...sfs]));
+}
+
+describe("PA6 D2 the runner's diversity of stage 5", () => {
+  test("with the missing data filter at 0.05, F, the alleles and the private alleles of the table of stage 5, beside the three numbers of stage 2", () => {
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(0.05)]), ignore),
+    );
+    expect(numbersOf(result)).toEqual(AT_0_05);
+    expect(popDiversityNumbersOf(result)).toEqual(POP_DIVERSITY_AT_0_05);
+  });
+
+  test("with the missing data filter at 1, the table of stage 5 of 1,200 variants", () => {
+    const result = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(1)]), ignore),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012758486763376542, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [1.9775, 1.9866666666666666, 1.9808333333333332],
+      numAllelesInDraw: [
+        1.9626723071292755, 1.9597096939774163, 1.9588173095272452,
+      ],
+      privateAllelesTotal: [0, 1, 0],
+      privateAllelesMean: [0, 0.0008333333333333334, 0],
+      privateAllelesInDraw: [
+        0.0030782892654586708, 0.003055908632949441, 0.002742968858959168,
+      ],
+      numVarsInDraw: [1200, 1200, 1200],
+      numVarsEveryPop: 1200,
+      numVarsEveryPopInDraw: 1200,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("with the list of 111 before the filter at 0.05, F, the alleles and the private alleles of diversity.md over 1,117 variants", () => {
+    const { of111 } = lists();
+    const result = valueOf(
+      opened("panel.nei").run(diversityWithList(of111), ignore),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.014117401270937968, -0.014870687595523124, -0.011046467292424866,
+      ],
+      numAllelesMean: [1.973142345568487, 1.981199641897941, 1.973142345568487],
+      numAllelesInDraw: [
+        1.9647343026993345, 1.957125180734846, 1.959297105964442,
+      ],
+      privateAllelesTotal: [0, 2, 0],
+      privateAllelesMean: [0, 0.0017905102954341987, 0],
+      privateAllelesInDraw: [
+        0.0030804317646699105, 0.0030584963993553, 0.0021106596894612368,
+      ],
+      numVarsInDraw: [1117, 1117, 1117],
+      numVarsEveryPop: 1117,
+      numVarsEveryPopInDraw: 1117,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("All individuals, one population, gives F and the alleles, and no private alleles, which are not asked for", () => {
+    const runner = createRunner();
+    const individuals = valueOf(
+      runner.open(NEI, { name: "panel.nei", source: bytesOf("panel.nei") }),
+    ).individuals;
+    const job = diversityJob(
+      [missingData(0.05)],
+      [["All individuals", individuals]],
+    );
+    expect(job.popDiversityPops).toEqual(["All individuals"]);
+    const result = valueOf(runner.run(job, ignore));
+    expect(numbersOf(result)).toEqual({
+      pops: ["All individuals"],
+      numIndividuals: [200],
+      unbiasedExpHet: [0.37487834409014364],
+      obsHet: [0.3541409192154764],
+      polyRatio: [0.9791666666666666],
+      numVarsWithValue: [1152],
+      passStats: AT_0_05.passStats,
+    });
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["All individuals"],
+      fis: [0.055317745614243075],
+      numAllelesMean: [2],
+      numAllelesInDraw: [1.992568885944447],
+      privateAllelesTotal: [NaN],
+      privateAllelesMean: [NaN],
+      privateAllelesInDraw: [NaN],
+      numVarsInDraw: [1152],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs[0]?.length).toBe(21);
+  });
+
+  test("p0 cut to 12 individuals and left out of calcPopDiversity has NaN in its six numbers and no spectrum, and p2 and p1 have 22 and 16 private alleles", () => {
+    const [p0, p2, p1] = threePops();
+    const pops: Pops = [["p0", p0[1].slice(0, 12)], p2, p1];
+    const job = diversityJob([missingData(0.05)], pops);
+    expect(job.popDiversityPops).toEqual(["p2", "p1"]);
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, ...POP_DIVERSITY_AT_0_05.fis.slice(1)],
+      numAllelesMean: [NaN, ...POP_DIVERSITY_AT_0_05.numAllelesMean.slice(1)],
+      numAllelesInDraw: [
+        NaN,
+        ...POP_DIVERSITY_AT_0_05.numAllelesInDraw.slice(1),
+      ],
+      privateAllelesTotal: [NaN, 22, 16],
+      privateAllelesMean: [NaN, 0.019097222222222224, 0.013888888888888888],
+      privateAllelesInDraw: [NaN, 0.038418511541450096, 0.037124162585145296],
+      numVarsInDraw: [0, 1152, 1152],
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 1152,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs[0]).toBeNull();
+    expect(result.foldedSfs.slice(1).map((sfs) => sfs?.length)).toEqual([
+      21, 21,
+    ]);
+  });
+
+  test("the spectra with no filter are in the order of the job, of 21 values each, p0's first 44.79323144486922, and equal to those of a call that asks folded_sfs alone", () => {
+    const result = valueOf(opened("panel.nei").run(diversityJob([]), ignore));
+    const spectra = spectraOf(result);
+    expect(spectra.map((sfs) => sfs?.length)).toEqual([21, 21, 21]);
+    expect(spectra[0]?.slice(0, 2)).toEqual([
+      44.79323144486922, 38.07795856907602,
+    ]);
+    expect(spectra[0]?.[20]).toBe(30.355250953099038);
+    expect(spectra[1]?.slice(0, 2)).toEqual([
+      48.34836722710054, 49.07990431264654,
+    ]);
+    expect(spectra[2]?.[0]).toBe(49.419228567305325);
+    // The same call as the spec's, sfs.md, "The numbers of popnei".
+    const variants = openVars(bytesOf("panel.nei"));
+    try {
+      const alone = calcPopDiversity(variants, {
+        pops: Object.fromEntries(panelPops()),
+        numCalledAlleles: 40,
+        minNumIndividuals: 20,
+        stats: ["folded_sfs"],
+      });
+      expect(alone.pops).toEqual(["p0", "p2", "p1"]);
+      expect(spectra).toEqual(
+        alone.pops.map((pop) => [...(alone.foldedSfs?.[pop] ?? [])]),
+      );
+    } finally {
+      variants.free();
+    }
+  });
+
+  test("told is given the calls of the two passes as passes 1 and 2 of 2", () => {
+    const told: Progress[] = [];
+    const answer = opened("panel.nei").run(diversityJob([]), (progress) => {
+      told.push(progress);
+    });
+    expect(answer.kind).toBe("ok");
+    expect(told).toEqual([
+      { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 2 },
+      { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 2 },
+      { bytesRead: 0, numBytes: 261490, pass: 2, numPasses: 2 },
+      { bytesRead: 259376, numBytes: 261490, pass: 2, numPasses: 2 },
+    ]);
+  });
+
+  test("with popDiversityPops empty there is one pass, told as pass 1 of 1, calcPopDiversity is not called, and its numbers are NaN", () => {
+    const told: Progress[] = [];
+    const onePass = { ...diversityJob([]), popDiversityPops: [] };
+    const result = valueOf(
+      opened("panel.nei").run(onePass, (progress) => {
+        told.push(progress);
+      }),
+    );
+    expect(told).toEqual([
+      { bytesRead: 0, numBytes: 261490, pass: 1, numPasses: 1 },
+      { bytesRead: 259376, numBytes: 261490, pass: 1, numPasses: 1 },
+    ]);
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, NaN, NaN],
+      numAllelesMean: [NaN, NaN, NaN],
+      numAllelesInDraw: [NaN, NaN, NaN],
+      privateAllelesTotal: [NaN, NaN, NaN],
+      privateAllelesMean: [NaN, NaN, NaN],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 0, 0],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs).toEqual([null, null, null]);
+  });
+
+  test("one population of a column given to calcPopDiversity has no private alleles asked: NaN in their three arrays and numVarsEveryPop null", () => {
+    const job = {
+      ...diversityJob([missingData(0.05)]),
+      popDiversityPops: ["p2"],
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [NaN, POP_DIVERSITY_AT_0_05.fis[1], NaN],
+      numAllelesMean: [NaN, POP_DIVERSITY_AT_0_05.numAllelesMean[1], NaN],
+      numAllelesInDraw: [NaN, POP_DIVERSITY_AT_0_05.numAllelesInDraw[1], NaN],
+      privateAllelesTotal: [NaN, NaN, NaN],
+      privateAllelesMean: [NaN, NaN, NaN],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 1152, 0],
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      numCalledAlleles: 40,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length ?? null)).toEqual([
+      null,
+      21,
+      null,
+    ]);
+  });
+
+  test("populations named 10, 9 and p come back with their numbers and spectra in the order of the job, not in popnei's 9, 10, p", () => {
+    const [p0, p2, p1] = threePops();
+    const named = valueOf(
+      opened("panel.nei").run(
+        diversityJob(
+          [missingData(0.05)],
+          [
+            ["10", p0[1]],
+            ["9", p2[1]],
+            ["p", p1[1]],
+          ],
+        ),
+        ignore,
+      ),
+    );
+    const panel = valueOf(
+      opened("panel.nei").run(diversityJob([missingData(0.05)]), ignore),
+    );
+    expect(popDiversityNumbersOf(named)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      pops: ["10", "9", "p"],
+    });
+    expect(spectraOf(named)).toEqual(spectraOf(panel));
+    expect(spectraOf(named)[0]?.[0]).toBe(40.761955639534804);
+  });
+
+  test("a population named __proto__ has its spectrum and its numbers, which a read with Object.hasOwn would not find", () => {
+    const [p0, p2, p1] = threePops();
+    const result = valueOf(
+      opened("panel.nei").run(
+        diversityJob([missingData(0.05)], [["__proto__", p0[1]], p2, p1]),
+        ignore,
+      ),
+    );
+    expect(popDiversityNumbersOf(result)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      pops: ["__proto__", "p2", "p1"],
+    });
+    expect(spectraOf(result)[0]?.slice(0, 2)).toEqual([
+      40.761955639534804, 36.42942568440002,
+    ]);
+    expect(result.foldedSfs[0]).toBeInstanceOf(Float64Array);
+  });
+
+  test("a draw above the chromosomes of the individuals is popnei's refusal of the second call", () => {
+    const job = { ...diversityJob([]), numCalledAlleles: 401 };
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toContain(
+      "the largest draw this dataset allows is 400",
+    );
+  });
+});
+
+describe("PA6 D2 the runner's diversity of stage 5, at other draws and minimums", () => {
+  // The numbers of popnei js-v0.1.0-dev.3 in node, 30 September 2026, by
+  // calcPopDiversity over panel.nei and the populations p0, p2 and p1 with
+  // the statistics the runner asks, at each draw and minimum.
+
+  test("a draw of 130, above the 96 chromosomes of p0: numVarsInDraw is popnei's inDraw and not withData, and the counts of every population are each their own", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      numCalledAlleles: 130,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012758486763376542, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [1.9775, 1.9866666666666666, 1.9808333333333332],
+      numAllelesInDraw: [NaN, 1.9853334175992314, 1.9794430186763494],
+      privateAllelesTotal: [0, 1, 0],
+      privateAllelesMean: [0, 0.0008333333333333334, 0],
+      privateAllelesInDraw: [NaN, NaN, NaN],
+      numVarsInDraw: [0, 1200, 1027],
+      numVarsEveryPop: 1200,
+      numVarsEveryPopInDraw: 0,
+      numCalledAlleles: 130,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([66, 66, 66]);
+  });
+
+  test("a minimum of 46 reaches the second call: p0's F and the private alleles of 1,001 variants", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      minNumIndividuals: 46,
+    };
+    expect(job.popDiversityPops).toEqual(["p0", "p2", "p1"]);
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      pops: ["p0", "p2", "p1"],
+      fis: [
+        -0.012034766430304433, -0.018458583231322434, -0.018110713076467055,
+      ],
+      numAllelesMean: [
+        1.979020979020979, 1.9866666666666666, 1.9808333333333332,
+      ],
+      numAllelesInDraw: [
+        1.9639672902859708, 1.9597096939774163, 1.9588173095272452,
+      ],
+      privateAllelesTotal: [0, 0, 0],
+      privateAllelesMean: [0, 0, 0],
+      privateAllelesInDraw: [
+        0.0030310457247010817, 0.002306061734860746, 0.002943478707386431,
+      ],
+      numVarsInDraw: [1001, 1200, 1200],
+      numVarsEveryPop: 1001,
+      numVarsEveryPopInDraw: 1001,
+      numCalledAlleles: 40,
+    });
+  });
+
+  test("an odd draw, 41, gives spectra of 21 values, floor(41 / 2) + 1", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)]),
+      numCalledAlleles: 41,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([21, 21, 21]);
+    expect([...result.numAllelesInDraw]).toEqual([
+      1.9653614127402348, 1.9605319113532742, 1.9591501457278342,
+    ]);
+  });
+
+  test("the draw of 96 of diversity.md: the rarefied alleles, p0 in the draw at 277 variants, and 277 for every population", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)]),
+      numCalledAlleles: 96,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(popDiversityNumbersOf(result)).toEqual({
+      ...POP_DIVERSITY_AT_0_05,
+      numAllelesInDraw: [
+        1.9855595667870036, 1.981752674879213, 1.9779693674030254,
+      ],
+      privateAllelesInDraw: [
+        0.0000011386298901610201, 0.00031549574772689635, 7.803443099134099e-7,
+      ],
+      numVarsInDraw: [277, 1152, 1152],
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 277,
+      numCalledAlleles: 96,
+    });
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([49, 49, 49]);
+  });
+});
+
+// The cases of the specs of stage 5 that no test reached, found by the
+// map of the cases, docs/plans/population-analyses.cases.md.
+
+/** A runner with a haploid VCF of nine individuals and 12 variants opened
+    with ploidy 1, and its three populations a, b and c of three each:
+    population a carries the alternative allele at the first four
+    variants, b at the next four and c at the last four, in two of its
+    three individuals, so that every pair of populations differs. */
+function haploidRunner(): { readonly runner: Runner; readonly pops: Pops } {
+  const names = ["a0", "a1", "a2", "b0", "b1", "b2", "c0", "c1", "c2"];
+  const lines = Array.from({ length: 12 }, (_, v) => {
+    const carrier = Math.floor(v / 4);
+    const genotypes = names.map((_, i) => {
+      const inCarrier = Math.floor(i / 3) === carrier;
+      const against = i % 3 === v % 3;
+      return inCarrier && !against ? "1" : "0";
+    });
+    return `1\t${String((v + 1) * 100)}\t.\tA\tG\t.\tPASS\t.\tGT\t${genotypes.join("\t")}`;
+  });
+  const vcf =
+    '##fileformat=VCFv4.2\n##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n' +
+    `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}\n` +
+    lines.join("\n") +
+    "\n";
+  const runner = createRunner();
+  const open = runner.open(
+    {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: { ploidy: 1, onlyPassed: true },
+    },
+    { name: "haploid.vcf", source: new TextEncoder().encode(vcf) },
+  );
+  expect(open.kind).toBe("ok");
+  return {
+    runner,
+    pops: [
+      ["a", names.slice(0, 3)],
+      ["b", names.slice(3, 6)],
+      ["c", names.slice(6, 9)],
+    ],
+  };
+}
+
+describe("the map of the cases of stage 5: the runner's diversity and spectrum", () => {
+  // sfs.md, "The cases": a size of the draw above the ploidy times the
+  // minimum, with no filter.
+  test("a draw of 96 with no filter: p0, of 48 individuals, reaches it at 278 of its 1,200 variants, and its spectrum is of whole numbers, 4, 2 and 4 at the counts 0, 1 and 48, and 274 from 1 to 48", () => {
+    const job: DiversityJob = { ...diversityJob([]), numCalledAlleles: 96 };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numVarsInDraw[0]).toBe(278);
+    const p0 = [...(result.foldedSfs[0] ?? [])];
+    expect(p0).toHaveLength(49);
+    expect(p0.every((count) => Number.isInteger(count))).toBe(true);
+    expect([p0[0], p0[1], p0[48]]).toEqual([4, 2, 4]);
+    expect(p0.slice(1).reduce((sum, count) => sum + count, 0)).toBe(274);
+  });
+
+  // sfs.md, "The cases": one population, "All individuals".
+  test("All individuals at a draw of 41 with no filter: one spectrum of 21 values over the 1,200 variants", () => {
+    const runner = createRunner();
+    const individuals = valueOf(
+      runner.open(NEI, { name: "panel.nei", source: bytesOf("panel.nei") }),
+    ).individuals;
+    const job: DiversityJob = {
+      ...diversityJob([], [["All individuals", individuals]]),
+      numCalledAlleles: 41,
+    };
+    const result = valueOf(runner.run(job, ignore));
+    expect(result.pops).toEqual(["All individuals"]);
+    expect([...result.numVarsInDraw]).toEqual([1200]);
+    expect(result.foldedSfs.map((sfs) => sfs?.length)).toEqual([21]);
+    // The spectrum of the draw of 41, which a draw of 40, also of 21
+    // values, would not give.
+    const variants = openVars(bytesOf("panel.nei"));
+    try {
+      const spectrumAt = (numCalledAlleles: number): number[] => [
+        ...(calcPopDiversity(variants, {
+          pops: { "All individuals": individuals },
+          numCalledAlleles,
+          minNumIndividuals: 20,
+          stats: ["folded_sfs"],
+        }).foldedSfs?.["All individuals"] ?? []),
+      ];
+      expect(spectraOf(result)).toEqual([spectrumAt(41)]);
+      expect(spectrumAt(41)).not.toEqual(spectrumAt(40));
+    } finally {
+      variants.free();
+    }
+  });
+
+  // diversity.md, "The cases": a draw typed above a population's
+  // chromosomes, and at most those of the largest population.
+  test("a draw of 130 gives p0, whose 96 chromosomes never reach it, no rarefied value and a spectrum of zeros, and p2 a spectrum that is not", () => {
+    const job: DiversityJob = {
+      ...diversityJob([missingData(1)]),
+      numCalledAlleles: 130,
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numAllelesInDraw[0]).toBeNaN();
+    const [p0, p2] = spectraOf(result);
+    expect(p0).toHaveLength(66);
+    expect(p0?.every((count) => count === 0)).toBe(true);
+    expect(p2?.some((count) => count > 0)).toBe(true);
+  });
+
+  // diversity.md, "The cases": a haploid VCF.
+  test("a haploid VCF read with ploidy 1 gives F no value in every population, and the alleles their values", () => {
+    const { runner, pops } = haploidRunner();
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.1)], pops),
+      minNumIndividuals: 3,
+      numCalledAlleles: 3,
+      popDiversityPops: ["a", "b", "c"],
+    };
+    const result = valueOf(runner.run(job, ignore));
+    expect(result.pops).toEqual(["a", "b", "c"]);
+    expect([...result.fis].every(Number.isNaN)).toBe(true);
+    expect([...result.numAllelesMean].every((n) => n > 1)).toBe(true);
+  });
+
+  // diversity.md, "How it is verified": p0 cut to its first 12
+  // individuals and left in the call.
+  test("p0 cut to 12 individuals and left in calcPopDiversity: no variant at which every population has a value, the private alleles of all three 0, and none per variant", () => {
+    const [p0, p2, p1] = threePops();
+    const pops: Pops = [["p0", p0[1].slice(0, 12)], p2, p1];
+    const job: DiversityJob = {
+      ...diversityJob([missingData(0.05)], pops),
+      popDiversityPops: ["p0", "p2", "p1"],
+    };
+    const result = valueOf(opened("panel.nei").run(job, ignore));
+    expect(result.numVarsEveryPop).toBe(0);
+    expect([...result.privateAllelesTotal]).toEqual([0, 0, 0]);
+    expect([...result.privateAllelesMean]).toEqual([NaN, NaN, NaN]);
+  });
+
+  // diversity.md, "How it is verified": the refusals of the draw, 40 over
+  // a list of 15.
+  test("a draw of 40 over a list of 15 individuals is popnei's refusal, whose largest draw is 30", () => {
+    const [p0] = threePops();
+    const fifteen = p0[1].slice(0, 15);
+    const job: DiversityJob = {
+      ...diversityJob([], [["p0", fifteen]]),
+      individuals: fifteen,
+      minNumIndividuals: 1,
+      popDiversityPops: ["p0"],
+    };
+    const answer = opened("panel.nei").run(job, ignore);
+    expect(answer.kind).toBe("refused");
+    expect(answer.kind === "refused" ? answer.message : "").toContain(
+      "the largest draw this dataset allows is 30",
+    );
+  });
+});
+
+describe("the map of the cases of stage 5: the runner's LD decay", () => {
+  // ldDecay.md, "The cases": a population of 1 or 2 individuals.
+  test("a population of two individuals gives every pair an r² of 1 and no curve", () => {
+    const [a, b] = ldPops();
+    if (a === undefined || b === undefined) {
+      throw new Error("ld_pops.csv has not two populations");
+    }
+    const result = resultOf(
+      opened("ld.nei").run(ldDecayJob([["two", a[1].slice(0, 2)], b]), ignore),
+      "ldDecay",
+    );
+    const means = [...result.meanR2.subarray(0, 50)].filter(
+      (_, bin) => binOf(result.numPairs, 0, bin) > 0,
+    );
+    expect(means.length).toBeGreaterThan(0);
+    expect(means.every((mean) => Math.abs(mean - 1) < 1e-12)).toBe(true);
+    expect(result.halfDist[0]).toBeNaN();
+    expect(result.rhoPerBp[0]).toBeNaN();
+    expect(result.halfDist[1]).not.toBeNaN();
+  });
+
+  // ldDecay.md, "The cases": a largest distance below the spacing of the
+  // variants, 1,000 bp in ld.nei.
+  test("a largest distance of 500 bp, below the 1,000 bp between the variants of ld.nei, gives no pair in any population", () => {
+    const result = resultOf(
+      opened("ld.nei").run({ ...ldDecayJob(), maxDist: 500 }, ignore),
+      "ldDecay",
+    );
+    expect([pairsOf(result, 0), pairsOf(result, 1)]).toEqual([0, 0]);
+    expect([...result.halfDist]).toEqual([NaN, NaN]);
   });
 });

@@ -7,7 +7,9 @@
  */
 
 import type { PngErrorKind } from "../src/charts/export.ts";
+import type { HeatmapData } from "../src/charts/heatmap.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
+import type { LineData } from "../src/charts/line.ts";
 import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
@@ -41,6 +43,31 @@ export type Pca3dKind =
   | "swapped"
   | "markup"
   | "thousand";
+
+/**
+ * The data of a heatmap of the page: `panel`, Hudson's Fst of panel.nei
+ * between p2, p0 and p1, in that order; `split`, the Fst of p0b, p0a, p2
+ * and p1 of panel_split.csv, whose pair p0a and p0b is negative, with the
+ * pair p0b and p2 given no value; `long`, eight names of 20 to 26
+ * characters, the longer ones cut on the axes; `many`, 40 names, whose
+ * bands are too narrow for the values; `most`, the 200 names a heatmap
+ * draws, whose bands are too narrow for the names; `capitals`, three
+ * names in capitals, "MEX", one of 20 characters and "PER".
+ */
+export type HeatmapKind =
+  "panel" | "split" | "long" | "many" | "most" | "capitals";
+
+/**
+ * The data of a line plot of the page: `ld`, the LD decay of
+ * e2e/fixtures/ld.nei in pop_a and pop_b, groups 0 and 1, orange and sky
+ * blue, each with the mean r² of its 50 bins, its fitted curve and a mark
+ * at its half distance; `oneMark`, the same with the mark of pop_a
+ * alone; `noCasing`, four series of the groups 2, 4, 5 and 6, whose lines
+ * have no casing; `capitals`, the LD decay with the two populations named
+ * in 16 capitals, "MESOAMERICA_WILD", the widest labels a legend that
+ * counts 7.5 pixels a character has to hold.
+ */
+export type LineKind = "ld" | "oneMark" | "noCasing" | "capitals";
 
 /** The times of the scatter, in milliseconds of `performance.now()`. */
 export interface ScatterTimes {
@@ -115,6 +142,34 @@ export interface PlotsPage {
    * 0.5, nearer a camera above; the others are those of the scatter.
    */
   drawPca3d(width: number, height: number, kind: Pca3dKind): Promise<void>;
+  /**
+   * Draws the heatmap of `kind` in a new element whose content is `width`
+   * by `height` CSS pixels, with a padding of 8, `position: relative`, in
+   * place of the plot drawn before, and returns its handle.
+   */
+  drawHeatmap(
+    width: number,
+    height: number,
+    kind: HeatmapKind,
+  ): ChartHandle<HeatmapData>;
+  /**
+   * Where the middle of the cell of `row` and `column` of the heatmap
+   * drawn last is in the viewport, computed by the page with
+   * `heatmapMargin` and `heatmapScale`, apart from the plot.
+   */
+  heatmapCell(row: number, column: number): ViewportPoint;
+  /**
+   * Draws the line plot of `kind` in a new element whose content is
+   * `width` by `height` CSS pixels, in place of the plot drawn before, and
+   * returns its handle.
+   */
+  drawLine(
+    width: number,
+    height: number,
+    kind: LineKind,
+  ): ChartHandle<LineData>;
+  /** Gives the line plot drawn last the data of `kind` by its `update`. */
+  lineUpdate(kind: LineKind): void;
   /** The data of the 3D plot drawn last. */
   pca3dData(): Pca3dData;
   /** Draws the 3D plot again with `highlighted` as the legend's highlight. */
@@ -137,7 +192,12 @@ export interface PlotsPage {
   /** The element of the plot drawn last; throws when none was drawn. */
   element(): HTMLElement;
   /** The handle of the plot drawn last; throws when none was drawn. */
-  handle(): ChartHandle<HistogramData> | ChartHandle<ScatterData> | Pca3dHandle;
+  handle():
+    | ChartHandle<HistogramData>
+    | ChartHandle<ScatterData>
+    | ChartHandle<HeatmapData>
+    | ChartHandle<LineData>
+    | Pca3dHandle;
   /** The handle of the 3D plot drawn last; throws when the last plot is not one. */
   pca3d(): Pca3dHandle;
   /** The `kind` of `error` when it is a PngError, and null when it is not. */

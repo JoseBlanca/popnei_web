@@ -27,6 +27,7 @@ import {
 } from "./project.ts";
 import type {
   AnalysisId,
+  AnalysisOptions,
   AppId,
   ColumnAllows,
   ColumnTypeOf,
@@ -49,6 +50,7 @@ import type {
   ColumnType,
   CsvFound,
   CsvOptions,
+  DiversityResult,
   IndividualFilter,
   IndividualsFileError,
   IndividualsTable,
@@ -61,6 +63,44 @@ import type {
   WriteJob,
   Written,
 } from "../worker/protocol.ts";
+
+/**
+ * The fields of a diversity result that popnei's `calcPopDiversity`
+ * gives, from stage 5, for `numPops` populations none of which was given
+ * to it, as when none has the minimum of individuals: NaN in the six
+ * arrays of numbers, 0 variants in the draw, no count of the variants of
+ * every population and no spectrum, at the draw `numCalledAlleles`, 40 by
+ * default. The results written before stage 5 take them unchanged.
+ */
+export function noPopDiversity(
+  numPops: number,
+  numCalledAlleles = 40,
+): Omit<
+  DiversityResult,
+  | "analysis"
+  | "pops"
+  | "numIndividuals"
+  | "unbiasedExpHet"
+  | "obsHet"
+  | "polyRatio"
+  | "numVarsWithValue"
+  | "passStats"
+> {
+  const nan = (): Float64Array => new Float64Array(numPops).fill(NaN);
+  return {
+    fis: nan(),
+    numAllelesMean: nan(),
+    numAllelesInDraw: nan(),
+    privateAllelesTotal: nan(),
+    privateAllelesMean: nan(),
+    privateAllelesInDraw: nan(),
+    numVarsInDraw: new Uint32Array(numPops),
+    numVarsEveryPop: null,
+    numVarsEveryPopInDraw: null,
+    numCalledAlleles,
+    foldedSfs: Array.from({ length: numPops }, () => null),
+  };
+}
 
 /**
  * Freezes a value and everything it holds, so that a function that writes
@@ -1181,6 +1221,112 @@ export const wholeProject: fc.Arbitrary<Project> = fc
       filtersOff: variantLists.filtersOff,
       individualFilters: individualLists.individualFilters,
       individualFiltersOff: individualLists.individualFiltersOff,
+    }),
+  );
+
+/** A number from `min` to 1 that is not −0, which JSON writes back as
+    0. */
+const share = (min: number): fc.Arbitrary<number> =>
+  fc
+    .double({ min, max: 1, noNaN: true })
+    .filter((value) => !Object.is(value, -0));
+
+/** The largest minimum of individuals and draw of chromosomes popnei
+    takes, 2^32 − 1. */
+const WHOLE_UP_TO_2_32 = 4_294_967_295;
+
+/**
+ * Any options of the three analyses of the populations, each drawn among
+ * the values its `parseOptions` takes: the diversity's minimum of
+ * individuals, its threshold of a polymorphic variant and its draw,
+ * `null` or 2 or more (`docs/specs/analyses/diversity.md`); the
+ * distances' minimum and measure (`popDists.md`); and the LD decay's
+ * largest distance, `null` or 50 or more, and its largest major allele
+ * frequency, from 0.5 to 1 (`ldDecay.md`).
+ */
+const populationAnalysesOptions: fc.Arbitrary<AnalysisOptions> = fc.oneof(
+  fc.record(
+    {
+      analysis: fc.constant("diversity"),
+      options: fc.record(
+        {
+          minNumIndividuals: fc.integer({ min: 0, max: WHOLE_UP_TO_2_32 }),
+          polyThreshold: share(0),
+          numCalledAlleles: fc.option(
+            fc.integer({ min: 2, max: WHOLE_UP_TO_2_32 }),
+            { nil: null },
+          ),
+        },
+        PLAIN,
+      ),
+    },
+    PLAIN,
+  ),
+  fc.record(
+    {
+      analysis: fc.constant("popDists"),
+      options: fc.record(
+        {
+          minNumIndividuals: fc.integer({ min: 0, max: WHOLE_UP_TO_2_32 }),
+          measure: fc.constantFrom("fst", "dest"),
+        },
+        PLAIN,
+      ),
+    },
+    PLAIN,
+  ),
+  fc.record(
+    {
+      analysis: fc.constant("ldDecay"),
+      options: fc.record(
+        {
+          maxDist: fc.option(
+            fc.integer({ min: 50, max: Number.MAX_SAFE_INTEGER }),
+            { nil: null },
+          ),
+          maxAllowedMaf: share(0.5),
+        },
+        PLAIN,
+      ),
+    },
+    PLAIN,
+  ),
+);
+
+/** The ids of the three analyses of the populations, which the checks of
+    the reference of `populationsProject` take in turn in place of those of
+    `TEST_ANALYSES`, of which the reference holds at most one each. */
+const POPULATION_ANALYSES = ["diversity", "popDists", "ldDecay"] as const;
+
+/**
+ * Any valid project of population genetics, as `wholeProject` draws it,
+ * whose options are those of the diversity, the distances between
+ * populations and the LD decay, each analysis at most once, in any order,
+ * and whose reference's checks are of those three. Their definitions read
+ * them, where `wholeProject` holds options of any shape for the analyses
+ * of `TEST_ANALYSES`. Frozen deeply.
+ */
+export const populationsProject: fc.Arbitrary<Project> = fc
+  .tuple(
+    wholeProject.filter((p) => p.app === "popgen"),
+    fc.uniqueArray(populationAnalysesOptions, {
+      selector: (entry) => entry.analysis,
+    }),
+  )
+  .map(([p, analyses]) =>
+    deepFreeze<Project>({
+      ...p,
+      analyses,
+      reference:
+        p.reference === null
+          ? null
+          : {
+              ...p.reference,
+              checks: p.reference.checks.map((check, index) => ({
+                ...check,
+                analysis: POPULATION_ANALYSES[index] ?? "diversity",
+              })),
+            },
     }),
   );
 

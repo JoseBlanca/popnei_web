@@ -903,7 +903,7 @@ test("VS5 D4 a file written from the big VCF is saved after the worker that made
     .click();
   await page.getByRole("option", { name: "pop", exact: true }).click();
   await goTo(page, "Analyses");
-  const panel = page.getByRole("region", { name: "Diversity" });
+  const panel = page.getByRole("region", { name: "Diversity", exact: true });
   await panel.getByRole("button", { name: "Run" }).click();
   const bars = panel.getByRole("progressbar", {
     name: "Calculating the diversity",

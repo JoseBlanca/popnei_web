@@ -1,8 +1,10 @@
 /**
  * What the analyses share: the words of a refusal of popnei, which the
  * diversity and the three analyses of the Variants step give their error
- * states from; the parsing of the options of an analysis that has none;
- * the description of a histogram with the threshold of its filter; and
+ * states from; the two warnings of the populations of the analyses per
+ * population (diversity.md, "The warnings"); the parsing of the options
+ * of an analysis that has none; the description of a histogram with the
+ * threshold of its filter; and
  * the cells of a CSV (docs/specs/analyses/diversity.md, "Its words";
  * individualChecks.md, "Its words"; variantChecks.md, "The states";
  * filterCounts.md, "The states"; docs/specs/charts/histogram.md, "The
@@ -10,9 +12,19 @@
  */
 
 import type { JsonObject } from "../keys.ts";
-import { counted, escaped, saying, shown } from "../project.ts";
+import {
+  counted,
+  escaped,
+  identifierOf,
+  namesOf,
+  populationsToRun,
+  saying,
+  shown,
+} from "../project.ts";
+import { populationsColumnOf } from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Result } from "../result.ts";
+import type { Warning } from "../store.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
@@ -409,16 +421,135 @@ export function binsCsv(bins: readonly DescribedBin[]): string {
   return [BINS_CSV_HEADER, ...lines].map((line) => `${line}\n`).join("");
 }
 
+/** What an analysis per population calls itself and its result in the
+    two warnings of `populationWarnings`. */
+export interface PopulationWords {
+  /** What the individuals with no population are left out of: "the
+      diversity", "the distances", "the LD decay". */
+  readonly leftOutOf: string;
+  /** What a population the filters emptied is not in: "the table", "the
+      distances", "the plot". */
+  readonly notIn: string;
+}
+
+/** individualsWithoutPopulation and populationNotInResult, in this
+    order, for the project of a request and `pops`, every population the
+    result accounts for, those left out for their size included: the
+    distances between populations pass the populations of their result and
+    those of its `leftOut` (popDists.md, "The warnings"), so a population
+    under the minimum is not named as one the filters emptied. The words:
+    "…, and are left out of ‹leftOutOf›: …" and "…, so it is not in
+    ‹notIn›."; none for the one population. A population none of whose
+    individuals is in the variants file is named by neither, since a
+    metadata file may hold the individuals of several panels. Throws a
+    defect on a project whose variants file is not read, and on a project
+    of association, which has no analysis per population, where the
+    functions of the populations of project.ts give null. */
+export function populationWarnings(
+  pops: readonly string[],
+  p: Project,
+  words: PopulationWords,
+): readonly Warning[] {
+  const variants = p.variants;
+  if (variants?.read.kind !== "read") {
+    throw defect("the warnings of the populations need a variants file read.");
+  }
+  if (p.grouping.kind === "roles") {
+    throw defect(
+      "the warnings of the populations were asked of a project of association.",
+    );
+  }
+  const column = populationsColumnOf(p);
+  if (column === null) {
+    return [];
+  }
+  const fileName = escaped(variants.name);
+  const found: Warning[] = [];
+  const unassigned = unassignedOf(p, column);
+  const noPopulation = variants.read.individuals.filter((individual) =>
+    unassigned.has(individual),
+  );
+  if (noPopulation.length > 0) {
+    const one = noPopulation.length === 1;
+    found.push({
+      code: "individualsWithoutPopulation",
+      text: `${counted(noPopulation.length, "individual")} of ${fileName} ${one ? "has" : "have"} no population, and ${one ? "is" : "are"} left out of ${words.leftOutOf}: ${namesOf(noPopulation)}. If ${one ? "it belongs" : "they belong"} to one, fill in ${one ? "its" : "their"} population in the metadata file and load it again.`,
+    });
+  }
+  const inResult = new Set(pops);
+  const missing = (populationsToRun(p) ?? [])
+    .map(([pop]) => pop)
+    .filter((pop) => !inResult.has(pop));
+  if (missing.length > 0) {
+    const one = missing.length === 1;
+    found.push({
+      code: "populationNotInResult",
+      text: `${one ? "Population" : "Populations"} ${namesOf(missing)} ${one ? "has" : "have"} no individual among the individuals of ${fileName} that the filters kept, so ${one ? "it is" : "they are"} not in ${words.notIn}.`,
+    });
+  }
+  return found;
+}
+
+/** The individuals of the table whose cell in `column` is missing, who
+    are in no population; none when the table is not read or has no such
+    column. */
+function unassignedOf(p: Project, column: string): ReadonlySet<string> {
+  const read = p.individuals?.read;
+  if (read?.kind !== "read") {
+    return new Set();
+  }
+  const index = read.table.columns.indexOf(column);
+  return new Set(
+    index === -1
+      ? []
+      : read.table.rows
+          .filter((row) => row[index] === null)
+          .map((row) => identifierOf(row[0])),
+  );
+}
+
 /** A number of a result in a CSV: as `String` writes it, or an empty cell
     for no value. */
 export function csvNumber(value: number | null): string {
   return value === null ? "" : String(value);
 }
 
-/** A field of a CSV, quoted when it holds a comma, a quote or a new line,
-    its quotes doubled, as RFC 4180 has it. */
+/**
+ * A cell of text of a CSV, the name of a population, of an individual or
+ * of a column of the user's files: with a quote, ', before it when it
+ * starts with "=", "+", "-" or "@", so that a spreadsheet that opens the
+ * file shows the name and does not run it as a formula; then quoted when
+ * it holds a comma, a quote or a new line, its quotes doubled, as RFC
+ * 4180 has it. Every CSV of the application writes its cells of text
+ * through it, and none of its numbers, which `csvNumber` and `String`
+ * write, so that a negative number stays a number (diversity.md, "What
+ * it shows").
+ */
 export function csvField(value: string): string {
-  return /[",\n\r]/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  const text = /^[=+\-@]/u.test(value) ? `'${value}` : value;
+  return /[",\n\r]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+/** A share of `whole` as a whole percentage rounded to the nearest,
+    "56%", as the diversity writes it: a share below all is never written
+    100%, nor one above none 0%. */
+export function percentOf(part: number, whole: number): string {
+  const rounded = Math.round((part / whole) * 100);
+  const percent =
+    part < whole && rounded === 100
+      ? 99
+      : part > 0 && rounded === 0
+        ? 1
+        : rounded;
+  return `${String(percent)}%`;
+}
+
+/** A number for the screen, to four decimals, a negative one with the
+    minus sign U+2212, "−0.0113", and one that rounds to 0 written
+    "0.0000", whatever its sign, as the PCA writes its coordinates. */
+export function fourDecimals(value: number): string {
+  const text = Math.abs(value).toFixed(4);
+  return value < 0 && text !== "0.0000" ? `\u2212${text}` : text;
 }
 
 /** A number of popnei, `null` for a NaN. */

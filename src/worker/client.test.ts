@@ -17,7 +17,10 @@ import {
 import type {
   DiversityJob,
   DiversityResult,
+  Job,
   JobResult,
+  LdDecayJob,
+  LdDecayResult,
   Outcome,
   PcaJob,
   PcaMethod,
@@ -125,8 +128,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 3, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 3 };
+const READY = { kind: "ready", protocol: 4, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 4 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -136,6 +139,17 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28]),
   polyRatio: Float64Array.from([0.9]),
   numVarsWithValue: Uint32Array.from([1152]),
+  fis: Float64Array.from([0.1]),
+  numAllelesMean: Float64Array.from([1.98]),
+  numAllelesInDraw: Float64Array.from([1.96]),
+  privateAllelesTotal: Float64Array.from([NaN]),
+  privateAllelesMean: Float64Array.from([NaN]),
+  privateAllelesInDraw: Float64Array.from([NaN]),
+  numVarsInDraw: Uint32Array.from([1152]),
+  numVarsEveryPop: null,
+  numVarsEveryPopInDraw: null,
+  numCalledAlleles: 40,
+  foldedSfs: [new Float64Array(21)],
   passStats: {
     numVars: 1152,
     filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
@@ -162,6 +176,8 @@ function job(fileId: string): DiversityJob {
     pops: [["p0", INDIVIDUALS]],
     minNumIndividuals: 20,
     polyThreshold: 0.95,
+    numCalledAlleles: 40,
+    popDiversityPops: ["p0"],
   };
 }
 
@@ -1046,11 +1062,11 @@ describe("WS2 D3 the client: starting", () => {
     });
   });
 
-  test("a ready of protocol 2, stage 3's, fails every request with protocolMismatch, and no other worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, fails every request with protocolMismatch, and no other worker is made", async () => {
     const env = setUp();
     env.client.addFile("A", FILE_A);
     const readA = env.client.openVariants({ fileId: "A", ...NEI });
-    emit(last(env.calculation), { kind: "ready", protocol: 2 });
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
     expect(await now(readA.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -1104,8 +1120,9 @@ type Step =
   | { readonly kind: "pick" }
   /** The read of a load picked before asked for again. */
   | { readonly kind: "reread"; readonly load: number }
-  /** A run on a load picked before. */
-  | { readonly kind: "run"; readonly load: number }
+  /** A run on a load picked before, of an LD decay when `ld`, which
+      starts the worker again after it ends done or refused. */
+  | { readonly kind: "run"; readonly load: number; readonly ld: boolean }
   /** A write on a load picked before, whose file is larger than
       WRITE_RESTART_BYTES when `large`. */
   | { readonly kind: "write"; readonly load: number; readonly large: boolean }
@@ -1144,7 +1161,11 @@ const step: fc.Arbitrary<Step> = fc.oneof(
   },
   {
     weight: 4,
-    arbitrary: fc.record({ kind: fc.constant("run" as const), load: fc.nat() }),
+    arbitrary: fc.record({
+      kind: fc.constant("run" as const),
+      load: fc.nat(),
+      ld: fc.boolean(),
+    }),
   },
   {
     weight: 2,
@@ -1340,10 +1361,12 @@ function stampedOpened(id: number, fileId: string): unknown {
   return { kind: "opened", id, individuals: [fileId], ploidy: 2 };
 }
 
-/** A result whose numVars is `stamp`, the id of its run. */
+/** A result whose numVars is `stamp`, the id of its run: of an LD decay
+    when the key ends in "D", of a diversity otherwise. */
 function stampedResult(id: number, key: string, stamp: number): unknown {
   const passStats = { ...RESULT.passStats, numVars: stamp };
-  return { kind: "result", id, key, result: { ...RESULT, passStats } };
+  const result = key.endsWith("D") ? ldDecayResult() : RESULT;
+  return { kind: "result", id, key, result: { ...result, passStats } };
 }
 
 /** A written whose numVars is `stamp`, the id of its write, and whose
@@ -1494,8 +1517,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     watched.pending = null;
     if (how === 2) {
       deliver(index, { kind: "refused", id: pending.id, message: "refused" });
-      if (pending.kind === "write") {
-        expectEnded(watched, true, `the write ${pending.key} refused`);
+      if (pending.kind === "write" || isLdDecay(pending)) {
+        expectEnded(
+          watched,
+          true,
+          `the ${pending.kind} ${pending.key} refused`,
+        );
       }
       return;
     }
@@ -1506,8 +1533,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         name: "f.nei",
         message: "short",
       });
-      if (pending.kind === "write") {
-        expectEnded(watched, false, `the write ${pending.key} reopenFailed`);
+      if (pending.kind === "write" || isLdDecay(pending)) {
+        expectEnded(
+          watched,
+          false,
+          `the ${pending.kind} ${pending.key} reopenFailed`,
+        );
       }
       return;
     }
@@ -1517,6 +1548,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         return;
       case "run":
         deliver(index, stampedResult(pending.id, pending.key, pending.id));
+        expectEnded(watched, isLdDecay(pending), `the run ${pending.key} done`);
         return;
       case "write":
         deliver(index, stampedWritten(pending.id, pending.key, pending.id));
@@ -1529,8 +1561,15 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
     }
   }
 
-  /** After the answer of a write, its worker was ended or not, as `ended`
-      says it should be. */
+  /** Whether a request is the run of an LD decay. */
+  function isLdDecay(
+    request: ToRunner,
+  ): request is Extract<ToRunner, { readonly kind: "run" }> {
+    return request.kind === "run" && request.job.analysis === "ldDecay";
+  }
+
+  /** After the answer of a write or a run, its worker was ended or not, as
+      `ended` says it should be. */
   function expectEnded(watched: Watched, ended: boolean, what: string): void {
     if (watched.fake.terminated !== ended) {
       seen.wrongRestart.push(
@@ -1615,8 +1654,12 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
       }
       case "run": {
         const load = loads[next.load % Math.max(loads.length, 1)] ?? "none";
-        const key = `k${String(counts.length)}`;
-        const run = client.run(key, job(load), noProgress);
+        const key = `k${String(counts.length)}${next.ld ? "D" : ""}`;
+        const run = client.run(
+          key,
+          next.ld ? ldDecayJob(load) : job(load),
+          noProgress,
+        );
         track(run.outcome, { kind: "run", id: run.id, key });
         cancels.push(() => {
           run.cancel();
@@ -1698,7 +1741,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
         const index = calculation.length - 1;
         const watched = calculation[index];
         if (watched !== undefined && !watched.readySent && next.chance === 0) {
-          deliver(index, { kind: "ready", protocol: 2 });
+          deliver(index, { kind: "ready", protocol: 3 });
         }
         break;
       }
@@ -1803,7 +1846,7 @@ describe("VS1 D5 the write of the client: the properties", () => {
     vi.restoreAllMocks();
   });
 
-  test("the worker is ended after a write larger than WRITE_RESTART_BYTES or refused, and not after a smaller one", async () => {
+  test("the worker is ended after a write larger than WRITE_RESTART_BYTES or refused, and after an LD decay done or refused, and not after a smaller write, a diversity or a reopenFailed", async () => {
     await fc.assert(
       fc.asyncProperty(steps, async (sequence) => {
         expect((await explore(sequence)).wrongRestart).toEqual([]);
@@ -2016,11 +2059,11 @@ describe("WS2 D3 the client: crashes, defects, and every read answered, on the l
     expect(env.light).toHaveLength(2);
   });
 
-  test("a ready of protocol 2, stage 3's, fails every read with protocolMismatch, and no other light worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, fails every read with protocolMismatch, and no other light worker is made", async () => {
     const env = setUp();
     env.client.addFile("ind", CSV_FILE);
     const read = env.client.readIndividuals("ind", CSV);
-    emit(last(env.light), { kind: "ready", protocol: 2 });
+    emit(last(env.light), { kind: "ready", protocol: 3 });
     expect(await now(read.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -2513,12 +2556,12 @@ describe("VS1 D5 the write of the client: the restart after a large write", () =
     expect(sentTo(second)).toMatchObject([{ kind: "open", fileId: "B" }]);
   });
 
-  test("a ready of protocol 2, stage 3's, of the worker started again after a large write fails every request with protocolMismatch, and no other worker is made", async () => {
+  test("a ready of protocol 3, stage 4's, of the worker started again after a large write fails every request with protocolMismatch, and no other worker is made", async () => {
     vi.useFakeTimers();
     const env = writeAndRun();
     const w2 = env.client.write("w2", writeJob("A"), noProgress);
     emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
-    emit(last(env.calculation), { kind: "ready", protocol: 2 });
+    emit(last(env.calculation), { kind: "ready", protocol: 3 });
     expect(await now(env.k5.outcome)).toEqual({
       kind: "failed",
       error: { kind: "protocolMismatch" },
@@ -2667,11 +2710,12 @@ function pcaResult(method: PcaMethod): PcaResult {
   };
 }
 
-/** Load A read with `numInFile` individuals, a run k1 of the principal
-    components of `job` running on the first worker, and a run k6 waiting. */
+/** Load A read with `numInFile` individuals, a run k1 of `pca`, the
+    principal components or another analysis, running on the first worker,
+    and a run k6 waiting. */
 function pcaAndRun(
   numInFile: number,
-  pca: PcaJob,
+  pca: Job,
 ): ReturnType<typeof setUp> & {
   readonly first: FakeWorker;
   readonly k1: ReturnType<ReturnType<typeof createClient>["run"]>;
@@ -2945,5 +2989,256 @@ describe("IP9 a crash of a worker reaches the console", () => {
     expect(logged).toHaveBeenCalledWith(
       "popnei_web: the calculation worker stopped. trap",
     );
+  });
+});
+
+/** An LD decay of two individuals of its list, one in each population. */
+function ldDecayJob(fileId = "A"): LdDecayJob {
+  return {
+    analysis: "ldDecay",
+    fileId,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+    individuals: ["s1", "s2"],
+    pops: [
+      ["pop_a", ["s1"]],
+      ["pop_b", ["s2"]],
+    ],
+    minDist: 1,
+    maxDist: 100_000,
+    numBins: 1,
+    maxAllowedMaf: 0.95,
+  };
+}
+
+/** A result of the LD decay the check of a result takes, of two
+    populations and one bin; the client reads nothing of it but its
+    analysis. */
+function ldDecayResult(): LdDecayResult {
+  return {
+    analysis: "ldDecay",
+    pops: ["pop_a", "pop_b"],
+    numIndividuals: Uint32Array.of(1, 1),
+    numVars: Float64Array.of(432, 432),
+    smallestDist: Float64Array.of(1),
+    largestDist: Float64Array.of(100_000),
+    numPairs: Float64Array.of(29_367, 29_367),
+    meanR2: Float64Array.of(0.5, 0.5),
+    sdR2: Float64Array.of(0.1, 0.1),
+    rhoPerBp: Float64Array.of(NaN, NaN),
+    r2AtZero: Float64Array.of(NaN, NaN),
+    halfDist: Float64Array.of(NaN, NaN),
+    passStats: RESULT.passStats,
+  };
+}
+
+describe("PA2 D4 the restart after an LD decay", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("a result of an LD decay of 2 individuals, a run waiting: the LD decay is done, the worker ended, and a new one opens A again, then runs k6", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "result",
+      id: env.k1.id,
+      key: "k1",
+      result: ldDecayResult(),
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "done",
+      key: "k1",
+      result: ldDecayResult(),
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("an LD decay that popnei refused fails with its message, and the worker is started again", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "refused",
+      id: env.k1.id,
+      message: "not enough memory",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "popnei", message: "not enough memory" },
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test('an LD decay ended by a crashed that starts "popnei_web defect: " fails as a defect, and the worker is started again', async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "crashed",
+      message: "popnei_web defect: a population popnei did not give",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: "a population popnei did not give" },
+    });
+    expectReopenedThenK6(env);
+  });
+
+  test("an LD decay that ends reopenFailed fails with it, and the worker is not ended", async () => {
+    const env = pcaAndRun(2, ldDecayJob());
+    emit(env.first, {
+      kind: "reopenFailed",
+      id: env.k1.id,
+      name: "panel.nei",
+      message: "the file could not be read",
+    });
+    expect(await now(env.k1.outcome)).toEqual({
+      kind: "failed",
+      error: {
+        kind: "reopenFailed",
+        name: "panel.nei",
+        message: "the file could not be read",
+      },
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test("a result of a diversity ends no worker, and k6 is sent to it", async () => {
+    const env = pcaAndRun(2, job("A"));
+    emit(env.first, resultOf(env.k1.id, "k1"));
+    expect(await now(env.k1.outcome)).toMatchObject({
+      kind: "done",
+      key: "k1",
+    });
+    expectK6OnTheSameWorker(env);
+  });
+
+  test.each([
+    [
+      "a result",
+      "done",
+      { kind: "result", key: "k1", result: ldDecayResult() },
+    ],
+    ["a refused", "failed", { kind: "refused", message: "not enough memory" }],
+    [
+      "a crashed of a defect",
+      "failed",
+      { kind: "crashed", message: "popnei_web defect: a population" },
+    ],
+  ])(
+    "the outcome of an LD decay after %s is given before the restart: when no new worker can be made, the LD decay is %s and then k6 fails",
+    async (_, kind, answer) => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const calculation: FakeWorker[] = [];
+      const client = createClient({
+        calculation: () => {
+          if (calculation.length > 0) {
+            throw new Error("the script of the worker is not served");
+          }
+          const worker = fakeWorker();
+          calculation.push(worker);
+          return worker;
+        },
+        light: fakeWorker,
+        onPopneiReady: () => undefined,
+      });
+      const first = last(calculation);
+      client.addFile("A", FILE_A);
+      client.openVariants({ fileId: "A", ...NEI });
+      emit(first, READY);
+      emit(first, {
+        kind: "opened",
+        id: lastSent(first).id,
+        individuals: names(2),
+        ploidy: 2,
+      });
+      const k1 = client.run("k1", ldDecayJob(), noProgress);
+      const k6 = client.run("k6", job("A"), noProgress);
+      const order: string[] = [];
+      void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+      void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+      emit(first, { ...answer, id: k1.id });
+      await now(k6.outcome);
+      expect(first.terminated).toBe(true);
+      expect(order).toEqual([`k1 ${kind}`, "k6 failed"]);
+    },
+  );
+
+  test("a crashed of a defect during a diversity gives its outcome before the worker is ended too: when no new worker can be made, the diversity fails as a defect and then k6 fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "opened",
+      id: lastSent(first).id,
+      individuals: names(2),
+      ploidy: 2,
+    });
+    const k1 = client.run("k1", job("A"), noProgress);
+    const k6 = client.run("k6", job("A"), noProgress);
+    const order: string[] = [];
+    void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+    void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+    emit(first, {
+      kind: "crashed",
+      message: "popnei_web defect: a population popnei did not give",
+    });
+    await now(k6.outcome);
+    expect(await now(k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "defect", message: "a population popnei did not give" },
+    });
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["k1 failed", "k6 failed"]);
+  });
+
+  test("PA10 a crashed of any other message during a diversity gives its outcome first as well: when no new worker can be made, the diversity fails as workerFailed and then k6 fails", async () => {
+    const calculation: FakeWorker[] = [];
+    const client = createClient({
+      calculation: () => {
+        if (calculation.length > 0) {
+          throw new Error("the script of the worker is not served");
+        }
+        const worker = fakeWorker();
+        calculation.push(worker);
+        return worker;
+      },
+      light: fakeWorker,
+      onPopneiReady: () => undefined,
+    });
+    const first = last(calculation);
+    client.addFile("A", FILE_A);
+    client.openVariants({ fileId: "A", ...NEI });
+    emit(first, READY);
+    emit(first, {
+      kind: "opened",
+      id: lastSent(first).id,
+      individuals: names(2),
+      ploidy: 2,
+    });
+    const k1 = client.run("k1", job("A"), noProgress);
+    const k6 = client.run("k6", job("A"), noProgress);
+    const order: string[] = [];
+    void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
+    void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
+    emit(first, { kind: "crashed", message: "unreachable executed" });
+    await now(k6.outcome);
+    expect(await now(k1.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "unreachable executed" },
+    });
+    expect(first.terminated).toBe(true);
+    expect(order).toEqual(["k1 failed", "k6 failed"]);
   });
 });

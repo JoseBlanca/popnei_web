@@ -4,10 +4,12 @@ import type { Notice } from "../../core/store.ts";
 import {
   clockText,
   failureText,
+  minimumRefusedText,
   progressShare,
   removedText,
   runningBarLabel,
   runningText,
+  passesOf,
   stoppedText,
   versionsText,
   warningsHeading,
@@ -60,6 +62,7 @@ describe("the words of the frame of an analysis panel", () => {
       seconds: 12,
       waitingFor: null,
       waitsForStatistics: false,
+      passes: null,
     };
     expect(runningText(line)).toBe("Calculating · 35% · 0:12");
     expect(runningText({ ...line, share: null })).toBe("Calculating · 0:12");
@@ -74,12 +77,40 @@ describe("the words of the frame of an analysis panel", () => {
     );
   });
 
+  test("PA7 D1 the line of a run of two passes names the pass it reads, the share being of the whole run, and none before the first progress", () => {
+    const line = {
+      share: 17,
+      seconds: 12,
+      waitingFor: null,
+      waitsForStatistics: false,
+      passes: { pass: 1, numPasses: 2 },
+    };
+    expect(runningText(line)).toBe("Calculating · pass 1 of 2 · 17% · 0:12");
+    expect(
+      runningText({ ...line, share: 62, passes: { pass: 2, numPasses: 2 } }),
+    ).toBe("Calculating · pass 2 of 2 · 62% · 0:12");
+    expect(runningText({ ...line, share: null, passes: null })).toBe(
+      "Calculating · 0:12",
+    );
+    const progress = {
+      bytesRead: 90_000,
+      numBytes: 261_490,
+      pass: 1,
+      numPasses: 2,
+    };
+    expect(passesOf(progress)).toEqual({ pass: 1, numPasses: 2 });
+    expect(progressShare(progress)).toBe(17);
+    expect(passesOf({ ...progress, numPasses: 1 })).toBeNull();
+    expect(passesOf(null)).toBeNull();
+  });
+
   test("VS7 D2 the line and the bar of a Run that waits for the statistics of each individual", () => {
     const line = {
       share: 35,
       seconds: 12,
       waitingFor: null,
       waitsForStatistics: true,
+      passes: null,
     };
     expect(runningText(line)).toBe(
       "Calculating the statistics of each individual, which the thresholds of the individuals need · 35% · 0:12",
@@ -218,6 +249,28 @@ describe("the line of the versions", () => {
     // shows.
     expect(versionsText("0.1.0", "0.2.0")).toBe(
       "Calculated with popnei 0.1.0, in version 0.2.0 of the application.",
+    );
+  });
+});
+
+describe("PA5 D1 the refusals of the minimum of individuals", () => {
+  test("a comma as a whole number, any other character named, why, and the minimum kept, with commas between thousands", () => {
+    expect(minimumRefusedText({ kind: "notTaken", text: "," }, 20)).toBe(
+      "Write the minimum as a whole number, 20 and not 20,0; the minimum stays 20.",
+    );
+    expect(minimumRefusedText({ kind: "notTaken", text: "x" }, 12)).toBe(
+      "‘x’ cannot be typed in the minimum, which is a whole number, as 20; the minimum stays 12.",
+    );
+    expect(
+      minimumRefusedText({ kind: "offStep", typed: "2.5", decimals: 0 }, 20),
+    ).toBe("2.5 is not a whole number; the minimum stays 20.");
+    expect(
+      minimumRefusedText(
+        { kind: "aboveMax", typed: "5000000000", maxValue: 4_294_967_295 },
+        1500,
+      ),
+    ).toBe(
+      "5,000,000,000 is more than 4,294,967,295; the minimum stays 1,500.",
     );
   });
 });

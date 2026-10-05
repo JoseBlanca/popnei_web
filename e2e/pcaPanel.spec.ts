@@ -632,7 +632,7 @@ test("from the keyboard alone, the LD filter set for the PCA, 50000 typed in its
   });
   await expect(
     page
-      .getByRole("region", { name: "Diversity" })
+      .getByRole("region", { name: "Diversity", exact: true })
       .getByRole("button", { name: "Run", exact: true }),
   ).toBeVisible();
 });
@@ -1332,13 +1332,25 @@ test.describe("the line under the bar of a calculation under way", () => {
   }) => {
     await openPanel(page);
     await holdResults(page);
-    const diversity = page.getByRole("region", { name: "Diversity" });
+    const diversity = page.getByRole("region", {
+      name: "Diversity",
+      exact: true,
+    });
     await diversity.getByRole("button", { name: "Run", exact: true }).click();
     await expect(
       diversity.getByRole("progressbar", { name: "Calculating the diversity" }),
     ).toBeVisible();
     await expect(diversity.getByText(/^Calculating · /)).toBeVisible();
-    await expect(diversity.locator("p")).toHaveCount(1);
+    // The part of the calculation under way, the parent of its bar, holds
+    // one line; the fields of the options above it have lines of their
+    // own.
+    const running = diversity
+      .getByRole("progressbar", { name: "Calculating the diversity" })
+      .locator("xpath=..");
+    await expect(running.locator("p")).toHaveCount(1);
+    await expect(
+      diversity.getByText(/^The bar shows the reading of/),
+    ).toHaveCount(0);
   });
 });
 
@@ -1698,7 +1710,10 @@ test.describe("IP10 D3 the states of the panel", () => {
     await expect(panel.getByRole("progressbar")).toHaveCount(0);
     await expect(stop).toHaveCount(0);
     await expect(status(page)).toContainText("Principal components: stopped.");
-    const diversity = page.getByRole("region", { name: "Diversity" });
+    const diversity = page.getByRole("region", {
+      name: "Diversity",
+      exact: true,
+    });
     await expect(
       diversity.getByRole("button", { name: "Run", exact: true }),
     ).toBeEnabled();

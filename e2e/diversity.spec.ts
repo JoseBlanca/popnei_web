@@ -97,16 +97,19 @@ async function load(
 
 /** The panel of the diversity. */
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
-/** The row of the population `pop` of the table of the diversity, as the
-    text of its cells. */
+/** The cells of the row of the population `pop` of the diversity in the
+    first five columns, its header left out: those of stages 2 to 4,
+    which F, sixth from stage 5, and the columns after it leave as they
+    were. */
 function row(page: Page, pop: string): Locator {
   return panel(page)
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
-    .getByRole("cell");
+    .getByRole("cell")
+    .and(page.locator(":nth-child(-n+5)"));
 }
 
 /** Runs the diversity with the Run button, and waits for its table. */
@@ -179,6 +182,12 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
     "Expected heterozygosity (unbiased)",
     "Observed heterozygosity",
     "Proportion of polymorphic variants",
+    "F",
+    "Alleles per variant",
+    "Alleles per variant, rarefied to 40 chromosomes",
+    "Private alleles",
+    "Private alleles per variant",
+    "Private alleles per variant, rarefied to 40 chromosomes",
   ]);
   await expect(panel(page).getByRole("rowheader")).toHaveText([
     "p0",
@@ -203,11 +212,20 @@ test("WS8 D2 at 0.05 the row p0 reads 48, 0.3527, 0.3567, 0.9288, and the focus 
     "0.3560",
     "0.9158",
   ]);
+  // The options the table was calculated with are those of the fields,
+  // and the draw is said beside the download.
   await expect(
-    panel(page).getByText(
-      "A variant counts in a population when at least 20 of its individuals have a called genotype there, and is polymorphic when its commonest allele is below 0.95.",
-      { exact: true },
+    panel(page).getByLabel(
+      "Individuals with a called genotype needed in each population, per variant",
     ),
+  ).toHaveValue("20");
+  await expect(
+    panel(page).getByLabel(
+      "Frequency of the commonest allele below which a variant is polymorphic, from 0 to 1",
+    ),
+  ).toHaveValue("0.95");
+  await expect(
+    panel(page).getByText("Rarefied to 40 chromosomes.", { exact: true }),
   ).toBeVisible();
   await expect(panel(page).getByText(/^Warning:/)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
@@ -297,11 +315,16 @@ test("WS8 D2 at 320 px wide the table scrolls in a frame that the Tab key reache
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  // The Tab key goes from the heading, where the run left the focus, to
-  // the frame, and the arrow key scrolls it.
+  // The run left the focus on the heading; the Tab key goes through the
+  // three fields of the options to the frame, and the arrow key scrolls
+  // it.
   await expect(
     page.getByRole("heading", { level: 2, name: "Diversity" }),
   ).toBeFocused();
+  for (let field = 0; field < 3; field++) {
+    await page.keyboard.press("Tab");
+    await expect(page.locator("input:focus")).toHaveCount(1);
+  }
   await page.keyboard.press("Tab");
   await expect(frame).toBeFocused();
   // The arrow key is pressed until the frame scrolls: WebKit 26.6 under
@@ -321,43 +344,56 @@ test("WS8 D2 a table that fits its frame has no line of scrolling, and its frame
   page,
   makeAxeBuilder,
 }) => {
+  // The table of the diversity, of eleven columns from stage 5, is 1,187
+  // px wide at the least on the Mac, wider than the column of 1,024 px of
+  // a window of 1,280 and more, so it fits no window: the table of the
+  // pairs of the distances between populations, of the same widget, is
+  // the one that fits.
   await load(page, "panel.nei", "panel_pops.csv", "popcat");
   await goTo(page, "Analyses");
-  await run(page);
+  const distances = page.getByRole("region", {
+    name: "Distances between populations",
+  });
+  await distances.getByRole("button", { name: "Run", exact: true }).click();
   const caption =
-    "The diversity of each population, over the 1,200 variants of panel.nei the filters kept.";
-  const frame = panel(page).getByRole("region", { name: caption });
-  const line = panel(page).getByText(
+    "Distances between the populations of panel.nei, over the 1,200 variants the filters kept.";
+  await expect(distances.getByRole("table", { name: caption })).toBeVisible();
+  const frame = distances.getByRole("region", { name: caption });
+  const line = distances.getByText(
     "Scroll the table sideways to see all its columns.",
   );
-  await expect(panel(page).getByRole("table", { name: caption })).toBeVisible();
+  const download = distances.getByRole("button", {
+    name: "Download the table as CSV",
+  });
   await expect(frame).toHaveCount(0);
   await expect(line).toHaveCount(0);
-  // The Tab key goes from the heading to the download, past the table.
-  await panel(page)
-    .getByRole("heading", { level: 2, name: "Diversity" })
-    .focus();
-  await page.keyboard.press("Tab");
-  await expect(
-    panel(page).getByRole("button", { name: "Download the table as CSV" }),
-  ).toBeFocused();
+  // Shift+Tab goes back from the download past the table.
+  await download.focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(download).not.toBeFocused();
+  await expect(frame).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
   // Narrowed, the table no longer fits: the frame becomes a region and a
-  // stop of the Tab key, and the line appears.
-  await page.setViewportSize({ width: 320, height: 800 });
+  // stop of the Tab key, and the line appears. The table of the three
+  // pairs is 272 px wide at the least on the Mac, so it fits a window of
+  // 320 px there and not one of 240 px.
+  await page.setViewportSize({ width: 240, height: 800 });
   await expect(frame).toHaveCount(1);
   await expect(line).toBeVisible();
-  await panel(page)
-    .getByRole("heading", { level: 2, name: "Diversity" })
-    .focus();
-  await page.keyboard.press("Tab");
+  await download.focus();
+  await page.keyboard.press("Shift+Tab");
   await expect(frame).toBeFocused();
 
-  // Widened again, they go.
+  // Widened again, the line goes; the frame, which has the focus, keeps
+  // it, out of the order of the Tab key, and is no region once the focus
+  // leaves it.
   await page.setViewportSize({ width: 1280, height: 800 });
-  await expect(frame).toHaveCount(0);
   await expect(line).toHaveCount(0);
+  await expect(frame).toBeFocused();
+  await expect(frame).toHaveAttribute("tabindex", "-1");
+  await page.keyboard.press("Tab");
+  await expect(frame).toHaveCount(0);
 });
 
 test("WS8 D2 the filter moved to 1 removes the table with the words of its notice, and Run at 1 gives p0 0.3519, 0.3564, 0.9267", async ({
@@ -443,10 +479,10 @@ test("WS8 D2 at 0.05 the download panel.diversity.csv holds the table, and the v
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("panel.diversity.csv");
   expect(await readFile(await download.path(), "utf8")).toBe(
-    "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic\n" +
-      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444\n" +
-      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778\n" +
-      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112\n",
+    "population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied\n" +
+      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,-0.011344341019483117,1.9791666666666667,1.9646163579517928,0,0,0.0028348059148665707\n" +
+      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,-0.020803811522959625,1.9861111111111112,1.9595644507442256,1,0.0008680555555555555,0.0031646710919597015\n" +
+      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,-0.017724256612463796,1.9809027777777777,1.9582701017879214,0,0,0.002521711046320405\n",
   );
 });
 
@@ -710,13 +746,24 @@ test("WS8 D2 tetraploid.vcf.gz read with ploidy 2 is refused in the panel's word
     page.getByRole("main").getByText("12 individuals"),
   ).toBeVisible();
   await goTo(page, "Analyses");
+  // The default draw of a tetraploid file, from its ploidy.
+  await expect(
+    panel(page).getByText(
+      /^The default: the ploidy, 4, times the minimum number of individuals, 20\. /,
+    ),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByLabel(
+      "Chromosomes drawn for the rarefaction, a whole number from 2",
+    ),
+  ).toHaveValue("80");
   await run(page);
   await expect(
     panel(page).getByRole("heading", { level: 3, name: "1 warning" }),
   ).toBeVisible();
   await expect(
     panel(page).getByText(
-      "Warning: Population A has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file.",
+      "Warning: Population A has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -769,13 +816,13 @@ test("WS8 D2 a calculation under way shows its bar, its share and its clock, and
   });
   await expect(bar).toHaveAttribute("aria-valuetext", "99%");
   await expect(
-    panel(page).getByText(/^Calculating · 99% · 0:0\d$/),
+    panel(page).getByText(/^Calculating · pass 2 of 2 · 99% · 0:0\d$/),
   ).toBeVisible();
   // One button, Run then Stop, and the focus stays on it.
   await expect(panel(page).getByRole("button", { name: "Stop" })).toBeFocused();
-  await expect(panel(page).getByText(/^Calculating · 99% · 0:01$/)).toBeVisible(
-    { timeout: 3000 },
-  );
+  await expect(
+    panel(page).getByText(/^Calculating · pass 2 of 2 · 99% · 0:01$/),
+  ).toBeVisible({ timeout: 3000 });
   await expectNoViolations(makeAxeBuilder);
 
   await page.keyboard.press("Enter");
@@ -1109,4 +1156,472 @@ test("WS8 D3 a Stop in the middle of a pass leaves the panel ready with no table
     "0.3567",
     "0.9288",
   ]);
+});
+
+/** Every cell of the row of the population `pop` of the diversity, its
+    header left out: the eleven columns of stage 5 but the first. */
+function wholeRow(page: Page, pop: string): Locator {
+  return panel(page)
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
+    .getByRole("cell");
+}
+
+/** The labels of the fields of the diversity. */
+const MINIMUM_FIELD =
+  "Individuals with a called genotype needed in each population, per variant";
+const DRAW_FIELD =
+  "Chromosomes drawn for the rarefaction, a whole number from 2";
+
+/** Types `value` in the field `label` of the diversity and commits it
+    with Enter. */
+async function setField(
+  page: Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  const field = panel(page).getByLabel(label);
+  await field.fill(value);
+  await field.press("Enter");
+  await expect(field).toHaveValue(value);
+}
+
+test("PA7 D1 at 0.05 the row p0 reads to its end 48, 0.3527, 0.3567, 0.9288, −0.0113, 1.9792, 1.9646, 0, 0.0000, 0.0028, and p2 has 1 private allele, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await expectNoViolations(makeAxeBuilder);
+  await run(page);
+  await expect(wholeRow(page, "p0")).toHaveText([
+    "48",
+    "0.3527",
+    "0.3567",
+    "0.9288",
+    "−0.0113",
+    "1.9792",
+    "1.9646",
+    "0",
+    "0.0000",
+    "0.0028",
+  ]);
+  await expect(wholeRow(page, "p2").nth(7)).toHaveText("1");
+  await expect(
+    panel(page).getByText("Rarefied to 40 chromosomes.", { exact: true }),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D1 a draw of 96 typed: the column headed with 96 and the warning of p0 at 277 of the 1,152 variants; Use the default then sets the draw back to 40 with the focus on its field, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "96");
+  await expect(
+    panel(page).getByText(/^Typed; the default would be 40\. The alleles/),
+  ).toBeVisible();
+  await run(page);
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Alleles per variant, rarefied to 96 chromosomes",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByText(
+      /^Warning: p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value \(24%\), so its rarefied values are over those alone\./,
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
+  // The block of the spectrum is of the same draw.
+  const p0 = panel(page).getByRole("group", { name: "p0", exact: true });
+  await expect(p0.locator("svg desc")).toHaveText(
+    / in 48 bars from 1 to 48 copies of the rarer allele; /,
+  );
+  await expect(p0.locator("svg .chart-axis-label-x")).toHaveText(
+    "Copies of the rarer allele among 96 chromosomes",
+  );
+  await expect(
+    panel(page).getByText(
+      /^The folded site frequency spectrum of each population, in a draw of 96 /,
+    ),
+  ).toBeVisible();
+
+  const useDefault = panel(page).getByRole("button", {
+    name: "Use the default",
+  });
+  await useDefault.focus();
+  await page.keyboard.press("Enter");
+  await expect(useDefault).toHaveCount(0);
+  const draw = panel(page).getByLabel(DRAW_FIELD);
+  await expect(draw).toHaveValue("40");
+  await expect(draw).toBeFocused();
+  await expect(
+    panel(page).getByText(
+      /^The diversity was removed because the number of chromosomes of the rarefaction changed\./,
+    ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D1 a minimum of 50 names p0, of 48 individuals, in the ready state, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, MINIMUM_FIELD, "50");
+  await expect(
+    panel(page).getByText(
+      "p0 has 48 individuals, fewer than the minimum of 50, so it will have no values, and is left out of the count of the private alleles of the others.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // The default draw follows the minimum.
+  await expect(panel(page).getByLabel(DRAW_FIELD)).toHaveValue("100");
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("the review of PA10: at 1,280 pixels, in the committed font, the table of the diversity scrolls sideways and keeps its headers wrapped, so that more of its columns are in view", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await useWideFont(page);
+  await run(page);
+  await expect(
+    panel(page).getByRole("region", {
+      name: /^The diversity of each population/,
+    }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Expected heterozygosity (unbiased)",
+    }),
+  ).toHaveCSS("white-space", "normal");
+});
+
+test("PA10 a draw of 120 names p0, whose 96 chromosomes are fewer, before the Run, a draw of 168 runs, and one of 169 locks at the 168 of p2, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "120");
+  await expect(
+    panel(page).getByText(
+      "p0 holds 96 chromosomes, fewer than the 120 the rarefaction draws, so it will have no rarefied values and no spectrum. Lower the number of chromosomes, above, to have them.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  // "Use the default" is a button drawn as a link, at the end of the line
+  // under the field.
+  const useDefault = panel(page).getByRole("button", {
+    name: "Use the default",
+  });
+  await expect(useDefault).toHaveCSS("text-decoration-line", "underline");
+  await expect(useDefault).toHaveCSS("border-top-style", "none");
+  const run = panel(page).getByRole("button", { name: "Run", exact: true });
+  await setField(page, DRAW_FIELD, "168");
+  await expect(run).toBeEnabled();
+  // The draw of 168 runs: p2 has its rarefied values, and p0 and p1, of
+  // 96 and 136 chromosomes, have none.
+  await run.click();
+  await expect(
+    panel(page).getByRole("columnheader", {
+      name: "Alleles per variant, rarefied to 168 chromosomes",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(wholeRow(page, "p2").nth(6)).toHaveText(/^\d\.\d{4}$/);
+  for (const pop of ["p0", "p1"]) {
+    await expect(wholeRow(page, pop).nth(6)).toHaveText("no value");
+    await expect(wholeRow(page, pop).nth(9)).toHaveText("no value");
+  }
+  await setField(page, DRAW_FIELD, "169");
+  await expect(run).toBeDisabled();
+  await expect(run).toHaveAccessibleDescription(
+    "The rarefaction draws 169 chromosomes, and the largest population, p2, holds 168, those of its 84 individuals at a ploidy of 2. Type a number of chromosomes of at most 168 in the options of the diversity.",
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA10 the default's own number typed over the default removes the table, and the notice says the draw is now typed", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const field = panel(page).getByLabel(DRAW_FIELD);
+  await field.fill("40");
+  await field.press("Enter");
+  await expect(
+    panel(page).getByText(
+      /^The diversity was removed because the number of chromosomes of the rarefaction is now a typed one, and no longer follows the minimum number of individuals\./,
+    ),
+  ).toBeVisible();
+});
+
+test("PA7 D2 three histograms, each headed by its population, of 20 bars, and the table of 21 rows, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  // Each histogram draws its own population: the description of its
+  // SVG, with its largest share and where.
+  const described = [
+    ["p0", "about 1,155", "0.0559, at 15"],
+    ["p2", "about 1,152", "0.0551, at 11"],
+    ["p1", "about 1,151", "0.0562, at 15"],
+  ] as const;
+  // The block is a region named by its heading, and the heading of each
+  // population is one level under it.
+  const block = panel(page).getByRole("region", {
+    name: "Site frequency spectrum",
+  });
+  await expect(
+    block.getByRole("heading", { level: 3, name: "Site frequency spectrum" }),
+  ).toBeVisible();
+  await expect(block.getByRole("heading", { level: 4 })).toHaveText([
+    "p0",
+    "p2",
+    "p1",
+  ]);
+  for (const [pop, both, largest] of described) {
+    const group = panel(page).getByRole("group", { name: pop, exact: true });
+    await expect(
+      group.getByRole("heading", { level: 4, name: pop, exact: true }),
+    ).toBeVisible();
+    await expect(group.locator("svg rect.chart-bar")).toHaveCount(20);
+    // The description starts at its numbers, after the title.
+    await expect(group.locator("svg title")).toHaveText(
+      `The spectrum of ${pop}`,
+    );
+    await expect(group.locator("svg desc")).toHaveText(
+      `1,200 variants in the draw of 40 chromosomes, ${both} with both alleles, in 20 bars from 1 to 20 copies of the rarer allele; the largest share, ${largest}.`,
+    );
+    // The horizontal axis: ticks at whole counts, and its label.
+    await expect(group.locator("svg .chart-axis-x .tick text")).toHaveText([
+      "5",
+      "10",
+      "15",
+      "20",
+    ]);
+    await expect(group.locator("svg .chart-axis-label-x")).toHaveText(
+      "Copies of the rarer allele among 40 chromosomes",
+    );
+  }
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  await expectNoViolations(makeAxeBuilder);
+
+  await panel(page).getByRole("tab", { name: "Table", exact: true }).click();
+  const table = panel(page).getByRole("table", {
+    name: "The folded site frequency spectrum of each population, as numbers",
+  });
+  await expect(table.locator("tbody tr")).toHaveCount(21);
+  await expect(panel(page).locator("svg rect.chart-bar")).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 the MAF filter at 0.95 after the missing data filter at 0.05 gives the warning of the spectrum, 24 of the 1,152 removed, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await setThreshold(page, "0.05");
+  await page
+    .getByText("Filter the variants by major allele frequency (MAF)", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByLabel("Maximum major allele frequency", { exact: false }),
+  ).toHaveValue("0.95");
+  await goTo(page, "Analyses");
+  await run(page);
+  // In the block of the spectrum, after its caption, and not among the
+  // warnings above the table, which this result has none of.
+  await expect(
+    panel(page).getByRole("heading", { name: /warning/ }),
+  ).toHaveCount(0);
+  await expect(
+    panel(page)
+      .getByRole("region", { name: "Site frequency spectrum" })
+      .getByText(
+        "Warning: The MAF filter of the Variants step removes the variants whose commonest allele is above 0.95 in the individuals kept, taken together, and it removed 24 of the 1,152 it was given. So the spectrum lacks many of the rare alleles, and its first bins are lower than those of the population. To see every variant in the spectrum, turn off the MAF filter in the Variants step.",
+        { exact: true },
+      ),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 at 320 px the block of the spectrum is one histogram to a row and the page does not scroll sideways, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const groups = panel(page).getByRole("group");
+  await expect(groups).toHaveCount(3);
+  await expect(groups.nth(2).locator("svg rect.chart-bar")).toHaveCount(20);
+  const lefts = await groups.evaluateAll((elements) =>
+    elements.map((element) => element.getBoundingClientRect().left),
+  );
+  expect(new Set(lefts).size).toBe(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("PA7 D2 the download of the spectrum saves panel.sfs.csv, its header and the counts of p0 as popnei gives them", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  const downloading = page.waitForEvent("download");
+  await panel(page)
+    .getByRole("button", { name: "Download the spectrum as CSV" })
+    .click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("panel.sfs.csv");
+  const lines = (await readFile(await download.path(), "utf8")).split("\n");
+  expect(lines[0]).toBe("population,rarer_allele,variants,share");
+  expect(lines[1]).toBe("p0,0,44.79323144486922,");
+  expect(lines[2]).toMatch(/^p0,1,38\.07795856907602,0\.03/);
+  // 21 lines of each of the three populations, a header and the end.
+  expect(lines).toHaveLength(1 + 3 * 21 + 1);
+});
+
+/** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as
+    wide as Verdana and wider than the Mac's system font, which a check of
+    what the text of a plot reaches gives the page, so that it does not
+    rest on the fonts of the machine (the plan of stage 5, "What every
+    prompt of a task carries"). */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+}
+
+/** In each histogram of the spectrum, the numbers of the vertical axis
+    and the pixels from the right of the label of the axis to the left of
+    the number nearest to it, on the screen. */
+async function ticksAndLabel(
+  page: Page,
+): Promise<{ readonly ticks: string[]; readonly gap: number }[]> {
+  return panel(page)
+    .getByRole("group")
+    .locator("svg.chart-histogram")
+    .evaluateAll((svgs) =>
+      svgs.map((svg) => {
+        const label = svg.querySelector(".chart-axis-label-y");
+        const ticks = [...svg.querySelectorAll(".chart-axis-y .tick text")];
+        if (label === null || ticks.length === 0) {
+          throw new Error("A histogram has no label or no tick to measure.");
+        }
+        const right = label.getBoundingClientRect().right;
+        return {
+          ticks: ticks.map((tick) => tick.textContent),
+          gap: Math.min(
+            ...ticks.map((tick) => tick.getBoundingClientRect().left - right),
+          ),
+        };
+      }),
+    );
+}
+
+test("at a draw of 96 the numbers of the vertical axis of each histogram, of three decimals, lie right of the label of the axis, in the wide font too", async ({
+  page,
+}) => {
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await setField(page, DRAW_FIELD, "96");
+  await run(page);
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  for (const wide of [false, true]) {
+    if (wide) await useWideFont(page);
+    const measured = await ticksAndLabel(page);
+    expect(measured).toHaveLength(3);
+    for (const { ticks, gap } of measured) {
+      // The defect this guards: numbers of five characters, "0.035".
+      expect(ticks.some((tick) => tick.length === 5)).toBe(true);
+      expect(Number.isFinite(gap)).toBe(true);
+      expect(gap).toBeGreaterThanOrEqual(2);
+    }
+  }
+});
+
+test("PA10 at 320 px, in the wide font, the label under each histogram of the spectrum is on two lines inside its SVG, and so is the label along its vertical axis", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await load(page, "panel.nei", "panel_pops.csv", "popcat");
+  await goTo(page, "Analyses");
+  await run(page);
+  await expect(panel(page).getByRole("group")).toHaveCount(3);
+  await useWideFont(page);
+  const measured = await panel(page)
+    .getByRole("group")
+    .locator("svg.chart-histogram")
+    .evaluateAll((svgs) =>
+      svgs.map((svg) => {
+        const box = svg.getBoundingClientRect();
+        const inside = (selector: string): boolean => {
+          const label = svg.querySelector(selector);
+          if (label === null) return false;
+          const r = label.getBoundingClientRect();
+          return (
+            r.width > 0 &&
+            r.left >= box.left - 0.5 &&
+            r.right <= box.right + 0.5 &&
+            r.top >= box.top - 0.5 &&
+            r.bottom <= box.bottom + 0.5
+          );
+        };
+        return {
+          lines: [...svg.querySelectorAll(".chart-axis-label-x tspan")].map(
+            (line) => line.textContent,
+          ),
+          x: inside(".chart-axis-label-x"),
+          y: inside(".chart-axis-label-y"),
+        };
+      }),
+    );
+  expect(measured).toHaveLength(3);
+  for (const { lines, x, y } of measured) {
+    expect(lines).toEqual([
+      "Copies of the rarer allele ",
+      "among 40 chromosomes",
+    ]);
+    expect(x).toBe(true);
+    expect(y).toBe(true);
+  }
 });

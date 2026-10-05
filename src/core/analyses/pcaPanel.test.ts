@@ -858,6 +858,32 @@ describe("IP8 D3 pcaRows, pcaCsv and varianceCsv", () => {
     );
   });
 
+  test("PA10 an individual, a group and a column that start with =, - or + have a quote before them, and a negative coordinate stays a number", () => {
+    const names = ["=x1", "x2"];
+    const p = project({
+      individuals: names,
+      meta: {
+        table: {
+          columns: ["IID", "+Origin"],
+          rows: [
+            ["=x1", "-north"],
+            ["x2", null],
+          ],
+        },
+        types: [{ kind: "categorical" }],
+      },
+      options: { colourBy: "+Origin" },
+    });
+    const r = result(names, 2, [
+      [-1.5, 2],
+      [3, -0.25],
+    ]);
+    const c = pcaColours(r, p);
+    expect(pcaCsv(r, c)).toBe(
+      "individual,'+origin,PC1,PC2\n'=x1,'-north,-1.5,2\nx2,,3,-0.25\n",
+    );
+  });
+
   test("the rows: each individual with its group or value and every component kept, the same frozen array for the same result and colours", () => {
     const r = flowResult();
     const c = pcaColours(r, flowProject({ colourBy: "altitude" }));

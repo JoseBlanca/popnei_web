@@ -401,7 +401,10 @@ While the distance is empty, popnei cannot be given the filter, and
 `variantFilterNeeds` of `docs/specs/core/project.md` gives its reason,
 which locks what reads the filters of the variants: in this step, the
 Count and the writing of the filtered variants; in the Analyses step,
-the diversity and the PCA. The statistics of each individual, which read no filter, and the
+the diversity, the distances between populations, and the PCA while its
+LD filter follows the step; the LD decay, which does not read the LD
+pruning, is not locked (corrected on 1 October 2026: the sentence named
+the diversity and the PCA alone). The statistics of each individual, which read no filter, and the
 histograms of the variants, which read the filters of individuals alone,
 can still be calculated, so that the user can look at the data while
 choosing; until 28 September 2026 the statistics were locked too. The reason stands whole under the field
@@ -1161,8 +1164,8 @@ fixed order, over the individuals the filters of individuals keep,
 which act first, and that the MAF is of
 the major allele; that the distance of the LD pruning has no default,
 because how far linkage disequilibrium extends differs from one
-species, and one genome, to another, and that the LD decay of stage 5,
-once it exists, is the way to choose it, as the help of the PCA says of
+species, and one genome, to another, and that the LD decay, built in
+stage 5, is the way to choose it, as the help of the PCA says of
 its own LD filter; that the PCA follows these filters unless its own
 are set in its panel; that the histograms of the variants are over every
 variant of the file and the individuals kept, and the statistics of

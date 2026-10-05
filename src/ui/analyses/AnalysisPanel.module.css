@@ -23,9 +23,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The warnings and their list are grids of one column that may be
+   narrower than its longest word: an item of a grid is otherwise as wide
+   as that word, and a warning that names a population of 41 characters
+   with no space made the whole step 425 pixels wide on a page of 320,
+   where the words of the warning should be cut to fit instead (WCAG
+   1.4.10; Warning.module.css cuts them). */
 .warnings {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
+  min-inline-size: 0;
 }
 
 .warningsHeading {
@@ -35,6 +43,7 @@
 
 .warningList {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   margin: 0;
   padding: 0;

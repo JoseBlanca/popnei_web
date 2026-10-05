@@ -444,9 +444,14 @@ that the worker is not started again between requests
 the owner on 30 September 2026, as recommended (point 16 there; point
 12 of `docs/specs/stage-5-open-points.md`). The options not taken: a
 restart above a bound of the individuals and the distance, and no
-restart. The plan of stage 5 measures, in
-Chromium and WebKit, the growth of the engine 3 s after an LD decay with
-the restart and without it, as stage 4 measured the PCA.
+restart. The plan of stage 5 measured it through the application on
+30 September 2026 (`docs/specs/analyses/ldDecay.md`, "How it runs", "In
+the browsers"): an LD decay of 1,000 individuals and 20,000 variants at
+100,000 and 1,000,000 bp grew the engine by 0.40 to 0.45 GB in Chromium
+153 and 0.43 to 0.59 GB in WebKit 26.6, which the tab would keep without
+the restart, 0.55 to 0.78 GB in all; 3 s after the restart the engine
+was back at its size before the Run, 0.14 to 0.15 GB in Chromium and
+0.20 to 0.22 GB in WebKit.
 
 ### Crashes, defects, and every read answered
 
@@ -478,6 +483,19 @@ answered rests on the runners too: each posts an answer or `crashed` for
 whatever breaks, a promise rejected with nothing to handle it among the
 causes, which fires no `error` event on the page
 (`docs/specs/worker/messages.md`, "A worker that cannot go on").
+
+In every row that ends the worker, the request it was running, a run
+of any analysis or a write, gets its failure first, and the worker is
+ended and a new one started after it, so that the failure reaches the
+store before anything the new worker does, and reaches it even when no
+new worker can be made. It is the order of an answer followed by a
+restart, above, written here for every request on 1 October 2026, as
+the owner decided (`docs/specs/stage-5-open-points.md`, "Decided by the
+owner on 1 October 2026: the LD decay and the line plot", point 8): the
+spec asked it of the LD decay alone, and the client had started the new
+worker first for the runs of the other analyses. A crash during an
+`open` is the one case that is not a request running: the new worker is
+started, and then the read and the runs that waited on it fail.
 
 The requests that were waiting stay in the queue and go to the new
 worker, so a crash costs the one request that was running. A crash with
@@ -825,7 +843,10 @@ walking skeleton, a diversity `Job` and a CSV.
 - **Failures**, one test for each row of the table above, with what the
   running request gets, that the waiting ones reach the new worker, and
   that a message of the old worker, posted after it was ended, changes
-  nothing.
+  nothing. The order: with a `Worker` that cannot be made again, a
+  `crashed` of a defect during a diversity, with a run k6 waiting,
+  fails the diversity as a defect and then k6; and the same for a
+  `crashed` of any other message, which fails it as `workerFailed`.
 - **Starting.** No `ready` in 30 seconds of the fake timers: a second
   worker is made; no `ready` again: every request fails with
   `couldNotStart`, a request after it too, at once, and no third worker

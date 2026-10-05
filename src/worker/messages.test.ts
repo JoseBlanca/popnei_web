@@ -5,11 +5,16 @@ import type {
   DiversityResult,
   FilterCountsJob,
   FilterCountsResult,
+  HeatmapOrder,
   IndividualChecksJob,
   IndividualChecksResult,
+  LdDecayJob,
+  LdDecayResult,
   PassStats,
   PcaJob,
   PcaResult,
+  PopDistsJob,
+  PopDistsResult,
   VariantChecksJob,
   VariantChecksResult,
   VariantDistrib,
@@ -45,6 +50,8 @@ const JOB: DiversityJob = {
   ],
   minNumIndividuals: 20,
   polyThreshold: 0.95,
+  numCalledAlleles: 40,
+  popDiversityPops: [],
 };
 
 const RESULT: DiversityResult = {
@@ -55,6 +62,17 @@ const RESULT: DiversityResult = {
   obsHet: Float64Array.from([0.28, Number.NaN]),
   polyRatio: Float64Array.from([0.9, Number.NaN]),
   numVarsWithValue: Uint32Array.from([1152, 0]),
+  fis: Float64Array.from([NaN, NaN]),
+  numAllelesMean: Float64Array.from([NaN, NaN]),
+  numAllelesInDraw: Float64Array.from([NaN, NaN]),
+  privateAllelesTotal: Float64Array.from([NaN, NaN]),
+  privateAllelesMean: Float64Array.from([NaN, NaN]),
+  privateAllelesInDraw: Float64Array.from([NaN, NaN]),
+  numVarsInDraw: Uint32Array.from([0, 0]),
+  numVarsEveryPop: null,
+  numVarsEveryPopInDraw: null,
+  numCalledAlleles: 40,
+  foldedSfs: [null, null],
   passStats: {
     numVars: 1152,
     filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
@@ -138,7 +156,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 3, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 4, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -176,7 +194,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 3 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 4 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -482,7 +500,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 3,
+        protocol: 4,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -497,7 +515,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 3 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 4 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -555,17 +573,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 4 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 4 })).toEqual({
+  test("a ready of protocol 5 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 5 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 4 },
+      error: { kind: "otherProtocol", found: 5 },
     });
   });
 
-  test("a ready of protocol 4 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 4 })).toEqual({
+  test("a ready of protocol 5 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 5 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 4 },
+      error: { kind: "otherProtocol", found: 5 },
     });
   });
 
@@ -573,18 +591,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 4 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 5 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 4,
+          protocol: 5,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 4 },
+        error: { kind: "otherProtocol", found: 5 },
       });
     },
   );
@@ -1172,10 +1190,6 @@ describe("IP2 D1 the worker in the new order: the messages", () => {
       });
     },
   );
-
-  test("the version of the messages is 3", () => {
-    expect(PROTOCOL_VERSION).toBe(3);
-  });
 });
 
 // The messages of the two workers, drawn by fast-check.
@@ -1210,18 +1224,39 @@ const passStats: fc.Arbitrary<PassStats> = fc.record({
 });
 
 const diversityResult: fc.Arbitrary<DiversityResult> = fc
-  .array(text, { maxLength: 5 })
-  .chain((pops) =>
-    fc.record({
-      analysis: fc.constant("diversity" as const),
-      pops: fc.constant(pops),
-      numIndividuals: uint32s(pops.length),
-      unbiasedExpHet: float64s(pops.length),
-      obsHet: float64s(pops.length),
-      polyRatio: float64s(pops.length),
-      numVarsWithValue: uint32s(pops.length),
-      passStats,
-    }),
+  .tuple(fc.array(text, { maxLength: 5 }), fc.integer({ min: 2, max: 12 }))
+  .chain(([pops, numCalledAlleles]) =>
+    fc
+      .record({
+        analysis: fc.constant("diversity" as const),
+        pops: fc.constant(pops),
+        numIndividuals: uint32s(pops.length),
+        unbiasedExpHet: float64s(pops.length),
+        obsHet: float64s(pops.length),
+        polyRatio: float64s(pops.length),
+        numVarsWithValue: uint32s(pops.length),
+        fis: float64s(pops.length),
+        numAllelesMean: float64s(pops.length),
+        numAllelesInDraw: float64s(pops.length),
+        privateAllelesTotal: float64s(pops.length),
+        privateAllelesMean: float64s(pops.length),
+        privateAllelesInDraw: float64s(pops.length),
+        numVarsInDraw: uint32s(pops.length),
+        everyPop: fc.option(fc.tuple(whole, whole), { nil: null }),
+        numCalledAlleles: fc.constant(numCalledAlleles),
+        foldedSfs: fc.array(
+          fc.option(float64s(Math.floor(numCalledAlleles / 2) + 1), {
+            nil: null,
+          }),
+          { minLength: pops.length, maxLength: pops.length },
+        ),
+        passStats,
+      })
+      .map(({ everyPop, ...result }) => ({
+        ...result,
+        numVarsEveryPop: everyPop === null ? null : everyPop[0],
+        numVarsEveryPopInDraw: everyPop === null ? null : everyPop[1],
+      })),
   );
 const individualChecksResult: fc.Arbitrary<IndividualChecksResult> = fc
   .array(text, { maxLength: 5 })
@@ -1273,12 +1308,82 @@ const pcaResult: fc.Arbitrary<PcaResult> = fc
       passStats,
     }),
   );
+const ldDecayResult: fc.Arbitrary<LdDecayResult> = fc
+  .record({
+    pops: fc.array(text, { maxLength: 3 }),
+    numBins: fc.nat({ max: 5 }),
+  })
+  .chain(({ pops, numBins }) =>
+    fc.record({
+      analysis: fc.constant("ldDecay" as const),
+      pops: fc.constant(pops),
+      numIndividuals: uint32s(pops.length),
+      numVars: float64s(pops.length),
+      smallestDist: float64s(numBins),
+      largestDist: float64s(numBins),
+      numPairs: float64s(pops.length * numBins),
+      meanR2: float64s(pops.length * numBins),
+      sdR2: float64s(pops.length * numBins),
+      rhoPerBp: float64s(pops.length),
+      r2AtZero: float64s(pops.length),
+      halfDist: float64s(pops.length),
+      passStats,
+    }),
+  );
+/** An order of the heatmap of `numPops` populations, of each kind. */
+const heatmapOrder = (numPops: number): fc.Arbitrary<HeatmapOrder> =>
+  fc.oneof(
+    fc
+      .shuffledSubarray(
+        Array.from({ length: numPops }, (_, at) => at),
+        { minLength: numPops, maxLength: numPops },
+      )
+      .map((order) => ({
+        kind: "pcoa" as const,
+        order: Uint32Array.from(order),
+      })),
+    fc.record({
+      kind: fc.constant("file" as const),
+      reason: fc.constantFrom(
+        "twoPopulations" as const,
+        "noDistance" as const,
+        "allZero" as const,
+      ),
+    }),
+    fc.record({
+      kind: fc.constant("file" as const),
+      reason: fc.constant("notPlaced" as const),
+      message: text,
+    }),
+  );
+const leftOut = fc.array(fc.tuple(text, whole), { maxLength: 3 });
+const popDistsResult: fc.Arbitrary<PopDistsResult> = fc
+  .array(text, { maxLength: 5 })
+  .chain((pops) => {
+    const numPairs = (pops.length * (pops.length - 1)) / 2;
+    return fc.record({
+      analysis: fc.constant("popDists" as const),
+      pops: fc.constant(pops),
+      numIndividuals: uint32s(pops.length),
+      fst: float64s(numPairs),
+      dest: float64s(numPairs),
+      numVarsPerPair: uint32s(numPairs),
+      order: fc.record({
+        fst: heatmapOrder(pops.length),
+        dest: heatmapOrder(pops.length),
+      }),
+      leftOut,
+      passStats,
+    });
+  });
 const jobResult = fc.oneof(
   diversityResult,
   individualChecksResult,
   variantChecksResult,
   filterCountsResult,
   pcaResult,
+  popDistsResult,
+  ldDecayResult,
 );
 const written = fc.nat({ max: 64 }).chain((numBytes) =>
   fc.record({
@@ -1297,7 +1402,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(3),
+    protocol: fc.constant(4),
     popneiVersion: text,
   }),
   fc.record({
@@ -1442,7 +1547,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(3) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(4) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1473,17 +1578,21 @@ const individualsKept = fc.option(fc.array(text, { maxLength: 4 }), {
   nil: null,
 });
 const filters = fc.array(variantFilter, { maxLength: 4 });
-const diversityJob = fc.record({
-  analysis: fc.constant("diversity" as const),
-  fileId: text,
-  filters,
-  individuals: individualsKept,
-  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
-    maxLength: 3,
-  }),
-  minNumIndividuals: number,
-  polyThreshold: number,
-});
+const diversityJob = fc
+  .array(fc.tuple(text, fc.array(text, { maxLength: 3 })), { maxLength: 3 })
+  .chain((pops) =>
+    fc.record({
+      analysis: fc.constant("diversity" as const),
+      fileId: text,
+      filters,
+      individuals: individualsKept,
+      pops: fc.constant(pops),
+      minNumIndividuals: number,
+      polyThreshold: number,
+      numCalledAlleles: fc.integer({ min: 2, max: 4294967295 }),
+      popDiversityPops: fc.subarray(pops.map(([pop]) => pop)),
+    }),
+  );
 const individualChecksJob = fc.record({
   analysis: fc.constant("individualChecks" as const),
   fileId: text,
@@ -1511,6 +1620,30 @@ const pcaJob = fc.record({
   individuals: individualsKept,
   method: fc.constantFrom("pca" as const, "pcoa" as const),
   numCompsKept: fc.integer(),
+});
+const popDistsJob = fc.record({
+  analysis: fc.constant("popDists" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
+  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
+    maxLength: 3,
+  }),
+  leftOut,
+  minNumIndividuals: number,
+});
+const ldDecayJob = fc.record({
+  analysis: fc.constant("ldDecay" as const),
+  fileId: text,
+  filters,
+  individuals: individualsKept,
+  pops: fc.array(fc.tuple(text, fc.array(text, { maxLength: 3 })), {
+    maxLength: 3,
+  }),
+  minDist: number,
+  maxDist: number,
+  numBins: number,
+  maxAllowedMaf: number,
 });
 const writeJob = fc.record({
   format: fc.constant("nei" as const),
@@ -1545,6 +1678,8 @@ const toRunnerMessage = fc.oneof(
       variantChecksJob,
       filterCountsJob,
       pcaJob,
+      popDistsJob,
+      ldDecayJob,
     ),
   }),
   fc.record({
@@ -2253,6 +2388,787 @@ describe("IP4 D2 the binary type of the messages holds texts", () => {
     ).toMatchObject({
       ok: false,
       error: { kind: "wrongType", path: "read.columns.3.zero" },
+    });
+  });
+});
+
+// The job and the result of the LD decay, stage 5, and the version of the
+// messages of stage 5 (docs/specs/worker/messages.md, "How it is
+// verified").
+
+const LD_DECAY_JOB: LdDecayJob = {
+  analysis: "ldDecay",
+  fileId: "load-a",
+  filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+  individuals: null,
+  pops: [
+    ["pop_a", ["i000", "i001"]],
+    ["pop_b", ["i050"]],
+  ],
+  minDist: 1,
+  maxDist: 100000,
+  numBins: 50,
+  maxAllowedMaf: 0.95,
+};
+
+/** A result of the LD decay of two populations and 50 bins, the second
+    population with no curve and its last bin with no pair. */
+const LD_DECAY_RESULT: LdDecayResult = {
+  analysis: "ldDecay",
+  pops: ["pop_a", "pop_b"],
+  numIndividuals: Uint32Array.of(50, 50),
+  numVars: Float64Array.of(432, 432),
+  smallestDist: Float64Array.from({ length: 50 }, (_, i) => 1 + 2000 * i),
+  largestDist: Float64Array.from({ length: 50 }, (_, i) => 2000 * (i + 1)),
+  numPairs: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? 0 : 745 - i,
+  ),
+  meanR2: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? Number.NaN : 0.31 - i / 1000,
+  ),
+  sdR2: Float64Array.from({ length: 100 }, (_, i) =>
+    i === 99 ? Number.NaN : 0.28,
+  ),
+  rhoPerBp: Float64Array.of(0.00029996668947275404, Number.NaN),
+  r2AtZero: Float64Array.of(0.46942148760330576, Number.NaN),
+  halfDist: Float64Array.of(7548.08187836982, Number.NaN),
+  passStats: {
+    numVars: 500,
+    filtering: { missing_data: { varsProcessed: 500, varsKept: 500 } },
+  },
+};
+
+describe("PA2 D1 the messages of the LD decay", () => {
+  test.each([
+    ["over every individual", LD_DECAY_JOB],
+    [
+      "with a list of individuals",
+      { ...LD_DECAY_JOB, individuals: ["i000", "i001", "i050"] },
+    ],
+  ])("parseToRunner accepts a run of the LD decay %s", (_name, job) => {
+    const run = { ...RUN, job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test("parseFromRunner accepts a result of the LD decay of two populations and 50 bins", () => {
+    const message = resultMessage(LD_DECAY_RESULT);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a result of two populations and 50 bins with 99 values of meanR2 is wrongLength", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      meanR2: LD_DECAY_RESULT.meanR2.slice(0, 99),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.meanR2",
+        expected: 100,
+        found: 99,
+      },
+    });
+  });
+
+  test.each([
+    ["largestDist", 49],
+    ["numPairs", 99],
+    ["sdR2", 101],
+    ["numVars", 3],
+    ["rhoPerBp", 1],
+    ["r2AtZero", 1],
+    ["halfDist", 3],
+  ])("a result whose %s has %d values is wrongLength", (name, length) => {
+    const result = { ...LD_DECAY_RESULT, [name]: new Float64Array(length) };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: `result.${name}`, found: length },
+    });
+  });
+
+  test("a result whose numIndividuals has one value is wrongLength", () => {
+    const result = { ...LD_DECAY_RESULT, numIndividuals: Uint32Array.of(50) };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.numIndividuals",
+        expected: 2,
+        found: 1,
+      },
+    });
+  });
+
+  test("a result whose smallestDist is a list of numbers is wrongType", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      smallestDist: [...LD_DECAY_RESULT.smallestDist],
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.smallestDist" },
+    });
+  });
+
+  test("a result of 10 bins, whose smallestDist gives the number of bins, is accepted with its other arrays of 10 and 20 values", () => {
+    const result = {
+      ...LD_DECAY_RESULT,
+      smallestDist: new Float64Array(10),
+      largestDist: new Float64Array(10),
+      numPairs: new Float64Array(20),
+      meanR2: new Float64Array(20),
+      sdR2: new Float64Array(20),
+    };
+    const message = resultMessage(result);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("an ldDecay job without maxDist is missingFields, and one with a field more is extraFields", () => {
+    const without = Object.fromEntries(
+      Object.entries(LD_DECAY_JOB).filter(([name]) => name !== "maxDist"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["maxDist"],
+      },
+    });
+    expect(
+      parseToRunner({ ...RUN, job: { ...LD_DECAY_JOB, ldPruning: false } }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["ldPruning"],
+      },
+    });
+  });
+
+  test.each(["minDist", "maxDist", "numBins", "maxAllowedMaf"])(
+    "an ldDecay job whose %s is a text is wrongType",
+    (name) => {
+      const job = { ...LD_DECAY_JOB, [name]: "100000" };
+      expect(parseToRunner({ ...RUN, job })).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `job.${name}` },
+      });
+    },
+  );
+
+  test("an ldDecay job whose population is not a pair is wrongLength", () => {
+    const job = { ...LD_DECAY_JOB, pops: [["pop_a", ["i000"], "pop_b"]] };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "job.pops.0" },
+    });
+  });
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 3, stage 4's, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 3 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 3 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 5 with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 5 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 5 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    'a ready of protocol "4", from the %s worker, is wrongType',
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: "4" })).toEqual({
+        ok: false,
+        error: {
+          kind: "wrongType",
+          messageKind: "ready",
+          path: "protocol",
+          expected: "a number",
+          found: "string",
+        },
+      });
+    },
+  );
+
+  test("the version of the messages is 4", () => {
+    expect(PROTOCOL_VERSION).toBe(4);
+  });
+});
+
+// The job and the result of the distances between populations, stage 5
+// (docs/specs/worker/messages.md, "How it is verified").
+
+const POP_DISTS_JOB: PopDistsJob = {
+  analysis: "popDists",
+  fileId: "load-a",
+  filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+  individuals: null,
+  pops: [
+    ["p0", ["s000", "s001"]],
+    ["p2", ["s002"]],
+    ["p1", ["s003"]],
+  ],
+  leftOut: [["p3", 12]],
+  minNumIndividuals: 20,
+};
+
+/** A result of the distances of p0, p2 and p1, the numbers of panel.nei at
+    the missing data filter at 0.1, ordered along the first axis of each
+    measure. */
+const POP_DISTS_RESULT: PopDistsResult = {
+  analysis: "popDists",
+  pops: ["p0", "p2", "p1"],
+  numIndividuals: Uint32Array.of(48, 84, 68),
+  fst: Float64Array.of(
+    0.10273588423661377,
+    0.10496244498389443,
+    0.10962148955018115,
+  ),
+  dest: Float64Array.of(
+    0.06129813142463423,
+    0.06354346296076403,
+    0.06567052128821259,
+  ),
+  numVarsPerPair: Uint32Array.of(1200, 1200, 1200),
+  order: {
+    fst: { kind: "pcoa", order: Uint32Array.of(1, 0, 2) },
+    dest: { kind: "pcoa", order: Uint32Array.of(1, 0, 2) },
+  },
+  leftOut: [["p3", 12]],
+  passStats: {
+    numVars: 1200,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1200 } },
+  },
+};
+
+describe("PA3 D1 the messages of the distances", () => {
+  test.each([
+    ["over every individual", POP_DISTS_JOB],
+    [
+      "with a list of individuals and no population left out",
+      {
+        ...POP_DISTS_JOB,
+        individuals: ["s000", "s001", "s002", "s003"],
+        leftOut: [],
+      },
+    ],
+  ])("parseToRunner accepts a run of the distances %s", (_name, job) => {
+    const run = { ...RUN, job };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test.each<[string, PopDistsResult["order"]]>([
+    ["of the kind pcoa for both measures", POP_DISTS_RESULT.order],
+    [
+      "of the file, for a pair of no distance and for every distance 0",
+      {
+        fst: { kind: "file", reason: "noDistance" },
+        dest: { kind: "file", reason: "allZero" },
+      },
+    ],
+    [
+      "of the file, for a refusal of popnei, with its message, beside one of the PCoA",
+      {
+        fst: {
+          kind: "file",
+          reason: "notPlaced",
+          message: "popnei: the linear algebra could not be done",
+        },
+        dest: { kind: "pcoa", order: Uint32Array.of(2, 1, 0) },
+      },
+    ],
+  ])(
+    "parseFromRunner accepts a result of the distances with orders %s",
+    (_name, order) => {
+      const message = resultMessage({ ...POP_DISTS_RESULT, order });
+      expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+    },
+  );
+
+  test("parseFromRunner accepts a result of two populations whose orders are twoPopulations", () => {
+    const message = resultMessage({
+      ...POP_DISTS_RESULT,
+      pops: ["p2", "p1"],
+      numIndividuals: Uint32Array.of(84, 68),
+      fst: Float64Array.of(0.10962148955018115),
+      dest: Float64Array.of(0.06567052128821259),
+      numVarsPerPair: Uint32Array.of(1200),
+      order: {
+        fst: { kind: "file", reason: "twoPopulations" },
+        dest: { kind: "file", reason: "twoPopulations" },
+      },
+      leftOut: [
+        ["p0a", 24],
+        ["p0b", 24],
+      ],
+    });
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a result of three populations with two values of fst is wrongLength", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      fst: POP_DISTS_RESULT.fst.slice(0, 2),
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.fst",
+        expected: 3,
+        found: 2,
+      },
+    });
+  });
+
+  test.each([
+    ["dest", new Float64Array(4)],
+    ["numVarsPerPair", new Uint32Array(2)],
+    ["numIndividuals", new Uint32Array(2)],
+  ])(
+    "a result of three populations whose %s is not as long is wrongLength",
+    (name, array) => {
+      const result = { ...POP_DISTS_RESULT, [name]: array };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongLength", path: `result.${name}` },
+      });
+    },
+  );
+
+  test("a result whose numVarsPerPair is a Float64Array is wrongType", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      numVarsPerPair: Float64Array.of(1200, 1200, 1200),
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numVarsPerPair" },
+    });
+  });
+
+  test.each([
+    ["[0, 0, 2], which holds 0 twice and 1 never", [0, 0, 2]],
+    ["[0, 1, 3], which holds an index beyond the three populations", [0, 1, 3]],
+  ])("an order of the kind pcoa of %s is refused", (_name, indexes) => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        dest: { kind: "pcoa", order: Uint32Array.from(indexes) },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        path: "result.order.dest.order",
+        expected:
+          "a Uint32Array that holds each index of the 3 populations once",
+      },
+    });
+  });
+
+  test("an order of the kind pcoa of two indexes for three populations is wrongLength", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "pcoa", order: Uint32Array.of(1, 0) },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.order.fst.order",
+        expected: 3,
+        found: 2,
+      },
+    });
+  });
+
+  test("an order notPlaced without its message is missingFields", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "file", reason: "notPlaced" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "result",
+        path: "result.order.fst",
+        fields: ["message"],
+      },
+    });
+  });
+
+  test("an order of another reason with a message is extraFields", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        fst: { kind: "file", reason: "noDistance", message: "no distance" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.order.fst",
+        fields: ["message"],
+      },
+    });
+  });
+
+  test("an order of the file whose reason is not one of the four is unknownValue", () => {
+    const result = {
+      ...POP_DISTS_RESULT,
+      order: {
+        ...POP_DISTS_RESULT.order,
+        dest: { kind: "file", reason: "notEuclidean" },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "unknownValue",
+        path: "result.order.dest.reason",
+        found: "notEuclidean",
+      },
+    });
+  });
+
+  test("an order of a kind that is not pcoa nor file is unknownValue, and a result without the order of dest is missingFields", () => {
+    const tree = {
+      ...POP_DISTS_RESULT,
+      order: { ...POP_DISTS_RESULT.order, fst: { kind: "tree" } },
+    };
+    expect(parseFromRunner(resultMessage(tree))).toMatchObject({
+      ok: false,
+      error: { kind: "unknownValue", path: "result.order.fst.kind" },
+    });
+    const noDest = {
+      ...POP_DISTS_RESULT,
+      order: { fst: POP_DISTS_RESULT.order.fst },
+    };
+    expect(parseFromRunner(resultMessage(noDest))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        path: "result.order",
+        fields: ["dest"],
+      },
+    });
+  });
+
+  test.each([
+    ["a count that is not whole", [["p3", 12.5]], "leftOut.0.1"],
+    ["a name that is a number", [[3, 12]], "leftOut.0.0"],
+  ])(
+    "a job and a result whose leftOut holds %s are wrongType",
+    (_name, left, path) => {
+      expect(
+        parseToRunner({ ...RUN, job: { ...POP_DISTS_JOB, leftOut: left } }),
+      ).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `job.${path}` },
+      });
+      expect(
+        parseFromRunner(resultMessage({ ...POP_DISTS_RESULT, leftOut: left })),
+      ).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: `result.${path}` },
+      });
+    },
+  );
+
+  test("a popDists job without leftOut is missingFields, and one with a measure is extraFields", () => {
+    const without = Object.fromEntries(
+      Object.entries(POP_DISTS_JOB).filter(([name]) => name !== "leftOut"),
+    );
+    expect(parseToRunner({ ...RUN, job: without })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["leftOut"],
+      },
+    });
+    expect(
+      parseToRunner({ ...RUN, job: { ...POP_DISTS_JOB, measure: "fst" } }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["measure"],
+      },
+    });
+  });
+});
+
+/** A diversity job of stage 5 over three populations, p0, p2 and p1, all
+    three given to calcPopDiversity. */
+const DIVERSITY_JOB_5: DiversityJob = {
+  ...JOB,
+  pops: [
+    ["p0", ["s000", "s003"]],
+    ["p2", ["s001"]],
+    ["p1", ["s002"]],
+  ],
+  minNumIndividuals: 1,
+  numCalledAlleles: 40,
+  popDiversityPops: ["p0", "p2", "p1"],
+};
+
+/** A diversity result of stage 5 of p2 and p1, given to calcPopDiversity,
+    and p0, of 12 individuals, not given, at the draw of 40: 21 values in
+    each spectrum. The numbers of diversity.md, p0 cut to 12. */
+const DIVERSITY_RESULT_5: DiversityResult = {
+  analysis: "diversity",
+  pops: ["p0", "p2", "p1"],
+  numIndividuals: Uint32Array.of(12, 84, 68),
+  unbiasedExpHet: Float64Array.of(NaN, 0.3440824705971255, 0.3498365468860467),
+  obsHet: Float64Array.of(NaN, 0.3512406974637824, 0.35603713961547323),
+  polyRatio: Float64Array.of(NaN, 0.9105902777777778, 0.9157986111111112),
+  numVarsWithValue: Uint32Array.of(0, 1152, 1152),
+  fis: Float64Array.of(NaN, -0.020803811522959625, -0.017724256612463796),
+  numAllelesMean: Float64Array.of(NaN, 1.9861111111111112, 1.9809027777777777),
+  numAllelesInDraw: Float64Array.of(
+    NaN,
+    1.9595644507442256,
+    1.9582701017879214,
+  ),
+  privateAllelesTotal: Float64Array.of(NaN, 22, 16),
+  privateAllelesMean: Float64Array.of(
+    NaN,
+    0.019097222222222224,
+    0.013888888888888888,
+  ),
+  privateAllelesInDraw: Float64Array.of(
+    NaN,
+    0.038418511541450096,
+    0.037124162585145296,
+  ),
+  numVarsInDraw: Uint32Array.of(0, 1152, 1152),
+  numVarsEveryPop: 1152,
+  numVarsEveryPopInDraw: 1152,
+  numCalledAlleles: 40,
+  foldedSfs: [null, new Float64Array(21), new Float64Array(21)],
+  passStats: {
+    numVars: 1152,
+    filtering: { missing_data: { varsProcessed: 1200, varsKept: 1152 } },
+  },
+};
+
+describe("PA6 D1 the messages of the diversity of stage 5", () => {
+  test("parseToRunner accepts a run of the diversity with the draw and the populations of calcPopDiversity", () => {
+    for (const popDiversityPops of [["p0", "p2", "p1"], ["p2"], []]) {
+      const run = { ...RUN, job: { ...DIVERSITY_JOB_5, popDiversityPops } };
+      expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+    }
+  });
+
+  test("parseFromRunner accepts a result with its spectra, a population not given to calcPopDiversity among them", () => {
+    const message = resultMessage(DIVERSITY_RESULT_5);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("a diversity job with numCalledAlleles 1, below popnei's smallest draw, is wrongType, and so are 0 and 2.5", () => {
+    for (const numCalledAlleles of [1, 0, 2.5]) {
+      expect(
+        parseToRunner({
+          ...RUN,
+          job: { ...DIVERSITY_JOB_5, numCalledAlleles },
+        }),
+      ).toMatchObject({
+        ok: false,
+        error: {
+          kind: "wrongType",
+          path: "job.numCalledAlleles",
+          expected: "a whole number of 2 or more",
+        },
+      });
+    }
+  });
+
+  test("a diversity job whose popDiversityPops names a population not in pops is wrongType", () => {
+    const job = { ...DIVERSITY_JOB_5, popDiversityPops: ["p0", "p3"] };
+    expect(parseToRunner({ ...RUN, job })).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "job.popDiversityPops" },
+    });
+  });
+
+  test("a diversity job whose popDiversityPops holds two populations in another order than theirs, or one twice, is wrongType", () => {
+    for (const popDiversityPops of [
+      ["p2", "p0"],
+      ["p0", "p1", "p2"],
+      ["p2", "p2"],
+    ]) {
+      const job = { ...DIVERSITY_JOB_5, popDiversityPops };
+      expect(parseToRunner({ ...RUN, job })).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: "job.popDiversityPops" },
+      });
+    }
+  });
+
+  test("a diversity job without the two fields of stage 5 is missingFields", () => {
+    const stage4 = Object.fromEntries(
+      Object.entries(DIVERSITY_JOB_5).filter(
+        ([name]) => name !== "numCalledAlleles" && name !== "popDiversityPops",
+      ),
+    );
+    expect(parseToRunner({ ...RUN, job: stage4 })).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["numCalledAlleles", "popDiversityPops"],
+      },
+    });
+  });
+
+  test("a diversity result with numVarsEveryPop a number and numVarsEveryPopInDraw null, or the other way round, is wrongType", () => {
+    for (const [numVarsEveryPop, numVarsEveryPopInDraw] of [
+      [1152, null],
+      [null, 1152],
+    ]) {
+      const result = {
+        ...DIVERSITY_RESULT_5,
+        numVarsEveryPop,
+        numVarsEveryPopInDraw,
+      };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongType", path: "result.numVarsEveryPopInDraw" },
+      });
+    }
+  });
+
+  test("a diversity result whose foldedSfs holds 20 values for a draw of 40 is wrongLength", () => {
+    const result = {
+      ...DIVERSITY_RESULT_5,
+      foldedSfs: [null, new Float64Array(21), new Float64Array(20)],
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.foldedSfs.2",
+        expected: 21,
+        found: 20,
+      },
+    });
+  });
+
+  test("a diversity result with fewer spectra than populations, or a spectrum that is a list of numbers, is refused", () => {
+    expect(
+      parseFromRunner(
+        resultMessage({ ...DIVERSITY_RESULT_5, foldedSfs: [null, null] }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "result.foldedSfs", expected: 3 },
+    });
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          foldedSfs: [null, new Array<number>(21).fill(0), null],
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.foldedSfs.1" },
+    });
+  });
+
+  test.each([
+    "fis",
+    "numAllelesMean",
+    "numAllelesInDraw",
+    "privateAllelesTotal",
+    "privateAllelesMean",
+    "privateAllelesInDraw",
+  ])(
+    "a diversity result of three populations whose %s holds two values is wrongLength",
+    (name) => {
+      const result = { ...DIVERSITY_RESULT_5, [name]: new Float64Array(2) };
+      expect(parseFromRunner(resultMessage(result))).toMatchObject({
+        ok: false,
+        error: { kind: "wrongLength", path: `result.${name}`, expected: 3 },
+      });
+    },
+  );
+
+  test("a diversity result whose numVarsInDraw holds four values, or whose privateAllelesTotal is popnei's Uint32Array, is refused", () => {
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          numVarsInDraw: new Uint32Array(4),
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongLength", path: "result.numVarsInDraw" },
+    });
+    expect(
+      parseFromRunner(
+        resultMessage({
+          ...DIVERSITY_RESULT_5,
+          privateAllelesTotal: Uint32Array.of(0, 22, 16),
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.privateAllelesTotal" },
+    });
+  });
+
+  test("a diversity result whose numCalledAlleles is 1 is wrongType", () => {
+    const result = { ...DIVERSITY_RESULT_5, numCalledAlleles: 1 };
+    expect(parseFromRunner(resultMessage(result))).toMatchObject({
+      ok: false,
+      error: { kind: "wrongType", path: "result.numCalledAlleles" },
     });
   });
 });

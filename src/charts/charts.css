@@ -238,3 +238,111 @@
 .chart-pca3d-label-text {
   text-anchor: start;
 }
+
+/* The cells of the heatmap with no value: no fill, outlined, and crossed
+   from corner to corner, so that such a cell is told by its shape and not
+   by a missing colour. The cells with a value are filled with the colour
+   of viridis of their step, written on their path, the same in both
+   themes (docs/specs/charts/heatmap.md, "The cells"). */
+.chart-cell-none {
+  fill: none;
+  stroke: var(--chart-axis);
+  stroke-width: 1px;
+}
+
+/* The value in a cell of the heatmap, black on the steps of viridis from
+   111 to 255 and white on those from 0 to 110, whichever has the larger
+   contrast with the cell, at least 4.60:1 (heatmap.md, "The values in the
+   cells"). It is centred up by its dy, which heatmap.ts writes. */
+.chart-cell-text {
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.chart-cell-text-dark {
+  fill: var(--chart-text-on-light);
+}
+
+.chart-cell-text-light {
+  fill: var(--chart-text-on-dark);
+}
+
+/* The texts of the legend of the heatmap start right of its bar, and the
+   name of the value above it. */
+.chart-heatmap .chart-legend-text {
+  text-anchor: start;
+}
+
+/* The lines of the line plot (docs/specs/charts/line.md, "The SVG it
+   builds"), drawn under its points. The SVG of that plot has the class
+   chart-line too, chart-‹kind› of the base, so the rule leaves out the
+   element of the class chart: on the SVG, its fill and its width would
+   reach every element of the plot that sets neither, the axes and the
+   texts among them. */
+.chart-line:not(.chart) {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+/* The casing under a line of one of the three light colours, orange, sky
+   blue and yellow, below 3:1 on the light background: the same path, 4
+   pixels wide, in the colour of the axes, which gives the line the edge
+   its colour does not (line.md, "What the user sees"). */
+.chart-line-casing {
+  fill: none;
+  stroke: var(--chart-axis);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* The colour of the line of group i, i % 7, of Okabe and Ito, as the
+   points of .chart-colour-‹i›; on a dashed line of a mark too. */
+.chart-line-colour-0 {
+  stroke: var(--chart-cat-1);
+}
+
+.chart-line-colour-1 {
+  stroke: var(--chart-cat-2);
+}
+
+.chart-line-colour-2 {
+  stroke: var(--chart-cat-3);
+}
+
+.chart-line-colour-3 {
+  stroke: var(--chart-cat-4);
+}
+
+.chart-line-colour-4 {
+  stroke: var(--chart-cat-5);
+}
+
+.chart-line-colour-5 {
+  stroke: var(--chart-cat-6);
+}
+
+.chart-line-colour-6 {
+  stroke: var(--chart-cat-7);
+}
+
+/* The dashed line of a mark, from the axis up to the mark at its top. */
+.chart-mark-line {
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+}
+
+/* The casing under the dashed line of a mark of one of the three light
+   colours: the same dashes, 3 pixels wide, in the colour of the axes
+   (line.md, "What the user sees"). */
+.chart-mark-casing {
+  stroke: var(--chart-axis);
+  stroke-width: 3px;
+  stroke-dasharray: 4 3;
+}
+
+/* The texts of the legend of the line plot start after the piece of line
+   of their row. */
+.chart.chart-line .chart-legend-text {
+  text-anchor: start;
+}

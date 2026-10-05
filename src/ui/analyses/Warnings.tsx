@@ -29,8 +29,10 @@ export function Warnings({
         {warningsHeading(warnings.length)}
       </h3>
       <ul className={classOf(styles, "warningList")}>
-        {warnings.map((warning) => (
-          <li key={warning.code}>
+        {/* A code can come more than once, one warning per population of
+            the LD decay, so the key is the code and the place. */}
+        {warnings.map((warning, index) => (
+          <li key={`${String(index)} ${warning.code}`}>
             <Warning>{warning.text}</Warning>
           </li>
         ))}

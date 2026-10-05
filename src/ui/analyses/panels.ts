@@ -18,6 +18,8 @@
 import type { ComponentType } from "react";
 
 import {
+  diversityOptions,
+  drawOf,
   refusalText,
   statisticsFailedText,
 } from "../../core/analyses/diversity.ts";
@@ -26,16 +28,33 @@ import {
   refusalText as pcaRefusalText,
   statisticsFailedText as pcaStatisticsFailedText,
 } from "../../core/analyses/pca.ts";
+import { statisticsFailedWords } from "../../core/analyses/individualChecks.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
+import {
+  LD_DECAY_NAME,
+  crashText as ldDecayCrashText,
+  refusalText as ldDecayRefusalText,
+} from "../../core/analyses/ldDecay.ts";
+import {
+  popDistsOptions,
+  refusalText as popDistsRefusalText,
+} from "../../core/analyses/popDists.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { populationsBeforeRun, populationsOf } from "../../core/project.ts";
 import type { AnalysisId, Project } from "../../core/project.ts";
 import type { AnalysisError } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { DiversityOptionsPart } from "./diversity/DiversityOptionsPart.tsx";
 import { DiversityResults } from "./diversity/DiversityResults.tsx";
 import { readyLines } from "./diversity/words.ts";
+import { LdDecayOptionsPart } from "./ldDecay/LdDecayOptionsPart.tsx";
+import { LdDecayResults } from "./ldDecay/LdDecayResults.tsx";
+import { fitLine } from "./ldDecay/words.ts";
 import { PcaOptionsPart } from "./pca/PcaOptionsPart.tsx";
 import { PcaResults } from "./pca/PcaResults.tsx";
+import { PopDistsOptionsPart } from "./popDists/PopDistsOptionsPart.tsx";
+import { PopDistsResults } from "./popDists/PopDistsResults.tsx";
+import { readyLines as popDistsReadyLines } from "./popDists/words.ts";
 import { decompositionLine, readyLines as pcaReadyLines } from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
 
@@ -131,12 +150,25 @@ const DIVERSITY: AnalysisUi = Object.freeze({
         : p.individuals === null
           ? "noFile"
           : "onePopulation";
-    return pops === null ? [] : readyLines(pops, waits, kind);
+    if (pops === null) return [];
+    // The draw and the ploidy, which name the populations short of the
+    // draw; the variants file is read whenever these lines are drawn.
+    const numCalledAlleles = drawOf(p);
+    const read = p.variants?.read;
+    return readyLines(
+      pops,
+      diversityOptions(p).minNumIndividuals,
+      waits,
+      kind,
+      numCalledAlleles === null || read?.kind !== "read"
+        ? null
+        : { numCalledAlleles, ploidy: read.ploidy },
+    );
   },
   refusalText,
   statisticsFailedText,
   Results: DiversityResults,
-  Options: null,
+  Options: DiversityOptionsPart,
   runningLine: (): null => null,
   workerFailedText: null,
 });
@@ -157,6 +189,88 @@ const PCA: AnalysisUi = Object.freeze({
     p.variants === null ? null : decompositionLine(p.variants.name),
   workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
     crashText(p, individualsRunOn(p, kept)),
+});
+
+/** The panel of the distances between populations
+    (docs/specs/analyses/popDists.md, "The panel"). */
+const POP_DISTS: AnalysisUi = Object.freeze({
+  title: titleOf("popDists"),
+  name: "the distances between populations",
+  resultName: "the heatmap and the table",
+  plural: true,
+  readyLines: (p: Project, kept: IndividualsKept | null): readonly string[] => {
+    // As the diversity's: the store locks the distances with no
+    // individuals kept before they are ready or removed.
+    if (kept === null) {
+      throw new Error(
+        "popnei_web defect: the distances between populations are ready or removed with no individuals kept.",
+      );
+    }
+    const pops = populationsBeforeRun(p, kept);
+    return pops === null
+      ? []
+      : popDistsReadyLines(
+          pops,
+          popDistsOptions(p).minNumIndividuals,
+          kept.list.kind === "needsStatistics",
+        );
+  },
+  refusalText: popDistsRefusalText,
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string =>
+    statisticsFailedWords(
+      error,
+      p,
+      failureText,
+      waited
+        ? "the distances between populations were not run"
+        : "the distances between populations cannot run",
+    ),
+  Results: PopDistsResults,
+  Options: PopDistsOptionsPart,
+  runningLine: (): null => null,
+  workerFailedText: null,
+});
+
+/** The panel of the LD decay (docs/specs/analyses/ldDecay.md, "The
+    panel"): its words, the lines of its ready state and the line under
+    the bar, which is all the user has while the curves are fitted; its
+    two options; its result, the plot and the two tables; and its own
+    words of a worker that stopped with no answer, which name the memory
+    and not only another run. */
+const LD_DECAY: AnalysisUi = Object.freeze({
+  title: titleOf("ldDecay"),
+  name: LD_DECAY_NAME,
+  // Its result has the name of the analysis, "Undo brings back the LD
+  // decay as it was": the plot and the tables would ask for "they were"
+  // after an analysis named in the singular, which `removedText` cannot
+  // say.
+  resultName: LD_DECAY_NAME,
+  plural: false,
+  // The individuals a run will take, as the principal components'.
+  readyLines: pcaReadyLines,
+  refusalText: ldDecayRefusalText,
+  statisticsFailedText: (
+    error: AnalysisError,
+    p: Project,
+    failureText: (failure: Failure) => string,
+    waited: boolean,
+  ): string =>
+    statisticsFailedWords(
+      error,
+      p,
+      failureText,
+      waited ? "the LD decay was not run" : "the LD decay cannot run",
+    ),
+  Results: LdDecayResults,
+  Options: LdDecayOptionsPart,
+  runningLine: (p: Project): string | null =>
+    p.variants === null ? null : fitLine(p.variants.name),
+  workerFailedText: (p: Project): string => ldDecayCrashText(p),
 });
 
 /** The individuals a calculation of the project `p` ran on, those the
@@ -182,6 +296,8 @@ function individualsRunOn(p: Project, kept: IndividualsKept | null): number {
 export const PANELS: ReadonlyMap<AnalysisId, AnalysisUi> = new Map([
   ["pca", PCA],
   ["diversity", DIVERSITY],
+  ["popDists", POP_DISTS],
+  ["ldDecay", LD_DECAY],
 ]);
 
 /** The panel of the analysis `id`; a defect when it has none. */

@@ -1,0 +1,28 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+.options {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+/* The field of the largest distance, and under it, while no distance is
+   typed, why it has to be, or the reason of the lock of the memory. */
+.distance {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* Why the distance has to be typed: a line of help, as the line under
+   the field, and not a problem. */
+.help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

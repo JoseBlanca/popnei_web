@@ -1,6 +1,6 @@
 # Plan: the analyses of the populations
 
-30 September 2026, approved by the owner the same day. It builds
+30 September 2026, approved by the owner the same day; done on 1 October 2026 on the branch `plan/population-analyses`. It builds
 stage 5 of `docs/build-order.md`: the distances between populations,
 Hudson's Fst and Jost's D of each pair, as a heatmap ordered by
 similarity and a table; the diversity whole, with F, the alleles, the
@@ -305,6 +305,13 @@ the project file (`projectFile.md`).
     detached commit; a flow that fails once is run 20 times in the
     engine where it failed before it is called flaky or fixed;
   - the answer gives the tokens the subagent used, for the report.
+- **Task 0.1, added on 30 September 2026** (the report, "Before the
+  first task"): the flow `IP10 D3 the keyboard moves through the table
+  cell by cell` of `e2e/pcaResults.spec.ts` failed once in Chromium in
+  the browser check of the start, and passed 40 times out of 40 alone; it
+  is made to wait for the scroll of the table's box before the plan's
+  first browser check.
+  - [x] 0.1 That flow made steady, in a commit of its own.
 - **What every review of a work package carries**, from the same
   reports: the reviewers that only read run together, reading at a
   commit; `tests`, `browser` and `accessibility`, which run the page,
@@ -352,13 +359,13 @@ filters emptied in the same words.
 
 **Tasks:**
 
-- [ ] 1.1 `populationListsNeeds` and `populationsKeptNeeds` moved into
+- [x] 1.1 `populationListsNeeds` and `populationsKeptNeeds` moved into
   `src/core/project.ts` from `diversity.ts`, with their tests; and
   `populationsWithMinimum` and `underMinimumText` added (`project.md`,
   "What the analyses per population share from stage 5", its block of
   "The TypeScript interface" and "How it is verified"). The diversity
   calls them; its words do not change. Serves 1 and 3.
-- [ ] 1.2 `populationWarnings` in `src/core/analyses/words.ts`, called
+- [x] 1.2 `populationWarnings` in `src/core/analyses/words.ts`, called
   by the diversity (`diversity.md`, "The warnings"). Serves 2 and 3.
   Needs 1.1.
 
@@ -455,7 +462,7 @@ its panel is built.
 
 **Tasks:**
 
-- [ ] 2.1 The worker side, in one commit that keeps every check
+- [x] 2.1 The worker side, in one commit that keeps every check
   passing: `LdDecayJob` and `LdDecayResult` in `protocol.ts`, their
   checks in `messages.ts`, and `PROTOCOL_VERSION` 4, with the tests of
   the version in `messages.test.ts` and `client.test.ts`
@@ -468,10 +475,10 @@ its panel is built.
   with `in` would give a population named `__proto__` NaN with no word
   (`runner.md`, "The LD decay", step 3), so its test is part of this
   task. Serves 1, 2 and 3.
-- [ ] 2.2 The client's restart after every LD decay (`client.md`, "The
+- [x] 2.2 The client's restart after every LD decay (`client.md`, "The
   LD decay, and the restart after it"). Serves 4. Needs 2.1. Can run
   beside 2.3.
-- [ ] 2.3 `src/core/analyses/ldDecay.ts` but its key: "Which variants it
+- [x] 2.3 `src/core/analyses/ldDecay.ts` but its key: "Which variants it
   reads", "The populations", "Its options", "Why it cannot run", "The
   request", "The fitted curve", "The warnings", "The check numbers",
   "Its lines of the Python script", "The TypeScript interface" and "Its
@@ -480,12 +487,12 @@ its panel is built.
   of `src/core/apps.ts` with no counts for it (`entry.md`;
   `filterCounts.md`, "Which results fill it"). It is not in
   `POPGEN_ANALYSES` until task 8.1. Serves 5. Needs 2.1.
-- [ ] 2.4 The key of the LD decay, `keyInputs`, and its tests, in a
+- [x] 2.4 The key of the LD decay, `keyInputs`, and its tests, in a
   commit of its own (`ldDecay.md`, "What goes into its key"): a key that
   read the LD pruning would take the plot off the screen for a filter
   the analysis does not read, and one that missed another filter would
   show a plot of other variants as current. Serves 6. Needs 2.3.
-- [ ] 2.5 The measurements of D7, through the application with a
+- [x] 2.5 The measurements of D7, through the application with a
   placeholder panel (above, "Where the specs are thin"), with
   `e2e/bigVcf.ts` given the spacing and the positions drawn at random
   that they need; the dense file tried at 2,000,000, 4,000,000 and
@@ -566,7 +573,7 @@ a population under the minimum, and has its warnings and check numbers.
 
 **Tasks:**
 
-- [ ] 3.1 `PopDistsJob`, `PopDistsResult`, `HeatmapOrder`,
+- [x] 3.1 `PopDistsJob`, `PopDistsResult`, `HeatmapOrder`,
   `FileOrderReason` and `LeftOut` in `protocol.ts` and their checks in
   `messages.ts` (`protocol.md`; `messages.md`, "The checks"); "The
   distances between populations" of `runner.md`, the pairs put back in
@@ -576,7 +583,7 @@ a population under the minimum, and has its warnings and check numbers.
   the table to the wrong two populations with no error, so the test of
   the names "3", "1" and "2" is part of this task. Serves 1, 2 and 3.
   Needs 2.1.
-- [ ] 3.2 `src/core/analyses/popDists.ts` but its key and the panel's
+- [x] 3.2 `src/core/analyses/popDists.ts` but its key and the panel's
   functions: "What it does", "Why it cannot run", "The request", "The
   warnings", "The check numbers", "Its lines of the Python script", "The
   TypeScript interface" (`parseOptions`, `popDistsOptions`,
@@ -584,7 +591,7 @@ a population under the minimum, and has its warnings and check numbers.
   the analyses whose `keptNeeds` locks (`store.md`); `countsOf` with
   their counts (`entry.md`; `filterCounts.md`). Not in `POPGEN_ANALYSES`
   until task 5.1. Serves 4. Needs 3.1 and work package 1.
-- [ ] 3.3 The key of the distances, `keyInputs`, and its tests, in a
+- [x] 3.3 The key of the distances, `keyInputs`, and its tests, in a
   commit of its own (`popDists.md`, "What goes into its key"): a key
   that held the measure would calculate again at each change of it.
   Serves 5. Needs 3.2.
@@ -646,7 +653,7 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 6. `PA4 D6 the histogram of the spectrum`. Check: `npx vitest run
    src/charts -t "PA4 D6"` passes at least 5 tests, from
    `histogram.md`, "How it is verified", the parts of stage 5: the
-   shares of p0 with `yMax` 0.061 giving 0 to 0.07 (1), ticks that are
+   shares of p0 with `yMax` 0.061 giving 0 to 0.065 (1, corrected from 0.07 by the owner's decision of 1 October 2026, point 1), ticks that are
    not whole (1), `xWholeNumbers` over 0.5 to 2.5 (1), and a count of
    −0.1, NaN and a `yMax` below the largest count refused (at least 2).
 
@@ -654,20 +661,20 @@ gives, with ticks at whole counts. Each is tried on `e2e/plots.html`.
 
 **Tasks:**
 
-- [ ] 4.1 The base: `plot2d.ts` with an axis of names from a band scale,
+- [x] 4.1 The base: `plot2d.ts` with an axis of names from a band scale,
   `xLabelAngle`, `nameFormat`, no text for an empty label, and
   `xWholeNumbers` (`plot2d.md`, "The axes" and "The TypeScript
   interface"); the tokens `--chart-text-on-light` and
   `--chart-text-on-dark` in `src/ui/tokens.css` (`css.md`); and
   `MAX_HEATMAP_NAMES` and `MAX_LINE_SERIES` in `src/charts/limits.ts`
   (`heatmap.md` and `line.md`, "The TypeScript interface"). Serves 1.
-- [ ] 4.2 `src/charts/heatmap.ts` and its classes in `charts.css`, from
+- [x] 4.2 `src/charts/heatmap.ts` and its classes in `charts.css`, from
   `heatmap.md` whole; the heatmap on `e2e/plots.html` and its flows.
   Serves 2 and 3. Needs 4.1.
-- [ ] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
+- [x] 4.3 `src/charts/line.ts` and its classes, from `line.md` whole;
   the line plot on `e2e/plots.html` and its flows. Serves 4 and 5. Needs
   4.1.
-- [ ] 4.4 The histogram's three additions for the spectrum:
+- [x] 4.4 The histogram's three additions for the spectrum:
   `Float64Array` counts, `yMax` and `xWholeNumbers` (`histogram.md`, the
   parts its opening dates 30 September 2026). Serves 6. Needs 4.1.
 
@@ -751,26 +758,26 @@ negative distance.
 
 **Tasks:**
 
-- [ ] 5.1 The panel's functions of `popDists.ts`, `popDistsHeatmap`,
+- [x] 5.1 The panel's functions of `popDists.ts`, `popDistsHeatmap`,
   `orderText`, `popDistsDescription`, `popDistsRows`, `popDistsCsv` and
   `tooManyPopulationsText` (`popDists.md`, "The TypeScript interface"
   and "Its words"); the distances in `POPGEN_ANALYSES` after the
   diversity, their title in `titles.ts` and their entry in `panels.ts`
   (`entry.md`, "`src/core/apps.ts`"); the shell's words of stage 5 for
   them (`shell.md`, "The status region"). Serves 1.
-- [ ] 5.2 The panel of `src/ui/analyses/popDists/`, from `popDists.md`,
+- [x] 5.2 The panel of `src/ui/analyses/popDists/`, from `popDists.md`,
   "The panel": the field of the minimum and the radio buttons, the
   heatmap mounted as `react.md` mounts a plot, its line of order, the
   table and its download, the text above 200 populations, the states,
   "Its words" and "Accessibility"; the states of D5 in
   `e2e/screens.spec.ts`. Serves 5. Needs 5.1.
-- [ ] 5.3 The flows of D2 in `e2e/popDists.spec.ts`, with
+- [x] 5.3 The flows of D2 in `e2e/popDists.spec.ts`, with
   `bigVcfPopsCsv` given the number of individuals a population holds,
   for the 201 populations of two; and the measurement of D3, with 20
   populations of the 19 MB file. Serves 2 and 3. Needs 5.2.
-- [ ] 5.4 The flow of D4, over the field of the minimum. Serves 4.
+- [x] 5.4 The flow of D4, over the field of the minimum. Serves 4.
   Needs 5.2; runs after 5.3, since both run Playwright.
-- [ ] 5.5 Stop A: the owner tries the panel of the distances, in
+- [x] 5.5 Stop A: the owner tries the panel of the distances, in
   Firefox and Safari by hand as well, and judges the writers' choices of
   the open-points file that it shows: the field of the minimum with its
   default of 20, the measure left out of the key, the panel after the
@@ -856,7 +863,7 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
 
 **Tasks:**
 
-- [ ] 6.1 The second call, across the layers in one commit that keeps
+- [x] 6.1 The second call, across the layers in one commit that keeps
   the application working: the two fields of the job and the eleven of
   the result in `protocol.ts` and their checks in `messages.ts`;
   `calcPopDiversity` in the runner, steps 6 to 8 of "The diversity" of
@@ -866,26 +873,26 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   read with `Object.hasOwn` would crash a diversity with a population
   named `__proto__`, which ran in stages 3 and 4 (`runner.md`, step 7),
   so its test is part of this task. Serves 1, 2 and 8. Needs 3.1.
-- [ ] 6.2 The options: `parseOptions` with its three fields,
+- [x] 6.2 The options: `parseOptions` with its three fields,
   `diversityOptions`, `drawOf`, and the lock of the draw in `needs` and
   `keptNeeds` (`diversity.md`, the options of "What it does", "Why it
   cannot run" and "The TypeScript interface"); the doc comment of
   `keptNeeds` in `store.ts` (`store.md`, "The definition of an
   analysis"); the options of the three analyses read by
   `projectFile.ts` (`projectFile.md`, "The versions of the format"). Serves 3. Needs 6.1.
-- [ ] 6.3 The warnings of stage 5, `diversityRows` and `diversityCsv` of
+- [x] 6.3 The warnings of stage 5, `diversityRows` and `diversityCsv` of
   eleven columns, and `script` with the spectrum's lines inside its
   block `if large:` (`diversity.md`, "The warnings", "Its lines of the
   Python script" and "What it shows"; `sfs.md`, "Its lines of the Python
   script"). Serves 4. Needs 6.2 and 6.5.
-- [ ] 6.4 The key version 3 and `keyInputs` without the default draw,
+- [x] 6.4 The key version 3 and `keyInputs` without the default draw,
   in a commit of its own (`diversity.md`, "What goes into its key"): a
   key that held the default draw would make every project file of stage
   4 leave its check numbers uncompared. Serves 5. Needs 6.2.
-- [ ] 6.5 `src/core/analyses/sfs.ts`: `spectraOf`, `spectraCsv` and
+- [x] 6.5 `src/core/analyses/sfs.ts`: `spectraOf`, `spectraCsv` and
   `spectrumWarnings` (`sfs.md`, "The module"). Serves 6. Needs 6.1; can
   run beside 6.2 and 6.4.
-- [ ] 6.6 First, in a commit of its own, the check numbers of the
+- [x] 6.6 First, in a commit of its own, the check numbers of the
   distances in `projectFile.md`, "How it is verified", beside the
   fixture: those of `popDists.md`, "How it is verified", at the missing
   data filter at 0.1, which popnei gives at a minimum of 10 as at 20
@@ -894,6 +901,15 @@ tasks 2.3 and 3.2 for the fixture of task 6.6.
   written by hand from `projectFile.md`, "How it is verified", and
   `wholeProject` of `src/core/testSupport.ts` drawing the options of the
   three analyses. Serves 7. Needs 2.3, 3.2 and 6.2.
+
+- [x] 6.7 Added on 30 September 2026, from the reviews of work packages
+  2 and 3: the small rules of the populations that the three analyses
+  wrote each for itself, gathered into one exported function each, with
+  no change to what they give: `MAX_NAMED` beside `namesOf`; whether the
+  project has a threshold on the individuals, from `individualsKept.ts`;
+  the populations the lists leave; the diversity's own rule of shares
+  replaced by `percentOf`. Needs 6.3 and 6.4, which edit
+  `diversity.ts`.
 
 **What could go wrong:** the flows of stages 2 and 3 read the diversity's
 rows by their cells; a column added before the fifth breaks them, and
@@ -949,20 +965,20 @@ its table and its CSV.
 
 **Tasks:**
 
-- [ ] 7.1 The options and the table: the three fields with the line of
+- [x] 7.1 The options and the table: the three fields with the line of
   the default and "Use the default", the eleven columns, the ready state
   with `underMinimumText`, the running state of two passes
   (`diversity.md`, "The panel": "What it shows", "The states", "Its
   words" and "Accessibility"). Serves 1 and 4.
-- [ ] 7.2 The block of the spectrum, below the table in the state done:
+- [x] 7.2 The block of the spectrum, below the table in the state done:
   its caption, one histogram per population with the shared `yMax`, the
   line under them, the table in its tab and the download (`sfs.md`, "The
   block of the panel"); the states of D4 in `e2e/screens.spec.ts`.
   Serves 2 and 4. Needs 7.1.
-- [ ] 7.3 The flows of D1 and D2, extending `e2e/diversity.spec.ts` and
+- [x] 7.3 The flows of D1 and D2, extending `e2e/diversity.spec.ts` and
   `diversityKept.spec.ts`; the measurement of D3. Serves 1, 2 and 3.
   Needs 7.2.
-- [ ] 7.4 Stop B: the owner tries the diversity and the spectrum, in
+- [x] 7.4 Stop B: the owner tries the diversity and the spectrum, in
   Firefox and Safari by hand as well, and judges the writers' choices of
   the open-points file that they show: no private alleles for one
   population, the check numbers as they were, eleven columns with F
@@ -1029,22 +1045,22 @@ task 8.1 shares; and, if a tab closed in task 2.5, the owner's answer.
 
 **Tasks:**
 
-- [ ] 8.1 The panel's functions: the data of the plot, the labels of
+- [x] 8.1 The panel's functions: the data of the plot, the labels of
   the legend, the description, the two tables and their CSVs
   (`ldDecay.md`, "What it shows", "Its words" and "Accessibility"); the
   LD decay in `POPGEN_ANALYSES` after the distances, its title and its
   entry in `panels.ts` (`entry.md`); the shell's words for it
   (`shell.md`); the placeholder panel of task 2.5 taken out. Serves 1.
   Needs 2.4, 5.1 and 7.1.
-- [ ] 8.2 The panel of `src/ui/analyses/ldDecay/`, from `ldDecay.md`,
+- [x] 8.2 The panel of `src/ui/analyses/ldDecay/`, from `ldDecay.md`,
   "The panel": the two fields, the empty distance as the PCA's, the line
   of the LD pruning, the plot mounted with `ldDecayCurve`, the line past
   16 populations, the two tables in their tabs, the downloads, the
   states, "Its words" and "Accessibility"; the states of D4 in
   `e2e/screens.spec.ts`. Serves 4. Needs 8.1 and 4.3.
-- [ ] 8.3 The flows of D2 and D3 in `e2e/ldDecay.spec.ts`. Serves 2 and
+- [x] 8.3 The flows of D2 and D3 in `e2e/ldDecay.spec.ts`. Serves 2 and
   3. Needs 8.2.
-- [ ] 8.4 Stop C: the owner tries the LD decay, in Firefox and Safari by
+- [x] 8.4 Stop C: the owner tries the LD decay, in Firefox and Safari by
   hand as well, and judges the writers' choices of the open-points file
   that it shows: the largest major allele frequency as an option, the
   warning of few individuals below 20, the lock at 1 GB with the
@@ -1058,6 +1074,40 @@ The field of the distance is empty until typed, and the PCA's field
 found that React Aria's field turns an empty field into `NaN` or keeps
 the last number; the flow of the keyboard checks that no key sends
 anything while it is empty.
+
+## 10. The owner's decisions at the three stops
+
+Added on 1 October 2026. The owner tried the three screens that day, in
+Firefox, with their own data, found them right, and took every
+recommendation of the report: the decisions A1 to A9, B1 to B8 and C1 to
+C10 and the numbered points 1 to 26 of "For the owner, as the work
+goes". Several reach `src/core`, the worker and `src/charts`, so they
+are tasks and not rounds of a screen. In each task a spec is changed
+first, in a commit of its own, to say what the recommendation says, and
+the code follows with its tests; the open-points file records each
+decision with the option not taken.
+
+**Deliverables:** every recommendation is in a spec and in the code, or
+is listed in the report with the reason it is not; the checks of work
+package 9, deliverable 1, pass; the screenshots of the three panels are
+taken again and looked at; the review of task 10.4 has run and its
+findings are fixed.
+
+**Tasks:**
+
+- [x] 10.1 The distances and the heatmap: A1 to A9 and points 4, 9, 10,
+  11, 13 and 21; and what the three analyses share: point 2 (the module
+  `src/core/populations.ts`), point 3, and A7 in the writer of every
+  CSV.
+- [x] 10.2 The LD decay and the line plot: C1 to C9 and points 5, 6, 7,
+  8, 14, 19, 22, 23 and 24. Beside 10.1, in other files.
+- [x] 10.3 The diversity, the spectrum and the histogram: B2 to B8 and
+  points 1, 15, 16, 17, 20, 25 and 26. B1 stays as it is. After 10.1,
+  whose shared words it uses.
+- [x] 10.4 The review of 10.1 to 10.3: `spec`, `tests`, `stale`,
+  `errors`, `react`, `accessibility` and `ux`, and its fixes.
+
+Points 12 and 18 are for stage 6 and C10 for task 9.1.
 
 ## 9. The end of the stage
 
@@ -1096,8 +1146,11 @@ specs of stage 5 matched to a test.
 
 **Tasks:**
 
-- [ ] 9.1 The documents, and the final checks. Serves 1 and 2.
-- [ ] 9.2 The map of the cases, and the tests it finds missing. Serves
+- [x] 9.1 The documents, and the final checks, with a sentence of
+  section 7 of `docs/architecture.md` that the order of the heatmap and
+  the curve of the LD decay are made outside the plots, found missing
+  by the review of work package 3. Serves 1 and 2.
+- [x] 9.2 The map of the cases, and the tests it finds missing. Serves
   3. Needs 9.1.
 
 ## At the end

@@ -1043,7 +1043,15 @@ the analyses `done`, `ready` or `removed`.
   populations with a minimum of 10 and the measure `"dest"`, and of the
   LD decay with a largest distance of 100000 and a largest major allele
   frequency of 0.9, with the check numbers of the distances, 1 + 3 × 2 =
-  7, as `popDists.md`, "The check numbers", counts them. Each
+  7, as `popDists.md`, "The check numbers", counts them. They are those
+  of `popDists.md`, "How it is verified", at the missing data filter at
+  0.1, which the fixture has: `[1200, 0.10273588423661377,
+  0.06129813142463423, 0.10496244498389443, 0.06354346296076403,
+  0.10962148955018115, 0.06567052128821259]`. popnei gives them at a
+  minimum of 10 as at 20, to the last digit, since the smallest
+  population, p0, has 48 individuals (node, `js-v0.1.0-dev.3`, 30
+  September 2026, `calcPopDists` of `panel.nei` and `panel_pops.csv` at
+  10 and at 20). Each
   opens into a project written as a literal in its test, and, while
   `FORMAT_VERSION` is 1, the project written back from it, with no result
   and the header's versions and date, is the fixture byte for byte; but

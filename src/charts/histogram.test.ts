@@ -588,3 +588,230 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(labels()).toContain("12,000");
   });
 });
+
+/**
+ * The shares of p0 at n = 40 of docs/specs/analyses/sfs.md, "The numbers
+ * of popnei": bins 1 to 20 of popnei's folded spectrum of p0 over their
+ * sum, 1155.2067685551308, from calcPopDiversity of the release
+ * js-v0.1.0-dev.3 on e2e/fixtures/panel.nei and panel_pops.csv, with
+ * numCalledAlleles 40 and minNumIndividuals 20, under node on 30
+ * September 2026. The largest is 0.05590275165567829, at 15.
+ */
+const P0_SHARES = Float64Array.from([
+  0.03296202862168288, 0.039741192875913794, 0.04292589823492003,
+  0.04599381504237501, 0.04950826665575176, 0.05214107823717621,
+  0.05333464033303239, 0.05374146334958941, 0.05408245056632821,
+  0.0545442264980674, 0.05499692782727783, 0.05536047033652249,
+  0.05566250577424119, 0.05588819458513805, 0.05590275165567829,
+  0.05553867859956841, 0.05475717261859911, 0.05374980986517631,
+  0.052891529866881344, 0.026276898456079615,
+]);
+
+/** The edges at the halves, 0.5 to numBins + 0.5, one bin per count. */
+function halfEdges(numBins: number): Float64Array {
+  return Float64Array.from(
+    { length: numBins + 1 },
+    (_each, index) => index + 0.5,
+  );
+}
+
+/** The histogram of a spectrum, as the block of the diversity draws it. */
+function spectrumOf(
+  shares: Float64Array,
+  options: { readonly yMax?: number; readonly xWholeNumbers?: boolean } = {},
+): HistogramData {
+  return {
+    title: "p0",
+    description: "The folded site frequency spectrum of p0.",
+    xLabel: "Copies of the rarer allele among 40 chromosomes",
+    yLabel: "Share of the variants with both alleles",
+    edges: halfEdges(shares.length),
+    counts: shares,
+    threshold: null,
+    ...options,
+  };
+}
+
+function tickTexts(element: HTMLElement, axis: string): (string | null)[] {
+  return [...element.querySelectorAll(`g.${axis} g.tick text`)].map(
+    (text) => text.textContent,
+  );
+}
+
+describe("PA4 D6 the histogram of the spectrum, its scales and ticks", () => {
+  // docs/specs/charts/histogram.md has 0 to 0.07 here; d3's nice, at its
+  // default of about 10 ticks, rounds 0.061 up to a step of 0.005, 0.065.
+  test("the shares of p0 with yMax 0.061 give a vertical domain of 0 to 0.065, and without it 0 to 0.06", () => {
+    expect(P0_SHARES).toHaveLength(20);
+    expect(Math.max(...P0_SHARES)).toBe(0.05590275165567829);
+    const shared = histogramScales(
+      spectrumOf(P0_SHARES, { yMax: 0.061 }),
+      500,
+      300,
+    );
+    expect(shared.y.domain()).toEqual([0, 0.065]);
+    expect(shared.x.domain()).toEqual([0.5, 20.5]);
+    expect(histogramScales(spectrumOf(P0_SHARES), 500, 300).y.domain()).toEqual(
+      [0, 0.06],
+    );
+    // The largest share of the three populations cannot tell the two apart.
+    expect(
+      histogramScales(
+        spectrumOf(P0_SHARES, { yMax: 0.05618145165329451 }),
+        500,
+        300,
+      ).y.domain(),
+    ).toEqual([0, 0.06]);
+  });
+
+  test("the rows of the spectrum hold the shares as they were given, with no threshold", () => {
+    const rows = histogramRows(spectrumOf(P0_SHARES, { yMax: 0.061 }));
+    expect(rows).toHaveLength(20);
+    expect(rows.map((row) => row.count)).toEqual([...P0_SHARES]);
+    expect(rows[0]).toEqual({
+      from: 0.5,
+      to: 1.5,
+      toIncluded: false,
+      count: 0.03296202862168288,
+      state: null,
+    });
+    expect(rows.every((row) => row.state === null)).toBe(true);
+  });
+
+  test("a yMax of 0 with every share 0 gives a vertical domain of 0 to 1", () => {
+    expect(
+      histogramScales(
+        spectrumOf(new Float64Array(20), { yMax: 0 }),
+        500,
+        300,
+      ).y.domain(),
+    ).toEqual([0, 1]);
+  });
+});
+
+describe("PA4 D6 the histogram of the spectrum, under jsdom", () => {
+  test("the shares of p0 with yMax 0.061 have vertical ticks that are not whole, 0.00 to 0.06, and bars that reach 0.0559 of 0.065", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, spectrumOf(P0_SHARES, { yMax: 0.061 }));
+    expect(tickTexts(element, "chart-axis-y")).toEqual([
+      "0.00",
+      "0.01",
+      "0.02",
+      "0.03",
+      "0.04",
+      "0.05",
+      "0.06",
+    ]);
+    const bars = [...element.querySelectorAll("g.chart-marks rect.chart-bar")];
+    expect(bars).toHaveLength(20);
+    for (const bar of bars) expect(bar.getAttribute("class")).toBe("chart-bar");
+    // The frame is 375 less the margins of 12 and 44, 319 high; bin 15
+    // rises to 0.05590275165567829 of 0.065 of it.
+    expect(numberOf(bars[14], "height")).toBeCloseTo(
+      (319 * 0.05590275165567829) / 0.065,
+      9,
+    );
+  });
+
+  test("xWholeNumbers over the edges 0.5 to 2.5, two bins, gives the horizontal ticks 1 and 2 alone, and without it d3 gives fractions", () => {
+    const shares = Float64Array.from([0.75, 0.25]);
+    const element = sizedElement(600, 375);
+    const handle = createHistogram(
+      element,
+      spectrumOf(shares, { xWholeNumbers: true }),
+    );
+    expect(tickTexts(element, "chart-axis-x")).toEqual(["1", "2"]);
+    handle.update(spectrumOf(shares));
+    const fractions = tickTexts(element, "chart-axis-x");
+    expect(fractions.some((tick) => Number(tick) % 1 !== 0)).toBe(true);
+  });
+
+  test("the spectrum of p0 with xWholeNumbers has whole ticks under the centres of its bars", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(
+      element,
+      spectrumOf(P0_SHARES, { yMax: 0.061, xWholeNumbers: true }),
+    );
+    const ticks = tickTexts(element, "chart-axis-x");
+    expect(ticks.length).toBeGreaterThan(1);
+    for (const tick of ticks) expect(Number(tick) % 1).toBe(0);
+  });
+});
+
+describe("the left margin of the histogram follows the numbers of its vertical axis", () => {
+  const frameOf = (element: HTMLElement): string | null | undefined =>
+    element.querySelector("g.chart-frame")?.getAttribute("transform");
+
+  test("shares up to 0.5, of at most four characters at any height, keep the margin of 60", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, spectrumOf(Float64Array.from([0.5, 0.3, 0.2])));
+    expect(frameOf(element)).toBe("translate(60,12)");
+  });
+
+  test("shares up to 0.044 under a yMax of 0.936 keep 60, and alone, with ticks up to 0.045, five characters, get 67", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(
+      element,
+      spectrumOf(Float64Array.from([0.044, 0.02, 0.936]), { yMax: 0.936 }),
+    );
+    expect(frameOf(element)).toBe("translate(60,12)");
+    const narrow = sizedElement(600, 375);
+    createHistogram(narrow, spectrumOf(Float64Array.from([0.044, 0.02])));
+    // The label's 22 pixels, five characters at 7.2 and the tick's 9.
+    expect(frameOf(narrow)).toBe("translate(67,12)");
+  });
+
+  test("counts up to 240 keep the margin of 60, and counts up to 12,000, six characters, get 74.2", () => {
+    const element = sizedElement(600, 375);
+    const edges = Float64Array.from([0, 0.5, 1]);
+    const handle = createHistogram(
+      element,
+      histogramOf(Uint32Array.from([240, 3]), null, edges),
+    );
+    expect(frameOf(element)).toBe("translate(60,12)");
+    handle.update(histogramOf(Uint32Array.from([12000, 3]), null, edges));
+    expect(frameOf(element)).toBe("translate(74.2,12)");
+  });
+});
+
+describe("PA4 D6 the histogram of the spectrum, its defects", () => {
+  test("a share of -0.1 is refused", () => {
+    expectRefused(
+      spectrumOf(Float64Array.from([0.5, -0.1, 0.6])),
+      "not a finite number at least 0",
+    );
+  });
+
+  test("a share of NaN or of an infinity is refused", () => {
+    expectRefused(
+      spectrumOf(Float64Array.from([0.5, NaN, 0.5])),
+      "not a finite number at least 0",
+    );
+    expectRefused(
+      spectrumOf(Float64Array.from([Number.POSITIVE_INFINITY, 0.5])),
+      "not a finite number at least 0",
+    );
+  });
+
+  test("a yMax below the largest count is refused, and one equal to it is drawn", () => {
+    expectRefused(
+      spectrumOf(P0_SHARES, { yMax: 0.0559 }),
+      "below the largest count",
+    );
+    expect(
+      histogramScales(
+        spectrumOf(P0_SHARES, { yMax: 0.05590275165567829 }),
+        500,
+        300,
+      ).y.domain(),
+    ).toEqual([0, 0.06]);
+  });
+
+  test("a yMax that is not finite is refused", () => {
+    expectRefused(spectrumOf(P0_SHARES, { yMax: NaN }), "not a finite number");
+    expectRefused(
+      spectrumOf(P0_SHARES, { yMax: Number.POSITIVE_INFINITY }),
+      "not a finite number",
+    );
+  });
+});

@@ -754,10 +754,24 @@ project of association, which has roles and no populations.
 **What the analyses per population share from stage 5.** Three
 analyses read the populations in stage 5, the diversity, the distances
 between populations and the LD decay, and they lock and name the
-populations alike, so the functions that do it are here, where the
+populations alike, so the functions that do it are specified here, where the
 diversity's module had them alone until stage 4; the option not taken
 was each analysis importing the diversity's module, which would tie the
 three to one of them.
+
+They are in a module of their own, `src/core/populations.ts`, as the
+owner decided on 1 October 2026
+(`docs/specs/stage-5-open-points.md`, "Decided by the owner on 1 October
+2026: the distances, the heatmap and what the analyses share"). Until
+then they were in `project.ts`, and `populationListsNeeds` needs the
+function `individualsKept` of `individualsKept.ts`, a module that
+imports `project.ts`: the two modules imported each other. Every name
+that crossed was a function, so nothing broke, and a constant added at
+the top of either module and made with a function of the other could
+have stopped the page at load, which the review of the plan showed on a
+scratch copy. `populations.ts` imports `project.ts` and
+`individualsKept.ts`, and neither imports it; `project.ts` imports
+`individualsKept.ts` for its types alone.
 
 - **The lists of individuals leaving no individual with a
   population**, `populationListsNeeds(p)`: the diversity's reason of
@@ -799,9 +813,12 @@ three to one of them.
   `underMinimumText(under, minNumIndividuals, consequence)`, which the
   ready state of both panels shows under the populations it lists:
   "p3 has 12 individuals, fewer than the minimum of 20, ‹consequence›",
-  and, of two or more, "p3 and p5 have fewer individuals than the
-  minimum of 20, 12 and 8, ‹consequence›", named as `namesOf` names them,
-  with no counts past three. Each analysis gives its consequence, of one
+  and, of two or three, "p3 and p5 have 12 and 8 individuals, fewer than
+  the minimum of 20, ‹consequence›", named as `namesOf` names them,
+  with no counts past three. The form of two or three is the owner's
+  decision of 1 October 2026; until then it read "p3 and p5 have fewer
+  individuals than the minimum of 20, 12 and 8, ‹consequence›", in which
+  the three numbers read as three minimums. Each analysis gives its consequence, of one
   population and of several: the distances "and is left out." and "and
   are left out."; the diversity "so it will have no values, and is left
   out of the count of the private alleles of the others." and "so they
@@ -809,6 +826,19 @@ three to one of them.
   alleles of the others." Past three populations the counts are left
   out: "p3, p5 and 2 more have fewer individuals than the minimum of 20,
   and are left out."
+- **Four helpers** the analyses and their panels call, exported beside
+  them since stage 5 and listed here from 1 October 2026:
+  `populationsColumnOf(p)`, the column the populations are taken from,
+  or `null` for the one population and for a project of association;
+  `populationsByLists(p)`, the populations the lists of individuals to
+  keep and to remove leave, known from the project alone, with which an
+  analysis locks before the statistics of each individual are known;
+  `allEmptiedText(numKept, column, emptied)`, the words of
+  `populationsKeptNeeds`, which the LD decay gives too for the
+  populations of its own request; and `loosenText(one)`, "Loosen the
+  filters of individuals in the Variants step to keep it.", or "…them.",
+  which ends those words and the line of the ready state that names the
+  populations left empty.
 
 ### The types of the columns
 
@@ -1520,10 +1550,12 @@ export function populationsNeeds(p: Project):
 ```
 
 From stage 5, what the analyses per population share, of "What the
-analyses per population share from stage 5" above; `LeftOut` is of
+analyses per population share from stage 5" above, in
+`src/core/populations.ts`; `LeftOut` is of
 `docs/specs/worker/protocol.md`:
 
 ```ts
+// src/core/populations.ts
 /** The reason when the lists to keep and to remove leave no individual
     that has a population, known from the project alone; null for the
     one population, when some population keeps an individual, and when
@@ -1548,6 +1580,25 @@ export function underMinimumText(
   minNumIndividuals: number,
   consequence: { readonly one: string; readonly many: string },
 ): string;
+
+/** The column the populations are taken from; null when no column is
+    chosen, for the one population, and for a project of association. */
+export function populationsColumnOf(p: Project): string | null;
+
+/** The populations the lists of individuals to keep and to remove
+    leave, each with an individual; null when the individuals kept or
+    the populations cannot be made. */
+export function populationsByLists(p: Project): Pops | null;
+
+/** The words of populationsKeptNeeds: the `numKept` individuals kept
+    have no population in `column`, which leaves every population of
+    `emptied` empty. */
+export function allEmptiedText(
+  numKept: number, column: string, emptied: readonly string[],
+): string;
+
+/** What to do about populations left empty, of one or of several. */
+export function loosenText(one: boolean): string;
 ```
 
 Each keeps its answer for the same inputs, so that a table of 10,000
@@ -1568,6 +1619,10 @@ behaviour is the one this spec gives:
 export function shown(value: string): string;
 /** A value of a file, the name of a file among them, escaped and not cut. */
 export function escaped(value: string): string;
+/** The characters of a value of a file, each as `escaped` writes it, an
+    escape as one, so that a text that cuts a value at its own length,
+    the legend of the LD decay among them, never cuts inside an escape. */
+export function escapedCharacters(value: string): readonly string[];
 /** Names in words: all when three or fewer, "a, b and c"; otherwise the
     first two and how many more, "a, b and 10 more". */
 export function namesOf(names: readonly string[]): string;
@@ -1943,12 +1998,18 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
 while a threshold waits for the statistics, those of `byLists`, for a
 column and for the one population alike, as `populationsBeforeRun` was
 tested in the module of the diversity in stage 3; every function `null`
-for a project of association. From stage 5: `populationsWithMinimum` of
+for a project of association. From stage 5, of the functions of
+`src/core/populations.ts`, tested where they were, in the tests of
+`project.ts`: `populationsWithMinimum` of
 A of 2, B of 1 and C of 3 individuals at a minimum of 2 gives A and C,
 and B with 1, in that order, and at 0 every population; `underMinimumText`
-of one, of two and of four populations, the texts above as literals;
-`populationListsNeeds` and `populationsKeptNeeds` each case of the
-diversity's tests of stage 3, moved here with them.
+of one, of two, of three and of four populations, the texts above as
+literals; `populationListsNeeds` and `populationsKeptNeeds` each case of
+the diversity's tests of stage 3, moved there with them. In the tests of
+`populations.ts`: the helpers, on the worked table, `populationsByLists`
+giving A and B, A alone with a list to remove i2, and none with a list
+to keep i4; and, read from the text of `project.ts`, it imports nothing
+of `individualsKept.ts` but types, and nothing of `populations.ts`.
 - **`columnAllows`**, on the worked table of the diversity's spec,
   `i1` to `i4`, with a column `h` of `1,5`, `2`, `2` and a missing cell,
   read with the comma, and a column `st` of `yes`, `no`, `yes` and `no`:

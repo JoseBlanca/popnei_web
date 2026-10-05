@@ -9,21 +9,29 @@ import {
   variantsKept,
   writeCountsOf,
 } from "./apps.ts";
+import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
+import { popDists } from "./analyses/popDists.ts";
 import { resultBytes } from "./cache.ts";
 import { keyFromWire } from "./keys.ts";
 import { emptyProject } from "./project.ts";
 import { createStore } from "./store.ts";
 import type { AnalysisView, AppState, Store } from "./store.ts";
-import { FIVE_INDIVIDUALS, fiveIndividualsProject } from "./testSupport.ts";
+import {
+  FIVE_INDIVIDUALS,
+  fiveIndividualsProject,
+  noPopDiversity,
+} from "./testSupport.ts";
 import type {
   DiversityResult,
   IndividualChecksResult,
   Job,
   JobResult,
+  LdDecayResult,
   Outcome,
   PassStats,
   PcaResult,
+  PopDistsResult,
   Run,
   VariantChecksResult,
   VariantDistrib,
@@ -46,6 +54,7 @@ function diversityResult(pass: PassStats): DiversityResult {
     obsHet: Float64Array.from([0.35]),
     polyRatio: Float64Array.from([0.9]),
     numVarsWithValue: Uint32Array.from([pass.numVars]),
+    ...noPopDiversity(1),
     passStats: pass,
   };
 }
@@ -98,6 +107,24 @@ describe("IP8 D3 the analyses of apps.ts", () => {
   });
 });
 
+describe("PA5 D1 the distances between populations in apps.ts", () => {
+  test("the distances between populations are an analysis of population genetics, in the Analyses step, just after the diversity", () => {
+    const ids = POPGEN_ANALYSES.map((def) => def.id);
+    expect(POPGEN_ANALYSES[ids.indexOf("popDists")]).toBe(popDists);
+    expect(ids.indexOf("popDists")).toBe(ids.indexOf("diversity") + 1);
+    expect(POPGEN_ANALYSIS_STEPS["popDists"]).toBe("analyses");
+  });
+});
+
+describe("PA8 D1 the LD decay in apps.ts", () => {
+  test("the LD decay is the last analysis of population genetics, in the Analyses step, just after the distances between populations", () => {
+    const ids = POPGEN_ANALYSES.map((def) => def.id);
+    expect(POPGEN_ANALYSES.at(-1)).toBe(ldDecay);
+    expect(ids.indexOf("ldDecay")).toBe(ids.indexOf("popDists") + 1);
+    expect(POPGEN_ANALYSIS_STEPS["ldDecay"]).toBe("analyses");
+  });
+});
+
 describe("VS5 D1 apps.ts", () => {
   test("the first project of population genetics has the missing data filter at 0.1 and nothing else", () => {
     expect(firstProject("popgen")).toEqual({
@@ -106,7 +133,7 @@ describe("VS5 D1 apps.ts", () => {
     });
   });
 
-  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components and the diversity", () => {
+  test("the analyses of population genetics have distinct ids: the three checks of the Variants step in the order of its sections, the statistics of each individual first since 28 September 2026, then the principal components, the diversity, the distances between populations and the LD decay", () => {
     const ids = POPGEN_ANALYSES.map((def) => def.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
@@ -115,16 +142,20 @@ describe("VS5 D1 apps.ts", () => {
       "filterCounts",
       "pca",
       "diversity",
+      "popDists",
+      "ldDecay",
     ]);
   });
 
-  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components and the diversity in the Analyses step, and no other analysis has one", () => {
+  test("each analysis has its step in POPGEN_ANALYSIS_STEPS, the checks in the Variants step and the principal components, the diversity, the distances between populations and the LD decay in the Analyses step, and no other analysis has one", () => {
     expect(POPGEN_ANALYSIS_STEPS).toStrictEqual({
       individualChecks: "variants",
       variantChecks: "variants",
       filterCounts: "variants",
       pca: "analyses",
       diversity: "analyses",
+      popDists: "analyses",
+      ldDecay: "analyses",
     });
     expect(Object.keys(POPGEN_ANALYSIS_STEPS).toSorted()).toEqual(
       POPGEN_ANALYSES.map((def) => def.id).toSorted(),
@@ -158,6 +189,52 @@ describe("VS5 D1 apps.ts", () => {
         ]),
       ),
     ).toBeNull();
+  });
+});
+
+describe("PA2 D5 countsOf of a result of the LD decay", () => {
+  test("countsOf of a result of the LD decay with the passStats of the diversity gives the variants of the file, 1,200, and no counts, since its filters are the project's but the LD pruning", () => {
+    const result: LdDecayResult = {
+      analysis: "ldDecay",
+      pops: ["p0"],
+      numIndividuals: Uint32Array.from([48]),
+      numVars: Float64Array.from([1100]),
+      smallestDist: Float64Array.from([1]),
+      largestDist: Float64Array.from([100]),
+      numPairs: Float64Array.from([10]),
+      meanR2: Float64Array.from([0.2]),
+      sdR2: Float64Array.from([0.1]),
+      rhoPerBp: Float64Array.from([0.01]),
+      r2AtZero: Float64Array.from([0.47]),
+      halfDist: Float64Array.from([50]),
+      passStats: MISSING_PASS,
+    };
+    expect(countsOf(result)).toStrictEqual({ numVarsRead: 1200, counts: null });
+  });
+});
+
+describe("PA3 D4 countsOf of a result of the distances", () => {
+  test("countsOf of a result of the distances between populations with the passStats of the diversity gives the variants of the file, 1,200, and the counts of the same passStats, since its pass has the project's list and filters", () => {
+    const result: PopDistsResult = {
+      analysis: "popDists",
+      pops: ["p0", "p2"],
+      numIndividuals: Uint32Array.from([48, 84]),
+      fst: Float64Array.from([0.10134216885691137]),
+      dest: Float64Array.from([0.060374890860149355]),
+      numVarsPerPair: Uint32Array.from([1152]),
+      order: {
+        fst: { kind: "file", reason: "twoPopulations" },
+        dest: { kind: "file", reason: "twoPopulations" },
+      },
+      leftOut: [],
+      passStats: MISSING_PASS,
+    };
+    const found = countsOf(result);
+    expect(found).toStrictEqual({
+      numVarsRead: 1200,
+      counts: { analysis: "filterCounts", passStats: MISSING_PASS },
+    });
+    expect(found.counts?.passStats).toBe(MISSING_PASS);
   });
 });
 

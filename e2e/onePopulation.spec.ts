@@ -106,15 +106,19 @@ async function choosePopulations(page: Page, option: string): Promise<void> {
 }
 
 function panel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
-/** The cells of the row of the population `pop` of the diversity. */
+/** The cells of the row of the population `pop` of the diversity in the
+    first five columns, its header left out: those of stages 2 to 4,
+    which F, sixth from stage 5, and the columns after it leave as they
+    were. */
 function row(page: Page, pop: string): Locator {
   return panel(page)
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader", { name: pop, exact: true }) })
-    .getByRole("cell");
+    .getByRole("cell")
+    .and(page.locator(":nth-child(-n+5)"));
 }
 
 async function run(page: Page): Promise<void> {

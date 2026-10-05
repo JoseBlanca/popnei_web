@@ -21,7 +21,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
     Analyses step holds the principal components' panel beside it, with
     a Run of its own. */
 function diversityPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** The largest project file the page reads, 64 MB. */
@@ -1323,7 +1323,10 @@ test("WS9 D3 under the diversity's table, a VCF read with every variant is told 
   await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
   const notCompared =
     "Not compared with the numbers of the project file: this file was read with every variant, and the project's with only the variants with PASS or . in the FILTER column. To compare them, read the file again in the Variants step with only the variants with PASS or . in the FILTER column.";
-  const diversity = page.getByRole("region", { name: "Diversity" });
+  const diversity = page.getByRole("region", {
+    name: "Diversity",
+    exact: true,
+  });
   await expect(diversity.getByText(notCompared)).toBeVisible();
   // Announced with the end of the calculation, after the words of the
   // read when they come within the pause of the announcer.

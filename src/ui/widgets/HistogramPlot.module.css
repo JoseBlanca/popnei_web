@@ -1,0 +1,21 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The element the plot draws in, whose size the plot reads
+   (docs/specs/charts/histogram.md, "The size"); as narrow as its
+   parent, whatever width the SVG in it was drawn at. The histograms of
+   the Variants step. */
+.wide {
+  inline-size: 100%;
+  min-inline-size: 0;
+  aspect-ratio: 16 / 10;
+}
+
+/* The histograms of the spectrum: 4 by 3, and never lower than 18rem, so
+   that the label of the vertical axis fits along it at the width of a
+   phone. */
+.tall {
+  inline-size: 100%;
+  min-inline-size: 0;
+  aspect-ratio: 4 / 3;
+  min-block-size: 18rem;
+}

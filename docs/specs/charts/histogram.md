@@ -8,7 +8,11 @@ one histogram per population in the block of the diversity's panel:
 counts that are not whole numbers, a top of the vertical axis the
 screen gives, so that several histograms share one scale, and ticks at
 whole numbers on the horizontal axis when asked; approved by the
-owner on 30 September 2026. This spec gives the first plot of the applications: the
+owner on 30 September 2026. Revised on 1 October 2026 for the owner's
+decisions of that day (`docs/specs/stage-5-open-points.md`): the left
+margin follows the numbers of the vertical axis, the bottom one is 16
+pixels deeper under a label on two lines, and the example of the
+vertical axis of the spectrum is corrected. This spec gives the first plot of the applications: the
 function of `src/charts/histogram.ts` that draws a histogram whose bins
 are already counted, and marks which bins the threshold of a filter keeps
 and which it removes. The Variants step draws five histograms with it:
@@ -288,6 +292,28 @@ pixels, refined in the running application:
 | bottom | 44 | 44 |
 | left | 60 | 60 |
 
+The left margin is 60 pixels, or, when the longest number of the
+vertical axis has more than four characters, 22 pixels, 7.2 a character
+and 9: 22 for the label of the axis and the gap after it, the number
+counted and not measured, and 9 for the tick and its gap. The owner
+took it on 1 October 2026 (point 26 of the report of
+`docs/plans/population-analyses.md`): with a draw of 96 the shares of
+the spectrum have three decimals, "0.035", and at 60 pixels they ran
+over the label of the axis by 1 to 2.4 pixels, in Chromium and WebKit;
+they now stand 4.6 to 7 pixels from it. The longest number is the top
+of the axis as it is written with the most ticks a frame of 640 pixels
+has, 16, since the margin does not know the height. The histograms of
+the Variants step keep 60 while the top of their axis of counts is
+below 1,000, as on `panel.nei`, and get 67 from "1,000", five
+characters with its comma.
+
+The bottom margin is 16 pixels deeper, 60, when the base writes the
+label of the horizontal axis on two lines, which it does when one line
+would not fit (`plot2d.md`, "The axes"): "Copies of the rarer allele
+among 40 chromosomes" under a histogram of the spectrum on a screen of
+320 pixels. The left margin is 16 pixels deeper in the same way when
+the label of the vertical axis is on two lines: "Share of the variants
+with both alleles" along the same histogram.
 
 
 ### Colours and the two themes
@@ -441,10 +467,13 @@ verified in `plot2d.md`, the export on this histogram.
   the vertical ticks whole numbers for counts of 0 to 3. From stage 5:
   the shares of p0 at n = 40 of `docs/specs/analyses/sfs.md`, "The
   numbers of popnei", as a `Float64Array` over the edges 0.5 to 20.5,
-  with `yMax` 0.061, give a vertical domain of 0 to 0.07, made round
-  from it, where p0's largest share, 0.05590275165567829, would give 0
-  to 0.06 (the largest share of the three populations, 0.05618145165329451,
-  gives 0 to 0.06 as well, so it cannot tell the two apart); ticks
+  with `yMax` 0.061, give a vertical domain of 0 to 0.065, made round
+  from it by the scale's `nice`, where p0's largest share,
+  0.05590275165567829, would give 0 to 0.06 (the largest share of the
+  three populations, 0.05618145165329451, gives 0 to 0.06 as well, so
+  it cannot tell the two apart). This example read 0 to 0.07 until 1
+  October 2026, which d3's `nice` gives only when it is told to round
+  to 5 ticks, and the histograms of stage 4 would change with that; ticks
   that are not whole on it; `xWholeNumbers` over the edges 0.5 to 2.5,
   two bins, the ticks 1 and 2 alone, where d3 would give fractions; a count of −0.1 or NaN, and a `yMax` below the largest count,
   throw.
@@ -463,7 +492,12 @@ calls:
   legend and leaves every bar filled, in the same `<svg>` element;
 - an `update` to 20 bins of a count of 1 each gives 20 rects, in the same `<svg>` element;
 - the top margin 56 with a threshold and 12 without, after an `update`
-  in each direction.
+  in each direction;
+- the left margin 60 for shares up to 0.5, of at most four characters
+  at any height, and 67 for shares of 0.044 and 0.02, whose axis ends
+  at "0.045", five characters, 22 + 5 × 7.2 + 9, while the same shares
+  under a `yMax` of 0.936 keep 60; 60 for counts up to 240 and 74.2
+  for counts up to 12,000, "12,000".
 
 
 **In Playwright, in Chromium, Firefox and WebKit**:
@@ -472,6 +506,11 @@ calls:
   three rows of the legend lie inside the SVG, their boxes measured with
   `getBBox`, with the longest words of the step, "Removed by this
   filter";
+- at 320 pixels wide, with the committed font of the checks, the label
+  under each histogram of the spectrum, on its two lines, lies inside
+  its SVG, its box measured with `getBBox`, and so does the label
+  along its vertical axis; the labels under the histograms of the
+  Variants step are on one line there;
 - the Variants step with its histograms, in both themes, in the screens
   of `e2e/screens.spec.ts`, looked at as `testing.md` says, and axe on
   each.

@@ -2450,8 +2450,8 @@ function isTableFrozen(table: IndividualsTable): boolean {
 }
 
 /** The name of an individual, the cell of the first column. The reader
-    refuses a row with no name, so a missing one is a defect. */
-function identifierOf(cell: Cell | undefined): string {
+    refuses a row with no name, so a missing one is a defect, thrown. */
+export function identifierOf(cell: Cell | undefined): string {
   if (cell === null || cell === undefined) {
     throw defect("a row of the individuals table has no individual.");
   }
@@ -2681,6 +2681,12 @@ function needOf(kind: PopulationsNeed["kind"], words: string): PopulationsNeed {
   };
 }
 
+// What the analyses per population share from stage 5 is in
+// populations.ts (the project spec, "What the analyses per population
+// share from stage 5"), which imports this module and individualsKept.ts,
+// so that this module imports individualsKept.ts for its types alone,
+// and nothing of populations.ts.
+
 /** The separator a read used, as the Individuals step names it. */
 const SEPARATOR_NAMES: Readonly<Record<CsvFound["separator"], string>> = {
   ",": "the comma",
@@ -2758,8 +2764,15 @@ function individualsFileRefusalWords(
   }
 }
 
-/** The most individuals a text names all of (the project spec, Open 3). */
-const MAX_NAMED = 3;
+/** The most individuals or populations a text names all of (the project
+    spec, Open 3), as `namesOf` names them: past it, a text names the
+    first two and how many more, and gives no counts of each. */
+export const MAX_NAMED = 3;
+
+/** The largest whole number popnei takes for a minimum of individuals or
+    a draw, 2^32 − 1, `LARGEST_WHOLE_NUMBER` of popnei's `arguments.ts`:
+    the bound of the options of the diversity and of the distances. */
+export const LARGEST_WHOLE_NUMBER = 4_294_967_295;
 
 /** Names in words, in their order: all of them when there are at most
     MAX_NAMED, "a, b and c"; otherwise the first two and how many more,
@@ -4656,8 +4669,10 @@ const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
 
 /** The characters of a value, each as a text shows it: a hidden one
     escaped, `\n`, `‮`, `\u{e0001}`, and any other as it is, a
-    quote and a backslash among them. */
-function escapedCharacters(value: string): string[] {
+    quote and a backslash among them. A text that cuts a value at a length
+    of its own counts and cuts these, so that it never stops inside an
+    escape. */
+export function escapedCharacters(value: string): readonly string[] {
   return Array.from(value, (character) => {
     if (!HIDDEN.test(character)) {
       return character;

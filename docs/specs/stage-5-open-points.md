@@ -255,6 +255,350 @@ application, a pass of its own over the whole file reading the
 positions, minutes more for each Run on a file of several GB; and
 leaving it, with a line of the help alone.
 
+## Decided by the owner on 1 October 2026: the distances, the heatmap and what the analyses share
+
+On 1 October 2026 the owner tried the panel of the distances between
+populations as built, in Firefox, with their own data, at the first
+stop of `docs/plans/population-analyses.md`, and took every
+recommendation of the plan's report as written. The report,
+`docs/plans/population-analyses.report.md`, names them A1 to A9, under
+"Stop A", and by number under "For the owner, as the work goes"; each
+is below under what it decides, with its name there. The specs changed
+are `docs/specs/analyses/popDists.md`, `docs/specs/charts/heatmap.md`
+and `plot2d.md`, `docs/specs/core/project.md`, and a sentence each of
+`docs/specs/analyses/diversity.md`, `pca.md` and
+`docs/specs/steps/variants.md`.
+
+The warnings and the locks of the distances (`popDists.md`, "The
+warnings" and "Why it cannot run"):
+
+- **The warning of a negative distance says what the heatmap does only
+  when it does it** (A1). "The heatmap orders them as if the distance
+  were 0, and shows the value." is written when a heatmap is drawn, 200
+  populations or fewer, and a measure the warning names is ordered by
+  similarity; with the order of the metadata file, "The heatmap shows
+  the value."; above 200 populations, where no heatmap is drawn,
+  nothing. The warning is made once for a result, so it reads the
+  orders of the measures it names, not the measure the radio buttons
+  draw. Not taken: the sentence as it was, in every case.
+- **A pair with variants and no Fst has a warning of its own** (A2),
+  "p0 and p2 share one allele at every variant counted for them, so
+  Hudson's Fst has no value (0/0)." popnei gives no Fst where its
+  divisor is 0. Not taken: "no value" in the table beside a count of
+  variants, unexplained.
+- **At a minimum of 0 or 1 the warnings do not count individuals**
+  (A3): "p0 and p3 have no variant at which both have a called
+  genotype, so the pair has no distance.", and, for the pairs over fewer
+  variants, "at the others, one of the two populations has no called
+  genotype." Not taken: "fewer than 0 individuals with a called
+  genotype".
+- **The lock's advice names the field as its label does, and where it
+  is** (A4): "Lower the number of individuals needed, above". Not
+  taken: "Lower the minimum of individuals below", the field being
+  above the Run button and labelled "Individuals with a called genotype
+  needed in each population, per variant".
+- **When every pair is over fewer variants, the warning says "All"**
+  (A6): "All 20,100 pairs are over fewer than the 1,152 variants kept,
+  down to 641 (56%) for p0 and p3.", without the clause "at the
+  others, …". Not taken: "20,100 of the 20,100 pairs … at the
+  others, …".
+- **Two sentences of the warnings are the code's** (point 9): the
+  advice of a population left out, when the filters of individuals took
+  some of it, is one list with one "or", "lower the minimum of
+  individuals, merge it with another population in the metadata file,
+  or loosen the filters of individuals in the Variants step"; and the
+  warning of several negative pairs ends "shows the values". Not taken:
+  the spec's two "or" and its singular.
+- **The lists or the filters of individuals leaving one population
+  lock with words of their own** (point 10): "The lists of individuals
+  leave one population, p0, and the distances need two or more. Change
+  the lists in the Variants step.", and, known once the individuals
+  kept are, "The filters of individuals leave one population, p0, and
+  the distances need two or more. Loosen the filters of individuals in
+  the Variants step." The words of the minimum are given only when two
+  populations or more are left. Not taken: "Only p0 has 20 individuals
+  or more … Lower the minimum…", which cannot help when the others have
+  no individual.
+
+What both panels say before a Run, and every download:
+
+- **The populations under the minimum, of two or three** (A5): "p0a and
+  p0b have 24 and 24 individuals, fewer than the minimum of 25, and are
+  left out", in the distances and, with its own consequence, in the
+  diversity (`project.md`, `underMinimumText`). Not taken: "…have fewer
+  individuals than the minimum of 25, 24 and 24, …", which reads as
+  three minimums.
+- **A name that a spreadsheet would run as a formula is written with a
+  quote before it** (A7): in every CSV of the application, a cell of
+  text that starts with "=", "+", "-" or "@", the name of a population,
+  of an individual or of a column, is written `'=p1`; a number is never
+  changed, so `-0.0128` stays a number (`diversity.md`, "What it
+  shows"). Not taken: the names as they are.
+
+The Python script of the distances (`popDists.md`, "Its lines of the
+Python script"):
+
+- **The lines follow the six steps of the application's order, and keep
+  a population only when it holds an individual** (point 11). Run in
+  popnei's Python on 1 October 2026 they gave the application's numbers
+  and orders, also where the lines of 30 September raised: at a minimum
+  of 0 with a population left empty, on a pair of no value, on
+  distances all 0 or below, and with two populations. Not taken: lines
+  that raise where the application gives a result.
+
+The heatmap (`heatmap.md`):
+
+- **The grid is at the bottom left of its frame** (point 4), so that
+  the names of the columns stand right under them. Not taken: the grid
+  at the top, with the names 90 to 130 pixels below the last row at 640
+  pixels; an option of the base of the plots that places the axis.
+- **The heatmap has a least width, and scrolls sideways below it** (A8
+  and point 13): the margins of its names and its legend and a grid of
+  128 pixels; the box scrolls as the tables do and is reached with the
+  Tab key. Not taken: names cut shorter as the width falls.
+- **When the names are not written, the margins are made without them**
+  (point 13), so the grid takes the room: below bands of 12 pixels, 8
+  pixels left and below. Not taken: the margins kept empty, 270 pixels
+  of 640 with 32 populations of long names.
+- **A name is counted at 9 pixels a character in the margins** (point
+  21), where it was 7.2. The recommendation offered a measurement of
+  each name in the browser, or 9 pixels; the measurement was not taken,
+  since it needs the font loaded and a browser, which the tests of the
+  plots do not have (`.claude/skills/coding/charts.md`, "The margins").
+  At 9 pixels a name of 20 capitals fits, and "WMA", made of the two
+  widest letters, still loses 3.2 pixels of its "W", where it lost 8.6.
+- **The 56 pixels under which a cell holds no value, and the width of
+  40rem**, the two values the spec gave as "meanwhile", are kept.
+
+The modules and two sentences of the specs:
+
+- **The functions the three analyses share are in a module of their
+  own, `src/core/populations.ts`** (point 2), so that `project.ts` and
+  `individualsKept.ts` no longer import each other, and the helpers
+  beside them are listed in the spec (point 3; `project.md`, "What the
+  analyses per population share from stage 5"). Not taken: the functions
+  left in `project.ts`, where a constant added at the top of either
+  module could stop the page at load.
+- **Two sentences corrected** (A9): `steps/variants.md` names the
+  distances among what an empty distance of the LD pruning locks; and
+  the interface of `popDists.md` lists `MEASURE_NAMES`,
+  `PopDistsHeatmap` and `orderText` giving none for two populations. The
+  report said the LD decay locks too; it does not, since it does not
+  read the LD pruning (decision 8), and the sentence says so.
+
+## Decided by the owner on 1 October 2026: the LD decay and the line plot
+
+The owner tried the panel of the LD decay that day, in Firefox, with
+their own data, at the third stop of the plan of stage 5, and took each
+recommendation of the plan's report as it was written
+(`docs/plans/population-analyses.report.md`, "Stop C: the LD decay, for
+the owner", and "For the owner, as the work goes"). The points keep
+their names there, C1 to C9 of the stop and the numbered points 5 to
+24. The specs changed are `docs/specs/analyses/ldDecay.md`,
+`docs/specs/charts/line.md`, `docs/specs/worker/runner.md` and
+`docs/specs/worker/client.md`. C10 is with the documents of the end of
+the stage.
+
+- **C1. The table of the populations above the tabs, and the table of
+  the bins in a frame.** The result is the table of the populations,
+  then the tabs of the plot and of the table of the bins, then the
+  downloads; the table of the bins, 50 rows for each population, is in
+  a frame at most 28rem high, or 70% of the window, as the tables of
+  the individuals have, whose header row stays in view, and the
+  line of the populations the plot leaves out ends "The two tables hold
+  all 17." Not taken: the table of the bins with no frame, as it was
+  built, with which the table of the populations and the downloads
+  started about 3,600 pixels down for two populations.
+- **C2, with point 5. The legend of the line plot outside its frame.**
+  The legend stands in a margin at the right of the frame, which is
+  never less than 28 pixels, so the last number of the axis, "100,000",
+  has its room; in the legend a name is cut after 15 characters with
+  "…" when it has more than 16, and the table has it whole. Not taken:
+  the legend inside the frame, at the top right, where the last rows of
+  16 populations lay over the points; and, for point 5 alone, a right
+  margin of 28 pixels with the legend left inside. Within this
+  decision, the task that built it chose that in an element too narrow
+  to leave the frame 300 pixels the legend stands above the plot, where
+  the histograms have theirs, since on a screen of 320 pixels a margin
+  at the right would leave a frame of 34.
+- **C3. The warning of a half distance below the pairs says what to
+  do.** It ends "Type a smaller largest distance to see the decay
+  within them." Not taken: the warning as it was, which ended at what
+  the half distance says.
+- **C4. A half distance is written one way.** The warnings write a half
+  distance as the legend and the table do, to three significant digits
+  below 10 bp, "at 3.40 bp", "at 0.247 bp", and no longer "within 1 bp"
+  below 1. Not taken: whole base pairs in the warnings, "at 3 bp"
+  beside a table that says "3.40".
+- **C5. The frequency has two decimals.** The field of the maximum
+  major allele frequency takes two decimals, as the MAF filter of the
+  Variants step does. Not taken: as many decimals as popnei and a
+  project file take, 0.975 among them.
+- **C6. Words of its own when the calculation stops with no answer.**
+  "The calculation stopped unexpectedly, perhaps because the LD decay
+  needed more memory than the browser tab could give. Type a smaller
+  largest distance, or keep fewer individuals …" Not taken: the words
+  every analysis shares, "Run it again…", which repeat a run of perhaps
+  many minutes.
+- **C7. The column "r² at distance 0, of the curve" stays**, and the
+  caption says that it depends on the number of individuals of the
+  population alone. Not taken: the number in the CSV alone.
+- **C8. Why the distance has to be typed stands beside its field
+  alone**, as a line of help and not as an error, and under Run the
+  reason is "Type the largest distance, above." The reason of the lock
+  of the memory stays as it was, beside the field and under Run, as an
+  error, and said once to a screen reader. Not taken: the long reason
+  twice, in red with its mark, before the user has done anything, 14
+  lines on a screen of 320 pixels.
+- **C9. Two small things of the words.** The warning of few individuals
+  drops "Compare them with the others with this in mind." when every
+  population has fewer than 20, since there are no others. The field of
+  the distance keeps its digits with no comma, "100000", as every
+  number field of the application, since a comma typed is refused. Not
+  taken: the sentence always; commas in the field.
+- **Point 6. A population named `__proto__` runs.** The calculation
+  worker gives popnei names of its own for the populations, `p0`, `p1`,
+  …, and puts the user's names back by their place. Not taken: waiting
+  for popnei issue #5, with the LD decay failing meanwhile as an error
+  of the application at every run. The issue still asks popnei to keep
+  such a name.
+- **Point 7. The warnings of the LD decay.** The warnings of no pair,
+  of no curve and of a half distance beyond or below the pairs are one
+  for each population, which the spec now says; a population of one
+  individual is told that r² needs two or more, and not to type a
+  larger distance; and the warning of few individuals says "its curve,
+  when it has one". Not taken: one warning that names several
+  populations without their numbers.
+- **Point 8. The order after a crash.** The request the calculation
+  worker was running gets its failure first, and the new worker is
+  started after it, for every request, which `client.md` now says. Not
+  taken: the order written for the LD decay alone.
+- **Point 14. Two populations never drawn alike in the LD decay.** With
+  up to 49 populations in the metadata file each keeps the mark of its
+  place among them, as in the PCA; with more, the marks are numbered
+  among the 16 the plot draws. Not taken: the place among every
+  population always, with which the 1st and the 50th share a colour and
+  a shape.
+- **Point 19. The lock of the memory stays as it is**, and the running
+  state says that a large distance on a file whose variants are close
+  together may take tens of minutes and end refused for lack of memory.
+  Not taken: a lock on the individuals times the variants within the
+  distance as well, which needs the density of the file before the Run.
+- **Point 22. The dashed line to a half distance has a grey edge** for
+  the three colours below 3 to 1 on white, orange, sky blue and yellow,
+  as their lines and points have. Not taken: the dashed line as it was,
+  2.25, 2.31 and 1.32 to 1.
+- **Point 23. The description of the plot for a screen reader** is as
+  task 8.1 of the plan wrote it for the cases the spec did not give,
+  now in the spec. Not taken: other words.
+- **Point 24. The notice of an LD decay removed keeps "the LD decay"**,
+  "Undo brings back the LD decay as it was". Not taken: "the plot and
+  the tables", which the shared sentence cannot say after an analysis
+  named in the singular.
+
+## Decided by the owner on 1 October 2026: the diversity, the spectrum and the histogram
+
+The owner tried the panel of the diversity that day, in Firefox, with
+their own data, at the second stop of the plan of stage 5, and took
+each recommendation of the plan's report as it was written
+(`docs/plans/population-analyses.report.md`, "Stop B: the diversity and
+the spectrum, for the owner", and "For the owner, as the work goes").
+The points keep their names there, B1 to B8 of the stop and the
+numbered points. The specs changed are
+`docs/specs/analyses/diversity.md`, `sfs.md` and a row of `popDists.md`,
+`docs/specs/charts/histogram.md` and `plot2d.md`, a sentence of
+`docs/specs/worker/runner.md`, and a sentence each of
+`docs/architecture.md`, section 9, and the coding skill.
+
+- **B1. The table of eleven columns stays as it is.** It is 1,187
+  pixels wide at the least, wider than the column of the page on any
+  window, so it scrolls sideways, and its last column, the rarefied
+  private alleles, is seen only once it is scrolled. Not taken: shorter
+  headers, or two tables.
+- **B2. "Use the default" is drawn as a link**, at the end of the line
+  under the field of the draw. It stays a button for the keyboard and
+  a screen reader. Not taken: a button under the field, which looked
+  like the Run button under it.
+- **B3. The lock of the draw counts the largest population.** A draw
+  larger than the chromosomes of the largest population locks the
+  panel, "at most 168" on `panel.nei`, and, below that, the panel names
+  before a Run the populations that hold fewer chromosomes than the
+  draw, which will have no rarefied values and no spectrum. Not taken:
+  the lock at the chromosomes of every individual kept, 400 on
+  `panel.nei`, under which a draw from 169 to 400 ran both passes and
+  gave no rarefied value and no spectrum to any population. Within
+  this decision, the task that built it kept the older count in one
+  case the recommendation did not foresee: a haploid file whose
+  populations have one individual each, where "at most 1" is a number
+  the field refuses.
+- **B4. The warning of the MAF filter on the spectrum is said in the
+  block of the spectrum**, at the end of its caption. Not taken: among
+  the warnings above the diversity's table, about 500 pixels above the
+  histograms. It is then no longer counted among the diversity's
+  warnings, and the script of stage 6 takes it from the spectrum's own
+  function.
+- **B5. The default's own number typed over the default still removes
+  the table**, and the notice says why: "…because the number of
+  chromosomes of the rarefaction is now a typed one, and no longer
+  follows the minimum number of individuals". Not taken: "…changed",
+  where no number the user saw had changed.
+- **B6. What a screen reader hears of the spectrum.** The description
+  of each histogram starts at its numbers and does not repeat its
+  title, and the block has a heading, "Site frequency spectrum", with
+  the headings of the populations one level under it. Not taken: the
+  title heard twice, and the populations right under "Diversity".
+- **B7. One label for the minimum of individuals in the diversity and
+  in the distances**, "Individuals with a called genotype needed in
+  each population, per variant", with a line under each field that says
+  it is for that analysis alone. Of the two labels the distances' was
+  kept, since it says where the number is counted; the diversity's was
+  "Minimum number of individuals with a genotype, a whole number from
+  0". Not taken: two labels for the same number.
+- **B8. Two things of `diversity.md`.** The sentence that called the
+  width of the table of eleven columns "not measured" gives the 1,187
+  pixels; and the line under the field of a draw typed before the
+  variants file is read, "Typed; the default would be the ploidy of the
+  variants file times the minimum number of individuals, 20.", written
+  with the code, is in the spec. Not taken: other words.
+- **Point 1. The example of the vertical axis in `histogram.md`** reads
+  0 to 0.065, which the rule of the spec gives, where it read 0 to
+  0.07. Not taken: a rounding to 5 ticks, which would change the
+  histograms of the Variants step. The plan's deliverable `PA4 D6`
+  quotes the same number, and is the plan's to correct.
+- **Point 15. The examples of the key in `diversity.md`** give the
+  options without the default draw, as its rule does. Not taken: the
+  rule changed to the examples.
+- **Point 16. The words the code chose where the spec had none** are in
+  the spec: the private alleles counted without several populations,
+  the variants outside the draw for populations with different counts
+  and for none, and the lock of the draw for one individual. Not taken:
+  other words.
+- **Point 17. One haploid individual no longer locks the diversity.**
+  When the populations hold fewer than 2 chromosomes between them, the
+  heterozygosities and the proportion of polymorphic variants are
+  calculated, in one pass, and a warning says why the alleles, the
+  private alleles, the rarefied values and the spectrum have no value;
+  and the line of the default draw says "and at least 2" when the
+  ploidy times the minimum is below 2. Not taken: the lock, which told
+  the user to type a draw "of at most 1", a number the field refuses.
+- **Point 20. A sentence of `runner.md`** says that the two options are
+  those the diversity had until stage 5. Not taken: the sentence as it
+  was, which read as the whole job.
+- **Point 25. Core imports the constants of the file of the worker's
+  jobs, as well as its types**, the least draw of the rarefaction the
+  first, so that the number is written once. Not taken: the number
+  written in five places.
+- **Point 26. The margins of a histogram.** The left margin follows
+  the longest number of the vertical axis; and the base of the plots
+  writes on two lines a label of the horizontal axis that would not
+  fit, with 16 pixels more below, which mends the label under the
+  histograms of the spectrum on a screen of 320 pixels. Not taken: a
+  shorter label on narrow screens, which mends one plot alone. The
+  label along the vertical axis, which the report said also looked cut,
+  ran 3.8 pixels above its SVG in the font of the checks once the frame
+  was lower, and the base treats it the same way: two lines, and 16
+  pixels more of left margin.
+
 ## Decided by the writers of the specs, for the owner to overrule
 
 Each is written in its spec with its reason and the option not taken;
@@ -277,10 +621,11 @@ The diversity (`docs/specs/analyses/diversity.md`):
   their mean per variant and that mean rarefied.
 - A draw larger than the chromosomes of the individuals kept locks the
   panel before the Run; without the lock popnei refuses it only after
-  the whole first pass.
+  the whole first pass. From 1 October 2026 the lock is at the
+  chromosomes of the largest population (B3, above).
 - A MAF filter raises no warning on the table, since every filter
   changes the variants the means are over; the spectrum warns (point
-  17).
+  17), in its block from 1 October 2026 (B4, above).
 - The warning of variants outside the draw comes whenever one variant
   is outside it, the owner's rule of 25 September 2026 for the variants
   without a value, and `docs/functionality.md` says so where it said "at
@@ -455,7 +800,9 @@ pairs.
   `calcPopDiversity` as every other population is: today the first loses
   it, and the second holds it where a lookup by that name finds it but
   a list of the populations of the result does not. Stage 5 does not
-  wait for it.
+  wait for it: from 1 October 2026 the calculation worker gives popnei
+  names of its own for the populations of an LD decay (above, point 6
+  of the owner's decisions of that day).
 
 popnei's release `js-v0.1.0-dev.3`, which the application has
 installed since stage 4, has every other calculation of the stage, as checked in its code and by running it under node on 30

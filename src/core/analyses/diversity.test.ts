@@ -1,14 +1,17 @@
 import { describe, expect, test } from "vitest";
 import {
   DIVERSITY_DEFAULTS,
-  allEmptiedText,
+  defaultDrawOf,
   diversity,
   diversityCsv,
+  diversityOptions,
   diversityRows,
+  drawOf,
   refusalText,
   statisticsFailedText,
 } from "./diversity.ts";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "../apps.ts";
+import type { IndividualsKept } from "../individualsKept.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import {
@@ -23,11 +26,12 @@ import {
   removeIndividuals,
   setGrouping,
 } from "../project.ts";
+import { populationsKeptNeeds } from "../populations.ts";
 import type { Project, VariantSource } from "../project.ts";
-import type { IndividualsKept } from "../individualsKept.ts";
+import { spectrumWarnings } from "./sfs.ts";
 import { createStore } from "../store.ts";
-import type { AnalysisStatus, WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import type { AnalysisStatus, Warning, WorkerClient } from "../store.ts";
+import { deepFreeze, noPopDiversity } from "../testSupport.ts";
 import type {
   Cell,
   DiversityJob,
@@ -38,6 +42,23 @@ import type {
   Outcome,
   Run,
 } from "../../worker/protocol.ts";
+
+/** What the options should be, the words of `parseOptions` for any
+    options it refuses. */
+const OPTIONS_EXPECTED =
+  "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else";
+
+/** The options the key holds for the defaults: the default draw is left
+    out of the key, since the load and the minimum fix it. */
+const KEY_OPTIONS = { minNumIndividuals: 20, polyThreshold: 0.95 };
+
+/** The `keptNeeds` of the diversity, which it has. */
+function keptNeeds(p: Project, kept: IndividualsKept): string | null {
+  if (diversity.keptNeeds === undefined) {
+    throw new Error("the diversity has a keptNeeds");
+  }
+  return diversity.keptNeeds(p, kept);
+}
 
 const VARIANTS_ID = "00112233445566778899aabbccddeeff";
 const INDIVIDUALS_ID = "ffeeddccbbaa99887766554433221100";
@@ -144,7 +165,8 @@ function tableOf(
   };
 }
 
-/** A result of the diversity; the arrays are made from the lists. */
+/** A result of the diversity; the arrays are made from the lists. Each
+    population reaches the draw at every variant it has a value at. */
 function result(fields: {
   readonly pops: readonly string[];
   readonly numIndividuals: readonly number[];
@@ -155,6 +177,8 @@ function result(fields: {
   readonly numVars: number;
 }): DiversityResult {
   const nan = fields.pops.map(() => NaN);
+  const withValue =
+    fields.numVarsWithValue ?? fields.pops.map(() => fields.numVars);
   return {
     analysis: "diversity",
     pops: fields.pops,
@@ -162,9 +186,9 @@ function result(fields: {
     unbiasedExpHet: Float64Array.from(fields.unbiasedExpHet ?? nan),
     obsHet: Float64Array.from(fields.obsHet ?? nan),
     polyRatio: Float64Array.from(fields.polyRatio ?? nan),
-    numVarsWithValue: Uint32Array.from(
-      fields.numVarsWithValue ?? fields.pops.map(() => fields.numVars),
-    ),
+    numVarsWithValue: Uint32Array.from(withValue),
+    ...noPopDiversity(fields.pops.length),
+    numVarsInDraw: Uint32Array.from(withValue),
     passStats: {
       numVars: fields.numVars,
       filtering: {
@@ -218,6 +242,16 @@ const FLOW_RESULT = result({
   numVars: 1152,
 });
 
+/** `privateAllelesNeedTwoPopulations` of stage 5 for a column whose one
+    population of `min` individuals or more is `pop`, which a result with
+    one such population also gives. */
+function needTwo(pop: string, min = 20): Warning {
+  return {
+    code: "privateAllelesNeedTwoPopulations",
+    text: `Only ${pop} has ${String(min)} individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.`,
+  };
+}
+
 describe("WS5 D1 the example and the reasons", () => {
   test("the worked example gives the populations, the request, the warnings, the key inputs and the check numbers of the spec", () => {
     const p = project();
@@ -240,6 +274,8 @@ describe("WS5 D1 the example and the reasons", () => {
         ],
         minNumIndividuals: 20,
         polyThreshold: 0.95,
+        numCalledAlleles: 40,
+        popDiversityPops: [],
       },
     ]);
     const r = result({
@@ -251,7 +287,7 @@ describe("WS5 D1 the example and the reasons", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+        text: "Populations A and B have fewer than 20 individuals, 2 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       },
       {
         code: "individualsWithoutPopulation",
@@ -282,7 +318,7 @@ describe("WS5 D1 the example and the reasons", () => {
         ["B", ["i2"]],
         ["C", ["i5"]],
       ],
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
     expect(diversity.checkNumbers(r)).toEqual([
       1000,
@@ -393,85 +429,6 @@ describe("WS5 D1 the example and the reasons", () => {
 });
 
 describe("WS5 D3 the rest of the module", () => {
-  const EXPECTED =
-    "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
-
-  test("parseOptions gives the defaults back", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }, 1),
-    ).toEqual({
-      ok: true,
-      value: { minNumIndividuals: 20, polyThreshold: 0.95 },
-    });
-  });
-
-  test("parseOptions takes a minNumIndividuals of 4,294,967,295", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 4_294_967_295, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({
-      ok: true,
-      value: { minNumIndividuals: 4_294_967_295, polyThreshold: 0.95 },
-    });
-  });
-
-  test("parseOptions refuses a missing field", () => {
-    expect(diversity.parseOptions({ minNumIndividuals: 20 }, 1)).toEqual({
-      ok: false,
-      error: EXPECTED,
-    });
-  });
-
-  test("parseOptions refuses a field more", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 20, polyThreshold: 0.95, stats: [] },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of 2.5", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 2.5, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of -1", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: -1, polyThreshold: 0.95 }, 1),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a minNumIndividuals of 4,294,967,296", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 4_294_967_296, polyThreshold: 0.95 },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a polyThreshold of 1.5", () => {
-    expect(
-      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 1.5 }, 1),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
-  test("parseOptions refuses a polyThreshold that is a text", () => {
-    expect(
-      diversity.parseOptions(
-        { minNumIndividuals: 20, polyThreshold: "0.95" },
-        1,
-      ),
-    ).toEqual({ ok: false, error: EXPECTED });
-  });
-
   /** A project of one population, p0a, of the first 20 individuals, and
       its result with `withValue` of the 1,152 variants kept. */
   function p0a(withValue: number): {
@@ -506,6 +463,7 @@ describe("WS5 D3 the rest of the module", () => {
         code: "variantsWithoutValue",
         text: "p0a has a value at 641 of the 1,152 variants kept (56%); at the others fewer than 20 of its individuals have a genotype.",
       },
+      needTwo("p0a"),
     ]);
   });
 
@@ -516,6 +474,7 @@ describe("WS5 D3 the rest of the module", () => {
         code: "variantsWithoutValue",
         text: "p0a has a value at 1,151 of the 1,152 variants kept (99%); at the others fewer than 20 of its individuals have a genotype.",
       },
+      needTwo("p0a"),
     ]);
   });
 
@@ -526,12 +485,13 @@ describe("WS5 D3 the rest of the module", () => {
         code: "variantsWithoutValue",
         text: "p0a has a value at 1 of the 1,152 variants kept (1%); at the others fewer than 20 of its individuals have a genotype.",
       },
+      needTwo("p0a"),
     ]);
   });
 
   test("warnings of a population with a value at every variant kept is none", () => {
     const { p, r } = p0a(1152);
-    expect(diversity.warnings(r, p)).toEqual([]);
+    expect(diversity.warnings(r, p)).toEqual([needTwo("p0a")]);
   });
 
   test("warnings of four populations of fewer than 20 names two and how many more, with no counts", () => {
@@ -549,7 +509,7 @@ describe("WS5 D3 the rest of the module", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "Populations P1, P2 and 2 more have fewer than 20 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+        text: "Populations P1, P2 and 2 more have fewer than 20 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       },
     ]);
   });
@@ -575,25 +535,56 @@ for individual, pop in zip(individuals.iloc[:, 0], individuals["popcat"]):
 kept = set(variants.individuals)
 pops = {pop: [i for i in names if i in kept] for pop, names in pops.items()}
 pops = {pop: names for pop, names in pops.items() if names}
-diversity = popnei.calc_per_var_distribs(
+per_var = popnei.calc_per_var_distribs(
     variants, pops=pops, min_num_individuals=20, poly_threshold=0.95
 )
-print(pandas.DataFrame({
+table = pandas.DataFrame({
     "individuals": {pop: len(names) for pop, names in pops.items()},
-    "expected_heterozygosity_unbiased": diversity.unbiased_exp_het.mean,
-    "observed_heterozygosity": diversity.obs_het.mean,
-    "proportion_polymorphic": diversity.poly_vars_ratio.poly_ratio,
-}).to_string())
+    "expected_heterozygosity_unbiased": per_var.unbiased_exp_het.mean,
+    "observed_heterozygosity": per_var.obs_het.mean,
+    "proportion_polymorphic": per_var.poly_vars_ratio.poly_ratio,
+})
+# A population of fewer than 20 individuals has a value at no variant; it
+# is left out here, where it would take every variant out of the private
+# alleles of the others. A private allele needs two populations.
+large = {pop: names for pop, names in pops.items() if len(names) >= 20}
+if large:
+    stats = [
+        popnei.PopDiversityStat.NUM_ALLELES,
+        popnei.PopDiversityStat.FIS,
+        popnei.PopDiversityStat.FOLDED_SFS,
+    ]
+    if len(large) > 1:
+        stats.append(popnei.PopDiversityStat.PRIVATE_ALLELES)
+    diversity = popnei.calc_pop_diversity(
+        variants, large, stats=stats, num_called_alleles=40, min_num_individuals=20
+    )
+    table["f"] = diversity.fis
+    table["alleles_per_variant"] = diversity.num_alleles["mean"]
+    table["alleles_per_variant_rarefied"] = diversity.num_alleles["in_draw"]
+    if diversity.private_alleles is not None:
+        table["private_alleles"] = diversity.private_alleles["total"]
+        table["private_alleles_per_variant"] = diversity.private_alleles["mean"]
+        table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]
+    # The folded site frequency spectrum of each population, in a draw of
+    # 40 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
+print(table.to_string())
 `,
     );
   });
 
   test("diversityCsv of the result of the flow gives the text of the spec", () => {
     expect(diversityCsv(FLOW_RESULT)).toBe(
-      `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic
-p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444
-p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778
-p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
+      `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied
+p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,,,,,,
+p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,,,,,,
+p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
 `,
     );
   });
@@ -605,10 +596,19 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112
       numVars: 10,
     });
     expect(diversityCsv(r)).toBe(
-      `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic
-"a,""b""",3,,,
+      `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied
+"a,""b""",3,,,,,,,,,
 `,
     );
+  });
+
+  test("PA10 diversityCsv writes a population named =SUM(A1) with a quote before it", () => {
+    const r = result({
+      pops: ["=SUM(A1)"],
+      numIndividuals: [3],
+      numVars: 10,
+    });
+    expect(diversityCsv(r).split("\n")[1]).toBe("'=SUM(A1),3,,,,,,,,,");
   });
 
   test("WS8 D2 refusalText of a pass over a file with no variant says the file has none", () => {
@@ -970,13 +970,22 @@ describe("WS5 D2 the key", () => {
     const withOptions = (options: {
       readonly minNumIndividuals: number;
       readonly polyThreshold: number;
+      readonly numCalledAlleles: null;
     }): Project =>
       deepFreeze<Project>({
         ...base,
         analyses: [{ analysis: "diversity", options }],
       });
-    const fewer = withOptions({ minNumIndividuals: 10, polyThreshold: 0.95 });
-    const lower = withOptions({ minNumIndividuals: 20, polyThreshold: 0.9 });
+    const fewer = withOptions({
+      minNumIndividuals: 10,
+      polyThreshold: 0.95,
+      numCalledAlleles: null,
+    });
+    const lower = withOptions({
+      minNumIndividuals: 20,
+      polyThreshold: 0.9,
+      numCalledAlleles: null,
+    });
     expect(keyOfDiversity(fewer)).not.toBe(baseKey);
     expect(keyOfDiversity(lower)).not.toBe(baseKey);
   });
@@ -1006,9 +1015,9 @@ describe("WS5 D2 the key", () => {
     expect(keyOfDiversity(referenced)).toBe(baseKey);
   });
 
-  test("the key version, 2, or the version of popnei, changes the key", () => {
-    expect(diversity.keyVersion).toBe(2);
-    const earlier: KeyedDef = { ...diversity, keyVersion: 1 };
+  test("the key version, 3, or the version of popnei, changes the key", () => {
+    expect(diversity.keyVersion).toBe(3);
+    const earlier: KeyedDef = { ...diversity, keyVersion: 2 };
     expect(keyOfDiversity(base, "0.1.0", earlier)).not.toBe(baseKey);
     expect(keyOfDiversity(base, "0.2.0")).not.toBe(baseKey);
   });
@@ -1017,7 +1026,7 @@ describe("WS5 D2 the key", () => {
     const p = withVariantsUnreadable(emptyProject("popgen"));
     expect(diversity.keyInputs(p)).toEqual({
       pops: "all",
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
   });
 
@@ -1034,7 +1043,7 @@ describe("WS5 D2 the key", () => {
     );
     expect(diversity.keyInputs(pending)).toEqual({
       pops: null,
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
   });
 });
@@ -1103,6 +1112,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
         code: "variantsWithoutValue",
         text: "p0a has a value at none of the 1,152 variants kept: at each, fewer than 20 of its individuals have a genotype.",
       },
+      needTwo("p0a"),
     ]);
   });
 
@@ -1119,6 +1129,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
         code: "variantsWithoutValue",
         text: "A has no value at the one variant kept: fewer than 20 of its individuals have a genotype there.",
       },
+      needTwo("A"),
     ]);
   });
 
@@ -1149,7 +1160,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file.",
+        text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       },
     ]);
   });
@@ -1173,6 +1184,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
         code: "individualsWithoutPopulation",
         text: "5 individuals of panel.nei have no population, and are left out of the diversity: s0, s1 and 3 more. If they belong to one, fill in their population in the metadata file and load it again.",
       },
+      needTwo("p0"),
     ]);
   });
 
@@ -1186,7 +1198,7 @@ describe("WS5 D3 the rest of the module, after its review", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: `Population ${"x".repeat(40)}… has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so ${"x".repeat(40)}… has no values. To have them, merge it with another population in the metadata file.`,
+        text: `Population ${"x".repeat(40)}… has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so ${"x".repeat(40)}… has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.`,
       },
       {
         code: "populationNotInResult",
@@ -1260,7 +1272,11 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
       analyses: [
         {
           analysis: "diversity",
-          options: { minNumIndividuals: 10, polyThreshold: 0.9 },
+          options: {
+            minNumIndividuals: 10,
+            polyThreshold: 0.9,
+            numCalledAlleles: null,
+          },
         },
       ],
     });
@@ -1273,7 +1289,7 @@ describe("WS5 D1 the example and the reasons, with options set and reasons toget
       "    variants, pops=pops, min_num_individuals=10, poly_threshold=0.9\n",
     );
     const r = result({ pops: ["p0"], numIndividuals: [15], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([]);
+    expect(diversity.warnings(r, p)).toEqual([needTwo("p0", 10)]);
   });
 
   test("needs gives a reason of individualsNeeds before the column, whatever the filters of individuals", () => {
@@ -1325,6 +1341,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
         code: "populationNotInResult",
         text: "Populations C and D have no individual among the individuals of panel.nei that the filters kept, so they are not in the table.",
       },
+      needTwo("A"),
     ]);
   });
 
@@ -1339,7 +1356,7 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "Populations A, B and C have fewer than 20 individuals, 1, 2 and 3, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+        text: "Populations A, B and C have fewer than 20 individuals, 1, 2 and 3, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
       },
     ]);
   });
@@ -1366,27 +1383,25 @@ describe("WS5 D3 the rest of the module, its words at their bounds", () => {
       individuals: ["i1"],
     });
     const r = result({ pops: ["A"], numIndividuals: [20], numVars: 1152 });
-    expect(diversity.warnings(r, p)).toEqual([]);
+    expect(diversity.warnings(r, p)).toEqual([needTwo("A")]);
   });
 
   test("diversityCsv quotes a population with a new line", () => {
     const r = result({ pops: ["a\nb"], numIndividuals: [3], numVars: 10 });
     expect(diversityCsv(r)).toBe(
-      'population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic\n"a\nb",3,,,\n',
+      'population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied\n"a\nb",3,,,,,,,,,\n',
     );
   });
 
   test("parseOptions refuses a polyThreshold of -0.1 or NaN, and options that are null, without throwing", () => {
-    const expected =
-      "the minimum of individuals, a whole number from 0 to 4,294,967,295, and the frequency below which a variant is polymorphic, a number from 0 to 1, and nothing else";
     for (const options of [
-      { minNumIndividuals: 20, polyThreshold: -0.1 },
-      { minNumIndividuals: 20, polyThreshold: NaN },
+      { minNumIndividuals: 20, polyThreshold: -0.1, numCalledAlleles: null },
+      { minNumIndividuals: 20, polyThreshold: NaN, numCalledAlleles: null },
       null,
     ]) {
       expect(diversity.parseOptions(options, 1)).toEqual({
         ok: false,
-        error: expected,
+        error: OPTIONS_EXPECTED,
       });
     }
   });
@@ -1542,7 +1557,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
     });
     expect(diversity.warnings(r, project()).at(0)).toEqual({
       code: "tooFewIndividuals",
-      text: "Population A has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or loosen the filters of individuals in the Variants step.",
+      text: "Population A has 1 individual, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so A has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
     });
     const both = result({
       pops: ["A", "B"],
@@ -1552,7 +1567,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
     });
     expect(diversity.warnings(both, project()).at(0)).toEqual({
       code: "tooFewIndividuals",
-      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or loosen the filters of individuals in the Variants step.",
+      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
     });
   });
 
@@ -1585,48 +1600,6 @@ describe("VS3 D3 the diversity of stage 3", () => {
     ).toBeNull();
   });
 
-  test("needs of a list to keep i4, who has no population, gives the reason of the lists, with a threshold after it too; of lists that leave one, or of thresholds alone, none", () => {
-    const reason =
-      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.";
-    expect(
-      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i4"] }])),
-    ).toBe(reason);
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i4", "i2"] },
-          { kind: "remove", individuals: ["i1"] },
-        ]),
-      ),
-    ).toBeNull();
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
-          { kind: "obs_het", maxAllowedObsHet: 0.4 },
-        ]),
-      ),
-    ).toBeNull();
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i1", "i2", "i3"] },
-          { kind: "remove", individuals: ["i1", "i2", "i3"] },
-        ]),
-      ),
-    ).toBe(reason);
-    // A threshold after the list does not hide the reason of the lists,
-    // which is known before the statistics are.
-    expect(
-      diversity.needs(
-        filteredProject([
-          { kind: "keep", individuals: ["i4"] },
-          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
-        ]),
-      ),
-    ).toBe(reason);
-  });
-
   test("a population of the metadata with more individuals than it has in the variants file, and no filter of individuals, is too small with no advice to loosen the filters", () => {
     // A is i1 and i3 in the metadata, and the variants file holds i1 alone.
     const r = result({
@@ -1639,7 +1612,7 @@ describe("VS3 D3 the diversity of stage 3", () => {
       diversity.warnings(r, project({ individuals: ["i1", "i2"] })).at(0),
     ).toEqual({
       code: "tooFewIndividuals",
-      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file.",
+      text: "Populations A and B have fewer than 20 individuals, 1 and 1, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so they have no values. To have them, merge each with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
     });
   });
 
@@ -1706,26 +1679,6 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     );
   });
 
-  test("keptNeeds locks the diversity when the individuals kept leave no population, with the words of all left empty", () => {
-    const kept = (individuals: readonly string[]): IndividualsKept => ({
-      list: { kind: "known", individuals },
-      byLists: ["i1", "i2", "i3", "i4"],
-      counts: [],
-    });
-    const keptNeeds = diversity.keptNeeds;
-    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
-    expect(keptNeeds(project(), kept(["i4"]))).toBe(
-      "The one individual kept has no population in pop, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
-    );
-    expect(keptNeeds(project(), kept(["i1", "i4"]))).toBeNull();
-    expect(allEmptiedText(34, "popcat", ["p0", "p1"])).toBe(
-      "The 34 individuals kept have no population in popcat, so none of the 2 populations has an individual left. Loosen the filters of individuals in the Variants step to keep them.",
-    );
-    expect(allEmptiedText(2, "pop\tcat", ["A"])).toBe(
-      "The 2 individuals kept have no population in pop\\tcat, so A has no individual left. Loosen the filters of individuals in the Variants step to keep it.",
-    );
-  });
-
   test("with thresholds that leave no population, run sends no population, for popnei to refuse", () => {
     const { client, jobs } = keptClient(["i4"]);
     diversity.run(project(), client);
@@ -1734,18 +1687,22 @@ describe("VS3 D3 the diversity of stage 3, at its bounds", () => {
     ]);
     expect(populationsKept(project(), ["i4"])?.emptied).toEqual(["A", "B"]);
   });
+});
 
-  test("the reason of the lists names the file escaped, and a list popnei would refuse is left to the store", () => {
-    const p = deepFreeze<Project>({
-      ...project({ variantsName: "a\tb.nei" }),
-      individualFilters: [{ kind: "remove", individuals: ["i1", "i2", "i3"] }],
-    });
+describe("PA1 D1 the diversity locks with the shared functions of the populations", () => {
+  test("needs gives the reason of the lists, that of populationListsNeeds, and keptNeeds that of populationsKeptNeeds", () => {
+    const p = filteredProject([{ kind: "keep", individuals: ["i4"] }]);
     expect(diversity.needs(p)).toBe(
-      "The lists of individuals to keep and to remove leave none of the individuals of a\\tb.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
+      "The lists of individuals to keep and to remove leave none of the individuals of panel.nei that have a population in pop, so no population is left. Change the lists in the Variants step.",
     );
-    expect(
-      diversity.needs(filteredProject([{ kind: "keep", individuals: ["i9"] }])),
-    ).toBeNull();
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i4"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    const reason = populationsKeptNeeds(project(), kept);
+    expect(reason).not.toBeNull();
+    expect(keptNeeds(project(), kept)).toBe(reason);
   });
 });
 
@@ -1788,23 +1745,60 @@ function onePopulationProject(): Project {
   });
 }
 
+/** The lines of the Python script from `per_var` on, with the defaults
+    and a draw of 40, which the one population shares with a column (the
+    spec, "Its lines of the Python script"). */
+const SCRIPT_AFTER_POPS = `per_var = popnei.calc_per_var_distribs(
+    variants, pops=pops, min_num_individuals=20, poly_threshold=0.95
+)
+table = pandas.DataFrame({
+    "individuals": {pop: len(names) for pop, names in pops.items()},
+    "expected_heterozygosity_unbiased": per_var.unbiased_exp_het.mean,
+    "observed_heterozygosity": per_var.obs_het.mean,
+    "proportion_polymorphic": per_var.poly_vars_ratio.poly_ratio,
+})
+# A population of fewer than 20 individuals has a value at no variant; it
+# is left out here, where it would take every variant out of the private
+# alleles of the others. A private allele needs two populations.
+large = {pop: names for pop, names in pops.items() if len(names) >= 20}
+if large:
+    stats = [
+        popnei.PopDiversityStat.NUM_ALLELES,
+        popnei.PopDiversityStat.FIS,
+        popnei.PopDiversityStat.FOLDED_SFS,
+    ]
+    if len(large) > 1:
+        stats.append(popnei.PopDiversityStat.PRIVATE_ALLELES)
+    diversity = popnei.calc_pop_diversity(
+        variants, large, stats=stats, num_called_alleles=40, min_num_individuals=20
+    )
+    table["f"] = diversity.fis
+    table["alleles_per_variant"] = diversity.num_alleles["mean"]
+    table["alleles_per_variant_rarefied"] = diversity.num_alleles["in_draw"]
+    if diversity.private_alleles is not None:
+        table["private_alleles"] = diversity.private_alleles["total"]
+        table["private_alleles_per_variant"] = diversity.private_alleles["mean"]
+        table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]
+    # The folded site frequency spectrum of each population, in a draw of
+    # 40 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
+print(table.to_string())
+`;
+
 /** The lines of the Python script of the one population, with the
     defaults (the spec, "Its lines of the Python script"). */
 const ONE_POPULATION_SCRIPT = [
   "# The diversity of every individual, as one population",
   'pops = {"All individuals": list(variants.individuals)}',
-  "diversity = popnei.calc_per_var_distribs(",
-  "    variants, pops=pops, min_num_individuals=20, poly_threshold=0.95",
-  ")",
-  "print(pandas.DataFrame({",
-  '    "individuals": {pop: len(names) for pop, names in pops.items()},',
-  '    "expected_heterozygosity_unbiased": diversity.unbiased_exp_het.mean,',
-  '    "observed_heterozygosity": diversity.obs_het.mean,',
-  '    "proportion_polymorphic": diversity.poly_vars_ratio.poly_ratio,',
-  "}).to_string())",
 ]
   .map((line) => `${line}\n`)
-  .join("");
+  .join("")
+  .concat(SCRIPT_AFTER_POPS);
 
 describe("IP4 D1 the one population", () => {
   test("with no metadata file and the grouping pop kept, needs is null, keyInputs the one population, run sends All individuals, narrowed to the individuals kept, and numCheckNumbers is 4", () => {
@@ -1812,7 +1806,7 @@ describe("IP4 D1 the one population", () => {
     expect(diversity.needs(p)).toBeNull();
     expect(diversity.keyInputs(p)).toEqual({
       pops: "all",
-      options: DIVERSITY_DEFAULTS,
+      options: KEY_OPTIONS,
     });
     const whole = recordingClient();
     diversity.run(p, whole.client);
@@ -1871,7 +1865,7 @@ describe("IP4 D1 the one population", () => {
     expect(diversity.warnings(r, p)).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "All individuals, the one population, has 2 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. The minimum of 20 cannot be changed in this version.",
+        text: "All individuals, the one population, has 2 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, lower the minimum number of individuals in the options of the diversity.",
       },
     ]);
     // With the file, whose i4 has no population in pop, and the one
@@ -1895,7 +1889,7 @@ describe("IP4 D1 the one population", () => {
     expect(diversity.warnings(r, noFileProject())).toEqual([
       {
         code: "tooFewIndividuals",
-        text: "All individuals, the one population, has 3 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, loosen the filters of individuals in the Variants step.",
+        text: "All individuals, the one population, has 3 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so it has no values. To have them, lower the minimum number of individuals in the options of the diversity, or loosen the filters of individuals in the Variants step.",
       },
     ]);
   });
@@ -1903,37 +1897,6 @@ describe("IP4 D1 the one population", () => {
   test("a result without All individuals raises no populationNotInResult for the one population", () => {
     const r = result({ pops: [], numIndividuals: [], numVars: 1000 });
     expect(diversity.warnings(r, noFileProject())).toEqual([]);
-  });
-
-  test("lists that remove every individual leave needs null, the lock being the store's, and keptNeeds is null for the one population", () => {
-    const p = deepFreeze<Project>({
-      ...noFileProject(),
-      individualFilters: [
-        { kind: "remove", individuals: ["i1", "i2", "i3", "i4"] },
-      ],
-    });
-    expect(diversity.needs(p)).toBeNull();
-    const keptNeeds = diversity.keptNeeds;
-    if (keptNeeds === undefined) throw new Error("the diversity has keptNeeds");
-    expect(
-      keptNeeds(noFileProject(), {
-        list: { kind: "known", individuals: ["i4"] },
-        byLists: ["i1", "i2", "i3", "i4"],
-        counts: [],
-      }),
-    ).toBeNull();
-    // Filters that keep none leave no individual, which the store locks
-    // on first with the words of keptNoneReason; keptNeeds gives no
-    // second text for it.
-    for (const one of [noFileProject(), onePopulationProject()]) {
-      expect(
-        keptNeeds(one, {
-          list: { kind: "known", individuals: [] },
-          byLists: ["i1", "i2", "i3", "i4"],
-          counts: [],
-        }),
-      ).toBeNull();
-    }
   });
 
   test("script gives the lines of the one population, with no metadata file and with onePopulation", () => {
@@ -2105,5 +2068,1039 @@ describe("IP10 D3 the cases of the one population", () => {
     expect(back).toMatchObject({ kind: "done", key: request.key });
     expect(back?.kind === "done" && back.result).toBe(done);
     expect(sent).toHaveLength(numSent);
+  });
+});
+
+describe("PA6 D3 the populations of calcPopDiversity and the default draw that run sends", () => {
+  /** The worked example with the minimum `minNumIndividuals` and a
+      variants file of ploidy `ploidy`. */
+  function withMinimum(minNumIndividuals: number, ploidy = 2): Project {
+    const p = project();
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { ...p.variants.read, ploidy } },
+      analyses: [
+        {
+          analysis: "diversity",
+          options: {
+            minNumIndividuals,
+            polyThreshold: 0.95,
+            numCalledAlleles: null,
+          },
+        },
+      ],
+    });
+  }
+
+  /** What run sends of the stage 5: the draw and the populations. */
+  function sentOf(p: Project): readonly [number, readonly string[]] {
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    const [job] = jobs;
+    if (job === undefined || jobs.length !== 1) {
+      throw new Error("run sent no job, or more than one");
+    }
+    return [job.numCalledAlleles, job.popDiversityPops];
+  }
+
+  test("with minNumIndividuals 2, A of 2 individuals is given and B of 1 is not, at a draw of 4 for ploidy 2", () => {
+    expect(sentOf(withMinimum(2))).toEqual([4, ["A"]]);
+  });
+
+  test("with minNumIndividuals 1, A and B in their order, at a draw of 2", () => {
+    expect(sentOf(withMinimum(1))).toEqual([2, ["A", "B"]]);
+  });
+
+  test("with the default of 20, no population, at a draw of 40", () => {
+    expect(sentOf(project())).toEqual([40, []]);
+  });
+
+  test("the draw is the ploidy times the minimum, 80 for ploidy 4 at 20, and never below 2, as at a minimum of 0", () => {
+    expect(sentOf(withMinimum(20, 4))[0]).toBe(80);
+    expect(sentOf(withMinimum(0, 1))).toEqual([2, ["A", "B"]]);
+  });
+
+  test("the populations are counted among the individuals kept: with i1 and i2 kept, A has 1 and is not given at a minimum of 2", () => {
+    const { client, jobs } = recordingClient();
+    diversity.run(withMinimum(2), { ...client, individuals: ["i1", "i2"] });
+    expect(
+      jobs.map((job) => [job.pops, job.popDiversityPops, job.numCalledAlleles]),
+    ).toEqual([
+      [
+        [
+          ["A", ["i1"]],
+          ["B", ["i2"]],
+        ],
+        [],
+        4,
+      ],
+    ]);
+  });
+});
+
+/** The project `p` with the options of the diversity: the minimum
+    `minNumIndividuals` and the draw `numCalledAlleles`, `null` for the
+    default. */
+function withDiversity(
+  p: Project,
+  minNumIndividuals: number,
+  numCalledAlleles: number | null,
+): Project {
+  return deepFreeze<Project>({
+    ...p,
+    analyses: [
+      {
+        analysis: "diversity",
+        options: { minNumIndividuals, polyThreshold: 0.95, numCalledAlleles },
+      },
+    ],
+  });
+}
+
+/** What `parseOptions` gives for options it refuses. */
+const REFUSED = { ok: false, error: OPTIONS_EXPECTED };
+
+describe("PA6 D3 parseOptions of the three options", () => {
+  test("gives the defaults back, the default draw as null, in a new object", () => {
+    const given = {
+      minNumIndividuals: 20,
+      polyThreshold: 0.95,
+      numCalledAlleles: null,
+    };
+    const read = diversity.parseOptions(given, 1);
+    expect(read).toStrictEqual({ ok: true, value: given });
+    expect(read.ok && read.value).not.toBe(given);
+    expect(diversity.parseOptions(DIVERSITY_DEFAULTS, 1)).toStrictEqual({
+      ok: true,
+      value: { ...DIVERSITY_DEFAULTS },
+    });
+  });
+
+  test("takes a minNumIndividuals of 0 and of 4,294,967,295", () => {
+    for (const minNumIndividuals of [0, 4_294_967_295]) {
+      const options = {
+        minNumIndividuals,
+        polyThreshold: 0.95,
+        numCalledAlleles: null,
+      };
+      expect(diversity.parseOptions(options, 1)).toStrictEqual({
+        ok: true,
+        value: options,
+      });
+    }
+  });
+
+  test("takes a numCalledAlleles of 2 and of 4,294,967,295", () => {
+    for (const numCalledAlleles of [2, 4_294_967_295]) {
+      const options = {
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        numCalledAlleles,
+      };
+      expect(diversity.parseOptions(options, 1)).toStrictEqual({
+        ok: true,
+        value: options,
+      });
+    }
+  });
+
+  test("refuses each field missing", () => {
+    for (const options of [
+      { polyThreshold: 0.95, numCalledAlleles: null },
+      { minNumIndividuals: 20, numCalledAlleles: null },
+      { minNumIndividuals: 20, polyThreshold: 0.95, stats: null },
+      // The draw inherited, not a field of its own.
+      Object.assign(Object.create({ numCalledAlleles: null }), {
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        stats: null,
+      }),
+    ]) {
+      expect(diversity.parseOptions(options, 1)).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a field more", () => {
+    expect(
+      diversity.parseOptions(
+        {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: null,
+          stats: [],
+        },
+        1,
+      ),
+    ).toStrictEqual(REFUSED);
+  });
+
+  test("refuses a minNumIndividuals of 2.5, of -1 and of 4,294,967,296", () => {
+    for (const minNumIndividuals of [2.5, -1, 4_294_967_296]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals, polyThreshold: 0.95, numCalledAlleles: null },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a polyThreshold of 1.5 and one that is a text", () => {
+    for (const polyThreshold of [1.5, "0.95"]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals: 20, polyThreshold, numCalledAlleles: null },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses a numCalledAlleles of 1, 0, 2.5, 4,294,967,296, a text, and undefined", () => {
+    for (const numCalledAlleles of [
+      1,
+      0,
+      2.5,
+      4_294_967_296,
+      "40",
+      undefined,
+    ]) {
+      expect(
+        diversity.parseOptions(
+          { minNumIndividuals: 20, polyThreshold: 0.95, numCalledAlleles },
+          1,
+        ),
+      ).toStrictEqual(REFUSED);
+    }
+  });
+
+  test("refuses the two fields of stage 2 alone", () => {
+    expect(
+      diversity.parseOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }, 1),
+    ).toStrictEqual(REFUSED);
+  });
+
+  test("diversityOptions gives the defaults of a project with no entry, and the entry of one with it", () => {
+    expect(diversityOptions(project())).toStrictEqual({
+      ...DIVERSITY_DEFAULTS,
+    });
+    expect(diversityOptions(withDiversity(project(), 10, 60))).toStrictEqual({
+      minNumIndividuals: 10,
+      polyThreshold: 0.95,
+      numCalledAlleles: 60,
+    });
+  });
+});
+
+describe("PA6 D3 the draw of drawOf and run", () => {
+  /** The project of the worked example with its variants file of ploidy
+      `ploidy`. */
+  function ofPloidy(ploidy: number): Project {
+    const p = project();
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { ...p.variants.read, ploidy } },
+    });
+  }
+
+  test("a draw typed, 7, is sent as typed whatever the minimum", () => {
+    for (const min of [1, 2, 20]) {
+      const { client, jobs } = recordingClient();
+      diversity.run(withDiversity(project(), min, 7), client);
+      expect(jobs.map((job) => job.numCalledAlleles)).toEqual([7]);
+    }
+  });
+
+  test("drawOf of ploidy 4 and the minimum 20 gives 80, and of ploidy 1 and the minimum 0 gives 2", () => {
+    expect(drawOf(ofPloidy(4))).toBe(80);
+    expect(drawOf(withDiversity(ofPloidy(1), 0, null))).toBe(2);
+  });
+
+  test("drawOf of the default follows the minimum, 20 at a minimum of 10 for diploids, and a draw typed does not", () => {
+    expect(drawOf(withDiversity(project(), 10, null))).toBe(20);
+    expect(drawOf(withDiversity(project(), 10, 60))).toBe(60);
+  });
+
+  test("drawOf of the default is null while the variants file is not read, and a draw typed is given", () => {
+    const p = project();
+    if (p.variants === null) {
+      throw new Error("the project of project() has a variants file");
+    }
+    const pending = deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { kind: "pending" } },
+    });
+    expect(drawOf(pending)).toBeNull();
+    expect(drawOf(withDiversity(pending, 20, 9))).toBe(9);
+  });
+});
+
+describe("PA6 D3 the lock of the draw", () => {
+  test("a draw of 5 over A, the largest population, of 2 individuals and 4 chromosomes, locks in needs with the words of no list, which name A", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 5))).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+    );
+  });
+
+  test("a draw of 4, which A holds, does not lock, and one of 8, which the 4 individuals of the variants file hold and no population does, locks", () => {
+    expect(diversity.needs(withDiversity(project(), 2, 4))).toBeNull();
+    expect(diversity.needs(withDiversity(project(), 2, 8))).toBe(
+      "The rarefaction draws 8 chromosomes, and the largest population, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity.",
+    );
+  });
+
+  test("with a list to remove i3, A and B of one individual each, and a draw of 3, needs locks with the words of the lists, which name A, the first of the two", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "remove", individuals: ["i3"] }]),
+      1,
+      3,
+    );
+    expect(diversity.needs(p)).toBe(
+      "The rarefaction draws 3 chromosomes, and the largest population the lists of individuals keep, A, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or change the lists in the Variants step.",
+    );
+  });
+
+  test("on populations of 48, 84 and 68 individuals, as panel.nei's, a draw of 168 does not lock and one of 169 names p2, its 168 and its 84 individuals", () => {
+    const p = projectOfSizes(["p0", "p2", "p1"], [48, 84, 68]);
+    expect(diversity.needs(withDiversity(p, 20, 168))).toBeNull();
+    expect(diversity.needs(withDiversity(p, 20, 169))).toBe(
+      "The rarefaction draws 169 chromosomes, and the largest population, p2, holds 168, those of its 84 individuals at a ploidy of 2. Type a number of chromosomes of at most 168 in the options of the diversity.",
+    );
+  });
+
+  test("the one population of one individual the lists keep, at a draw of 3, locks with the one individual", () => {
+    const p = withDiversity(
+      deepFreeze<Project>({
+        ...filteredProject([
+          { kind: "remove", individuals: ["i2", "i3", "i4"] },
+        ]),
+        individuals: null,
+      }),
+      1,
+      3,
+    );
+    expect(diversity.needs(p)).toBe(
+      "The rarefaction draws 3 chromosomes, and the one individual the lists of individuals keep holds 2 at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or change the lists in the Variants step.",
+    );
+  });
+
+  test("with no population of the minimum there is no lock: the default draw at 20, and a draw of 9 at 20", () => {
+    expect(diversity.needs(project())).toBeNull();
+    expect(diversity.needs(withDiversity(project(), 20, 9))).toBeNull();
+  });
+
+  test("the one population locks too, with no metadata file, at its individuals: a draw of 9 over the 4, and not one of 8", () => {
+    const onePopulation = deepFreeze<Project>({
+      ...project(),
+      individuals: null,
+    });
+    expect(diversity.needs(withDiversity(onePopulation, 2, 9))).toBe(
+      "The rarefaction draws 9 chromosomes, and the 4 individuals of panel.nei hold 8 at a ploidy of 2. Type a number of chromosomes of at most 8 in the options of the diversity.",
+    );
+    expect(diversity.needs(withDiversity(onePopulation, 2, 8))).toBeNull();
+  });
+
+  test("keptNeeds with a threshold, the individuals kept i1 and i3 and a draw of 5, locks with the words of the filters", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      2,
+      5,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1", "i3"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 5 chromosomes, and the largest population the filters of individuals keep, A, holds 4, those of its 2 individuals at a ploidy of 2. Type a number of chromosomes of at most 4 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds with the individuals kept i1 and i2, A and B of one each, and a draw of 3, names A and its one individual", () => {
+    const p = withDiversity(
+      filteredProject([{ kind: "missing_data", maxAllowedMissingRate: 0.2 }]),
+      1,
+      3,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1", "i2"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    // A holds 4 among the individuals the lists keep, which needs counts.
+    expect(diversity.needs(p)).toBeNull();
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 3 chromosomes, and the largest population the filters of individuals keep, A, holds 2, those of its one individual at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds of the one population with one individual kept says the one individual", () => {
+    const p = withDiversity(
+      deepFreeze<Project>({
+        ...filteredProject([
+          { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+        ]),
+        individuals: null,
+      }),
+      1,
+      3,
+    );
+    const kept: IndividualsKept = {
+      list: { kind: "known", individuals: ["i1"] },
+      byLists: ["i1", "i2", "i3", "i4"],
+      counts: [],
+    };
+    expect(keptNeeds(p, kept)).toBe(
+      "The rarefaction draws 3 chromosomes, and the one individual the filters of individuals keep holds 2 at a ploidy of 2. Type a number of chromosomes of at most 2 in the options of the diversity, or loosen the filters of individuals in the Variants step.",
+    );
+  });
+
+  test("keptNeeds leaves to needs the list null, a list as long as the lists keep, and a list not known", () => {
+    const p = withDiversity(project(), 2, 9);
+    const byLists = ["i1", "i2", "i3", "i4"];
+    for (const list of [
+      { kind: "known", individuals: null },
+      { kind: "known", individuals: byLists },
+      { kind: "needsStatistics" },
+    ] as const) {
+      expect(keptNeeds(p, { list, byLists, counts: [] })).toBeNull();
+    }
+  });
+});
+
+describe("PA10 populations that hold fewer than 2 chromosomes", () => {
+  /** A project whose variants file, of ploidy 1, holds `individuals`,
+      with the minimum 1 and the draw `draw`: with `pops`, a population
+      for each individual in a column; without, no metadata file. */
+  function haploid(
+    individuals: readonly string[],
+    draw: number | null,
+    pops: readonly string[] | null,
+    minNumIndividuals = 1,
+  ): Project {
+    const p =
+      pops === null
+        ? deepFreeze<Project>({
+            ...project({ individuals }),
+            individuals: null,
+          })
+        : project({ individuals, table: tableOf(individuals, pops) });
+    if (p.variants?.read.kind !== "read") {
+      throw new Error("the project of project() has a variants file read");
+    }
+    return withDiversity(
+      deepFreeze<Project>({
+        ...p,
+        variants: { ...p.variants, read: { ...p.variants.read, ploidy: 1 } },
+      }),
+      minNumIndividuals,
+      draw,
+    );
+  }
+
+  /** The draw and the populations of calcPopDiversity that run sends. */
+  function sentOf(p: Project): readonly [number, readonly string[]] {
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    const [job] = jobs;
+    if (job === undefined || jobs.length !== 1) {
+      throw new Error("run sent no job, or more than one");
+    }
+    return [job.numCalledAlleles, job.popDiversityPops];
+  }
+
+  test("one haploid individual does not lock, at the default draw of 2 and at a draw typed of 5", () => {
+    expect(diversity.needs(haploid(["i1"], null, null))).toBeNull();
+    expect(diversity.needs(haploid(["i1"], 5, null))).toBeNull();
+  });
+
+  test("run sends it with no population for calcPopDiversity, the first pass alone, and the draw of 2", () => {
+    expect(sentOf(haploid(["i1"], null, null))).toEqual([2, []]);
+  });
+
+  test("its result gives tooFewChromosomesForDraw and noFInHaploid, and neither the warning of one population nor that of the draw", () => {
+    const p = haploid(["i1"], null, null);
+    const r = result({
+      pops: ["All individuals"],
+      numIndividuals: [1],
+      numVars: 1152,
+    });
+    const found = diversity.warnings(
+      { ...r, numVarsInDraw: Uint32Array.from([0]), numCalledAlleles: 2 },
+      p,
+    );
+    expect(found.map((w) => w.code)).toEqual([
+      "tooFewChromosomesForDraw",
+      "noFInHaploid",
+    ]);
+    expect(found[0]?.text).toBe(
+      "The diversity was calculated over one individual of ploidy 1, which holds 1 chromosome, and the rarefaction and the spectrum draw 2 or more. So the alleles per variant, the private alleles, their rarefied values and the spectrum, which are calculated together, have no value.",
+    );
+  });
+
+  test("two haploid individuals in two populations run at the default draw, with both populations, and a draw of 3 locks at the 2 chromosomes of the individuals", () => {
+    const two = ["i1", "i2"];
+    expect(diversity.needs(haploid(two, null, ["A", "B"]))).toBeNull();
+    expect(sentOf(haploid(two, null, ["A", "B"]))).toEqual([2, ["A", "B"]]);
+    expect(diversity.needs(haploid(two, 3, ["A", "B"]))).toBe(
+      "The rarefaction draws 3 chromosomes, and the 2 individuals of panel.nei hold 2 at a ploidy of 1. Type a number of chromosomes of at most 2 in the options of the diversity.",
+    );
+  });
+
+  // The case "One haploid individual, at a minimum of 0 or 1" of
+  // diversity.md, at 0.
+  test("at a minimum of 0, one haploid individual does not lock either, and run sends the draw of 2 with no population for calcPopDiversity", () => {
+    expect(diversity.needs(haploid(["i1"], null, null, 0))).toBeNull();
+    expect(sentOf(haploid(["i1"], null, null, 0))).toEqual([2, []]);
+  });
+
+  // The case "A haploid VCF" of diversity.md: the default draw is the
+  // minimum.
+  test("a haploid VCF at the minimum of 20 has the default draw of 20, the minimum", () => {
+    expect(defaultDrawOf(haploid(["i1"], null, null, 20))).toBe(20);
+    expect(drawOf(haploid(["i1"], null, null, 20))).toBe(20);
+  });
+
+  test("a result of two haploid individuals in two populations gives no tooFewChromosomesForDraw", () => {
+    const p = haploid(["i1", "i2"], null, ["A", "B"]);
+    const r = result({ pops: ["A", "B"], numIndividuals: [1, 1], numVars: 9 });
+    expect(warningsOf(r, p, "tooFewChromosomesForDraw")).toEqual([]);
+  });
+});
+
+/** A result of stage 5: that of `result` for `pops` and their sizes, over
+    1,152 variants, with `changes` over its fields. */
+function stage5Result(
+  pops: readonly string[],
+  numIndividuals: readonly number[],
+  changes: Partial<DiversityResult> = {},
+): DiversityResult {
+  return { ...result({ pops, numIndividuals, numVars: 1152 }), ...changes };
+}
+
+/** The warnings of `code` among those of `r`. */
+function warningsOf(
+  r: DiversityResult,
+  p: Project,
+  code: string,
+): readonly Warning[] {
+  return diversity.warnings(r, p).filter((w) => w.code === code);
+}
+
+/** The project of the flow, the column popcat, with two individuals. */
+function flowProject(): Project {
+  return project({
+    table: {
+      columns: ["IID", "popcat"],
+      rows: [
+        ["s000", "p0"],
+        ["s001", "p2"],
+      ],
+    },
+    individuals: ["s000", "s001"],
+    column: "popcat",
+  });
+}
+
+describe("PA6 D4 the warnings of stage 5", () => {
+  test("a population of 12 among others of 20 or more gives privateAllelesWithoutSmall naming it, after tooFewIndividuals", () => {
+    const names = ["p0", "p2", "p1", "p3"];
+    const sizes = [48, 84, 68, 12];
+    const p = projectOfSizes(names, sizes);
+    const r = stage5Result(names, sizes, {
+      // p3, not given to calcPopDiversity, is in no draw, and no warning
+      // of the draw names it.
+      numVarsInDraw: Uint32Array.from([1152, 1152, 1152, 0]),
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 1152,
+    });
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "tooFewIndividuals",
+        text: "Population p3 has 12 individuals, and a variant has a value in a population only when at least 20 of its individuals have a called genotype there, so p3 has no values. To have them, merge it with another population in the metadata file, or lower the minimum number of individuals in the options of the diversity.",
+      },
+      {
+        code: "privateAllelesWithoutSmall",
+        text: "The private alleles of p0, p2 and p1 are counted among these populations alone, without p3, which has fewer than 20 individuals: an allele they share only with p3 counts as private.",
+      },
+    ]);
+  });
+
+  test("more than three populations counted are counted by their number, and those left out named", () => {
+    const names = ["a", "b", "c", "d", "p3", "p5"];
+    const sizes = [20, 20, 20, 20, 12, 8];
+    const r = stage5Result(names, sizes, {
+      numVarsEveryPop: 1152,
+      numVarsEveryPopInDraw: 1152,
+    });
+    expect(
+      warningsOf(r, projectOfSizes(names, sizes), "privateAllelesWithoutSmall"),
+    ).toEqual([
+      {
+        code: "privateAllelesWithoutSmall",
+        text: "The private alleles of the 4 populations with 20 individuals or more are counted among them alone, without p3 and p5, which have fewer than 20 individuals: an allele they share only with some of those populations counts as private.",
+      },
+    ]);
+  });
+
+  test("one population of the column in the call gives privateAllelesNeedTwoPopulations with the words of the column, and no privateAllelesWithoutSmall", () => {
+    const p = projectOfSizes(["p2", "p3"], [20, 12]);
+    const r = stage5Result(["p2", "p3"], [20, 12]);
+    expect(warningsOf(r, p, "privateAllelesNeedTwoPopulations")).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: "Only p2 has 20 individuals or more, and private alleles are counted among such populations, so the table has none: an allele is private when one population has it and no other does.",
+      },
+    ]);
+    expect(warningsOf(r, p, "privateAllelesWithoutSmall")).toEqual([]);
+  });
+
+  test("All individuals in the call gives privateAllelesNeedTwoPopulations with the words of the one population", () => {
+    const p = deepFreeze<Project>({ ...project(), individuals: null });
+    const r = stage5Result(["All individuals"], [200]);
+    expect(diversity.warnings(r, p)).toEqual([
+      {
+        code: "privateAllelesNeedTwoPopulations",
+        text: "With every individual in one population, no allele can be private, found in this population and in no other, so the table has no private alleles. Choose a column that defines the populations in the Individuals step to count them.",
+      },
+    ]);
+  });
+
+  test("numVarsEveryPop 641 of 1,152 gives privateAllelesOverFewerVariants with 56%, and 0 its words of none", () => {
+    const names = ["p0", "p2", "p1"];
+    const sizes = [48, 84, 68];
+    const p = projectOfSizes(names, sizes);
+    expect(
+      diversity.warnings(
+        stage5Result(names, sizes, {
+          numVarsEveryPop: 641,
+          numVarsEveryPopInDraw: 641,
+        }),
+        p,
+      ),
+    ).toEqual([
+      {
+        code: "privateAllelesOverFewerVariants",
+        text: "The private alleles are counted over the 641 of the 1,152 variants kept (56%) at which every population has a value; at the others, fewer than 20 individuals of some population have a genotype.",
+      },
+    ]);
+    expect(
+      diversity.warnings(
+        stage5Result(names, sizes, {
+          numVarsEveryPop: 0,
+          numVarsEveryPopInDraw: 0,
+        }),
+        p,
+      ),
+    ).toEqual([
+      {
+        code: "privateAllelesOverFewerVariants",
+        text: "The private alleles are counted over the variants at which every population has a value, and there is none among the 1,152 kept: at each, fewer than 20 individuals of some population have a genotype. So no population has private alleles.",
+      },
+    ]);
+    // Not asked for, so not counted over any variant.
+    expect(
+      warningsOf(
+        stage5Result(names, sizes),
+        p,
+        "privateAllelesOverFewerVariants",
+      ),
+    ).toEqual([]);
+  });
+
+  test("p0 in a draw of 96 at 277 of its 1,152 variants gives variantsNotInDraw with 24%, and the last sentence when the rarefied private alleles are over fewer", () => {
+    const names = ["p0", "p2", "p1"];
+    const sizes = [48, 84, 68];
+    const p = projectOfSizes(names, sizes);
+    const draw = {
+      numCalledAlleles: 96,
+      numVarsInDraw: Uint32Array.from([277, 1152, 1152]),
+    };
+    const first =
+      "p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value (24%), so its rarefied values are over those alone.";
+    expect(
+      diversity.warnings(
+        stage5Result(names, sizes, {
+          ...draw,
+          numVarsEveryPop: 1152,
+          numVarsEveryPopInDraw: 1152,
+        }),
+        p,
+      ),
+    ).toEqual([{ code: "variantsNotInDraw", text: first }]);
+    expect(
+      diversity.warnings(
+        stage5Result(names, sizes, {
+          ...draw,
+          numVarsEveryPop: 1152,
+          numVarsEveryPopInDraw: 277,
+        }),
+        p,
+      ),
+    ).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: `${first} The rarefied private alleles are over the 277 variants at which every population reaches 96.`,
+      },
+    ]);
+  });
+
+  test("the last sentence of variantsNotInDraw over the one variant at which every population reaches the draw, and over none", () => {
+    const names = ["p0", "p2", "p1"];
+    const sizes = [48, 84, 68];
+    const p = projectOfSizes(names, sizes);
+    const first =
+      "p0 reaches 96 called chromosomes at 277 of the 1,152 variants at which it has a value (24%), so its rarefied values are over those alone.";
+    const atEveryPop = (inDraw: number): readonly Warning[] =>
+      warningsOf(
+        stage5Result(names, sizes, {
+          numCalledAlleles: 96,
+          numVarsInDraw: Uint32Array.from([277, 1152, 1152]),
+          numVarsEveryPop: 1152,
+          numVarsEveryPopInDraw: inDraw,
+        }),
+        p,
+        "variantsNotInDraw",
+      );
+    expect(atEveryPop(1)).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: `${first} The rarefied private alleles are over the one variant at which every population reaches 96.`,
+      },
+    ]);
+    expect(atEveryPop(0)).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: `${first} No variant has every population at 96 called chromosomes, so there are no rarefied private alleles.`,
+      },
+    ]);
+  });
+
+  test("a population in the draw at none of its variants has no rarefied values, and is told to lower the draw except at 2", () => {
+    const p = projectOfSizes(["p0", "p2"], [48, 84]);
+    const none = (numCalledAlleles: number): DiversityResult =>
+      stage5Result(["p0", "p2"], [48, 84], {
+        numCalledAlleles,
+        numVarsInDraw: Uint32Array.from([0, 1152]),
+        numVarsEveryPop: 1152,
+        numVarsEveryPopInDraw: 1152,
+      });
+    expect(warningsOf(none(96), p, "variantsNotInDraw")).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: "p0 reaches 96 called chromosomes at none of the variants at which it has a value, so it has no rarefied values. Lower the number of chromosomes of the rarefaction in the options of the diversity.",
+      },
+    ]);
+    expect(warningsOf(none(2), p, "variantsNotInDraw")).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: "p0 reaches 2 called chromosomes at none of the variants at which it has a value, so it has no rarefied values.",
+      },
+    ]);
+  });
+
+  test("two populations short of the draw are listed with their counts and shares", () => {
+    const p = projectOfSizes(["p0", "p2"], [48, 84]);
+    const r = stage5Result(["p0", "p2"], [48, 84], {
+      numCalledAlleles: 96,
+      numVarsWithValue: Uint32Array.from([1152, 1100]),
+      numVarsInDraw: Uint32Array.from([277, 1000]),
+      numVarsEveryPop: 1100,
+      numVarsEveryPopInDraw: 270,
+    });
+    expect(warningsOf(r, p, "variantsNotInDraw")).toEqual([
+      {
+        code: "variantsNotInDraw",
+        text: "p0 and p2 reach 96 called chromosomes at 277 and 1,000 of the 1,152 and 1,100 variants at which each has a value (24% and 91%), so their rarefied values are over those alone. The rarefied private alleles are over the 270 variants at which every population reaches 96.",
+      },
+    ]);
+  });
+
+  test("a variants file of ploidy 1 gives noFInHaploid, the last warning, the spectrum's being said in its block and not here", () => {
+    const vcf = vcfProject("panel.vcf.gz", false);
+    if (vcf.variants?.read.kind !== "read") {
+      throw new Error("the project of vcfProject has a variants file read");
+    }
+    const p = deepFreeze<Project>({
+      ...vcf,
+      variants: {
+        ...vcf.variants,
+        readOptions: { ploidy: 1, onlyPassed: false },
+        read: { ...vcf.variants.read, ploidy: 1 },
+      },
+      filters: [{ kind: "maf", maxAllowedMaf: 0.95 }],
+    });
+    const r: DiversityResult = {
+      ...result({ pops: ["A", "B"], numIndividuals: [1, 1], numVars: 1152 }),
+      passStats: {
+        numVars: 1152,
+        filtering: { maf: { varsProcessed: 1200, varsKept: 1152 } },
+      },
+    };
+    expect(
+      diversity
+        .warnings(r, p)
+        .map((w) => w.code)
+        .slice(-1),
+    ).toEqual(["noFInHaploid"]);
+    expect(warningsOf(r, p, "mafFilterOnSpectrum")).toEqual([]);
+    // The spectrum's own function still gives it, for its block.
+    expect(spectrumWarnings(r, p).map((w) => w.code)).toEqual([
+      "mafFilterOnSpectrum",
+    ]);
+    expect(warningsOf(r, p, "noFInHaploid")).toEqual([
+      {
+        code: "noFInHaploid",
+        text: "The variants of panel.vcf.gz have a ploidy of 1, and a genotype of one allele cannot be heterozygous, so F has no value.",
+      },
+    ]);
+    expect(warningsOf(r, project(), "noFInHaploid")).toEqual([]);
+  });
+});
+
+/** The result of the flow with the missing data filter at 0.05, with the
+    numbers of stage 5 (the spec, "How it is verified"). */
+const FLOW_RESULT_STAGE_5: DiversityResult = {
+  ...FLOW_RESULT,
+  fis: Float64Array.from([
+    -0.011344341019483117, -0.020803811522959625, -0.017724256612463796,
+  ]),
+  numAllelesMean: Float64Array.from([
+    1.9791666666666667, 1.9861111111111112, 1.9809027777777777,
+  ]),
+  numAllelesInDraw: Float64Array.from([
+    1.9646163579517928, 1.9595644507442256, 1.9582701017879214,
+  ]),
+  privateAllelesTotal: Float64Array.from([0, 1, 0]),
+  privateAllelesMean: Float64Array.from([0, 0.0008680555555555555, 0]),
+  privateAllelesInDraw: Float64Array.from([
+    0.0028348059148665707, 0.0031646710919597015, 0.002521711046320405,
+  ]),
+  numVarsInDraw: Uint32Array.from([1152, 1152, 1152]),
+  numVarsEveryPop: 1152,
+  numVarsEveryPopInDraw: 1152,
+};
+
+describe("PA6 D4 the rows, the CSV and the script of stage 5", () => {
+  test("diversityRows of a result with NaN in privateAllelesTotal gives null in the three cells of the private alleles, and not 0", () => {
+    const r: DiversityResult = {
+      ...FLOW_RESULT_STAGE_5,
+      pops: ["All individuals"],
+      numIndividuals: Uint32Array.from([200]),
+      unbiasedExpHet: Float64Array.from([0.37487834409014364]),
+      obsHet: Float64Array.from([0.3541409192154764]),
+      polyRatio: Float64Array.from([0.9791666666666666]),
+      numVarsWithValue: Uint32Array.from([1152]),
+      fis: Float64Array.from([0.055317745614243075]),
+      numAllelesMean: Float64Array.from([2]),
+      numAllelesInDraw: Float64Array.from([1.992568885944447]),
+      privateAllelesTotal: Float64Array.from([NaN]),
+      privateAllelesMean: Float64Array.from([NaN]),
+      privateAllelesInDraw: Float64Array.from([NaN]),
+      numVarsInDraw: Uint32Array.from([1152]),
+      numVarsEveryPop: null,
+      numVarsEveryPopInDraw: null,
+      foldedSfs: [null],
+    };
+    expect(diversityRows(r)).toEqual([
+      {
+        population: "All individuals",
+        individuals: 200,
+        expectedHeterozygosity: 0.37487834409014364,
+        observedHeterozygosity: 0.3541409192154764,
+        polymorphic: 0.9791666666666666,
+        f: 0.055317745614243075,
+        allelesPerVariant: 2,
+        allelesPerVariantRarefied: 1.992568885944447,
+        privateAlleles: null,
+        privateAllelesPerVariant: null,
+        privateAllelesPerVariantRarefied: null,
+      },
+    ]);
+  });
+
+  test("diversityCsv of the result of the flow gives the eleven columns of the spec", () => {
+    expect(diversityCsv(FLOW_RESULT_STAGE_5)).toBe(
+      `population,individuals,expected_heterozygosity_unbiased,observed_heterozygosity,proportion_polymorphic,f,alleles_per_variant,alleles_per_variant_rarefied,private_alleles,private_alleles_per_variant,private_alleles_per_variant_rarefied
+p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,-0.011344341019483117,1.9791666666666667,1.9646163579517928,0,0,0.0028348059148665707
+p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,-0.020803811522959625,1.9861111111111112,1.9595644507442256,1,0.0008680555555555555,0.0031646710919597015
+p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,-0.017724256612463796,1.9809027777777777,1.9582701017879214,0,0,0.002521711046320405
+`,
+    );
+  });
+
+  test("script puts the spectrum's lines of sfs.md inside the block if large:, with the draw run sends and the minimum set", () => {
+    const spectrumLines = `    # The folded site frequency spectrum of each population, in a draw of
+    # 40 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
+`;
+    expect(diversity.script(flowProject())).toContain(
+      `        table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]
+${spectrumLines}print(table.to_string())
+`,
+    );
+    expect(diversity.script(withDiversity(flowProject(), 10, 96))).toBe(
+      `# The diversity of each population, from the column "popcat"
+pops = {}
+for individual, pop in zip(individuals.iloc[:, 0], individuals["popcat"]):
+    if not pandas.isna(pop):
+        pops.setdefault(pop, []).append(individual)
+kept = set(variants.individuals)
+pops = {pop: [i for i in names if i in kept] for pop, names in pops.items()}
+pops = {pop: names for pop, names in pops.items() if names}
+per_var = popnei.calc_per_var_distribs(
+    variants, pops=pops, min_num_individuals=10, poly_threshold=0.95
+)
+table = pandas.DataFrame({
+    "individuals": {pop: len(names) for pop, names in pops.items()},
+    "expected_heterozygosity_unbiased": per_var.unbiased_exp_het.mean,
+    "observed_heterozygosity": per_var.obs_het.mean,
+    "proportion_polymorphic": per_var.poly_vars_ratio.poly_ratio,
+})
+# A population of fewer than 10 individuals has a value at no variant; it
+# is left out here, where it would take every variant out of the private
+# alleles of the others. A private allele needs two populations.
+large = {pop: names for pop, names in pops.items() if len(names) >= 10}
+if large:
+    stats = [
+        popnei.PopDiversityStat.NUM_ALLELES,
+        popnei.PopDiversityStat.FIS,
+        popnei.PopDiversityStat.FOLDED_SFS,
+    ]
+    if len(large) > 1:
+        stats.append(popnei.PopDiversityStat.PRIVATE_ALLELES)
+    diversity = popnei.calc_pop_diversity(
+        variants, large, stats=stats, num_called_alleles=96, min_num_individuals=10
+    )
+    table["f"] = diversity.fis
+    table["alleles_per_variant"] = diversity.num_alleles["mean"]
+    table["alleles_per_variant_rarefied"] = diversity.num_alleles["in_draw"]
+    if diversity.private_alleles is not None:
+        table["private_alleles"] = diversity.private_alleles["total"]
+        table["private_alleles_per_variant"] = diversity.private_alleles["mean"]
+        table["private_alleles_per_variant_rarefied"] = diversity.private_alleles["in_draw"]
+    # The folded site frequency spectrum of each population, in a draw of
+    # 96 chromosomes: the expected number of variants with each count of the
+    # rarer allele, and the share of each count among the variants that show
+    # both alleles in the draw
+    spectrum = diversity.folded_sfs
+    print(spectrum.to_string())
+    both_alleles = spectrum.iloc[1:]
+    print((both_alleles / both_alleles.sum()).to_string())
+print(table.to_string())
+`,
+    );
+  });
+});
+
+describe("PA6 D5 the key of stage 5", () => {
+  test("keyInputs with the default draw gives no numCalledAlleles, not even null, and with a draw typed gives it", () => {
+    const p = project();
+    expect(diversity.keyInputs(p)).toStrictEqual({
+      pops: populationsOf(p),
+      options: KEY_OPTIONS,
+    });
+    expect(JSON.stringify(diversity.keyInputs(p))).not.toContain(
+      "numCalledAlleles",
+    );
+    expect(diversity.keyInputs(withDiversity(p, 20, 60))).toStrictEqual({
+      pops: populationsOf(p),
+      options: { ...KEY_OPTIONS, numCalledAlleles: 60 },
+    });
+  });
+
+  test("minNumIndividuals changes the key with the default draw, which follows it", () => {
+    const p = project();
+    const at20 = keyOfDiversity(withDiversity(p, 20, null));
+    expect(keyOfDiversity(p)).toBe(at20);
+    expect(keyOfDiversity(withDiversity(p, 10, null))).not.toBe(at20);
+    expect(drawOf(withDiversity(p, 10, null))).toBe(20);
+  });
+
+  test("numCalledAlleles typed changes the key, the default's number included, and set back to the default gives the key of the default again", () => {
+    const p = project();
+    const byDefault = keyOfDiversity(withDiversity(p, 20, null));
+    expect(drawOf(p)).toBe(40);
+    const typed40 = keyOfDiversity(withDiversity(p, 20, 40));
+    expect(typed40).not.toBe(byDefault);
+    expect(keyOfDiversity(withDiversity(p, 20, 60))).not.toBe(typed40);
+    expect(keyOfDiversity(withDiversity(p, 20, 60))).not.toBe(byDefault);
+    // Set back: the options of the default again.
+    expect(keyOfDiversity(withDiversity(p, 20, null))).toBe(byDefault);
+  });
+});
+
+describe("PA6 D4 the rows and the CSV of stage 5, each population its own numbers", () => {
+  /** A result whose six numbers of stage 5 differ in every population, so
+      that a row read from another population's place fails. */
+  const r: DiversityResult = {
+    ...FLOW_RESULT_STAGE_5,
+    fis: Float64Array.from([-0.01, -0.02, -0.03]),
+    numAllelesMean: Float64Array.from([1.1, 1.2, 1.3]),
+    numAllelesInDraw: Float64Array.from([1.01, 1.02, 1.03]),
+    privateAllelesTotal: Float64Array.from([3, 1, 2]),
+    privateAllelesMean: Float64Array.from([0.3, 0.1, 0.2]),
+    privateAllelesInDraw: Float64Array.from([0.03, 0.01, 0.02]),
+  };
+
+  test("diversityRows gives each population the numbers at its own place", () => {
+    expect(
+      diversityRows(r).map((row) => [
+        row.population,
+        row.f,
+        row.allelesPerVariant,
+        row.allelesPerVariantRarefied,
+        row.privateAlleles,
+        row.privateAllelesPerVariant,
+        row.privateAllelesPerVariantRarefied,
+      ]),
+    ).toEqual([
+      ["p0", -0.01, 1.1, 1.01, 3, 0.3, 0.03],
+      ["p2", -0.02, 1.2, 1.02, 1, 0.1, 0.01],
+      ["p1", -0.03, 1.3, 1.03, 2, 0.2, 0.02],
+    ]);
+  });
+
+  test("diversityCsv writes each population's numbers on its own row", () => {
+    expect(diversityCsv(r).split("\n").slice(1)).toEqual([
+      "p0,48,0.35267894847982756,0.35667985874177544,0.9288194444444444,-0.01,1.1,1.01,3,0.3,0.03",
+      "p2,84,0.3440824705971255,0.3512406974637824,0.9105902777777778,-0.02,1.2,1.02,1,0.1,0.01",
+      "p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,-0.03,1.3,1.03,2,0.2,0.02",
+      "",
+    ]);
+  });
+});
+
+describe("PA6 D3 the default draw", () => {
+  test("defaultDrawOf is the ploidy times the minimum, at least 2, whatever draw is typed, and drawOf gives it while none is", () => {
+    const p = project();
+    expect(defaultDrawOf(withDiversity(p, 20, null))).toBe(40);
+    expect(defaultDrawOf(withDiversity(p, 20, 60))).toBe(40);
+    expect(defaultDrawOf(withDiversity(p, 0, null))).toBe(2);
+    expect(drawOf(withDiversity(p, 0, null))).toBe(2);
+    expect(drawOf(withDiversity(p, 20, 60))).toBe(60);
+  });
+
+  test("defaultDrawOf is null while the variants file is not read", () => {
+    const p = project();
+    if (p.variants === null) {
+      throw new Error("the project of project() has a variants file");
+    }
+    const pending = deepFreeze<Project>({
+      ...p,
+      variants: { ...p.variants, read: { kind: "pending" } },
+    });
+    expect(defaultDrawOf(pending)).toBeNull();
   });
 });

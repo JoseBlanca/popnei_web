@@ -8,13 +8,26 @@
  * coordinate, loaded with `import()` as the screen loads it
  * (docs/specs/charts/pca3d.md, "How it is verified"). No screen offers the
  * export before stage 6, nor the scatter and the 3D plot before the PCA
- * panel, so this page is where they are seen working in a browser.
+ * panel, so this page is where they are seen working in a browser. From
+ * stage 5, the heatmap of the distances between populations
+ * (docs/specs/charts/heatmap.md, "How it is verified"), with Hudson's Fst
+ * of panel.nei as literals; and the line plot of the LD decay of
+ * e2e/fixtures/ld.nei (docs/specs/charts/line.md, "How it is verified"),
+ * its numbers as literals.
  */
 
 import "../src/ui/tokens.css";
 import { PngError } from "../src/charts/export.ts";
+import {
+  createHeatmap,
+  heatmapMargin,
+  heatmapScale,
+} from "../src/charts/heatmap.ts";
+import type { HeatmapData } from "../src/charts/heatmap.ts";
 import { createHistogram } from "../src/charts/histogram.ts";
 import type { HistogramData } from "../src/charts/histogram.ts";
+import { createLine } from "../src/charts/line.ts";
+import type { LineData } from "../src/charts/line.ts";
 import { NO_GROUP } from "../src/charts/marks.ts";
 import type * as Pca3dModule from "../src/charts/pca3d.ts";
 import type { Pca3dData, Pca3dHandle, ViewName } from "../src/charts/pca3d.ts";
@@ -26,7 +39,12 @@ import {
 } from "../src/charts/scatter.ts";
 import type { ScatterData } from "../src/charts/scatter.ts";
 import type { ChartHandle } from "../src/charts/types.ts";
-import type { Pca3dKind, PlotsPage } from "./plotsPage.ts";
+import type {
+  HeatmapKind,
+  LineKind,
+  Pca3dKind,
+  PlotsPage,
+} from "./plotsPage.ts";
 
 /**
  * The edges of the default 40 bins over [0, 1] as popnei gives them,
@@ -392,6 +410,291 @@ function pca3dDataOf(kind: Pca3dKind): Pca3dData {
   }
 }
 
+/** A square matrix, row by row, from the values of its upper triangle. */
+function matrixOf(size: number, upper: readonly number[]): Float64Array {
+  const values = new Float64Array(size * size).fill(Number.NaN);
+  let next = 0;
+  for (let row = 0; row < size; row++) {
+    for (let column = row + 1; column < size; column++) {
+      const value = upper[next] ?? Number.NaN;
+      next += 1;
+      values[row * size + column] = value;
+      values[column * size + row] = value;
+    }
+  }
+  return values;
+}
+
+/** A heatmap of Hudson's Fst between `names`, from the upper triangle. */
+function heatmapOf(
+  names: readonly string[],
+  upper: readonly number[],
+): HeatmapData {
+  return {
+    title: "Distances between populations",
+    description: `Hudson's Fst between ${String(names.length)} populations, for the tests.`,
+    xLabel: "",
+    yLabel: "",
+    names,
+    values: matrixOf(names.length, upper),
+    valueName: "Hudson's Fst",
+  };
+}
+
+/**
+ * Values between 0.02 and 0.2 for the `count` pairs of a larger matrix,
+ * by a linear congruential generator, so that every engine draws the same.
+ */
+function spread(count: number): number[] {
+  let state = 24680;
+  return Array.from({ length: count }, () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return 0.02 + 0.18 * (state / 2 ** 32);
+  });
+}
+
+/** The data of each kind of heatmap of the page. */
+function heatmapDataOf(kind: HeatmapKind): HeatmapData {
+  switch (kind) {
+    case "panel":
+      // Hudson's Fst of panel.nei and panel_pops.csv, the filter of
+      // missing data at 0.1, as popnei js-v0.1.0-dev.3 gives them
+      // (docs/specs/analyses/popDists.md): p2 and p0, p2 and p1, p0 and p1.
+      return heatmapOf(
+        ["p2", "p0", "p1"],
+        [0.10273588423661377, 0.10962148955018115, 0.10496244498389443],
+      );
+    case "split":
+      // The same with p0 split, panel_split.csv, in the order of the
+      // heatmap: p0b and p0a, p0b and p2 (given no value here), p0b and
+      // p1, p0a and p2, p0a and p1, p2 and p1.
+      return heatmapOf(
+        ["p0b", "p0a", "p2", "p1"],
+        [
+          -0.011276258310056011,
+          Number.NaN,
+          0.1020068488376186,
+          0.09917164096189776,
+          0.10284678759499101,
+          0.10962148955018115,
+        ],
+      );
+    case "long": {
+      const names = [
+        "Andes_highland_2019",
+        "Andes_lowland_valley_2020",
+        "Coastal_north_2018",
+        "Coastal_south_landrace",
+        "Mesoamerica_wild_A",
+        "Mesoamerica_wild_B_2021",
+        "Yucatan_peninsula_cultivar",
+        "Amazonia_basin_2017",
+      ];
+      return heatmapOf(names, spread((names.length * (names.length - 1)) / 2));
+    }
+    case "capitals":
+      // Names in capitals, of 3 and of 20 characters, which the margins
+      // counted at 7.2 pixels a character cut at the left edge of the
+      // plot (heatmap.md, "The names on the axes").
+      return heatmapOf(["MEX", "MESOAMERICA_WILD_ABC", "PER"], spread(3));
+    case "many":
+    case "most": {
+      const count = kind === "many" ? 40 : 200;
+      const names = Array.from(
+        { length: count },
+        (_v, at) => `pop${String(at + 1)}`,
+      );
+      return heatmapOf(names, spread((count * (count - 1)) / 2));
+    }
+  }
+}
+
+/**
+ * The LD decay of e2e/fixtures/ld.nei and ld_pops.csv, as popnei's
+ * calcLdAndDistPerPop of js-v0.1.0-dev.3 gives it in node, on 30
+ * September 2026, with the missing data filter at 0.1, `minDist` 1,
+ * `maxDist` 100,000, `numBins` 50 and `maxAllowedMaf` 0.95
+ * (docs/specs/analyses/ldDecay.md, "How it is verified", which gives the
+ * first and the last bin, ρ, r² at 0 and the half distances of these):
+ * the mean r² of each bin from 1 to 2,000 bp, 2,001 to 4,000 and so on,
+ * every bin with 447 pairs or more.
+ */
+const LD_POPS = [
+  {
+    name: "pop_a",
+    meanR2: [
+      0.3104664289575117, 0.2820255905475207, 0.27659287487316725,
+      0.2655018974427538, 0.24614250869402585, 0.21102008526901228,
+      0.2004786460773509, 0.19145122734838316, 0.17739470597739634,
+      0.15523865433910036, 0.15133418365342394, 0.13875922352649073,
+      0.13236508634628952, 0.12653646052948295, 0.12243131123456136,
+      0.1054545042122309, 0.09804770091615721, 0.09932043031415565,
+      0.08833081139464928, 0.08465114117643732, 0.07254462070681451,
+      0.07523503739191888, 0.06631937069945551, 0.06361376108343192,
+      0.06084978406680016, 0.05660448809671642, 0.053354758226221814,
+      0.053661857885035455, 0.05088070571658384, 0.045410867348340295,
+      0.04222736556230612, 0.047280654036187114, 0.04279528786916123,
+      0.04163850655540775, 0.038147795066883906, 0.03569376304110423,
+      0.03972960264519655, 0.03225490230762466, 0.03711007903254675,
+      0.03523721641105735, 0.0332631879943675, 0.02992277633113261,
+      0.03142050978374764, 0.03121253933812961, 0.02891185708491238,
+      0.02847113359375036, 0.02582459044330509, 0.02676728542156746,
+      0.026257871513402448, 0.025953462391956096,
+    ],
+    rhoPerBp: 0.00029996668947275404,
+    r2AtZero: 0.46942148760330576,
+    halfDist: 7548.08187836982,
+    label: "pop_a · half at 7,548 bp",
+  },
+  {
+    name: "pop_b",
+    meanR2: [
+      0.31876304803774247, 0.2881866647384668, 0.27908183631889316,
+      0.25582411690422346, 0.23853081004952895, 0.2073635609117386,
+      0.19756193673353173, 0.19020189644071095, 0.17618695270475876,
+      0.15073131582369262, 0.14545990597681532, 0.13476170215403435,
+      0.12628845890667337, 0.11877906887994663, 0.12182557934910218,
+      0.10033548083843576, 0.09827842161265991, 0.0904209555741906,
+      0.08292856923441082, 0.08016487548665151, 0.0721657617075713,
+      0.07253572398802322, 0.06458440636932421, 0.05732607254998534,
+      0.05903622766414325, 0.05454165326749274, 0.054534084596338774,
+      0.052746721928583026, 0.04895662492830702, 0.049351361500301866,
+      0.04633351959176894, 0.042475884954535297, 0.04260511973127428,
+      0.03995788312713356, 0.039060447606816304, 0.036032614946560834,
+      0.03719365745471715, 0.03320492894297172, 0.03515917000492124,
+      0.036212587352603166, 0.03478004202835503, 0.03412679847173774,
+      0.03367712221952762, 0.03157386443438083, 0.030239721111296837,
+      0.03188743812979735, 0.0321350739252722, 0.028556562242940963,
+      0.029462113557790142, 0.03162397044318621,
+    ],
+    rhoPerBp: 0.00030848266256738914,
+    r2AtZero: 0.46942148760330576,
+    halfDist: 7339.709512618931,
+    label: "pop_b · half at 7,340 bp",
+  },
+] as const;
+
+/** The largest distance of the LD decay of the page, in base pairs. */
+const LD_MAX_DIST = 100000;
+/** The width of each of its 50 bins, in base pairs. */
+const LD_BIN_WIDTH = 2000;
+/** The individuals of each of its two populations. */
+const LD_NUM_INDIVIDUALS = 50;
+/** The points of each fitted curve, from 0 to the largest distance. */
+const LD_CURVE_POINTS = 200;
+
+/**
+ * The curve popnei fits, at `distance` base pairs, for `rhoPerBp` and
+ * `numIndividuals`: the formula of ldDecay.md, "The fitted curve", which
+ * core gives the screen as fittedR2, written here so that the page of the
+ * plots draws the curve with nothing of core.
+ */
+function ldCurveAt(
+  distance: number,
+  rhoPerBp: number,
+  numIndividuals: number,
+): number {
+  const rho = distance * rhoPerBp;
+  const twoPlusRho = 2 + rho;
+  const elevenPlusRho = 11 + rho;
+  const expected = (10 + rho) / (twoPlusRho * elevenPlusRho);
+  const ofTheSample =
+    ((3 + rho) * (12 + 12 * rho + rho * rho)) /
+    (numIndividuals * twoPlusRho * elevenPlusRho);
+  return expected * (1 + ofTheSample);
+}
+
+/** The data of each kind of line plot of the page. */
+function lineDataOf(kind: LineKind): LineData {
+  switch (kind) {
+    case "oneMark": {
+      const ld = lineDataOf("ld");
+      return {
+        ...ld,
+        series: ld.series.map((series, at) =>
+          at === 0 ? series : { ...series, marks: [] },
+        ),
+      };
+    }
+    case "capitals": {
+      const ld = lineDataOf("ld");
+      const names = ["MESOAMERICA_WILD", "ANDES_LANDRACE_B"];
+      return {
+        ...ld,
+        series: ld.series.map((series, at) => ({
+          ...series,
+          label: series.label.replace(/^pop_[ab]/u, names[at] ?? ""),
+        })),
+      };
+    }
+    case "ld":
+      return {
+        title: "LD decay",
+        description:
+          "The mean r² of pairs of variants against their distance, in 50 bins up to 100,000 base pairs, for 2 populations, with the curve fitted to each. The curve falls to half at 7,548 bp in pop_a and 7,340 bp in pop_b.",
+        xLabel: "Distance between the two variants (bp)",
+        yLabel: "Mean r² of the pairs",
+        series: LD_POPS.map((pop, group) => {
+          const distances = Array.from(
+            { length: LD_CURVE_POINTS },
+            (_v, at) => (LD_MAX_DIST * at) / (LD_CURVE_POINTS - 1),
+          );
+          return {
+            label: pop.label,
+            group,
+            // The middle of each bin, (smallest + largest) / 2: 1,000.5
+            // for the bin from 1 to 2,000.
+            points: {
+              x: Float64Array.from(
+                pop.meanR2,
+                (_v, bin) => bin * LD_BIN_WIDTH + (1 + LD_BIN_WIDTH) / 2,
+              ),
+              y: Float64Array.from(pop.meanR2),
+            },
+            line: {
+              x: Float64Array.from(distances),
+              y: Float64Array.from(distances, (distance) =>
+                ldCurveAt(distance, pop.rhoPerBp, LD_NUM_INDIVIDUALS),
+              ),
+            },
+            marks: [{ x: pop.halfDist, y: pop.r2AtZero / 2 }],
+          };
+        }),
+        xDomain: [0, LD_MAX_DIST],
+        // The largest value drawn, 0.4694 at 0, rounded up to a tenth.
+        yDomain: [0, 0.5],
+        xWholeNumbers: true,
+        yWholeNumbers: false,
+      };
+    case "noCasing": {
+      // One series of each colour whose line has no casing, 3:1 or more
+      // on the background of both themes: green, blue, vermilion and
+      // reddish purple, the colours 2, 4, 5 and 6.
+      const groups = [2, 4, 5, 6];
+      return {
+        title: "Four lines",
+        description: "Four lines in the colours that have no casing.",
+        xLabel: "x",
+        yLabel: "y",
+        series: groups.map((group, at) => ({
+          label: `line ${String(group)}`,
+          group,
+          points: { x: Float64Array.of(20, 60), y: Float64Array.of(0.8, 0.6) },
+          line: {
+            x: Float64Array.of(0, 100),
+            y: Float64Array.of(0.8 - 0.1 * at, 0.4 - 0.1 * at),
+          },
+          marks: [{ x: 50, y: 0.5 - 0.1 * at }],
+        })),
+        xDomain: [0, 100],
+        yDomain: [0, 1],
+        xWholeNumbers: false,
+        yWholeNumbers: false,
+      };
+    }
+  }
+}
+
 /** A plot of the page: its element and its handle. */
 type Drawn =
   | {
@@ -403,6 +706,17 @@ type Drawn =
       readonly kind: "scatter";
       readonly element: HTMLElement;
       readonly handle: ChartHandle<ScatterData>;
+    }
+  | {
+      readonly kind: "heatmap";
+      readonly element: HTMLElement;
+      readonly handle: ChartHandle<HeatmapData>;
+      readonly data: HeatmapData;
+    }
+  | {
+      readonly kind: "line";
+      readonly element: HTMLElement;
+      readonly handle: ChartHandle<LineData>;
     }
   | {
       readonly kind: "pca3d";
@@ -435,6 +749,14 @@ function lastScatter(): Extract<Drawn, { kind: "scatter" }> {
   const plot = last();
   if (plot.kind !== "scatter") {
     throw new Error("popnei_web defect: the plot drawn last is no scatter.");
+  }
+  return plot;
+}
+
+function lastHeatmap(): Extract<Drawn, { kind: "heatmap" }> {
+  const plot = last();
+  if (plot.kind !== "heatmap") {
+    throw new Error("popnei_web defect: the plot drawn last is no heatmap.");
   }
   return plot;
 }
@@ -635,6 +957,59 @@ const page: PlotsPage = {
     }
     element.remove();
     return { create, createCall, highlight, highlightCall };
+  },
+  drawHeatmap(width, height, kind) {
+    const element = newElement(width, height, SCATTER_PADDING);
+    const data = heatmapDataOf(kind);
+    const handle = createHeatmap(element, data);
+    drawn = { kind: "heatmap", element, handle, data };
+    return handle;
+  },
+  heatmapCell(row, column) {
+    const { element, data } = lastHeatmap();
+    const style = getComputedStyle(element);
+    const padLeft = Number.parseFloat(style.paddingLeft);
+    const padTop = Number.parseFloat(style.paddingTop);
+    const width =
+      element.clientWidth - padLeft - Number.parseFloat(style.paddingRight);
+    const height =
+      element.clientHeight - padTop - Number.parseFloat(style.paddingBottom);
+    const margin = heatmapMargin(data, { width, height });
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    const scale = heatmapScale(data.names, innerWidth, innerHeight);
+    // The grid stands at the foot of the frame.
+    const gridTop = innerHeight - Math.min(innerWidth, innerHeight);
+    const middle = (index: number): number => {
+      const name = data.names[index];
+      const start = name === undefined ? undefined : scale(name);
+      if (start === undefined) {
+        throw new Error(
+          `popnei_web defect: the heatmap has no name ${String(index)}.`,
+        );
+      }
+      return start + scale.bandwidth() / 2;
+    };
+    const box = element.getBoundingClientRect();
+    return {
+      x: box.left + padLeft + margin.left + middle(column),
+      y: box.top + padTop + margin.top + gridTop + middle(row),
+    };
+  },
+  drawLine(width, height, kind) {
+    const element = newElement(width, height);
+    const handle = createLine(element, lineDataOf(kind));
+    drawn = { kind: "line", element, handle };
+    return handle;
+  },
+  lineUpdate(kind) {
+    const plot = last();
+    if (plot.kind !== "line") {
+      throw new Error(
+        "popnei_web defect: the plot drawn last is no line plot.",
+      );
+    }
+    plot.handle.update(lineDataOf(kind));
   },
   webgl() {
     const context = document.createElement("canvas").getContext("webgl2");

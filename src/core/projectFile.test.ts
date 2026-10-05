@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
+import { popDists } from "./analyses/popDists.ts";
 import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
 import { keyFromWire, settingsFingerprint } from "./keys.ts";
 import {
@@ -31,6 +32,7 @@ import {
   SAMPLE_VARIANTS_ID,
   TEST_DEFS,
   deepFreeze,
+  noPopDiversity,
   sampleProject,
   wholeProject,
 } from "./testSupport.ts";
@@ -1324,6 +1326,7 @@ describe("WS6 D2 the opening", () => {
       obsHet: Float64Array.from([0.3, NaN]),
       polyRatio: Float64Array.from([0.91, 0.89]),
       numVarsWithValue: Uint32Array.from([1150112, 0]),
+      ...noPopDiversity(2),
       passStats: {
         numVars: 1150112,
         filtering: {
@@ -2399,7 +2402,7 @@ describe("WS6 D4 the properties of the project file", () => {
         }
       }),
     );
-  });
+  }, 30_000);
 
   test("written, opened, and written again with no result, a project gives the same text", () => {
     fc.assert(
@@ -2451,13 +2454,48 @@ function diversityVerdictOfStage3(
   numbers: readonly [number, number, number, number, number, number, number],
   appVersion: string,
 ): CheckVerdict | null {
-  const opened = readProjectFile(
-    fixture("v1-nei-diversity.popnei.json"),
-    "popgen",
-    POPGEN_ANALYSES,
-  );
+  const [
+    numVars,
+    northExp,
+    northObs,
+    northPoly,
+    southExp,
+    southObs,
+    southPoly,
+  ] = numbers;
+  const result: DiversityResult = {
+    analysis: "diversity",
+    pops: ["north", "south"],
+    numIndividuals: Uint32Array.from([3, 3]),
+    unbiasedExpHet: Float64Array.from([northExp, southExp]),
+    obsHet: Float64Array.from([northObs, southObs]),
+    polyRatio: Float64Array.from([northPoly, southPoly]),
+    numVarsWithValue: Uint32Array.from([numVars, numVars]),
+    ...noPopDiversity(2),
+    passStats: {
+      numVars,
+      filtering: {
+        missing_data: { varsProcessed: 1203554, varsKept: numVars },
+      },
+    },
+  };
+  return diversityVerdictOf("v1-nei-diversity.popnei.json", result, appVersion);
+}
+
+/**
+ * The comparison the store of the application, with `POPGEN_ANALYSES` and
+ * the application's version `appVersion`, gives the diversity of the
+ * project of the fixture `file`, once the file's variants file is given
+ * again and read and the diversity ends with `result`.
+ */
+function diversityVerdictOf(
+  file: string,
+  result: DiversityResult,
+  appVersion: string,
+): CheckVerdict | null {
+  const opened = readProjectFile(fixture(file), "popgen", POPGEN_ANALYSES);
   if (!opened.ok) {
-    throw new Error("the fixture of stage 2 does not open");
+    throw new Error("the fixture does not open");
   }
   const sent: { key: string; run: Run<JobResult> }[] = [];
   const store = createStore<Job, JobResult>({
@@ -2484,7 +2522,7 @@ function diversityVerdictOfStage3(
   store.open(opened.value);
   const reference = opened.value.reference;
   if (reference === null) {
-    throw new Error("the fixture of stage 2 has no reference");
+    throw new Error("the fixture has no reference");
   }
   const { read, ...load } = reference.variants;
   store.apply("a variants file was loaded", (p) => ({
@@ -2496,7 +2534,7 @@ function diversityVerdictOfStage3(
     },
   }));
   if (read.kind !== "read") {
-    throw new Error("the fixture of stage 2 has no variants file read");
+    throw new Error("the fixture has no variants file read");
   }
   store.variantsRead(SAMPLE_VARIANTS_ID, read);
   store.startRun("diversity");
@@ -2504,30 +2542,6 @@ function diversityVerdictOfStage3(
   if (request === undefined) {
     throw new Error("no request of the diversity was sent");
   }
-  const [
-    numVars,
-    northExp,
-    northObs,
-    northPoly,
-    southExp,
-    southObs,
-    southPoly,
-  ] = numbers;
-  const result: DiversityResult = {
-    analysis: "diversity",
-    pops: ["north", "south"],
-    numIndividuals: Uint32Array.from([3, 3]),
-    unbiasedExpHet: Float64Array.from([northExp, southExp]),
-    obsHet: Float64Array.from([northObs, southObs]),
-    polyRatio: Float64Array.from([northPoly, southPoly]),
-    numVarsWithValue: Uint32Array.from([numVars, numVars]),
-    passStats: {
-      numVars,
-      filtering: {
-        missing_data: { varsProcessed: 1203554, varsKept: numVars },
-      },
-    },
-  };
   store.runEnded(request.run.id, {
     kind: "done",
     key: request.key,
@@ -2543,13 +2557,13 @@ function diversityVerdictOfStage3(
 }
 
 describe("IP2 D2 the check numbers of a project file of stage 3", () => {
-  test("the diversity of a file saved under key version 1 is compared under key version 2: the same numbers give same, and others name both versions of the application", () => {
+  test("the diversity of a file saved under key version 1 is compared under key version 3: the same numbers give same, and others name both versions of the application", () => {
     const saved = [
       1150112, 0.3120051, 0.3089214, 0.9124, 0.2987112, 0.2954871, 0.8977,
     ] as const;
     expect(
       POPGEN_ANALYSES.find((def) => def.id === "diversity")?.keyVersion,
-    ).toBe(2);
+    ).toBe(3);
 
     expect(diversityVerdictOfStage3(saved, "0.2.0")).toStrictEqual({
       kind: "same",
@@ -3167,6 +3181,7 @@ describe("IP4 D4 the project file of stage 4", () => {
       obsHet: Float64Array.from([0.3541409192154764]),
       polyRatio: Float64Array.from([0.9791666666666666]),
       numVarsWithValue: Uint32Array.from([1152]),
+      ...noPopDiversity(1),
       passStats: {
         numVars: 1152,
         filtering: {
@@ -3302,6 +3317,298 @@ describe("IP10 D3 the cases of the project file", () => {
     ]);
     expect(individualsNeeds(opening.value)).toBe(
       "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
+    );
+  });
+});
+
+describe("PA6 D3 the options of the three analyses of the populations in a project file", () => {
+  /** The definitions of the application, the two analyses of stage 5
+      among them. */
+  const ANALYSES = POPGEN_ANALYSES;
+
+  /** The fixture with the diversity's options `diversityOptions`, and
+      those of the distances and of the LD decay. */
+  function withOptions(diversityOptions: unknown): string {
+    return JSON.stringify({
+      ...fixtureJson("v1-nei-diversity.popnei.json"),
+      analyses: [
+        { analysis: "diversity", options: diversityOptions },
+        {
+          analysis: "popDists",
+          options: { minNumIndividuals: 10, measure: "dest" },
+        },
+        {
+          analysis: "ldDecay",
+          options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+        },
+      ],
+    });
+  }
+
+  test("a file with a draw of 60 typed, the distances at 10 and dest, and the LD decay at 100000 and 0.9 opens with them", () => {
+    const opened = readProjectFile(
+      withOptions({
+        minNumIndividuals: 20,
+        polyThreshold: 0.95,
+        numCalledAlleles: 60,
+      }),
+      "popgen",
+      ANALYSES,
+    );
+    expect(opened.ok && opened.value.analyses).toEqual([
+      {
+        analysis: "diversity",
+        options: {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: 60,
+        },
+      },
+      {
+        analysis: "popDists",
+        options: { minNumIndividuals: 10, measure: "dest" },
+      },
+      {
+        analysis: "ldDecay",
+        options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+      },
+    ]);
+  });
+
+  test("the diversity's two options of before stage 5, with no draw, are refused with what they should be", () => {
+    expect(
+      readProjectFile(
+        withOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }),
+        "popgen",
+        ANALYSES,
+      ),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "project",
+        error: {
+          kind: "wrongValue",
+          path: ["analyses", 0, "options"],
+          expected:
+            "the minimum of individuals, a whole number from 0 to 4,294,967,295, the frequency below which a variant is polymorphic, a number from 0 to 1, and the chromosomes of the rarefaction, null or a whole number from 2 to 4,294,967,295, and nothing else",
+        },
+      },
+    });
+  });
+});
+
+/** The definitions of the application of population genetics, the two
+    analyses of stage 5 among them. */
+const STAGE_5_ANALYSES = POPGEN_ANALYSES;
+
+/** The check numbers of the distances of panel.nei and the column `popcat`
+    of panel_pops.csv with the missing data filter at 0.1: the variants
+    kept, then Fst and D of p0 and p2, of p0 and p1 and of p2 and p1,
+    which popnei js-v0.1.0-dev.3 gives at a minimum of 10 as at 20
+    (docs/specs/core/projectFile.md, "How it is verified"). */
+const DISTANCES_NUMBERS = [
+  1200, 0.10273588423661377, 0.06129813142463423, 0.10496244498389443,
+  0.06354346296076403, 0.10962148955018115, 0.06567052128821259,
+];
+
+/** The project of `v1-stage5-options.popnei.json` once opened, the
+    fingerprint of its check made with the definition of the distances:
+    panel.nei and panel_pops.csv grouped by `popcat`, whose 200 rows are
+    read from e2e/fixtures/panel_pops.csv, the file the fixture names,
+    rather than written out here; the missing data filter at 0.1; the
+    options of the diversity with a draw of 60 typed, of the distances at
+    a minimum of 10 with Jost's D, and of the LD decay within 100000 bp
+    below a major allele frequency of 0.9; and the check of the
+    distances. */
+function stage5OptionsProject(): Project {
+  const pops = readFileSync(
+    new URL("../../e2e/fixtures/panel_pops.csv", import.meta.url),
+    "utf8",
+  )
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((line) => line.split(","));
+  const variants: VariantSource = {
+    fileId: "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+    name: "panel.nei",
+    size: 261490,
+    format: "nei",
+    readOptions: null,
+    read: {
+      kind: "read",
+      individuals: PANEL_INDIVIDUALS,
+      ploidy: 2,
+      numVars: 1200,
+    },
+  };
+  const p: Project = {
+    app: "popgen",
+    variants: null,
+    filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    filtersOff: [],
+    individualFilters: [],
+    individualFiltersOff: [],
+    individuals: {
+      fileId: "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+      name: "panel_pops.csv",
+      csv: { encoding: "auto", separator: "auto", decimal: "auto" },
+      typesSet: [],
+      read: {
+        kind: "read",
+        table: { columns: ["IID", "popcat"], rows: pops },
+        columns: [{ kind: "identifier" }, { kind: "categorical" }],
+        found: {
+          encoding: "utf-8",
+          separator: ",",
+          decimal: ".",
+          undecodedLine: null,
+        },
+      },
+    },
+    grouping: { kind: "populations", column: "popcat" },
+    analyses: [
+      {
+        analysis: "diversity",
+        options: {
+          minNumIndividuals: 20,
+          polyThreshold: 0.95,
+          numCalledAlleles: 60,
+        },
+      },
+      {
+        analysis: "popDists",
+        options: { minNumIndividuals: 10, measure: "dest" },
+      },
+      {
+        analysis: "ldDecay",
+        options: { maxDist: 100000, maxAllowedMaf: 0.9 },
+      },
+    ],
+    reference: { variants, checks: [] },
+  };
+  return deepFreeze<Project>({
+    ...p,
+    reference: {
+      variants,
+      checks: [
+        {
+          analysis: "popDists",
+          numbers: DISTANCES_NUMBERS,
+          keyVersion: 1,
+          popneiVersion: "0.1.0",
+          appVersion: "0.1.0",
+          settings: settingsFingerprint(popDists, p, null, null),
+        },
+      ],
+    },
+  });
+}
+
+describe("PA6 D7 the project file of stage 5", () => {
+  const FILE = "v1-stage5-options.popnei.json";
+
+  test("v1-stage5-options.popnei.json opens into its project, with the options of the three analyses and the 7 check numbers of the distances, and is written back byte for byte", () => {
+    const project = stage5OptionsProject();
+    expect(readProjectFile(fixture(FILE), "popgen", STAGE_5_ANALYSES)).toEqual({
+      ok: true,
+      value: project,
+    });
+    const state: AppState<JobResult> = {
+      ...popgenState(project),
+      analyses: STAGE_5_ANALYSES.map((def) => ({
+        id: def.id,
+        status: { kind: "locked", reason: "Load a variants file." },
+      })),
+    };
+    expect(
+      writeProjectFile(
+        state,
+        STAGE_5_ANALYSES,
+        "0.1.0",
+        "2026-09-30T17:10:25.000Z",
+      ),
+    ).toBe(fixture(FILE));
+  });
+
+  test("the distances at a minimum of 10 over p0, p1 and p2 are refused with 6 check numbers, as with the 3 of two populations", () => {
+    for (const numbers of [
+      DISTANCES_NUMBERS.slice(0, 6),
+      DISTANCES_NUMBERS.slice(0, 3),
+    ]) {
+      const file = JSON.stringify({
+        ...fixtureJson(FILE),
+        checks: [
+          {
+            analysis: "popDists",
+            numbers,
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+          },
+        ],
+      });
+      expect(readProjectFile(file, "popgen", STAGE_5_ANALYSES)).toEqual({
+        ok: false,
+        error: {
+          kind: "header",
+          field: "checks",
+          expected: `7 numbers for the analysis popDists, as many as the rest of the file gives it, and not ${String(numbers.length)}`,
+        },
+      });
+    }
+  });
+});
+
+describe("PA6 D5 the check numbers of a project file of stage 4", () => {
+  /** The result of the diversity over All individuals of the fixture, with
+      `numbers`: numVars, then the expected and observed heterozygosity and
+      the proportion polymorphic. */
+  function onePopulationResult(numbers: readonly number[]): DiversityResult {
+    const [numVars = 0, expected = 0, observed = 0, polymorphic = 0] = numbers;
+    return {
+      analysis: "diversity",
+      pops: ["All individuals"],
+      numIndividuals: Uint32Array.from([200]),
+      unbiasedExpHet: Float64Array.from([expected]),
+      obsHet: Float64Array.from([observed]),
+      polyRatio: Float64Array.from([polymorphic]),
+      numVarsWithValue: Uint32Array.from([numVars]),
+      ...noPopDiversity(1),
+      passStats: {
+        numVars,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: numVars },
+        },
+      },
+    };
+  }
+
+  test("the diversity of v1-one-population.popnei.json, saved under key version 2, is compared under key version 3, and a difference is told as calculated in another way", () => {
+    const file = "v1-one-population.popnei.json";
+    expect(fixtureJson(file)).toMatchObject({
+      checks: [{ analysis: "diversity", keyVersion: 2, appVersion: "0.1.0" }],
+    });
+    expect(
+      diversityVerdictOf(
+        file,
+        onePopulationResult(ONE_POPULATION_NUMBERS),
+        "0.2.0",
+      ),
+    ).toStrictEqual({ kind: "same" });
+
+    const verdict = diversityVerdictOf(
+      file,
+      onePopulationResult([1117, ...ONE_POPULATION_NUMBERS.slice(1)]),
+      "0.2.0",
+    );
+    expect(verdict).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: { saved: "0.1.0", now: "0.2.0" },
+    });
+    expect(verdict === null ? null : checkVerdictText(verdict)).toBe(
+      "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
     );
   });
 });

@@ -11,6 +11,8 @@ import { gunzipSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, Route } from "@playwright/test";
 
+import { writeBigVcf } from "./bigVcf.ts";
+
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
 
@@ -18,7 +20,7 @@ const SCREENS = join(import.meta.dirname, "..", "screens");
     Analyses step holds the principal components' panel beside it, with
     a Run of its own. */
 function diversityPanel(page: Page): Locator {
-  return page.getByRole("region", { name: "Diversity" });
+  return page.getByRole("region", { name: "Diversity", exact: true });
 }
 
 /** Saves the whole page as `name`, or only the window with `fullPage`
@@ -300,6 +302,53 @@ async function holdResults(page: Page): Promise<void> {
     };
   });
 }
+
+/** Makes the calculation worker keep its results back, and the progress
+    of every pass after the first, so that a calculation of two passes
+    stays under way in its first. */
+async function holdAfterFirstPass(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.workers().some((w) => w.url().includes("runnerWorker")))
+    .toBe(true);
+  const worker = page.workers().find((w) => w.url().includes("runnerWorker"));
+  if (worker === undefined) throw new Error("no calculation worker");
+  await worker.evaluate(() => {
+    const scope = globalThis as unknown as {
+      postMessage: (message: unknown, transfer?: Transferable[]) => void;
+    };
+    const post = scope.postMessage.bind(scope);
+    scope.postMessage = (message, transfer) => {
+      if (typeof message !== "object" || message === null) {
+        post(message, transfer);
+        return;
+      }
+      const kind = "kind" in message ? message.kind : null;
+      const pass = "pass" in message ? message.pass : null;
+      if (kind === "result") return;
+      if (kind === "progress" && typeof pass === "number" && pass > 1) return;
+      post(message, transfer);
+    };
+  });
+}
+
+/** The panel of the diversity's field `label`, given `value` and
+    committed with Enter. */
+async function setDiversityField(
+  page: Page,
+  label: string,
+  value: string,
+): Promise<void> {
+  const field = diversityPanel(page).getByLabel(label);
+  await field.fill(value);
+  await field.press("Enter");
+  await expect(field).toHaveValue(value);
+}
+
+/** The labels of the three fields of the diversity. */
+const DIVERSITY_MINIMUM =
+  "Individuals with a called genotype needed in each population, per variant";
+const DIVERSITY_DRAW =
+  "Chromosomes drawn for the rarefaction, a whole number from 2";
 
 /** Makes the calculation worker keep back the files it writes and pass
     its progress on, so that a write stays under way. */
@@ -1481,18 +1530,81 @@ for (const theme of ["light", "dark"] as const) {
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
       await expect(
-        page.getByRole("main").getByText(/^3 populations: /),
+        diversityPanel(page).getByText(/^3 populations: /),
+      ).toBeVisible();
+      // The three fields, the draw the default with its line.
+      await expect(diversityPanel(page).getByLabel(DIVERSITY_DRAW)).toHaveValue(
+        "40",
+      );
+      await expect(
+        diversityPanel(page).getByText(/^The default: the ploidy, 2, /),
       ).toBeVisible();
       await save(page, `popgen-diversity-ready-${theme}`);
     });
 
-    test("the diversity running, with its bar", async ({ page }) => {
+    test("the diversity ready, a draw typed with Use the default", async ({
+      page,
+    }) => {
       await loadPanelWithPopulations(page);
-      await holdResults(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "96");
+      await expect(
+        diversityPanel(page).getByText(/^Typed; the default would be 40\. /),
+      ).toBeVisible();
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Use the default" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-draw-typed-${theme}`);
+    });
+
+    test("the diversity ready, a population under the minimum", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_MINIMUM, "50");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has 48 individuals, fewer than the minimum of 50, /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-under-minimum-${theme}`);
+    });
+
+    test("the diversity locked by the draw", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      // One more than the 168 chromosomes of p2, the largest population.
+      await setDiversityField(page, DIVERSITY_DRAW, "169");
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeDisabled();
+      await save(page, `popgen-diversity-locked-draw-${theme}`);
+    });
+
+    test("the diversity ready, a population short of the draw", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "120");
+      await expect(
+        diversityPanel(page).getByText(/^p0 holds 96 chromosomes, /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-short-of-draw-${theme}`);
+    });
+
+    test("the diversity running, with its bar, in the first of its two passes", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await holdAfterFirstPass(page);
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+        page
+          .getByRole("main")
+          .getByText(/^Calculating · pass 1 of 2 · 49% · 0:01$/),
       ).toBeVisible({
         timeout: 3000,
       });
@@ -1504,7 +1616,121 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+      // The block of the spectrum under the table, a histogram for each
+      // of the three populations.
+      await expect(
+        diversityPanel(page).getByRole("group", { name: "p1" }).locator("svg"),
+      ).toBeVisible();
       await save(page, `popgen-diversity-done-${theme}`);
+    });
+
+    test("the diversity done, the table of the spectrum", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await diversityPanel(page).getByRole("tab", { name: "Table" }).click();
+      await expect(
+        diversityPanel(page).getByRole("columnheader", { name: "p0, share" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-table-${theme}`);
+    });
+
+    /** Runs the diversity of panel.nei and popcat with the field `label`
+        at `value`, and waits for its table. */
+    async function runWith(
+      page: Page,
+      label: string,
+      value: string,
+    ): Promise<void> {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setDiversityField(page, label, value);
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(page.getByRole("rowheader", { name: "p0" })).toBeVisible();
+    }
+
+    test("the diversity done, a population under the minimum with no spectrum", async ({
+      page,
+    }) => {
+      await runWith(page, DIVERSITY_MINIMUM, "50");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has 48 individuals, fewer than the 50 /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-under-minimum-${theme}`);
+    });
+
+    test("the diversity done, a population with no variant in the draw", async ({
+      page,
+    }) => {
+      await runWith(page, DIVERSITY_DRAW, "120");
+      await expect(
+        diversityPanel(page).getByText(
+          /^p0 has no variant with 120 called chromosomes/,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-none-in-draw-${theme}`);
+    });
+
+    test("the diversity done, a draw of more bars than a histogram draws", async ({
+      page,
+    }, testInfo) => {
+      // 1,100 individuals in one population hold 2,200 chromosomes, so
+      // that a draw of 2,002, of 1,001 bars, can be run: panel.nei's 200
+      // hold 400.
+      const path = testInfo.outputPath("draw2002.vcf");
+      await writeBigVcf(path, 100, 1100);
+      await pickVariants(page, { path });
+      await expect(
+        page.getByRole("main").getByText("1,100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await setDiversityField(page, DIVERSITY_DRAW, "2002");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        diversityPanel(page).getByText(
+          /^A draw of 2,002 chromosomes gives 1,001 bars /,
+        ),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-too-many-${theme}`);
+    });
+
+    test("the diversity done, an odd draw", async ({ page }) => {
+      await runWith(page, DIVERSITY_DRAW, "39");
+      await expect(
+        diversityPanel(page).getByText(/^Each bar is the share /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-odd-${theme}`);
+    });
+
+    test("the diversity done with a draw typed", async ({ page }) => {
+      await runWith(page, DIVERSITY_DRAW, "96");
+      await expect(
+        diversityPanel(page).getByRole("button", { name: "Use the default" }),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-typed-${theme}`);
+    });
+
+    test("the diversity done, the warning of the MAF filter on the spectrum", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByLabel("Maximum major allele frequency", { exact: false }),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await diversityPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        diversityPanel(page).getByText(/^Warning: The MAF filter of the /),
+      ).toBeVisible();
+      await save(page, `popgen-diversity-spectrum-maf-${theme}`);
     });
 
     test("the diversity done, with a warning", async ({ page }) => {
@@ -1560,6 +1786,8 @@ for (const theme of ["light", "dark"] as const) {
 
     test("the diversity done, at 320 px", async ({ page }) => {
       await page.setViewportSize({ width: 320, height: 900 });
+      // In the committed font, as wide as the fonts of Linux.
+      await useWideFont(page);
       await loadPanelWithPopulations(page);
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
@@ -1570,9 +1798,16 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("main")
           .getByText("Scroll the table sideways to see all its columns."),
       ).toBeVisible();
-      // The frame of the table, reached by the Tab key, with its focus
-      // ring.
-      await page.keyboard.press("Tab");
+      // The frame of the table, reached by the Tab key from the heading
+      // past the three fields, with its focus ring.
+      for (let stop = 0; stop < 4; stop++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(
+        diversityPanel(page).getByRole("region", {
+          name: /^The diversity of each population/,
+        }),
+      ).toBeFocused();
       await save(page, `popgen-diversity-done-320-${theme}`);
     });
 
@@ -1700,7 +1935,9 @@ for (const theme of ["light", "dark"] as const) {
       await goTo(page, "Analyses");
       await diversityPanel(page).getByRole("button", { name: "Run" }).click();
       await expect(
-        page.getByRole("main").getByText(/^Calculating · 99% · 0:01$/),
+        page
+          .getByRole("main")
+          .getByText(/^Calculating · pass 2 of 2 · 99% · 0:01$/),
       ).toBeVisible({
         timeout: 3000,
       });
@@ -2937,9 +3174,9 @@ for (const theme of ["light", "dark"] as const) {
         .click();
       await goTo(page, "Analyses");
       await expect(
-        page
-          .getByRole("main")
-          .getByText("2 populations: p0, 29 individuals; p2, 48 individuals"),
+        diversityPanel(page).getByText(
+          "2 populations: p0, 29 individuals; p2, 48 individuals",
+        ),
       ).toBeVisible();
       await save(page, `popgen-diversity-kept-${theme}`);
     });
@@ -3283,7 +3520,798 @@ for (const theme of ["light", "dark"] as const) {
       await page.waitForTimeout(200);
       await save(page, `popgen-pca-320-${theme}`);
     });
+
+    test("the distances locked, with one population", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Analyses");
+      await expect(
+        popDistsPanel(page).getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription(/^The distances between populations need/);
+      await savePanel(page, `popgen-popdists-locked-one-${theme}`);
+    });
+
+    test("the distances locked, every population but one under the minimum", async ({
+      page,
+    }) => {
+      await loadSplit(page);
+      await goTo(page, "Analyses");
+      await setMinimum(page, "70");
+      await expect(
+        popDistsPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeDisabled();
+      await savePanel(page, `popgen-popdists-locked-minimum-${theme}`);
+    });
+
+    test("the distances ready, naming the populations under the minimum", async ({
+      page,
+    }) => {
+      await loadSplit(page);
+      await goTo(page, "Analyses");
+      await setMinimum(page, "25");
+      await expect(
+        popDistsPanel(page).getByText(
+          /^p0a and p0b have 24 and 24 individuals/,
+        ),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-ready-under-${theme}`);
+    });
+
+    test("the distances running", async ({ page }) => {
+      await loadPanelWithPopulations(page);
+      await holdResults(page);
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Calculating · \d+% · 0:0[1-9]$/),
+      ).toBeVisible({ timeout: 5000 });
+      await savePanel(page, `popgen-popdists-running-${theme}`);
+    });
+
+    test("the distances done, the heatmap of Hudson's Fst and the table", async ({
+      page,
+    }) => {
+      await popDistsDone(page);
+      await savePanel(page, `popgen-popdists-done-${theme}`);
+    });
+
+    test("the distances done, the heatmap of Jost's D", async ({ page }) => {
+      await popDistsDone(page);
+      await chooseRadio(
+        popDistsPanel(page).getByRole("radiogroup", {
+          name: "Distance in the heatmap",
+        }),
+        "Jost's D",
+      );
+      await expect(
+        popDistsPanel(page).getByRole("img", {
+          name: /^Jost's D between populations/,
+        }),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-jost-${theme}`);
+    });
+
+    test("the distances done, the warning of a negative distance", async ({
+      page,
+    }) => {
+      await loadSplit(page);
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Warning: .*−0\.0113/),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-negative-${theme}`);
+    });
+
+    test("the distances removed by a change of the minimum, with the notice", async ({
+      page,
+    }) => {
+      await popDistsDone(page);
+      await setMinimum(page, "25");
+      await expect(
+        popDistsPanel(page).getByText(
+          /^The distances between populations were removed/,
+        ),
+      ).toBeVisible();
+      await popDistsPanel(page).scrollIntoViewIfNeeded();
+      await save(page, `popgen-popdists-removed-${theme}`, {
+        fullPage: false,
+      });
+    });
+
+    test("the distances in error, the filters keep no variant", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.4");
+      await threshold.press("Enter");
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^The filters kept none of the variants/),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-no-variant-${theme}`);
+    });
+
+    test("the distances above 200 populations", async ({ page }, testInfo) => {
+      // 402 individuals, two in each of 201 populations, q0 to q200.
+      const path = testInfo.outputPath("pops201.vcf");
+      await writeBigVcf(path, 100, 402);
+      await pickVariants(page, { path });
+      await expect(
+        page.getByRole("main").getByText("402 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "pops201.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 402 },
+          (_, i) =>
+            `s${String(i).padStart(3, "0")},q${String(Math.floor(i / 2))}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setMinimum(page, "2");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(
+          /^The heatmap and the table are shown for up to 200 populations/,
+        ),
+      ).toBeVisible({ timeout: 30_000 });
+      await savePanel(page, `popgen-popdists-many-${theme}`);
+    });
+
+    test("the distances done, 100 populations, whose names the heatmap does not write", async ({
+      page,
+    }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      // Two individuals in each of 100 populations, q0 to q99.
+      await pickIndividuals(page, {
+        name: "pops100.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 200 },
+          (_, i) =>
+            `s${String(i).padStart(3, "0")},q${String(Math.floor(i / 2))}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setMinimum(page, "2");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByRole("img", {
+          name: /^Hudson's Fst between populations/,
+        }),
+      ).toBeVisible({ timeout: 30_000 });
+      await popDistsPanel(page)
+        .getByRole("img", { name: /^Hudson's Fst between populations/ })
+        .scrollIntoViewIfNeeded();
+      await page
+        .locator(".chart-heatmap")
+        .first()
+        .screenshot({
+          path: join(SCREENS, `popgen-popdists-hundred-${theme}.png`),
+        });
+    });
+
+    test("the distances done, Jost's D of a haploid file, every cell with no value", async ({
+      page,
+    }) => {
+      await pickVariants(page, {
+        name: "haploid.vcf",
+        text: smallVcf(9, () => false, "haploid"),
+      });
+      await expect(
+        page.getByRole("main").getByText("9 individuals"),
+      ).toBeVisible();
+      const ploidy = page.getByLabel("Ploidy of the VCF");
+      await ploidy.fill("1");
+      await ploidy.press("Enter");
+      await page
+        .getByRole("button", { name: "Read haploid.vcf again with ploidy 1" })
+        .click();
+      await loadSmallPopulations(page);
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Warning: Jost's D has no value/),
+      ).toBeVisible();
+      await chooseRadio(
+        popDistsPanel(page).getByRole("radiogroup", {
+          name: "Distance in the heatmap",
+        }),
+        "Jost's D",
+      );
+      await expect(
+        popDistsPanel(page).getByRole("img", {
+          name: /^Jost's D between populations/,
+        }),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-haploid-jost-${theme}`);
+    });
+
+    test("the distances done, a pair with no value and its line of order", async ({
+      page,
+    }) => {
+      // The individuals of C, the last three, have no called genotype.
+      await pickVariants(page, {
+        name: "c_missing.vcf",
+        text: smallVcf(9, (individual) => individual >= 6, "diploid"),
+      });
+      await expect(
+        page.getByRole("main").getByText("9 individuals"),
+      ).toBeVisible();
+      // The missing data filter would keep no variant.
+      await page
+        .getByText("Filter the variants by missing data", { exact: true })
+        .click();
+      await loadSmallPopulations(page);
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^In the order of the metadata file/),
+      ).toBeVisible();
+      await savePanel(page, `popgen-popdists-no-value-${theme}`);
+    });
+
+    test("the distances done, two populations", async ({ page }) => {
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+      await pickIndividuals(page, {
+        name: "two_pops.csv",
+        text: text.replaceAll(/,p1$/gm, ",p2"),
+      });
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByRole("rowheader", { name: "p0 and p2" }),
+      ).toBeVisible({ timeout: 30_000 });
+      await savePanel(page, `popgen-popdists-two-${theme}`);
+    });
+
+    test("the distances done, populations under the minimum left out", async ({
+      page,
+    }) => {
+      await loadSplit(page);
+      await goTo(page, "Analyses");
+      await setMinimum(page, "25");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(/^Warning: Populations p0a and p0b/),
+      ).toBeVisible({ timeout: 30_000 });
+      await savePanel(page, `popgen-popdists-too-few-${theme}`);
+    });
+
+    test("the distances done at 320 pixels wide, in the committed font", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await popDistsDone(page);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      // The heatmap of three short names fits the page with no scroll.
+      await expect(
+        popDistsPanel(page).getByText(
+          "Scroll the heatmap sideways to see all of it.",
+        ),
+      ).toHaveCount(0);
+      await savePanel(page, `popgen-popdists-320-${theme}`);
+    });
+
+    test("the distances done at 320 pixels wide, with names of 20 characters", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await pickVariants(page, "panel.nei");
+      await expect(
+        page.getByRole("main").getByText("200 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+      await pickIndividuals(page, {
+        name: "long_pops.csv",
+        text: text.replaceAll(/,(p\d)$/gm, ",Valencia_landrace_$1"),
+      });
+      await choose(page, "Column that defines the populations", "popcat");
+      await goTo(page, "Analyses");
+      await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        popDistsPanel(page).getByText(
+          "Scroll the heatmap sideways to see all of it.",
+        ),
+      ).toBeVisible({ timeout: 30_000 });
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      await savePanel(page, `popgen-popdists-320-long-names-${theme}`);
+    });
+
+    test("the LD decay locked by the distance not typed, with why beside the field and where beside the Run button", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription("Type the largest distance, above.");
+      await expect(
+        ldDecayPanel(page).getByLabel(LD_DISTANCE),
+      ).toHaveAccessibleDescription(
+        /^The LD decay needs the largest distance .* How far to look for pairs\./,
+      );
+      await saveLdPanel(page, `popgen-lddecay-locked-distance-${theme}`);
+    });
+
+    test("the LD decay locked by the memory of the counts", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      // One base pair above the 12,500,000 the memory allows two
+      // populations.
+      await setLdDistance(page, "12500001");
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toHaveAccessibleDescription(
+        /^With 2 populations, the largest distance can be at most 12,500,000 base pairs/,
+      );
+      await saveLdPanel(page, `popgen-lddecay-locked-memory-${theme}`);
+    });
+
+    test("the LD decay ready, with the line of the LD pruning of the Variants step", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Prune the variants by linkage disequilibrium (LD)", {
+          exact: true,
+        })
+        .click();
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^The LD pruning of the Variants step is not applied here/,
+        ),
+      ).toBeVisible();
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeEnabled();
+      await saveLdPanel(page, `popgen-lddecay-ready-pruning-${theme}`);
+    });
+
+    test("the LD decay running, with the line of the fit", async ({ page }) => {
+      await loadLd(page);
+      await setLdDistance(page, "100000");
+      await holdResults(page);
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(/^Calculating · \d+% · 0:0[1-9]$/),
+      ).toBeVisible({ timeout: 5000 });
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^The bar shows the reading of ld\.nei\. The curves are fitted once it is read\. With a large distance /,
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-running-${theme}`);
+    });
+
+    test("the LD decay done, the plot with its legend and the table of the populations", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await saveLdPanel(page, `popgen-lddecay-done-${theme}`);
+    });
+
+    test("the LD decay done, the table of the bins in its tab", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await ldDecayPanel(page)
+        .getByRole("tab", { name: "Table of the bins" })
+        .click();
+      await expect(
+        ldDecayPanel(page).getByRole("columnheader", { name: "Mean r²" }),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-bins-${theme}`);
+    });
+
+    test("the LD decay done, the table of the bins scrolled in its frame, its header in view", async ({
+      page,
+    }) => {
+      await ldDecayDone(page);
+      await ldDecayPanel(page)
+        .getByRole("tab", { name: "Table of the bins" })
+        .click();
+      const frame = ldDecayPanel(page).getByRole("region", {
+        name: /^The 50 bins/,
+      });
+      await frame.focus();
+      await frame.evaluate((element) => {
+        element.scrollTo(0, 1200);
+      });
+      await expect(
+        ldDecayPanel(page).getByRole("columnheader", { name: "Mean r²" }),
+      ).toBeInViewport();
+      await saveLdPanel(page, `popgen-lddecay-bins-scrolled-${theme}`);
+    });
+
+    test("the LD decay done with 17 populations of 5 or 6 individuals: the warning of few individuals, 16 in the plot and its line", async ({
+      page,
+    }) => {
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      await pickIndividuals(page, {
+        name: "pops17.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) => `i${String(i).padStart(3, "0")},q${String(i % 17)}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          "The plot draws the first 16 of the 17 populations, in the order of the table of the populations. The two tables hold all 17.",
+        ),
+      ).toBeVisible({ timeout: 30_000 });
+      await expect(
+        ldDecayPanel(page).getByText(/^Warning: .*fewer than 20 individuals/),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-few-individuals-${theme}`);
+    });
+
+    test("the LD decay done on panel.nei, each half distance below the closest pairs", async ({
+      page,
+    }) => {
+      await loadPanelWithPopulations(page);
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page)
+          .getByText(/^Warning: The curve of p0 falls to half at 0\.247 bp/)
+          .first(),
+      ).toBeVisible({ timeout: 30_000 });
+      await saveLdPanel(page, `popgen-lddecay-half-below-${theme}`);
+    });
+
+    test("the LD decay in error, the filters keep no variant", async ({
+      page,
+    }) => {
+      await loadLd(page);
+      await goTo(page, "Variants");
+      await page
+        .getByText("Filter the variants by major allele frequency (MAF)", {
+          exact: true,
+        })
+        .click();
+      const threshold = page.getByLabel("Maximum major allele frequency", {
+        exact: false,
+      });
+      await threshold.fill("0.4");
+      await threshold.press("Enter");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "100000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^The filters kept none of the variants of ld\.nei/,
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-no-variant-${theme}`);
+    });
+
+    test("the LD decay done, two names of 45 characters alike in their first 40, and half distances beyond the plot", async ({
+      page,
+    }) => {
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const stem = "Solanum_pimpinellifolium_from_N_Ecuador_";
+      await pickIndividuals(page, {
+        name: "long_pops.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) =>
+            `i${String(i).padStart(3, "0")},${stem}${i < 50 ? "wild1" : "weed2"}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      // The variants are 1,000 bp apart: within 2,000 bp the curves fitted
+      // fall to half beyond the plot.
+      await setLdDistance(page, "2000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^Warning: .* beyond the 2,000 base pairs/,
+        ),
+      ).toHaveCount(2, { timeout: 30_000 });
+      await saveLdPanel(page, `popgen-lddecay-long-names-${theme}`);
+    });
+
+    test("the LD decay done at 320 pixels wide, two names of 45 characters in its warnings", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await pickVariants(page, "ld.nei");
+      await expect(
+        page.getByRole("main").getByText("100 individuals"),
+      ).toBeVisible();
+      await goTo(page, "Individuals");
+      const stem = "Solanum_pimpinellifolium_from_N_Ecuador_";
+      await pickIndividuals(page, {
+        name: "long_pops.csv",
+        text: `IID,pop\n${Array.from(
+          { length: 100 },
+          (_, i) =>
+            `i${String(i).padStart(3, "0")},${stem}${i < 50 ? "wild1" : "weed2"}\n`,
+        ).join("")}`,
+      });
+      await choose(page, "Column that defines the populations", "pop");
+      await goTo(page, "Analyses");
+      await setLdDistance(page, "2000");
+      await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+      await expect(
+        ldDecayPanel(page).getByText(
+          /^Warning: .* beyond the 2,000 base pairs/,
+        ),
+      ).toHaveCount(2, { timeout: 30_000 });
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      await saveLdPanel(page, `popgen-lddecay-long-names-320-${theme}`);
+    });
+
+    test("the LD decay done at 320 pixels wide, in the committed font", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await ldDecayDone(page);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      // The plot keeps the width the label of its axis needs, and its
+      // frame scrolls sideways, not the page.
+      await expect(
+        ldDecayPanel(page).getByText(
+          "Scroll the plot sideways to see all of it.",
+        ),
+      ).toBeVisible();
+      await saveLdPanel(page, `popgen-lddecay-320-${theme}`);
+    });
+
+    test("the LD decay locked at 320 pixels wide, in the committed font", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 900 });
+      await useWideFont(page);
+      await loadLd(page);
+      await expect(
+        ldDecayPanel(page).getByRole("button", { name: "Run" }),
+      ).toBeDisabled();
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+        .toBeLessThanOrEqual(320);
+      await saveLdPanel(page, `popgen-lddecay-320-locked-${theme}`);
+    });
   });
+}
+
+/** The panel of the LD decay, its region named by its heading. */
+function ldDecayPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "LD decay", exact: true });
+}
+
+/** Saves the panel of the LD decay alone as `name`: the Analyses step
+    holds the other three panels above it. */
+async function saveLdPanel(page: Page, name: string): Promise<void> {
+  await ldDecayPanel(page).screenshot({ path: join(SCREENS, `${name}.png`) });
+}
+
+/** The label of the field of the largest distance of the LD decay. */
+const LD_DISTANCE =
+  "Largest distance between the two variants of a pair, in base pairs, from 50";
+
+/** Loads ld.nei and ld_pops.csv, chooses the column pop, its two
+    populations of 50, and goes to the Analyses step. */
+async function loadLd(page: Page): Promise<void> {
+  await pickVariants(page, "ld.nei");
+  await expect(
+    page.getByRole("main").getByText("100 individuals"),
+  ).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, "ld_pops.csv");
+  await choose(page, "Column that defines the populations", "pop");
+  await expect(
+    page.getByRole("main").getByText("pop_a, 50 individuals"),
+  ).toBeAttached();
+  await goTo(page, "Analyses");
+}
+
+/** Types `distance` in the field of the largest distance of the LD decay,
+    and commits it with Enter. */
+async function setLdDistance(page: Page, distance: string): Promise<void> {
+  const field = ldDecayPanel(page).getByLabel(LD_DISTANCE);
+  await field.fill(distance);
+  await field.press("Enter");
+  await expect(field).toHaveValue(distance);
+}
+
+/** Loads ld.nei with its two populations, runs the LD decay up to
+    100,000 bp, and waits for the plot and the table of the populations. */
+async function ldDecayDone(page: Page): Promise<void> {
+  await loadLd(page);
+  await setLdDistance(page, "100000");
+  await ldDecayPanel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    ldDecayPanel(page).getByRole("cell", { name: "7,548", exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    ldDecayPanel(page).getByRole("img", { name: "LD decay" }),
+  ).toBeVisible();
+}
+
+/** The panel of the distances between populations, its region named by
+    its heading. */
+function popDistsPanel(page: Page): Locator {
+  return page.getByRole("region", { name: "Distances between populations" });
+}
+
+/** Saves the panel of the distances alone as `name`: the Analyses step
+    holds the principal components and the diversity above it. */
+async function savePanel(page: Page, name: string): Promise<void> {
+  await popDistsPanel(page).screenshot({ path: join(SCREENS, `${name}.png`) });
+}
+
+/** Loads panel.nei and panel_split.csv, whose p0 is split in p0a and p0b
+    of 24 individuals each, chooses popsplit, and stays at the
+    Individuals step. */
+async function loadSplit(page: Page): Promise<void> {
+  await pickVariants(page, "panel.nei");
+  await expect(
+    page.getByRole("main").getByText("200 individuals"),
+  ).toBeVisible();
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, "panel_split.csv");
+  await choose(page, "Column that defines the populations", "popsplit");
+  await expect(
+    page.getByRole("main").getByText("p0a, 24 individuals"),
+  ).toBeAttached();
+}
+
+/** A VCF of 20 variants and `numIndividuals` individuals, i0, i1, …,
+    haploid or diploid, with the genotypes of the individuals `missing`
+    gives true for left uncalled, and the others drawn from the variant
+    and the individual so that the populations differ. */
+function smallVcf(
+  numIndividuals: number,
+  missing: (individual: number) => boolean,
+  ploidy: "haploid" | "diploid",
+): string {
+  const names = Array.from(
+    { length: numIndividuals },
+    (_, i) => `i${String(i)}`,
+  );
+  const allele = (variant: number, individual: number, copy: number): string =>
+    String(
+      (variant * 7 + individual * 3 + copy * 5) % 11 < 4 + (individual % 3)
+        ? 1
+        : 0,
+    );
+  const lines = Array.from({ length: 20 }, (_, v) => {
+    const genotypes = names.map((_, i) => {
+      if (missing(i)) return ploidy === "haploid" ? "." : "./.";
+      return ploidy === "haploid"
+        ? allele(v, i, 0)
+        : `${allele(v, i, 0)}/${allele(v, i, 1)}`;
+    });
+    return `1\t${String((v + 1) * 1000)}\t.\tA\tC\t.\tPASS\t.\tGT\t${genotypes.join("\t")}`;
+  });
+  return [
+    "##fileformat=VCFv4.2",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    `#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t${names.join("\t")}`,
+    ...lines,
+    "",
+  ].join("\n");
+}
+
+/** Loads the metadata file of the small VCF, its nine individuals in A,
+    B and C of three, goes to the Analyses step and sets the minimum of
+    the distances to 2. */
+async function loadSmallPopulations(page: Page): Promise<void> {
+  await goTo(page, "Individuals");
+  await pickIndividuals(page, {
+    name: "small_pops.csv",
+    text: `IID,pop\n${Array.from(
+      { length: 9 },
+      (_, i) => `i${String(i)},${"ABC"[Math.floor(i / 3)] ?? ""}\n`,
+    ).join("")}`,
+  });
+  await choose(page, "Column that defines the populations", "pop");
+  await goTo(page, "Analyses");
+  await setMinimum(page, "2");
+}
+
+/** Types `minimum` in the field of the minimum of the distances, and
+    commits it with Enter. */
+async function setMinimum(page: Page, minimum: string): Promise<void> {
+  const field = popDistsPanel(page).getByLabel(
+    "Individuals with a called genotype needed in each population, per variant",
+  );
+  await field.fill(minimum);
+  await field.press("Enter");
+}
+
+/** Loads panel.nei and panel_pops.csv with popcat, runs the distances,
+    and waits for the heatmap and the table. */
+async function popDistsDone(page: Page): Promise<void> {
+  await loadPanelWithPopulations(page);
+  await goTo(page, "Analyses");
+  await popDistsPanel(page).getByRole("button", { name: "Run" }).click();
+  await expect(
+    popDistsPanel(page).getByRole("rowheader", { name: "p0 and p2" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    popDistsPanel(page).getByRole("img", {
+      name: /^Hudson's Fst between populations/,
+    }),
+  ).toBeVisible();
+}
+
+/** The fonts of DejaVu Sans, the sans-serif font of Ubuntu's runners, as
+    wide as Verdana and wider than the Mac's system font, which the
+    pictures at 320 pixels give the page (testing.md, the plan of stage
+    5, "What every prompt of a task carries"). */
+const WIDE_FONTS = [
+  { file: "DejaVuSans.woff2", weight: "100 500" },
+  { file: "DejaVuSans-Bold.woff2", weight: "600 900" },
+] as const;
+
+/** Gives the page DejaVu Sans as the font of its text. */
+async function useWideFont(page: Page): Promise<void> {
+  const faces = await Promise.all(
+    WIDE_FONTS.map(async ({ file, weight }) => {
+      const bytes = await readFile(join(FIXTURES, "fonts", file));
+      return `@font-face { font-family: "Wide test font"; font-weight: ${weight}; src: url(data:font/woff2;base64,${bytes.toString("base64")}) format("woff2"); }`;
+    }),
+  );
+  await page.addStyleTag({
+    content: `${faces.join("\n")}\n:root { --font-body: "Wide test font"; font-family: "Wide test font"; }`,
+  });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
 }
 
 test("popgen.html, its code not loaded", async ({ page }) => {

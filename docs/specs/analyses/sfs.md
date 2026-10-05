@@ -7,8 +7,15 @@ the diversity's block `if large:`, and its point of whether the
 spectrum is part of the diversity written with the diversity as that
 spec now has it. Its three open points were decided by the owner on 30
 September 2026, each as recommended, and are written below as decided
-(points 11, 17 and 18 of `docs/specs/stage-5-open-points.md`). Approved by the owner on 30 September 2026. There
-is no code of it yet. This spec gives
+(points 11, 17 and 18 of `docs/specs/stage-5-open-points.md`). Approved by the owner on 30 September 2026.
+Revised on 1 October 2026 for what the owner decided that day, after
+trying the block as built (the same file, "Decided by the owner on 1
+October 2026: the diversity, the spectrum and the histogram"): the
+warning of the MAF filter is said at the end of the block's caption and
+not among the diversity's warnings, the block has a heading, the
+description of a histogram does not repeat its title, and a population
+that holds fewer than 2 chromosomes has a line of its own. The code is
+in `src/core/analyses/sfs.ts` and `src/ui/analyses/diversity/`. This spec gives
 the folded site frequency spectrum (SFS) of each population, the part of
 section 6 of `docs/functionality.md` headed "The site frequency
 spectrum": what popnei gives for it, how it rides in the pass of the
@@ -170,9 +177,15 @@ words under the plots say it, so that no user reads it as a fall.
 
 ### The warnings
 
-The spectrum's warnings are among those of the diversity's `warnings(r,
-p)`, after the diversity's own, and shown with them above the panel.
-One is the spectrum's own:
+The spectrum has one warning of its own, which `spectrumWarnings(r, p)`
+gives and the block writes at the end of its caption, beside the
+histograms it is about, as the owner decided on 1 October 2026 (B4 of
+the stop of the diversity). Until that day the diversity's `warnings(r,
+p)` appended it to its own, and it stood above the diversity's table,
+about 500 pixels above the histograms; it is no longer among them, nor
+in their count. The Python script of stage 6, which writes the warnings
+of a result as comments (`docs/functionality.md`, section 9), takes
+this one from `spectrumWarnings` as well:
 
 | code | when | the text |
 |---|---|---|
@@ -286,7 +299,8 @@ The functions the block of the panel calls, in
 export interface SpectrumOfPop {
   readonly population: string;
   /** False for a population not given to calcPopDiversity, under the minimum
-      of individuals: then variantsInDraw is 0, expected is empty and shares null. */
+      of individuals, or, from 1 October 2026, with populations that hold fewer
+      than 2 chromosomes: then variantsInDraw is 0, expected is empty and shares null. */
   readonly calculated: boolean;
   /** The variants of the population in the draw, popnei's numVars.inDraw. */
   readonly variantsInDraw: number;
@@ -327,8 +341,15 @@ defect of the runner.
   popnei's call (decision 7), `calculated` false; in the block, a line
   with the words of "Its words", which take the minimum from the
   diversity's options in the project, as its warning
-  `tooFewIndividuals` does, and no histogram. It is not in the table nor
-  in the CSV.
+  `tooFewIndividuals` does, and no histogram. In the table its two
+  columns hold "no value", since the review of work package 7 of the
+  plan of stage 5 (f4d6764); it is not in the CSV.
+- **Populations that hold fewer than 2 chromosomes between them**, one
+  haploid individual: the diversity makes no call of `calcPopDiversity`
+  (`diversity.md`, "Why it cannot run"), so the population has the
+  minimum of individuals and `calculated` false; its line says that it
+  holds fewer than 2 chromosomes, and not that it has too few
+  individuals ("Its words").
 - **A population that no variant counted for, or that reached the draw
   at none.** `variantsInDraw` 0, a spectrum of zeros, no shares: a line
   that says so, and no histogram; its rows are in the table and the CSV,
@@ -378,6 +399,10 @@ With Vitest, at the highest functions that show each thing:
   `variantsInDraw` 3; `largestShare` 0.5. The same object
   for the same result, compared with `===`. A `foldedSfs` array of 2
   values for n = 4 throws the defect.
+- **`noSpectrumLine`** of the block's words, for a population not
+  calculated: with fewer individuals than the minimum, the words of the
+  minimum; with the minimum, one individual at a minimum of 1, the
+  words of fewer than 2 chromosomes.
 - **`spectrumWarnings`**: no warning without a MAF filter; none with one
   that kept every variant it was given; with a project whose MAF filter
   is at 0.95, from which the text takes the threshold, and a result
@@ -401,7 +426,10 @@ diversity (`docs/specs/analyses/diversity.md`) goes on to the block: three
 histograms, each titled with its population, 20 bars each, and the table
 of 21 rows; with the MAF filter at 0.95 added to the flow's missing
 data filter at 0.05, the warning's text, "…it removed 24 of the 1,152
-it was given. …". The block
+it was given. …", in the block, after its caption, and not among the
+warnings above the table; the heading "Site frequency spectrum" at
+level 3 and those of the populations at level 4; the description of
+p0's histogram starting "1,152 variants in the draw". The block
 is looked at in both themes and at 320 pixels wide, as
 `.claude/skills/coding/testing.md` says, and axe runs on it.
 
@@ -464,13 +492,22 @@ No option of its own. The size of the draw is the diversity's field,
 above the table, and the block names it in its caption, so that a user
 who reads the spectrum learns where it is set.
 
+- **A heading**, "Site frequency spectrum", an `<h3>` under the `<h2>`
+  of the panel, which names the block as a region of the page, from 1
+  October 2026 (B6): without it a screen reader that moves by headings
+  went from "Diversity" to the populations, "p0, p2, p1", with nothing
+  to say what they were of.
 - **A caption**: "The folded site frequency spectrum of each population,
   in a draw of 40 of its chromosomes at each variant, over the 1,200
   variants of panel.nei the filters kept. The number of chromosomes is
-  set above the table, with the rarefaction."
+  set above the table, with the rarefaction." When `spectrumWarnings`
+  gives the warning of the MAF filter, its sentences end the caption,
+  after the word "Warning:" and with the mark of a warning, as every
+  warning of the application is drawn (B4).
 - **One histogram per population**, in the order of the result, each
   in a group of the page named by a heading the block writes in the
-  page, the name of its population, since the title a plot is given is
+  page, the name of its population, an `<h4>`, one level under the
+  heading of the block, since the title a plot is given is
   the `<title>` of its SVG, which browsers do not draw
   (`docs/specs/charts/plot2d.md`); a line under the heading,
   "1,200 variants in the draw, about 1,155 of them with both alleles",
@@ -509,7 +546,7 @@ in "Its words".
 | state | what the user sees |
 |---|---|
 | empty, locked, ready, running, results removed, error | the diversity panel's state; the block is not shown, since it has nothing of its own to say in any of them |
-| done | the caption, a histogram or a line per population, the line under them, the table in its tab, the download; the spectrum's warnings with the diversity's, above the panel |
+| done | the heading, the caption, with the spectrum's warning at its end when there is one, a histogram or a line per population, the line under them, the table in its tab, the download |
 
 ### What it sends and reads
 
@@ -525,6 +562,10 @@ variants kept, which the diversity's caption reads too.
 - A population left out of the call (decision 7): "p3 has 12
   individuals, fewer than the 20 a variant needs to count for a
   population, so it has no spectrum."
+- A population with the minimum of individuals that was not in the
+  call, the populations holding fewer than 2 chromosomes between them:
+  "All individuals holds fewer than 2 chromosomes, the least a draw
+  takes, so it has no spectrum."
 - A population with no variant in the draw: "p3 has no variant with 40
   called chromosomes, so it has no spectrum."
 - A population with no variant with both alleles in the draw: "Every
@@ -543,10 +584,16 @@ variants kept, which the diversity's caption reads too.
 ### Accessibility
 
 Each histogram has the text alternative of the base
-(`docs/specs/charts/plot2d.md`), a description the block writes: "The
-spectrum of p0: 1,200 variants in the draw of 40 chromosomes, about
-1,155 with both alleles, in 20 bars from 1 to 20 copies of the rarer
-allele; the largest share, 0.0559, at 15." The table is reachable by the
+(`docs/specs/charts/plot2d.md`), its title, "The spectrum of p0", and a
+description the block writes: "1,200 variants in the draw of 40
+chromosomes, about 1,155 with both alleles, in 20 bars from 1 to 20
+copies of the rarer allele; the largest share, 0.0559, at 15." A screen
+reader reads the title and then the description, so the description
+does not start with the title, as it did until 1 October 2026, "The
+spectrum of p0 The spectrum of p0: 1,200 variants…" (B6). The block is
+a region named by its heading, and the heading of each population is one
+level under it, so that moving by headings gives "Diversity, Site
+frequency spectrum, p0, p2, p1". The table is reachable by the
 keyboard and read by a screen reader with a header cell for every column
 and row. The keyboard goes through the tabs of the plots and the table,
 then the download. The end of the run is announced by the diversity's
@@ -578,8 +625,9 @@ spec:
   population in the order of `pops` (above, "The TypeScript
   interface"), and `numVarsInDraw`, popnei's `numVars.inDraw`, which its
   rarefaction needs as well.
-- Its `warnings` appends `spectrumWarnings(r, p)` after its own, and its
-  panel shows the block of this spec below its table in the state done.
+- Its panel shows the block of this spec below its table in the state
+  done, and the block ends its caption with `spectrumWarnings(r, p)`,
+  which its `warnings` does not append, from 1 October 2026 (B4).
 - Its default size of the draw is never below 2, which popnei refuses:
   the ploidy times a minimum of 0, or of 1 for a haploid dataset, gives
   less.
@@ -622,6 +670,14 @@ Of the other specs:
   variants with both alleles in the draw, and a MAF filter warns.
 - `docs/specs/stage-5-open-points.md`: the three points below, which
   the owner decided there as points 11, 17 and 18.
+
+On 1 October 2026, for the owner's decisions of that day:
+`diversity.md` no longer appends `spectrumWarnings` to its warnings,
+and sends no call of `calcPopDiversity` when its populations hold fewer
+than 2 chromosomes; `docs/specs/charts/plot2d.md` breaks the label of
+the horizontal axis into two lines when it would not fit, which mends
+"Copies of the rarer allele among 40 chromosomes" on a screen of 320
+pixels, where its end was cut.
 
 ## Open points
 

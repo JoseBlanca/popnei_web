@@ -11,7 +11,8 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { isOutlined } from "../charts/marks.ts";
+import { cellTextClass } from "../charts/heatmap.ts";
+import { isOutlined, viridisColour } from "../charts/marks.ts";
 
 const CSS = readFileSync(join(import.meta.dirname, "tokens.css"), {
   encoding: "utf8",
@@ -162,5 +163,41 @@ describe("stop C 2 the outline of the marks in charts.css", () => {
     expect(classes).toEqual(
       [0, 1, 2, 3, 4, 5, 6].filter((colour) => !isOutlined(colour)),
     );
+  });
+});
+
+describe("PA4 D2 the values in the cells of the heatmap", () => {
+  test("on each of the 256 steps of viridis, the colour charts.css gives the class of text cellTextClass picks has at least 4.5:1, in both themes", () => {
+    const css = readFileSync(
+      join(import.meta.dirname, "..", "charts", "charts.css"),
+      { encoding: "utf8" },
+    );
+    // The token of the fill of a class of the text, as charts.css writes it.
+    const tokenOf = (className: string): string => {
+      const rule = new RegExp(
+        `\\.${className}\\s*\\{\\s*fill:\\s*var\\((--[a-z-]+)\\);`,
+      ).exec(css);
+      const token = rule?.[1];
+      if (token === undefined) {
+        throw new Error(`charts.css gives .${className} no fill of a token.`);
+      }
+      return token;
+    };
+    for (const [name, colours] of THEMES) {
+      let least = Infinity;
+      for (let step = 0; step < 256; step++) {
+        const token = tokenOf(cellTextClass(step));
+        const text = colours.get(token);
+        if (text === undefined) throw new Error(`tokens.css lacks ${token}.`);
+        const ratio = contrast(text, viridisColour(step));
+        least = Math.min(least, ratio);
+        expect(
+          ratio,
+          `step ${String(step)} in the ${name} theme`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+      // 4.60:1 at step 110 (docs/specs/charts/heatmap.md).
+      expect(least).toBeCloseTo(4.6, 1);
+    }
   });
 });

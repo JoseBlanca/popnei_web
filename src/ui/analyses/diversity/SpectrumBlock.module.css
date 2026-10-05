@@ -1,0 +1,70 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* As wide as the panel, and never wider, so that a plot drawn wide does
+   not hold the column at its width after the window narrows. */
+.block {
+  display: grid;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* The heading of the block, under the heading of the panel. */
+.blockHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+/* The caption, and the warning of the spectrum at its end. */
+.captionBox {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.caption {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.histograms {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+/* The histograms side by side, as many as the width holds at 28rem at
+   least each, two in the column of a wide window, and one to a row at
+   the width of a phone. */
+.plots {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
+}
+
+/* One population: its heading, its line and its histogram. */
+.population {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

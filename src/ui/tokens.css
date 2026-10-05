@@ -44,6 +44,10 @@
   --chart-bar: #0072b2;
   --chart-axis: #555d68;
   --chart-threshold: #b3261e;
+  /* the text over the colours of viridis in the cells of the heatmap,
+     the same in both themes, as the colours under it are */
+  --chart-text-on-light: #000000;
+  --chart-text-on-dark: #ffffff;
 
   /* spacing: a scale of 0.25rem */
   --space-1: 0.25rem;

@@ -625,7 +625,7 @@ test("IP5 D2 a type and a value coded 1 changed while the diversity by popcat is
     "popcat",
   );
   await goTo(page, "Analyses");
-  const panel = page.getByRole("region", { name: "Diversity" });
+  const panel = page.getByRole("region", { name: "Diversity", exact: true });
   await panel.getByRole("button", { name: "Run" }).click();
   await expect(panel.getByRole("table")).toBeVisible();
 
@@ -644,7 +644,9 @@ test("IP5 D2 a type and a value coded 1 changed while the diversity by popcat is
     panel
       .getByRole("row")
       .filter({ has: page.getByRole("rowheader", { name: "p0", exact: true }) })
-      .getByRole("cell"),
+      .getByRole("cell")
+      // The first five columns, those of stages 2 to 4.
+      .and(page.locator(":nth-child(-n+5)")),
   ).toHaveText(["48", "0.3519", "0.3564", "0.9267"]);
 });
 

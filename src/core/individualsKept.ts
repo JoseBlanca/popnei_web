@@ -65,6 +65,15 @@ export interface IndividualsKept {
   readonly counts: readonly FilterCount[];
 }
 
+/** Whether the project holds a threshold on the individuals, of missing
+    genotypes or of observed heterozygosity, whose list of the individuals
+    kept needs the statistics of each individual. */
+export function hasIndividualThreshold(p: Project): boolean {
+  return p.individualFilters.some(
+    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
+  );
+}
+
 /**
  * The individuals the filters of individuals of `p` keep, applied in the
  * project's fixed order, keep, remove, missing data, observed
@@ -85,10 +94,7 @@ export function individualsKept(
     return null;
   }
   const all = fileIndividuals(p);
-  const hasThreshold = p.individualFilters.some(
-    (filter) => filter.kind === "missing_data" || filter.kind === "obs_het",
-  );
-  const given = hasThreshold ? stats : null;
+  const given = hasIndividualThreshold(p) ? stats : null;
   if (given !== null) {
     checkStats(all, given);
   }

@@ -369,9 +369,10 @@ would read as popnei's message.
 A diversity job holds its pass, the load id, the filters of the variants
 and the list of the individuals kept, the populations, as pairs of a
 name and its individuals in the order of the individuals file, only
-individuals kept and none empty, and the two options of the diversity,
+individuals kept and none empty, and, until stage 5, the two options
+the diversity then had,
 `minNumIndividuals` and `polyThreshold` (`docs/specs/analyses/diversity.md`,
-`DiversityJob`). After the steps are on the `Variants` (above), the
+`DiversityJob`); the two fields stage 5 adds are below, after step 5. After the steps are on the `Variants` (above), the
 runner:
 
 1. Checks the job: no two populations of one name, since the object
@@ -448,7 +449,11 @@ step 5, over the same steps of the `Variants`, the runner:
    decided on 30 September 2026 until popnei issue #4 gives the two
    heterozygosities and the proportion of polymorphic variants in this
    call (decision 4). With `popDiversityPops` empty there is no second
-   call and no second pass.
+   call and no second pass: core sends it empty when no population has
+   the minimum of individuals and, from 1 October 2026, when the
+   populations hold fewer than 2 chromosomes between them, the least
+   draw (`diversity.md`, "Why it cannot run"); the runner does the same
+   for both and knows neither reason.
 7. Puts popnei's arrays back in the order of the job, as step 4 does,
    `foldedSfs` among them, which popnei gives as an object by the name
    of the population, each array copied into a new `Float64Array`, read
@@ -759,26 +764,36 @@ the `Variants`, the runner:
 
 1. Checks that no two populations share a name, `badRequest`, and sets
    the function of the progress.
-2. Calls `calcLdAndDistPerPop(variants, { pops: Object.fromEntries(job.pops),
-   minDist, maxDist, numBins, maxAllowedMaf })` of
-   `js/popnei/src/ld.ts`, the options written with these keys alone,
-   since the release refuses a key it does not know.
-3. Checks that popnei gave every population of the job, with
-   `Object.hasOwn`, in `numVarsPerPop`, `perPop` and `decayPerPop`: a
-   plain lookup or `in` finds a population named `__proto__` in the last
-   two, where popnei's objects hold it, and returns `Object.prototype` in
-   the first, where assigning a number to that name is ignored, so the
-   check with `in` would pass and `numVars` would be NaN with no word
-   (node, `js-v0.1.0-dev.3`, found by the review of 30 September 2026);
-   and that the smallest and the largest distance of the
-   bins are the same for every population, as popnei's rule has them;
-   a difference is a defect of ours, thrown. A population named
-   `__proto__` is missing from popnei's result, whose objects the
-   release fills by assigning to them (`perPop[pop] = …` of `ld.ts`),
-   and so is thrown as a defect; it is asked of popnei with the
-   refusal of a source not sorted, in popnei issue #5.
+2. Calls `calcLdAndDistPerPop(variants, { pops, minDist, maxDist,
+   numBins, maxAllowedMaf })` of `js/popnei/src/ld.ts`, the options
+   written with these keys alone, since the release refuses a key it
+   does not know. `pops` names the populations with names of the
+   runner's own, `p0`, `p1`, …, the place of each in `job.pops`, each
+   with the individuals of the population at that place, as the owner
+   decided on 1 October 2026 (`docs/specs/stage-5-open-points.md`,
+   "Decided by the owner on 1 October 2026: the LD decay and the line
+   plot", point 6). The reason is a population named `__proto__`: the
+   release fills the objects of its result by assigning to them
+   (`perPop[pop] = …` of `ld.ts`), where that name sets the object's
+   parent instead of making a field, so under the user's names such a
+   population was missing from the result, and the job failed as a
+   defect at every run (node, `js-v0.1.0-dev.3`, 30 September 2026).
+   popnei's numbers do not depend on the names: the job of `ld.nei`
+   gives the numbers of `ldDecay.md` to the last digit under `p0` and
+   `p1`. No refusal of popnei that this job can meet names a
+   population, so the runner's names are never shown. Until 1 October
+   2026 the object was `Object.fromEntries(job.pops)`, and the case
+   waited for popnei issue #5, which still asks popnei to keep such a
+   name.
+3. Checks that popnei gave every population it was sent, each `p‹i›`
+   with `Object.hasOwn`, in `numVarsPerPop`, `perPop` and `decayPerPop`,
+   and five arrays of `numBins` values for its bins; and that the
+   smallest and the largest distance of the bins are the same for every
+   population, as popnei's rule has them; a difference is a defect of
+   ours, thrown.
 4. Answers the `LdDecayResult` of `ldDecay.md`, every array in the order
-   of the job: `numIndividuals`, the lengths of the job's populations,
+   of the job, the values of `p‹i›` at the place `i`, and `pops` the
+   names of the job: `numIndividuals`, the lengths of the job's populations,
    the n of each curve; `numVars` from `numVarsPerPop`; `smallestDist`
    and `largestDist` copied with `slice()` from the bins of the first
    population, since popnei gives each population's bins as `subarray`
@@ -1809,8 +1824,11 @@ each spec gives beside them, and written into the tests as literals:
   `ldDecay.md`, "How it is verified", 432 variants and 29,367 pairs in
   each population, the half distances 7548.08187836982 and
   7339.709512618931, and the first and last bins; populations named
-  "10" and "2", given back by popnei as "2", "10", held in the order of
-  the job; and a population named `__proto__`, thrown as a defect.
+  "10" and "2", held in the order of the job; and a population named
+  `__proto__`, the first of the job, the second, and the only one,
+  which has its name in `pops` and the numbers of the population of the
+  same individuals named `pop_a` or `pop_b`, every array equal value by
+  value.
 
 ### In the browser
 

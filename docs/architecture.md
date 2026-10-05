@@ -2000,7 +2000,15 @@ for the smallest part of it.
   anyway. `.claude/skills/coding/charts.md`, which gives every binning to
   Rust, is corrected so. The option not taken, a histogram of the
   individuals in popnei, would cost a request to popnei and a release for
-  every change of the bins.
+  every change of the bins. From stage 5 the order of the heatmap and
+  the curve of the LD decay are made outside the plots as well: the
+  calculation worker orders the populations of the heatmap from popnei's
+  PCoA of the distances, after Lingoes' correction
+  (`docs/specs/analyses/popDists.md`, "The order of the heatmap"), and
+  core gives the points of each population's fitted curve from popnei's
+  parameters of the fit, by popnei's formula
+  (`docs/specs/analyses/ldDecay.md`, "The fitted curve"). The heatmap
+  and the line plot draw the order and the points they are given.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2126,6 +2134,11 @@ src/core/
   individualsKept.ts
                     the list of the individuals the filters keep, and the
                     counts of each filter of individuals (section 4)
+  populations.ts    from stage 5, what the analyses per population share:
+                    the locks when no population is left, the populations
+                    under the minimum of individuals and their words; it
+                    imports project.ts and individualsKept.ts, and neither
+                    imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
@@ -2245,7 +2258,9 @@ installed into `node_modules/` from its release, as popnei is (section
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
 in `core` imports from `ui` or `charts`, and nothing in `charts` imports
 from `core` or `ui`. From stage 4 core imports, of `src/worker`, the
-types of `protocol.ts` and the pure functions of
+types of `protocol.ts` and its constants, the least draw of the
+rarefaction the first, written once beside the messages that check it
+(the owner, 1 October 2026), and the pure functions of
 `src/worker/individuals/columnTypes.ts`, which read the number a cell
 holds and the types a column allows, so that the project and the reader
 cannot disagree on them (`docs/specs/core/project.md`, `columnAllows`). Only `src/worker/runner.ts` calls popnei, apart
@@ -2385,16 +2400,43 @@ the same numbers for everything else but the size of a written file.
   variants and the distance, about 48 bytes for each individual and
   variant held by the table above: a file of 1,000 individuals with a
   variant every 100 bp, at the 8,333,333 bp the lock allows three
-  populations, would hold about 3 to 4 GB, an extrapolation not
-  measured, and the user would wait minutes for popnei's refusal for
-  memory, or lose the tab in WebKit, which closed it on a write of 2.2
-  GB. The plan measures such a file at several million base pairs in
-  WebKit and Chromium; if the tab closes, the lock counts the
-  individuals × the distance as well.
+  populations, would hold about 3 to 4 GB. Measured through the
+  application in Chromium 153 and WebKit 26.6 on 30 September 2026
+  (`docs/specs/analyses/ldDecay.md`, "How it runs", "In the browsers"),
+  no tab closed: such a file ran at 2,000,000 and 4,000,000 bp, in 3.7
+  and 10 to 14 minutes, the engine at 1.3 to 1.6 and 2.4 to 2.6 GB, and
+  at 8,333,333 bp popnei refused it for memory after 19 to 25 minutes,
+  the engine at 4.05 and 4.28 GB, so the user waits that long for the
+  refusal and keeps the tab. At the lock itself, 100 individuals and
+  20,000 variants at positions drawn at random over 26 Mb, the tab held
+  at 1.26 GB in Chromium and 1.44 GB in WebKit for one population at
+  25,000,000 bp, and the fit after the pass, with no progress, took 9
+  to 11 s. On 1,000 individuals and 20,000 variants at 100,000 and
+  1,000,000 bp the engine grew by 0.40 to 0.59 GB, in 3.4 to 20 s.
   That memory stays with wasm after the analysis, so the worker is
-  started again after every LD decay (section 13, point 16).
-  None of it has been measured in a browser; the plan of stage 5
-  measures it in Chromium and WebKit, as stage 4 measured the PCA.
+  started again after every LD decay (section 13, point 16), which gave
+  all of it back in both engines.
+- **The distances between populations take one pass**, and their time
+  grows with the variants and with the pairs of populations. Measured
+  through the application on 30 September 2026, in Chromium 153 and
+  WebKit 26.6 on the owner's Mac, an Apple M5 Pro with 64 GB, on the
+  built site, from the Run to the answer of the calculation worker, the
+  median of five runs (`docs/specs/analyses/popDists.md`, "How it
+  runs"): on `panel.nei`, 1,200 variants of 200 individuals, 17 and 14
+  ms with three populations, and 17 and 19 ms with twenty of 10
+  individuals; on the `.nei` file of 19 MB of section 13, 20,000
+  variants of 1,000 individuals, 118 and 118 ms with three populations,
+  and 155 and 144 ms with twenty of 50 individuals, the pass taking most
+  of it.
+- **The diversity takes two passes from stage 5**, one for each of its
+  calls of popnei, until popnei issue #4 lets it make one. Measured the
+  same way on 30 September 2026 on the same file of 19 MB, with the
+  default options, the first pass timed to the first progress of the
+  second (`docs/specs/analyses/diversity.md`, "How it runs"): a Run took
+  257 ms in Chromium 153, a first pass of 136 ms and a second of 122 ms,
+  and 261 ms in WebKit 26.6, 139 and 123 ms. One pass would save the
+  first, about half of the Run. On `panel.nei` a Run took 19 ms in
+  Chromium and 24 ms in WebKit.
 - **The kinship takes n² × 8 bytes**, 800 MB at 10,000 individuals, and
   the calculation worker keeps it in its cache for the GWAS. While it is
   calculated it is in the memory of wasm as well, which keeps that room
@@ -2476,8 +2518,8 @@ the same numbers for everything else but the size of a written file.
   are counted over the individuals kept (section 4): the histograms need
   a pass again, the pass of a check, and the counts come back with the
   next analysis or Count. The pass of the histograms is one call of
-  `calcPerVarDistribs`, as the diversity's is, which took 248 ms in
-  Chromium 153 and 243 ms in WebKit 26.6 over a VCF of 80,692,954 bytes
+  `calcPerVarDistribs`, as the diversity's first call is and its whole
+  run was in stage 4, which took 248 ms in Chromium 153 and 243 ms in WebKit 26.6 over a VCF of 80,692,954 bytes
   on the owner's Mac (`docs/plans/variants-step.report.md`, "The Count
   against the diversity"); the histograms themselves were not timed, and
   over a gzipped VCF of gigabytes the pass takes minutes. The user sets the individuals first, in the
@@ -2729,7 +2771,13 @@ by the owner the same day, "OK", as recommended
    40 bytes × its largest distance × its populations (section 11): in node, 10.6 MB for
    100 individuals and 500 variants at 100,000 bp, and 0.4 to 1.1 GB for
    1,000 individuals and 20,000 variants (section 11), where a written
-   file and a PCA restart the worker above about 25 MB. What it costs:
+   file and a PCA restart the worker above about 25 MB. In the browsers,
+   on 30 September 2026, such an LD decay at 100,000 and 1,000,000 bp
+   left the engine 0.40 to 0.45 GB larger in Chromium 153 and 0.43 to
+   0.59 GB in WebKit 26.6 while its worker lived, and 3 s after the
+   restart the engine was back at its size before the Run
+   (`docs/specs/analyses/ldDecay.md`, "How it runs", "In the
+   browsers"). What it costs:
    reading the header of the variants file again, at most 49 ms (point
    5), against a calculation of 0.6 s and more on 20,000 variants, and,
    from stage 7, the intermediate results the worker holds, the kinship

@@ -10,7 +10,9 @@
 import { diversity } from "./analyses/diversity.ts";
 import { filterCounts, variantsOfFile } from "./analyses/filterCounts.ts";
 import { individualChecks } from "./analyses/individualChecks.ts";
+import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
+import { popDists } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
@@ -42,7 +44,9 @@ export const DEFAULT_ONLY_PASSED = true;
     the individuals comes first since 28 September 2026, then the
     histograms of the variants and the counts of what each filter kept;
     then the principal components and the diversity, in the Analyses step,
-    the PCA first from stage 4 (docs/specs/entry.md, "`src/core/apps.ts`").
+    the PCA first from stage 4, and the distances between populations and
+    the LD decay after them, from stage 5, the LD decay last
+    (docs/specs/entry.md, "`src/core/apps.ts`").
     The stepper names the first check in error in this order. */
 export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
   Object.freeze([
@@ -51,6 +55,8 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     filterCounts,
     pca,
     diversity,
+    popDists,
+    ldDecay,
   ]);
 
 /** The steps of the population genetics application, by their ids, in
@@ -62,8 +68,9 @@ export const POPGEN_STEPS: readonly ["variants", "individuals", "analyses"] =
 export type StepId = (typeof POPGEN_STEPS)[number];
 
 /** The step each analysis of `POPGEN_ANALYSES` is shown in, by its id: the
-    three checks in the Variants step, the principal components and the
-    diversity in the Analyses step.
+    three checks in the Variants step, the principal components, the
+    diversity, the distances between populations and the LD decay in the
+    Analyses step.
     The ids are literals of their modules, never names of the user, so an
     object may hold them. */
 export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>> =
@@ -73,6 +80,8 @@ export const POPGEN_ANALYSIS_STEPS: Readonly<Record<string, StepId>> =
     filterCounts: "variants",
     pca: "analyses",
     diversity: "analyses",
+    popDists: "analyses",
+    ldDecay: "analyses",
   });
 
 /** The first project of the population genetics application: an empty
@@ -92,11 +101,13 @@ export function firstProject(app: "popgen"): Project {
  * gave when it had no filter; and the counts of its filters, a result of
  * `filterCounts`, for a result whose pass had the list of the individuals
  * kept and the filters of the variants of its request's project, told by
- * the analysis of the result: the diversity and `filterCounts` itself,
- * and not the statistics of each individual, whose pass has no filter,
- * nor the histograms of the variants, whose pass has the list and no
+ * the analysis of the result: the diversity, the distances between
+ * populations and `filterCounts` itself, and not the statistics of each
+ * individual, whose pass has no filter, nor the histograms of the
+ * variants, whose pass has the list and no
  * filter of the variants, nor the PCA, whose filters of missing data, MAF
- * and LD can be its own in the place of the project's
+ * and LD can be its own in the place of the project's, nor the LD decay,
+ * whose filters are the project's but the LD pruning
  * (docs/architecture.md, section 4; docs/specs/entry.md).
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
@@ -104,10 +115,12 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
   switch (r.analysis) {
     case "diversity":
     case "filterCounts":
+    case "popDists":
       return { numVarsRead, counts: writeCountsOf(r.passStats) };
     case "individualChecks":
     case "variantChecks":
     case "pca":
+    case "ldDecay":
       return { numVarsRead, counts: null };
   }
 }
