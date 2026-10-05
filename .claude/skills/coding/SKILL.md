@@ -109,20 +109,20 @@ easy and hide which module a name comes from.
 
 ## Before the code
 
-Code is written from a spec, `docs/specs/<layer>/<module>.md`,
-`docs/specs/analyses/<id>.md` or `docs/specs/steps/<step>.md`, as the
-`writing-specs` skill describes, and usually from a step of a plan, as the
-`writing-plans` and `following-plans` skills do. Read the item of the
-spec, the part of `docs/architecture.md` it stands on, and, when it calls
+Code is written from a phase of the plan of a piece, as the `building`
+skill describes, and from the use case of `docs/use-cases.md` the piece
+serves; a complex piece has a spec as well, as the `writing-specs` skill
+describes. Read the phase, the use case, the spec when there is one, the
+part of `docs/architecture.md` it stands on, and, when it calls
 popnei, the TypeScript declarations of the function in the popnei package
 and its spec in popnei's `docs/specs/`.
 
-When the spec does not say what should happen in a case, the choice is not
-made in silence. A choice that changes what a user sees, a result, a
-message, the project file, goes to the owner as an open point of the spec.
-A smaller one is made and written in the spec, in a commit of its own
-before the commit of the code, and named in the commit message of the
-code.
+When the plan does not say what should happen in a case, the choice is
+not made in silence. A choice that is one of the stops of the `building`
+skill, a default, a result, the project file, goes back to the
+coordinator, who asks the owner. A smaller one is made, named in the
+commit message, and sent back in the subagent's report, so that the
+coordinator writes it in the plan and the report.
 
 ## The order of the work
 

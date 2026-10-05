@@ -32,7 +32,7 @@ timing, and when it fails says only that something on the path broke.
 | the light worker with the files wasm | Playwright | browser | an xlsx read, and from stage 6 a report written, through the real package of xlsx_rs, loaded on first need |
 | `src/charts`, 2D | Vitest | jsdom | the SVG each plot function builds, its update and its removal |
 | `src/charts/pca3d.ts`, the PNG export | Playwright | browser | what needs WebGL or a canvas, which jsdom does not have |
-| `src/ui` | Playwright | browser | the screens, as part of the flows |
+| `src/ui` | Playwright | browser | the screens, as part of the flows of the use cases |
 | the whole application | Playwright | Chromium, Firefox, WebKit | a few flows from start to end, the walking skeleton first, and axe on each state |
 
 ### src/core: examples, and properties
@@ -140,6 +140,19 @@ canvas, which jsdom has neither of, so both are checked by Playwright
 only.
 
 ### src/ui: by Playwright, without Testing Library for now
+
+Since 5 October 2026 a screen is built in small pieces and changes after
+the owner tries each one (the `building` skill). A test of every state
+of a screen that is still changing is rewritten at every change, and
+works against trying the screen early. So while a screen is being
+built, its tests are one or two flows for each use case it serves, that
+walk the path the use case gives, from opening the file to what the user
+leaves with, with axe on the states they pass through. The flows of each
+state, each warning and each error are added once the owner has accepted
+the screen. The code under `src/core`, `src/worker` and `src/charts` is
+tested in full from the start, as the sections around this one say,
+since a mistake there gives a wrong or stale number that no screen
+shows.
 
 The screens are not tested one component at a time. The logic lives in
 `src/core`, and a screen reads the project and sends commands, so a test
@@ -665,9 +678,10 @@ For the testing part of the hub's list:
    nothing. It runs for every change to the code, not only to `src/ui`: a
    change in `src/core` reaches the screens through the store, and the
    build is checked by it as well.
-4. When a screen changed, `npm run screens` was run, the session looked at
-   the PNGs of the states that changed, and the owner was given their
-   paths with what to look for.
+4. When a screen changed, `npm run screens` was run, and the session
+   looked at the PNGs of the states that changed, in the light and the
+   dark theme, before the owner tries the screen in the running
+   application.
 5. The output of each command is reported, as in popnei. A test that
    passed only on a retry is reported as flaky. A browser that is not
    installed, or a layer that does not exist yet, is reported as not run,

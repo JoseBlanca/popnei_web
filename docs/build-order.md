@@ -1,12 +1,18 @@
 # The order in which the applications are built
 
+Superseded on 5 October 2026 for the screens: they are built again in
+small pieces from the use cases of `docs/use-cases.md`, in the order
+that document gives, as the `building` skill says. What follows is the
+order of stages 0 to 5, kept for what it records of popnei and of the
+measurements.
+
 Written on 24 September 2026, to be revised after the walking skeleton
 of stage 2. The pieces the two web applications are built
 from, in the order they are built, why each comes where it does, what it
 needs of popnei, and what shows that it is done. What the applications do
 is in `docs/functionality.md`, their parts in `docs/architecture.md`, and
 how each piece becomes a spec, a plan and code in the skills
-`writing-specs`, `writing-plans` and `following-plans`. Each stage below is
+`writing-specs`, `writing-plans` and `following-plans`, the last replaced by `building` on 5 October 2026. Each stage below is
 one plan or a few, and each plan is written when its stage is next, not
 before: what the first stages teach changes the later ones.
 

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: How code is reviewed in popnei_web and what is done with the findings. Use it after the tasks of a work package of an implementation plan are committed and before the work package is reported as done, or when the owner asks for a review of a commit, a branch or a module. The session that asks for the review sends one reviewer subagent per category, each with a fresh context, then evaluates every finding and fixes the ones that hold.
+description: How code is reviewed in popnei_web and what is done with the findings. Use it after each phase of a piece is committed, as the building skill says, and before it is reported as done, or when the owner asks for a review of a commit, a branch or a module. The session that asks for the review sends one reviewer subagent per category, each with a fresh context, then evaluates every finding and fixes the ones that hold.
 ---
 
 # Code review
@@ -8,7 +8,7 @@ description: How code is reviewed in popnei_web and what is done with the findin
 The writer of a piece of code cannot review it, for the same reason the
 writer of a text cannot: they know what it was meant to do and read that
 into it. So the review is done by subagents that start with nothing but
-the code, the specs and the `coding` skill, one for each category below,
+the code, the plan of the piece, its use case, its spec when it has one, and the `coding` skill, one for each category below,
 and the session that wrote the code, or that the owner asked, is the
 orchestrator: it sends them out, and then it acts on what they find.
 
@@ -30,18 +30,18 @@ findings that it gives.
    what calls it and is called by it. A defect seen elsewhere goes at the
    end of a reviewer's report as seen outside the scope, unless it shows
    a wrong or stale result, and then it is a finding like any other.
-2. Find the spec items, module and screen, and the task of the plan the
-   change was made from. A reviewer needs them to tell a defect from a
+2. Find what the change was meant to do: the plan of the piece and the
+   phase, the use case of `docs/use-cases.md` it serves, and the spec
+   when the piece has one. A reviewer needs them to tell a defect from a
    decision.
 3. Run the checks of the `coding` skill once and keep the output: the
    typecheck, the lint, Vitest, Playwright, the build with the sizes of
    its files. A reviewer does not spend its time finding what ESLint
    prints.
-4. For a change to a screen, have the screenshots of its states, as the
-   `writing-plans` skill lists them, and their paths.
+4. For a change to a screen, have the screenshots of its states, as the plan of the piece lists them, and their paths.
 5. Note what the reviewers cannot know from the code: an open point the
    owner has answered, what the owner asked for in a round of a screen, a
-   later task that will add what looks missing. Most wrong findings come
+   later phase that will add what looks missing. Most wrong findings come
    from missing context, and a line in the prompt avoids them.
 
 ## The categories
@@ -52,7 +52,7 @@ every one that applies, in parallel, in one message.
 
 | category | applies when |
 |---|---|
-| `spec` | always: the code against the module and screen specs and `docs/functionality.md` |
+| `spec` | always: the code against the plan of the piece, its use case, its spec when it has one, and `docs/functionality.md` |
 | `tests` | always: whether each test can fail, and the numbers the change claims |
 | `stale` | always: anything that could show a result whose inputs changed |
 | `errors` | always: what the user sees when a file, the worker or the wasm fails |
@@ -65,6 +65,13 @@ every one that applies, in parallel, in one message.
 | `bundle` | the change adds a dependency, an import of the wasm, a new entry or a lazy load |
 
 When in doubt, send it. A reviewer with nothing to report costs little.
+The pieces are small so that the owner can try them early, not so that
+they are reviewed less: the owner decided on 5 October 2026 that the
+code is to be of high quality, and the review is its guard. For a
+change to a screen, `react`, `accessibility`, `ux` and `browser` are
+always sent, as well as the four that always run. At most three agents
+run at once, so that the owner's machine stays usable, and the
+reviewers go out in batches of three.
 
 The subagent is `code-reviewer`. Its prompt gives the category, the
 commit under review, the files in scope, the paths of the spec items,
@@ -104,8 +111,8 @@ evidence:
    - It holds. Fix it. For a wrong or stale result, a test that fails
      first, then the fix, as the `coding` skill says. The suggested fix
      is a suggestion.
-   - It holds and the fix is the owner's: it changes what the user sees
-     or can do, or a spec is what is wrong. It becomes an open point of
+   - It holds and the fix is the owner's: it is one of the stops of the
+     `building` skill, or the spec is what is wrong. It becomes an open point of
      the spec or a question to the owner, with a recommendation.
    - It holds and does not belong in this step: a GitHub issue, written
      as the `writing` skill says, so that it is not lost.

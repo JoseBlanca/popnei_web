@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Reviews a change to the code of popnei_web in ONE category, with a fresh context, and reports findings with their evidence. The categories are spec, tests, stale, errors, api, architecture, react, accessibility, ux, browser and bundle. Give it the category, the commit under review, the files in scope, the paths of the module and screen specs, the output of the checks, the paths of the screenshots of a screen, and any context the code does not show. The code-review skill says when and how to send it.
+description: Reviews a change to the code of popnei_web in ONE category, with a fresh context, and reports findings with their evidence. The categories are spec, tests, stale, errors, api, architecture, react, accessibility, ux, browser and bundle. Give it the category, the commit under review, the files in scope, the paths of the plan of the piece, its use case and its spec when it has one, the output of the checks, the paths of the screenshots of a screen, and any context the code does not show. The code-review skill says when and how to send it.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -20,8 +20,7 @@ review, confirm it with `git rev-parse HEAD`, since a worktree starts on
 `main`, and run `npm ci`, since a new tree has no `node_modules`.
 
 Then read `.claude/skills/code-review/categories.md`, the section of your
-category, and the files of `.claude/skills/coding/` it names; the specs
-you were given; `docs/architecture.md` where your category touches it;
+category, and the files of `.claude/skills/coding/` it names; the plan, the use case and the spec you were given; `docs/architecture.md` where your category touches it;
 and then the code in scope, whole, with what calls it and what it calls.
 For a screen, look at every screenshot you were given, with `Read`.
 

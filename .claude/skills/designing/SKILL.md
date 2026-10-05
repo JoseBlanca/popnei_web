@@ -22,6 +22,13 @@ application, so the costs that belong to the web, a tab out of memory, a
 frozen page, a larger download, are for the design and its reviewer to
 catch; the owner will not.
 
+Since 5 October 2026 a small piece has its design in its short plan,
+as the `building` skill says, reviewed by the `architecture-reviewer`
+when it changes an interface between the layers, an invariant or what
+the site depends on. A design of its own, as this skill describes, is
+for a piece that skill calls complex, and for when the owner asks for
+one.
+
 The prose follows the `writing` skill, which is read first.
 
 ## When a design is needed

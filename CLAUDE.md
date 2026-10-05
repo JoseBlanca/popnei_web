@@ -17,25 +17,24 @@ The skills are under `.claude/skills/` and the subagents under
 `.claude/agents/`. The `writing` skill is read before anything a person
 will read is written, the text of the applications included, and a
 document, a spec or a GitHub issue goes to the `first-reader` subagent
-before it is handed over. The work goes in this order: what the
-applications do, in `docs/functionality.md`; a design, when the change
-does not fit the architecture as it stands, as the `designing` skill
-says, reviewed by the `architecture-reviewer` subagent and approved by
-the owner; a spec, under `docs/specs/`, as the `writing-specs` skill
-says; a plan, as `writing-plans` says; the code, as `coding` says. The
-design comes before the specs because they are written against the
-architecture. A module of `src/core`,
-`src/worker` or `src/charts` is specified in full before its code; a
-screen of `src/ui` has a short spec, and its look is refined in the
-running application.
+before it is handed over. What the applications do is in `docs/functionality.md`, and what their
+users come to do in `docs/use-cases.md`. Since 5 October 2026 they are
+built in small pieces, each tried by the owner in the running
+application before the next, as the `building` skill says: the owner
+and the session decide the piece; the session writes its short plan,
+sends the implementation, the code review and the fixes to subagents,
+looks at the screen, and reports; it stops for the owner only in the
+cases that skill lists. A piece that skill calls complex gets a design,
+a spec and a plan first, as the `designing`, `writing-specs` and
+`writing-plans` skills say, approved by the owner before its code. The
+code follows the `coding` skill.
 
 A session that writes anything in the repository, a spec, a plan, a skill
 or code, works in a git worktree and a branch of its own, under
 `.claude/worktrees/` of `/Users/jose/devel/popnei_web`, which it makes
 before its first edit: two sessions that edit the main checkout at once
 leave their changes mixed in the same files, as happened in popnei on 21
-September 2026. An implementation plan is carried out the same way, as
-the `following-plans` skill says. Nothing is merged into `main`, and
+September 2026. A piece is built the same way, as the `building` skill says. Nothing is merged into `main`, and
 nothing is pushed, without the owner's order.
 
 ## popnei in the application

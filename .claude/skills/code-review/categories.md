@@ -1,7 +1,7 @@
 # The categories of a code review
 
 A reviewer reads the section for its category, the files of the `coding`
-skill it names, and the specs it was given. The rules are in the
+skill it names, and the plan, the use case and the spec it was given. The rules are in the
 `coding` skill with their reasons and are not repeated here. What is
 here is what to look for, the evidence a finding needs, and what is not
 a finding.
@@ -15,8 +15,9 @@ and ESLint settle is never a finding.
 
 ## spec
 
-Does the code do what the module spec, the screen spec and
-`docs/functionality.md` say?
+Does the code do what the plan of the piece, its use case, its spec
+when it has one, and `docs/functionality.md` say? Where the text below
+says the spec, read whichever of those the piece has.
 
 - Go through the spec item part by part. For each statement find the
   code that makes it true and the test that would fail if it stopped
@@ -274,7 +275,11 @@ Practices, unless you show that it fails in a browser.
 
 ## ux
 
-The screen spec, and the principles of `docs/functionality.md` section 2.
+The plan of the piece and its use case, the screen spec when there is
+one, and the principles of `docs/functionality.md` section 2. Where the
+text below says the spec, read whichever of those the piece has; a state
+that a user of the use case will meet is a state of the screen even when
+no document lists it.
 The reviewer looks at the screenshots of every state and at the running
 application.
 

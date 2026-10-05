@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: How an implementation plan is written in popnei_web. Use it when writing or revising a document under docs/plans/, which turns one or more settled specs, module specs and screen specs, into work packages with deliverables that can be checked, each made of tasks that a subagent can carry out, and with room for the owner to try a screen and ask for changes. The following-plans skill is the one that executes it.
+description: How an implementation plan is written in popnei_web. Use it when writing or revising a document under docs/plans/, which turns one or more settled specs, module specs and screen specs, into work packages with deliverables that can be checked, each made of tasks that a subagent can carry out, and with room for the owner to try a screen and ask for changes. Only for a piece that the building skill calls complex; a small piece has the short plan of the building skill instead, which carries out the work packages of this one as its phases.
 ---
 
 # Writing implementation plans
@@ -8,10 +8,12 @@ description: How an implementation plan is written in popnei_web. Use it when wr
 A plan turns specs that are settled, approved by the owner with every
 open point answered or given a meanwhile, into the order of the work. It says
 what is built first and what after, in which pieces, and how we will know
-that each piece is done. It is carried out by the `following-plans`
-skill: an orchestrator that sends each piece to a subagent, checks what
-comes back, and goes on to the next one, so a plan has to be something
-that can be run that way.
+that each piece is done. It is carried out by the `building` skill: a coordinator that sends each work package to a subagent, checks what comes back, has it reviewed, and goes on to the next one, so a plan has to be something that can be run that way.
+
+Since 5 October 2026 most pieces of the applications are small and have
+the short plan of the `building` skill, with no spec. This skill is for
+a piece that skill calls complex, whose spec and plan are reviewed and
+approved by the owner before any code.
 
 A plan decides nothing about the design. When writing it shows that a
 spec left something open, the question goes back to the spec, as an open

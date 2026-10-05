@@ -1,6 +1,6 @@
 ---
 name: writing-specs
-description: How a spec is written in popnei_web. Use it when writing or revising a document under docs/specs/, either a module spec, which says what a module of src/core, src/worker or src/charts has to do, its TypeScript interface and how it is verified, or a screen spec, which says what a step or an analysis panel of src/ui shows in each of its states, what it sends to core, and its warnings and help. The prose follows the writing skill, which is read first.
+description: How a spec is written in popnei_web. Use it when writing or revising a document under docs/specs/, either a module spec, which says what a module of src/core, src/worker or src/charts has to do, its TypeScript interface and how it is verified, or a screen spec, which says what a step or an analysis panel of src/ui shows in each of its states, what it sends to core, and its warnings and help. Only for a piece that the building skill calls complex; a small piece has no spec. The prose follows the writing skill, which is read first.
 ---
 
 # Writing specs
@@ -11,6 +11,14 @@ implementation plan and the tests are made from it. It does not give the
 order of the work, which is the plan's, and it does not repeat
 `docs/functionality.md`, `docs/architecture.md` or `docs/technology.md`,
 which it points to by section.
+
+Since 5 October 2026 a spec is written only for a piece that the
+`building` skill calls complex: one where a mistake gives wrong or stale
+results in many cases that no screen shows, or that needs more than
+three phases, or for which the owner asks. A screen is no longer
+specified before it is built; it is built in small pieces and tried by
+the owner, as that skill says. The screen specs already under
+`docs/specs/` are a starting point for those pieces, not a contract.
 
 The prose follows the `writing` skill. Read that first. This skill says
 what goes into a spec, in which order, and what stays out. It is the
@@ -390,7 +398,7 @@ not taken and why, a line for each.
 
 The owner approves the spec. Its opening then says that it is approved,
 with the date, and only then can a plan be written from it: the
-`writing-plans` and `following-plans` skills call such a spec settled,
+`writing-plans` and `building` skills call such a spec settled,
 once each of its open points is answered or has a meanwhile.
 
 A change made after the review is checked against every other place that
