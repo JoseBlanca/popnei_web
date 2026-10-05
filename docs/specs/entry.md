@@ -105,7 +105,7 @@ is served at `/popnei_web/popgen.html` (`docs/technology.md`, section 4;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Population genetics · popnei web</title>
-    <script>/* the start guard, below */</script>
+    <!-- the start guard -->
   </head>
   <body>
     <div id="defects"></div>
@@ -125,7 +125,10 @@ with a status region of its own, and `#root` the application, so that
 the bar, and its Save, stay when the application's root is lost (below,
 "The errors nothing else shows").
 
-**The start guard** is a few lines of plain script in the `<head>`, run
+**The start guard** is a few lines of plain script in the `<head>`,
+written once in `src/ui/startGuard.js` and put inline where a page has
+the comment `<!-- the start guard -->` by a plugin of `vite.config.ts`,
+so that `popgen.html` and `popgen2.html` share it; it is run
 before the application's code, since a browser older than the floor,
 Chrome and Edge 111, Firefox 115, Safari 16.4 (`docs/technology.md`,
 section 6), fails on the first function or syntax it lacks, and the page
@@ -159,7 +162,7 @@ would show "Loading…" for ever. It does three things:
   window, and writes "The application could not be loaded. Reload the
   page."
 
-The guard puts on the window one object, `window.__popgenGuard`, with
+The guard puts on the window one object, `window.__startGuard`, with
 `tooOld`, the result of the test, and `remove()`, which takes its two
 listeners off; `src/ui/popgen.tsx` declares its type with `declare
 global`. Decided here, not by the owner.
@@ -171,7 +174,7 @@ run of its code, so that no message of a worker can arrive before
 everything that listens to it exists, since the browser delivers a
 message only after the code that is running has finished:
 
-1. It calls `window.__popgenGuard.remove()`, stops there when `tooOld`
+1. It calls `window.__startGuard.remove()`, stops there when `tooOld`
    is true, and puts its own listeners on the window (below, "The errors
    nothing else shows"), so that an error in the steps that follow is
    shown.

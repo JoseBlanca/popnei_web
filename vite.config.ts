@@ -34,6 +34,31 @@ function appVersion(): string {
   throw new Error("package.json has no version, which the site is built with.");
 }
 
+/** The comment of a page where the start guard goes. */
+const GUARD_MARK = "<!-- the start guard -->";
+
+/**
+ * Puts the start guard, `src/ui/startGuard.js`, inline where a page has
+ * the comment `GUARD_MARK`, so that the pages of the applications share
+ * one guard that still runs before their code and needs no request of
+ * its own (docs/specs/entry.md, "The page"). The file is read at the
+ * start of the server or the build.
+ */
+function startGuard(): Plugin {
+  const source = readFileSync(
+    resolve(import.meta.dirname, "src/ui/startGuard.js"),
+    { encoding: "utf8" },
+  );
+  return {
+    name: "popnei-web-start-guard",
+    transformIndexHtml: {
+      order: "pre",
+      handler: (html) =>
+        html.replace(GUARD_MARK, () => `<script>\n${source}</script>`),
+    },
+  };
+}
+
 /** Whether a build of the site is followed by that of the pages of the tests. */
 const testPages = process.env["POPNEI_TEST_PAGES"] !== undefined;
 
@@ -72,6 +97,7 @@ export default defineConfig(({ mode }) => {
     // "React Aria Components"). The entry sets React Aria's language to it.
     plugins: [
       react(),
+      startGuard(),
       optimizeLocales.vite({ locales: ["en-US"] }),
       testPagesBuild(),
     ],

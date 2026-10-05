@@ -5,35 +5,33 @@
  * listeners of the errors nothing else shows, makes the store, the
  * worker client and the announcer of the status region, asks for the
  * reads the project waits for, and draws the error bar and the
- * application in two roots. The global styles, the tokens and the base,
- * come first. All of it runs in one
- * run of this code, so that nothing that listens is made after the first
- * message of a worker could arrive.
+ * application in two roots, with the functions of pageStart.tsx that the
+ * new page, popgen2.html, shares. The global styles, the tokens and the
+ * base, come first. All of it runs in one run of this code, so that
+ * nothing that listens is made after the first message of a worker could
+ * arrive.
  */
 import "./tokens.css";
 import "./base.css";
 
-import { StrictMode } from "react";
-import { I18nProvider } from "react-aria-components";
-import { createRoot } from "react-dom/client";
-
 import { POPGEN_ANALYSES } from "../core/apps.ts";
 import type { Store } from "../core/store.ts";
-import { createClient } from "../worker/client.ts";
-import type { Client } from "../worker/client.ts";
 import type { JobResult } from "../worker/protocol.ts";
-import { makeFilesWorker, makeRunnerWorker } from "../worker/start.ts";
 import { SHELL_WORDS } from "./analyses/titles.ts";
-import { createDefects, isResizeObserverNoise } from "./defects.ts";
 import type { Defects } from "./defects.ts";
-import { FilesProvider, createFiles } from "./files.tsx";
+import { FilesProvider } from "./files.tsx";
 import { downloadFile, downloadText } from "./download.ts";
+import {
+  connectStore,
+  renderApplication,
+  startPage,
+  syncReads,
+} from "./pageStart.tsx";
+import type { DrawBar } from "./pageStart.tsx";
 import { createPopgenStore } from "./popgenStore.ts";
-import { createReads } from "./reads.ts";
 import { SavingProvider, createSaving } from "./saving.ts";
 import type { Saving } from "./saving.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
-import { ErrorBar } from "./shell/ErrorBar.tsx";
 import { Shell } from "./shell/Shell.tsx";
 import { ShellWordsProvider } from "./shell/shellWords.tsx";
 import { createAnnouncer } from "./shell/status.ts";
@@ -41,141 +39,17 @@ import type { Announcer } from "./shell/status.ts";
 import { announcementsOf, writtenDiscarded } from "./shell/words.ts";
 import { StoreProvider } from "./store.tsx";
 
-declare global {
-  /** The version of the application, the number in package.json, which
-      `define` of vite.config.ts writes in at the build. */
-  const APP_VERSION: string;
-
-  interface Window {
-    /** What the start guard of popgen.html leaves on the window. */
-    readonly __popgenGuard?: {
-      /** The browser lacks what the floor has, and the guard said so in
-          `#root`. */
-      readonly tooOld: boolean;
-      /** Takes the guard's two listeners of errors off. */
-      remove(): void;
-    };
-  }
-}
-
-/** The language of the widgets of React Aria, which would otherwise take
-    the browser's: the application is in English, and a number field in a
-    Spanish browser would show 0,1 and read its buttons in Spanish. Its
-    digits are the Latin ones, named by `-u-nu-latn`: with no numbering
-    system named, React Aria reads a text that is no number in these
-    digits, a comma typed first in an empty field, in the digits of
-    another system that takes it, keeps it in the field, and then shows
-    the number in those digits, 0.1 as ٠٫١. */
-const LOCALE = "en-US-u-nu-latn";
-
-/** The element of the page with the id `id`; a defect when popgen.html
-    lacks it. */
-function element(id: string): HTMLElement {
-  const found = document.getElementById(id);
-  if (found === null) {
-    throw new Error(`popnei_web defect: popgen.html has no #${id}.`);
-  }
-  return found;
-}
-
-/** Gives the log of the bar every error of our own code that no error
-    boundary sees: one thrown in an event handler, and a promise rejected
-    with nothing to handle it. The browser still writes each to the
-    console. */
-function listenForDefects(defects: Defects): void {
-  window.addEventListener("error", (event: ErrorEvent) => {
-    if (isResizeObserverNoise(event.message)) return;
-    // The browser leaves `error` null for an error it does not describe.
-    const thrown: unknown = event.error;
-    defects.report(thrown ?? event.message, "event", null);
-  });
-  window.addEventListener(
-    "unhandledrejection",
-    (event: PromiseRejectionEvent) => {
-      const reason: unknown = event.reason;
-      defects.report(reason, "rejection", null);
-    },
+/** Steps 3 to 7 of the opening, after the guard, the listeners and the
+    bar of `startPage`: the store, the worker client, the saving and the
+    question before leaving, the bar with the store, the announcer and
+    the reads, and the application. */
+function startApplication(defects: Defects, drawBar: DrawBar): void {
+  // 3 and 4. The store, with the counts of the filters, the statistics of
+  // each individual and the writing of the filtered variants, and the
+  // worker client its `send` and its write reach.
+  const { store, client, files } = connectStore((senders) =>
+    createPopgenStore({ ...senders, appVersion: APP_VERSION }),
   );
-}
-
-function start(): void {
-  // 1. The guard steps back, and the page's own listeners take over.
-  const guard = window.__popgenGuard;
-  guard?.remove();
-  if (guard?.tooOld === true) return;
-  const defects = createDefects();
-  listenForDefects(defects);
-
-  // 2. The error bar, in a root of its own, with no store yet.
-  const defectsRoot = createRoot(element("defects"));
-  const drawBar = (
-    store: Store<JobResult, Blob> | null,
-    saving: Saving | null,
-  ): void => {
-    defectsRoot.render(
-      <StrictMode>
-        <I18nProvider locale={LOCALE}>
-          <ErrorBar
-            defects={defects}
-            store={store}
-            saving={saving}
-            appVersion={APP_VERSION}
-          />
-        </I18nProvider>
-      </StrictMode>,
-    );
-  };
-  drawBar(null, null);
-
-  try {
-    startApplication(defects, drawBar);
-  } catch (error) {
-    // The application's root is not drawn: "Loading…" goes, and the
-    // window's listener gives the error to the bar, which says the page
-    // met it as it started.
-    element("root").replaceChildren();
-    throw error;
-  }
-}
-
-/** Steps 3 to 7 of the opening: the store, the worker client, the
-    saving and the question before leaving, the bar with the store, the
-    announcer and the reads, and the application. */
-function startApplication(
-  defects: Defects,
-  drawBar: (store: Store<JobResult, Blob>, saving: Saving) => void,
-): void {
-  // 3. The store, with the counts of the filters, the statistics of each
-  // individual and the writing of the filtered variants. It sends nothing
-  // while it is made, so its `send` and its write reach the client of the
-  // next step.
-  let client: Client | null = null;
-  const madeClient = (): Client => {
-    if (client === null) {
-      throw new Error(
-        "popnei_web defect: the store sent a request before the worker client was made.",
-      );
-    }
-    return client;
-  };
-  const store = createPopgenStore({
-    send: (key, job, onProgress) => madeClient().run(key, job, onProgress),
-    sendWrite: (key, job, onProgress) =>
-      madeClient().write(key, job, onProgress),
-    appVersion: APP_VERSION,
-  });
-
-  // 4. The worker client, which starts the calculation worker at once, so
-  // that popnei's wasm loads while the user looks for their file.
-  const made = createClient({
-    calculation: makeRunnerWorker,
-    light: makeFilesWorker,
-    onPopneiReady: (version) => {
-      store.popneiReady(version);
-    },
-  });
-  client = made;
-  const files = createFiles(made);
 
   // 5. The saving, and the question before the page is left while the
   // project has changed or a written file is not saved; the error bar
@@ -198,42 +72,22 @@ function startApplication(
   // for, asked after every change of it.
   const announcer = createAnnouncer();
   announceChanges(store, announcer);
-  const reads = createReads({ store, client: made });
-  store.subscribe(() => {
-    reads.sync();
-  });
-  reads.sync();
+  syncReads(store, client);
 
   // 7. The application, in its own root.
-  const root = createRoot(element("root"), {
-    // An error while React drew the shell itself, outside every boundary:
-    // React has emptied the root, and the bar says what happened.
-    onUncaughtError: (error, errorInfo) => {
-      defects.report(error, "drawing", errorInfo.componentStack ?? null);
-    },
-    // What the boundary of a step caught: the step shows its heading
-    // alone, and the bar says what happened.
-    onCaughtError: (error, errorInfo) => {
-      defects.report(error, "boundary", errorInfo.componentStack ?? null);
-      console.error(error, errorInfo.componentStack);
-    },
-  });
-  root.render(
-    <StrictMode>
-      <I18nProvider locale={LOCALE}>
-        <StoreProvider value={store}>
-          <AnnouncerProvider value={announcer}>
-            <FilesProvider value={files}>
-              <SavingProvider value={saving}>
-                <ShellWordsProvider value={SHELL_WORDS}>
-                  <Shell />
-                </ShellWordsProvider>
-              </SavingProvider>
-            </FilesProvider>
-          </AnnouncerProvider>
-        </StoreProvider>
-      </I18nProvider>
-    </StrictMode>,
+  renderApplication(
+    defects,
+    <StoreProvider value={store}>
+      <AnnouncerProvider value={announcer}>
+        <FilesProvider value={files}>
+          <SavingProvider value={saving}>
+            <ShellWordsProvider value={SHELL_WORDS}>
+              <Shell />
+            </ShellWordsProvider>
+          </SavingProvider>
+        </FilesProvider>
+      </AnnouncerProvider>
+    </StoreProvider>,
   );
 }
 
@@ -278,4 +132,4 @@ function announceChanges(
   });
 }
 
-start();
+startPage(startApplication);
