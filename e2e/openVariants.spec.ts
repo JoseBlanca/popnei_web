@@ -208,6 +208,7 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
 
 test("OV2 a new ploidy reads the VCF again, and the summary says the ploidy given", async ({
   page,
+  makeAxeBuilder,
 }) => {
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
@@ -225,6 +226,7 @@ test("OV2 a new ploidy reads the VCF again, and the summary says the ploidy give
     ),
   ).toBeVisible();
   await expectPanelCounted(page);
+  await expectNoViolations(makeAxeBuilder);
 
   await page
     .getByText("Only the variants with PASS or . in the FILTER column", {
@@ -430,4 +432,146 @@ test("OV2 a gzipped VCF cut short opens, and its count says it could not be read
     count(page).getByRole("button", { name: "Count again" }),
   ).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 ld.vcf.gz shows its two chromosomes with their variants", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "ld.vcf.gz"));
+
+  await expect(
+    count(page).getByText("500 variants on 2 chromosomes.", { exact: true }),
+  ).toBeVisible();
+  const table = count(page).getByRole("table", {
+    name: "Variants on each chromosome",
+  });
+  // popnei's numbers: 250 variants on chr1 and 250 on chr2.
+  await expect(table.getByRole("row")).toHaveText([
+    "ChromosomeVariants",
+    "chr1250",
+    "chr2250",
+  ]);
+});
+
+test("OV2 the box of the passed variants changes the count of a VCF with variants that did not pass", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "low_qual.vcf.gz"));
+
+  // popnei's numbers: 900 of the 1,200 variants have PASS.
+  await expect(
+    count(page).getByText("900 variants on 1 chromosome.", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByText(PASSED_LABEL, { exact: true }).click();
+
+  await expect(
+    count(page).getByText("1,200 variants on 1 chromosome.", { exact: true }),
+  ).toBeVisible();
+});
+
+test("OV2 another file opened while a count runs ends on the numbers of that file, and the count is checked by axe while it runs", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("long.vcf.gz");
+  await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+  await openPage(page);
+  await pick(page, vcf);
+  await expect(
+    count(page).getByRole("progressbar", { name: "Counting the variants" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expectNoViolations(makeAxeBuilder);
+
+  await pick(page, join(FIXTURES, "panel.nei"));
+
+  await expect(summary(page).getByText("panel.nei")).toBeVisible();
+  await expectPanelCounted(page);
+  await expect(count(page).getByText(/200,000/u)).toHaveCount(0);
+});
+
+test("OV2 the refusals of an opening and of a count are said in the status region", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "bad.vcf"));
+  await expect(page.getByRole("status")).toHaveText([
+    "",
+    /popnei could not read bad\.vcf: the source is not a VCF: it starts with This is a line o\. Open another file\.$/u,
+  ]);
+
+  await pick(page, join(FIXTURES, "bad_position.vcf.gz"));
+  await expect(page.getByRole("status")).toHaveText([
+    "",
+    /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: x80 is not a position\. Correct the file, or fetch it again, and open it again\.$/u,
+  ]);
+});
+
+test("OV2 an error of the page's own code shows the bar, which says to reload and open the files again, with no Save", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("test");
+    });
+  });
+
+  await expect(page.getByRole("alert")).toHaveText(
+    "The application met an error of its own: test. Reload the page, and open your files again.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Save the project" }),
+  ).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 the start guard of popgen2.html: the code not found, the code that does not start, a browser too old", async ({
+  page,
+}) => {
+  await page.route("**/assets/popgen2-*.js", (route) =>
+    route.fulfill({ status: 404, body: "" }),
+  );
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByText("The application could not be loaded. Reload the page.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await page.unroute("**/assets/popgen2-*.js");
+  await page.route("**/assets/popgen2-*.js", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: 'throw new Error("the entry failed.");',
+    }),
+  );
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByText(
+      "The application could not start: Error: the entry failed. Reload the page.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+});
+
+test("OV2 the start guard of popgen2.html tells a browser without Array.prototype.toSorted that it is too old", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(Array.prototype, "toSorted");
+  });
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByText(
+      "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });

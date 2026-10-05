@@ -67,6 +67,14 @@ async function settled(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** A result of the summary: 1,200 variants on the chromosome 1. */
+const SUMMARY: JobResult = {
+  analysis: "variantsSummary",
+  passStats: { numVars: 1200, filtering: {} },
+  chroms: ["1"],
+  numVarsPerChrom: new Uint32Array([1200]),
+};
+
 const FIRST = "0123456789abcdef0123456789abcdef";
 const SECOND = "fedcba9876543210fedcba9876543210";
 
@@ -145,13 +153,22 @@ describe("the analyses the new page starts by itself", () => {
     expect(auto.startedUnder(running.key)).toBe(true);
   });
 
-  test("Count again does nothing while the summary is running or done", () => {
-    const { store, auto, sent } = setUp();
+  test("Count again does nothing while the summary is running or done", async () => {
+    const { store, auto, sent, status } = setUp();
     open(store, FIRST);
     auto.sync();
 
     auto.again(ID);
+    expect(sent).toHaveLength(1);
 
+    const running = status();
+    if (running.kind !== "running") throw new Error("not running");
+    sent[0]?.({ kind: "done", key: running.key, result: SUMMARY });
+    await settled();
+    expect(status().kind).toBe("done");
+
+    auto.again(ID);
+    auto.sync();
     expect(sent).toHaveLength(1);
   });
 });
