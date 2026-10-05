@@ -180,7 +180,7 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
 
   await expect(
     opening(page).getByText(
-      "popnei could not read bad.vcf: the source is not a VCF: it starts with `This is a line o`. Open another file.",
+      "popnei could not read bad.vcf: the source is not a VCF: it starts with This is a line o. Open another file.",
     ),
   ).toBeVisible();
   await expect(summary(page)).toHaveCount(0);
@@ -412,4 +412,22 @@ test("OV2 a file dropped while the focus is on Count again moves the focus to th
 
   await expect(summary(page).getByText("panel.nei")).toBeVisible();
   await expect(openButton(page)).toBeFocused();
+});
+
+test("OV2 a gzipped VCF cut short opens, and its count says it could not be read to its end", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "cut_short.vcf.gz"));
+
+  await expect(
+    count(page).getByText(
+      "cut_short.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    ),
+  ).toBeVisible();
+  await expect(
+    count(page).getByRole("button", { name: "Count again" }),
+  ).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
 });

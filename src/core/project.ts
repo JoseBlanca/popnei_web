@@ -1776,6 +1776,8 @@ const REOPEN_FAILED =
 /** The ends of the reason of a file that was not read: what the user can
     do, where the reason is shown. */
 interface ReasonEnds {
+  /** popnei's message as the reason gives it; as it is when absent. */
+  readonly message?: (message: string) => string;
   /** After a refusal of the file's reader. */
   readonly refused: string;
   /** After a failure that a new load of the file mends. */
@@ -1868,7 +1870,9 @@ function variantsReadNeeds(
       return `Reading ${fileName}.`;
     case "failed":
       if (read.error.kind === "popnei") {
-        return `popnei could not read ${fileName}${saying(read.error.message)}. ${ends.refused}`;
+        const message =
+          ends.message?.(read.error.message) ?? read.error.message;
+        return `popnei could not read ${fileName}${saying(message)}. ${ends.refused}`;
       }
       return read.error.error.kind === "reopenFailed"
         ? `${fileName} ${REOPEN_FAILED} ${ends.again}`
@@ -1896,6 +1900,7 @@ export function variantsStepNeeds(p: Project): string | null {
     popgen2.html, beside its button "Open another variants file…", which
     has no project to save before a reload. */
 const VARIANTS_OPEN_ENDS: ReasonEnds = {
+  message: withoutBackquotes,
   refused: "Open another file.",
   again: "Open it again.",
   reload: (fileName) => `Reload the page and open ${fileName} again.`,
@@ -2833,6 +2838,13 @@ export function counted(count: number, noun: string): string {
     in every browser: "1,203,554". */
 export function grouped(count: number): string {
   return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
+}
+
+/** popnei's message without its backquotes, which name code a user of
+    the application cannot use: "it starts with `This`" becomes "it
+    starts with This". */
+export function withoutBackquotes(message: string): string {
+  return message.replaceAll("`", "");
 }
 
 /** What follows "could not read panel.nei": a colon and the message of

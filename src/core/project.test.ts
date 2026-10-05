@@ -3786,6 +3786,33 @@ describe("WS1 D3 the additions to project.ts", () => {
       );
     });
 
+    test("popnei's backquotes, which name code, are taken out of its message", () => {
+      expect(
+        variantsOpenNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: {
+              kind: "popnei",
+              message: "the source is not a VCF: it starts with `This is a`",
+            },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: the source is not a VCF: it starts with This is a. Open another file.",
+      );
+      // The Variants step of the old page keeps them, as before.
+      expect(
+        variantsStepNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "it starts with `This`" },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: it starts with `This`. Choose another file.",
+      );
+    });
+
     test.each([
       [
         { kind: "workerFailed", message: "out of memory" },

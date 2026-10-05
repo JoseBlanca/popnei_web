@@ -43,7 +43,10 @@
 // of panel.vcf.gz, gzipped, with the position of the 80th, at line 84 of
 // the VCF, written `x80`: a file that popnei opens, since the open reads
 // its header, and whose pass popnei refuses at that line
-// (docs/plans/open-variants.md, "The phases").
+// (docs/plans/open-variants.md, "The phases"). For the page that opens a
+// variants file it writes e2e/fixtures/cut_short.vcf.gz, two thirds of the
+// bytes of panel.vcf.gz, and e2e/fixtures/low_qual.vcf.gz, the panel with
+// LowQual in the FILTER column of every fourth variant.
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -168,6 +171,43 @@ writeFileSync(
 console.log(
   `${badPositionPath}: ${String(panelHeader.length)} lines of header, ` +
     `${String(badPositionVariants.length)} variants`,
+);
+
+// A gzipped VCF cut short: panel.vcf.gz, compressed with plain gzip and
+// not bgzip, cut to two thirds of its bytes, so that popnei opens its
+// header and its pass stops where the bytes end, "the source could not be
+// read: incomplete deflate stream" (docs/plans/open-variants.md, phase 2).
+const panelGz = readFileSync(join(fixtures, "panel.vcf.gz"));
+const cutShortPath = join(fixtures, "cut_short.vcf.gz");
+writeFileSync(
+  cutShortPath,
+  panelGz.subarray(0, Math.floor((panelGz.length * 2) / 3)),
+);
+console.log(`${cutShortPath}: two thirds of panel.vcf.gz`);
+
+// A VCF with variants that did not pass: the panel, every fourth variant,
+// the 4th, 8th and so on, with LowQual in its FILTER column, so that
+// reading only the passed variants keeps 900 of its 1,200.
+const panelVariants = panelLines.filter(
+  (line) => line !== "" && !line.startsWith("#"),
+);
+const lowQualVariants = panelVariants.map((line, i) => {
+  if (i % 4 !== 3) return line;
+  const columns = line.split("\t");
+  if (columns[6] !== "PASS") {
+    throw new Error(`the variant ${String(i + 1)} of panel.vcf.gz is not PASS`);
+  }
+  columns[6] = "LowQual";
+  return columns.join("\t");
+});
+const lowQualPath = join(fixtures, "low_qual.vcf.gz");
+writeFileSync(
+  lowQualPath,
+  gzipSync(`${[...panelHeader, ...lowQualVariants].join("\n")}\n`),
+);
+console.log(
+  `${lowQualPath}: ${String(lowQualVariants.length)} variants, ` +
+    `${String(lowQualVariants.filter((line) => line.includes("\tLowQual\t")).length)} of them LowQual`,
 );
 
 // The populations: the copy, and the same rows as a CSV. The names hold no

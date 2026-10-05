@@ -9,13 +9,18 @@
  * Pure, so that a test in node checks them; the widgets draw them.
  */
 
-import { BGZIP_REFUSAL, EMPTY_SOURCE } from "../../core/analyses/words.ts";
+import {
+  EMPTY_SOURCE,
+  SOURCE_UNREADABLE,
+  isVcfLineRefusal,
+} from "../../core/analyses/words.ts";
 import {
   counted,
   escaped,
   saying,
   shown,
   variantsOpenNeeds,
+  withoutBackquotes,
 } from "../../core/project.ts";
 import type { Project, VariantSource } from "../../core/project.ts";
 import type {
@@ -26,7 +31,7 @@ import type {
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
 import { DEFAULT_PLOIDY } from "../../core/apps.ts";
-import { formatText } from "../steps/variants/words.ts";
+import { ONLY_PASSED_LABEL, formatText } from "../steps/variants/words.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
@@ -152,9 +157,14 @@ export function refusalText(message: string, p: Project): string {
   }
   const fileName = escaped(variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
+    // popnei gives the same refusal for a file of no variant and for one
+    // whose variants all have another FILTER, so the words hold for both.
     return variants.readOptions?.onlyPassed === true
-      ? `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column" under "How a VCF is read", and the file is read again with every variant.`
+      ? `${fileName} has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" under ${VCF_OPTIONS_HEADING} and it is read again with every variant; otherwise open another variants file.`
       : `${fileName} has no variants. Open another variants file.`;
+  }
+  if (message.startsWith(SOURCE_UNREADABLE)) {
+    return `${fileName} could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.`;
   }
   const zero = POSITION_ZERO.exec(message);
   if (zero !== null) {
@@ -164,13 +174,11 @@ export function refusalText(message: string, p: Project): string {
   if (past !== null) {
     return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.`;
   }
-  if (
-    /^line \d+ of the VCF/u.test(message) ||
-    message.startsWith(BGZIP_REFUSAL)
-  ) {
-    return `popnei could not read ${fileName}${saying(message.replaceAll("`", ""))}. Correct the file, or fetch it again, and open it again.`;
+  const words = saying(withoutBackquotes(message));
+  if (isVcfLineRefusal(message)) {
+    return `popnei could not read ${fileName}${words}. Correct the file, or fetch it again, and open it again.`;
   }
-  return `popnei could not count the variants of ${fileName}${saying(message.replaceAll("`", ""))}. Open the file again, or another file.`;
+  return `popnei could not count the variants of ${fileName}${words}. Open the file again, or another file.`;
 }
 
 /**
@@ -188,7 +196,8 @@ export function failedText(error: AnalysisError, p: Project): string {
     case "workerFailed":
       return `The count stopped unexpectedly. Count again. If it stops again, open ${fileName} again.`;
     case "defect":
-      return `The application met an error of its own${saying(failure.message)}. Count again.`;
+      // The entry gives the defect to the error bar, which tells it whole.
+      return "The count stopped on an error of the application itself. The error bar says what it was, and its details can be copied for a report.";
     case "couldNotStart":
       return `The application could not start its calculations. Reload the page and open ${fileName} again.`;
     case "protocolMismatch":
@@ -200,11 +209,14 @@ export function failedText(error: AnalysisError, p: Project): string {
   }
 }
 
-/** Whether Count again can mend the failure `error`: not popnei's
-    refusal, which the same file gives again, nor a file the browser can
-    no longer read, which a new opening mends. */
+/** Whether Count again can mend the failure `error`: a worker that
+    stopped, and none of these: popnei's refusal, which the same file
+    gives again; a file the browser can no longer read, which a new
+    opening mends; a worker that could not start or a page out of date,
+    which the client fails at once until the page is reloaded; a defect of
+    our own code, which the error bar tells. */
 export function countAgainMends(error: AnalysisError): boolean {
-  return error.kind === "failed" && error.error.kind !== "reopenFailed";
+  return error.kind === "failed" && error.error.kind === "workerFailed";
 }
 
 /** The status of the summary in `s`; a defect when the store has none. */

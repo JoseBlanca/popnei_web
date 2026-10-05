@@ -32,7 +32,7 @@ export interface DefectsState {
     boundary, React drawing a step, whose error boundary caught it, or
     Save the project of the error bar, which caught it. */
 export type DefectOrigin =
-  "event" | "rejection" | "drawing" | "boundary" | "barSave";
+  "event" | "rejection" | "drawing" | "boundary" | "barSave" | "worker";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -69,6 +69,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
     "thrown while React drew a step, caught by the error boundary of a step, through onCaughtError",
   barSave:
     "thrown as Save the project of the error bar wrote the project file, caught by the bar",
+  worker:
+    "thrown in the calculation worker during a calculation, given back to the page as its failure",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });

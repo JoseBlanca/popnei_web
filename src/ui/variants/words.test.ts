@@ -3,7 +3,10 @@ import { describe, expect, test } from "vitest";
 import { emptyProject, loadVariants } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
+import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
 import {
+  VCF_OPTIONS_HEADING,
+  countAgainMends,
   countedText,
   countingText,
   failedText,
@@ -69,14 +72,14 @@ describe("the words of the page that opens a variants file", () => {
 });
 
 describe("the refusals of the count", () => {
-  test("a VCF with no variant that passed says to untick the box", () => {
+  test("a VCF of no variant read with only the passed ones gives words that hold for both causes", () => {
     expect(
       refusalText(
         "the pass gave no variant and its source holds none: the file",
         PASSED,
       ),
     ).toBe(
-      'panel.vcf.gz has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column" under "How a VCF is read", and the file is read again with every variant.',
+      `panel.vcf.gz has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" under ${VCF_OPTIONS_HEADING} and it is read again with every variant; otherwise open another variants file.`,
     );
   });
 
@@ -84,6 +87,17 @@ describe("the refusals of the count", () => {
     expect(
       refusalText("the pass gave no variant and its source holds none", EVERY),
     ).toBe("panel.vcf.gz has no variants. Open another variants file.");
+  });
+
+  test("a gzipped file cut short says it could not be read to its end, and to fetch it again", () => {
+    expect(
+      refusalText(
+        "the source could not be read: incomplete deflate stream",
+        PASSED,
+      ),
+    ).toBe(
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
   });
 
   test("a variant at position 0 names its chromosome", () => {
@@ -116,6 +130,43 @@ describe("the refusals of the count", () => {
       ),
     ).toBe(
       "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
+    );
+  });
+
+  test.each([
+    [{ kind: "refused", message: "a refusal" }, false],
+    [
+      {
+        kind: "failed",
+        error: { kind: "reopenFailed", name: "panel.vcf.gz", message: "gone" },
+      },
+      false,
+    ],
+    [{ kind: "failed", error: { kind: "workerFailed", message: "oom" } }, true],
+    [
+      { kind: "failed", error: { kind: "couldNotStart", reason: "no ready" } },
+      false,
+    ],
+    [{ kind: "failed", error: { kind: "protocolMismatch" } }, false],
+    [
+      { kind: "failed", error: { kind: "defect", message: "x is undefined" } },
+      false,
+    ],
+  ] as const)("Count again for %o: %s", (error, mends) => {
+    expect(countAgainMends(error)).toBe(mends);
+  });
+
+  test("a defect of the count is said as one, for the error bar to tell", () => {
+    expect(
+      failedText(
+        {
+          kind: "failed",
+          error: { kind: "defect", message: "x is undefined" },
+        },
+        PASSED,
+      ),
+    ).toBe(
+      "The count stopped on an error of the application itself. The error bar says what it was, and its details can be copied for a report.",
     );
   });
 

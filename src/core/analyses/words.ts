@@ -52,6 +52,21 @@ const OTHER_PLOIDY =
     short. */
 export const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
+/** Whether popnei's refusal `message` is of a line of the VCF it cannot
+    read, or of a gzipped VCF damaged or cut short that bgzip wrote: a
+    fault of the file, which the words of a refusal say to correct or
+    fetch again. */
+export function isVcfLineRefusal(message: string): boolean {
+  return (
+    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL)
+  );
+}
+
+/** The start of popnei's refusal of a source whose bytes could not be
+    read to their end, a file compressed with plain gzip and cut short
+    among the causes. */
+export const SOURCE_UNREADABLE = "the source could not be read:";
+
 /** What to change for a calculation that depends on the settings to be
     offered again after a refusal for another reason, the diversity's
     words. */
@@ -120,9 +135,7 @@ export function refusalWords(
   if (order !== null) {
     return order;
   }
-  const isVcfLine =
-    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
-  if (isVcfLine) {
+  if (isVcfLineRefusal(message)) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
   return `popnei could not ${words.calculate}${saying(message.replaceAll("`", ""))}. ${words.change}, ${words.again}.`;
