@@ -1,0 +1,205 @@
+# Open a variants file and see what it holds
+
+The first piece of the new screens, asked for by the owner on 5 October
+2026: a page with an Open button that opens a VCF or a `.nei` file; once
+the file is opened, a second widget that shows what popnei says the file
+holds; and an error message when the file cannot be opened or read.
+Built as the `building` skill says, on the branch `open-variants`.
+
+## What the user can do when it is done
+
+Steps 1 and 2 of cases 1 and 2 of `docs/use-cases.md`. The user opens
+the new page, presses "Open a variants file…", and picks a VCF, gzipped
+or not, or a `.nei` file. They see the name and size of the file, the
+number of individuals, the ploidy, and, after one pass over the file
+with its progress shown, the number of variants and the chromosomes with
+the number of variants on each. When the file cannot be used, they see
+why, in words that name the file and say what to do.
+
+## What it stands on
+
+Reused as they are:
+
+- The store (`src/core/store.ts`, `src/ui/store.tsx`), the client of the
+  calculation worker (`src/worker/client.ts`), the files of the user
+  (`src/ui/files.tsx`) and the reads (`src/ui/reads.ts`), set up as
+  `src/ui/popgen.tsx` sets them up.
+- Opening: `loadVariants` of `src/core/project.ts` with the command the
+  Variants step uses (`src/ui/steps/variants/commands.ts`), which leads
+  the worker to call popnei's `openVcf` or `openVars`. The result,
+  `SourceRead` of `project.ts`, gives the individuals and the ploidy.
+- The words of a failed read: `variantsReadNeeds` of `project.ts`, and
+  the words of a refused analysis that the other analyses use.
+- The defects of the application's own code, an exception or a React
+  error: `src/ui/defects.ts` with `ErrorBar` and `ErrorBoundary` of
+  `src/ui/shell/`.
+- The widgets `FileZone`, `Problem`, `ProgressBar` and `Table` of
+  `src/ui/widgets/`.
+
+New from popnei: `calcVarDensity(variants, windowSize)`, declared in
+`node_modules/popnei/dist/stats.d.ts`, which the application does not
+call yet. Opening reads only the header of the file. So the number of
+variants and the chromosomes need this pass over the whole file. The
+pass reads only the chromosome and the position of each variant, as its
+doc comment says. It finds a bad position in the middle of a VCF, but
+not a bad genotype, nor genotypes of another ploidy than the one given:
+the architecture review of 5 October 2026 ran a tetraploid VCF read as
+diploid through it, and got 200 variants and no error. Those are caught
+by the next piece, whose distributions read the genotypes. Until then
+the summary says the ploidy is the one the user gave, not one popnei
+found.
+
+## The design
+
+**The summary is an analysis.** A new module,
+`src/core/analyses/variantsSummary.ts`, has the shape of section 4 of
+`docs/architecture.md`, with its request and result added to the unions
+of `src/worker/protocol.ts`, their checks in `messages.ts`, and its
+handler in the runner. It reads no filter, `filtersRead: { variants:
+false, individuals: false }`: it describes the file as it is. It has no options. Its result has the field `analysis` and `passStats`
+as every result does, so `countsOf` of `src/core/apps.ts` gets a case
+for it, and through it the store records the number of variants with
+`recordVariantsCounted`, as for every other pass. Not taken:
+calling popnei in the read of the file itself. That would change the
+read, which every analysis waits on, and would put a pass of minutes
+before the individuals and the ploidy are shown.
+
+**One window per chromosome.** `calcVarDensity` counts the variants in
+windows of a size the caller gives. Any size would be a default that
+depends on the genome, which the owner does not want. A window of
+`Number.MAX_SAFE_INTEGER` base pairs, the largest popnei accepts, gives
+one window per chromosome, so the counts per chromosome need no choice.
+It is called with `chromLengths: {}`, so that the lengths of the
+`##contig` lines are not used. With them, a header of thousands of
+scaffolds would list each one, with 0 variants, and a variant past the
+length its header gives would make the whole summary fail on a file
+that is otherwise usable. Without them, the chromosomes are those with
+variants, in the order of their first variant.
+The density along each chromosome, which needs a size of window, is a
+later piece.
+
+```ts
+// protocol.ts, beside the other jobs
+type VariantsSummaryJob = { analysis: "variantsSummary" };
+type VariantsSummaryResult = {
+  analysis: "variantsSummary";
+  passStats: PassStats;                  // its numVars is the count
+  chromosomes: readonly { name: string; numVars: number }[];
+                                         // in popnei's order
+};
+```
+
+The exact names follow those of the other jobs. `PROTOCOL_VERSION` goes
+from 4 to 5, and the literals `protocol: 4` of `messages.test.ts` and
+`client.test.ts` with it.
+
+**Its own list of analyses.** The summary is in a list of the new page,
+not in `POPGEN_ANALYSES` of `apps.ts`. In that list the old page would
+show it in its stepper as ready, and the lists of `titles.ts`, its tests,
+and `checksWritten` of `projectFile.ts` would change. The unions of the
+protocol, `stepsOf` of the runner and `countsOf` do change, as types; the
+old page behaves as before.
+
+**It runs on its own once the file is read.** The user opens a file to
+see what it holds, so the summary starts without a Run button. No
+analysis starts on its own today: they start from `startAnalysis` of
+`src/ui/runs.ts`, at a Run. So a module of the page, `src/ui/autoRuns.ts`,
+subscribed to the store as `reads.sync` is in `popgen.tsx`, calls
+`startAnalysis` once for each key of the summary and remembers the keys
+it started. It does not start a key again after a failure, which the
+store clears at the next command of the user, nor after a Stop; only a
+new file, or the user's "Count again", does. Opening another file while
+it runs leaves the old result unshown, as the keys of the store already
+ensure: a new load stops what is in flight.
+
+**A Stop.** A pass over millions of variants takes minutes, so the
+progress has a Stop button, and a stopped count says so and offers
+"Count again".
+
+**A new page, beside the old one.** The screens start again, so the
+piece is a new entry of the site, `popgen2.html` with
+`src/ui/popgen2.tsx`, added to the `input` of `vite.config.ts`. It has the defects, the store, the client, the files and the reads of
+`popgen.tsx`, and no stepper. The part of `popgen.tsx` that sets them
+up, and the start guard inline in `popgen.html`, are moved into
+functions both pages call, rather than copied: about 150 lines that
+would otherwise drift apart. The old page's browser tests check that the
+move changed nothing there. Two tabs, one on each page, each run a
+calculation worker of their own. The old `popgen.html` stays, with its
+tests, until the new page covers what it does. Then the new page takes
+its name. Not taken: replacing the Variants step of the old page, which
+would break 1,143 browser tests that check screens that are going away.
+
+**Two widgets, in `src/ui/variants/`:**
+
+- `OpenVariants`: the button "Open a variants file…" over `FileZone`,
+  which also takes a dropped file. It accepts `.vcf`, `.vcf.gz`, `.vcf.bgz` and `.nei`, whatever `formatOfName` of the Variants step accepts. For a
+  VCF the read has two options, settled since stage 3: the ploidy, a
+  whole number from 1 to 255, 2 by default, and whether only the
+  variants with PASS or `.` in their FILTER column are read, on by
+  default. They are beside the button as the Variants step has them,
+  reusing its code, since a VCF does not say its ploidy and popnei reads
+  it with the one given. Changing them reads the file again. Below it, the errors of opening: a file refused by its name,
+  several files at once, and a file popnei could not read. Each is a
+  `Problem`, announced to a screen reader.
+- `VariantsSummary`, shown once the file is read: the name and size of
+  the file, the individuals, the ploidy, said as the one given for a VCF
+  and as the file's for a `.nei`, and for a VCF whether only the passed
+  variants were read; then the progress of the pass, with its Stop;
+  then the number of variants and a table of the chromosomes with their
+  variants. When the pass fails, a bad line of the VCF among the causes,
+  the words of the refusal are shown in place of the counts, as a
+  `Problem`.
+
+The words follow the last section of the `writing` skill, and those
+the Variants step already has are reused when they fit.
+
+## The phases
+
+**1. The analysis.** The module, the job, the result, the handler of the
+runner, its definition in `src/core/apps.ts`, and whatever else section 4
+of the architecture lists for a new analysis. The old page must not show
+it anywhere and must not change. Its tests are in Vitest:
+
+- the module, as the tests of `variantChecks.ts` are written;
+- the runner on `e2e/fixtures/panel.nei` and `panel.vcf.gz`, with the
+  number of variants and the counts per chromosome taken from popnei's
+  Python on the same files, as literals;
+- a new fixture, a VCF whose header and first lines are right and one of
+  whose later lines has a position that is not a number, refused by the
+  pass with popnei's words. `bad.vcf` is plain text and is refused at
+  the opening, before any pass.
+
+**2. The page.** The entry, the two widgets, the errors. Its tests are a
+flow of Playwright for the use case: open `panel.vcf.gz`, see 200
+individuals, the ploidy and the counts; open `panel.nei`; open `bad.vcf` and see the refusal of the opening; open the new fixture
+and see the refusal of the pass; stop a count and count again; change
+the ploidy and see the file read again; drop a file of another kind and see why it is
+refused; with axe on each state. Run in Chromium and WebKit, since
+Firefox cannot be started on this Mac. The states for the screenshots,
+in `e2e/screens.spec.ts`, light and dark, at the width of a desktop and
+at 320 px:
+
+1. nothing opened;
+2. reading the file;
+3. counting the variants, with the progress;
+4. the summary;
+5. a file refused by its name;
+6. a file popnei could not read;
+7. a pass that failed;
+8. a count stopped.
+
+## What is left out
+
+- The density of variants along each chromosome: a later piece, with the
+  size of its windows decided with the owner.
+- The names of the individuals, which the read gives: a later piece,
+  with the files of the individuals.
+- A check that the genotypes agree with the ploidy given: the next
+  piece, whose pass reads the genotypes.
+
+- The filters, the histograms and the saving of the file of cases 1 and
+  2: the next pieces.
+
+## What was done
+
+(Filled in as the work goes.)
