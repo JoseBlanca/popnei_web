@@ -84,12 +84,15 @@ type VariantsSummaryJob = { analysis: "variantsSummary" };
 type VariantsSummaryResult = {
   analysis: "variantsSummary";
   passStats: PassStats;                  // its numVars is the count
-  chromosomes: readonly { name: string; numVars: number }[];
-                                         // in popnei's order
+  chroms: readonly string[];             // in the order of their first variant
+  numVarsPerChrom: Uint32Array;          // one count for each of chroms
 };
 ```
 
-The exact names follow those of the other jobs. `PROTOCOL_VERSION` goes
+As built, the job is `{ analysis, fileId, filters: [] }`, like the job
+of the statistics of each individual, and the counts are a typed array,
+as `coding/worker.md` asks of a result; `chromRows` of the module gives
+the rows of the table. `PROTOCOL_VERSION` goes
 from 4 to 5, and the literals `protocol: 4` of `messages.test.ts` and
 `client.test.ts` with it.
 
@@ -202,4 +205,52 @@ at 320 px:
 
 ## What was done
 
-(Filled in as the work goes.)
+### Phase 1, the analysis
+
+Commits a73b80c (the worker) and 88f73d8 (core), then the fixes of the
+review: bc2f073, cb612c8, cbbf5d5, 3b1626a. On 3b1626a: Prettier clean,
+`tsc` and ESLint with no output, Vitest "Tests 3715 passed (3715)", the
+build, Playwright "1142 passed" in Chromium and WebKit (Firefox cannot be
+started on this Mac), the release URLs of popnei and xlsx_rs.
+
+popnei's Python gave the literals of the tests: `panel.nei` and
+`panel.vcf.gz` 1,200 variants on "1"; `ld.vcf.gz` and `ld.nei` 250 on
+chr1 and 250 on chr2; the new `bad_position.vcf.gz`, the panel's first
+100 variants with the position of the 80th written `x80`, refused at
+"line 84 of the VCF, the column POS: `x80` is not a position".
+
+The review sent spec, tests, stale, errors, api and architecture. Fixed:
+no test guarded `chromLengths: {}`, the order of the chromosomes or
+`onlyPassed`, now a VCF built in the test with lengths in its header;
+the check of popnei's answer was never run, now a function tested with
+hand-made answers, which also checks that the counts add up to the
+pass; the Python line that opens the file was written in four analyses,
+now `pythonOpenVariants` of `words.ts`; `app` is `["popgen"]`;
+`docs/architecture.md`, sections 4, 6 and 9, records the summary and the
+list of the new page. Not taken: keeping the counts per chromosome among
+the check numbers of the project file, since the total comes from the
+same pass. stale and architecture found nothing.
+
+**For phase 2**, from the review:
+
+- The words of a refused summary are the page's own; the shared ones send
+  the user to a Variants step. Three refusals of popnei need words that
+  say what to do: a VCF in which no variant passed, which popnei words
+  as "its source holds none", and which the old Variants step already
+  words for a VCF with none that passed (`e2e/writing.spec.ts`, VS5 D3);
+  a variant at the position 0; a position of 2^53 or more, which popnei
+  words as a window the user never chose, rare since the VCF format
+  allows positions up to 2^31 − 1.
+- After a Stop the store's status is `ready`, as before any run; the page
+  knows a count was stopped only from the keys `autoRuns.ts` remembers.
+- `titleOf` and `stepOf` of `src/ui/analyses/titles.ts` throw for an
+  analysis they do not list: the page must not pass the summary to the
+  shell's words, or the summary gets a title there.
+- The new page saves no project file in this piece. A project of the new
+  page opened on the old one would name an analysis the old page does not
+  know; that waits for the piece that saves projects.
+
+**For popnei**, not opened as an issue: the refusal of a position of 2^53
+or more names a window and not the line of the VCF; Python's
+`calc_var_density` accepts a window of 2^53, which the TypeScript
+declaration says is past its limit.
