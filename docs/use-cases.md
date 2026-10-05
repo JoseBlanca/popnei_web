@@ -1,15 +1,18 @@
 # The use cases of the population genetics application
 
 Written on 5 October 2026 from the four use cases the owner gave that day.
-The screens of the application are started again from these cases. Each
-case is built as a small piece, and the owner walks through it in a
+The screens of the application, the code under `src/ui`, are started
+again from these cases. The code that reads the files, runs popnei in
+the background and keeps the results, and the code that draws the
+plots, are kept where the cases do not change them, which is checked
+once the cases are settled. Each case is built as a small piece, and the owner walks through it in a
 browser before the next piece is started. The screens built until now
 had their specs written before the screens existed, and the owner saw
 them only at the end of each plan. What the application computes is in
 `docs/functionality.md`, and that document still holds. This document
 says what a user comes to do, and so what a screen has to let them do.
-More cases will be added as they come up. The questions for the owner
-are at the end.
+The owner will add more cases. The questions for the owner
+are at the end, and their answers are written into the cases.
 
 A use case here says who the user is, which files they bring, what they
 want to leave with, what they do in order, and what they must see to make
@@ -28,12 +31,13 @@ popnei.
 
 **The user** has a VCF with many variants, a million or more, called in a
 few hundred individuals; those sizes are assumed until the owner answers
-the first question at the end. Many of the variants are useless: some are
+question 1 at the end. Many of the variants are useless: some are
 missing in most of the individuals, and some have a major allele
 frequency so close to 1 that they hardly vary.
 
-**They want to leave with** a smaller variants file, a VCF or a `.nei`
-file, that holds only the variants worth analysing, and with the numbers
+**They want to leave with** a smaller variants file, a VCF or a `.nei` file,
+popnei's own format, which is read many times faster than a VCF, that
+holds only the variants worth analysing, and with the numbers
 of how many variants each filter removed, to write in their methods.
 
 **What they do:**
@@ -55,9 +59,11 @@ marked on them; and, for each threshold, how many variants it keeps.
 **Where they could go wrong:** a threshold of the major allele frequency
 read as one of the minor allele frequency. The two differ for a variant
 with three or more alleles (`docs/functionality.md`, section 3). The
-filters keep a variant whose value is at most the threshold, so a user
-who expects "at least" keeps the wrong half. Reading a VCF of a million
-variants takes minutes, so the user has to see that it is progressing
+filters keep a variant whose value is at most the threshold, as popnei's
+do, so a user who expects "at least" would keep the wrong half; the
+screen has to say "at most" beside each threshold. Reading a VCF of a
+million variants is expected to take minutes, not yet measured in a
+browser, so the user has to see that it is progressing
 and how far it has got.
 
 ## 2. Get a first idea of a variants file
@@ -120,7 +126,7 @@ which individual.
 
 **Where they could go wrong:** without an LD pruning, a single region of
 the genome, an inversion or a region of low recombination, can make up a
-whole component. Many missing genotypes pull the individuals with them
+whole component. Individuals with many missing genotypes are pulled
 towards the centre of a PCA, which is why the PCoA is there.
 
 ## 4. Characterise populations and the distances between them
@@ -152,8 +158,9 @@ the number of variants each value rests on.
 
 **Where they could go wrong:** comparing the number of alleles of a
 population of 8 individuals with that of a population of 60, which is what
-the rarefaction is for. A filter of the major allele frequency empties
-the first bins of the spectrum.
+the rarefaction is for. A filter of the major allele frequency removes the
+variants with a rare allele, and so empties the first classes of the
+spectrum, those of the alleles found in one or two chromosomes.
 
 ## How the cases follow each other
 
@@ -166,7 +173,8 @@ already filtered file and a file of populations goes straight to case 4.
 
 So the screens are built in this order: cases 2 and 1 together, since
 they open the same file and the filters are chosen from the
-distributions; then case 3; then case 4.
+distributions; then case 3; then case 4, since its populations can be the groups
+named in case 3.
 
 ## Questions for the owner
 
@@ -178,21 +186,26 @@ distributions; then case 3; then case 4.
 2. **The individuals in case 2.** Does case 2 also show the missing rate
    and the observed heterozygosity of each individual? Those distributions
    catch the bad samples, which the filters of individuals of
-   `docs/functionality.md` remove. Recommended: yes, beside the
+   `docs/functionality.md` remove, by a maximum of each. Recommended: yes, beside the
    distributions of the variants.
 3. **The LD decay.** The LD pruning of case 3 needs a distance that
    depends on the genome. The LD decay of `docs/functionality.md` is the
    way to choose that distance, but none of the four cases has it.
-   Recommended: put it in case 3, before the PCA, for the users who do not
+   The LD decay measures how the r² between two
+   variants falls with the distance between them. Recommended: put it in
+   case 3, before the PCA, for the users who do not
    know the extent of the LD in their species.
 4. **Naming the clusters.** Is naming the groups of case 3 with a lasso,
    so that they become populations, part of case 3 now, or later?
-   `docs/functionality.md` has it as later.
+   `docs/functionality.md` has it as later. Recommended: later, once
+   case 4 is built, since case 4 works with a file of populations and
+   the lasso is the larger piece of work of the two.
 5. **The datasets to walk through.** Which datasets should the owner walk
    each case through? `panel.nei`, the test file of the repository, has
    200 individuals and 1,200 variants, which shows neither the waits of case 1 nor what a real
    plot looks like. Recommended: one real dataset of the owner for each
    case, kept out of the repository.
 6. **The association application.** No case covers the GWAS. Is the
-   association application left until the population genetics cases are
-   built?
+   association application left until the population genetics cases are built? Recommended: yes, since the two
+   applications share the opening of the files, the filters and the PCA,
+   and the first three cases settle those.
