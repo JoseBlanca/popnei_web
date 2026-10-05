@@ -8,11 +8,14 @@
  * same files on 5 October 2026: 1,200 variants on the chromosome 1 for
  * panel.nei and panel.vcf.gz, 250 on chr1 and 250 on chr2 for ld.vcf.gz
  * and ld.nei; and for bad_position.vcf.gz the refusal "line 84 of the
- * VCF, the column POS: `x80` is not a position", after the name of the
- * file.
+ * VCF, the column POS: `x80` is not a position", which Python gives after
+ * the path of the file and the runner gives alone. For the VCF with
+ * `##contig` lines built here, Python gave 3 variants on 2 and 1 on 1
+ * with only the passed variants, and 3 and 2 with every variant.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -23,7 +26,12 @@ import type {
   VariantsSummaryJob,
   VariantsSummaryResult,
 } from "./protocol.ts";
-import { createRunner, loadPopnei, transferablesOf } from "./runner.ts";
+import {
+  createRunner,
+  loadPopnei,
+  transferablesOf,
+  variantsSummaryOf,
+} from "./runner.ts";
 import type { Answer, LoadToOpen, Runner } from "./runner.ts";
 
 const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
@@ -154,5 +162,106 @@ describe("open-variants 1 the runner's summary of the variants file", () => {
       told.every((progress) => progress.pass === 1 && progress.numPasses === 1),
     ).toBe(true);
     expect(transferablesOf(result)).toEqual([result.numVarsPerChrom.buffer]);
+  });
+});
+
+/** A VCF of two individuals whose header names three chromosomes with
+    lengths, 2 of 50 base pairs, 1 and scaf9 of 1,000, and whose variants
+    are on 2, then 1, then 2 again: one on 1 has the FILTER LowQ, and the
+    last one on 2 is at the position 60, past the length of 2. Gzipped,
+    as the runner is given a file. */
+const CONTIGS_VCF = new Uint8Array(
+  gzipSync(
+    [
+      "##fileformat=VCFv4.2",
+      "##contig=<ID=2,length=50>",
+      "##contig=<ID=1,length=1000>",
+      "##contig=<ID=scaf9,length=1000>",
+      '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+      "2\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/0",
+      "2\t20\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t1/1",
+      "1\t5\t.\tC\tT\t.\tPASS\t.\tGT\t0/0\t0/1",
+      "1\t100\t.\tC\tT\t.\tLowQ\t.\tGT\t0/1\t0/1",
+      "2\t60\t.\tA\tG\t.\t.\t.\tGT\t1/1\t0/1",
+      "",
+    ].join("\n"),
+  ),
+);
+
+/** The summary of CONTIGS_VCF read with `onlyPassed`. */
+function contigsSummary(onlyPassed: boolean): VariantsSummaryResult {
+  const runner = createRunner();
+  const load: LoadToOpen = {
+    fileId: FILE_ID,
+    format: "vcf",
+    readOptions: { ploidy: 2, onlyPassed },
+  };
+  expect(
+    runner.open(load, { name: "contigs.vcf.gz", source: CONTIGS_VCF }).kind,
+  ).toBe("ok");
+  return summaryOf(runner.run(JOB, ignore));
+}
+
+describe("open-variants 1 the runner's summary of the variants file: the lengths of the header and onlyPassed", () => {
+  test("only the chromosomes with variants, in the order of their first variant, and a variant past the length of its header refuses nothing", () => {
+    expect(numbersOf(contigsSummary(true))).toEqual({
+      chroms: ["2", "1"],
+      numVarsPerChrom: [3, 1],
+      passStats: { numVars: 4, filtering: {} },
+    });
+  });
+
+  test("read with every variant, the LowQ variant is counted on 1", () => {
+    expect(numbersOf(contigsSummary(false))).toEqual({
+      chroms: ["2", "1"],
+      numVarsPerChrom: [3, 2],
+      passStats: { numVars: 5, filtering: {} },
+    });
+  });
+});
+
+/** An answer of calcVarDensity made by hand: the windows of `chroms`,
+    from `start`, with `numVars`, and a pass of `numVarsOfPass`. */
+function density(
+  chroms: readonly string[],
+  start: readonly number[],
+  numVars: readonly number[],
+  numVarsOfPass: number,
+): Parameters<typeof variantsSummaryOf>[0] {
+  return {
+    chroms,
+    start: Float64Array.from(start),
+    end: Float64Array.from(start, () => Number.MAX_SAFE_INTEGER),
+    numVars: Uint32Array.from(numVars),
+    passStats: { numVars: numVarsOfPass, filtering: {} },
+  };
+}
+
+describe("open-variants 1 variantsSummaryOf, popnei's density made the result", () => {
+  test("one window per chromosome from the position 1 gives the chromosomes and their counts", () => {
+    expect(
+      numbersOf(variantsSummaryOf(density(["2", "1"], [1, 1], [3, 1], 4))),
+    ).toEqual({
+      chroms: ["2", "1"],
+      numVarsPerChrom: [3, 1],
+      passStats: { numVars: 4, filtering: {} },
+    });
+  });
+
+  test.each([
+    ["a chromosome twice", density(["1", "1"], [1, 1], [3, 1], 4)],
+    [
+      "a window that does not start at 1",
+      density(["1", "2"], [1, 2], [3, 1], 4),
+    ],
+    ["counts fewer than the chromosomes", density(["1", "2"], [1, 1], [4], 4)],
+    ["starts fewer than the chromosomes", density(["1", "2"], [1], [3, 1], 4)],
+    [
+      "counts that do not add up to the pass",
+      density(["1", "2"], [1, 1], [3, 1], 5),
+    ],
+  ])("%s is a defect", (_name, given) => {
+    expect(() => variantsSummaryOf(given)).toThrow(/^popnei_web defect:/u);
   });
 });

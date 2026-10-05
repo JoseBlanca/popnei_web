@@ -46,6 +46,7 @@ import type {
   PopDiversityStat,
   StatsDistrib,
   Step,
+  VarDensity,
   Variants,
   VariantsPcaResult,
   VariantsPcoaResult,
@@ -84,7 +85,6 @@ import type {
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
-  VariantsSummaryJob,
   VariantsSummaryResult,
   WriteJob,
   Written,
@@ -489,7 +489,7 @@ export function createRunner(): Runner {
       case "filterCounts":
         return runFilterCounts(pass, job);
       case "variantsSummary":
-        return runVariantsSummary(pass, job);
+        return runVariantsSummary(pass);
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -883,44 +883,53 @@ function runVariantChecks(
 }
 
 /**
+ * The summary of the variants file made of popnei's density of one window
+ * per chromosome: its chromosomes in popnei's order and the counts of
+ * their windows. Throws a defect when a chromosome has more than one
+ * window, a window does not start at 1, the arrays differ in length, or
+ * the counts do not add up to the variants of the pass, which a window of
+ * 2^53 − 1 base pairs rules out.
+ */
+export function variantsSummaryOf(density: VarDensity): VariantsSummaryResult {
+  const { chroms, start, numVars, passStats } = density;
+  let counted = 0;
+  for (const count of numVars) {
+    counted += count;
+  }
+  if (
+    new Set(chroms).size !== chroms.length ||
+    start.length !== chroms.length ||
+    numVars.length !== chroms.length ||
+    start.some((first) => first !== 1) ||
+    counted !== passStats.numVars
+  ) {
+    throw new Error(
+      "popnei_web defect: calcVarDensity gave other than one window per chromosome, from the position 1, whose counts add up to the variants of the pass",
+    );
+  }
+  return {
+    analysis: "variantsSummary",
+    chroms,
+    numVarsPerChrom: numVars,
+    passStats: passStatsOf(passStats, []),
+  };
+}
+
+/**
  * Runs `calcVarDensity` with one window per chromosome, `chromLengths`
  * empty so that the lengths of the source are not used: with them, a
  * header of thousands of scaffolds would give each one with 0 variants,
  * and a variant past the length its header gives would refuse a file
- * otherwise usable. Gives popnei's chromosomes in its order, those with
- * variants in the order of their first variant, and the counts of their
- * windows. Throws a defect when a chromosome has more than one window, or
- * a window does not start at 1, which a window of 2^53 − 1 base pairs
- * rules out.
+ * otherwise usable. The job has no filter.
  */
-function runVariantsSummary(
-  pass: Pass,
-  job: VariantsSummaryJob,
-): Answer<JobResult> {
+function runVariantsSummary(pass: Pass): Answer<JobResult> {
   const answer = passOf(pass, (variants) =>
     calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
   );
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { chroms, start, numVars, passStats } = answer.value;
-  if (
-    new Set(chroms).size !== chroms.length ||
-    start.length !== chroms.length ||
-    numVars.length !== chroms.length ||
-    start.some((first) => first !== 1)
-  ) {
-    throw new Error(
-      "popnei_web defect: calcVarDensity gave a chromosome other than one window from the position 1",
-    );
-  }
-  const result: VariantsSummaryResult = {
-    analysis: "variantsSummary",
-    chroms,
-    numVarsPerChrom: numVars,
-    passStats: passStatsOf(passStats, job.filters),
-  };
-  return { kind: "ok", value: result };
+  return { kind: "ok", value: variantsSummaryOf(answer.value) };
 }
 
 /** The mean and the counts of popnei's distribution of its one
