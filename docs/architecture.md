@@ -928,6 +928,16 @@ weighed again with the kinship of stage 7. This is the
 piece the work is split into, and what lets an analysis be tried, changed
 or dropped without touching the others.
 
+From 5 October 2026 the screens are started again on a new page,
+`popgen2.html`, beside the old one (`docs/plans/open-variants.md`). An
+analysis of the new page joins `POPGEN2_ANALYSES` of `src/core/apps.ts`,
+its list of analyses, as the summary of the variants file does. It has
+no step, and it joins none of the lists of the old page,
+`POPGEN_ANALYSES`, `POPGEN_ANALYSIS_STEPS` and the titles of
+`titles.ts`, so the old page neither shows it nor changes. Its request
+and its result join the unions of `protocol.ts` and the cases of
+`countsOf` as any analysis's do.
+
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
 "the individuals file lacks 12 individuals of the variants", a trait not
@@ -943,6 +953,8 @@ defect for one without, which that lock keeps from every `run`.
 
 An application is a list of steps and a list of analyses. The two
 applications share the steps of the variants and the analysis of the PCA.
+The new page of population genetics, `popgen2.html`, is for now a list
+of analyses with no steps.
 
 **An option that changes only how a result is drawn is left out of its
 key**, from stage 4: the column that colours the points of the PCA, the
@@ -1929,7 +1941,8 @@ the bound the step warns at.
 
 Each is asked of popnei and not built around in the applications, and
 `.claude/skills/coding/worker.md`, "What popnei has to provide", keeps the
-full list. The first two are given by `js-v0.1.0-dev.2`; the owner
+full list. The first two are given by `js-v0.1.0-dev.2`, and the seventh
+by `js-v0.1.0-dev.3`; the owner
 decided on 26 September 2026 that popnei adds the filter of the regions,
 the histogram of the missing rate, the writer of the VCF and the density
 of variants, for stage 3, and on the same day the writer by pieces and a
@@ -1947,7 +1960,13 @@ reader of BED files in Python:
 6. A writer of the `.nei` file and of the VCF that gives the file by
    pieces, with the counts of its pass at the end (the same).
 7. The density of variants along each chromosome, of
-   `docs/build-order.md`, section 4, which this revision does not touch.
+   `docs/build-order.md`, section 4, given by `js-v0.1.0-dev.3` as
+   `calcVarDensity`. From 5 October 2026 the summary of the variants file
+   calls it with one window per chromosome, a window of 2^53 − 1 base
+   pairs, `ONE_WINDOW_PER_CHROM` of `src/worker/protocol.ts`, and with
+   `chromLengths: {}`, so that the lengths of the `##contig` lines are not
+   used (`docs/plans/open-variants.md`, "The design", says why). The
+   density in windows of a size the user chooses is still to come.
 8. A reader of BED files in popnei's Python, for the Python script
    (above, "The regions of a BED file").
 
@@ -2144,7 +2163,9 @@ src/core/
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
                     counted, the statistics of each individual, the
-                    variants the filters keep
+                    variants the filters keep; from 5 October 2026 also
+                    POPGEN2_ANALYSES, the analyses of the new page
+                    popgen2.html, which has no steps
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file
   writeEstimate.ts  the size expected of a file of the filtered variants,
@@ -2260,7 +2281,10 @@ in `core` imports from `ui` or `charts`, and nothing in `charts` imports
 from `core` or `ui`. From stage 4 core imports, of `src/worker`, the
 types of `protocol.ts` and its constants, the least draw of the
 rarefaction the first, written once beside the messages that check it
-(the owner, 1 October 2026), and the pure functions of
+(the owner, 1 October 2026), and, from 5 October 2026, the window of
+2^53 − 1 base pairs of the summary of the variants file,
+`ONE_WINDOW_PER_CHROM`, which the runner gives popnei and the Python
+script writes; and the pure functions of
 `src/worker/individuals/columnTypes.ts`, which read the number a cell
 holds and the types a column allows, so that the project and the reader
 cannot disagree on them (`docs/specs/core/project.md`, `columnAllows`). Only `src/worker/runner.ts` calls popnei, apart
