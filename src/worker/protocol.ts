@@ -561,6 +561,41 @@ export interface FilterCountsResult {
   readonly passStats: PassStats;
 }
 
+/** The request of the summary of the variants file: how many variants
+    it holds and on which chromosomes, from popnei's `calcVarDensity` with
+    one window per chromosome, over every variant and every individual of
+    the file, with no filter (docs/plans/open-variants.md, "The design"). */
+export interface VariantsSummaryJob {
+  /** The analysis the request is of. */
+  readonly analysis: "variantsSummary";
+  /** The load id of the variants file it reads. */
+  readonly fileId: string;
+  /** No filter: the summary describes the file as it is. */
+  readonly filters: readonly [];
+}
+
+/** The size of window, in base pairs, of the pass of the summary of the
+    variants file, the largest `calcVarDensity` accepts, 2^53 − 1: wider
+    than any chromosome, so that each chromosome is one window and no size
+    of window, which depends on the genome, has to be chosen. The one
+    place the number is written: the runner gives it to popnei, and the
+    Python script of the summary writes it. */
+export const ONE_WINDOW_PER_CHROM = Number.MAX_SAFE_INTEGER;
+
+/** The summary of the variants file: its chromosomes, in popnei's order,
+    those with variants in the order of their first variant, and the
+    variants of each. */
+export interface VariantsSummaryResult {
+  /** The analysis the result is of. */
+  readonly analysis: "variantsSummary";
+  /** The name of each chromosome with variants, each once. */
+  readonly chroms: readonly string[];
+  /** The variants on each chromosome of `chroms`, in its order. */
+  readonly numVarsPerChrom: Uint32Array;
+  /** The counts of the pass; `numVars` is the variants of the file. */
+  readonly passStats: PassStats;
+}
+
 /** The method of the principal components: a PCA of the genotypes, or a
     PCoA of the Kosman distances, corrected by Lingoes' method when no
     space holds them. */
@@ -801,7 +836,8 @@ export type Job =
   | FilterCountsJob
   | PcaJob
   | PopDistsJob
-  | LdDecayJob;
+  | LdDecayJob
+  | VariantsSummaryJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -812,7 +848,8 @@ export type JobResult =
   | FilterCountsResult
   | PcaResult
   | PopDistsResult
-  | LdDecayResult;
+  | LdDecayResult
+  | VariantsSummaryResult;
 
 /**
  * The request of a file of the filtered variants

@@ -37,7 +37,13 @@
 // e2e/fixtures/ld.vcf.gz, writes it as the vars file e2e/fixtures/ld.nei,
 // and writes its two populations, `i000` to `i049` in `pop_a` and `i050` to
 // `i099` in `pop_b`, to e2e/fixtures/ld_pops.csv with the header `IID,pop`
-// (docs/specs/analyses/ldDecay.md, "The fixture").
+// (docs/specs/analyses/ldDecay.md, "The fixture"). For the summary of the
+// variants file, whose pass reads the position of every variant, it writes
+// e2e/fixtures/bad_position.vcf.gz, the header and the first 100 variants
+// of panel.vcf.gz, gzipped, with the position of the 80th, at line 84 of
+// the VCF, written `x80`: a file that popnei opens, since the open reads
+// its header, and whose pass popnei refuses at that line
+// (docs/plans/open-variants.md, "The phases").
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -58,6 +64,7 @@
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 import {
   calcPerIndividualStats,
@@ -133,6 +140,35 @@ const ldPopsLines = [
 const ldPopsPath = join(fixtures, "ld_pops.csv");
 writeFileSync(ldPopsPath, `${ldPopsLines.join("\n")}\n`);
 console.log(`${ldPopsPath}: ${String(ldPopsLines.length)} lines`);
+
+// The VCF with a position that is not a number on a later line: the
+// header and the first 100 variants of the panel, whose 80th, at the
+// position 80, is given the position `x80`.
+const panelLines = gunzipSync(readFileSync(join(fixtures, "panel.vcf.gz")))
+  .toString("utf8")
+  .split("\n");
+const panelHeader = panelLines.filter((line) => line.startsWith("#"));
+const badPositionVariants = panelLines
+  .filter((line) => line !== "" && !line.startsWith("#"))
+  .slice(0, 100)
+  .map((line, i) => {
+    if (i !== 79) {
+      return line;
+    }
+    if (!line.startsWith("1\t80\t")) {
+      throw new Error("the 80th variant of panel.vcf.gz is not at 1:80");
+    }
+    return line.replace("1\t80\t", "1\tx80\t");
+  });
+const badPositionPath = join(fixtures, "bad_position.vcf.gz");
+writeFileSync(
+  badPositionPath,
+  gzipSync(`${[...panelHeader, ...badPositionVariants].join("\n")}\n`),
+);
+console.log(
+  `${badPositionPath}: ${String(panelHeader.length)} lines of header, ` +
+    `${String(badPositionVariants.length)} variants`,
+);
 
 // The populations: the copy, and the same rows as a CSV. The names hold no
 // comma nor quote, so no cell is quoted; a name that did would stop here.

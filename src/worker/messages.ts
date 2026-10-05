@@ -51,6 +51,8 @@ import type {
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
+  VariantsSummaryJob,
+  VariantsSummaryResult,
   WriteJob,
   Written,
 } from "./protocol.ts";
@@ -60,7 +62,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -866,6 +868,7 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   individualChecks: true,
   variantChecks: true,
   filterCounts: true,
+  variantsSummary: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -875,6 +878,7 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   individualChecks: true,
   variantChecks: true,
   filterCounts: true,
+  variantsSummary: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -1060,6 +1064,8 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkFilterCountsJob(record, place);
     case "variantChecks":
       return checkVariantChecksJob(record, place);
+    case "variantsSummary":
+      return checkVariantsSummaryJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
     case "popDists":
@@ -1195,6 +1201,31 @@ function checkIndividualChecksJob(
   }
   return accepted({
     analysis: "individualChecks",
+    fileId: fileId.value,
+    filters: filters.value,
+  });
+}
+
+/** The fields of the request of the summary of the variants file,
+    docs/plans/open-variants.md: the load alone, whose filters are none. */
+function checkVariantsSummaryJob(
+  record: object,
+  place: Place,
+): Checked<VariantsSummaryJob> {
+  const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, noFilters);
+  if (!filters.ok) {
+    return filters;
+  }
+  return accepted({
+    analysis: "variantsSummary",
     fileId: fileId.value,
     filters: filters.value,
   });
@@ -1657,6 +1688,8 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkVariantChecksResult(record, place);
     case "filterCounts":
       return checkFilterCountsResult(record, place);
+    case "variantsSummary":
+      return checkVariantsSummaryResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
     case "popDists":
@@ -2022,6 +2055,46 @@ function checkFilterCountsResult(
     return checked;
   }
   return accepted({ analysis: "filterCounts", passStats: checked.value });
+}
+
+/** The fields of the summary of the variants file,
+    docs/plans/open-variants.md, the counts as many as the chromosomes. */
+function checkVariantsSummaryResult(
+  record: object,
+  place: Place,
+): Checked<VariantsSummaryResult> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "chroms",
+    "numVarsPerChrom",
+    "passStats",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const chroms = field(record, "chroms", place, listOf(isText));
+  if (!chroms.ok) {
+    return chroms;
+  }
+  const numVarsPerChrom = field(
+    record,
+    "numVarsPerChrom",
+    place,
+    uint32Array(chroms.value.length),
+  );
+  if (!numVarsPerChrom.ok) {
+    return numVarsPerChrom;
+  }
+  const passStats = field(record, "passStats", place, checkPassStats);
+  if (!passStats.ok) {
+    return passStats;
+  }
+  return accepted({
+    analysis: "variantsSummary",
+    chroms: chroms.value,
+    numVarsPerChrom: numVarsPerChrom.value,
+    passStats: passStats.value,
+  });
 }
 
 /** A written file, the `Blob` the runner made with its size and the

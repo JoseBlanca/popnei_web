@@ -6,9 +6,10 @@
  * diversity, the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
  * filters, the principal components, a PCA or a PCoA, the distances
- * between populations with the order of their heatmap, and the LD decay of
- * each population, writes the filtered variants as a `.nei` file, and says
- * what to answer when popnei refuses or something breaks
+ * between populations with the order of their heatmap, the LD decay of
+ * each population, and the summary of the variants file, its chromosomes
+ * and the variants on each, writes the filtered variants as a `.nei` file,
+ * and says what to answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
@@ -23,6 +24,7 @@ import {
   calcPerVarDistribs,
   calcPopDiversity,
   calcPopDists,
+  calcVarDensity,
   correctDistsByLingoes,
   doPcaFromVariants,
   doPcoa,
@@ -52,7 +54,7 @@ import type {
 import type { Result } from "../core/result.ts";
 import { DEFECT_START, messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
-import { SHOWN_MEASURES } from "./protocol.ts";
+import { ONE_WINDOW_PER_CHROM, SHOWN_MEASURES } from "./protocol.ts";
 import type {
   DiversityJob,
   DiversityResult,
@@ -82,6 +84,8 @@ import type {
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
+  VariantsSummaryJob,
+  VariantsSummaryResult,
   WriteJob,
   Written,
 } from "./protocol.ts";
@@ -300,6 +304,8 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
       ];
     case "filterCounts":
       return [];
+    case "variantsSummary":
+      return [result.numVarsPerChrom];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
     case "popDists":
@@ -482,6 +488,8 @@ export function createRunner(): Runner {
         return runVariantChecks(pass, job);
       case "filterCounts":
         return runFilterCounts(pass, job);
+      case "variantsSummary":
+        return runVariantsSummary(pass, job);
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -518,11 +526,12 @@ export function createRunner(): Runner {
 }
 
 /** The steps a job asks for: its list of individuals, of every job but
-    the statistics of each individual, which read every individual, and
-    its filters of the variants. */
+    the statistics of each individual and the summary of the variants
+    file, which read every individual, and its filters of the variants. */
 function stepsOf(job: Job): Steps {
   switch (job.analysis) {
     case "individualChecks":
+    case "variantsSummary":
       return { individuals: null, filters: job.filters };
     case "diversity":
     case "variantChecks":
@@ -647,6 +656,7 @@ function whyNotToRun(job: Job): string | null {
     case "individualChecks":
     case "variantChecks":
     case "filterCounts":
+    case "variantsSummary":
       return null;
   }
 }
@@ -867,6 +877,47 @@ function runVariantChecks(
     maf: variantDistribOf(maf),
     obsHet: variantDistribOf(obsHet),
     unbiasedExpHet: variantDistribOf(unbiasedExpHet),
+    passStats: passStatsOf(passStats, job.filters),
+  };
+  return { kind: "ok", value: result };
+}
+
+/**
+ * Runs `calcVarDensity` with one window per chromosome, `chromLengths`
+ * empty so that the lengths of the source are not used: with them, a
+ * header of thousands of scaffolds would give each one with 0 variants,
+ * and a variant past the length its header gives would refuse a file
+ * otherwise usable. Gives popnei's chromosomes in its order, those with
+ * variants in the order of their first variant, and the counts of their
+ * windows. Throws a defect when a chromosome has more than one window, or
+ * a window does not start at 1, which a window of 2^53 − 1 base pairs
+ * rules out.
+ */
+function runVariantsSummary(
+  pass: Pass,
+  job: VariantsSummaryJob,
+): Answer<JobResult> {
+  const answer = passOf(pass, (variants) =>
+    calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
+  );
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  const { chroms, start, numVars, passStats } = answer.value;
+  if (
+    new Set(chroms).size !== chroms.length ||
+    start.length !== chroms.length ||
+    numVars.length !== chroms.length ||
+    start.some((first) => first !== 1)
+  ) {
+    throw new Error(
+      "popnei_web defect: calcVarDensity gave a chromosome other than one window from the position 1",
+    );
+  }
+  const result: VariantsSummaryResult = {
+    analysis: "variantsSummary",
+    chroms,
+    numVarsPerChrom: numVars,
     passStats: passStatsOf(passStats, job.filters),
   };
   return { kind: "ok", value: result };
