@@ -5,6 +5,7 @@ import type { Project } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import {
   countedText,
+  countingText,
   failedText,
   notOpenedText,
   passedLine,
@@ -33,9 +34,23 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the ploidy of a VCF is the one given, that of a .nei file the file's", () => {
-    expect(ploidyLine(4, true)).toBe("Ploidy 4, as given to read the VCF");
-    expect(ploidyLine(2, false)).toBe("Ploidy 2, as the file says");
+  test("the ploidy of a VCF is the one set, the default told apart, and that of a .nei file the file's", () => {
+    expect(ploidyLine(2, { ploidy: 2, onlyPassed: true })).toBe(
+      "Ploidy 2, the default, as set under How a VCF is read: a VCF does not give its ploidy",
+    );
+    expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
+      "Ploidy 4, as set under How a VCF is read: a VCF does not give its ploidy",
+    );
+    expect(ploidyLine(2, null)).toBe("Ploidy 2, as the file says");
+  });
+
+  test("the line of a count under way says what is counted and that its time is elapsed", () => {
+    expect(countingText(6, 12)).toBe(
+      "Counting the variants · 6% · 12 seconds so far",
+    );
+    expect(countingText(null, 1)).toBe(
+      "Counting the variants · 1 second so far",
+    );
   });
 
   test("the passed variants of a VCF, both ways", () => {

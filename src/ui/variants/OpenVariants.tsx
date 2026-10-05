@@ -1,31 +1,29 @@
 /**
  * The opening of the variants file on popgen2.html
- * (docs/plans/open-variants.md, "Two widgets"): the button "Open a
- * variants file…" in a zone that also takes a dropped or pasted file, the
- * two options a VCF is read with, the ploidy and the passed variants,
- * whose change reads an open VCF again, and below them what went wrong
- * with an opening: a file refused by its name, several files at once, a
- * file popnei could not read. While a file is being read, the zone says
- * so. It reads the project from the store and sends it the commands of
- * the Variants step; what it holds itself is the options of the next VCF
- * and the words of a file it did not open.
+ * (docs/plans/open-variants.md, "Two widgets"): first the two options a
+ * VCF is read with, the ploidy and the passed variants, since they apply
+ * before a file is opened, and whose change reads an open VCF again;
+ * then the button "Open a variants file…" in a zone that also takes a
+ * dropped or pasted file, with one line on the file open, being read or
+ * not opened; and below it what went wrong with an opening: a file
+ * refused by its name, several files at once, a file popnei could not
+ * read. It reads the project from the store and sends it the commands of
+ * the Variants step; what it holds itself is the options the user last
+ * set, kept when a `.nei` file is opened, and the words of a file it did
+ * not open.
  */
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { useId, useRef, useState } from "react";
 
-import { MAX_PLOIDY, variantsOpenNeeds } from "../../core/project.ts";
+import { MAX_PLOIDY, escaped, variantsOpenNeeds } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import {
-  pickCommand,
-  readAgainCommand,
-  shownOptions,
-} from "../steps/variants/commands.ts";
+import { pickCommand, readAgainCommand } from "../steps/variants/commands.ts";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
-import { createVcfOptions } from "../steps/variants/vcfOptions.ts";
 import {
+  DEFAULT_READ_OPTIONS,
   ONLY_PASSED_LABEL,
   PICKER_ENDINGS,
   PLOIDY_LABEL,
@@ -49,6 +47,7 @@ import {
   TEXT_DROPPED,
   VCF_OPTIONS_HEADING,
   notOpenedText,
+  openLine,
 } from "./words.ts";
 
 /** What the page says of a drop, or a paste, that is not of one file. */
@@ -65,8 +64,17 @@ interface Refusal {
   readonly forLoad: string | null;
 }
 
+/** What the opening is drawn with. */
+export interface OpenVariantsProps {
+  /** The element of the open button, for the page to move the focus to
+      it when the summary goes. */
+  readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+}
+
 /** The section that opens the variants file. */
-export function OpenVariants(): React.JSX.Element {
+export function OpenVariants({
+  buttonRef,
+}: OpenVariantsProps): React.JSX.Element {
   const store = useStore();
   const files = useFiles();
   const announcer = useAnnouncer();
@@ -75,13 +83,11 @@ export function OpenVariants(): React.JSX.Element {
   const heading = useId();
   const optionsHeading = useId();
 
-  // The options of the next VCF, the Variants step's (vcfOptions.ts).
-  const [vcfOptions] = useState(() => createVcfOptions(store));
-  const edited = useSyncExternalStore(
-    vcfOptions.subscribe,
-    vcfOptions.getEdited,
-  );
-  const options = useAppState((s) => shownOptions(edited, s.project));
+  // The options the user last set, for the next VCF and for a VCF open;
+  // a .nei file opened keeps them, since it has its own ploidy. The ref
+  // holds them at once for a pick made in the same moment as a commit.
+  const [options, setOptions] = useState<VcfReadOptions>(DEFAULT_READ_OPTIONS);
+  const optionsNow = useRef(options);
   const commitPloidy = useRef<(() => void) | null>(null);
 
   // The words of a file not opened, until the next opening, or until the
@@ -114,43 +120,40 @@ export function OpenVariants(): React.JSX.Element {
       return;
     }
     setRefusal(null);
-    // A number still being typed in the ploidy is committed first: a
-    // file dropped from the desktop leaves the focus in the field.
+    // A number still being typed in the ploidy is committed first, which
+    // reads an open VCF again before the new file replaces it: a file
+    // dropped from the desktop leaves the focus in the field.
     commitPloidy.current?.();
-    const readOptions = format === "vcf" ? vcfOptions.shown() : null;
     const load: VariantLoad = {
       fileId: files.addFile(file),
       name: file.name,
       size: file.size,
       format,
-      readOptions,
+      readOptions: format === "vcf" ? optionsNow.current : null,
     };
-    vcfOptions.load(pickCommand(load));
+    const step = pickCommand(load);
+    store.apply(step.description, step.command);
   };
 
-  /** The options changed to `next`: an open VCF is read again with them,
-      the same file under a new load; otherwise they wait for the next
-      VCF. */
+  /** The options changed to `next`: kept for the next VCF, and an open
+      VCF is read again with them, the same file under a new load. */
   const change = (next: VcfReadOptions): void => {
+    optionsNow.current = next;
+    setOptions(next);
     const open = store.getState().project.variants;
     const file = open === null ? null : files.fileOf(open.fileId);
-    if (open?.format !== "vcf" || file === null) {
-      vcfOptions.edit(next);
-      return;
-    }
+    if (open?.format !== "vcf" || file === null) return;
     setRefusal(null);
-    vcfOptions.load(
-      readAgainCommand({
-        fileId: files.addFile(file),
-        name: open.name,
-        size: open.size,
-        format: "vcf",
-        readOptions: next,
-      }),
-    );
+    const step = readAgainCommand({
+      fileId: files.addFile(file),
+      name: open.name,
+      size: open.size,
+      format: "vcf",
+      readOptions: next,
+    });
+    store.apply(step.description, step.command);
   };
 
-  const reading = variants?.read.kind === "pending";
   const failed = variants?.read.kind === "failed";
 
   return (
@@ -158,30 +161,6 @@ export function OpenVariants(): React.JSX.Element {
       <h2 id={heading} className={classOf(styles, "heading")}>
         Variants file
       </h2>
-      <FileZone
-        pasteLabel={PASTE_LABEL}
-        buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
-        accept={PICKER_ENDINGS}
-        onFiles={onFiles}
-        onNotFiles={(dropped) => {
-          refuse(NOT_FILES_WORDS[dropped]);
-        }}
-      >
-        {variants === null && (
-          <p className={classOf(styles, "muted")}>{DROP_HINT}</p>
-        )}
-        {reading && reason !== null && (
-          <p className={classOf(styles, "line")}>
-            {reason}{" "}
-            <ReadingTime
-              key={variants.fileId}
-              className={classOf(styles, "muted")}
-            />
-          </p>
-        )}
-      </FileZone>
-      {refusalText !== null && <Problem>{refusalText}</Problem>}
-      {failed && reason !== null && <Problem>{reason}</Problem>}
 
       <section
         aria-labelledby={optionsHeading}
@@ -205,17 +184,49 @@ export function OpenVariants(): React.JSX.Element {
             commitPloidy.current = commit;
           }}
           onChange={(ploidy) => {
-            change({ ...vcfOptions.shown(), ploidy });
+            change({ ...optionsNow.current, ploidy });
           }}
         />
         <Checkbox
           label={ONLY_PASSED_LABEL}
           isSelected={options.onlyPassed}
           onChange={(onlyPassed) => {
-            change({ ...vcfOptions.shown(), onlyPassed });
+            change({ ...optionsNow.current, onlyPassed });
           }}
         />
       </section>
+
+      <FileZone
+        pasteLabel={PASTE_LABEL}
+        buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
+        accept={PICKER_ENDINGS}
+        onFiles={onFiles}
+        onNotFiles={(dropped) => {
+          refuse(NOT_FILES_WORDS[dropped]);
+        }}
+        buttonRef={buttonRef}
+      >
+        {/* One line in every state, so that a read that starts, at a
+            commit of the ploidy as the focus leaves it, does not move the
+            button under a click. */}
+        <p className={classOf(styles, "line")}>
+          {variants === null ? (
+            <span className={classOf(styles, "mutedText")}>{DROP_HINT}</span>
+          ) : variants.read.kind === "pending" ? (
+            <>
+              {`Reading ${escaped(variants.name)}.`}{" "}
+              <ReadingTime
+                key={variants.fileId}
+                className={classOf(styles, "mutedText")}
+              />
+            </>
+          ) : (
+            openLine(variants)
+          )}
+        </p>
+      </FileZone>
+      {refusalText !== null && <Problem>{refusalText}</Problem>}
+      {failed && reason !== null && <Problem>{reason}</Problem>}
     </section>
   );
 }

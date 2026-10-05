@@ -15,26 +15,30 @@ import type { AnalysisError, AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
 import type { ButtonOf } from "../analyses/status.ts";
-import { Running } from "../analyses/Running.tsx";
+import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { useAppState, useStore } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
+import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { Table } from "../widgets/Table.tsx";
+import { useRunSeconds } from "../runSeconds.ts";
+import type { Progress } from "../../worker/protocol.ts";
 import styles from "./Variants.module.css";
 import {
   CHROMS_CAPTION,
   CHROM_COLUMN,
   COUNT_AGAIN_LABEL,
   COUNT_HEADING,
-  COUNT_NAME,
+  COUNT_BAR_LABEL,
   NUM_VARS_COLUMN,
   STOPPED_TEXT,
   SUMMARY_HEADING,
   SUMMARY_ID,
   countAgainMends,
   countedText,
+  countingText,
   failedText,
   formatAndSizeText,
   passedLine,
@@ -47,11 +51,15 @@ export interface VariantsSummaryProps {
   /** The analyses the page starts by itself, for Count again and to tell
       a count stopped from one not yet started. */
   readonly autoRuns: AutoRuns;
+  /** The open button of the page, which takes the focus when the summary
+      goes while its Stop or Count again had it. */
+  readonly openButton: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** The summary of the variants file; nothing until a file is read. */
 export function VariantsSummary({
   autoRuns,
+  openButton,
 }: VariantsSummaryProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
   const heading = useId();
@@ -67,19 +75,33 @@ export function VariantsSummary({
         <ul className={classOf(styles, "facts")}>
           <li>{formatAndSizeText(variants)}</li>
           <li>{counted(read.individuals.length, "individual")}</li>
-          <li>{ploidyLine(read.ploidy, variants.readOptions !== null)}</li>
+          <li>{ploidyLine(read.ploidy, variants.readOptions)}</li>
           {variants.readOptions !== null && (
             <li>{passedLine(variants.readOptions)}</li>
           )}
         </ul>
       </div>
-      <Count autoRuns={autoRuns} />
+      <Count
+        autoRuns={autoRuns}
+        openButton={openButton}
+        fileId={variants.fileId}
+      />
     </section>
   );
 }
 
+/** What the count is drawn with. */
+interface CountProps extends VariantsSummaryProps {
+  /** The load of the file the summary is of. */
+  readonly fileId: string;
+}
+
 /** The count of the variants, in each of its states. */
-function Count({ autoRuns }: VariantsSummaryProps): React.JSX.Element {
+function Count({
+  autoRuns,
+  openButton,
+  fileId,
+}: CountProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
@@ -117,7 +139,17 @@ function Count({ autoRuns }: VariantsSummaryProps): React.JSX.Element {
             runLabel={COUNT_AGAIN_LABEL}
             onRun={again}
             onStop={stop}
-            onGone={() => headingRef.current?.focus()}
+            onGone={() => {
+              // The summary stays while its file is the one read; when it
+              // goes, a new file dropped or a read again, its heading goes
+              // with it, and the focus goes to the open button.
+              const now = store.getState().project.variants;
+              if (now?.fileId === fileId && now.read.kind === "read") {
+                headingRef.current?.focus();
+              } else {
+                openButton.current?.focus();
+              }
+            }}
           />
         </div>
       )}
@@ -173,14 +205,7 @@ function CountBody({
         <p className={classOf(styles, "line")}>{STOPPED_TEXT}</p>
       ) : null;
     case "running":
-      return (
-        <Running
-          name={COUNT_NAME}
-          runId={status.runId}
-          progress={status.progress}
-          waitsForStatistics={false}
-        />
-      );
+      return <Counting runId={status.runId} progress={status.progress} />;
     case "error":
       return <Problem>{failed(status.error)}</Problem>;
     case "done": {
@@ -212,3 +237,24 @@ function CountBody({
     limited height, so that a file of thousands of scaffolds does not push
     the page thousands of pixels down. */
 const LONG_TABLE = 20;
+
+/** What the bar of a count under way is drawn with. */
+interface CountingProps {
+  /** The id of its request. */
+  readonly runId: number;
+  /** How far it has gone, or `null` until the worker says. */
+  readonly progress: Progress | null;
+}
+
+/** The bar and the line of a count under way, with the seconds since it
+    started. */
+function Counting({ runId, progress }: CountingProps): React.JSX.Element {
+  const seconds = useRunSeconds(runId);
+  const share = progress === null ? null : progressShare(progress);
+  return (
+    <div className={classOf(styles, "running")}>
+      <ProgressBar label={COUNT_BAR_LABEL} value={share} />
+      <p className={classOf(styles, "line")}>{countingText(share, seconds)}</p>
+    </div>
+  );
+}

@@ -5,6 +5,8 @@
  * that draws its heading alone in its place, and the status region that
  * says what changes away from the focus.
  */
+import { useRef } from "react";
+
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
@@ -24,6 +26,7 @@ export interface VariantsPageProps {
 export function VariantsPage({
   autoRuns,
 }: VariantsPageProps): React.JSX.Element {
+  const openButton = useRef<HTMLButtonElement>(null);
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -33,10 +36,10 @@ export function VariantsPage({
           Population genetics
         </h1>
         <ErrorBoundary heading="Variants file" level={2}>
-          <OpenVariants />
+          <OpenVariants buttonRef={openButton} />
         </ErrorBoundary>
         <ErrorBoundary heading={SUMMARY_HEADING} level={2}>
-          <VariantsSummary autoRuns={autoRuns} />
+          <VariantsSummary autoRuns={autoRuns} openButton={openButton} />
         </ErrorBoundary>
       </main>
       <StatusRegion />

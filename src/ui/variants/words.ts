@@ -25,6 +25,7 @@ import type {
 } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
+import { DEFAULT_PLOIDY } from "../../core/apps.ts";
 import { formatText } from "../steps/variants/words.ts";
 
 /** The id of the summary of the variants file. */
@@ -62,7 +63,16 @@ export const VCF_OPTIONS_HEADING = "How a VCF is read";
 /** The line under the ploidy: a VCF does not say it, and a change reads
     the open VCF again. */
 export const PLOIDY_DESCRIPTION =
-  "A VCF does not say its ploidy, so it is given here, and the page does not check it against the genotypes. Changing it, or the box below, reads an open VCF again and counts its variants again.";
+  "A VCF does not say its ploidy, so it is given here, and the page does not check it against the genotypes. Changing it, or the box below, reads an open VCF again and counts its variants again; a .nei file says its own ploidy, and these apply to the next VCF opened.";
+
+/** The line of the zone on the file open, read or not opened:
+    "panel.vcf.gz is open.", "bad.vcf is not open."; the line of a file
+    being read is drawn with its seconds by the zone. */
+export function openLine(variants: VariantSource): string {
+  return variants.read.kind === "read"
+    ? `${escaped(variants.name)} is open.`
+    : `${escaped(variants.name)} is not open.`;
+}
 
 /** The heading of the summary. */
 export const SUMMARY_HEADING = "What the file holds";
@@ -72,13 +82,19 @@ export function formatAndSizeText(variants: VariantSource): string {
   return `${formatText(variants.format)} · ${sizeText(variants.size)}`;
 }
 
-/** The line of the ploidy: for a VCF, the one given, since the file does
-    not say it and the count does not read the genotypes; for a `.nei`
-    file, the file's. */
-export function ploidyLine(ploidy: number, isVcf: boolean): string {
-  return isVcf
-    ? `Ploidy ${String(ploidy)}, as given to read the VCF`
-    : `Ploidy ${String(ploidy)}, as the file says`;
+/** The line of the ploidy: for a VCF, the one set on the page, the
+    default or another, since the file does not give it and the count
+    does not read the genotypes; for a `.nei` file, the file's. */
+export function ploidyLine(
+  ploidy: number,
+  readOptions: VcfReadOptions | null,
+): string {
+  if (readOptions === null) return `Ploidy ${String(ploidy)}, as the file says`;
+  const set =
+    readOptions.ploidy === DEFAULT_PLOIDY
+      ? `Ploidy ${String(ploidy)}, the default, as set under ${VCF_OPTIONS_HEADING}`
+      : `Ploidy ${String(ploidy)}, as set under ${VCF_OPTIONS_HEADING}`;
+  return `${set}: a VCF does not give its ploidy`;
 }
 
 /** The line of the variants a VCF was read with. */
@@ -90,10 +106,6 @@ export function passedLine(options: VcfReadOptions): string {
 
 /** The heading of the count of the variants. */
 export const COUNT_HEADING = "Variants";
-
-/** The count in the middle of a sentence, which names its bar,
-    "Calculating the variants on each chromosome". */
-export const COUNT_NAME = "the variants on each chromosome";
 
 /** The button that counts again after a Stop or a failure. */
 export const COUNT_AGAIN_LABEL = "Count again";
@@ -208,6 +220,29 @@ export function summaryStatus(
   return view.status;
 }
 
+/** What the status region says as a read starts: "Reading panel.nei.",
+    and for a VCF the ploidy it is read with, "Reading panel.vcf.gz, with
+    ploidy 4.". */
+export function readingText(variants: VariantSource): string {
+  const name = escaped(variants.name);
+  return variants.readOptions === null
+    ? `Reading ${name}.`
+    : `Reading ${name}, with ploidy ${String(variants.readOptions.ploidy)}.`;
+}
+
+/** The name of the bar of the count. */
+export const COUNT_BAR_LABEL = "Counting the variants";
+
+/** The line under the bar of the count: "Counting the variants · 6% · 12
+    seconds so far", or with no share before the first progress; the
+    seconds as the line of a read gives them. */
+export function countingText(share: number | null, seconds: number): string {
+  const time = `${counted(seconds, "second")} so far`;
+  return share === null
+    ? `${COUNT_BAR_LABEL} · ${time}`
+    : `${COUNT_BAR_LABEL} · ${String(share)}% · ${time}`;
+}
+
 /**
  * What the status region says of a change of the store from `before` to
  * `after`, which the user may not be looking at: the file read, with its
@@ -222,6 +257,9 @@ export function announcementsOf(
   const variants = after.project.variants;
   if (variants === null) return texts;
   const was = before.project.variants;
+  if (was?.fileId !== variants.fileId && variants.read.kind === "pending") {
+    texts.push(readingText(variants));
+  }
   const wasPending =
     was?.fileId === variants.fileId && was.read.kind === "pending";
   if (wasPending && variants.read.kind === "read") {

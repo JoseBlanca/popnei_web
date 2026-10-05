@@ -62,3 +62,16 @@
   margin: 0;
   color: var(--color-text-muted);
 }
+
+/* Muted words inside a line. */
+.mutedText {
+  color: var(--color-text-muted);
+}
+
+/* The bar and the line of a count under way. */
+.running {
+  display: grid;
+  gap: var(--space-2);
+  inline-size: min(100%, 24rem);
+  font-variant-numeric: tabular-nums;
+}

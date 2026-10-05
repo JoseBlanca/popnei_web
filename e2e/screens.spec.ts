@@ -4382,7 +4382,7 @@ for (const theme of ["light", "dark"] as const) {
         await writeBigVcf(vcf, 200_000);
         await pickOnNewPage(page, vcf);
         await expect(
-          newPageCount(page).getByText(/^Calculating · \d+% · /u),
+          newPageCount(page).getByText(/^Counting the variants · \d+% · /u),
         ).toBeVisible({ timeout: 30_000 });
         await save(page, `popgen2-counting${at}-${theme}`);
       });
@@ -4393,6 +4393,14 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByText("1,200 variants on 1 chromosome."),
         ).toBeVisible();
         await save(page, `popgen2-summary${at}-${theme}`);
+      });
+
+      test("a .nei summary", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(
+          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+        ).toBeVisible();
+        await save(page, `popgen2-nei-summary${at}-${theme}`);
       });
 
       test("a file refused by its name", async ({ page }) => {
