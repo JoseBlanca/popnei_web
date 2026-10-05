@@ -14,6 +14,7 @@ import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
+import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
 import { emptyProject, setVariantFilter } from "./project.ts";
@@ -58,6 +59,14 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     popDists,
     ldDecay,
   ]);
+
+/** The analyses of the new page of population genetics, popgen2.html,
+    which starts the screens again from the use cases: the summary of the
+    variants file alone, for now. It is a list apart from `POPGEN_ANALYSES`,
+    so that the old page neither shows the summary nor changes
+    (docs/plans/open-variants.md, "Its own list of analyses"). */
+export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
+  Object.freeze([variantsSummary]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */

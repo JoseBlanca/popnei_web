@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  POPGEN2_ANALYSES,
   POPGEN_ANALYSES,
   POPGEN_ANALYSIS_STEPS,
   POPGEN_STEPS,
@@ -35,6 +36,7 @@ import type {
   Run,
   VariantChecksResult,
   VariantDistrib,
+  VariantsSummaryResult,
 } from "../worker/protocol.ts";
 
 /** The counts of a pass of the missing data filter over 1,200 variants,
@@ -468,5 +470,71 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
     const histograms = state.analyses.find((a) => a.id === "variantChecks");
     expect(histograms?.status.kind).toBe("done");
     expect(state.individualsKept?.list.kind).toBe("needsStatistics");
+  });
+});
+
+describe("open-variants 1 the summary of the variants file in apps.ts", () => {
+  /** The summary of panel.nei, as popnei gave it on 5 October 2026. */
+  const PANEL_SUMMARY: VariantsSummaryResult = {
+    analysis: "variantsSummary",
+    chroms: ["1"],
+    numVarsPerChrom: Uint32Array.of(1200),
+    passStats: { numVars: 1200, filtering: {} },
+  };
+
+  test("the new page has the summary alone, and the analyses of the old page do not hold it", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual(["variantsSummary"]);
+    expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
+      "variantsSummary",
+    );
+    expect(Object.keys(POPGEN_ANALYSIS_STEPS)).not.toContain("variantsSummary");
+  });
+
+  test("countsOf of a summary, whose pass has no filter, gives the variants of the file and no counts", () => {
+    expect(countsOf(PANEL_SUMMARY)).toStrictEqual({
+      numVarsRead: 1200,
+      counts: null,
+    });
+  });
+
+  test("a store of the new page sends the summary of the load, and its result records the 1,200 variants into the variants file", () => {
+    const sent: Sent[] = [];
+    const store = createStore<Job, JobResult>({
+      first: emptyProject("popgen"),
+      analyses: POPGEN2_ANALYSES,
+      send: (key, job): Run<JobResult> => {
+        const id = sent.length + 1;
+        sent.push({ id, key, job });
+        return {
+          id,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      countsOf,
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1_000_000,
+      maxUndoSteps: 100,
+    });
+    store.popneiReady("0.1.0");
+    store.open({ ...fiveIndividualsProject([]), individuals: null });
+    store.startRun("variantsSummary");
+    expect(sent.map((request) => request.job)).toEqual([
+      {
+        analysis: "variantsSummary",
+        fileId: fiveIndividualsProject([]).variants?.fileId,
+        filters: [],
+      },
+    ]);
+    end(store, sent[0], PANEL_SUMMARY);
+    const state = store.getState();
+    expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
+      ["variantsSummary", "done"],
+    ]);
+    const read = state.project.variants?.read;
+    expect(read?.kind === "read" ? read.numVars : null).toBe(1200);
   });
 });
