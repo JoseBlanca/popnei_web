@@ -31,11 +31,8 @@ import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
-import {
-  SUMMARY_ID,
-  announcementsOf,
-  summaryStatus,
-} from "./variants/words.ts";
+import { SUMMARY_ID, announcementsOf } from "./variants/words.ts";
+import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
     the worker client, the bar with the store and no saving, the
@@ -82,26 +79,6 @@ function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
   });
   autoRuns.sync();
   return autoRuns;
-}
-
-/** Gives the error bar a defect of our own code that a calculation met in
-    the worker, which the page shows only as a failure, so that it can be
-    copied and reported; once for each failure. */
-function reportDefects(store: Store<JobResult, Blob>, defects: Defects): void {
-  let before = summaryStatus(store.getState());
-  store.subscribe(() => {
-    const after = summaryStatus(store.getState());
-    if (
-      after !== before &&
-      after.kind === "error" &&
-      after.error.kind === "failed" &&
-      after.error.error.kind === "defect" &&
-      !(before.kind === "error" && before.key === after.key)
-    ) {
-      defects.report(new Error(after.error.error.message), "worker", null);
-    }
-    before = after;
-  });
 }
 
 /** Announces in the status region what each change of the store did

@@ -2251,7 +2251,8 @@ src/ui/
                     page tells a count stopped
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the summary of what it holds, the page
-                    that holds them, and their words
+                    that holds them, their words, and the defects of the
+                    worker given to the error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
