@@ -61,7 +61,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      'panel.vcf.gz has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column", and the file is read again with every variant.',
+      'panel.vcf.gz has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column" under "How a VCF is read", and the file is read again with every variant.',
     );
   });
 
@@ -89,7 +89,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome 1 in panel.vcf.gz is at a position of 9,007,199,254,740,992 or more, larger than the application can count. The VCF format allows positions up to 2,147,483,647: correct the position in the file and open it again.",
+      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.",
     );
   });
 

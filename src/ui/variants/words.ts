@@ -62,7 +62,7 @@ export const VCF_OPTIONS_HEADING = "How a VCF is read";
 /** The line under the ploidy: a VCF does not say it, and a change reads
     the open VCF again. */
 export const PLOIDY_DESCRIPTION =
-  "A VCF does not say its ploidy, so it is given here. Changing it, or the box below, reads an open VCF again.";
+  "A VCF does not say its ploidy, so it is given here, and the page does not check it against the genotypes. Changing it, or the box below, reads an open VCF again and counts its variants again.";
 
 /** The heading of the summary. */
 export const SUMMARY_HEADING = "What the file holds";
@@ -100,7 +100,7 @@ export const COUNT_AGAIN_LABEL = "Count again";
 
 /** The line of a count stopped, and what the status region says of it. */
 export const STOPPED_TEXT =
-  "Counting the variants was stopped. Count again to see them.";
+  "Counting the variants was stopped. Count again counts them from the start.";
 
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {
@@ -141,7 +141,7 @@ export function refusalText(message: string, p: Project): string {
   const fileName = escaped(variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
     return variants.readOptions?.onlyPassed === true
-      ? `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column", and the file is read again with every variant.`
+      ? `${fileName} has no variant with PASS or . in its FILTER column, and it was read with only those, so there is nothing to count. Untick "Only the variants with PASS or . in the FILTER column" under "How a VCF is read", and the file is read again with every variant.`
       : `${fileName} has no variants. Open another variants file.`;
   }
   const zero = POSITION_ZERO.exec(message);
@@ -150,7 +150,7 @@ export function refusalText(message: string, p: Project): string {
   }
   const past = PAST_LARGEST.exec(message);
   if (past !== null) {
-    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position of 9,007,199,254,740,992 or more, larger than the application can count. The VCF format allows positions up to 2,147,483,647: correct the position in the file and open it again.`;
+    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.`;
   }
   if (
     /^line \d+ of the VCF/u.test(message) ||

@@ -281,7 +281,7 @@ test("OV2 a count stopped says so, and Count again counts the variants", async (
 
   await expect(
     count(page).getByText(
-      "Counting the variants was stopped. Count again to see them.",
+      "Counting the variants was stopped. Count again counts them from the start.",
     ),
   ).toBeVisible();
   const again = count(page).getByRole("button", { name: "Count again" });
