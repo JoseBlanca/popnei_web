@@ -254,3 +254,47 @@ same pass. stale and architecture found nothing.
 or more names a window and not the line of the VCF; Python's
 `calc_var_density` accepts a window of 2^53, which the TypeScript
 declaration says is past its limit.
+
+### Phase 2, the page
+
+Commits a992911, 4e30773, a83bdc8 and 6495722; the fixes of its review,
+6547d66, c4f958f, 395ee6a, 5a689b3 and 9c27cf7; the fixes of a second
+look at them, dc2fc53, 79539b5, 0074a55 and 3d4f635. On 3d4f635:
+Prettier clean, `tsc` and ESLint with no output, Vitest "Tests 3758
+passed (3758)", the build, Playwright "1190 passed" in Chromium and
+WebKit (Firefox cannot be started on this Mac), the release URLs.
+
+The review sent all ten categories. stale, bundle and browser found
+nothing: the old page downloads 333.7 kB gzipped before any lazy file,
+334.9 kB before the piece; the new page 192.9 kB; the guard's three
+messages show on both pages. Fixed, among 24 findings: the options of a
+VCF moved before the zone and kept over a `.nei`; the words of a plain
+gzip cut short, of an empty VCF, and of a failure Count again cannot
+mend; a defect of the count sent to the error bar; one source of the
+refusal words; the page starts from the first project of the old page,
+with the missing-data filter at 0.1; the build fails on a page without
+the guard; the shared code in two chunks named `react` and `shared`;
+flows with two chromosomes and with variants that did not pass;
+`docs/architecture.md`, `docs/specs/entry.md` and `shell.md` updated.
+
+A second look, react and accessibility, found that the first click on
+the open button was still lost with a long file name at 320 px and after
+a refused ploidy, and that the focus fell to the top of the page from
+the count's heading. Fixed: the zone's line is under the button, and the
+refusal of the ploidy under the zone, tied to its field by
+`aria-describedby`; the summary hands the focus to the open button when
+it goes. A re-run of the reviewer's scripts: the file chooser opened on
+the first click in 42 of 42 runs, and axe found 0 violations in 100
+checks, in Chromium and WebKit.
+
+Decisions of the session the owner may want otherwise: the read options
+before the open button; the refusal of a ploidy shown under the zone,
+away from its field, so that nothing above the button moves; the
+summary's ploidy line "Ploidy 2, the default, as set under How a VCF is
+read"; the page's name `popgen2.html`, to become `popgen.html` when it
+replaces the old page.
+
+Not seen: Firefox, which runs on GitHub once `main` is pushed; a screen
+reader (VoiceOver), whose words were checked only in the page's status
+region; iOS Safari, whose file picker may grey out `.vcf` and `.nei`
+files (seen outside the scope by the browser review).
