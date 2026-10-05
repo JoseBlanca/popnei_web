@@ -233,13 +233,17 @@ export function summaryStatus(
 }
 
 /** What the status region says as a read starts: "Reading panel.nei.",
-    and for a VCF the ploidy it is read with, "Reading panel.vcf.gz, with
-    ploidy 4.". */
+    and for a VCF the options it is read with, the ploidy and which
+    variants, "Reading panel.vcf.gz, with ploidy 4 and every variant,
+    whatever its FILTER column.", so that a change of either is heard. */
 export function readingText(variants: VariantSource): string {
   const name = escaped(variants.name);
-  return variants.readOptions === null
-    ? `Reading ${name}.`
-    : `Reading ${name}, with ploidy ${String(variants.readOptions.ploidy)}.`;
+  const options = variants.readOptions;
+  if (options === null) return `Reading ${name}.`;
+  const which = options.onlyPassed
+    ? "only the variants with PASS or . in the FILTER column"
+    : "every variant, whatever its FILTER column";
+  return `Reading ${name}, with ploidy ${String(options.ploidy)} and ${which}.`;
 }
 
 /** The name of the bar of the count. */

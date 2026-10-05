@@ -18,7 +18,7 @@
   font-size: var(--text-base);
 }
 
-/* The options of a VCF, under the zone. */
+/* The options of a VCF, above the zone. */
 .options {
   display: grid;
   gap: var(--space-3);

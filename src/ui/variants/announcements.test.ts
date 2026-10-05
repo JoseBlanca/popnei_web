@@ -74,9 +74,27 @@ describe("what the status region of the new page says", () => {
           loadVariants(p, VCF),
         );
       }),
-    ).toEqual(["Reading panel.vcf.gz, with ploidy 4."]);
+    ).toEqual([
+      "Reading panel.vcf.gz, with ploidy 4 and only the variants with PASS or . in the FILTER column.",
+    ]);
     // Nothing more while it is read and nothing changes.
     expect(said(store, () => undefined)).toEqual([]);
+  });
+
+  test("a VCF read with every variant is said so", () => {
+    const { store } = setUp();
+    expect(
+      said(store, () => {
+        store.apply("a new variants file was loaded", (p) =>
+          loadVariants(p, {
+            ...VCF,
+            readOptions: { ploidy: 2, onlyPassed: false },
+          }),
+        );
+      }),
+    ).toEqual([
+      "Reading panel.vcf.gz, with ploidy 2 and every variant, whatever its FILTER column.",
+    ]);
   });
 
   test("a file read is said with its individuals", () => {

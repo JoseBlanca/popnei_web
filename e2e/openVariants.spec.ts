@@ -387,7 +387,7 @@ test("OV2 a file being read is announced once, with the ploidy it is read with",
 
   await expect(page.getByRole("status")).toHaveText([
     "",
-    "Reading panel.vcf.gz, with ploidy 2.",
+    "Reading panel.vcf.gz, with ploidy 2 and only the variants with PASS or . in the FILTER column.",
   ]);
   await expect(
     opening(page).getByText(/^Reading panel\.vcf\.gz\./u),
