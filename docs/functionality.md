@@ -305,9 +305,14 @@ give the principal components that go into the GWAS as covariates.
   in association; a column of groups, categorical or binary, of more
   than 1,000 different values, which no legend could show, is not
   offered.
-- Later, not in the first version: selecting a group of points with a
-  lasso to assign or rename a population, which writes into the
-  populations of the project.
+- The coordinates of the individuals are downloaded as a table that
+  vavilov-explorer, the owner's desktop application, imports: a CSV
+  whose first column holds the names of the individuals and whose other
+  columns hold one component each. Building groups of individuals on the
+  plot, with a lasso, is vavilov-explorer's, not the application's, as
+  the owner decided on 5 October 2026; the groups come back as a file of
+  populations. This replaces the lasso of the application, planned for
+  later until then (`docs/use-cases.md`, case 3).
 
 ## 6. Each population
 
@@ -526,9 +531,7 @@ by Python. It holds:
   the column that defines the populations. A file that was still being
   read, or was refused, when the project was saved is named without its
   rows, and asked for again when the project is opened. It is kept whole because it is small, so that a project
-  needs no file other than the variants, and because the populations
-  edited in the application, with the lasso, are in no file of the
-  user.
+  needs no file other than the variants.
 - **The filters of the dataset, in their order, with their parameters.**
 - **The options of each analysis**, those that were run and those that
   were set, with the preprocessing of the analysis itself, such as the
