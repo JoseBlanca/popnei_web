@@ -1,0 +1,14 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* One column, as wide as a line that can be read. */
+.page {
+  display: grid;
+  gap: var(--space-8);
+  max-inline-size: 48rem;
+  padding: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+}

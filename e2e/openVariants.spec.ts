@@ -1,0 +1,304 @@
+/**
+ * The new page of population genetics, popgen2.html, on the built site
+ * (docs/plans/open-variants.md, phase 2): steps 1 and 2 of cases 1 and 2
+ * of docs/use-cases.md, a variants file opened and what it holds; a file
+ * popnei refuses at the opening and one whose count it refuses; a count
+ * stopped and counted again; the ploidy changed, which reads the file
+ * again; files of another kind dropped; axe at each state reached.
+ *
+ * The counts are popnei's, taken from its Python on the same files in
+ * phase 1: panel.nei and panel.vcf.gz hold 1,200 variants of 200
+ * individuals on the chromosome "1"; bad_position.vcf.gz is refused at
+ * line 84, whose position is `x80`.
+ */
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import type { Locator, Page } from "@playwright/test";
+
+import { expect, test } from "./axe.ts";
+import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+
+const FIXTURES = join(import.meta.dirname, "fixtures");
+
+async function openPage(page: Page): Promise<void> {
+  await page.goto("popgen2.html");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Population genetics" }),
+  ).toBeVisible();
+}
+
+function opening(page: Page): Locator {
+  return page.getByRole("region", { name: "Variants file" });
+}
+
+function summary(page: Page): Locator {
+  return page.getByRole("region", { name: "What the file holds" });
+}
+
+function count(page: Page): Locator {
+  return summary(page).getByRole("region", { name: "Variants" });
+}
+
+/** The button that opens the file picker, whatever its words. */
+function openButton(page: Page): Locator {
+  return opening(page).getByRole("button", {
+    name: /^Open (a|another) variants file…$/,
+  });
+}
+
+/** Picks `path` with the button, as a user does, through the file picker
+    of the system. */
+async function pick(page: Page, path: string): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await openButton(page).click();
+  await (await chooser).setFiles(path);
+}
+
+/** Drops files of the names and texts `files` on the zone, as a drag from
+    the desktop does. */
+async function drop(
+  page: Page,
+  files: readonly { readonly name: string; readonly text: string }[],
+): Promise<void> {
+  const dataTransfer = await page.evaluateHandle((given) => {
+    // A file a script puts into a DataTransfer has no entry of the file
+    // system in Chromium, and React Aria skips an item without one; so
+    // the item says it is a file.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+    DataTransferItem.prototype.webkitGetAsEntry = function (
+      this: DataTransferItem,
+    ) {
+      return (
+        entryOf.call(this) ??
+        ({ isFile: true, isDirectory: false } as FileSystemEntry)
+      );
+    };
+    const transfer = new DataTransfer();
+    for (const file of given) {
+      transfer.items.add(new File([file.text], file.name));
+    }
+    return transfer;
+  }, files);
+  const target = openButton(page);
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await target.dispatchEvent(type, { dataTransfer });
+  }
+}
+
+async function expectNoViolations(
+  makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
+): Promise<void> {
+  expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
+}
+
+/** The count of panel's 1,200 variants on its one chromosome, done. */
+async function expectPanelCounted(page: Page): Promise<void> {
+  await expect(
+    count(page).getByText("1,200 variants on 1 chromosome.", { exact: true }),
+  ).toBeVisible();
+  const table = count(page).getByRole("table", {
+    name: "Variants on each chromosome",
+  });
+  await expect(table.getByRole("row")).toHaveCount(2);
+  await expect(
+    table.getByRole("row", { name: "1 1,200" }).getByRole("rowheader"),
+  ).toHaveText("1");
+}
+
+test("OV2 the page opens with the button, the hint and the options of a VCF, and no summary", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+
+  await expect(page).toHaveTitle("Population genetics · popnei web");
+  await expect(openButton(page)).toHaveText("Open a variants file…");
+  await expect(
+    opening(page).getByText("Drop a VCF or a .nei file here, or open one."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Ploidy of the VCF, from 1 to 255" }),
+  ).toHaveValue("2");
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Only the variants with PASS or . in the FILTER column",
+    }),
+  ).toBeChecked();
+  await expect(summary(page)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 panel.vcf.gz shows its individuals, the ploidy given and its variants on each chromosome, then panel.nei its own", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+
+  await expect(summary(page).getByText("panel.vcf.gz")).toBeVisible();
+  const facts = summary(page).getByRole("listitem");
+  await expect(facts).toHaveText([
+    /^VCF · /u,
+    "200 individuals",
+    "Ploidy 2, as given to read the VCF",
+    "Only the variants with PASS or . in the FILTER column were read",
+  ]);
+  await expectPanelCounted(page);
+  // The read and the count, said together when they end within the
+  // pause of the region.
+  await expect(page.getByRole("status")).toHaveText([
+    "",
+    /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.$/u,
+  ]);
+  await expect(openButton(page)).toHaveText("Open another variants file…");
+  await expectNoViolations(makeAxeBuilder);
+
+  await pick(page, join(FIXTURES, "panel.nei"));
+
+  await expect(summary(page).getByText("panel.nei")).toBeVisible();
+  await expect(facts).toHaveText([
+    /^\.nei file · /u,
+    "200 individuals",
+    "Ploidy 2, as the file says",
+  ]);
+  await expectPanelCounted(page);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "bad.vcf"));
+
+  await expect(
+    opening(page).getByText(
+      "popnei could not read bad.vcf: the source is not a VCF: it starts with `This is a line o`. Open another file.",
+    ),
+  ).toBeVisible();
+  await expect(summary(page)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the position that is not a number", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "bad_position.vcf.gz"));
+
+  await expect(
+    count(page).getByText(
+      "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
+    ),
+  ).toBeVisible();
+  // popnei's refusal comes again for the same file, so no Count again.
+  await expect(
+    count(page).getByRole("button", { name: "Count again" }),
+  ).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 a new ploidy reads the VCF again, and the summary says the ploidy given", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expectPanelCounted(page);
+
+  const ploidy = page.getByRole("textbox", {
+    name: "Ploidy of the VCF, from 1 to 255",
+  });
+  await ploidy.fill("4");
+  await ploidy.press("Enter");
+
+  await expect(
+    summary(page).getByText("Ploidy 4, as given to read the VCF"),
+  ).toBeVisible();
+  await expectPanelCounted(page);
+
+  await page
+    .getByText("Only the variants with PASS or . in the FILTER column", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    summary(page).getByText(
+      "Every variant was read, whatever its FILTER column",
+    ),
+  ).toBeVisible();
+  await expectPanelCounted(page);
+});
+
+test("OV2 a dropped file of another kind, and several files at once, are not opened, and the page says why", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+
+  await drop(page, [{ name: "panel_pops.csv", text: pops }]);
+
+  const notOpened =
+    "panel_pops.csv was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.";
+  await expect(opening(page).getByText(notOpened)).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText(["", notOpened]);
+  await expect(summary(page)).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+
+  await drop(page, [
+    { name: "a.vcf", text: "" },
+    { name: "b.vcf", text: "" },
+  ]);
+  await expect(
+    opening(page).getByText("Open one variants file at a time."),
+  ).toBeVisible();
+  await expect(opening(page).getByText(notOpened)).toHaveCount(0);
+});
+
+test("OV2 a count stopped says so, and Count again counts the variants", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  // A VCF written for the test, whose pass lasts seconds, so that Stop is
+  // pressed while it reads (testing.md, "The walking skeleton, as a
+  // flow").
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stop.vcf.gz");
+  await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+  await openPage(page);
+  await pick(page, vcf);
+
+  const bar = count(page).getByRole("progressbar", {
+    name: "Calculating the variants on each chromosome",
+  });
+  await expect(bar).toBeVisible({ timeout: 30_000 });
+  const stop = count(page).getByRole("button", { name: "Stop" });
+  await stop.click();
+
+  await expect(
+    count(page).getByText(
+      "Counting the variants was stopped. Count again to see them.",
+    ),
+  ).toBeVisible();
+  const again = count(page).getByRole("button", { name: "Count again" });
+  // One button in one place: the focus stays on it.
+  await expect(again).toBeFocused();
+  await expect(bar).toHaveCount(0);
+  await expectNoViolations(makeAxeBuilder);
+
+  await again.click();
+  await expect(
+    count(page).getByText(
+      `${STOP_VCF_VARIANTS.toLocaleString("en-US")} variants on`,
+    ),
+  ).toBeVisible({ timeout: 60_000 });
+  // The button gone with the focus on it, the focus is on the heading of
+  // the count, not on the top of the page.
+  await expect(
+    count(page).getByRole("heading", { level: 3, name: "Variants" }),
+  ).toBeFocused();
+});

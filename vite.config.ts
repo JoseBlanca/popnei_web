@@ -118,6 +118,7 @@ export default defineConfig(({ mode }) => {
           index: page("index"),
           probe: page("probe"),
           popgen: page("popgen"),
+          popgen2: page("popgen2"),
         },
     // The second build writes beside the site, under dist/e2e/ alone: it
     // keeps what the first wrote and does not copy public/ again.

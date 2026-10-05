@@ -154,7 +154,11 @@ export function ErrorBar({
   const line =
     first === null ? null : (
       <p className={classOf(styles, "message")}>
-        {barText(first.message, store !== null, saveFailed)}
+        {barText(
+          first.message,
+          store === null ? "starting" : saving === null ? "noSaving" : "saving",
+          saveFailed,
+        )}
       </p>
     );
 

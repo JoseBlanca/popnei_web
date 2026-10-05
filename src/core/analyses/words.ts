@@ -28,7 +28,8 @@ import type { Warning } from "../store.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
-const EMPTY_SOURCE = "the pass gave no variant and its source holds none";
+export const EMPTY_SOURCE =
+  "the pass gave no variant and its source holds none";
 
 /** The start of popnei's refusal of a pass that gave no variant from a
     source that held some: with its colon, which the refusal of a source
@@ -49,7 +50,7 @@ const OTHER_PLOIDY =
 
 /** The start of popnei's refusals of a gzipped VCF damaged or cut
     short. */
-const BGZIP_REFUSAL = "the VCF was written by bgzip";
+export const BGZIP_REFUSAL = "the VCF was written by bgzip";
 
 /** What to change for a calculation that depends on the settings to be
     offered again after a refusal for another reason, the diversity's

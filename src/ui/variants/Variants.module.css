@@ -1,0 +1,64 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The opening and the summary: a heading and its parts, one under the
+   other. */
+.section {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.subheading {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+/* The options of a VCF, under the zone. */
+.options {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding-block-start: var(--space-2);
+}
+
+/* The count of the variants: its heading, its words or its table, and
+   its button. */
+.count {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.fileName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}

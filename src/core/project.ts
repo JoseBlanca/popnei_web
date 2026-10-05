@@ -1892,6 +1892,29 @@ export function variantsStepNeeds(p: Project): string | null {
     : variantsReadNeeds(p.variants, VARIANTS_STEP_ENDS);
 }
 
+/** The ends of a reason of the variants file on the page that opens it,
+    popgen2.html, beside its button "Open another variants file…", which
+    has no project to save before a reload. */
+const VARIANTS_OPEN_ENDS: ReasonEnds = {
+  refused: "Open another file.",
+  again: "Open it again.",
+  reload: (fileName) => `Reload the page and open ${fileName} again.`,
+};
+
+/**
+ * The reason of the variants file being read or not read, in the words
+ * of the page that opens it, popgen2.html, or `null` when the project has
+ * no variants file or its file is read: those of `variantsStepNeeds`,
+ * with "Open another file." after a refusal of popnei, "Open it again."
+ * after a failure that a new load mends, and a reload with no project to
+ * save after one that only a new page mends.
+ */
+export function variantsOpenNeeds(p: Project): string | null {
+  return p.variants === null
+    ? null
+    : variantsReadNeeds(p.variants, VARIANTS_OPEN_ENDS);
+}
+
 /** What each application calls its individuals file, as the owner
     decided on 25 September 2026 (point P of
     docs/specs/stage-2-open-points.md). */

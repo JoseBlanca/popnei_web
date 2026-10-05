@@ -113,14 +113,20 @@ describe("WS9 the Save of the error bar", () => {
   });
 
   test("the first line of the bar: intact, not saved, and as the page started", () => {
-    expect(barText("test.", true, false)).toBe(
+    expect(barText("test.", "saving", false)).toBe(
       "The application met an error of its own: test. Your project is intact: save it, then reload the page.",
     );
-    expect(barText("test", true, true)).toBe(
+    expect(barText("test", "saving", true)).toBe(
       "The application met an error of its own: test. Your project could not be saved; copy the details and report them.",
     );
-    expect(barText("test", false, false)).toBe(
+    expect(barText("test", "starting", false)).toBe(
       "The application met an error of its own as it started: test. Reload the page.",
+    );
+  });
+
+  test("the first line of the bar on a page that saves no project: reload, and open the file again", () => {
+    expect(barText("test.", "noSaving", false)).toBe(
+      "The application met an error of its own: test. Reload the page, and open your files again.",
     );
   });
 
