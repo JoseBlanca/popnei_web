@@ -4324,3 +4324,118 @@ test("popgen.html, its code not loaded", async ({ page }) => {
   ).toBeVisible();
   await save(page, "popgen-not-loaded-light");
 });
+
+/** Picks `file`, a fixture or a path, with the button of popgen2.html. */
+async function pickOnNewPage(page: Page, file: string): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^Open (a|another) variants file…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles(file.startsWith("/") ? file : join(FIXTURES, file));
+}
+
+/** The count of the variants on popgen2.html. */
+function newPageCount(page: Page): Locator {
+  return page
+    .getByRole("region", { name: "What the file holds" })
+    .getByRole("region", { name: "Variants" });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [null, 320] as const) {
+    const at = width === null ? "" : `-${String(width)}`;
+    test.describe(`popgen2.html, ${theme}${width === null ? "" : `, at ${String(width)} px`}`, () => {
+      test.beforeEach(async ({ page }) => {
+        await page.emulateMedia({
+          colorScheme: theme,
+          reducedMotion: "reduce",
+        });
+        if (width !== null) {
+          await page.setViewportSize({ width, height: 900 });
+        }
+        await page.goto("popgen2.html");
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Population genetics" }),
+        ).toBeVisible();
+      });
+
+      test("nothing opened", async ({ page }) => {
+        await save(page, `popgen2-empty${at}-${theme}`);
+      });
+
+      test("reading the file", async ({ page }) => {
+        // The wasm is held back, so the read waits for the calculation
+        // worker; the page was opened before, so it is fetched again.
+        await page.route("**/*.wasm", () => undefined);
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByText("1 second so far.")).toBeVisible();
+        await save(page, `popgen2-reading${at}-${theme}`);
+      });
+
+      test("counting the variants", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("count.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageCount(page).getByText(/^Calculating · \d+% · /u),
+        ).toBeVisible({ timeout: 30_000 });
+        await save(page, `popgen2-counting${at}-${theme}`);
+      });
+
+      test("the summary", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+        ).toBeVisible();
+        await save(page, `popgen2-summary${at}-${theme}`);
+      });
+
+      test("a file refused by its name", async ({ page }) => {
+        const chooser = page.waitForEvent("filechooser");
+        await page
+          .getByRole("button", { name: "Open a variants file…" })
+          .click();
+        await (await chooser).setFiles(join(FIXTURES, "panel_pops.csv"));
+        await expect(
+          page.getByText(/^panel_pops\.csv was not opened/u),
+        ).toBeVisible();
+        await save(page, `popgen2-name-refused${at}-${theme}`);
+      });
+
+      test("a file popnei could not read", async ({ page }) => {
+        await pickOnNewPage(page, "bad.vcf");
+        await expect(
+          page.getByText(/^popnei could not read bad\.vcf/u),
+        ).toBeVisible();
+        await save(page, `popgen2-not-read${at}-${theme}`);
+      });
+
+      test("a count that failed", async ({ page }) => {
+        await pickOnNewPage(page, "bad_position.vcf.gz");
+        await expect(
+          newPageCount(page).getByText(/^popnei could not read bad_position/u),
+        ).toBeVisible();
+        await save(page, `popgen2-count-failed${at}-${theme}`);
+      });
+
+      test("a count stopped", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("stop.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await newPageCount(page)
+          .getByRole("button", { name: "Stop" })
+          .click({ timeout: 30_000 });
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Count again" }),
+        ).toBeVisible();
+        await save(page, `popgen2-count-stopped${at}-${theme}`);
+      });
+    });
+  }
+}
