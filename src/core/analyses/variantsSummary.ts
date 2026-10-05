@@ -41,7 +41,7 @@ export interface ChromRow {
     it. */
 export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
-  app: Object.freeze(["popgen", "gwas"] as const),
+  app: Object.freeze(["popgen"] as const),
   defaults: Object.freeze({}),
   keyVersion: 1,
   filtersRead: Object.freeze({ variants: false, individuals: false }),

@@ -153,9 +153,9 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
     ).toThrow(/^popnei_web defect: /u);
   });
 
-  test("the definition reads no filter, and has no key input, no reason, no option and no warning", () => {
+  test("the definition is of population genetics alone, reads no filter, and has no key input, no reason, no option and no warning", () => {
     expect(variantsSummary.id).toBe("variantsSummary");
-    expect(variantsSummary.app).toEqual(["popgen", "gwas"]);
+    expect(variantsSummary.app).toEqual(["popgen"]);
     expect(variantsSummary.keyVersion).toBe(1);
     expect(variantsSummary.filtersRead).toEqual({
       variants: false,
