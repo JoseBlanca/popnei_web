@@ -7,10 +7,11 @@
  * of the chromosomes when it is done, the words of a count stopped or
  * refused, and Count again where a new count may give the numbers.
  */
-import { useId, useRef } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 
 import { chromRows } from "../../core/analyses/variantsSummary.ts";
 import { counted, escaped, grouped } from "../../core/project.ts";
+import type { SourceRead, VariantSource } from "../../core/project.ts";
 import type { AnalysisError, AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
@@ -52,21 +53,66 @@ export interface VariantsSummaryProps {
       a count stopped from one not yet started. */
   readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the summary
-      goes while its Stop or Count again had it. */
+      goes while the focus is in it. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
 }
 
 /** The summary of the variants file; nothing until a file is read. */
-export function VariantsSummary({
+export function VariantsSummary(
+  props: VariantsSummaryProps,
+): React.JSX.Element | null {
+  const variants = useAppState((s) => s.project.variants);
+  if (variants?.read.kind !== "read") return null;
+  // Another load is another summary, so that the one before goes, with
+  // the focus it held.
+  return (
+    <Summary
+      key={variants.fileId}
+      {...props}
+      variants={variants}
+      read={variants.read}
+    />
+  );
+}
+
+/** What the summary of a file read is drawn with. */
+interface SummaryProps extends VariantsSummaryProps {
+  /** The file. */
+  readonly variants: VariantSource;
+  /** Its read. */
+  readonly read: Extract<SourceRead, { readonly kind: "read" }>;
+}
+
+/** The summary of one load of the file, read. */
+function Summary({
   autoRuns,
   openButton,
-}: VariantsSummaryProps): React.JSX.Element | null {
-  const variants = useAppState((s) => s.project.variants);
+  variants,
+  read,
+}: SummaryProps): React.JSX.Element {
   const heading = useId();
-  if (variants?.read.kind !== "read") return null;
-  const read = variants.read;
+  const sectionRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    // The open button is one element whatever the zone holds.
+    const button = openButton.current;
+    return () => {
+      // The summary goes, a new file dropped or read again, while the
+      // focus is in it, on its Stop, its Count again or the heading of
+      // its count: the focus goes to the open button, not to the top of
+      // the page. The cleanup of a layout effect runs while the section
+      // is still in the page.
+      if (section?.contains(document.activeElement) === true) {
+        button?.focus();
+      }
+    };
+  }, [openButton]);
   return (
-    <section aria-labelledby={heading} className={classOf(styles, "section")}>
+    <section
+      ref={sectionRef}
+      aria-labelledby={heading}
+      className={classOf(styles, "section")}
+    >
       <h2 id={heading} className={classOf(styles, "heading")}>
         {SUMMARY_HEADING}
       </h2>
@@ -81,27 +127,19 @@ export function VariantsSummary({
           )}
         </ul>
       </div>
-      <Count
-        autoRuns={autoRuns}
-        openButton={openButton}
-        fileId={variants.fileId}
-      />
+      <Count autoRuns={autoRuns} />
     </section>
   );
 }
 
 /** What the count is drawn with. */
-interface CountProps extends VariantsSummaryProps {
-  /** The load of the file the summary is of. */
-  readonly fileId: string;
+interface CountProps {
+  /** As the summary's. */
+  readonly autoRuns: AutoRuns;
 }
 
 /** The count of the variants, in each of its states. */
-function Count({
-  autoRuns,
-  openButton,
-  fileId,
-}: CountProps): React.JSX.Element {
+function Count({ autoRuns }: CountProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
@@ -140,15 +178,10 @@ function Count({
             onRun={again}
             onStop={stop}
             onGone={() => {
-              // The summary stays while its file is the one read; when it
-              // goes, a new file dropped or a read again, its heading goes
-              // with it, and the focus goes to the open button.
-              const now = store.getState().project.variants;
-              if (now?.fileId === fileId && now.read.kind === "read") {
-                headingRef.current?.focus();
-              } else {
-                openButton.current?.focus();
-              }
+              // The button went, the count done, and the summary stays:
+              // when the summary goes, its own cleanup has already moved
+              // the focus to the open button.
+              headingRef.current?.focus();
             }}
           />
         </div>

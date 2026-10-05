@@ -309,6 +309,13 @@ test("OV2 a count stopped says so, and Count again counts the variants", async (
   await expect(
     count(page).getByRole("heading", { level: 3, name: "Variants" }),
   ).toBeFocused();
+
+  // A file dropped with the mouse removes the summary, and its heading
+  // with the focus: the focus goes to the open button, not to the top.
+  const nei = await readFile(join(FIXTURES, "panel.nei"));
+  await drop(page, [{ name: "panel.nei", bytes: [...nei] }]);
+  await expect(summary(page).getByText("panel.nei")).toBeVisible();
+  await expect(openButton(page)).toBeFocused();
 });
 
 /** The field of the ploidy. */
