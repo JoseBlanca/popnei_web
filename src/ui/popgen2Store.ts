@@ -1,15 +1,16 @@
 /**
  * The store of the new page of population genetics, popgen2.html
- * (docs/plans/open-variants.md, "A new page, beside the old one"): an
- * empty project, the analyses of `POPGEN2_ANALYSES`, and no counts of
+ * (docs/plans/open-variants.md, "A new page, beside the old one"): the
+ * first project of the old page, with the missing data filter on at 0.1
+ * as docs/functionality.md has it, which the summary does not read, the
+ * analyses of `POPGEN2_ANALYSES`, and no counts of
  * the filters, no statistics of each individual and no writing, which
  * the page does not have yet. Apart from the entry, so that a test in
  * node makes the store with what the page gives it.
  */
-import { POPGEN2_ANALYSES, countsOf } from "../core/apps.ts";
+import { POPGEN2_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
-import { emptyProject } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
@@ -28,7 +29,7 @@ export function createPopgen2Store(
   deps: Popgen2StoreDeps,
 ): Store<JobResult, Blob> {
   return createStore<Job, JobResult, Blob>({
-    first: emptyProject("popgen"),
+    first: firstProject("popgen"),
     analyses: POPGEN2_ANALYSES,
     send: deps.send,
     countsOf,

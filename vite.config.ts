@@ -41,20 +41,28 @@ const GUARD_MARK = "<!-- the start guard -->";
  * Puts the start guard, `src/ui/startGuard.js`, inline where a page has
  * the comment `GUARD_MARK`, so that the pages of the applications share
  * one guard that still runs before their code and needs no request of
- * its own (docs/specs/entry.md, "The page"). The file is read at the
- * start of the server or the build.
+ * its own (docs/specs/entry.md, "The page"). The file is read for each
+ * page, so that an edit reaches the dev server; a page whose entry is
+ * under src/ui/ and has no comment stops the build.
  */
 function startGuard(): Plugin {
-  const source = readFileSync(
-    resolve(import.meta.dirname, "src/ui/startGuard.js"),
-    { encoding: "utf8" },
-  );
+  const path = resolve(import.meta.dirname, "src/ui/startGuard.js");
   return {
     name: "popnei-web-start-guard",
     transformIndexHtml: {
       order: "pre",
-      handler: (html) =>
-        html.replace(GUARD_MARK, () => `<script>\n${source}</script>`),
+      handler: (html, context) => {
+        // A page of the applications, whose entry is under src/ui/, needs
+        // the guard, and the build stops when its comment is missing.
+        if (html.includes('src="/src/ui/') && !html.includes(GUARD_MARK)) {
+          throw new Error(
+            `${context.path} loads the application and has no ${GUARD_MARK}.`,
+          );
+        }
+        // Read at each page, so that an edit reaches the dev server.
+        const source = readFileSync(path, { encoding: "utf8" });
+        return html.replace(GUARD_MARK, () => `<script>\n${source}</script>`);
+      },
     },
   };
 }
@@ -130,6 +138,32 @@ export default defineConfig(({ mode }) => {
     build: {
       target: ["chrome111", "edge111", "firefox115", "safari16.4"],
       ...(testPagesOnly && { emptyOutDir: false, assetsDir: "e2e/assets" }),
+      // The code two pages or more share goes into chunks named for what
+      // they hold, rather than one the bundler names after a module in it:
+      // React, which the probe shares too, and what the two pages of
+      // population genetics share, our store, client and widgets with
+      // React Aria. A helper of the bundler is left to the bundler.
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: (id: string) =>
+                  /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/u.test(
+                    id,
+                  )
+                    ? "react"
+                    : /[\\/](node_modules|src[\\/](core|ui|worker|charts))[\\/]/u.test(
+                          id,
+                        )
+                      ? "shared"
+                      : null,
+                minShareCount: 2,
+              },
+            ],
+          },
+        },
+      },
     },
     // A module worker, not the default, "iife" (worker.md).
     worker: { format: "es" },

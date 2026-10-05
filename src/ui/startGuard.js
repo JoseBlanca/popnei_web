@@ -11,8 +11,10 @@
 // over with remove().
 (function () {
   "use strict";
-  // toSorted, of Chrome 110, Firefox 115 and Safari 16, which the core
-  // calls; the closest single test of the floor (docs/specs/entry.md).
+  // toSorted, which the core calls and which Chrome 110, Firefox 115 and
+  // Safari 16 were the first to have, by MDN: the closest single test of
+  // the floor of the message, Chrome 111 and Safari 16.4, which a Chrome
+  // 110 or a Safari before 16.4 passes (docs/specs/entry.md).
   var tooOld = typeof Array.prototype.toSorted !== "function";
   var TOO_OLD =
     "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.";
