@@ -24,7 +24,7 @@ import type {
   Run,
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
-import { defect, parseNoOptions } from "./words.ts";
+import { defect, parseNoOptions, pythonOpenVariants } from "./words.ts";
 
 /** The id of the analysis. */
 const ID = "variantsSummary";
@@ -126,12 +126,7 @@ function script(p: Project): string {
       "the script of the summary of the variants file needs a file.",
     );
   }
-  const name = JSON.stringify(variants.name);
-  const options = variants.readOptions;
-  const open =
-    options === null
-      ? `popnei.open_vars(${name})`
-      : `popnei.open_vcf(${name}, ploidy=${String(options.ploidy)}, only_passed=${options.onlyPassed ? "True" : "False"})`;
+  const open = pythonOpenVariants(variants);
   return [
     "# The variants of the file on each chromosome, one window per chromosome",
     `variants_as_read = ${open}`,

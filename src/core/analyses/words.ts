@@ -22,7 +22,7 @@ import {
   shown,
 } from "../project.ts";
 import { populationsColumnOf } from "../populations.ts";
-import type { Project } from "../project.ts";
+import type { Project, VariantSource } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
 
@@ -570,6 +570,23 @@ export function parseNoOptions(options: unknown): Result<JsonObject, string> {
     !Array.isArray(options) &&
     Reflect.ownKeys(options).length === 0;
   return isEmpty ? { ok: true, value: {} } : { ok: false, error: NO_OPTION };
+}
+
+/**
+ * The call of popnei's Python that opens the variants file again, for the
+ * lines of the Python script of an analysis: `popnei.open_vars` for a
+ * `.nei` file, and `popnei.open_vcf` with the ploidy and `only_passed` of
+ * the read options for a VCF; the name is written as JSON quotes it,
+ * which Python reads as the same text.
+ */
+export function pythonOpenVariants(
+  variants: Pick<VariantSource, "name" | "readOptions">,
+): string {
+  const name = JSON.stringify(variants.name);
+  const read = variants.readOptions;
+  return read === null
+    ? `popnei.open_vars(${name})`
+    : `popnei.open_vcf(${name}, ploidy=${String(read.ploidy)}, only_passed=${read.onlyPassed ? "True" : "False"})`;
 }
 
 /** An error for a state the code makes impossible. */

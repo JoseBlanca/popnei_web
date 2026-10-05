@@ -59,6 +59,7 @@ import {
   defect,
   emptySourceText,
   ldOrderText,
+  pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
 import type { LdFilterWords } from "./words.ts";
@@ -695,12 +696,7 @@ function script(p: Project): string {
   }
   const o = pcaOptions(p);
   const filters = jobFilters(pcaFilters(p.filters, o));
-  const name = JSON.stringify(variants.name);
-  const read = variants.readOptions;
-  const open =
-    read === null
-      ? `popnei.open_vars(${name})`
-      : `popnei.open_vcf(${name}, ploidy=${String(read.ploidy)}, only_passed=${read.onlyPassed ? "True" : "False"})`;
+  const open = pythonOpenVariants(variants);
   const kept = PCA_NUM_COMPS_KEPT;
   const prints = (result: string): string[] => [
     `print(${result}.explained_variance_percent.iloc[:${String(kept)}].to_string())`,

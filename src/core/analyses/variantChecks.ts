@@ -37,6 +37,7 @@ import {
   histogramDescription,
   orNull,
   parseNoOptions,
+  pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
@@ -278,12 +279,7 @@ function script(p: Project): string {
   if (variants === null) {
     throw defect("the script of the histograms of the variants needs a file.");
   }
-  const name = JSON.stringify(variants.name);
-  const options = variants.readOptions;
-  const open =
-    options === null
-      ? `popnei.open_vars(${name})`
-      : `popnei.open_vcf(${name}, ploidy=${String(options.ploidy)}, only_passed=${options.onlyPassed ? "True" : "False"})`;
+  const open = pythonOpenVariants(variants);
   const [low, high] = VARIANT_RANGE;
   return [
     "# The histograms of the variants, over every variant of the file and the individuals kept",
