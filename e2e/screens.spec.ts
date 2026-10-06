@@ -4337,11 +4337,10 @@ async function pickOnNewPage(page: Page, file: string): Promise<void> {
   ).setFiles(file.startsWith("/") ? file : join(FIXTURES, file));
 }
 
-/** The count of the variants on popgen2.html. */
+/** The box of the file open on popgen2.html, which holds the count of
+    its variants. */
 function newPageCount(page: Page): Locator {
-  return page
-    .getByRole("region", { name: "What the file holds" })
-    .getByRole("region", { name: "Variants" });
+  return page.getByRole("region", { name: "File information" });
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -4390,7 +4389,7 @@ for (const theme of ["light", "dark"] as const) {
       test("the summary", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+          newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await save(page, `popgen2-summary${at}-${theme}`);
       });
@@ -4398,7 +4397,7 @@ for (const theme of ["light", "dark"] as const) {
       test("a .nei summary", async ({ page }) => {
         await pickOnNewPage(page, "panel.nei");
         await expect(
-          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+          newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         await save(page, `popgen2-nei-summary${at}-${theme}`);
       });
@@ -4411,6 +4410,20 @@ for (const theme of ["light", "dark"] as const) {
           page.getByText(/^panel_pops\.csv was not opened/u),
         ).toBeVisible();
         await save(page, `popgen2-name-refused${at}-${theme}`);
+      });
+
+      test("a file refused by its name while another is open", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(
+          newPageCount(page).getByText("Chromosomes: 1"),
+        ).toBeVisible();
+        await pickOnNewPage(page, "panel_pops.csv");
+        await expect(
+          page.getByText(/^panel_pops\.csv was not opened/u),
+        ).toBeVisible();
+        await save(page, `popgen2-name-refused-open${at}-${theme}`);
       });
 
       test("a file popnei could not read", async ({ page }) => {
@@ -4446,7 +4459,7 @@ for (const theme of ["light", "dark"] as const) {
       test("a ploidy refused", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageCount(page).getByText("1,200 variants on 1 chromosome."),
+          newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
         const ploidy = page.getByRole("textbox", {
           name: "Default ploidy",

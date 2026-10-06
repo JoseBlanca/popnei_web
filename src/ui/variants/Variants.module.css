@@ -1,21 +1,11 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The opening and the summary: a heading and its parts, one under the
-   other. */
+/* The opening: the zone and the place of a ploidy refused, one under
+   the other. */
 .section {
   display: grid;
   gap: var(--space-3);
   align-content: start;
-}
-
-.heading {
-  margin: 0;
-  font-size: var(--text-lg);
-}
-
-.subheading {
-  margin: 0;
-  font-size: var(--text-base);
 }
 
 /* The place of the line of a ploidy refused, under the zone: no box of
@@ -24,30 +14,52 @@
   display: contents;
 }
 
-/* The count of the variants: its heading, its words or its table, and
-   its button. */
-.count {
+/* The box of the file, and the table of its chromosomes under it. */
+.info {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
   justify-items: start;
 }
 
-.card {
+/* The box of the file: a solid border, where the zone's is dashed. */
+.box {
+  display: grid;
+  gap: var(--space-2);
+  justify-self: stretch;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* The lines of one load of the file, one under the other. */
+.lines {
   display: grid;
   gap: var(--space-1);
+}
+
+/* The lines of the variants and the chromosomes, or what stands in their
+   place, and Count again or Stop under them. */
+.count {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+/* Count again or Stop, a little apart from the lines above it. */
+.countButton {
+  padding-block: var(--space-1);
+}
+
+.count:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .fileName {
   margin: 0;
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-
-.facts {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-variant-numeric: tabular-nums;
 }
 
 .line {

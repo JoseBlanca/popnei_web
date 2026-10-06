@@ -1,31 +1,34 @@
 /**
  * The opening of the variants file on popgen2.html
- * (docs/plans/open-variants.md, "Two widgets"; the owner's layout of 6
+ * (docs/plans/open-variants.md, "Two widgets"; the owner's layouts of 6
  * October 2026): one widget, a zone that also takes a dropped or pasted
  * file, with the button "Open variants file…" and, on its row, the
  * default ploidy a VCF is read with; under them the box of the passed
- * variants, then one line on the file open, being read or not opened.
- * The two options apply before a file is opened, and their change reads
- * an open VCF again. Below the zone, a ploidy the field refused and what
- * went wrong with an opening: a file refused by its name, several files
- * at once, a file popnei could not read. Nothing that changes as the
- * ploidy field loses the focus is above or beside the box or the
- * button, so that the click that takes the focus from it is not lost.
+ * variants. The two options apply before a file is opened, and their
+ * change reads an open VCF again. Below the zone, a ploidy the field
+ * refused. The words of a file it did not open go to the page, which
+ * shows them in the box of the file above the zone.
+ *
+ * Nothing above or beside the button and the box of the passed variants
+ * may move as the ploidy field loses the focus, or the press that takes
+ * the focus from it would be lost: the box of the file above them
+ * changes when the file is read again. So a change of the options made
+ * during a press of the pointer on the widget reads the file again once
+ * the press, and the click it gives, have ended.
+ *
  * It reads the project from the store and sends it the commands of the
  * Variants step; what it holds itself is the options the user last set,
- * kept when a `.nei` file is opened, and the words of a file it did not
- * open.
+ * kept when a `.nei` file is opened.
  */
 import { useRef, useState } from "react";
 
-import { MAX_PLOIDY, escaped, variantsOpenNeeds } from "../../core/project.ts";
+import { MAX_PLOIDY } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { pickCommand, readAgainCommand } from "../steps/variants/commands.ts";
-import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
 import {
   DEFAULT_READ_OPTIONS,
   ONLY_PASSED_LABEL,
@@ -37,7 +40,6 @@ import { useAppState, useStore } from "../store.tsx";
 import { Checkbox } from "../widgets/Checkbox.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
-import { Problem } from "../widgets/Problem.tsx";
 import styles from "./Variants.module.css";
 import {
   DEFAULT_PLOIDY_LABEL,
@@ -49,7 +51,6 @@ import {
   SEVERAL_DROPPED,
   TEXT_DROPPED,
   notOpenedText,
-  openLine,
 } from "./words.ts";
 
 /** What the page says of a drop, or a paste, that is not of one file. */
@@ -60,8 +61,10 @@ const NOT_FILES_WORDS = {
 } as const;
 
 /** The words of a file the page did not open, with the load that was
-    open when they were said, by its id, or `null` with none. */
-interface Refusal {
+    open when they were said, by its id, or `null` with none: they are
+    shown until the next opening, or until that load is no longer the
+    project's. */
+export interface Refusal {
   readonly text: string;
   readonly forLoad: string | null;
 }
@@ -71,17 +74,20 @@ export interface OpenVariantsProps {
   /** The element of the open button, for the page to move the focus to
       it when the summary goes. */
   readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
+  /** Called with the words of a file not opened, and with `null` when an
+      opening or a new read makes them out of date. */
+  readonly onRefusal: (refusal: Refusal | null) => void;
 }
 
 /** The section that opens the variants file. */
 export function OpenVariants({
   buttonRef,
+  onRefusal,
 }: OpenVariantsProps): React.JSX.Element {
   const store = useStore();
   const files = useFiles();
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
-  const reason = useAppState((s) => variantsOpenNeeds(s.project));
 
   // The options the user last set, for the next VCF and for a VCF open;
   // a .nei file opened keeps them, since it has its own ploidy. The ref
@@ -93,20 +99,18 @@ export function OpenVariants({
   // for it, and the file open before is not read again.
   const opening = useRef(false);
 
+  // Whether a press of the pointer that started on the widget has not
+  // yet ended, and whether the options changed during it.
+  const pressing = useRef(false);
+  const changedInPress = useRef(false);
+
   // The element the line of a ploidy refused is drawn into, once drawn.
   const [ploidyRefusedIn, setPloidyRefusedIn] = useState<HTMLElement | null>(
     null,
   );
 
-  // The words of a file not opened, until the next opening, or until the
-  // load they were said beside is no longer the project's.
-  const [refusal, setRefusal] = useState<Refusal | null>(null);
-  const forLoad = variants?.fileId ?? null;
-  const refusalText =
-    refusal !== null && refusal.forLoad === forLoad ? refusal.text : null;
-
   const refuse = (text: string): void => {
-    setRefusal({
+    onRefusal({
       text,
       forLoad: store.getState().project.variants?.fileId ?? null,
     });
@@ -127,16 +131,18 @@ export function OpenVariants({
       refuse(notOpenedText(file.name));
       return;
     }
-    setRefusal(null);
+    onRefusal(null);
     // A number still being typed in the ploidy is committed first, for
     // the new file, since a file dropped from the desktop leaves the
-    // focus in the field; the file it replaces is not read again.
+    // focus in the field; the file it replaces is not read again, nor
+    // after a press.
     opening.current = true;
     try {
       commitPloidy.current?.();
     } finally {
       opening.current = false;
     }
+    changedInPress.current = false;
     const load: VariantLoad = {
       fileId: files.addFile(file),
       name: file.name,
@@ -148,31 +154,66 @@ export function OpenVariants({
     store.apply(step.description, step.command);
   };
 
-  /** The options changed to `next`: kept for the next VCF, and an open
-      VCF is read again with them, the same file under a new load, unless
-      a new file is being opened. */
-  const change = (next: VcfReadOptions): void => {
-    optionsNow.current = next;
-    setOptions(next);
-    if (opening.current) return;
+  /** An open VCF read again with the options the user last set, the same
+      file under a new load. */
+  const readAgain = (): void => {
     const open = store.getState().project.variants;
     const file = open === null ? null : files.fileOf(open.fileId);
     if (open?.format !== "vcf" || file === null) return;
-    setRefusal(null);
+    onRefusal(null);
     const step = readAgainCommand({
       fileId: files.addFile(file),
       name: open.name,
       size: open.size,
       format: "vcf",
-      readOptions: next,
+      readOptions: optionsNow.current,
     });
     store.apply(step.description, step.command);
   };
 
-  const failed = variants?.read.kind === "failed";
+  /** The options changed to `next`: kept for the next VCF, and an open
+      VCF is read again with them, unless a new file is being opened; at
+      once, or, during a press, once it has ended. */
+  const change = (next: VcfReadOptions): void => {
+    optionsNow.current = next;
+    setOptions(next);
+    if (opening.current) return;
+    if (pressing.current) {
+      changedInPress.current = true;
+      return;
+    }
+    readAgain();
+  };
+
+  /** A press of the pointer starts on the widget, before the field loses
+      the focus to it. It ends with the task after the pointer is
+      released, which gives the click first; or when the browser cancels
+      it. Then the file is read again if the options changed during it, a
+      ploidy committed, the box ticked. */
+  const pressStarts = (): void => {
+    if (pressing.current) return;
+    pressing.current = true;
+    const ends = (): void => {
+      window.removeEventListener("pointerup", ends, true);
+      window.removeEventListener("pointercancel", ends, true);
+      setTimeout(() => {
+        pressing.current = false;
+        if (changedInPress.current) {
+          changedInPress.current = false;
+          readAgain();
+        }
+      });
+    };
+    window.addEventListener("pointerup", ends, true);
+    window.addEventListener("pointercancel", ends, true);
+  };
 
   return (
-    <section aria-label={OPENING_NAME} className={classOf(styles, "section")}>
+    <section
+      aria-label={OPENING_NAME}
+      className={classOf(styles, "section")}
+      onPointerDownCapture={pressStarts}
+    >
       <FileZone
         pasteLabel={PASTE_LABEL}
         buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
@@ -204,43 +245,19 @@ export function OpenVariants({
           />
         }
         status={
-          <>
-            <Checkbox
-              label={ONLY_PASSED_LABEL}
-              isSelected={options.onlyPassed}
-              onChange={(onlyPassed) => {
-                change({ ...optionsNow.current, onlyPassed });
-              }}
-            />
-            {/* Under the button and the box, since a read starts as the
-                ploidy is committed when the focus leaves it, and
-                "Reading …" and "… is open." wrap at different widths:
-                above them, the line would move them from under a click.
-                None before a file is opened. */}
-            {variants !== null && (
-              <p className={classOf(styles, "line")}>
-                {variants.read.kind === "pending" ? (
-                  <>
-                    {`Reading ${escaped(variants.name)}.`}{" "}
-                    <ReadingTime
-                      key={variants.fileId}
-                      className={classOf(styles, "mutedText")}
-                    />
-                  </>
-                ) : (
-                  openLine(variants)
-                )}
-              </p>
-            )}
-          </>
+          <Checkbox
+            label={ONLY_PASSED_LABEL}
+            isSelected={options.onlyPassed}
+            onChange={(onlyPassed) => {
+              change({ ...optionsNow.current, onlyPassed });
+            }}
+          />
         }
       />
       {/* The line of a ploidy refused, drawn here and not under the
           field, where, appearing as the field loses the focus to a click
           on the box or the button, it would move them from under it. */}
       <div ref={setPloidyRefusedIn} className={classOf(styles, "slot")} />
-      {refusalText !== null && <Problem>{refusalText}</Problem>}
-      {failed && reason !== null && <Problem>{reason}</Problem>}
     </section>
   );
 }

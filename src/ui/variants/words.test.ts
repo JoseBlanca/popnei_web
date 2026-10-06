@@ -5,14 +5,17 @@ import type { Project } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
 import {
+  chromosomesLine,
   countAgainMends,
   countedText,
   countingText,
   failedText,
+  individualsLine,
+  nameAndSizeText,
   notOpenedText,
-  passedLine,
   ploidyLine,
   refusalText,
+  variantsLine,
 } from "./words.ts";
 
 /** A project with a VCF of the name `name`, read with `readOptions`. */
@@ -36,14 +39,31 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the ploidy of a VCF is the one set in the field, the one it starts with told apart, and not checked against the genotypes; that of a .nei file the file's", () => {
-    expect(ploidyLine(2, { ploidy: 2, onlyPassed: true })).toBe(
-      "Ploidy 2, the Default ploidy the page starts with: a VCF does not give its ploidy, and this page does not check it against the genotypes",
-    );
+  test("the ploidy of a VCF is the one of the field Default ploidy, not checked against the genotypes; that of a .nei file the file's", () => {
     expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
-      "Ploidy 4, the Default ploidy set on this page: a VCF does not give its ploidy, and this page does not check it against the genotypes",
+      "Ploidy: 4 (the Default ploidy, not checked against the genotypes)",
     );
-    expect(ploidyLine(2, null)).toBe("Ploidy 2, as the file says");
+    expect(ploidyLine(2, null)).toBe("Ploidy: 2 (given by the file)");
+  });
+
+  test("the lines of the box of the file: its name and size, its individuals, variants and chromosomes, with their numbers grouped", () => {
+    const vcf = PASSED.variants;
+    if (vcf === null) throw new Error("the project of the test has no VCF");
+    expect(nameAndSizeText({ ...vcf, size: 1234567 })).toBe(
+      "panel.vcf.gz · 1.2 MB",
+    );
+    expect(individualsLine(1200)).toBe("Individuals: 1,200");
+    expect(chromosomesLine(1)).toBe("Chromosomes: 1");
+  });
+
+  test("the variants of a VCF read with only the passed ones say so, and the others are the number alone", () => {
+    expect(variantsLine(1200, { ploidy: 2, onlyPassed: true })).toBe(
+      "Variants: 1,200 (only those with PASS or . in the FILTER column)",
+    );
+    expect(variantsLine(1200, { ploidy: 2, onlyPassed: false })).toBe(
+      "Variants: 1,200",
+    );
+    expect(variantsLine(1200, null)).toBe("Variants: 1,200");
   });
 
   test("the line of a count under way says what is counted and that its time is elapsed", () => {
@@ -52,15 +72,6 @@ describe("the words of the page that opens a variants file", () => {
     );
     expect(countingText(null, 1)).toBe(
       "Counting the variants · 1 second so far",
-    );
-  });
-
-  test("the passed variants of a VCF, both ways", () => {
-    expect(passedLine({ ploidy: 2, onlyPassed: true })).toBe(
-      "Only the variants with PASS or . in the FILTER column were read",
-    );
-    expect(passedLine({ ploidy: 2, onlyPassed: false })).toBe(
-      "Every variant was read, whatever its FILTER column",
     );
   });
 

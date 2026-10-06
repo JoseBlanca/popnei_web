@@ -1,8 +1,8 @@
 /**
  * The words of the page that opens a variants file, popgen2.html
  * (docs/plans/open-variants.md, "Two widgets"): the button and the zone,
- * the files it does not open, the options of a VCF, the lines of what the
- * file holds, the count of its variants, the refusals and failures of
+ * the files it does not open, the options of a VCF, the lines of the box
+ * of the file open, the count of its variants, the refusals and failures of
  * that count, and what the status region says as the file is read and
  * counted. They are the page's own, since the words of the rest of the
  * application send the user to a Variants step this page does not have.
@@ -17,6 +17,7 @@ import {
 import {
   counted,
   escaped,
+  grouped,
   saying,
   shown,
   variantsOpenNeeds,
@@ -30,8 +31,7 @@ import type {
 } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
-import { DEFAULT_PLOIDY } from "../../core/apps.ts";
-import { ONLY_PASSED_LABEL, formatText } from "../steps/variants/words.ts";
+import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
@@ -66,48 +66,62 @@ export function notOpenedText(name: string): string {
   return `${escaped(name)} was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.`;
 }
 
-/** The line of the zone on the file open, read or not opened:
-    "panel.vcf.gz is open.", "bad.vcf is not open."; the line of a file
-    being read is drawn with its seconds by the zone. */
-export function openLine(variants: VariantSource): string {
-  return variants.read.kind === "read"
-    ? `${escaped(variants.name)} is open.`
-    : `${escaped(variants.name)} is not open.`;
+/** The name of the box of the file open, above the open button, which
+    has no heading: what a screen reader calls it, and the heading drawn
+    in its place when it fails. */
+export const INFO_NAME = "File information";
+
+/** The first line of the box: "panel.vcf.gz · 87 KB". */
+export function nameAndSizeText(variants: VariantSource): string {
+  return `${escaped(variants.name)} · ${sizeText(variants.size)}`;
 }
 
-/** The heading of the summary. */
-export const SUMMARY_HEADING = "What the file holds";
-
-/** The line of the format and the size: "VCF · 1.2 MB". */
-export function formatAndSizeText(variants: VariantSource): string {
-  return `${formatText(variants.format)} · ${sizeText(variants.size)}`;
+/** The line of the individuals: "Individuals: 200". */
+export function individualsLine(numIndividuals: number): string {
+  return `Individuals: ${grouped(numIndividuals)}`;
 }
+
+/** The line of the individuals while the file is read, before its
+    seconds. */
+export const READING_LINE = "Individuals: reading the file.";
+
+/** The line of the variants once counted, and for a VCF read with only
+    the passed ones, which: "Variants: 1,200 (only those with PASS or . in
+    the FILTER column)". */
+export function variantsLine(
+  numVars: number,
+  readOptions: VcfReadOptions | null,
+): string {
+  const line = `Variants: ${grouped(numVars)}`;
+  return readOptions?.onlyPassed === true
+    ? `${line} (only those with PASS or . in the FILTER column)`
+    : line;
+}
+
+/** The line of the chromosomes once counted: "Chromosomes: 1". */
+export function chromosomesLine(numChroms: number): string {
+  return `Chromosomes: ${grouped(numChroms)}`;
+}
+
+/** The lines of the variants and the chromosomes before their count. */
+export const VARIANTS_NOT_COUNTED = "Variants: not counted yet";
+export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted yet";
 
 /** The line of the ploidy: for a VCF, the one of the field Default
-    ploidy, the one it starts with or another, and that the page does not
-    check it, since the file does not give it and the count does not read
-    the genotypes; for a `.nei` file, the file's. */
+    ploidy, which the page does not check, since the file does not give it
+    and the count does not read the genotypes; for a `.nei` file, the
+    file's. */
 export function ploidyLine(
   ploidy: number,
   readOptions: VcfReadOptions | null,
 ): string {
-  if (readOptions === null) return `Ploidy ${String(ploidy)}, as the file says`;
-  const set =
-    readOptions.ploidy === DEFAULT_PLOIDY
-      ? `Ploidy ${String(ploidy)}, the ${DEFAULT_PLOIDY_LABEL} the page starts with`
-      : `Ploidy ${String(ploidy)}, the ${DEFAULT_PLOIDY_LABEL} set on this page`;
-  return `${set}: a VCF does not give its ploidy, and this page does not check it against the genotypes`;
+  return readOptions === null
+    ? `Ploidy: ${String(ploidy)} (given by the file)`
+    : `Ploidy: ${String(ploidy)} (the ${DEFAULT_PLOIDY_LABEL}, not checked against the genotypes)`;
 }
 
-/** The line of the variants a VCF was read with. */
-export function passedLine(options: VcfReadOptions): string {
-  return options.onlyPassed
-    ? "Only the variants with PASS or . in the FILTER column were read"
-    : "Every variant was read, whatever its FILTER column";
-}
-
-/** The heading of the count of the variants. */
-export const COUNT_HEADING = "Variants";
+/** The line of the ploidy of a `.nei` file being read. */
+export const PLOIDY_NOT_READ = "Ploidy: not read yet";
 
 /** The button that counts again after a Stop or a failure. */
 export const COUNT_AGAIN_LABEL = "Count again";

@@ -1,20 +1,24 @@
 /**
  * The body of popgen2.html, the first of the new screens
- * (docs/plans/open-variants.md): the page's one heading, "Popnei", the
- * opening of the variants file and what the file holds, each in a
- * boundary of errors that draws its heading alone in its place, and the
- * status region that says what changes away from the focus.
+ * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
+ * the page's one heading, "Popnei"; the box of the file open, with what
+ * went wrong with it, and the table of its chromosomes; under them the
+ * opening of the variants file; each in a boundary of errors that draws
+ * its name alone in its place; and the status region that says what
+ * changes away from the focus. The page holds the words of the last file
+ * not opened, which the opening says and the box shows.
  */
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
+import type { Refusal } from "./OpenVariants.tsx";
 import styles from "./VariantsPage.module.css";
 import { VariantsSummary } from "./VariantsSummary.tsx";
-import { OPENING_NAME, SUMMARY_HEADING } from "./words.ts";
+import { INFO_NAME, OPENING_NAME } from "./words.ts";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
@@ -27,6 +31,7 @@ export function VariantsPage({
   autoRuns,
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -35,11 +40,15 @@ export function VariantsPage({
         <h1 tabIndex={-1} className={classOf(styles, "title")}>
           Popnei
         </h1>
-        <ErrorBoundary heading={OPENING_NAME} level={2}>
-          <OpenVariants buttonRef={openButton} />
+        <ErrorBoundary heading={INFO_NAME} level={2}>
+          <VariantsSummary
+            autoRuns={autoRuns}
+            openButton={openButton}
+            refusal={refusal}
+          />
         </ErrorBoundary>
-        <ErrorBoundary heading={SUMMARY_HEADING} level={2}>
-          <VariantsSummary autoRuns={autoRuns} openButton={openButton} />
+        <ErrorBoundary heading={OPENING_NAME} level={2}>
+          <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
         </ErrorBoundary>
       </main>
       <StatusRegion />
