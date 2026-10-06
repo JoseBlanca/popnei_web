@@ -530,7 +530,7 @@ export interface VariantDistrib {
 export interface VariantChecksResult {
   /** The analysis the result is of. */
   readonly analysis: "variantChecks";
-  /** The edges of the bins, `numBins` + 1, shared by the three. */
+  /** The edges of the bins, `numBins` + 1, shared by the four. */
   readonly binEdges: Float64Array;
   /** The missing rate, popnei's `missingRate`: the missing genotypes of
       a variant over the individuals of the pass, called or not, a half

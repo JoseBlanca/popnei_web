@@ -572,12 +572,12 @@ variant of the file over the individuals kept, as the owner decided on
 28 September 2026 (`docs/architecture.md`, section 4), and three
 options, `minNumIndividuals`, 0, and the bins, `numBins` and `range`
 (`docs/specs/analyses/variantChecks.md`). The runner calls
-`calcPerVarDistribs(variants, { stats: ["maf", "obs_het",
-"unbiased_exp_het"], minNumIndividuals, histKwargs: { numBins, range }
-})` with no `pops`, which popnei takes as one population, `pop`, of every
+`calcPerVarDistribs(variants, { stats: ["missing_rate", "maf",
+"obs_het", "unbiased_exp_het"], minNumIndividuals, histKwargs: {
+numBins, range } })` with no `pops`, which popnei takes as one population, `pop`, of every
 individual the pass gives, those of the list when the job has one. It gives back `binEdges`, one copy of popnei's
-`histBinEdges`, which popnei's three distributions share as one array
-read only; and, of each of the three, `mean`, the one number of popnei's
+`histBinEdges`, which popnei's four distributions share as one array
+read only; and, of each of the four, `mean`, the one number of popnei's
 `mean`, and `counts`, popnei's `histCounts`, `numBins` numbers for the
 one population; with `passStats`.
 

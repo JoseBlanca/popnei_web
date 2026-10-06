@@ -534,7 +534,8 @@ export interface VariantDistrib {
 
 export interface VariantChecksResult {
   analysis: "variantChecks";
-  binEdges: Float64Array;                  // numBins + 1, shared by the three
+  binEdges: Float64Array;                  // numBins + 1, shared by the four
+  missingRate: VariantDistrib;             // popnei's missing rate: the missing genotypes of a variant over the individuals of the pass
   maf: VariantDistrib;                     // popnei's major allele frequency
   obsHet: VariantDistrib;
   unbiasedExpHet: VariantDistrib;

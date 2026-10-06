@@ -140,7 +140,7 @@ treats every job. It calls
 
 ```js
 calcPerVarDistribs(variants, {
-  stats: ["maf", "obs_het", "unbiased_exp_het"],
+  stats: ["missing_rate", "maf", "obs_het", "unbiased_exp_het"],
   minNumIndividuals, histKwargs: { range, numBins },
 })
 ```
@@ -202,7 +202,7 @@ variants_as_read = popnei.open_vars("panel.nei")
 variants_as_read.filter_individuals(individuals_kept)
 variant_distribs = popnei.calc_per_var_distribs(
     variants_as_read,
-    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
+    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
     min_num_individuals=0,
     hist_kwargs={"range": (0, 1), "num_bins": 40},
 )
