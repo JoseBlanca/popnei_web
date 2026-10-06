@@ -137,7 +137,7 @@ describe("VS5 D3 the words of the writing of the filtered variants", () => {
         {
           kind: "refused",
           message:
-            "line 12 of the VCF, the column of ind_3: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2",
+            "line 12 of the VCF, the column of ind_3: its genotype is of the ploidy 4 and the variants are read with the ploidy 2",
         },
         false,
         vcfProject(true),

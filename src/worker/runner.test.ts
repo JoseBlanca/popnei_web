@@ -1,14 +1,14 @@
 /**
  * The runner of the calculation worker in node, over the fixtures of
  * e2e/fixtures/ given as bytes (docs/specs/worker/runner.md, "How it is
- * verified"). The numbers are popnei's of the release js-v0.1.0-dev.3,
- * compared exactly: the runner passes them on with no arithmetic. They are
- * those of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
- * written, which are dev.3's own. The ploidy read from the file, and the
- * words of popnei's refusals of a genotype of another ploidy and of a
- * ploidy above 255, are those of popnei's main of 6 October 2026 (merge
- * 0a40644), which no release has yet (docs/plans/open-variants.md, "Round
- * 3").
+ * verified"). The numbers are popnei's of the release js-v0.2.0, compared
+ * exactly: the runner passes them on with no arithmetic. They are those
+ * of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
+ * written, which are of the release installed. The ploidy read from the
+ * file, and the words of popnei's refusals of a genotype of another ploidy,
+ * of a ploidy above 255, of a VCF whose ploidy cannot be read and of one
+ * of no variant opened with no ploidy, are those of js-v0.2.0
+ * (docs/plans/open-variants.md, "Round 3").
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

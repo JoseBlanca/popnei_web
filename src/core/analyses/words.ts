@@ -44,11 +44,9 @@ export const ONLY_PASSED_BOX =
 
 /** popnei's refusal of a genotype of another ploidy than the one the VCF
     was read with: the line, the individual, the ploidy found and the one
-    given or read from the file. The words of release js-v0.1.0-dev.3, "the
-    reader was asked for the ploidy 2", and of popnei's main of 6 October
-    2026, "the variants are read with the ploidy 2". */
+    given or read from the file, in the words of release js-v0.2.0. */
 const OTHER_PLOIDY =
-  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and (?:the reader was asked for|the variants are read with) the ploidy (\d+)/su;
+  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
 
 /** The start of popnei's refusals of a gzipped VCF damaged or cut
     short. */

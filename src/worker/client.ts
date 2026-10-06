@@ -433,8 +433,10 @@ export function createClient(config: {
         );
         // A defect of ours thrown in the worker, or popnei's refusal of an
         // option it does not know, is told as a defect of the
-        // application, and not as a crash, whose words send the user to
-        // load the file again or blame the memory of the tab.
+        // application, and not as a crash: the old page's words of a crash
+        // send the user to load the file again or blame the memory of the
+        // tab, which mends neither; the new page gives both to its error
+        // bar.
         calculationBroken(
           message.message.startsWith(DEFECT_START)
             ? {

@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { chromRows, variantsSummary } from "./variantsSummary.ts";
+import { numChroms, variantsSummary } from "./variantsSummary.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import { emptyProject } from "../project.ts";
@@ -237,24 +237,22 @@ describe("open-variants 1 the summary of the variants file: the numbers", () => 
     expect(variantsSummary.numCheckNumbers(project())).toBe(1);
   });
 
-  test("chromRows of ld.vcf.gz gives chr1 and chr2 in popnei's order, 250 variants each", () => {
-    expect(chromRows(LD)).toEqual([
-      { chrom: "chr1", numVars: 250 },
-      { chrom: "chr2", numVars: 250 },
-    ]);
+  test("numChroms of ld.vcf.gz gives its two chromosomes, and of panel.nei its one", () => {
+    expect(numChroms(LD)).toBe(2);
+    expect(numChroms(PANEL)).toBe(1);
   });
 
-  test("chromRows of a result of another analysis, or of counts fewer than the chromosomes, throws a defect", () => {
+  test("numChroms of a result of another analysis, or of counts fewer than the chromosomes, throws a defect", () => {
     const counts: FilterCountsResult = {
       analysis: "filterCounts",
       passStats: PANEL.passStats,
     };
-    expect(() => chromRows(counts)).toThrow(/^popnei_web defect: /u);
+    expect(() => numChroms(counts)).toThrow(/^popnei_web defect: /u);
     expect(() => variantsSummary.checkNumbers(counts)).toThrow(
       /^popnei_web defect: /u,
     );
     expect(() =>
-      chromRows({ ...LD, numVarsPerChrom: Uint32Array.of(250) }),
+      numChroms({ ...LD, numVarsPerChrom: Uint32Array.of(250) }),
     ).toThrow(/^popnei_web defect: /u);
   });
 });

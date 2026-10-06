@@ -1180,9 +1180,9 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   genotypes hold four alleles, opened with ploidy 2: `opened`, 12
   individuals, ploidy 2. The first diversity on it is `refused` with
   "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4
-  and the reader was asked for the ploidy 2; popnei does not read a VCF
-  whose genotypes are of different ploidies, and the ploidy is an
-  argument of the reader", which the store keeps under the key of that
+  and the variants are read with the ploidy 2; popnei does not read a VCF
+  whose genotypes are of different ploidies", in the words of
+  `js-v0.2.0`, which the store keeps under the key of that
   run (`docs/specs/core/store.md`). The user reads the file again with
   ploidy 4, a new load.
 - **A file that is not of its format.** `bad.vcf`, a line of text, is

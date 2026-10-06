@@ -68,6 +68,7 @@ import {
   notLoadedText,
   ploidyRefusedText,
   ploidyText,
+  givenOptions,
   readAgainLabel,
   readWithText,
   variantsText,
@@ -173,7 +174,11 @@ export function VariantsStep(): React.JSX.Element {
   const againLabel =
     variants === null || loadedOptions === null
       ? null
-      : readAgainLabel(variants.name, loadedOptions, options);
+      : readAgainLabel(
+          variants.name,
+          givenOptions(loadedOptions),
+          givenOptions(options),
+        );
   const againFile = variants === null ? null : files.fileOf(variants.fileId);
   const readAgain = (): void => {
     if (variants === null || againFile === null) return;
@@ -339,7 +344,7 @@ function FileRead({
           {variants.readOptions === null && <li>{ploidyText(read.ploidy)}</li>}
           <li>{variantsText(read.numVars)}</li>
           {variants.readOptions !== null && (
-            <li>{readWithText(variants.readOptions)}</li>
+            <li>{readWithText(givenOptions(variants.readOptions))}</li>
           )}
         </ul>
       );

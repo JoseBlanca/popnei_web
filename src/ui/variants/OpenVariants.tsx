@@ -62,7 +62,7 @@ export interface OpenVariantsProps {
       it when the summary goes. */
   readonly buttonRef: React.RefObject<HTMLButtonElement | null>;
   /** Called with the words of a file not opened, and with `null` when an
-      opening or a new read makes them out of date. */
+      opening makes them out of date. */
   readonly onRefusal: (refusal: Refusal | null) => void;
 }
 

@@ -1152,7 +1152,7 @@ describe("IP6 D4 refusalText", () => {
   test("the ploidy of tetraploid.vcf.gz read with ploidy 2", () => {
     expect(
       refusalText(
-        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies, and the ploidy is an argument of the reader",
+        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
         vcf({ variantsName: "tetraploid.vcf.gz" }),
       ),
     ).toBe(

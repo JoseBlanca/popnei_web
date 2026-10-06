@@ -31,6 +31,7 @@ import type {
   AnalysisStatus,
   AppState,
 } from "../../core/store.ts";
+import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 
@@ -434,7 +435,7 @@ export function announcementsOf(
     now.result.analysis === SUMMARY_ID
   ) {
     texts.push(
-      `${escaped(variants.name)}: ${countedText(now.result.passStats.numVars, now.result.chroms.length)}`,
+      `${escaped(variants.name)}: ${countedText(now.result.passStats.numVars, numChroms(now.result))}`,
     );
   }
   if (now.kind === "error" && then.kind !== "error") {

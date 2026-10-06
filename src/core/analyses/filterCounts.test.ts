@@ -336,7 +336,7 @@ describe("VS6 D2 the name of a filter of the variants inside a sentence", () => 
 describe("VS3 D1 the counts of the filters: refusalText", () => {
   test("a genotype of another ploidy tells to set the ploidy", () => {
     const message =
-      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2";
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2";
     expect(
       refusalText(
         message,

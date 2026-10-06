@@ -29,14 +29,6 @@ import { defect, parseNoOptions, pythonOpenVariants } from "./words.ts";
 /** The id of the analysis. */
 const ID = "variantsSummary";
 
-/** One row of the table of the chromosomes. */
-export interface ChromRow {
-  /** The name of the chromosome, as the variants file has it. */
-  readonly chrom: string;
-  /** The variants on it. */
-  readonly numVars: number;
-}
-
 /** The definition of the summary of the variants file, as the store knows
     it. */
 export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
@@ -56,23 +48,19 @@ export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
 });
 
 /**
- * The rows of the table of the chromosomes of a result, in popnei's
- * order: the chromosomes with variants in the order of their first
- * variant. Throws a defect for a result of another analysis, and for one
- * whose two arrays differ in length, which the check of the messages
- * rules out.
+ * The number of chromosomes of a result, those with variants, which the
+ * box of popgen2.html and its status region both say. Throws a defect for
+ * a result of another analysis, and for one whose chromosomes and counts
+ * differ in length, which the check of the messages rules out.
  */
-export function chromRows(result: JobResult): readonly ChromRow[] {
+export function numChroms(result: JobResult): number {
   const r = variantsSummaryResultOf(result);
   if (r.chroms.length !== r.numVarsPerChrom.length) {
     throw defect(
       "the summary of the variants file has chromosomes and counts of different lengths.",
     );
   }
-  return r.chroms.map((chrom, i) => ({
-    chrom,
-    numVars: countAt(r.numVarsPerChrom, i),
-  }));
+  return r.chroms.length;
 }
 
 /** Nothing beyond the load, which every key holds: no filter, which
@@ -150,16 +138,4 @@ function variantsSummaryResultOf(r: JobResult): VariantsSummaryResult {
     );
   }
   return r;
-}
-
-/** The count `i` of `counts`; one missing is a defect, as `chromRows`
-    checks the lengths first. */
-function countAt(counts: Uint32Array, i: number): number {
-  const count = counts[i];
-  if (count === undefined) {
-    throw defect(
-      `the summary of the variants file has no count at ${String(i)}.`,
-    );
-  }
-  return count;
 }

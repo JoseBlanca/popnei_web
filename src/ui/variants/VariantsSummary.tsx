@@ -20,7 +20,7 @@
  */
 import { useLayoutEffect, useRef } from "react";
 
-import { chromRows } from "../../core/analyses/variantsSummary.ts";
+import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import type { VariantSource } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -139,7 +139,7 @@ function Load({
     // The open button is one element whatever the zone holds.
     const button = openButton.current;
     return () => {
-      // The lines go, a new file dropped or read again, while the focus
+      // The lines go, a new file opened or dropped, while the focus
       // is in them, on Stop, on Count again or on the lines of the
       // count: the focus goes to the open button, not to the top of the
       // page. The cleanup of a layout effect runs while the lines are
@@ -382,7 +382,7 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
     case "done":
       lines = [
         variantsLine(status.result.passStats.numVars),
-        chromosomesLine(chromRows(status.result).length),
+        chromosomesLine(numChroms(status.result)),
       ];
       break;
   }

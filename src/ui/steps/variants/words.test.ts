@@ -18,6 +18,7 @@ import {
   notLoadedText,
   ploidyRefusedText,
   r2RefusedText,
+  givenOptions,
   readAgainLabel,
   readWithText,
   startingOptions,
@@ -59,6 +60,22 @@ describe("the words of the Variants step", () => {
     expect(readWithText({ ploidy: 2, onlyPassed: false })).toBe(
       "Read with ploidy 2, every variant",
     );
+  });
+
+  test("the step's read options have a ploidy: one with none is a defect, and the words of a read refuse it at the type check", () => {
+    expect(givenOptions({ ploidy: 3, onlyPassed: false })).toEqual({
+      ploidy: 3,
+      onlyPassed: false,
+    });
+    expect(() => givenOptions({ ploidy: null, onlyPassed: false })).toThrow(
+      /^popnei_web defect: /u,
+    );
+    // The compiler refuses the words of a read with no ploidy, which
+    // would say "ploidy null"; the line is never called.
+    const refused = (): string =>
+      // @ts-expect-error -- a ploidy of null
+      readWithText({ ploidy: null, onlyPassed: false });
+    expect(refused).toBeTypeOf("function");
   });
 
   test("the button to read again names both options when both differ, the ploidy first", () => {
