@@ -168,3 +168,35 @@ test reads them; `VariantStatistic` holds the four statistics, the
 missing rate's words among them; the specs and section 5 of the
 architecture say four histograms, and the limit the filters' piece must
 settle includes a key that comes back after a stop.
+
+### Phase 2, the section
+
+Commits 123c111, 7e8efa2 and 6a2ef51; the fixes of its review in c509b93,
+12e58aa, 7a444f3, 318dfde, 41954ca and 3d8e526; the fixes of a second
+look at them in 25c366f and a71b86b. On a71b86b: Vitest "3845 passed",
+Playwright "1208 passed" in Chromium and WebKit (Firefox cannot be
+started on this Mac). The page's numbers equal popnei's on panel.vcf.gz,
+panel.nei, tetraploid.vcf.gz, ld.vcf.gz and low_qual.vcf.gz.
+
+The review sent all ten categories, and a second look sent react and
+accessibility. Fixed: a Stop between the two passes held nothing (the
+chain's own state now tells the screen when it changes); the variants
+are calculated first, in the order of the page; after a Stop a part
+says it is not calculated because what comes before was stopped, not
+that it waits; Start again is offered only after a crash; the error bar
+words its advice so that it holds while the other pass runs; after one
+error of its code the section stayed dead for every later file (its
+boundary is now keyed by the load); the status region says the start of
+the statistics, the first result and the end, once each, and only once
+the section is on the page; the tabs, the downloads and the note of the
+table are left out; the individuals' plots start at 0; the table fits
+at 320 px; the plots are downloaded only once a file is picked
+(popgen2.html 182.3 kB gzipped before any lazy file, 181.7 before this
+piece; popgen.html 339.4, 337.7 before); a dynamic import has no script
+preloaded, so a later chunk of the 3D view cannot bring back WebKit's
+cached 404; the error bar breaks a long address at 320 px.
+
+For the owner: with the individuals' axes from 0, their observed
+heterozygosity, all between 0.32 and 0.39 on panel.vcf.gz, falls in a
+few wide bars; and the individuals' bins are made in the page from
+popnei's values, as on the old page.
