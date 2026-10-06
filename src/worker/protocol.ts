@@ -626,10 +626,12 @@ export interface VariantsSummaryResult {
   readonly chroms: readonly string[];
   /** The variants on each chromosome of `chroms`, in its order. */
   readonly numVarsPerChrom: Uint32Array;
-  /** The histograms of the variants, over every individual. */
-  readonly variants: VariantStatsPart;
-  /** The statistics of each individual. */
-  readonly individuals: IndividualStatsPart;
+  /** The histograms of the variants, over every individual, popnei's
+      `perVar` of `VariantsSummary`. */
+  readonly perVar: VariantStatsPart;
+  /** The statistics of each individual, popnei's `perIndividual` of
+      `VariantsSummary`. */
+  readonly perIndividual: IndividualStatsPart;
   /** The counts of the pass; `numVars` is the variants of the file. */
   readonly passStats: PassStats;
 }

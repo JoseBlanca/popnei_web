@@ -2164,8 +2164,8 @@ function checkVariantsSummaryResult(
     "analysis",
     "chroms",
     "numVarsPerChrom",
-    "variants",
-    "individuals",
+    "perVar",
+    "perIndividual",
     "passStats",
   ]);
   if (wrong !== null) {
@@ -2184,18 +2184,18 @@ function checkVariantsSummaryResult(
   if (!numVarsPerChrom.ok) {
     return numVarsPerChrom;
   }
-  const variants = field(record, "variants", place, checkVariantStatsPart);
-  if (!variants.ok) {
-    return variants;
+  const perVar = field(record, "perVar", place, checkVariantStatsPart);
+  if (!perVar.ok) {
+    return perVar;
   }
-  const individuals = field(
+  const perIndividual = field(
     record,
-    "individuals",
+    "perIndividual",
     place,
     checkIndividualStatsPart,
   );
-  if (!individuals.ok) {
-    return individuals;
+  if (!perIndividual.ok) {
+    return perIndividual;
   }
   const passStats = field(record, "passStats", place, checkPassStats);
   if (!passStats.ok) {
@@ -2205,8 +2205,8 @@ function checkVariantsSummaryResult(
     analysis: "variantsSummary",
     chroms: chroms.value,
     numVarsPerChrom: numVarsPerChrom.value,
-    variants: variants.value,
-    individuals: individuals.value,
+    perVar: perVar.value,
+    perIndividual: perIndividual.value,
     passStats: passStats.value,
   });
 }

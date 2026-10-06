@@ -180,7 +180,7 @@ function Stats({
   };
 
   const result = summaryOf(status);
-  const individualsResult = result?.individuals ?? null;
+  const perIndividual = result?.perIndividual ?? null;
   return (
     <StatsFrame sectionRef={sectionRef}>
       <Part heading={VARIANTS_HEADING}>
@@ -188,7 +188,7 @@ function Stats({
           <p className={classOf(styles, "line")}>{PART_FAILED}</p>
         ) : (
           <PlotsRoom line={lineOf("variants")}>
-            <VariantPlots result={result?.variants ?? null} />
+            <VariantPlots result={result?.perVar ?? null} />
           </PlotsRoom>
         )}
       </Part>
@@ -198,16 +198,16 @@ function Stats({
         ) : (
           <>
             <PlotsRoom line={lineOf("individuals")}>
-              <IndividualPlots result={individualsResult} />
+              <IndividualPlots result={perIndividual} />
             </PlotsRoom>
             <IndividualsDownload
               onPress={
-                individualsResult === null
+                perIndividual === null
                   ? null
                   : () => {
                       downloadText(
                         statsCsvName(variantsName),
-                        individualChecksCsv(individualsResult),
+                        individualChecksCsv(perIndividual),
                         "text/csv",
                       );
                     }

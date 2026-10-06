@@ -54,7 +54,8 @@ Revised on 6 October 2026 for the one pass of popgen2.html
 the plan reviewed in place of a spec): the summary of the variants file,
 built for `docs/plans/open-variants.md` without a revision here, is
 written in, its job with the bins of the histograms of the variants and
-its result with two parts, `variants` and `individuals`, the fields of
+its result with two parts, `perVar` and `perIndividual`, popnei's own
+names in `VariantsSummary`, the fields of
 the results of the histograms of the variants and of the statistics of
 each individual without `analysis`, which `VariantStatsPart` and
 `IndividualStatsPart` name and those two results extend.
@@ -591,8 +592,8 @@ export interface VariantsSummaryResult {
   analysis: "variantsSummary";
   chroms: readonly string[];               // those with variants, in the order of their first variant
   numVarsPerChrom: Uint32Array;            // as chroms
-  variants: VariantStatsPart;
-  individuals: IndividualStatsPart;
+  perVar: VariantStatsPart;
+  perIndividual: IndividualStatsPart;
   passStats: PassStats;
 }
 

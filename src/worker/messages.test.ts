@@ -1352,7 +1352,7 @@ const variantsSummaryResult: fc.Arbitrary<VariantsSummaryResult> = fc
       analysis: fc.constant("variantsSummary" as const),
       chroms: fc.constant(chroms),
       numVarsPerChrom: uint32s(chroms.length),
-      variants: variantChecksResult.map((r) => ({
+      perVar: variantChecksResult.map((r) => ({
         binEdges: r.binEdges,
         missingRate: r.missingRate,
         maf: r.maf,
@@ -1360,7 +1360,7 @@ const variantsSummaryResult: fc.Arbitrary<VariantsSummaryResult> = fc
         unbiasedExpHet: r.unbiasedExpHet,
         passStats: r.passStats,
       })),
-      individuals: individualChecksResult.map((r) => ({
+      perIndividual: individualChecksResult.map((r) => ({
         individuals: r.individuals,
         missingGtRate: r.missingGtRate,
         obsHetRate: r.obsHetRate,
@@ -3312,7 +3312,7 @@ const VARIANTS_SUMMARY_RESULT: VariantsSummaryResult = {
   analysis: "variantsSummary",
   chroms: ["chr1", "chr2"],
   numVarsPerChrom: Uint32Array.of(250, 250),
-  variants: {
+  perVar: {
     binEdges: Float64Array.of(0, 0.5, 1),
     missingRate: { mean: 0.1, counts: Uint32Array.of(500, 0) },
     maf: { mean: 0.8, counts: Uint32Array.of(0, 500) },
@@ -3320,7 +3320,7 @@ const VARIANTS_SUMMARY_RESULT: VariantsSummaryResult = {
     unbiasedExpHet: { mean: 0.3, counts: Uint32Array.of(500, 0) },
     passStats: SUMMARY_PASS,
   },
-  individuals: {
+  perIndividual: {
     individuals: ["a", "b"],
     missingGtRate: Float64Array.of(0.1, 0.2),
     obsHetRate: Float64Array.of(0.3, Number.NaN),
@@ -3432,34 +3432,34 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
   });
 
   test("a part of the statistics is checked as the result of its own request: counts fewer than the edges, or an array of the individuals shorter than they are, is wrongLength", () => {
-    const variants = {
-      ...VARIANTS_SUMMARY_RESULT.variants,
+    const perVar = {
+      ...VARIANTS_SUMMARY_RESULT.perVar,
       maf: { mean: 0.8, counts: Uint32Array.of(500) },
     };
     expect(
-      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, variants })),
+      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, perVar })),
     ).toMatchObject({
       ok: false,
       error: {
         kind: "wrongLength",
-        path: "result.variants.maf.counts",
+        path: "result.perVar.maf.counts",
         expected: 2,
         found: 1,
       },
     });
-    const individuals = {
-      ...VARIANTS_SUMMARY_RESULT.individuals,
+    const perIndividual = {
+      ...VARIANTS_SUMMARY_RESULT.perIndividual,
       obsHetRate: Float64Array.of(0.3),
     };
     expect(
       parseFromRunner(
-        resultMessage({ ...VARIANTS_SUMMARY_RESULT, individuals }),
+        resultMessage({ ...VARIANTS_SUMMARY_RESULT, perIndividual }),
       ),
     ).toMatchObject({
       ok: false,
       error: {
         kind: "wrongLength",
-        path: "result.individuals.obsHetRate",
+        path: "result.perIndividual.obsHetRate",
         expected: 2,
         found: 1,
       },
@@ -3467,23 +3467,23 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
   });
 
   test("a part with the field analysis of its own result is extraFields, and a summary without its parts missingFields", () => {
-    const variants = {
-      ...VARIANTS_SUMMARY_RESULT.variants,
+    const perVar = {
+      ...VARIANTS_SUMMARY_RESULT.perVar,
       analysis: "variantChecks",
     };
     expect(
-      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, variants })),
+      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, perVar })),
     ).toMatchObject({
       ok: false,
       error: {
         kind: "extraFields",
-        path: "result.variants",
+        path: "result.perVar",
         fields: ["analysis"],
       },
     });
     const without = Object.fromEntries(
       Object.entries(VARIANTS_SUMMARY_RESULT).filter(
-        ([name]) => name !== "variants" && name !== "individuals",
+        ([name]) => name !== "perVar" && name !== "perIndividual",
       ),
     );
     expect(parseFromRunner(resultMessage(without))).toMatchObject({
@@ -3491,7 +3491,7 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
       error: {
         kind: "missingFields",
         path: "result",
-        fields: ["variants", "individuals"],
+        fields: ["perVar", "perIndividual"],
       },
     });
   });

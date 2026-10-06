@@ -310,8 +310,8 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
     case "variantsSummary":
       return [
         result.numVarsPerChrom,
-        ...variantStatsArrays(result.variants),
-        ...individualStatsArrays(result.individuals),
+        ...variantStatsArrays(result.perVar),
+        ...individualStatsArrays(result.perIndividual),
       ];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
@@ -1030,8 +1030,12 @@ function runVariantsSummary(
   const result: VariantsSummaryResult = {
     analysis: "variantsSummary",
     ...chromsOf(density),
-    variants: variantStatsPartOf(perVar, job.filters),
-    individuals: individualStatsPartOf(perIndividual, individuals, job.filters),
+    perVar: variantStatsPartOf(perVar, job.filters),
+    perIndividual: individualStatsPartOf(
+      perIndividual,
+      individuals,
+      job.filters,
+    ),
     passStats: passStatsOf(passStats, job.filters),
   };
   return { kind: "ok", value: result };

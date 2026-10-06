@@ -625,9 +625,9 @@ minNumIndividuals, histKwargs: { numBins, range } }, perIndividual: {}
 })`, one pass that reads the genotypes, and gives back the chromosomes
 and their counts from the density, as one window per chromosome from the
 position 1 whose counts add up to the variants of the pass, else a
-defect; `variants`, made of `perVar` as the result of a `variantChecks`
-job is; `individuals`, made of `perIndividual` as that of an
-`individualChecks` job is, a defect when its names are not those the
+defect; `perVar`, made of popnei's `perVar` as the result of a
+`variantChecks` job is; `perIndividual`, made of popnei's
+`perIndividual` as that of an `individualChecks` job is, a defect when its names are not those the
 open gave; and `passStats`. popnei gives each part the same to the bit
 as its own call; under node on `panel.vcf.gz`, `panel.nei` and
 `tetraploid.vcf.gz` the two parts equal the results of a `variantChecks`

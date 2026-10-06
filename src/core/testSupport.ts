@@ -1912,7 +1912,7 @@ export function summaryResult(
     analysis: "variantsSummary",
     chroms,
     numVarsPerChrom: Uint32Array.from(numVarsPerChrom),
-    variants: {
+    perVar: {
       binEdges: Float64Array.of(0, 0.5, 1),
       missingRate: distrib(),
       maf: distrib(),
@@ -1920,7 +1920,7 @@ export function summaryResult(
       unbiasedExpHet: distrib(),
       passStats,
     },
-    individuals: {
+    perIndividual: {
       individuals,
       missingGtRate: new Float64Array(individuals.length),
       obsHetRate: new Float64Array(individuals.length).fill(0.25),

@@ -181,16 +181,16 @@ describe("open-variants 1 the runner's summary of the variants file", () => {
     expect(
       told.every((progress) => progress.pass === 1 && progress.numPasses === 1),
     ).toBe(true);
-    const { variants, individuals } = result;
+    const { perVar, perIndividual } = result;
     expect(transferablesOf(result)).toEqual([
       result.numVarsPerChrom.buffer,
-      variants.binEdges.buffer,
-      variants.missingRate.counts.buffer,
-      variants.maf.counts.buffer,
-      variants.obsHet.counts.buffer,
-      variants.unbiasedExpHet.counts.buffer,
-      individuals.missingGtRate.buffer,
-      individuals.obsHetRate.buffer,
+      perVar.binEdges.buffer,
+      perVar.missingRate.counts.buffer,
+      perVar.maf.counts.buffer,
+      perVar.obsHet.counts.buffer,
+      perVar.unbiasedExpHet.counts.buffer,
+      perIndividual.missingGtRate.buffer,
+      perIndividual.obsHetRate.buffer,
     ]);
   });
 });
@@ -234,15 +234,15 @@ describe("live-stats 1 the one pass of the summary gives the statistics of their
       if (variants.kind !== "ok" || individuals.kind !== "ok") {
         throw new Error("the statistics of their own requests failed");
       }
-      expect({ analysis: "variantChecks", ...summary.variants }).toStrictEqual(
+      expect({ analysis: "variantChecks", ...summary.perVar }).toStrictEqual(
         variants.value,
       );
       expect({
         analysis: "individualChecks",
-        ...summary.individuals,
+        ...summary.perIndividual,
       }).toStrictEqual(individuals.value);
       expect(summary.passStats).toEqual({ numVars, filtering: {} });
-      expect(summary.individuals.individuals).toHaveLength(numIndividuals);
+      expect(summary.perIndividual.individuals).toHaveLength(numIndividuals);
     },
   );
 });
