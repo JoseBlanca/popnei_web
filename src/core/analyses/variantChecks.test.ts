@@ -14,6 +14,7 @@ import {
   VARIANT_BINS,
   VARIANT_FINE_BINS,
   binsCsvName,
+  summed,
   refusalText,
   statisticsFailedText,
   variantBins,
@@ -269,7 +270,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 1280},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
         ")\n",
     );
   });
@@ -415,7 +416,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 1280},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
         ")\n",
     );
   });
@@ -816,6 +817,57 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
       0.30000000000000004,
     );
     expect(fineResult("tetraploid.nei").binEdges[768]).toBe(0.6000000000000001);
+  });
+
+  /** The result of panel.nei with the counts of `statistic` 1 in each of
+      popnei's bins `indices` and 0 in the others. */
+  function countsAt(
+    statistic: VariantStatistic,
+    indices: readonly number[],
+  ): VariantChecksResult {
+    const counts = new Uint32Array(VARIANT_FINE_BINS);
+    for (const index of indices) counts[index] = 1;
+    return { ...fineResult("panel.nei"), [statistic]: { mean: 0.5, counts } };
+  }
+
+  test("a last count in the bin of popnei that ends on 0.6 gives an axis to 0.6, although popnei's edge there is 0.6000000000000001", () => {
+    const result = countsAt("maf", [0, 767]);
+    expect(result.binEdges[768]).toBe(0.6000000000000001);
+    expect(rangeOf(result, "maf")).toEqual([0, 0.6, 32]);
+  });
+
+  test("a last count in the bin of popnei that ends on 0.3 gives an axis to 0.3, although popnei's edge there is 0.30000000000000004", () => {
+    const result = countsAt("maf", [0, 383]);
+    expect(result.binEdges[384]).toBe(0.30000000000000004);
+    expect(rangeOf(result, "maf")).toEqual([0, 0.3, 32]);
+  });
+
+  test("the missing rate's axis starts at 0 when no variant has a missing rate near 0", () => {
+    const result = countsAt("missingRate", [200, 300]);
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.25, 40]);
+  });
+
+  test("a range whose rounded end is no edge of popnei's bins is a defect", () => {
+    // 30 bins of 1 / 30: the counts from 2 / 30 to 4 / 30 round out to
+    // 0.05, which is 1.5 bins.
+    const counts = new Uint32Array(30);
+    counts[2] = 1;
+    counts[3] = 1;
+    const result: VariantChecksResult = {
+      ...PANEL,
+      binEdges: Float64Array.from({ length: 31 }, (_, i) => i / 30),
+      maf: { mean: 0.1, counts },
+    };
+    expect(() => variantBinsRounded(result, "maf")).toThrow(
+      "popnei_web defect: 0.05 is no edge of 30 bins over 0 to 1.",
+    );
+  });
+
+  test("a variant in a bin of popnei outside those added up is a defect", () => {
+    // The MAF of panel.nei has its 1,200 variants in the bins 20 to 39.
+    expect(() => summed(PANEL, "maf", 0, 20, 5)).toThrow(
+      "popnei_web defect: 1200 variants in bins of popnei outside 0 to 20.",
+    );
   });
 
   test("with no variant in a bin, the bins span 0 to 1 in 40, all empty", () => {

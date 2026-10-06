@@ -18,7 +18,8 @@
  * drawn are made of them by addition alone: popgen.html draws them 32 at
  * a time, popnei's 40 bins over 0 to 1; popgen2.html draws about 40 over
  * the range of the bins with a count, rounded out to round numbers
- * (docs/plans/file-stats.md, "Round 1 with the owner").
+ * (docs/plans/file-stats.md, "Round 1 with the owner"). The Python script
+ * asks popnei for the 40 bins, which are those sums.
  */
 
 import { variantsStem } from "../fileNames.ts";
@@ -52,9 +53,9 @@ import type { DescribedBin } from "./words.ts";
 /** The id of the analysis. */
 const ID = "variantChecks";
 
-/** The bins of each histogram of popgen.html, popnei's default over 0 to
-    1, written here so that a new default of popnei does not change them
-    unsaid. */
+/** The bins of each histogram of popgen.html and of the Python script,
+    popnei's default over 0 to 1, written here so that a new default of
+    popnei does not change them unsaid. */
 export const VARIANT_BINS = 40;
 
 /**
@@ -304,9 +305,11 @@ function numCheckNumbers(): number {
  * filter off: `popnei.open_vars` for a `.nei` file, `popnei.open_vcf` with
  * the read options for a VCF; then the list of the individuals kept,
  * `individuals_kept`, which src/core/script.ts makes before any filter,
- * when the project has a filter of individuals. Throws a defect on a
- * project with no variants file, since it is asked only of an analysis
- * that has run.
+ * when the project has a filter of individuals. It asks popnei for
+ * `VARIANT_BINS` bins, 40, as many as the rows of the CSV of the bins and
+ * the bars of popgen.html, and not for the 1,280 of the job, which the page
+ * sums. Throws a defect on a project with no variants file, since it is
+ * asked only of an analysis that has run.
  */
 function script(p: Project): string {
   const variants = p.variants;
@@ -325,7 +328,7 @@ function script(p: Project): string {
     "    variants_as_read,",
     "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
     `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
-    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_FINE_BINS)}},`,
+    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
     ")",
   ]
     .map((line) => `${line}\n`)
@@ -382,7 +385,8 @@ const ROUNDED_BINS = 40;
 /**
  * The bins of `statistic` that popgen2.html draws: over the range from
  * the first bin of popnei with a count to the last, from 0 for the
- * missing rate, rounded out to steps of 0.05 at least (`roundedRange` of
+ * missing rate, the ends taken as i / 1,280 and not as popnei's edges,
+ * rounded out to steps of 0.05 at least (`roundedRange` of
  * histogram.ts), the number of popnei's bins in each that makes the bins
  * nearest 40, the fewer of two as near, every bin the same number of
  * popnei's. Each count is popnei's counts added up; the inner edges are
@@ -403,9 +407,12 @@ export function variantBinsRounded(
     return variantBins(result, statistic);
   }
   const last = counts.findLastIndex((count) => count > 0) + 1;
+  // The nominal edges, i / numFine, and not popnei's i × (1 / numFine),
+  // which at 0.3 or 0.6 is one last place above the round number and
+  // would be rounded up to the next step.
   const [low, high] = roundedRange(
-    statistic === "missingRate" ? 0 : edgeAt(result.binEdges, first),
-    edgeAt(result.binEdges, last),
+    statistic === "missingRate" ? 0 : first / numFine,
+    last / numFine,
     SMALLEST_STEP,
   );
   const from = fineIndexOf(low, numFine);
@@ -446,9 +453,11 @@ function fineIndexOf(value: number, numFine: number): number {
  * popnei's bins of `statistic` from the index `from` up to `to` added up
  * `perBin` at a time, with popnei's edges at the start of each and at
  * `to`. Throws a defect when a variant is in a bin of popnei outside
- * them, which the range of the bins with a count rules out.
+ * them, which the range of the bins with a count rules out; exported so
+ * that a test reaches that defect, which `variantBins` and
+ * `variantBinsRounded` never give it.
  */
-function summed(
+export function summed(
   result: VariantChecksResult,
   statistic: VariantStatistic,
   from: number,

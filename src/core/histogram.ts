@@ -16,8 +16,8 @@ export const INDIVIDUAL_BINS = 20;
 
 /** The bins of a list of values. */
 export interface Bins {
-  /** The `numBins + 1` edges, increasing: the smallest value first and
-      the largest last. */
+  /** The `numBins + 1` edges, increasing: the smallest and the largest
+      value, or the ends of `range` when it is given, first and last. */
   readonly edges: Float64Array;
   /** The values in each bin, `numBins` of them. */
   readonly counts: Uint32Array;
