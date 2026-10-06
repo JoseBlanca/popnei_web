@@ -318,6 +318,21 @@ test("OV2 a file refused by its name while another is open is said in the box, a
     "Ploidy: 2",
     /^panel_pops\.csv was not opened: /u,
   ]);
+  // The empty row under the lines, kept for the end of a count, goes
+  // under a refusal, as under the words of a failure of the count: the
+  // refusal follows the last line at the gap of the box, 8 pixels, and
+  // not under a row of a button's height.
+  const ploidy = await info(page)
+    .getByText("Ploidy: 2", { exact: true })
+    .boundingBox();
+  const refusal = await info(page)
+    .getByRole("paragraph")
+    .filter({ hasText: /^panel_pops\.csv was not opened: /u })
+    .boundingBox();
+  if (ploidy === null || refusal === null) {
+    throw new Error("the line of the ploidy or the refusal is not drawn");
+  }
+  expect(refusal.y - (ploidy.y + ploidy.height)).toBeLessThan(16);
   await expectNoViolations(makeAxeBuilder);
 });
 

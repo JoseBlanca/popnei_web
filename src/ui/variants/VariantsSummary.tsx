@@ -104,6 +104,7 @@ export function VariantsSummary({
           openButton={openButton}
           onCountButton={onCountButton}
           variants={variants}
+          refused={refusalText !== null}
         />
       )}
       {refusalText !== null && <Problem>{refusalText}</Problem>}
@@ -118,6 +119,8 @@ interface LoadProps {
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** The file. */
   readonly variants: VariantSource;
+  /** Whether the words of a file not opened follow the lines. */
+  readonly refused: boolean;
 }
 
 /** The lines of one load of the file, in each state of its read. */
@@ -126,6 +129,7 @@ function Load({
   openButton,
   onCountButton,
   variants,
+  refused,
 }: LoadProps): React.JSX.Element {
   const linesRef = useRef<HTMLDivElement>(null);
   const project = useAppState((s) => s.project);
@@ -195,6 +199,7 @@ function Load({
             autoRuns={autoRuns}
             onCountButton={onCountButton}
             ploidy={ploidyLine(read.ploidy)}
+            refused={refused}
           />
         </>
       )}
@@ -209,6 +214,8 @@ interface CountProps {
   /** The line of the ploidy, drawn between the lines of the count and
       the row of its progress. */
   readonly ploidy: string;
+  /** Whether the words of a file not opened follow the lines. */
+  readonly refused: boolean;
 }
 
 /** The lines of the variants and the chromosomes, in each state of their
@@ -218,6 +225,7 @@ function Count({
   autoRuns,
   onCountButton,
   ploidy,
+  refused,
 }: CountProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
@@ -259,10 +267,11 @@ function Count({
         <CountLines status={status} stopped={button?.kind === "run"} />
       </div>
       <p className={classOf(styles, "line")}>{ploidy}</p>
-      {/* The row goes when a failure leaves nothing in it, for the words
-          of the failure to follow the lines: the height of the box
-          changes then anyway. */}
-      {(failure === null || button !== null) && (
+      {/* The row goes when it holds nothing and words of a problem
+          follow, a failure of the count or a file not opened, for them
+          to follow the lines: the height of the box changes then
+          anyway. */}
+      {(button !== null || (failure === null && !refused)) && (
         <div className={classOf(styles, "progress")}>
           {status.kind === "running" && (
             <div className={classOf(styles, "progressBar")}>
