@@ -345,3 +345,20 @@ The owner also decided that the ploidy of a VCF is to be empty by
 default once popnei reads it from the file: issue
 https://github.com/JoseBlanca/popnei/issues/8, opened on 6 October 2026.
 Until a release of popnei has it, the field starts at 2.
+
+### Round 3: the ploidy read from the file, 6 October 2026
+
+popnei closed issue #8 on 6 October 2026 (merge 0a40644 of its main):
+`openVcf` with no `ploidy` reads it from the file, the number of alleles
+of the first genotype that is not a single dot, and refuses with its own
+words when the search finds none. No release of the wasm package has it
+yet; the newest is `js-v0.1.0-dev.3`. So this round is built against the
+local build of popnei's main, installed with `npm install --no-save` as
+CLAUDE.md says, and the branch is not merged until a release has it and
+`package.json` names that release.
+
+What changes, as the owner decided: the ploidy field is empty by default
+and a VCF is opened without a ploidy unless the user gives one; the box
+shows the ploidy popnei read, said as read from the file; a ploidy the
+user gives is used as today; popnei's refusal when it cannot read the
+ploidy is shown in the box and asks for one.
