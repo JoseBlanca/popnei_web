@@ -82,7 +82,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
 function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
   const autoRuns = createAutoRuns({
     store,
-    ids: [SUMMARY_ID, ...STATISTICS_IDS],
+    groups: [[SUMMARY_ID], STATISTICS_IDS],
     start: (id) => startAnalysis(store, id),
   });
   store.subscribe(() => {

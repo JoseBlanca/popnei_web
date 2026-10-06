@@ -7,6 +7,7 @@ import type {
   JobResult,
   Outcome,
   Run,
+  RunError,
   VariantDistrib,
 } from "../worker/protocol.ts";
 import { createAutoRuns } from "./autoRuns.ts";
@@ -26,9 +27,9 @@ interface Request {
 }
 
 /** The store of the new page with a fake `send` whose requests the test
-    ends by hand, and the analyses it starts by itself, `ids`, the
+    ends by hand, and the analyses it starts by itself, `groups`, the
     summary alone unless given. */
-function setUp(ids: readonly string[] = [ID]): {
+function setUp(groups: readonly (readonly string[])[] = [[ID]]): {
   readonly store: Store<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
   readonly requests: Request[];
@@ -60,7 +61,7 @@ function setUp(ids: readonly string[] = [ID]): {
   store.popneiReady("0.1.0");
   const auto = createAutoRuns({
     store,
-    ids,
+    groups,
     start: (id) => startAnalysis(store, id),
   });
   const status = (id: string = ID): AnalysisStatus<JobResult> => {
@@ -247,11 +248,30 @@ function analysesOf(requests: readonly Request[]): readonly string[] {
   return requests.map((request) => request.job.analysis);
 }
 
+/** Ends `request` with the failure `error`. */
+function fail(request: Request | undefined, error: RunError): void {
+  if (request === undefined) throw new Error("no such request");
+  request.end({ kind: "failed", error });
+}
+
 describe("the statistics of the open file, started after the count, one after the other", () => {
   const PAGE_IDS = [ID, ...STATISTICS_IDS];
+  const PAGE_GROUPS = [[ID], STATISTICS_IDS];
+
+  /** The page with a file open and its count done, and the statistics
+      of each individual running, the second request. */
+  async function countDone(): Promise<ReturnType<typeof setUp>> {
+    const page = setUp(PAGE_GROUPS);
+    open(page.store, FIRST);
+    page.auto.sync();
+    endDone(page.requests[0]);
+    await settled();
+    page.auto.sync();
+    return page;
+  }
 
   test("the count starts alone; once done, the statistics of each individual; once they are done, the histograms of the variants", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     expect(analysesOf(requests)).toEqual([ID]);
@@ -288,7 +308,7 @@ describe("the statistics of the open file, started after the count, one after th
   });
 
   test("the count's Stop leaves the statistics not started, and Count again starts the count and then them", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     store.cancelRun(ID);
@@ -310,7 +330,7 @@ describe("the statistics of the open file, started after the count, one after th
   });
 
   test("stop of the statistics while those of each individual run cancels them, and the histograms of the variants do not start", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     endDone(requests[0]);
@@ -333,7 +353,7 @@ describe("the statistics of the open file, started after the count, one after th
   });
 
   test("resume after a stop of the statistics of each individual starts them again, and the histograms of the variants after them", async () => {
-    const { store, requests, auto } = setUp(PAGE_IDS);
+    const { store, requests, auto } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     endDone(requests[0]);
@@ -343,7 +363,7 @@ describe("the statistics of the open file, started after the count, one after th
     requests[1]?.end({ kind: "cancelled" });
     await settled();
 
-    auto.resume(STATISTICS_IDS);
+    expect(auto.resume(STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([
       ID,
       "individualChecks",
@@ -357,7 +377,7 @@ describe("the statistics of the open file, started after the count, one after th
   });
 
   test("stop while the histograms of the variants run cancels them alone, and resume starts them, not the statistics of each individual, which are done", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     endDone(requests[0]);
@@ -380,7 +400,7 @@ describe("the statistics of the open file, started after the count, one after th
     expect(status("individualChecks").kind).toBe("done");
     expect(status("variantChecks").kind).toBe("ready");
 
-    auto.resume(STATISTICS_IDS);
+    expect(auto.resume(STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([
       ID,
       "individualChecks",
@@ -390,14 +410,14 @@ describe("the statistics of the open file, started after the count, one after th
   });
 
   test("resume does nothing while one of the statistics runs, nor once both are done", async () => {
-    const { store, requests, auto } = setUp(PAGE_IDS);
+    const { store, requests, auto } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     endDone(requests[0]);
     await settled();
     auto.sync();
 
-    auto.resume(STATISTICS_IDS);
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
 
     endDone(requests[1]);
@@ -406,12 +426,12 @@ describe("the statistics of the open file, started after the count, one after th
     endDone(requests[2]);
     await settled();
     auto.sync();
-    auto.resume(STATISTICS_IDS);
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(3);
   });
 
   test("stop does nothing when none of the statistics runs: the count goes on", () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
 
@@ -420,32 +440,194 @@ describe("the statistics of the open file, started after the count, one after th
     expect(status(ID).kind).toBe("running");
   });
 
-  test("a failure of the statistics of each individual leaves the histograms of the variants not started, and resume starts the statistics again", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_IDS);
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
+  test("a crash of the statistics of each individual does not hold back the histograms of the variants, and resume then starts the statistics again", async () => {
+    const { requests, auto, status } = await countDone();
+    fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
     auto.sync();
-    requests[1]?.end({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
+    expect(status("individualChecks").kind).toBe("error");
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "variantChecks",
+    ]);
+
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(3);
+
+    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(analysesOf(requests).at(-1)).toBe("individualChecks");
+  });
+
+  test("a defect of ours in the statistics of each individual does not hold back the histograms of the variants", async () => {
+    const { requests, auto } = await countDone();
+    fail(requests[1], {
+      kind: "defect",
+      message: "a message that did not validate",
     });
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests).at(-1)).toBe("variantChecks");
+  });
+
+  test("popnei's refusal of the statistics of each individual holds back the histograms of the variants, and resume starts nothing", async () => {
+    const { requests, auto, status } = await countDone();
+    fail(requests[1], { kind: "popnei", message: "not a VCF" });
     await settled();
     auto.sync();
     expect(status("individualChecks").kind).toBe("error");
     expect(requests).toHaveLength(2);
+    expect(auto.pending("variantChecks")).toEqual({
+      kind: "blocked",
+      by: "individualChecks",
+    });
 
-    auto.resume(STATISTICS_IDS);
-    expect(analysesOf(requests)).toEqual([
-      ID,
-      "individualChecks",
-      "individualChecks",
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(requests).toHaveLength(2);
+  });
+
+  test("a variants file the browser could not read again puts both statistics in error, and resume starts nothing", async () => {
+    const { requests, auto, status } = await countDone();
+    fail(requests[1], {
+      kind: "reopenFailed",
+      name: "panel.nei",
+      message: "changed",
+    });
+    await settled();
+    auto.sync();
+    expect(status("individualChecks").kind).toBe("error");
+    expect(status("variantChecks").kind).toBe("error");
+    expect(requests).toHaveLength(2);
+    expect(auto.pending("variantChecks")).toBeNull();
+
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(requests).toHaveLength(2);
+  });
+
+  test("a crash of the count holds back the statistics, which wait for the count", async () => {
+    const { store, requests, auto } = setUp(PAGE_GROUPS);
+    open(store, FIRST);
+    auto.sync();
+    fail(requests[0], { kind: "workerFailed", message: "out of memory" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(1);
+    expect(auto.pending("individualChecks")).toEqual({
+      kind: "blocked",
+      by: ID,
+    });
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(requests).toHaveLength(1);
+  });
+
+  test("resume of the statistics while the count is stopped starts nothing", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
+    open(store, FIRST);
+    auto.sync();
+    store.cancelRun(ID);
+    requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(auto.pending("individualChecks")).toEqual({
+      kind: "waiting",
+      after: ID,
+    });
+
+    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(requests).toHaveLength(1);
+    expect(PAGE_IDS.map((id) => status(id).kind)).toEqual([
+      "ready",
+      "ready",
+      "ready",
     ]);
   });
 
+  test("pending tells an analysis waiting for the one before from one stopped", async () => {
+    const { requests, auto } = await countDone();
+    expect(auto.pending("individualChecks")).toBeNull();
+    expect(auto.pending("variantChecks")).toEqual({
+      kind: "waiting",
+      after: "individualChecks",
+    });
+
+    auto.stop(STATISTICS_IDS);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(auto.pending("individualChecks")).toEqual({ kind: "stopped" });
+    expect(auto.pending("variantChecks")).toEqual({
+      kind: "waiting",
+      after: "individualChecks",
+    });
+  });
+
+  test("after a crash of the statistics of each individual and a stop of the histograms of the variants, resume starts both, one after the other", async () => {
+    const { requests, auto, status } = await countDone();
+    fail(requests[1], { kind: "workerFailed", message: "out of memory" });
+    await settled();
+    auto.sync();
+    auto.stop(STATISTICS_IDS);
+    requests[2]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
+
+    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(analysesOf(requests).at(-1)).toBe("individualChecks");
+    expect(auto.pending("variantChecks")).toEqual({
+      kind: "waiting",
+      after: "individualChecks",
+    });
+    const variants = status("variantChecks");
+    if (variants.kind !== "ready") throw new Error("not ready");
+    expect(auto.startedUnder(variants.key)).toBe(false);
+
+    endDone(requests[3]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "variantChecks",
+      "individualChecks",
+      "variantChecks",
+    ]);
+  });
+
+  test("a stop after resume keeps the rest of the group from starting", async () => {
+    const { requests, auto } = await countDone();
+    fail(requests[1], { kind: "workerFailed", message: "out of memory" });
+    await settled();
+    auto.sync();
+    auto.stop(STATISTICS_IDS);
+    requests[2]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    auto.resume(STATISTICS_IDS);
+
+    auto.stop(STATISTICS_IDS);
+    requests[3]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(4);
+    expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
+  });
+
+  test("stop and resume of a list that is not a group is a defect", () => {
+    const { auto } = setUp(PAGE_GROUPS);
+    expect(() => {
+      auto.stop(["variantChecks"]);
+    }).toThrow(/popnei_web defect/);
+    expect(() => auto.resume([ID, "individualChecks"])).toThrow(
+      /popnei_web defect/,
+    );
+  });
+
   test("a new file while the statistics run stops them, and starts the count of the new file alone", async () => {
-    const { store, requests, auto } = setUp(PAGE_IDS);
+    const { store, requests, auto } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     endDone(requests[0]);
