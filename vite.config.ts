@@ -138,24 +138,40 @@ export default defineConfig(({ mode }) => {
     build: {
       target: ["chrome111", "edge111", "firefox115", "safari16.4"],
       ...(testPagesOnly && { emptyOutDir: false, assetsDir: "e2e/assets" }),
-      // A file loaded with import(), the 3D view of the PCA, is not
-      // preloaded with a link before its import: WebKit 26.6 keeps the
-      // failure of such a link, a 404 or a network down, and gives it to
-      // the next import() of the file without asking the network, so Try
-      // again of the 3D view never downloads it (load3d.ts). The bundler
-      // adds the link once the file imports a chunk the page shares,
-      // which it does since popgen2.html shares the plots
-      // (docs/plans/file-stats.md, phase 2). The chunks it imports are
-      // still preloaded.
+      // A file loaded with import(), the 3D view of the PCA or the
+      // statistics of the open file, has none of its scripts preloaded
+      // with a link before its import, neither its own nor those it
+      // imports: WebKit 26.6 keeps the failure of such a link, a 404 or a
+      // network down, and gives it to the next import() of the file
+      // without asking the network, so Try again of the 3D view never
+      // downloaded it (load3d.ts). The bundler adds such links once the
+      // file imports a chunk of another page, which a chunk shared with
+      // the statistics may become (docs/plans/file-stats.md, phase 2). Its
+      // styles are still preloaded, which import() does not fetch; the
+      // links of a page's own scripts, in its HTML, stay.
       modulePreload: {
-        resolveDependencies: (filename: string, deps: string[]) =>
-          deps.filter((dep) => dep !== filename),
+        resolveDependencies: (
+          _filename: string,
+          deps: string[],
+          context: { readonly hostType: "html" | "js" },
+        ) =>
+          context.hostType === "js"
+            ? deps.filter((dep) => dep.endsWith(".css"))
+            : deps,
       },
       // The code two pages or more share goes into chunks named for what
-      // they hold, rather than one the bundler names after a module in it:
-      // React, which the probe shares too, and what the two pages of
-      // population genetics share, our store, client and widgets with
-      // React Aria. A helper of the bundler is left to the bundler.
+      // they hold and for the pages, or the files loaded with import(),
+      // that share them, rather than one the bundler names after a module
+      // in it: React, which the probe shares too, and our code with D3 and
+      // React Aria. Each set of pages gets a chunk of its own, so that a
+      // page downloads only what it uses: popgen2.html loads the plots,
+      // D3 and the sortable table only with the statistics of the open
+      // file, by import() once a file is picked
+      // (src/ui/variants/StatsSection.tsx), and they are in a chunk
+      // popgen.html shares with that file. In one chunk for every page,
+      // they were in popgen2.html's first download, 257.0 kB of gzip
+      // against 181.7 without them, on 6 October 2026. A helper of the
+      // bundler is left to the bundler.
       rolldownOptions: {
         output: {
           codeSplitting: {
@@ -172,6 +188,7 @@ export default defineConfig(({ mode }) => {
                       ? "shared"
                       : null,
                 minShareCount: 2,
+                entriesAware: true,
               },
             ],
           },

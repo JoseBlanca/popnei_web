@@ -353,3 +353,41 @@ test("FS2 on a desktop the plots are two wide", async ({ page }) => {
     expect(tops[row]).toBe(tops[row + 1]);
   }
 });
+
+test("FS2 the plots are downloaded once a file is picked, not with the page; a download that fails leaves the section's name and the error bar, and the page still opens files", async ({
+  page,
+}) => {
+  const fetched: string[] = [];
+  page.on("request", (request) => {
+    fetched.push(request.url());
+  });
+  // The first download of the code of the statistics fails, as with the
+  // network down; the next ones are served, though Chromium 153 keeps the
+  // failure of an import() until the page is reloaded and asks no more.
+  let refused = 0;
+  await page.route(/\/assets\/FileStats-[^/]*\.js$/u, async (route) => {
+    if (refused === 0) {
+      refused += 1;
+      await route.fulfill({ status: 404, body: "" });
+    } else {
+      await route.continue();
+    }
+  });
+  await openPage(page);
+  expect(fetched.filter((url) => /FileStats|d3|plots/u.test(url))).toEqual([]);
+
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Statistics of the file" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("alert")).toBeVisible();
+  expect(refused).toBe(1);
+
+  // The rest of the page works: another file is opened and counted.
+  await pick(page, join(FIXTURES, "panel.nei"));
+  const box = page.getByRole("region", { name: "File information" });
+  await expect(box.getByText("panel.nei · 261 KB")).toBeVisible();
+  await expect(box.getByText("Variants: 1,200")).toBeVisible({
+    timeout: 20_000,
+  });
+});

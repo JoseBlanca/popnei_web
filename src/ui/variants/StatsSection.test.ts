@@ -11,7 +11,14 @@
 import { StrictMode, act, createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
@@ -98,6 +105,13 @@ interface Page {
 let container: HTMLElement;
 let root: Root;
 let caught: unknown[];
+
+beforeAll(async () => {
+  // The code of the statistics, which the section loads by import() once
+  // a file is picked, made ready once, so that each test waits for it a
+  // few turns and not for its first transform.
+  await import("./FileStats.tsx");
+});
 
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -206,7 +220,18 @@ async function open(page: Page, fileId: string): Promise<void> {
     });
     await Promise.resolve();
   });
-  await settled();
+  // The code of the statistics comes by import(), a few turns later.
+  for (let turn = 0; turn < 50 && sectionOf() === null; turn += 1) {
+    await settled();
+  }
+  if (sectionOf() === null) throw new Error("the section was not drawn");
+}
+
+/** The section of the statistics, once drawn, or `null`. */
+function sectionOf(): Element | null {
+  return container.querySelector(
+    'section[aria-label="Statistics of the file"]',
+  );
 }
 
 /** Ends the last request sent with the result of its analysis. */
