@@ -15,7 +15,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -148,6 +148,42 @@ describe("open-variants 1 the runner's summary of the variants file", () => {
       kind: "refused",
       message: "line 84 of the VCF, the column POS: `x80` is not a position",
     });
+  });
+
+  test("a genotype of ploidy 1 in panel.vcf, read with the ploidy of the file, refuses the one pass with popnei's words, so the variants are not counted either", () => {
+    const lines = gunzipSync(bytesOf("panel.vcf.gz")).toString().split("\n");
+    // Line 9 of the file, its first variant: the genotype of s000.
+    const fields = (lines[8] ?? "").split("\t");
+    expect(fields[9]).toBe("0/1");
+    fields[9] = "1";
+    lines[8] = fields.join("\t");
+    const runner = createRunner();
+    const open = runner.open(PAGE_VCF, {
+      name: "haploid.vcf.gz",
+      source: new Uint8Array(gzipSync(lines.join("\n"))),
+    });
+    expect(open.kind).toBe("ok");
+    expect(runner.run(JOB, ignore)).toEqual({
+      kind: "refused",
+      message:
+        "line 9 of the VCF, the column of s000: its genotype is of the ploidy 1 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
+    });
+  });
+
+  test("panel.nei with 400 bytes of its middle changed opens, and its pass is refused as a damaged file", () => {
+    const bytes = bytesOf("panel.nei");
+    const middle = Math.floor(bytes.length / 2);
+    for (let at = middle; at < middle + 400; at += 1) {
+      bytes[at] = (bytes[at] ?? 0) ^ 0xff;
+    }
+    const runner = createRunner();
+    expect(runner.open(NEI, { name: "panel.nei", source: bytes }).kind).toBe(
+      "ok",
+    );
+    const answer = runner.run(JOB, ignore);
+    expect(answer.kind === "refused" ? answer.message : answer).toMatch(
+      /^the batch \d+ of the vars file could not be read, so the file is damaged and has to be fetched or copied again: /u,
+    );
   });
 
   test("after a count with the missing data filter, the summary is of every variant of the file", () => {
