@@ -63,7 +63,7 @@ they can work with.
 | calculation | what it gives | its key holds | runs |
 |---|---|---|---|
 | the one pass | the count, the value of each individual, the histograms of the variants over every individual | the file | once per file |
-| the histograms of the variants over the individuals kept (`variantChecks`) | the four histograms | the file and the filters of the individuals | only while some individual is taken out |
+| the histograms of the variants over the individuals kept (`variantChecks`) | the four histograms | the file and the filters of the individuals | only while the filters of the individuals take some individual out |
 | the counts of the filters (`filterCounts`) | the variants each filter is given and keeps, in order | the file and both kinds of filters | at every change of a filter |
 | the FILTER failures (`filterFailures`) | how many variants failed their FILTER | the file | once per VCF |
 
@@ -72,10 +72,17 @@ gives the value of each individual over every variant and the filters of
 the variants come after those of the individuals (section 2). The
 histograms of the variants read the filters of the individuals and not
 those of the variants, as on the old page (section 4, "The checks of the
-Variants step"). While no individual is taken out, the page draws the
-histograms of the variants from the one pass, and `variantChecks`, whose
-`needs` then says it is not needed, does not run: the first view of a
-file stays one pass. The counts of each filter alone, which the plots
+Variants step"). While the filters of the individuals take no
+individual out, which the page knows from the individuals kept, the page
+draws the histograms of the variants from the one pass, which then gives
+the same numbers, and `autoRuns.ts` does not start `variantChecks`: the
+first view of a file stays one pass, and a threshold of the individuals
+that takes nobody out calculates nothing. This cannot be the `needs` of
+`variantChecks`, which sees only the project, while the individuals kept
+depend on the one pass's result in the cache; so the rule is the page's,
+in `autoRuns.ts` and in the part that draws the histograms, both reading
+the same individuals kept (`individualsKept` of `src/core/`, over the
+project and the one pass's values). The counts of each filter alone, which the plots
 say, come from the bins of the histogram it is drawn on, without a pass
 (below); what all the filters keep together, which depends on their
 order, needs the pass of `filterCounts`, over the file with every
@@ -83,7 +90,18 @@ filter, as on the old page. The individuals kept are known without a
 pass, as on the old page: the store's `statistics` takes them from the
 one pass's values of the individuals (`StoreConfig.statistics` of
 `src/core/store.ts`, null on `popgen2.html` today), which reads no
-filter, as that setting requires.
+filter, as that setting requires; and the store's `counts` names
+`filterCounts`, null today too.
+
+The chain of `autoRuns.ts` runs, in this order: the one pass; the
+FILTER failures, for a VCF; the histograms over the individuals kept,
+when they are needed; the counts of the filters. Today an analysis that
+is locked, as `filterFailures` is on a `.nei` file, or not done holds
+back every one after it (`holderOf`); the chain instead passes over one
+that is locked or not needed, so that the counts of the filters start
+on a `.nei` file and while no individual is taken out. The one Stop
+stops whichever runs and keeps the rest from starting; Start again
+starts the first not done.
 
 ## When a threshold changes the project
 
@@ -101,22 +119,26 @@ filters: every change of a threshold gives the calculations that read it
 a new key, and starting the new one stops the one left behind, which
 ends the worker. Two changes settle it.
 
-**A quiet second.** `autoRuns.ts` starts a calculation under a new key
-only once the project has had no change for one second. A user who
-presses an arrow key ten times starts one calculation, at the end, not
-ten that are each stopped. A calculation already running under a key
-that the change left behind is stopped when the new one starts, not
-before, so that an Undo within the second keeps it. One second is a
-first value, to be tried by the owner.
+**A quiet second.** After a change of a filter, `autoRuns.ts` starts
+a calculation under a new key only once the filters have had no change
+for one second. A user who presses an arrow key ten times starts one
+calculation, at the end, not ten that are each stopped. Other changes,
+the reading of a file among them, start at once, as today. A calculation
+running under a key that a change left behind is stopped when the next
+calculation starts, or at once by a second change that does not give its
+key back, as `docs/architecture.md` section 5 has it; an Undo within the
+second keeps it. One second is a first value, to be tried by the owner.
 
-**Keys left behind are forgotten.** Today `autoRuns.ts` remembers every
-key it started, so that a calculation stopped by the user is not
-started again; and an Undo that comes back to a key whose calculation
-was left behind and stopped shows it as stopped. It remembers instead
-only the keys the user stopped with Stop. A key whose calculation was
-stopped because a change left it behind starts again when the project
-comes back to it, unless its result is in the cache, where an Undo
-finds it at once.
+**Keys left behind start again when the project comes back to them.**
+Today `autoRuns.ts` remembers every key it started, `started`, for two
+reasons: a calculation stopped by the user is not started again, and
+each key starts once, so that a result dropped from the cache, or a
+start the store refuses, is not tried again at every change of the
+store. Both stay. What changes: when the store stops a calculation
+because a change left its key behind, `autoRuns.ts` forgets that key,
+so that an Undo, or the old threshold typed again, starts it again,
+unless its result is in the cache, where the Undo finds it at once.
+Today that key shows as stopped and does not start.
 
 What a stop costs is the restart of the worker: the wasm of popnei
 compiled again from the browser's cache and the file opened again,
@@ -130,15 +152,17 @@ of 200,000 variants before the second is settled.
 A result is never shown under a key the project no longer gives
 (invariant 1 of the `designing` skill). So when a threshold of the
 individuals moves, the four histograms of the variants are those of the
-new calculation as it runs: empty until its first result so far, within
-about two seconds, then filling, as at the opening of a file. The plots
+new calculation as it runs: empty until its first result so far, which
+comes after the quiet second, the restart of the worker when a
+calculation was running, and up to two seconds of the pass, then
+filling, as at the opening of a file. The plots
 keep their place and their titles while they are empty, so that the
 page does not jump. The lines of the thresholds stay where the user put
 them.
 
 The option not taken: to keep the old histograms on the screen, greyed
 and marked as of the previous thresholds, until the new ones arrive.
-The page would then not empty for two seconds, but invariant 1 would
+The page would then not empty for those seconds, but invariant 1 would
 change for every page, and a greyed plot that a user reads as current
 shows numbers that no filter gives.
 
@@ -149,52 +173,97 @@ ongoing calculations will be stopped unless you undo the change." On
 `popgen2.html` the calculations start again by themselves, so the notice
 says only what changed, "The MAF filter changed · Undo", and the
 progress of the new calculation shows the rest. A calculation left
-behind is stopped when the new one starts, a second after the change,
-and an Undo within that second keeps it.
+behind is stopped when the next one starts, a second after a change of
+a filter, or at once by a second change that does not give its key
+back; an Undo within that second keeps it.
 
 ## The FILTER filter
 
 A switch in the file's box, beside the count of the failures: "Leave
 out the 300 variants that failed their FILTER". It is a filter of the
-variants of a new kind, `passed`, with no number, first in the order of
-the filters, since it reads the file and not the genotypes. Its job
-step is popnei's `filterPassed`, and its count is the `passed` entry of
-popnei's counts that `live-stats` already reads. On a `.nei` file the
-switch is not offered (`docs/plans/live-stats.md`, "What is left out").
+variants of a new kind, `passed`, with no number. Its job step is
+popnei's `filterPassed`, and its count is the `passed` entry of popnei's
+counts that `live-stats` already reads. The page opens every VCF with
+`onlyPassed: false`, as `live-stats` does, so that the switch, and not
+the opening, decides; the old page keeps its option of the reading.
+
+Where it goes in the order of the filters is the owner's: popnei asks
+for it first or right after the regions, and the architecture puts the
+list of the individuals between the regions and the filters of the
+variants (section 2). The design puts it after the list of the
+individuals, with the other filters of the variants: the individuals
+are then judged over every variant, failed or not, as they are judged
+today over the variants that the other filters take out, and the one
+pass reads no filter. Put before the individuals, as the regions are,
+an individual's missing rate would be over the variants that passed
+(on `low_qual.vcf.gz`, 900 of 1,200), and the one pass would have to
+read the switch, so that the count and the values of the individuals
+would be read again at each turn of it.
+
+On a `.nei` file the switch is not offered, and a project that holds it
+when a `.nei` file is opened, since a new load keeps the filters, locks
+the calculations that read it with words that say so, rather than
+sending a pass that popnei refuses at its first block on a vars file
+written before format 1.2.
 
 This changes the kinds of filter a project and its file can hold:
-`VariantFilterKind`, `VARIANT_FILTER_ORDER` and the reading of the
-project file (section 8), which refuses a kind it does not know. A
-project file saved with the switch on cannot be opened by a version of
-the application from before it. That is hard to undo, and is the
-owner's to approve with this design.
+`VariantFilterKind` of `src/worker/protocol.ts`, from which the kinds of
+the project come, `VARIANT_FILTER_ORDER`, the tables of the project
+that take a kind with no number (`Kinds`, `filtersOff`), the check of
+the messages (`checkFiltering`, `PROTOCOL_VERSION`), the steps of the
+runner, the words of each kind (`FILTER_KIND_WORDS`), every `script()`,
+and the reading of the project file (section 8), which refuses a kind it
+does not know. A project file saved with the switch on cannot be opened
+by a version of the application from before it. That is hard to undo,
+and is the owner's to approve with this design.
 
-## Exact counts, and "below" rather than "at most"
+## Exact counts need popnei
 
-The counts each threshold shows are exact, as the owner asked: the
-individuals from popnei's value of each individual, the variants from
-popnei's 1,280 fine bins over [0, 1], with the line snapped to an edge
-of a fine bin. A value on an edge falls in the bin to its right
-(`node_modules/popnei/dist/stats.d.ts`, the comment of the bins), so
-the bins below an edge hold exactly the variants whose value is below
-it, and not those whose value equals it. The edges fall on the round
-numbers a user types, 0.1 among them, the 128th, and values on them are
-common: a missing rate of 0.1 is one individual of ten missing. So a
-count of the bins below the line at 0.1 would leave out, from what "at
-most 0.1" keeps, every variant whose missing rate is 0.1. So the thresholds of the variants keep the values below the
-line, and their words say so: "Missing rate below 0.1". As a filter,
-the threshold t is given to popnei as the largest number below t
-(popnei's filters keep the values at most their threshold), which keeps
-the same variants the bins counted. The thresholds of the individuals
-say "below" too, so that the six read alike, and the page gives the
-same number to `individualsKept`. At the top of the axis, 1, the last
-bin holds 1 too, and the threshold keeps everything: no filter.
+The owner asked for the count each threshold keeps to be exact: the
+individuals from popnei's value of each individual, which is exact, and
+the variants from popnei's 1,280 fine bins over [0, 1], with the line
+snapped to an edge of a fine bin. popnei 0.2.1 does not allow it, for
+two reasons that act together:
 
-The option not taken, and the one to weigh if "at most" matters more
-than a popnei release: popnei gives bins that hold their right edge, as
-an option of its histograms, and the thresholds keep the values at most
-the line, as popnei's filters and plink's `--geno` do. That is an issue
-for popnei.
+- A value on an edge falls in the bin to its right
+  (`node_modules/popnei/dist/stats.d.ts`, the comment of the bins),
+  while popnei's filters keep the values at most their threshold. So
+  the bins below the edge 0.1 hold the variants whose value is below
+  0.1, and not those at 0.1; and values on the round edges are common:
+  a missing rate of 0.1 is one individual of ten missing.
+- popnei makes the edges as k · (1/1280), not k/1280. On 817 of the
+  1,281 edges the two are the same number; on the other 464 the edge is
+  the next number above, 0.30000000000000004 for 0.3. There the bins
+  below the edge hold the values at most 0.3.
+
+So the words "at most" are exact on 464 edges and miss the values on
+the edge on the other 817, and "below" the other way round. The
+architecture review of 6 October 2026 found it under node on popnei
+0.2.1, on a VCF of 10 diploid individuals with missing rates of exactly
+0.1, 0.3 and 0.7; it also found that the bins below edge k always equal
+popnei's filter given the largest number below `histBinEdges[k]`, on
+933 edges of `panel.vcf.gz` and `low_qual.vcf.gz`.
+
+The design asks popnei for histograms whose bins hold their right edge
+and whose edges are lo + (hi − lo) · k / n, an option of its
+`histKwargs`. With them the bins below the edge t hold exactly the
+values at most t, the words say "at most", as popnei's filters, plink's
+`--geno` and `docs/use-cases.md` do, and the filter is given t itself:
+the project, its file, the keys and the script hold the number the user
+typed, and a line at 0 keeps the values at 0. The issue is drafted
+beside this design, for the owner to open.
+
+Until popnei has it, the thresholds of the piece `thresholds`, which
+are only shown, say "at most" and count the bins below the edge, and
+their counts leave out the variants whose value is on an edge that
+equals its round number; the report of that piece gives how many on the
+fixtures. The filters are not built before popnei has the option.
+
+The option not taken: to word the thresholds "below" and give popnei the
+largest number below the edge. It is exact with popnei as it is, but the
+project, its file and the script would hold numbers such as
+0.09999999999999999, a line at 0 would have no threshold popnei takes,
+and a later change to "at most" would leave files of the old meaning.
 
 ## The expected heterozygosity
 
@@ -215,9 +284,14 @@ Made on this branch once the owner approves, each with its paragraph
   their order.
 - Section 4: `POPGEN2_ANALYSES` gains `variantChecks` and `filterCounts`;
   the store of `popgen2.html` takes the individuals kept from the one
-  pass; `variantChecks` does not run while no individual is taken out.
-- Section 5: the quiet second, the keys left behind forgotten, and the
-  notice of `popgen2.html`; the limit recorded for this piece removed.
+  pass and names `filterCounts` for the counts; on `popgen2.html`
+  `variantChecks` starts by itself, and not while no individual is
+  taken out, where section 4 says today that it runs when the user
+  presses its button.
+- Section 5: the chain of four, which passes over what is locked or not
+  needed; the quiet second after a change of a filter; the keys left
+  behind that start again; the notice of `popgen2.html`; the limit
+  recorded for this piece removed.
 - Section 8: the project file with the kind `passed`.
 
 ## The costs of the web
@@ -253,10 +327,13 @@ Made on this branch once the owner approves, each with its paragraph
 ## For the owner to decide
 
 1. Approve the design, or what to change in it.
-2. The kind `passed` of filter in the project and its file, which an
-   older version of the application cannot open.
-3. "Below" with popnei as it is, or "at most" with a popnei issue for
-   bins that hold their right edge.
+2. The popnei issue for histograms whose bins hold their right edge,
+   with edges lo + (hi − lo) · k / n, on which exact counts and the
+   filters wait; or the thresholds worded "below", exact with popnei as
+   it is, with the costs above.
+3. The kind `passed` of filter in the project and its file, which an
+   older version of the application cannot open; and its place: after
+   the list of the individuals, as the design has it, or before it.
 4. The line of the expected heterozygosity taken off, or a popnei issue
    for its filter.
 5. The quiet second, as a first value.
