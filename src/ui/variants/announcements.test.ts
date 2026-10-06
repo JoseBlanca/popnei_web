@@ -16,12 +16,16 @@ const FILE_ID = "0123456789abcdef0123456789abcdef";
 function setUp(): {
   readonly store: Store<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
+  /** The function of each request that gives the store a result so far. */
+  readonly soFar: ((result: JobResult) => void)[];
 } {
   const sent: ((outcome: Outcome<JobResult>) => void)[] = [];
+  const soFar: ((result: JobResult) => void)[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
-    send: (): Run<JobResult> => {
+    send: (_key, _job, _onProgress, onSoFar): Run<JobResult> => {
       lastId += 1;
+      soFar.push(onSoFar);
       const outcome = new Promise<Outcome<JobResult>>((resolve) => {
         sent.push(resolve);
       });
@@ -30,7 +34,7 @@ function setUp(): {
     appVersion: "0.1.0",
   });
   store.popneiReady("0.1.0");
-  return { store, sent };
+  return { store, sent, soFar };
 }
 
 const VCF: VariantLoad = {
@@ -320,5 +324,30 @@ describe("what the status region of the new page says of the statistics of the o
         });
       }),
     ).toEqual([]);
+  });
+
+  test("live-stats 2 the first result so far of a pass is said once, and the ones after it nothing", async () => {
+    const page = running();
+    expect(
+      await statsSaid(page.store, () => {
+        page.soFar[0]?.(summaryResult(["chr1"], [100]));
+      }),
+    ).toEqual([
+      "The first statistics of panel.vcf.gz are drawn, and grow as the file is read.",
+    ]);
+    expect(
+      await statsSaid(page.store, () => {
+        page.soFar[0]?.(summaryResult(["chr1"], [300]));
+      }),
+    ).toEqual([]);
+    expect(
+      await statsSaid(page.store, () => {
+        page.sent[0]?.({
+          kind: "done",
+          key: page.key,
+          result: summaryResult(["chr1"], [500]),
+        });
+      }),
+    ).toEqual(["The statistics of panel.vcf.gz are calculated."]);
   });
 });

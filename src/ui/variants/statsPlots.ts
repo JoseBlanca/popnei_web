@@ -7,7 +7,9 @@
  * spans the range of the values, rounded out to round numbers, the
  * missing rates from 0 (the owner, 6 October 2026): the variants' bins
  * are popnei's added up, `variantBinsRounded`, those of the individuals
- * made from popnei's values over that range, `binValuesRounded`. Pure, so
+ * made from popnei's values over that range, `binValuesRounded`. The axes
+ * are fitted to what is drawn, so those of a result so far widen as the
+ * pass reads values outside them. Pure, so
  * that a test in node checks the counts, a value of NaN among them; the
  * section draws them.
  */
@@ -59,10 +61,12 @@ export interface IndividualPlot {
 
 /** The histogram of the variants of `statistic`, popnei's bins added up
     over the range of those with a count, rounded out, over the variants
-    in them, which leaves out a variant with no value. */
+    in them, which leaves out a variant with no value; its line says "so
+    far" for a result so far, `soFar`. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
+  soFar = false,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
   const bins = variantBinsRounded(result, statistic);
@@ -80,16 +84,18 @@ export function variantPlot(
       ...plotted,
       description: variantHistogramDescription(statistic, rows, null),
     },
-    countLine: overVariantsLine(sumOf(bins.counts)),
+    countLine: overVariantsLine(sumOf(bins.counts), soFar),
   };
 }
 
 /** The histogram of the individuals of `statistic`, its values binned
     over their range rounded out, the missing rate from 0, over the
-    individuals with a value. */
+    individuals with a value; its line says "so far" for a result so far,
+    `soFar`. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualStatsPart,
+  soFar = false,
 ): IndividualPlot {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
@@ -119,7 +125,7 @@ export function individualPlot(
         ...plotted,
         description: individualHistogramDescription(statistic, rows, null),
       },
-      countLine: overIndividualsLine(sumOf(bins.counts)),
+      countLine: overIndividualsLine(sumOf(bins.counts), soFar),
     },
     noValueLine,
   };

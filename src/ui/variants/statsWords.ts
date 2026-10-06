@@ -84,17 +84,24 @@ export const PART_STOPPED = "Stopped.";
     words the box of the file says. */
 export const PART_FAILED = "Not calculated.";
 
+/** What a line of a plot drawn from a result so far ends with. */
+const SO_FAR = " so far";
+
 /** The line under the title of a histogram of the variants: "Over 1,200
     variants", those in its bins, which leaves out a variant with no
-    value. */
-export function overVariantsLine(numVars: number): string {
-  return `Over ${counted(numVars, "variant")}`;
+    value; "Over 523 variants so far" while the pass runs, `soFar`. */
+export function overVariantsLine(numVars: number, soFar = false): string {
+  return `Over ${counted(numVars, "variant")}${soFar ? SO_FAR : ""}`;
 }
 
 /** The line under the title of a histogram of the individuals: "Over 200
-    individuals", those in its bins. */
-export function overIndividualsLine(numIndividuals: number): string {
-  return `Over ${counted(numIndividuals, "individual")}`;
+    individuals", those in its bins; "Over 200 individuals so far" while
+    the pass runs, `soFar`, whose values change as it reads. */
+export function overIndividualsLine(
+  numIndividuals: number,
+  soFar = false,
+): string {
+  return `Over ${counted(numIndividuals, "individual")}${soFar ? SO_FAR : ""}`;
 }
 
 /** The kind of the words of the progress of the statistics, their start
@@ -120,14 +127,24 @@ export interface StatsAnnouncement {
   readonly replaces: typeof STATS_PROGRESS_KIND;
 }
 
+/** What the status region says as the first plots of the file `name`
+    are drawn from a result so far: "The first statistics of panel.vcf.gz
+    are drawn, and grow as the file is read." */
+export function statsFirstText(name: string): string {
+  return `The first statistics of ${escaped(name)} are drawn, and grow as the file is read.`;
+}
+
 /**
  * What the status region says of a change of the store from `before` to
  * `after` in the statistics of the open file, as a run says its start and
  * its end (react.md, "Announcements"): their start, "Calculating the
  * statistics of panel.vcf.gz…", as the pass of the summary starts, by
- * itself or at Start again; and its end, "The statistics of panel.vcf.gz
- * are calculated." A failure and a Stop are said by the box of the file,
- * which says those of the count of the same pass.
+ * itself or at Start again; the first plots drawn, from the first result
+ * so far of the pass, `statsFirstText`, and not the ones after, which
+ * would talk over everything else every 2 seconds; and its end, "The
+ * statistics of panel.vcf.gz are calculated." A failure and a Stop are
+ * said by the box of the file, which says those of the count of the same
+ * pass.
  */
 export function statsAnnouncementsOf(
   before: AppState<JobResult, unknown>,
@@ -140,6 +157,15 @@ export function statsAnnouncementsOf(
   if (now.kind === "running" && then.kind !== "running") {
     return [
       { text: statsStartText(variants.name), replaces: STATS_PROGRESS_KIND },
+    ];
+  }
+  if (
+    now.kind === "running" &&
+    now.soFar !== null &&
+    (then.kind !== "running" || then.soFar === null)
+  ) {
+    return [
+      { text: statsFirstText(variants.name), replaces: STATS_PROGRESS_KIND },
     ];
   }
   if (now.kind === "done" && then.kind !== "done") {

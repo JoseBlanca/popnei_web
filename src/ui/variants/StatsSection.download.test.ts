@@ -200,18 +200,10 @@ async function drawPage(): Promise<Page> {
   return { store, requests, said, open };
 }
 
-/** The section of the statistics, once drawn, or `null`; not its room,
-    drawn busy while the code downloads. */
+/** The section of the statistics, once drawn, or `null`. */
 function sectionOf(): Element | null {
   return container.querySelector(
-    'section[aria-label="Statistics of the file"]:not([aria-busy])',
-  );
-}
-
-/** The room of the section, drawn while its code downloads, or `null`. */
-function roomOf(): Element | null {
-  return container.querySelector(
-    'section[aria-label="Statistics of the file"][aria-busy="true"]',
+    'section[aria-label="Statistics of the file"]',
   );
 }
 
@@ -255,9 +247,8 @@ describe("the section of the statistics while its code downloads", () => {
       "variantsSummary",
     ]);
     await after(REGION_PAUSE_MS);
+    // Nothing is drawn in its place while its code downloads.
     expect(sectionOf()).toBeNull();
-    // Its room is there, so that the open button under it stays.
-    expect(roomOf()).not.toBeNull();
     expect(saidOfStats(page)).toEqual([]);
 
     release();

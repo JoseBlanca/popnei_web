@@ -3,40 +3,29 @@
  * title, the line of how many variants or individuals are in its bins,
  * and the plot, in a group named by its title. No table of its bins and
  * no download, which the owner wants out of this page until the piece of
- * the downloads (docs/plans/file-stats.md, "Where it goes").
- *
- * Before its result it keeps the room it will take, hidden, `PlotSpace`
- * of StatsLayout.tsx, so that the plot's arrival moves nothing under it,
- * the open button among it (docs/plans/file-stats.md, "Round 1 with the
- * owner").
+ * the downloads (docs/plans/file-stats.md, "Where it goes"). Drawn from
+ * the result, or from a result so far while the pass runs, whose line
+ * says so.
  */
 import { useId } from "react";
 
 import { classOf } from "../classOf.ts";
 import { HistogramPlot } from "../widgets/HistogramPlot.tsx";
-import { PlotSpace } from "./StatsLayout.tsx";
 import type { StatsPlot } from "./statsPlots.ts";
 import styles from "./StatsHistogram.module.css";
 
 /** What one histogram is drawn with. */
 export interface StatsHistogramProps {
-  /** Its title, the same as that of `plot`. */
-  readonly title: string;
   /** The histogram, the same object until its result changes, so that
-      the plot is not drawn again on renders that changed nothing; `null`
-      before its result, for the room it will take. */
-  readonly plot: StatsPlot | null;
+      the plot is not drawn again on renders that changed nothing. */
+  readonly plot: StatsPlot;
 }
 
-/** A histogram of the section, or the room it will take. */
+/** A histogram of the section. */
 export function StatsHistogram({
-  title,
   plot,
 }: StatsHistogramProps): React.JSX.Element {
   const titleId = useId();
-  if (plot === null) {
-    return <PlotSpace title={title} />;
-  }
   return (
     <div
       role="group"

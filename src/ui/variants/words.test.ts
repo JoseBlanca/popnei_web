@@ -187,6 +187,10 @@ describe("the words of the page that opens a variants file", () => {
   test("the line of the variants while they are counted says the share done, once known", () => {
     expect(countingVariantsLine(6)).toBe("Variants: counting… 6%");
     expect(countingVariantsLine(null)).toBe("Variants: counting…");
+    expect(countingVariantsLine(6, 52_000)).toBe(
+      "Variants: 52,000 so far, counting… 6%",
+    );
+    expect(countingVariantsLine(null, 1)).toBe("Variants: 1 so far, counting…");
   });
 
   test("the count, with its nouns in the singular and the plural", () => {

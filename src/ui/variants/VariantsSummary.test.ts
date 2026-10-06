@@ -13,6 +13,7 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
+import { summaryResult } from "../../core/testSupport.ts";
 import type { Store } from "../../core/store.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
@@ -34,6 +35,8 @@ interface Request {
   readonly job: Job;
   cancelled: boolean;
   readonly end: (outcome: Outcome<JobResult>) => void;
+  /** Gives the store a result so far of the request. */
+  readonly soFar: (result: JobResult) => void;
 }
 
 /** The page: its store, the analyses it starts by itself, which start
@@ -77,11 +80,17 @@ async function drawPage(): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
-    send: (key, job): Run<JobResult> => {
+    send: (key, job, _onProgress, onSoFar): Run<JobResult> => {
       lastId += 1;
       let request: Request | null = null;
       const outcome = new Promise<Outcome<JobResult>>((resolve) => {
-        request = { key, job, cancelled: false, end: resolve };
+        request = {
+          key,
+          job,
+          cancelled: false,
+          end: resolve,
+          soFar: onSoFar,
+        };
         requests.push(request);
       });
       return {
@@ -212,5 +221,20 @@ describe("the one button of the box of the variants file", () => {
       "Line 9 of panel.nei has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.",
     );
     expect(active?.getAttribute("tabindex")).toBe("-1");
+  });
+
+  test("live-stats 2 while the pass runs, the line of the variants gives those read so far once the pass gave a result so far", async () => {
+    const page = await drawPage();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    const lines = (): string => container.textContent;
+    expect(lines()).toContain("Variants: counting…");
+    await act(async () => {
+      page.requests[0]?.soFar(summaryResult(["1"], [52_000], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    expect(lines()).toContain("Variants: 52,000 so far, counting…");
+    expect(lines()).toContain("Chromosomes: counting…");
   });
 });

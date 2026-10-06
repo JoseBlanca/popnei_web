@@ -7,7 +7,8 @@
  * knows is shown at once; the individuals and the ploidy once the file is
  * read; the variants and the chromosomes once they are counted, by the
  * one pass that also calculates the statistics of the file, which starts
- * by itself (autoRuns.ts; docs/plans/live-stats.md). Under the lines, a
+ * by itself (autoRuns.ts; docs/plans/live-stats.md), with the variants
+ * read so far while it runs, from its results so far. Under the lines, a
  * row of one height in every state holds the seconds of the read, the
  * bar of the pass with the page's one Stop, or Start again.
  *
@@ -386,6 +387,7 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
       lines = [
         countingVariantsLine(
           status.progress === null ? null : progressShare(status.progress),
+          status.soFar?.passStats.numVars ?? null,
         ),
         CHROMOSOMES_COUNTING,
       ];

@@ -7,8 +7,8 @@
   min-inline-size: 0;
 }
 
-/* A part: its heading, its plots or the room they keep, and for the
-   individuals their download. */
+/* A part: its heading, its line, its plots, and for the individuals
+   their download. */
 .part {
   display: grid;
   gap: var(--space-4);
@@ -24,35 +24,13 @@
 .line {
   margin: 0;
   color: var(--color-text-muted);
-}
-
-/* The room of the plots of a part, with the words of the part over its
-   top, which take no height of their own, so that the part is as high
-   before its plots as with them. */
-.room {
-  position: relative;
-  min-inline-size: 0;
-}
-
-.roomLine {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
-  margin: 0;
-  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
-/* The download of the individuals, at the start of its row; its room
-   kept, hidden, before the result. */
+/* The download of the individuals, at the start of its row. */
 .download {
   display: flex;
-}
-
-.downloadRoom {
-  display: flex;
-  visibility: hidden;
 }
 
 /* The plots of a part, two side by side when each has 20rem, one under

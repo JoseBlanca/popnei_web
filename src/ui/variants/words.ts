@@ -104,11 +104,17 @@ export function variantsLine(numVars: number): string {
 }
 
 /** The line of the variants while they are counted: "Variants:
-    counting… 6%", with no share before the first progress. */
-export function countingVariantsLine(share: number | null): string {
-  return share === null
-    ? "Variants: counting…"
-    : `Variants: counting… ${String(share)}%`;
+    counting… 6%", with no share before the first progress, and once the
+    pass gave a result so far, the variants it covers, "Variants: 52,000
+    so far, counting… 6%". */
+export function countingVariantsLine(
+  share: number | null,
+  numVarsSoFar: number | null = null,
+): string {
+  const counting = share === null ? "counting…" : `counting… ${String(share)}%`;
+  return numVarsSoFar === null
+    ? `Variants: ${counting}`
+    : `Variants: ${grouped(numVarsSoFar)} so far, ${counting}`;
 }
 
 /** The line of the chromosomes while the variants are counted. */

@@ -53,6 +53,8 @@ interface Request {
   readonly key: string;
   readonly job: Job;
   readonly end: (outcome: Outcome<JobResult>) => void;
+  /** Gives the store a result so far of the request. */
+  readonly soFar: (result: JobResult) => void;
 }
 
 /** The result of each analysis the page starts, by its id: the summary
@@ -129,10 +131,10 @@ async function drawPage(announced = true): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
-    send: (key, job): Run<JobResult> => {
+    send: (key, job, _onProgress, onSoFar): Run<JobResult> => {
       lastId += 1;
       const outcome = new Promise<Outcome<JobResult>>((resolve) => {
-        requests.push({ key, job, end: resolve });
+        requests.push({ key, job, end: resolve, soFar: onSoFar });
       });
       return { id: lastId, outcome, cancel: () => undefined };
     },
@@ -308,13 +310,8 @@ describe("the section of the statistics of the open file", () => {
       "Calculating the statistics of the individuals…",
     );
     expect(sectionOf()?.querySelector('[role="progressbar"]')).toBeNull();
-    expect(
-      [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
-        (element) => element.textContent,
-      ),
-    ).toEqual([
-      "Download the missing genotypes and heterozygosity of each individual (CSV)",
-    ]);
+    // Not even the download, which comes with the result.
+    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
 
     await act(async () => {
       page.autoRuns.stop(POPGEN2_CHAIN);
@@ -334,5 +331,46 @@ describe("the section of the statistics of the open file", () => {
     });
     expect(partsText().match(/Not calculated\./gu)).toHaveLength(2);
     expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+  });
+
+  test("live-stats 2 the plots are drawn from each result so far while the pass runs, saying so, with no download, and from the result at its end", async () => {
+    const page = await drawPage();
+    await open(page, FIRST);
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [523], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    await settled();
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
+    expect(partsText().match(/Over 523 variants so far/gu)).toHaveLength(4);
+    expect(partsText().match(/Over 2 individuals so far/gu)).toHaveLength(2);
+    expect(partsText()).toContain(
+      "Calculating the statistics of the variants…",
+    );
+    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+    // Each plot keeps its element as the next result so far comes.
+    const before = [...container.querySelectorAll("svg.chart")];
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [1000], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    await settled();
+    expect(partsText().match(/Over 1,000 variants so far/gu)).toHaveLength(4);
+    expect([...container.querySelectorAll("svg.chart")]).toEqual(before);
+
+    await endDone(page);
+    expect(partsText()).not.toContain("so far");
+    expect(partsText()).not.toContain("Calculating");
+    expect(partsText().match(/Over 1,200 variants/gu)).toHaveLength(4);
+    expect(
+      [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
+        (element) => element.textContent,
+      ),
+    ).toEqual([
+      "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    ]);
   });
 });

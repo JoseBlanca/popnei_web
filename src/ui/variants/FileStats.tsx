@@ -20,19 +20,19 @@
  * Plain, as the owner wants this page: no mean in the titles, no table of
  * the bins, and no bar nor button of its own: the bar of the pass, its
  * Stop and Start again are in the box of the file. Each part says, over
- * the room of its plots, that it is calculated, with the share done, or
- * that it was stopped; once the pass failed, whose words the box says, a
- * short line in place of its plots. When another file is opened with the
- * focus in the section, the focus goes to the open button.
+ * its plots, that it is calculated, with the share done, or that it was
+ * stopped; once the pass failed, whose words the box says, a short line
+ * in place of its plots. When another file is opened with the focus in
+ * the section, the focus goes to the open button.
  *
- * The open button is under the section, so the section keeps its height
- * from the moment it is drawn, the file read, to the end of the pass: the
- * words of a part lie over the room of its plots, which is kept, hidden,
- * until they are drawn; and the download keeps its room, hidden, until
- * the table is there. So a click aimed at the open button as the pass
- * ends, or a press held across that end, is not lost. Only a failure,
- * whose line takes the place of the plots, and a line of individuals with
- * no called genotype under their plot, change it.
+ * The plots fill in while the pass runs (docs/plans/live-stats.md, "The
+ * plots so far"): from the first result so far of the pass, about two
+ * seconds after its start, they are drawn from the last one, each saying
+ * it is over the variants or the individuals so far, and at the end from
+ * the result. Nothing keeps their room before: the open button under the
+ * section moves down as they arrive, which the owner chose over empty
+ * space. The download of the table of the individuals comes with the
+ * result alone.
  */
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
@@ -45,7 +45,6 @@ import type {
 } from "../../worker/protocol.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { classOf } from "../classOf.ts";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
 import { statsCsvName } from "../steps/variants/individualStats.ts";
@@ -54,11 +53,10 @@ import {
   IndividualPlace,
   IndividualsDownload,
   Part,
-  PlotsRoom,
+  PartLine,
+  Plots,
   StatsFrame,
-  StatsRoom,
 } from "./StatsLayout.tsx";
-import styles from "./StatsLayout.module.css";
 import {
   INDIVIDUALS_HEADING,
   INDIVIDUAL_STATISTICS,
@@ -66,9 +64,7 @@ import {
   PART_STOPPED,
   VARIANTS_HEADING,
   VARIANT_STATISTICS,
-  individualTitle,
   statsRunningLine,
-  variantTitle,
 } from "./statsWords.ts";
 import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
@@ -96,10 +92,7 @@ export function FileStats({
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
-  if (variants === null) return null;
-  // Until the file is read, the room of the statistics, as high as the
-  // section that follows.
-  if (variants.read.kind !== "read") return <StatsRoom />;
+  if (variants?.read.kind !== "read") return null;
   return (
     // Another load is another section, so that the one before goes, with
     // the focus it held.
@@ -156,9 +149,9 @@ function Stats({
   // Drawn: the status region may say the statistics of this load.
   useLayoutEffect(() => onShown(fileId), [onShown, fileId]);
 
-  /** What a part says over the room of its plots: the share done while
-      the pass runs, that it was stopped, why it cannot run, or nothing
-      once done, failed or about to start. */
+  /** What a part says over its plots: the share done while the pass
+      runs, that it was stopped, why it cannot run, or nothing once done,
+      failed or about to start. */
   const lineOf = (part: StatsPart): string | null => {
     switch (status.kind) {
       case "done":
@@ -179,40 +172,48 @@ function Stats({
     }
   };
 
-  const result = summaryOf(status);
-  const perIndividual = result?.perIndividual ?? null;
+  const shown = shownOf(status);
+  const soFar = shown?.soFar ?? false;
+  const done = status.kind === "done" ? shown?.result : undefined;
+  const variantsLine = lineOf("variants");
+  const individualsLine = lineOf("individuals");
   return (
     <StatsFrame sectionRef={sectionRef}>
       <Part heading={VARIANTS_HEADING}>
         {status.kind === "error" ? (
-          <p className={classOf(styles, "line")}>{PART_FAILED}</p>
+          <PartLine>{PART_FAILED}</PartLine>
         ) : (
-          <PlotsRoom line={lineOf("variants")}>
-            <VariantPlots result={result?.perVar ?? null} />
-          </PlotsRoom>
+          <>
+            {variantsLine !== null && <PartLine>{variantsLine}</PartLine>}
+            {shown !== null && (
+              <VariantPlots result={shown.result.perVar} soFar={soFar} />
+            )}
+          </>
         )}
       </Part>
       <Part heading={INDIVIDUALS_HEADING}>
         {status.kind === "error" ? (
-          <p className={classOf(styles, "line")}>{PART_FAILED}</p>
+          <PartLine>{PART_FAILED}</PartLine>
         ) : (
           <>
-            <PlotsRoom line={lineOf("individuals")}>
-              <IndividualPlots result={perIndividual} />
-            </PlotsRoom>
-            <IndividualsDownload
-              onPress={
-                perIndividual === null
-                  ? null
-                  : () => {
-                      downloadText(
-                        statsCsvName(variantsName),
-                        individualChecksCsv(perIndividual),
-                        "text/csv",
-                      );
-                    }
-              }
-            />
+            {individualsLine !== null && <PartLine>{individualsLine}</PartLine>}
+            {shown !== null && (
+              <IndividualPlots
+                result={shown.result.perIndividual}
+                soFar={soFar}
+              />
+            )}
+            {done !== undefined && (
+              <IndividualsDownload
+                onPress={() => {
+                  downloadText(
+                    statsCsvName(variantsName),
+                    individualChecksCsv(done.perIndividual),
+                    "text/csv",
+                  );
+                }}
+              />
+            )}
           </>
         )}
       </Part>
@@ -220,85 +221,97 @@ function Stats({
   );
 }
 
-/** The result of the summary once done; `null` in any other state. A
-    defect for a result of another analysis, which the store never gives
-    it. */
-function summaryOf(
-  status: AnalysisStatus<JobResult>,
-): VariantsSummaryResult | null {
-  if (status.kind !== "done") return null;
-  const result = status.result;
+/** What the plots are drawn from: the result of the summary once done,
+    or its last result so far while it runs, `soFar`. */
+interface Shown {
+  readonly result: VariantsSummaryResult;
+  readonly soFar: boolean;
+}
+
+/** What the plots are drawn from in `status`; `null` before the first
+    result so far, and in any state but running and done. A defect for a
+    result of another analysis, which the store never gives it. */
+function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
+  let result: JobResult;
+  let soFar: boolean;
+  if (status.kind === "done") {
+    result = status.result;
+    soFar = false;
+  } else if (status.kind === "running" && status.soFar !== null) {
+    result = status.soFar;
+    soFar = true;
+  } else {
+    return null;
+  }
   if (result.analysis !== "variantsSummary") {
     throw new Error(
       `popnei_web defect: the summary of the variants file has a result of ${result.analysis}.`,
     );
   }
-  return result;
+  return { result, soFar };
 }
 
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
-  /** The result, or `null` before it, for the room of the plots. */
-  readonly result: VariantStatsPart | null;
+  /** The part of the variants of the result, or of a result so far. */
+  readonly result: VariantStatsPart;
+  /** Whether it is of a result so far. */
+  readonly soFar: boolean;
 }
 
 /** The four histograms of the variants, each over the variants in its
-    bins, or the room they keep. */
-function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
+    bins. Each keeps its element from one result so far to the next, and
+    is updated in it. */
+function VariantPlots({ result, soFar }: VariantPlotsProps): React.JSX.Element {
   // Made again only for another result, so that the plots are not drawn
   // again on renders that changed nothing (react.md, "Mounting a plot").
   const plots = useMemo(
     () =>
       VARIANT_STATISTICS.map((statistic) => ({
         statistic,
-        plot: result === null ? null : variantPlot(statistic, result),
+        plot: variantPlot(statistic, result, soFar),
       })),
-    [result],
+    [result, soFar],
   );
   return (
-    <>
+    <Plots>
       {plots.map(({ statistic, plot }) => (
-        <StatsHistogram
-          key={statistic}
-          title={variantTitle(statistic)}
-          plot={plot}
-        />
+        <StatsHistogram key={statistic} plot={plot} />
       ))}
-    </>
+    </Plots>
   );
 }
 
 /** What the plots of the individuals are drawn with. */
 interface IndividualPlotsProps {
-  /** The result, or `null` before it, for the room of the plots. */
-  readonly result: IndividualStatsPart | null;
+  /** The part of the individuals of the result, or of a result so far. */
+  readonly result: IndividualStatsPart;
+  /** Whether it is of a result so far. */
+  readonly soFar: boolean;
 }
 
 /** The two histograms of the individuals, each over the individuals
-    with a value, and under each the line of those with none, or the room
-    they keep. */
-function IndividualPlots({ result }: IndividualPlotsProps): React.JSX.Element {
+    with a value, and under each the line of those with none; a line
+    alone where no individual has a value. */
+function IndividualPlots({
+  result,
+  soFar,
+}: IndividualPlotsProps): React.JSX.Element {
   const plots = useMemo(
     () =>
       INDIVIDUAL_STATISTICS.map((statistic) => ({
         statistic,
-        shown: result === null ? null : individualPlot(statistic, result),
+        shown: individualPlot(statistic, result, soFar),
       })),
-    [result],
+    [result, soFar],
   );
   return (
-    <>
+    <Plots>
       {plots.map(({ statistic, shown }) => (
-        <IndividualPlace
-          key={statistic}
-          noValueLine={shown?.noValueLine ?? null}
-        >
-          <StatsHistogram
-            title={individualTitle(statistic)}
-            plot={shown?.plot ?? null}
-          />
+        <IndividualPlace key={statistic} noValueLine={shown.noValueLine}>
+          {shown.plot !== null && <StatsHistogram plot={shown.plot} />}
         </IndividualPlace>
       ))}
-    </>
+    </Plots>
   );
 }

@@ -47,6 +47,14 @@ describe("the histograms of the statistics of the open file", () => {
     expect(maf.data.threshold).toBeNull();
   });
 
+  test("live-stats 2 a histogram of a result so far says so in its line, and draws the same bins", () => {
+    const soFar = variantPlot("maf", VARIANTS, true);
+    expect(soFar.countLine).toBe("Over 3 variants so far");
+    expect(soFar.data).toEqual(variantPlot("maf", VARIANTS).data);
+    const het = individualPlot("observedHeterozygosity", INDIVIDUALS, true);
+    expect(het.plot?.countLine).toMatch(/ so far$/u);
+  });
+
   test("the axis of a histogram of the variants spans the bins with a count rounded out to steps of 0.05, the missing rate from 0", () => {
     const missing = variantPlot("missingRate", VARIANTS).data;
     expect([missing.edges[0], missing.edges.at(-1)]).toEqual([0, 1]);

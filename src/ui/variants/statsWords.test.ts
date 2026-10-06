@@ -27,4 +27,9 @@ describe("the words of the statistics of the open file", () => {
     expect(overVariantsLine(1200)).toBe("Over 1,200 variants");
     expect(overIndividualsLine(1)).toBe("Over 1 individual");
   });
+
+  test("live-stats 2 while the pass runs, each histogram says it is over the variants or individuals so far", () => {
+    expect(overVariantsLine(523, true)).toBe("Over 523 variants so far");
+    expect(overIndividualsLine(200, true)).toBe("Over 200 individuals so far");
+  });
 });
