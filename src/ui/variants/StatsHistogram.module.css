@@ -10,6 +10,15 @@
   min-inline-size: 0;
 }
 
+/* The room of a histogram not drawn yet: as the block, and hidden, from
+   the eyes and from a screen reader. */
+.space {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  visibility: hidden;
+}
+
 .title {
   margin: 0;
   font-weight: 600;

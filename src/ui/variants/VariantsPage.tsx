@@ -2,11 +2,13 @@
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
  * the page's one heading, "Popnei"; the box of the file open, with what
- * went wrong with it; under it the opening of the variants file; under
- * that the statistics of the open file (docs/plans/file-stats.md); each in
- * a boundary of errors that draws its name alone in its place, that of
- * the statistics made again for each file; and the
- * status region that says what changes away from the focus. The page holds the words of the last file
+ * went wrong with it; under it the statistics of the open file
+ * (docs/plans/file-stats.md); and at the bottom the opening of the
+ * variants file, which the owner put after the statistics on 6 October
+ * 2026, and which is alone under the heading before a file is opened.
+ * Each is in a boundary of errors that draws its name alone in its place,
+ * that of the statistics made again for each file; and the status region
+ * says what changes away from the focus. The page holds the words of the last file
  * not opened, which the opening says and the box shows.
  */
 import { useRef, useState } from "react";
@@ -60,14 +62,14 @@ export function VariantsPage({
             refusal={refusal}
           />
         </ErrorBoundary>
-        <ErrorBoundary heading={OPENING_NAME} level={2}>
-          <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
-        </ErrorBoundary>
         <StatsSection
           autoRuns={autoRuns}
           openButton={openButton}
           onShown={onStatsShown}
         />
+        <ErrorBoundary heading={OPENING_NAME} level={2}>
+          <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
+        </ErrorBoundary>
       </main>
       <StatusRegion />
     </>

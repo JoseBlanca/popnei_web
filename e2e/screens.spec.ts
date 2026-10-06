@@ -4344,7 +4344,7 @@ function newPageCount(page: Page): Locator {
   return page.getByRole("region", { name: "File information" });
 }
 
-/** The statistics of the open file on popgen2.html, under the open
+/** The statistics of the open file on popgen2.html, above the open
     button. */
 function newPageStats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
@@ -4526,8 +4526,8 @@ for (const theme of ["light", "dark"] as const) {
       test("the statistics done", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageStats(page).getByRole("grid", {
-            name: "Statistics of each individual",
+          newPageStats(page).getByRole("button", {
+            name: /^Download the missing genotypes/u,
           }),
         ).toBeVisible({ timeout: 20_000 });
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);

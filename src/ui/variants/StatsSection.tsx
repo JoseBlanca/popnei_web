@@ -10,7 +10,9 @@
  * file is open, is downloaded apart from the page's, from the moment a
  * file is picked, so that it is there when the statistics start after the
  * file is read and its variants counted: the page's first download does
- * not carry it. Once downloaded, the section of the next file is drawn at
+ * not carry it. Until it is there, the section's room is drawn, empty,
+ * by code the page has (StatsLayout.tsx), so that the open button under
+ * it is where it will stay. Once downloaded, the section of the next file is drawn at
  * once, with no pause. A download that fails is caught by the boundary,
  * which gives it to the error bar, whose words say to reload the page; the
  * next file picked asks for it again, which WebKit 26.6 downloads, and
@@ -22,6 +24,7 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import type { FileStatsProps } from "./FileStats.tsx";
+import { StatsRoom } from "./StatsLayout.tsx";
 import { STATS_NAME } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 
@@ -36,7 +39,8 @@ export interface StatsSectionProps {
   readonly onShown: StatsShown;
 }
 
-/** The statistics of the open file; nothing before a file is picked. */
+/** The statistics of the open file, or their room; nothing before a file
+    is picked. */
 export function StatsSection({
   autoRuns,
   openButton,
@@ -79,13 +83,14 @@ async function loadFileStats(): Promise<{
   }
 }
 
-/** The statistics of one load, drawn once their code is there, and
-    nothing until then. */
+/** The statistics of one load, drawn once their code is there, and their
+    room until then, so that the open button under them does not move
+    when the code arrives. */
 function LoadedStats(props: StatsSectionProps): React.JSX.Element {
   // Read as it is drawn, since a failed download replaces it.
   const FileStats = LazyFileStats;
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<StatsRoom />}>
       <FileStats {...props} />
     </Suspense>
   );

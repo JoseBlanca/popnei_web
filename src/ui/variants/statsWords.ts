@@ -10,6 +10,8 @@
  * them.
  */
 
+import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
+import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import { isVcfLineRefusal } from "../../core/analyses/words.ts";
 import {
   counted,
@@ -26,6 +28,8 @@ import type {
 import type { JobResult } from "../../worker/protocol.ts";
 import type { Pending } from "../autoRuns.ts";
 import { capitalized } from "../sentences.ts";
+import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
+import { INDIVIDUAL_HISTOGRAMS } from "../steps/variants/individualStats.ts";
 import { SUMMARY_ID } from "./words.ts";
 
 /** The id of the statistics of each individual. */
@@ -45,6 +49,35 @@ export const STATS_NAME = "Statistics of the file";
 /** The headings of the two parts of the section. */
 export const VARIANTS_HEADING = "Variants";
 export const INDIVIDUALS_HEADING = "Individuals";
+
+/** The four histograms of the variants, in the order they are drawn. */
+export const VARIANT_STATISTICS: readonly VariantStatistic[] = Object.freeze([
+  "missingRate",
+  "maf",
+  "obsHet",
+  "unbiasedExpHet",
+]);
+
+/** The two histograms of the individuals, in the order they are drawn. */
+export const INDIVIDUAL_STATISTICS: readonly IndividualStatistic[] =
+  Object.freeze(["missingGenotypes", "observedHeterozygosity"]);
+
+/** The title of the histogram of the variants of `statistic`, with no
+    mean: "Major allele frequency". */
+export function variantTitle(statistic: VariantStatistic): string {
+  return VARIANT_HISTOGRAMS[statistic].name;
+}
+
+/** The title of the histogram of the individuals of `statistic`:
+    "Observed heterozygosity of each individual". */
+export function individualTitle(statistic: IndividualStatistic): string {
+  return INDIVIDUAL_HISTOGRAMS[statistic].title;
+}
+
+/** The button that downloads the statistics of each individual, their
+    missing genotypes and their heterozygosity, as a CSV file. */
+export const INDIVIDUALS_CSV_LABEL =
+  "Download the missing genotypes and heterozygosity of each individual (CSV)";
 
 /** The button that stops the statistics, the one running and those after
     it. */

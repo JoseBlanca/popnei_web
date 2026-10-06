@@ -407,8 +407,20 @@ for (const width of [320, 1280]) {
         heights.push(box.getBoundingClientRect().height);
       }).observe(box, { subtree: true, childList: true, characterData: true });
     });
-    const at = await openButton(page).boundingBox();
-    if (at === null) throw new Error("the open button is not drawn");
+    // Its place in the page, not in the window: the second pick scrolls
+    // the page to the button, which is under the statistics.
+    const inPage = (): Promise<{
+      readonly top: number;
+      readonly left: number;
+    }> =>
+      openButton(page).evaluate((button) => {
+        const box = button.getBoundingClientRect();
+        return {
+          top: box.top + window.scrollY,
+          left: box.left + window.scrollX,
+        };
+      });
+    const at = await inPage();
 
     await pick(page, vcf);
     // The count of the second opening said as that of the first, alone
@@ -423,7 +435,7 @@ for (const width of [320, 1280]) {
       )
       .toBe(2);
     await expectPanelCounted(page);
-    expect(await openButton(page).boundingBox()).toEqual(at);
+    expect(await inPage()).toEqual(at);
 
     const heights = await page.evaluate(
       () => Reflect.get(window, "boxHeights") as number[],

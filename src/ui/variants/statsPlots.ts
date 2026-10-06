@@ -31,7 +31,12 @@ import {
   INDIVIDUAL_HISTOGRAMS,
   noHeterozygosityText,
 } from "../steps/variants/individualStats.ts";
-import { overIndividualsLine, overVariantsLine } from "./statsWords.ts";
+import {
+  individualTitle,
+  overIndividualsLine,
+  overVariantsLine,
+  variantTitle,
+} from "./statsWords.ts";
 
 /** One histogram of the section. */
 export interface StatsPlot {
@@ -62,7 +67,7 @@ export function variantPlot(
   const words = VARIANT_HISTOGRAMS[statistic];
   const bins = variantBinsRounded(result, statistic);
   const plotted = {
-    title: words.name,
+    title: variantTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
@@ -100,7 +105,7 @@ export function individualPlot(
   );
   if (bins === null) return { plot: null, noValueLine };
   const plotted = {
-    title: words.title,
+    title: individualTitle(statistic),
     xLabel: words.xLabel,
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,

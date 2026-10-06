@@ -85,11 +85,32 @@ function part(page: Page, name: string): Locator {
     .locator("xpath=..");
 }
 
-/** The table of the individuals. */
-function table(page: Page): Locator {
-  return stats(page).getByRole("grid", {
-    name: "Statistics of each individual",
+/** The download of the statistics of each individual. */
+function downloadButton(page: Page): Locator {
+  return stats(page).getByRole("button", {
+    name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
   });
+}
+
+/** The open button, under the statistics. */
+function openButton(page: Page): Locator {
+  return page.getByRole("button", {
+    name: /^Open (another )?variants file…$/u,
+  });
+}
+
+/** Downloads the statistics of each individual, and gives the name of
+    the file and its text. */
+async function downloadCsv(
+  page: Page,
+): Promise<{ readonly name: string; readonly text: string }> {
+  const download = page.waitForEvent("download");
+  await downloadButton(page).click();
+  const file = await download;
+  return {
+    name: file.suggestedFilename(),
+    text: await readFile(await file.path(), "utf8"),
+  };
 }
 
 async function expectNoViolations(
@@ -98,26 +119,7 @@ async function expectNoViolations(
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 }
 
-/** Sorts the table by the column `name`, descending, and gives its first
-    row: the individual and its two numbers. */
-async function firstWhenSorted(
-  page: Page,
-  name: RegExp,
-): Promise<readonly string[]> {
-  const header = table(page).getByRole("columnheader", { name });
-  await header.click();
-  await expect(header).toHaveAttribute("aria-sort", "ascending");
-  await header.click();
-  await expect(header).toHaveAttribute("aria-sort", "descending");
-  return table(page)
-    .getByRole("row")
-    .nth(1)
-    .getByRole("rowheader")
-    .or(table(page).getByRole("row").nth(1).getByRole("gridcell"))
-    .allTextContents();
-}
-
-test("FS2 panel.vcf.gz: the four distributions of the variants and the two of the individuals over their ranges rounded out, the table sorted to its tails, and axe", async ({
+test("FS2 panel.vcf.gz: the four distributions of the variants and the two of the individuals over their ranges rounded out, the table of the individuals downloaded and not drawn, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -125,7 +127,7 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   await expect(stats(page).getByRole("heading", { level: 2 })).toHaveText([
     "Variants",
     "Individuals",
@@ -145,11 +147,12 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await expect(stats(page).getByText("Over 200 individuals")).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
-  // tabs of a table of the bins, no download, no line of the rows of the
-  // table.
-  await expect(stats(page).getByRole("button")).toHaveCount(0);
+  // tabs of a table of the bins, no table of the individuals, whose
+  // download is the one button.
+  await expect(stats(page).getByRole("button")).toHaveCount(1);
   await expect(stats(page).getByRole("tab")).toHaveCount(0);
-  await expect(stats(page).getByText(/CSV/u)).toHaveCount(0);
+  await expect(stats(page).getByRole("grid")).toHaveCount(0);
+  await expect(stats(page).getByRole("table")).toHaveCount(0);
   await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
   await expect
     .poll(() => announced(page))
@@ -160,14 +163,18 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
     );
   await expectNoViolations(makeAxeBuilder);
 
-  expect(
-    await firstWhenSorted(page, /^Proportion of missing genotypes/u),
-  ).toEqual(["s082", "0.0442", "0.3688"]);
-  expect(await firstWhenSorted(page, /^Observed heterozygosity/u)).toEqual([
-    "s026",
-    "0.0333",
-    "0.3931",
-  ]);
+  // The CSV of the old page's table: a row per individual in the order
+  // of the file, popnei's numbers as they are, the most missing s082 and
+  // the most heterozygous s026 among them.
+  const csv = await downloadCsv(page);
+  expect(csv.name).toBe("panel.individual_stats.csv");
+  const lines = csv.text.split("\n");
+  expect(lines).toHaveLength(202);
+  expect(lines[0]).toBe("individual,missing_genotypes,observed_heterozygosity");
+  expect(lines[1]).toBe("s000,0.028333333333333332,0.3653516295025729");
+  expect(lines).toContain("s082,0.04416666666666667,0.3687881429816914");
+  expect(lines).toContain("s026,0.03333333333333333,0.3931034482758621");
+  expect(lines.at(-1)).toBe("");
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -178,7 +185,7 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   await openPage(page);
   await pick(page, join(FIXTURES, "tetraploid.vcf.gz"));
 
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   await expect(titles(page)).toHaveText(TITLES);
   await expect(descriptions(page)).toHaveText([
     "The proportion of missing genotypes of 200 variants, in 32 bins from 0 to 0.3.",
@@ -190,11 +197,10 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   ]);
   await expect(stats(page).getByText("Over 200 variants")).toHaveCount(4);
   await expect(stats(page).getByText("Over 12 individuals")).toHaveCount(2);
-  const first = await firstWhenSorted(
-    page,
-    /^Proportion of missing genotypes/u,
-  );
-  expect(first.slice(0, 2)).toEqual(["t04", "0.0850"]);
+  const csv = await downloadCsv(page);
+  expect(csv.name).toBe("tetraploid.individual_stats.csv");
+  expect(csv.text.split("\n")).toHaveLength(14);
+  expect(csv.text).toMatch(/^t04,0\.085,/mu);
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -283,7 +289,7 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await expect(stats(page).getByText(/Calculating/u)).toHaveCount(1);
   await expectNoViolations(makeAxeBuilder);
 
-  await expect(table(page)).toBeVisible({ timeout: 120_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 120_000 });
   await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
     timeout: 120_000,
   });
@@ -324,7 +330,7 @@ test("FS2 a crash of the statistics of the individuals: its short words, said in
   await expect(titles(page).first()).toHaveText(
     "Proportion of missing genotypes",
   );
-  await expect(table(page)).toHaveCount(0);
+  await expect(downloadButton(page)).toHaveCount(0);
   const again = stats(page).getByRole("button", {
     name: "Start the statistics again",
   });
@@ -332,7 +338,7 @@ test("FS2 a crash of the statistics of the individuals: its short words, said in
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   await expect(stats(page).getByText(failed)).toHaveCount(0);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect
@@ -345,18 +351,14 @@ test("FS2 a crash of the statistics of the individuals: its short words, said in
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 a file dropped while the focus is on a header of the table moves the focus to the open button, not to the top of the page", async ({
+test("FS2 a file dropped while the focus is on the download of the individuals moves the focus to the open button, not to the top of the page", async ({
   page,
 }) => {
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
-  const header = table(page).getByRole("columnheader", {
-    name: /^Observed heterozygosity/u,
-  });
-  await header.click();
-  await expect(header).toHaveAttribute("aria-sort", "ascending");
-  await expect(header).toBeFocused();
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await downloadButton(page).focus();
+  await expect(downloadButton(page)).toBeFocused();
 
   const nei = await readFile(join(FIXTURES, "panel.nei"));
   await dropFiles(
@@ -380,37 +382,20 @@ test("FS2 at 320 pixels the plots are one under the other within the page, which
   await page.setViewportSize({ width: 320, height: 900 });
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   const plots = stats(page).locator("svg.chart");
   await expect(plots).toHaveCount(6);
   const boxes = await plots.evaluateAll((svgs) =>
     svgs.map((svg) => svg.getBoundingClientRect()),
   );
   // One column: each plot starts at the same left edge, and none passes
-  // the right edge of the page.
+  // the right edge of the page; nor does the download.
   expect(new Set(boxes.map((box) => Math.round(box.left))).size).toBe(1);
   for (const box of boxes) expect(box.right).toBeLessThanOrEqual(320);
-  // The three columns of the table within its box, which does not scroll
-  // sideways, with the short headers of a narrow page.
-  const grid = table(page);
+  const download = await downloadButton(page).boundingBox();
   expect(
-    await grid.evaluate((element) => element.scrollWidth - element.clientWidth),
-  ).toBe(0);
-  const right = await grid.evaluate(
-    (element) => element.getBoundingClientRect().right,
-  );
-  const headers = grid.getByRole("columnheader");
-  await expect(headers).toHaveCount(3);
-  for (const box of await headers.evaluateAll((cells) =>
-    cells.map((cell) => cell.getBoundingClientRect()),
-  )) {
-    expect(box.right).toBeLessThanOrEqual(right);
-  }
-  // A screen reader still hears the whole name of each column.
-  await expect(
-    grid.getByRole("columnheader", { name: /^Observed heterozygosity/u }),
-  ).toBeVisible();
-  await expect(grid.getByText("Heterozygosity", { exact: true })).toBeVisible();
+    (download?.x ?? Infinity) + (download?.width ?? Infinity),
+  ).toBeLessThanOrEqual(320);
   expect(
     await page.evaluate(
       () =>
@@ -424,7 +409,7 @@ test("FS2 on a desktop the plots are two wide", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   const lefts = await stats(page)
     .locator("svg.chart")
     .evaluateAll((svgs) =>
@@ -498,3 +483,85 @@ test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps t
     ),
   ).toBe(true);
 });
+
+test("FS3 the open button is alone under the heading before a file is opened, and under the statistics once one is", async ({
+  page,
+}) => {
+  await openPage(page);
+  // Under the heading, the open button alone: no box, no statistics.
+  await expect(
+    page.locator("main").getByRole("region", { includeHidden: true }),
+  ).toHaveCount(1);
+  await expect(openButton(page)).toHaveText("Open variants file…");
+
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  const box = await page
+    .getByRole("region", { name: "File information" })
+    .boundingBox();
+  const statsAt = await stats(page).boundingBox();
+  const buttonAt = await openButton(page).boundingBox();
+  // The box of the file, then the statistics, then the open button.
+  expect((box?.y ?? NaN) + (box?.height ?? NaN)).toBeLessThanOrEqual(
+    statsAt?.y ?? NaN,
+  );
+  expect((statsAt?.y ?? NaN) + (statsAt?.height ?? NaN)).toBeLessThanOrEqual(
+    buttonAt?.y ?? NaN,
+  );
+  await expect(openButton(page)).toHaveText("Open another variants file…");
+});
+
+for (const width of [1280, 320] as const) {
+  test(`FS3 at ${String(width)} pixels the open button stays where it is from the read of the file to the end of the statistics: a press held on it across the end of the first pass, and a click at its place as the second ends, open the file picker`, async ({
+    page,
+  }, testInfo) => {
+    // A VCF written for the test, whose passes last seconds (testing.md,
+    // "The walking skeleton, as a flow").
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width, height: 900 });
+    const vcf = testInfo.outputPath("click.vcf.gz");
+    await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+    await openPage(page);
+    await pick(page, vcf);
+
+    // The file read and the statistics' section drawn, waiting for the
+    // count: the place of the button from now on.
+    await expect(
+      stats(page).getByText("Waiting for the count of the variants."),
+    ).toHaveCount(2, { timeout: 30_000 });
+    await openButton(page).scrollIntoViewIfNeeded();
+    const at = await openButton(page).boundingBox();
+    if (at === null) throw new Error("the open button is not drawn");
+    const x = at.x + at.width / 2;
+    const y = at.y + at.height / 2;
+
+    // The first pass runs; the press starts on the button, and is held
+    // until its four plots are drawn.
+    await expect(
+      stats(page).getByRole("progressbar", {
+        name: "Calculating the statistics of the variants",
+      }),
+    ).toBeVisible({ timeout: 60_000 });
+    expect(await openButton(page).boundingBox()).toEqual(at);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(stats(page).locator("svg.chart")).toHaveCount(4, {
+      timeout: 120_000,
+    });
+    expect(await openButton(page).boundingBox()).toEqual(at);
+    const first = page.waitForEvent("filechooser", { timeout: 5_000 });
+    await page.mouse.up();
+    await first;
+
+    // The second pass ends: a click at the place of the button as soon
+    // as its plots are drawn.
+    await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
+      timeout: 120_000,
+    });
+    const second = page.waitForEvent("filechooser", { timeout: 5_000 });
+    await page.mouse.click(x, y);
+    await second;
+    expect(await openButton(page).boundingBox()).toEqual(at);
+    await expect(downloadButton(page)).toBeVisible();
+  });
+}

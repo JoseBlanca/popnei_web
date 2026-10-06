@@ -1,38 +1,45 @@
 /**
- * The statistics of the open file on popgen2.html, under the open button
- * so that their plots, which come as each pass ends, never move it
- * (docs/plans/file-stats.md, "The design" and phase 2; steps 3 and 4 of
- * case 2 of docs/use-cases.md). Two parts, each under its heading:
+ * The statistics of the open file on popgen2.html, between the box of
+ * the file and the open button, which the owner put at the bottom of the
+ * page (docs/plans/file-stats.md, "The design" and "Round 1 with the
+ * owner"; steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
+ * under its heading:
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
- *   and the expected heterozygosity (unbiased), each with its mean, which
- *   popnei gives, and the number of variants in its bins;
+ *   and the expected heterozygosity (unbiased), with the number of
+ *   variants in their bins;
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   from 0 to the largest, with the number of individuals in their bins
- *   and no mean, which popnei does not give; and the table of the
- *   individuals, sorted by any column.
+ *   with the number of individuals in their bins; and the download of
+ *   their table as CSV, which is not drawn, since there may be thousands
+ *   of individuals.
  *
- * Plain, as the owner wants this page: no table of the bins and no
- * download, which come back with the piece of the downloads.
+ * Plain, as the owner wants this page: no mean in the titles, no table of
+ * the bins.
  *
- * Above the parts, one row: the line and the bar of the pass running with
- * one Stop for both statistics, or, once stopped or after a crash of the
- * worker, the button that starts again those not done.
- * Each part says, in place of its result, what it waits for, that a
- * failure or a Stop before it held it back, that it was stopped, or the
- * words of its own failure, and nothing while it is calculated, which the
- * line over the bar says; a failure of one hides nothing of the other. When the button goes with the focus on it, the
- * focus goes to the heading of the part that failed, or of the variants;
- * when another file is opened, to the open button.
+ * Above the parts, one row: the bar of the pass running with one Stop for
+ * both statistics, or, once stopped or after a crash of the worker, the
+ * button that starts again those not done. Each part says, over the room
+ * of its plots, what it waits for, that a failure or a Stop before it
+ * held it back, that it was stopped, or that it is calculated with its
+ * share done; in place of its plots, the words of its own failure; a
+ * failure of one hides nothing of the other. When the button goes with
+ * the focus on it, the focus goes to the heading of the part that failed,
+ * or of the variants; when another file is opened, to the open button.
  *
- * Drawn once the file is read, the statistics then waiting for the count
- * of its variants, which the box above shows.
+ * The open button is under the section, so the section keeps its height
+ * from the moment it is drawn, the file read, to the end of the second
+ * pass: the row of the button is one button high in every state, empty
+ * when there is none; the words of a part lie over the room of its
+ * plots, which is kept, hidden, until they are drawn; and the download
+ * keeps its room, hidden, until the table is there. So a click aimed at
+ * the open button as a pass ends, or a press held across that end, is
+ * not lost. Only a failure, whose words take the place of the plots, a
+ * line of individuals with no called genotype under their plot, and the
+ * user's own Stop, which only the bar leaves, change it.
  */
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
-import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
   IndividualChecksResult,
@@ -47,21 +54,34 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import { POPGEN2_STATISTICS_IDS } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import { IndividualTable } from "../steps/variants/IndividualTable.tsx";
+import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
+import { downloadText } from "../download.ts";
+import { statsCsvName } from "../steps/variants/individualStats.ts";
 import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
-import styles from "./FileStats.module.css";
+import {
+  ControlsRow,
+  IndividualPlace,
+  IndividualsDownload,
+  Part,
+  PlotsRoom,
+  StatsFrame,
+  StatsRoom,
+} from "./StatsLayout.tsx";
+import styles from "./StatsLayout.module.css";
 import {
   INDIVIDUALS_HEADING,
   INDIVIDUALS_ID,
+  INDIVIDUAL_STATISTICS,
   RESUME_STATS_LABEL,
-  STATS_NAME,
   STATS_PROGRESS_KIND,
   STATS_STOPPED_TEXT,
   STOP_STATS_LABEL,
   VARIANTS_HEADING,
   VARIANTS_ID,
+  VARIANT_STATISTICS,
+  individualTitle,
   pendingText,
   statsBarLabel,
   statsButton,
@@ -69,26 +89,13 @@ import {
   statsRunningLine,
   statsStartText,
   statsStatus,
+  variantTitle,
 } from "./statsWords.ts";
 import type { StatsId } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { summaryStatus } from "./words.ts";
-
-/** The four histograms of the variants, in the order they are drawn. */
-const VARIANT_STATISTICS: readonly VariantStatistic[] = Object.freeze([
-  "missingRate",
-  "maf",
-  "obsHet",
-  "unbiasedExpHet",
-]);
-
-/** The two histograms of the individuals, in the order they are drawn. */
-const INDIVIDUAL_STATISTICS: readonly IndividualStatistic[] = Object.freeze([
-  "missingGenotypes",
-  "observedHeterozygosity",
-]);
 
 /** What the section is drawn with. */
 export interface FileStatsProps {
@@ -110,7 +117,10 @@ export function FileStats({
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
-  if (variants?.read.kind !== "read") return null;
+  if (variants === null) return null;
+  // Until the file is read, the room of the statistics, as high as the
+  // section that follows.
+  if (variants.read.kind !== "read") return <StatsRoom />;
   return (
     // Another load is another section, so that the one before goes, with
     // the focus it held.
@@ -227,90 +237,98 @@ function Stats({
     }
   };
 
-  /** What a part shows in place of its result, or `null` once done. */
-  const notDone = (
+  /** What a part says over the room of its plots: its share done while
+      it runs, what holds it back, or nothing once done or failed. */
+  const lineOf = (
     id: StatsId,
     status: AnalysisStatus<JobResult>,
-  ): React.JSX.Element | null => {
+  ): string | null => {
     switch (status.kind) {
       case "done":
+      case "error":
         return null;
       case "running":
-        // The line over the bar says it.
-        return null;
+        return statsRunningLine(id, shareOf(status));
       case "ready":
-      case "removed": {
+      case "removed":
         // A statistic ready that autoRuns knows nothing of starts by
         // itself in a moment.
-        const text = pendingText(
+        return pendingText(
           autoRuns.pending(id) ?? { kind: "waiting", after: null },
         );
-        return text === null ? null : (
-          <p className={classOf(styles, "line")}>{text}</p>
-        );
-      }
       case "locked":
-        return <p className={classOf(styles, "line")}>{status.reason}</p>;
-      case "error":
-        return <Problem>{statsFailedText(id, status.error, project)}</Problem>;
+        return status.reason;
     }
   };
 
   const variantsResult = resultOf(variants, VARIANTS_ID);
   const individualsResult = resultOf(individuals, INDIVIDUALS_ID);
   return (
-    <section
-      ref={sectionRef}
-      aria-label={STATS_NAME}
-      className={classOf(styles, "stats")}
-    >
-      {runButton !== null && (
-        <div className={classOf(styles, "controls")}>
-          {running !== null && (
-            <p className={classOf(styles, "runningLine")}>
-              {statsRunningLine(running.id, running.share)}
-            </p>
-          )}
-          <div className={classOf(styles, "barRow")}>
-            {running !== null && (
-              <div className={classOf(styles, "bar")}>
-                <ProgressBar
-                  label={statsBarLabel(running.id)}
-                  value={running.share}
-                />
-              </div>
-            )}
-            <div className={classOf(styles, "button")}>
-              <RunButton
-                button={runButton}
-                runLabel={RESUME_STATS_LABEL}
-                stopLabel={STOP_STATS_LABEL}
-                onRun={resume}
-                onStop={stop}
-                onGone={() => {
-                  // The headings are drawn by the time the effects of the
-                  // drawing run, after this cleanup.
-                  focusAfterGone.current = true;
-                }}
-              />
-            </div>
+    <StatsFrame sectionRef={sectionRef}>
+      <ControlsRow>
+        {running !== null && (
+          <div className={classOf(styles, "bar")}>
+            <ProgressBar
+              label={statsBarLabel(running.id)}
+              value={running.share}
+            />
           </div>
-        </div>
-      )}
+        )}
+        {runButton !== null && (
+          <div className={classOf(styles, "button")}>
+            <RunButton
+              button={runButton}
+              runLabel={RESUME_STATS_LABEL}
+              stopLabel={STOP_STATS_LABEL}
+              onRun={resume}
+              onStop={stop}
+              onGone={() => {
+                // The headings are drawn by the time the effects of the
+                // drawing run, after this cleanup.
+                focusAfterGone.current = true;
+              }}
+            />
+          </div>
+        )}
+      </ControlsRow>
       <Part heading={VARIANTS_HEADING} headingRef={variantsHeading}>
-        {notDone(VARIANTS_ID, variants)}
-        {variantsResult !== null && <VariantPlots result={variantsResult} />}
-      </Part>
-      <Part heading={INDIVIDUALS_HEADING} headingRef={individualsHeading}>
-        {notDone(INDIVIDUALS_ID, individuals)}
-        {individualsResult !== null && (
-          <IndividualParts
-            result={individualsResult}
-            variantsName={variantsName}
-          />
+        {variants.kind === "error" ? (
+          <Problem>
+            {statsFailedText(VARIANTS_ID, variants.error, project)}
+          </Problem>
+        ) : (
+          <PlotsRoom line={lineOf(VARIANTS_ID, variants)}>
+            <VariantPlots result={variantsResult} />
+          </PlotsRoom>
         )}
       </Part>
-    </section>
+      <Part heading={INDIVIDUALS_HEADING} headingRef={individualsHeading}>
+        {individuals.kind === "error" ? (
+          <Problem>
+            {statsFailedText(INDIVIDUALS_ID, individuals.error, project)}
+          </Problem>
+        ) : (
+          <>
+            <PlotsRoom line={lineOf(INDIVIDUALS_ID, individuals)}>
+              <IndividualPlots result={individualsResult} />
+            </PlotsRoom>
+            <IndividualsDownload
+              onPress={
+                individualsResult === null
+                  ? null
+                  : () => {
+                      downloadText(
+                        statsCsvName(variantsName),
+                        individualChecksCsv(individualsResult),
+                        "text/csv",
+                      );
+                    }
+              }
+            />
+          </>
+        )}
+      </Part>
+    </StatsFrame>
   );
 }
 
@@ -322,38 +340,14 @@ function shareOf(
   return status.progress === null ? null : progressShare(status.progress);
 }
 
-/** What a part is drawn with. */
-interface PartProps {
-  /** Its heading. */
-  readonly heading: string;
-  /** The element of its heading, which takes the focus when the button
-      goes with it. */
-  readonly headingRef: React.RefObject<HTMLHeadingElement | null>;
-  /** What it holds under its heading. */
-  readonly children: React.ReactNode;
-}
-
-/** A part of the section: its heading, then what it holds. */
-function Part({ heading, headingRef, children }: PartProps): React.JSX.Element {
-  return (
-    <div className={classOf(styles, "part")}>
-      {/* It takes the focus when the button goes with it, and is not in
-          the order of the Tab key. */}
-      <h2 ref={headingRef} tabIndex={-1} className={classOf(styles, "heading")}>
-        {heading}
-      </h2>
-      {children}
-    </div>
-  );
-}
-
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
-  readonly result: VariantChecksResult;
+  /** The result, or `null` before it, for the room of the plots. */
+  readonly result: VariantChecksResult | null;
 }
 
 /** The four histograms of the variants, each over the variants in its
-    bins. */
+    bins, or the room they keep. */
 function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
   // Made again only for another result, so that the plots are not drawn
   // again on renders that changed nothing (react.md, "Mounting a plot").
@@ -361,52 +355,54 @@ function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
     () =>
       VARIANT_STATISTICS.map((statistic) => ({
         statistic,
-        plot: variantPlot(statistic, result),
-      })),
-    [result],
-  );
-  return (
-    <div className={classOf(styles, "plots")}>
-      {plots.map(({ statistic, plot }) => (
-        <StatsHistogram key={statistic} plot={plot} />
-      ))}
-    </div>
-  );
-}
-
-/** What the plots and the table of the individuals are drawn with. */
-interface IndividualPartsProps {
-  readonly result: IndividualChecksResult;
-  readonly variantsName: string;
-}
-
-/** The two histograms of the individuals, each over the individuals with
-    a value and from 0, and the table of the individuals. */
-function IndividualParts({
-  result,
-  variantsName,
-}: IndividualPartsProps): React.JSX.Element {
-  const plots = useMemo(
-    () =>
-      INDIVIDUAL_STATISTICS.map((statistic) => ({
-        statistic,
-        shown: individualPlot(statistic, result),
+        plot: result === null ? null : variantPlot(statistic, result),
       })),
     [result],
   );
   return (
     <>
-      <div className={classOf(styles, "plots")}>
-        {plots.map(({ statistic, shown }) => (
-          <div key={statistic} className={classOf(styles, "plot")}>
-            {shown.plot !== null && <StatsHistogram plot={shown.plot} />}
-            {shown.noValueLine !== null && (
-              <p className={classOf(styles, "line")}>{shown.noValueLine}</p>
-            )}
-          </div>
-        ))}
-      </div>
-      <IndividualTable result={result} variantsName={variantsName} plain />
+      {plots.map(({ statistic, plot }) => (
+        <StatsHistogram
+          key={statistic}
+          title={variantTitle(statistic)}
+          plot={plot}
+        />
+      ))}
+    </>
+  );
+}
+
+/** What the plots of the individuals are drawn with. */
+interface IndividualPlotsProps {
+  /** The result, or `null` before it, for the room of the plots. */
+  readonly result: IndividualChecksResult | null;
+}
+
+/** The two histograms of the individuals, each over the individuals
+    with a value, and under each the line of those with none, or the room
+    they keep. */
+function IndividualPlots({ result }: IndividualPlotsProps): React.JSX.Element {
+  const plots = useMemo(
+    () =>
+      INDIVIDUAL_STATISTICS.map((statistic) => ({
+        statistic,
+        shown: result === null ? null : individualPlot(statistic, result),
+      })),
+    [result],
+  );
+  return (
+    <>
+      {plots.map(({ statistic, shown }) => (
+        <IndividualPlace
+          key={statistic}
+          noValueLine={shown?.noValueLine ?? null}
+        >
+          <StatsHistogram
+            title={individualTitle(statistic)}
+            plot={shown?.plot ?? null}
+          />
+        </IndividualPlace>
+      ))}
     </>
   );
 }

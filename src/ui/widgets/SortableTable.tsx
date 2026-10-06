@@ -61,12 +61,6 @@ export interface SortableColumn<Id extends string> {
   readonly isNumeric?: boolean;
   /** The narrowest it may be, in CSS pixels. */
   readonly minWidth: number;
-  /** The words its header shows, in place of `label`, in a table that
-      fits a narrow page, `fitNarrow`, on a page narrower than 30em: a
-      part of `label`, "Missing" of "Proportion of missing genotypes", so
-      that what is seen is in the name a screen reader says, which stays
-      `label` (WCAG 2.5.3). */
-  readonly narrowLabel?: string;
 }
 
 /** The height a row is drawn at before it is measured, in CSS pixels: a
@@ -105,11 +99,6 @@ export interface SortableTableProps<Id extends string> {
       not measure the header, as it did not on a page 320 pixels wide in
       Chromium 153, which left the header of one line 81 pixels high. */
   readonly headingLines?: number;
-  /** Whether, on a page narrower than 30em, the headers show their
-      `narrowLabel` in smaller words with less space beside them, so that
-      columns of small `minWidth` fit a page 320 pixels wide and the box
-      does not scroll sideways. */
-  readonly fitNarrow?: boolean;
 }
 
 /** A table sorted by any of its columns, in a box that scrolls. */
@@ -120,7 +109,6 @@ export function SortableTable<Id extends string>({
   sort,
   onSortChange,
   headingLines = 3,
-  fitNarrow = false,
 }: SortableTableProps<Id>): React.JSX.Element {
   // The same object while the lines are the same, since the Virtualizer
   // lays the table out again for other options.
@@ -161,31 +149,11 @@ export function SortableTable<Id extends string>({
               // ascending order".
               textValue={column.label}
               allowsSorting
-              className={[
-                cellClass(column, "header"),
-                ...(fitNarrow ? [classOf(styles, "fitNarrow")] : []),
-              ].join(" ")}
+              className={cellClass(column, "header")}
             >
               {({ sortDirection }) => (
                 <span className={classOf(styles, "headerText")}>
-                  {fitNarrow && column.narrowLabel !== undefined ? (
-                    <>
-                      {/* The label, said by a screen reader and seen on a
-                          wide page; on a narrow one, the narrow label is
-                          seen in its place. */}
-                      <span className={classOf(styles, "wideLabel")}>
-                        {column.label}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className={classOf(styles, "narrowLabel")}
-                      >
-                        {column.narrowLabel}
-                      </span>
-                    </>
-                  ) : (
-                    column.label
-                  )}
+                  {column.label}
                   {/* The direction is said by React Aria, and drawn
                       here for the eyes alone. */}
                   <span aria-hidden="true" className={classOf(styles, "arrow")}>
