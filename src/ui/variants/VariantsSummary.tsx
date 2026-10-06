@@ -1,30 +1,26 @@
 /**
  * The box of the variants file on popgen2.html, above the open button
- * (docs/plans/open-variants.md, "Two widgets"; the owner's layouts of 6
- * October 2026), and the table of the variants on each chromosome, which
- * the page draws under the open button. The box says what is known of the
+ * (docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
+ * layouts and decisions of 6 October 2026). It says what is known of the
  * file open, line by line: its name and size, its individuals, its
- * variants, its chromosomes and its ploidy. What the opening knows is
- * shown at once; the individuals, and the ploidy of a `.nei` file, once
- * the file is read; the variants and the chromosomes once they are
- * counted, which starts by itself (autoRuns.ts). Under the lines, a row
- * of one height in every state holds the seconds of the read, the bar of
- * the count with its Stop, or Count again.
+ * variants, its chromosomes and its ploidy, the file's. What the opening
+ * knows is shown at once; the individuals and the ploidy once the file is
+ * read; the variants and the chromosomes once they are counted, which
+ * starts by itself (autoRuns.ts). Under the lines, a row of one height in
+ * every state holds the seconds of the read, the bar of the count with
+ * its Stop, or Count again.
  *
  * The box keeps its height through the read and the count, a value not
- * known yet said in its place, so that a new ploidy, which reads the file
- * again as the field loses the focus to a press on the open button or on
- * the box of the passed variants, does not move them from under the
- * pointer. Only a problem adds to it, after the lines: a file popnei
- * could not read, in place of all the lines but the first; a count
- * refused; a file refused by its name, or several files at once, after
- * the lines of the file still open, or alone with none. There is no box
- * before a file is opened or refused.
+ * known yet said in its place, so that the open button under it does not
+ * move from under the pointer as a read or a count ends. Only a problem
+ * adds to it, after the lines: a file popnei could not read, in place of
+ * all the lines but the first; a count refused; a file refused by its
+ * name, or several files at once, after the lines of the file still open,
+ * or alone with none. There is no box before a file is opened or refused.
  */
 import { useLayoutEffect, useRef } from "react";
 
 import { chromRows } from "../../core/analyses/variantsSummary.ts";
-import { escaped, grouped, variantsOpenNeeds } from "../../core/project.ts";
 import type { VariantSource } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -38,20 +34,16 @@ import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
 import { useAppState, useStore } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
-import { Table } from "../widgets/Table.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import styles from "./Variants.module.css";
 import {
   CHROMOSOMES_COUNTING,
   CHROMOSOMES_NOT_COUNTED,
   CHROMOSOMES_READING,
-  CHROMS_CAPTION,
-  CHROM_COLUMN,
   COUNT_AGAIN_LABEL,
   COUNT_BAR_LABEL,
   INDIVIDUALS_READING,
   INFO_NAME,
-  NUM_VARS_COLUMN,
   PLOIDY_READING,
   READING_TIME_LINE,
   STOPPED_TEXT,
@@ -64,6 +56,7 @@ import {
   failedText,
   individualsLine,
   nameAndSizeText,
+  openFailedText,
   ploidyLine,
   summaryStatus,
   variantsLine,
@@ -134,7 +127,7 @@ function Load({
   variants,
 }: LoadProps): React.JSX.Element {
   const linesRef = useRef<HTMLDivElement>(null);
-  const reason = useAppState((s) => variantsOpenNeeds(s.project));
+  const reason = useAppState((s) => openFailedText(s.project));
   useLayoutEffect(() => {
     const lines = linesRef.current;
     // The open button is one element whatever the zone holds.
@@ -150,10 +143,7 @@ function Load({
       }
     };
   }, [openButton]);
-  const { read, readOptions } = variants;
-  // The ploidy a VCF is read with, known before the read; `null` for a
-  // `.nei` file, and for a VCF whose ploidy popnei reads from it.
-  const givenPloidy = readOptions?.ploidy ?? null;
+  const { read } = variants;
   return (
     <div ref={linesRef} className={classOf(styles, "lines")}>
       <p className={classOf(styles, "fileName")}>{nameAndSizeText(variants)}</p>
@@ -162,11 +152,7 @@ function Load({
           <p className={classOf(styles, "line")}>{INDIVIDUALS_READING}</p>
           <p className={classOf(styles, "line")}>{VARIANTS_READING}</p>
           <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
-          <p className={classOf(styles, "line")}>
-            {givenPloidy === null
-              ? PLOIDY_READING
-              : ploidyLine(givenPloidy, readOptions)}
-          </p>
+          <p className={classOf(styles, "line")}>{PLOIDY_READING}</p>
           <div className={classOf(styles, "progress")}>
             <p className={classOf(styles, "progressLine")}>
               {READING_TIME_LINE}{" "}
@@ -184,7 +170,7 @@ function Load({
           <Count
             autoRuns={autoRuns}
             onCountButton={onCountButton}
-            ploidy={ploidyLine(read.ploidy, readOptions)}
+            ploidy={ploidyLine(read.ploidy)}
           />
         </>
       )}
@@ -374,31 +360,3 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
     </>
   );
 }
-
-/** The table of the chromosomes and their variants, once counted, which
-    the page draws under the open button. */
-export function ChromTable(): React.JSX.Element | null {
-  const status = useAppState(summaryStatus);
-  const read = useAppState((s) => s.project.variants?.read.kind === "read");
-  if (!read || status.kind !== "done") return null;
-  const rows = chromRows(status.result);
-  return (
-    <Table
-      caption={CHROMS_CAPTION}
-      columns={[
-        { id: "chrom", label: CHROM_COLUMN, isRowHeader: true },
-        { id: "numVars", label: NUM_VARS_COLUMN, isNumeric: true },
-      ]}
-      rows={rows.map((row) => ({
-        id: row.chrom,
-        cells: [escaped(row.chrom), grouped(row.numVars)],
-      }))}
-      limitedHeight={rows.length > LONG_TABLE}
-    />
-  );
-}
-
-/** The rows past which the table of the chromosomes scrolls in a frame of
-    limited height, so that a file of thousands of scaffolds does not push
-    the page thousands of pixels down. */
-const LONG_TABLE = 20;

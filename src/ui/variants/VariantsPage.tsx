@@ -2,10 +2,8 @@
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
  * the page's one heading, "Popnei"; the box of the file open, with what
- * went wrong with it; under it the opening of the variants file; under
- * that the table of the chromosomes of the file, which with hundreds of
- * scaffolds would push the open button out of a window; each in a
- * boundary of errors that draws its name alone in its place; and the
+ * went wrong with it; under it the opening of the variants file; each in
+ * a boundary of errors that draws its name alone in its place; and the
  * status region that says what changes away from the focus. The page holds the words of the last file
  * not opened, which the opening says and the box shows.
  */
@@ -18,8 +16,8 @@ import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import styles from "./VariantsPage.module.css";
-import { ChromTable, VariantsSummary } from "./VariantsSummary.tsx";
-import { CHROMS_CAPTION, INFO_NAME, OPENING_NAME } from "./words.ts";
+import { VariantsSummary } from "./VariantsSummary.tsx";
+import { INFO_NAME, OPENING_NAME } from "./words.ts";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
@@ -56,9 +54,6 @@ export function VariantsPage({
         </ErrorBoundary>
         <ErrorBoundary heading={OPENING_NAME} level={2}>
           <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
-        </ErrorBoundary>
-        <ErrorBoundary heading={CHROMS_CAPTION} level={2}>
-          <ChromTable />
         </ErrorBoundary>
       </main>
       <StatusRegion />

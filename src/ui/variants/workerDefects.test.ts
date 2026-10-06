@@ -78,7 +78,7 @@ describe("the defects of the worker given to the error bar of the new page", () 
     });
   });
 
-  test("a failure that is no defect of our code is not reported", async () => {
+  test("a worker that stopped during the count is reported once, with what it said", async () => {
     const { store, sent } = setUp();
     const defects = createDefects();
     reportDefects(store, defects);
@@ -87,6 +87,69 @@ describe("the defects of the worker given to the error bar of the new page", () 
     sent[0]?.({
       kind: "failed",
       error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    store.popneiReady("0.1.0");
+
+    expect(defects.getState()).toEqual({
+      first: {
+        message: "out of memory",
+        details:
+          "Error 1, the calculation worker stopped during an opening or a count, with these words:\nout of memory",
+      },
+      more: 0,
+    });
+  });
+
+  test("a worker that stopped during the opening is reported once, with what it said", () => {
+    const { store } = setUp();
+    const defects = createDefects();
+    reportDefects(store, defects);
+    const OTHER_ID = "fedcba9876543210fedcba9876543210";
+
+    store.apply("a new variants file was loaded", (p) =>
+      loadVariants(p, {
+        fileId: OTHER_ID,
+        name: "panel.vcf.gz",
+        size: 87_000,
+        format: "vcf",
+        readOptions: { ploidy: null, onlyPassed: false },
+      }),
+    );
+    const failed = {
+      kind: "failed",
+      error: {
+        kind: "worker",
+        error: {
+          kind: "workerFailed",
+          message: "wasm.default_ploidy is not a function",
+        },
+      },
+    } as const;
+    store.variantsRead(OTHER_ID, failed);
+    // The same failure recorded again is reported no second time.
+    store.variantsRead(OTHER_ID, failed);
+    store.popneiReady("0.1.0");
+
+    expect(defects.getState()).toEqual({
+      first: {
+        message: "wasm.default_ploidy is not a function",
+        details:
+          "Error 1, the calculation worker stopped during an opening or a count, with these words:\nwasm.default_ploidy is not a function",
+      },
+      more: 0,
+    });
+  });
+
+  test("a failure that is neither a defect of our code nor a worker that stopped is not reported", async () => {
+    const { store, sent } = setUp();
+    const defects = createDefects();
+    reportDefects(store, defects);
+
+    void startAnalysis(store, SUMMARY_ID);
+    sent[0]?.({
+      kind: "failed",
+      error: { kind: "popnei", message: "the pass gave no variant" },
     });
     await settled();
 

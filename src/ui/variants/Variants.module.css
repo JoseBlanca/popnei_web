@@ -1,17 +1,9 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The opening: the zone and the place of a ploidy refused, one under
-   the other. */
+/* The opening: the zone. */
 .section {
   display: grid;
-  gap: var(--space-3);
   align-content: start;
-}
-
-/* The place of the line of a ploidy refused, under the zone: no box of
-   its own, so that, empty, it adds no gap to the section. */
-.slot {
-  display: contents;
 }
 
 /* The box of the file: a solid border, where the zone's is dashed. */

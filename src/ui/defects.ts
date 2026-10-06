@@ -30,9 +30,17 @@ export interface DefectsState {
 /** Where an error came from: the window's `error` event, its
     `unhandledrejection` event, React drawing the shell outside every
     boundary, React drawing a step, whose error boundary caught it, or
-    Save the project of the error bar, which caught it. */
+    Save the project of the error bar, which caught it; a defect thrown
+    in the calculation worker; or that worker stopped on its own, on
+    popgen2.html, with the words the browser gave. */
 export type DefectOrigin =
-  "event" | "rejection" | "drawing" | "boundary" | "barSave" | "worker";
+  | "event"
+  | "rejection"
+  | "drawing"
+  | "boundary"
+  | "barSave"
+  | "worker"
+  | "workerStopped";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -71,6 +79,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
     "thrown as Save the project of the error bar wrote the project file, caught by the bar",
   worker:
     "thrown in the calculation worker during a calculation, given back to the page as its failure",
+  workerStopped:
+    "the calculation worker stopped during an opening or a count, with these words",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });

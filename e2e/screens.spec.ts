@@ -4456,18 +4456,12 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-count-stopped${at}-${theme}`);
       });
 
-      test("a ploidy refused", async ({ page }) => {
-        await pickOnNewPage(page, "panel.vcf.gz");
+      test("a VCF whose ploidy could not be read", async ({ page }) => {
+        await pickOnNewPage(page, "no_ploidy.vcf.gz");
         await expect(
-          newPageCount(page).getByText("Chromosomes: 1"),
+          newPageCount(page).getByText(/^The ploidy of no_ploidy\.vcf\.gz/u),
         ).toBeVisible();
-        const ploidy = page.getByRole("textbox", {
-          name: "Default ploidy",
-        });
-        await ploidy.fill("300");
-        await ploidy.press("Enter");
-        await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
-        await save(page, `popgen2-ploidy-refused${at}-${theme}`);
+        await save(page, `popgen2-ploidy-not-read${at}-${theme}`);
       });
     });
   }

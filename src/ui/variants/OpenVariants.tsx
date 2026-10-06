@@ -1,47 +1,28 @@
 /**
  * The opening of the variants file on popgen2.html
- * (docs/plans/open-variants.md, "Two widgets"; the owner's layouts of 6
+ * (docs/plans/open-variants.md, "Round 3"; the owner's decision of 6
  * October 2026): one widget, a zone that also takes a dropped or pasted
- * file, with the button "Open variants file…" and, on its row, the
- * default ploidy a VCF is read with; under them the box of the passed
- * variants. The two options apply before a file is opened, and their
- * change reads an open VCF again. Below the zone, a ploidy the field
- * refused. The words of a file it did not open go to the page, which
- * shows them in the box of the file above the zone.
+ * file, with the button "Open variants file…". A VCF is opened with no
+ * ploidy, which popnei reads from the file, and with every variant,
+ * whatever its FILTER column, which a filter is to choose among later;
+ * so the page asks nothing of how a file is read. The words of a file it
+ * did not open go to the page, which shows them in the box of the file
+ * above the zone.
  *
- * Nothing above or beside the button and the box of the passed variants
- * may move as the ploidy field loses the focus, or the press that takes
- * the focus from it would be lost. A change of the options reads the
- * file again at once, and the box of the file above keeps its height
- * through the read and the count (VariantsSummary.tsx).
- *
- * It reads the project from the store and sends it the commands of the
- * Variants step; what it holds itself is the options the user last set,
- * kept when a `.nei` file is opened.
+ * It reads the project from the store and sends it the command of the
+ * Variants step that loads a file.
  */
-import { useRef, useState } from "react";
-
-import { MAX_PLOIDY } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import { pickCommand, readAgainCommand } from "../steps/variants/commands.ts";
-import {
-  DEFAULT_READ_OPTIONS,
-  ONLY_PASSED_LABEL,
-  PICKER_ENDINGS,
-  formatOfName,
-  ploidyRefusedText,
-} from "../steps/variants/words.ts";
+import { pickCommand } from "../steps/variants/commands.ts";
+import { PICKER_ENDINGS, formatOfName } from "../steps/variants/words.ts";
 import { useAppState, useStore } from "../store.tsx";
-import { Checkbox } from "../widgets/Checkbox.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
-import { NumberField } from "../widgets/NumberField.tsx";
 import styles from "./Variants.module.css";
 import {
-  DEFAULT_PLOIDY_LABEL,
   FOLDER_DROPPED,
   OPEN_ANOTHER_LABEL,
   OPEN_LABEL,
@@ -51,6 +32,13 @@ import {
   TEXT_DROPPED,
   notOpenedText,
 } from "./words.ts";
+
+/** How the page reads a VCF: with the ploidy popnei reads from the file,
+    and every variant, whatever its FILTER column. */
+const READ_OPTIONS: VcfReadOptions = Object.freeze({
+  ploidy: null,
+  onlyPassed: false,
+});
 
 /** What the page says of a drop, or a paste, that is not of one file. */
 const NOT_FILES_WORDS = {
@@ -88,21 +76,6 @@ export function OpenVariants({
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
 
-  // The options the user last set, for the next VCF and for a VCF open;
-  // a .nei file opened keeps them, since it has its own ploidy. The ref
-  // holds them at once for a pick made in the same moment as a commit.
-  const [options, setOptions] = useState<VcfReadOptions>(DEFAULT_READ_OPTIONS);
-  const optionsNow = useRef(options);
-  const commitPloidy = useRef<(() => void) | null>(null);
-  // Whether a new file is being opened: a ploidy committed then is kept
-  // for it, and the file open before is not read again.
-  const opening = useRef(false);
-
-  // The element the line of a ploidy refused is drawn into, once drawn.
-  const [ploidyRefusedIn, setPloidyRefusedIn] = useState<HTMLElement | null>(
-    null,
-  );
-
   const refuse = (text: string): void => {
     onRefusal({
       text,
@@ -126,50 +99,15 @@ export function OpenVariants({
       return;
     }
     onRefusal(null);
-    // A number still being typed in the ploidy is committed first, for
-    // the new file, since a file dropped from the desktop leaves the
-    // focus in the field; the file it replaces is not read again.
-    opening.current = true;
-    try {
-      commitPloidy.current?.();
-    } finally {
-      opening.current = false;
-    }
     const load: VariantLoad = {
       fileId: files.addFile(file),
       name: file.name,
       size: file.size,
       format,
-      readOptions: format === "vcf" ? optionsNow.current : null,
+      readOptions: format === "vcf" ? READ_OPTIONS : null,
     };
     const step = pickCommand(load);
     store.apply(step.description, step.command);
-  };
-
-  /** An open VCF read again with the options the user last set, the same
-      file under a new load. */
-  const readAgain = (): void => {
-    const open = store.getState().project.variants;
-    const file = open === null ? null : files.fileOf(open.fileId);
-    if (open?.format !== "vcf" || file === null) return;
-    onRefusal(null);
-    const step = readAgainCommand({
-      fileId: files.addFile(file),
-      name: open.name,
-      size: open.size,
-      format: "vcf",
-      readOptions: optionsNow.current,
-    });
-    store.apply(step.description, step.command);
-  };
-
-  /** The options changed to `next`: kept for the next VCF, and an open
-      VCF is read again with them, unless a new file is being opened. */
-  const change = (next: VcfReadOptions): void => {
-    optionsNow.current = next;
-    setOptions(next);
-    if (opening.current) return;
-    readAgain();
   };
 
   return (
@@ -183,41 +121,7 @@ export function OpenVariants({
           refuse(NOT_FILES_WORDS[dropped]);
         }}
         buttonRef={buttonRef}
-        actions={
-          <NumberField
-            label={DEFAULT_PLOIDY_LABEL}
-            value={options.ploidy ?? Number.NaN}
-            minValue={1}
-            maxValue={MAX_PLOIDY}
-            step={1}
-            inline
-            refusedText={ploidyRefusedText}
-            refusedIn={ploidyRefusedIn}
-            onRefused={(text) => {
-              announcer.announce(text);
-            }}
-            onCommitReady={(commit) => {
-              commitPloidy.current = commit;
-            }}
-            onChange={(ploidy) => {
-              change({ ...optionsNow.current, ploidy });
-            }}
-          />
-        }
-        status={
-          <Checkbox
-            label={ONLY_PASSED_LABEL}
-            isSelected={options.onlyPassed}
-            onChange={(onlyPassed) => {
-              change({ ...optionsNow.current, onlyPassed });
-            }}
-          />
-        }
       />
-      {/* The line of a ploidy refused, drawn here and not under the
-          field, where, appearing as the field loses the focus to a click
-          on the box or the button, it would move them from under it. */}
-      <div ref={setPloidyRefusedIn} className={classOf(styles, "slot")} />
     </section>
   );
 }

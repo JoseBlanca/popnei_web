@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { emptyProject, loadVariants } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
-import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
 import {
   chromosomesLine,
   countAgainMends,
@@ -13,6 +12,7 @@ import {
   individualsLine,
   nameAndSizeText,
   notOpenedText,
+  openFailedText,
   ploidyLine,
   refusalText,
   variantsLine,
@@ -39,11 +39,92 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the ploidy of a VCF is the one given, not checked against the genotypes; that of a .nei file the file's", () => {
-    expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
-      "Ploidy: 4 (as given, not checked against the genotypes)",
+  test("the ploidy is the file's, with no note", () => {
+    expect(ploidyLine(4)).toBe("Ploidy: 4");
+  });
+
+  test("a VCF whose ploidy popnei could not read: what happened, and popnei's Python, which opens it with a ploidy and writes the .nei file this page opens", () => {
+    const failed = (name: string, message: string): Project => {
+      const p = withVcf(name, { ploidy: null, onlyPassed: false });
+      const variants = p.variants;
+      if (variants === null) throw new Error("the test loaded a file");
+      return {
+        ...p,
+        variants: {
+          ...variants,
+          read: { kind: "failed", error: { kind: "popnei", message } },
+        },
+      };
+    };
+    expect(
+      openFailedText(
+        failed(
+          "no_ploidy.vcf.gz",
+          "the first 5 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+        ),
+      ),
+    ).toBe(
+      'The ploidy of no_ploidy.vcf.gz could not be read from the file: every genotype of its first 5 variants is a single dot, a missing genotype that does not say how many alleles it has, and this page has no way to give the ploidy. In Python, popnei opens the file with its ploidy given, 2 for a diploid: variants = popnei.open_vcf("no_ploidy.vcf.gz", ploidy=2, only_passed=False). It then writes it as a .nei file, popnei.write_vars(variants, "no_ploidy.nei"), which this page opens.',
     );
-    expect(ploidyLine(2, null)).toBe("Ploidy: 2 (given by the file)");
+    expect(
+      openFailedText(
+        failed(
+          "one.vcf",
+          "the one data line of the VCF holds no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+        ),
+      ),
+    ).toContain("every genotype of its one variant is a single dot");
+    expect(
+      openFailedText(
+        failed(
+          "big.vcf.bgz",
+          "the first 4096 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+        ),
+      ),
+    ).toContain("its first 4,096 variants is a single dot");
+    expect(
+      openFailedText(
+        failed(
+          "empty.vcf",
+          "the file has no variants and the ploidy can't be inferred",
+        ),
+      ),
+    ).toBe("empty.vcf has no variants. Open another variants file.");
+    // Any other refusal keeps the words of the opening.
+    expect(
+      openFailedText(
+        failed("bad.vcf", "the source is not a VCF: it starts with `x`"),
+      ),
+    ).toBe(
+      "popnei could not read bad.vcf: the source is not a VCF: it starts with x. Open another file.",
+    );
+    expect(openFailedText(PASSED)).toBe("Reading panel.vcf.gz.");
+    // A worker that stopped during the opening: the error bar has what
+    // it said.
+    const stopped = withVcf("panel.vcf.gz", {
+      ploidy: null,
+      onlyPassed: false,
+    });
+    const variants = stopped.variants;
+    if (variants === null) throw new Error("the test loaded a file");
+    expect(
+      openFailedText({
+        ...stopped,
+        variants: {
+          ...variants,
+          read: {
+            kind: "failed",
+            error: {
+              kind: "worker",
+              error: {
+                kind: "workerFailed",
+                message: "wasm.default_ploidy is not a function",
+              },
+            },
+          },
+        },
+      }),
+    ).toBe("panel.vcf.gz could not be read.");
   });
 
   test("the lines of the box of the file: its name and size, its individuals, variants and chromosomes, with their numbers grouped", () => {
@@ -72,17 +153,6 @@ describe("the words of the page that opens a variants file", () => {
 });
 
 describe("the refusals of the count", () => {
-  test("a VCF of no variant read with only the passed ones gives words that hold for both causes", () => {
-    expect(
-      refusalText(
-        "the pass gave no variant and its source holds none: the file",
-        PASSED,
-      ),
-    ).toBe(
-      `panel.vcf.gz has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" and it is read again with every variant; otherwise open another variants file.`,
-    );
-  });
-
   test("a file of no variant read with every variant says to open another", () => {
     expect(
       refusalText("the pass gave no variant and its source holds none", EVERY),
@@ -165,12 +235,10 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe(
-      "The count stopped on an error of the application itself. The error bar says what it was, and its details can be copied for a report.",
-    );
+    ).toBe("The variants of panel.vcf.gz could not be counted.");
   });
 
-  test("a failure of the worker says to count again", () => {
+  test("a failure of the worker names the file, the error bar saying the rest", () => {
     expect(
       failedText(
         {
@@ -179,8 +247,6 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe(
-      "The count stopped unexpectedly. Count again. If it stops again, open panel.vcf.gz again.",
-    );
+    ).toBe("The variants of panel.vcf.gz could not be counted.");
   });
 });

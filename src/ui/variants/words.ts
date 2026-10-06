@@ -1,10 +1,10 @@
 /**
  * The words of the page that opens a variants file, popgen2.html
- * (docs/plans/open-variants.md, "Two widgets"): the button and the zone,
- * the files it does not open, the options of a VCF, the lines of the box
- * of the file open, the count of its variants, the refusals and failures of
- * that count, and what the status region says as the file is read and
- * counted. They are the page's own, since the words of the rest of the
+ * (docs/plans/open-variants.md, "Two widgets" and "Round 3"): the button
+ * and the zone, the files it does not open, the lines of the box of the
+ * file open, a file popnei could not open, the count of its variants, the
+ * refusals and failures of that count, and what the status region says as
+ * the file is read and counted. They are the page's own, since the words of the rest of the
  * application send the user to a Variants step this page does not have.
  * Pure, so that a test in node checks them; the widgets draw them.
  */
@@ -30,8 +30,7 @@ import type {
   AppState,
 } from "../../core/store.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
-import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
-import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
+import type { JobResult } from "../../worker/protocol.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
@@ -48,9 +47,6 @@ export const PASTE_LABEL = "Paste a variants file";
 /** The name of the widget that opens a variants file, which has no
     heading of its own. */
 export const OPENING_NAME = "Variants file";
-
-/** The label of the ploidy a VCF is read with, beside the open button. */
-export const DEFAULT_PLOIDY_LABEL = "Default ploidy";
 
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
@@ -82,12 +78,12 @@ export function individualsLine(numIndividuals: number): string {
 }
 
 /* Each line of the box keeps one row at 320 pixels in every state of
-   the read and of the count, so that the box keeps its height when a
-   new ploidy reads the file again under a press of the pointer: the
-   words of a value not known yet are short. */
+   the read and of the count, so that the box keeps its height and the
+   open button under it does not move under the pointer as a count ends:
+   the words of a value not known yet are short. */
 
 /** The lines of the individuals, the variants, the chromosomes and the
-    ploidy of a `.nei` file while the file is read. */
+    ploidy while the file is read. */
 export const INDIVIDUALS_READING = "Individuals: reading…";
 export const VARIANTS_READING = "Variants: reading…";
 export const CHROMOSOMES_READING = "Chromosomes: reading…";
@@ -125,18 +121,71 @@ export function chromosomesLine(numChroms: number): string {
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
 
-/** The line of the ploidy: for a VCF, the one of the field Default
-    ploidy, which the page does not check, since the file does not give it
-    and the count does not read the genotypes; for a `.nei` file, the
-    file's. One row at 320 pixels only for a `.nei` file; for a VCF two in
-    every state, since it does not change with the state. */
-export function ploidyLine(
-  ploidy: number,
-  readOptions: VcfReadOptions | null,
-): string {
-  return readOptions === null
-    ? `Ploidy: ${String(ploidy)} (given by the file)`
-    : `Ploidy: ${String(ploidy)} (as given, not checked against the genotypes)`;
+/** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
+    this page is the file's: a `.nei` file holds it, and popnei reads that
+    of a VCF from its first genotype that is not a single dot. */
+export function ploidyLine(ploidy: number): string {
+  return `Ploidy: ${String(ploidy)}`;
+}
+
+/** popnei's refusal of a VCF opened with no ploidy whose first variants,
+    up to 4096 of them, hold no genotype but a single dot: their number,
+    or none for one. */
+const PLOIDY_NOT_READ =
+  /^(?:the first (\d+) data lines of the VCF hold|the one data line of the VCF holds) no genotype with alleles/u;
+
+/** popnei's refusal of a VCF opened with no ploidy that has a header and
+    no variant. */
+const PLOIDY_OF_NO_VARIANTS =
+  "the file has no variants and the ploidy can't be inferred";
+
+/** The name of the `.nei` file a VCF is written to: its own, with .nei in
+    place of .vcf, .vcf.gz or .vcf.bgz. */
+function neiNameOf(name: string): string {
+  return `${name.replace(/\.vcf(?:\.b?gz)?$/iu, "")}.nei`;
+}
+
+/**
+ * The words of a variants file that could not be opened, `p`'s, for the
+ * box: popnei could not read the ploidy of a VCF, since every genotype of
+ * its first variants is a single dot, which says no number of alleles,
+ * and the page has no field to give one, so the words give popnei's
+ * Python, which opens it with its ploidy given and writes it as a `.nei`
+ * file this page opens; a VCF of no variant; the worker that stopped,
+ * whose words the error bar shows; otherwise those of
+ * `variantsOpenNeeds`. `null` for a file being read or read.
+ */
+export function openFailedText(p: Project): string | null {
+  const variants = p.variants;
+  if (
+    variants?.read.kind === "failed" &&
+    variants.read.error.kind === "popnei"
+  ) {
+    const message = variants.read.error.message;
+    const name = escaped(variants.name);
+    const notRead = PLOIDY_NOT_READ.exec(message);
+    if (notRead !== null) {
+      const which =
+        notRead[1] === undefined
+          ? "its one variant"
+          : `its first ${grouped(Number(notRead[1]))} variants`;
+      const quoted = JSON.stringify(variants.name);
+      return `The ploidy of ${name} could not be read from the file: every genotype of ${which} is a single dot, a missing genotype that does not say how many alleles it has, and this page has no way to give the ploidy. In Python, popnei opens the file with its ploidy given, 2 for a diploid: variants = popnei.open_vcf(${quoted}, ploidy=2, only_passed=False). It then writes it as a .nei file, popnei.write_vars(variants, ${JSON.stringify(neiNameOf(variants.name))}), which this page opens.`;
+    }
+    if (message.startsWith(PLOIDY_OF_NO_VARIANTS)) {
+      return `${name} has no variants. Open another variants file.`;
+    }
+  }
+  if (
+    variants?.read.kind === "failed" &&
+    variants.read.error.kind === "worker" &&
+    variants.read.error.error.kind === "workerFailed"
+  ) {
+    // The error bar, on the screen with it, says what the worker said
+    // and how to report it (the owner, 6 October 2026).
+    return `${escaped(variants.name)} could not be read.`;
+  }
+  return variantsOpenNeeds(p);
 }
 
 /** The button that counts again after a Stop or a failure. */
@@ -152,13 +201,6 @@ export function countedText(numVars: number, numChroms: number): string {
   return `${counted(numVars, "variant")} on ${counted(numChroms, "chromosome")}.`;
 }
 
-/** The caption of the table of the chromosomes. */
-export const CHROMS_CAPTION = "Variants on each chromosome";
-
-/** The headers of its columns. */
-export const CHROM_COLUMN = "Chromosome";
-export const NUM_VARS_COLUMN = "Variants";
-
 /** popnei's refusal of a variant at the position 0. */
 const POSITION_ZERO =
   /^a variant of the chromosome (.*?) is at the position 0,/su;
@@ -170,8 +212,7 @@ const PAST_LARGEST =
 
 /**
  * The words of popnei's refusal `message` of the count of the variants
- * of `p`: a file of no variant, or, for a VCF read with only the passed
- * variants, none that passed; a variant at the position 0; a position of
+ * of `p`: a file of no variant; a variant at the position 0; a position of
  * 2^53 or more; a line of the VCF popnei cannot read, or a gzipped file
  * damaged or cut short; any other, with popnei's message. Throws a defect
  * on a project with no variants file.
@@ -185,11 +226,9 @@ export function refusalText(message: string, p: Project): string {
   }
   const fileName = escaped(variants.name);
   if (message.startsWith(EMPTY_SOURCE)) {
-    // popnei gives the same refusal for a file of no variant and for one
-    // whose variants all have another FILTER, so the words hold for both.
-    return variants.readOptions?.onlyPassed === true
-      ? `${fileName} has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" and it is read again with every variant; otherwise open another variants file.`
-      : `${fileName} has no variants. Open another variants file.`;
+    // The page reads every variant, whatever its FILTER column, so a
+    // pass of none is a file of none.
+    return `${fileName} has no variants. Open another variants file.`;
   }
   if (message.startsWith(SOURCE_UNREADABLE)) {
     return `${fileName} could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.`;
@@ -222,10 +261,11 @@ export function failedText(error: AnalysisError, p: Project): string {
     case "reopenFailed":
       return `${escaped(failure.name)} could not be read again; it may have changed on the disk since it was opened. Open it again.`;
     case "workerFailed":
-      return `The count stopped unexpectedly. Count again. If it stops again, open ${fileName} again.`;
     case "defect":
-      // The entry gives the defect to the error bar, which tells it whole.
-      return "The count stopped on an error of the application itself. The error bar says what it was, and its details can be copied for a report.";
+      // The entry gives what the worker said to the error bar, on the
+      // screen with these words, which says what it was and how to report
+      // it; Count again is offered beside them after a stop of the worker.
+      return `The variants of ${fileName} could not be counted.`;
     case "couldNotStart":
       return `The application could not start its calculations. Reload the page and open ${fileName} again.`;
     case "protocolMismatch":
@@ -260,18 +300,11 @@ export function summaryStatus(
   return view.status;
 }
 
-/** What the status region says as a read starts: "Reading panel.nei.",
-    and for a VCF the options it is read with, the ploidy and which
-    variants, "Reading panel.vcf.gz, with ploidy 4 and every variant,
-    whatever its FILTER column.", so that a change of either is heard. */
+/** What the status region says as a read starts: "Reading
+    panel.vcf.gz." The page reads every file in one way, so it names no
+    option. */
 export function readingText(variants: VariantSource): string {
-  const name = escaped(variants.name);
-  const options = variants.readOptions;
-  if (options === null) return `Reading ${name}.`;
-  const which = options.onlyPassed
-    ? "only the variants with PASS or . in the FILTER column"
-    : "every variant, whatever its FILTER column";
-  return `Reading ${name}, with ploidy ${String(options.ploidy)} and ${which}.`;
+  return `Reading ${escaped(variants.name)}.`;
 }
 
 /** The name of the bar of the count. */
@@ -313,7 +346,7 @@ export function announcementsOf(
     );
   }
   if (wasPending && variants.read.kind === "failed") {
-    const reason = variantsOpenNeeds(after.project);
+    const reason = openFailedText(after.project);
     if (reason !== null) texts.push(reason);
   }
   const then = summaryStatus(before);

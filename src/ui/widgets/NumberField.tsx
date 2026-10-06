@@ -8,8 +8,7 @@
  * why and what is kept, which the screen is handed to announce
  * (committedNumber.ts; docs/specs/steps/variants.md, "A number the two
  * fields do not take"). The line goes at the next commit, whatever it
- * holds. A screen can draw that line elsewhere, `refusedIn`, where it
- * moves nothing the user may be clicking as the field loses the focus. A field left empty gives nothing and shows again the value it
+ * holds. A field left empty gives nothing and shows again the value it
  * had, with no line. It takes no separator of thousands, so that a number
  * written with the decimal mark of another language, 0,05 in English or
  * 0.05 in Spanish, is no number, and not 5.
@@ -51,7 +50,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal, flushSync } from "react-dom";
+import { flushSync } from "react-dom";
 import {
   NumberField as AriaNumberField,
   Input,
@@ -120,15 +119,9 @@ function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
   else input.setSelectionRange(length, length);
 }
 
-/** What a number field is drawn with: what every field has, and either
-    its label above it or its label beside it. */
-export type NumberFieldProps = NumberFieldCommonProps &
-  (NumberFieldAboveProps | NumberFieldInlineProps);
-
-/** What every number field is drawn with. */
-interface NumberFieldCommonProps {
-  /** The name of the field, shown above it or beside it; a field above
-      says its range in it, "Ploidy of the VCF, from 1 to 255". */
+/** What a number field is drawn with. */
+export interface NumberFieldProps {
+  /** The name of the field, shown above it, with its range. */
   readonly label: string;
   /** The number the field shows, from the store or the screen. */
   readonly value: number;
@@ -147,6 +140,9 @@ interface NumberFieldCommonProps {
       before `description`: the count of a filter and the line under its
       switch. */
   readonly describedBy?: string;
+  /** A line under the field, which a screen reader reads with it, after
+      the line of a refusal and the elements of `describedBy`. */
+  readonly description?: string;
   /** The line under the field for a number it refused, or a character it
       threw away, from the reason and the value it keeps, the one it shows
       again: "10 is more than 1; the threshold stays 0.1." */
@@ -185,35 +181,6 @@ interface NumberFieldCommonProps {
   readonly onSameCommitted?: (value: number) => void;
 }
 
-/** A field with its label above it. */
-interface NumberFieldAboveProps {
-  readonly inline?: false;
-  /** A line under the field, which a screen reader reads with it, after
-      the line of a refusal and the elements of `describedBy`. */
-  readonly description?: string;
-  /** The element the line of a refusal is drawn into, instead of under
-      the field: for a screen with something under the field that a
-      click takes the focus to, and which the line, appearing at that
-      blur, would move from under the pointer, so that the click is lost.
-      `null` until the screen has drawn the element; the line waits for
-      it. */
-  readonly refusedIn?: Element | null;
-}
-
-/** A field with its label beside it, on the input's row. Every part of
-    the field goes on that row, each in a column of its own, so a line
-    drawn in the field would stand beside the input, and, appearing as
-    the field loses the focus, would move what is on the row: such a
-    field has no `description`, and draws the line of a refusal
-    elsewhere, in `refusedIn`. */
-interface NumberFieldInlineProps {
-  readonly inline: true;
-  readonly description?: never;
-  /** The element the line of a refusal is drawn into, as for a field
-      above, and here always: `null` until the screen has drawn it. */
-  readonly refusedIn: Element | null;
-}
-
 /** A number field with its label, and the line of a number it refused. */
 export function NumberField({
   label,
@@ -221,12 +188,10 @@ export function NumberField({
   minValue,
   maxValue,
   step,
-  inline = false,
   decimals,
   describedBy,
   description,
   refusedText,
-  refusedIn,
   onRefused,
   onCommitReady,
   onTyped,
@@ -347,23 +312,15 @@ export function NumberField({
   // line under the field after it (the spec, "Accessibility"). Given by
   // the page and not by React Aria's slot of a description, which it
   // would put before the line of the refusal.
-  const refusedLine =
-    refused === null || refusedIn === null ? null : (
-      <Problem id={refusedId}>{refused}</Problem>
-    );
   const describers = [
-    ...(refusedLine !== null ? [refusedId] : []),
+    ...(refused !== null ? [refusedId] : []),
     ...(describedBy !== undefined && describedBy !== "" ? [describedBy] : []),
     ...(description !== undefined ? [descriptionId] : []),
   ];
 
   return (
     <AriaNumberField
-      className={
-        inline
-          ? `${classOf(styles, "field")} ${classOf(styles, "inline")}`
-          : classOf(styles, "field")
-      }
+      className={classOf(styles, "field")}
       value={value}
       minValue={minValue}
       maxValue={maxValue}
@@ -452,9 +409,7 @@ export function NumberField({
           {description}
         </p>
       )}
-      {refusedIn === undefined || refusedIn === null
-        ? refusedLine
-        : refusedLine !== null && createPortal(refusedLine, refusedIn)}
+      {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
     </AriaNumberField>
   );
 }
