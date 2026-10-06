@@ -105,8 +105,9 @@ is over, and the variants' plots their mean, which popnei gives. The
 individuals' plots have no mean: popnei gives each individual's values
 and no mean of them, and the numbers are popnei's. Their bins are made
 in the page from popnei's values, by `binValues`, as the old page makes
-them; the report tells the owner, and popnei can be asked for them. The
-downloads the old page's components draw stay.
+them; the report tells the owner, and popnei can be asked for them. The tabs of a table of the bins and the downloads the old page's
+components draw are left out of this page, which the owner wants plain;
+they come back with the piece of the downloads.
 
 ## The phases
 
