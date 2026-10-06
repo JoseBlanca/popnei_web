@@ -760,7 +760,7 @@ interface Pass {
 
 /** Wraps a function of ours that popnei calls while a pass reads, so
     that what it throws is recorded as ours, as what `told` throws is. */
-type Ours = <A>(call: (argument: A) => void) => (argument: A) => void;
+type RecordThrown = <A>(call: (argument: A) => void) => (argument: A) => void;
 
 /**
  * Makes the pass of `consume`, the one call to popnei that reads the file,
@@ -774,16 +774,17 @@ type Ours = <A>(call: (argument: A) => void) => (argument: A) => void;
  */
 function passOf<T>(
   pass: Pass,
-  consume: (variants: Variants, ours: Ours) => T,
+  consume: (variants: Variants, ours: RecordThrown) => T,
 ): Answer<T> {
   const { variants, name, told } = pass;
-  /** What `told` threw, or a function of ours, none or one value. */
-  const thrownByTold: unknown[] = [];
-  const ours: Ours = (call) => (argument) => {
+  /** What `told` threw, or a function of ours wrapped by `ours`, none or
+      one value. */
+  const thrownByOurs: unknown[] = [];
+  const ours: RecordThrown = (call) => (argument) => {
     try {
       call(argument);
     } catch (thrown: unknown) {
-      thrownByTold.push(thrown);
+      thrownByOurs.push(thrown);
       throw thrown;
     }
   };
@@ -796,7 +797,7 @@ function passOf<T>(
         numPasses: progress.numPasses,
       });
     } catch (thrown: unknown) {
-      thrownByTold.push(thrown);
+      thrownByOurs.push(thrown);
       throw thrown;
     }
   });
@@ -804,15 +805,15 @@ function passOf<T>(
   try {
     value = consume(variants, ours);
   } catch (thrown: unknown) {
-    if (thrownByTold.some((caught) => caught === thrown)) {
+    if (thrownByOurs.some((caught) => caught === thrown)) {
       throw thrown;
     }
     return answerOfPopnei(thrown, name);
   }
   // popnei throws back what `told` threw while a pass reads, and drops what
   // it threw at the calls of the end of the run, which is thrown here.
-  if (thrownByTold.length > 0) {
-    throw thrownByTold[0];
+  if (thrownByOurs.length > 0) {
+    throw thrownByOurs[0];
   }
   return { kind: "ok", value };
 }
@@ -1122,7 +1123,10 @@ function summaryResultOf(
 }
 
 /** A copy of a summary whose every typed array is over a buffer of its
-    own, of its length, that no other array shares. */
+    own, of its length, that no other array shares. Its arrays are listed
+    here and in `arraysOf`; the tests compare the two through
+    `transferablesOf`, which is why it is exported: no caller of the page
+    uses it. */
 export function copiedSummary(
   result: VariantsSummaryResult,
 ): VariantsSummaryResult {

@@ -30,6 +30,7 @@ import type {
 } from "./protocol.ts";
 import {
   chromsOf,
+  copiedSummary,
   createRunner,
   loadPopnei,
   transferablesOf,
@@ -383,48 +384,80 @@ describe("open-variants 1 chromsOf, popnei's density made the chromosomes of the
   });
 });
 
-/** A VCF of `numVars` variants on the chromosome 1 and two diploid
-    individuals, gzipped, which popnei reads in blocks of 10,000
-    variants: two blocks for 20,000. */
-function twoIndividualsVcf(numVars: number): Uint8Array<ArrayBuffer> {
+/** The genotypes of the two halves of `halvesVcf`, of its three
+    individuals, one row per variant in turn: the second half has missing
+    genotypes, which the first has none of, and more of the alternative
+    allele, so that a statistic over the first half differs from the same
+    statistic over the whole file. */
+const FIRST_HALF_GTS = [
+  ["0/1", "0/0", "0/0"],
+  ["0/0", "0/1", "0/0"],
+  ["1/1", "0/0", "0/1"],
+] as const;
+const SECOND_HALF_GTS = [
+  ["./.", "1/1", "0/1"],
+  ["1/1", "./.", "1/1"],
+  ["0/1", "1/1", "./."],
+  ["./.", "0/1", "1/1"],
+] as const;
+
+/** A VCF of `numFirst` variants of the first half and `numSecond` of the
+    second on the chromosome 1, of three diploid individuals, gzipped;
+    popnei reads it in blocks of 10,000 variants, so 10,000 and 10,000
+    are two blocks, one per half. */
+function halvesVcf(
+  numFirst: number,
+  numSecond: number,
+): Uint8Array<ArrayBuffer> {
   const lines = [
     "##fileformat=VCFv4.2",
-    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts0\ts1",
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts0\ts1\ts2",
   ];
-  const genotypes = ["0/1", "0/0", "1/1"];
-  for (let v = 0; v < numVars; v += 1) {
-    lines.push(
-      `1\t${String(v + 1)}\t.\tA\tT\t.\t.\t.\tGT\t${genotypes[v % 3] ?? ""}\t${genotypes[(v + 1) % 3] ?? ""}`,
-    );
+  for (let v = 0; v < numFirst + numSecond; v += 1) {
+    const rows = v < numFirst ? FIRST_HALF_GTS : SECOND_HALF_GTS;
+    const gts = rows[v % rows.length] ?? [];
+    lines.push(`1\t${String(v + 1)}\t.\tA\tT\t.\t.\t.\tGT\t${gts.join("\t")}`);
   }
   return new Uint8Array(gzipSync(`${lines.join("\n")}\n`));
 }
 
-/** The buffers of the typed arrays of a summary. */
-function buffersOf(result: VariantsSummaryResult): readonly ArrayBufferLike[] {
-  const { perVar, perIndividual } = result;
-  return [
-    result.numVarsPerChrom,
-    perVar.binEdges,
-    perVar.missingRate.counts,
-    perVar.maf.counts,
-    perVar.obsHet.counts,
-    perVar.unbiasedExpHet.counts,
-    perIndividual.missingGtRate,
-    perIndividual.obsHetRate,
-  ].map((array) => array.buffer);
+/** The summary of `source` read whole by a runner of popnei's own
+    `soFarEvery`, which gives no result so far for a file this small. */
+function summaryOfWhole(
+  source: Uint8Array<ArrayBuffer>,
+): VariantsSummaryResult {
+  const runner = createRunner();
+  expect(runner.open(PAGE_VCF, { name: "half.vcf.gz", source }).kind).toBe(
+    "ok",
+  );
+  return summaryOf(runner.run(JOB, ignore));
+}
+
+/** The buffers of `copy` and of `given` are disjoint, and `copy` has as
+    many as `given`: each array `transferablesOf` lists, and with it each
+    field a summary has, was copied. */
+function expectCopied(
+  copy: VariantsSummaryResult,
+  given: VariantsSummaryResult,
+): void {
+  const ofGiven = transferablesOf(given);
+  const ofCopy = transferablesOf(copy);
+  expect(ofCopy).toHaveLength(ofGiven.length);
+  for (const buffer of ofCopy) {
+    expect(ofGiven.includes(buffer)).toBe(false);
+  }
 }
 
 describe("live-stats 2 the results so far of the summary of the variants file", () => {
-  // popnei's numbers under node, js-v0.2.1, 6 October 2026: the VCF of
-  // 20,000 variants and two individuals is read in two blocks, and with
-  // soFarEvery 0 popnei gives a result so far after each, over 10,000 and
-  // then 20,000 variants.
-  test("a file of two blocks gives a result so far after each with soFarEvery 0, the first over its first block and the last the result, each a copy that can be transferred", () => {
+  // popnei's numbers under node, js-v0.2.1: the VCF of 20,000 variants
+  // and three individuals is read in two blocks, and with soFarEvery 0
+  // popnei gives a result so far after each, over 10,000 and then 20,000
+  // variants. The first is popnei's summary of the first half read alone.
+  test("a file of two blocks gives a result so far after each with soFarEvery 0, the first equal to the summary of its first block alone and the last the result, each a copy that can be transferred", () => {
     const runner = createRunner({ soFarEvery: 0 });
     const open = runner.open(PAGE_VCF, {
       name: "two_blocks.vcf.gz",
-      source: twoIndividualsVcf(20_000),
+      source: halvesVcf(10_000, 10_000),
     });
     expect(open.kind).toBe("ok");
     const soFar: JobResult[] = [];
@@ -436,43 +469,102 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
     const summaries = soFar.map((given) =>
       summaryOf({ kind: "ok", value: given }),
     );
-    expect(summaries.map((given) => numbersOf(given))).toEqual([
-      {
-        chroms: ["1"],
-        numVarsPerChrom: [10_000],
-        passStats: { numVars: 10_000, filtering: {} },
-      },
-      {
-        chroms: ["1"],
-        numVarsPerChrom: [20_000],
-        passStats: { numVars: 20_000, filtering: {} },
-      },
-    ]);
-    expect(summaries.map((given) => given.perIndividual.individuals)).toEqual([
-      ["s0", "s1"],
-      ["s0", "s1"],
-    ]);
-    const last = summaries.at(-1);
+    expect(summaries).toHaveLength(2);
+    const [first, last] = summaries;
+    const firstHalf = summaryOfWhole(halvesVcf(10_000, 0));
+    expect(first).toEqual(firstHalf);
+    expect(numbersOf(firstHalf)).toEqual({
+      chroms: ["1"],
+      numVarsPerChrom: [10_000],
+      passStats: { numVars: 10_000, filtering: {} },
+    });
+    // The halves differ, so the first result so far cannot be the
+    // result by chance.
+    expect(first).not.toEqual(result);
+    expect(first?.perIndividual.missingGtRate).not.toEqual(
+      result.perIndividual.missingGtRate,
+    );
+    expect(first?.perVar.missingRate.mean).not.toBe(
+      result.perVar.missingRate.mean,
+    );
     expect(last).toEqual(result);
-    // No buffer of a result so far is that of the result or of another
-    // result so far, and transferring them leaves the result whole.
-    const ofResult = new Set(buffersOf(result));
-    const seen = new Set<ArrayBufferLike>();
-    for (const given of summaries) {
-      for (const buffer of buffersOf(given)) {
-        expect(ofResult.has(buffer)).toBe(false);
-        expect(seen.has(buffer)).toBe(false);
-        seen.add(buffer);
-      }
-      structuredClone(given, { transfer: transferablesOf(given) });
-    }
-    expect(result.perVar.binEdges).toHaveLength(1281);
-    expect(result.perIndividual.missingGtRate).toHaveLength(2);
     expect(numbersOf(result)).toEqual({
       chroms: ["1"],
       numVarsPerChrom: [20_000],
       passStats: { numVars: 20_000, filtering: {} },
     });
+    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perIndividual.individuals).toEqual(["s0", "s1", "s2"]);
+    // No buffer of a result so far is that of the result or of another
+    // result so far, and transferring them leaves the result whole.
+    const seen = new Set<ArrayBuffer>(transferablesOf(result));
+    const numSeen = seen.size;
+    for (const given of summaries) {
+      const buffers = transferablesOf(given);
+      expect(buffers).toHaveLength(numSeen);
+      for (const buffer of buffers) {
+        expect(seen.has(buffer)).toBe(false);
+        seen.add(buffer);
+      }
+      structuredClone(given, { transfer: buffers });
+    }
+    expect(result.perVar.binEdges).toHaveLength(1281);
+  });
+
+  test("copiedSummary copies every array transferablesOf lists into a buffer of its own", () => {
+    const given = summaryOfWhole(halvesVcf(30, 30));
+    const copy = copiedSummary(given);
+    expect(copy).toEqual(given);
+    expectCopied(copy, given);
+  });
+
+  test("copiedSummary of a summary whose arrays are views of one buffer: no buffer of the copy is that buffer, and a transfer of the copy leaves the summary whole", () => {
+    const shared = new ArrayBuffer(8 * 16);
+    let offset = 0;
+    /** The next `length` floats of the shared buffer. */
+    const floats = (length: number): Float64Array => {
+      const array = new Float64Array(shared, offset, length);
+      offset += 8 * length;
+      return array.fill(0.25);
+    };
+    const counts = (): Uint32Array => {
+      const array = new Uint32Array(shared, offset, 2);
+      offset += 8;
+      return array.fill(3);
+    };
+    const passStats = { numVars: 6, filtering: {} };
+    const distrib = (): { mean: number; counts: Uint32Array } => ({
+      mean: 0.25,
+      counts: counts(),
+    });
+    const given: VariantsSummaryResult = {
+      analysis: "variantsSummary",
+      chroms: ["1"],
+      numVarsPerChrom: counts(),
+      perVar: {
+        binEdges: floats(3),
+        missingRate: distrib(),
+        maf: distrib(),
+        obsHet: distrib(),
+        unbiasedExpHet: distrib(),
+        passStats,
+      },
+      perIndividual: {
+        individuals: ["s0", "s1"],
+        missingGtRate: floats(2),
+        obsHetRate: floats(2),
+        passStats,
+      },
+      passStats,
+    };
+    const copy = copiedSummary(given);
+    const buffers = transferablesOf(copy);
+    expect(buffers).toHaveLength(8);
+    expect(buffers.includes(shared)).toBe(false);
+    structuredClone(copy, { transfer: buffers });
+    expect(shared.byteLength).toBe(8 * 16);
+    expect([...given.perIndividual.obsHetRate]).toEqual([0.25, 0.25]);
+    expect([...given.perVar.maf.counts]).toEqual([3, 3]);
   });
 
   test("with popnei's 2 seconds, panel.vcf.gz, read in less, gives no result so far", () => {
@@ -485,26 +577,41 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
     expect(soFar).toEqual([]);
   });
 
-  test("what the function of the results so far throws is thrown by the run, ours, and not answered as popnei's refusal", () => {
+  test("what the function of the results so far throws is thrown by the run, that very value, ours, and not answered as popnei's refusal", () => {
     const runner = createRunner({ soFarEvery: 0 });
     runner.open(PAGE_VCF, {
       name: "two_blocks.vcf.gz",
-      source: twoIndividualsVcf(20_000),
+      source: halvesVcf(10_000, 10_000),
     });
     const thrown = new Error("the result so far could not be posted");
-    expect(() =>
-      runner.run(JOB, ignore, () => {
-        throw thrown;
-      }),
-    ).toThrow(thrown);
+    expect(
+      thrownBy(() =>
+        runner.run(JOB, ignore, () => {
+          throw thrown;
+        }),
+      ),
+    ).toBe(thrown);
     // Thrown at the last block too, after which popnei's call returns.
     const atTheEnd = new Error("thrown at the last result so far");
     let calls = 0;
-    expect(() =>
-      runner.run(JOB, ignore, () => {
-        calls += 1;
-        if (calls === 2) throw atTheEnd;
-      }),
-    ).toThrow(atTheEnd);
+    expect(
+      thrownBy(() =>
+        runner.run(JOB, ignore, () => {
+          calls += 1;
+          if (calls === 2) throw atTheEnd;
+        }),
+      ),
+    ).toBe(atTheEnd);
   });
 });
+
+/** What `call` threw, or null when it returned: compared with `toBe`, it
+    is that very value, which `toThrow` would check only by its message. */
+function thrownBy(call: () => unknown): unknown {
+  try {
+    call();
+  } catch (error: unknown) {
+    return error;
+  }
+  return null;
+}
