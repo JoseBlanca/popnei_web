@@ -1,15 +1,15 @@
 /**
  * The statistics of the open file on popgen2.html, on the built site
- * (docs/plans/file-stats.md, phase 2): steps 3 and 4 of case 2 of
- * docs/use-cases.md, the distributions over the variants and over the
- * individuals, which start by themselves once the variants are counted,
- * one after the other, the variants first; the table of the individuals
- * sorted; one Stop for
- * both and the start again; a crash of one pass, which hides nothing of
- * the other; axe at each state reached.
+ * (docs/plans/file-stats.md, phase 2; docs/plans/live-stats.md, phase 1):
+ * steps 3 and 4 of case 2 of docs/use-cases.md, the distributions over
+ * the variants and over the individuals, from the one pass that also
+ * counts the variants, which starts by itself once the file is read; the
+ * table of the individuals downloaded; the one Stop of the page, in the
+ * box of the file, and its Start again; a crash of the pass; axe at each
+ * state reached.
  *
- * The numbers are popnei's, from the installed js-v0.2.0 under node on
- * the same files, with the options the runner gives (1,280 bins over 0 to
+ * The numbers are popnei's, from js-v0.2.0 under node on the same files,
+ * which js-v0.2.1 gives unchanged, with the options the runner gives (1,280 bins over 0 to
  * 1, minNumIndividuals 0, no filter), on 6 October 2026: panel.vcf.gz,
  * 1,200 variants of 200 individuals, the first and the last of popnei's
  * bins with a count from 0 to 0.0805 for the missing rate, 0.5 to 0.9875
@@ -54,6 +54,12 @@ async function pick(page: Page, path: string): Promise<void> {
 /** The section of the statistics. */
 function stats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
+}
+
+/** The box of the file, which holds the bar of the pass, Stop and Start
+    again. */
+function info(page: Page): Locator {
+  return page.getByRole("region", { name: "File information" });
 }
 
 /** The titles of the histograms, in their order. */
@@ -204,12 +210,12 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 the statistics wait for the count, Stop stops them, Start the statistics again finishes them, and the focus stays on the page", async ({
+test("FS2 the statistics come from the pass of the count: the Stop of the box stops them, its Start again finishes them, and the focus stays on the page", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
-  // A VCF written for the test, whose passes last seconds, so that Stop
-  // is pressed while one reads (testing.md, "The walking skeleton, as a
+  // A VCF written for the test, whose pass lasts seconds, so that Stop is
+  // pressed while it reads (testing.md, "The walking skeleton, as a
   // flow").
   test.setTimeout(180_000);
   const vcf = testInfo.outputPath("stats.vcf.gz");
@@ -218,51 +224,38 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await openPage(page);
   await pick(page, vcf);
 
-  // Nothing computed yet: both parts wait for the count.
-  await expect(
-    stats(page).getByText("Waiting for the count of the variants."),
-  ).toHaveCount(2, { timeout: 30_000 });
-  await expect(stats(page).getByRole("button")).toHaveCount(0);
-  await expectNoViolations(makeAxeBuilder);
-
-  const bar = stats(page).getByRole("progressbar", {
-    name: "Calculating the statistics of the variants",
+  const bar = info(page).getByRole("progressbar", {
+    name: "Counting the variants",
   });
-  // Stop is pressed as soon as the bar of the first pass is seen, and
-  // the checks of the running state, axe among them, wait for the start
-  // again: made before the Stop, they could outlast the pass, of a few
-  // seconds, under four workers in WebKit, and Stop then stopped the
-  // second pass, which failed this flow once in five runs.
+  // Stop is pressed as soon as the bar of the pass is seen, and the
+  // checks of the running state, axe among them, wait for the start
+  // again, so that they do not outlast the pass.
   await expect(bar).toBeVisible({ timeout: 60_000 });
-  await stats(page)
-    .getByRole("button", { name: "Stop the statistics" })
-    .click();
-  const again = stats(page).getByRole("button", {
-    name: "Start the statistics again",
-  });
+  await info(page).getByRole("button", { name: "Stop" }).click();
+  const again = info(page).getByRole("button", { name: "Start again" });
   // One button in one place: the focus stays on it.
   await expect(again).toBeFocused();
   await expect(bar).toHaveCount(0);
-  // The first pass was the one stopped, and the second, not started,
-  // says why.
+  // Both parts say they were stopped, and the section has no bar nor
+  // button of its own.
   await expect(
     part(page, "Variants").getByText("Stopped.", { exact: true }),
   ).toBeVisible();
   await expect(
-    part(page, "Individuals").getByText(
-      "Not calculated: the statistics of the variants were stopped.",
-    ),
+    part(page, "Individuals").getByText("Stopped.", { exact: true }),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
+  await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
+  await expect(stats(page).getByRole("button")).toHaveCount(0);
   await expect
     .poll(() => announced(page))
     .toContainEqual(
       expect.stringContaining(
-        "The statistics were stopped. Start them again to calculate those not done yet.",
+        "The count of the variants and the statistics were stopped. Start again calculates them from the start.",
       ),
     );
-  // The start, said as the first pass started, unless the Stop came
-  // within the region's pause and replaced it.
+  // The start, said as the pass started, unless the Stop came within the
+  // region's pause and replaced it.
   const started = (texts: readonly string[]): number =>
     texts.filter((text) =>
       text.includes("Calculating the statistics of stats.vcf.gz…"),
@@ -272,74 +265,73 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
-  await expect(
-    stats(page).getByRole("button", { name: "Stop the statistics" }),
-  ).toBeFocused();
-  // Running: the start again is said as the first start was, the line
-  // over the bar says it once, and the second part waits for the first.
+  await expect(info(page).getByRole("button", { name: "Stop" })).toBeFocused();
+  // Running: the start again is said as the first start was, and each
+  // part says it is calculated.
   await expect(bar).toBeVisible();
   await expect
     .poll(async () => started(await announced(page)))
     .toBe(startsBefore + 1);
   await expect(
-    part(page, "Individuals").getByText(
-      "Waiting for the statistics of the variants.",
+    part(page, "Variants").getByText(
+      /^Calculating the statistics of the variants…( \d+%)?$/u,
     ),
   ).toBeVisible();
-  await expect(stats(page).getByText(/Calculating/u)).toHaveCount(1);
+  await expect(
+    part(page, "Individuals").getByText(
+      /^Calculating the statistics of the individuals…( \d+%)?$/u,
+    ),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await expect(downloadButton(page)).toBeVisible({ timeout: 120_000 });
   await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
     timeout: 120_000,
   });
-  // The button gone with the focus on it, the focus is on the heading of
-  // the variants, not on the top of the page.
-  await expect(
-    stats(page).getByRole("heading", { level: 2, name: "Variants" }),
-  ).toBeFocused();
-  await expect(
-    stats(page).getByRole("button", { name: /statistics/u }),
-  ).toHaveCount(0);
+  // The button gone with the focus on it, the focus is on the lines of
+  // the variants and the chromosomes in the box, not on the top of the
+  // page.
+  const counted = `Variants: ${STOP_VCF_VARIANTS.toLocaleString("en-US")}`;
+  await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
+  await expect(info(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 a crash of the statistics of the individuals: its short words, said in the region, the details in the error bar, the variants' histograms still drawn, and Start the statistics again, which calculates them", async ({
+test("FS2 a crash of the worker during the pass: the box says the variants could not be counted, each part that it is not calculated, the details in the error bar, and Start again calculates them", async ({
   page,
   makeAxeBuilder,
 }) => {
-  // The first worker crashes on the statistics of the individuals; the
-  // one the page makes after the crash calculates them.
-  await crashWorkerOn(page, "run", "individualChecks", true);
+  // The first worker crashes on the pass; the one the page makes after
+  // the crash calculates it.
+  await crashWorkerOn(page, "run", "variantsSummary", true);
   await recordAnnouncements(page);
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
-  const failed = "The statistics of the individuals could not be calculated.";
-  await expect(stats(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
+  const failed = "The variants of panel.vcf.gz could not be counted.";
+  await expect(info(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
+  await expect(
+    part(page, "Variants").getByText("Not calculated.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    part(page, "Individuals").getByText("Not calculated.", { exact: true }),
+  ).toBeVisible();
   await expect
     .poll(() => announced(page))
     .toContainEqual(expect.stringContaining(failed));
   await expect(page.getByRole("alert")).toContainText(
-    "The application stopped as it calculated the statistics: ",
+    "The application stopped as it counted the variants and calculated the statistics: ",
   );
-  // A failure of one hides nothing of the other.
-  await expect(stats(page).locator("svg.chart")).toHaveCount(4, {
-    timeout: 20_000,
-  });
-  await expect(titles(page).first()).toHaveText(
-    "Proportion of missing genotypes",
-  );
+  await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(downloadButton(page)).toHaveCount(0);
-  const again = stats(page).getByRole("button", {
-    name: "Start the statistics again",
-  });
+  const again = info(page).getByRole("button", { name: "Start again" });
   await expect(again).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
   await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
-  await expect(stats(page).getByText(failed)).toHaveCount(0);
+  await expect(info(page).getByText(failed)).toHaveCount(0);
+  await expect(stats(page).getByText("Not calculated.")).toHaveCount(0);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect
     .poll(() => announced(page))
@@ -512,11 +504,13 @@ test("FS3 the open button is alone under the heading before a file is opened, an
 });
 
 for (const width of [1280, 320] as const) {
-  test(`FS3 at ${String(width)} pixels the open button stays where it is from the read of the file to the end of the statistics: a press held on it across the end of the first pass, and a click at its place as the second ends, open the file picker`, async ({
+  test(`FS3 at ${String(width)} pixels the open button stays where it is from the read of the file to the end of the pass: a press held on it across the end, and a click at its place after, open the file picker`, async ({
     page,
   }, testInfo) => {
-    // A VCF written for the test, whose passes last seconds (testing.md,
-    // "The walking skeleton, as a flow").
+    // A VCF written for the test, whose pass lasts seconds (testing.md,
+    // "The walking skeleton, as a flow"). The plan of live-stats moves
+    // the button with the plots in its second phase, which removes this
+    // flow.
     test.setTimeout(180_000);
     await page.setViewportSize({ width, height: 900 });
     const vcf = testInfo.outputPath("click.vcf.gz");
@@ -524,28 +518,27 @@ for (const width of [1280, 320] as const) {
     await openPage(page);
     await pick(page, vcf);
 
-    // The file read and the statistics' section drawn, waiting for the
-    // count: the place of the button from now on.
+    // The file read and the pass running, the statistics' section drawn:
+    // the place of the button from now on.
     await expect(
-      stats(page).getByText("Waiting for the count of the variants."),
-    ).toHaveCount(2, { timeout: 30_000 });
+      info(page).getByRole("progressbar", { name: "Counting the variants" }),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      part(page, "Variants").getByText(
+        /^Calculating the statistics of the variants…/u,
+      ),
+    ).toBeVisible();
     await openButton(page).scrollIntoViewIfNeeded();
     const at = await openButton(page).boundingBox();
     if (at === null) throw new Error("the open button is not drawn");
     const x = at.x + at.width / 2;
     const y = at.y + at.height / 2;
 
-    // The first pass runs; the press starts on the button, and is held
-    // until its four plots are drawn.
-    await expect(
-      stats(page).getByRole("progressbar", {
-        name: "Calculating the statistics of the variants",
-      }),
-    ).toBeVisible({ timeout: 60_000 });
-    expect(await openButton(page).boundingBox()).toEqual(at);
+    // The press starts on the button, and is held until the six plots are
+    // drawn.
     await page.mouse.move(x, y);
     await page.mouse.down();
-    await expect(stats(page).locator("svg.chart")).toHaveCount(4, {
+    await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
       timeout: 120_000,
     });
     expect(await openButton(page).boundingBox()).toEqual(at);
@@ -553,11 +546,7 @@ for (const width of [1280, 320] as const) {
     await page.mouse.up();
     await first;
 
-    // The second pass ends: a click at the place of the button as soon
-    // as its plots are drawn.
-    await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
-      timeout: 120_000,
-    });
+    // A click at the place of the button once the plots are drawn.
     const second = page.waitForEvent("filechooser", { timeout: 5_000 });
     await page.mouse.click(x, y);
     await second;
