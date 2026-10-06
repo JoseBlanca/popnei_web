@@ -176,7 +176,10 @@ release, "0.1.0-dev.2" and on; it is asked of popnei
 until it is done the version in a key is only as good as the one
 `version()` gives. `js-v0.1.0-dev.3` gives "0.1.0" too (node, 28 September 2026), so
 a check number saved with the application of stage 3 is compared with
-one of stage 4 as made by the same popnei. The numbers of the two
+one of stage 4 as made by the same popnei. The release `js-v0.2.0` of
+6 October 2026 is the first to raise it, and gives "0.2.0", so a check
+number saved with an earlier release is compared as made by another
+popnei. The numbers of the two
 scripts of "How it is verified", `numbers.mjs`, `numbers3.mjs` and
 `orderA.mjs`, and
 those of the PCA are the same with both releases, and only the size of

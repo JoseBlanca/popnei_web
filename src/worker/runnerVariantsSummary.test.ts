@@ -33,6 +33,7 @@ import {
   variantsSummaryOf,
 } from "./runner.ts";
 import type { Answer, LoadToOpen, Runner } from "./runner.ts";
+import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
 const FILE_ID = "load-1";
@@ -89,7 +90,10 @@ function numbersOf(result: VariantsSummaryResult): unknown {
 }
 
 beforeAll(async () => {
-  expect(await loadPopnei()).toEqual({ ok: true, value: "0.1.0" });
+  expect(await loadPopnei()).toEqual({
+    ok: true,
+    value: INSTALLED_POPNEI_VERSION,
+  });
 });
 
 describe("open-variants 1 the runner's summary of the variants file", () => {

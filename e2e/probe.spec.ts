@@ -10,11 +10,9 @@ import { join } from "node:path";
 import type { BrowserContext, Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { INSTALLED_POPNEI_VERSION } from "../src/worker/testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
-
-/** The version of popnei that package.json installs. */
-const POPNEI_VERSION = "0.1.0";
 
 /** What the probe shows for the panel, 200 individuals in three populations. */
 const PANEL = "200 individuals, ploidy 2";
@@ -75,7 +73,7 @@ test("the page shows popnei's version and what popnei read from the served file"
   await openProbe(page);
 
   await expect(
-    page.getByText(`popnei ${POPNEI_VERSION}, loaded in`),
+    page.getByText(`popnei ${INSTALLED_POPNEI_VERSION}, loaded in`),
   ).toBeVisible();
   await expect(served(page)).toContainText(
     new RegExp(

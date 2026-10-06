@@ -12,11 +12,12 @@
  */
 
 /**
- * A filter of the variants, one of the four of popnei 0.1.0, with the
- * names of the arguments of popnei's methods of `Variants`. `kind` is the
- * name popnei gives the filter in the counts of a pass. Each keeps the
- * variants whose number is at most its threshold; the thresholds are
- * numbers from 0 to 1, given to popnei as the user typed them.
+ * A filter of the variants, one of the four of popnei's that the
+ * application gives, with the names of the arguments of popnei's methods
+ * of `Variants`. `kind` is the name popnei gives the filter in the counts
+ * of a pass. Each keeps the variants whose number is at most its
+ * threshold; the thresholds are numbers from 0 to 1, given to popnei as
+ * the user typed them.
  */
 export type VariantFilter =
   /** `filterByMissingData`: the largest proportion of missing genotypes. */

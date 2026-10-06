@@ -16,6 +16,7 @@ import type { Locator, Page, Route, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { bigVcfPopsCsv, STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+import { INSTALLED_POPNEI_VERSION } from "../src/worker/testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -467,7 +468,7 @@ test("WS8 D2 at 0.05 the download panel.diversity.csv holds the table, and the v
   await run(page);
   await expect(
     panel(page).getByText(
-      "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+      `Calculated with popnei ${INSTALLED_POPNEI_VERSION}, in version 0.1.0 of the application.`,
       { exact: true },
     ),
   ).toBeVisible();

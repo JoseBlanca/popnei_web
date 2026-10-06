@@ -55,6 +55,7 @@ import {
   transferablesOf,
 } from "./runner.ts";
 import type { Answer, LoadFile, LoadToOpen, Runner } from "./runner.ts";
+import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
 
@@ -194,7 +195,7 @@ const AT_0_05 = {
 
 beforeAll(async () => {
   const loaded = await loadPopnei();
-  expect(loaded).toEqual({ ok: true, value: "0.1.0" });
+  expect(loaded).toEqual({ ok: true, value: INSTALLED_POPNEI_VERSION });
 });
 
 describe("WS3 D1 the open and the diversity", () => {

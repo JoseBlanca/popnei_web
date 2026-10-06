@@ -2361,7 +2361,10 @@ reads an xlsx, and the light worker of the skeleton loads no wasm.
 What a user of the applications would meet, with the numbers from popnei's
 code, the release `js-v0.1.0-dev.2`, and from stage 4 the release
 `js-v0.1.0-dev.3` of 28 September 2026, which adds the PCoA and gives
-the same numbers for everything else but the size of a written file.
+the same numbers for everything else but the size of a written file. Since 6 October 2026 the application uses the release
+`js-v0.2.0`, which reads the ploidy from a VCF and adds the filters of
+the first variants and of a random sample of them; the numbers of the
+tests of the application are the same with it.
 
 - **The size of the variant file** is limited by the time of a pass, and
   not by memory, since popnei reads the file by ranges and holds only a
