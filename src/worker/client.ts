@@ -96,12 +96,15 @@ export interface Client {
   /** Sends a calculation, under its key; the store's `send`. `onSoFar`
       is given each result so far of the run while it is the one running,
       of a calculation that gives one, the summary of the variants file;
-      none reaches it after the outcome, nor after a cancel. */
+      none reaches it after the outcome, nor after a cancel. It is
+      required, so that a caller that forgets to pass it on, as the page's
+      `send` could, fails the type check instead of losing the plots so
+      far in silence. */
   run(
     key: string,
     job: Job,
     onProgress: (p: Progress) => void,
-    onSoFar?: (result: JobResult) => void,
+    onSoFar: (result: JobResult) => void,
   ): Run<JobResult>;
 
   /** Writes the variants the job's filters keep as a file, under its key;
@@ -1090,7 +1093,7 @@ export function createClient(config: {
       };
     },
 
-    run(key, job, onProgress, onSoFar = () => undefined) {
+    run(key, job, onProgress, onSoFar) {
       const { promise, resolve } = promiseWithResolver<Outcome<JobResult>>();
       const request: RunRequest = {
         kind: "run",

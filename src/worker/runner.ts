@@ -151,7 +151,11 @@ export interface Runner {
    * for a run before the open or of another load, an empty list of
    * individuals and two populations of one name. Throws what `told` or
    * `toldSoFar` throws, and a defect of ours, one in making a result so
-   * far among them.
+   * far among them. `toldSoFar` is optional, unlike the `onSoFar` of
+   * `Client.run`: its one caller of the page, `answerRun` of
+   * `runnerWorker.ts`, is beside the runner and always gives it, while
+   * the tests of the runners, most of which look at no result so far,
+   * leave it out.
    */
   run(
     job: Job,
