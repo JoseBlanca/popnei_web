@@ -36,17 +36,23 @@ interface StatsFrameProps {
   readonly sectionRef?: React.Ref<HTMLElement>;
   /** The row of the button, then the two parts. */
   readonly children: React.ReactNode;
+  /** Whether it is the room alone, waiting for the code of the plots or
+      the read of the file, which a screen reader is told by
+      `aria-busy`. */
+  readonly busy?: boolean;
 }
 
 /** The section of the statistics, named for a screen reader. */
 export function StatsFrame({
   sectionRef,
   children,
+  busy = false,
 }: StatsFrameProps): React.JSX.Element {
   return (
     <section
       ref={sectionRef}
       aria-label={STATS_NAME}
+      {...(busy && { "aria-busy": true })}
       className={classOf(styles, "stats")}
     >
       {children}
@@ -184,7 +190,7 @@ export function IndividualsDownload({
     the file is read and the code of the plots downloaded. */
 export function StatsRoom(): React.JSX.Element {
   return (
-    <StatsFrame>
+    <StatsFrame busy>
       <ControlsRow />
       <Part heading={VARIANTS_HEADING}>
         <PlotsRoom line={null}>
