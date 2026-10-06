@@ -40,6 +40,14 @@ popnei to read it from the file, `PROTOCOL_VERSION` 6. Revised on 6
 October 2026 for the statistics of the open file (`docs/plans/file-stats.md`):
 the result of the histograms of the variants holds a fourth distribution,
 `missingRate`, checked as the other three are, and `PROTOCOL_VERSION` 7.
+Revised on 6 October 2026 for the one pass of popgen2.html
+(`docs/plans/live-stats.md`, phase 1): the job of the summary of the
+variants file gains `minNumIndividuals`, `numBins` and `range`, checked
+as those of the histograms of the variants are, and its result the parts
+`variants` and `individuals`, each an object of exactly the fields of
+the result of the histograms of the variants or of the statistics of
+each individual but `analysis`, checked as those results are; and
+`PROTOCOL_VERSION` 8.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -431,7 +439,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 8;
 ```
 
 The requests of the calculation worker, and what it sends back.

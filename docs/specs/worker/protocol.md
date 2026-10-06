@@ -49,6 +49,15 @@ spectrum among them, which rides in the diversity's result
 (`docs/specs/analyses/diversity.md` and `sfs.md`); and the distances
 between populations (`popDists.md`) and the LD decay (`ldDecay.md`)
 join `Job` and `JobResult`. Approved by the owner on 30 September 2026.
+Revised on 6 October 2026 for the one pass of popgen2.html
+(`docs/plans/live-stats.md`, phase 1, ordered by the owner that day with
+the plan reviewed in place of a spec): the summary of the variants file,
+built for `docs/plans/open-variants.md` without a revision here, is
+written in, its job with the bins of the histograms of the variants and
+its result with two parts, `variants` and `individuals`, the fields of
+the results of the histograms of the variants and of the statistics of
+each individual without `analysis`, which `VariantStatsPart` and
+`IndividualStatsPart` name and those two results extend.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -553,6 +562,37 @@ export interface FilterCountsJob {
 
 export interface FilterCountsResult {
   analysis: "filterCounts";
+  passStats: PassStats;
+}
+
+// The summary of the variants file of popgen2.html, from one pass of
+// popnei's calcVariantsSummary over every variant and every individual,
+// with no filter: the chromosomes, from its density of one window per
+// chromosome (ONE_WINDOW_PER_CHROM, 2^53 − 1); the histograms of the
+// variants, from its perVar, with the bins of the job over every
+// individual as one population; and the statistics of each individual,
+// from its perIndividual. Each part is what its own call gives, to the
+// bit (docs/plans/live-stats.md).
+export interface VariantsSummaryJob {
+  analysis: "variantsSummary";
+  fileId: string;
+  filters: readonly [];
+  minNumIndividuals: number;               // 0
+  numBins: number;                         // 1,280
+  range: readonly [number, number];        // [0, 1]
+}
+
+// The fields of VariantChecksResult and IndividualChecksResult but
+// `analysis`, which those two extend.
+export interface VariantStatsPart { binEdges; missingRate; maf; obsHet; unbiasedExpHet; passStats }
+export interface IndividualStatsPart { individuals; missingGtRate; obsHetRate; passStats }
+
+export interface VariantsSummaryResult {
+  analysis: "variantsSummary";
+  chroms: readonly string[];               // those with variants, in the order of their first variant
+  numVarsPerChrom: Uint32Array;            // as chroms
+  variants: VariantStatsPart;
+  individuals: IndividualStatsPart;
   passStats: PassStats;
 }
 

@@ -1282,44 +1282,44 @@ The page and each worker talk through typed messages
   the variants file again; on `popgen.html` the calculation of the new
   settings starts when the user asks for it, as every calculation there
   does. On `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts`
-  starts by itself the summary of the variants file, the count of its
-  variants, and from 6 October 2026 the statistics of the open file after
-  it, the histograms of the variants and then the statistics of each
-  individual, the order of their parts on the page
-  (`docs/plans/file-stats.md`). They start in that order, one
-  at a time: the one calculation worker runs one request at a time, and
-  the store has no state for a request that waits in the client's queue,
-  so three sent at once would all show as running, two of them with no
-  progress. The statistics start only once the count is done; the
-  statistics of each individual once the histograms of the variants are
-  done, or failed in a way that does not fail the next pass too, a crash
-  or a defect of ours, since each is shown apart and a failure of one
-  should not hide the other. popnei's refusal of the file, or a file the browser could not
-  read again, holds them back, since their pass would fail the same way
-  after minutes. Each starts once for each key: when the file is read,
-  again after a read with other options, which is a new load and a new
-  key, and at the user's Count again or start again of the statistics;
-  not again after a failure or a Stop under the same key, and a Stop
-  also keeps those after it from starting, the one about to start
-  between two passes among them. The statistics have one Stop,
-  which stops the one running, and one start again, which starts the
-  first not done and lets the rest of the statistics start after it
-  (`stop` and `resume` of `autoRuns.ts`, which says whether it started
-  one: not while the count is not done, nor after any failure but a
-  crash of the worker, the others failing again or asking for a reload);
-  the count keeps its own Stop and Count
-  again, and since the statistics start only once the count is done, its
-  Stop leaves them not started and its Count again waits behind none of
-  them. After a Stop the store's state is `ready`, as before any run, and
-  the keys `autoRuns.ts` remembers are the one record that the analysis
-  was stopped; its `pending` tells the page whether one not started waits
-  for the one before, is held back by a failure or a Stop of one before
-  it, or was stopped, and its `subscribe` tells the page when that
-  changes with no change of the store, as a Stop between two passes. None
-  of the three reads a filter yet, the page having none. A limit the
-  piece that adds the filters to that page must settle: an analysis that
-  starts by itself and reads a filter, as the histograms of the variants
-  read the filters of individuals, gets a new key at every change of a
+  starts by itself the summary of the variants file, and from 6 October
+  2026 that summary is the one pass of the page: popnei's
+  `calcVariantsSummary` gives in one pass the count of the variants on
+  each chromosome and the statistics of the open file, the histograms of
+  the variants and the statistics of each individual, which until then
+  were two analyses of their own started after the count
+  (`docs/plans/live-stats.md`, "One pass for the count and the
+  statistics"; `variantChecks` and `individualChecks` stay on
+  `popgen.html`). `autoRuns.ts` takes its analyses in groups and starts
+  them one at a time, in their order: the one calculation worker runs one
+  request at a time, and the store has no state for a request that waits
+  in the client's queue, so two sent at once would both show as running,
+  one of them with no progress. A group starts only once the one before
+  it is done; within a group, one that failed in a way that does not fail
+  the next pass too, a crash or a defect of ours, does not hold back the
+  next. popnei's refusal of the file, or a file the browser could not
+  read again, holds back what follows, since its pass would fail the same
+  way after minutes. Each starts once for each key: when the file is
+  read, again after a read with other options, which is a new load and a
+  new key, and at the user's Start again; not again after a failure or a
+  Stop under the same key. The page has one Stop, in the box of the file
+  beside the one bar of the pass, shown while a pass runs or is about to
+  start by itself, which stops every group (`stopAll` of `autoRuns.ts`):
+  the pass running, and one about to start, which it records as started
+  so that it does not start; and, after a Stop or a crash of the worker,
+  one Start again in its place, which starts the summary again. The
+  statistics' section has no bar nor button of its own, and says of each
+  part that it is calculated, stopped, or not calculated. After a Stop
+  the store's state is `ready`, as before any run, and the keys
+  `autoRuns.ts` remembers are the one record that the analysis was
+  stopped; its `pending` tells the page whether one not started waits for
+  the one before, is held back by a failure or a Stop of one before it,
+  or was stopped, and its `subscribe` tells the page when that changes
+  with no change of the store, as a Stop of a pass about to start. The
+  summary reads no filter, the page having none. A limit the piece that
+  adds the filters to that page must settle: an analysis that starts by
+  itself and reads a filter, as the statistics would if they read the
+  filters of individuals, gets a new key at every change of a
   threshold, and its start, as any new calculation does, stops the
   calculation left behind, which restarts the worker; so moving a
   threshold would stop and start the pass at each step. And a key the
@@ -2295,21 +2295,23 @@ src/ui/
                     page: with pageStart.tsx, its store, the announcements,
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
-  popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES and no
-                    counts, statistics config or writing, and the groups
-                    of the analyses the page starts by itself, made from
-                    POPGEN2_ANALYSES; apart from the entry, so that a
-                    test in node makes it
+  popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
+                    summary of the variants file alone, and no counts,
+                    statistics config or writing, and the groups of the
+                    analyses the page starts by itself; apart from the
+                    entry, so that a test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
                     calculation stopped from one waiting or held back by
-                    a failure, and the Stop and start again of the
-                    statistics of the open file
+                    a failure, and the one Stop of the page, stopAll,
+                    and Start again
   variants/         the screens of popgen2.html: the opening of the
-                    variants file, the summary of what it holds, the page
-                    that holds them, their words, and the defects of the
-                    worker given to the error bar
+                    variants file, the box of what it holds with the bar
+                    of the one pass, its Stop and Start again, the
+                    statistics of the open file drawn from the result of
+                    that pass, the page that holds them, their words, and
+                    the defects of the worker given to the error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from

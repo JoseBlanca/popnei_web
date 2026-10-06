@@ -40,7 +40,10 @@ diversity, `calcPopDiversity`, with the folded site frequency spectrum
 in it, told as the second pass of the run (below, "The diversity" and
 "Progress"); the distances between populations with the order of their
 heatmap; the LD decay; the memory of the LD decay; and their tests.
-Approved by the owner on 30 September 2026. The calculation
+Approved by the owner on 30 September 2026. Revised on 6 October 2026
+for the one pass of popgen2.html (`docs/plans/live-stats.md`, phase 1):
+the summary of the variants file is one call of `calcVariantsSummary`
+(below, "The summary of the variants file"). The calculation
 worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -608,6 +611,30 @@ wasm, which is the cost section 11 of the architecture measures against
 a pass of the diversity. What the iteration throws, it throws at a
 block, and the runner catches it around the whole iteration as it would
 a call.
+
+### The summary of the variants file
+
+A `variantsSummary` job, of popgen2.html, holds its pass with no filter
+and no list of individuals, and the three options of the histograms of
+the variants, `minNumIndividuals`, 0, `numBins`, 1,280, and `range`,
+[0, 1], as `variantChecks` has them. The runner makes one call,
+`calcVariantsSummary(variants, { density: { windowSize:
+ONE_WINDOW_PER_CHROM, chromLengths: {} }, perVar: { stats:
+["missing_rate", "maf", "obs_het", "unbiased_exp_het"],
+minNumIndividuals, histKwargs: { numBins, range } }, perIndividual: {}
+})`, one pass that reads the genotypes, and gives back the chromosomes
+and their counts from the density, as one window per chromosome from the
+position 1 whose counts add up to the variants of the pass, else a
+defect; `variants`, made of `perVar` as the result of a `variantChecks`
+job is; `individuals`, made of `perIndividual` as that of an
+`individualChecks` job is, a defect when its names are not those the
+open gave; and `passStats`. popnei gives each part the same to the bit
+as its own call; under node on `panel.vcf.gz`, `panel.nei` and
+`tetraploid.vcf.gz` the two parts equal the results of a `variantChecks`
+job with no list and of an `individualChecks` job on the same runner
+(`src/worker/runnerVariantsSummary.test.ts`). A refusal of any of the
+three parts refuses the pass, and none of them is given: a genotype
+popnei refuses fails the count too.
 
 ### The principal components
 
