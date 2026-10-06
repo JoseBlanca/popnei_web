@@ -48,7 +48,8 @@
 // bytes of panel.vcf.gz; e2e/fixtures/low_qual.vcf.gz, the panel with
 // LowQual in the FILTER column of every fourth variant; and
 // e2e/fixtures/no_ploidy.vcf.gz, the first 5 variants of the panel with
-// every genotype a single dot, whose ploidy popnei cannot read.
+// every genotype a single dot, whose ploidy popnei cannot read; and
+// e2e/fixtures/no_variants.vcf, the header of the panel alone.
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -234,6 +235,16 @@ writeFileSync(
 );
 console.log(
   `${noPloidyPath}: ${String(noPloidyVariants.length)} variants, every genotype a single dot`,
+);
+
+// A VCF of no variant: the header of the panel alone, 200 individuals,
+// plain text, which popnei's openVcf with no ploidy refuses, "the file
+// has no variants and the ploidy can't be inferred" with js-v0.2.0
+// (docs/plans/open-variants.md, "Round 3").
+const noVariantsPath = join(fixtures, "no_variants.vcf");
+writeFileSync(noVariantsPath, `${panelHeader.join("\n")}\n`);
+console.log(
+  `${noVariantsPath}: ${String(panelHeader.length)} lines of header, no variant`,
 );
 
 // The populations: the copy, and the same rows as a CSV. The names hold no

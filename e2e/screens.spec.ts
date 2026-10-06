@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page, Route } from "@playwright/test";
 
 import { writeBigVcf } from "./bigVcf.ts";
+import { crashWorkerOn } from "./crashWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -4454,6 +4455,38 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByRole("button", { name: "Count again" }),
         ).toBeVisible();
         await save(page, `popgen2-count-stopped${at}-${theme}`);
+      });
+
+      test("a VCF of no variant", async ({ page }) => {
+        await pickOnNewPage(page, "no_variants.vcf");
+        await expect(
+          newPageCount(page).getByText(
+            "no_variants.vcf has no variants. Open another variants file.",
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-no-variants${at}-${theme}`);
+      });
+
+      test("a crash at the opening", async ({ page }) => {
+        await crashWorkerOn(page, "open");
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("panel.vcf.gz could not be read."),
+        ).toBeVisible();
+        await save(page, `popgen2-crash-opening${at}-${theme}`);
+      });
+
+      test("a crash during the count", async ({ page }) => {
+        await crashWorkerOn(page, "run");
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Count again" }),
+        ).toBeVisible();
+        await save(page, `popgen2-crash-count${at}-${theme}`);
       });
 
       test("a VCF whose ploidy could not be read", async ({ page }) => {

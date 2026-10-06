@@ -24,6 +24,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+import { crashWorkerOn } from "./crashWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -574,6 +575,46 @@ test("OV2 the refusals of an opening and of a count are said in the status regio
     "",
     /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position\. Correct the file, or fetch it again, and open it again\.$/u,
   ]);
+});
+
+test("OV2 a crash of the worker during the opening goes to the error bar, and the box says only that the file could not be read", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await crashWorkerOn(page, "open");
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+
+  await expect(lines(page)).toHaveText([
+    /^panel\.vcf\.gz · /u,
+    "panel.vcf.gz could not be read.",
+  ]);
+  await expect(page.getByRole("alert")).toHaveText(
+    /^The application met an error of its own: .*a crash of the test.*\. Reload the page, and open your files again\.$/u,
+  );
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 a crash of the worker during the count goes to the error bar, which says to count again, as the box offers", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await crashWorkerOn(page, "run");
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+
+  await expect(
+    info(page).getByText("The variants of panel.vcf.gz could not be counted.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    info(page).getByRole("button", { name: "Count again" }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText(
+    /^The application stopped as it counted the variants: .*a crash of the test.*\. Count again, and if it stops again, reload the page and open your files again\.$/u,
+  );
+  await expectNoViolations(makeAxeBuilder);
 });
 
 test("OV2 an error of the page's own code shows the bar, which says to reload and open the files again, with no Save", async ({

@@ -12,7 +12,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gunzipSync } from "node:zlib";
+import { crc32, deflateRawSync, gunzipSync, gzipSync } from "node:zlib";
 
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes, and calls calcPopDiversity itself to compare its spectra with the runner's
 import { Variants, calcPopDiversity, openVars } from "popnei";
@@ -128,6 +128,36 @@ function opened(
   const answer = runner.open(load, { name, source: bytesOf(name) });
   expect(answer.kind).toBe("ok");
   return runner;
+}
+
+/** `bytes` compressed as bgzip writes them: gzip members of at most
+    65,280 bytes of input, each with the BC field of its size, and the
+    empty member of 28 bytes that ends the file (the SAM/BAM format
+    specification, section 4.1). */
+function bgzip(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const members: Uint8Array[] = [];
+  const member = (input: Uint8Array): Uint8Array => {
+    const deflated = deflateRawSync(input);
+    const out = new Uint8Array(18 + deflated.length + 8);
+    const view = new DataView(out.buffer);
+    out.set([0x1f, 0x8b, 8, 4, 0, 0, 0, 0, 0, 0xff, 6, 0, 0x42, 0x43, 2, 0]);
+    view.setUint16(16, out.length - 1, true);
+    out.set(deflated, 18);
+    view.setUint32(18 + deflated.length, crc32(input), true);
+    view.setUint32(22 + deflated.length, input.length, true);
+    return out;
+  };
+  for (let start = 0; start < bytes.length; start += 65_280) {
+    members.push(member(bytes.subarray(start, start + 65_280)));
+  }
+  members.push(member(new Uint8Array(0)));
+  const out = new Uint8Array(members.reduce((sum, m) => sum + m.length, 0));
+  let at = 0;
+  for (const m of members) {
+    out.set(m, at);
+    at += m.length;
+  }
+  return out;
 }
 
 function ignore(): void {
@@ -879,6 +909,83 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     const given = valueOf(createRunner().open(VCF, file));
     expect(given.individuals.length).toBe(200);
     expect(given.ploidy).toBe(2);
+  });
+
+  test("no_variants.vcf, a header and no variant, is refused with no ploidy, with popnei's words, and opened with one given", () => {
+    const file = {
+      name: "no_variants.vcf",
+      source: bytesOf("no_variants.vcf"),
+    };
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    expect(createRunner().open(fromFile, file)).toEqual({
+      kind: "refused",
+      message: "the file has no variants and the ploidy can't be inferred",
+    });
+    expect(valueOf(createRunner().open(VCF, file)).individuals.length).toBe(
+      200,
+    );
+  });
+
+  test("a VCF of one variant whose genotypes are single dots is refused with no ploidy, with popnei's words of one data line", () => {
+    const vcf =
+      "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n" +
+      "1\t1\t.\tA\tT\t.\tPASS\t.\tGT\t.\t.\n";
+    expect(
+      createRunner().open(
+        { ...VCF, readOptions: { ploidy: null, onlyPassed: false } },
+        { name: "one.vcf", source: new TextEncoder().encode(vcf) },
+      ),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the one data line of the VCF holds no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+    });
+  });
+
+  test("a VCF cut short before its first genotype with alleles is refused at the open with no ploidy, gzipped or bgzipped", () => {
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    // 2,000 variants of single dots, then 1,000 of genotypes with alleles:
+    // half of the bytes holds none of the second.
+    const lines = [
+      "##fileformat=VCFv4.2",
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+    ];
+    for (let position = 1; position <= 3000; position += 1) {
+      const genotype = position <= 2000 ? "." : "0/1";
+      lines.push(
+        `1\t${String(position)}\t.\tA\tT\t.\tPASS\t.\tGT\t${genotype}\t.`,
+      );
+    }
+    const text = new TextEncoder().encode(`${lines.join("\n")}\n`);
+    const gzipped = gzipSync(text);
+    expect(
+      createRunner().open(fromFile, {
+        name: "cut.vcf.gz",
+        source: new Uint8Array(
+          gzipped.subarray(0, Math.floor(gzipped.length / 2)),
+        ),
+      }),
+    ).toEqual({
+      kind: "refused",
+      message: "the source could not be read: incomplete deflate stream",
+    });
+    const bgzipped = bgzip(text);
+    expect(
+      createRunner().open(fromFile, {
+        name: "cut.vcf.bgz",
+        source: bgzipped.slice(0, Math.floor(bgzipped.length / 2)),
+      }),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`",
+    });
   });
 
   test("bad.vcf is refused at the open as a VCF", () => {
