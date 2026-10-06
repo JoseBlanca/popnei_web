@@ -457,3 +457,20 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
     timeout: 20_000,
   });
 });
+
+test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps the address of the file in its words and the page does not scroll sideways", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.route(/\/assets\/FileStats-[^/]*\.js$/u, async (route) => {
+    await route.fulfill({ status: 404, body: "" });
+  });
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expect(page.getByRole("alert")).toBeVisible({ timeout: 20_000 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
