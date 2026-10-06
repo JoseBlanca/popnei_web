@@ -10,6 +10,7 @@
  */
 
 import {
+  BGZIP_REFUSAL,
   EMPTY_SOURCE,
   SOURCE_UNREADABLE,
   isVcfLineRefusal,
@@ -18,6 +19,7 @@ import {
   counted,
   escaped,
   grouped,
+  isHidden,
   saying,
   shown,
   variantsOpenNeeds,
@@ -93,9 +95,8 @@ export const PLOIDY_READING = "Ploidy: reading…";
     seconds. */
 export const READING_TIME_LINE = "Reading the file.";
 
-/** The line of the variants once counted: "Variants: 1,200". Which
-    variants were read, the box of the passed variants under the box says,
-    and its change reads the file again. */
+/** The line of the variants once counted: "Variants: 1,200", every
+    variant of the file, whatever its FILTER column. */
 export function variantsLine(numVars: number): string {
   return `Variants: ${grouped(numVars)}`;
 }
@@ -129,8 +130,9 @@ export function ploidyLine(ploidy: number): string {
 }
 
 /** popnei's refusal of a VCF opened with no ploidy whose first variants,
-    up to 4096 of them, hold no genotype but a single dot: their number,
-    or none for one. */
+    up to 4096 of them, hold no genotype with alleles: every genotype a
+    single dot, or no GT field in the FORMAT column, which popnei does not
+    tell apart; their number, or none for one. */
 const PLOIDY_NOT_READ =
   /^(?:the first (\d+) data lines of the VCF hold|the one data line of the VCF holds) no genotype with alleles/u;
 
@@ -145,47 +147,114 @@ function neiNameOf(name: string): string {
   return `${name.replace(/\.vcf(?:\.b?gz)?$/iu, "")}.nei`;
 }
 
+/** The escapes of Python for the commonest characters a string of it
+    escapes. */
+const PYTHON_ESCAPES: ReadonlyMap<string, string> = new Map([
+  ["\\", "\\\\"],
+  ['"', '\\"'],
+  ["\n", "\\n"],
+  ["\t", "\\t"],
+  ["\r", "\\r"],
+]);
+
+/** `value` as a string of Python between double quotes, which Python
+    reads as the same text: a quote and a backslash escaped, and each
+    character the box escapes written as `\uXXXX`, or `\UXXXXXXXX` above
+    U+FFFF, so that the line shows what the box shows. */
+function pythonString(value: string): string {
+  const characters = Array.from(value, (character) => {
+    const named = PYTHON_ESCAPES.get(character);
+    if (named !== undefined) return named;
+    if (!isHidden(character)) return character;
+    const code = character.codePointAt(0);
+    if (code === undefined) {
+      throw new Error("popnei_web defect: a character of a name has no code.");
+    }
+    return code > 0xffff
+      ? `\\U${code.toString(16).padStart(8, "0")}`
+      : `\\u${code.toString(16).padStart(4, "0")}`;
+  });
+  return `"${characters.join("")}"`;
+}
+
+/** The name of the lines of popnei's Python in the box, for a screen
+    reader. */
+export const PYTHON_NAME = "popnei's Python";
+
+/** What the box says of a variants file that could not be opened. */
+export interface OpenFailure {
+  /** What happened and what to do, which the status region says too. */
+  readonly text: string;
+  /** popnei's Python that opens the file with its ploidy given and
+      writes it as a `.nei` file, after `words`, which say when it helps;
+      `code` is its lines, one statement each, drawn apart from the words
+      so that they can be copied whole; `null` when no Python helps. */
+  readonly remedy: { readonly words: string; readonly code: string } | null;
+}
+
 /**
- * The words of a variants file that could not be opened, `p`'s, for the
- * box: popnei could not read the ploidy of a VCF, since every genotype of
- * its first variants is a single dot, which says no number of alleles,
- * and the page has no field to give one, so the words give popnei's
- * Python, which opens it with its ploidy given and writes it as a `.nei`
- * file this page opens; a VCF of no variant; the worker that stopped,
- * whose words the error bar shows; otherwise those of
- * `variantsOpenNeeds`. `null` for a file being read or read.
+ * What the box says of the variants file of `p` that could not be opened,
+ * or `null` for a file being read or read: a VCF whose ploidy popnei
+ * could not read, since its first variants hold no genotype with alleles,
+ * whose genotypes are missing or that has no genotypes, which popnei does
+ * not tell apart, with popnei's Python as the remedy for the first, since
+ * the page has no field to give a ploidy; a VCF of no variant; a file cut
+ * short or damaged, in the words its count gives; the worker that stopped
+ * or met a defect of our code, whose words the error bar shows; otherwise
+ * those of `variantsOpenNeeds`.
  */
-export function openFailedText(p: Project): string | null {
+export function openFailure(p: Project): OpenFailure | null {
   const variants = p.variants;
-  if (
-    variants?.read.kind === "failed" &&
-    variants.read.error.kind === "popnei"
-  ) {
-    const message = variants.read.error.message;
+  if (variants?.read.kind === "failed") {
+    const error = variants.read.error;
     const name = escaped(variants.name);
-    const notRead = PLOIDY_NOT_READ.exec(message);
-    if (notRead !== null) {
-      const which =
-        notRead[1] === undefined
-          ? "its one variant"
-          : `its first ${grouped(Number(notRead[1]))} variants`;
-      const quoted = JSON.stringify(variants.name);
-      return `The ploidy of ${name} could not be read from the file: every genotype of ${which} is a single dot, a missing genotype that does not say how many alleles it has, and this page has no way to give the ploidy. In Python, popnei opens the file with its ploidy given, 2 for a diploid: variants = popnei.open_vcf(${quoted}, ploidy=2, only_passed=False). It then writes it as a .nei file, popnei.write_vars(variants, ${JSON.stringify(neiNameOf(variants.name))}), which this page opens.`;
-    }
-    if (message.startsWith(PLOIDY_OF_NO_VARIANTS)) {
-      return `${name} has no variants. Open another variants file.`;
+    if (error.kind === "popnei") {
+      const message = error.message;
+      const notRead = PLOIDY_NOT_READ.exec(message);
+      if (notRead !== null) {
+        const [which, their] =
+          notRead[1] === undefined
+            ? ["the one variant", "its"]
+            : [`the first ${grouped(Number(notRead[1]))} variants`, "their"];
+        return {
+          text: `No genotype with alleles was found in ${which} of ${name}: ${their} genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.`,
+          remedy: {
+            words:
+              "If the genotypes are missing, popnei's Python opens the file with its ploidy given, 2 for a diploid, and writes it as a .nei file, which this page opens:",
+            code: [
+              "import popnei",
+              `variants = popnei.open_vcf(${pythonString(variants.name)}, ploidy=2, only_passed=False)`,
+              `popnei.write_vars(variants, ${pythonString(neiNameOf(variants.name))})`,
+            ].join("\n"),
+          },
+        };
+      }
+      if (message.startsWith(PLOIDY_OF_NO_VARIANTS)) {
+        return {
+          text: `${name} has no variants. Open another variants file.`,
+          remedy: null,
+        };
+      }
+      // With no ploidy, popnei reads the first lines at the opening, up
+      // to the first genotype with alleles, so a file cut short can be
+      // found here as well as by the count.
+      if (
+        message.startsWith(SOURCE_UNREADABLE) ||
+        message.startsWith(BGZIP_REFUSAL)
+      ) {
+        return { text: refusalText(message, p), remedy: null };
+      }
+    } else if (
+      error.error.kind === "workerFailed" ||
+      error.error.kind === "defect"
+    ) {
+      // The error bar, on the screen with it, says what the worker said
+      // and how to report it (the owner, 6 October 2026).
+      return { text: `${name} could not be read.`, remedy: null };
     }
   }
-  if (
-    variants?.read.kind === "failed" &&
-    variants.read.error.kind === "worker" &&
-    variants.read.error.error.kind === "workerFailed"
-  ) {
-    // The error bar, on the screen with it, says what the worker said
-    // and how to report it (the owner, 6 October 2026).
-    return `${escaped(variants.name)} could not be read.`;
-  }
-  return variantsOpenNeeds(p);
+  const text = variantsOpenNeeds(p);
+  return text === null ? null : { text, remedy: null };
 }
 
 /** The button that counts again after a Stop or a failure. */
@@ -346,8 +415,9 @@ export function announcementsOf(
     );
   }
   if (wasPending && variants.read.kind === "failed") {
-    const reason = openFailedText(after.project);
-    if (reason !== null) texts.push(reason);
+    // The words alone: the lines of Python are read in the box.
+    const failure = openFailure(after.project);
+    if (failure !== null) texts.push(failure.text);
   }
   const then = summaryStatus(before);
   const now = summaryStatus(after);

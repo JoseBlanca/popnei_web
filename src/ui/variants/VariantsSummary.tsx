@@ -45,6 +45,7 @@ import {
   INDIVIDUALS_READING,
   INFO_NAME,
   PLOIDY_READING,
+  PYTHON_NAME,
   READING_TIME_LINE,
   STOPPED_TEXT,
   SUMMARY_ID,
@@ -56,7 +57,7 @@ import {
   failedText,
   individualsLine,
   nameAndSizeText,
-  openFailedText,
+  openFailure,
   ploidyLine,
   summaryStatus,
   variantsLine,
@@ -127,7 +128,8 @@ function Load({
   variants,
 }: LoadProps): React.JSX.Element {
   const linesRef = useRef<HTMLDivElement>(null);
-  const reason = useAppState((s) => openFailedText(s.project));
+  const project = useAppState((s) => s.project);
+  const failure = openFailure(project);
   useLayoutEffect(() => {
     const lines = linesRef.current;
     // The open button is one element whatever the zone holds.
@@ -161,7 +163,29 @@ function Load({
           </div>
         </>
       )}
-      {read.kind === "failed" && reason !== null && <Problem>{reason}</Problem>}
+      {read.kind === "failed" && failure !== null && (
+        <>
+          <Problem>{failure.text}</Problem>
+          {failure.remedy !== null && (
+            <>
+              <p className={classOf(styles, "line")}>{failure.remedy.words}</p>
+              {/* Its lines apart from the words, each on its own row,
+                  so that a name of a file does not break them and a
+                  copy takes no full stop of a sentence. A long line
+                  scrolls inside it, which the keyboard does once the Tab
+                  key has given it the focus. */}
+              <pre
+                tabIndex={0}
+                role="region"
+                aria-label={PYTHON_NAME}
+                className={classOf(styles, "code")}
+              >
+                <code>{failure.remedy.code}</code>
+              </pre>
+            </>
+          )}
+        </>
+      )}
       {read.kind === "read" && (
         <>
           <p className={classOf(styles, "line")}>

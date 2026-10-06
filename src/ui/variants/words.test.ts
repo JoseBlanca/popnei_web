@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { emptyProject, loadVariants } from "../../core/project.ts";
-import type { Project } from "../../core/project.ts";
+import type { Project, SourceError } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
@@ -12,7 +12,7 @@ import {
   individualsLine,
   nameAndSizeText,
   notOpenedText,
-  openFailedText,
+  openFailure,
   ploidyLine,
   refusalText,
   variantsLine,
@@ -43,88 +43,131 @@ describe("the words of the page that opens a variants file", () => {
     expect(ploidyLine(4)).toBe("Ploidy: 4");
   });
 
-  test("a VCF whose ploidy popnei could not read: what happened, and popnei's Python, which opens it with a ploidy and writes the .nei file this page opens", () => {
-    const failed = (name: string, message: string): Project => {
-      const p = withVcf(name, { ploidy: null, onlyPassed: false });
-      const variants = p.variants;
-      if (variants === null) throw new Error("the test loaded a file");
-      return {
-        ...p,
-        variants: {
-          ...variants,
-          read: { kind: "failed", error: { kind: "popnei", message } },
-        },
-      };
-    };
+  /** A project whose VCF of the name `name`, opened with no ploidy,
+      failed with `error`. */
+  const failedWith = (name: string, error: SourceError): Project => {
+    const p = withVcf(name, { ploidy: null, onlyPassed: false });
+    const variants = p.variants;
+    if (variants === null) throw new Error("the test loaded a file");
+    return { ...p, variants: { ...variants, read: { kind: "failed", error } } };
+  };
+  const refused = (name: string, message: string): Project =>
+    failedWith(name, { kind: "popnei", message });
+  const NO_ALLELES =
+    "hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy";
+
+  test("a VCF whose ploidy popnei could not read: no genotype with alleles, either missing or with no GT, and popnei's Python as the remedy when they are missing, in lines of their own", () => {
     expect(
-      openFailedText(
-        failed(
+      openFailure(
+        refused(
           "no_ploidy.vcf.gz",
-          "the first 5 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+          `the first 5 data lines of the VCF ${NO_ALLELES}`,
         ),
       ),
+    ).toEqual({
+      text: "No genotype with alleles was found in the first 5 variants of no_ploidy.vcf.gz: their genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.",
+      remedy: {
+        words:
+          "If the genotypes are missing, popnei's Python opens the file with its ploidy given, 2 for a diploid, and writes it as a .nei file, which this page opens:",
+        code: 'import popnei\nvariants = popnei.open_vcf("no_ploidy.vcf.gz", ploidy=2, only_passed=False)\npopnei.write_vars(variants, "no_ploidy.nei")',
+      },
+    });
+    expect(
+      openFailure(
+        refused(
+          "one.vcf",
+          `the one data line of the VCF holds no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy`,
+        ),
+      )?.text,
     ).toBe(
-      'The ploidy of no_ploidy.vcf.gz could not be read from the file: every genotype of its first 5 variants is a single dot, a missing genotype that does not say how many alleles it has, and this page has no way to give the ploidy. In Python, popnei opens the file with its ploidy given, 2 for a diploid: variants = popnei.open_vcf("no_ploidy.vcf.gz", ploidy=2, only_passed=False). It then writes it as a .nei file, popnei.write_vars(variants, "no_ploidy.nei"), which this page opens.',
+      "No genotype with alleles was found in the one variant of one.vcf: its genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.",
     );
     expect(
-      openFailedText(
-        failed(
-          "one.vcf",
-          "the one data line of the VCF holds no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
-        ),
-      ),
-    ).toContain("every genotype of its one variant is a single dot");
-    expect(
-      openFailedText(
-        failed(
+      openFailure(
+        refused(
           "big.vcf.bgz",
-          "the first 4096 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+          `the first 4096 data lines of the VCF ${NO_ALLELES}`,
         ),
+      )?.text,
+    ).toContain("in the first 4,096 variants of big.vcf.bgz:");
+  });
+
+  test("the name in popnei's Python is a string of Python, its quotes, backslashes and hidden characters escaped as the box escapes them", () => {
+    const remedy = openFailure(
+      refused(
+        'a"b\\c\u202e\n\u{e0001}.vcf',
+        `the first 5 data lines of the VCF ${NO_ALLELES}`,
       ),
-    ).toContain("its first 4,096 variants is a single dot");
+    )?.remedy;
+    expect(remedy?.code).toBe(
+      'import popnei\nvariants = popnei.open_vcf("a\\"b\\\\c\\u202e\\n\\U000e0001.vcf", ploidy=2, only_passed=False)\npopnei.write_vars(variants, "a\\"b\\\\c\\u202e\\n\\U000e0001.nei")',
+    );
+  });
+
+  test("a VCF of no variant, and any other refusal of the opening, have no Python", () => {
     expect(
-      openFailedText(
-        failed(
+      openFailure(
+        refused(
           "empty.vcf",
           "the file has no variants and the ploidy can't be inferred",
         ),
       ),
-    ).toBe("empty.vcf has no variants. Open another variants file.");
-    // Any other refusal keeps the words of the opening.
+    ).toEqual({
+      text: "empty.vcf has no variants. Open another variants file.",
+      remedy: null,
+    });
     expect(
-      openFailedText(
-        failed("bad.vcf", "the source is not a VCF: it starts with `x`"),
+      openFailure(
+        refused("bad.vcf", "the source is not a VCF: it starts with `x`"),
+      ),
+    ).toEqual({
+      text: "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cx\u201d. Open another file.",
+      remedy: null,
+    });
+    expect(openFailure(PASSED)).toEqual({
+      text: "Reading panel.vcf.gz.",
+      remedy: null,
+    });
+  });
+
+  test("a gzipped VCF cut short before its ploidy is read, and a bgzipped one, have the words their count gives", () => {
+    const cut = "the source could not be read: incomplete deflate stream";
+    expect(openFailure(refused("panel.vcf.gz", cut))?.text).toBe(
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
+    expect(openFailure(refused("panel.vcf.gz", cut))?.text).toBe(
+      refusalText(cut, EVERY),
+    );
+    const bgzip =
+      "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`";
+    expect(openFailure(refused("panel.vcf.gz", bgzip))?.text).toBe(
+      refusalText(bgzip, EVERY),
+    );
+  });
+
+  test.each(["workerFailed", "defect"] as const)(
+    "a worker that failed with %s during the opening: the file could not be read, the error bar saying the rest",
+    (kind) => {
+      expect(
+        openFailure(
+          failedWith("panel.vcf.gz", {
+            kind: "worker",
+            error: { kind, message: "wasm.default_ploidy is not a function" },
+          }),
+        ),
+      ).toEqual({ text: "panel.vcf.gz could not be read.", remedy: null });
+    },
+  );
+
+  test("popnei's backquotes become quotes, so that the text of the file it quotes keeps its bounds", () => {
+    expect(
+      refusalText(
+        "line 3 of the VCF, the column of a: `x` is not an allele number, which is a run of digits",
+        EVERY,
       ),
     ).toBe(
-      "popnei could not read bad.vcf: the source is not a VCF: it starts with x. Open another file.",
+      "popnei could not read panel.vcf.gz: line 3 of the VCF, the column of a: \u201cx\u201d is not an allele number, which is a run of digits. Correct the file, or fetch it again, and open it again.",
     );
-    expect(openFailedText(PASSED)).toBe("Reading panel.vcf.gz.");
-    // A worker that stopped during the opening: the error bar has what
-    // it said.
-    const stopped = withVcf("panel.vcf.gz", {
-      ploidy: null,
-      onlyPassed: false,
-    });
-    const variants = stopped.variants;
-    if (variants === null) throw new Error("the test loaded a file");
-    expect(
-      openFailedText({
-        ...stopped,
-        variants: {
-          ...variants,
-          read: {
-            kind: "failed",
-            error: {
-              kind: "worker",
-              error: {
-                kind: "workerFailed",
-                message: "wasm.default_ploidy is not a function",
-              },
-            },
-          },
-        },
-      }),
-    ).toBe("panel.vcf.gz could not be read.");
   });
 
   test("the lines of the box of the file: its name and size, its individuals, variants and chromosomes, with their numbers grouped", () => {
@@ -137,7 +180,7 @@ describe("the words of the page that opens a variants file", () => {
     expect(chromosomesLine(1)).toBe("Chromosomes: 1");
   });
 
-  test("the variants are the number alone, since the box of the passed variants says which are read", () => {
+  test("the variants are the number alone, every variant of the file", () => {
     expect(variantsLine(1200)).toBe("Variants: 1,200");
   });
 
@@ -199,7 +242,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
+      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
     );
   });
 

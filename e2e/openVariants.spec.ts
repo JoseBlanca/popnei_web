@@ -206,7 +206,7 @@ test("OV2 bad.vcf is refused at the opening, with popnei's words", async ({
   // The words in place of what the file would have told.
   await expect(lines(page)).toHaveText([
     "bad.vcf · 41 bytes",
-    "popnei could not read bad.vcf: the source is not a VCF: it starts with This is a line o. Open another file.",
+    "popnei could not read bad.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d. Open another file.",
   ]);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -226,7 +226,7 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
     "Variants: not counted",
     "Chromosomes: not counted",
     "Ploidy: 2",
-    "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
+    "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
   ]);
   // popnei's refusal comes again for the same file, so no Count again.
   await expect(
@@ -252,7 +252,7 @@ test("OV2 tetraploid.vcf.gz is opened with the ploidy popnei reads from it, 4", 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 no_ploidy.vcf.gz, whose genotypes are all single dots, is refused with words that give popnei's Python to open it with a ploidy", async ({
+test("OV2 no_ploidy.vcf.gz, whose genotypes are all single dots, is refused with words that give popnei's Python to open it with a ploidy, in lines of their own", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -260,9 +260,20 @@ test("OV2 no_ploidy.vcf.gz, whose genotypes are all single dots, is refused with
   await pick(page, join(FIXTURES, "no_ploidy.vcf.gz"));
 
   const words =
-    'The ploidy of no_ploidy.vcf.gz could not be read from the file: every genotype of its first 5 variants is a single dot, a missing genotype that does not say how many alleles it has, and this page has no way to give the ploidy. In Python, popnei opens the file with its ploidy given, 2 for a diploid: variants = popnei.open_vcf("no_ploidy.vcf.gz", ploidy=2, only_passed=False). It then writes it as a .nei file, popnei.write_vars(variants, "no_ploidy.nei"), which this page opens.';
-  await expect(lines(page)).toHaveText([/^no_ploidy\.vcf\.gz · /u, words]);
+    "No genotype with alleles was found in the first 5 variants of no_ploidy.vcf.gz: their genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.";
+  await expect(lines(page)).toHaveText([
+    /^no_ploidy\.vcf\.gz · /u,
+    words,
+    "If the genotypes are missing, popnei's Python opens the file with its ploidy given, 2 for a diploid, and writes it as a .nei file, which this page opens:",
+  ]);
+  await expect(
+    info(page).getByRole("region", { name: "popnei's Python" }),
+  ).toHaveText(
+    'import popnei\nvariants = popnei.open_vcf("no_ploidy.vcf.gz", ploidy=2, only_passed=False)\npopnei.write_vars(variants, "no_ploidy.nei")',
+  );
+  // The status region says the words, and not the lines of Python.
   await expect(page.getByRole("status").nth(1)).toContainText(words);
+  await expect(page.getByRole("status").nth(1)).not.toContainText("popnei.");
   await expectNoViolations(makeAxeBuilder);
 });
 
@@ -540,13 +551,13 @@ test("OV2 the refusals of an opening and of a count are said in the status regio
   await pick(page, join(FIXTURES, "bad.vcf"));
   await expect(page.getByRole("status")).toHaveText([
     "",
-    /popnei could not read bad\.vcf: the source is not a VCF: it starts with This is a line o\. Open another file\.$/u,
+    /popnei could not read bad\.vcf: the source is not a VCF: it starts with \u201cThis is a line o\u201d\. Open another file\.$/u,
   ]);
 
   await pick(page, join(FIXTURES, "bad_position.vcf.gz"));
   await expect(page.getByRole("status")).toHaveText([
     "",
-    /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: x80 is not a position\. Correct the file, or fetch it again, and open it again\.$/u,
+    /popnei could not read bad_position\.vcf\.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position\. Correct the file, or fetch it again, and open it again\.$/u,
   ]);
 });
 

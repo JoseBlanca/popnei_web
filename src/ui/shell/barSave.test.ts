@@ -10,10 +10,20 @@ import { TEST_DEFS } from "../../core/testSupport.ts";
 import type { TestDefJob, TestDefResult } from "../../core/testSupport.ts";
 import type { Outcome, Run } from "../../worker/protocol.ts";
 import { createDefects } from "../defects.ts";
+import type { Defect, DefectOrigin } from "../defects.ts";
 import { createSaving } from "../saving.ts";
 import { NOT_SAVED, barText, saveFromBar, saveLabel } from "./barSave.ts";
 
 const PANEL_ID = "0123456789abcdef0123456789abcdef";
+
+/** What the bar reads of an error of the message `message`, from
+    `origin`. */
+function defect(
+  message: string,
+  origin: DefectOrigin = "event",
+): Pick<Defect, "message" | "origin"> {
+  return { message, origin };
+}
 
 /** A store of the analyses of population genetics of `TEST_DEFS`, with
     panel.nei read and its diversity done with the check numbers
@@ -113,20 +123,33 @@ describe("WS9 the Save of the error bar", () => {
   });
 
   test("the first line of the bar: intact, not saved, and as the page started", () => {
-    expect(barText("test.", "saving", false)).toBe(
+    expect(barText(defect("test."), "saving", false)).toBe(
       "The application met an error of its own: test. Your project is intact: save it, then reload the page.",
     );
-    expect(barText("test", "saving", true)).toBe(
+    expect(barText(defect("test"), "saving", true)).toBe(
       "The application met an error of its own: test. Your project could not be saved; copy the details and report them.",
     );
-    expect(barText("test", "starting", false)).toBe(
+    expect(barText(defect("test"), "starting", false)).toBe(
       "The application met an error of its own as it started: test. Reload the page.",
     );
   });
 
   test("the first line of the bar on a page that saves no project: reload, and open the file again", () => {
-    expect(barText("test.", "noSaving", false)).toBe(
+    expect(barText(defect("test."), "noSaving", false)).toBe(
       "The application met an error of its own: test. Reload the page, and open your files again.",
+    );
+  });
+
+  test("the first line of the bar for the worker stopped during a count says Count again, as the box does, and for one stopped during an opening, to reload", () => {
+    expect(
+      barText(defect("out of memory", "countStopped"), "noSaving", false),
+    ).toBe(
+      "The application stopped as it counted the variants: out of memory. Count again, and if it stops again, reload the page and open your files again.",
+    );
+    expect(
+      barText(defect("out of memory", "openingStopped"), "noSaving", false),
+    ).toBe(
+      "The application met an error of its own: out of memory. Reload the page, and open your files again.",
     );
   });
 

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import { loadVariants } from "../../core/project.ts";
+import { loadIndividuals, loadVariants } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createDefects } from "../defects.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
-import { SUMMARY_ID } from "./words.ts";
+import { SUMMARY_ID, summaryStatus } from "./words.ts";
 import { reportDefects } from "./workerDefects.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
@@ -48,6 +48,40 @@ function setUp(): {
   return { store, sent };
 }
 
+const INDIVIDUALS_ID = "00000000000000000000000000000001";
+
+/** Loads an individuals file, whose read `touch` records later. */
+function loadPops(store: Store<JobResult, Blob>): void {
+  store.apply("an individuals file was loaded", (p) =>
+    loadIndividuals(p, {
+      fileId: INDIVIDUALS_ID,
+      name: "pops.xlsx",
+      csv: null,
+    }),
+  );
+}
+
+/** Changes the store with no change of the user, which keeps the
+    failures shown: the individuals file of `loadPops` read, or not; the
+    test fails when no listener was called. */
+function touch(store: Store<JobResult, Blob>): void {
+  const calls = { count: 0 };
+  const stop = store.subscribe(() => {
+    calls.count += 1;
+  });
+  store.individualsRead(INDIVIDUALS_ID, null, {
+    kind: "failed",
+    error: {
+      kind: "worker",
+      error: { kind: "workerFailed", message: "the light worker stopped" },
+    },
+  });
+  stop();
+  if (calls.count === 0) {
+    throw new Error("the change of the test called no listener");
+  }
+}
+
 /** Lets the outcomes given settle through `startAnalysis`. */
 async function settled(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -58,6 +92,7 @@ describe("the defects of the worker given to the error bar of the new page", () 
     const { store, sent } = setUp();
     const defects = createDefects();
     reportDefects(store, defects);
+    loadPops(store);
 
     void startAnalysis(store, SUMMARY_ID);
     sent[0]?.({
@@ -66,13 +101,15 @@ describe("the defects of the worker given to the error bar of the new page", () 
     });
     await settled();
     // Another change of the store, with the failure still shown.
-    store.popneiReady("0.1.0");
+    touch(store);
+    expect(summaryStatus(store.getState()).kind).toBe("error");
 
     expect(defects.getState()).toEqual({
       first: {
         message: "popnei_web defect: a test.",
+        origin: "worker",
         details:
-          "Error 1, thrown in the calculation worker during a calculation, given back to the page as its failure:\npopnei_web defect: a test.",
+          "Error 1, thrown in the calculation worker during an opening or a calculation, given back to the page as its failure:\npopnei_web defect: a test.",
       },
       more: 0,
     });
@@ -82,6 +119,7 @@ describe("the defects of the worker given to the error bar of the new page", () 
     const { store, sent } = setUp();
     const defects = createDefects();
     reportDefects(store, defects);
+    loadPops(store);
 
     void startAnalysis(store, SUMMARY_ID);
     sent[0]?.({
@@ -89,13 +127,15 @@ describe("the defects of the worker given to the error bar of the new page", () 
       error: { kind: "workerFailed", message: "out of memory" },
     });
     await settled();
-    store.popneiReady("0.1.0");
+    touch(store);
+    expect(summaryStatus(store.getState()).kind).toBe("error");
 
     expect(defects.getState()).toEqual({
       first: {
         message: "out of memory",
+        origin: "countStopped",
         details:
-          "Error 1, the calculation worker stopped during an opening or a count, with these words:\nout of memory",
+          "Error 1, the calculation worker stopped during the count of the variants, with these words:\nout of memory",
       },
       more: 0,
     });
@@ -126,16 +166,58 @@ describe("the defects of the worker given to the error bar of the new page", () 
         },
       },
     } as const;
+    loadPops(store);
     store.variantsRead(OTHER_ID, failed);
-    // The same failure recorded again is reported no second time.
-    store.variantsRead(OTHER_ID, failed);
-    store.popneiReady("0.1.0");
+    // Another change of the store, with the failure still shown, is
+    // reported no second time.
+    touch(store);
+    expect(store.getState().project.variants?.read.kind).toBe("failed");
 
     expect(defects.getState()).toEqual({
       first: {
         message: "wasm.default_ploidy is not a function",
+        origin: "openingStopped",
         details:
-          "Error 1, the calculation worker stopped during an opening or a count, with these words:\nwasm.default_ploidy is not a function",
+          "Error 1, the calculation worker stopped during the opening of a file, with these words:\nwasm.default_ploidy is not a function",
+      },
+      more: 0,
+    });
+  });
+
+  test("a defect of our code met during the opening, sent as a defect by the worker, is reported once, with its message", () => {
+    const { store } = setUp();
+    const defects = createDefects();
+    reportDefects(store, defects);
+    const OTHER_ID = "fedcba9876543210fedcba9876543210";
+
+    store.apply("a new variants file was loaded", (p) =>
+      loadVariants(p, {
+        fileId: OTHER_ID,
+        name: "panel.vcf.gz",
+        size: 87_000,
+        format: "vcf",
+        readOptions: { ploidy: null, onlyPassed: false },
+      }),
+    );
+    loadPops(store);
+    store.variantsRead(OTHER_ID, {
+      kind: "failed",
+      error: {
+        kind: "worker",
+        error: {
+          kind: "defect",
+          message: "popnei refused an unknown option: foo",
+        },
+      },
+    });
+    touch(store);
+
+    expect(defects.getState()).toEqual({
+      first: {
+        message: "popnei refused an unknown option: foo",
+        origin: "worker",
+        details:
+          "Error 1, thrown in the calculation worker during an opening or a calculation, given back to the page as its failure:\npopnei refused an unknown option: foo",
       },
       more: 0,
     });

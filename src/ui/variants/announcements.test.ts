@@ -109,6 +109,41 @@ describe("what the status region of the new page says", () => {
     ]);
   });
 
+  test("a VCF opened with no ploidy whose ploidy popnei could not read is said in the words of the box, without its lines of Python", () => {
+    const { store } = setUp();
+    store.apply("a new variants file was loaded", (p) => loadVariants(p, VCF));
+    expect(
+      said(store, () => {
+        store.variantsRead(FILE_ID, {
+          kind: "failed",
+          error: {
+            kind: "popnei",
+            message:
+              "the first 5 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+          },
+        });
+      }),
+    ).toEqual([
+      "No genotype with alleles was found in the first 5 variants of panel.vcf.gz: their genotypes are missing, or the file has no genotypes (GT). popnei cannot read the ploidy of the file.",
+    ]);
+  });
+
+  test("a VCF opened with no ploidy whose worker stopped during the opening is said as a file that could not be read", () => {
+    const { store } = setUp();
+    store.apply("a new variants file was loaded", (p) => loadVariants(p, VCF));
+    expect(
+      said(store, () => {
+        store.variantsRead(FILE_ID, {
+          kind: "failed",
+          error: {
+            kind: "worker",
+            error: { kind: "workerFailed", message: "out of memory" },
+          },
+        });
+      }),
+    ).toEqual(["panel.vcf.gz could not be read."]);
+  });
+
   test("a count done is said with its numbers, and a Stop by nothing of the state", async () => {
     const { store, sent } = setUp();
     openRead(store);
@@ -160,7 +195,7 @@ describe("what the status region of the new page says", () => {
     });
     await settled();
     expect(announcementsOf(before, store.getState())).toEqual([
-      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
+      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
     ]);
   });
 

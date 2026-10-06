@@ -5,7 +5,7 @@
  * bar's first line, which change once that Save has failed. Apart from the bar, so
  * that a test in node drives it on the real store and saving.
  */
-import type { Defects } from "../defects.ts";
+import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { handedText } from "./saveOpen.ts";
 
@@ -40,22 +40,27 @@ export function saveFromBar(
     for now. */
 export type BarPage = "starting" | "saving" | "noSaving";
 
-/** The words of the bar for the first error, `message` without its last
-    full stop, since the sentence adds its own: with the saving, that the
-    project is intact and to save it, or, once `saveFailed`, that it could
-    not be saved; on a page that saves no project, to reload it and open
-    the files again; before the store, as the page started, to reload. */
+/** The words of the bar for the first error, `first`, its message
+    without its last full stop, since the sentence adds its own: with the
+    saving, that the project is intact and to save it, or, once
+    `saveFailed`, that it could not be saved; on a page that saves no
+    project, to count again after the worker stopped during a count, as
+    the box offers, and otherwise to reload the page and open the files
+    again; before the store, as the page started, to reload. */
 export function barText(
-  message: string,
+  first: Pick<Defect, "message" | "origin">,
   page: BarPage,
   saveFailed: boolean,
 ): string {
+  const message = first.message;
   const text = message.endsWith(".") ? message.slice(0, -1) : message;
   if (page === "starting") {
     return `The application met an error of its own as it started: ${text}. Reload the page.`;
   }
   if (page === "noSaving") {
-    return `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
+    return first.origin === "countStopped"
+      ? `The application stopped as it counted the variants: ${text}. Count again, and if it stops again, reload the page and open your files again.`
+      : `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }
   return saveFailed
     ? `The application met an error of its own: ${text}. Your project could not be saved; copy the details and report them.`

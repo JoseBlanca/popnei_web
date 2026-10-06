@@ -4459,7 +4459,7 @@ for (const theme of ["light", "dark"] as const) {
       test("a VCF whose ploidy could not be read", async ({ page }) => {
         await pickOnNewPage(page, "no_ploidy.vcf.gz");
         await expect(
-          newPageCount(page).getByText(/^The ploidy of no_ploidy\.vcf\.gz/u),
+          newPageCount(page).getByText(/^No genotype with alleles was found/u),
         ).toBeVisible();
         await save(page, `popgen2-ploidy-not-read${at}-${theme}`);
       });

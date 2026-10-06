@@ -2843,11 +2843,13 @@ export function grouped(count: number): string {
   return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
 }
 
-/** popnei's message without its backquotes, which name code a user of
-    the application cannot use: "it starts with `This`" becomes "it
-    starts with This". */
+/** popnei's message with each pair of its backquotes, around a name of
+    its code or a piece of the user's file, written as quotes, which a
+    user of the application reads as the bounds of what they hold: "it
+    starts with `This is a line o`" becomes "it starts with “This is a line
+    o”". A backquote with no pair is taken out. */
 export function withoutBackquotes(message: string): string {
-  return message.replaceAll("`", "");
+  return message.replace(/`([^`]*)`/gu, "\u201c$1\u201d").replaceAll("`", "");
 }
 
 /** What follows "could not read panel.nei": a colon and the message of
@@ -4698,6 +4700,13 @@ export function escaped(value: string): string {
     among them, and half of a pair that encodes one character, alone. */
 const HIDDEN = /^[\p{Cc}\p{Cf}\p{Cs}]$/u;
 
+/** Whether `character`, one character of a value, is one that a text
+    escapes, `escapedCharacters` and the strings of popnei's Python that
+    the page writes. */
+export function isHidden(character: string): boolean {
+  return HIDDEN.test(character);
+}
+
 /** The escapes of the commonest control characters. */
 const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
   ["\n", "\\n"],
@@ -4712,7 +4721,7 @@ const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
     escape. */
 export function escapedCharacters(value: string): readonly string[] {
   return Array.from(value, (character) => {
-    if (!HIDDEN.test(character)) {
+    if (!isHidden(character)) {
       return character;
     }
     const named = NAMED_ESCAPES.get(character);

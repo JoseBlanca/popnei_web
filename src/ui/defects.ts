@@ -14,6 +14,8 @@ import { messageOf } from "../core/thrown.ts";
 export interface Defect {
   /** The message of the error, or the text of what was thrown. */
   readonly message: string;
+  /** Where it came from, which the bar's words depend on. */
+  readonly origin: DefectOrigin;
   /** The message, the stack or the component stack, and where it came
       from, for a report of the bug. */
   readonly details: string;
@@ -32,7 +34,8 @@ export interface DefectsState {
     boundary, React drawing a step, whose error boundary caught it, or
     Save the project of the error bar, which caught it; a defect thrown
     in the calculation worker; or that worker stopped on its own, on
-    popgen2.html, with the words the browser gave. */
+    popgen2.html, with the words the browser gave, during the opening of
+    the variants file or during the count of its variants. */
 export type DefectOrigin =
   | "event"
   | "rejection"
@@ -40,7 +43,8 @@ export type DefectOrigin =
   | "boundary"
   | "barSave"
   | "worker"
-  | "workerStopped";
+  | "openingStopped"
+  | "countStopped";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -78,9 +82,11 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
   barSave:
     "thrown as Save the project of the error bar wrote the project file, caught by the bar",
   worker:
-    "thrown in the calculation worker during a calculation, given back to the page as its failure",
-  workerStopped:
-    "the calculation worker stopped during an opening or a count, with these words",
+    "thrown in the calculation worker during an opening or a calculation, given back to the page as its failure",
+  openingStopped:
+    "the calculation worker stopped during the opening of a file, with these words",
+  countStopped:
+    "the calculation worker stopped during the count of the variants, with these words",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });
@@ -144,7 +150,7 @@ function toDefect(
   if (componentStack !== null) {
     lines.push(`The components being drawn:${componentStack}`);
   }
-  return { message, details: lines.join("\n") };
+  return { message, origin, details: lines.join("\n") };
 }
 
 /**

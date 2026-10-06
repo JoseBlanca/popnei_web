@@ -155,7 +155,7 @@ export function ErrorBar({
     first === null ? null : (
       <p className={classOf(styles, "message")}>
         {barText(
-          first.message,
+          first,
           store === null ? "starting" : saving === null ? "noSaving" : "saving",
           saveFailed,
         )}

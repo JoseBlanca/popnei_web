@@ -45,6 +45,7 @@ import {
   turnOffVariantFilter,
   variantFilterNeeds,
   variantsOpenNeeds,
+  withoutBackquotes,
   variantsStepNeeds,
   individualsStepMissing,
   individualsStepNeeds,
@@ -3816,7 +3817,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       );
     });
 
-    test("popnei's backquotes, which name code, are taken out of its message", () => {
+    test("popnei's backquotes become quotes, and one with no pair is taken out", () => {
       expect(
         variantsOpenNeeds(
           withVariantsRead({
@@ -3828,7 +3829,10 @@ describe("WS1 D3 the additions to project.ts", () => {
           }),
         ),
       ).toBe(
-        "popnei could not read panel.nei: the source is not a VCF: it starts with This is a. Open another file.",
+        "popnei could not read panel.nei: the source is not a VCF: it starts with \u201cThis is a\u201d. Open another file.",
+      );
+      expect(withoutBackquotes("`a` and `b`, and ` alone")).toBe(
+        "\u201ca\u201d and \u201cb\u201d, and  alone",
       );
       // The Variants step of the old page keeps them, as before.
       expect(
