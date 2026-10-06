@@ -17,6 +17,7 @@ import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
+import type { StatsShown } from "./announceChanges.ts";
 import { StatsSection } from "./StatsSection.tsx";
 import styles from "./VariantsPage.module.css";
 import { VariantsSummary } from "./VariantsSummary.tsx";
@@ -30,12 +31,16 @@ export interface VariantsPageProps {
       one is shown, and with `null` when it goes, for the entry to tell
       whether the focus is on it as the count ends. */
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
+  /** Told when the section of the statistics of a load is drawn, and when
+      it goes. */
+  readonly onStatsShown: StatsShown;
 }
 
 /** The page that opens a variants file and shows what it holds. */
 export function VariantsPage({
   autoRuns,
   onCountButton,
+  onStatsShown,
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
@@ -58,7 +63,11 @@ export function VariantsPage({
         <ErrorBoundary heading={OPENING_NAME} level={2}>
           <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
         </ErrorBoundary>
-        <StatsSection autoRuns={autoRuns} openButton={openButton} />
+        <StatsSection
+          autoRuns={autoRuns}
+          openButton={openButton}
+          onShown={onStatsShown}
+        />
       </main>
       <StatusRegion />
     </>

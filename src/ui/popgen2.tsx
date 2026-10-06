@@ -28,11 +28,9 @@ import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { createAnnouncer } from "./shell/status.ts";
-import type { Announcer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
-import { statsAnnouncementsOf } from "./variants/statsWords.ts";
-import { announcementsOf } from "./variants/words.ts";
+import { announceChanges } from "./variants/announceChanges.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
@@ -49,7 +47,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   const announcer = createAnnouncer();
   // Stop or Count again of the count, while one is shown.
   let countButton: HTMLButtonElement | null = null;
-  announceChanges(store, announcer, () => countButton);
+  const statsShown = announceChanges(store, announcer, () => countButton);
   reportDefects(store, defects);
   syncReads(store, client);
   const autoRuns = startByThemselves(store);
@@ -64,6 +62,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
             onCountButton={(node) => {
               countButton = node;
             }}
+            onStatsShown={statsShown}
           />
         </FilesProvider>
       </AnnouncerProvider>
@@ -89,34 +88,6 @@ function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
   });
   autoRuns.sync();
   return autoRuns;
-}
-
-/** Announces in the status region what each change of the store did
-    away from the focus: the file read, its count and its statistics, of
-    whose progress the region says the latest within one of its pauses. It listens before
-    the page is drawn, so it is told of a change before React draws it,
-    with the focus still where the change found it: on the button of the
-    count, `countButton` gives it, as the count ends, the page moves the
-    focus onto the words of the end, which are then not said again. */
-function announceChanges(
-  store: Store<JobResult, Blob>,
-  announcer: Announcer,
-  countButton: () => HTMLButtonElement | null,
-): void {
-  let before = store.getState();
-  store.subscribe(() => {
-    const after = store.getState();
-    const button = countButton();
-    const texts = announcementsOf(before, after, {
-      focusOnCountButton: button !== null && document.activeElement === button,
-    });
-    const stats = statsAnnouncementsOf(before, after);
-    before = after;
-    for (const text of texts) announcer.announce(text);
-    for (const { text, replaces } of stats) {
-      announcer.announce(text, ...(replaces === null ? [] : [{ replaces }]));
-    }
-  });
 }
 
 startPage(startApplication);

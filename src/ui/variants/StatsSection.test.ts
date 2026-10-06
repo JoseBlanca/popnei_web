@@ -37,6 +37,7 @@ import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
+import { announceChanges } from "./announceChanges.ts";
 import { StatsSection } from "./StatsSection.tsx";
 
 declare global {
@@ -153,7 +154,7 @@ async function settled(): Promise<void> {
 
 /** Draws the section in <StrictMode>, as the development server draws the
     page, with the open button before it. */
-async function drawPage(): Promise<Page> {
+async function drawPage(announced = true): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
@@ -178,6 +179,10 @@ async function drawPage(): Promise<Page> {
     });
   });
   const openButton = createRef<HTMLButtonElement>();
+  const announcer = createAnnouncer();
+  const onShown = announced
+    ? announceChanges(store, announcer, () => null)
+    : () => () => undefined;
   const tree = createElement(
     StrictMode,
     null,
@@ -186,9 +191,9 @@ async function drawPage(): Promise<Page> {
       { value: store },
       createElement(
         AnnouncerProvider,
-        { value: createAnnouncer() },
+        { value: announcer },
         createElement("button", { ref: openButton }, "Open variants file…"),
-        createElement(StatsSection, { autoRuns, openButton }),
+        createElement(StatsSection, { autoRuns, openButton, onShown }),
       ),
     ),
   );
@@ -202,29 +207,39 @@ async function drawPage(): Promise<Page> {
 /** Opens `panel.nei` under `fileId`, records its read, and lets the
     section draw it, the count of its variants sent. */
 async function open(page: Page, fileId: string): Promise<void> {
-  await act(async () => {
-    page.store.apply("a new variants file was loaded", (p) =>
-      loadVariants(p, {
-        fileId,
-        name: "panel.nei",
-        size: 261_490,
-        format: "nei",
-        readOptions: null,
-      }),
-    );
-    page.store.variantsRead(fileId, {
-      kind: "read",
-      individuals: ["i1", "i2"],
-      ploidy: 2,
-      numVars: null,
-    });
-    await Promise.resolve();
-  });
+  await read(page, fileId);
   // The code of the statistics comes by import(), a few turns later.
   for (let turn = 0; turn < 50 && sectionOf() === null; turn += 1) {
     await settled();
   }
   if (sectionOf() === null) throw new Error("the section was not drawn");
+}
+
+/** Opens `panel.nei` under `fileId` and records its read, in one act. */
+async function read(page: Page, fileId: string): Promise<void> {
+  await act(async () => {
+    readUnwrapped(page, fileId);
+    await Promise.resolve();
+  });
+}
+
+/** Opens `panel.nei` under `fileId` and records its read. */
+function readUnwrapped(page: Page, fileId: string): void {
+  page.store.apply("a new variants file was loaded", (p) =>
+    loadVariants(p, {
+      fileId,
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    }),
+  );
+  page.store.variantsRead(fileId, {
+    kind: "read",
+    individuals: ["i1", "i2"],
+    ploidy: 2,
+    numVars: null,
+  });
 }
 
 /** The section of the statistics, once drawn, or `null`. */
@@ -272,8 +287,29 @@ function focused(): string {
 }
 
 describe("the section of the statistics of the open file", () => {
-  test("a defect drawn in the section leaves its name alone, and the next file draws its statistics again", async () => {
+  test("the section of a second file is drawn within a few milliseconds of its read, its code already downloaded", async () => {
     const page = await drawPage();
+    await open(page, FIRST);
+    await endDone(page);
+
+    // Outside act(), which would draw at once what React holds back: a
+    // section that waits for its code is drawn 300 ms after it comes.
+    globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+    const first = sectionOf();
+    const start = performance.now();
+    readUnwrapped(page, SECOND);
+    const drawn = (): boolean => ![null, first].includes(sectionOf());
+    while (!drawn() && performance.now() - start < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    expect(drawn()).toBe(true);
+    expect(performance.now() - start).toBeLessThan(100);
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  });
+
+  test("a defect drawn in the section leaves its name alone, and the next file draws its statistics again", async () => {
+    // The words of the status region would throw the same defect first.
+    const page = await drawPage(false);
     await open(page, FIRST);
     await endDone(page);
     expect(lastAnalysis(page)).toBe("variantChecks");

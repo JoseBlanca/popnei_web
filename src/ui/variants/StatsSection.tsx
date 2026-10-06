@@ -10,18 +10,20 @@
  * file is open, is downloaded apart from the page's, from the moment a
  * file is picked, so that it is there when the statistics start after the
  * file is read and its variants counted: the page's first download does
- * not carry it. A download that fails is caught by the boundary, which
- * gives it to the error bar, whose words say to reload the page; the next
- * file picked asks for it again, which WebKit 26.6 downloads, and
+ * not carry it. Once downloaded, the section of the next file is drawn at
+ * once, with no pause. A download that fails is caught by the boundary,
+ * which gives it to the error bar, whose words say to reload the page; the
+ * next file picked asks for it again, which WebKit 26.6 downloads, and
  * Chromium 153 does not, keeping the failure until the page is reloaded.
  */
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy } from "react";
 
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import type { FileStatsProps } from "./FileStats.tsx";
 import { STATS_NAME } from "./statsWords.ts";
+import type { StatsShown } from "./announceChanges.ts";
 
 /** What the section is drawn with. */
 export interface StatsSectionProps {
@@ -30,12 +32,15 @@ export interface StatsSectionProps {
   /** The open button of the page, which takes the focus when the section
       goes with it. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** Told when the section of a load is drawn, and when it goes. */
+  readonly onShown: StatsShown;
 }
 
 /** The statistics of the open file; nothing before a file is picked. */
 export function StatsSection({
   autoRuns,
   openButton,
+  onShown,
 }: StatsSectionProps): React.JSX.Element | null {
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
   if (fileId === null) return null;
@@ -43,26 +48,42 @@ export function StatsSection({
     // Another load is another boundary, which has caught nothing, and
     // another download if the one before failed.
     <ErrorBoundary key={fileId} heading={STATS_NAME} level={2}>
-      <LoadedStats autoRuns={autoRuns} openButton={openButton} />
+      <LoadedStats
+        autoRuns={autoRuns}
+        openButton={openButton}
+        onShown={onShown}
+      />
     </ErrorBoundary>
   );
 }
+
+/** The section's code, downloaded once and drawn for every file after. A
+    lazy component made for each file would wait for its code each time,
+    even once downloaded, and React then holds the section back 300 ms
+    before drawing it (React 19.3). Made again after a download that
+    failed, which it would otherwise keep, so that the next file picked
+    asks for the code again. */
+let LazyFileStats = lazy(loadFileStats);
 
 /** Downloads the code of the statistics, or takes it from the browser's
     modules once it was downloaded. */
 async function loadFileStats(): Promise<{
   readonly default: React.ComponentType<FileStatsProps>;
 }> {
-  const module = await import("./FileStats.tsx");
-  return { default: module.FileStats };
+  try {
+    const module = await import("./FileStats.tsx");
+    return { default: module.FileStats };
+  } catch (error) {
+    LazyFileStats = lazy(loadFileStats);
+    throw error;
+  }
 }
 
 /** The statistics of one load, drawn once their code is there, and
     nothing until then. */
 function LoadedStats(props: StatsSectionProps): React.JSX.Element {
-  // One lazy component for each load, made once, so that a download
-  // that failed for one file is asked for again for the next.
-  const [FileStats] = useState(() => lazy(loadFileStats));
+  // Read as it is drawn, since a failed download replaces it.
+  const FileStats = LazyFileStats;
   return (
     <Suspense fallback={null}>
       <FileStats {...props} />

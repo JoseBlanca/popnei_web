@@ -71,6 +71,7 @@ import {
   statsStatus,
 } from "./statsWords.ts";
 import type { StatsId } from "./statsWords.ts";
+import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { summaryStatus } from "./words.ts";
@@ -97,12 +98,16 @@ export interface FileStatsProps {
   /** The open button of the page, which takes the focus when the section
       goes with it, another file opened. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** Told when the section of a load is drawn, and when it goes, so that
+      the status region says nothing of the statistics before. */
+  readonly onShown: StatsShown;
 }
 
 /** The statistics of the open file; nothing before a file is read. */
 export function FileStats({
   autoRuns,
   openButton,
+  onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
   if (variants?.read.kind !== "read") return null;
@@ -113,6 +118,8 @@ export function FileStats({
       key={variants.fileId}
       autoRuns={autoRuns}
       openButton={openButton}
+      onShown={onShown}
+      fileId={variants.fileId}
       variantsName={variants.name}
     />
   );
@@ -120,6 +127,8 @@ export function FileStats({
 
 /** What the section of one load is drawn with. */
 interface StatsProps extends FileStatsProps {
+  /** The id of the load. */
+  readonly fileId: string;
   /** The name of the variants file, which the downloads are named
       after. */
   readonly variantsName: string;
@@ -129,6 +138,8 @@ interface StatsProps extends FileStatsProps {
 function Stats({
   autoRuns,
   openButton,
+  onShown,
+  fileId,
   variantsName,
 }: StatsProps): React.JSX.Element {
   const announcer = useAnnouncer();
@@ -158,6 +169,9 @@ function Stats({
       }
     };
   }, [openButton]);
+
+  // Drawn: the status region may say the statistics of this load.
+  useLayoutEffect(() => onShown(fileId), [onShown, fileId]);
 
   // Whether the button went with the focus in the drawing being made.
   const focusAfterGone = useRef(false);
