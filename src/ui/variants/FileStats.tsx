@@ -8,10 +8,13 @@
  *   and the expected heterozygosity (unbiased), each with its mean, which
  *   popnei gives, and the number of variants in its bins;
  * - Individuals: the histograms of the missing rate and of the observed
- *   heterozygosity of each individual, binned here from popnei's values
- *   as the old page bins them, with the number of individuals in their
- *   bins and no mean, which popnei does not give; and the table of the
+ *   heterozygosity of each individual, binned here from popnei's values,
+ *   from 0 to the largest, with the number of individuals in their bins
+ *   and no mean, which popnei does not give; and the table of the
  *   individuals, sorted by any column.
+ *
+ * Plain, as the owner wants this page: no table of the bins and no
+ * download, which come back with the piece of the downloads.
  *
  * Above the parts, one row: the line and the bar of the pass running with
  * one Stop for both statistics, or, once stopped or after a crash of the
@@ -26,7 +29,7 @@
  * Drawn once the file is read, the statistics then waiting for the count
  * of its variants, which the box above shows.
  */
-import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
@@ -44,9 +47,7 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import { POPGEN2_STATISTICS_IDS } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import { IndividualHistogram } from "../steps/variants/IndividualHistogram.tsx";
 import { IndividualTable } from "../steps/variants/IndividualTable.tsx";
-import { VariantHistogram } from "../steps/variants/VariantHistogram.tsx";
 import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
@@ -60,8 +61,6 @@ import {
   STOP_STATS_LABEL,
   VARIANTS_HEADING,
   VARIANTS_ID,
-  overIndividualsLine,
-  overVariantsLine,
   pendingText,
   statsBarLabel,
   statsButton,
@@ -70,6 +69,8 @@ import {
   statsStatus,
 } from "./statsWords.ts";
 import type { StatsId } from "./statsWords.ts";
+import { StatsHistogram } from "./StatsHistogram.tsx";
+import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { summaryStatus } from "./words.ts";
 
 /** The four histograms of the variants, in the order they are drawn. */
@@ -275,9 +276,7 @@ function Stats({
       )}
       <Part heading={VARIANTS_HEADING} headingRef={variantsHeading}>
         {notDone(VARIANTS_ID, variants)}
-        {variantsResult !== null && (
-          <VariantPlots result={variantsResult} variantsName={variantsName} />
-        )}
+        {variantsResult !== null && <VariantPlots result={variantsResult} />}
       </Part>
       <Part heading={INDIVIDUALS_HEADING} headingRef={individualsHeading}>
         {notDone(INDIVIDUALS_ID, individuals)}
@@ -328,28 +327,25 @@ function Part({ heading, headingRef, children }: PartProps): React.JSX.Element {
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
   readonly result: VariantChecksResult;
-  readonly variantsName: string;
 }
 
 /** The four histograms of the variants, each over the variants in its
     bins. */
-function VariantPlots({
-  result,
-  variantsName,
-}: VariantPlotsProps): React.JSX.Element {
+function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
+  // Made again only for another result, so that the plots are not drawn
+  // again on renders that changed nothing (react.md, "Mounting a plot").
+  const plots = useMemo(
+    () =>
+      VARIANT_STATISTICS.map((statistic) => ({
+        statistic,
+        plot: variantPlot(statistic, result),
+      })),
+    [result],
+  );
   return (
     <div className={classOf(styles, "plots")}>
-      {VARIANT_STATISTICS.map((statistic) => (
-        <VariantHistogram
-          key={statistic}
-          statistic={statistic}
-          result={result}
-          threshold={null}
-          variantsName={variantsName}
-          countLine={overVariantsLine(
-            result[statistic].counts.reduce((sum, count) => sum + count, 0),
-          )}
-        />
+      {plots.map(({ statistic, plot }) => (
+        <StatsHistogram key={statistic} plot={plot} />
       ))}
     </div>
   );
@@ -362,37 +358,32 @@ interface IndividualPartsProps {
 }
 
 /** The two histograms of the individuals, each over the individuals with
-    a value, and the table of the individuals. */
+    a value and from 0, and the table of the individuals. */
 function IndividualParts({
   result,
   variantsName,
 }: IndividualPartsProps): React.JSX.Element {
+  const plots = useMemo(
+    () =>
+      INDIVIDUAL_STATISTICS.map((statistic) => ({
+        statistic,
+        shown: individualPlot(statistic, result),
+      })),
+    [result],
+  );
   return (
     <>
       <div className={classOf(styles, "plots")}>
-        {INDIVIDUAL_STATISTICS.map((statistic) => {
-          const values =
-            statistic === "missingGenotypes"
-              ? result.missingGtRate
-              : result.obsHetRate;
-          const numWithValue = values.filter(
-            (value) => !Number.isNaN(value),
-          ).length;
-          return (
-            <div key={statistic} className={classOf(styles, "plot")}>
-              <IndividualHistogram
-                statistic={statistic}
-                result={result}
-                threshold={null}
-                thresholdLine={null}
-                variantsName={variantsName}
-                countLine={overIndividualsLine(numWithValue)}
-              />
-            </div>
-          );
-        })}
+        {plots.map(({ statistic, shown }) => (
+          <div key={statistic} className={classOf(styles, "plot")}>
+            {shown.plot !== null && <StatsHistogram plot={shown.plot} />}
+            {shown.noValueLine !== null && (
+              <p className={classOf(styles, "line")}>{shown.noValueLine}</p>
+            )}
+          </div>
+        ))}
       </div>
-      <IndividualTable result={result} variantsName={variantsName} />
+      <IndividualTable result={result} variantsName={variantsName} plain />
     </>
   );
 }

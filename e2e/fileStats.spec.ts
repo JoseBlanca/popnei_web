@@ -111,10 +111,12 @@ test("FS2 panel.vcf.gz: the four distributions of the variants with popnei's mea
   await expect(stats(page).getByText("Over 1,200 variants")).toHaveCount(4);
   await expect(stats(page).getByText("Over 200 individuals")).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
-  // Nothing left to stop or to start again.
-  await expect(
-    stats(page).getByRole("button", { name: /statistics/u }),
-  ).toHaveCount(0);
+  // Nothing left to stop or to start again, and the page is plain: no
+  // tabs of a table of the bins, no download, no line of the rows of the
+  // table.
+  await expect(stats(page).getByRole("button")).toHaveCount(0);
+  await expect(stats(page).getByRole("tab")).toHaveCount(0);
+  await expect(stats(page).getByText(/CSV/u)).toHaveCount(0);
   await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
   await expect
     .poll(() => announced(page))
@@ -298,6 +300,27 @@ test("FS2 at 320 pixels the plots are one under the other within the page, which
   // the right edge of the page.
   expect(new Set(boxes.map((box) => Math.round(box.left))).size).toBe(1);
   for (const box of boxes) expect(box.right).toBeLessThanOrEqual(320);
+  // The three columns of the table within its box, which does not scroll
+  // sideways, with the short headers of a narrow page.
+  const grid = table(page);
+  expect(
+    await grid.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBe(0);
+  const right = await grid.evaluate(
+    (element) => element.getBoundingClientRect().right,
+  );
+  const headers = grid.getByRole("columnheader");
+  await expect(headers).toHaveCount(3);
+  for (const box of await headers.evaluateAll((cells) =>
+    cells.map((cell) => cell.getBoundingClientRect()),
+  )) {
+    expect(box.right).toBeLessThanOrEqual(right);
+  }
+  // A screen reader still hears the whole name of each column.
+  await expect(
+    grid.getByRole("columnheader", { name: /^Observed heterozygosity/u }),
+  ).toBeVisible();
+  await expect(grid.getByText("Heterozygosity", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
       () =>
@@ -318,4 +341,15 @@ test("FS2 on a desktop the plots are two wide", async ({ page }) => {
       svgs.map((svg) => Math.round(svg.getBoundingClientRect().left)),
     );
   expect(new Set(lefts).size).toBe(2);
+  // The two plots of a row on one line, though the title of the expected
+  // heterozygosity, with its mean, wraps and its neighbour's does not.
+  const tops = await stats(page)
+    .locator("svg.chart")
+    .evaluateAll((svgs) =>
+      svgs.map((svg) => Math.round(svg.getBoundingClientRect().top)),
+    );
+  expect(tops).toHaveLength(6);
+  for (let row = 0; row < tops.length; row += 2) {
+    expect(tops[row]).toBe(tops[row + 1]);
+  }
 });

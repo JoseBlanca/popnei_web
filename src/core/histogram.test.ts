@@ -181,3 +181,24 @@ describe("VS2 D4 the bins of the statistics of each individual", () => {
     ]);
   });
 });
+
+describe("the bins of the statistics of each individual from a first edge given, as popgen2.html draws them from 0", () => {
+  test("from 0 the bins span 0 to the largest value, as numpy.histogram with the range (0, largest) makes them, a NaN in no bin", () => {
+    const bins = binValues(Float64Array.from([0.25, 0.5, 1, NaN]), 4, 0);
+    expect(Array.from(bins?.edges ?? [])).toEqual([0, 0.25, 0.5, 0.75, 1]);
+    expect(Array.from(bins?.counts ?? [])).toEqual([0, 1, 1, 1]);
+    expect(bins?.numNaN).toBe(1);
+  });
+
+  test("from 0 with every value 0 the bins span 0 to 1, all in the first", () => {
+    const bins = binValues(Float64Array.from([0, 0, 0]), 2, 0);
+    expect(Array.from(bins?.edges ?? [])).toEqual([0, 0.5, 1]);
+    expect(Array.from(bins?.counts ?? [])).toEqual([3, 0]);
+  });
+
+  test("a value below the first edge given is a defect", () => {
+    expect(() => binValues(Float64Array.from([0.1, -0.1]), 2, 0)).toThrow(
+      "popnei_web defect: a value of -0.1 below the first edge, 0.",
+    );
+  });
+});

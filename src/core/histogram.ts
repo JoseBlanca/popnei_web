@@ -33,8 +33,19 @@ export interface Bins {
  * no value or every value is NaN. A `numBins` below 1 or not whole, and
  * an infinite value, which no statistic of popnei gives, are defects,
  * thrown.
+ *
+ * With `from`, the bins span `from` to the largest value, as
+ * `numpy.histogram(values, bins=numBins, range=(from, max))` makes them,
+ * or `from` to `from + 1` when the largest value is `from` itself:
+ * popgen2.html draws the histograms of the individuals from 0, as those
+ * of the variants are, so that the ordinary spread of a few individuals
+ * does not look like a tail. A value below `from` is a defect.
  */
-export function binValues(values: Float64Array, numBins: number): Bins | null {
+export function binValues(
+  values: Float64Array,
+  numBins: number,
+  from: number | null = null,
+): Bins | null {
   if (!Number.isInteger(numBins) || numBins < 1) {
     throw defect(
       `a number of bins of ${String(numBins)}, not a whole number of at least 1.`,
@@ -56,9 +67,18 @@ export function binValues(values: Float64Array, numBins: number): Bins | null {
   if (numNaN === values.length) {
     return null;
   }
+  if (from !== null && min < from) {
+    throw defect(
+      `a value of ${String(min)} below the first edge, ${String(from)}.`,
+    );
+  }
   // numpy widens a range of one value by 0.5 on each side.
-  const first = min === max ? min - 0.5 : min;
-  const last = min === max ? max + 0.5 : max;
+  const [first, last] =
+    from !== null
+      ? [from, max === from ? from + 1 : max]
+      : min === max
+        ? [min - 0.5, max + 0.5]
+        : [min, max];
   const edges = new Float64Array(numBins + 1);
   const step = (last - first) / numBins;
   for (let index = 0; index < numBins; index += 1) {

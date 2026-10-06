@@ -1,0 +1,22 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* A histogram: its title, the line of what is in its bins, its plot. */
+.block {
+  display: grid;
+  gap: var(--space-2);
+  /* As narrow as its column: a grid item is otherwise at least as wide
+     as what it holds, and a plot drawn wide would keep it wide after the
+     window narrows. */
+  min-inline-size: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

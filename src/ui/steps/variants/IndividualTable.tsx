@@ -8,7 +8,10 @@
  * gives, with no pass; while the lists of individuals are refused, a
  * line above the table in place of that column. Which column is sorted,
  * and which way, is the table's own state, kept while it is drawn, but
- * for a sort by Kept, which goes with its column.
+ * for a sort by Kept, which goes with its column. On popgen2.html it is
+ * plain: no line of its rows and no download, which come back there with
+ * the piece of the downloads (docs/plans/file-stats.md), and its three
+ * columns fit a page 320 pixels wide, with shorter headers there.
  */
 import { useMemo, useState } from "react";
 
@@ -65,12 +68,43 @@ const WITHOUT_KEPT = Object.freeze(
   WITH_KEPT.filter((column) => column.id !== "kept"),
 );
 
+/** The narrowest each column of the plain table may be, in CSS pixels,
+    and the words of the two headers of numbers on a page narrower than
+    30em, which the table draws smaller there: the longest word of each
+    header in bold of 14 pixels, "Individual" of 64, "Missing" of 51 and
+    "Heterozygosity" of 101 in Chromium 153 and WebKit 26.6, with its
+    padding, the arrow of the sort and the space before it; the three
+    take 278 of the 286 pixels inside the box at 320 pixels wide. */
+const PLAIN_MIN_WIDTHS: Readonly<
+  Record<Exclude<IndividualColumnId, "kept">, number>
+> = { individual: 84, missingGenotypes: 72, observedHeterozygosity: 122 };
+const NARROW_LABELS: Readonly<Partial<Record<IndividualColumnId, string>>> = {
+  missingGenotypes: "Missing",
+  observedHeterozygosity: "Heterozygosity",
+};
+
+/** The columns of the plain table, which has no Kept. */
+const PLAIN: readonly SortableColumn<IndividualColumnId>[] = Object.freeze(
+  WITHOUT_KEPT.map((column) => {
+    const narrowLabel = NARROW_LABELS[column.id];
+    return {
+      ...column,
+      minWidth:
+        column.id === "kept" ? column.minWidth : PLAIN_MIN_WIDTHS[column.id],
+      ...(narrowLabel !== undefined && { narrowLabel }),
+    };
+  }),
+);
+
 /** What the table is drawn with. */
 export interface IndividualTableProps {
   /** The statistics of each individual, as the store gives them. */
   readonly result: IndividualChecksResult;
   /** The name of the variants file, which the CSV is named after. */
   readonly variantsName: string;
+  /** Whether the table is drawn as on popgen2.html: no line of its rows,
+      no download, and its columns within 320 pixels. */
+  readonly plain?: boolean;
 }
 
 /** The table of the individuals, sorted by any column, and its
@@ -78,6 +112,7 @@ export interface IndividualTableProps {
 export function IndividualTable({
   result,
   variantsName,
+  plain = false,
 }: IndividualTableProps): React.JSX.Element {
   const numFilters = useAppState((s) => s.project.individualFilters.length);
   const kept = useAppState((s) => s.individualsKept);
@@ -142,22 +177,27 @@ export function IndividualTable({
 
   return (
     <div className={classOf(styles, "individualTable")}>
-      <p className={classOf(styles, "line")}>
-        {tableRowsText(result.individuals.length)}
-      </p>
+      {!plain && (
+        <p className={classOf(styles, "line")}>
+          {tableRowsText(result.individuals.length)}
+        </p>
+      )}
       {column.kind === "notKnown" && (
         <p className={classOf(styles, "line")}>{KEPT_NOT_KNOWN_LINE}</p>
       )}
       <SortableTable
         label={STATS_TABLE_NAME}
-        columns={isKept === null ? WITHOUT_KEPT : WITH_KEPT}
+        columns={isKept !== null ? WITH_KEPT : plain ? PLAIN : WITHOUT_KEPT}
         rows={rows}
         sort={shownSort}
         onSortChange={setSort}
+        {...(plain && { fitNarrow: true })}
       />
-      <div>
-        <Button label={STATS_CSV_LABEL} onPress={download} />
-      </div>
+      {!plain && (
+        <div>
+          <Button label={STATS_CSV_LABEL} onPress={download} />
+        </div>
+      )}
     </div>
   );
 }

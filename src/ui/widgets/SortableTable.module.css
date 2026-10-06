@@ -62,6 +62,34 @@
   }
 }
 
+/* The headers of a table that fits a narrow page: there, the narrow
+   label in place of the label, which a screen reader still says, and
+   smaller words with less space beside them, so that columns of small
+   widths fit 320 pixels. */
+.narrowLabel {
+  display: none;
+}
+
+@media (width < 30em) {
+  .header.fitNarrow {
+    padding-inline: var(--space-1);
+    font-size: var(--text-sm);
+  }
+
+  .wideLabel {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .narrowLabel {
+    display: inline;
+  }
+}
+
 .row {
   background: var(--color-background);
 }
