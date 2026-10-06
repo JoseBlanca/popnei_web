@@ -342,10 +342,10 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   await expect(lines(page)).toHaveText([
     /^stop\.vcf\.gz · /u,
     "Individuals: 1,000",
-    // A result so far of the pass, 2 seconds after its start, adds the
-    // variants read so far.
-    /^Variants: ([\d,]+ so far, )?counting…( \d+%)?$/u,
-    "Chromosomes: counting…",
+    // A result so far of the pass, 2 seconds after its start, gives the
+    // variants and the chromosomes read so far in place of the count.
+    /^Variants: (counting…( \d+%)?|[\d,]+ so far)$/u,
+    /^Chromosomes: (counting…|[\d,]+ so far)$/u,
     "Ploidy: 2",
   ]);
   const counting = await height();
@@ -620,9 +620,10 @@ test("OV2 a crash of the worker during the count goes to the error bar, which sa
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
   await expect(
-    info(page).getByText("The variants of panel.vcf.gz could not be counted.", {
-      exact: true,
-    }),
+    info(page).getByText(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
     info(page).getByRole("button", { name: "Start again" }),

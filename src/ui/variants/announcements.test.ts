@@ -248,7 +248,9 @@ describe("what the status region of the new page says", () => {
     await settled();
     expect(
       announcementsOf(before, store.getState(), { focusOnCountButton: true }),
-    ).toEqual(["The variants of panel.vcf.gz could not be counted."]);
+    ).toEqual([
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+    ]);
   });
 });
 
@@ -333,7 +335,7 @@ describe("what the status region of the new page says of the statistics of the o
         page.soFar[0]?.(summaryResult(["chr1"], [100]));
       }),
     ).toEqual([
-      "The first statistics of panel.vcf.gz are drawn, and grow as the file is read.",
+      "Plots of panel.vcf.gz are drawn from the variants read so far, and change as the file is read.",
     ]);
     expect(
       await statsSaid(page.store, () => {

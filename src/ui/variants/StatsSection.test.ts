@@ -346,7 +346,9 @@ describe("the section of the statistics of the open file", () => {
     await settled();
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
     expect(partsText().match(/Over 523 variants so far/gu)).toHaveLength(4);
-    expect(partsText().match(/Over 2 individuals so far/gu)).toHaveLength(2);
+    expect(
+      partsText().match(/Over 2 individuals, from the variants read so far/gu),
+    ).toHaveLength(2);
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );

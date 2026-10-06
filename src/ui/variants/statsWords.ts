@@ -77,8 +77,10 @@ export function statsRunningLine(
   return share === null ? start : `${start} ${String(share)}%`;
 }
 
-/** What a part says once the pass is stopped. */
-export const PART_STOPPED = "Stopped.";
+/** What a part says once the pass is stopped: Start again does not go on
+    from where the Stop left it. */
+export const PART_STOPPED =
+  "Stopped. Start again reads the file from the start.";
 
 /** What a part says in place of its plots once the pass failed, whose
     words the box of the file says. */
@@ -95,14 +97,22 @@ export function overVariantsLine(numVars: number, soFar = false): string {
 }
 
 /** The line under the title of a histogram of the individuals: "Over 200
-    individuals", those in its bins; "Over 200 individuals so far" while
-    the pass runs, `soFar`, whose values change as it reads. */
+    individuals", those in its bins; "Over 200 individuals, from the
+    variants read so far" while the pass runs, `soFar`: every individual
+    is there from the first variant, and their values change as it
+    reads. */
 export function overIndividualsLine(
   numIndividuals: number,
   soFar = false,
 ): string {
-  return `Over ${counted(numIndividuals, "individual")}${soFar ? SO_FAR : ""}`;
+  const over = `Over ${counted(numIndividuals, "individual")}`;
+  return soFar ? `${over}, from the variants read so far` : over;
 }
+
+/** What the description of a histogram drawn from a result so far ends
+    with, for a screen reader, which does not read the line under its
+    title. */
+export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
 
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
@@ -128,10 +138,10 @@ export interface StatsAnnouncement {
 }
 
 /** What the status region says as the first plots of the file `name`
-    are drawn from a result so far: "The first statistics of panel.vcf.gz
-    are drawn, and grow as the file is read." */
+    are drawn from a result so far: "Plots of panel.vcf.gz are drawn from
+    the variants read so far, and change as the file is read." */
 export function statsFirstText(name: string): string {
-  return `The first statistics of ${escaped(name)} are drawn, and grow as the file is read.`;
+  return `Plots of ${escaped(name)} are drawn from the variants read so far, and change as the file is read.`;
 }
 
 /**

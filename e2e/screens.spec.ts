@@ -4389,7 +4389,7 @@ for (const theme of ["light", "dark"] as const) {
         await pickOnNewPage(page, vcf);
         await expect(
           newPageCount(page).getByText(
-            /^Variants: ([\d,]+ so far, )?counting… \d+%$/u,
+            /^Variants: (counting… \d+%|[\d,]+ so far)$/u,
           ),
         ).toBeVisible({ timeout: 30_000 });
         await save(page, `popgen2-counting${at}-${theme}`);
@@ -4468,7 +4468,11 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           newPageCount(page).getByRole("button", { name: "Start again" }),
         ).toBeVisible();
-        await expect(newPageStats(page).getByText("Stopped.")).toHaveCount(2);
+        await expect(
+          newPageStats(page).getByText(
+            "Stopped. Start again reads the file from the start.",
+          ),
+        ).toHaveCount(2);
         await save(page, `popgen2-count-stopped${at}-${theme}`);
       });
 

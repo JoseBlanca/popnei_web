@@ -50,9 +50,48 @@ describe("the histograms of the statistics of the open file", () => {
   test("live-stats 2 a histogram of a result so far says so in its line, and draws the same bins", () => {
     const soFar = variantPlot("maf", VARIANTS, true);
     expect(soFar.countLine).toBe("Over 3 variants so far");
-    expect(soFar.data).toEqual(variantPlot("maf", VARIANTS).data);
+    const done = variantPlot("maf", VARIANTS).data;
+    expect({ ...soFar.data, description: "" }).toEqual({
+      ...done,
+      description: "",
+    });
     const het = individualPlot("observedHeterozygosity", INDIVIDUALS, true);
-    expect(het.plot?.countLine).toMatch(/ so far$/u);
+    expect(het.plot?.countLine).toBe(
+      "Over 2 individuals, from the variants read so far",
+    );
+  });
+
+  test("live-stats 2 the individuals with no called genotype in a result so far are said to have none so far", () => {
+    expect(
+      individualPlot("observedHeterozygosity", INDIVIDUALS, true).noValueLine,
+    ).toBe(
+      "1 individual with no called genotype so far is not in the histogram.",
+    );
+    const twoOfThree = {
+      ...INDIVIDUALS,
+      obsHetRate: Float64Array.from([0.3, NaN, NaN]),
+    };
+    expect(
+      individualPlot("observedHeterozygosity", twoOfThree, true).noValueLine,
+    ).toBe(
+      "2 individuals with no called genotype so far are not in the histogram.",
+    );
+    expect(
+      individualPlot("observedHeterozygosity", twoOfThree).noValueLine,
+    ).toBe("2 individuals with no called genotype are not in the histogram.");
+  });
+
+  test("live-stats 2 the description of a plot of a result so far, which a screen reader reads, says it is drawn from the variants read so far", () => {
+    const done = variantPlot("missingRate", VARIANTS).data.description;
+    expect(done).not.toContain("so far");
+    expect(variantPlot("missingRate", VARIANTS, true).data.description).toBe(
+      `${done} Drawn from the variants read so far.`,
+    );
+    const individuals = individualPlot("missingGenotypes", INDIVIDUALS);
+    const soFar = individualPlot("missingGenotypes", INDIVIDUALS, true);
+    expect(soFar.plot?.data.description).toBe(
+      `${individuals.plot?.data.description ?? ""} Drawn from the variants read so far.`,
+    );
   });
 
   test("the axis of a histogram of the variants spans the bins with a count rounded out to steps of 0.05, the missing rate from 0", () => {

@@ -35,6 +35,7 @@ import {
 } from "../steps/variants/individualStats.ts";
 import {
   individualTitle,
+  SO_FAR_DESCRIPTION,
   overIndividualsLine,
   overVariantsLine,
   variantTitle,
@@ -61,8 +62,8 @@ export interface IndividualPlot {
 
 /** The histogram of the variants of `statistic`, popnei's bins added up
     over the range of those with a count, rounded out, over the variants
-    in them, which leaves out a variant with no value; its line says "so
-    far" for a result so far, `soFar`. */
+    in them, which leaves out a variant with no value; its line and its
+    description say "so far" for a result so far, `soFar`. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
@@ -82,7 +83,10 @@ export function variantPlot(
   return {
     data: {
       ...plotted,
-      description: variantHistogramDescription(statistic, rows, null),
+      description: describedSoFar(
+        variantHistogramDescription(statistic, rows, null),
+        soFar,
+      ),
     },
     countLine: overVariantsLine(sumOf(bins.counts), soFar),
   };
@@ -90,7 +94,8 @@ export function variantPlot(
 
 /** The histogram of the individuals of `statistic`, its values binned
     over their range rounded out, the missing rate from 0, over the
-    individuals with a value; its line says "so far" for a result so far,
+    individuals with a value; its line, its description and the line of
+    the individuals with no value say "so far" for a result so far,
     `soFar`. */
 export function individualPlot(
   statistic: IndividualStatistic,
@@ -108,6 +113,7 @@ export function individualPlot(
   // binValues gives no bins only when every value is NaN.
   const noValueLine = noHeterozygosityText(
     bins === null ? values.length : bins.numNaN,
+    soFar,
   );
   if (bins === null) return { plot: null, noValueLine };
   const plotted = {
@@ -123,12 +129,21 @@ export function individualPlot(
     plot: {
       data: {
         ...plotted,
-        description: individualHistogramDescription(statistic, rows, null),
+        description: describedSoFar(
+          individualHistogramDescription(statistic, rows, null),
+          soFar,
+        ),
       },
       countLine: overIndividualsLine(sumOf(bins.counts), soFar),
     },
     noValueLine,
   };
+}
+
+/** The description of a histogram, which says, for one drawn from a
+    result so far, `soFar`, that it is of the variants read so far. */
+function describedSoFar(description: string, soFar: boolean): string {
+  return soFar ? `${description} ${SO_FAR_DESCRIPTION}` : description;
 }
 
 /** The sum of the counts of the bins. */

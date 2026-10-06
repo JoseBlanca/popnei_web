@@ -54,6 +54,7 @@ import {
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
   chromosomesLine,
+  chromosomesSoFarLine,
   countingVariantsLine,
   failedText,
   individualsLine,
@@ -384,13 +385,22 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
   let lines: readonly [string, string];
   switch (status.kind) {
     case "running":
-      lines = [
-        countingVariantsLine(
-          status.progress === null ? null : progressShare(status.progress),
-          status.soFar?.passStats.numVars ?? null,
-        ),
-        CHROMOSOMES_COUNTING,
-      ];
+      // From the first result so far, the variants and the chromosomes
+      // read so far, and the share on the bar alone.
+      lines =
+        status.soFar === null
+          ? [
+              countingVariantsLine(
+                status.progress === null
+                  ? null
+                  : progressShare(status.progress),
+              ),
+              CHROMOSOMES_COUNTING,
+            ]
+          : [
+              countingVariantsLine(null, status.soFar.passStats.numVars),
+              chromosomesSoFarLine(numChroms(status.soFar)),
+            ];
       break;
     case "ready":
     case "removed":

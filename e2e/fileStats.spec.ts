@@ -36,6 +36,9 @@ import { dropFiles } from "./dropFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
+/** What each part says once the pass is stopped. */
+const STOPPED_PART = "Stopped. Start again reads the file from the start.";
+
 async function openPage(page: Page): Promise<void> {
   await page.goto("popgen2.html");
   await expect(
@@ -240,10 +243,10 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // Both parts say they were stopped, and the section has no bar nor
   // button of its own.
   await expect(
-    part(page, "Variants").getByText("Stopped.", { exact: true }),
+    part(page, "Variants").getByText(STOPPED_PART, { exact: true }),
   ).toBeVisible();
   await expect(
-    part(page, "Individuals").getByText("Stopped.", { exact: true }),
+    part(page, "Individuals").getByText(STOPPED_PART, { exact: true }),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
@@ -341,7 +344,8 @@ test("FS2 a crash of the worker during the pass: the box says the variants could
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
-  const failed = "The variants of panel.vcf.gz could not be counted.";
+  const failed =
+    "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.";
   await expect(info(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
   await expect(
     part(page, "Variants").getByText("Not calculated.", { exact: true }),

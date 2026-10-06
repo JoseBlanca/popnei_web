@@ -104,21 +104,29 @@ export function variantsLine(numVars: number): string {
 }
 
 /** The line of the variants while they are counted: "Variants:
-    counting… 6%", with no share before the first progress, and once the
-    pass gave a result so far, the variants it covers, "Variants: 52,000
-    so far, counting… 6%". */
+    counting… 6%", with no share before the first progress; once the pass
+    gave a result so far, the variants it covers alone, "Variants: 52,000
+    so far", with no share beside it, which is of the bytes read and
+    would invite a division of the two; the bar keeps the share. */
 export function countingVariantsLine(
   share: number | null,
   numVarsSoFar: number | null = null,
 ): string {
-  const counting = share === null ? "counting…" : `counting… ${String(share)}%`;
-  return numVarsSoFar === null
-    ? `Variants: ${counting}`
-    : `Variants: ${grouped(numVarsSoFar)} so far, ${counting}`;
+  if (numVarsSoFar !== null) return `Variants: ${grouped(numVarsSoFar)} so far`;
+  return share === null
+    ? "Variants: counting…"
+    : `Variants: counting… ${String(share)}%`;
 }
 
-/** The line of the chromosomes while the variants are counted. */
+/** The line of the chromosomes while the variants are counted, before
+    the first result so far. */
 export const CHROMOSOMES_COUNTING = "Chromosomes: counting…";
+
+/** The line of the chromosomes once the pass gave a result so far, those
+    with a variant among the variants read: "Chromosomes: 1 so far". */
+export function chromosomesSoFarLine(numChroms: number): string {
+  return `Chromosomes: ${grouped(numChroms)} so far`;
+}
 
 /** The line of the chromosomes once counted: "Chromosomes: 1". */
 export function chromosomesLine(numChroms: number): string {
@@ -325,11 +333,11 @@ export function refusalText(message: string, p: Project): string {
   }
   const zero = POSITION_ZERO.exec(message);
   if (zero !== null) {
-    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted. Remove that line from the file and open it again.`;
+    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again.`;
   }
   const past = PAST_LARGEST.exec(message);
   if (past !== null) {
-    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.`;
+    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again.`;
   }
   const ploidies = OTHER_PLOIDY.exec(message);
   if (ploidies !== null) {
@@ -360,7 +368,7 @@ export function failedText(error: AnalysisError, p: Project): string {
       // The entry gives what the worker said to the error bar, on the
       // screen with these words, which says what it was and how to report
       // it; Start again is offered beside them after a stop of the worker.
-      return `The variants of ${fileName} could not be counted.`;
+      return `The variants of ${fileName} could not be counted, nor their statistics calculated.`;
     case "couldNotStart":
       return `The application could not start its calculations. Reload the page and open ${fileName} again.`;
     case "protocolMismatch":

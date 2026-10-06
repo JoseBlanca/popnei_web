@@ -236,6 +236,12 @@ describe("open-variants 1 the summary of the variants file: the numbers", () => 
     expect(numChroms(PANEL)).toBe(1);
   });
 
+  test("live-stats 2 numChroms counts only the chromosomes with a variant, as a result so far may list one with none yet", () => {
+    expect(numChroms({ ...LD, numVarsPerChrom: Uint32Array.of(250, 0) })).toBe(
+      1,
+    );
+  });
+
   test("numChroms of a result of another analysis, or of counts fewer than the chromosomes, throws a defect", () => {
     const counts: FilterCountsResult = {
       analysis: "filterCounts",

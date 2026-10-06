@@ -5,6 +5,7 @@ import type { Project, SourceError } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
+  chromosomesSoFarLine,
   startAgainMends,
   countedText,
   countingVariantsLine,
@@ -187,10 +188,16 @@ describe("the words of the page that opens a variants file", () => {
   test("the line of the variants while they are counted says the share done, once known", () => {
     expect(countingVariantsLine(6)).toBe("Variants: counting… 6%");
     expect(countingVariantsLine(null)).toBe("Variants: counting…");
-    expect(countingVariantsLine(6, 52_000)).toBe(
-      "Variants: 52,000 so far, counting… 6%",
-    );
-    expect(countingVariantsLine(null, 1)).toBe("Variants: 1 so far, counting…");
+    // Once a result so far gave the variants read, the line gives them
+    // alone, no share: one row at 320 pixels, and no count beside a share
+    // of the bytes, which would invite a wrong division.
+    expect(countingVariantsLine(6, 52_000)).toBe("Variants: 52,000 so far");
+    expect(countingVariantsLine(null, 1)).toBe("Variants: 1 so far");
+  });
+
+  test("live-stats 2 the line of the chromosomes once a result so far gave them", () => {
+    expect(chromosomesSoFarLine(1)).toBe("Chromosomes: 1 so far");
+    expect(chromosomesSoFarLine(1250)).toBe("Chromosomes: 1,250 so far");
   });
 
   test("the count, with its nouns in the singular and the plural", () => {
@@ -224,7 +231,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted. Remove that line from the file and open it again.",
+      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again.",
     );
   });
 
@@ -235,7 +242,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.",
+      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again.",
     );
   });
 
@@ -315,7 +322,9 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe("The variants of panel.vcf.gz could not be counted.");
+    ).toBe(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+    );
   });
 
   test("a failure of the worker names the file, the error bar saying the rest", () => {
@@ -327,6 +336,8 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe("The variants of panel.vcf.gz could not be counted.");
+    ).toBe(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+    );
   });
 });

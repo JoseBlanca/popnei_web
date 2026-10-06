@@ -65,10 +65,11 @@ export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
 });
 
 /**
- * The number of chromosomes of a result, those with variants, which the
- * box of popgen2.html and its status region both say. Throws a defect for
- * a result of another analysis, and for one whose chromosomes and counts
- * differ in length, which the check of the messages rules out.
+ * The number of chromosomes of a result, or of a result so far, those
+ * with at least one variant, which the box of popgen2.html and its status
+ * region both say. Throws a defect for a result of another analysis, and
+ * for one whose chromosomes and counts differ in length, which the check
+ * of the messages rules out.
  */
 export function numChroms(result: JobResult): number {
   const r = variantsSummaryResultOf(result);
@@ -77,7 +78,7 @@ export function numChroms(result: JobResult): number {
       "the summary of the variants file has chromosomes and counts of different lengths.",
     );
   }
-  return r.chroms.length;
+  return r.numVarsPerChrom.filter((count) => count > 0).length;
 }
 
 /** Nothing beyond the load, which every key holds: no filter, which

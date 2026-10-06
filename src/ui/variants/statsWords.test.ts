@@ -5,6 +5,7 @@ import {
   PART_STOPPED,
   overIndividualsLine,
   overVariantsLine,
+  statsFirstText,
   statsRunningLine,
 } from "./statsWords.ts";
 
@@ -19,7 +20,9 @@ describe("the words of the statistics of the open file", () => {
   });
 
   test("a part stopped, or whose pass failed, says so in a few words, the box saying why", () => {
-    expect(PART_STOPPED).toBe("Stopped.");
+    expect(PART_STOPPED).toBe(
+      "Stopped. Start again reads the file from the start.",
+    );
     expect(PART_FAILED).toBe("Not calculated.");
   });
 
@@ -28,8 +31,16 @@ describe("the words of the statistics of the open file", () => {
     expect(overIndividualsLine(1)).toBe("Over 1 individual");
   });
 
-  test("live-stats 2 while the pass runs, each histogram says it is over the variants or individuals so far", () => {
+  test("live-stats 2 while the pass runs, each histogram says it is over the variants so far, or over every individual from the variants so far", () => {
     expect(overVariantsLine(523, true)).toBe("Over 523 variants so far");
-    expect(overIndividualsLine(200, true)).toBe("Over 200 individuals so far");
+    expect(overIndividualsLine(200, true)).toBe(
+      "Over 200 individuals, from the variants read so far",
+    );
+  });
+
+  test("live-stats 2 the first plots drawn from a result so far are said once, as drawn from the variants read so far", () => {
+    expect(statsFirstText("panel.vcf.gz")).toBe(
+      "Plots of panel.vcf.gz are drawn from the variants read so far, and change as the file is read.",
+    );
   });
 });

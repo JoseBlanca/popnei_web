@@ -223,7 +223,7 @@ describe("the one button of the box of the variants file", () => {
     expect(active?.getAttribute("tabindex")).toBe("-1");
   });
 
-  test("live-stats 2 while the pass runs, the line of the variants gives those read so far once the pass gave a result so far", async () => {
+  test("live-stats 2 while the pass runs, the lines of the variants and the chromosomes give those read so far once the pass gave a result so far", async () => {
     const page = await drawPage();
     act(() => {
       page.autoRuns.sync();
@@ -231,10 +231,14 @@ describe("the one button of the box of the variants file", () => {
     const lines = (): string => container.textContent;
     expect(lines()).toContain("Variants: counting…");
     await act(async () => {
-      page.requests[0]?.soFar(summaryResult(["1"], [52_000], ["i1", "i2"]));
+      page.requests[0]?.soFar(
+        summaryResult(["1", "2", "3"], [52_000, 7, 0], ["i1", "i2"]),
+      );
       await Promise.resolve();
     });
-    expect(lines()).toContain("Variants: 52,000 so far, counting…");
-    expect(lines()).toContain("Chromosomes: counting…");
+    expect(lines()).toContain("Variants: 52,007 so far");
+    expect(lines()).not.toContain("counting");
+    // The chromosomes with a variant among those read.
+    expect(lines()).toContain("Chromosomes: 2 so far");
   });
 });
