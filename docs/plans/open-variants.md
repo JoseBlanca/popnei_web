@@ -322,3 +322,26 @@ Vitest "Tests 3758 passed (3758)", Playwright "1204 passed" in Chromium
 and WebKit, axe 0 violations in 32 runs. Not changed, for the owner:
 with a `.nei` open, the ploidy field and the box apply to the next VCF
 and nothing says so; the tab's title is "Popnei".
+
+### Round 2 with the owner, 6 October 2026
+
+The owner: the heading "What the file holds" goes; the information of
+the open file in one box of its own, above the open widget, "file name,
+file size / individuals / variants / number of chromosomes / ploidy",
+showing what is known at once and filled in when the file is read; any
+error of the file in that box. Built in ea4ee6d; its review sent ux,
+react and accessibility, and the fixes are in 10d81a2. The box keeps the
+same five lines in every state of a read and a count, each value
+replaced in place ("reading…", "counting… 6%", "not counted"), with one
+row of fixed height under them for the reading time, the bar and Stop,
+or Count again; so nothing above the open widget changes height when a
+change of the ploidy reads the file again, and the deferral of that read
+until a press ended, which a context menu could leave unapplied, is
+gone. The table of the chromosomes is under the open widget. On 10d81a2:
+Vitest "Tests 3762 passed (3762)", Playwright "1212 passed" in Chromium
+and WebKit, axe with no violation in 10 states.
+
+The owner also decided that the ploidy of a VCF is to be empty by
+default once popnei reads it from the file: issue
+https://github.com/JoseBlanca/popnei/issues/8, opened on 6 October 2026.
+Until a release of popnei has it, the field starts at 2.
