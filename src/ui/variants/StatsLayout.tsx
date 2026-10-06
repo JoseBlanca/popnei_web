@@ -7,6 +7,10 @@
  * button under the section moves down as the plots arrive, which the
  * owner chose over empty space (docs/plans/live-stats.md, "The open
  * widget moves with the plots").
+ *
+ * Apart from FileStats.tsx, and with no D3, since StatsSection.tsx draws
+ * the section with it while the code of FileStats.tsx downloads: the
+ * page's first download carries it, and not the plots.
  */
 import { classOf } from "../classOf.ts";
 import { Button } from "../widgets/Button.tsx";

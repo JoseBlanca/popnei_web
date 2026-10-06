@@ -55,12 +55,13 @@ const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
 const FIRST = "0123456789abcdef0123456789abcdef";
 const SECOND = "fedcba9876543210fedcba9876543210";
 
-/** The page: its store, the requests sent, and every text the status
-    region said. */
+/** The page: its store, the requests sent, every text the status
+    region said, and the loads whose section was drawn, its code there. */
 interface Page {
   readonly store: Store<JobResult, Blob>;
   readonly requests: Request[];
   readonly said: string[];
+  readonly shown: string[];
   readonly open: (fileId: string) => Promise<void>;
 }
 
@@ -157,7 +158,12 @@ async function drawPage(): Promise<Page> {
     const text = announcer.getState();
     if (text !== "") said.push(text);
   });
-  const onShown = announceChanges(store, announcer, () => null);
+  const announceShown = announceChanges(store, announcer, () => null);
+  const shown: string[] = [];
+  const onShown = (fileId: string): (() => void) => {
+    shown.push(fileId);
+    return announceShown(fileId);
+  };
   const openButton = createRef<HTMLButtonElement>();
   const tree = createElement(
     StrictMode,
@@ -197,7 +203,7 @@ async function drawPage(): Promise<Page> {
       await Promise.resolve();
     });
   };
-  return { store, requests, said, open };
+  return { store, requests, said, shown, open };
 }
 
 /** The section of the statistics, once drawn, or `null`. */
@@ -217,15 +223,18 @@ async function endDone(page: Page): Promise<void> {
   await after(0);
 }
 
-/** Waits for the section to be drawn, its code imported afresh with the
-    plots and D3, and then held back 300 ms by React, as the first
-    download is; fails after 5 s. */
-async function sectionDrawn(): Promise<void> {
+/** Waits for the section of the load `fileId` to be drawn, its code
+    imported afresh with the plots and D3, and then held back 300 ms by
+    React, as the first download is, in place of the section drawn while
+    it downloads; fails after 5 s. */
+async function sectionDrawn(page: Page, fileId: string): Promise<void> {
   const start = performance.now();
-  while (sectionOf() === null && performance.now() - start < 5000) {
+  while (!page.shown.includes(fileId) && performance.now() - start < 5000) {
     await after(10);
   }
-  if (sectionOf() === null) throw new Error("the section was not drawn");
+  if (!page.shown.includes(fileId)) {
+    throw new Error("the section was not drawn");
+  }
 }
 
 /** The texts said that speak of the statistics, each the whole text of
@@ -247,12 +256,18 @@ describe("the section of the statistics while its code downloads", () => {
       "variantsSummary",
     ]);
     await after(REGION_PAUSE_MS);
-    // Nothing is drawn in its place while its code downloads.
-    expect(sectionOf()).toBeNull();
+    // While its code downloads, the section has its two headings, and
+    // says of each part that it is calculated, never a count done with
+    // no word of the statistics; nothing is said of them yet.
+    expect(sectionOf()?.textContent).toBe(
+      "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…",
+    );
+    expect(page.shown).toEqual([]);
     expect(saidOfStats(page)).toEqual([]);
 
     release();
-    await sectionDrawn();
+    await sectionDrawn(page, FIRST);
+    expect(sectionOf()?.querySelectorAll("svg.chart")).toHaveLength(6);
     await after(REGION_PAUSE_MS);
     expect(saidOfStats(page)).toEqual([
       "The statistics of panel.nei are calculated.",
@@ -273,7 +288,7 @@ describe("the section of the statistics while its code downloads", () => {
 
     download.fail = false;
     await page.open(SECOND);
-    await sectionDrawn();
+    await sectionDrawn(page, SECOND);
     expect(download.calls).toBe(2);
     await endDone(page);
     await after(REGION_PAUSE_MS);
