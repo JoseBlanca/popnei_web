@@ -16,10 +16,10 @@
  * Above the parts, one row: the line and the bar of the pass running with
  * one Stop for both statistics, or, once stopped or after a crash of the
  * worker, the button that starts again those not done.
- * Each part says, in place of its result, that it is being calculated,
- * what it waits for, that a failure before it held it back, that it was
- * stopped, or the words of its own failure; a failure of one hides
- * nothing of the other. When the button goes with the focus on it, the
+ * Each part says, in place of its result, what it waits for, that a
+ * failure or a Stop before it held it back, that it was stopped, or the
+ * words of its own failure, and nothing while it is calculated, which the
+ * line over the bar says; a failure of one hides nothing of the other. When the button goes with the focus on it, the
  * focus goes to the heading of the part that failed, or of the variants;
  * when another file is opened, to the open button.
  *
@@ -54,7 +54,6 @@ import styles from "./FileStats.module.css";
 import {
   INDIVIDUALS_HEADING,
   INDIVIDUALS_ID,
-  PART_RUNNING,
   RESUME_STATS_LABEL,
   STATS_NAME,
   STATS_STOPPED_TEXT,
@@ -213,17 +212,17 @@ function Stats({
       case "done":
         return null;
       case "running":
-        return <p className={classOf(styles, "line")}>{PART_RUNNING}</p>;
+        // The line over the bar says it.
+        return null;
       case "ready":
       case "removed": {
         // A statistic ready that autoRuns knows nothing of starts by
         // itself in a moment.
-        const pending = autoRuns.pending(id) ?? {
-          kind: "waiting",
-          after: null,
-        };
-        return (
-          <p className={classOf(styles, "line")}>{pendingText(pending)}</p>
+        const text = pendingText(
+          autoRuns.pending(id) ?? { kind: "waiting", after: null },
+        );
+        return text === null ? null : (
+          <p className={classOf(styles, "line")}>{text}</p>
         );
       }
       case "locked":

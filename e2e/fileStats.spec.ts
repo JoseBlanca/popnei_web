@@ -172,6 +172,7 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   test.setTimeout(180_000);
   const vcf = testInfo.outputPath("stats.vcf.gz");
   await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+  await recordAnnouncements(page);
   await openPage(page);
   await pick(page, vcf);
 
@@ -192,6 +193,15 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await expect(
     stats(page).getByText(/^Calculating the statistics of the variants…/u),
   ).toBeVisible();
+  // Said once on the bar's line, and not again in the part.
+  await expect(stats(page).getByText(/Calculating/u)).toHaveCount(1);
+  const started = (texts: readonly string[]): number =>
+    texts.filter((text) =>
+      text.includes(
+        "Calculating the statistics of the variants of stats.vcf.gz…",
+      ),
+    ).length;
+  await expect.poll(async () => started(await announced(page))).toBe(1);
   await expectNoViolations(makeAxeBuilder);
 
   await stats(page)
@@ -212,9 +222,18 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
     ),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringContaining(
+        "The statistics were stopped. Start them again to calculate those not done yet.",
+      ),
+    );
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
+  // The start again is said as the first start was.
+  await expect.poll(async () => started(await announced(page))).toBe(2);
   await expect(
     stats(page).getByRole("button", { name: "Stop the statistics" }),
   ).toBeFocused();

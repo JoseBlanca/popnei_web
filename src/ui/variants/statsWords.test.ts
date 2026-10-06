@@ -53,7 +53,7 @@ describe("the words of the statistics of the open file", () => {
     expect(pendingText({ kind: "waiting", after: "variantChecks" })).toBe(
       "Waiting for the statistics of the variants.",
     );
-    expect(pendingText({ kind: "waiting", after: null })).toBe("Calculating…");
+    expect(pendingText({ kind: "waiting", after: null })).toBeNull();
     expect(
       pendingText({
         kind: "blocked",

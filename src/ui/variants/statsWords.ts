@@ -73,15 +73,12 @@ export function statsRunningLine(id: StatsId, share: number | null): string {
   return share === null ? start : `${start} ${String(share)}%`;
 }
 
-/** What a part says while its pass runs; its share is beside the bar. */
-export const PART_RUNNING = "Calculating…";
-
 /** What a part says once it is stopped. */
 export const PART_STOPPED = "Stopped.";
 
 /** What the status region says at a Stop of the statistics. */
 export const STATS_STOPPED_TEXT =
-  "The statistics were stopped. Start the statistics again calculates those not done.";
+  "The statistics were stopped. Start them again to calculate those not done yet.";
 
 /** Whether `id` is one of the two statistics. */
 export function isStatsId(id: AnalysisId): id is StatsId {
@@ -91,15 +88,16 @@ export function isStatsId(id: AnalysisId): id is StatsId {
 /**
  * What a part says of its statistic, ready to run and not started,
  * `pending` of autoRuns.ts: that it waits for the count of the variants,
- * or for the statistics of the variants; that it starts now, when none
- * holds it back; that it is not calculated since the one before it
- * failed or cannot run, or was stopped, which nothing but the user starts
- * again; or that it was stopped itself.
+ * or for the statistics of the variants; nothing when none holds it back
+ * and it starts in a moment, as nothing is said of it while it runs, the
+ * line over the bar saying it; that it is not calculated since the one
+ * before it failed or cannot run, or was stopped, which nothing but the
+ * user starts again; or that it was stopped itself.
  */
-export function pendingText(pending: Pending): string {
+export function pendingText(pending: Pending): string | null {
   switch (pending.kind) {
     case "waiting":
-      if (pending.after === null) return PART_RUNNING;
+      if (pending.after === null) return null;
       return pending.after === SUMMARY_ID
         ? "Waiting for the count of the variants."
         : `Waiting for ${subjectOf(pending.after)}.`;
@@ -204,8 +202,14 @@ export function statsStatus(
 
 /**
  * What the status region says of a change of the store from `before` to
- * `after` in the statistics of the open file: the words of each that
- * failed, and, once both are done for the same file, that they are.
+ * `after` in the statistics of the open file, as a run says its start and
+ * its end (react.md, "Announcements"): each pass that starts, "Calculating
+ * the statistics of the variants of panel.vcf.gz…", whether it started by
+ * itself or at the user's start again; the words of each that failed; the
+ * result of one while the other is not done; and, once both are done for
+ * the same file, that they are. A Stop is said by its button. The same
+ * words are said once, as those of a file that could not be read again,
+ * which fails both.
  */
 export function statsAnnouncementsOf(
   before: AppState<JobResult, unknown>,
@@ -213,24 +217,35 @@ export function statsAnnouncementsOf(
 ): readonly string[] {
   const variants = after.project.variants;
   if (variants === null) return [];
+  const fileName = escaped(variants.name);
   const texts: string[] = [];
-  const ids = [INDIVIDUALS_ID, VARIANTS_ID] as const;
+  const ids = [VARIANTS_ID, INDIVIDUALS_ID] as const;
+  const allDone = (s: AppState<JobResult, unknown>): boolean =>
+    ids.every((id) => statsStatus(s, id).kind === "done");
   for (const id of ids) {
     const then = statsStatus(before, id);
     const now = statsStatus(after, id);
+    const other = statsStatus(
+      after,
+      id === VARIANTS_ID ? INDIVIDUALS_ID : VARIANTS_ID,
+    );
+    if (now.kind === "running" && then.kind !== "running") {
+      texts.push(`Calculating ${SUBJECTS[id]} of ${fileName}…`);
+    }
     if (
       now.kind === "error" &&
       !(then.kind === "error" && then.key === now.key)
     ) {
       texts.push(statsFailedText(id, now.error, after.project));
     }
+    if (now.kind === "done" && then.kind !== "done" && other.kind !== "done") {
+      texts.push(`${capitalized(SUBJECTS[id])} of ${fileName} are calculated.`);
+    }
   }
-  const allDone = (s: AppState<JobResult, unknown>): boolean =>
-    ids.every((id) => statsStatus(s, id).kind === "done");
   if (allDone(after) && !allDone(before)) {
-    texts.push(`The statistics of ${escaped(variants.name)} are calculated.`);
+    texts.push(`The statistics of ${fileName} are calculated.`);
   }
-  return texts;
+  return [...new Set(texts)];
 }
 
 /** The one button of the statistics: Stop while one of them runs, or is
