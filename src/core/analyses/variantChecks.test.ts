@@ -376,6 +376,13 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
     );
   });
 
+  test("the description of the proportion of missing genotypes, with no threshold", () => {
+    const rows = binsOf(PANEL_MAF, 40).map((bin) => ({ ...bin, state: null }));
+    expect(variantHistogramDescription("missingRate", rows, null)).toBe(
+      "The proportion of missing genotypes of 1,200 variants, in 40 bins from 0 to 1.",
+    );
+  });
+
   test("the definition reads the filters of individuals alone, and has no key input, no reason and no option", () => {
     expect(variantChecks.id).toBe("variantChecks");
     expect(variantChecks.app).toEqual(["popgen", "gwas"]);
@@ -505,7 +512,10 @@ describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
     expect(lines[22]).toBe("0.525,0.55,27,removed");
   });
 
-  test("the names of the three files, from the stem of the variants file", () => {
+  test("the names of the four files, from the stem of the variants file", () => {
+    expect(binsCsvName("panel.nei", "missingRate")).toBe(
+      "panel.variant_missing_genotypes_bins.csv",
+    );
     expect(binsCsvName("panel.nei", "maf")).toBe("panel.variant_maf_bins.csv");
     expect(binsCsvName("panel.vcf.gz", "obsHet")).toBe(
       "panel.variant_obs_het_bins.csv",

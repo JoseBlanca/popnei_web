@@ -72,7 +72,16 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     );
   });
 
-  test("the three histograms, their axes and their tables", () => {
+  test("the four histograms, their axes and their tables", () => {
+    expect(VARIANT_HISTOGRAMS.missingRate.name).toBe(
+      "Proportion of missing genotypes",
+    );
+    expect(VARIANT_HISTOGRAMS.missingRate.tableName).toBe(
+      "The bins of the proportion of missing genotypes",
+    );
+    expect(VARIANT_HISTOGRAMS.missingRate.filterName).toBe(
+      "the filter of the variants by missing data",
+    );
     expect(VARIANT_HISTOGRAMS.maf.name).toBe("Major allele frequency");
     expect(VARIANT_HISTOGRAMS.obsHet.name).toBe("Observed heterozygosity");
     expect(VARIANT_HISTOGRAMS.unbiasedExpHet.name).toBe(

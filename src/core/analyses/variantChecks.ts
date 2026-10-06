@@ -104,13 +104,16 @@ export function refusalText(message: string, p: Project): string {
   });
 }
 
-/** The three statistics of the variants that have a histogram, as the
-    result names them. */
-export type VariantStatistic = "maf" | "obsHet" | "unbiasedExpHet";
+/** The four statistics of the variants that have a histogram, as the
+    result names them. The old page draws the three that stand beside
+    their filters, and not the missing rate, which popgen2.html draws. */
+export type VariantStatistic =
+  "missingRate" | "maf" | "obsHet" | "unbiasedExpHet";
 
 /** What each histogram counts, at the start of its description. */
 const HISTOGRAM_SUBJECTS: Readonly<Record<VariantStatistic, string>> =
   Object.freeze({
+    missingRate: "The proportion of missing genotypes",
     maf: "The major allele frequency",
     obsHet: "The observed heterozygosity",
     unbiasedExpHet: "The unbiased expected heterozygosity",
@@ -142,6 +145,7 @@ export function variantHistogramDescription(
 /** The part of the name of each file of a histogram that names its
     statistic. */
 const FILE_PARTS: Readonly<Record<VariantStatistic, string>> = Object.freeze({
+  missingRate: "missing_genotypes",
   maf: "maf",
   obsHet: "obs_het",
   unbiasedExpHet: "exp_het",
@@ -149,8 +153,9 @@ const FILE_PARTS: Readonly<Record<VariantStatistic, string>> = Object.freeze({
 
 /**
  * The name of the download of the bins of the histogram of `statistic`:
- * the stem of the variants file, `variantsStem`, then `.variant_maf`,
- * `.variant_obs_het` or `.variant_exp_het`, then `_bins.csv`;
+ * the stem of the variants file, `variantsStem`, then
+ * `.variant_missing_genotypes`, `.variant_maf`, `.variant_obs_het` or
+ * `.variant_exp_het`, then `_bins.csv`;
  * `panel.vcf.gz` gives `panel.variant_maf_bins.csv`
  * (docs/specs/analyses/variantChecks.md, "What it shows").
  */
