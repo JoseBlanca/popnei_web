@@ -28,9 +28,6 @@ export interface RunButtonProps {
       "Calculate the histograms of the variants" for a check of the
       Variants step. */
   readonly runLabel: string;
-  /** The words of Stop, "Stop" unless given: "Stop the statistics" for
-      the one Stop of the statistics of popgen2.html. */
-  readonly stopLabel?: string;
   /** Starts the calculation. */
   readonly onRun: () => void;
   /** Stops the calculation. */
@@ -60,7 +57,6 @@ export function RunButton(props: RunButtonProps): React.JSX.Element {
 function OneButton({
   button,
   runLabel,
-  stopLabel = "Stop",
   onRun,
   onStop,
   onGone,
@@ -96,7 +92,7 @@ function OneButton({
   }, [reasonRef]);
 
   if (button.kind === "stop") {
-    return <Button label={stopLabel} onPress={onStop} ref={setElement} />;
+    return <Button label="Stop" onPress={onStop} ref={setElement} />;
   }
   // The reason of a disabled Run takes the focus when the part gives its
   // element, named for this button.
