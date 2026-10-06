@@ -52,11 +52,18 @@ they can work with.
 - **The one pass** is the summary of the file of `live-stats`, one call
   of popnei's `calcVariantsSummary`: the count, the value of each
   individual, and the histograms of the variants over every individual.
+- **The worker** is the second thread of the browser tab in which
+  popnei runs, so that the page does not freeze during a pass; it holds
+  the open file and runs one calculation at a time.
 - **Starting by itself**: on `popgen2.html` the calculations start with
-  no button, one after another, in the order of `src/ui/autoRuns.ts`
-  (section 5). A calculation that runs and is no longer wanted is
-  stopped by ending its worker and starting another, which opens the
-  file again.
+  no button, one after another, in an order called **the chain**, kept
+  by `src/ui/autoRuns.ts` (section 5). A calculation that runs and is
+  no longer wanted is stopped by ending the worker and starting another,
+  which opens the file again: popnei cannot be interrupted inside a pass.
+- **Locked**: a calculation that cannot run on the current project, with
+  the words that say why, such as the FILTER failures on a `.nei` file.
+  Each analysis says it in a function of its own, `needs`, which is given
+  the project and nothing else.
 
 ## Which calculation reads which filter
 
@@ -77,9 +84,10 @@ individual out, which the page knows from the individuals kept, the page
 draws the histograms of the variants from the one pass, which then gives
 the same numbers, and `autoRuns.ts` does not start `variantChecks`: the
 first view of a file stays one pass, and a threshold of the individuals
-that takes nobody out calculates nothing. This cannot be the `needs` of
-`variantChecks`, which sees only the project, while the individuals kept
-depend on the one pass's result in the cache; so the rule is the page's,
+that takes nobody out calculates nothing. This cannot be said by the `needs` of
+`variantChecks`, since it is given only the project, while the
+individuals kept depend on the result of the one pass; so the rule is
+the page's,
 in `autoRuns.ts` and in the part that draws the histograms, both reading
 the same individuals kept (`individualsKept` of `src/core/`, over the
 project and the one pass's values). The counts of each filter alone, which the plots
@@ -95,9 +103,9 @@ filter, as that setting requires; and the store's `counts` names
 
 The chain of `autoRuns.ts` runs, in this order: the one pass; the
 FILTER failures, for a VCF; the histograms over the individuals kept,
-when they are needed; the counts of the filters. Today an analysis that
-is locked, as `filterFailures` is on a `.nei` file, or not done holds
-back every one after it (`holderOf`); the chain instead passes over one
+when they are needed; the counts of the filters. Today a calculation that
+is locked, as `filterFailures` is on a `.nei` file, or not done, holds
+back every one after it in the chain; the chain instead passes over one
 that is locked or not needed, so that the counts of the filters start
 on a `.nei` file and while no individual is taken out. The one Stop
 stops whichever runs and keeps the rest from starting; Start again
@@ -127,10 +135,10 @@ the reading of a file among them, start at once, as today. A calculation
 running under a key that a change left behind is stopped when the next
 calculation starts, or at once by a second change that does not give its
 key back, as `docs/architecture.md` section 5 has it; an Undo within the
-second keeps it. One second is a first value, to be tried by the owner.
+second keeps it.
 
 **Keys left behind start again when the project comes back to them.**
-Today `autoRuns.ts` remembers every key it started, `started`, for two
+Today `autoRuns.ts` remembers every key it started, for two
 reasons: a calculation stopped by the user is not started again, and
 each key starts once, so that a result dropped from the cache, or a
 start the store refuses, is not tried again at every change of the
@@ -149,13 +157,16 @@ of 200,000 variants before the second is settled.
 
 ## What the screen shows while it calculates again
 
-A result is never shown under a key the project no longer gives
-(invariant 1 of the `designing` skill). So when a threshold of the
+A result is never shown under a key the project no longer gives: the
+first of the invariants that the rest of the code relies on (the
+`designing` skill), so that no plot shows numbers of other settings
+than the ones on the screen. So when a threshold of the
 individuals moves, the four histograms of the variants are those of the
 new calculation as it runs: empty until its first result so far, which
 comes after the quiet second, the restart of the worker when a
 calculation was running, and up to two seconds of the pass, then
-filling, as at the opening of a file. The plots
+filling, as at the opening of a file (popnei sends a result so far at
+most every two seconds of the pass, whatever the file). The plots
 keep their place and their titles while they are empty, so that the
 page does not jump. The lines of the thresholds stay where the user put
 them.
@@ -200,22 +211,25 @@ an individual's missing rate would be over the variants that passed
 read the switch, so that the count and the values of the individuals
 would be read again at each turn of it.
 
-On a `.nei` file the switch is not offered, and a project that holds it
-when a `.nei` file is opened, since a new load keeps the filters, locks
-the calculations that read it with words that say so, rather than
-sending a pass that popnei refuses at its first block on a vars file
-written before format 1.2.
+On a `.nei` file the switch is not offered. A new file keeps the
+filters of the project, so a user who turned the switch on for a VCF and
+then opens a `.nei` file still has it on; the calculations that read it
+are then locked, with words that say the switch needs a VCF. Sending
+them would fail: popnei refuses `filterPassed` on a `.nei` file written
+before its format 1.2, and the page cannot tell the format.
 
-This changes the kinds of filter a project and its file can hold:
+What approving the switch commits to: a project file saved with the
+switch on cannot be opened by a version of the application from before
+it, since the reading of a project file refuses a kind of filter it does
+not know (section 8). In the code it changes the kinds of filter a
+project and its file can hold:
 `VariantFilterKind` of `src/worker/protocol.ts`, from which the kinds of
 the project come, `VARIANT_FILTER_ORDER`, the tables of the project
 that take a kind with no number (`Kinds`, `filtersOff`), the check of
 the messages (`checkFiltering`, `PROTOCOL_VERSION`), the steps of the
 runner, the words of each kind (`FILTER_KIND_WORDS`), every `script()`,
-and the reading of the project file (section 8), which refuses a kind it
-does not know. A project file saved with the switch on cannot be opened
-by a version of the application from before it. That is hard to undo,
-and is the owner's to approve with this design.
+and the reading of the project file. That is hard to undo, and is the
+owner's to approve with this design.
 
 ## Exact counts need popnei
 
@@ -236,8 +250,9 @@ two reasons that act together:
   the next number above, 0.30000000000000004 for 0.3. There the bins
   below the edge hold the values at most 0.3.
 
-So the words "at most" are exact on 464 edges and miss the values on
-the edge on the other 817, and "below" the other way round. The
+So the words "at most" are exact on 464 edges and, on the other 817,
+the count leaves out the values on the edge; the words "below" are exact
+on those 817 and wrong on the 464. The
 architecture review of 6 October 2026 found it under node on popnei
 0.2.1, on a VCF of 10 diploid individuals with missing rates of exactly
 0.1, 0.3 and 0.7; it also found that the bins below edge k always equal
@@ -301,12 +316,13 @@ Made on this branch once the owner approves, each with its paragraph
   values of the individuals, a few thousand.
 - **Memory:** none new. Each restart gives the memory of the old worker
   back.
-- **The keyboard and a screen reader:** the lines are React Aria
-  sliders, moved by the arrow keys, Page Up and Page Down, Home and End,
+- **The keyboard and a screen reader:** the lines are sliders of React
+  Aria, the library of the controls of the applications, moved by the arrow keys, Page Up and Page Down, Home and End,
   and read with their value and what they keep (`thresholds`); this
   design adds that each key press is a change of the project, so a
   screen reader says the notice of the change after each press. To be
-  heard in VoiceOver before the plan is settled.
+  heard in VoiceOver, the screen reader of macOS, before the plan is
+  settled.
 - **Downloads and browsers:** nothing new.
 
 ## Options not taken
@@ -336,4 +352,5 @@ Made on this branch once the owner approves, each with its paragraph
    the list of the individuals, as the design has it, or before it.
 4. The line of the expected heterozygosity taken off, or a popnei issue
    for its filter.
-5. The quiet second, as a first value.
+5. The quiet second, as a first value, to be settled once the restart of
+   the worker is measured and the owner has tried it.

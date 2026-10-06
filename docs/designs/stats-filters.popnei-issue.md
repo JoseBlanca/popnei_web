@@ -41,13 +41,45 @@ heterozygosities of exactly 0.1, 0.3 and 0.7, `calcPerVarDistribs` with
 | observed heterozygosity | 0.3 | 0.30000000000000004 | 5 | 5 |
 | observed heterozygosity | 0.7 | 0.7000000000000001 | 6 | 6 |
 
+The script, which writes the VCF and prints each row (`init` and the
+calls are popnei's node entry):
+
+```js
+import * as p from "popnei";
+await p.init();
+const n = 10, inds = [...Array(n)].map((_, i) => "i" + i);
+const row = (pos, gts) => `1\t${pos}\t.\tA\tC\t.\tPASS\t.\tGT\t${gts.join("\t")}`;
+const g = (miss, het) => [...Array(n)].map((_, i) => i < miss ? "./." : i < miss + het ? "0/1" : "0/0");
+const lines = ["##fileformat=VCFv4.2",
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + inds.join("\t"),
+  row(1, g(3, 0)), row(2, g(0, 3)), row(3, g(7, 0)),
+  row(4, g(0, 7)), row(5, g(1, 0)), row(6, g(0, 1))];
+const bytes = new TextEncoder().encode(lines.join("\n") + "\n");
+const open = () => p.openVcf(bytes, { ploidy: 2 });
+const d = p.calcPerVarDistribs(open(), { minNumIndividuals: 0, histKwargs: { numBins: 1280, range: [0, 1] } });
+for (const [stat, filter] of [["missingRate", "filterByMissingData"], ["obsHet", "filterByObsHet"]]) {
+  for (const t of [0.1, 0.3, 0.7]) {
+    const k = Math.round(t * 1280);
+    let inBins = 0;
+    for (let i = 0; i < k; i++) inBins += d[stat].histCounts[i];
+    const w = open(); w[filter](t);
+    const blocks = w.iterBlocks({ fields: [] }); for (const _ of blocks) {}
+    console.log(stat, t, d[stat].histBinEdges[k], inBins, blocks.passStats.numVars);
+  }
+}
+```
+
+The filter's count is the right one, since the filter is what an
+analysis reads; the bins below the edge undercount it at 0.1.
+
 Values on the round numbers are common in real data: a missing rate of
 0.1 is one individual of ten missing.
 
 **What it means for popnei_web.** Its new page draws the histograms of
 the variants and lets the user drag on each the threshold of its filter,
 with how many variants that threshold keeps, without a pass over the
-file. That count is right on 464 edges and too low on 817.
+file. That count is right on 464 edges, and on the other 817 it leaves
+out every variant whose value is on the edge.
 
 **What is asked.** An option of `histKwargs` for bins that hold their
 right edge instead of their left, the first bin holding its left edge
