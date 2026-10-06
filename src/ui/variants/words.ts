@@ -13,6 +13,7 @@ import {
   BGZIP_REFUSAL,
   EMPTY_SOURCE,
   SOURCE_UNREADABLE,
+  VARS_BATCH_UNREADABLE,
   isVcfLineRefusal,
 } from "../../core/analyses/words.ts";
 import {
@@ -281,12 +282,21 @@ const POSITION_ZERO =
 const PAST_LARGEST =
   /^the window \d+ to \d+ of the chromosome (.*?) ends past/su;
 
+/** popnei's refusal of a genotype of a ploidy other than that the
+    variants are read with, "line 9 of the VCF, the column of s000: its
+    genotype is of the ploidy 1 and the variants are read with the ploidy
+    2; ...", as js-v0.2.1 gives it: the line, and the two ploidies. */
+const OTHER_PLOIDY =
+  /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
+
 /**
- * The words of popnei's refusal `message` of the count of the variants
- * of `p`: a file of no variant; a variant at the position 0; a position of
- * 2^53 or more; a line of the VCF popnei cannot read, or a gzipped file
- * damaged or cut short; any other, with popnei's message. Throws a defect
- * on a project with no variants file.
+ * The words of popnei's refusal `message` of the pass of the count and
+ * the statistics of `p`: a file of no variant; a gzipped file or a `.nei`
+ * file damaged or cut short; a variant at the position 0; a position of
+ * 2^53 or more; a genotype of another ploidy, which may be a correct VCF,
+ * haploid males on chrX, and which fetching the file again does not mend;
+ * any other line of the VCF popnei cannot read; any other, with popnei's
+ * message. Throws a defect on a project with no variants file.
  */
 export function refusalText(message: string, p: Project): string {
   const variants = p.variants;
@@ -301,7 +311,10 @@ export function refusalText(message: string, p: Project): string {
     // pass of none is a file of none.
     return `${fileName} has no variants. Open another variants file.`;
   }
-  if (message.startsWith(SOURCE_UNREADABLE)) {
+  if (
+    message.startsWith(SOURCE_UNREADABLE) ||
+    VARS_BATCH_UNREADABLE.test(message)
+  ) {
     return `${fileName} could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.`;
   }
   const zero = POSITION_ZERO.exec(message);
@@ -312,11 +325,16 @@ export function refusalText(message: string, p: Project): string {
   if (past !== null) {
     return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.`;
   }
+  const ploidies = OTHER_PLOIDY.exec(message);
+  if (ploidies !== null) {
+    const [, line, found, read] = ploidies;
+    return `Line ${line ?? ""} of ${fileName} has a genotype of ploidy ${found ?? ""} among genotypes of ploidy ${read ?? ""}, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.`;
+  }
   const words = saying(withoutBackquotes(message));
   if (isVcfLineRefusal(message)) {
     return `popnei could not read ${fileName}${words}. Correct the file, or fetch it again, and open it again.`;
   }
-  return `popnei could not count the variants of ${fileName}${words}. Open the file again, or another file.`;
+  return `popnei could not read ${fileName}${words}. Open the file again, or another file.`;
 }
 
 /**

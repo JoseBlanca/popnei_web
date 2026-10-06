@@ -235,6 +235,39 @@ describe("the refusals of the count", () => {
     );
   });
 
+  test("a damaged .nei file, a batch of it that popnei could not read, says it could not be read to its end, without popnei's code words", () => {
+    const nei = loadVariants(emptyProject("popgen"), {
+      fileId: "0123456789abcdef0123456789abcdef",
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    });
+    // popnei js-v0.2.1 under node, on panel.nei with 400 bytes from its
+    // middle XOR-ed.
+    const damaged =
+      "the batch 1 of the vars file could not be read, so the file is damaged and has to be fetched or copied again: Ipc error: Expected compressed length of 480000 got 479861";
+    expect(refusalText(damaged, nei)).toBe(
+      "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
+  });
+
+  test("a genotype of another ploidy names its line and the two ploidies, and says to remove those variants or individuals", () => {
+    // popnei js-v0.2.1 under node, on panel.vcf with the genotype of
+    // s000 on line 9 set to 1, read with the ploidy of the file.
+    const haploid =
+      "line 9 of the VCF, the column of s000: its genotype is of the ploidy 1 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies";
+    expect(refusalText(haploid, EVERY)).toBe(
+      "Line 9 of panel.vcf.gz has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.",
+    );
+  });
+
+  test("any other refusal says popnei could not read the file, with popnei's words", () => {
+    expect(refusalText("out of memory", EVERY)).toBe(
+      "popnei could not read panel.vcf.gz: out of memory. Open the file again, or another file.",
+    );
+  });
+
   test("a bad line of the VCF gives popnei's words without their backquotes", () => {
     expect(
       refusalText(
