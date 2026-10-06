@@ -222,3 +222,23 @@ for fine bins over 0 to 1 and the page sums neighbouring bins into about
 titles carry no mean. The open widget goes to the bottom of the page,
 after the statistics; it moves as the plots arrive, and a click aimed at
 it as a pass ends must not be lost.
+
+Built in b4f4414, 7af9e13 and a49e5c8: popnei is asked for 1,280 bins
+over [0, 1], 40 × 2^5 so that every edge of the old 40 is the same
+double, and the page sums them, into the old 40 on popgen.html and into
+about 40 over a rounded axis on popgen2.html; keyVersion 4; the
+individuals' table is a CSV download; no means in the titles; the open
+widget at the bottom, still while the plots arrive, by room kept for
+them from the pick. Reviewed in spec, tests, stale and api; the fixes in
+c54e408 and aa1de2a: an axis ended one step past its data when its last
+edge was one of popnei's doubles above a round number (0.6 → 0.7); the
+missing rate's axis from 0 and the summing's guards are tested; the
+Python script asks for the 40 bins the page draws; the spec's body
+says the fine bins and the rounding. On aa1de2a: Vitest "3870 passed",
+Playwright "1214 passed" in Chromium and WebKit.
+
+Asked of the owner: the room kept for the plots leaves about 1,100 px
+of empty page above the open button while the statistics run, and a
+band of about 80 px above "Variants" when done; the options are to keep
+it, to let the button move with the plots, or to put it back above the
+statistics.
