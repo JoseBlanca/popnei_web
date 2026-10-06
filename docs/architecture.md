@@ -944,12 +944,12 @@ no step, and it joins none of the lists of the old page,
 `titles.ts`, so the old page neither shows it nor changes. Its request
 and its result join the unions of `protocol.ts` and the cases of
 `countsOf` as any analysis's do. An analysis of the old page can join
-the list of the new one with its module as it is, as the statistics of
-each individual and the histograms of the variants did on 6 October 2026
-(`docs/plans/file-stats.md`); each page has its own store, so the old
-page does not change, and a field its result gains for the new page, the
-missing rate of the histograms of the variants, is one the old page
-does not draw.
+the list of the new one with its module, or with a field its result
+gains for the new page and a new key version, as the statistics of each
+individual and the histograms of the variants did on 6 October 2026
+(`docs/plans/file-stats.md`), the histograms gaining the missing rate
+and their key version going to 3; each page has its own store, so the
+old page does not change, and does not draw the missing rate.
 
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
@@ -1317,9 +1317,15 @@ The page and each worker talk through typed messages
   read the filters of individuals, gets a new key at every change of a
   threshold, and its start, as any new calculation does, stops the
   calculation left behind, which restarts the worker; so moving a
-  threshold would stop and start the pass at each step. An undo while the
-  notice is up gives the keys back, and the requests go on. A change of
-  the load of the variant file is the exception, below. The store holds the handle of every run and cancels
+  threshold would stop and start the pass at each step. And a key the
+  analysis comes back to, by an undo or by the old threshold typed
+  again, shows it as stopped and does not start it again, since
+  `autoRuns.ts` remembers that key as started and the undo does not
+  give its request back, which the new start already stopped. For an
+  analysis the user starts, an undo while the notice is up gives the
+  keys back, and the requests go on; for one that starts by itself it
+  does not. A change of the load of the variant file is the exception,
+  below. The store holds the handle of every run and cancels
   them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
   outcomes. The option not taken was to let a running request finish, its
   result kept for a possible undo, while the request of the new settings
