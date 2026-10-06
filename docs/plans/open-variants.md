@@ -298,3 +298,11 @@ Not seen: Firefox, which runs on GitHub once `main` is pushed; a screen
 reader (VoiceOver), whose words were checked only in the page's status
 region; iOS Safari, whose file picker may grey out `.vcf` and `.nei`
 files (seen outside the scope by the browser review).
+
+### Round 1 with the owner, 6 October 2026
+
+The owner, trying the page: the headings "Population genetics",
+"Variants file" and "How a VCF is read" go, and the page's one heading
+is "Popnei"; the explanation under the ploidy goes; right under the
+heading, one widget holds the button "Open variants file…" and, on the
+same row, the field "Default ploidy" (2); the PASS box below them.
