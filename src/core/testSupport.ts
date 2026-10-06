@@ -1389,6 +1389,8 @@ export interface SentRequest {
   readonly job: TestJob;
   /** Passes a progress to the store, as the worker client would. */
   readonly progress: (p: Progress) => void;
+  /** Passes a result so far to the store, as the worker client would. */
+  readonly soFar: (r: TestResult) => void;
   /** Resolves the request's outcome. */
   readonly end: (outcome: Outcome<TestResult>) => void;
   /** How many times its `cancel()` was called. */
@@ -1417,6 +1419,7 @@ export function fakeSend(): {
     key: string,
     job: TestJob,
     onProgress: (p: Progress) => void,
+    onSoFar?: (r: TestResult) => void,
   ) => Run<TestResult>;
   readonly sent: SentRequest[];
   /** What was sent and cancelled, in order: "send 2", "cancel 1",
@@ -1437,6 +1440,7 @@ export function fakeSend(): {
     key: string,
     job: TestJob,
     onProgress: (p: Progress) => void,
+    onSoFar: (r: TestResult) => void = () => undefined,
   ): Run<TestResult> => {
     let end: (outcome: Outcome<TestResult>) => void = () => undefined;
     const outcome = new Promise<Outcome<TestResult>>((resolve) => {
@@ -1459,6 +1463,7 @@ export function fakeSend(): {
       key,
       job,
       progress: onProgress,
+      soFar: onSoFar,
       end,
       cancels: () => cancels,
     });

@@ -989,6 +989,7 @@ describe("WP4 D2 the calculations", () => {
       runId: request.run.id,
       progress: null,
       waitsForStatistics: false,
+      soFar: null,
     });
     expect(store.getState().runs).toStrictEqual([
       {
@@ -1008,6 +1009,7 @@ describe("WP4 D2 the calculations", () => {
       runId: request.run.id,
       progress: { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 },
       waitsForStatistics: false,
+      soFar: null,
     });
     expect(store.getState().runs[0]?.progress).toStrictEqual({
       bytesRead: 3,
@@ -3679,11 +3681,13 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       runId: stats.run.id,
       progress: null,
       waitsForStatistics: true,
+      soFar: null,
     });
     expect(statusIn(store, "stats")).toMatchObject({
       kind: "running",
       runId: stats.run.id,
       waitsForStatistics: false,
+      soFar: null,
     });
     const progress = { bytesRead: 3, numBytes: 10, pass: 1, numPasses: 1 };
     stats.progress(progress);
@@ -3705,6 +3709,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       runId: own.run.id,
       progress: null,
       waitsForStatistics: false,
+      soFar: null,
     });
     expect(store.getState().individualsKept).toStrictEqual({
       list: { kind: "known", individuals: ["a", "b", "d"] },
@@ -3742,6 +3747,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       kind: "running",
       runId: stats.run.id,
       waitsForStatistics: true,
+      soFar: null,
     });
     store.cancelRun("pops");
 
@@ -3943,6 +3949,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       kind: "running",
       runId: again.run.id,
       waitsForStatistics: true,
+      soFar: null,
     });
   });
 
@@ -4203,6 +4210,7 @@ describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
     expect(statusIn(store, "pops")).toMatchObject({
       kind: "running",
       waitsForStatistics: true,
+      soFar: null,
     });
     const stats = sentAt(sent, 0);
 
@@ -4266,6 +4274,7 @@ describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
     expect(statusIn(store, "pops")).toMatchObject({
       kind: "running",
       waitsForStatistics: true,
+      soFar: null,
     });
   });
 
@@ -4621,6 +4630,7 @@ describe("IP2 D2 the store with the individuals first", () => {
       runId: stats.run.id,
       progress: null,
       waitsForStatistics: true,
+      soFar: null,
     });
 
     const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
@@ -4650,6 +4660,7 @@ describe("IP2 D2 the store with the individuals first", () => {
       kind: "running",
       key,
       waitsForStatistics: true,
+      soFar: null,
     });
 
     const next = store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
@@ -4820,6 +4831,7 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
     expect(statusIn(store, "other")).toMatchObject({
       kind: "running",
       waitsForStatistics: true,
+      soFar: null,
     });
     const next = store.runEnded(
       statsRequest.run.id,
@@ -6714,5 +6726,136 @@ describe("IP4 D1 a result given back by a read, with the diversity of the applic
     expect(back?.kind === "done" && back.result).toBe(result);
     expect(sent).toHaveLength(numSent);
     expect(store.getState().notice).toBeNull();
+  });
+});
+
+describe("live-stats 2 the result so far of a run", () => {
+  test("running has no result so far until the first; each one is the state's, a new object, and done keeps the result, not the result so far", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    expect(statuses(store)[1]).toMatchObject({ kind: "running", soFar: null });
+    const before = store.getState();
+    const first = varsResult(500);
+    request.soFar(first);
+    const afterFirst = store.getState();
+    expect(afterFirst).not.toBe(before);
+    expect(afterFirst.analyses[1]).not.toBe(before.analyses[1]);
+    // The other analyses keep their objects.
+    expect(afterFirst.analyses[0]).toBe(before.analyses[0]);
+    const running = statuses(store)[1];
+    expect(running?.kind === "running" && running.soFar).toBe(first);
+    const second = varsResult(900);
+    request.soFar(second);
+    const later = statuses(store)[1];
+    expect(later?.kind === "running" && later.soFar).toBe(second);
+    // A progress keeps the result so far.
+    request.progress({ bytesRead: 9, numBytes: 10, pass: 1, numPasses: 1 });
+    const withProgress = statuses(store)[1];
+    expect(withProgress?.kind === "running" && withProgress.soFar).toBe(second);
+    const result = varsResult(1000);
+    store.runEnded(request.run.id, doneWith(request, result));
+    const done = statuses(store)[1];
+    expect(done?.kind === "done" && done.result).toBe(result);
+  });
+
+  test("a Stop drops the result so far, and the run after it starts with none", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    request.soFar(varsResult(500));
+    store.cancelRun("vars");
+    expect(statuses(store)[1]?.kind).not.toBe("running");
+    // The worker client gives nothing of a request cancelled; a result so
+    // far that came anyway before its outcome is not shown.
+    request.soFar(varsResult(600));
+    expect(statuses(store)[1]?.kind).not.toBe("running");
+    store.runEnded(request.run.id, { kind: "cancelled" });
+    store.startRun("vars");
+    expect(statuses(store)[1]).toMatchObject({ kind: "running", soFar: null });
+    expect(sentAt(sent, 1).run.id).not.toBe(request.run.id);
+  });
+
+  test("a failure drops the result so far", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    request.soFar(varsResult(500));
+    store.runEnded(request.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no variant left" },
+    });
+    expect(statuses(store)[1]).toMatchObject({ kind: "error" });
+  });
+
+  test("a new key gives a running state of its own with no result so far, and the result so far of the old key is not shown under it", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const old = sentAt(sent, 0);
+    old.soFar(varsResult(500));
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(statuses(store)[1]?.kind).not.toBe("running");
+    store.startRun("vars");
+    const fresh = sentAt(sent, 1);
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "running",
+      runId: fresh.run.id,
+      soFar: null,
+    });
+    old.soFar(varsResult(700));
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "running",
+      runId: fresh.run.id,
+      soFar: null,
+    });
+  });
+
+  test("a result so far given before send returns is passed over", () => {
+    const { analyses } = fakeAnalyses();
+    const { send, sent } = fakeSend();
+    const early = (
+      key: string,
+      job: TestJob,
+      onProgress: (p: Progress) => void,
+      onSoFar: (r: TestResult) => void,
+    ): Run<TestResult> => {
+      onSoFar(varsResult(1));
+      return send(key, job, onProgress, onSoFar);
+    };
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses,
+      send: early,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
+    store.variantsRead(VARIANTS_ID, VARIANTS_READ);
+    store.startRun("vars");
+    expect(sent).toHaveLength(1);
+    expect(statuses(store)[1]).toMatchObject({ kind: "running", soFar: null });
+  });
+
+  test("while a Run waits for the statistics of each individual, its state has no result so far, whatever the statistics give", () => {
+    const { store, sent } = storeOfFive([MISSING_AT_02]);
+    store.startRun("pops");
+    const stats = sentAt(sent, 0);
+    expect(stats.job.analysis).toBe("stats");
+    stats.soFar(fiveStats());
+    expect(statusIn(store, "pops")).toMatchObject({
+      kind: "running",
+      waitsForStatistics: true,
+      soFar: null,
+    });
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "running",
+      soFar: fiveStats(),
+    });
   });
 });

@@ -242,6 +242,7 @@ function running(key: Key, runId: number): AnalysisStatus<TestDefResult> {
     runId,
     progress: null,
     waitsForStatistics: false,
+    soFar: null,
   };
 }
 
@@ -1459,6 +1460,7 @@ function waitsForStatistics(runId: number): AnalysisStatus<TestDefResult> {
     runId,
     progress: null,
     waitsForStatistics: true,
+    soFar: null,
   };
 }
 
@@ -2372,6 +2374,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
           runId: 1,
           progress: null,
           waitsForStatistics: true,
+          soFar: null,
         },
       },
       runs: [run(1, STATISTICS, KEY_S, CURRENT)],
@@ -2404,6 +2407,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
       runId: 1,
       progress: null,
       waitsForStatistics: true,
+      soFar: null,
     });
     const before = checksState({
       project: THREE_FILTERS,
@@ -2448,6 +2452,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
           runId: 1,
           progress: null,
           waitsForStatistics: true,
+          soFar: null,
         },
       },
       runs: [run(1, STATISTICS, KEY_S, CURRENT)],

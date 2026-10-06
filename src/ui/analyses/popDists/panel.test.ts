@@ -296,6 +296,7 @@ describe("PA5 the options of the distances, drawn by React", () => {
         runId: 1,
         progress: null,
         waitsForStatistics: false,
+        soFar: null,
       },
       { kind: "removed", key: KEY },
       {
