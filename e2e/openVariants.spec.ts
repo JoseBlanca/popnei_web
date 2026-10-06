@@ -176,7 +176,7 @@ test("OV2 panel.vcf.gz shows its individuals, the ploidy given and its variants 
   await expect(facts).toHaveText([
     /^VCF · /u,
     "200 individuals",
-    "Ploidy 2, the default ploidy, unchanged: a VCF does not give its ploidy",
+    "Ploidy 2, the Default ploidy the page starts with: a VCF does not give its ploidy, and this page does not check it against the genotypes",
     "Only the variants with PASS or . in the FILTER column were read",
   ]);
   await expectPanelCounted(page);
@@ -252,7 +252,7 @@ test("OV2 a new ploidy reads the VCF again, and the summary says the ploidy give
 
   await expect(
     summary(page).getByText(
-      "Ploidy 4, the default ploidy set on this page: a VCF does not give its ploidy",
+      "Ploidy 4, the Default ploidy set on this page: a VCF does not give its ploidy, and this page does not check it against the genotypes",
     ),
   ).toBeVisible();
   await expectPanelCounted(page);
@@ -444,6 +444,36 @@ for (const width of [320, 1280]) {
   }
 }
 
+test("OV2 a click between the label of the ploidy and its field leaves the focus in the field, and one between the open button and the label does not give it to the zone's hidden button", async ({
+  page,
+}) => {
+  await openPage(page);
+  const field = ploidyField(page);
+  await field.click();
+  await field.selectText();
+  await page.keyboard.type("4");
+  const at = await field.boundingBox();
+  if (at === null) throw new Error("the field is not drawn");
+
+  // Just before the field, where the label and the field meet.
+  await page.mouse.click(at.x - 3, at.y + at.height / 2);
+  await page.keyboard.type("3");
+
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("43");
+
+  // Just after the open button, where it and the label meet.
+  const button = await openButton(page).boundingBox();
+  if (button === null) throw new Error("the button is not drawn");
+  await page.mouse.click(
+    button.x + button.width + 3,
+    button.y + button.height / 2,
+  );
+  await expect(
+    page.getByRole("button", { name: "Paste a variants file" }),
+  ).not.toBeFocused();
+});
+
 test("OV2 a file dropped with a ploidy typed is read with it, and the file open before is not read again", async ({
   page,
 }) => {
@@ -471,7 +501,7 @@ test("OV2 a file dropped with a ploidy typed is read with it, and the file open 
   await drop(page, [{ name: "other.vcf.gz", bytes: [...vcf] }]);
 
   await expect(
-    summary(page).getByText(/^Ploidy 3, the default ploidy set on this page/u),
+    summary(page).getByText(/^Ploidy 3, the Default ploidy set on this page/u),
   ).toBeVisible();
   await expect(summary(page).getByText("other.vcf.gz")).toBeVisible();
   await expectPanelCounted(page);
@@ -505,7 +535,7 @@ test("OV2 the options set are kept when a .nei file is opened, and the next VCF 
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
   await expect(
-    summary(page).getByText(/^Ploidy 4, the default ploidy set on this page/u),
+    summary(page).getByText(/^Ploidy 4, the Default ploidy set on this page/u),
   ).toBeVisible();
   await expect(
     summary(page).getByText(

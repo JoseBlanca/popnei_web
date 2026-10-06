@@ -83,9 +83,10 @@ export function formatAndSizeText(variants: VariantSource): string {
   return `${formatText(variants.format)} · ${sizeText(variants.size)}`;
 }
 
-/** The line of the ploidy: for a VCF, the one set on the page, the
-    default or another, since the file does not give it and the count
-    does not read the genotypes; for a `.nei` file, the file's. */
+/** The line of the ploidy: for a VCF, the one of the field Default
+    ploidy, the one it starts with or another, and that the page does not
+    check it, since the file does not give it and the count does not read
+    the genotypes; for a `.nei` file, the file's. */
 export function ploidyLine(
   ploidy: number,
   readOptions: VcfReadOptions | null,
@@ -93,9 +94,9 @@ export function ploidyLine(
   if (readOptions === null) return `Ploidy ${String(ploidy)}, as the file says`;
   const set =
     readOptions.ploidy === DEFAULT_PLOIDY
-      ? `Ploidy ${String(ploidy)}, the default ploidy, unchanged`
-      : `Ploidy ${String(ploidy)}, the default ploidy set on this page`;
-  return `${set}: a VCF does not give its ploidy`;
+      ? `Ploidy ${String(ploidy)}, the ${DEFAULT_PLOIDY_LABEL} the page starts with`
+      : `Ploidy ${String(ploidy)}, the ${DEFAULT_PLOIDY_LABEL} set on this page`;
+  return `${set}: a VCF does not give its ploidy, and this page does not check it against the genotypes`;
 }
 
 /** The line of the variants a VCF was read with. */

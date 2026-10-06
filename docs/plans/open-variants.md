@@ -9,7 +9,7 @@ Built as the `building` skill says, on the branch `open-variants`.
 ## What the user can do when it is done
 
 Steps 1 and 2 of cases 1 and 2 of `docs/use-cases.md`. The user opens
-the new page, presses "Open a variants file…", and picks a VCF, gzipped
+the new page, presses "Open variants file…", and picks a VCF, gzipped
 or not, or a `.nei` file. They see the name and size of the file, the
 number of individuals, the ploidy, and, after one pass over the file
 with its progress shown, the number of variants and the chromosomes with
@@ -134,16 +134,18 @@ would break 1,143 browser tests that check screens that are going away.
 
 **Two widgets, in `src/ui/variants/`:**
 
-- `OpenVariants`: the button "Open a variants file…" over `FileZone`,
+- `OpenVariants`: the button "Open variants file…" over `FileZone`,
   which also takes a dropped file. It accepts `.vcf`, `.vcf.gz`, `.vcf.bgz` and `.nei`, whatever `formatOfName` of the Variants step accepts. For a
   VCF the read has two options, settled since stage 3: the ploidy, a
   whole number from 1 to 255, 2 by default, and whether only the
   variants with PASS or `.` in their FILTER column are read, on by
-  default. They are beside the button as the Variants step has them,
-  reusing its code, since a VCF does not say its ploidy and popnei reads
-  it with the one given. Changing them reads the file again. Below it, the errors of opening: a file refused by its name,
-  several files at once, and a file popnei could not read. Each is a
-  `Problem`, announced to a screen reader.
+  default. The field "Default ploidy" is on the button's row, after it,
+  and the box of the PASS variants under that row; both reuse the code
+  of the Variants step. The ploidy is asked for because a VCF does not
+  say its ploidy, and popnei reads it with the one given. Changing either
+  reads the file again. Under the zone, the errors of opening: a file
+  refused by its name, several files at once, and a file popnei could
+  not read. Each is a `Problem`, announced to a screen reader.
 - `VariantsSummary`, shown once the file is read: the name and size of
   the file, the individuals, the ploidy, said as the one given for a VCF
   and as the file's for a `.nei`, and for a VCF whether only the passed

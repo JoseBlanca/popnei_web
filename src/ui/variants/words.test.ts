@@ -36,12 +36,12 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the ploidy of a VCF is the one set, the default told apart, and that of a .nei file the file's", () => {
+  test("the ploidy of a VCF is the one set in the field, the one it starts with told apart, and not checked against the genotypes; that of a .nei file the file's", () => {
     expect(ploidyLine(2, { ploidy: 2, onlyPassed: true })).toBe(
-      "Ploidy 2, the default ploidy, unchanged: a VCF does not give its ploidy",
+      "Ploidy 2, the Default ploidy the page starts with: a VCF does not give its ploidy, and this page does not check it against the genotypes",
     );
     expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
-      "Ploidy 4, the default ploidy set on this page: a VCF does not give its ploidy",
+      "Ploidy 4, the Default ploidy set on this page: a VCF does not give its ploidy, and this page does not check it against the genotypes",
     );
     expect(ploidyLine(2, null)).toBe("Ploidy 2, as the file says");
   });

@@ -1,10 +1,9 @@
 /**
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md): the page's one heading, "Popnei", the
- * opening of the
- * variants file and what the file holds, each in a boundary of errors
- * that draws its heading alone in its place, and the status region that
- * says what changes away from the focus.
+ * opening of the variants file and what the file holds, each in a
+ * boundary of errors that draws its heading alone in its place, and the
+ * status region that says what changes away from the focus.
  */
 import { useRef } from "react";
 

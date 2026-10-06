@@ -120,9 +120,15 @@ function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
   else input.setSelectionRange(length, length);
 }
 
-/** What a number field is drawn with. */
-export interface NumberFieldProps {
-  /** The name of the field, shown above it, with its range. */
+/** What a number field is drawn with: what every field has, and either
+    its label above it or its label beside it. */
+export type NumberFieldProps = NumberFieldCommonProps &
+  (NumberFieldAboveProps | NumberFieldInlineProps);
+
+/** What every number field is drawn with. */
+interface NumberFieldCommonProps {
+  /** The name of the field, shown above it or beside it; a field above
+      says its range in it, "Ploidy of the VCF, from 1 to 255". */
   readonly label: string;
   /** The number the field shows, from the store or the screen. */
   readonly value: number;
@@ -130,8 +136,6 @@ export interface NumberFieldProps {
   readonly minValue: number;
   /** The largest number it takes. */
   readonly maxValue: number;
-  /** The label beside the input, on its row, rather than above it. */
-  readonly inline?: boolean;
   /** The step an arrow key moves by; a number committed must be a
       multiple of it, unless `decimals` is given. */
   readonly step: number;
@@ -143,20 +147,10 @@ export interface NumberFieldProps {
       before `description`: the count of a filter and the line under its
       switch. */
   readonly describedBy?: string;
-  /** A line under the field, which a screen reader reads with it, after
-      the line of a refusal and the elements of `describedBy`. */
-  readonly description?: string;
   /** The line under the field for a number it refused, or a character it
       threw away, from the reason and the value it keeps, the one it shows
       again: "10 is more than 1; the threshold stays 0.1." */
   readonly refusedText: (refusal: NumberRefusal, kept: number) => string;
-  /** The element the line of a refusal is drawn into, instead of under
-      the field: for a screen with something under the field that a
-      click takes the focus to, and which the line, appearing at that
-      blur, would move from under the pointer, so that the click is lost.
-      `null` until the screen has drawn the element; the line waits for
-      it. */
-  readonly refusedIn?: Element | null;
   /** Called with that line when it appears, so that the screen announces
       it: the focus is on the field or past it, where a screen reader
       would not read it. */
@@ -189,6 +183,35 @@ export interface NumberFieldProps {
       as for one typed; not for an arrow key or Page Up and Down, whose
       number is not typed, nor for a number the field refused. */
   readonly onSameCommitted?: (value: number) => void;
+}
+
+/** A field with its label above it. */
+interface NumberFieldAboveProps {
+  readonly inline?: false;
+  /** A line under the field, which a screen reader reads with it, after
+      the line of a refusal and the elements of `describedBy`. */
+  readonly description?: string;
+  /** The element the line of a refusal is drawn into, instead of under
+      the field: for a screen with something under the field that a
+      click takes the focus to, and which the line, appearing at that
+      blur, would move from under the pointer, so that the click is lost.
+      `null` until the screen has drawn the element; the line waits for
+      it. */
+  readonly refusedIn?: Element | null;
+}
+
+/** A field with its label beside it, on the input's row. Every part of
+    the field goes on that row, each in a column of its own, so a line
+    drawn in the field would stand beside the input, and, appearing as
+    the field loses the focus, would move what is on the row: such a
+    field has no `description`, and draws the line of a refusal
+    elsewhere, in `refusedIn`. */
+interface NumberFieldInlineProps {
+  readonly inline: true;
+  readonly description?: never;
+  /** The element the line of a refusal is drawn into, as for a field
+      above, and here always: `null` until the screen has drawn it. */
+  readonly refusedIn: Element | null;
 }
 
 /** A number field with its label, and the line of a number it refused. */
