@@ -4344,6 +4344,12 @@ function newPageCount(page: Page): Locator {
   return page.getByRole("region", { name: "File information" });
 }
 
+/** The statistics of the open file on popgen2.html, under the open
+    button. */
+function newPageStats(page: Page): Locator {
+  return page.getByRole("region", { name: "Statistics of the file" });
+}
+
 for (const theme of ["light", "dark"] as const) {
   for (const width of [null, 320] as const) {
     const at = width === null ? "" : `-${String(width)}`;
@@ -4487,6 +4493,72 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByRole("button", { name: "Count again" }),
         ).toBeVisible();
         await save(page, `popgen2-crash-count${at}-${theme}`);
+      });
+
+      test("the statistics not computed yet, waiting for the count", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("waiting.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageStats(page).getByText(
+            "Waiting for the count of the variants.",
+          ),
+        ).toHaveCount(2, { timeout: 30_000 });
+        await save(page, `popgen2-stats-waiting${at}-${theme}`);
+      });
+
+      test("the statistics running", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("running.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageStats(page).getByText(
+            /^Calculating the statistics of the individuals… \d+%$/u,
+          ),
+        ).toBeVisible({ timeout: 60_000 });
+        await save(page, `popgen2-stats-running${at}-${theme}`);
+      });
+
+      test("the statistics done", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageStats(page).getByRole("grid", {
+            name: "Statistics of each individual",
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-stats-done${at}-${theme}`);
+      });
+
+      test("the statistics stopped", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("stopped.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await newPageStats(page)
+          .getByRole("button", { name: "Stop the statistics" })
+          .click({ timeout: 60_000 });
+        await expect(
+          newPageStats(page).getByRole("button", {
+            name: "Start the statistics again",
+          }),
+        ).toBeVisible();
+        await save(page, `popgen2-stats-stopped${at}-${theme}`);
+      });
+
+      test("the statistics of the individuals failed", async ({ page }) => {
+        await crashWorkerOn(page, "run", "individualChecks");
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(4, {
+          timeout: 20_000,
+        });
+        await save(page, `popgen2-stats-failed${at}-${theme}`);
       });
 
       test("a VCF whose ploidy could not be read", async ({ page }) => {
