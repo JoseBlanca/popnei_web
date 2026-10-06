@@ -4517,7 +4517,7 @@ for (const theme of ["light", "dark"] as const) {
         await pickOnNewPage(page, vcf);
         await expect(
           newPageStats(page).getByText(
-            /^Calculating the statistics of the individuals… \d+%$/u,
+            /^Calculating the statistics of the variants… \d+%$/u,
           ),
         ).toBeVisible({ timeout: 60_000 });
         await save(page, `popgen2-stats-running${at}-${theme}`);

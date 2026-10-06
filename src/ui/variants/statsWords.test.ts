@@ -50,20 +50,34 @@ describe("the words of the statistics of the open file", () => {
     expect(pendingText({ kind: "waiting", after: "variantsSummary" })).toBe(
       "Waiting for the count of the variants.",
     );
-    expect(pendingText({ kind: "waiting", after: "individualChecks" })).toBe(
-      "Waiting for the statistics of the individuals.",
+    expect(pendingText({ kind: "waiting", after: "variantChecks" })).toBe(
+      "Waiting for the statistics of the variants.",
     );
     expect(pendingText({ kind: "waiting", after: null })).toBe("Calculating…");
-    expect(pendingText({ kind: "blocked", by: "variantsSummary" })).toBe(
-      "Not calculated: the variants were not counted.",
-    );
-    expect(pendingText({ kind: "blocked", by: "individualChecks" })).toBe(
-      "Not calculated: the statistics of the individuals failed.",
-    );
+    expect(
+      pendingText({
+        kind: "blocked",
+        by: "variantsSummary",
+        because: "failed",
+      }),
+    ).toBe("Not calculated: the variants were not counted.");
+    expect(
+      pendingText({ kind: "blocked", by: "variantChecks", because: "failed" }),
+    ).toBe("Not calculated: the statistics of the variants failed.");
+    expect(
+      pendingText({
+        kind: "blocked",
+        by: "variantsSummary",
+        because: "stopped",
+      }),
+    ).toBe("Not calculated: the count of the variants was stopped.");
+    expect(
+      pendingText({ kind: "blocked", by: "variantChecks", because: "stopped" }),
+    ).toBe("Not calculated: the statistics of the variants were stopped.");
     expect(pendingText({ kind: "stopped" })).toBe("Stopped.");
-    expect(() => pendingText({ kind: "blocked", by: "pca" })).toThrow(
-      /popnei_web defect/,
-    );
+    expect(() =>
+      pendingText({ kind: "blocked", by: "pca", because: "failed" }),
+    ).toThrow(/popnei_web defect/);
   });
 
   test("the failures are short: popnei's words, a crash whose details the error bar has, a file that changed", () => {
@@ -159,7 +173,10 @@ describe("the words of the statistics of the open file", () => {
     expect(
       statsButton(
         [READY, READY],
-        [{ kind: "stopped" }, { kind: "waiting", after: "individualChecks" }],
+        [
+          { kind: "stopped" },
+          { kind: "blocked", by: "variantChecks", because: "stopped" },
+        ],
         true,
       ),
     ).toEqual({ kind: "resume" });

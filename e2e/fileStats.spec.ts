@@ -3,7 +3,8 @@
  * (docs/plans/file-stats.md, phase 2): steps 3 and 4 of case 2 of
  * docs/use-cases.md, the distributions over the variants and over the
  * individuals, which start by themselves once the variants are counted,
- * one after the other; the table of the individuals sorted; one Stop for
+ * one after the other, the variants first; the table of the individuals
+ * sorted; one Stop for
  * both and the start again; a crash of one pass, which hides nothing of
  * the other; axe at each state reached.
  *
@@ -182,14 +183,14 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await expectNoViolations(makeAxeBuilder);
 
   const bar = stats(page).getByRole("progressbar", {
-    name: "Calculating the statistics of the individuals",
+    name: "Calculating the statistics of the variants",
   });
   await expect(bar).toBeVisible({ timeout: 60_000 });
   await expect(
-    stats(page).getByText("Waiting for the statistics of the individuals."),
+    stats(page).getByText("Waiting for the statistics of the variants."),
   ).toBeVisible();
   await expect(
-    stats(page).getByText(/^Calculating the statistics of the individuals…/u),
+    stats(page).getByText(/^Calculating the statistics of the variants…/u),
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
@@ -206,7 +207,9 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
     stats(page).getByText("Stopped.", { exact: true }),
   ).toBeVisible();
   await expect(
-    stats(page).getByText("Waiting for the statistics of the individuals."),
+    stats(page).getByText(
+      "Not calculated: the statistics of the variants were stopped.",
+    ),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);

@@ -261,9 +261,11 @@ function fail(request: Request | undefined, error: RunError): void {
 describe("the statistics of the open file, started after the count, one after the other", () => {
   const PAGE_GROUPS = POPGEN2_AUTO_GROUPS;
   const PAGE_IDS = PAGE_GROUPS.flat();
+  const VARIANTS = "variantChecks";
+  const INDIVIDUALS = "individualChecks";
 
-  /** The page with a file open and its count done, and the statistics
-      of each individual running, the second request. */
+  /** The page with a file open and its count done, and the histograms of
+      the variants running, the second request. */
   async function countDone(): Promise<ReturnType<typeof setUp>> {
     const page = setUp(PAGE_GROUPS);
     open(page.store, FIRST);
@@ -274,36 +276,33 @@ describe("the statistics of the open file, started after the count, one after th
     return page;
   }
 
-  test("the count starts alone; once done, the statistics of each individual; once they are done, the histograms of the variants", async () => {
+  test("the count starts alone; once done, the histograms of the variants; once they are done, the statistics of each individual", async () => {
     const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
     expect(analysesOf(requests)).toEqual([ID]);
-    expect(status("individualChecks").kind).toBe("ready");
+    expect(status(VARIANTS).kind).toBe("ready");
 
     endDone(requests[0]);
     await settled();
     auto.sync();
-    expect(analysesOf(requests)).toEqual([ID, "individualChecks"]);
-    expect(status("variantChecks").kind).toBe("ready");
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS]);
+    expect(requests[1]?.job).toMatchObject({
+      analysis: VARIANTS,
+      individuals: null,
+    });
+    expect(status(INDIVIDUALS).kind).toBe("ready");
 
     endDone(requests[1]);
     await settled();
     auto.sync();
-    expect(analysesOf(requests)).toEqual([
-      ID,
-      "individualChecks",
-      "variantChecks",
-    ]);
-    expect(requests[2]?.job).toMatchObject({
-      analysis: "variantChecks",
-      individuals: null,
-    });
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS, INDIVIDUALS]);
 
     endDone(requests[2]);
     await settled();
     auto.sync();
     expect(requests).toHaveLength(3);
+    expect(PAGE_IDS).toEqual([ID, VARIANTS, INDIVIDUALS]);
     expect(PAGE_IDS.map((id) => status(id).kind)).toEqual([
       "done",
       "done",
@@ -320,26 +319,21 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
     expect(requests).toHaveLength(1);
-    const individuals = status("individualChecks");
-    expect(individuals.kind).toBe("ready");
-    if (individuals.kind !== "ready") return;
-    expect(auto.startedUnder(individuals.key)).toBe(false);
+    const variants = status(VARIANTS);
+    expect(variants.kind).toBe("ready");
+    if (variants.kind !== "ready") return;
+    expect(auto.startedUnder(variants.key)).toBe(false);
 
     auto.again(ID);
     expect(analysesOf(requests)).toEqual([ID, ID]);
     endDone(requests[1]);
     await settled();
     auto.sync();
-    expect(analysesOf(requests)).toEqual([ID, ID, "individualChecks"]);
+    expect(analysesOf(requests)).toEqual([ID, ID, VARIANTS]);
   });
 
-  test("stop of the statistics while those of each individual run cancels them, and the histograms of the variants do not start", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
+  test("stop of the statistics while the histograms of the variants run cancels them, and the statistics of each individual do not start", async () => {
+    const { requests, auto, status } = await countDone();
 
     auto.stop(POPGEN2_STATISTICS_IDS);
     expect(requests[1]?.cancelled).toBe(true);
@@ -349,44 +343,80 @@ describe("the statistics of the open file, started after the count, one after th
 
     expect(requests).toHaveLength(2);
     expect(status(ID).kind).toBe("done");
-    const stopped = status("individualChecks");
+    const stopped = status(VARIANTS);
     expect(stopped.kind).toBe("ready");
     if (stopped.kind !== "ready") return;
     expect(auto.startedUnder(stopped.key)).toBe(true);
-    expect(status("variantChecks").kind).toBe("ready");
+    expect(status(INDIVIDUALS).kind).toBe("ready");
   });
 
-  test("resume after a stop of the statistics of each individual starts them again, and the histograms of the variants after them", async () => {
+  test("stop of the statistics after the first pass ends and before the second starts keeps the second from starting", async () => {
+    const { requests, auto, status } = await countDone();
+    endDone(requests[1]);
+    await settled();
+    // The page has not synced yet: the second pass is about to start.
+    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "waiting", after: null });
+
+    auto.stop(POPGEN2_STATISTICS_IDS);
+    auto.sync();
+
+    expect(requests).toHaveLength(2);
+    expect(status(INDIVIDUALS).kind).toBe("ready");
+    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "stopped" });
+    expect(auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(true);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS, INDIVIDUALS]);
+  });
+
+  test("the page is told of every change of what autoRuns knows: a start, a stop with nothing running, and a resume", async () => {
     const { store, requests, auto } = setUp(PAGE_GROUPS);
+    let told = 0;
+    const unsubscribe = auto.subscribe(() => {
+      told += 1;
+    });
+    const version = auto.getVersion();
     open(store, FIRST);
     auto.sync();
+    expect(told).toBe(1);
+    expect(auto.getVersion()).not.toBe(version);
+
     endDone(requests[0]);
     await settled();
     auto.sync();
+    endDone(requests[1]);
+    await settled();
+    const between = auto.getVersion();
+    expect(auto.getVersion()).toBe(between);
+    auto.stop(POPGEN2_STATISTICS_IDS);
+    expect(auto.getVersion()).not.toBe(between);
+    const afterStop = told;
+
+    auto.resume(POPGEN2_STATISTICS_IDS);
+    expect(told).toBeGreaterThan(afterStop);
+
+    unsubscribe();
+    const last = told;
+    auto.stop(POPGEN2_STATISTICS_IDS);
+    expect(told).toBe(last);
+  });
+
+  test("resume after a stop of the histograms of the variants starts them again, and the statistics of each individual after them", async () => {
+    const { requests, auto } = await countDone();
     auto.stop(POPGEN2_STATISTICS_IDS);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
-    expect(analysesOf(requests)).toEqual([
-      ID,
-      "individualChecks",
-      "individualChecks",
-    ]);
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS, VARIANTS]);
     endDone(requests[2]);
     await settled();
     auto.sync();
-    expect(analysesOf(requests).at(-1)).toBe("variantChecks");
+    expect(analysesOf(requests).at(-1)).toBe(INDIVIDUALS);
     expect(requests).toHaveLength(4);
   });
 
-  test("stop while the histograms of the variants run cancels them alone, and resume starts them, not the statistics of each individual, which are done", async () => {
-    const { store, requests, auto, status } = setUp(PAGE_GROUPS);
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
+  test("stop while the statistics of each individual run cancels them alone, and resume starts them, not the histograms of the variants, which are done", async () => {
+    const { requests, auto, status } = await countDone();
     endDone(requests[1]);
     await settled();
     auto.sync();
@@ -401,25 +431,20 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
     expect(requests).toHaveLength(3);
-    expect(status("individualChecks").kind).toBe("done");
-    expect(status("variantChecks").kind).toBe("ready");
+    expect(status(VARIANTS).kind).toBe("done");
+    expect(status(INDIVIDUALS).kind).toBe("ready");
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([
       ID,
-      "individualChecks",
-      "variantChecks",
-      "variantChecks",
+      VARIANTS,
+      INDIVIDUALS,
+      INDIVIDUALS,
     ]);
   });
 
   test("resume does nothing while one of the statistics runs, nor once both are done", async () => {
-    const { store, requests, auto } = setUp(PAGE_GROUPS);
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
+    const { requests, auto } = await countDone();
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
@@ -434,7 +459,7 @@ describe("the statistics of the open file, started after the count, one after th
     expect(requests).toHaveLength(3);
   });
 
-  test("stop does nothing when none of the statistics runs: the count goes on", () => {
+  test("stop does nothing when none of the statistics runs and the count does: the count goes on, and the statistics start after it", async () => {
     const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
@@ -442,19 +467,20 @@ describe("the statistics of the open file, started after the count, one after th
     auto.stop(POPGEN2_STATISTICS_IDS);
     expect(requests[0]?.cancelled).toBe(false);
     expect(status(ID).kind).toBe("running");
+
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS]);
   });
 
-  test("a crash of the statistics of each individual does not hold back the histograms of the variants, and resume then starts the statistics again", async () => {
+  test("a crash of the histograms of the variants does not hold back the statistics of each individual, and resume then starts the histograms again", async () => {
     const { requests, auto, status } = await countDone();
     fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
     auto.sync();
-    expect(status("individualChecks").kind).toBe("error");
-    expect(analysesOf(requests)).toEqual([
-      ID,
-      "individualChecks",
-      "variantChecks",
-    ]);
+    expect(status(VARIANTS).kind).toBe("error");
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS, INDIVIDUALS]);
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     endDone(requests[2]);
@@ -463,10 +489,10 @@ describe("the statistics of the open file, started after the count, one after th
     expect(requests).toHaveLength(3);
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
-    expect(analysesOf(requests).at(-1)).toBe("individualChecks");
+    expect(analysesOf(requests).at(-1)).toBe(VARIANTS);
   });
 
-  test("a defect of ours in the statistics of each individual does not hold back the histograms of the variants", async () => {
+  test("a defect of ours in the histograms of the variants does not hold back the statistics of each individual, and no start again is offered for it", async () => {
     const { requests, auto } = await countDone();
     fail(requests[1], {
       kind: "defect",
@@ -474,26 +500,34 @@ describe("the statistics of the open file, started after the count, one after th
     });
     await settled();
     auto.sync();
-    expect(analysesOf(requests).at(-1)).toBe("variantChecks");
+    expect(analysesOf(requests).at(-1)).toBe(INDIVIDUALS);
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
+    expect(requests).toHaveLength(3);
   });
 
-  test("popnei's refusal of the statistics of each individual holds back the histograms of the variants, and resume starts nothing", async () => {
+  test("popnei's refusal of the histograms of the variants holds back the statistics of each individual, and resume starts nothing", async () => {
     const { requests, auto, status } = await countDone();
     fail(requests[1], { kind: "popnei", message: "not a VCF" });
     await settled();
     auto.sync();
-    expect(status("individualChecks").kind).toBe("error");
+    expect(status(VARIANTS).kind).toBe("error");
     expect(requests).toHaveLength(2);
-    expect(auto.pending("variantChecks")).toEqual({
+    expect(auto.pending(INDIVIDUALS)).toEqual({
       kind: "blocked",
-      by: "individualChecks",
+      by: VARIANTS,
+      because: "failed",
     });
 
+    expect(auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
 
-  test("a variants file the browser could not read again puts both statistics in error, and resume starts nothing", async () => {
+  test("a variants file the browser could not read again puts both statistics in error, and neither canResume nor resume offers a start", async () => {
     const { requests, auto, status } = await countDone();
     fail(requests[1], {
       kind: "reopenFailed",
@@ -502,14 +536,36 @@ describe("the statistics of the open file, started after the count, one after th
     });
     await settled();
     auto.sync();
-    expect(status("individualChecks").kind).toBe("error");
-    expect(status("variantChecks").kind).toBe("error");
+    expect(status(VARIANTS).kind).toBe("error");
+    expect(status(INDIVIDUALS).kind).toBe("error");
     expect(requests).toHaveLength(2);
-    expect(auto.pending("variantChecks")).toBeNull();
+    expect(auto.pending(INDIVIDUALS)).toBeNull();
 
+    expect(auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
+
+  for (const error of [
+    { kind: "couldNotStart", reason: "no worker" },
+    { kind: "protocolMismatch" },
+    { kind: "defect", message: "a message that did not validate" },
+  ] as const) {
+    test(`canResume is false after ${error.kind}, which only a reload mends, though the chain steps past it`, async () => {
+      const { requests, auto, status } = await countDone();
+      fail(requests[1], error);
+      await settled();
+      auto.sync();
+      expect(status(VARIANTS).kind).toBe("error");
+      expect(analysesOf(requests).at(-1)).toBe(INDIVIDUALS);
+      endDone(requests[2]);
+      await settled();
+      auto.sync();
+      expect(auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
+      expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
+      expect(requests).toHaveLength(3);
+    });
+  }
 
   test("a crash of the count holds back the statistics, which wait for the count", async () => {
     const { store, requests, auto } = setUp(PAGE_GROUPS);
@@ -519,15 +575,16 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
     expect(requests).toHaveLength(1);
-    expect(auto.pending("individualChecks")).toEqual({
+    expect(auto.pending(VARIANTS)).toEqual({
       kind: "blocked",
       by: ID,
+      because: "failed",
     });
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
   });
 
-  test("resume of the statistics while the count is stopped starts nothing", async () => {
+  test("after the count's Stop the statistics are not calculated because the count was stopped, and resume of the statistics starts nothing", async () => {
     const { store, requests, auto, status } = setUp(PAGE_GROUPS);
     open(store, FIRST);
     auto.sync();
@@ -535,10 +592,13 @@ describe("the statistics of the open file, started after the count, one after th
     requests[0]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    expect(auto.pending("individualChecks")).toEqual({
-      kind: "waiting",
-      after: ID,
-    });
+    for (const id of [VARIANTS, INDIVIDUALS]) {
+      expect(auto.pending(id)).toEqual({
+        kind: "blocked",
+        by: ID,
+        because: "stopped",
+      });
+    }
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
@@ -549,26 +609,27 @@ describe("the statistics of the open file, started after the count, one after th
     ]);
   });
 
-  test("pending tells an analysis waiting for the one before from one stopped", async () => {
+  test("pending tells an analysis waiting for the one before from one stopped, and from one held back by a stop", async () => {
     const { requests, auto } = await countDone();
-    expect(auto.pending("individualChecks")).toBeNull();
-    expect(auto.pending("variantChecks")).toEqual({
+    expect(auto.pending(VARIANTS)).toBeNull();
+    expect(auto.pending(INDIVIDUALS)).toEqual({
       kind: "waiting",
-      after: "individualChecks",
+      after: VARIANTS,
     });
 
     auto.stop(POPGEN2_STATISTICS_IDS);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    expect(auto.pending("individualChecks")).toEqual({ kind: "stopped" });
-    expect(auto.pending("variantChecks")).toEqual({
-      kind: "waiting",
-      after: "individualChecks",
+    expect(auto.pending(VARIANTS)).toEqual({ kind: "stopped" });
+    expect(auto.pending(INDIVIDUALS)).toEqual({
+      kind: "blocked",
+      by: VARIANTS,
+      because: "stopped",
     });
   });
 
-  test("after a crash of the statistics of each individual and a stop of the histograms of the variants, resume starts both, one after the other", async () => {
+  test("after a crash of the histograms of the variants and a stop of the statistics of each individual, resume starts both, one after the other", async () => {
     const { requests, auto, status } = await countDone();
     fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
@@ -577,27 +638,27 @@ describe("the statistics of the open file, started after the count, one after th
     requests[2]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
+    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "stopped" });
 
     expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
-    expect(analysesOf(requests).at(-1)).toBe("individualChecks");
-    expect(auto.pending("variantChecks")).toEqual({
+    expect(analysesOf(requests).at(-1)).toBe(VARIANTS);
+    expect(auto.pending(INDIVIDUALS)).toEqual({
       kind: "waiting",
-      after: "individualChecks",
+      after: VARIANTS,
     });
-    const variants = status("variantChecks");
-    if (variants.kind !== "ready") throw new Error("not ready");
-    expect(auto.startedUnder(variants.key)).toBe(false);
+    const individuals = status(INDIVIDUALS);
+    if (individuals.kind !== "ready") throw new Error("not ready");
+    expect(auto.startedUnder(individuals.key)).toBe(false);
 
     endDone(requests[3]);
     await settled();
     auto.sync();
     expect(analysesOf(requests)).toEqual([
       ID,
-      "individualChecks",
-      "variantChecks",
-      "individualChecks",
-      "variantChecks",
+      VARIANTS,
+      INDIVIDUALS,
+      VARIANTS,
+      INDIVIDUALS,
     ]);
   });
 
@@ -617,7 +678,12 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
     expect(requests).toHaveLength(4);
-    expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
+    expect(auto.pending(VARIANTS)).toEqual({ kind: "stopped" });
+    expect(auto.pending(INDIVIDUALS)).toEqual({
+      kind: "blocked",
+      by: VARIANTS,
+      because: "stopped",
+    });
   });
 
   test("canResume says whether resume would start one of the statistics, and starts nothing", async () => {
@@ -637,7 +703,7 @@ describe("the statistics of the open file, started after the count, one after th
     endDone(requests[1]);
     await settled();
     auto.sync();
-    // The statistics of each individual running.
+    // The histograms of the variants running.
     expect(can()).toBe(false);
     auto.stop(POPGEN2_STATISTICS_IDS);
     requests[2]?.end({ kind: "cancelled" });
@@ -681,26 +747,19 @@ describe("the statistics of the open file, started after the count, one after th
   test("stop and resume of a list that is not a group is a defect", () => {
     const { auto } = setUp(PAGE_GROUPS);
     expect(() => {
-      auto.stop(["variantChecks"]);
+      auto.stop([INDIVIDUALS]);
     }).toThrow(/popnei_web defect/);
-    expect(() => auto.resume([ID, "individualChecks"])).toThrow(
-      /popnei_web defect/,
-    );
+    expect(() => auto.resume([ID, VARIANTS])).toThrow(/popnei_web defect/);
   });
 
   test("a new file while the statistics run stops them, and starts the count of the new file alone", async () => {
-    const { store, requests, auto } = setUp(PAGE_GROUPS);
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
+    const { store, requests, auto } = await countDone();
 
     open(store, SECOND);
     expect(requests[1]?.cancelled).toBe(true);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    expect(analysesOf(requests)).toEqual([ID, "individualChecks", ID]);
+    expect(analysesOf(requests)).toEqual([ID, VARIANTS, ID]);
   });
 });

@@ -14,8 +14,8 @@
  *   individuals, sorted by any column.
  *
  * Above the parts, one row: the line and the bar of the pass running with
- * one Stop for both statistics, or, once stopped or after a failure a new
- * calculation may mend, the button that starts again those not done.
+ * one Stop for both statistics, or, once stopped or after a crash of the
+ * worker, the button that starts again those not done.
  * Each part says, in place of its result, that it is being calculated,
  * what it waits for, that a failure before it held it back, that it was
  * stopped, or the words of its own failure; a failure of one hides
@@ -26,7 +26,7 @@
  * Drawn once the file is read, the statistics then waiting for the count
  * of its variants, which the box above shows.
  */
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
@@ -134,8 +134,10 @@ function Stats({
   const variantsHeading = useRef<HTMLHeadingElement>(null);
   const individualsHeading = useRef<HTMLHeadingElement>(null);
   // Selected for what autoRuns says of the statistics not started, which
-  // changes with the count.
+  // changes with the count, and with what autoRuns knows, which a Stop
+  // with no pass running changes and the store does not.
   useAppState(summaryStatus);
+  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
   const individuals = useAppState((s) => statsStatus(s, INDIVIDUALS_ID));
   const variants = useAppState((s) => statsStatus(s, VARIANTS_ID));
   const project = useAppState((s) => s.project);

@@ -22,9 +22,10 @@ import type { Job, JobResult } from "../worker/protocol.ts";
 
 /** The ids of the statistics of the open file, the analyses of
     `POPGEN2_ANALYSES` but the summary, in their order there, the order
-    the page starts them: the statistics of each individual, then the
-    histograms of the variants (docs/plans/file-stats.md, "They start on
-    their own, one after the other"). One Stop of the page stops them. */
+    the page starts them: the histograms of the variants, then the
+    statistics of each individual (docs/plans/file-stats.md, "They start
+    on their own, one after the other"). One Stop of the page stops
+    them. */
 export const POPGEN2_STATISTICS_IDS: readonly AnalysisId[] = Object.freeze(
   POPGEN2_ANALYSES.filter((def) => def.id !== variantsSummary.id).map(
     (def) => def.id,

@@ -1284,33 +1284,38 @@ The page and each worker talk through typed messages
   does. On `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts`
   starts by itself the summary of the variants file, the count of its
   variants, and from 6 October 2026 the statistics of the open file after
-  it, the statistics of each individual and then the histograms of the
-  variants (`docs/plans/file-stats.md`). They start in that order, one
+  it, the histograms of the variants and then the statistics of each
+  individual, the order of their parts on the page
+  (`docs/plans/file-stats.md`). They start in that order, one
   at a time: the one calculation worker runs one request at a time, and
   the store has no state for a request that waits in the client's queue,
   so three sent at once would all show as running, two of them with no
   progress. The statistics start only once the count is done; the
-  histograms of the variants once the statistics of each individual are
-  done, or failed in a way a new calculation may mend, a crash or a defect
-  of ours, since each is shown apart and a failure of one should not hide
-  the other. popnei's refusal of the file, or a file the browser could not
+  statistics of each individual once the histograms of the variants are
+  done, or failed in a way that does not fail the next pass too, a crash
+  or a defect of ours, since each is shown apart and a failure of one
+  should not hide the other. popnei's refusal of the file, or a file the browser could not
   read again, holds them back, since their pass would fail the same way
   after minutes. Each starts once for each key: when the file is read,
   again after a read with other options, which is a new load and a new
   key, and at the user's Count again or start again of the statistics;
   not again after a failure or a Stop under the same key, and a Stop
-  also keeps those after it from starting. The statistics have one Stop,
+  also keeps those after it from starting, the one about to start
+  between two passes among them. The statistics have one Stop,
   which stops the one running, and one start again, which starts the
   first not done and lets the rest of the statistics start after it
   (`stop` and `resume` of `autoRuns.ts`, which says whether it started
-  one: not while the count is not done, nor after a refusal or a file
-  that could not be read again); the count keeps its own Stop and Count
+  one: not while the count is not done, nor after any failure but a
+  crash of the worker, the others failing again or asking for a reload);
+  the count keeps its own Stop and Count
   again, and since the statistics start only once the count is done, its
   Stop leaves them not started and its Count again waits behind none of
   them. After a Stop the store's state is `ready`, as before any run, and
   the keys `autoRuns.ts` remembers are the one record that the analysis
   was stopped; its `pending` tells the page whether one not started waits
-  for the one before, is held back by a failure, or was stopped. None
+  for the one before, is held back by a failure or a Stop of one before
+  it, or was stopped, and its `subscribe` tells the page when that
+  changes with no change of the store, as a Stop between two passes. None
   of the three reads a filter yet, the page having none. A limit the
   piece that adds the filters to that page must settle: an analysis that
   starts by itself and reads a filter, as the histograms of the variants

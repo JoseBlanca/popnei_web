@@ -157,7 +157,7 @@ describe("WS9 the Save of the error bar", () => {
     expect(
       barText(defect("out of memory", "statisticsStopped"), "noSaving", false),
     ).toBe(
-      "The application stopped as it calculated the statistics: out of memory. Start the statistics again, and if it stops again, reload the page and open your files again.",
+      "The application stopped as it calculated the statistics: out of memory. Once the other statistics are calculated, start the statistics again; if it stops again, reload the page and open your files again.",
     );
   });
 

@@ -23,8 +23,14 @@
  * Stop, which leaves it ready under a key it was started under and holds
  * back those after it; but again for a new file, or a new read of it,
  * which gives a new key, and when the user asks, with `again` or
- * `resume`. The entry calls `sync` after every change of the store.
- * Plain TypeScript, so that a test in node drives it on the real store.
+ * `resume`, after a Stop or a crash of the worker, the one failure a new
+ * calculation is offered for: popnei's refusal and a file that could not
+ * be read again fail the same way again, and a page that could not start
+ * its calculations, a page out of date or a defect of ours ask for a
+ * reload. The entry calls `sync` after every change of the store, and the
+ * page reads what changes here, which no change of the store tells,
+ * through `subscribe` and `getVersion`. Plain TypeScript, so that a test
+ * in node drives it on the real store.
  */
 
 import type { Key } from "../core/keys.ts";
@@ -44,9 +50,14 @@ export type Pending =
       stopped, which waits for the user to start it again; `null` when
       none is left and it starts at the next `sync`. */
   | { readonly kind: "waiting"; readonly after: AnalysisId | null }
-  /** `by`, an analysis before it, is in error, or cannot run, and holds
-      it back until `by` is run again and done. */
-  | { readonly kind: "blocked"; readonly by: AnalysisId }
+  /** `by`, an analysis before it, holds it back until `by` is run again
+      and done: `because` it failed, or cannot run, or because it was
+      stopped. */
+  | {
+      readonly kind: "blocked";
+      readonly by: AnalysisId;
+      readonly because: "failed" | "stopped";
+    }
   /** It was stopped: it was started under its key, and nothing will
       start it again but the user. */
   | { readonly kind: "stopped" };
@@ -58,8 +69,8 @@ export interface AutoRuns {
       nothing while one of them runs. */
   sync(): void;
   /** Starts the analysis `id` again, at the user's Count again, after a
-      Stop or a failure that a new calculation may mend; nothing when the
-      store does not start it. */
+      Stop or a crash of the worker; nothing in any other state, nor when
+      the store does not start it. */
   again(id: AnalysisId): void;
   /** Whether the analysis was started under `key` and is not to be
       started again by itself: an analysis that can run under such a key
@@ -71,7 +82,10 @@ export interface AutoRuns {
   /** Stops the calculation in flight of each of `group`, one of the
       groups, at the user's Stop of it, the statistics of the file: the
       one running is left ready under a key it was started under, so
-      neither it nor those after it start again by themselves. */
+      neither it nor those after it start again by themselves. Once every
+      analysis before the group is done, those of the group not started
+      are recorded as started too, so that one about to start, between the
+      end of one pass and the start of the next, does not start. */
   stop(group: readonly AnalysisId[]): void;
   /** Starts again, at the user's start again of `group`, one of the
       groups, the first of it that is not done, as `again` starts it, and
@@ -80,13 +94,21 @@ export interface AutoRuns {
       started one. It starts nothing, and returns false, when one of the
       analyses of every group runs; when one before the group is not
       done; when every one of the group is done; and when the first not
-      done is locked, or in error from popnei's refusal or from a
-      variants file the browser could not read again, which a new
-      calculation would not mend. */
+      done is locked, or in error from anything but a crash of the
+      worker. */
   resume(group: readonly AnalysisId[]): boolean;
   /** Whether `resume` of `group` would start one of it now, for the page
       to offer its start again only then; it starts nothing. */
   canResume(group: readonly AnalysisId[]): boolean;
+  /** Calls `listener` after every change of what this knows beyond the
+      store, which keys were started and which were given back; returns
+      the function that stops it. A property made once, so that React
+      keeps it. */
+  readonly subscribe: (listener: () => void) => () => void;
+  /** A number that changes at every such change, for React's
+      `useSyncExternalStore`, with `subscribe`. A property made once, as
+      `subscribe` is. */
+  readonly getVersion: () => number;
 }
 
 /** The key of a status that can be started: ready, or removed by the
@@ -104,9 +126,10 @@ function startableKey(status: AnalysisStatus<unknown>): Key | null {
   }
 }
 
-/** Whether `status` is an error that a new calculation may mend: a
-    failure that is not popnei's refusal nor a variants file the browser
-    could not read again, as the store's own rule of what it starts. */
+/** Whether `status` is an error that does not hold back those after it
+    in its group: a failure that is not popnei's refusal nor a variants
+    file the browser could not read again, as the store's own rule of what
+    it starts. */
 function isMendable(status: AnalysisStatus<unknown>): boolean {
   return (
     status.kind === "error" &&
@@ -116,10 +139,17 @@ function isMendable(status: AnalysisStatus<unknown>): boolean {
 }
 
 /** The key under which `status` can be started again at the user's
-    asking: that of a startable status or of a mendable error; `null` for
-    any other. */
+    asking: that of a startable status or of a crash of the worker, the
+    one failure a new calculation is offered for, as the count offers its
+    Count again (`countAgainMends` of variants/words.ts); `null` for any
+    other. */
 function againKey(status: AnalysisStatus<unknown>): Key | null {
-  if (status.kind === "error") return isMendable(status) ? status.key : null;
+  if (status.kind === "error") {
+    return status.error.kind === "failed" &&
+      status.error.error.kind === "workerFailed"
+      ? status.key
+      : null;
+  }
   return startableKey(status);
 }
 
@@ -157,6 +187,15 @@ export function createAutoRuns(deps: {
   /** The analyses `resume` gave back, each with the key it may start
       under once those before it let it. */
   const resumed = new Map<AnalysisId, Key>();
+  /** The page's listeners, told of every change of `started` and
+      `resumed`, and the number that counts those changes. */
+  const listeners = new Set<() => void>();
+  let version = 0;
+
+  function changed(): void {
+    version += 1;
+    for (const listener of [...listeners]) listener();
+  }
 
   function statusOf(id: AnalysisId): AnalysisStatus<unknown> {
     const status = store.getState().analyses.find((a) => a.id === id)?.status;
@@ -171,8 +210,16 @@ export function createAutoRuns(deps: {
   function startOne(id: AnalysisId, key: Key): boolean {
     started.add(key);
     resumed.delete(id);
+    changed();
     const sent = start(id);
     return sent !== null;
+  }
+
+  /** Whether `id`, ready or removed by the notice, was stopped: started
+      under its key, and not given back by `resume`. */
+  function isStopped(id: AnalysisId): boolean {
+    const key = startableKey(statusOf(id));
+    return key !== null && started.has(key) && resumed.get(id) !== key;
   }
 
   /** The first analysis before `id`, at `index` of `ids`, that holds it
@@ -243,6 +290,7 @@ export function createAutoRuns(deps: {
         const back = resumed.get(id);
         if (back !== undefined && back !== againKey(status)) {
           resumed.delete(id);
+          changed();
         }
         if (holderOf(id, index) !== null) return;
         const fresh = startableKey(status);
@@ -267,26 +315,35 @@ export function createAutoRuns(deps: {
           `popnei_web defect: ${id} is not among the analyses started by themselves.`,
         );
       }
-      const key = startableKey(statusOf(id));
-      if (key === null) return null;
+      if (startableKey(statusOf(id)) === null) return null;
       const holder = holderOf(id, index);
       if (holder !== null) {
         const kind = statusOf(holder).kind;
         if (kind === "error" || kind === "locked") {
-          return { kind: "blocked", by: holder };
+          return { kind: "blocked", by: holder, because: "failed" };
         }
       }
-      if (started.has(key) && resumed.get(id) !== key) {
-        return { kind: "stopped" };
+      if (holder !== null && isStopped(holder)) {
+        return { kind: "blocked", by: holder, because: "stopped" };
       }
+      if (isStopped(id)) return { kind: "stopped" };
       return { kind: "waiting", after: holder };
     },
     stop: (group) => {
-      placeOf(group);
+      const place = placeOf(group);
+      // The statistics wait for the count: while it is not done, none of
+      // them is about to start, and a Stop of theirs leaves them waiting.
+      const free = ids
+        .slice(0, place)
+        .every((id) => statusOf(id).kind === "done");
       for (const id of group) {
         resumed.delete(id);
-        if (statusOf(id).kind === "running") store.cancelRun(id);
+        const status = statusOf(id);
+        if (status.kind === "running") store.cancelRun(id);
+        const key = startableKey(status);
+        if (free && key !== null) started.add(key);
       }
+      changed();
     },
     resume: (group) => {
       const first = resumable(group);
@@ -297,8 +354,16 @@ export function createAutoRuns(deps: {
       }
       if (startOne(first.id, first.key)) return true;
       for (const id of group) resumed.delete(id);
+      changed();
       return false;
     },
     canResume: (group) => resumable(group) !== null,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    getVersion: () => version,
   };
 }

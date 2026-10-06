@@ -484,11 +484,11 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     passStats: { numVars: 1200, filtering: {} },
   };
 
-  test("the new page has the summary, the statistics of each individual and the histograms of the variants, and the analyses of the old page do not hold the summary", () => {
+  test("the new page has the summary, the histograms of the variants and the statistics of each individual, in that order, and the analyses of the old page do not hold the summary", () => {
     expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
       "variantsSummary",
-      "individualChecks",
       "variantChecks",
+      "individualChecks",
     ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
@@ -539,8 +539,8 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
-      ["individualChecks", "ready"],
       ["variantChecks", "ready"],
+      ["individualChecks", "ready"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

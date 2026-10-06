@@ -91,9 +91,10 @@ export function isStatsId(id: AnalysisId): id is StatsId {
 /**
  * What a part says of its statistic, ready to run and not started,
  * `pending` of autoRuns.ts: that it waits for the count of the variants,
- * or for the statistics of the individuals; that it starts now, when none
+ * or for the statistics of the variants; that it starts now, when none
  * holds it back; that it is not calculated since the one before it
- * failed or cannot run; or that it was stopped.
+ * failed or cannot run, or was stopped, which nothing but the user starts
+ * again; or that it was stopped itself.
  */
 export function pendingText(pending: Pending): string {
   switch (pending.kind) {
@@ -103,11 +104,24 @@ export function pendingText(pending: Pending): string {
         ? "Waiting for the count of the variants."
         : `Waiting for ${subjectOf(pending.after)}.`;
     case "blocked":
-      return pending.by === SUMMARY_ID
-        ? "Not calculated: the variants were not counted."
-        : `Not calculated: ${subjectOf(pending.by)} failed.`;
+      return blockedText(pending.by, pending.because);
     case "stopped":
       return PART_STOPPED;
+  }
+}
+
+/** What a part says when `by`, an analysis before it, holds it back,
+    `because` it failed or was stopped. */
+function blockedText(by: AnalysisId, because: "failed" | "stopped"): string {
+  switch (because) {
+    case "failed":
+      return by === SUMMARY_ID
+        ? "Not calculated: the variants were not counted."
+        : `Not calculated: ${subjectOf(by)} failed.`;
+    case "stopped":
+      return by === SUMMARY_ID
+        ? "Not calculated: the count of the variants was stopped."
+        : `Not calculated: ${subjectOf(by)} were stopped.`;
   }
 }
 

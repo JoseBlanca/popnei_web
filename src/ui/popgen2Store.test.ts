@@ -12,10 +12,10 @@ import {
 // that records the jobs and never ends them.
 
 describe("the store of popgen2.html", () => {
-  test("the page starts the summary by itself, then the statistics of each individual and the histograms of the variants, in that order", () => {
+  test("the page starts the summary by itself, then the histograms of the variants and the statistics of each individual, in that order", () => {
     expect(POPGEN2_AUTO_GROUPS).toEqual([
       ["variantsSummary"],
-      ["individualChecks", "variantChecks"],
+      ["variantChecks", "individualChecks"],
     ]);
     expect(POPGEN2_STATISTICS_IDS).toBe(POPGEN2_AUTO_GROUPS[1]);
   });
