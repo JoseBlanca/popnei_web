@@ -2,7 +2,8 @@
  * The script the browser runs as the calculation worker
  * (docs/specs/worker/runner.md, "Two files"): it loads popnei when it
  * starts, checks every request of the page with `parseToRunner`, gives it
- * to runner.ts, and posts the answer and the progress. popnei is called in
+ * to runner.ts, and posts the answer, the progress and the results so far.
+ * popnei is called in
  * runner.ts alone.
  *
  * Every request gets its answer or a `crashed` or `badRequest`, after
@@ -81,7 +82,11 @@ function answerOpen(held: Runner, request: OpenRequest): void {
 
 function answerRun(held: Runner, request: RunRequest): void {
   const { id, key, job } = request;
-  const answer = held.run(job, progressOf(id));
+  const answer = held.run(job, progressOf(id), (result) => {
+    // What this throws, a buffer that cannot be transferred or a result
+    // the browser cannot copy, is the runner's to throw on as ours.
+    post({ kind: "soFar", id, key, result }, transferablesOf(result));
+  });
   switch (answer.kind) {
     case "ok":
       post(

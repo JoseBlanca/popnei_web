@@ -64,7 +64,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -129,6 +129,20 @@ export type FromRunner =
       /** The key the `run` was asked with. */
       readonly key: string;
       /** The result, of the analysis of the job. */
+      readonly result: JobResult;
+    }
+  /** The result so far of a `run` whose calculation gives one, the
+      summary of the variants file: the result over the variants read so
+      far, of the analysis of the job, sent while the pass runs, every 2
+      seconds as popnei gives it, before the `result`. */
+  | {
+      /** Which message this is. */
+      readonly kind: "soFar";
+      /** The id of the `run`. */
+      readonly id: number;
+      /** The key the `run` was asked with. */
+      readonly key: string;
+      /** The result over the variants read so far. */
       readonly result: JobResult;
     }
   /** The answer of a `write`: the file, as a `Blob` the runner made. */
@@ -545,7 +559,8 @@ export function parseFromRunner(
         ploidy: ploidy.value,
       });
     }
-    case "result": {
+    case "result":
+    case "soFar": {
       const wrong = exactFields(record, place, ["kind", "id", "key", "result"]);
       if (wrong !== null) {
         return wrong;
@@ -844,6 +859,7 @@ const FROM_RUNNER_KINDS: Readonly<Record<FromRunner["kind"], true>> = {
   ready: true,
   opened: true,
   result: true,
+  soFar: true,
   written: true,
   refused: true,
   reopenFailed: true,

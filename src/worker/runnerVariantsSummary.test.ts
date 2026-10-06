@@ -382,3 +382,129 @@ describe("open-variants 1 chromsOf, popnei's density made the chromosomes of the
     expect(() => chromsOf(given)).toThrow(/^popnei_web defect:/u);
   });
 });
+
+/** A VCF of `numVars` variants on the chromosome 1 and two diploid
+    individuals, gzipped, which popnei reads in blocks of 10,000
+    variants: two blocks for 20,000. */
+function twoIndividualsVcf(numVars: number): Uint8Array<ArrayBuffer> {
+  const lines = [
+    "##fileformat=VCFv4.2",
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts0\ts1",
+  ];
+  const genotypes = ["0/1", "0/0", "1/1"];
+  for (let v = 0; v < numVars; v += 1) {
+    lines.push(
+      `1\t${String(v + 1)}\t.\tA\tT\t.\t.\t.\tGT\t${genotypes[v % 3] ?? ""}\t${genotypes[(v + 1) % 3] ?? ""}`,
+    );
+  }
+  return new Uint8Array(gzipSync(`${lines.join("\n")}\n`));
+}
+
+/** The buffers of the typed arrays of a summary. */
+function buffersOf(result: VariantsSummaryResult): readonly ArrayBufferLike[] {
+  const { perVar, perIndividual } = result;
+  return [
+    result.numVarsPerChrom,
+    perVar.binEdges,
+    perVar.missingRate.counts,
+    perVar.maf.counts,
+    perVar.obsHet.counts,
+    perVar.unbiasedExpHet.counts,
+    perIndividual.missingGtRate,
+    perIndividual.obsHetRate,
+  ].map((array) => array.buffer);
+}
+
+describe("live-stats 2 the results so far of the summary of the variants file", () => {
+  // popnei's numbers under node, js-v0.2.1, 6 October 2026: the VCF of
+  // 20,000 variants and two individuals is read in two blocks, and with
+  // soFarEvery 0 popnei gives a result so far after each, over 10,000 and
+  // then 20,000 variants.
+  test("a file of two blocks gives a result so far after each with soFarEvery 0, the first over its first block and the last the result, each a copy that can be transferred", () => {
+    const runner = createRunner({ soFarEvery: 0 });
+    const open = runner.open(PAGE_VCF, {
+      name: "two_blocks.vcf.gz",
+      source: twoIndividualsVcf(20_000),
+    });
+    expect(open.kind).toBe("ok");
+    const soFar: JobResult[] = [];
+    const result = summaryOf(
+      runner.run(JOB, ignore, (given) => {
+        soFar.push(given);
+      }),
+    );
+    const summaries = soFar.map((given) =>
+      summaryOf({ kind: "ok", value: given }),
+    );
+    expect(summaries.map((given) => numbersOf(given))).toEqual([
+      {
+        chroms: ["1"],
+        numVarsPerChrom: [10_000],
+        passStats: { numVars: 10_000, filtering: {} },
+      },
+      {
+        chroms: ["1"],
+        numVarsPerChrom: [20_000],
+        passStats: { numVars: 20_000, filtering: {} },
+      },
+    ]);
+    expect(summaries.map((given) => given.perIndividual.individuals)).toEqual([
+      ["s0", "s1"],
+      ["s0", "s1"],
+    ]);
+    const last = summaries.at(-1);
+    expect(last).toEqual(result);
+    // No buffer of a result so far is that of the result or of another
+    // result so far, and transferring them leaves the result whole.
+    const ofResult = new Set(buffersOf(result));
+    const seen = new Set<ArrayBufferLike>();
+    for (const given of summaries) {
+      for (const buffer of buffersOf(given)) {
+        expect(ofResult.has(buffer)).toBe(false);
+        expect(seen.has(buffer)).toBe(false);
+        seen.add(buffer);
+      }
+      structuredClone(given, { transfer: transferablesOf(given) });
+    }
+    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perIndividual.missingGtRate).toHaveLength(2);
+    expect(numbersOf(result)).toEqual({
+      chroms: ["1"],
+      numVarsPerChrom: [20_000],
+      passStats: { numVars: 20_000, filtering: {} },
+    });
+  });
+
+  test("with popnei's 2 seconds, panel.vcf.gz, read in less, gives no result so far", () => {
+    const soFar: JobResult[] = [];
+    summaryOf(
+      opened("panel.vcf.gz").run(JOB, ignore, (given) => {
+        soFar.push(given);
+      }),
+    );
+    expect(soFar).toEqual([]);
+  });
+
+  test("what the function of the results so far throws is thrown by the run, ours, and not answered as popnei's refusal", () => {
+    const runner = createRunner({ soFarEvery: 0 });
+    runner.open(PAGE_VCF, {
+      name: "two_blocks.vcf.gz",
+      source: twoIndividualsVcf(20_000),
+    });
+    const thrown = new Error("the result so far could not be posted");
+    expect(() =>
+      runner.run(JOB, ignore, () => {
+        throw thrown;
+      }),
+    ).toThrow(thrown);
+    // Thrown at the last block too, after which popnei's call returns.
+    const atTheEnd = new Error("thrown at the last result so far");
+    let calls = 0;
+    expect(() =>
+      runner.run(JOB, ignore, () => {
+        calls += 1;
+        if (calls === 2) throw atTheEnd;
+      }),
+    ).toThrow(atTheEnd);
+  });
+});

@@ -50,6 +50,7 @@ import type {
   Step,
   VarDensity,
   Variants,
+  VariantsSummary,
   VariantsPcaResult,
   VariantsPcoaResult,
 } from "popnei";
@@ -143,12 +144,20 @@ export interface Runner {
    * Runs the job over the load opened, first opening the file again when
    * the steps of the `Variants` are not the job's, its list of individuals
    * and then its filters of the variants, and gives `told` each
-   * `Progress` of popnei as it comes. `badRequest` for a run before the
-   * open or of another load, an empty list of individuals and two
-   * populations of one name. Throws what `told` throws, and a defect of
-   * ours.
+   * `Progress` of popnei as it comes, and `toldSoFar`, when given, each
+   * result so far of a calculation that gives one, the summary of the
+   * variants file, a copy over buffers of its own that can be
+   * transferred. `badRequest`
+   * for a run before the open or of another load, an empty list of
+   * individuals and two populations of one name. Throws what `told` or
+   * `toldSoFar` throws, and a defect of ours, one in making a result so
+   * far among them.
    */
-  run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  run(
+    job: Job,
+    told: (progress: Progress) => void,
+    toldSoFar?: (result: JobResult) => void,
+  ): Answer<JobResult>;
   /**
    * Writes the variants the job's filters keep, of the individuals of its
    * list, as a `.nei` file, opening the file again as `run` does, and
@@ -388,8 +397,16 @@ interface Steps {
   readonly filters: readonly VariantFilter[];
 }
 
+/** What a runner is made with, for the tests. */
+export interface RunnerOptions {
+  /** The seconds between two results so far, popnei's `soFarEvery`;
+      popnei's 2 when not given. A test gives 0, a result so far after
+      every block, to have one from a small file. */
+  readonly soFarEvery?: number;
+}
+
 /** A runner holding nothing; `loadPopnei` has to have given `ok`. */
-export function createRunner(): Runner {
+export function createRunner(options: RunnerOptions = {}): Runner {
   let held: Held = { kind: "none" };
   /** The `Variants` of the load opened; `null` before the open, after an
       open that gave none, and after an open again that popnei refused. */
@@ -495,6 +512,7 @@ export function createRunner(): Runner {
   function run(
     job: Job,
     told: (progress: Progress) => void,
+    toldSoFar: (result: JobResult) => void = () => undefined,
   ): Answer<JobResult> {
     const theLoad = openedFor("run", job.fileId);
     if (theLoad.kind !== "ok") {
@@ -520,7 +538,10 @@ export function createRunner(): Runner {
       case "filterCounts":
         return runFilterCounts(pass, job);
       case "variantsSummary":
-        return runVariantsSummary(pass, job, individuals);
+        return runVariantsSummary(pass, job, individuals, {
+          toldSoFar,
+          soFarEvery: options.soFarEvery ?? null,
+        });
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -733,18 +754,35 @@ interface Pass {
   readonly told: (progress: Progress) => void;
 }
 
+/** Wraps a function of ours that popnei calls while a pass reads, so
+    that what it throws is recorded as ours, as what `told` throws is. */
+type Ours = <A>(call: (argument: A) => void) => (argument: A) => void;
+
 /**
  * Makes the pass of `consume`, the one call to popnei that reads the file,
  * with `told` given every `Progress`, and answers what it threw as popnei's
- * refusal. What `told` throws is thrown on, a defect of ours, and not taken
- * for popnei's refusal nor dropped: while a pass reads it ends the pass and
- * popnei's call throws that same value back; at the end of the run popnei's
- * call returns, and it is thrown here.
+ * refusal. What `told` throws, and what throws a function of ours that
+ * `consume` gives popnei wrapped by `ours`, its `onSoFar`, is thrown on, a
+ * defect of ours, and not taken for popnei's refusal nor dropped: while a
+ * pass reads it ends the pass and popnei's call throws that same value
+ * back; at the end of the run popnei's call returns, and it is thrown
+ * here.
  */
-function passOf<T>(pass: Pass, consume: (variants: Variants) => T): Answer<T> {
+function passOf<T>(
+  pass: Pass,
+  consume: (variants: Variants, ours: Ours) => T,
+): Answer<T> {
   const { variants, name, told } = pass;
-  /** What `told` threw, none or one value. */
+  /** What `told` threw, or a function of ours, none or one value. */
   const thrownByTold: unknown[] = [];
+  const ours: Ours = (call) => (argument) => {
+    try {
+      call(argument);
+    } catch (thrown: unknown) {
+      thrownByTold.push(thrown);
+      throw thrown;
+    }
+  };
   variants.onProgress((progress) => {
     try {
       told({
@@ -760,7 +798,7 @@ function passOf<T>(pass: Pass, consume: (variants: Variants) => T): Answer<T> {
   });
   let value: T;
   try {
-    value = consume(variants);
+    value = consume(variants, ours);
   } catch (thrown: unknown) {
     if (thrownByTold.some((caught) => caught === thrown)) {
       throw thrown;
@@ -854,7 +892,7 @@ function runIndividualChecks(
   job: IndividualChecksJob,
   individuals: readonly string[],
 ): Answer<JobResult> {
-  const answer = passOf(pass, calcPerIndividualStats);
+  const answer = passOf(pass, (variants) => calcPerIndividualStats(variants));
   if (answer.kind !== "ok") {
     return answer;
   }
@@ -998,6 +1036,13 @@ export function chromsOf(
   return { chroms, numVarsPerChrom: numVars };
 }
 
+/** How the summary gives its results so far: the function told each
+    one, and the seconds between two, `null` for popnei's 2. */
+interface SoFar {
+  readonly toldSoFar: (result: JobResult) => void;
+  readonly soFarEvery: number | null;
+}
+
 /**
  * Runs `calcVariantsSummary`, the one pass over every variant and every
  * individual of the file, with its three parts: `density` with one window
@@ -1007,31 +1052,59 @@ export function chromsOf(
  * gives would refuse a file otherwise usable); `perVar`, the histograms
  * of the variants with the bins of the job, over every individual as one
  * population; and `perIndividual`. Each part is the same to the bit as
- * its own call gives it. The job has no filter. Throws a defect when
- * popnei gives no value of a part it was asked for.
+ * its own call gives it. The job has no filter.
+ *
+ * While the pass runs, popnei gives the summary over the variants read so
+ * far every `soFarEvery` seconds, and `toldSoFar` is given each, made as
+ * the result is and copied, since its arrays may be those of popnei's
+ * next result so far or of its final result, which a transfer of them
+ * would empty. What making it, copying it or `toldSoFar` throws is ours
+ * (`passOf`). Throws a defect when popnei gives no value of a part it was
+ * asked for, in a result so far or in the result.
  */
 function runVariantsSummary(
   pass: Pass,
   job: VariantsSummaryJob,
   individuals: readonly string[],
+  soFar: SoFar,
 ): Answer<JobResult> {
-  const answer = passOf(pass, (variants) =>
+  const answer = passOf(pass, (variants, ours) =>
     calcVariantsSummary(variants, {
       density: { windowSize: ONE_WINDOW_PER_CHROM, chromLengths: {} },
       perVar: perVarOptionsOf(job),
       perIndividual: {},
+      onSoFar: ours((summary: VariantsSummary) => {
+        soFar.toldSoFar(
+          copiedSummary(summaryResultOf(summary, job, individuals)),
+        );
+      }),
+      ...(soFar.soFarEvery !== null && { soFarEvery: soFar.soFarEvery }),
     }),
   );
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { density, perVar, perIndividual, passStats } = answer.value;
+  return {
+    kind: "ok",
+    value: summaryResultOf(answer.value, job, individuals),
+  };
+}
+
+/** The result of the summary of the variants file made of popnei's
+    summary, a result so far or the final one. Throws a defect when popnei
+    gives no value of a part it was asked for. */
+function summaryResultOf(
+  summary: VariantsSummary,
+  job: VariantsSummaryJob,
+  individuals: readonly string[],
+): VariantsSummaryResult {
+  const { density, perVar, perIndividual, passStats } = summary;
   if (density === null || perVar === null || perIndividual === null) {
     throw new Error(
       "popnei_web defect: calcVariantsSummary gave no value of a part it was asked for",
     );
   }
-  const result: VariantsSummaryResult = {
+  return {
     analysis: "variantsSummary",
     ...chromsOf(density),
     perVar: variantStatsPartOf(perVar, job.filters),
@@ -1042,7 +1115,36 @@ function runVariantsSummary(
     ),
     passStats: passStatsOf(passStats, job.filters),
   };
-  return { kind: "ok", value: result };
+}
+
+/** A copy of a summary whose every typed array is over a buffer of its
+    own, of its length, that no other array shares. */
+export function copiedSummary(
+  result: VariantsSummaryResult,
+): VariantsSummaryResult {
+  const { perVar, perIndividual } = result;
+  return {
+    ...result,
+    numVarsPerChrom: result.numVarsPerChrom.slice(),
+    perVar: {
+      ...perVar,
+      binEdges: perVar.binEdges.slice(),
+      missingRate: copiedDistrib(perVar.missingRate),
+      maf: copiedDistrib(perVar.maf),
+      obsHet: copiedDistrib(perVar.obsHet),
+      unbiasedExpHet: copiedDistrib(perVar.unbiasedExpHet),
+    },
+    perIndividual: {
+      ...perIndividual,
+      missingGtRate: perIndividual.missingGtRate.slice(),
+      obsHetRate: perIndividual.obsHetRate.slice(),
+    },
+  };
+}
+
+/** A copy of a distribution, its counts over a buffer of their own. */
+function copiedDistrib(distrib: VariantDistrib): VariantDistrib {
+  return { ...distrib, counts: distrib.counts.slice() };
 }
 
 /** The mean and the counts of popnei's distribution of its one

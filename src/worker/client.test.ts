@@ -128,8 +128,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 8, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 8 };
+const READY = { kind: "ready", protocol: 9, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 9 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -739,6 +739,106 @@ describe("WS2 D3 the client: progress", () => {
       numPasses: 1,
     });
     expect(await now(env.r1.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    expect(env.first.terminated).toBe(true);
+  });
+});
+
+function soFarOf(id: number, key: string): unknown {
+  return { kind: "soFar", id, key, result: RESULT };
+}
+
+describe("live-stats 2 the client: the results so far", () => {
+  test("each result so far of the run running reaches its onSoFar as it came, and the run goes on to its result", async () => {
+    const env = withA();
+    const seen: JobResult[] = [];
+    const run = env.client.run("k1", job("A"), noProgress, (result) => {
+      seen.push(result);
+    });
+    emit(env.first, soFarOf(run.id, "k1"));
+    emit(env.first, soFarOf(run.id, "k1"));
+    expect(seen).toEqual([RESULT, RESULT]);
+    expect(env.first.terminated).toBe(false);
+    emit(env.first, resultOf(run.id, "k1"));
+    expect(await now(run.outcome)).toMatchObject({ kind: "done", key: "k1" });
+    expect(seen).toHaveLength(2);
+  });
+
+  test("a run with no onSoFar passes its results so far over", async () => {
+    const env = withA();
+    const run = env.client.run("k1", job("A"), noProgress);
+    emit(env.first, soFarOf(run.id, "k1"));
+    emit(env.first, resultOf(run.id, "k1"));
+    expect(await now(run.outcome)).toMatchObject({ kind: "done", key: "k1" });
+  });
+
+  test("a result so far of a run cancelled reaches nobody: its worker was ended", async () => {
+    const env = withA();
+    const seen: JobResult[] = [];
+    const run = env.client.run("k1", job("A"), noProgress, (result) => {
+      seen.push(result);
+    });
+    run.cancel();
+    expect(await now(run.outcome)).toEqual({ kind: "cancelled" });
+    emit(env.first, soFarOf(run.id, "k1"));
+    expect(seen).toEqual([]);
+    expect(env.calculation).toHaveLength(2);
+    expect(last(env.calculation).terminated).toBe(false);
+  });
+
+  test.each([
+    [
+      "of the run waiting",
+      (env: ReturnType<typeof twoRuns>) => soFarOf(env.r2.id, "r2"),
+    ],
+    ["of an id never sent", () => soFarOf(99, "r1")],
+    [
+      "under another key than its run's",
+      (env: ReturnType<typeof twoRuns>) => soFarOf(env.r1.id, "k9"),
+    ],
+    [
+      "of another analysis than its job's",
+      (env: ReturnType<typeof twoRuns>) => ({
+        kind: "soFar",
+        id: env.r1.id,
+        key: "r1",
+        result: { analysis: "filterCounts", passStats: RESULT.passStats },
+      }),
+    ],
+    [
+      "that fails its check",
+      (env: ReturnType<typeof twoRuns>) => ({
+        kind: "soFar",
+        id: env.r1.id,
+        key: "r1",
+      }),
+    ],
+  ])(
+    "a result so far %s is a defect: the run fails, nothing reaches its onSoFar, and the worker is started again",
+    async (_name, message) => {
+      const console_ = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const env = twoRuns();
+      emit(env.first, message(env));
+      expect(await now(env.r1.outcome)).toMatchObject({
+        kind: "failed",
+        error: { kind: "defect" },
+      });
+      expect(console_).toHaveBeenCalledOnce();
+      expectRestartedWithR2(env);
+    },
+  );
+
+  test("a result so far after the result of its run, of a run done, is a defect", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const env = twoRuns();
+    emit(env.first, resultOf(env.r1.id, "r1"));
+    expect(await now(env.r1.outcome)).toMatchObject({ kind: "done" });
+    emit(env.first, soFarOf(env.r1.id, "r1"));
+    expect(await now(env.r2.outcome)).toMatchObject({
       kind: "failed",
       error: { kind: "defect" },
     });
