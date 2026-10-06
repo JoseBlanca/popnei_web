@@ -211,11 +211,15 @@ const RANGE_NOT_GIVEN = [
  * does not have, "popnei: `numCompsKept` is not an option of
  * `doPcoaFromVariants`, whose options are `minNumSnps` and
  * `correctByLingoes`" (`onlyTheseOptions` of popnei's
- * `js/popnei/src/arguments.ts`, from `js-v0.1.0-dev.3`): only the runner
- * writes those objects, so it is a defect of ours.
+ * `js/popnei/src/arguments.ts`, from `js-v0.1.0-dev.3`), and, from
+ * js-v0.2.1, of an option of a part that takes none, "`x` is not an
+ * option of `calcVariantsSummary.perIndividual`, which takes no option",
+ * and of a key of `histKwargs`, "`x` is not a key of `histKwargs`, whose
+ * keys are ...": only the runner writes those objects, so it is a defect
+ * of ours.
  */
 const UNKNOWN_OPTION =
-  /^popnei: `[^`]*` is not an option of `[^`]*`, whose options are /u;
+  /^popnei: `[^`]*` is not (an option|a key) of `[^`]*`, (whose|which takes)/u;
 
 let popneiLoading: Promise<Result<string, string>> | null = null;
 

@@ -1209,6 +1209,20 @@ describe("WS3 D2 what goes wrong: answerOfThrown", () => {
     });
   });
 
+  test.each([
+    "popnei: `x` is not an option of `calcVariantsSummary.perIndividual`, which takes no option",
+    "popnei: `x` is not a key of `histKwargs`, whose keys are `range`, the two ends of the histogram, `numBins` and `binType`",
+    "popnei: `y` is not an option of `calcVariantsSummary.perVar`, whose options are `stats`, `pops`, `minNumIndividuals`, `histKwargs`, `ploidy` and `polyThreshold`",
+  ])(
+    "popnei's refusal of an option of a part, or of a key of histKwargs, as js-v0.2.1 gives it under node, is crashed as a defect of the application: %s",
+    (unknown) => {
+      expect(answerOfThrown(new Error(unknown))).toEqual({
+        kind: "crashed",
+        message: `popnei_web defect: ${unknown}`,
+      });
+    },
+  );
+
   test("a TypeError, a mistake of the code, is crashed", () => {
     expect(answerOfThrown(new TypeError("x is not a function"))).toEqual({
       kind: "crashed",
