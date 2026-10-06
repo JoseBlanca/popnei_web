@@ -92,6 +92,15 @@ it and stay on the old page unchanged. The summary reads no filter, as
 before. On a VCF of 403 MB popnei measured the one pass 44% faster than
 three (natively, one thread).
 
+What the one pass costs: the old count read only the chromosome and
+the position, and popnei gives none of the three parts when one fails,
+so on a file whose genotypes popnei refuses (a haploid genotype in a
+diploid VCF, a genotype that is not an allele number) the box shows
+popnei's message instead of the variants and the chromosomes, and the
+count of the FILTER failures is held back with it. The statistics fail
+on such a file anyway, and so would every analysis. Accepted, and told
+to the owner in the report.
+
 The option not taken was to keep three analyses and stream each: three
 passes over the file, the plots of the individuals appearing only after
 those of the variants, and two Stops.
@@ -103,9 +112,21 @@ they are transferred, since popnei may reuse them, and it is checked by
 `messages.ts` as the final result is. `Client.run` gains a callback
 `onSoFar(result: JobResult)` beside `onProgress`; a `soFar` of a
 request that is no longer the running one is dropped, as a `progress`
-is. In the store, `running` gains `soFar: R | null`, null until the
-first and again at every new run; it is never cached, has no check
-numbers and no warnings, and a `done`, a failure or a Stop drops it. An
+is not: the client handles a `soFar` as it handles a `result`
+(`client.ts` ~516): of the running id, its key and its job's analysis,
+or a defect of ours that ends the worker; messages of a worker already
+ended reach nobody, which is what keeps a Stop safe. A `soFar` that
+comes before `send` returns is passed over, as `progressed` does. In
+the runner, what `onSoFar` throws (the check, the copy, `postMessage`)
+is recorded as what `told` throws is (`passOf`, `thrownByTold`) and
+thrown on as ours, never shown as popnei's refusal of the file. In the
+store, `running` gains `soFar: R | null`, null until the
+first and again at every new run, and null whenever
+`waitsForStatistics` is true, since that form takes its run from the
+request of the statistics; `sameStatus` and `sameRun` compare it, or
+the screen would keep the old object and never redraw. It is never
+cached, has no check numbers and no warnings, and a `done`, a failure
+or a Stop drops it. An
 analysis whose runner gives no `onSoFar` has `soFar` null throughout,
 so nothing changes for the old page. `PROTOCOL_VERSION` goes to 8.
 
@@ -118,8 +139,16 @@ progress would grow a field only one uses.
 `calcVarDensity` with one window per chromosome under the step
 `filterPassed`, a pass that reads no genotype. Its result is `passStats`
 with `filtering.passed`; the failures are `varsProcessed − varsKept`,
-its one check number. `PassStats` of `protocol.ts` and `checkFiltering`
-accept `"passed"`, and `passStatsOf` accepts it for this job. The page
+its one check number. A new kind of the counts alone,
+`PassFilterKind = VariantFilterKind | "passed"` of `protocol.ts`, types
+`PassStats.filtering` and `checkFiltering`, and `passStatsOf` accepts
+`"passed"` for this job. `VariantFilterKind`, and with it the filters a
+project and its file can hold, does not change. `variantsOfFile` of
+`filterCounts.ts` learns that `"passed"` comes first, so that a
+`filterFailures` result never gives the variants that passed as the
+variants of the file. Under node on a VCF of 20,000 variants and 500
+individuals (40.5 MB), the summary took 134 ms and this pass 7 ms, 18 ms
+gzipped (architecture review, 6 October 2026). The page
 opens every VCF with `onlyPassed: false`, as now, so the summary sees
 every variant. For a `.nei` file it is not run (`needs` says so): a
 vars file written before format 1.2 refuses `filterPassed`, and telling
@@ -198,7 +227,14 @@ none.
 
 `docs/architecture.md`, section 5 (the chain, the result so far as a
 kind of message beside progress, the one Stop), and section 9's list of
-modules, are brought up to date in the phase that changes each.
+modules, are brought up to date in the phase that changes each, and so
+are the specs that would say otherwise: `docs/specs/worker/messages.md`,
+`client.md`, `runner.md` and `protocol.md` (the `soFar` message,
+`PROTOCOL_VERSION` 8, `"passed"`), `docs/specs/core/store.md` ("The
+state of an analysis"), and a line in `docs/plans/file-stats.md` that
+this piece replaced its two analyses and their Stop. The summary's
+`script()` gives the three calls of popnei's Python, which has no
+`calc_variants_summary`.
 
 ## What is left out
 
@@ -206,6 +242,11 @@ modules, are brought up to date in the phase that changes each.
 - The count of the FILTER failures of a `.nei` file of format 1.2: when
   popnei tells its old formats apart in a way the page can read.
 - The result so far on the old page: it has no use for it yet.
+- The individuals kept: `variantChecks` read the filters of individuals,
+  and the one pass reads none. The piece of the filters chooses between
+  giving the pass the individuals kept, so that the count is read again
+  at every change of them, and splitting it back into a count and the
+  statistics.
 - The thresholds on the plots: the next piece, `thresholds`.
 
 ## What was done
