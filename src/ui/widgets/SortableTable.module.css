@@ -76,6 +76,10 @@
     font-size: var(--text-sm);
   }
 
+  .header.fitNarrow .headerText {
+    gap: 0;
+  }
+
   .wideLabel {
     position: absolute;
     inline-size: 1px;

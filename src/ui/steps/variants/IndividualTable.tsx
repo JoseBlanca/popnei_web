@@ -70,14 +70,15 @@ const WITHOUT_KEPT = Object.freeze(
 
 /** The narrowest each column of the plain table may be, in CSS pixels,
     and the words of the two headers of numbers on a page narrower than
-    30em, which the table draws smaller there: the longest word of each
-    header in bold of 14 pixels, "Individual" of 64, "Missing" of 51 and
-    "Heterozygosity" of 101 in Chromium 153 and WebKit 26.6, with its
-    padding, the arrow of the sort and the space before it; the three
-    take 278 of the 286 pixels inside the box at 320 pixels wide. */
+    30em, which the table draws smaller there, with less space: the
+    longest word of each header in bold of 14 pixels, "Individual",
+    "Missing" and "Heterozygosity", 66, 52 and 103 pixels in Chromium 153,
+    with its padding and the arrow of the sort; at 84 pixels "Individual"
+    wrapped. The three take 282 of the 286 pixels inside the box at 320
+    pixels wide. */
 const PLAIN_MIN_WIDTHS: Readonly<
   Record<Exclude<IndividualColumnId, "kept">, number>
-> = { individual: 84, missingGenotypes: 72, observedHeterozygosity: 122 };
+> = { individual: 86, missingGenotypes: 72, observedHeterozygosity: 124 };
 const NARROW_LABELS: Readonly<Partial<Record<IndividualColumnId, string>>> = {
   missingGenotypes: "Missing",
   observedHeterozygosity: "Heterozygosity",
