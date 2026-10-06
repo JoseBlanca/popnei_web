@@ -30,7 +30,13 @@
 // PCA's own LD filter at r² 0.1 within 50,000 base pairs, cut to its first
 // 10 components as the calculation worker cuts it, to
 // e2e/fixtures/panel_pca.json, which the tests of the panel's functions of
-// core read. For the LD decay, whose curve the panel cannot show, since its
+// core read. From panel.nei and tetraploid.nei it writes the histograms of
+// the variants that popnei's calcPerVarDistribs gives in 1,280 bins over 0
+// to 1, over every variant and individual, with minNumIndividuals 0, the
+// missing rate, the MAF, the observed and the unbiased expected
+// heterozygosity, each its mean and its counts, to
+// e2e/fixtures/variant_fine_bins.json, which the tests of core read
+// (docs/plans/file-stats.md, "Round 1 with the owner"). For the LD decay, whose curve the panel cannot show, since its
 // variants lie at positions 1 to 1,200 of one chromosome, it copies
 // popnei's tests/reference/ld/ld.vcf.gz, 100 diploid individuals and two
 // chromosomes of 250 variants every 1,000 bp, byte for byte to
@@ -74,6 +80,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 
 import {
   calcPerIndividualStats,
+  calcPerVarDistribs,
   doPcaFromVariants,
   init,
   openVars,
@@ -325,6 +332,48 @@ writeFileSync(
 console.log(
   `${statsPath}: ${String(individualStats.individuals.length)} individuals, ` +
     `${String(individualStats.passStats.numVars)} variants`,
+);
+
+// The histograms of the variants of panel.nei and tetraploid.nei in the
+// bins the application asks popnei for from 6 October 2026, 1,280 over 0
+// to 1 (VARIANT_FINE_BINS of src/core/analyses/variantChecks.ts), over
+// every variant and every individual with minNumIndividuals 0: for each
+// statistic its mean and its counts, each list on one line.
+const FINE_BINS = 1280;
+const fineStats = ["missing_rate", "maf", "obs_het", "unbiased_exp_het"];
+const fineLines = [];
+for (const name of ["panel.nei", "tetraploid.nei"]) {
+  const variants = openVars(readFileSync(join(fixtures, name)));
+  let distribs;
+  try {
+    distribs = calcPerVarDistribs(variants, {
+      stats: fineStats,
+      minNumIndividuals: 0,
+      histKwargs: { numBins: FINE_BINS, range: [0, 1] },
+    });
+  } finally {
+    variants.free();
+  }
+  const of = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic) =>
+      `    ${JSON.stringify(statistic)}: {\n` +
+      `      "mean": ${JSON.stringify(distribs[statistic].mean[0])},\n` +
+      `      "counts": ${JSON.stringify([...distribs[statistic].histCounts])}\n` +
+      "    }",
+  );
+  fineLines.push(
+    `  ${JSON.stringify(name)}: {\n` +
+      `    "numVars": ${JSON.stringify(distribs.passStats.numVars)},\n` +
+      `${of.join(",\n")}\n  }`,
+  );
+}
+const finePath = join(fixtures, "variant_fine_bins.json");
+writeFileSync(
+  finePath,
+  `{\n  "numBins": ${String(FINE_BINS)},\n${fineLines.join(",\n")}\n}\n`,
+);
+console.log(
+  `${finePath}: panel.nei and tetraploid.nei in ${String(FINE_BINS)} bins`,
 );
 
 // The metadata file with a column of numbers: the rows of panel_pops.csv in

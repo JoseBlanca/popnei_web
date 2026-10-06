@@ -1733,6 +1733,51 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
   });
 });
 
+describe("the histograms in 1,280 bins, which the application asks popnei for from 6 October 2026", () => {
+  test("panel.vcf.gz, panel.nei and tetraploid.vcf.gz: the 1,280 bins added up 32 at a time are popnei's 40, the means the same, and the 1,281 edges every 32nd those of the 40", () => {
+    const tetraploid: LoadToOpen = {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    for (const [name, load] of [
+      ["panel.vcf.gz", VCF],
+      ["panel.nei", NEI],
+      ["tetraploid.vcf.gz", tetraploid],
+    ] as const) {
+      const coarse = resultOf(
+        opened(name, load).run(variantChecksJob(), ignore),
+        "variantChecks",
+      );
+      const fine = resultOf(
+        opened(name, load).run(
+          { ...variantChecksJob(), numBins: 1280 },
+          ignore,
+        ),
+        "variantChecks",
+      );
+      expect(fine.binEdges.length).toBe(1281);
+      for (let edge = 0; edge <= 40; edge += 1) {
+        expect(fine.binEdges[edge * 32]).toBe(coarse.binEdges[edge]);
+      }
+      for (const statistic of [
+        "missingRate",
+        "maf",
+        "obsHet",
+        "unbiasedExpHet",
+      ] as const) {
+        expect(fine[statistic].mean).toBe(coarse[statistic].mean);
+        const added = Array.from({ length: 40 }, (_, bin) =>
+          fine[statistic].counts
+            .subarray(bin * 32, bin * 32 + 32)
+            .reduce((sum, count) => sum + count, 0),
+        );
+        expect(added).toEqual([...coarse[statistic].counts]);
+      }
+    }
+  });
+});
+
 describe("VS1 D3 the passes of the runner: the histograms and the counts", () => {
   test("the histograms of panel.nei with no filter, 40 bins from 0 to 1: popnei's edges, means and counts", () => {
     const result = resultOf(

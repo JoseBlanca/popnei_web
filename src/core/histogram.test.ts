@@ -10,7 +10,12 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { INDIVIDUAL_BINS, binValues } from "./histogram.ts";
+import {
+  INDIVIDUAL_BINS,
+  binValues,
+  binValuesRounded,
+  roundedRange,
+} from "./histogram.ts";
 import type { Bins } from "./histogram.ts";
 
 /** The proportions of missing genotypes and the observed heterozygosity
@@ -182,23 +187,121 @@ describe("VS2 D4 the bins of the statistics of each individual", () => {
   });
 });
 
-describe("the bins of the statistics of each individual from a first edge given, as popgen2.html draws them from 0", () => {
-  test("from 0 the bins span 0 to the largest value, as numpy.histogram with the range (0, largest) makes them, a NaN in no bin", () => {
-    const bins = binValues(Float64Array.from([0.25, 0.5, 1, NaN]), 4, 0);
+describe("the bins over a range given, as popgen2.html draws those of the individuals over their range rounded out", () => {
+  test("over 0 to 1 the bins are those of numpy.histogram with the range (0, 1), a NaN in no bin", () => {
+    const bins = binValues(Float64Array.from([0.25, 0.5, 0.9, NaN]), 4, [0, 1]);
     expect(Array.from(bins?.edges ?? [])).toEqual([0, 0.25, 0.5, 0.75, 1]);
     expect(Array.from(bins?.counts ?? [])).toEqual([0, 1, 1, 1]);
     expect(bins?.numNaN).toBe(1);
   });
 
-  test("from 0 with every value 0 the bins span 0 to 1, all in the first", () => {
-    const bins = binValues(Float64Array.from([0, 0, 0]), 2, 0);
-    expect(Array.from(bins?.edges ?? [])).toEqual([0, 0.5, 1]);
-    expect(Array.from(bins?.counts ?? [])).toEqual([3, 0]);
+  test("over 0.3 to 0.4 the last edge is 0.4 itself", () => {
+    const bins = binValues(Float64Array.from([0.3, 0.35, 0.4]), 2, [0.3, 0.4]);
+    expect(Array.from(bins?.edges ?? [])).toEqual([0.3, 0.35, 0.4]);
+    expect(Array.from(bins?.counts ?? [])).toEqual([1, 2]);
   });
 
-  test("a value below the first edge given is a defect", () => {
-    expect(() => binValues(Float64Array.from([0.1, -0.1]), 2, 0)).toThrow(
-      "popnei_web defect: a value of -0.1 below the first edge, 0.",
+  test("a value outside the range given, or a range that does not go up, is a defect", () => {
+    expect(() => binValues(Float64Array.from([0.1, -0.1]), 2, [0, 1])).toThrow(
+      "popnei_web defect: a value of -0.1 outside the range 0 to 1.",
     );
+    expect(() => binValues(Float64Array.from([0.1, 0.6]), 2, [0, 0.5])).toThrow(
+      "popnei_web defect: a value of 0.6 outside the range 0 to 0.5.",
+    );
+    expect(() => binValues(Float64Array.from([0.1]), 2, [0.5, 0.5])).toThrow(
+      "popnei_web defect: a range of the bins from 0.5 to 0.5, which does not go up.",
+    );
+  });
+});
+
+describe("the range of an axis rounded out to round numbers", () => {
+  test("the variants' ranges of panel.nei and tetraploid.nei, from the edges of popnei's 1,280 bins with a count, at steps of 0.05 at least", () => {
+    // The edges of the first and the last bin with a count, popnei 0.2.0
+    // under node, 6 October 2026; the missing rate from 0.
+    expect(roundedRange(0, 0.08046875, 0.05)).toEqual([0, 0.1]);
+    expect(roundedRange(0.5, 0.9875, 0.05)).toEqual([0.5, 1]);
+    expect(roundedRange(0.025781250000000002, 0.61328125, 0.05)).toEqual([
+      0, 0.7,
+    ]);
+    expect(roundedRange(0.025781250000000002, 0.5015625, 0.05)).toEqual([
+      0, 0.55,
+    ]);
+    expect(roundedRange(0, 0.25078125, 0.05)).toEqual([0, 0.3]);
+    expect(roundedRange(0.3328125, 0.56875, 0.05)).toEqual([0.3, 0.6]);
+    expect(roundedRange(0.7265625, 1, 0.05)).toEqual([0.7, 1]);
+    expect(roundedRange(0.90234375, 0.97265625, 0.05)).toEqual([0.9, 1]);
+  });
+
+  test("the ends are the doubles of the round numbers, not a multiple of the step: 0.3 and not 0.30000000000000004", () => {
+    const [first, last] = roundedRange(0.31, 0.69, 0.1);
+    expect(first).toBe(0.3);
+    expect(last).toBe(0.7);
+  });
+
+  test("the individuals' ranges of panel.nei: the missing rate from 0, at steps of 0.001 at least", () => {
+    expect(roundedRange(0, 0.04416666666666667, 0.001)).toEqual([0, 0.045]);
+    expect(
+      roundedRange(0.32112436115843274, 0.3931034482758621, 0.001),
+    ).toEqual([0.32, 0.4]);
+  });
+
+  test("an end already round stays where it is", () => {
+    expect(roundedRange(0, 0.1, 0.05)).toEqual([0, 0.1]);
+    expect(roundedRange(0.5, 1, 0.05)).toEqual([0.5, 1]);
+  });
+
+  test("a range of one value is a step of 0.1 from it, rounded down, within 0 to 1", () => {
+    expect(roundedRange(0, 0, 0.001)).toEqual([0, 0.1]);
+    expect(roundedRange(0.35, 0.35, 0.001)).toEqual([0.3, 0.4]);
+    expect(roundedRange(0.7, 0.7, 0.001)).toEqual([0.7, 0.8]);
+    expect(roundedRange(1, 1, 0.001)).toEqual([0.9, 1]);
+  });
+
+  test("ends outside 0 to 1, in the wrong order or not numbers are a defect", () => {
+    for (const [low, high] of [
+      [-0.1, 0.5],
+      [0.5, 1.5],
+      [0.6, 0.5],
+      [NaN, 0.5],
+    ] as const) {
+      expect(() => roundedRange(low, high, 0.05)).toThrow(
+        `popnei_web defect: a range of ${String(low)} to ${String(high)} to round, not within 0 to 1.`,
+      );
+    }
+  });
+});
+
+describe("the bins of the statistics of each individual over their range rounded out", () => {
+  test("panel.nei: the missing rate in 20 bins from 0 to 0.045, the heterozygosity from 0.32 to 0.4, every individual in a bin", () => {
+    const stats = panelStats();
+    const missing = binValuesRounded(
+      stats.missingGtRate,
+      INDIVIDUAL_BINS,
+      true,
+    );
+    expect(missing?.edges[0]).toBe(0);
+    expect(missing?.edges[INDIVIDUAL_BINS]).toBe(0.045);
+    const het = binValuesRounded(stats.obsHetRate, INDIVIDUAL_BINS, false);
+    expect(het?.edges[0]).toBe(0.32);
+    expect(het?.edges[INDIVIDUAL_BINS]).toBe(0.4);
+    for (const bins of [missing, het]) {
+      expect(Array.from(bins?.counts ?? []).reduce((a, b) => a + b, 0)).toBe(
+        200,
+      );
+    }
+  });
+
+  test("a NaN is in no bin, and only NaN gives no bins", () => {
+    // From 0.3 to 0.37, 7 steps of 0.01.
+    const bins = binValuesRounded(
+      Float64Array.from([0.3, NaN, 0.37]),
+      2,
+      false,
+    );
+    expect(bins?.edges[0]).toBe(0.3);
+    expect(bins?.edges[2]).toBe(0.37);
+    expect(Array.from(bins?.counts ?? [])).toEqual([1, 1]);
+    expect(bins?.numNaN).toBe(1);
+    expect(binValuesRounded(Float64Array.from([NaN]), 2, true)).toBeNull();
   });
 });

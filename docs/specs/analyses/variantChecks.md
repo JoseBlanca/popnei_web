@@ -29,6 +29,20 @@ over the same 40 bins from 0 to 1, which popgen.html does not draw; the
 key version is 3. The check numbers stay four, without the mean missing
 rate, since a fifth would make every project file saved with four refused
 at its opening.
+Revised again on 6 October 2026, for the owner's first round on
+popgen2.html, which draws each histogram over the range of its values
+rounded out: popnei is asked for 1,280 bins over 0 to 1, 32 in each of
+the 40, and the bins drawn are popnei's added up, 32 at a time on
+popgen.html, which draws the same 40 bins as before, to the last count,
+and about 40 over the rounded range on popgen2.html
+(`variantBins` and `variantBinsRounded` of the module). 1,280 and not
+1,000: popnei's edges are i × (1 / numBins), and only a number of bins
+that is 40 times a power of two puts every edge of the 40 on an edge of
+the finer bins as the same double; with 1,000, 8 of the 41 edges differ
+in their last place, and a missing rate of 15 / 200, 0.075, would move to
+the next bin of popgen.html. The means are unchanged, and so are the
+check numbers. The key version is 4; the result is 30,728 bytes, where
+the 40 bins took 968.
 
 ## The module
 
@@ -204,7 +218,7 @@ variant_distribs = popnei.calc_per_var_distribs(
     variants_as_read,
     stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
     min_num_individuals=0,
-    hist_kwargs={"range": (0, 1), "num_bins": 40},
+    hist_kwargs={"range": (0, 1), "num_bins": 1280},
 )
 ```
 

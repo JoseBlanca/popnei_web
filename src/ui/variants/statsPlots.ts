@@ -3,27 +3,29 @@
  * draws (docs/plans/file-stats.md, "Where it goes"): its title, its axes,
  * its bins and its description, and the line under its title that says
  * how many variants or individuals are in its bins. The words are those
- * of the old page's histograms; the bins of the individuals start at 0,
- * as those of the variants do, so that the spread of a few individuals is
- * not drawn as wide as the whole range of the variants. Pure, so that a
- * test in node checks the counts, a value of NaN among them; the section
- * draws them.
+ * of the old page's histograms, with no mean in the titles. Each axis
+ * spans the range of the values, rounded out to round numbers, the
+ * missing rates from 0 (the owner, 6 October 2026): the variants' bins
+ * are popnei's added up, `variantBinsRounded`, those of the individuals
+ * made from popnei's values over that range, `binValuesRounded`. Pure, so
+ * that a test in node checks the counts, a value of NaN among them; the
+ * section draws them.
  */
-import { variantHistogramDescription } from "../../core/analyses/variantChecks.ts";
+import {
+  variantBinsRounded,
+  variantHistogramDescription,
+} from "../../core/analyses/variantChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import { individualHistogramDescription } from "../../core/analyses/individualChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
-import { INDIVIDUAL_BINS, binValues } from "../../core/histogram.ts";
+import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
 import { histogramRows } from "../../charts/histogram.ts";
 import type { HistogramData } from "../../charts/histogram.ts";
 import type {
   IndividualChecksResult,
   VariantChecksResult,
 } from "../../worker/protocol.ts";
-import {
-  VARIANT_HISTOGRAMS,
-  histogramTitle,
-} from "../steps/variants/histogramWords.ts";
+import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import {
   INDIVIDUALS_LABEL,
   INDIVIDUAL_HISTOGRAMS,
@@ -50,20 +52,21 @@ export interface IndividualPlot {
   readonly noValueLine: string | null;
 }
 
-/** The histogram of the variants of `statistic`, popnei's bins, over the
-    variants in them, which leaves out a variant with no value. */
+/** The histogram of the variants of `statistic`, popnei's bins added up
+    over the range of those with a count, rounded out, over the variants
+    in them, which leaves out a variant with no value. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantChecksResult,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
-  const distrib = result[statistic];
+  const bins = variantBinsRounded(result, statistic);
   const plotted = {
-    title: histogramTitle(words.name, distrib.mean),
+    title: words.name,
     xLabel: words.name,
     yLabel: words.countLabel,
-    edges: result.binEdges,
-    counts: distrib.counts,
+    edges: bins.edges,
+    counts: bins.counts,
     threshold: null,
   };
   const rows = histogramRows({ ...plotted, description: "" });
@@ -72,12 +75,13 @@ export function variantPlot(
       ...plotted,
       description: variantHistogramDescription(statistic, rows, null),
     },
-    countLine: overVariantsLine(sumOf(distrib.counts)),
+    countLine: overVariantsLine(sumOf(bins.counts)),
   };
 }
 
 /** The histogram of the individuals of `statistic`, its values binned
-    from 0 to the largest, over the individuals with a value. */
+    over their range rounded out, the missing rate from 0, over the
+    individuals with a value. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualChecksResult,
@@ -85,7 +89,11 @@ export function individualPlot(
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
     statistic === "missingGenotypes" ? result.missingGtRate : result.obsHetRate;
-  const bins = binValues(values, INDIVIDUAL_BINS, 0);
+  const bins = binValuesRounded(
+    values,
+    INDIVIDUAL_BINS,
+    statistic === "missingGenotypes",
+  );
   // binValues gives no bins only when every value is NaN.
   const noValueLine = noHeterozygosityText(
     bins === null ? values.length : bins.numNaN,

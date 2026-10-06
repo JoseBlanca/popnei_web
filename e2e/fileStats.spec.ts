@@ -9,14 +9,18 @@
  * the other; axe at each state reached.
  *
  * The numbers are popnei's, from the installed js-v0.2.0 under node on
- * the same files, with the options the runner gives (40 bins over 0 to 1,
- * minNumIndividuals 0, no filter), on 6 October 2026: panel.vcf.gz, 1,200
- * variants of 200 individuals, means of the missing rate 0.0297, of the
- * MAF 0.7163, of the observed heterozygosity 0.3543 and of the unbiased
- * expected heterozygosity 0.3755, each over the 1,200 variants; the most
- * missing individual s082 at 0.0442 (heterozygosity 0.3688), the most
- * heterozygous s026 at 0.3931 (missing 0.0333). tetraploid.vcf.gz, 200 variants of 12 individuals: 0.0479,
- * 0.4044, 0.9620 and 0.9635; the most missing t04 at 0.0850.
+ * the same files, with the options the runner gives (1,280 bins over 0 to
+ * 1, minNumIndividuals 0, no filter), on 6 October 2026: panel.vcf.gz,
+ * 1,200 variants of 200 individuals, the first and the last of popnei's
+ * bins with a count from 0 to 0.0805 for the missing rate, 0.5 to 0.9875
+ * for the MAF, 0.0258 to 0.6133 and 0.0258 to 0.5016 for the observed and
+ * the expected heterozygosity; the individuals' missing rates from 0.0175
+ * to 0.0442 and heterozygosities from 0.3211 to 0.3931; the most missing
+ * individual s082 at 0.0442 (heterozygosity 0.3688), the most
+ * heterozygous s026 at 0.3931 (missing 0.0333). tetraploid.vcf.gz, 200
+ * variants of 12 individuals: 0 to 0.2508, 0.3328 to 0.5688, 0.7266 to 1
+ * and 0.9023 to 0.9727; the individuals from 0.02 to 0.085 and 0.9301 to
+ * 0.9847; the most missing t04 at 0.0850.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -55,6 +59,22 @@ function stats(page: Page): Locator {
 /** The titles of the histograms, in their order. */
 function titles(page: Page): Locator {
   return stats(page).getByRole("group").locator("> p:first-child");
+}
+
+/** The titles of the six histograms, with no mean. */
+const TITLES = [
+  "Proportion of missing genotypes",
+  "Major allele frequency",
+  "Observed heterozygosity",
+  "Expected heterozygosity (unbiased)",
+  "Proportion of missing genotypes of each individual",
+  "Observed heterozygosity of each individual",
+];
+
+/** The descriptions of the histograms, which say their bins and the
+    two ends of their axis. */
+function descriptions(page: Page): Locator {
+  return stats(page).locator("svg.chart desc");
 }
 
 /** The part of the section under the heading `name`, "Variants" or
@@ -97,7 +117,7 @@ async function firstWhenSorted(
     .allTextContents();
 }
 
-test("FS2 panel.vcf.gz: the four distributions of the variants with popnei's means, the two of the individuals, the table sorted to its tails, and axe", async ({
+test("FS2 panel.vcf.gz: the four distributions of the variants and the two of the individuals over their ranges rounded out, the table sorted to its tails, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -110,13 +130,16 @@ test("FS2 panel.vcf.gz: the four distributions of the variants with popnei's mea
     "Variants",
     "Individuals",
   ]);
-  await expect(titles(page)).toHaveText([
-    "Proportion of missing genotypes, mean 0.0297",
-    "Major allele frequency, mean 0.7163",
-    "Observed heterozygosity, mean 0.3543",
-    "Expected heterozygosity (unbiased), mean 0.3755",
-    "Proportion of missing genotypes of each individual",
-    "Observed heterozygosity of each individual",
+  await expect(titles(page)).toHaveText(TITLES);
+  // Each axis over the range of its values rounded out, the missing rates
+  // from 0; the variants' bins popnei's 1,280 added up, about 40.
+  await expect(descriptions(page)).toHaveText([
+    "The proportion of missing genotypes of 1,200 variants, in 32 bins from 0 to 0.1.",
+    "The major allele frequency of 1,200 variants, in 40 bins from 0.5 to 1.",
+    "The observed heterozygosity of 1,200 variants, in 32 bins from 0 to 0.7.",
+    "The unbiased expected heterozygosity of 1,200 variants, in 44 bins from 0 to 0.55.",
+    "The proportion of missing genotypes of 200 individuals, in 20 bins from 0 to 0.045.",
+    "The observed heterozygosity of 200 individuals, in 20 bins from 0.32 to 0.4.",
   ]);
   await expect(stats(page).getByText("Over 1,200 variants")).toHaveCount(4);
   await expect(stats(page).getByText("Over 200 individuals")).toHaveCount(2);
@@ -148,7 +171,7 @@ test("FS2 panel.vcf.gz: the four distributions of the variants with popnei's mea
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 tetraploid.vcf.gz: its own means and its 12 individuals", async ({
+test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -156,13 +179,14 @@ test("FS2 tetraploid.vcf.gz: its own means and its 12 individuals", async ({
   await pick(page, join(FIXTURES, "tetraploid.vcf.gz"));
 
   await expect(table(page)).toBeVisible({ timeout: 20_000 });
-  await expect(titles(page)).toHaveText([
-    "Proportion of missing genotypes, mean 0.0479",
-    "Major allele frequency, mean 0.4044",
-    "Observed heterozygosity, mean 0.9620",
-    "Expected heterozygosity (unbiased), mean 0.9635",
-    "Proportion of missing genotypes of each individual",
-    "Observed heterozygosity of each individual",
+  await expect(titles(page)).toHaveText(TITLES);
+  await expect(descriptions(page)).toHaveText([
+    "The proportion of missing genotypes of 200 variants, in 32 bins from 0 to 0.3.",
+    "The major allele frequency of 200 variants, in 32 bins from 0.3 to 0.6.",
+    "The observed heterozygosity of 200 variants, in 32 bins from 0.7 to 1.",
+    "The unbiased expected heterozygosity of 200 variants, in 32 bins from 0.9 to 1.",
+    "The proportion of missing genotypes of 12 individuals, in 20 bins from 0 to 0.09.",
+    "The observed heterozygosity of 12 individuals, in 20 bins from 0.93 to 0.99.",
   ]);
   await expect(stats(page).getByText("Over 200 variants")).toHaveCount(4);
   await expect(stats(page).getByText("Over 12 individuals")).toHaveCount(2);
@@ -298,7 +322,7 @@ test("FS2 a crash of the statistics of the individuals: its short words, said in
     timeout: 20_000,
   });
   await expect(titles(page).first()).toHaveText(
-    "Proportion of missing genotypes, mean 0.0297",
+    "Proportion of missing genotypes",
   );
   await expect(table(page)).toHaveCount(0);
   const again = stats(page).getByRole("button", {
@@ -407,8 +431,8 @@ test("FS2 on a desktop the plots are two wide", async ({ page }) => {
       svgs.map((svg) => Math.round(svg.getBoundingClientRect().left)),
     );
   expect(new Set(lefts).size).toBe(2);
-  // The two plots of a row on one line, though the title of the expected
-  // heterozygosity, with its mean, wraps and its neighbour's does not.
+  // The two plots of a row on one line, whatever the lines of their
+  // titles.
   const tops = await stats(page)
     .locator("svg.chart")
     .evaluateAll((svgs) =>

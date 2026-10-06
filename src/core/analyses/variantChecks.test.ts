@@ -8,14 +8,20 @@
  * elsewhere.
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import {
+  VARIANT_BINS,
+  VARIANT_FINE_BINS,
   binsCsvName,
   refusalText,
   statisticsFailedText,
+  variantBins,
+  variantBinsRounded,
   variantChecks,
   variantHistogramDescription,
 } from "./variantChecks.ts";
+import type { VariantStatistic } from "./variantChecks.ts";
 import { binsCsv, splitBinText } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
 import { emptyProject } from "../project.ts";
@@ -218,7 +224,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
       filters: [],
       individuals: ["s000"],
       minNumIndividuals: 0,
-      numBins: 40,
+      numBins: 1280,
       range: [0, 1],
     };
     expect(jobs).toEqual([expected]);
@@ -263,7 +269,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 1280},\n' +
         ")\n",
     );
   });
@@ -386,7 +392,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
   test("the definition reads the filters of individuals alone, and has no key input, no reason and no option", () => {
     expect(variantChecks.id).toBe("variantChecks");
     expect(variantChecks.app).toEqual(["popgen", "gwas"]);
-    expect(variantChecks.keyVersion).toBe(3);
+    expect(variantChecks.keyVersion).toBe(4);
     expect(variantChecks.filtersRead).toEqual({
       variants: false,
       individuals: true,
@@ -409,7 +415,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 1280},\n' +
         ")\n",
     );
   });
@@ -553,5 +559,270 @@ describe("IP2 D3 the words of the statistics of each individual that a Calculate
     ).toBe(
       "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the histograms of the variants were not calculated. The calculation stopped unexpectedly.",
     );
+  });
+});
+
+/** The four statistics, in the order of the result. */
+const STATISTICS: readonly VariantStatistic[] = [
+  "missingRate",
+  "maf",
+  "obsHet",
+  "unbiasedExpHet",
+];
+
+/**
+ * The result of `name`, panel.nei or tetraploid.nei, in the 1,280 bins
+ * over 0 to 1 that popnei 0.2.0 gave under node, which
+ * e2e/fixtures/make_fixtures.mjs writes to variant_fine_bins.json; the
+ * edges are popnei's, i × (1 / 1,280) and 1 for the last.
+ */
+function fineResult(name: "panel.nei" | "tetraploid.nei"): VariantChecksResult {
+  const parsed: unknown = JSON.parse(
+    readFileSync(
+      new URL("../../../e2e/fixtures/variant_fine_bins.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  if (field(parsed, "numBins") !== VARIANT_FINE_BINS) {
+    throw new Error("variant_fine_bins.json is not of 1,280 bins");
+  }
+  const file = field(parsed, name);
+  const distrib = (statistic: VariantStatistic) => {
+    const of = field(file, statistic);
+    const mean = field(of, "mean");
+    const counts = field(of, "counts");
+    if (typeof mean !== "number" || !Array.isArray(counts)) {
+      throw new Error(`variant_fine_bins.json has no ${statistic} of ${name}`);
+    }
+    return {
+      mean,
+      counts: Uint32Array.from(counts, (count: unknown) =>
+        typeof count === "number" ? count : NaN,
+      ),
+    };
+  };
+  const width = 1 / VARIANT_FINE_BINS;
+  return {
+    analysis: "variantChecks",
+    binEdges: Float64Array.from({ length: VARIANT_FINE_BINS + 1 }, (_, i) =>
+      i === VARIANT_FINE_BINS ? 1 : i * width,
+    ),
+    missingRate: distrib("missingRate"),
+    maf: distrib("maf"),
+    obsHet: distrib("obsHet"),
+    unbiasedExpHet: distrib("unbiasedExpHet"),
+    passStats: { numVars: name === "panel.nei" ? 1200 : 200, filtering: {} },
+  };
+}
+
+/** The field `key` of `value`, or undefined when it has none. */
+function field(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null || !(key in value)) {
+    return undefined;
+  }
+  return Object.getOwnPropertyDescriptor(value, key)?.value;
+}
+
+/** The sum of `counts`. */
+function sumOf(counts: Uint32Array): number {
+  return counts.reduce((sum, count) => sum + count, 0);
+}
+
+describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
+  test("popnei is asked for 1,280 bins over 0 to 1, 32 in each of the 40 that popgen.html draws", () => {
+    expect(VARIANT_BINS).toBe(40);
+    expect(VARIANT_FINE_BINS).toBe(1280);
+  });
+
+  test("panel.nei: the 40 bins and their edges are those popnei 0.2.0 gives when asked for 40", () => {
+    const result = fineResult("panel.nei");
+    const missing = variantBins(result, "missingRate");
+    expect(Array.from(missing.edges)).toEqual(Array.from(EDGES));
+    // An edge popnei computes as 3 × (1 / 40), above 0.075.
+    expect(missing.edges[3]).toBe(0.07500000000000001);
+    expect(Array.from(missing.counts)).toEqual([
+      345,
+      768,
+      86,
+      1,
+      ...Array.from({ length: 36 }, () => 0),
+    ]);
+    expect(Array.from(variantBins(result, "maf").counts)).toEqual(PANEL_MAF);
+    expect(Array.from(variantBins(result, "obsHet").counts)).toEqual(
+      PANEL_OBS_HET,
+    );
+    expect(Array.from(variantBins(result, "unbiasedExpHet").counts)).toEqual([
+      0,
+      3,
+      10,
+      13,
+      12,
+      26,
+      30,
+      30,
+      39,
+      46,
+      44,
+      58,
+      45,
+      80,
+      58,
+      70,
+      88,
+      109,
+      130,
+      240,
+      69,
+      ...Array.from({ length: 19 }, () => 0),
+    ]);
+  });
+
+  test("tetraploid.nei: the 40 bins are those popnei 0.2.0 gives when asked for 40", () => {
+    const result = fineResult("tetraploid.nei");
+    const zeros = (length: number): number[] => Array.from({ length }, () => 0);
+    expect(Array.from(variantBins(result, "missingRate").counts)).toEqual([
+      115,
+      0,
+      0,
+      60,
+      0,
+      0,
+      20,
+      0,
+      0,
+      0,
+      5,
+      ...zeros(29),
+    ]);
+    expect(Array.from(variantBins(result, "maf").counts)).toEqual([
+      ...zeros(13),
+      7,
+      30,
+      71,
+      40,
+      21,
+      18,
+      6,
+      3,
+      3,
+      1,
+      ...zeros(17),
+    ]);
+    expect(Array.from(variantBins(result, "obsHet").counts)).toEqual([
+      ...zeros(29),
+      1,
+      1,
+      1,
+      1,
+      9,
+      0,
+      3,
+      55,
+      0,
+      0,
+      129,
+    ]);
+    expect(Array.from(variantBins(result, "unbiasedExpHet").counts)).toEqual([
+      ...zeros(36),
+      2,
+      17,
+      181,
+      0,
+    ]);
+  });
+
+  test("bins of popnei that are not 40 times a whole number are a defect", () => {
+    const result: VariantChecksResult = {
+      ...PANEL,
+      binEdges: Float64Array.from([0, 0.5, 1]),
+      maf: { mean: 0.7, counts: Uint32Array.from([0, 3]) },
+    };
+    expect(() => variantBins(result, "maf")).toThrow(
+      "popnei_web defect: 2 bins of the variants, not 40 times a whole number.",
+    );
+  });
+});
+
+describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the bins with a count, rounded out", () => {
+  /** The first and the last edge of the bins of `statistic`, and their
+      number. */
+  function rangeOf(
+    result: VariantChecksResult,
+    statistic: VariantStatistic,
+  ): readonly [number, number, number] {
+    const bins = variantBinsRounded(result, statistic);
+    return [
+      bins.edges[0] ?? NaN,
+      bins.edges[bins.edges.length - 1] ?? NaN,
+      bins.counts.length,
+    ];
+  }
+
+  test("panel.nei: the missing rate from 0 to 0.1 in 32 bins, the MAF from 0.5 to 1 in 40, the observed heterozygosity from 0 to 0.7 in 32, the expected from 0 to 0.55 in 44", () => {
+    const result = fineResult("panel.nei");
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.1, 32]);
+    expect(rangeOf(result, "maf")).toEqual([0.5, 1, 40]);
+    expect(rangeOf(result, "obsHet")).toEqual([0, 0.7, 32]);
+    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0, 0.55, 44]);
+  });
+
+  test("tetraploid.nei: the missing rate from 0 to 0.3, the MAF from 0.3 to 0.6, the observed heterozygosity from 0.7 to 1, the expected from 0.9 to 1, each in 32 bins", () => {
+    const result = fineResult("tetraploid.nei");
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.3, 32]);
+    expect(rangeOf(result, "maf")).toEqual([0.3, 0.6, 32]);
+    expect(rangeOf(result, "obsHet")).toEqual([0.7, 1, 32]);
+    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0.9, 1, 32]);
+  });
+
+  test("each bin is popnei's bins added up, with popnei's inner edges, and every variant in a bin of popnei is in one", () => {
+    const result = fineResult("panel.nei");
+    for (const statistic of STATISTICS) {
+      const fine = result[statistic].counts;
+      const bins = variantBinsRounded(result, statistic);
+      expect(sumOf(bins.counts)).toBe(sumOf(fine));
+      // The fine bins each bin adds up: whole ones, as many in each.
+      const first = Math.round((bins.edges[0] ?? NaN) * VARIANT_FINE_BINS);
+      const perBin =
+        Math.round(
+          ((bins.edges.at(-1) ?? NaN) - (bins.edges[0] ?? NaN)) *
+            VARIANT_FINE_BINS,
+        ) / bins.counts.length;
+      expect(Number.isInteger(perBin)).toBe(true);
+      for (const [index, count] of bins.counts.entries()) {
+        const from = first + index * perBin;
+        expect(count).toBe(sumOf(fine.subarray(from, from + perBin)));
+        if (index > 0) {
+          expect(bins.edges[index]).toBe(result.binEdges[from]);
+        }
+      }
+    }
+  });
+
+  test("the missing rate of panel.nei: its first bins", () => {
+    const bins = variantBinsRounded(fineResult("panel.nei"), "missingRate");
+    // 0.003125 wide, 4 of popnei's bins each, whose counts at the indices
+    // 0, 6, 12 and 19 are 2, 20, 59 and 104.
+    expect(Array.from(bins.counts.subarray(0, 6))).toEqual([
+      2, 20, 0, 59, 104, 0,
+    ]);
+  });
+
+  test("the ends are the round numbers, 0.3 and not popnei's edge 0.30000000000000004", () => {
+    const bins = variantBinsRounded(fineResult("tetraploid.nei"), "maf");
+    expect(bins.edges[0]).toBe(0.3);
+    expect(bins.edges.at(-1)).toBe(0.6);
+    // popnei's edges at those places.
+    expect(fineResult("tetraploid.nei").binEdges[384]).toBe(
+      0.30000000000000004,
+    );
+    expect(fineResult("tetraploid.nei").binEdges[768]).toBe(0.6000000000000001);
+  });
+
+  test("with no variant in a bin, the bins span 0 to 1 in 40, all empty", () => {
+    const empty: VariantChecksResult = {
+      ...fineResult("panel.nei"),
+      maf: { mean: NaN, counts: new Uint32Array(VARIANT_FINE_BINS) },
+    };
+    expect(rangeOf(empty, "maf")).toEqual([0, 1, 40]);
   });
 });

@@ -11,3 +11,7 @@ e2e/fixtures/panel_individual_stats.json
 
 # The PCA of the flow on panel.nei, the same.
 e2e/fixtures/panel_pca.json
+
+# The variants of panel.nei and tetraploid.nei in popnei's 1,280 bins, the
+# same, each list on one line.
+e2e/fixtures/variant_fine_bins.json
