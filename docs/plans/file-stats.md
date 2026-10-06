@@ -145,3 +145,25 @@ desktop and 320 px.
 ## What was done
 
 (Filled in as the work goes.)
+
+### Phase 1, the analyses on the page
+
+Commits 52a15a4 and 1b80aac; the fixes of its review in 45dfad1,
+a91407f, 5bed282, 12746b6 and accbd2f. On accbd2f: Vitest "3813 passed",
+Playwright "1190 passed" in Chromium and WebKit. popnei's numbers, from
+the installed js-v0.2.0 under node: the missing rate of `panel.vcf.gz`
+and `panel.nei`, mean 0.02969999999999999 over 1,200 variants, bins 345,
+768, 86, 1 and then zeros.
+
+The review sent spec, tests, stale, errors, api and architecture; stale
+found nothing. Fixed: the chain steps past a crash or a defect of one
+statistic, and stops at popnei's refusal of the file or a file that
+could not be read again, which would fail the next pass the same way;
+the statistics wait for the count even through `resume`; `resume` says
+whether it started anything, and `pending(id)` tells waiting, blocked by
+a failure, and stopped apart; the page's groups of analyses are built
+from `POPGEN2_ANALYSES` beside the store (`POPGEN2_AUTO_GROUPS`) and a
+test reads them; `VariantStatistic` holds the four statistics, the
+missing rate's words among them; the specs and section 5 of the
+architecture say four histograms, and the limit the filters' piece must
+settle includes a key that comes back after a stop.
