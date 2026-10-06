@@ -30,11 +30,15 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
-import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { dropFiles } from "./dropFiles.ts";
+import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
+
+/** The variants of the VCF of FS2, three blocks of popnei. */
+const HELD_VCF_VARIANTS = 30_000;
 
 /** What each part says once the pass is stopped. */
 const STOPPED_PART = "Stopped. Start again reads the file from the start.";
@@ -218,12 +222,14 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   page,
   makeAxeBuilder,
 }, testInfo) => {
-  // A VCF written for the test, whose pass lasts seconds, so that Stop is
-  // pressed while it reads (testing.md, "The walking skeleton, as a
-  // flow").
-  test.setTimeout(180_000);
+  // A VCF of three blocks of popnei, whose results so far and result the
+  // worker holds until the test lets them through (holdWorker.ts), so
+  // that Stop is pressed while the pass runs and each state stays on the
+  // screen as long as its checks take.
+  test.setTimeout(120_000);
   const vcf = testInfo.outputPath("stats.vcf.gz");
-  await writeBigVcf(vcf, STOP_VCF_VARIANTS);
+  await writeBigVcf(vcf, HELD_VCF_VARIANTS);
+  await holdSummary(page);
   await recordAnnouncements(page);
   await openPage(page);
   await pick(page, vcf);
@@ -231,9 +237,6 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   const bar = info(page).getByRole("progressbar", {
     name: "Counting the variants",
   });
-  // Stop is pressed as soon as the bar of the pass is seen, and the
-  // checks of the running state, axe among them, wait for the start
-  // again, so that they do not outlast the pass.
   await expect(bar).toBeVisible({ timeout: 60_000 });
   await info(page).getByRole("button", { name: "Stop" }).click();
   const again = info(page).getByRole("button", { name: "Start again" });
@@ -270,8 +273,8 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
 
   await again.click();
   await expect(info(page).getByRole("button", { name: "Stop" })).toBeFocused();
-  // Running: the start again is said as the first start was, and each
-  // part says it is calculated.
+  // Running, its results so far held: the start again is said as the
+  // first start was, and each part says it is calculated.
   await expect(bar).toBeVisible();
   await expect
     .poll(async () => started(await announced(page)))
@@ -288,46 +291,59 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
-  // The plots fill in from the results so far of the pass, which popnei
-  // gives every 2 seconds: six plots, each over the variants or the
-  // individuals so far, with no download yet, and the box gives the
-  // variants read so far.
+  // The plots fill in from the results so far of the pass: six plots,
+  // each over the variants so far or over every individual from the
+  // variants so far, with no download yet; the box gives the variants
+  // and the chromosomes read so far; the status region says it once.
+  await release(page, "allSoFar");
   const overSoFar = stats(page).getByText(/^Over [\d,]+ variants so far$/u);
-  await expect(overSoFar).toHaveCount(4, { timeout: 60_000 });
+  await expect(overSoFar).toHaveCount(4);
   await expect(
-    stats(page).getByText("Over 1,000 individuals so far"),
+    stats(page).getByText(
+      "Over 1,000 individuals, from the variants read so far",
+    ),
   ).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect(downloadButton(page)).toHaveCount(0);
   await expect(
-    info(page).getByText(/^Variants: [\d,]+ so far, counting…( \d+%)?$/u),
+    info(page).getByText(/^Variants: [\d,]+ so far$/u),
   ).toBeVisible();
+  await expect(info(page).getByText("Chromosomes: 1 so far")).toBeVisible();
+  const plotsDrawn = (texts: readonly string[]): number =>
+    texts.filter((text) =>
+      text.includes(
+        "Plots of stats.vcf.gz are drawn from the variants read so far, and change as the file is read.",
+      ),
+    ).length;
+  await expect.poll(async () => plotsDrawn(await announced(page))).toBe(1);
   await expectNoViolations(makeAxeBuilder);
 
-  await expect(downloadButton(page)).toBeVisible({ timeout: 120_000 });
-  await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
-    timeout: 120_000,
-  });
+  await release(page, "result");
+  await expect(downloadButton(page)).toBeVisible();
+  await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // At the end, the plots of the result: none says "so far", and the
   // missing rate, which every variant has, is over every variant the box
   // counted.
   await expect(stats(page).getByText(/so far/u)).toHaveCount(0);
   await expect(
     stats(page).getByText(
-      `Over ${STOP_VCF_VARIANTS.toLocaleString("en-US")} variants`,
+      `Over ${HELD_VCF_VARIANTS.toLocaleString("en-US")} variants`,
       { exact: true },
     ),
   ).not.toHaveCount(0);
-  // The start of the pass, its first plots and its end are said once
-  // each, not every result so far.
-  const firstDrawn = (await announced(page)).filter((text) =>
-    text.includes("The first statistics of stats.vcf.gz are drawn"),
-  );
-  expect(firstDrawn.length).toBeLessThanOrEqual(1);
+  await expect
+    .poll(async () =>
+      (await announced(page)).some((text) =>
+        text.includes("The statistics of stats.vcf.gz are calculated."),
+      ),
+    )
+    .toBe(true);
+  // The first plots are said once, not at every result so far.
+  expect(plotsDrawn(await announced(page))).toBe(1);
   // The button gone with the focus on it, the focus is on the lines of
   // the variants and the chromosomes in the box, not on the top of the
   // page.
-  const counted = `Variants: ${STOP_VCF_VARIANTS.toLocaleString("en-US")}`;
+  const counted = `Variants: ${HELD_VCF_VARIANTS.toLocaleString("en-US")}`;
   await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
   await expect(info(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);

@@ -13,6 +13,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
+import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -4392,6 +4393,7 @@ for (const theme of ["light", "dark"] as const) {
             /^Variants: (counting… \d+%|[\d,]+ so far)$/u,
           ),
         ).toBeVisible({ timeout: 30_000 });
+        await expect(newPageStats(page)).toBeVisible();
         await save(page, `popgen2-counting${at}-${theme}`);
       });
 
@@ -4400,6 +4402,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-summary${at}-${theme}`);
       });
 
@@ -4528,9 +4531,19 @@ for (const theme of ["light", "dark"] as const) {
         page,
       }, testInfo) => {
         test.setTimeout(120_000);
+        // Three blocks of popnei, the first result so far let through and
+        // the others and the result held (holdWorker.ts), so that the
+        // plots stay those of the first 10,000 variants of 30,000.
         const vcf = testInfo.outputPath("so_far.vcf.gz");
-        await writeBigVcf(vcf, 200_000);
+        await writeBigVcf(vcf, 30_000);
+        // The page was opened before, so its worker is fetched again.
+        await holdSummary(page);
+        await page.reload();
         await pickOnNewPage(page, vcf);
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await release(page, "oneSoFar");
         await expect(
           newPageStats(page).getByText(/^Over [\d,]+ variants so far$/u),
         ).toHaveCount(4, { timeout: 60_000 });

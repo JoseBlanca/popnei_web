@@ -411,13 +411,20 @@ for (const width of [320, 1280]) {
     await openPage(page);
     await pick(page, vcf);
     await expectPanelCounted(page);
-    // The height of the box at every change of it.
-    await info(page).evaluate((box) => {
-      const heights: number[] = [box.getBoundingClientRect().height];
+    // The height of the box at every change of it; the box of each file
+    // is an element of its own, so it is found again at each change.
+    await page.getByRole("main").evaluate((main) => {
+      const box = (): Element | null =>
+        main.querySelector('section[aria-label="File information"]');
+      const heights: number[] = [box()?.getBoundingClientRect().height ?? 0];
       Reflect.set(window, "boxHeights", heights);
       new MutationObserver(() => {
-        heights.push(box.getBoundingClientRect().height);
-      }).observe(box, { subtree: true, childList: true, characterData: true });
+        heights.push(box()?.getBoundingClientRect().height ?? 0);
+      }).observe(main, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
     });
     // Its place in the page, not in the window: the second pick scrolls
     // the page to the button, which is under the statistics, and moves
