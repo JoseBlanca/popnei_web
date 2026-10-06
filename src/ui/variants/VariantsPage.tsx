@@ -29,7 +29,7 @@ import { INFO_NAME, OPENING_NAME } from "./words.ts";
 export interface VariantsPageProps {
   /** The analyses the page starts by itself. */
   readonly autoRuns: AutoRuns;
-  /** Called with the element of Stop or Count again of the count while
+  /** Called with the element of Stop or Start again of the box while
       one is shown, and with `null` when it goes, for the entry to tell
       whether the focus is on it as the count ends. */
   readonly onCountButton: (node: HTMLButtonElement | null) => void;

@@ -59,7 +59,9 @@ import type {
   Run,
   PassStats,
   RunError,
+  VariantDistrib,
   VariantFilterKind,
+  VariantsSummaryResult,
   WriteJob,
   Written,
 } from "../worker/protocol.ts";
@@ -1886,4 +1888,44 @@ export function fiveIndividualsProject(
     analyses: [],
     reference: null,
   });
+}
+
+/**
+ * A result of the summary of the variants file, of `numVarsPerChrom`
+ * variants on each chromosome of `chroms`, for the tests that do not read
+ * its statistics: the histograms of the variants in 2 bins over 0 to 1,
+ * every variant in the first, and the statistics of `individuals`, each
+ * with no missing genotype and a heterozygosity of 0.25.
+ */
+export function summaryResult(
+  chroms: readonly string[],
+  numVarsPerChrom: readonly number[],
+  individuals: readonly string[] = ["s000", "s001"],
+): VariantsSummaryResult {
+  const numVars = numVarsPerChrom.reduce((sum, count) => sum + count, 0);
+  const passStats = { numVars, filtering: {} };
+  const distrib = (): VariantDistrib => ({
+    mean: 0.25,
+    counts: Uint32Array.of(numVars, 0),
+  });
+  return {
+    analysis: "variantsSummary",
+    chroms,
+    numVarsPerChrom: Uint32Array.from(numVarsPerChrom),
+    variants: {
+      binEdges: Float64Array.of(0, 0.5, 1),
+      missingRate: distrib(),
+      maf: distrib(),
+      obsHet: distrib(),
+      unbiasedExpHet: distrib(),
+      passStats,
+    },
+    individuals: {
+      individuals,
+      missingGtRate: new Float64Array(individuals.length),
+      obsHetRate: new Float64Array(individuals.length).fill(0.25),
+      passStats,
+    },
+    passStats,
+  };
 }

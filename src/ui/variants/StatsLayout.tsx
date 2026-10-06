@@ -2,12 +2,11 @@
  * The layout of the statistics of the open file on popgen2.html, and the
  * room it keeps before they are drawn (docs/plans/file-stats.md, "Round 1
  * with the owner"). The open button is under the statistics, so they keep
- * one height from the pick of a file to the end of their second pass,
- * and a click aimed at the button as a pass ends is not lost: the row of
- * their button is one button high in every state; the words of a part
- * lie over the room of its plots, which takes the height of the plots
- * before they are drawn; and the download of the individuals keeps its
- * room, hidden, until the table is there.
+ * one height from the pick of a file to the end of the pass that
+ * calculates them, and a click aimed at the button as the pass ends is
+ * not lost: the words of a part lie over the room of its plots, which
+ * takes the height of the plots before they are drawn; and the download
+ * of the individuals keeps its room, hidden, until the table is there.
  *
  * The pieces hold no D3, so that the page draws `StatsRoom`, the whole
  * room with no words, from the pick of a file, while the code of the
@@ -34,7 +33,7 @@ import {
 interface StatsFrameProps {
   /** The element of the section, for the focus that leaves it. */
   readonly sectionRef?: React.Ref<HTMLElement>;
-  /** The row of the button, then the two parts. */
+  /** The two parts. */
   readonly children: React.ReactNode;
   /** Whether it is the room alone, waiting for the code of the plots or
       the read of the file, which a screen reader is told by
@@ -60,40 +59,19 @@ export function StatsFrame({
   );
 }
 
-/** The row of the bar of the pass running and the button of the
-    statistics: one button high in every state, empty with no button. */
-export function ControlsRow({
-  children,
-}: {
-  readonly children?: React.ReactNode;
-}): React.JSX.Element {
-  return <div className={classOf(styles, "controls")}>{children}</div>;
-}
-
 /** What a part is drawn with. */
 interface PartProps {
   /** Its heading. */
   readonly heading: string;
-  /** The element of its heading, which takes the focus when the button
-      goes with it. */
-  readonly headingRef?: React.Ref<HTMLHeadingElement>;
   /** What it holds under its heading. */
   readonly children: React.ReactNode;
 }
 
 /** A part of the section: its heading, then what it holds. */
-export function Part({
-  heading,
-  headingRef,
-  children,
-}: PartProps): React.JSX.Element {
+export function Part({ heading, children }: PartProps): React.JSX.Element {
   return (
     <div className={classOf(styles, "part")}>
-      {/* It takes the focus when the button goes with it, and is not in
-          the order of the Tab key. */}
-      <h2 ref={headingRef} tabIndex={-1} className={classOf(styles, "heading")}>
-        {heading}
-      </h2>
+      <h2 className={classOf(styles, "heading")}>{heading}</h2>
       {children}
     </div>
   );
@@ -191,7 +169,6 @@ export function IndividualsDownload({
 export function StatsRoom(): React.JSX.Element {
   return (
     <StatsFrame busy>
-      <ControlsRow />
       <Part heading={VARIANTS_HEADING}>
         <PlotsRoom line={null}>
           {VARIANT_STATISTICS.map((statistic) => (

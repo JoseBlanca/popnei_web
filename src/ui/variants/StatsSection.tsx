@@ -8,9 +8,9 @@
  *
  * Their code, the plots, D3 and the table, which no one needs before a
  * file is open, is downloaded apart from the page's, from the moment a
- * file is picked, so that it is there when the statistics start after the
- * file is read and its variants counted: the page's first download does
- * not carry it. Until it is there, the section's room is drawn, empty,
+ * file is picked, so that it is there when the pass that calculates the
+ * statistics starts after the file is read: the page's first download
+ * does not carry it. Until it is there, the section's room is drawn, empty,
  * by code the page has (StatsLayout.tsx), so that the open button under
  * it is where it will stay. Once downloaded, the section of the next file is drawn at
  * once, with no pause. A download that fails is caught by the boundary,

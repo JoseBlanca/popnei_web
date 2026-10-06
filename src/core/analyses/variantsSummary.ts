@@ -1,18 +1,24 @@
 /**
  * The summary of the variants file: how many variants it holds, and on
- * which chromosomes, with the variants of each, over every variant and
+ * which chromosomes, with the variants of each; the histograms of the
+ * variants; and the statistics of each individual, over every variant and
  * every individual of the file, before any filter, so that it describes
- * the file as it is (docs/plans/open-variants.md, "The design"). The
- * module says what it is calculated from, the request, the check numbers,
- * the lines of the Python script and the rows of its table of the
- * chromosomes.
+ * the file as it is (docs/plans/open-variants.md, "The design";
+ * docs/plans/live-stats.md, "One pass for the count and the statistics").
+ * The module says what it is calculated from, the request, the check
+ * numbers, the lines of the Python script and the rows of its table of
+ * the chromosomes.
  *
- * The counts are popnei's, from one call of `calcVarDensity` in the
- * calculation worker with a window wider than any chromosome, so that it
- * gives one window per chromosome and no size of window has to be chosen.
- * Its pass reads only the chromosome and the position of each variant: it
- * finds a position that is not a number in the middle of a VCF, but not a
- * bad genotype, nor a genotype of another ploidy than the one given.
+ * The numbers are popnei's, from one call of `calcVariantsSummary` in the
+ * calculation worker, one pass over the file that gives three results,
+ * each the same to the bit as its own call gives it: the density of
+ * `calcVarDensity` with a window wider than any chromosome, so that it
+ * gives one window per chromosome and no size of window has to be chosen;
+ * the histograms of `calcPerVarDistribs`, with the bins, the range and the
+ * least number of individuals of the histograms of the variants of
+ * variantChecks.ts, over every individual; and the statistics of
+ * `calcPerIndividualStats`. Its pass reads the genotypes, so a file whose
+ * genotypes popnei refuses gives none of the three.
  */
 
 import type { Project } from "../project.ts";
@@ -24,6 +30,12 @@ import type {
   Run,
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
+import {
+  VARIANT_BINS,
+  VARIANT_FINE_BINS,
+  VARIANT_MIN_NUM_INDIVIDUALS,
+  VARIANT_RANGE,
+} from "./variantChecks.ts";
 import { defect, parseNoOptions, pythonOpenVariants } from "./words.ts";
 
 /** The id of the analysis. */
@@ -35,7 +47,9 @@ export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 1,
+  // 2 since the result holds the histograms of the variants and the
+  // statistics of each individual (docs/plans/live-stats.md).
+  keyVersion: 2,
   filtersRead: Object.freeze({ variants: false, individuals: false }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -74,14 +88,21 @@ function needs(): null {
   return null;
 }
 
-/** Builds the request, with no filter, and sends it through `c`. Throws a
-    defect when the project has no variants file, which `projectNeeds`
-    rules out. */
+/** Builds the request, with no filter and the bins of the histograms of
+    the variants, and sends it through `c`. Throws a defect when the
+    project has no variants file, which `projectNeeds` rules out. */
 function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   if (p.variants === null) {
     throw defect("the summary of the variants file was run with no file.");
   }
-  return c.run({ analysis: ID, fileId: p.variants.fileId, filters: [] });
+  return c.run({
+    analysis: ID,
+    fileId: p.variants.fileId,
+    filters: [],
+    minNumIndividuals: VARIANT_MIN_NUM_INDIVIDUALS,
+    numBins: VARIANT_FINE_BINS,
+    range: VARIANT_RANGE,
+  });
 }
 
 /** None: what the summary finds wrong with a file is a refusal of popnei,
@@ -101,11 +122,16 @@ function numCheckNumbers(): number {
 }
 
 /**
- * The lines of the Python script that give the same counts, opening the
+ * The lines of the Python script that give the same numbers, opening the
  * file again with no filter, since a `Variants` takes no filter off:
  * `popnei.open_vars` for a `.nei` file, `popnei.open_vcf` with the read
- * options for a VCF. Throws a defect on a project with no variants file,
- * since it is asked only of an analysis that has run.
+ * options for a VCF. popnei's Python has no `calc_variants_summary`, so
+ * they are its three calls, three passes over the file: the variants on
+ * each chromosome, one window per chromosome; the histograms of the
+ * variants, in `VARIANT_BINS` bins, 40, and not the 1,280 of the job,
+ * which the page sums; and the statistics of each individual. Throws a
+ * defect on a project with no variants file, since it is asked only of an
+ * analysis that has run.
  */
 function script(p: Project): string {
   const variants = p.variants;
@@ -115,6 +141,7 @@ function script(p: Project): string {
     );
   }
   const open = pythonOpenVariants(variants);
+  const [low, high] = VARIANT_RANGE;
   return [
     "# The variants of the file on each chromosome, one window per chromosome",
     `variants_as_read = ${open}`,
@@ -124,6 +151,19 @@ function script(p: Project): string {
     "    chrom_lengths={},",
     ")",
     'print(variants_summary.windows[["chrom", "num_vars"]].to_string())',
+    "# The histograms of the variants, over every variant and every individual of the file",
+    "variant_distribs = popnei.calc_per_var_distribs(",
+    "    variants_as_read,",
+    "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
+    `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
+    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
+    ")",
+    "# The statistics of each individual, over every variant of the file",
+    "individual_stats = popnei.calc_per_individual_stats(variants_as_read)",
+    "print(pandas.DataFrame({",
+    '    "missing_genotypes": individual_stats.missing_gt_rate,',
+    '    "observed_heterozygosity": individual_stats.obs_het_rate,',
+    "}).to_string())",
   ]
     .map((line) => `${line}\n`)
     .join("");

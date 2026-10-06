@@ -2,25 +2,17 @@ import { describe, expect, test } from "vitest";
 
 import { loadVariants } from "../core/project.ts";
 import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
-import {
-  POPGEN2_AUTO_GROUPS,
-  POPGEN2_STATISTICS_IDS,
-  createPopgen2Store,
-} from "./popgen2Store.ts";
+import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 
 // The store of popgen2.html as its entry makes it, with a fake `send`
 // that records the jobs and never ends them.
 
 describe("the store of popgen2.html", () => {
-  test("the page starts the summary by itself, then the histograms of the variants and the statistics of each individual, in that order", () => {
-    expect(POPGEN2_AUTO_GROUPS).toEqual([
-      ["variantsSummary"],
-      ["variantChecks", "individualChecks"],
-    ]);
-    expect(POPGEN2_STATISTICS_IDS).toBe(POPGEN2_AUTO_GROUPS[1]);
+  test("the page starts the summary by itself, whose one pass gives the statistics too", () => {
+    expect(POPGEN2_AUTO_GROUPS).toEqual([["variantsSummary"]]);
   });
 
-  test("with no filter of individuals, it sends the histograms of the variants over every individual at once, with no wait for the statistics of each individual", () => {
+  test("it sends the summary with no filter and the bins of the histograms of the variants, and has no analysis of the statistics of their own", () => {
     const jobs: Job[] = [];
     const store = createPopgen2Store({
       send: (_key, job): Run<JobResult> => {
@@ -51,14 +43,20 @@ describe("the store of popgen2.html", () => {
       numVars: null,
     });
 
-    store.startRun("variantChecks");
+    store.startRun("variantsSummary");
 
     expect(jobs).toEqual([
-      expect.objectContaining({
-        analysis: "variantChecks",
+      {
+        analysis: "variantsSummary",
         fileId,
-        individuals: null,
-      }),
+        filters: [],
+        minNumIndividuals: 0,
+        numBins: 1280,
+        range: [0, 1],
+      },
+    ]);
+    expect(store.getState().analyses.map((a) => a.id)).toEqual([
+      "variantsSummary",
     ]);
   });
 });

@@ -39,6 +39,7 @@ import type {
   JobResult,
   Run,
   VariantChecksResult,
+  VariantStatsPart,
 } from "../../worker/protocol.ts";
 import {
   defect,
@@ -361,7 +362,7 @@ export interface VariantBins {
  * for a result whose bins are not 40 times a whole number.
  */
 export function variantBins(
-  result: VariantChecksResult,
+  result: VariantStatsPart,
   statistic: VariantStatistic,
 ): VariantBins {
   const numFine = result[statistic].counts.length;
@@ -397,7 +398,7 @@ const ROUNDED_BINS = 40;
  * whose ends of a range are not edges of its bins.
  */
 export function variantBinsRounded(
-  result: VariantChecksResult,
+  result: VariantStatsPart,
   statistic: VariantStatistic,
 ): VariantBins {
   const counts = result[statistic].counts;
@@ -458,7 +459,7 @@ function fineIndexOf(value: number, numFine: number): number {
  * `variantBinsRounded` never give it.
  */
 export function summed(
-  result: VariantChecksResult,
+  result: VariantStatsPart,
   statistic: VariantStatistic,
   from: number,
   to: number,

@@ -21,16 +21,18 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import type {
   FilterCountsJob,
+  IndividualChecksJob,
   JobResult,
   Progress,
+  VariantChecksJob,
   VariantsSummaryJob,
   VariantsSummaryResult,
 } from "./protocol.ts";
 import {
+  chromsOf,
   createRunner,
   loadPopnei,
   transferablesOf,
-  variantsSummaryOf,
 } from "./runner.ts";
 import type { Answer, LoadToOpen, Runner } from "./runner.ts";
 import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
@@ -43,10 +45,14 @@ const VCF: LoadToOpen = {
   format: "vcf",
   readOptions: { ploidy: 2, onlyPassed: true },
 };
+/** The bins of the histograms of the variants that popgen2.html asks
+    for, those of variantChecks.ts. */
+const BINS = { minNumIndividuals: 0, numBins: 1280, range: [0, 1] } as const;
 const JOB: VariantsSummaryJob = {
   analysis: "variantsSummary",
   fileId: FILE_ID,
   filters: [],
+  ...BINS,
 };
 
 /** The bytes of a fixture, a copy: node keeps a small file it reads inside
@@ -80,12 +86,22 @@ function summaryOf(answer: Answer<JobResult>): VariantsSummaryResult {
   return answer.value;
 }
 
-/** The numbers of a summary as plain values, for `toEqual`. */
+/** The chromosomes and the counts of a summary as plain values, for
+    `toEqual`. */
 function numbersOf(result: VariantsSummaryResult): unknown {
   return {
     chroms: result.chroms,
     numVarsPerChrom: [...result.numVarsPerChrom],
     passStats: result.passStats,
+  };
+}
+
+/** The chromosomes and the counts that `chromsOf` gives, as plain values,
+    for `toEqual`. */
+function chromNumbersOf(given: ReturnType<typeof chromsOf>): unknown {
+  return {
+    chroms: given.chroms,
+    numVarsPerChrom: [...given.numVarsPerChrom],
   };
 }
 
@@ -165,8 +181,70 @@ describe("open-variants 1 the runner's summary of the variants file", () => {
     expect(
       told.every((progress) => progress.pass === 1 && progress.numPasses === 1),
     ).toBe(true);
-    expect(transferablesOf(result)).toEqual([result.numVarsPerChrom.buffer]);
+    const { variants, individuals } = result;
+    expect(transferablesOf(result)).toEqual([
+      result.numVarsPerChrom.buffer,
+      variants.binEdges.buffer,
+      variants.missingRate.counts.buffer,
+      variants.maf.counts.buffer,
+      variants.obsHet.counts.buffer,
+      variants.unbiasedExpHet.counts.buffer,
+      individuals.missingGtRate.buffer,
+      individuals.obsHetRate.buffer,
+    ]);
   });
+});
+
+/** The VCF read as popgen2.html reads it: the ploidy read from the file,
+    every variant whatever its FILTER. */
+const PAGE_VCF: LoadToOpen = {
+  fileId: FILE_ID,
+  format: "vcf",
+  readOptions: { ploidy: null, onlyPassed: false },
+};
+
+describe("live-stats 1 the one pass of the summary gives the statistics of their own requests", () => {
+  test.each([
+    ["panel.vcf.gz", 1200, 200],
+    ["panel.nei", 1200, 200],
+    ["tetraploid.vcf.gz", 200, 12],
+  ])(
+    "%s: the histograms of the variants and the statistics of each individual are those of variantChecks and individualChecks, to the bit, over its %i variants and %i individuals",
+    (name, numVars, numIndividuals) => {
+      const runner = createRunner();
+      const load = name.endsWith(".nei") ? NEI : PAGE_VCF;
+      expect(runner.open(load, { name, source: bytesOf(name) }).kind).toBe(
+        "ok",
+      );
+      const summary = summaryOf(runner.run(JOB, ignore));
+      const variantsJob: VariantChecksJob = {
+        analysis: "variantChecks",
+        fileId: FILE_ID,
+        filters: [],
+        individuals: null,
+        ...BINS,
+      };
+      const individualsJob: IndividualChecksJob = {
+        analysis: "individualChecks",
+        fileId: FILE_ID,
+        filters: [],
+      };
+      const variants = runner.run(variantsJob, ignore);
+      const individuals = runner.run(individualsJob, ignore);
+      if (variants.kind !== "ok" || individuals.kind !== "ok") {
+        throw new Error("the statistics of their own requests failed");
+      }
+      expect({ analysis: "variantChecks", ...summary.variants }).toStrictEqual(
+        variants.value,
+      );
+      expect({
+        analysis: "individualChecks",
+        ...summary.individuals,
+      }).toStrictEqual(individuals.value);
+      expect(summary.passStats).toEqual({ numVars, filtering: {} });
+      expect(summary.individuals.individuals).toHaveLength(numIndividuals);
+    },
+  );
 });
 
 /** A VCF of two individuals whose header names three chromosomes with
@@ -232,7 +310,7 @@ function density(
   start: readonly number[],
   numVars: readonly number[],
   numVarsOfPass: number,
-): Parameters<typeof variantsSummaryOf>[0] {
+): Parameters<typeof chromsOf>[0] {
   return {
     chroms,
     start: Float64Array.from(start),
@@ -242,14 +320,13 @@ function density(
   };
 }
 
-describe("open-variants 1 variantsSummaryOf, popnei's density made the result", () => {
+describe("open-variants 1 chromsOf, popnei's density made the chromosomes of the result", () => {
   test("one window per chromosome from the position 1 gives the chromosomes and their counts", () => {
     expect(
-      numbersOf(variantsSummaryOf(density(["2", "1"], [1, 1], [3, 1], 4))),
+      chromNumbersOf(chromsOf(density(["2", "1"], [1, 1], [3, 1], 4))),
     ).toEqual({
       chroms: ["2", "1"],
       numVarsPerChrom: [3, 1],
-      passStats: { numVars: 4, filtering: {} },
     });
   });
 
@@ -266,6 +343,6 @@ describe("open-variants 1 variantsSummaryOf, popnei's density made the result", 
       density(["1", "2"], [1, 1], [3, 1], 5),
     ],
   ])("%s is a defect", (_name, given) => {
-    expect(() => variantsSummaryOf(given)).toThrow(/^popnei_web defect:/u);
+    expect(() => chromsOf(given)).toThrow(/^popnei_web defect:/u);
   });
 });

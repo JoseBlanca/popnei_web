@@ -8,7 +8,8 @@
  * filters, the principal components, a PCA or a PCoA, the distances
  * between populations with the order of their heatmap, the LD decay of
  * each population, and the summary of the variants file, its chromosomes
- * and the variants on each, writes the filtered variants as a `.nei` file,
+ * and the variants on each, the histograms of the variants and the
+ * statistics of each individual from one pass, writes the filtered variants as a `.nei` file,
  * and says what to answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
@@ -24,7 +25,7 @@ import {
   calcPerVarDistribs,
   calcPopDiversity,
   calcPopDists,
-  calcVarDensity,
+  calcVariantsSummary,
   correctDistsByLingoes,
   doPcaFromVariants,
   doPcoa,
@@ -40,6 +41,7 @@ import type {
   LdBins,
   PassStats as PopneiPassStats,
   PcoaResult,
+  PerIndividualStats,
   PerVarDistribs,
   PopDists,
   PopDiversity,
@@ -65,7 +67,7 @@ import type {
   FilteringStats,
   HeatmapOrder,
   IndividualChecksJob,
-  IndividualChecksResult,
+  IndividualStatsPart,
   Job,
   JobResult,
   LdDecayJob,
@@ -81,10 +83,11 @@ import type {
   Progress,
   ShownMeasure,
   VariantChecksJob,
-  VariantChecksResult,
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
+  VariantStatsPart,
+  VariantsSummaryJob,
   VariantsSummaryResult,
   WriteJob,
   Written,
@@ -299,19 +302,17 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
         ...result.foldedSfs.filter((sfs) => sfs !== null),
       ];
     case "individualChecks":
-      return [result.missingGtRate, result.obsHetRate];
+      return individualStatsArrays(result);
     case "variantChecks":
-      return [
-        result.binEdges,
-        result.missingRate.counts,
-        result.maf.counts,
-        result.obsHet.counts,
-        result.unbiasedExpHet.counts,
-      ];
+      return variantStatsArrays(result);
     case "filterCounts":
       return [];
     case "variantsSummary":
-      return [result.numVarsPerChrom];
+      return [
+        result.numVarsPerChrom,
+        ...variantStatsArrays(result.variants),
+        ...individualStatsArrays(result.individuals),
+      ];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
     case "popDists":
@@ -338,6 +339,26 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
         result.halfDist,
       ];
   }
+}
+
+/** The typed arrays of the histograms of the variants. */
+function variantStatsArrays(
+  part: VariantStatsPart,
+): readonly (Float64Array | Uint32Array)[] {
+  return [
+    part.binEdges,
+    part.missingRate.counts,
+    part.maf.counts,
+    part.obsHet.counts,
+    part.unbiasedExpHet.counts,
+  ];
+}
+
+/** The typed arrays of the statistics of each individual. */
+function individualStatsArrays(
+  part: IndividualStatsPart,
+): readonly Float64Array[] {
+  return [part.missingGtRate, part.obsHetRate];
 }
 
 /** What the runner holds: nothing before the `open`; a load whose open
@@ -495,7 +516,7 @@ export function createRunner(): Runner {
       case "filterCounts":
         return runFilterCounts(pass, job);
       case "variantsSummary":
-        return runVariantsSummary(pass);
+        return runVariantsSummary(pass, job, individuals);
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -822,9 +843,7 @@ function passNumbered(pass: Pass, number: number, numPasses: number): Pass {
 
 /**
  * Runs `calcPerIndividualStats` and gives popnei's names and arrays as
- * they are, which popnei copies out of the memory of wasm. Throws a defect
- * when the names are not `individuals`, those the open gave, in their
- * order, since the numbers would then be read under other names.
+ * they are, `individualStatsPartOf`.
  */
 function runIndividualChecks(
   pass: Pass,
@@ -835,7 +854,27 @@ function runIndividualChecks(
   if (answer.kind !== "ok") {
     return answer;
   }
-  const stats = answer.value;
+  return {
+    kind: "ok",
+    value: {
+      analysis: "individualChecks",
+      ...individualStatsPartOf(answer.value, individuals, job.filters),
+    },
+  };
+}
+
+/**
+ * The statistics of each individual made of popnei's: its names and
+ * arrays as they are, which popnei copies out of the memory of wasm.
+ * Throws a defect when the names are not `individuals`, those the open
+ * gave, in their order, since the numbers would then be read under other
+ * names.
+ */
+function individualStatsPartOf(
+  stats: PerIndividualStats,
+  individuals: readonly string[],
+  filters: readonly VariantFilter[],
+): IndividualStatsPart {
   if (
     stats.individuals.length !== individuals.length ||
     stats.individuals.some((name, index) => name !== individuals[index])
@@ -844,38 +883,67 @@ function runIndividualChecks(
       "popnei_web defect: the statistics of each individual are not of the individuals the open gave, in their order",
     );
   }
-  const result: IndividualChecksResult = {
-    analysis: "individualChecks",
+  return {
     individuals: stats.individuals,
     missingGtRate: stats.missingGtRate,
     obsHetRate: stats.obsHetRate,
-    passStats: passStatsOf(stats.passStats, job.filters),
+    passStats: passStatsOf(stats.passStats, filters),
   };
-  return { kind: "ok", value: result };
 }
 
 /**
  * Runs `calcPerVarDistribs` over the individuals of the pass, those of the
  * job's list when it has one, as one population, with
- * the bins of the job, and gives one copy of the edges, which popnei's
- * four distributions share, and of each distribution its mean and its
- * counts.
+ * the bins of the job, `variantStatsPartOf`.
  */
 function runVariantChecks(
   pass: Pass,
   job: VariantChecksJob,
 ): Answer<JobResult> {
   const answer = passOf(pass, (variants) =>
-    calcPerVarDistribs(variants, {
-      stats: VARIANT_CHECKS_STATS,
-      minNumIndividuals: job.minNumIndividuals,
-      histKwargs: { numBins: job.numBins, range: job.range },
-    }),
+    calcPerVarDistribs(variants, perVarOptionsOf(job)),
   );
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { missingRate, maf, obsHet, unbiasedExpHet, passStats } = answer.value;
+  return {
+    kind: "ok",
+    value: {
+      analysis: "variantChecks",
+      ...variantStatsPartOf(answer.value, job.filters),
+    },
+  };
+}
+
+/** The options of `calcPerVarDistribs` of the histograms of the variants
+    of `job`, written with their keys alone, since popnei refuses a key it
+    does not know. */
+function perVarOptionsOf(job: VariantChecksJob | VariantsSummaryJob): {
+  readonly stats: typeof VARIANT_CHECKS_STATS;
+  readonly minNumIndividuals: number;
+  readonly histKwargs: {
+    readonly numBins: number;
+    readonly range: readonly [number, number];
+  };
+} {
+  return {
+    stats: VARIANT_CHECKS_STATS,
+    minNumIndividuals: job.minNumIndividuals,
+    histKwargs: { numBins: job.numBins, range: job.range },
+  };
+}
+
+/**
+ * The histograms of the variants made of popnei's distributions: one copy
+ * of the edges, which popnei's four distributions share, and of each
+ * distribution its mean and its counts. Throws a defect when popnei gave
+ * no value of one of the four, which it was asked for.
+ */
+function variantStatsPartOf(
+  distribs: PerVarDistribs,
+  filters: readonly VariantFilter[],
+): VariantStatsPart {
+  const { missingRate, maf, obsHet, unbiasedExpHet, passStats } = distribs;
   if (
     missingRate === null ||
     maf === null ||
@@ -886,27 +954,27 @@ function runVariantChecks(
       "popnei_web defect: calcPerVarDistribs gave no value of a statistic it was asked for",
     );
   }
-  const result: VariantChecksResult = {
-    analysis: "variantChecks",
+  return {
     binEdges: Float64Array.from(maf.histBinEdges),
     missingRate: variantDistribOf(missingRate),
     maf: variantDistribOf(maf),
     obsHet: variantDistribOf(obsHet),
     unbiasedExpHet: variantDistribOf(unbiasedExpHet),
-    passStats: passStatsOf(passStats, job.filters),
+    passStats: passStatsOf(passStats, filters),
   };
-  return { kind: "ok", value: result };
 }
 
 /**
- * The summary of the variants file made of popnei's density of one window
- * per chromosome: its chromosomes in popnei's order and the counts of
- * their windows. Throws a defect when a chromosome has more than one
- * window, a window does not start at 1, the arrays differ in length, or
- * the counts do not add up to the variants of the pass, which a window of
- * 2^53 − 1 base pairs rules out.
+ * The chromosomes of the summary of the variants file made of popnei's
+ * density of one window per chromosome: its chromosomes in popnei's order
+ * and the counts of their windows. Throws a defect when a chromosome has
+ * more than one window, a window does not start at 1, the arrays differ in
+ * length, or the counts do not add up to the variants of the pass, which a
+ * window of 2^53 − 1 base pairs rules out.
  */
-export function variantsSummaryOf(density: VarDensity): VariantsSummaryResult {
+export function chromsOf(
+  density: VarDensity,
+): Pick<VariantsSummaryResult, "chroms" | "numVarsPerChrom"> {
   const { chroms, start, numVars, passStats } = density;
   let counted = 0;
   for (const count of numVars) {
@@ -923,29 +991,50 @@ export function variantsSummaryOf(density: VarDensity): VariantsSummaryResult {
       "popnei_web defect: calcVarDensity gave other than one window per chromosome, from the position 1, whose counts add up to the variants of the pass",
     );
   }
-  return {
-    analysis: "variantsSummary",
-    chroms,
-    numVarsPerChrom: numVars,
-    passStats: passStatsOf(passStats, []),
-  };
+  return { chroms, numVarsPerChrom: numVars };
 }
 
 /**
- * Runs `calcVarDensity` with one window per chromosome, `chromLengths`
- * empty so that the lengths of the source are not used: with them, a
- * header of thousands of scaffolds would give each one with 0 variants,
- * and a variant past the length its header gives would refuse a file
- * otherwise usable. The job has no filter.
+ * Runs `calcVariantsSummary`, the one pass over every variant and every
+ * individual of the file, with its three parts: `density` with one window
+ * per chromosome, `chromLengths` empty so that the lengths of the source
+ * are not used (with them, a header of thousands of scaffolds would give
+ * each one with 0 variants, and a variant past the length its header
+ * gives would refuse a file otherwise usable); `perVar`, the histograms
+ * of the variants with the bins of the job, over every individual as one
+ * population; and `perIndividual`. Each part is the same to the bit as
+ * its own call gives it. The job has no filter. Throws a defect when
+ * popnei gives no value of a part it was asked for.
  */
-function runVariantsSummary(pass: Pass): Answer<JobResult> {
+function runVariantsSummary(
+  pass: Pass,
+  job: VariantsSummaryJob,
+  individuals: readonly string[],
+): Answer<JobResult> {
   const answer = passOf(pass, (variants) =>
-    calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
+    calcVariantsSummary(variants, {
+      density: { windowSize: ONE_WINDOW_PER_CHROM, chromLengths: {} },
+      perVar: perVarOptionsOf(job),
+      perIndividual: {},
+    }),
   );
   if (answer.kind !== "ok") {
     return answer;
   }
-  return { kind: "ok", value: variantsSummaryOf(answer.value) };
+  const { density, perVar, perIndividual, passStats } = answer.value;
+  if (density === null || perVar === null || perIndividual === null) {
+    throw new Error(
+      "popnei_web defect: calcVariantsSummary gave no value of a part it was asked for",
+    );
+  }
+  const result: VariantsSummaryResult = {
+    analysis: "variantsSummary",
+    ...chromsOf(density),
+    variants: variantStatsPartOf(perVar, job.filters),
+    individuals: individualStatsPartOf(perIndividual, individuals, job.filters),
+    passStats: passStatsOf(passStats, job.filters),
+  };
+  return { kind: "ok", value: result };
 }
 
 /** The mean and the counts of popnei's distribution of its one

@@ -1,31 +1,10 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* The section: the row of the pass running, then the two parts. */
+/* The section: the two parts. */
 .stats {
   display: grid;
   gap: var(--space-8);
   min-inline-size: 0;
-}
-
-/* The bar of the pass running and the button: one row, one button high
-   in every state, empty with no button, so that the section keeps its
-   height as a pass starts and ends. The bar takes the room left beside
-   the button, up to its own largest. */
-.controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-block-size: calc(var(--leading-body) * 1em + 2 * var(--space-1) + 2px);
-}
-
-.bar {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-  max-inline-size: 24rem;
-}
-
-.button {
-  flex: none;
 }
 
 /* A part: its heading, its plots or the room they keep, and for the
@@ -40,11 +19,6 @@
   margin: 0;
   font-size: var(--text-lg);
   line-height: var(--leading-heading);
-}
-
-.heading:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--focus-offset);
 }
 
 .line {

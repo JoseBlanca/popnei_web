@@ -3,7 +3,10 @@
  * the file and the open button, which the owner put at the bottom of the
  * page (docs/plans/file-stats.md, "The design" and "Round 1 with the
  * owner"; steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
- * under its heading:
+ * under its heading, both from the result of the summary of the variants
+ * file, whose one pass counts the variants and calculates them
+ * (docs/plans/live-stats.md, "One pass for the count and the
+ * statistics"):
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
  *   and the expected heterozygosity (unbiased), with the number of
@@ -15,53 +18,39 @@
  *   of individuals.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
- * the bins.
- *
- * Above the parts, one row: the bar of the pass running with one Stop for
- * both statistics, or, once stopped or after a crash of the worker, the
- * button that starts again those not done. Each part says, over the room
- * of its plots, what it waits for, that a failure or a Stop before it
- * held it back, that it was stopped, or that it is calculated with its
- * share done; in place of its plots, the words of its own failure; a
- * failure of one hides nothing of the other. When the button goes with
- * the focus on it, the focus goes to the heading of the part that failed,
- * or of the variants; when another file is opened, to the open button.
+ * the bins, and no bar nor button of its own: the bar of the pass, its
+ * Stop and Start again are in the box of the file. Each part says, over
+ * the room of its plots, that it is calculated, with the share done, or
+ * that it was stopped; once the pass failed, whose words the box says, a
+ * short line in place of its plots. When another file is opened with the
+ * focus in the section, the focus goes to the open button.
  *
  * The open button is under the section, so the section keeps its height
- * from the moment it is drawn, the file read, to the end of the second
- * pass: the row of the button is one button high in every state, empty
- * when there is none; the words of a part lie over the room of its
- * plots, which is kept, hidden, until they are drawn; and the download
- * keeps its room, hidden, until the table is there. So a click aimed at
- * the open button as a pass ends, or a press held across that end, is
- * not lost. Only a failure, whose words take the place of the plots, a
- * line of individuals with no called genotype under their plot, and the
- * user's own Stop, which only the bar leaves, change it.
+ * from the moment it is drawn, the file read, to the end of the pass: the
+ * words of a part lie over the room of its plots, which is kept, hidden,
+ * until they are drawn; and the download keeps its room, hidden, until
+ * the table is there. So a click aimed at the open button as the pass
+ * ends, or a press held across that end, is not lost. Only a failure,
+ * whose line takes the place of the plots, and a line of individuals with
+ * no called genotype under their plot, change it.
  */
 import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
-  IndividualChecksResult,
+  IndividualStatsPart,
   JobResult,
-  VariantChecksResult,
+  VariantStatsPart,
+  VariantsSummaryResult,
 } from "../../worker/protocol.ts";
-import { RunButton } from "../analyses/RunButton.tsx";
-import type { ButtonOf } from "../analyses/status.ts";
-import { resultOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
-import { POPGEN2_STATISTICS_IDS } from "../popgen2Store.ts";
-import { useAnnouncer } from "../shell/announcer.tsx";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
 import { statsCsvName } from "../steps/variants/individualStats.ts";
 import { useAppState } from "../store.tsx";
-import { Problem } from "../widgets/Problem.tsx";
-import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import {
-  ControlsRow,
   IndividualPlace,
   IndividualsDownload,
   Part,
@@ -72,26 +61,16 @@ import {
 import styles from "./StatsLayout.module.css";
 import {
   INDIVIDUALS_HEADING,
-  INDIVIDUALS_ID,
   INDIVIDUAL_STATISTICS,
-  RESUME_STATS_LABEL,
-  STATS_PROGRESS_KIND,
-  STATS_STOPPED_TEXT,
-  STOP_STATS_LABEL,
+  PART_FAILED,
+  PART_STOPPED,
   VARIANTS_HEADING,
-  VARIANTS_ID,
   VARIANT_STATISTICS,
   individualTitle,
-  pendingText,
-  statsBarLabel,
-  statsButton,
-  statsFailedText,
   statsRunningLine,
-  statsStartText,
-  statsStatus,
   variantTitle,
 } from "./statsWords.ts";
-import type { StatsId } from "./statsWords.ts";
+import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
@@ -99,8 +78,8 @@ import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
 export interface FileStatsProps {
-  /** The analyses the page starts by itself, which stop, start again and
-      say why one has not started. */
+  /** The analyses the page starts by itself, which tell a pass stopped
+      from one about to start. */
   readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the section
       goes with it, another file opened. */
@@ -152,18 +131,12 @@ function Stats({
   fileId,
   variantsName,
 }: StatsProps): React.JSX.Element {
-  const announcer = useAnnouncer();
   const sectionRef = useRef<HTMLElement>(null);
-  const variantsHeading = useRef<HTMLHeadingElement>(null);
-  const individualsHeading = useRef<HTMLHeadingElement>(null);
-  // Selected for what autoRuns says of the statistics not started, which
-  // changes with the count, and with what autoRuns knows, which a Stop
-  // with no pass running changes and the store does not.
-  useAppState(summaryStatus);
+  const status = useAppState(summaryStatus);
+  // Selected for what autoRuns knows, which tells a pass stopped from one
+  // about to start, and which a Stop with no pass running changes and the
+  // store does not.
   useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
-  const individuals = useAppState((s) => statsStatus(s, INDIVIDUALS_ID));
-  const variants = useAppState((s) => statsStatus(s, VARIANTS_ID));
-  const project = useAppState((s) => s.project);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -183,133 +156,48 @@ function Stats({
   // Drawn: the status region may say the statistics of this load.
   useLayoutEffect(() => onShown(fileId), [onShown, fileId]);
 
-  // Whether the button went with the focus in the drawing being made.
-  const focusAfterGone = useRef(false);
-  useLayoutEffect(() => {
-    if (!focusAfterGone.current) return;
-    focusAfterGone.current = false;
-    // The part whose failure took the button, else the variants, the
-    // first part.
-    const failed =
-      individuals.kind === "error" && variants.kind !== "error"
-        ? individualsHeading
-        : variantsHeading;
-    failed.current?.focus();
-  });
-
-  const pendingOf = (id: StatsId, status: AnalysisStatus<JobResult>) =>
-    status.kind === "ready" || status.kind === "removed"
-      ? autoRuns.pending(id)
-      : null;
-  const button = statsButton(
-    [individuals, variants],
-    [pendingOf(INDIVIDUALS_ID, individuals), pendingOf(VARIANTS_ID, variants)],
-    autoRuns.canResume(POPGEN2_STATISTICS_IDS),
-  );
-  const runButton: ButtonOf =
-    button === null
-      ? null
-      : button.kind === "stop"
-        ? { kind: "stop" }
-        : { kind: "run", reason: null };
-  const running: {
-    readonly id: StatsId;
-    readonly share: number | null;
-  } | null =
-    individuals.kind === "running"
-      ? { id: INDIVIDUALS_ID, share: shareOf(individuals) }
-      : variants.kind === "running"
-        ? { id: VARIANTS_ID, share: shareOf(variants) }
-        : null;
-
-  const stop = (): void => {
-    autoRuns.stop(POPGEN2_STATISTICS_IDS);
-    announcer.announce(STATS_STOPPED_TEXT, { replaces: STATS_PROGRESS_KIND });
-  };
-  const resume = (): void => {
-    // Said here, since the store does not tell this start from the second
-    // pass that follows the first; when it says it too, the region says
-    // it once.
-    if (autoRuns.resume(POPGEN2_STATISTICS_IDS)) {
-      announcer.announce(statsStartText(variantsName), {
-        replaces: STATS_PROGRESS_KIND,
-      });
-    }
-  };
-
-  /** What a part says over the room of its plots: its share done while
-      it runs, what holds it back, or nothing once done or failed. */
-  const lineOf = (
-    id: StatsId,
-    status: AnalysisStatus<JobResult>,
-  ): string | null => {
+  /** What a part says over the room of its plots: the share done while
+      the pass runs, that it was stopped, why it cannot run, or nothing
+      once done, failed or about to start. */
+  const lineOf = (part: StatsPart): string | null => {
     switch (status.kind) {
       case "done":
       case "error":
         return null;
       case "running":
-        return statsRunningLine(id, shareOf(status));
+        return statsRunningLine(
+          part,
+          status.progress === null ? null : progressShare(status.progress),
+        );
       case "ready":
       case "removed":
-        // A statistic ready that autoRuns knows nothing of starts by
-        // itself in a moment.
-        return pendingText(
-          autoRuns.pending(id) ?? { kind: "waiting", after: null },
-        );
+        // Not started under its key, the pass starts by itself in a
+        // moment.
+        return autoRuns.startedUnder(status.key) ? PART_STOPPED : null;
       case "locked":
         return status.reason;
     }
   };
 
-  const variantsResult = resultOf(variants, VARIANTS_ID);
-  const individualsResult = resultOf(individuals, INDIVIDUALS_ID);
+  const result = summaryOf(status);
+  const individualsResult = result?.individuals ?? null;
   return (
     <StatsFrame sectionRef={sectionRef}>
-      <ControlsRow>
-        {running !== null && (
-          <div className={classOf(styles, "bar")}>
-            <ProgressBar
-              label={statsBarLabel(running.id)}
-              value={running.share}
-            />
-          </div>
-        )}
-        {runButton !== null && (
-          <div className={classOf(styles, "button")}>
-            <RunButton
-              button={runButton}
-              runLabel={RESUME_STATS_LABEL}
-              stopLabel={STOP_STATS_LABEL}
-              onRun={resume}
-              onStop={stop}
-              onGone={() => {
-                // The headings are drawn by the time the effects of the
-                // drawing run, after this cleanup.
-                focusAfterGone.current = true;
-              }}
-            />
-          </div>
-        )}
-      </ControlsRow>
-      <Part heading={VARIANTS_HEADING} headingRef={variantsHeading}>
-        {variants.kind === "error" ? (
-          <Problem>
-            {statsFailedText(VARIANTS_ID, variants.error, project)}
-          </Problem>
+      <Part heading={VARIANTS_HEADING}>
+        {status.kind === "error" ? (
+          <p className={classOf(styles, "line")}>{PART_FAILED}</p>
         ) : (
-          <PlotsRoom line={lineOf(VARIANTS_ID, variants)}>
-            <VariantPlots result={variantsResult} />
+          <PlotsRoom line={lineOf("variants")}>
+            <VariantPlots result={result?.variants ?? null} />
           </PlotsRoom>
         )}
       </Part>
-      <Part heading={INDIVIDUALS_HEADING} headingRef={individualsHeading}>
-        {individuals.kind === "error" ? (
-          <Problem>
-            {statsFailedText(INDIVIDUALS_ID, individuals.error, project)}
-          </Problem>
+      <Part heading={INDIVIDUALS_HEADING}>
+        {status.kind === "error" ? (
+          <p className={classOf(styles, "line")}>{PART_FAILED}</p>
         ) : (
           <>
-            <PlotsRoom line={lineOf(INDIVIDUALS_ID, individuals)}>
+            <PlotsRoom line={lineOf("individuals")}>
               <IndividualPlots result={individualsResult} />
             </PlotsRoom>
             <IndividualsDownload
@@ -332,18 +220,26 @@ function Stats({
   );
 }
 
-/** The share done of a pass running, or `null` before its first
-    progress. */
-function shareOf(
-  status: Extract<AnalysisStatus<JobResult>, { readonly kind: "running" }>,
-): number | null {
-  return status.progress === null ? null : progressShare(status.progress);
+/** The result of the summary once done; `null` in any other state. A
+    defect for a result of another analysis, which the store never gives
+    it. */
+function summaryOf(
+  status: AnalysisStatus<JobResult>,
+): VariantsSummaryResult | null {
+  if (status.kind !== "done") return null;
+  const result = status.result;
+  if (result.analysis !== "variantsSummary") {
+    throw new Error(
+      `popnei_web defect: the summary of the variants file has a result of ${result.analysis}.`,
+    );
+  }
+  return result;
 }
 
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
   /** The result, or `null` before it, for the room of the plots. */
-  readonly result: VariantChecksResult | null;
+  readonly result: VariantStatsPart | null;
 }
 
 /** The four histograms of the variants, each over the variants in its
@@ -375,7 +271,7 @@ function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
 /** What the plots of the individuals are drawn with. */
 interface IndividualPlotsProps {
   /** The result, or `null` before it, for the room of the plots. */
-  readonly result: IndividualChecksResult | null;
+  readonly result: IndividualStatsPart | null;
 }
 
 /** The two histograms of the individuals, each over the individuals

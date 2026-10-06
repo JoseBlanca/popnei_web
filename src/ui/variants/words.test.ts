@@ -5,7 +5,7 @@ import type { Project, SourceError } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
-  countAgainMends,
+  startAgainMends,
   countedText,
   countingVariantsLine,
   failedText,
@@ -265,8 +265,8 @@ describe("the refusals of the count", () => {
       { kind: "failed", error: { kind: "defect", message: "x is undefined" } },
       false,
     ],
-  ] as const)("Count again for %o: %s", (error, mends) => {
-    expect(countAgainMends(error)).toBe(mends);
+  ] as const)("Start again for %o: %s", (error, mends) => {
+    expect(startAgainMends(error)).toBe(mends);
   });
 
   test("a defect of the count is said as one, for the error bar to tell", () => {

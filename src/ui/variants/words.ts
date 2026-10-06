@@ -258,13 +258,14 @@ export function openFailure(p: Project): OpenFailure | null {
   return text === null ? null : { text, remedy: null };
 }
 
-/** The button that counts again after a Stop or a failure. */
-export const COUNT_AGAIN_LABEL = "Count again";
+/** The button that starts the pass of the count and the statistics
+    again after a Stop or a crash of the worker. */
+export const START_AGAIN_LABEL = "Start again";
 
-/** What the status region says of a count stopped, whose lines then say
-    "not counted" beside Count again. */
+/** What the status region says of a Stop, whose lines then say "not
+    counted" beside Start again. */
 export const STOPPED_TEXT =
-  "Counting the variants was stopped. Count again counts them from the start.";
+  "The count of the variants and the statistics were stopped. Start again calculates them from the start.";
 
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {
@@ -334,7 +335,7 @@ export function failedText(error: AnalysisError, p: Project): string {
     case "defect":
       // The entry gives what the worker said to the error bar, on the
       // screen with these words, which says what it was and how to report
-      // it; Count again is offered beside them after a stop of the worker.
+      // it; Start again is offered beside them after a stop of the worker.
       return `The variants of ${fileName} could not be counted.`;
     case "couldNotStart":
       return `The application could not start its calculations. Reload the page and open ${fileName} again.`;
@@ -347,13 +348,13 @@ export function failedText(error: AnalysisError, p: Project): string {
   }
 }
 
-/** Whether Count again can mend the failure `error`: a worker that
+/** Whether Start again can mend the failure `error`: a worker that
     stopped, and none of these: popnei's refusal, which the same file
     gives again; a file the browser can no longer read, which a new
     opening mends; a worker that could not start or a page out of date,
     which the client fails at once until the page is reloaded; a defect of
     our own code, which the error bar tells. */
-export function countAgainMends(error: AnalysisError): boolean {
+export function startAgainMends(error: AnalysisError): boolean {
   return error.kind === "failed" && error.error.kind === "workerFailed";
 }
 
@@ -382,7 +383,7 @@ export const COUNT_BAR_LABEL = "Counting the variants";
 
 /** What the page knows of the focus as the store changes. */
 export interface FocusNow {
-  /** Whether the focus is on Stop or Count again of the count, which,
+  /** Whether the focus is on Stop or Start again of the count, which,
       when the count ends with no button to show, moves the focus onto
       its lines or the words of its failure, for a screen reader to read
       them. */
@@ -423,11 +424,11 @@ export function announcementsOf(
   const then = summaryStatus(before);
   const now = summaryStatus(after);
   // The button goes with the focus at a count done and at a failure
-  // Count again cannot mend, and the focus moves onto those words.
+  // Start again cannot mend, and the focus moves onto those words.
   const focusMoves =
     focus.focusOnCountButton &&
     (now.kind === "done" ||
-      (now.kind === "error" && !countAgainMends(now.error)));
+      (now.kind === "error" && !startAgainMends(now.error)));
   if (focusMoves) return texts;
   if (
     now.kind === "done" &&

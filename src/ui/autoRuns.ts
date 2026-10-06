@@ -1,23 +1,23 @@
 /**
  * The analyses a page starts by itself (docs/plans/open-variants.md, "It
  * runs on its own once the file is read"): the summary of the variants
- * file of popgen2.html starts as soon as it can run, with no Run button,
- * since the user opened the file to see what it holds, and the statistics
- * of the open file after it (docs/plans/file-stats.md).
+ * file of popgen2.html, whose one pass gives the count of the variants
+ * and the statistics of the open file, starts as soon as it can run,
+ * with no Run button, since the user opened the file to see what it holds
+ * (docs/plans/live-stats.md).
  *
- * They are given in groups, each the analyses one Stop of the page stops
- * together: the summary alone, then the two statistics. They start one at
- * a time, in their order, since the one calculation worker runs one
+ * They are given in groups, each the analyses a Stop of a group stops
+ * together; the one Stop of popgen2.html stops them all. They start one
+ * at a time, in their order, since the one calculation worker runs one
  * request at a time and the store has no state for a request that waits
  * in the client's queue. An analysis starts once every one before it is
  * done; within its group, one before it that failed in a way a new
  * calculation may mend, a crash or a defect of ours, does not hold it
- * back, since each statistic is shown apart and a failure of one should
- * not hide the other. popnei's refusal, or a variants file the browser
- * could not read again, holds back those after it, since they would fail
- * the same way after a pass of minutes; and a group starts only once
- * every analysis of the group before it is done, so the statistics wait
- * for the count.
+ * back, since each analysis of a group is shown apart and a failure of
+ * one should not hide the other. popnei's refusal, or a variants file the
+ * browser could not read again, holds back those after it, since they
+ * would fail the same way after a pass of minutes; and a group starts
+ * only once every analysis of the group before it is done.
  *
  * Each starts once for each key: not again after a failure, nor after a
  * Stop, which leaves it ready under a key it was started under and holds
@@ -68,7 +68,7 @@ export interface AutoRuns {
       a key it has not been started under, or that `resume` gave back;
       nothing while one of them runs. */
   sync(): void;
-  /** Starts the analysis `id` again, at the user's Count again, after a
+  /** Starts the analysis `id` again, at the user's Start again, after a
       Stop or a crash of the worker; nothing in any other state, nor when
       the store does not start it. */
   again(id: AnalysisId): void;
@@ -87,6 +87,9 @@ export interface AutoRuns {
       are recorded as started too, so that one about to start, between the
       end of one pass and the start of the next, does not start. */
   stop(group: readonly AnalysisId[]): void;
+  /** Stops every group, `stop` of each in their order, at the user's one
+      Stop of the page: the one running and those about to start. */
+  stopAll(): void;
   /** Starts again, at the user's start again of `group`, one of the
       groups, the first of it that is not done, as `again` starts it, and
       gives back those after it in the group that are not done, which
@@ -140,8 +143,8 @@ function isMendable(status: AnalysisStatus<unknown>): boolean {
 
 /** The key under which `status` can be started again at the user's
     asking: that of a startable status or of a crash of the worker, the
-    one failure a new calculation is offered for, as the count offers its
-    Count again (`countAgainMends` of variants/words.ts); `null` for any
+    one failure a new calculation is offered for, as the box offers its
+    Start again (`startAgainMends` of variants/words.ts); `null` for any
     other. */
 function againKey(status: AnalysisStatus<unknown>): Key | null {
   if (status.kind === "error") {
@@ -275,6 +278,24 @@ export function createAutoRuns(deps: {
     return key === null ? null : { id: first, key, at };
   }
 
+  function stop(group: readonly AnalysisId[]): void {
+    const place = placeOf(group);
+    // A group waits for those before it: while one of them is not done,
+    // none of the group is about to start, and a Stop of it leaves them
+    // waiting.
+    const free = ids
+      .slice(0, place)
+      .every((id) => statusOf(id).kind === "done");
+    for (const id of group) {
+      resumed.delete(id);
+      const status = statusOf(id);
+      if (status.kind === "running") store.cancelRun(id);
+      const key = startableKey(status);
+      if (free && key !== null) started.add(key);
+    }
+    changed();
+  }
+
   function again(id: AnalysisId): void {
     const key = againKey(statusOf(id));
     if (key !== null) startOne(id, key);
@@ -329,21 +350,9 @@ export function createAutoRuns(deps: {
       if (isStopped(id)) return { kind: "stopped" };
       return { kind: "waiting", after: holder };
     },
-    stop: (group) => {
-      const place = placeOf(group);
-      // The statistics wait for the count: while it is not done, none of
-      // them is about to start, and a Stop of theirs leaves them waiting.
-      const free = ids
-        .slice(0, place)
-        .every((id) => statusOf(id).kind === "done");
-      for (const id of group) {
-        resumed.delete(id);
-        const status = statusOf(id);
-        if (status.kind === "running") store.cancelRun(id);
-        const key = startableKey(status);
-        if (free && key !== null) started.add(key);
-      }
-      changed();
+    stop,
+    stopAll: () => {
+      for (const group of groups) stop(group);
     },
     resume: (group) => {
       const first = resumable(group);

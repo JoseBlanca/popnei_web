@@ -5,10 +5,11 @@
  * file open, line by line: its name and size, its individuals, its
  * variants, its chromosomes and its ploidy, the file's. What the opening
  * knows is shown at once; the individuals and the ploidy once the file is
- * read; the variants and the chromosomes once they are counted, which
- * starts by itself (autoRuns.ts). Under the lines, a row of one height in
- * every state holds the seconds of the read, the bar of the count with
- * its Stop, or Count again.
+ * read; the variants and the chromosomes once they are counted, by the
+ * one pass that also calculates the statistics of the file, which starts
+ * by itself (autoRuns.ts; docs/plans/live-stats.md). Under the lines, a
+ * row of one height in every state holds the seconds of the read, the
+ * bar of the pass with the page's one Stop, or Start again.
  *
  * The box keeps its height through the read and the count, a value not
  * known yet said in its place, so that the open button under it does not
@@ -18,7 +19,7 @@
  * name, or several files at once, after the lines of the file still open,
  * or alone with none. There is no box before a file is opened or refused.
  */
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import type { VariantSource } from "../../core/project.ts";
@@ -31,7 +32,7 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
-import { useAppState, useStore } from "../store.tsx";
+import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
@@ -40,38 +41,38 @@ import {
   CHROMOSOMES_COUNTING,
   CHROMOSOMES_NOT_COUNTED,
   CHROMOSOMES_READING,
-  COUNT_AGAIN_LABEL,
   COUNT_BAR_LABEL,
   INDIVIDUALS_READING,
   INFO_NAME,
   PLOIDY_READING,
   PYTHON_NAME,
   READING_TIME_LINE,
+  START_AGAIN_LABEL,
   STOPPED_TEXT,
   SUMMARY_ID,
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
   chromosomesLine,
-  countAgainMends,
   countingVariantsLine,
   failedText,
   individualsLine,
   nameAndSizeText,
   openFailure,
   ploidyLine,
+  startAgainMends,
   summaryStatus,
   variantsLine,
 } from "./words.ts";
 
 /** What the box is drawn with. */
 export interface VariantsSummaryProps {
-  /** The analyses the page starts by itself, for Count again and to tell
-      a count stopped from one not yet started. */
+  /** The analyses the page starts by itself, for Stop and Start again
+      and to tell a count stopped from one not yet started. */
   readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the lines
       of a load go while the focus is in them. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
-  /** Called with the element of Stop or Count again while one is shown,
+  /** Called with the element of Stop or Start again while one is shown,
       and with `null` when it goes, for the entry to tell whether the
       focus is on it as the count ends. */
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
@@ -140,7 +141,7 @@ function Load({
     const button = openButton.current;
     return () => {
       // The lines go, a new file opened or dropped, while the focus
-      // is in them, on Stop, on Count again or on the lines of the
+      // is in them, on Stop, on Start again or on the lines of the
       // count: the focus goes to the open button, not to the top of the
       // page. The cleanup of a layout effect runs while the lines are
       // still in the page.
@@ -220,16 +221,18 @@ interface CountProps {
 
 /** The lines of the variants and the chromosomes, in each state of their
     count, the line of the ploidy, the row of the progress with Stop or
-    Count again, and a failure of the count after them. */
+    Start again, and a failure of the count after them. */
 function Count({
   autoRuns,
   onCountButton,
   ploidy,
   refused,
 }: CountProps): React.JSX.Element {
-  const store = useStore();
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
+  // Selected for what autoRuns knows, which a Stop of a pass about to
+  // start changes and the store does not.
+  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
   const project = useAppState((s) => s.project);
   // The lines of the count, and the element that holds the words of a
   // failure: one of them takes the focus when the button goes with it.
@@ -243,8 +246,9 @@ function Count({
     (failureRef.current ?? linesRef.current)?.focus();
   });
 
+  // The one Stop of the page: the pass running, and one about to start.
   const stop = (): void => {
-    store.cancelRun(SUMMARY_ID);
+    autoRuns.stopAll();
     announcer.announce(STOPPED_TEXT);
   };
   const again = (): void => {
@@ -289,7 +293,7 @@ function Count({
             <div className={classOf(styles, "progressButton")}>
               <RunButton
                 button={button}
-                runLabel={COUNT_AGAIN_LABEL}
+                runLabel={START_AGAIN_LABEL}
                 onRun={again}
                 onStop={stop}
                 onButton={onCountButton}
@@ -324,8 +328,8 @@ function Count({
     </>
   );
 }
-/** Stop while the count runs; Count again after a Stop, or after a
-    failure it may mend; none otherwise. */
+/** Stop while the pass runs or is about to start by itself; Start again
+    after a Stop, or after a failure it may mend; none otherwise. */
 function buttonOf(
   status: AnalysisStatus<JobResult>,
   autoRuns: AutoRuns,
@@ -335,11 +339,12 @@ function buttonOf(
       return { kind: "stop" };
     case "ready":
     case "removed":
+      // Not started under its key, it starts by itself in a moment.
       return autoRuns.startedUnder(status.key)
         ? { kind: "run", reason: null }
-        : null;
+        : { kind: "stop" };
     case "error":
-      return countAgainMends(status.error)
+      return startAgainMends(status.error)
         ? { kind: "run", reason: null }
         : null;
     case "locked":

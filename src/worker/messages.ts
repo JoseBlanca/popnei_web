@@ -28,6 +28,7 @@ import type {
   FilteringStats,
   IndividualChecksJob,
   IndividualChecksResult,
+  IndividualStatsPart,
   IndividualsFileError,
   IndividualsTable,
   Job,
@@ -48,6 +49,7 @@ import type {
   Separator,
   VariantChecksJob,
   VariantChecksResult,
+  VariantStatsPart,
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
@@ -62,7 +64,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 8;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -1209,12 +1211,20 @@ function checkIndividualChecksJob(
 }
 
 /** The fields of the request of the summary of the variants file,
-    docs/plans/open-variants.md: the load alone, whose filters are none. */
+    docs/plans/live-stats.md: the load, whose filters are none, and the
+    bins of the histograms of the variants. */
 function checkVariantsSummaryJob(
   record: object,
   place: Place,
 ): Checked<VariantsSummaryJob> {
-  const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "minNumIndividuals",
+    "numBins",
+    "range",
+  ]);
   if (wrong !== null) {
     return wrong;
   }
@@ -1226,10 +1236,25 @@ function checkVariantsSummaryJob(
   if (!filters.ok) {
     return filters;
   }
+  const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
+  if (!minNumIndividuals.ok) {
+    return minNumIndividuals;
+  }
+  const numBins = field(record, "numBins", place, isNumber);
+  if (!numBins.ok) {
+    return numBins;
+  }
+  const range = field(record, "range", place, checkRange);
+  if (!range.ok) {
+    return range;
+  }
   return accepted({
     analysis: "variantsSummary",
     fileId: fileId.value,
     filters: filters.value,
+    minNumIndividuals: minNumIndividuals.value,
+    numBins: numBins.value,
+    range: range.value,
   });
 }
 
@@ -1930,14 +1955,47 @@ function checkIndividualChecksResult(
 ): Checked<IndividualChecksResult> {
   const wrong = exactFields(record, place, [
     "analysis",
-    "individuals",
-    "missingGtRate",
-    "obsHetRate",
-    "passStats",
+    ...INDIVIDUAL_STATS_FIELDS,
   ]);
   if (wrong !== null) {
     return wrong;
   }
+  const part = individualStatsFields(record, place);
+  if (!part.ok) {
+    return part;
+  }
+  return accepted({ analysis: "individualChecks", ...part.value });
+}
+
+/** The fields of the statistics of each individual, of their own result
+    and of the summary of the variants file. */
+const INDIVIDUAL_STATS_FIELDS = [
+  "individuals",
+  "missingGtRate",
+  "obsHetRate",
+  "passStats",
+] as const;
+
+/** The statistics of each individual, the part `individuals` of the
+    summary of the variants file: an object of exactly their fields. */
+function checkIndividualStatsPart(
+  value: unknown,
+  place: Place,
+): Checked<IndividualStatsPart> {
+  const record = objectWith(value, place, INDIVIDUAL_STATS_FIELDS);
+  if (!record.ok) {
+    return record;
+  }
+  return individualStatsFields(record.value, place);
+}
+
+/** The fields of the statistics of each individual in `record`, whose
+    names the caller checked: the two arrays as long as its
+    individuals. */
+function individualStatsFields(
+  record: object,
+  place: Place,
+): Checked<IndividualStatsPart> {
   const individuals = field(record, "individuals", place, listOf(isText));
   if (!individuals.ok) {
     return individuals;
@@ -1966,7 +2024,6 @@ function checkIndividualChecksResult(
     return passStats;
   }
   return accepted({
-    analysis: "individualChecks",
     individuals: individuals.value,
     missingGtRate: missingGtRate.value,
     obsHetRate: obsHetRate.value,
@@ -1983,16 +2040,48 @@ function checkVariantChecksResult(
 ): Checked<VariantChecksResult> {
   const wrong = exactFields(record, place, [
     "analysis",
-    "binEdges",
-    "missingRate",
-    "maf",
-    "obsHet",
-    "unbiasedExpHet",
-    "passStats",
+    ...VARIANT_STATS_FIELDS,
   ]);
   if (wrong !== null) {
     return wrong;
   }
+  const part = variantStatsFields(record, place);
+  if (!part.ok) {
+    return part;
+  }
+  return accepted({ analysis: "variantChecks", ...part.value });
+}
+
+/** The fields of the histograms of the variants, of their own result and
+    of the summary of the variants file. */
+const VARIANT_STATS_FIELDS = [
+  "binEdges",
+  "missingRate",
+  "maf",
+  "obsHet",
+  "unbiasedExpHet",
+  "passStats",
+] as const;
+
+/** The histograms of the variants, the part `variants` of the summary of
+    the variants file: an object of exactly their fields. */
+function checkVariantStatsPart(
+  value: unknown,
+  place: Place,
+): Checked<VariantStatsPart> {
+  const record = objectWith(value, place, VARIANT_STATS_FIELDS);
+  if (!record.ok) {
+    return record;
+  }
+  return variantStatsFields(record.value, place);
+}
+
+/** The fields of the histograms of the variants in `record`, whose names
+    the caller checked: the counts of each one fewer than the edges. */
+function variantStatsFields(
+  record: object,
+  place: Place,
+): Checked<VariantStatsPart> {
   const binEdges = field(record, "binEdges", place, isFloat64Array);
   if (!binEdges.ok) {
     return binEdges;
@@ -2019,7 +2108,6 @@ function checkVariantChecksResult(
     return passStats;
   }
   return accepted({
-    analysis: "variantChecks",
     binEdges: binEdges.value,
     missingRate: missingRate.value,
     maf: maf.value,
@@ -2066,7 +2154,8 @@ function checkFilterCountsResult(
 }
 
 /** The fields of the summary of the variants file,
-    docs/plans/open-variants.md, the counts as many as the chromosomes. */
+    docs/plans/live-stats.md, the counts as many as the chromosomes, and
+    its two parts of the statistics. */
 function checkVariantsSummaryResult(
   record: object,
   place: Place,
@@ -2075,6 +2164,8 @@ function checkVariantsSummaryResult(
     "analysis",
     "chroms",
     "numVarsPerChrom",
+    "variants",
+    "individuals",
     "passStats",
   ]);
   if (wrong !== null) {
@@ -2093,6 +2184,19 @@ function checkVariantsSummaryResult(
   if (!numVarsPerChrom.ok) {
     return numVarsPerChrom;
   }
+  const variants = field(record, "variants", place, checkVariantStatsPart);
+  if (!variants.ok) {
+    return variants;
+  }
+  const individuals = field(
+    record,
+    "individuals",
+    place,
+    checkIndividualStatsPart,
+  );
+  if (!individuals.ok) {
+    return individuals;
+  }
   const passStats = field(record, "passStats", place, checkPassStats);
   if (!passStats.ok) {
     return passStats;
@@ -2101,6 +2205,8 @@ function checkVariantsSummaryResult(
     analysis: "variantsSummary",
     chroms: chroms.value,
     numVarsPerChrom: numVarsPerChrom.value,
+    variants: variants.value,
+    individuals: individuals.value,
     passStats: passStats.value,
   });
 }

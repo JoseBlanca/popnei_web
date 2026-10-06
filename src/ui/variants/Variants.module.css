@@ -43,7 +43,7 @@
 }
 
 /* The row under the lines: the seconds of the read, the bar of the count
-   and Stop, Count again, or nothing. It is as high as a button in every
+   and Stop, Start again, or nothing. It is as high as a button in every
    state, and what it holds keeps to one row, so that the box keeps its
    height through the read and the count. */
 .progress {

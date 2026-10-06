@@ -13,13 +13,8 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Store } from "../../core/store.ts";
-import type {
-  Job,
-  JobResult,
-  Outcome,
-  Run,
-  RunError,
-} from "../../worker/protocol.ts";
+import { summaryResult } from "../../core/testSupport.ts";
+import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 
 /** How the download of the code of the section goes: held until `gate`
     resolves, then failed when `fail`; `calls` counts the downloads. */
@@ -51,39 +46,10 @@ interface Request {
   readonly end: (outcome: Outcome<JobResult>) => void;
 }
 
-/** The result of each analysis the page starts, by its id. */
+/** The result of each analysis the page starts, by its id: the summary
+    of panel.nei, with the statistics of its two individuals. */
 const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
-  [
-    "variantsSummary",
-    {
-      analysis: "variantsSummary",
-      passStats: { numVars: 1200, filtering: {} },
-      chroms: ["1"],
-      numVarsPerChrom: new Uint32Array([1200]),
-    },
-  ],
-  [
-    "individualChecks",
-    {
-      analysis: "individualChecks",
-      individuals: ["i1", "i2"],
-      missingGtRate: Float64Array.from([0.02, 0.04]),
-      obsHetRate: Float64Array.from([0.3, 0.4]),
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
-  [
-    "variantChecks",
-    {
-      analysis: "variantChecks",
-      binEdges: Float64Array.from([0, 0.5, 1]),
-      missingRate: { mean: 0.03, counts: Uint32Array.from([1200, 0]) },
-      maf: { mean: 0.7, counts: Uint32Array.from([1200, 0]) },
-      obsHet: { mean: 0.35, counts: Uint32Array.from([1200, 0]) },
-      unbiasedExpHet: { mean: 0.37, counts: Uint32Array.from([1200, 0]) },
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
+  ["variantsSummary", summaryResult(["1"], [1200], ["i1", "i2"])],
 ]);
 
 const FIRST = "0123456789abcdef0123456789abcdef";
@@ -259,14 +225,6 @@ async function endDone(page: Page): Promise<void> {
   await after(0);
 }
 
-/** Ends the last request sent with the failure `error`. */
-async function endFailed(page: Page, error: RunError): Promise<void> {
-  const request = page.requests.at(-1);
-  if (request === undefined) throw new Error("no request was sent");
-  request.end({ kind: "failed", error });
-  await after(0);
-}
-
 /** Waits for the section to be drawn, its code imported afresh with the
     plots and D3, and then held back 300 ms by React, as the first
     download is; fails after 5 s. */
@@ -293,12 +251,8 @@ describe("the section of the statistics while its code downloads", () => {
     const page = await drawPage();
     await page.open(FIRST);
     await endDone(page);
-    await endDone(page);
-    await endDone(page);
     expect(page.requests.map((r) => r.job.analysis)).toEqual([
       "variantsSummary",
-      "variantChecks",
-      "individualChecks",
     ]);
     await after(REGION_PAUSE_MS);
     expect(sectionOf()).toBeNull();
@@ -322,13 +276,8 @@ describe("the section of the statistics while its code downloads", () => {
     expect(caught).toHaveLength(1);
     expect(sectionOf()).toBeNull();
     await endDone(page);
-    await endFailed(page, {
-      kind: "popnei",
-      message: "a genotype of 3 alleles",
-    });
     await after(REGION_PAUSE_MS);
     expect(saidOfStats(page)).toEqual([]);
-    expect(page.said.join(" ")).not.toContain("3 alleles");
     expect(download.calls).toBe(1);
 
     download.fail = false;
@@ -337,10 +286,12 @@ describe("the section of the statistics while its code downloads", () => {
     expect(download.calls).toBe(2);
     await endDone(page);
     await after(REGION_PAUSE_MS);
-    // Said with the read and the count, in one pause of the region.
+    // Said with the read and the count, in one pause of the region, the
+    // end of the pass in place of its start.
     expect(saidOfStats(page)).toHaveLength(1);
     expect(saidOfStats(page)[0]).toContain(
-      "Calculating the statistics of panel.nei…",
+      "The statistics of panel.nei are calculated.",
     );
+    expect(saidOfStats(page)[0]).not.toContain("Calculating");
   });
 });

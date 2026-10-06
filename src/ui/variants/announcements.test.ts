@@ -4,6 +4,7 @@ import { loadVariants } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
 import type { AppState, Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
+import { summaryResult } from "../../core/testSupport.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { STATS_PROGRESS_KIND, statsAnnouncementsOf } from "./statsWords.ts";
@@ -158,12 +159,7 @@ describe("what the status region of the new page says", () => {
     sent[0]?.({
       kind: "done",
       key: running.key,
-      result: {
-        analysis: "variantsSummary",
-        passStats: { numVars: 500, filtering: {} },
-        chroms: ["chr1", "chr2"],
-        numVarsPerChrom: new Uint32Array([250, 250]),
-      },
+      result: summaryResult(["chr1", "chr2"], [250, 250]),
     });
     await settled();
     expect(announcementsOf(before, store.getState())).toEqual([
@@ -210,12 +206,7 @@ describe("what the status region of the new page says", () => {
     sent[0]?.({
       kind: "done",
       key: running.key,
-      result: {
-        analysis: "variantsSummary",
-        passStats: { numVars: 500, filtering: {} },
-        chroms: ["chr1"],
-        numVarsPerChrom: new Uint32Array([500]),
-      },
+      result: summaryResult(["chr1"], [500]),
     });
     await settled();
     expect(
@@ -241,7 +232,7 @@ describe("what the status region of the new page says", () => {
     ).toEqual([]);
   });
 
-  test("a worker that stopped with the focus on Stop is said, since Count again keeps the focus in place of Stop", async () => {
+  test("a worker that stopped with the focus on Stop is said, since Start again keeps the focus in place of Stop", async () => {
     const { store, sent } = setUp();
     openRead(store);
     void startAnalysis(store, "variantsSummary");
@@ -257,60 +248,7 @@ describe("what the status region of the new page says", () => {
   });
 });
 
-/** The individuals of the VCF `openRead` reads. */
-const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `s${String(i)}`);
-
-/** The result of each statistic of the open file, by its id. */
-const STATS_RESULTS: ReadonlyMap<string, JobResult> = new Map<
-  string,
-  JobResult
->([
-  [
-    "variantChecks",
-    {
-      analysis: "variantChecks",
-      binEdges: Float64Array.from([0, 0.5, 1]),
-      missingRate: { mean: 0.03, counts: Uint32Array.from([500, 0]) },
-      maf: { mean: 0.7, counts: Uint32Array.from([0, 500]) },
-      obsHet: { mean: 0.35, counts: Uint32Array.from([500, 0]) },
-      unbiasedExpHet: { mean: 0.37, counts: Uint32Array.from([500, 0]) },
-      passStats: { numVars: 500, filtering: {} },
-    },
-  ],
-  [
-    "individualChecks",
-    {
-      analysis: "individualChecks",
-      individuals: INDIVIDUALS,
-      missingGtRate: new Float64Array(200).fill(0.02),
-      obsHetRate: new Float64Array(200).fill(0.3),
-      passStats: { numVars: 500, filtering: {} },
-    },
-  ],
-]);
-
 describe("what the status region of the new page says of the statistics of the open file", () => {
-  /** The page with the VCF open and its variants counted. */
-  async function counted(): Promise<ReturnType<typeof setUp>> {
-    const page = setUp();
-    openRead(page.store);
-    void startAnalysis(page.store, "variantsSummary");
-    const running = summaryStatus(page.store.getState());
-    if (running.kind !== "running") throw new Error("not running");
-    page.sent[0]?.({
-      kind: "done",
-      key: running.key,
-      result: {
-        analysis: "variantsSummary",
-        passStats: { numVars: 500, filtering: {} },
-        chroms: ["chr1"],
-        numVarsPerChrom: new Uint32Array([500]),
-      },
-    });
-    await settled();
-    return page;
-  }
-
   /** What the region says of the statistics as `change` is made and the
       outcomes it gave settle. */
   async function statsSaid(
@@ -325,135 +263,62 @@ describe("what the status region of the new page says of the statistics of the o
     );
   }
 
-  /** Ends the request `index` of `sent`, of the statistic `id`, with its
-      result, under the key it runs under. */
-  function endDone(
-    page: ReturnType<typeof setUp>,
-    index: number,
-    id: "variantChecks" | "individualChecks",
-  ): void {
-    const status = page.store
-      .getState()
-      .analyses.find((a) => a.id === id)?.status;
-    const result = STATS_RESULTS.get(id);
-    if (status?.kind !== "running" || result === undefined) {
-      throw new Error(`${id} is not running`);
-    }
-    page.sent[index]?.({ kind: "done", key: status.key, result });
+  /** The page with the VCF open and the pass of its summary running. */
+  function running(): ReturnType<typeof setUp> & { readonly key: string } {
+    const page = setUp();
+    openRead(page.store);
+    void startAnalysis(page.store, "variantsSummary");
+    const status = summaryStatus(page.store.getState());
+    if (status.kind !== "running") throw new Error("not running");
+    return { ...page, key: status.key };
   }
 
-  test("the start is said with the file, the first result while the other is not done, and the end once both are, and not the second pass that follows the first", async () => {
-    const page = await counted();
-    const { store } = page;
-    expect(
-      await statsSaid(store, () => void startAnalysis(store, "variantChecks")),
-    ).toEqual(["Calculating the statistics of panel.vcf.gz\u2026"]);
-    expect(
-      await statsSaid(store, () => {
-        endDone(page, 1, "variantChecks");
-      }),
-    ).toEqual([
-      "The statistics of the variants of panel.vcf.gz are calculated.",
-    ]);
-    expect(
-      await statsSaid(
-        store,
-        () => void startAnalysis(store, "individualChecks"),
-      ),
-    ).toEqual([]);
-    expect(
-      await statsSaid(store, () => {
-        endDone(page, 2, "individualChecks");
-      }),
-    ).toEqual(["The statistics of panel.vcf.gz are calculated."]);
-    // A change after that, the summary counted again, says nothing of
-    // the statistics.
-    expect(await statsSaid(store, () => undefined)).toEqual([]);
-  });
-
-  test("the words of the progress are of the kind the region replaces within a pause, and those of a failure are not", async () => {
-    const page = await counted();
-    const { store } = page;
-    const before = store.getState();
-    void startAnalysis(store, "variantChecks");
-    expect(statsAnnouncementsOf(before, store.getState())).toEqual([
+  test("the start of the pass is said with the file, and its end once, in words of the kind the region replaces within a pause", async () => {
+    const page = setUp();
+    openRead(page.store);
+    const before = page.store.getState();
+    void startAnalysis(page.store, "variantsSummary");
+    expect(statsAnnouncementsOf(before, page.store.getState())).toEqual([
       {
         text: "Calculating the statistics of panel.vcf.gz\u2026",
         replaces: STATS_PROGRESS_KIND,
       },
     ]);
-    const running = store.getState();
-    page.sent[1]?.({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
+    const status = summaryStatus(page.store.getState());
+    if (status.kind !== "running") throw new Error("not running");
+    const doneBefore = page.store.getState();
+    page.sent[0]?.({
+      kind: "done",
+      key: status.key,
+      result: summaryResult(["chr1"], [500]),
     });
     await settled();
-    expect(statsAnnouncementsOf(running, store.getState())).toEqual([
+    expect(statsAnnouncementsOf(doneBefore, page.store.getState())).toEqual([
       {
-        text: "The statistics of the variants could not be calculated.",
-        replaces: null,
+        text: "The statistics of panel.vcf.gz are calculated.",
+        replaces: STATS_PROGRESS_KIND,
       },
     ]);
+    // A change after that says nothing of the statistics.
+    expect(await statsSaid(page.store, () => undefined)).toEqual([]);
   });
 
-  test("a Stop says nothing from the state, since its button says it", async () => {
-    const page = await counted();
-    const { store } = page;
-    void startAnalysis(store, "variantChecks");
+  test("a Stop and a failure say nothing of the statistics, since the box says them", async () => {
+    const stopped = running();
     expect(
-      await statsSaid(store, () => {
-        store.cancelRun("variantChecks");
-        page.sent[1]?.({ kind: "cancelled" });
+      await statsSaid(stopped.store, () => {
+        stopped.store.cancelRun("variantsSummary");
+        stopped.sent[0]?.({ kind: "cancelled" });
       }),
     ).toEqual([]);
-  });
-
-  test("a failure is said once, with its words, and not again while it stays", async () => {
-    const page = await counted();
-    const { store } = page;
-    void startAnalysis(store, "variantChecks");
+    const failed = running();
     expect(
-      await statsSaid(store, () => {
-        page.sent[1]?.({
+      await statsSaid(failed.store, () => {
+        failed.sent[0]?.({
           kind: "failed",
           error: { kind: "workerFailed", message: "out of memory" },
         });
       }),
-    ).toEqual(["The statistics of the variants could not be calculated."]);
-    // The other pass follows, and the failure stays as it was.
-    expect(
-      await statsSaid(
-        store,
-        () => void startAnalysis(store, "individualChecks"),
-      ),
     ).toEqual([]);
-    // Its result, the other not done but failed, is said as the first.
-    expect(
-      await statsSaid(store, () => {
-        endDone(page, 2, "individualChecks");
-      }),
-    ).toEqual([
-      "The statistics of the individuals of panel.vcf.gz are calculated.",
-    ]);
-  });
-
-  test("a file that could not be read again, which fails both statistics with the same words, is said once", async () => {
-    const page = await counted();
-    const { store } = page;
-    void startAnalysis(store, "variantChecks");
-    expect(
-      await statsSaid(store, () => {
-        page.sent[1]?.({
-          kind: "failed",
-          error: {
-            kind: "reopenFailed",
-            name: "panel.vcf.gz",
-            message: "changed",
-          },
-        });
-      }),
-    ).toEqual([
-      "panel.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again.",
-    ]);
   });
 });

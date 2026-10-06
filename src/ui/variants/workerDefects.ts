@@ -1,42 +1,31 @@
 /**
  * The failures of the calculation worker on popgen2.html that the page
- * shows only as a line of the box or of the statistics' section, given to
- * the error bar, so that they can be copied and reported: a defect of our
- * own code that the opening of the file, its count or its statistics met
- * in the worker, and the worker that stopped on its own, a crash and not a
- * refusal of popnei, during the opening, the count or the statistics, with
- * the words it stopped with (the owner, 6 October 2026). Each failure is
- * reported once.
+ * shows only as a line of the box, given to the error bar, so that they
+ * can be copied and reported: a defect of our own code that the opening
+ * of the file or the pass of its count and statistics met in the worker,
+ * and the worker that stopped on its own, a crash and not a refusal of
+ * popnei, during the opening or that pass, with the words it stopped with
+ * (the owner, 6 October 2026). Each failure is reported once.
  */
 import type { AnalysisStatus, Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import type { DefectOrigin, Defects } from "../defects.ts";
-import { INDIVIDUALS_ID, VARIANTS_ID, statsStatus } from "./statsWords.ts";
 import { summaryStatus } from "./words.ts";
 
 /** The calculations of the page whose failures are reported, each with
     the status the store gives it and the origin of a stop of the worker
-    during it. */
+    during it: the summary of the variants file, the one pass of the count
+    and the statistics. */
 const WATCHED: readonly {
   readonly statusOf: (
     s: ReturnType<Store<JobResult, Blob>["getState"]>,
   ) => AnalysisStatus<JobResult>;
   readonly stopped: DefectOrigin;
-}[] = [
-  { statusOf: summaryStatus, stopped: "countStopped" },
-  {
-    statusOf: (s) => statsStatus(s, INDIVIDUALS_ID),
-    stopped: "statisticsStopped",
-  },
-  {
-    statusOf: (s) => statsStatus(s, VARIANTS_ID),
-    stopped: "statisticsStopped",
-  },
-];
+}[] = [{ statusOf: summaryStatus, stopped: "countStopped" }];
 
-/** Gives `defects` each defect of our own code that an opening, a count
-    or a statistic met in the worker, and each stop of the worker during
-    one of them, once for each failure. */
+/** Gives `defects` each defect of our own code that an opening or the
+    pass of the count met in the worker, and each stop of the worker
+    during one of them, once for each failure. */
 export function reportDefects(
   store: Store<JobResult, Blob>,
   defects: Defects,

@@ -1,6 +1,7 @@
 /**
  * The tests of the summary of the variants file, from
- * docs/plans/open-variants.md, "The phases", 1: the request, the key, the
+ * docs/plans/open-variants.md, "The phases", 1, and
+ * docs/plans/live-stats.md, phase 1: the request, the key, the
  * check numbers, the rows of the chromosomes and the lines of the Python
  * script. The numbers of the results are those popnei gave for ld.vcf.gz
  * and panel.nei, in Python and in node, on 5 October 2026: 250 variants on
@@ -14,7 +15,7 @@ import type { Key, KeyedDef } from "../keys.ts";
 import { emptyProject } from "../project.ts";
 import type { Project, VariantSource } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, summaryResult } from "../testSupport.ts";
 import type {
   FilterCountsResult,
   IndividualFilter,
@@ -65,21 +66,11 @@ function project(
   });
 }
 
-/** The summary of ld.vcf.gz. */
-const LD: VariantsSummaryResult = {
-  analysis: "variantsSummary",
-  chroms: ["chr1", "chr2"],
-  numVarsPerChrom: Uint32Array.of(250, 250),
-  passStats: { numVars: 500, filtering: {} },
-};
+/** The summary of ld.vcf.gz, its chromosomes. */
+const LD: VariantsSummaryResult = summaryResult(["chr1", "chr2"], [250, 250]);
 
-/** The summary of panel.nei. */
-const PANEL: VariantsSummaryResult = {
-  analysis: "variantsSummary",
-  chroms: ["1"],
-  numVarsPerChrom: Uint32Array.of(1200),
-  passStats: { numVars: 1200, filtering: {} },
-};
+/** The summary of panel.nei, its chromosomes. */
+const PANEL: VariantsSummaryResult = summaryResult(["1"], [1200]);
 
 /** A client that records the jobs it is given and answers none. */
 function recordingClient(): {
@@ -129,7 +120,7 @@ function variantsOf(p: Project): VariantSource {
 }
 
 describe("open-variants 1 the summary of the variants file: the request", () => {
-  test("run sends the load and no filter, whatever the filters of the project", () => {
+  test("run sends the load, no filter, whatever the filters of the project, and the bins of the histograms of the variants", () => {
     const { client, jobs } = recordingClient();
     variantsSummary.run(
       project({
@@ -142,6 +133,9 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
       analysis: "variantsSummary",
       fileId: VARIANTS_ID,
       filters: [],
+      minNumIndividuals: 0,
+      numBins: 1280,
+      range: [0, 1],
     };
     expect(jobs).toEqual([expected]);
   });
@@ -156,7 +150,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
   test("the definition is of population genetics alone, reads no filter, and has no key input, no reason, no option and no warning", () => {
     expect(variantsSummary.id).toBe("variantsSummary");
     expect(variantsSummary.app).toEqual(["popgen"]);
-    expect(variantsSummary.keyVersion).toBe(1);
+    expect(variantsSummary.keyVersion).toBe(2);
     expect(variantsSummary.filtersRead).toEqual({
       variants: false,
       individuals: false,
@@ -211,8 +205,8 @@ describe("open-variants 1 the summary of the variants file: the key", () => {
     }
   });
 
-  test("the key version, 1, and the version of popnei change the key", () => {
-    const later: KeyedDef = { ...variantsSummary, keyVersion: 2 };
+  test("the key version, 2, and the version of popnei change the key", () => {
+    const later: KeyedDef = { ...variantsSummary, keyVersion: 3 };
     expect(keyOf(later, base, "0.1.0", createKeyMemo())).not.toBe(baseKey);
     expect(keyFor(base, "0.2.0")).not.toBe(baseKey);
   });
@@ -258,7 +252,7 @@ describe("open-variants 1 the summary of the variants file: the numbers", () => 
 });
 
 describe("open-variants 1 the summary of the variants file: the script", () => {
-  test("script of a .nei file opens it with open_vars and counts the variants of each chromosome in one window", () => {
+  test("script of a .nei file opens it with open_vars and makes popnei's three calls, Python having no calc_variants_summary: the variants of each chromosome in one window, the 40 bins of the histograms of the variants, and the statistics of each individual", () => {
     expect(variantsSummary.script(project())).toBe(
       "# The variants of the file on each chromosome, one window per chromosome\n" +
         'variants_as_read = popnei.open_vars("panel.nei")\n' +
@@ -267,7 +261,20 @@ describe("open-variants 1 the summary of the variants file: the script", () => {
         "    9007199254740991,\n" +
         "    chrom_lengths={},\n" +
         ")\n" +
-        'print(variants_summary.windows[["chrom", "num_vars"]].to_string())\n',
+        'print(variants_summary.windows[["chrom", "num_vars"]].to_string())\n' +
+        "# The histograms of the variants, over every variant and every individual of the file\n" +
+        "variant_distribs = popnei.calc_per_var_distribs(\n" +
+        "    variants_as_read,\n" +
+        "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
+        "    min_num_individuals=0,\n" +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        ")\n" +
+        "# The statistics of each individual, over every variant of the file\n" +
+        "individual_stats = popnei.calc_per_individual_stats(variants_as_read)\n" +
+        "print(pandas.DataFrame({\n" +
+        '    "missing_genotypes": individual_stats.missing_gt_rate,\n' +
+        '    "observed_heterozygosity": individual_stats.obs_het_rate,\n' +
+        "}).to_string())\n",
     );
   });
 

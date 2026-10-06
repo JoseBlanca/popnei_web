@@ -22,8 +22,8 @@ import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
 import { histogramRows } from "../../charts/histogram.ts";
 import type { HistogramData } from "../../charts/histogram.ts";
 import type {
-  IndividualChecksResult,
-  VariantChecksResult,
+  IndividualStatsPart,
+  VariantStatsPart,
 } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import {
@@ -62,7 +62,7 @@ export interface IndividualPlot {
     in them, which leaves out a variant with no value. */
 export function variantPlot(
   statistic: VariantStatistic,
-  result: VariantChecksResult,
+  result: VariantStatsPart,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
   const bins = variantBinsRounded(result, statistic);
@@ -89,7 +89,7 @@ export function variantPlot(
     individuals with a value. */
 export function individualPlot(
   statistic: IndividualStatistic,
-  result: IndividualChecksResult,
+  result: IndividualStatsPart,
 ): IndividualPlot {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =

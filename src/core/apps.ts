@@ -62,15 +62,15 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
 
 /** The analyses of the new page of population genetics, popgen2.html,
     which starts the screens again from the use cases: the summary of the
-    variants file, then the statistics of the open file, the histograms of
-    the variants and those of each individual, in the order the page
-    starts them, which is the order of their parts on the page and of
-    steps 3 and 4 of case 2 of docs/use-cases.md (docs/plans/file-stats.md).
-    It is a list apart from `POPGEN_ANALYSES`, so that the old page neither
-    shows the summary nor changes (docs/plans/open-variants.md, "Its own
-    list of analyses"). */
+    variants file, whose one pass gives the count of the variants and the
+    statistics of the open file, steps 3 and 4 of case 2 of
+    docs/use-cases.md (docs/plans/live-stats.md). The histograms of the
+    variants and the statistics of each individual of their own requests
+    are the old page's. It is a list apart from `POPGEN_ANALYSES`, so that
+    the old page neither shows the summary nor changes
+    (docs/plans/open-variants.md, "Its own list of analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantsSummary, variantChecks, individualChecks]);
+  Object.freeze([variantsSummary]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */
