@@ -42,16 +42,22 @@ the finer bins as the same double; with 1,000, 8 of the 41 edges differ
 in their last place, and a missing rate of 15 / 200, 0.075, would move to
 the next bin of popgen.html. The means are unchanged, and so are the
 check numbers. The key version is 4; the result is 30,728 bytes, where
-the 40 bins took 968.
+the 40 bins took 968. The Python script asks popnei for the 40 bins,
+which are the page's sums, so that its user can match them to the 40
+bars and the 40 rows of the CSV.
 
 ## The module
 
 ### What it does
 
 It gives, over **every variant of the file and the individuals the
-filters of individuals keep**, before any filter of the variants, three
-histograms of 40 bins over 0 to 1, each with its mean:
+filters of individuals keep**, before any filter of the variants, four
+histograms over 0 to 1, each with its mean, which the page draws in
+about 40 bins (below, "The bins drawn"):
 
+- **the proportion of missing genotypes**, popnei's `missing_rate`, the
+  genotypes not called over all of them, which the missing data filter
+  keeps a variant by; popgen2.html draws it, and popgen.html does not;
 - **the major allele frequency (MAF)**, the frequency of the commonest
   allele among the called alleles, which the MAF filter keeps a variant
   by;
@@ -93,17 +99,59 @@ that of every individual holds 1,175.
 
 The expected heterozygosity is the unbiased one, decided here, since the
 diversity shows the unbiased one and a user who compares the two should
-read one statistic. The 40 bins over 0 to 1 are popnei's defaults,
-given explicitly so that a new default of popnei does not change them
-unsaid. One call gives the three with the same bins, `histBinEdges`
-shared, so the MAF of a variant of two alleles, which is at least 0.5,
-fills the right half of its plot alone; a variant of three alleles can be
-below 0.5.
+read one statistic. One call gives the four with the same bins,
+`histBinEdges` shared, so the MAF of a variant of two alleles, which is
+at least 0.5, fills the right half of its plot alone; a variant of three
+alleles can be below 0.5.
 
-The histogram of the proportion of missing genotypes of each variant,
-which the missing data filter reads, comes with popnei's release that has
-it (`docs/architecture.md`, section 6, "What this asks of popnei", item
-4).
+popnei is asked for 1,280 bins over 0 to 1, and the page adds them up
+into the bins it draws. 1,280 is 40 × 2^5, 32 fine bins in each of the
+40 bins over 0 to 1 that are popnei's default and that popgen.html
+draws. popnei computes edge i as i × (1 / numBins), and 1 / 1,280 is
+1 / 40 halved five times, which a double holds exactly, so edge 32 × k
+of the 1,280 is the same double as edge k of the 40, and a value on an
+edge falls on the same side of both: the 40 sums are popnei's 40 bins to
+the last count. With 1,000 bins, 8 of the 41 edges differ in their last
+place, 0.075 against the 0.07500000000000001 of the 40, and a missing
+rate of 15 / 200 would move to the next bin. The 40 bins of 0.025 hold
+32 fine bins each, and the steps of 0.05 that popgen2.html rounds its
+axes to hold 64, so each end of its axes is an edge of popnei's. The
+number of bins and the range are given explicitly, so that a new default
+of popnei does not change them unsaid.
+
+### The bins drawn
+
+Two functions of the module make the bins a page draws from popnei's
+1,280; they only add popnei's counts up, and compute no statistic.
+
+`variantBins(r, statistic)` gives the 40 bins over 0 to 1 that
+popgen.html draws, popnei's bins added up 32 at a time, with popnei's
+edges at every 32nd. A result whose bins are not 40 times a whole number
+is a defect.
+
+`variantBinsRounded(r, statistic)` gives the bins popgen2.html draws,
+over the range of the values rounded out to round numbers:
+
+1. The range runs from the start of the first fine bin with a count to
+   the end of the last, taken as i / 1,280 and not as popnei's edge,
+   which at 0.3 or 0.6 is one last place above the round number,
+   0.30000000000000004, and would be rounded up to the next step. The
+   missing rate starts at 0 whatever its values, as the round of 6
+   October 2026 decided (`docs/plans/file-stats.md`, "Round 1 with the
+   owner").
+2. The range is rounded out to a step of 1, 2 or 5 × 10^k, of at least
+   0.05, the smallest that the range spans at most 10 of, its start
+   rounded down to a multiple of the step and its end up
+   (`roundedRange` of `src/core/histogram.ts`). On panel.nei the
+   missing rate, whose largest value is 0.0805, gives 0 to 0.1.
+3. The fine bins of that range are added up in bins of the same number
+   of fine bins each, the number of bins nearest 40, the fewer of two
+   as near: 128 fine bins from 0 to 0.1 make 32 bins of 4.
+4. The inner edges are popnei's, and the two ends the round numbers.
+
+With no count in any bin, it gives the 40 bins of `variantBins`. A
+count outside the bins added up, and an end of the range that is no edge
+of popnei's bins, are defects.
 
 ### What goes into its key
 
@@ -114,8 +162,10 @@ version of popnei change it; no filter of the variants and no
 individuals file does. The key holds the thresholds of the individuals
 and not the list they keep (`docs/specs/core/keys.md`), so two
 thresholds that keep the same individuals give two keys. The key
-version is 2, raised on 28 September 2026 when the key began to hold
-the filters of individuals. The check numbers of a project file saved by
+version is 4: raised to 2 on 28 September 2026, when the key began to
+hold the filters of individuals, to 3 on 6 October 2026, when the result
+began to hold the missing rate, and to 4 the same day, when its bins
+became 1,280. The check numbers of a project file saved by
 stage 3 are compared always, whatever its filters, since the fingerprint
 of their settings is made when the file is opened
 (`docs/specs/core/keys.md`); their key version, 1, is not this one, so a
@@ -141,7 +191,7 @@ the statistics").
 
 ```ts
 { analysis: "variantChecks", fileId: p.variants.fileId, filters: [],
-  individuals: c.individuals, minNumIndividuals: 0, numBins: 40, range: [0, 1] }
+  individuals: c.individuals, minNumIndividuals: 0, numBins: 1280, range: [0, 1] }
 ```
 
 `individuals` is the list of the individuals kept that the client bound
@@ -164,8 +214,9 @@ and answers:
 ```ts
 {
   analysis: "variantChecks",
-  binEdges: Float64Array,         // 41 edges, from histBinEdges
-  maf: { mean: number; counts: Uint32Array },            // mean[0], histCounts
+  binEdges: Float64Array,         // 1,281 edges, from histBinEdges
+  missingRate: { mean: number; counts: Uint32Array },    // mean[0], histCounts
+  maf: { mean: number; counts: Uint32Array },
   obsHet: { mean: number; counts: Uint32Array },
   unbiasedExpHet: { mean: number; counts: Uint32Array },
   passStats: PassStats,           // numVars: the variants of the file
@@ -218,9 +269,14 @@ variant_distribs = popnei.calc_per_var_distribs(
     variants_as_read,
     stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],
     min_num_individuals=0,
-    hist_kwargs={"range": (0, 1), "num_bins": 1280},
+    hist_kwargs={"range": (0, 1), "num_bins": 40},
 )
 ```
+
+The script asks for the 40 bins, and not for the 1,280 of the job: they
+are the 40 bars of popgen.html and the 40 rows of the CSV of the bins,
+which its user can then compare row by row. popnei's 40 bins equal the
+page's sums of the 1,280, as "The module" says.
 
 The file is opened again with no filter, as `script.ts` of stage 6 opens
 it, `popnei.open_vcf` with the read options for a VCF, since a
@@ -255,7 +311,7 @@ export interface VariantChecksResult {
 }
 
 export const variantChecks: AnalysisDef<Job, JobResult>;
-// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 3;
+// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 4;
 // filtersRead { variants: false, individuals: true }; defaults {}
 
 /** The words of a refusal of popnei, for the error state of the panel. */
@@ -279,8 +335,8 @@ that of `individualChecks`.
 
 ### How it runs
 
-One pass. The result is 41 edges and 120 counts, about 1 KB, whatever
-the size of the file.
+One pass. The result is 1,281 edges and 4 × 1,280 counts, 30,728 bytes,
+whatever the size of the file.
 
 ### How it is verified
 
@@ -290,7 +346,13 @@ the job above, with the `individuals` of a fake client that gives a
 list, and with `null`; `warnings` of a result whose MAF
 counts sum to 5 of `numVars` 6 gives `variantsWithoutCalls` with "1 of
 the 6 variants"; `checkNumbers` of the result below gives its four
-numbers.
+numbers. The bins drawn are tested on the 1,280 bins popnei 0.2.0 gave
+for panel.nei and tetraploid.nei in node,
+`e2e/fixtures/variant_fine_bins.json`: `variantBins` gives popnei's own
+40 bins; `variantBinsRounded` gives the ranges of each statistic, a last
+count in the fine bin that ends on 0.3 or 0.6 an axis ending there, a
+missing rate with counts only at 0.156 and 0.234 an axis from 0 to 0.25
+in 40 bins, and each of its two defects is thrown.
 
 The numbers of the runner's test and of the flow, on `e2e/fixtures/panel.nei`
 and on `panel.vcf.gz`, which give the same, got in node on 26 September
