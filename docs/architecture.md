@@ -451,7 +451,11 @@ interface VariantSource {
   name: string;                       // as File gives them; never in a key
   size: number;
   format: "vcf" | "nei";
-  readOptions: { ploidy: number; onlyPassed: boolean } | null; // a VCF's; null for .nei
+  readOptions: { ploidy: number | null; onlyPassed: boolean } | null;
+                                      // a VCF's; null for .nei; a ploidy of
+                                      // null is read from the file by popnei,
+                                      // as popgen2.html opens every VCF, and
+                                      // a project file refuses it
   read: SourceRead;                   // what the worker read from the file
 }
 

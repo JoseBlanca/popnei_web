@@ -32,6 +32,11 @@ populations: the checks of the fields the diversity gains, of the jobs
 and results of the distances between populations and of the LD decay
 (`docs/specs/analyses/diversity.md`, `sfs.md`, `popDists.md` and
 `ldDecay.md`), and `PROTOCOL_VERSION` 4; approved by the owner on 30 September 2026.
+Revised on 6 October 2026 for the page that opens a variants file,
+popgen2.html (`docs/plans/open-variants.md`): the job and the result of
+the summary of the variants file, `PROTOCOL_VERSION` 5; and a VCF opened
+with no ploidy, a ploidy of `null` in the read options of `open`, for
+popnei to read it from the file, `PROTOCOL_VERSION` 6.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -85,11 +90,15 @@ received it is ended (below):
   that passed its filters are kept, the two options of popnei's `openVcf`
   (`js/popnei/src/io_vcf.ts`); the owner decided on 25 September 2026
   that the walking skeleton reads both formats, and a VCF with its ploidy
-  as a read option, 2 unless the user sets another. popnei cannot read
-  the ploidy of a VCF from the file: it takes it as given, and refuses a
-  genotype of another number of alleles when a pass reads it, not when
-  the file is opened. So an `open` of a VCF of the wrong ploidy ends
-  `opened`, and the first `run` on it ends `refused` (the cases, below).
+  as a read option, 2 unless the user sets another. A ploidy given is
+  taken as given: popnei refuses a genotype of another number of alleles
+  when a pass reads it, not when the file is opened. So an `open` of a
+  VCF of the wrong ploidy ends `opened`, and the first `run` on it ends
+  `refused` (the cases, below). From popnei's release `js-v0.2.0` the
+  ploidy may be `null`, as popgen2.html sends every VCF: popnei reads it
+  from the file, the number of alleles of the first genotype with alleles
+  among the first 4,096 lines, and refuses the `open` when it finds none
+  or the file has no variant.
 - **`opened` carries what popnei gives once the file is open**, its
   `individuals` and its `ploidy`, with no pass over the variants
   (`docs/architecture.md`, section 6). The number of variants comes later,
@@ -419,7 +428,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 6;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -428,7 +437,7 @@ The requests of the calculation worker, and what it sends back.
 export type ToRunner =
   | { kind: "open"; id: number; fileId: string; file: File;
       format: "vcf" | "nei";
-      readOptions: { ploidy: number; onlyPassed: boolean } | null } // null for .nei
+      readOptions: { ploidy: number | null; onlyPassed: boolean } | null } // null for .nei; a ploidy of null is read from the file
   | { kind: "run"; id: number; key: string; job: Job }
   | { kind: "write"; id: number; key: string; job: WriteJob };
 

@@ -62,6 +62,8 @@ The number of individuals, the number of variants, the ploidy, the
 chromosomes with their number of variants, and the density of variants
 along each chromosome, the number of variants in each window of the
 genome, which popnei will give (decided by the owner on 26 September
+2026). The new page, popgen2.html, gives the number of chromosomes and
+leaves out the variants on each of them for now (the owner, 6 October
 2026).
 
 ### The filters of variants

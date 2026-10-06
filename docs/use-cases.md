@@ -89,7 +89,9 @@ someone else.
 
 1. They open the VCF.
 2. They see how many individuals and variants it holds, its ploidy, and
-   the chromosomes with the density of variants along each.
+   the chromosomes with the density of variants along each. The density
+   is a later piece: the first, built in October 2026, gives the number
+   of chromosomes (`docs/plans/open-variants.md`).
 3. They look at the distributions over the variants of the observed
    heterozygosity, the expected heterozygosity, the missing rate and the
    major allele frequency, and at the site frequency spectrum of all the
