@@ -11,9 +11,13 @@ import type {
   VariantDistrib,
 } from "../worker/protocol.ts";
 import { createAutoRuns } from "./autoRuns.ts";
-import { createPopgen2Store } from "./popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_STATISTICS_IDS,
+  createPopgen2Store,
+} from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
-import { STATISTICS_IDS, SUMMARY_ID } from "./variants/words.ts";
+import { SUMMARY_ID } from "./variants/words.ts";
 
 const ID = SUMMARY_ID;
 
@@ -255,8 +259,8 @@ function fail(request: Request | undefined, error: RunError): void {
 }
 
 describe("the statistics of the open file, started after the count, one after the other", () => {
-  const PAGE_IDS = [ID, ...STATISTICS_IDS];
-  const PAGE_GROUPS = [[ID], STATISTICS_IDS];
+  const PAGE_GROUPS = POPGEN2_AUTO_GROUPS;
+  const PAGE_IDS = PAGE_GROUPS.flat();
 
   /** The page with a file open and its count done, and the statistics
       of each individual running, the second request. */
@@ -337,7 +341,7 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
 
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     expect(requests[1]?.cancelled).toBe(true);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
@@ -359,11 +363,11 @@ describe("the statistics of the open file, started after the count, one after th
     endDone(requests[0]);
     await settled();
     auto.sync();
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([
       ID,
       "individualChecks",
@@ -387,7 +391,7 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
 
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     expect(requests.map((request) => request.cancelled)).toEqual([
       false,
       false,
@@ -400,7 +404,7 @@ describe("the statistics of the open file, started after the count, one after th
     expect(status("individualChecks").kind).toBe("done");
     expect(status("variantChecks").kind).toBe("ready");
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([
       ID,
       "individualChecks",
@@ -417,7 +421,7 @@ describe("the statistics of the open file, started after the count, one after th
     await settled();
     auto.sync();
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
 
     endDone(requests[1]);
@@ -426,7 +430,7 @@ describe("the statistics of the open file, started after the count, one after th
     endDone(requests[2]);
     await settled();
     auto.sync();
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(3);
   });
 
@@ -435,7 +439,7 @@ describe("the statistics of the open file, started after the count, one after th
     open(store, FIRST);
     auto.sync();
 
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     expect(requests[0]?.cancelled).toBe(false);
     expect(status(ID).kind).toBe("running");
   });
@@ -452,13 +456,13 @@ describe("the statistics of the open file, started after the count, one after th
       "variantChecks",
     ]);
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     endDone(requests[2]);
     await settled();
     auto.sync();
     expect(requests).toHaveLength(3);
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests).at(-1)).toBe("individualChecks");
   });
 
@@ -485,7 +489,7 @@ describe("the statistics of the open file, started after the count, one after th
       by: "individualChecks",
     });
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
 
@@ -503,7 +507,7 @@ describe("the statistics of the open file, started after the count, one after th
     expect(requests).toHaveLength(2);
     expect(auto.pending("variantChecks")).toBeNull();
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
 
@@ -519,7 +523,7 @@ describe("the statistics of the open file, started after the count, one after th
       kind: "blocked",
       by: ID,
     });
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
   });
 
@@ -536,7 +540,7 @@ describe("the statistics of the open file, started after the count, one after th
       after: ID,
     });
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(false);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
     expect(PAGE_IDS.map((id) => status(id).kind)).toEqual([
       "ready",
@@ -553,7 +557,7 @@ describe("the statistics of the open file, started after the count, one after th
       after: "individualChecks",
     });
 
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     requests[1]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
@@ -569,13 +573,13 @@ describe("the statistics of the open file, started after the count, one after th
     fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
     auto.sync();
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     requests[2]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
     expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
 
-    expect(auto.resume(STATISTICS_IDS)).toBe(true);
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
     expect(analysesOf(requests).at(-1)).toBe("individualChecks");
     expect(auto.pending("variantChecks")).toEqual({
       kind: "waiting",
@@ -602,13 +606,13 @@ describe("the statistics of the open file, started after the count, one after th
     fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
     auto.sync();
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     requests[2]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    auto.resume(STATISTICS_IDS);
+    auto.resume(POPGEN2_STATISTICS_IDS);
 
-    auto.stop(STATISTICS_IDS);
+    auto.stop(POPGEN2_STATISTICS_IDS);
     requests[3]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();

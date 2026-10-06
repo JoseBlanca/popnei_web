@@ -24,18 +24,14 @@ import {
   syncReads,
 } from "./pageStart.tsx";
 import type { DrawBar } from "./pageStart.tsx";
-import { createPopgen2Store } from "./popgen2Store.ts";
+import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
 import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
-import {
-  STATISTICS_IDS,
-  SUMMARY_ID,
-  announcementsOf,
-} from "./variants/words.ts";
+import { announcementsOf } from "./variants/words.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
@@ -82,7 +78,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
 function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
   const autoRuns = createAutoRuns({
     store,
-    groups: [[SUMMARY_ID], STATISTICS_IDS],
+    groups: POPGEN2_AUTO_GROUPS,
     start: (id) => startAnalysis(store, id),
   });
   store.subscribe(() => {

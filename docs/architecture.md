@@ -2285,8 +2285,10 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES and no
-                    counts, statistics config or writing; apart from the
-                    entry, so that a test in node makes it
+                    counts, statistics config or writing, and the groups
+                    of the analyses the page starts by itself, made from
+                    POPGEN2_ANALYSES; apart from the entry, so that a
+                    test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a

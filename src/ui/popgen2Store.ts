@@ -11,12 +11,31 @@
  * (docs/plans/file-stats.md). Apart from the entry, so that a test in
  * node makes the store with what the page gives it.
  */
+import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import { POPGEN2_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
+import type { AnalysisId } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
+
+/** The ids of the statistics of the open file, the analyses of
+    `POPGEN2_ANALYSES` but the summary, in their order there, the order
+    the page starts them: the statistics of each individual, then the
+    histograms of the variants (docs/plans/file-stats.md, "They start on
+    their own, one after the other"). One Stop of the page stops them. */
+export const POPGEN2_STATISTICS_IDS: readonly AnalysisId[] = Object.freeze(
+  POPGEN2_ANALYSES.filter((def) => def.id !== variantsSummary.id).map(
+    (def) => def.id,
+  ),
+);
+
+/** The analyses the page starts by itself, in the groups `createAutoRuns`
+    of autoRuns.ts takes: the summary of the variants file, then the
+    statistics of the open file once it is done. */
+export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
+  Object.freeze([Object.freeze([variantsSummary.id]), POPGEN2_STATISTICS_IDS]);
 
 /** What the store of the page is made with beyond `src/core/apps.ts`. */
 export interface Popgen2StoreDeps {
@@ -37,6 +56,9 @@ export function createPopgen2Store(
     send: deps.send,
     countsOf,
     counts: null,
+    // The piece that adds the filters of individuals to the page must
+    // give here the configuration of the statistics of each individual,
+    // as popgenStore.ts does: a Run under such a filter waits for them.
     statistics: null,
     write: null,
     appVersion: deps.appVersion,

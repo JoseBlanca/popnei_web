@@ -25,7 +25,7 @@ import {
   variantsOpenNeeds,
   withoutBackquotes,
 } from "../../core/project.ts";
-import type { AnalysisId, Project, VariantSource } from "../../core/project.ts";
+import type { Project, VariantSource } from "../../core/project.ts";
 import type {
   AnalysisError,
   AnalysisStatus,
@@ -37,16 +37,6 @@ import type { JobResult } from "../../worker/protocol.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
-
-/** The ids of the statistics of the open file, in the order the page
-    starts them, one when the one before it is done: the statistics of
-    each individual, then the histograms of the variants
-    (docs/plans/file-stats.md, "They start on their own, one after the
-    other"). */
-export const STATISTICS_IDS: readonly AnalysisId[] = Object.freeze([
-  "individualChecks",
-  "variantChecks",
-]);
 
 /** The button that opens the file picker, before a file is open. */
 export const OPEN_LABEL = "Open variants file…";
