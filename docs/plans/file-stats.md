@@ -200,3 +200,25 @@ For the owner: with the individuals' axes from 0, their observed
 heterozygosity, all between 0.32 and 0.39 on panel.vcf.gz, falls in a
 few wide bars; and the individuals' bins are made in the page from
 popnei's values, as on the old page.
+
+### Round 1 with the owner, 6 October 2026
+
+The owner, trying the page: "the table with the results for the
+individuals should be downloadable, but we don't need to show it. There
+could be too many individuals. In the individuals section we could add a
+download button or link. We could adjust the x-axis ranges a bit
+better. For instance, the missing genotypes of the nei file has a
+maximum below 0.1, but we're showing from 0 to 1. We don't need to show
+the means in the plot titles. The open another variants file should be
+at the bottom of the page, after the variants and individuals stats
+sections."
+
+So: the table of the individuals is not drawn; a download of it (CSV)
+in the part of the individuals. The plots' x axes span the range their
+data cover, rounded out to round numbers, the missing rates from 0. For
+the variants, whose bins are popnei's (40 over 0 to 1), popnei is asked
+for fine bins over 0 to 1 and the page sums neighbouring bins into about
+40 over the axis's range; the counts stay popnei's, only added up. The
+titles carry no mean. The open widget goes to the bottom of the page,
+after the statistics; it moves as the plots arrive, and a click aimed at
+it as a pass ends must not be lost.
