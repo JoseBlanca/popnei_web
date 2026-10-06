@@ -62,7 +62,14 @@ then each pass shows its progress.
 for it yet. `variantChecks` asks for it too, its result gains a
 `missingRate` distribution, the check of the result in `messages.ts`
 with it, `PROTOCOL_VERSION` is raised, and the module's `keyVersion`.
-The old page gets the field in its result and does not draw it.
+The old page gets the field in its result and does not draw it. The
+check numbers of `variantChecks`, which a project file keeps, stay four:
+the mean missing rate does not join them, since a fifth would make every
+project file saved from the old page with the histograms refused at its
+opening ("5 numbers … and not 4"), a change of the format that is the
+owner's. Every fixture that builds a `VariantChecksResult` gains the
+field, the typed arrays the runner transfers include its counts, and
+`script()` asks popnei's Python for `MISSING_RATE` too.
 
 **The two analyses join the page's list,** `POPGEN2_ANALYSES`, and the
 page's store gets the configuration of the statistics of individuals
@@ -72,25 +79,34 @@ page has no filter of individuals yet, so both are over every
 individual.
 
 **They start on their own, one after the other.** The calculation
-worker runs one request at a time, so the three passes, the count, then
-the individuals, then the variants, are three requests in a row. The
-page's `autoRuns` starts each once for each key, as it starts the count.
+worker runs one request at a time, and the store has no state for a
+request that waits in the client's queue: three sent at once would all
+show as running, two of them with no progress. So the page starts them
+in a chain, each when the one before it is done: the count, then the
+individuals, then the variants. `autoRuns` gains the order of its ids
+and starts an id only when those before it are done; the statistics'
+section says of one not started yet that it waits for the one before.
 The count comes first, since the box waits for it.
 
-**One Stop for the statistics.** The statistics' section has one button,
-"Stop the statistics" or the like, that stops the pass running and does
-not start the ones not run yet, and, once stopped, one that starts again
-what is not done. The count of the box keeps its own Stop and Count
-again. Whether the statistics' Stop also stops the count, when the
-count is running, is the session's to settle in the plan of phase 2,
-said in the report.
+**One Stop for the statistics.** The statistics' section has one
+button, "Stop the statistics" or the like, that stops the pass running
+and keeps the ones not run yet from starting, and, once stopped, one that
+starts again what is not done. When either button goes, the focus goes
+to a place that stays, as the count's Stop sends it, not to the top of
+the page. The count of the box keeps its own Stop and Count again; since
+the statistics start only once the count is done, the count's Stop
+leaves them not started, and Count again does not wait behind them.
 
 **Where it goes.** A section below the open widget, so that its
 growing plots never move the open button. Under it, two parts,
 "Variants" and "Individuals", each with its plots in a grid that is two
-plots wide on a desktop and one at 320 px. Each plot has its title, its
-mean and the number of variants or individuals it is over. No download
-buttons in this piece: a later one, with the report.
+plots wide on a desktop and one at 320 px. Each plot has its title and the number of variants or individuals it
+is over, and the variants' plots their mean, which popnei gives. The
+individuals' plots have no mean: popnei gives each individual's values
+and no mean of them, and the numbers are popnei's. Their bins are made
+in the page from popnei's values, by `binValues`, as the old page makes
+them; the report tells the owner, and popnei can be asked for them. The
+downloads the old page's components draw stay.
 
 ## The phases
 
@@ -98,8 +114,13 @@ buttons in this piece: a later one, with the report.
 (core, protocol, runner, messages, tests with popnei's numbers on
 `panel.vcf.gz`); the two analyses in `POPGEN2_ANALYSES` and the store's
 configuration; `autoRuns` starting the three in order; the one Stop of
-the statistics and its starting again. The old page must behave as
-before, and its tests pass. Tests in Vitest, as the coding skill says.
+the statistics and its starting again. The old page must behave as before, and its tests pass. Tests in
+Vitest, as the coding skill says. `docs/architecture.md` section 5,
+which says a calculation starts when the user asks and that on popgen2
+only the summary starts by itself, is revised; and it records the limit
+the filters' piece must settle: an analysis that starts by itself and
+reads a filter gets a new key at every change of a threshold, and its
+start stops the run left behind, which restarts the worker.
 
 **2. The section.** The plots and the table, drawn as each result
 arrives, the progress of the pass running and the Stop, the words of a
