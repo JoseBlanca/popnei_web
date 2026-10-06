@@ -362,3 +362,40 @@ and a VCF is opened without a ploidy unless the user gives one; the box
 shows the ploidy popnei read, said as read from the file; a ploidy the
 user gives is used as today; popnei's refusal when it cannot read the
 ploidy is shown in the box and asks for one.
+
+The owner then changed this round, on 6 October 2026, while it was
+being built, and these decisions replace the empty field above:
+
+- "now that we can open most VCF files without giving a ploidy, we're
+  going to remove the possibility of giving a default ploidy. We just
+  need the 'open variants file...' dialog." The open widget is the
+  button alone; a VCF is always opened with no ploidy, which popnei
+  reads from the file. A VCF whose ploidy popnei cannot read is not
+  opened here; the box says how popnei's Python opens it with a ploidy
+  and writes a `.nei` file.
+- "we don't need the 'Only the variants with PASS or . in the FILTER
+  column' check, that can be a filter to be applied along with other
+  filters." Every variant of a VCF is read, whatever its FILTER column,
+  until a filter of the FILTER column comes with the other filters. In
+  popnei that choice is an option of the opening, not a filter of a
+  pass, so such a filter needs popnei (asked of the owner on 6 October
+  2026).
+- "We don't need the 'given by the file' note, all ploidies in the web
+  application will be given by the file. Also, we don't need the
+  'Variants on each chromosome' table." The box says "Ploidy: N"; the
+  table is gone, and the box keeps "Chromosomes: N".
+- A crash of the worker sends its technical words to the error bar,
+  where they can be copied for a report, and the box says only
+  "<file> could not be read.", in the owner's words.
+
+popnei's release `js-v0.2.0` (tag at popnei 6abacd1, 6 October 2026) has
+the ploidy read from the file; `package.json` names it (4a41175).
+
+Left for the owner and for popnei: popnei reads the ploidy from the
+first genotype that is not a single dot, so a diploid VCF whose first
+genotype is haploid, a male's chrX listed first, is shown as "Ploidy: 1"
+until a pass reads the genotypes; and popnei's refusal "hold no genotype
+with alleles" does not tell a VCF of missing genotypes from one with no
+GT field. The project file still refuses a null ploidy; the piece that
+saves projects from this page decides how a ploidy read from the file is
+saved.
