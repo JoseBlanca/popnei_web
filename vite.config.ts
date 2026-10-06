@@ -138,6 +138,19 @@ export default defineConfig(({ mode }) => {
     build: {
       target: ["chrome111", "edge111", "firefox115", "safari16.4"],
       ...(testPagesOnly && { emptyOutDir: false, assetsDir: "e2e/assets" }),
+      // A file loaded with import(), the 3D view of the PCA, is not
+      // preloaded with a link before its import: WebKit 26.6 keeps the
+      // failure of such a link, a 404 or a network down, and gives it to
+      // the next import() of the file without asking the network, so Try
+      // again of the 3D view never downloads it (load3d.ts). The bundler
+      // adds the link once the file imports a chunk the page shares,
+      // which it does since popgen2.html shares the plots
+      // (docs/plans/file-stats.md, phase 2). The chunks it imports are
+      // still preloaded.
+      modulePreload: {
+        resolveDependencies: (filename: string, deps: string[]) =>
+          deps.filter((dep) => dep !== filename),
+      },
       // The code two pages or more share goes into chunks named for what
       // they hold, rather than one the bundler names after a module in it:
       // React, which the probe shares too, and what the two pages of
