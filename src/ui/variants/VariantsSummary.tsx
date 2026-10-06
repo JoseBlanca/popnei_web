@@ -151,6 +151,9 @@ function Load({
     };
   }, [openButton]);
   const { read, readOptions } = variants;
+  // The ploidy a VCF is read with, known before the read; `null` for a
+  // `.nei` file, and for a VCF whose ploidy popnei reads from it.
+  const givenPloidy = readOptions?.ploidy ?? null;
   return (
     <div ref={linesRef} className={classOf(styles, "lines")}>
       <p className={classOf(styles, "fileName")}>{nameAndSizeText(variants)}</p>
@@ -160,9 +163,9 @@ function Load({
           <p className={classOf(styles, "line")}>{VARIANTS_READING}</p>
           <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
           <p className={classOf(styles, "line")}>
-            {readOptions === null
+            {givenPloidy === null
               ? PLOIDY_READING
-              : ploidyLine(readOptions.ploidy, readOptions)}
+              : ploidyLine(givenPloidy, readOptions)}
           </p>
           <div className={classOf(styles, "progress")}>
             <p className={classOf(styles, "progressLine")}>

@@ -44,9 +44,11 @@ export const ONLY_PASSED_BOX =
 
 /** popnei's refusal of a genotype of another ploidy than the one the VCF
     was read with: the line, the individual, the ploidy found and the one
-    given. */
+    given or read from the file. The words of release js-v0.1.0-dev.3, "the
+    reader was asked for the ploidy 2", and of popnei's main of 6 October
+    2026, "the variants are read with the ploidy 2". */
 const OTHER_PLOIDY =
-  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the reader was asked for the ploidy (\d+)/su;
+  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and (?:the reader was asked for|the variants are read with) the ploidy (\d+)/su;
 
 /** The start of popnei's refusals of a gzipped VCF damaged or cut
     short. */
@@ -590,7 +592,8 @@ export function parseNoOptions(options: unknown): Result<JsonObject, string> {
  * The call of popnei's Python that opens the variants file again, for the
  * lines of the Python script of an analysis: `popnei.open_vars` for a
  * `.nei` file, and `popnei.open_vcf` with the ploidy and `only_passed` of
- * the read options for a VCF; the name is written as JSON quotes it,
+ * the read options for a VCF, and with no ploidy when none was given, so
+ * that popnei reads it from the file; the name is written as JSON quotes it,
  * which Python reads as the same text.
  */
 export function pythonOpenVariants(
@@ -598,9 +601,13 @@ export function pythonOpenVariants(
 ): string {
   const name = JSON.stringify(variants.name);
   const read = variants.readOptions;
+  // No ploidy given, popnei's Python reads it from the file, as the page
+  // did.
+  const ploidy = read?.ploidy ?? null;
+  const ploidyArgument = ploidy === null ? "" : `ploidy=${String(ploidy)}, `;
   return read === null
     ? `popnei.open_vars(${name})`
-    : `popnei.open_vcf(${name}, ploidy=${String(read.ploidy)}, only_passed=${read.onlyPassed ? "True" : "False"})`;
+    : `popnei.open_vcf(${name}, ${ploidyArgument}only_passed=${read.onlyPassed ? "True" : "False"})`;
 }
 
 /** An error for a state the code makes impossible. */

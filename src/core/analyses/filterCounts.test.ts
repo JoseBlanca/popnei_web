@@ -347,6 +347,19 @@ describe("VS3 D1 the counts of the filters: refusalText", () => {
     );
   });
 
+  test("a genotype of another ploidy in the words of popnei's main of 6 October 2026 tells the same", () => {
+    const message =
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies";
+    expect(
+      refusalText(
+        message,
+        project([], { name: "tetraploid.vcf.gz", onlyPassed: true }),
+      ),
+    ).toMatch(
+      /^At line 5 of tetraploid\.vcf\.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2\./u,
+    );
+  });
+
   test("another message gives popnei's message without its full stop, and to count again", () => {
     expect(refusalText("out of memory.", project([]))).toBe(
       "popnei could not count the variants: out of memory. Change the settings, or load the variants file again, to count again.",

@@ -202,6 +202,21 @@ describe("WP1 D3 the commands", () => {
       expectKept(p, q, ["variants"]);
     });
 
+    test("loadVariants takes a VCF with no ploidy, read from the file", () => {
+      const p = sampleProject();
+      const load = {
+        fileId: NEW_ID,
+        name: "tetraploid.vcf.gz",
+        size: 4096,
+        format: "vcf",
+        readOptions: { ploidy: null, onlyPassed: true },
+      } as const;
+      expect(loadVariants(p, load).variants).toEqual({
+        ...load,
+        read: { kind: "pending" },
+      });
+    });
+
     test("setVariantFilter puts a new kind in the fixed order", () => {
       const p = sampleProject();
       const q = setVariantFilter(p, { kind: "obs_het", maxAllowedObsHet: 0.5 });
@@ -2283,6 +2298,21 @@ describe("WP1 D5 the validation", () => {
             variantsWith({
               format: "vcf",
               readOptions: { ploidy, onlyPassed: true },
+            }),
+          ),
+        ),
+      ).toMatchObject({
+        path: ["variants", "readOptions", "ploidy"],
+      });
+    });
+
+    test("a ploidy of null in the read options, which only the page that opens a variants file gives, and no project file holds", () => {
+      expect(
+        errorOf(
+          parse(
+            variantsWith({
+              format: "vcf",
+              readOptions: { ploidy: null, onlyPassed: true },
             }),
           ),
         ),

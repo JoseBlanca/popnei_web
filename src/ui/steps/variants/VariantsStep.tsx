@@ -246,7 +246,9 @@ export function VariantsStep(): React.JSX.Element {
           </h2>
           <NumberField
             label={PLOIDY_LABEL}
-            value={options.ploidy}
+            // This step always gives a ploidy; only popgen2.html leaves it
+            // to the file, and an empty field would say so.
+            value={options.ploidy ?? Number.NaN}
             minValue={1}
             maxValue={MAX_PLOIDY}
             step={1}

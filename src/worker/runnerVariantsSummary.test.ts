@@ -234,7 +234,7 @@ function density(
     start: Float64Array.from(start),
     end: Float64Array.from(start, () => Number.MAX_SAFE_INTEGER),
     numVars: Uint32Array.from(numVars),
-    passStats: { numVars: numVarsOfPass, filtering: {} },
+    passStats: { numVars: numVarsOfPass, filtering: {}, stoppedEarly: false },
   };
 }
 

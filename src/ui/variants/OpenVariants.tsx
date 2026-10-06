@@ -186,7 +186,7 @@ export function OpenVariants({
         actions={
           <NumberField
             label={DEFAULT_PLOIDY_LABEL}
-            value={options.ploidy}
+            value={options.ploidy ?? Number.NaN}
             minValue={1}
             maxValue={MAX_PLOIDY}
             step={1}

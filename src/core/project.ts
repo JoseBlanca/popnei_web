@@ -119,8 +119,10 @@ export interface VariantSource {
   readonly size: number;
   /** The format of the file. */
   readonly format: LoadFormat["format"];
-  /** How a VCF is read, its ploidy a whole number from 1 to 255; `null`
-      for a `.nei`. */
+  /** How a VCF is read, its ploidy a whole number from 1 to 255, or
+      `null` for the ploidy read from the file, which only the page that
+      opens a variants file, popgen2.html, gives and no project file
+      holds; `null` for a `.nei`. */
   readonly readOptions: VcfReadOptions | null;
   /** What the calculation worker read of the file. */
   readonly read: SourceRead;
@@ -615,8 +617,8 @@ function loadIdError(fileId: string, path: FieldPath): ProjectError | null {
 export type VariantLoad = Omit<VariantSource, "read">;
 
 /** Checks a load of the variants file: its load id, a finite size, and
-    read options for a VCF, with a ploidy from 1 to 255, and none for a
-    `.nei`. */
+    read options for a VCF, with a ploidy from 1 to 255 or `null`, read
+    from the file, and none for a `.nei`. */
 function variantLoadError(
   load: VariantLoad,
   path: FieldPath,
@@ -644,10 +646,11 @@ function variantLoadError(
       "given, since a VCF file is read with a ploidy",
     );
   }
-  return wholeNumberError(load.readOptions.ploidy, 1, MAX_PLOIDY, [
-    ...optionsPath,
-    "ploidy",
-  ]);
+  // A ploidy of null is read from the file by popnei.
+  const ploidy = load.readOptions.ploidy;
+  return ploidy === null
+    ? null
+    : wholeNumberError(ploidy, 1, MAX_PLOIDY, [...optionsPath, "ploidy"]);
 }
 
 /** Checks that a grouping is of the application `app`: the populations

@@ -543,17 +543,21 @@ function stepsOf(job: Job): Steps {
   }
 }
 
-/** Opens the file of the load with popnei, reading its `source` anew. */
+/** Opens the file of the load with popnei, reading its `source` anew; a
+    VCF with no ploidy is opened without one, and popnei reads it from the
+    file. */
 function openSource(load: LoadToOpen, file: LoadFile): Variants {
   const source = file.source;
   switch (load.format) {
     case "nei":
       return openVars(source);
-    case "vcf":
-      return openVcf(source, {
-        ploidy: load.readOptions.ploidy,
-        onlyPassed: load.readOptions.onlyPassed,
-      });
+    case "vcf": {
+      const { ploidy, onlyPassed } = load.readOptions;
+      return openVcf(
+        source,
+        ploidy === null ? { onlyPassed } : { ploidy, onlyPassed },
+      );
+    }
   }
 }
 

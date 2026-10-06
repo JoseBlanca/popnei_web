@@ -309,4 +309,13 @@ describe("the Python call that opens the variants file", () => {
       }),
     ).toBe('popnei.open_vcf("panel.vcf.gz", ploidy=2, only_passed=False)');
   });
+
+  test("a VCF with no ploidy given is opened with open_vcf and no ploidy, which popnei reads from the file", () => {
+    expect(
+      pythonOpenVariants({
+        name: "tetraploid.vcf.gz",
+        readOptions: { ploidy: null, onlyPassed: true },
+      }),
+    ).toBe('popnei.open_vcf("tetraploid.vcf.gz", only_passed=True)');
+  });
 });

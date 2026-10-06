@@ -290,11 +290,14 @@ export type RunError =
       of an option it does not know. */
   | { readonly kind: "defect"; readonly message: string };
 
-/** How a VCF is read: the two options of popnei's `openVcf`, both always
-    given, so that neither default of popnei is used. */
+/** How a VCF is read: the two options of popnei's `openVcf`. Which
+    variants are read is always given, so that popnei's default of it is
+    not used; the ploidy is given or read from the file. */
 export interface VcfReadOptions {
-  /** The alleles of every genotype, a whole number from 1 to 255. */
-  readonly ploidy: number;
+  /** The alleles of every genotype, a whole number from 1 to 255; `null`
+      for the ploidy popnei reads from the file, the number of alleles of
+      its first genotype that is not a single dot. */
+  readonly ploidy: number | null;
   /** Whether the variants that failed a filter of the VCF are left out. */
   readonly onlyPassed: boolean;
 }

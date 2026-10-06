@@ -614,6 +614,26 @@ describe("WP2 D2 the key", () => {
     );
   });
 
+  test("gives a VCF read with the ploidy of the file another key than one read with a ploidy given", () => {
+    const p = sampleProject();
+    const variants = p.variants;
+    if (variants === null) {
+      throw new Error("popnei_web defect: the sample has a variants file.");
+    }
+    const withPloidy = (ploidy: number | null): Project => ({
+      ...p,
+      variants: {
+        ...variants,
+        format: "vcf",
+        readOptions: { ploidy, onlyPassed: true },
+      },
+    });
+    const memo = createKeyMemo();
+    const fromFile = keyOf(READS_TABLE, withPloidy(null), "0.1.0", memo);
+    expect(fromFile).toBe(keyOf(READS_TABLE, withPloidy(null), "0.1.0", memo));
+    expect(fromFile).not.toBe(keyOf(READS_TABLE, withPloidy(2), "0.1.0", memo));
+  });
+
   test("gives the same key for a keyInputs that returns a new object each time", () => {
     const p = literalProject();
     expect(DIVERSITY.keyInputs(p)).not.toBe(DIVERSITY.keyInputs(p));
@@ -733,7 +753,7 @@ function changeOf(
       const vcf = variants.readOptions ?? { ploidy: 2, onlyPassed: false };
       const changed =
         part === "ploidy"
-          ? { ...vcf, ploidy: (vcf.ploidy % 255) + 1 }
+          ? { ...vcf, ploidy: vcf.ploidy === null ? 2 : (vcf.ploidy % 255) + 1 }
           : { ...vcf, onlyPassed: !vcf.onlyPassed };
       return [
         withVariants({ format: "vcf", readOptions: vcf }),

@@ -45,8 +45,10 @@
 // its header, and whose pass popnei refuses at that line
 // (docs/plans/open-variants.md, "The phases"). For the page that opens a
 // variants file it writes e2e/fixtures/cut_short.vcf.gz, two thirds of the
-// bytes of panel.vcf.gz, and e2e/fixtures/low_qual.vcf.gz, the panel with
-// LowQual in the FILTER column of every fourth variant.
+// bytes of panel.vcf.gz; e2e/fixtures/low_qual.vcf.gz, the panel with
+// LowQual in the FILTER column of every fourth variant; and
+// e2e/fixtures/no_ploidy.vcf.gz, the first 5 variants of the panel with
+// every genotype a single dot, whose ploidy popnei cannot read.
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -208,6 +210,30 @@ writeFileSync(
 console.log(
   `${lowQualPath}: ${String(lowQualVariants.length)} variants, ` +
     `${String(lowQualVariants.filter((line) => line.includes("\tLowQual\t")).length)} of them LowQual`,
+);
+
+// A VCF whose ploidy cannot be read from the file: the header and the
+// first 5 variants of the panel, with every genotype a single dot, a
+// missing genotype of any ploidy, so that popnei's openVcf with no ploidy
+// refuses it, "the first 5 data lines of the VCF hold no genotype with
+// alleles", and opens it with one given (docs/plans/open-variants.md,
+// "Round 3").
+const noPloidyVariants = panelVariants.slice(0, 5).map((line) => {
+  const columns = line.split("\t");
+  if (columns[8] !== "GT") {
+    throw new Error(
+      `a variant of panel.vcf.gz whose FORMAT is not GT: ${line}`,
+    );
+  }
+  return columns.map((column, i) => (i < 9 ? column : ".")).join("\t");
+});
+const noPloidyPath = join(fixtures, "no_ploidy.vcf.gz");
+writeFileSync(
+  noPloidyPath,
+  gzipSync(`${[...panelHeader, ...noPloidyVariants].join("\n")}\n`),
+);
+console.log(
+  `${noPloidyPath}: ${String(noPloidyVariants.length)} variants, every genotype a single dot`,
 );
 
 // The populations: the copy, and the same rows as a CSV. The names hold no

@@ -62,7 +62,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -1007,7 +1007,8 @@ function checkWorkerStop(
 }
 
 /** The format of an `open` with its read options: null for a `.nei`
-    file, the two options of `openVcf` for a VCF. */
+    file, the two options of `openVcf` for a VCF, the ploidy a number or
+    null. */
 function checkLoadFormat(
   format: Format,
   value: unknown,
@@ -1032,7 +1033,8 @@ function checkLoadFormat(
       if (!record.ok) {
         return record;
       }
-      const ploidy = field(record.value, "ploidy", place, isNumber);
+      // A ploidy of null is read from the file by popnei.
+      const ploidy = field(record.value, "ploidy", place, orNull(isNumber));
       if (!ploidy.ok) {
         return ploidy;
       }

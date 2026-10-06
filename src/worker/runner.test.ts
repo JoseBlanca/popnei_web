@@ -4,7 +4,11 @@
  * verified"). The numbers are popnei's of the release js-v0.1.0-dev.3,
  * compared exactly: the runner passes them on with no arithmetic. They are
  * those of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
- * written, which are dev.3's own.
+ * written, which are dev.3's own. The ploidy read from the file, and the
+ * words of popnei's refusals of a genotype of another ploidy and of a
+ * ploidy above 255, are those of popnei's main of 6 October 2026 (merge
+ * 0a40644), which no release has yet (docs/plans/open-variants.md, "Round
+ * 3").
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -830,8 +834,50 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(runner.run(job, ignore)).toEqual({
       kind: "refused",
       message:
-        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies, and the ploidy is an argument of the reader",
+        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
     });
+  });
+
+  test("a VCF opened with no ploidy is opened with the ploidy popnei reads from the file: 4 for tetraploid.vcf.gz, 2 for panel.vcf.gz", () => {
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: true },
+    };
+    const tetraploid = valueOf(
+      createRunner().open(fromFile, {
+        name: "tetraploid.vcf.gz",
+        source: bytesOf("tetraploid.vcf.gz"),
+      }),
+    );
+    expect(tetraploid.individuals.length).toBe(12);
+    expect(tetraploid.ploidy).toBe(4);
+    const panel = valueOf(
+      createRunner().open(fromFile, {
+        name: "panel.vcf.gz",
+        source: bytesOf("panel.vcf.gz"),
+      }),
+    );
+    expect(panel.individuals.length).toBe(200);
+    expect(panel.ploidy).toBe(2);
+  });
+
+  test("a VCF whose every genotype is a single dot is refused with no ploidy, with popnei's words, and opened with one given", () => {
+    const file = {
+      name: "no_ploidy.vcf.gz",
+      source: bytesOf("no_ploidy.vcf.gz"),
+    };
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: true },
+    };
+    expect(createRunner().open(fromFile, file)).toEqual({
+      kind: "refused",
+      message:
+        "the first 5 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+    });
+    const given = valueOf(createRunner().open(VCF, file));
+    expect(given.individuals.length).toBe(200);
+    expect(given.ploidy).toBe(2);
   });
 
   test("bad.vcf is refused at the open as a VCF", () => {
@@ -871,7 +917,7 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(createRunner().open(load, file)).toEqual({
       kind: "refused",
       message:
-        "the ploidy asked of the VCF reader is 256, and a genotype holds one allele at least and 255 at most",
+        "the ploidy 256 is not one popnei reads: a genotype holds one allele at least and 255 at most",
     });
   });
 
@@ -1822,7 +1868,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
   test.each([
     [
       "with no entry of a filter of the job",
-      { numVars: 1152, filtering: {} },
+      { numVars: 1152, filtering: {}, stoppedEarly: false },
       /^popnei_web defect: the counts of the pass have no filter missing_data$/,
     ],
     [
@@ -1833,6 +1879,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
           missing_data: { varsProcessed: 1200, varsKept: 1152 },
           maf: { varsProcessed: 1152, varsKept: 1152 },
         },
+        stoppedEarly: false,
       },
       /^popnei_web defect: the counts of the pass have filters the job has not: maf$/,
     ],

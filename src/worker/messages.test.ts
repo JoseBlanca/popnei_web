@@ -142,6 +142,10 @@ const INDIVIDUALS_READ = {
 describe("WS2 D1 the messages accepted", () => {
   test.each([
     ["the open of a VCF", OPEN_VCF],
+    [
+      "the open of a VCF whose ploidy popnei reads from the file",
+      { ...OPEN_VCF, readOptions: { ploidy: null, onlyPassed: true } },
+    ],
     ["the open of a .nei file", OPEN_NEI],
     ["a diversity run with a filter of each kind", RUN],
   ])("parseToRunner accepts %s", (_name, message) => {
@@ -158,7 +162,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 5, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 6, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -196,7 +200,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 5 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 6 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -405,6 +409,23 @@ describe("WS2 D2 the messages refused", () => {
     });
   });
 
+  test("a VCF whose ploidy is a text", () => {
+    expect(
+      parseToRunner({
+        ...OPEN_VCF,
+        readOptions: { ploidy: "2", onlyPassed: false },
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongType",
+        messageKind: "open",
+        path: "readOptions.ploidy",
+        found: "string",
+      },
+    });
+  });
+
   test("a VCF without read options", () => {
     expect(parseToRunner({ ...OPEN_VCF, readOptions: null })).toMatchObject({
       ok: false,
@@ -502,7 +523,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 5,
+        protocol: 6,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -517,7 +538,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 5 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 6 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -575,17 +596,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 6 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 6 })).toEqual({
+  test("a ready of protocol 7 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 7 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 6 },
+      error: { kind: "otherProtocol", found: 7 },
     });
   });
 
-  test("a ready of protocol 6 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 6 })).toEqual({
+  test("a ready of protocol 7 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 7 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 6 },
+      error: { kind: "otherProtocol", found: 7 },
     });
   });
 
@@ -593,18 +614,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 6 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 7 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 6,
+          protocol: 7,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 6 },
+        error: { kind: "otherProtocol", found: 7 },
       });
     },
   );
@@ -1415,7 +1436,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(5),
+    protocol: fc.constant(6),
     popneiVersion: text,
   }),
   fc.record({
@@ -1560,7 +1581,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(5) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(6) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1676,7 +1697,10 @@ const toRunnerMessage = fc.oneof(
     fileId: text,
     file: fc.constant(VCF_FILE),
     format: fc.constant("vcf" as const),
-    readOptions: fc.record({ ploidy: number, onlyPassed: fc.boolean() }),
+    readOptions: fc.record({
+      ploidy: fc.option(number, { nil: null }),
+      onlyPassed: fc.boolean(),
+    }),
   }),
   fc.record({
     kind: fc.constant("open" as const),
@@ -2619,6 +2643,19 @@ describe("PA2 D1 the messages of the LD decay", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
+    "a ready of protocol 5, before the ploidy read from the file, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 5 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 5 },
+      });
+    },
+  );
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
     'a ready of protocol "4", from the %s worker, is wrongType',
     (_name, parse) => {
       expect(parse({ kind: "ready", protocol: "4" })).toEqual({
@@ -2634,8 +2671,8 @@ describe("PA2 D1 the messages of the LD decay", () => {
     },
   );
 
-  test("the version of the messages is 5", () => {
-    expect(PROTOCOL_VERSION).toBe(5);
+  test("the version of the messages is 6", () => {
+    expect(PROTOCOL_VERSION).toBe(6);
   });
 });
 
