@@ -58,7 +58,12 @@ its result with two parts, `perVar` and `perIndividual`, popnei's own
 names in `VariantsSummary`, the fields of
 the results of the histograms of the variants and of the statistics of
 each individual without `analysis`, which `VariantStatsPart` and
-`IndividualStatsPart` name and those two results extend.
+`IndividualStatsPart` name and those two results extend. Revised on 7
+October 2026 for the plots that fill in while the file is read
+(`docs/plans/live-stats.md`, phase 2): a result so far is a `JobResult`
+of the job's analysis, over the variants read so far, so no type is
+added here; its message, `soFar`, and `PROTOCOL_VERSION` 9 are in
+`messages.ts`.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -379,7 +384,11 @@ file the pass has read, `bytesRead`, of the bytes of the file,
 `numBytes`, counted on the disk, so a gzipped VCF compressed; the pass
 that reads, `pass`, 1 for the first; and the passes of the run,
 `numPasses`. The run is `(pass − 1 + bytesRead / numBytes) / numPasses`
-done (`docs/specs/worker/messages.md`, "The progress").
+done (`docs/specs/worker/messages.md`, "The progress"). A run of the
+summary of the variants file also gives, while its pass runs, results so
+far, each a `JobResult` of its analysis over the variants read so far,
+which the client gives to the store beside the progress and not in the
+`Run` (`docs/specs/worker/client.md`, "The result so far").
 
 ```ts
 export interface Progress { bytesRead: number; numBytes: number; pass: number; numPasses: number }

@@ -57,7 +57,10 @@ where it names the analyses: the distances between populations and the
 LD decay among those whose `keptNeeds` locks when the individuals kept
 leave no population, the diversity's second reason of `keptNeeds`, and
 which results fill the counts of the filters (`docs/specs/analyses/popDists.md`,
-`diversity.md` and `ldDecay.md`); approved by the owner on 30 September 2026. The store is the one object of core that
+`diversity.md` and `ldDecay.md`); approved by the owner on 30 September 2026. Revised on 7 October 2026 for the plots that fill in
+while the file is read (`docs/plans/live-stats.md`, phase 2): the state
+`running` holds the last result so far of its request, `soFar`, which
+`send` gives through `onSoFar`. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -192,7 +195,7 @@ has the kind `removed` in the code.
 |---|---|---|
 | locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or it reads the filters of the variants and `variantFilterNeeds` gives one; or its `needs` does | the first reason, in that order |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
-| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; and whether it waits for the statistics, whose request's progress and id it then holds |
+| running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; whether it waits for the statistics, whose request's progress and id it then holds; and `soFar`, the last result so far the worker gave of its request, `null` until the first, at every new run, while it waits for the statistics, and throughout for an analysis whose calculation gives none (below) |
 | error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own; and, for that failure, whether a Run of the analysis under its key waited for those statistics when they failed, `waited`, so that the panel says it "was not run" after its Run was pressed and "cannot run" when it was not |
 | locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and from stage 5 when it leaves fewer chromosomes than the draw of its rarefaction while some population of the request has the minimum of individuals; the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run"); from stage 5, the distances between populations when the list leaves no population or fewer than two with the minimum of individuals, and the LD decay when it leaves no population (`popDists.md` and `ldDecay.md`) | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
@@ -225,6 +228,16 @@ of their own, `needs` gives `null`
 reads the filters of individuals can run, the project gives the
 statistics a key, and no path reaches that defect. The store's property
 of "How it is verified" draws such definitions.
+
+A result so far is kept in the request in flight alone: it is never
+cached, has no warnings and no check numbers, and goes with the request
+at its outcome, done or failed, and at its Stop, so that `done` holds the
+result and never a result so far. One that comes before `send` returns,
+or after its request left, is passed over, as a progress is. Each one
+gives a new state of the analysis, compared by reference, so that the
+screen draws it; the other analyses keep theirs. Of the analyses of the
+two pages only the summary of the variants file gives one
+(`docs/specs/worker/runner.md`, "The result so far").
 
 `empty`, nothing to show and nothing the user can do, cannot happen: an
 analysis is locked until its variants file is read, and only a
@@ -936,7 +949,8 @@ export type AnalysisStatus<R> =
       readonly warnings: readonly Warning[]; readonly check: CheckVerdict | null }
   | { readonly kind: "running"; readonly key: Key; readonly runId: number;
       readonly progress: Progress | null;
-      readonly waitsForStatistics: boolean }   // runId and progress: the statistics'
+      readonly waitsForStatistics: boolean     // runId and progress: the statistics'
+      readonly soFar: R | null }               // the last result so far of its request
   | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError;
       readonly ofStatistics: boolean     // the failure of the statistics it waited for
       readonly waited: boolean }         // with ofStatistics, its own Run waited for them; false without
@@ -1008,7 +1022,8 @@ and `PassStats` are `docs/specs/worker/protocol.md`'s.
 export function createStore<J, R, F = never>(config: {
   readonly first: Project;
   readonly analyses: readonly AnalysisDef<J, R>[];
-  readonly send: (key: string, job: J, onProgress: (p: Progress) => void) => Run<R>;
+  readonly send: (key: string, job: J, onProgress: (p: Progress) => void,
+                  onSoFar: (r: R) => void) => Run<R>;
   readonly countsOf: (r: R) => PassFound<R>;
   /** The id of the analysis whose results countsOf makes, "filterCounts"; null in the tests that have none. */
   readonly counts: AnalysisId | null;

@@ -47,7 +47,10 @@ as those of the histograms of the variants are, and its result the parts
 `perVar` and `perIndividual`, each an object of exactly the fields of
 the result of the histograms of the variants or of the statistics of
 each individual but `analysis`, checked as those results are; and
-`PROTOCOL_VERSION` 8.
+`PROTOCOL_VERSION` 8. Revised on 7 October 2026 for the plots that fill
+in while the file is read (`docs/plans/live-stats.md`, phase 2): the
+message `soFar`, the result of a run over the variants read so far,
+checked as `result` is, and `PROTOCOL_VERSION` 9.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -90,7 +93,7 @@ received it is ended (below):
 | request | to | its answer, when it goes right | when the input is refused |
 |---|---|---|---|
 | `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
-| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
+| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` and its `soFar` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `write`: write the filtered variants as a file | the calculation worker | `written`, the file under the key it was asked with, after its `progress` | as `run` |
 | `readIndividuals`: read the individuals file, a CSV, a TSV or an xlsx | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer, and so is a files wasm that could not be downloaded |
 
@@ -179,6 +182,12 @@ received it is ended (below):
 - **`progress`** reports how far a `run` or a `write` has gone, as
   popnei's `Progress` gives it (below, "The progress"). Either may get any
   number of them before its answer, and an `open` gets none.
+- **`soFar`** carries the result of a `run` over the variants read so
+  far, with its id and its key, sent while the pass runs by a
+  calculation whose result popnei gives so far: the summary of the
+  variants file, every 2 seconds, popnei's `soFarEvery` left as it is
+  (below, "The result so far"). A run of another analysis gets none, a
+  `write` and an `open` none.
 
 ### The File travels in the request that needs it
 
@@ -433,13 +442,27 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
 
 ## The TypeScript interface
 
+### The result so far
+
+A `soFar` has the fields of a `result`, `id`, `key` and `result`, and is
+checked as a `result` is, every array of its `result` of its typed array
+and as long as what it goes with: a result so far is drawn as the result
+is, so a shape it does not have would put a wrong number on the screen
+as surely. Its arrays are transferred, each over a buffer of its own that
+the runner made by copying popnei's (`docs/specs/worker/runner.md`, "The
+result so far"). It is a message of its own and not a field of
+`progress`, which every run and write has and which would then carry
+statistics for one analysis alone (`docs/plans/live-stats.md`). The last
+one before the `result`, when popnei gives one after its last block,
+holds the same numbers as the `result`.
+
 Every field is `readonly`, and every array `readonly T[]`, in the code;
 `readonly` is left out below to keep the types short.
 
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -456,6 +479,7 @@ export type FromRunner =
   | { kind: "ready"; protocol: number; popneiVersion: string }
   | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
+  | { kind: "soFar"; id: number; key: string; result: JobResult } // the result over the variants read so far, of a run running
   | { kind: "written"; id: number; key: string; result: Written<Blob> } // the file, as a Blob
   | { kind: "refused"; id: number; message: string }        // popnei refused the input
   | { kind: "reopenFailed"; id: number; name: string; message: string } // the file no longer reads

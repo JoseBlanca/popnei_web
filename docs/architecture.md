@@ -1360,6 +1360,21 @@ The page and each worker talk through typed messages
   popnei issue #4, and the runner tells them as passes 1 and 2 of 2,
   where popnei tells each as pass 1 of 1, so that the bar fills once
   (`docs/specs/worker/runner.md`, "Progress").
+- **The result so far** is a kind of message beside the progress, sent
+  only by a calculation whose result popnei can give over the variants
+  read so far: the summary of the variants file of `popgen2.html`, whose
+  `calcVariantsSummary` calls its `onSoFar` every 2 seconds while its pass
+  runs (docs/plans/live-stats.md). The runner makes it as it makes the
+  result, copies its arrays, which may be those of popnei's final result,
+  and the worker posts it as `soFar`, checked as the result is. The client
+  gives it to the request only while it is the one running, under its key
+  and of its job's analysis, and takes any other for a defect that ends
+  the worker; after a cancel the worker is ended, and its messages reach
+  nobody. The store keeps the last one in the request in flight, `soFar`
+  of the state `running`, so that it goes with the request at its outcome
+  or its Stop and is never cached; the screen draws its plots from it
+  until the result comes. It is not part of the progress, which every
+  analysis has and whose bar it would burden with statistics.
 - **Cancelling** a request that is running ends its worker and starts a
   new one. While a calculation runs inside wasm, the worker cannot read a
   message that asks it to stop, and without `SharedArrayBuffer`, which
@@ -2260,7 +2275,8 @@ src/worker/
   runner.ts         the calculation worker: popnei, the variant file, the
                     intermediate results; tested in node
   runnerWorker.ts   the calculation worker's script: it checks each request,
-                    calls runner.ts and posts the answers and the progress
+                    calls runner.ts and posts the answers, the progress
+                    and the results so far
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
   xlsxCells.ts      the cells of an xlsx or its refusal, from what the files

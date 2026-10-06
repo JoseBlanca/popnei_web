@@ -43,8 +43,11 @@ heatmap; the LD decay; the memory of the LD decay; and their tests.
 Approved by the owner on 30 September 2026. Revised on 6 October 2026
 for the one pass of popgen2.html (`docs/plans/live-stats.md`, phase 1):
 the summary of the variants file is one call of `calcVariantsSummary`
-(below, "The summary of the variants file"). The calculation
-worker is the thread of the browser tab, beside the page, that runs
+(below, "The summary of the variants file"). Revised on 7 October 2026
+for the plots that fill in while the file is read
+(`docs/plans/live-stats.md`, phase 2): the summary gives its results so
+far to `toldSoFar` of the run (below, "The result so far"). The
+calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
 the page's requests there: it loads popnei, opens the variants file the
@@ -636,6 +639,35 @@ job with no list and of an `individualChecks` job on the same runner
 three parts refuses the pass, and none of them is given: a genotype
 popnei refuses fails the count too.
 
+### The result so far
+
+The call of the summary also gives popnei an `onSoFar`, with
+`soFarEvery` left at popnei's 2 seconds, and popnei calls it after a
+block when 2 seconds have gone by since the start of the pass or the
+last call, with the summary over the variants read so far. The runner
+makes it into a result as it makes the final one, with the same checks,
+copies every typed array of it into a buffer of its own, since popnei's
+arrays of the last call may be those of the result it then returns,
+which a transfer would empty, and gives it to `toldSoFar` of the run,
+which the worker's script posts as a `soFar` with its arrays transferred
+(`docs/specs/worker/messages.md`, "The result so far"). No other job
+gives one.
+
+What making it, copying it or `toldSoFar` throws, the `postMessage` of
+the worker among it, is recorded as what `told` throws is and thrown on,
+a defect of ours, and never answered as popnei's refusal of the file:
+while the pass reads, popnei's call throws that value back; at the last
+block, where popnei's call returns and drops it, the runner throws it
+after the call.
+
+`createRunner` takes `soFarEvery` for the tests, which give 0, a result
+so far after every block, to have some from a small file. Under node on
+popnei js-v0.2.1, a VCF of 20,000 variants and two diploid individuals
+is read in two blocks of 10,000, and with 0 gives results so far over
+10,000 and then 20,000 variants, the last equal to the result; the
+fixtures, of one block each, and `panel.vcf.gz` with 2 seconds, give
+none.
+
 ### The principal components
 
 A `pca` job holds its pass, the load id, the filters and the list of the
@@ -1166,7 +1198,8 @@ export type Answer<T> =
 The runner of one worker, which holds its one load. The three functions
 throw only for a defect of ours, which the worker's script posts as
 `crashed`. `run` and `write` give `told` each `Progress` of popnei as it
-comes, and the worker's script posts it.
+comes, and `run` gives `toldSoFar`, when given, each result so far of
+the summary, and the worker's script posts both.
 
 ```ts
 export interface Runner {
@@ -1174,11 +1207,16 @@ export interface Runner {
     readonly individuals: readonly string[];
     readonly ploidy: number;
   }>;
-  run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  run(job: Job, told: (progress: Progress) => void,
+      toldSoFar?: (result: JobResult) => void): Answer<JobResult>;
   write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>;
 }
 
-export function createRunner(): Runner; // after loadPopnei has given ok
+export interface RunnerOptions {
+  readonly soFarEvery?: number; // popnei's 2 seconds when not given; tests give 0
+}
+
+export function createRunner(options?: RunnerOptions): Runner; // after loadPopnei has given ok
 ```
 
 The answer of what a call to popnei threw, `refused` for a plain `Error`
@@ -1552,6 +1590,13 @@ The tests of stage 2, each at `open` and `run` of a runner made by
 - **What `told` throws**: a `told` that throws `new Error("told")` at
   its first call makes `run` throw that very value, compared with
   `toBe`, and not answer `refused`.
+- **The result so far**: with `soFarEvery` 0, the VCF of 20,000
+  variants of two individuals gives two results so far, over 10,000 and
+  20,000 variants, the last equal to the result; no buffer of one is the
+  result's or another's, and transferring them leaves the result whole;
+  `panel.vcf.gz` with popnei's 2 seconds gives none; a `toldSoFar` that
+  throws at its first call, or at the last block, makes `run` throw that
+  very value (`src/worker/runnerVariantsSummary.test.ts`).
 - **The order of the populations**: p0, p2 and p1 renamed "10", "2" and
   "p1" come back in that order, with the values of p0 under "10".
 - **popnei's refusals**, each `refused` with the message of "The cases"
