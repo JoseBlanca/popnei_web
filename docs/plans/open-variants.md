@@ -412,3 +412,10 @@ cut short; a defect at the opening reaches the error bar; popnei's
 backquotes become quotation marks; after a crash of the count, the bar
 says to count again before it says to reload. On 792c854: Vitest "Tests
 3788 passed (3788)", Playwright "1190 passed" in Chromium and WebKit.
+
+The owner's answers of 6 October 2026: the count stays "Variants: N" for
+every variant, with no word on the FILTER column; the FILTER filter is
+asked of popnei as a filter of a pass, issue
+https://github.com/JoseBlanca/popnei/issues/9; a ploidy read from the
+first genotype that is not a single dot is popnei's expected behaviour,
+and a haploid first genotype is not a defect to work around.
