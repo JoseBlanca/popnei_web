@@ -2,10 +2,13 @@
  * The store of the new page of population genetics, popgen2.html
  * (docs/plans/open-variants.md, "A new page, beside the old one"): the
  * first project of the old page, with the missing data filter on at 0.1
- * as docs/functionality.md has it, which the summary does not read, the
- * analyses of `POPGEN2_ANALYSES`, and no counts of
- * the filters, no statistics of each individual and no writing, which
- * the page does not have yet. Apart from the entry, so that a test in
+ * as docs/functionality.md has it, which the summary and the statistics
+ * of the open file do not read, the analyses of `POPGEN2_ANALYSES`, and
+ * no counts of the filters and no writing, which the page does not have
+ * yet. The statistics of each individual are among the analyses but not
+ * given as `statistics`, which only a Run that waits for them under a
+ * filter of individuals needs, and the page has no such filter yet
+ * (docs/plans/file-stats.md). Apart from the entry, so that a test in
  * node makes the store with what the page gives it.
  */
 import { POPGEN2_ANALYSES, countsOf, firstProject } from "../core/apps.ts";

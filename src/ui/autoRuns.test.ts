@@ -2,45 +2,73 @@ import { describe, expect, test } from "vitest";
 
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisStatus, Store } from "../core/store.ts";
-import type { JobResult, Outcome, Run } from "../worker/protocol.ts";
+import type {
+  Job,
+  JobResult,
+  Outcome,
+  Run,
+  VariantDistrib,
+} from "../worker/protocol.ts";
 import { createAutoRuns } from "./autoRuns.ts";
 import { createPopgen2Store } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
+import { STATISTICS_IDS, SUMMARY_ID } from "./variants/words.ts";
 
-const ID = "variantsSummary";
+const ID = SUMMARY_ID;
+
+/** A request the fake `send` was given: its key, its job, whether the
+    store cancelled it, and how the test ends it. */
+interface Request {
+  readonly key: string;
+  readonly job: Job;
+  cancelled: boolean;
+  readonly end: (outcome: Outcome<JobResult>) => void;
+}
 
 /** The store of the new page with a fake `send` whose requests the test
-    ends by hand, and the analyses it starts by itself. */
-function setUp(): {
+    ends by hand, and the analyses it starts by itself, `ids`, the
+    summary alone unless given. */
+function setUp(ids: readonly string[] = [ID]): {
   readonly store: Store<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
+  readonly requests: Request[];
   readonly auto: ReturnType<typeof createAutoRuns>;
-  readonly status: () => AnalysisStatus<JobResult>;
+  readonly status: (id?: string) => AnalysisStatus<JobResult>;
 } {
   const sent: ((outcome: Outcome<JobResult>) => void)[] = [];
+  const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
-    send: (): Run<JobResult> => {
+    send: (key, job): Run<JobResult> => {
       lastId += 1;
+      let request: Request | null = null;
       const outcome = new Promise<Outcome<JobResult>>((resolve) => {
         sent.push(resolve);
+        request = { key, job, cancelled: false, end: resolve };
+        requests.push(request);
       });
-      return { id: lastId, outcome, cancel: () => undefined };
+      return {
+        id: lastId,
+        outcome,
+        cancel: () => {
+          if (request !== null) request.cancelled = true;
+        },
+      };
     },
     appVersion: "0.1.0",
   });
   store.popneiReady("0.1.0");
   const auto = createAutoRuns({
     store,
-    ids: [ID],
+    ids,
     start: (id) => startAnalysis(store, id),
   });
-  const status = (): AnalysisStatus<JobResult> => {
-    const view = store.getState().analyses.find((a) => a.id === ID);
-    if (view === undefined) throw new Error("no summary in the store");
+  const status = (id: string = ID): AnalysisStatus<JobResult> => {
+    const view = store.getState().analyses.find((a) => a.id === id);
+    if (view === undefined) throw new Error(`no ${id} in the store`);
     return view.status;
   };
-  return { store, sent, auto, status };
+  return { store, sent, requests, auto, status };
 }
 
 /** Loads `panel.nei` under `fileId` and records its read. */
@@ -170,5 +198,265 @@ describe("the analyses the new page starts by itself", () => {
     auto.again(ID);
     auto.sync();
     expect(sent).toHaveLength(1);
+  });
+});
+
+/** A histogram of the variants of 2 bins, all 1,200 in the first. */
+function distrib(mean: number): VariantDistrib {
+  return { mean, counts: Uint32Array.from([1200, 0]) };
+}
+
+/** The result of each analysis the page starts, by its id, over the two
+    individuals of the file `open` reads. */
+const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
+  [ID, SUMMARY],
+  [
+    "individualChecks",
+    {
+      analysis: "individualChecks",
+      individuals: ["i1", "i2"],
+      missingGtRate: Float64Array.from([0.02, 0.04]),
+      obsHetRate: Float64Array.from([0.3, 0.4]),
+      passStats: { numVars: 1200, filtering: {} },
+    },
+  ],
+  [
+    "variantChecks",
+    {
+      analysis: "variantChecks",
+      binEdges: Float64Array.from([0, 0.5, 1]),
+      missingRate: distrib(0.03),
+      maf: distrib(0.7),
+      obsHet: distrib(0.35),
+      unbiasedExpHet: distrib(0.37),
+      passStats: { numVars: 1200, filtering: {} },
+    },
+  ],
+]);
+
+/** Ends `request` with the result of its analysis, under its key. */
+function endDone(request: Request | undefined): void {
+  if (request === undefined) throw new Error("no such request");
+  const result = RESULTS.get(request.job.analysis);
+  if (result === undefined) throw new Error("no result for the request");
+  request.end({ kind: "done", key: request.key, result });
+}
+
+/** The analyses of the requests sent, in their order. */
+function analysesOf(requests: readonly Request[]): readonly string[] {
+  return requests.map((request) => request.job.analysis);
+}
+
+describe("the statistics of the open file, started after the count, one after the other", () => {
+  const PAGE_IDS = [ID, ...STATISTICS_IDS];
+
+  test("the count starts alone; once done, the statistics of each individual; once they are done, the histograms of the variants", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID]);
+    expect(status("individualChecks").kind).toBe("ready");
+
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, "individualChecks"]);
+    expect(status("variantChecks").kind).toBe("ready");
+
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "variantChecks",
+    ]);
+    expect(requests[2]?.job).toMatchObject({
+      analysis: "variantChecks",
+      individuals: null,
+    });
+
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(3);
+    expect(PAGE_IDS.map((id) => status(id).kind)).toEqual([
+      "done",
+      "done",
+      "done",
+    ]);
+  });
+
+  test("the count's Stop leaves the statistics not started, and Count again starts the count and then them", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    store.cancelRun(ID);
+    requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(1);
+    const individuals = status("individualChecks");
+    expect(individuals.kind).toBe("ready");
+    if (individuals.kind !== "ready") return;
+    expect(auto.startedUnder(individuals.key)).toBe(false);
+
+    auto.again(ID);
+    expect(analysesOf(requests)).toEqual([ID, ID]);
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, ID, "individualChecks"]);
+  });
+
+  test("stop of the statistics while those of each individual run cancels them, and the histograms of the variants do not start", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+
+    auto.stop(STATISTICS_IDS);
+    expect(requests[1]?.cancelled).toBe(true);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+
+    expect(requests).toHaveLength(2);
+    expect(status(ID).kind).toBe("done");
+    const stopped = status("individualChecks");
+    expect(stopped.kind).toBe("ready");
+    if (stopped.kind !== "ready") return;
+    expect(auto.startedUnder(stopped.key)).toBe(true);
+    expect(status("variantChecks").kind).toBe("ready");
+  });
+
+  test("resume after a stop of the statistics of each individual starts them again, and the histograms of the variants after them", async () => {
+    const { store, requests, auto } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    auto.stop(STATISTICS_IDS);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+
+    auto.resume(STATISTICS_IDS);
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "individualChecks",
+    ]);
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests).at(-1)).toBe("variantChecks");
+    expect(requests).toHaveLength(4);
+  });
+
+  test("stop while the histograms of the variants run cancels them alone, and resume starts them, not the statistics of each individual, which are done", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+
+    auto.stop(STATISTICS_IDS);
+    expect(requests.map((request) => request.cancelled)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    requests[2]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(3);
+    expect(status("individualChecks").kind).toBe("done");
+    expect(status("variantChecks").kind).toBe("ready");
+
+    auto.resume(STATISTICS_IDS);
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "variantChecks",
+      "variantChecks",
+    ]);
+  });
+
+  test("resume does nothing while one of the statistics runs, nor once both are done", async () => {
+    const { store, requests, auto } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+
+    auto.resume(STATISTICS_IDS);
+    expect(requests).toHaveLength(2);
+
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    auto.resume(STATISTICS_IDS);
+    expect(requests).toHaveLength(3);
+  });
+
+  test("stop does nothing when none of the statistics runs: the count goes on", () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+
+    auto.stop(STATISTICS_IDS);
+    expect(requests[0]?.cancelled).toBe(false);
+    expect(status(ID).kind).toBe("running");
+  });
+
+  test("a failure of the statistics of each individual leaves the histograms of the variants not started, and resume starts the statistics again", async () => {
+    const { store, requests, auto, status } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    requests[1]?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    auto.sync();
+    expect(status("individualChecks").kind).toBe("error");
+    expect(requests).toHaveLength(2);
+
+    auto.resume(STATISTICS_IDS);
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "individualChecks",
+      "individualChecks",
+    ]);
+  });
+
+  test("a new file while the statistics run stops them, and starts the count of the new file alone", async () => {
+    const { store, requests, auto } = setUp(PAGE_IDS);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+
+    open(store, SECOND);
+    expect(requests[1]?.cancelled).toBe(true);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, "individualChecks", ID]);
   });
 });

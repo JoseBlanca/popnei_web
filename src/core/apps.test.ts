@@ -484,8 +484,12 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     passStats: { numVars: 1200, filtering: {} },
   };
 
-  test("the new page has the summary alone, and the analyses of the old page do not hold it", () => {
-    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual(["variantsSummary"]);
+  test("the new page has the summary, the statistics of each individual and the histograms of the variants, and the analyses of the old page do not hold the summary", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
+      "variantsSummary",
+      "individualChecks",
+      "variantChecks",
+    ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
     );
@@ -535,8 +539,48 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
+      ["individualChecks", "ready"],
+      ["variantChecks", "ready"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);
+  });
+
+  test("a store of the new page, with no filter of individuals, sends the histograms of the variants over every individual at once, with no wait for the statistics of each individual", () => {
+    const sent: Sent[] = [];
+    const store = createStore<Job, JobResult>({
+      first: emptyProject("popgen"),
+      analyses: POPGEN2_ANALYSES,
+      send: (key, job): Run<JobResult> => {
+        const id = sent.length + 1;
+        sent.push({ id, key, job });
+        return {
+          id,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      countsOf,
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1_000_000,
+      maxUndoSteps: 100,
+    });
+    store.popneiReady("0.1.0");
+    store.open({ ...fiveIndividualsProject([]), individuals: null });
+    store.startRun("variantChecks");
+    expect(sent.map((request) => request.job)).toEqual([
+      {
+        analysis: "variantChecks",
+        fileId: fiveIndividualsProject([]).variants?.fileId,
+        filters: [],
+        individuals: null,
+        minNumIndividuals: 0,
+        numBins: 40,
+        range: [0, 1],
+      },
+    ]);
   });
 });

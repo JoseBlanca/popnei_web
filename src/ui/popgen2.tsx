@@ -31,7 +31,11 @@ import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
-import { SUMMARY_ID, announcementsOf } from "./variants/words.ts";
+import {
+  STATISTICS_IDS,
+  SUMMARY_ID,
+  announcementsOf,
+} from "./variants/words.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
@@ -70,13 +74,15 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   );
 }
 
-/** The summary of the variants file, started once the file is read. A
-    change of the store starts it after the listeners of that change have
-    all run, so that a start is not made in the middle of telling them. */
+/** The summary of the variants file, started once the file is read, and
+    the statistics of the open file, started one after the other once the
+    summary is done (docs/plans/file-stats.md). A change of the store
+    starts them after the listeners of that change have all run, so that a
+    start is not made in the middle of telling them. */
 function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
   const autoRuns = createAutoRuns({
     store,
-    ids: [SUMMARY_ID],
+    ids: [SUMMARY_ID, ...STATISTICS_IDS],
     start: (id) => startAnalysis(store, id),
   });
   store.subscribe(() => {

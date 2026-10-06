@@ -168,7 +168,8 @@ day:
   joins them, asks for the read of each file whose read is pending and
   has none under way (section 6, "Who asks for a read"). From 5 October
   2026 the entry of `popgen2.html` also starts by itself the summary of
-  the variants file once the file is read (section 5).
+  the variants file once the file is read, and from 6 October 2026 the
+  statistics of the open file after it (section 5).
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
 - The notice offers the reverse of what caused it: Undo after a command
@@ -942,7 +943,13 @@ no step, and it joins none of the lists of the old page,
 `POPGEN_ANALYSES`, `POPGEN_ANALYSIS_STEPS` and the titles of
 `titles.ts`, so the old page neither shows it nor changes. Its request
 and its result join the unions of `protocol.ts` and the cases of
-`countsOf` as any analysis's do.
+`countsOf` as any analysis's do. An analysis of the old page can join
+the list of the new one with its module as it is, as the statistics of
+each individual and the histograms of the variants did on 6 October 2026
+(`docs/plans/file-stats.md`); each page has its own store, so the old
+page does not change, and a field its result gains for the new page, the
+missing rate of the histograms of the variants, is one the old page
+does not draw.
 
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
@@ -1272,15 +1279,35 @@ The page and each worker talk through typed messages
   screen reader, does not lose the minutes the calculation had run (WCAG
   2.2, success criterion 2.2.1). A request that waits leaves the queue at
   no cost, and one that runs ends its worker, a restart (below) that opens
-  the variants file again; the calculation of the new settings starts when
-  the user asks for it, as every calculation of `popgen.html` does. On
-  `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts` starts the
-  summary of the variants file by itself, once for each key: when the
+  the variants file again; on `popgen.html` the calculation of the new
+  settings starts when the user asks for it, as every calculation there
+  does. On `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts`
+  starts by itself the summary of the variants file, the count of its
+  variants, and from 6 October 2026 the statistics of the open file after
+  it, the statistics of each individual and then the histograms of the
+  variants (`docs/plans/file-stats.md`). They start in that order, each
+  only when the one before it is done: the one calculation worker runs one
+  request at a time, and the store has no state for a request that waits
+  in the client's queue, so three sent at once would all show as running,
+  two of them with no progress. Each starts once for each key: when the
   file is read, again after a read with other options, which is a new
-  load and a new key, and at the user's Count again; not again after a
-  failure or a Stop under the same key. After a Stop the store's state is
+  load and a new key, and at the user's Count again or start again of the
+  statistics; not again after a failure or a Stop under the same key,
+  which also keeps those after it from starting. The statistics have one
+  Stop, which stops the one running, and one start again, which starts
+  the first not done (`stop` and `resume` of `autoRuns.ts`); the count
+  keeps its own Stop and Count again, and since the statistics start only
+  once the count is done, its Stop leaves them not started and its Count
+  again waits behind none of them. After a Stop the store's state is
   `ready`, as before any run, and the keys `autoRuns.ts` remembers,
-  `startedUnder`, are the one record that the count was stopped. An undo while the
+  `startedUnder`, are the one record that the analysis was stopped. None
+  of the three reads a filter yet, the page having none. A limit the
+  piece that adds the filters to that page must settle: an analysis that
+  starts by itself and reads a filter, as the histograms of the variants
+  read the filters of individuals, gets a new key at every change of a
+  threshold, and its start, as any new calculation does, stops the
+  calculation left behind, which restarts the worker; so moving a
+  threshold would stop and start the pass at each step. An undo while the
   notice is up gives the keys back, and the requests go on. A change of
   the load of the variant file is the exception, below. The store holds the handle of every run and cancels
   them (`docs/specs/core/store.md`); `src/ui/runs.ts` only awaits their
@@ -2248,11 +2275,13 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES and no
-                    counts, statistics or writing; apart from the entry,
-                    so that a test in node makes it
-  autoRuns.ts       the analyses popgen2.html starts by itself, once for
-                    each key, and which keys were started, from which the
-                    page tells a count stopped
+                    counts, statistics config or writing; apart from the
+                    entry, so that a test in node makes it
+  autoRuns.ts       the analyses popgen2.html starts by itself, in order,
+                    each once for each key once the one before is done,
+                    which keys were started, from which the page tells a
+                    calculation stopped, and the Stop and start again of
+                    the statistics of the open file
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the summary of what it holds, the page
                     that holds them, their words, and the defects of the
