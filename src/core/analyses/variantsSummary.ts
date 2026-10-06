@@ -30,6 +30,9 @@ import type {
   Run,
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
+// The bins of the histograms of the variants, which variantChecks asks
+// popnei for too: a change of any of them changes the result of both
+// analyses and raises the keyVersion of both.
 import {
   VARIANT_BINS,
   VARIANT_FINE_BINS,

@@ -73,10 +73,17 @@ export const VARIANT_BINS = 40;
  * ends on an edge of popnei. Each of the four counts is 5,120 bytes and
  * the edges 10,248 bytes, 30,728 bytes in a result where the 40 bins took
  * 968.
+ *
+ * The summary of the variants file of popgen2.html asks popnei for the
+ * same bins, as do `VARIANT_RANGE` and `VARIANT_MIN_NUM_INDIVIDUALS`, so
+ * a change of any of the three changes the result of both analyses and
+ * raises the `keyVersion` of both, this one and variantsSummary.ts.
  */
 export const VARIANT_FINE_BINS = VARIANT_BINS * 32;
 
-/** The lowest and the highest edge of the bins, popnei's default range. */
+/** The lowest and the highest edge of the bins, popnei's default range;
+    the summary of popgen2.html asks for it too, so a change raises the
+    `keyVersion` of both analyses (`VARIANT_FINE_BINS`). */
 export const VARIANT_RANGE: readonly [number, number] = Object.freeze([
   0, 1,
 ] as const);
@@ -84,7 +91,8 @@ export const VARIANT_RANGE: readonly [number, number] = Object.freeze([
 /** popnei's `minNumIndividuals` of the histograms: 0, so that a variant
     with few called genotypes has a value, where popnei's default of 20
     would leave out the variants the missing data filter is there to
-    find. */
+    find. The summary of popgen2.html asks for it too, so a change raises
+    the `keyVersion` of both analyses (`VARIANT_FINE_BINS`). */
 export const VARIANT_MIN_NUM_INDIVIDUALS = 0;
 
 /**
