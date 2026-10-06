@@ -6765,12 +6765,16 @@ describe("live-stats 2 the result so far of a run", () => {
     const request = sentAt(sent, 0);
     request.soFar(varsResult(500));
     store.cancelRun("vars");
-    expect(statuses(store)[1]?.kind).not.toBe("running");
+    // ready under the key, not done: the result so far went to no cache,
+    // since a key whose result is cached is done.
+    const stopped = { kind: "ready", key: request.key };
+    expect(statuses(store)[1]).toStrictEqual(stopped);
     // The worker client gives nothing of a request cancelled; a result so
     // far that came anyway before its outcome is not shown.
     request.soFar(varsResult(600));
-    expect(statuses(store)[1]?.kind).not.toBe("running");
+    expect(statuses(store)[1]).toStrictEqual(stopped);
     store.runEnded(request.run.id, { kind: "cancelled" });
+    expect(statuses(store)[1]).toStrictEqual(stopped);
     store.startRun("vars");
     expect(statuses(store)[1]).toMatchObject({ kind: "running", soFar: null });
     expect(sentAt(sent, 1).run.id).not.toBe(request.run.id);
@@ -6808,6 +6812,33 @@ describe("live-stats 2 the result so far of a run", () => {
       runId: fresh.run.id,
       soFar: null,
     });
+  });
+
+  test("an undo back to a key whose request was left behind running shows that request's own results so far, the one given while away among them", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const old = sentAt(sent, 0);
+    const first = varsResult(500);
+    old.soFar(first);
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(statuses(store)[1]?.kind).not.toBe("running");
+    const away = varsResult(700);
+    old.soFar(away);
+
+    store.undo();
+
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "running",
+      key: old.key,
+      runId: old.run.id,
+    });
+    const back = statuses(store)[1];
+    expect(back?.kind === "running" && back.soFar).toBe(away);
+    const later = varsResult(900);
+    old.soFar(later);
+    const after = statuses(store)[1];
+    expect(after?.kind === "running" && after.soFar).toBe(later);
+    expect(sent).toHaveLength(1);
   });
 
   test("a result so far given before send returns is passed over", () => {
