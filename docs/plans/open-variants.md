@@ -308,3 +308,17 @@ The owner, trying the page: the headings "Population genetics",
 is "Popnei"; the explanation under the ploidy goes; right under the
 heading, one widget holds the button "Open variants file…" and, on the
 same row, the field "Default ploidy" (2); the PASS box below them.
+
+Built in 173fd61, with a flaky test fixed in cbf6cb2 and the fixes of
+its review in 97c61f5. The review sent ux, react and accessibility.
+Fixed: with the explanation under the field gone, nothing said the
+ploidy is not checked against the genotypes, so the summary's ploidy
+line says it; a click in the gap beside the ploidy field sent the
+focus to the zone's hidden paste button, in Chromium and WebKit; the
+field's one-row form is allowed by its type only with the refusal drawn
+elsewhere. The flaky test matched the refusal both on the page and in
+the status region, 12 runs in 40 in WebKit under load. On 97c61f5:
+Vitest "Tests 3758 passed (3758)", Playwright "1204 passed" in Chromium
+and WebKit, axe 0 violations in 32 runs. Not changed, for the owner:
+with a `.nei` open, the ploidy field and the box apply to the next VCF
+and nothing says so; the tab's title is "Popnei".
