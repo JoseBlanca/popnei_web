@@ -431,7 +431,12 @@ for (const width of [320, 1280]) {
         page.getByRole("checkbox", { name: PASSED_LABEL }),
       ).not.toBeChecked();
       if (typed === "300") {
-        await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
+        // In the section and not in the whole page: the status region,
+        // which announces the refusal with the read of the box, may end
+        // with the same words.
+        await expect(
+          opening(page).getByText(/the ploidy stays 2\.$/u),
+        ).toBeVisible();
       }
       // Nothing above or beside the box moved it.
       expect(await label.boundingBox()).toEqual(before);
