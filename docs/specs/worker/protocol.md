@@ -517,12 +517,17 @@ export interface IndividualChecksJob {
   filters: readonly [];                    // none
 }
 
-export interface IndividualChecksResult {
-  analysis: "individualChecks";
+// The fields of the statistics of each individual, which the result of
+// their own request and the summary of the variants file share.
+export interface IndividualStatsPart {
   individuals: readonly string[];          // every individual of the file, in its order, as popnei gave them
   missingGtRate: Float64Array;             // popnei's names; one per individual, in that order
   obsHetRate: Float64Array;                // NaN for an individual with no called genotype
   passStats: PassStats;
+}
+
+export interface IndividualChecksResult extends IndividualStatsPart {
+  analysis: "individualChecks";
 }
 
 // The histograms of the variants, calcPerVarDistribs over every variant
@@ -542,14 +547,19 @@ export interface VariantDistrib {
   counts: Uint32Array;                     // the variants in each bin
 }
 
-export interface VariantChecksResult {
-  analysis: "variantChecks";
+// The fields of the histograms of the variants, which the result of
+// their own request and the summary of the variants file share.
+export interface VariantStatsPart {
   binEdges: Float64Array;                  // numBins + 1, shared by the four
   missingRate: VariantDistrib;             // popnei's missing rate: the missing genotypes of a variant over the individuals of the pass
   maf: VariantDistrib;                     // popnei's major allele frequency
   obsHet: VariantDistrib;
   unbiasedExpHet: VariantDistrib;
   passStats: PassStats;
+}
+
+export interface VariantChecksResult extends VariantStatsPart {
+  analysis: "variantChecks";
 }
 
 // The counts of the filters of the variants, from a pass that gives
@@ -583,16 +593,11 @@ export interface VariantsSummaryJob {
   range: readonly [number, number];        // [0, 1]
 }
 
-// The fields of VariantChecksResult and IndividualChecksResult but
-// `analysis`, which those two extend.
-export interface VariantStatsPart { binEdges; missingRate; maf; obsHet; unbiasedExpHet; passStats }
-export interface IndividualStatsPart { individuals; missingGtRate; obsHetRate; passStats }
-
 export interface VariantsSummaryResult {
   analysis: "variantsSummary";
   chroms: readonly string[];               // those with variants, in the order of their first variant
   numVarsPerChrom: Uint32Array;            // as chroms
-  perVar: VariantStatsPart;
+  perVar: VariantStatsPart;                // popnei's names of the parts of VariantsSummary
   perIndividual: IndividualStatsPart;
   passStats: PassStats;
 }
@@ -693,10 +698,10 @@ export interface LdDecayResult {
 
 export type Job =
   | DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob
-  | PopDistsJob | LdDecayJob;
+  | PopDistsJob | LdDecayJob | VariantsSummaryJob;
 export type JobResult =
   | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult
-  | PcaResult | PopDistsResult | LdDecayResult;
+  | PcaResult | PopDistsResult | LdDecayResult | VariantsSummaryResult;
 ```
 
 The request of a written file is not a `Job`, since it is not an
