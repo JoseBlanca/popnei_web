@@ -18,12 +18,19 @@ import { createStore } from "../core/store.ts";
 import type { Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 
-/** The analyses the page starts by itself, in the groups `createAutoRuns`
-    of autoRuns.ts takes: the summary of the variants file, whose one pass
-    gives the count of the variants and the statistics of the open file
+/** The one group of the analyses the page starts by itself, which the
+    one Stop of the box stops and its Start again starts again: the
+    summary of the variants file, whose one pass gives the count of the
+    variants and the statistics of the open file
     (docs/plans/live-stats.md). */
+export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
+  variantsSummary.id,
+]);
+
+/** The analyses the page starts by itself, in the groups `createAutoRuns`
+    of autoRuns.ts takes: the one group, `POPGEN2_CHAIN`. */
 export const POPGEN2_AUTO_GROUPS: readonly (readonly AnalysisId[])[] =
-  Object.freeze([Object.freeze([variantsSummary.id])]);
+  Object.freeze([POPGEN2_CHAIN]);
 
 /** What the store of the page is made with beyond `src/core/apps.ts`. */
 export interface Popgen2StoreDeps {

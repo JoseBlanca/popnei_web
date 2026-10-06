@@ -1304,18 +1304,23 @@ The page and each worker talk through typed messages
   new key, and at the user's Start again; not again after a failure or a
   Stop under the same key. The page has one Stop, in the box of the file
   beside the one bar of the pass, shown while a pass runs or is about to
-  start by itself, which stops every group (`stopAll` of `autoRuns.ts`):
-  the pass running, and one about to start, which it records as started
-  so that it does not start; and, after a Stop or a crash of the worker,
-  one Start again in its place, which starts the summary again. The
+  start by itself, which stops the page's one group, `POPGEN2_CHAIN` of
+  `src/ui/popgen2Store.ts` (`stop` of `autoRuns.ts`): the pass running,
+  and one about to start, which it records as started so that it does
+  not start; and, after a Stop or a crash of the worker, one Start again
+  in its place (`resume`), which starts the first of the group that is
+  not done and lets the rest follow. The box decides between the two from
+  the first of the group that is not done, not from the summary alone, so
+  that a later member of the group, stopped after the summary is done,
+  gets its Start again too. The
   statistics' section has no bar nor button of its own, and says of each
   part that it is calculated, stopped, or not calculated. After a Stop
   the store's state is `ready`, as before any run, and the keys
   `autoRuns.ts` remembers are the one record that the analysis was
-  stopped; its `pending` tells the page whether one not started waits for
-  the one before, is held back by a failure or a Stop of one before it,
-  or was stopped, and its `subscribe` tells the page when that changes
-  with no change of the store, as a Stop of a pass about to start. The
+  stopped; its `startedUnder` tells the page whether one ready under a
+  key was stopped or waits to start, and its `subscribe` tells the page
+  when that changes with no change of the store, as a Stop of a pass
+  about to start. The
   summary reads no filter, the page having none. A limit the piece that
   adds the filters to that page must settle: an analysis that starts by
   itself and reads a filter, as the statistics would if they read the
@@ -2303,9 +2308,8 @@ src/ui/
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
-                    calculation stopped from one waiting or held back by
-                    a failure, and the one Stop of the page, stopAll,
-                    and Start again
+                    calculation stopped from one about to start, and the
+                    Stop and the start again of a group, stop and resume
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
                     of the one pass, its Stop and Start again, the

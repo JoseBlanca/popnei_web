@@ -32,7 +32,11 @@ import type {
 } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_CHAIN,
+  createPopgen2Store,
+} from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -313,7 +317,7 @@ describe("the section of the statistics of the open file", () => {
     ]);
 
     await act(async () => {
-      page.autoRuns.stopAll();
+      page.autoRuns.stop(POPGEN2_CHAIN);
       page.requests.at(-1)?.end({ kind: "cancelled" });
       await Promise.resolve();
     });
@@ -321,7 +325,7 @@ describe("the section of the statistics of the open file", () => {
     expect(partsText().match(/Stopped\./gu)).toHaveLength(2);
 
     await act(async () => {
-      page.autoRuns.again("variantsSummary");
+      page.autoRuns.resume(POPGEN2_CHAIN);
       await Promise.resolve();
     });
     await endFailed(page, {

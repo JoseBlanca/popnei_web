@@ -17,7 +17,7 @@ import type {
   VariantDistrib,
 } from "../worker/protocol.ts";
 import { createAutoRuns } from "./autoRuns.ts";
-import { POPGEN2_AUTO_GROUPS } from "./popgen2Store.ts";
+import { POPGEN2_AUTO_GROUPS, POPGEN2_CHAIN } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import { SUMMARY_ID } from "./variants/words.ts";
 
@@ -165,7 +165,7 @@ describe("the analyses the new page starts by itself", () => {
     auto.sync();
     expect(sent).toHaveLength(1);
 
-    auto.again(ID);
+    auto.resume(POPGEN2_CHAIN);
     expect(sent).toHaveLength(2);
     expect(status().kind).toBe("running");
   });
@@ -186,15 +186,15 @@ describe("the analyses the new page starts by itself", () => {
     expect(auto.startedUnder(stopped.key)).toBe(true);
     expect(sent).toHaveLength(1);
 
-    auto.again(ID);
+    auto.resume(POPGEN2_CHAIN);
     expect(sent).toHaveLength(2);
   });
 
-  test("stopAll, the one Stop of the page, stops the pass running, and one about to start before it is started, and Start again starts it", async () => {
+  test("stop of the page's one group stops the pass running, and one about to start before it is started, and resume starts it", async () => {
     const running = setUp();
     open(running.store, FIRST);
     running.auto.sync();
-    running.auto.stopAll();
+    running.auto.stop(POPGEN2_CHAIN);
     expect(running.requests[0]?.cancelled).toBe(true);
     running.sent[0]?.({ kind: "cancelled" });
     await settled();
@@ -203,14 +203,14 @@ describe("the analyses the new page starts by itself", () => {
 
     const aboutTo = setUp();
     open(aboutTo.store, FIRST);
-    aboutTo.auto.stopAll();
+    aboutTo.auto.stop(POPGEN2_CHAIN);
     aboutTo.auto.sync();
     expect(aboutTo.sent).toHaveLength(0);
     const stopped = aboutTo.status();
     expect(
       stopped.kind === "ready" && aboutTo.auto.startedUnder(stopped.key),
     ).toBe(true);
-    aboutTo.auto.again(ID);
+    aboutTo.auto.resume(POPGEN2_CHAIN);
     expect(aboutTo.sent).toHaveLength(1);
   });
 
@@ -232,12 +232,12 @@ describe("the analyses the new page starts by itself", () => {
     expect(auto.startedUnder(running.key)).toBe(true);
   });
 
-  test("Start again does nothing while the summary is running or done", async () => {
+  test("resume does nothing while the summary is running or done", async () => {
     const { store, auto, sent, status } = setUp();
     open(store, FIRST);
     auto.sync();
 
-    auto.again(ID);
+    auto.resume(POPGEN2_CHAIN);
     expect(sent).toHaveLength(1);
 
     const running = status();
@@ -246,7 +246,7 @@ describe("the analyses the new page starts by itself", () => {
     await settled();
     expect(status().kind).toBe("done");
 
-    auto.again(ID);
+    auto.resume(POPGEN2_CHAIN);
     auto.sync();
     expect(sent).toHaveLength(1);
   });
@@ -370,7 +370,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
     if (variants.kind !== "ready") return;
     expect(auto.startedUnder(variants.key)).toBe(false);
 
-    auto.again(ID);
+    auto.resume([ID]);
     expect(analysesOf(requests)).toEqual([ID, ID]);
     endDone(requests[1]);
     await settled();
@@ -401,15 +401,14 @@ describe("two groups, a count and then two statistics after it, one after the ot
     endDone(requests[1]);
     await settled();
     // The page has not synced yet: the second pass is about to start.
-    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "waiting", after: null });
-
     auto.stop(STATS_IDS);
     auto.sync();
 
     expect(requests).toHaveLength(2);
-    expect(status(INDIVIDUALS).kind).toBe("ready");
-    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "stopped" });
-    expect(auto.canResume(STATS_IDS)).toBe(true);
+    const individuals = status(INDIVIDUALS);
+    expect(individuals.kind).toBe("ready");
+    if (individuals.kind !== "ready") return;
+    expect(auto.startedUnder(individuals.key)).toBe(true);
     expect(auto.resume(STATS_IDS)).toBe(true);
     expect(analysesOf(requests)).toEqual([ID, VARIANTS, INDIVIDUALS]);
   });
@@ -550,7 +549,6 @@ describe("two groups, a count and then two statistics after it, one after the ot
     endDone(requests[2]);
     await settled();
     auto.sync();
-    expect(auto.canResume(STATS_IDS)).toBe(false);
     expect(auto.resume(STATS_IDS)).toBe(false);
     expect(requests).toHaveLength(3);
   });
@@ -562,18 +560,12 @@ describe("two groups, a count and then two statistics after it, one after the ot
     auto.sync();
     expect(status(VARIANTS).kind).toBe("error");
     expect(requests).toHaveLength(2);
-    expect(auto.pending(INDIVIDUALS)).toEqual({
-      kind: "blocked",
-      by: VARIANTS,
-      because: "failed",
-    });
 
-    expect(auto.canResume(STATS_IDS)).toBe(false);
     expect(auto.resume(STATS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
 
-  test("a variants file the browser could not read again puts both statistics in error, and neither canResume nor resume offers a start", async () => {
+  test("a variants file the browser could not read again puts both statistics in error, and resume starts nothing", async () => {
     const { requests, auto, status } = await countDone();
     fail(requests[1], {
       kind: "reopenFailed",
@@ -585,9 +577,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
     expect(status(VARIANTS).kind).toBe("error");
     expect(status(INDIVIDUALS).kind).toBe("error");
     expect(requests).toHaveLength(2);
-    expect(auto.pending(INDIVIDUALS)).toBeNull();
 
-    expect(auto.canResume(STATS_IDS)).toBe(false);
     expect(auto.resume(STATS_IDS)).toBe(false);
     expect(requests).toHaveLength(2);
   });
@@ -597,7 +587,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
     { kind: "protocolMismatch" },
     { kind: "defect", message: "a message that did not validate" },
   ] as const) {
-    test(`canResume is false after ${error.kind}, which only a reload mends, though the chain steps past it`, async () => {
+    test(`resume starts nothing after ${error.kind}, which only a reload mends, though the chain steps past it`, async () => {
       const { requests, auto, status } = await countDone();
       fail(requests[1], error);
       await settled();
@@ -607,7 +597,6 @@ describe("two groups, a count and then two statistics after it, one after the ot
       endDone(requests[2]);
       await settled();
       auto.sync();
-      expect(auto.canResume(STATS_IDS)).toBe(false);
       expect(auto.resume(STATS_IDS)).toBe(false);
       expect(requests).toHaveLength(3);
     });
@@ -621,11 +610,6 @@ describe("two groups, a count and then two statistics after it, one after the ot
     await settled();
     auto.sync();
     expect(requests).toHaveLength(1);
-    expect(auto.pending(VARIANTS)).toEqual({
-      kind: "blocked",
-      by: ID,
-      because: "failed",
-    });
     expect(auto.resume(STATS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
   });
@@ -638,13 +622,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
     requests[0]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    for (const id of [VARIANTS, INDIVIDUALS]) {
-      expect(auto.pending(id)).toEqual({
-        kind: "blocked",
-        by: ID,
-        because: "stopped",
-      });
-    }
+    expect(requests).toHaveLength(1);
 
     expect(auto.resume(STATS_IDS)).toBe(false);
     expect(requests).toHaveLength(1);
@@ -653,26 +631,6 @@ describe("two groups, a count and then two statistics after it, one after the ot
       "ready",
       "ready",
     ]);
-  });
-
-  test("pending tells an analysis waiting for the one before from one stopped, and from one held back by a stop", async () => {
-    const { requests, auto } = await countDone();
-    expect(auto.pending(VARIANTS)).toBeNull();
-    expect(auto.pending(INDIVIDUALS)).toEqual({
-      kind: "waiting",
-      after: VARIANTS,
-    });
-
-    auto.stop(STATS_IDS);
-    requests[1]?.end({ kind: "cancelled" });
-    await settled();
-    auto.sync();
-    expect(auto.pending(VARIANTS)).toEqual({ kind: "stopped" });
-    expect(auto.pending(INDIVIDUALS)).toEqual({
-      kind: "blocked",
-      by: VARIANTS,
-      because: "stopped",
-    });
   });
 
   test("after a crash of the histograms of the variants and a stop of the statistics of each individual, resume starts both, one after the other", async () => {
@@ -684,14 +642,9 @@ describe("two groups, a count and then two statistics after it, one after the ot
     requests[2]?.end({ kind: "cancelled" });
     await settled();
     auto.sync();
-    expect(auto.pending(INDIVIDUALS)).toEqual({ kind: "stopped" });
 
     expect(auto.resume(STATS_IDS)).toBe(true);
     expect(analysesOf(requests).at(-1)).toBe(VARIANTS);
-    expect(auto.pending(INDIVIDUALS)).toEqual({
-      kind: "waiting",
-      after: VARIANTS,
-    });
     const individuals = status(INDIVIDUALS);
     if (individuals.kind !== "ready") throw new Error("not ready");
     expect(auto.startedUnder(individuals.key)).toBe(false);
@@ -709,7 +662,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
   });
 
   test("a stop after resume keeps the rest of the group from starting", async () => {
-    const { requests, auto } = await countDone();
+    const { requests, auto, status } = await countDone();
     fail(requests[1], { kind: "workerFailed", message: "out of memory" });
     await settled();
     auto.sync();
@@ -724,70 +677,9 @@ describe("two groups, a count and then two statistics after it, one after the ot
     await settled();
     auto.sync();
     expect(requests).toHaveLength(4);
-    expect(auto.pending(VARIANTS)).toEqual({ kind: "stopped" });
-    expect(auto.pending(INDIVIDUALS)).toEqual({
-      kind: "blocked",
-      by: VARIANTS,
-      because: "stopped",
-    });
-  });
-
-  test("canResume says whether resume would start one of the statistics, and starts nothing", async () => {
-    const { store, requests, auto } = setUp(PAGE_GROUPS);
-    const can = (): boolean => auto.canResume(STATS_IDS);
-    open(store, FIRST);
-    auto.sync();
-    // The count running, then stopped: the statistics wait for it.
-    expect(can()).toBe(false);
-    store.cancelRun(ID);
-    requests[0]?.end({ kind: "cancelled" });
-    await settled();
-    auto.sync();
-    expect(can()).toBe(false);
-
-    auto.again(ID);
-    endDone(requests[1]);
-    await settled();
-    auto.sync();
-    // The histograms of the variants running.
-    expect(can()).toBe(false);
-    auto.stop(STATS_IDS);
-    requests[2]?.end({ kind: "cancelled" });
-    await settled();
-    auto.sync();
-    expect(can()).toBe(true);
-    expect(can()).toBe(true);
-    expect(requests).toHaveLength(3);
-
-    expect(auto.resume(STATS_IDS)).toBe(true);
-    endDone(requests[3]);
-    await settled();
-    auto.sync();
-    endDone(requests[4]);
-    await settled();
-    auto.sync();
-    expect(can()).toBe(false);
-  });
-
-  test("canResume after a crash of the statistics is true once nothing runs, and false after popnei's refusal", async () => {
-    const crashed = await countDone();
-    fail(crashed.requests[1], {
-      kind: "workerFailed",
-      message: "out of memory",
-    });
-    await settled();
-    crashed.auto.sync();
-    expect(crashed.auto.canResume(STATS_IDS)).toBe(false);
-    endDone(crashed.requests[2]);
-    await settled();
-    crashed.auto.sync();
-    expect(crashed.auto.canResume(STATS_IDS)).toBe(true);
-
-    const refused = await countDone();
-    fail(refused.requests[1], { kind: "popnei", message: "not a VCF" });
-    await settled();
-    refused.auto.sync();
-    expect(refused.auto.canResume(STATS_IDS)).toBe(false);
+    const variants = status(VARIANTS);
+    if (variants.kind !== "ready") throw new Error("not ready");
+    expect(auto.startedUnder(variants.key)).toBe(true);
   });
 
   test("stop and resume of a list that is not a group is a defect", () => {
@@ -807,5 +699,64 @@ describe("two groups, a count and then two statistics after it, one after the ot
     await settled();
     auto.sync();
     expect(analysesOf(requests)).toEqual([ID, VARIANTS, ID]);
+  });
+});
+
+describe("one group of two, the summary and an analysis after it, as the chain of popgen2.html once it counts the FILTER failures", () => {
+  const CHAIN = [ID, "variantChecks"];
+  const AFTER = "variantChecks";
+
+  test("a Stop while the summary runs stops the chain, and resume starts the summary and then the one after it", async () => {
+    const { store, requests, auto } = setUp([CHAIN]);
+    open(store, FIRST);
+    auto.sync();
+    auto.stop(CHAIN);
+    expect(requests[0]?.cancelled).toBe(true);
+    requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(1);
+
+    expect(auto.resume(CHAIN)).toBe(true);
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, ID, AFTER]);
+  });
+
+  test("a Stop of the one after the summary, the summary done, and resume starts that one alone", async () => {
+    const { store, requests, auto, status } = setUp([CHAIN]);
+    open(store, FIRST);
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    auto.stop(CHAIN);
+    expect(requests[1]?.cancelled).toBe(true);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(status(ID).kind).toBe("done");
+    expect(requests).toHaveLength(2);
+
+    expect(auto.resume(CHAIN)).toBe(true);
+    expect(analysesOf(requests)).toEqual([ID, AFTER, AFTER]);
+  });
+
+  test("a crash of the summary does not hold back the one after it, and once that one is done resume starts the summary again", async () => {
+    const { store, requests, auto } = setUp([CHAIN]);
+    open(store, FIRST);
+    auto.sync();
+    fail(requests[0], { kind: "workerFailed", message: "out of memory" });
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, AFTER]);
+    expect(auto.resume(CHAIN)).toBe(false);
+
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    expect(auto.resume(CHAIN)).toBe(true);
+    expect(analysesOf(requests)).toEqual([ID, AFTER, ID]);
   });
 });

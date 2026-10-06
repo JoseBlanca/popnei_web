@@ -23,13 +23,14 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import type { VariantSource } from "../../core/project.ts";
-import type { AnalysisStatus } from "../../core/store.ts";
+import type { AnalysisStatus, AnalysisView } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
 import type { ButtonOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
+import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
 import { useAppState } from "../store.tsx";
@@ -49,7 +50,6 @@ import {
   READING_TIME_LINE,
   START_AGAIN_LABEL,
   STOPPED_TEXT,
-  SUMMARY_ID,
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
   chromosomesLine,
@@ -230,6 +230,7 @@ function Count({
 }: CountProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
+  const analyses = useAppState((s) => s.analyses);
   // Selected for what autoRuns knows, which a Stop of a pass about to
   // start changes and the store does not.
   useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
@@ -248,13 +249,13 @@ function Count({
 
   // The one Stop of the page: the pass running, and one about to start.
   const stop = (): void => {
-    autoRuns.stopAll();
+    autoRuns.stop(POPGEN2_CHAIN);
     announcer.announce(STOPPED_TEXT);
   };
   const again = (): void => {
-    autoRuns.again(SUMMARY_ID);
+    autoRuns.resume(POPGEN2_CHAIN);
   };
-  const button = buttonOf(status, autoRuns);
+  const button = buttonOf(analyses, autoRuns);
   const failure =
     status.kind === "error" ? failedText(status.error, project) : null;
   return (
@@ -328,27 +329,43 @@ function Count({
     </>
   );
 }
-/** Stop while the pass runs or is about to start by itself; Start again
-    after a Stop, or after a failure it may mend; none otherwise. */
+/** The button of the chain of the page, `POPGEN2_CHAIN`, decided from
+    the first of it that is not done, as `resume` starts that one: Stop
+    while one of the chain runs, or the first not done is about to start
+    by itself; Start again after it was stopped, or after a failure Start
+    again may mend; none when every one is done, or the first not done is
+    locked or failed for good. */
 function buttonOf(
-  status: AnalysisStatus<JobResult>,
+  analyses: readonly AnalysisView<JobResult>[],
   autoRuns: AutoRuns,
 ): ButtonOf {
-  switch (status.kind) {
-    case "running":
-      return { kind: "stop" };
+  const statuses = POPGEN2_CHAIN.map((id) => {
+    const view = analyses.find((a) => a.id === id);
+    if (view === undefined) {
+      throw new Error(
+        `popnei_web defect: the store has no analysis ${id} of the chain.`,
+      );
+    }
+    return view.status;
+  });
+  if (statuses.some((status) => status.kind === "running")) {
+    return { kind: "stop" };
+  }
+  const first = statuses.find((status) => status.kind !== "done");
+  if (first === undefined) return null;
+  switch (first.kind) {
     case "ready":
     case "removed":
       // Not started under its key, it starts by itself in a moment.
-      return autoRuns.startedUnder(status.key)
+      return autoRuns.startedUnder(first.key)
         ? { kind: "run", reason: null }
         : { kind: "stop" };
     case "error":
-      return startAgainMends(status.error)
+      return startAgainMends(first.error)
         ? { kind: "run", reason: null }
         : null;
     case "locked":
-    case "done":
+    case "running":
       return null;
   }
 }
