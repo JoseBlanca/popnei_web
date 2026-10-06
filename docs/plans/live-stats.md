@@ -128,7 +128,7 @@ the screen would keep the old object and never redraw. It is never
 cached, has no check numbers and no warnings, and a `done`, a failure
 or a Stop drops it. An
 analysis whose runner gives no `onSoFar` has `soFar` null throughout,
-so nothing changes for the old page. `PROTOCOL_VERSION` goes to 8.
+so nothing changes for the old page. `PROTOCOL_VERSION` goes to 9 (phase 1 took 8).
 
 The option not taken was to put the result so far inside `progress`:
 the progress bar would then carry statistics, and every analysis's
@@ -165,8 +165,10 @@ after a Stop or a crash of the worker, Start again, which starts again
 the first not done and lets the rest follow. The statistics' section
 loses its own bar and buttons, and says of each part, as now, whether
 it is calculated, stopped, or failed. `POPGEN2_AUTO_GROUPS` becomes
-`[[variantsSummary], [filterFailures]]`; Stop stops every group, and
-the focus rules of the count's Stop hold.
+`[[variantsSummary, filterFailures]]`, one group (`POPGEN2_CHAIN`): the
+box's Stop is `stop` of that group and Start again its `resume`, which
+starts the first not done and lets the rest follow; the focus rules of
+the count's Stop hold.
 
 **The plots so far.** `FileStats.tsx` draws from the summary's result
 when `done`, and from `soFar` when `running`; each plot's line of how
@@ -229,8 +231,8 @@ none.
 kind of message beside progress, the one Stop), and section 9's list of
 modules, are brought up to date in the phase that changes each, and so
 are the specs that would say otherwise: `docs/specs/worker/messages.md`,
-`client.md`, `runner.md` and `protocol.md` (the `soFar` message,
-`PROTOCOL_VERSION` 8, `"passed"`), `docs/specs/core/store.md` ("The
+`client.md`, `runner.md` and `protocol.md` (the `soFar` message and
+`PROTOCOL_VERSION` 9 in phase 2, `"passed"` and 10 in phase 3), `docs/specs/core/store.md` ("The
 state of an analysis"), and a line in `docs/plans/file-stats.md` that
 this piece replaced its two analyses and their Stop. The summary's
 `script()` gives the three calls of popnei's Python, which has no
@@ -258,3 +260,40 @@ on it Vitest "3870 passed", the typecheck and the lint clean. The
 worktree's `node_modules` held popnei 0.1.0 before, which failed five
 test files on the version; the release changed no number the tests
 compare.
+
+### Phase 1, the one pass
+
+Commits b9dde13, 659d192, c4768a8 and 4065742; the fixes of its review
+in 80de47a to db033bb (eleven commits). On db033bb: Vitest "3878
+passed", Playwright "1214 passed" in Chromium and WebKit, the 64 screens
+of popgen2. The parts of the summary equal popnei's separate calls under
+node on `panel.vcf.gz`, `panel.nei` and `tetraploid.vcf.gz` (density,
+the 1,280 bins and their means, each individual's values), and the same
+numbers come from popnei's Python.
+
+The builder's choices: after a failure each part says "Not calculated."
+and the box gives the failure's words, so they are not said twice; the
+error bar of a crash says "…as it counted the variants and calculated
+the statistics"; the button of the box is Stop, and Start again after a
+Stop or a crash of the worker.
+
+The review sent spec, tests, stale, errors, api and architecture; stale
+found nothing. The categories of the screen, react, accessibility, ux
+and browser, are sent after phase 2 over the range of both phases,
+since phase 2 rewrites the same screen. Fixed: the chain is one group,
+`POPGEN2_CHAIN`, with the box's Stop and Start again as its `stop` and
+`resume`, and the methods nothing called removed (`stopAll`, `again`,
+`pending`, `canResume`), so that phase 3 adds `filterFailures` to that
+group; the parts are named `perVar` and `perIndividual`, popnei's names;
+`docs/specs/worker/protocol.md` has the summary in its unions; three
+passages of the architecture brought to the one pass; the shared bins
+say that a change raises the key version of both analyses; a damaged
+`.nei` file gets "could not be read to its end … Fetch or copy it
+again", and a genotype of another ploidy says that the application
+reads one ploidy per file, instead of advice that cannot help; popnei's
+refusal of an option of ours is a defect, not a refusal of the file;
+tests of the box's Stop before the pass starts, of the focus moving to
+popnei's words at a refusal while on Stop, and of a refused genotype
+failing the one pass. Not taken: the title of the click flow, which
+phase 2 removes; the pandas import of the scripts, since no code joins
+them into one script yet.
