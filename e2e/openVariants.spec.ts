@@ -342,7 +342,9 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   await expect(lines(page)).toHaveText([
     /^stop\.vcf\.gz · /u,
     "Individuals: 1,000",
-    /^Variants: counting…( \d+%)?$/u,
+    // A result so far of the pass, 2 seconds after its start, adds the
+    // variants read so far.
+    /^Variants: ([\d,]+ so far, )?counting…( \d+%)?$/u,
     "Chromosomes: counting…",
     "Ploidy: 2",
   ]);
@@ -383,13 +385,23 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   await expect(openButton(page)).toBeFocused();
 });
 
+/** Waits for the six plots of the statistics of the file and the
+    download of the individuals, which comes with their result. */
+async function expectPlotsDrawn(page: Page): Promise<void> {
+  const stats = page.getByRole("region", { name: "Statistics of the file" });
+  await expect(stats.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
+  await expect(
+    stats.getByRole("button", { name: /^Download the missing genotypes/u }),
+  ).toBeVisible();
+}
+
 /** A name of 24 characters, on which, at 320 pixels, the line "Reading
     <name>." took one row more than the line "<name> is open." (the
     review of 5 October 2026). */
 const NAME_24 = `${"a".repeat(17)}.vcf.gz`;
 
 for (const width of [320, 1280]) {
-  test(`OV2 at ${String(width)} pixels, a file opened again keeps the box above the open button at one height through the read and the count, so the button does not move`, async ({
+  test(`OV2 at ${String(width)} pixels, a file opened again keeps the box above the open button at one height through the read and the count, and the button is back at its place once the plots are drawn`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
@@ -408,7 +420,9 @@ for (const width of [320, 1280]) {
       }).observe(box, { subtree: true, childList: true, characterData: true });
     });
     // Its place in the page, not in the window: the second pick scrolls
-    // the page to the button, which is under the statistics.
+    // the page to the button, which is under the statistics, and moves
+    // down as their plots are drawn (docs/plans/live-stats.md, "The open
+    // widget moves with the plots"), so it is taken once they are.
     const inPage = (): Promise<{
       readonly top: number;
       readonly left: number;
@@ -420,6 +434,7 @@ for (const width of [320, 1280]) {
           left: box.left + window.scrollX,
         };
       });
+    await expectPlotsDrawn(page);
     const at = await inPage();
 
     await pick(page, vcf);
@@ -435,6 +450,7 @@ for (const width of [320, 1280]) {
       )
       .toBe(2);
     await expectPanelCounted(page);
+    await expectPlotsDrawn(page);
     expect(await inPage()).toEqual(at);
 
     const heights = await page.evaluate(

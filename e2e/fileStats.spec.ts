@@ -1,6 +1,7 @@
 /**
  * The statistics of the open file on popgen2.html, on the built site
- * (docs/plans/file-stats.md, phase 2; docs/plans/live-stats.md, phase 1):
+ * (docs/plans/file-stats.md, phase 2; docs/plans/live-stats.md, phases 1
+ * and 2):
  * steps 3 and 4 of case 2 of docs/use-cases.md, the distributions over
  * the variants and over the individuals, from the one pass that also
  * counts the variants, which starts by itself once the file is read; the
@@ -210,7 +211,7 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 the statistics come from the pass of the count: the Stop of the box stops them, its Start again finishes them, and the focus stays on the page", async ({
+test("FS2 the statistics come from the pass of the count: the Stop of the box stops them, its Start again finishes them, their plots fill in from its results so far, and the focus stays on the page", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
@@ -284,10 +285,42 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
+  // The plots fill in from the results so far of the pass, which popnei
+  // gives every 2 seconds: six plots, each over the variants or the
+  // individuals so far, with no download yet, and the box gives the
+  // variants read so far.
+  const overSoFar = stats(page).getByText(/^Over [\d,]+ variants so far$/u);
+  await expect(overSoFar).toHaveCount(4, { timeout: 60_000 });
+  await expect(
+    stats(page).getByText("Over 1,000 individuals so far"),
+  ).toHaveCount(2);
+  await expect(stats(page).locator("svg.chart")).toHaveCount(6);
+  await expect(downloadButton(page)).toHaveCount(0);
+  await expect(
+    info(page).getByText(/^Variants: [\d,]+ so far, counting…( \d+%)?$/u),
+  ).toBeVisible();
+  await expectNoViolations(makeAxeBuilder);
+
   await expect(downloadButton(page)).toBeVisible({ timeout: 120_000 });
   await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
     timeout: 120_000,
   });
+  // At the end, the plots of the result: none says "so far", and the
+  // missing rate, which every variant has, is over every variant the box
+  // counted.
+  await expect(stats(page).getByText(/so far/u)).toHaveCount(0);
+  await expect(
+    stats(page).getByText(
+      `Over ${STOP_VCF_VARIANTS.toLocaleString("en-US")} variants`,
+      { exact: true },
+    ),
+  ).not.toHaveCount(0);
+  // The start of the pass, its first plots and its end are said once
+  // each, not every result so far.
+  const firstDrawn = (await announced(page)).filter((text) =>
+    text.includes("The first statistics of stats.vcf.gz are drawn"),
+  );
+  expect(firstDrawn.length).toBeLessThanOrEqual(1);
   // The button gone with the focus on it, the focus is on the lines of
   // the variants and the chromosomes in the box, not on the top of the
   // page.
@@ -476,7 +509,7 @@ test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps t
   ).toBe(true);
 });
 
-test("FS3 the open button is alone under the heading before a file is opened, and under the statistics once one is", async ({
+test("FS3 the open button is alone under the heading before a file is opened, and under the statistics once one is, where it opens the file picker", async ({
   page,
 }) => {
   await openPage(page);
@@ -501,56 +534,8 @@ test("FS3 the open button is alone under the heading before a file is opened, an
     buttonAt?.y ?? NaN,
   );
   await expect(openButton(page)).toHaveText("Open another variants file…");
+  // Under the plots drawn, the button opens the file picker.
+  const chooser = page.waitForEvent("filechooser", { timeout: 5_000 });
+  await openButton(page).click();
+  await chooser;
 });
-
-for (const width of [1280, 320] as const) {
-  test(`FS3 at ${String(width)} pixels the open button stays where it is from the read of the file to the end of the pass: a press held on it across the end, and a click at its place after, open the file picker`, async ({
-    page,
-  }, testInfo) => {
-    // A VCF written for the test, whose pass lasts seconds (testing.md,
-    // "The walking skeleton, as a flow"). The plan of live-stats moves
-    // the button with the plots in its second phase, which removes this
-    // flow.
-    test.setTimeout(180_000);
-    await page.setViewportSize({ width, height: 900 });
-    const vcf = testInfo.outputPath("click.vcf.gz");
-    await writeBigVcf(vcf, STOP_VCF_VARIANTS);
-    await openPage(page);
-    await pick(page, vcf);
-
-    // The file read and the pass running, the statistics' section drawn:
-    // the place of the button from now on.
-    await expect(
-      info(page).getByRole("progressbar", { name: "Counting the variants" }),
-    ).toBeVisible({ timeout: 60_000 });
-    await expect(
-      part(page, "Variants").getByText(
-        /^Calculating the statistics of the variants…/u,
-      ),
-    ).toBeVisible();
-    await openButton(page).scrollIntoViewIfNeeded();
-    const at = await openButton(page).boundingBox();
-    if (at === null) throw new Error("the open button is not drawn");
-    const x = at.x + at.width / 2;
-    const y = at.y + at.height / 2;
-
-    // The press starts on the button, and is held until the six plots are
-    // drawn.
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
-      timeout: 120_000,
-    });
-    expect(await openButton(page).boundingBox()).toEqual(at);
-    const first = page.waitForEvent("filechooser", { timeout: 5_000 });
-    await page.mouse.up();
-    await first;
-
-    // A click at the place of the button once the plots are drawn.
-    const second = page.waitForEvent("filechooser", { timeout: 5_000 });
-    await page.mouse.click(x, y);
-    await second;
-    expect(await openButton(page).boundingBox()).toEqual(at);
-    await expect(downloadButton(page)).toBeVisible();
-  });
-}

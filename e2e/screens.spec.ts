@@ -4388,7 +4388,9 @@ for (const theme of ["light", "dark"] as const) {
         await writeBigVcf(vcf, 200_000);
         await pickOnNewPage(page, vcf);
         await expect(
-          newPageCount(page).getByText(/^Variants: counting… \d+%$/u),
+          newPageCount(page).getByText(
+            /^Variants: ([\d,]+ so far, )?counting… \d+%$/u,
+          ),
         ).toBeVisible({ timeout: 30_000 });
         await save(page, `popgen2-counting${at}-${theme}`);
       });
@@ -4516,6 +4518,20 @@ for (const theme of ["light", "dark"] as const) {
           ),
         ).toBeVisible({ timeout: 60_000 });
         await save(page, `popgen2-stats-running${at}-${theme}`);
+      });
+
+      test("the statistics running, with their plots so far", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("so_far.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageStats(page).getByText(/^Over [\d,]+ variants so far$/u),
+        ).toHaveCount(4, { timeout: 60_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-stats-so-far${at}-${theme}`);
       });
 
       test("the statistics done", async ({ page }) => {
