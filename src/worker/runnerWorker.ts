@@ -14,6 +14,7 @@
  */
 
 import {
+  DEFECT_START,
   PROTOCOL_VERSION,
   describeMessageError,
   messageOf,
@@ -27,6 +28,30 @@ import { createRunner, loadPopnei, transferablesOf } from "./runner.ts";
 /** Posts a message to the page, with the buffers it hands over. */
 function post(message: FromRunner, transfer: Transferable[] = []): void {
   postMessage(message, transfer);
+}
+
+/**
+ * Posts a message of a request running, `what` the words for it. What
+ * `postMessage` throws, a DataCloneError of a message the browser cannot
+ * copy or a buffer it cannot transfer, is a defect of ours, thrown with
+ * `DEFECT_START`: the runner throws it on, the catch of `handle` posts it
+ * as `crashed`, and the client then classes it as a defect, for which
+ * Start again is not offered, since starting again would fail the same
+ * way.
+ */
+function postOfRun(
+  message: FromRunner,
+  transfer: Transferable[],
+  what: string,
+): void {
+  try {
+    post(message, transfer);
+  } catch (thrown: unknown) {
+    throw new Error(
+      `${DEFECT_START}${what} could not be posted: ${messageOf(thrown)}`,
+      { cause: thrown },
+    );
+  }
 }
 
 /** Posts a message after which the worker cannot go on, and closes it. */
@@ -85,7 +110,11 @@ function answerRun(held: Runner, request: RunRequest): void {
   const answer = held.run(job, progressOf(id), (result) => {
     // What this throws, a buffer that cannot be transferred or a result
     // the browser cannot copy, is the runner's to throw on as ours.
-    post({ kind: "soFar", id, key, result }, transferablesOf(result));
+    postOfRun(
+      { kind: "soFar", id, key, result },
+      transferablesOf(result),
+      "the result so far",
+    );
   });
   switch (answer.kind) {
     case "ok":
@@ -108,14 +137,18 @@ function answerRun(held: Runner, request: RunRequest): void {
 /** Posts the progress of the request `id`, popnei's four fields. */
 function progressOf(id: number): (progress: Progress) => void {
   return (progress) => {
-    post({
-      kind: "progress",
-      id,
-      bytesRead: progress.bytesRead,
-      numBytes: progress.numBytes,
-      pass: progress.pass,
-      numPasses: progress.numPasses,
-    });
+    postOfRun(
+      {
+        kind: "progress",
+        id,
+        bytesRead: progress.bytesRead,
+        numBytes: progress.numBytes,
+        pass: progress.pass,
+        numPasses: progress.numPasses,
+      },
+      [],
+      "the progress",
+    );
   };
 }
 

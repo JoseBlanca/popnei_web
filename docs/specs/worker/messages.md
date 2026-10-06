@@ -244,6 +244,20 @@ built and deployed; it is 2 from stage 3, since `write`, `written`, the
 jobs and the results change, and 3 from stage 4 (below, "The ready
 message").
 
+### The result so far
+
+A `soFar` has the fields of a `result`, `id`, `key` and `result`, and is
+checked as a `result` is, every array of its `result` of its typed array
+and as long as what it goes with: a result so far is drawn as the result
+is, so a shape it does not have would put a wrong number on the screen
+as surely. Its arrays are transferred, each over a buffer of its own that
+the runner made by copying popnei's (`docs/specs/worker/runner.md`, "The
+result so far"). It is a message of its own and not a field of
+`progress`, which every run and write has and which would then carry
+statistics for one analysis alone (`docs/plans/live-stats.md`). The last
+one before the `result`, when popnei gives one after its last block,
+holds the same numbers as the `result`.
+
 ### A worker that cannot go on
 
 Two answers end the worker that sends them, whatever it was doing, and
@@ -320,7 +334,15 @@ check, because they differ in `ready`:
   change here, and whose job and result of the PCA join `Job` and
   `JobResult` (`docs/specs/analyses/pca.md`), and is 4 from stage 5,
   whose diversity gains fields and whose distances between populations
-  and LD decay join the unions; one number for the stage.
+  and LD decay join the unions. From then on it is raised with each
+  change rather than once for a stage: 5 on 5 October 2026, when the job
+  and the result of the summary of the variants file join the unions; 6
+  on 6 October, when the read options of a VCF take a ploidy of `null`,
+  which popnei reads from the file; 7 the same day, when the histograms
+  of the variants gain `missingRate`; 8, when the summary becomes the one
+  pass that also gives `perVar` and `perIndividual`
+  (`docs/plans/live-stats.md`, phase 1); and 9, when `soFar` joins
+  `FromRunner` (phase 2).
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -441,20 +463,6 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   `badRequest`.
 
 ## The TypeScript interface
-
-### The result so far
-
-A `soFar` has the fields of a `result`, `id`, `key` and `result`, and is
-checked as a `result` is, every array of its `result` of its typed array
-and as long as what it goes with: a result so far is drawn as the result
-is, so a shape it does not have would put a wrong number on the screen
-as surely. Its arrays are transferred, each over a buffer of its own that
-the runner made by copying popnei's (`docs/specs/worker/runner.md`, "The
-result so far"). It is a message of its own and not a field of
-`progress`, which every run and write has and which would then carry
-statistics for one analysis alone (`docs/plans/live-stats.md`). The last
-one before the `result`, when popnei gives one after its last block,
-holds the same numbers as the `result`.
 
 Every field is `readonly`, and every array `readonly T[]`, in the code;
 `readonly` is left out below to keep the types short.
@@ -669,6 +677,12 @@ File(["…"], "panel.nei")`.
   kind `pcoa` of `[0, 0, 2]`, and a `notPlaced` without its `message`;
   a result of the LD decay of two populations and 50 bins with 99 values
   of `meanR2`, `wrongLength`.
+- **The result so far**: a `soFar` of the summary of the variants file
+  is accepted as it is; one whose `numVarsPerChrom` holds one count for
+  two chromosomes gives `wrongLength` at `result.numVarsPerChrom`, with
+  `messageKind` `soFar`, as a `result` would; one with a field
+  `progress` gives `extraFields`, and one without `key` `missingFields`.
+  The property above draws `soFar` messages too.
 - **The version**: a `ready` with `protocol: 3`, stage 4's, and no
   other field gives `otherProtocol` with 3 from both checks of the page,
   and so does `protocol: 5` with 5; with `protocol: "4"`, `wrongType`.

@@ -2338,10 +2338,13 @@ src/ui/
                     Stop and the start again of a group, stop and resume
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
-                    of the one pass, its Stop and Start again, the
-                    statistics of the open file drawn from the result of
-                    that pass, the page that holds them, their words, and
-                    the defects of the worker given to the error bar
+                    of the one pass, the count of the variants so far,
+                    its Stop and Start again, the statistics of the open
+                    file, drawn while the pass runs from its results so
+                    far (the store's running.soFar, never cached) and
+                    then from its result, the page that holds them, their
+                    words, and the defects of the worker given to the
+                    error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from

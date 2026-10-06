@@ -658,7 +658,14 @@ the worker among it, is recorded as what `told` throws is and thrown on,
 a defect of ours, and never answered as popnei's refusal of the file:
 while the pass reads, popnei's call throws that value back; at the last
 block, where popnei's call returns and drops it, the runner throws it
-after the call.
+after the call. What the worker's `postMessage` throws, a DataCloneError
+of a message the browser cannot copy, the script throws on as an error
+whose message starts with `popnei_web defect: `, "the result so far
+could not be posted: " and the browser's words, so that the `crashed`
+it ends in reaches the client as a defect, for which Start again is not
+offered, and not as a failure of the worker that starting again could
+mend. A progress the browser cannot post is thrown the same way, "the
+progress could not be posted: ".
 
 `createRunner` takes `soFarEvery` for the tests, which give 0, a result
 so far after every block, to have some from a small file. Under node on
@@ -1959,7 +1966,9 @@ list gives.
   id, the `File`, the format and the read options, `run`, with the key
   and a `Job`, and `write`, with the key and a `WriteJob`; the answers
   `ready`, `opened`, `result`, `written`, `refused`, `reopenFailed`,
-  `progress` with popnei's four fields, and `crashed` and `badRequest`,
+  `progress` with popnei's four fields, `soFar` with the key and the
+  result so far of the summary of the variants file (from
+  `docs/plans/live-stats.md`, phase 2), and `crashed` and `badRequest`,
   after which the worker closes itself; `parseToRunner`, which the
   worker's script calls on every request.
 - **`docs/specs/worker/client.md`**: every worker receives at most one
