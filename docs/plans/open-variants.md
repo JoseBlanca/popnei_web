@@ -399,3 +399,16 @@ with alleles" does not tell a VCF of missing genotypes from one with no
 GT field. The project file still refuses a null ploidy; the piece that
 saves projects from this page decides how a ploidy read from the file is
 saved.
+
+Round 3 was built in 90f9544 and 24f6d82, moved to popnei js-v0.2.0 in
+4a41175, and reviewed in eight categories (spec, tests, stale, errors,
+api, react, accessibility, ux); stale, react and accessibility found no
+defect. The fixes are in 49b1a12, 92a2a00, 16c1992, 646fd35 and 792c854:
+the refusal of a ploidy that cannot be read no longer says the
+genotypes are dots (popnei gives it for a VCF with no GT field too), and
+gives popnei's Python in a block of its own; a gzip cut short, which the
+search for the ploidy now meets at the opening, gets the words of a file
+cut short; a defect at the opening reaches the error bar; popnei's
+backquotes become quotation marks; after a crash of the count, the bar
+says to count again before it says to reload. On 792c854: Vitest "Tests
+3788 passed (3788)", Playwright "1190 passed" in Chromium and WebKit.
