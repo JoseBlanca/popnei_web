@@ -24,6 +24,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
+import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -155,6 +156,7 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   page,
   makeAxeBuilder,
 }) => {
+  await recordAnnouncements(page);
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
@@ -177,10 +179,15 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   await expect(page.getByRole("table")).toHaveCount(0);
   // The read and the count, said together when they end within the
   // pause of the region.
-  await expect(page.getByRole("status")).toHaveText([
-    "",
-    /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.$/u,
-  ]);
+  // Read from the record of the region, since the end of the statistics,
+  // which start once the count ends, replaces these words there.
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringMatching(
+        /panel\.vcf\.gz: 1,200 variants on 1 chromosome\./u,
+      ),
+    );
   await expect(openButton(page)).toHaveText("Open another variants file…");
   await expectNoViolations(makeAxeBuilder);
 
@@ -415,6 +422,7 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     const vcf = testInfo.outputPath(NAME_24);
     await copyFile(join(FIXTURES, "panel.vcf.gz"), vcf);
+    await recordAnnouncements(page);
     await openPage(page);
     await pick(page, vcf);
     await expectPanelCounted(page);
@@ -430,10 +438,15 @@ for (const width of [320, 1280]) {
     if (at === null) throw new Error("the open button is not drawn");
 
     await pick(page, vcf);
-    await expect(page.getByRole("status")).toHaveText([
-      "",
-      /: 1,200 variants on 1 chromosome\.$/u,
-    ]);
+    // The count of the second opening said as that of the first.
+    await expect
+      .poll(
+        async () =>
+          (await announced(page)).filter((text) =>
+            text.includes(": 1,200 variants on 1 chromosome."),
+          ).length,
+      )
+      .toBe(2);
     await expectPanelCounted(page);
     expect(await openButton(page).boundingBox()).toEqual(at);
 

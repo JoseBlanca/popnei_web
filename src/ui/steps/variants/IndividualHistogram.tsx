@@ -45,6 +45,9 @@ export interface IndividualHistogramProps {
   readonly thresholdLine: string | null;
   /** The name of the variants file, which the CSV is named after. */
   readonly variantsName: string;
+  /** The line under the title that says how many individuals it is
+      over, on popgen2.html. */
+  readonly countLine?: string;
 }
 
 /** A histogram of the individuals, with its table of bins. */
@@ -54,6 +57,7 @@ export function IndividualHistogram({
   threshold,
   thresholdLine,
   variantsName,
+  countLine,
 }: IndividualHistogramProps): React.JSX.Element {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
@@ -95,6 +99,7 @@ export function IndividualHistogram({
           rows={shown.rows}
           countLabel={INDIVIDUALS_LABEL}
           tableName={words.tableName}
+          {...(countLine !== undefined && { countLine })}
           thresholdLine={thresholdLine}
           splitLine={splitBinText("individual", shown.rows, threshold)}
           csvName={individualBinsCsvName(variantsName, statistic)}

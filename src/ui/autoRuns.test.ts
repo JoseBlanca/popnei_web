@@ -620,6 +620,64 @@ describe("the statistics of the open file, started after the count, one after th
     expect(auto.pending("variantChecks")).toEqual({ kind: "stopped" });
   });
 
+  test("canResume says whether resume would start one of the statistics, and starts nothing", async () => {
+    const { store, requests, auto } = setUp(PAGE_GROUPS);
+    const can = (): boolean => auto.canResume(POPGEN2_STATISTICS_IDS);
+    open(store, FIRST);
+    auto.sync();
+    // The count running, then stopped: the statistics wait for it.
+    expect(can()).toBe(false);
+    store.cancelRun(ID);
+    requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(can()).toBe(false);
+
+    auto.again(ID);
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    // The statistics of each individual running.
+    expect(can()).toBe(false);
+    auto.stop(POPGEN2_STATISTICS_IDS);
+    requests[2]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(can()).toBe(true);
+    expect(can()).toBe(true);
+    expect(requests).toHaveLength(3);
+
+    expect(auto.resume(POPGEN2_STATISTICS_IDS)).toBe(true);
+    endDone(requests[3]);
+    await settled();
+    auto.sync();
+    endDone(requests[4]);
+    await settled();
+    auto.sync();
+    expect(can()).toBe(false);
+  });
+
+  test("canResume after a crash of the statistics is true once nothing runs, and false after popnei's refusal", async () => {
+    const crashed = await countDone();
+    fail(crashed.requests[1], {
+      kind: "workerFailed",
+      message: "out of memory",
+    });
+    await settled();
+    crashed.auto.sync();
+    expect(crashed.auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
+    endDone(crashed.requests[2]);
+    await settled();
+    crashed.auto.sync();
+    expect(crashed.auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(true);
+
+    const refused = await countDone();
+    fail(refused.requests[1], { kind: "popnei", message: "not a VCF" });
+    await settled();
+    refused.auto.sync();
+    expect(refused.auto.canResume(POPGEN2_STATISTICS_IDS)).toBe(false);
+  });
+
   test("stop and resume of a list that is not a group is a defect", () => {
     const { auto } = setUp(PAGE_GROUPS);
     expect(() => {

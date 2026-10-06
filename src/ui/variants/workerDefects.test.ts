@@ -141,6 +141,38 @@ describe("the defects of the worker given to the error bar of the new page", () 
     });
   });
 
+  test("a worker that stopped during a statistic, and a defect of ours in the other, are each reported once", async () => {
+    const { store, sent } = setUp();
+    const defects = createDefects();
+    reportDefects(store, defects);
+    loadPops(store);
+
+    void startAnalysis(store, "individualChecks");
+    sent[0]?.({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    void startAnalysis(store, "variantChecks");
+    sent[1]?.({
+      kind: "failed",
+      error: { kind: "defect", message: "popnei_web defect: a test." },
+    });
+    await settled();
+    touch(store);
+
+    expect(defects.getState().first).toEqual({
+      message: "out of memory",
+      origin: "statisticsStopped",
+      details:
+        "Error 1, the calculation worker stopped during the statistics of the file, with these words:\nout of memory",
+    });
+    expect(defects.getState().more).toBe(1);
+    expect(defects.details()).toContain(
+      "Error 2, thrown in the calculation worker during an opening or a calculation, given back to the page as its failure:\npopnei_web defect: a test.",
+    );
+  });
+
   test("a worker that stopped during the opening is reported once, with what it said", () => {
     const { store } = setUp();
     const defects = createDefects();

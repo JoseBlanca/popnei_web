@@ -45,7 +45,8 @@ export type BarPage = "starting" | "saving" | "noSaving";
     saving, that the project is intact and to save it, or, once
     `saveFailed`, that it could not be saved; on a page that saves no
     project, to count again after the worker stopped during a count, as
-    the box offers, and otherwise to reload the page and open the files
+    the box offers, to start the statistics again after it stopped
+    during them, as their section offers, and otherwise to reload the page and open the files
     again; before the store, as the page started, to reload. */
 export function barText(
   first: Pick<Defect, "message" | "origin">,
@@ -58,8 +59,11 @@ export function barText(
     return `The application met an error of its own as it started: ${text}. Reload the page.`;
   }
   if (page === "noSaving") {
-    return first.origin === "countStopped"
-      ? `The application stopped as it counted the variants: ${text}. Count again, and if it stops again, reload the page and open your files again.`
+    if (first.origin === "countStopped") {
+      return `The application stopped as it counted the variants: ${text}. Count again, and if it stops again, reload the page and open your files again.`;
+    }
+    return first.origin === "statisticsStopped"
+      ? `The application stopped as it calculated the statistics: ${text}. Start the statistics again, and if it stops again, reload the page and open your files again.`
       : `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }
   return saveFailed

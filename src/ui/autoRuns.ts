@@ -84,6 +84,9 @@ export interface AutoRuns {
       variants file the browser could not read again, which a new
       calculation would not mend. */
   resume(group: readonly AnalysisId[]): boolean;
+  /** Whether `resume` of `group` would start one of it now, for the page
+      to offer its start again only then; it starts nothing. */
+  canResume(group: readonly AnalysisId[]): boolean;
 }
 
 /** The key of a status that can be started: ready, or removed by the
@@ -205,6 +208,26 @@ export function createAutoRuns(deps: {
     return ids.some((id) => statusOf(id).kind === "running");
   }
 
+  /** The analysis `resume` of `group` would start, with the key it
+      would start it under and its place in the group; `null` when it
+      would start none. */
+  function resumable(group: readonly AnalysisId[]): {
+    readonly id: AnalysisId;
+    readonly key: Key;
+    readonly at: number;
+  } | null {
+    const place = placeOf(group);
+    if (anyRunning()) return null;
+    if (ids.slice(0, place).some((id) => statusOf(id).kind !== "done")) {
+      return null;
+    }
+    const at = group.findIndex((id) => statusOf(id).kind !== "done");
+    const first = group[at];
+    if (first === undefined) return null;
+    const key = againKey(statusOf(first));
+    return key === null ? null : { id: first, key, at };
+  }
+
   function again(id: AnalysisId): void {
     const key = againKey(statusOf(id));
     if (key !== null) startOne(id, key);
@@ -266,23 +289,16 @@ export function createAutoRuns(deps: {
       }
     },
     resume: (group) => {
-      const place = placeOf(group);
-      if (anyRunning()) return false;
-      if (ids.slice(0, place).some((id) => statusOf(id).kind !== "done")) {
-        return false;
-      }
-      const at = group.findIndex((id) => statusOf(id).kind !== "done");
-      const first = group[at];
-      if (first === undefined) return false;
-      const key = againKey(statusOf(first));
-      if (key === null) return false;
-      for (const id of group.slice(at + 1)) {
+      const first = resumable(group);
+      if (first === null) return false;
+      for (const id of group.slice(first.at + 1)) {
         const back = againKey(statusOf(id));
         if (back !== null) resumed.set(id, back);
       }
-      if (startOne(first, key)) return true;
+      if (startOne(first.id, first.key)) return true;
       for (const id of group) resumed.delete(id);
       return false;
     },
+    canResume: (group) => resumable(group) !== null,
   };
 }

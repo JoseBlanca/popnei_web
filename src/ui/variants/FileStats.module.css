@@ -1,0 +1,81 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The section: the row of the pass running, then the two parts. */
+.stats {
+  display: grid;
+  gap: var(--space-8);
+  min-inline-size: 0;
+}
+
+/* The line of the pass running over its bar and the button. */
+.controls {
+  display: grid;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.runningLine {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The bar takes the room left beside the button, up to its own
+   largest; the button keeps its place at the start when there is no
+   bar. */
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bar {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 24rem;
+}
+
+.button {
+  flex: none;
+}
+
+/* A part: its heading, the line of its state or its plots, and for the
+   individuals their table. */
+.part {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-heading);
+}
+
+.heading:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.line {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* The plots of a part, two side by side when each has 20rem, one under
+   the other below that, as at 320 pixels; a plot is as narrow as its
+   column. */
+.plots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-6) var(--space-4);
+}
+
+/* A histogram of the individuals and the line under it of those with no
+   value. */
+.plot {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-inline-size: 0;
+}

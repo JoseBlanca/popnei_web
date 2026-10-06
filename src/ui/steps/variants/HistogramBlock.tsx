@@ -51,6 +51,10 @@ export interface HistogramBlockProps {
   readonly countLabel: string;
   /** The name of the table of the bins. */
   readonly tableName: string;
+  /** The line under the title that says how many variants or
+      individuals the histogram is over, "Over 1,200 variants", drawn by
+      popgen2.html; the old page gives none. */
+  readonly countLine?: string;
   /** The line that says the threshold in words, or `null` while the
       filter is off. */
   readonly thresholdLine: string | null;
@@ -68,6 +72,7 @@ export function HistogramBlock({
   rows,
   countLabel,
   tableName,
+  countLine,
   thresholdLine,
   splitLine,
   csvName,
@@ -99,6 +104,9 @@ export function HistogramBlock({
       <p id={titleId} className={classOf(styles, "title")}>
         {data.title}
       </p>
+      {countLine !== undefined && (
+        <p className={classOf(styles, "muted")}>{countLine}</p>
+      )}
       {thresholdLine !== null && (
         <p className={classOf(styles, "muted")}>{thresholdLine}</p>
       )}

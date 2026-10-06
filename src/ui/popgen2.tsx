@@ -31,6 +31,7 @@ import { createAnnouncer } from "./shell/status.ts";
 import type { Announcer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
+import { statsAnnouncementsOf } from "./variants/statsWords.ts";
 import { announcementsOf } from "./variants/words.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
@@ -91,7 +92,7 @@ function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
 }
 
 /** Announces in the status region what each change of the store did
-    away from the focus: the file read and its count. It listens before
+    away from the focus: the file read, its count and its statistics. It listens before
     the page is drawn, so it is told of a change before React draws it,
     with the focus still where the change found it: on the button of the
     count, `countButton` gives it, as the count ends, the page moves the
@@ -105,9 +106,13 @@ function announceChanges(
   store.subscribe(() => {
     const after = store.getState();
     const button = countButton();
-    const texts = announcementsOf(before, after, {
-      focusOnCountButton: button !== null && document.activeElement === button,
-    });
+    const texts = [
+      ...announcementsOf(before, after, {
+        focusOnCountButton:
+          button !== null && document.activeElement === button,
+      }),
+      ...statsAnnouncementsOf(before, after),
+    ];
     before = after;
     for (const text of texts) announcer.announce(text);
   });

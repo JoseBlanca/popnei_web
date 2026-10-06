@@ -37,6 +37,9 @@ export interface VariantHistogramProps {
   readonly threshold: number | null;
   /** The name of the variants file, which the CSV is named after. */
   readonly variantsName: string;
+  /** The line under the title that says how many variants it is over,
+      on popgen2.html. */
+  readonly countLine?: string;
 }
 
 /** A histogram of the variants, with its table of bins. */
@@ -45,6 +48,7 @@ export function VariantHistogram({
   result,
   threshold,
   variantsName,
+  countLine,
 }: VariantHistogramProps): React.JSX.Element {
   const words = VARIANT_HISTOGRAMS[statistic];
   const distrib = result[statistic];
@@ -74,6 +78,7 @@ export function VariantHistogram({
       rows={rows}
       countLabel={words.countLabel}
       tableName={words.tableName}
+      {...(countLine !== undefined && { countLine })}
       thresholdLine={
         threshold === null || words.filterName === null
           ? null

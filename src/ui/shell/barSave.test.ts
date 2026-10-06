@@ -153,6 +153,14 @@ describe("WS9 the Save of the error bar", () => {
     );
   });
 
+  test("the first line of the bar for the worker stopped during the statistics says to start them again, as the section does", () => {
+    expect(
+      barText(defect("out of memory", "statisticsStopped"), "noSaving", false),
+    ).toBe(
+      "The application stopped as it calculated the statistics: out of memory. Start the statistics again, and if it stops again, reload the page and open your files again.",
+    );
+  });
+
   test("the bar's Save reads Try to save again after a save failed", () => {
     expect(saveLabel(false)).toBe("Save the project");
     expect(saveLabel(true)).toBe("Try to save again");

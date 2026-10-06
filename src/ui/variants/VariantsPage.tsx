@@ -2,7 +2,8 @@
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
  * the page's one heading, "Popnei"; the box of the file open, with what
- * went wrong with it; under it the opening of the variants file; each in
+ * went wrong with it; under it the opening of the variants file; under
+ * that the statistics of the open file (docs/plans/file-stats.md); each in
  * a boundary of errors that draws its name alone in its place; and the
  * status region that says what changes away from the focus. The page holds the words of the last file
  * not opened, which the opening says and the box shows.
@@ -13,9 +14,11 @@ import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
+import { FileStats } from "./FileStats.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import styles from "./VariantsPage.module.css";
+import { STATS_NAME } from "./statsWords.ts";
 import { VariantsSummary } from "./VariantsSummary.tsx";
 import { INFO_NAME, OPENING_NAME } from "./words.ts";
 
@@ -54,6 +57,9 @@ export function VariantsPage({
         </ErrorBoundary>
         <ErrorBoundary heading={OPENING_NAME} level={2}>
           <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
+        </ErrorBoundary>
+        <ErrorBoundary heading={STATS_NAME} level={2}>
+          <FileStats autoRuns={autoRuns} openButton={openButton} />
         </ErrorBoundary>
       </main>
       <StatusRegion />
