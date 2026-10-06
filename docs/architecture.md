@@ -168,8 +168,8 @@ day:
   joins them, asks for the read of each file whose read is pending and
   has none under way (section 6, "Who asks for a read"). From 5 October
   2026 the entry of `popgen2.html` also starts by itself the summary of
-  the variants file once the file is read, and from 6 October 2026 the
-  statistics of the open file after it (section 5).
+  the variants file once the file is read, whose one pass gives, from 6
+  October 2026, the statistics of the open file too (section 5).
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
 - The notice offers the reverse of what caused it: Undo after a command
@@ -949,7 +949,11 @@ gains for the new page and a new key version, as the statistics of each
 individual and the histograms of the variants did on 6 October 2026
 (`docs/plans/file-stats.md`), the histograms gaining the missing rate
 and their key version going to 3; each page has its own store, so the
-old page does not change, and does not draw the missing rate.
+old page does not change, and does not draw the missing rate. The same
+day the two left the list again (`docs/plans/live-stats.md`): the
+summary of the variants file gives them from its one pass, its result
+gaining their fields as two parts and its key version going to 2, and
+they stay on the old page as they were.
 
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
@@ -2028,11 +2032,17 @@ reader of BED files in Python:
 7. The density of variants along each chromosome, of
    `docs/build-order.md`, section 4, given by `js-v0.1.0-dev.3` as
    `calcVarDensity`. From 5 October 2026 the summary of the variants file
-   calls it with one window per chromosome, a window of 2^53 − 1 base
-   pairs, `ONE_WINDOW_PER_CHROM` of `src/worker/protocol.ts`, and with
+   asked it for one window per chromosome, a window of 2^53 − 1 base
+   pairs, `ONE_WINDOW_PER_CHROM` of `src/worker/protocol.ts`, with
    `chromLengths: {}`, so that the lengths of the `##contig` lines are not
-   used (`docs/plans/open-variants.md`, "The design", says why). The
-   density in windows of a size the user chooses is still to come.
+   used (`docs/plans/open-variants.md`, "The design", says why). From 6
+   October 2026 the summary calls `calcVariantsSummary` of
+   `js-v0.2.1` instead, with the same density as one of its three parts
+   beside `perVar` and `perIndividual` (`docs/plans/live-stats.md`). That
+   pass reads the genotypes, and popnei gives no part when one fails, so
+   a file whose genotypes popnei refuses gets no count of its variants
+   either. The density in windows of a size the user chooses is still to
+   come.
 8. A reader of BED files in popnei's Python, for the Python script
    (above, "The regions of a BED file").
 
