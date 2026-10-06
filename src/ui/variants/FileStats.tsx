@@ -57,6 +57,7 @@ import {
   INDIVIDUALS_ID,
   RESUME_STATS_LABEL,
   STATS_NAME,
+  STATS_PROGRESS_KIND,
   STATS_STOPPED_TEXT,
   STOP_STATS_LABEL,
   VARIANTS_HEADING,
@@ -66,6 +67,7 @@ import {
   statsButton,
   statsFailedText,
   statsRunningLine,
+  statsStartText,
   statsStatus,
 } from "./statsWords.ts";
 import type { StatsId } from "./statsWords.ts";
@@ -198,10 +200,17 @@ function Stats({
 
   const stop = (): void => {
     autoRuns.stop(POPGEN2_STATISTICS_IDS);
-    announcer.announce(STATS_STOPPED_TEXT);
+    announcer.announce(STATS_STOPPED_TEXT, { replaces: STATS_PROGRESS_KIND });
   };
   const resume = (): void => {
-    autoRuns.resume(POPGEN2_STATISTICS_IDS);
+    // Said here, since the store does not tell this start from the second
+    // pass that follows the first; when it says it too, the region says
+    // it once.
+    if (autoRuns.resume(POPGEN2_STATISTICS_IDS)) {
+      announcer.announce(statsStartText(variantsName), {
+        replaces: STATS_PROGRESS_KIND,
+      });
+    }
   };
 
   /** What a part shows in place of its result, or `null` once done. */

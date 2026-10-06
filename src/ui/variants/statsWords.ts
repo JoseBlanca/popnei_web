@@ -200,25 +200,56 @@ export function statsStatus(
   return view.status;
 }
 
+/** The kind of the words of the progress of the statistics, their start,
+    a result, their end, their Stop, of which the status region says only
+    the latest said within one of its pauses (`replaces` of status.ts): on
+    a small file the two passes end within a pause, and the region says
+    that the statistics are calculated, not each step that led there; and
+    a start said both by the store and by Start the statistics again is
+    said once. */
+export const STATS_PROGRESS_KIND = "statsProgress";
+
+/** What the status region says as the statistics of the file `name`
+    start, by themselves or at Start the statistics again: "Calculating
+    the statistics of panel.vcf.gz…". */
+export function statsStartText(name: string): string {
+  return `Calculating the statistics of ${escaped(name)}…`;
+}
+
+/** One text the status region says of the statistics. */
+export interface StatsAnnouncement {
+  /** Its words. */
+  readonly text: string;
+  /** `STATS_PROGRESS_KIND` for the words of the progress, which a later
+      one replaces within a pause; `null` for the words of a failure,
+      which are always said. */
+  readonly replaces: typeof STATS_PROGRESS_KIND | null;
+}
+
 /**
  * What the status region says of a change of the store from `before` to
  * `after` in the statistics of the open file, as a run says its start and
- * its end (react.md, "Announcements"): each pass that starts, "Calculating
- * the statistics of the variants of panel.vcf.gz…", whether it started by
- * itself or at the user's start again; the words of each that failed; the
- * result of one while the other is not done; and, once both are done for
- * the same file, that they are. A Stop is said by its button. The same
- * words are said once, as those of a file that could not be read again,
- * which fails both.
+ * its end (react.md, "Announcements"): their start, "Calculating the
+ * statistics of panel.vcf.gz…", as the first pass starts with neither
+ * done nor failed, and not again as the second follows it; the words of
+ * each that failed; the result of one while the other is not done; and,
+ * once both are done for the same file, that they are. A start again of
+ * one while the other is done or failed, which the state does not tell
+ * from the second pass following the first, is said by its button, as a
+ * Stop is. The same words are said once, as those of a file that could
+ * not be read again, which fails both.
  */
 export function statsAnnouncementsOf(
   before: AppState<JobResult, unknown>,
   after: AppState<JobResult, unknown>,
-): readonly string[] {
+): readonly StatsAnnouncement[] {
   const variants = after.project.variants;
   if (variants === null) return [];
   const fileName = escaped(variants.name);
-  const texts: string[] = [];
+  const said: StatsAnnouncement[] = [];
+  const say = (text: string, replaces: StatsAnnouncement["replaces"]): void => {
+    if (!said.some((one) => one.text === text)) said.push({ text, replaces });
+  };
   const ids = [VARIANTS_ID, INDIVIDUALS_ID] as const;
   const allDone = (s: AppState<JobResult, unknown>): boolean =>
     ids.every((id) => statsStatus(s, id).kind === "done");
@@ -229,23 +260,31 @@ export function statsAnnouncementsOf(
       after,
       id === VARIANTS_ID ? INDIVIDUALS_ID : VARIANTS_ID,
     );
-    if (now.kind === "running" && then.kind !== "running") {
-      texts.push(`Calculating ${SUBJECTS[id]} of ${fileName}…`);
+    if (
+      now.kind === "running" &&
+      then.kind !== "running" &&
+      other.kind !== "done" &&
+      other.kind !== "error"
+    ) {
+      say(statsStartText(variants.name), STATS_PROGRESS_KIND);
     }
     if (
       now.kind === "error" &&
       !(then.kind === "error" && then.key === now.key)
     ) {
-      texts.push(statsFailedText(id, now.error, after.project));
+      say(statsFailedText(id, now.error, after.project), null);
     }
     if (now.kind === "done" && then.kind !== "done" && other.kind !== "done") {
-      texts.push(`${capitalized(SUBJECTS[id])} of ${fileName} are calculated.`);
+      say(
+        `${capitalized(SUBJECTS[id])} of ${fileName} are calculated.`,
+        STATS_PROGRESS_KIND,
+      );
     }
   }
   if (allDone(after) && !allDone(before)) {
-    texts.push(`The statistics of ${fileName} are calculated.`);
+    say(`The statistics of ${fileName} are calculated.`, STATS_PROGRESS_KIND);
   }
-  return [...new Set(texts)];
+  return said;
 }
 
 /** The one button of the statistics: Stop while one of them runs, or is

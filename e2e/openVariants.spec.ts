@@ -26,6 +26,8 @@ import { expect, test } from "./axe.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
+import { dropFiles } from "./dropFiles.ts";
+import type { DroppedFile } from "./dropFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -65,40 +67,9 @@ async function pick(page: Page, path: string): Promise<void> {
   await (await chooser).setFiles(path);
 }
 
-/** Drops files of the names and texts `files` on the zone, as a drag from
-    the desktop does. */
-async function drop(
-  page: Page,
-  files: readonly (
-    | { readonly name: string; readonly text: string }
-    | { readonly name: string; readonly bytes: readonly number[] }
-  )[],
-): Promise<void> {
-  const dataTransfer = await page.evaluateHandle((given) => {
-    // A file a script puts into a DataTransfer has no entry of the file
-    // system in Chromium, and React Aria skips an item without one; so
-    // the item says it is a file.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
-    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
-    DataTransferItem.prototype.webkitGetAsEntry = function (
-      this: DataTransferItem,
-    ) {
-      return (
-        entryOf.call(this) ??
-        ({ isFile: true, isDirectory: false } as FileSystemEntry)
-      );
-    };
-    const transfer = new DataTransfer();
-    for (const file of given) {
-      const content = "text" in file ? file.text : new Uint8Array(file.bytes);
-      transfer.items.add(new File([content], file.name));
-    }
-    return transfer;
-  }, files);
-  const target = openButton(page);
-  for (const type of ["dragenter", "dragover", "drop"]) {
-    await target.dispatchEvent(type, { dataTransfer });
-  }
+/** Drops `files` on the open button, as a drag from the desktop does. */
+async function drop(page: Page, files: readonly DroppedFile[]): Promise<void> {
+  await dropFiles(page, openButton(page), files);
 }
 
 async function expectNoViolations(
@@ -180,12 +151,14 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   // The read and the count, said together when they end within the
   // pause of the region.
   // Read from the record of the region, since the end of the statistics,
-  // which start once the count ends, replaces these words there.
+  // which start once the count ends, replaces these words there; the
+  // latest words of the progress of the statistics said within the same
+  // pause may follow them, and nothing else.
   await expect
     .poll(() => announced(page))
     .toContainEqual(
       expect.stringMatching(
-        /panel\.vcf\.gz: 1,200 variants on 1 chromosome\./u,
+        /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.( (Calculating the statistics of panel\.vcf\.gz…|The statistics of (the variants of )?panel\.vcf\.gz are calculated\.))?$/u,
       ),
     );
   await expect(openButton(page)).toHaveText("Open another variants file…");
@@ -438,13 +411,15 @@ for (const width of [320, 1280]) {
     if (at === null) throw new Error("the open button is not drawn");
 
     await pick(page, vcf);
-    // The count of the second opening said as that of the first.
+    // The count of the second opening said as that of the first, alone
+    // or with it in one text of the region, when the second opening
+    // comes within the pause the words of the statistics prolong.
     await expect
       .poll(
         async () =>
-          (await announced(page)).filter((text) =>
-            text.includes(": 1,200 variants on 1 chromosome."),
-          ).length,
+          (await announced(page))
+            .join(" ")
+            .split(": 1,200 variants on 1 chromosome.").length - 1,
       )
       .toBe(2);
     await expectPanelCounted(page);

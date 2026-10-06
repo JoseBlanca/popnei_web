@@ -6,7 +6,7 @@ import type { AppState, Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
-import { statsAnnouncementsOf } from "./statsWords.ts";
+import { STATS_PROGRESS_KIND, statsAnnouncementsOf } from "./statsWords.ts";
 import { announcementsOf, summaryStatus } from "./words.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
@@ -320,7 +320,9 @@ describe("what the status region of the new page says of the statistics of the o
     const before = store.getState();
     change();
     await settled();
-    return statsAnnouncementsOf(before, store.getState());
+    return statsAnnouncementsOf(before, store.getState()).map(
+      (said) => said.text,
+    );
   }
 
   /** Ends the request `index` of `sent`, of the statistic `id`, with its
@@ -340,14 +342,12 @@ describe("what the status region of the new page says of the statistics of the o
     page.sent[index]?.({ kind: "done", key: status.key, result });
   }
 
-  test("each pass that starts is said with its statistic and the file, the first result while the other is not done, and the end once both are", async () => {
+  test("the start is said with the file, the first result while the other is not done, and the end once both are, and not the second pass that follows the first", async () => {
     const page = await counted();
     const { store } = page;
     expect(
       await statsSaid(store, () => void startAnalysis(store, "variantChecks")),
-    ).toEqual([
-      "Calculating the statistics of the variants of panel.vcf.gz\u2026",
-    ]);
+    ).toEqual(["Calculating the statistics of panel.vcf.gz\u2026"]);
     expect(
       await statsSaid(store, () => {
         endDone(page, 1, "variantChecks");
@@ -360,9 +360,7 @@ describe("what the status region of the new page says of the statistics of the o
         store,
         () => void startAnalysis(store, "individualChecks"),
       ),
-    ).toEqual([
-      "Calculating the statistics of the individuals of panel.vcf.gz\u2026",
-    ]);
+    ).toEqual([]);
     expect(
       await statsSaid(store, () => {
         endDone(page, 2, "individualChecks");
@@ -371,6 +369,31 @@ describe("what the status region of the new page says of the statistics of the o
     // A change after that, the summary counted again, says nothing of
     // the statistics.
     expect(await statsSaid(store, () => undefined)).toEqual([]);
+  });
+
+  test("the words of the progress are of the kind the region replaces within a pause, and those of a failure are not", async () => {
+    const page = await counted();
+    const { store } = page;
+    const before = store.getState();
+    void startAnalysis(store, "variantChecks");
+    expect(statsAnnouncementsOf(before, store.getState())).toEqual([
+      {
+        text: "Calculating the statistics of panel.vcf.gz\u2026",
+        replaces: STATS_PROGRESS_KIND,
+      },
+    ]);
+    const running = store.getState();
+    page.sent[1]?.({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    expect(statsAnnouncementsOf(running, store.getState())).toEqual([
+      {
+        text: "The statistics of the variants could not be calculated.",
+        replaces: null,
+      },
+    ]);
   });
 
   test("a Stop says nothing from the state, since its button says it", async () => {
@@ -397,15 +420,13 @@ describe("what the status region of the new page says of the statistics of the o
         });
       }),
     ).toEqual(["The statistics of the variants could not be calculated."]);
-    // The other pass starts, and the failure stays as it was.
+    // The other pass follows, and the failure stays as it was.
     expect(
       await statsSaid(
         store,
         () => void startAnalysis(store, "individualChecks"),
       ),
-    ).toEqual([
-      "Calculating the statistics of the individuals of panel.vcf.gz\u2026",
-    ]);
+    ).toEqual([]);
     // Its result, the other not done but failed, is said as the first.
     expect(
       await statsSaid(store, () => {

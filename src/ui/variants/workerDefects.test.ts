@@ -173,6 +173,31 @@ describe("the defects of the worker given to the error bar of the new page", () 
     );
   });
 
+  test("a worker that stopped during the histograms of the variants, the first pass, is reported as a stop during the statistics", async () => {
+    const { store, sent } = setUp();
+    const defects = createDefects();
+    reportDefects(store, defects);
+    loadPops(store);
+
+    void startAnalysis(store, "variantChecks");
+    sent[0]?.({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    touch(store);
+
+    expect(defects.getState()).toEqual({
+      first: {
+        message: "out of memory",
+        origin: "statisticsStopped",
+        details:
+          "Error 1, the calculation worker stopped during the statistics of the file, with these words:\nout of memory",
+      },
+      more: 0,
+    });
+  });
+
   test("a worker that stopped during the opening is reported once, with what it said", () => {
     const { store } = setUp();
     const defects = createDefects();

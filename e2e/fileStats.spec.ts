@@ -18,6 +18,7 @@
  * heterozygous s026 at 0.3931 (missing 0.0333). tetraploid.vcf.gz, 200 variants of 12 individuals: 0.0479,
  * 0.4044, 0.9620 and 0.9635; the most missing t04 at 0.0850.
  */
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
@@ -26,6 +27,7 @@ import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
 import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
+import { dropFiles } from "./dropFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -53,6 +55,14 @@ function stats(page: Page): Locator {
 /** The titles of the histograms, in their order. */
 function titles(page: Page): Locator {
   return stats(page).getByRole("group").locator("> p:first-child");
+}
+
+/** The part of the section under the heading `name`, "Variants" or
+    "Individuals". */
+function part(page: Page, name: string): Locator {
+  return stats(page)
+    .getByRole("heading", { level: 2, name })
+    .locator("xpath=..");
 }
 
 /** The table of the individuals. */
@@ -188,24 +198,12 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   const bar = stats(page).getByRole("progressbar", {
     name: "Calculating the statistics of the variants",
   });
+  // Stop is pressed as soon as the bar of the first pass is seen, and
+  // the checks of the running state, axe among them, wait for the start
+  // again: made before the Stop, they could outlast the pass, of a few
+  // seconds, under four workers in WebKit, and Stop then stopped the
+  // second pass, which failed this flow once in five runs.
   await expect(bar).toBeVisible({ timeout: 60_000 });
-  await expect(
-    stats(page).getByText("Waiting for the statistics of the variants."),
-  ).toBeVisible();
-  await expect(
-    stats(page).getByText(/^Calculating the statistics of the variants…/u),
-  ).toBeVisible();
-  // Said once on the bar's line, and not again in the part.
-  await expect(stats(page).getByText(/Calculating/u)).toHaveCount(1);
-  const started = (texts: readonly string[]): number =>
-    texts.filter((text) =>
-      text.includes(
-        "Calculating the statistics of the variants of stats.vcf.gz…",
-      ),
-    ).length;
-  await expect.poll(async () => started(await announced(page))).toBe(1);
-  await expectNoViolations(makeAxeBuilder);
-
   await stats(page)
     .getByRole("button", { name: "Stop the statistics" })
     .click();
@@ -215,11 +213,13 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   // One button in one place: the focus stays on it.
   await expect(again).toBeFocused();
   await expect(bar).toHaveCount(0);
+  // The first pass was the one stopped, and the second, not started,
+  // says why.
   await expect(
-    stats(page).getByText("Stopped.", { exact: true }),
+    part(page, "Variants").getByText("Stopped.", { exact: true }),
   ).toBeVisible();
   await expect(
-    stats(page).getByText(
+    part(page, "Individuals").getByText(
       "Not calculated: the statistics of the variants were stopped.",
     ),
   ).toBeVisible();
@@ -231,14 +231,34 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
         "The statistics were stopped. Start them again to calculate those not done yet.",
       ),
     );
+  // The start, said as the first pass started, unless the Stop came
+  // within the region's pause and replaced it.
+  const started = (texts: readonly string[]): number =>
+    texts.filter((text) =>
+      text.includes("Calculating the statistics of stats.vcf.gz…"),
+    ).length;
+  const startsBefore = started(await announced(page));
+  expect(startsBefore).toBeLessThanOrEqual(1);
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
-  // The start again is said as the first start was.
-  await expect.poll(async () => started(await announced(page))).toBe(2);
   await expect(
     stats(page).getByRole("button", { name: "Stop the statistics" }),
   ).toBeFocused();
+  // Running: the start again is said as the first start was, the line
+  // over the bar says it once, and the second part waits for the first.
+  await expect(bar).toBeVisible();
+  await expect
+    .poll(async () => started(await announced(page)))
+    .toBe(startsBefore + 1);
+  await expect(
+    part(page, "Individuals").getByText(
+      "Waiting for the statistics of the variants.",
+    ),
+  ).toBeVisible();
+  await expect(stats(page).getByText(/Calculating/u)).toHaveCount(1);
+  await expectNoViolations(makeAxeBuilder);
+
   await expect(table(page)).toBeVisible({ timeout: 120_000 });
   await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
     timeout: 120_000,
@@ -254,19 +274,22 @@ test("FS2 the statistics wait for the count, Stop stops them, Start the statisti
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("FS2 a crash of the statistics of the individuals: its short words, the details in the error bar, the variants' histograms still drawn, and Start the statistics again", async ({
+test("FS2 a crash of the statistics of the individuals: its short words, said in the region, the details in the error bar, the variants' histograms still drawn, and Start the statistics again, which calculates them", async ({
   page,
   makeAxeBuilder,
 }) => {
-  await crashWorkerOn(page, "run", "individualChecks");
+  // The first worker crashes on the statistics of the individuals; the
+  // one the page makes after the crash calculates them.
+  await crashWorkerOn(page, "run", "individualChecks", true);
+  await recordAnnouncements(page);
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
-  await expect(
-    stats(page).getByText(
-      "The statistics of the individuals could not be calculated.",
-    ),
-  ).toBeVisible({ timeout: 20_000 });
+  const failed = "The statistics of the individuals could not be calculated.";
+  await expect(stats(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(expect.stringContaining(failed));
   await expect(page.getByRole("alert")).toContainText(
     "The application stopped as it calculated the statistics: ",
   );
@@ -278,10 +301,53 @@ test("FS2 a crash of the statistics of the individuals: its short words, the det
     "Proportion of missing genotypes, mean 0.0297",
   );
   await expect(table(page)).toHaveCount(0);
-  await expect(
-    stats(page).getByRole("button", { name: "Start the statistics again" }),
-  ).toBeVisible();
+  const again = stats(page).getByRole("button", {
+    name: "Start the statistics again",
+  });
+  await expect(again).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
+
+  await again.click();
+  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  await expect(stats(page).getByText(failed)).toHaveCount(0);
+  await expect(stats(page).locator("svg.chart")).toHaveCount(6);
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringMatching(
+        /The statistics of panel\.vcf\.gz are calculated\.$/u,
+      ),
+    );
+  await expectNoViolations(makeAxeBuilder);
+});
+
+test("FS2 a file dropped while the focus is on a header of the table moves the focus to the open button, not to the top of the page", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expect(table(page)).toBeVisible({ timeout: 20_000 });
+  const header = table(page).getByRole("columnheader", {
+    name: /^Observed heterozygosity/u,
+  });
+  await header.click();
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(header).toBeFocused();
+
+  const nei = await readFile(join(FIXTURES, "panel.nei"));
+  await dropFiles(
+    page,
+    page.getByRole("button", { name: "Open another variants file…" }),
+    [{ name: "panel.nei", bytes: [...nei] }],
+  );
+  await expect(
+    page
+      .getByRole("region", { name: "File information" })
+      .getByText("panel.nei · 261 KB"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open another variants file…" }),
+  ).toBeFocused();
 });
 
 test("FS2 at 320 pixels the plots are one under the other within the page, which does not scroll sideways", async ({
