@@ -305,7 +305,7 @@ describe("IP2 D2 the key of the histograms of the variants", () => {
     }
   });
 
-  test("a new load, the read options of a VCF, the key version, 2, and the version of popnei change the key", () => {
+  test("a new load, the read options of a VCF, the key version, 3, and the version of popnei change the key", () => {
     const vcf = asVcf(base, 2, false);
     expect(keyFor(variantChecks, reloaded(base))).not.toBe(baseKey);
     expect(keyFor(variantChecks, asVcf(base, 4, false))).not.toBe(
@@ -314,8 +314,8 @@ describe("IP2 D2 the key of the histograms of the variants", () => {
     expect(keyFor(variantChecks, asVcf(base, 2, true))).not.toBe(
       keyFor(variantChecks, vcf),
     );
-    expect(variantChecks.keyVersion).toBe(2);
-    const earlier: KeyedDef = { ...variantChecks, keyVersion: 1 };
+    expect(variantChecks.keyVersion).toBe(3);
+    const earlier: KeyedDef = { ...variantChecks, keyVersion: 2 };
     expect(keyFor(earlier, base)).not.toBe(baseKey);
     expect(keyFor(variantChecks, base, "0.2.0")).not.toBe(baseKey);
   });

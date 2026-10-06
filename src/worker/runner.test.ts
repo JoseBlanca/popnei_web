@@ -1748,6 +1748,15 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     expect(result.maf.mean).toBe(0.7163445463101891);
     expect(result.obsHet.mean).toBe(0.35429523451520484);
     expect(result.unbiasedExpHet.mean).toBe(0.3754712450806149);
+    // popnei 0.2.0's missing rate of panel.nei, under node.
+    expect(result.missingRate.mean).toBe(0.02969999999999999);
+    expect([...result.missingRate.counts]).toEqual([
+      345,
+      768,
+      86,
+      1,
+      ...Array<number>(36).fill(0),
+    ]);
     expect([...result.maf.counts]).toEqual([
       ...Array<number>(20).fill(0),
       69,
@@ -1823,7 +1832,12 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       69,
       ...Array<number>(19).fill(0),
     ]);
-    for (const distrib of [result.maf, result.obsHet, result.unbiasedExpHet]) {
+    for (const distrib of [
+      result.missingRate,
+      result.maf,
+      result.obsHet,
+      result.unbiasedExpHet,
+    ]) {
       expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(1200);
     }
     expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
@@ -1839,6 +1853,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       "variantChecks",
     );
     expect(ofVcf.maf.mean).toBe(0.7163445463101891);
+    expect(ofVcf.missingRate.mean).toBe(0.02969999999999999);
     expect(ofVcf).toEqual(ofNei);
   });
 
@@ -2065,7 +2080,7 @@ describe("VS1 D3 the passes of the runner: transferablesOf", () => {
     ]);
   });
 
-  test("of the histograms, the buffers of the edges and of the three counts, and one buffer held by two fields once", () => {
+  test("of the histograms, the buffers of the edges and of the four counts, and one buffer held by two fields once", () => {
     const result = resultOf(
       opened("panel.nei").run(variantChecksJob(), ignore),
       "variantChecks",
@@ -2073,16 +2088,17 @@ describe("VS1 D3 the passes of the runner: transferablesOf", () => {
     const buffers = transferablesOf(result);
     expect(buffers).toEqual([
       result.binEdges.buffer,
+      result.missingRate.counts.buffer,
       result.maf.counts.buffer,
       result.obsHet.counts.buffer,
       result.unbiasedExpHet.counts.buffer,
     ]);
-    expect(new Set(buffers).size).toBe(4);
+    expect(new Set(buffers).size).toBe(5);
     const twice = {
       ...result,
       obsHet: { ...result.obsHet, counts: result.maf.counts },
     };
-    expect(transferablesOf(twice).length).toBe(3);
+    expect(transferablesOf(twice).length).toBe(4);
   });
 
   test("of the counts of the filters, no buffer", () => {

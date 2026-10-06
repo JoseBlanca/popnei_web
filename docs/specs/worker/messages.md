@@ -36,7 +36,10 @@ Revised on 6 October 2026 for the page that opens a variants file,
 popgen2.html (`docs/plans/open-variants.md`): the job and the result of
 the summary of the variants file, `PROTOCOL_VERSION` 5; and a VCF opened
 with no ploidy, a ploidy of `null` in the read options of `open`, for
-popnei to read it from the file, `PROTOCOL_VERSION` 6.
+popnei to read it from the file, `PROTOCOL_VERSION` 6. Revised on 6
+October 2026 for the statistics of the open file (`docs/plans/file-stats.md`):
+the result of the histograms of the variants holds a fourth distribution,
+`missingRate`, checked as the other three are, and `PROTOCOL_VERSION` 7.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -428,7 +431,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 ```
 
 The requests of the calculation worker, and what it sends back.

@@ -137,10 +137,21 @@ const PANEL_OBS_HET = [
 ];
 
 /** The result of panel.nei; the counts of the expected heterozygosity,
-    which no test reads, are those of the MAF. */
+    which no test reads, are those of the MAF. The missing rate is
+    popnei 0.2.0's, under node. */
 const PANEL: VariantChecksResult = {
   analysis: "variantChecks",
   binEdges: EDGES,
+  missingRate: {
+    mean: 0.02969999999999999,
+    counts: Uint32Array.from([
+      345,
+      768,
+      86,
+      1,
+      ...Array.from({ length: 36 }, () => 0),
+    ]),
+  },
   maf: { mean: 0.7163445463101891, counts: Uint32Array.from(PANEL_MAF) },
   obsHet: {
     mean: 0.35429523451520484,
@@ -250,7 +261,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
         "variants_as_read.filter_individuals(individuals_kept)\n" +
         "variant_distribs = popnei.calc_per_var_distribs(\n" +
         "    variants_as_read,\n" +
-        "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
+        "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
         '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
         ")\n",
@@ -277,7 +288,7 @@ describe("VS3 D1 the histograms of the variants", () => {
     ]);
   });
 
-  test("checkNumbers of panel.nei gives the variants and the three means", () => {
+  test("checkNumbers of panel.nei gives the variants and the three means, and not the mean missing rate", () => {
     expect(variantChecks.checkNumbers(PANEL)).toEqual([
       1200, 0.7163445463101891, 0.35429523451520484, 0.3754712450806149,
     ]);
@@ -368,7 +379,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
   test("the definition reads the filters of individuals alone, and has no key input, no reason and no option", () => {
     expect(variantChecks.id).toBe("variantChecks");
     expect(variantChecks.app).toEqual(["popgen", "gwas"]);
-    expect(variantChecks.keyVersion).toBe(2);
+    expect(variantChecks.keyVersion).toBe(3);
     expect(variantChecks.filtersRead).toEqual({
       variants: false,
       individuals: true,
@@ -389,7 +400,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
         'variants_as_read = popnei.open_vars("panel.nei")\n' +
         "variant_distribs = popnei.calc_per_var_distribs(\n" +
         "    variants_as_read,\n" +
-        "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
+        "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
         '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
         ")\n",

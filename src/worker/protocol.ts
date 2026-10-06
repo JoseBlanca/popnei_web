@@ -526,12 +526,16 @@ export interface VariantDistrib {
   readonly counts: Uint32Array;
 }
 
-/** The histograms of the variants, three over the same edges. */
+/** The histograms of the variants, four over the same edges. */
 export interface VariantChecksResult {
   /** The analysis the result is of. */
   readonly analysis: "variantChecks";
   /** The edges of the bins, `numBins` + 1, shared by the three. */
   readonly binEdges: Float64Array;
+  /** The missing rate, popnei's `missingRate`: the missing genotypes of
+      a variant over the individuals of the pass, called or not, a half
+      called genotype being missing. Every variant has one. */
+  readonly missingRate: VariantDistrib;
   /** The major allele frequency, popnei's `maf`. */
   readonly maf: VariantDistrib;
   /** The observed heterozygosity. */

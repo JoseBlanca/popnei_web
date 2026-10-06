@@ -22,6 +22,13 @@ their job carries the list, a Run with a threshold on the individuals
 waits for the statistics of each individual, and a list popnei would
 refuse, or one that keeps nobody, locks them; their key version is 2.
 This revision is approved by the owner on 28 September 2026; it changes the code of stage 3.
+Revised on 6 October 2026 for the statistics of the open file of
+popgen2.html (`docs/plans/file-stats.md`): the result holds a fourth
+histogram, of the missing rate of each variant, popnei's `missing_rate`,
+over the same 40 bins from 0 to 1, which popgen.html does not draw; the
+key version is 3. The check numbers stay four, without the mean missing
+rate, since a fifth would make every project file saved with four refused
+at its opening.
 
 ## The module
 
@@ -226,6 +233,7 @@ export interface VariantDistrib { readonly mean: number; readonly counts: Uint32
 export interface VariantChecksResult {
   readonly analysis: "variantChecks";
   readonly binEdges: Float64Array;
+  readonly missingRate: VariantDistrib;
   readonly maf: VariantDistrib;
   readonly obsHet: VariantDistrib;
   readonly unbiasedExpHet: VariantDistrib;
@@ -233,7 +241,7 @@ export interface VariantChecksResult {
 }
 
 export const variantChecks: AnalysisDef<Job, JobResult>;
-// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 2;
+// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 3;
 // filtersRead { variants: false, individuals: true }; defaults {}
 
 /** The words of a refusal of popnei, for the error state of the panel. */

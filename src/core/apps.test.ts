@@ -261,6 +261,7 @@ describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
     const result: VariantChecksResult = {
       analysis: "variantChecks",
       binEdges: Float64Array.from([0, 1]),
+      missingRate: distrib(),
       maf: distrib(),
       obsHet: distrib(),
       unbiasedExpHet: distrib(),
@@ -415,6 +416,7 @@ const FIVE_STATS: IndividualChecksResult = {
 const HISTOGRAMS: VariantChecksResult = {
   analysis: "variantChecks",
   binEdges: Float64Array.from([0, 1]),
+  missingRate: distrib(),
   maf: distrib(),
   obsHet: distrib(),
   unbiasedExpHet: distrib(),

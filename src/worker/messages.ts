@@ -62,7 +62,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -1984,6 +1984,7 @@ function checkVariantChecksResult(
   const wrong = exactFields(record, place, [
     "analysis",
     "binEdges",
+    "missingRate",
     "maf",
     "obsHet",
     "unbiasedExpHet",
@@ -1997,6 +1998,10 @@ function checkVariantChecksResult(
     return binEdges;
   }
   const distrib = checkDistrib(binEdges.value.length - 1);
+  const missingRate = field(record, "missingRate", place, distrib);
+  if (!missingRate.ok) {
+    return missingRate;
+  }
   const maf = field(record, "maf", place, distrib);
   if (!maf.ok) {
     return maf;
@@ -2016,6 +2021,7 @@ function checkVariantChecksResult(
   return accepted({
     analysis: "variantChecks",
     binEdges: binEdges.value,
+    missingRate: missingRate.value,
     maf: maf.value,
     obsHet: obsHet.value,
     unbiasedExpHet: unbiasedExpHet.value,

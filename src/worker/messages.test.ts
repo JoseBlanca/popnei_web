@@ -162,7 +162,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 6, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 7, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -200,7 +200,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 6 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 7 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -523,7 +523,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 6,
+        protocol: 7,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -538,7 +538,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 6 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 7 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -596,17 +596,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 7 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 7 })).toEqual({
+  test("a ready of protocol 8 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 8 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 7 },
+      error: { kind: "otherProtocol", found: 8 },
     });
   });
 
-  test("a ready of protocol 7 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 7 })).toEqual({
+  test("a ready of protocol 8 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 8 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 7 },
+      error: { kind: "otherProtocol", found: 8 },
     });
   });
 
@@ -614,18 +614,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 7 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 8 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 7,
+          protocol: 8,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 7 },
+        error: { kind: "otherProtocol", found: 8 },
       });
     },
   );
@@ -727,6 +727,7 @@ function distrib(mean: number, numVars: number): VariantDistrib {
 const VARIANT_CHECKS_RESULT: VariantChecksResult = {
   analysis: "variantChecks",
   binEdges: Float64Array.from({ length: 41 }, (_, i) => i / 40),
+  missingRate: distrib(0.03, 1200),
   maf: distrib(0.7, 1200),
   obsHet: distrib(0.35, 1200),
   unbiasedExpHet: distrib(0.35, 1200),
@@ -983,6 +984,40 @@ describe("VS1 D2 the messages of stage 3 refused", () => {
         path: "result.maf.counts",
         expected: 40,
         found: 41,
+      },
+    });
+  });
+
+  test("the counts of the missing rate of 39 with binEdges of 41 numbers", () => {
+    const result = {
+      ...VARIANT_CHECKS_RESULT,
+      missingRate: { mean: 0.03, counts: new Uint32Array(39) },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "result",
+        path: "result.missingRate.counts",
+        expected: 40,
+        found: 39,
+      },
+    });
+  });
+
+  test("a result of the histograms of the variants without the missing rate, that of protocol 6", () => {
+    const result = Object.fromEntries(
+      Object.entries(VARIANT_CHECKS_RESULT).filter(
+        ([name]) => name !== "missingRate",
+      ),
+    );
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "result",
+        path: "result",
+        fields: ["missingRate"],
       },
     });
   });
@@ -1299,6 +1334,7 @@ const variantChecksResult: fc.Arbitrary<VariantChecksResult> = fc
     return fc.record({
       analysis: fc.constant("variantChecks" as const),
       binEdges: float64s(numEdges),
+      missingRate: distrib,
       maf: distrib,
       obsHet: distrib,
       unbiasedExpHet: distrib,
@@ -1436,7 +1472,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(6),
+    protocol: fc.constant(7),
     popneiVersion: text,
   }),
   fc.record({
@@ -1581,7 +1617,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(6) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(7) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -2671,8 +2707,21 @@ describe("PA2 D1 the messages of the LD decay", () => {
     },
   );
 
-  test("the version of the messages is 6", () => {
-    expect(PROTOCOL_VERSION).toBe(6);
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 6, before the missing rate of the variants, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 6 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 6 },
+      });
+    },
+  );
+
+  test("the version of the messages is 7", () => {
+    expect(PROTOCOL_VERSION).toBe(7);
   });
 });
 

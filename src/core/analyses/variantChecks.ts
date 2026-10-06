@@ -1,14 +1,16 @@
 /**
- * The histograms of the variants: the major allele frequency, the
- * observed heterozygosity and the unbiased expected heterozygosity of
- * every variant of the file, before any filter of the variants and over
- * the individuals the filters of individuals keep, each in 40 bins over 0
- * to 1 with its mean, so that each shows the number its filter keeps a
- * variant by, counted as the filter counts it. The module says what they are
- * calculated from, the request, the warning, the check numbers, the lines
- * of the Python script, the words of a refusal and the descriptions of
- * the three histograms (docs/specs/analyses/variantChecks.md, "The
- * module").
+ * The histograms of the variants: the missing rate, the major allele
+ * frequency, the observed heterozygosity and the unbiased expected
+ * heterozygosity of every variant of the file, before any filter of the
+ * variants and over the individuals the filters of individuals keep, each
+ * in 40 bins over 0 to 1 with its mean, so that each shows the number its
+ * filter keeps a variant by, counted as the filter counts it. The module
+ * says what they are calculated from, the request, the warning, the check
+ * numbers, the lines of the Python script, the words of a refusal and the
+ * descriptions of the histograms of the MAF and of the two
+ * heterozygosities (docs/specs/analyses/variantChecks.md, "The module").
+ * The missing rate joined them on 6 October 2026, for popgen2.html
+ * (docs/plans/file-stats.md); popgen.html does not draw it.
  *
  * The bins and the means are popnei's, from one call of
  * `calcPerVarDistribs` in the calculation worker; this module computes
@@ -165,7 +167,8 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 2,
+  // 3 since the result holds the missing rate (docs/plans/file-stats.md).
+  keyVersion: 3,
   filtersRead: Object.freeze({ variants: false, individuals: true }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -248,7 +251,9 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
 
 /** The check numbers: the variants of the file, then the means of the
     major allele frequency, the observed heterozygosity and the unbiased
-    expected heterozygosity, `null` for a NaN. */
+    expected heterozygosity, `null` for a NaN. Not the mean missing rate:
+    a fifth number would make every project file saved with four refused
+    at its opening (docs/plans/file-stats.md, "The design"). */
 function checkNumbers(result: JobResult): readonly (number | null)[] {
   const r = variantChecksResultOf(result);
   return [
@@ -289,7 +294,7 @@ function script(p: Project): string {
       : ["variants_as_read.filter_individuals(individuals_kept)"]),
     "variant_distribs = popnei.calc_per_var_distribs(",
     "    variants_as_read,",
-    "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
+    "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
     `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
     `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
     ")",

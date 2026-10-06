@@ -183,7 +183,12 @@ const ONE_POP_DIVERSITY_STATS = ["num_alleles", "fis", "folded_sfs"] as const;
 
 /** The statistics of the histograms of the variants, in the order of
     `VariantChecksResult`. */
-const VARIANT_CHECKS_STATS = ["maf", "obs_het", "unbiased_exp_het"] as const;
+const VARIANT_CHECKS_STATS = [
+  "missing_rate",
+  "maf",
+  "obs_het",
+  "unbiased_exp_het",
+] as const;
 
 /** The kind popnei gives the step of `filterIndividuals` in `steps`. */
 const INDIVIDUALS_STEP = "individuals";
@@ -298,6 +303,7 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
     case "variantChecks":
       return [
         result.binEdges,
+        result.missingRate.counts,
         result.maf.counts,
         result.obsHet.counts,
         result.unbiasedExpHet.counts,
@@ -852,7 +858,7 @@ function runIndividualChecks(
  * Runs `calcPerVarDistribs` over the individuals of the pass, those of the
  * job's list when it has one, as one population, with
  * the bins of the job, and gives one copy of the edges, which popnei's
- * three distributions share, and of each distribution its mean and its
+ * four distributions share, and of each distribution its mean and its
  * counts.
  */
 function runVariantChecks(
@@ -869,8 +875,13 @@ function runVariantChecks(
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { maf, obsHet, unbiasedExpHet, passStats } = answer.value;
-  if (maf === null || obsHet === null || unbiasedExpHet === null) {
+  const { missingRate, maf, obsHet, unbiasedExpHet, passStats } = answer.value;
+  if (
+    missingRate === null ||
+    maf === null ||
+    obsHet === null ||
+    unbiasedExpHet === null
+  ) {
     throw new Error(
       "popnei_web defect: calcPerVarDistribs gave no value of a statistic it was asked for",
     );
@@ -878,6 +889,7 @@ function runVariantChecks(
   const result: VariantChecksResult = {
     analysis: "variantChecks",
     binEdges: Float64Array.from(maf.histBinEdges),
+    missingRate: variantDistribOf(missingRate),
     maf: variantDistribOf(maf),
     obsHet: variantDistribOf(obsHet),
     unbiasedExpHet: variantDistribOf(unbiasedExpHet),
