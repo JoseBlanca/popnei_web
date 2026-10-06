@@ -5,4 +5,4 @@
  * finds another version has run a popnei other than the one installed,
  * such as an old build left in `node_modules`. Imported by tests alone.
  */
-export const INSTALLED_POPNEI_VERSION = "0.2.0";
+export const INSTALLED_POPNEI_VERSION = "0.2.1";
