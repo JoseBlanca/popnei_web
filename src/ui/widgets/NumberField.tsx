@@ -130,6 +130,8 @@ export interface NumberFieldProps {
   readonly minValue: number;
   /** The largest number it takes. */
   readonly maxValue: number;
+  /** The label beside the input, on its row, rather than above it. */
+  readonly inline?: boolean;
   /** The step an arrow key moves by; a number committed must be a
       multiple of it, unless `decimals` is given. */
   readonly step: number;
@@ -196,6 +198,7 @@ export function NumberField({
   minValue,
   maxValue,
   step,
+  inline = false,
   decimals,
   describedBy,
   description,
@@ -333,7 +336,11 @@ export function NumberField({
 
   return (
     <AriaNumberField
-      className={classOf(styles, "field")}
+      className={
+        inline
+          ? `${classOf(styles, "field")} ${classOf(styles, "inline")}`
+          : classOf(styles, "field")
+      }
       value={value}
       minValue={minValue}
       maxValue={maxValue}

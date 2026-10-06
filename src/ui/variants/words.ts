@@ -37,7 +37,7 @@ import { ONLY_PASSED_LABEL, formatText } from "../steps/variants/words.ts";
 export const SUMMARY_ID = "variantsSummary";
 
 /** The button that opens the file picker, before a file is open. */
-export const OPEN_LABEL = "Open a variants file…";
+export const OPEN_LABEL = "Open variants file…";
 
 /** The same button once a file is open. */
 export const OPEN_ANOTHER_LABEL = "Open another variants file…";
@@ -45,8 +45,12 @@ export const OPEN_ANOTHER_LABEL = "Open another variants file…";
 /** The name of the zone's hidden button that takes a pasted file. */
 export const PASTE_LABEL = "Paste a variants file";
 
-/** The line of the zone before a file is open. */
-export const DROP_HINT = "Drop a VCF or a .nei file here, or open one.";
+/** The name of the widget that opens a variants file, which has no
+    heading of its own. */
+export const OPENING_NAME = "Variants file";
+
+/** The label of the ploidy a VCF is read with, beside the open button. */
+export const DEFAULT_PLOIDY_LABEL = "Default ploidy";
 
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
@@ -61,14 +65,6 @@ export const TEXT_DROPPED = "Open a VCF or a .nei file, not a piece of text.";
 export function notOpenedText(name: string): string {
   return `${escaped(name)} was not opened: a variants file is a VCF, whose name ends in .vcf, .vcf.gz or .vcf.bgz, or a .nei file. If it is one of them, rename it.`;
 }
-
-/** The heading of the options of a VCF. */
-export const VCF_OPTIONS_HEADING = "How a VCF is read";
-
-/** The line under the ploidy: a VCF does not say it, and a change reads
-    the open VCF again. */
-export const PLOIDY_DESCRIPTION =
-  "A VCF does not say its ploidy, so it is given here, and the page does not check it against the genotypes. Changing it, or the box below, reads an open VCF again and counts its variants again; a .nei file says its own ploidy, and these apply to the next VCF opened.";
 
 /** The line of the zone on the file open, read or not opened:
     "panel.vcf.gz is open.", "bad.vcf is not open."; the line of a file
@@ -97,8 +93,8 @@ export function ploidyLine(
   if (readOptions === null) return `Ploidy ${String(ploidy)}, as the file says`;
   const set =
     readOptions.ploidy === DEFAULT_PLOIDY
-      ? `Ploidy ${String(ploidy)}, the default, as set under ${VCF_OPTIONS_HEADING}`
-      : `Ploidy ${String(ploidy)}, as set under ${VCF_OPTIONS_HEADING}`;
+      ? `Ploidy ${String(ploidy)}, the default ploidy, unchanged`
+      : `Ploidy ${String(ploidy)}, the default ploidy set on this page`;
   return `${set}: a VCF does not give its ploidy`;
 }
 
@@ -160,7 +156,7 @@ export function refusalText(message: string, p: Project): string {
     // popnei gives the same refusal for a file of no variant and for one
     // whose variants all have another FILTER, so the words hold for both.
     return variants.readOptions?.onlyPassed === true
-      ? `${fileName} has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" under ${VCF_OPTIONS_HEADING} and it is read again with every variant; otherwise open another variants file.`
+      ? `${fileName} has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" and it is read again with every variant; otherwise open another variants file.`
       : `${fileName} has no variants. Open another variants file.`;
   }
   if (message.startsWith(SOURCE_UNREADABLE)) {

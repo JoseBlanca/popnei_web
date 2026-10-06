@@ -24,7 +24,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 async function openPage(page: Page): Promise<void> {
   await page.goto("popgen2.html");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Population genetics" }),
+    page.getByRole("heading", { level: 1, name: "Popnei" }),
   ).toBeVisible();
 }
 
@@ -43,7 +43,7 @@ function count(page: Page): Locator {
 /** The button that opens the file picker, whatever its words. */
 function openButton(page: Page): Locator {
   return opening(page).getByRole("button", {
-    name: /^Open (a|another) variants file…$/,
+    name: /^Open (another )?variants file…$/,
   });
 }
 
@@ -111,27 +111,57 @@ async function expectPanelCounted(page: Page): Promise<void> {
   ).toHaveText("1");
 }
 
-test("OV2 the page opens with the button, the hint and the options of a VCF, and no summary", async ({
+test("OV2 the page opens with its one heading, the button and the default ploidy on one row, the box under them, and no summary", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openPage(page);
 
-  await expect(page).toHaveTitle("Population genetics · popnei web");
-  await expect(openButton(page)).toHaveText("Open a variants file…");
-  await expect(
-    opening(page).getByText("Drop a VCF or a .nei file here, or open one."),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("textbox", { name: "Ploidy of the VCF, from 1 to 255" }),
-  ).toHaveValue("2");
-  await expect(
-    page.getByRole("checkbox", {
-      name: "Only the variants with PASS or . in the FILTER column",
-    }),
-  ).toBeChecked();
+  await expect(page).toHaveTitle("Popnei");
+  await expect(page.getByRole("heading")).toHaveText(["Popnei"]);
+  await expect(openButton(page)).toHaveText("Open variants file…");
+  const ploidy = page.getByRole("textbox", { name: "Default ploidy" });
+  await expect(ploidy).toHaveValue("2");
+  const box = page.getByRole("checkbox", {
+    name: "Only the variants with PASS or . in the FILTER column",
+  });
+  await expect(box).toBeChecked();
+  // The field beside the button, on its row; the box under them.
+  const button = await openButton(page).boundingBox();
+  const field = await ploidy.boundingBox();
+  const boxAt = await page
+    .getByText("Only the variants with PASS or . in the FILTER column", {
+      exact: true,
+    })
+    .boundingBox();
+  if (button === null || field === null || boxAt === null) {
+    throw new Error("the button, the field or the box is not drawn");
+  }
+  expect(field.x).toBeGreaterThan(button.x + button.width);
+  expect(
+    Math.abs(field.y + field.height / 2 - (button.y + button.height / 2)),
+  ).toBeLessThan(button.height / 2);
+  expect(boxAt.y).toBeGreaterThan(button.y + button.height);
+  await expect(opening(page).getByText(/^Drop a VCF/u)).toHaveCount(0);
   await expect(summary(page)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 at 320 pixels the page does not scroll sideways, with no file and with one open", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openPage(page);
+  const sideways = (): Promise<number> =>
+    page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+  expect(await sideways()).toBe(0);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await expectPanelCounted(page);
+  expect(await sideways()).toBe(0);
 });
 
 test("OV2 panel.vcf.gz shows its individuals, the ploidy given and its variants on each chromosome, then panel.nei its own", async ({
@@ -146,7 +176,7 @@ test("OV2 panel.vcf.gz shows its individuals, the ploidy given and its variants 
   await expect(facts).toHaveText([
     /^VCF · /u,
     "200 individuals",
-    "Ploidy 2, the default, as set under How a VCF is read: a VCF does not give its ploidy",
+    "Ploidy 2, the default ploidy, unchanged: a VCF does not give its ploidy",
     "Only the variants with PASS or . in the FILTER column were read",
   ]);
   await expectPanelCounted(page);
@@ -215,14 +245,14 @@ test("OV2 a new ploidy reads the VCF again, and the summary says the ploidy give
   await expectPanelCounted(page);
 
   const ploidy = page.getByRole("textbox", {
-    name: "Ploidy of the VCF, from 1 to 255",
+    name: "Default ploidy",
   });
   await ploidy.fill("4");
   await ploidy.press("Enter");
 
   await expect(
     summary(page).getByText(
-      "Ploidy 4, as set under How a VCF is read: a VCF does not give its ploidy",
+      "Ploidy 4, the default ploidy set on this page: a VCF does not give its ploidy",
     ),
   ).toBeVisible();
   await expectPanelCounted(page);
@@ -321,7 +351,7 @@ test("OV2 a count stopped says so, and Count again counts the variants", async (
 /** The field of the ploidy. */
 function ploidyField(page: Page): Locator {
   return page.getByRole("textbox", {
-    name: "Ploidy of the VCF, from 1 to 255",
+    name: "Default ploidy",
   });
 }
 
@@ -360,48 +390,54 @@ test("OV2 with a ploidy typed and not committed, the first click on the box of t
     review of 5 October 2026). */
 const NAME_24 = `${"a".repeat(17)}.vcf.gz`;
 
-for (const typed of ["3", "300"]) {
-  test(`OV2 at 320 pixels, with a file of a long name open and the ploidy ${typed} typed, the first click on the open button opens the file picker`, async ({
-    page,
-  }, testInfo) => {
-    await page.setViewportSize({ width: 320, height: 900 });
-    const vcf = testInfo.outputPath(NAME_24);
-    await copyFile(join(FIXTURES, "panel.vcf.gz"), vcf);
-    await openPage(page);
-    await pick(page, vcf);
-    await expectPanelCounted(page);
-    await ploidyField(page).fill(typed);
-    const before = await openButton(page).boundingBox();
+for (const width of [320, 1280]) {
+  for (const typed of ["3", "300"]) {
+    test(`OV2 at ${String(width)} pixels, with a file of a long name open and the ploidy ${typed} typed, the first click on the open button opens the file picker`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      const vcf = testInfo.outputPath(NAME_24);
+      await copyFile(join(FIXTURES, "panel.vcf.gz"), vcf);
+      await openPage(page);
+      await pick(page, vcf);
+      await expectPanelCounted(page);
+      await ploidyField(page).fill(typed);
+      const before = await openButton(page).boundingBox();
 
-    const chooser = page.waitForEvent("filechooser", { timeout: 5_000 });
-    await openButton(page).click();
-    await chooser;
-    // Nothing above the button changed height as the field lost the
-    // focus, whether its number was taken or refused.
-    expect((await openButton(page).boundingBox())?.y).toBe(before?.y);
-  });
+      const chooser = page.waitForEvent("filechooser", { timeout: 5_000 });
+      await openButton(page).click();
+      await chooser;
+      // Nothing above or beside the button changed as the field lost the
+      // focus, whether its number was taken or refused.
+      expect(await openButton(page).boundingBox()).toEqual(before);
+    });
+
+    test(`OV2 at ${String(width)} pixels, with a file of a long name open and the ploidy ${typed} typed, the first click on the box of the passed variants unticks it`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      const vcf = testInfo.outputPath(NAME_24);
+      await copyFile(join(FIXTURES, "panel.vcf.gz"), vcf);
+      await openPage(page);
+      await pick(page, vcf);
+      await expectPanelCounted(page);
+      await ploidyField(page).fill(typed);
+      const label = page.getByText(PASSED_LABEL, { exact: true });
+      const before = await label.boundingBox();
+
+      await label.click();
+
+      await expect(
+        page.getByRole("checkbox", { name: PASSED_LABEL }),
+      ).not.toBeChecked();
+      if (typed === "300") {
+        await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
+      }
+      // Nothing above or beside the box moved it.
+      expect(await label.boundingBox()).toEqual(before);
+    });
+  }
 }
-
-test("OV2 at 320 pixels, with a ploidy typed that the field refuses, the first click on the box of the passed variants unticks it", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 320, height: 900 });
-  await openPage(page);
-  await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expectPanelCounted(page);
-  await ploidyField(page).fill("300");
-  const label = page.getByText(PASSED_LABEL, { exact: true });
-  const before = await label.boundingBox();
-
-  await label.click();
-
-  await expect(
-    page.getByRole("checkbox", { name: PASSED_LABEL }),
-  ).not.toBeChecked();
-  await expect(page.getByText(/the ploidy stays 2\.$/u)).toBeVisible();
-  // The line of the refusal pushed nothing above the box.
-  expect((await label.boundingBox())?.y).toBe(before?.y);
-});
 
 test("OV2 a file dropped with a ploidy typed is read with it, and the file open before is not read again", async ({
   page,
@@ -430,7 +466,7 @@ test("OV2 a file dropped with a ploidy typed is read with it, and the file open 
   await drop(page, [{ name: "other.vcf.gz", bytes: [...vcf] }]);
 
   await expect(
-    summary(page).getByText(/^Ploidy 3, as set under How a VCF is read/u),
+    summary(page).getByText(/^Ploidy 3, the default ploidy set on this page/u),
   ).toBeVisible();
   await expect(summary(page).getByText("other.vcf.gz")).toBeVisible();
   await expectPanelCounted(page);
@@ -464,7 +500,7 @@ test("OV2 the options set are kept when a .nei file is opened, and the next VCF 
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
   await expect(
-    summary(page).getByText(/^Ploidy 4, as set under How a VCF is read/u),
+    summary(page).getByText(/^Ploidy 4, the default ploidy set on this page/u),
   ).toBeVisible();
   await expect(
     summary(page).getByText(

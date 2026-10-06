@@ -1,21 +1,22 @@
 /**
  * The opening of the variants file on popgen2.html
- * (docs/plans/open-variants.md, "Two widgets"): first the two options a
- * VCF is read with, the ploidy and the passed variants, since they apply
- * before a file is opened, and whose change reads an open VCF again;
- * then the button "Open a variants file…" in a zone that also takes a
- * dropped or pasted file, with one line under the button on the file
- * open, being read or not opened; and below the zone a ploidy the field
- * refused and what went wrong with an opening: a file refused by its
- * name, several files at once, a file popnei could not read. Nothing
- * that changes as the ploidy field loses the focus is above the box or
- * the button, so that the click that takes the focus from it is not
- * lost. It reads the project from the store and sends it the commands of
- * the Variants step; what it holds itself is the options the user last
- * set, kept when a `.nei` file is opened, and the words of a file it did
- * not open.
+ * (docs/plans/open-variants.md, "Two widgets"; the owner's layout of 6
+ * October 2026): one widget, a zone that also takes a dropped or pasted
+ * file, with the button "Open variants file…" and, on its row, the
+ * default ploidy a VCF is read with; under them the box of the passed
+ * variants, then one line on the file open, being read or not opened.
+ * The two options apply before a file is opened, and their change reads
+ * an open VCF again. Below the zone, a ploidy the field refused and what
+ * went wrong with an opening: a file refused by its name, several files
+ * at once, a file popnei could not read. Nothing that changes as the
+ * ploidy field loses the focus is above or beside the box or the
+ * button, so that the click that takes the focus from it is not lost.
+ * It reads the project from the store and sends it the commands of the
+ * Variants step; what it holds itself is the options the user last set,
+ * kept when a `.nei` file is opened, and the words of a file it did not
+ * open.
  */
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { MAX_PLOIDY, escaped, variantsOpenNeeds } from "../../core/project.ts";
 import type { VariantLoad } from "../../core/project.ts";
@@ -29,7 +30,6 @@ import {
   DEFAULT_READ_OPTIONS,
   ONLY_PASSED_LABEL,
   PICKER_ENDINGS,
-  PLOIDY_LABEL,
   formatOfName,
   ploidyRefusedText,
 } from "../steps/variants/words.ts";
@@ -40,15 +40,14 @@ import { NumberField } from "../widgets/NumberField.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import styles from "./Variants.module.css";
 import {
-  DROP_HINT,
+  DEFAULT_PLOIDY_LABEL,
   FOLDER_DROPPED,
   OPEN_ANOTHER_LABEL,
   OPEN_LABEL,
+  OPENING_NAME,
   PASTE_LABEL,
-  PLOIDY_DESCRIPTION,
   SEVERAL_DROPPED,
   TEXT_DROPPED,
-  VCF_OPTIONS_HEADING,
   notOpenedText,
   openLine,
 } from "./words.ts";
@@ -83,8 +82,6 @@ export function OpenVariants({
   const announcer = useAnnouncer();
   const variants = useAppState((s) => s.project.variants);
   const reason = useAppState((s) => variantsOpenNeeds(s.project));
-  const heading = useId();
-  const optionsHeading = useId();
 
   // The options the user last set, for the next VCF and for a VCF open;
   // a .nei file opened keeps them, since it has its own ploidy. The ref
@@ -175,46 +172,7 @@ export function OpenVariants({
   const failed = variants?.read.kind === "failed";
 
   return (
-    <section aria-labelledby={heading} className={classOf(styles, "section")}>
-      <h2 id={heading} className={classOf(styles, "heading")}>
-        Variants file
-      </h2>
-
-      <section
-        aria-labelledby={optionsHeading}
-        className={classOf(styles, "options")}
-      >
-        <h3 id={optionsHeading} className={classOf(styles, "subheading")}>
-          {VCF_OPTIONS_HEADING}
-        </h3>
-        <NumberField
-          label={PLOIDY_LABEL}
-          value={options.ploidy}
-          minValue={1}
-          maxValue={MAX_PLOIDY}
-          step={1}
-          description={PLOIDY_DESCRIPTION}
-          refusedText={ploidyRefusedText}
-          refusedIn={ploidyRefusedIn}
-          onRefused={(text) => {
-            announcer.announce(text);
-          }}
-          onCommitReady={(commit) => {
-            commitPloidy.current = commit;
-          }}
-          onChange={(ploidy) => {
-            change({ ...optionsNow.current, ploidy });
-          }}
-        />
-        <Checkbox
-          label={ONLY_PASSED_LABEL}
-          isSelected={options.onlyPassed}
-          onChange={(onlyPassed) => {
-            change({ ...optionsNow.current, onlyPassed });
-          }}
-        />
-      </section>
-
+    <section aria-label={OPENING_NAME} className={classOf(styles, "section")}>
       <FileZone
         pasteLabel={PASTE_LABEL}
         buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}
@@ -224,26 +182,57 @@ export function OpenVariants({
           refuse(NOT_FILES_WORDS[dropped]);
         }}
         buttonRef={buttonRef}
+        actions={
+          <NumberField
+            label={DEFAULT_PLOIDY_LABEL}
+            value={options.ploidy}
+            minValue={1}
+            maxValue={MAX_PLOIDY}
+            step={1}
+            inline
+            refusedText={ploidyRefusedText}
+            refusedIn={ploidyRefusedIn}
+            onRefused={(text) => {
+              announcer.announce(text);
+            }}
+            onCommitReady={(commit) => {
+              commitPloidy.current = commit;
+            }}
+            onChange={(ploidy) => {
+              change({ ...optionsNow.current, ploidy });
+            }}
+          />
+        }
         status={
-          // Under the button, since a read starts as the ploidy is
-          // committed when the focus leaves it, and "Reading …" and
-          // "… is open." wrap at different widths: above the button, the
-          // line would move it from under a click.
-          <p className={classOf(styles, "line")}>
-            {variants === null ? (
-              <span className={classOf(styles, "mutedText")}>{DROP_HINT}</span>
-            ) : variants.read.kind === "pending" ? (
-              <>
-                {`Reading ${escaped(variants.name)}.`}{" "}
-                <ReadingTime
-                  key={variants.fileId}
-                  className={classOf(styles, "mutedText")}
-                />
-              </>
-            ) : (
-              openLine(variants)
+          <>
+            <Checkbox
+              label={ONLY_PASSED_LABEL}
+              isSelected={options.onlyPassed}
+              onChange={(onlyPassed) => {
+                change({ ...optionsNow.current, onlyPassed });
+              }}
+            />
+            {/* Under the button and the box, since a read starts as the
+                ploidy is committed when the focus leaves it, and
+                "Reading …" and "… is open." wrap at different widths:
+                above them, the line would move them from under a click.
+                None before a file is opened. */}
+            {variants !== null && (
+              <p className={classOf(styles, "line")}>
+                {variants.read.kind === "pending" ? (
+                  <>
+                    {`Reading ${escaped(variants.name)}.`}{" "}
+                    <ReadingTime
+                      key={variants.fileId}
+                      className={classOf(styles, "mutedText")}
+                    />
+                  </>
+                ) : (
+                  openLine(variants)
+                )}
+              </p>
             )}
-          </p>
+          </>
         }
       />
       {/* The line of a ploidy refused, drawn here and not under the

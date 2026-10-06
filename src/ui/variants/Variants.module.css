@@ -18,14 +18,6 @@
   font-size: var(--text-base);
 }
 
-/* The options of a VCF, above the zone. */
-.options {
-  display: grid;
-  gap: var(--space-3);
-  justify-items: start;
-  padding-block-start: var(--space-2);
-}
-
 /* The place of the line of a ploidy refused, under the zone: no box of
    its own, so that, empty, it adds no gap to the section. */
 .slot {

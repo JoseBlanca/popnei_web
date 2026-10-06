@@ -4330,7 +4330,7 @@ async function pickOnNewPage(page: Page, file: string): Promise<void> {
   const chooser = page.waitForEvent("filechooser");
   await page
     .getByRole("region", { name: "Variants file" })
-    .getByRole("button", { name: /^Open (a|another) variants file…$/ })
+    .getByRole("button", { name: /^Open (another )?variants file…$/ })
     .click();
   await (
     await chooser
@@ -4358,7 +4358,7 @@ for (const theme of ["light", "dark"] as const) {
         }
         await page.goto("popgen2.html");
         await expect(
-          page.getByRole("heading", { level: 1, name: "Population genetics" }),
+          page.getByRole("heading", { level: 1, name: "Popnei" }),
         ).toBeVisible();
       });
 
@@ -4405,9 +4405,7 @@ for (const theme of ["light", "dark"] as const) {
 
       test("a file refused by its name", async ({ page }) => {
         const chooser = page.waitForEvent("filechooser");
-        await page
-          .getByRole("button", { name: "Open a variants file…" })
-          .click();
+        await page.getByRole("button", { name: "Open variants file…" }).click();
         await (await chooser).setFiles(join(FIXTURES, "panel_pops.csv"));
         await expect(
           page.getByText(/^panel_pops\.csv was not opened/u),
@@ -4451,7 +4449,7 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByText("1,200 variants on 1 chromosome."),
         ).toBeVisible();
         const ploidy = page.getByRole("textbox", {
-          name: "Ploidy of the VCF, from 1 to 255",
+          name: "Default ploidy",
         });
         await ploidy.fill("300");
         await ploidy.press("Enter");

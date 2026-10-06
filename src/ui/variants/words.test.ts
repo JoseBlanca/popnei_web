@@ -5,7 +5,6 @@ import type { Project } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { ONLY_PASSED_LABEL } from "../steps/variants/words.ts";
 import {
-  VCF_OPTIONS_HEADING,
   countAgainMends,
   countedText,
   countingText,
@@ -39,10 +38,10 @@ describe("the words of the page that opens a variants file", () => {
 
   test("the ploidy of a VCF is the one set, the default told apart, and that of a .nei file the file's", () => {
     expect(ploidyLine(2, { ploidy: 2, onlyPassed: true })).toBe(
-      "Ploidy 2, the default, as set under How a VCF is read: a VCF does not give its ploidy",
+      "Ploidy 2, the default ploidy, unchanged: a VCF does not give its ploidy",
     );
     expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
-      "Ploidy 4, as set under How a VCF is read: a VCF does not give its ploidy",
+      "Ploidy 4, the default ploidy set on this page: a VCF does not give its ploidy",
     );
     expect(ploidyLine(2, null)).toBe("Ploidy 2, as the file says");
   });
@@ -79,7 +78,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      `panel.vcf.gz has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" under ${VCF_OPTIONS_HEADING} and it is read again with every variant; otherwise open another variants file.`,
+      `panel.vcf.gz has no variant, or none with PASS or . in its FILTER column. If its variants have another FILTER, untick "${ONLY_PASSED_LABEL}" and it is read again with every variant; otherwise open another variants file.`,
     );
   });
 
