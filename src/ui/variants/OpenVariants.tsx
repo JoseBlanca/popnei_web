@@ -11,10 +11,9 @@
  *
  * Nothing above or beside the button and the box of the passed variants
  * may move as the ploidy field loses the focus, or the press that takes
- * the focus from it would be lost: the box of the file above them
- * changes when the file is read again. So a change of the options made
- * during a press of the pointer on the widget reads the file again once
- * the press, and the click it gives, have ended.
+ * the focus from it would be lost. A change of the options reads the
+ * file again at once, and the box of the file above keeps its height
+ * through the read and the count (VariantsSummary.tsx).
  *
  * It reads the project from the store and sends it the commands of the
  * Variants step; what it holds itself is the options the user last set,
@@ -99,11 +98,6 @@ export function OpenVariants({
   // for it, and the file open before is not read again.
   const opening = useRef(false);
 
-  // Whether a press of the pointer that started on the widget has not
-  // yet ended, and whether the options changed during it.
-  const pressing = useRef(false);
-  const changedInPress = useRef(false);
-
   // The element the line of a ploidy refused is drawn into, once drawn.
   const [ploidyRefusedIn, setPloidyRefusedIn] = useState<HTMLElement | null>(
     null,
@@ -134,15 +128,13 @@ export function OpenVariants({
     onRefusal(null);
     // A number still being typed in the ploidy is committed first, for
     // the new file, since a file dropped from the desktop leaves the
-    // focus in the field; the file it replaces is not read again, nor
-    // after a press.
+    // focus in the field; the file it replaces is not read again.
     opening.current = true;
     try {
       commitPloidy.current?.();
     } finally {
       opening.current = false;
     }
-    changedInPress.current = false;
     const load: VariantLoad = {
       fileId: files.addFile(file),
       name: file.name,
@@ -172,48 +164,16 @@ export function OpenVariants({
   };
 
   /** The options changed to `next`: kept for the next VCF, and an open
-      VCF is read again with them, unless a new file is being opened; at
-      once, or, during a press, once it has ended. */
+      VCF is read again with them, unless a new file is being opened. */
   const change = (next: VcfReadOptions): void => {
     optionsNow.current = next;
     setOptions(next);
     if (opening.current) return;
-    if (pressing.current) {
-      changedInPress.current = true;
-      return;
-    }
     readAgain();
   };
 
-  /** A press of the pointer starts on the widget, before the field loses
-      the focus to it. It ends with the task after the pointer is
-      released, which gives the click first; or when the browser cancels
-      it. Then the file is read again if the options changed during it, a
-      ploidy committed, the box ticked. */
-  const pressStarts = (): void => {
-    if (pressing.current) return;
-    pressing.current = true;
-    const ends = (): void => {
-      window.removeEventListener("pointerup", ends, true);
-      window.removeEventListener("pointercancel", ends, true);
-      setTimeout(() => {
-        pressing.current = false;
-        if (changedInPress.current) {
-          changedInPress.current = false;
-          readAgain();
-        }
-      });
-    };
-    window.addEventListener("pointerup", ends, true);
-    window.addEventListener("pointercancel", ends, true);
-  };
-
   return (
-    <section
-      aria-label={OPENING_NAME}
-      className={classOf(styles, "section")}
-      onPointerDownCapture={pressStarts}
-    >
+    <section aria-label={OPENING_NAME} className={classOf(styles, "section")}>
       <FileZone
         pasteLabel={PASTE_LABEL}
         buttonLabel={variants === null ? OPEN_LABEL : OPEN_ANOTHER_LABEL}

@@ -46,7 +46,9 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   drawBar(store, null);
 
   const announcer = createAnnouncer();
-  announceChanges(store, announcer);
+  // Stop or Count again of the count, while one is shown.
+  let countButton: HTMLButtonElement | null = null;
+  announceChanges(store, announcer, () => countButton);
   reportDefects(store, defects);
   syncReads(store, client);
   const autoRuns = startByThemselves(store);
@@ -56,7 +58,12 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
     <StoreProvider value={store}>
       <AnnouncerProvider value={announcer}>
         <FilesProvider value={files}>
-          <VariantsPage autoRuns={autoRuns} />
+          <VariantsPage
+            autoRuns={autoRuns}
+            onCountButton={(node) => {
+              countButton = node;
+            }}
+          />
         </FilesProvider>
       </AnnouncerProvider>
     </StoreProvider>,
@@ -82,15 +89,23 @@ function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {
 }
 
 /** Announces in the status region what each change of the store did
-    away from the focus: the file read and its count. */
+    away from the focus: the file read and its count. It listens before
+    the page is drawn, so it is told of a change before React draws it,
+    with the focus still where the change found it: on the button of the
+    count, `countButton` gives it, as the count ends, the page moves the
+    focus onto the words of the end, which are then not said again. */
 function announceChanges(
   store: Store<JobResult, Blob>,
   announcer: Announcer,
+  countButton: () => HTMLButtonElement | null,
 ): void {
   let before = store.getState();
   store.subscribe(() => {
     const after = store.getState();
-    const texts = announcementsOf(before, after);
+    const button = countButton();
+    const texts = announcementsOf(before, after, {
+      focusOnCountButton: button !== null && document.activeElement === button,
+    });
     before = after;
     for (const text of texts) announcer.announce(text);
   });

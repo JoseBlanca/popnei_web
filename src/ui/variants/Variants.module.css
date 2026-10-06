@@ -14,18 +14,10 @@
   display: contents;
 }
 
-/* The box of the file, and the table of its chromosomes under it. */
-.info {
-  display: grid;
-  gap: var(--space-4);
-  justify-items: start;
-}
-
 /* The box of the file: a solid border, where the zone's is dashed. */
 .box {
   display: grid;
   gap: var(--space-2);
-  justify-self: stretch;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -38,22 +30,56 @@
   gap: var(--space-1);
 }
 
-/* The lines of the variants and the chromosomes, or what stands in their
-   place, and Count again or Stop under them. */
-.count {
+/* The lines of the variants and the chromosomes, which take the focus
+   when the count ends with the focus on Stop. */
+.countLines {
   display: grid;
   gap: var(--space-1);
-  justify-items: start;
 }
 
-/* Count again or Stop, a little apart from the lines above it. */
-.countButton {
-  padding-block: var(--space-1);
+/* The words of a failure of the count, which take the focus in the same
+   way. */
+.failure {
+  display: grid;
 }
 
-.count:focus-visible {
+.countLines:focus-visible,
+.failure:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
+}
+
+/* The row under the lines: the seconds of the read, the bar of the count
+   and Stop, Count again, or nothing. It is as high as a button in every
+   state, and what it holds keeps to one row, so that the box keeps its
+   height through the read and the count. */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--leading-body) * 1em + 2 * var(--space-1) + 2px);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bar takes the room left beside the button, up to its own
+   largest. */
+.progressBar {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 24rem;
+}
+
+.progressButton {
+  flex: none;
+}
+
+/* The seconds of the read, on one row at any width. */
+.progressLine {
+  margin: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fileName {
@@ -76,12 +102,4 @@
 /* Muted words inside a line. */
 .mutedText {
   color: var(--color-text-muted);
-}
-
-/* The bar and the line of a count under way. */
-.running {
-  display: grid;
-  gap: var(--space-2);
-  inline-size: min(100%, 24rem);
-  font-variant-numeric: tabular-nums;
 }

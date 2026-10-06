@@ -1,34 +1,38 @@
 /**
  * The box of the variants file on popgen2.html, above the open button
- * (docs/plans/open-variants.md, "Two widgets"; the owner's layout of 6
- * October 2026), and under it the table of the variants on each
- * chromosome. The box says what is known of the file open, line by line:
- * its name and size, its individuals, its variants, its chromosomes and
- * its ploidy. What the opening knows is shown at once; the individuals,
- * and the ploidy of a `.nei` file, once the file is read; the variants
- * and the chromosomes once they are counted, which starts by itself
- * (autoRuns.ts). While they are counted, the bar of the count and its
- * Stop stand in place of their two lines; after a Stop, its words and
- * Count again. What went wrong with the file stands in place of what it
- * would have told: a file popnei could not read in place of all the
- * lines but the first, a count refused in place of the variants and the
- * chromosomes. A file refused by its name, or several files at once, is
- * said first in the box, over the file still open, or alone with none.
- * There is no box before a file is opened or refused.
+ * (docs/plans/open-variants.md, "Two widgets"; the owner's layouts of 6
+ * October 2026), and the table of the variants on each chromosome, which
+ * the page draws under the open button. The box says what is known of the
+ * file open, line by line: its name and size, its individuals, its
+ * variants, its chromosomes and its ploidy. What the opening knows is
+ * shown at once; the individuals, and the ploidy of a `.nei` file, once
+ * the file is read; the variants and the chromosomes once they are
+ * counted, which starts by itself (autoRuns.ts). Under the lines, a row
+ * of one height in every state holds the seconds of the read, the bar of
+ * the count with its Stop, or Count again.
+ *
+ * The box keeps its height through the read and the count, a value not
+ * known yet said in its place, so that a new ploidy, which reads the file
+ * again as the field loses the focus to a press on the open button or on
+ * the box of the passed variants, does not move them from under the
+ * pointer. Only a problem adds to it, after the lines: a file popnei
+ * could not read, in place of all the lines but the first; a count
+ * refused; a file refused by its name, or several files at once, after
+ * the lines of the file still open, or alone with none. There is no box
+ * before a file is opened or refused.
  */
 import { useLayoutEffect, useRef } from "react";
 
 import { chromRows } from "../../core/analyses/variantsSummary.ts";
 import { escaped, grouped, variantsOpenNeeds } from "../../core/project.ts";
 import type { VariantSource } from "../../core/project.ts";
-import type { AnalysisError, AnalysisStatus } from "../../core/store.ts";
-import type { JobResult, Progress } from "../../worker/protocol.ts";
+import type { AnalysisStatus } from "../../core/store.ts";
+import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
 import type { ButtonOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
-import { useRunSeconds } from "../runSeconds.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
 import { useAppState, useStore } from "../store.tsx";
@@ -38,21 +42,25 @@ import { Table } from "../widgets/Table.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import styles from "./Variants.module.css";
 import {
+  CHROMOSOMES_COUNTING,
   CHROMOSOMES_NOT_COUNTED,
+  CHROMOSOMES_READING,
   CHROMS_CAPTION,
   CHROM_COLUMN,
   COUNT_AGAIN_LABEL,
   COUNT_BAR_LABEL,
+  INDIVIDUALS_READING,
   INFO_NAME,
   NUM_VARS_COLUMN,
-  PLOIDY_NOT_READ,
-  READING_LINE,
+  PLOIDY_READING,
+  READING_TIME_LINE,
   STOPPED_TEXT,
   SUMMARY_ID,
   VARIANTS_NOT_COUNTED,
+  VARIANTS_READING,
   chromosomesLine,
   countAgainMends,
-  countingText,
+  countingVariantsLine,
   failedText,
   individualsLine,
   nameAndSizeText,
@@ -69,16 +77,20 @@ export interface VariantsSummaryProps {
   /** The open button of the page, which takes the focus when the lines
       of a load go while the focus is in them. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** Called with the element of Stop or Count again while one is shown,
+      and with `null` when it goes, for the entry to tell whether the
+      focus is on it as the count ends. */
+  readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** The words of the last file not opened, which the box shows while
       the load they were said beside is the project's. */
   readonly refusal: Refusal | null;
 }
 
-/** The box of the file and the table of its chromosomes; nothing before
-    a file is opened or refused. */
+/** The box of the file; nothing before a file is opened or refused. */
 export function VariantsSummary({
   autoRuns,
   openButton,
+  onCountButton,
   refusal,
 }: VariantsSummaryProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
@@ -88,22 +100,20 @@ export function VariantsSummary({
       : null;
   if (variants === null && refusalText === null) return null;
   return (
-    <div className={classOf(styles, "info")}>
-      <section aria-label={INFO_NAME} className={classOf(styles, "box")}>
-        {refusalText !== null && <Problem>{refusalText}</Problem>}
-        {variants !== null && (
-          // Another load is other lines, so that those before go, with
-          // the focus they held.
-          <Load
-            key={variants.fileId}
-            autoRuns={autoRuns}
-            openButton={openButton}
-            variants={variants}
-          />
-        )}
-      </section>
-      {variants?.read.kind === "read" && <ChromTable />}
-    </div>
+    <section aria-label={INFO_NAME} className={classOf(styles, "box")}>
+      {variants !== null && (
+        // Another load is other lines, so that those before go, with
+        // the focus they held.
+        <Load
+          key={variants.fileId}
+          autoRuns={autoRuns}
+          openButton={openButton}
+          onCountButton={onCountButton}
+          variants={variants}
+        />
+      )}
+      {refusalText !== null && <Problem>{refusalText}</Problem>}
+    </section>
   );
 }
 
@@ -111,6 +121,7 @@ export function VariantsSummary({
 interface LoadProps {
   readonly autoRuns: AutoRuns;
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  readonly onCountButton: (node: HTMLButtonElement | null) => void;
   /** The file. */
   readonly variants: VariantSource;
 }
@@ -119,6 +130,7 @@ interface LoadProps {
 function Load({
   autoRuns,
   openButton,
+  onCountButton,
   variants,
 }: LoadProps): React.JSX.Element {
   const linesRef = useRef<HTMLDivElement>(null);
@@ -144,17 +156,20 @@ function Load({
       <p className={classOf(styles, "fileName")}>{nameAndSizeText(variants)}</p>
       {read.kind === "pending" && (
         <>
-          <p className={classOf(styles, "line")}>
-            {READING_LINE}{" "}
-            <ReadingTime className={classOf(styles, "mutedText")} />
-          </p>
-          <p className={classOf(styles, "line")}>{VARIANTS_NOT_COUNTED}</p>
-          <p className={classOf(styles, "line")}>{CHROMOSOMES_NOT_COUNTED}</p>
+          <p className={classOf(styles, "line")}>{INDIVIDUALS_READING}</p>
+          <p className={classOf(styles, "line")}>{VARIANTS_READING}</p>
+          <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
           <p className={classOf(styles, "line")}>
             {readOptions === null
-              ? PLOIDY_NOT_READ
+              ? PLOIDY_READING
               : ploidyLine(readOptions.ploidy, readOptions)}
           </p>
+          <div className={classOf(styles, "progress")}>
+            <p className={classOf(styles, "progressLine")}>
+              {READING_TIME_LINE}{" "}
+              <ReadingTime className={classOf(styles, "mutedText")} />
+            </p>
+          </div>
         </>
       )}
       {read.kind === "failed" && reason !== null && <Problem>{reason}</Problem>}
@@ -163,10 +178,11 @@ function Load({
           <p className={classOf(styles, "line")}>
             {individualsLine(read.individuals.length)}
           </p>
-          <Count autoRuns={autoRuns} readOptions={readOptions} />
-          <p className={classOf(styles, "line")}>
-            {ploidyLine(read.ploidy, readOptions)}
-          </p>
+          <Count
+            autoRuns={autoRuns}
+            onCountButton={onCountButton}
+            ploidy={ploidyLine(read.ploidy, readOptions)}
+          />
         </>
       )}
     </div>
@@ -176,18 +192,35 @@ function Load({
 /** What the count is drawn with. */
 interface CountProps {
   readonly autoRuns: AutoRuns;
-  /** How the VCF was read, `null` for a `.nei` file. */
-  readonly readOptions: VariantSource["readOptions"];
+  readonly onCountButton: (node: HTMLButtonElement | null) => void;
+  /** The line of the ploidy, drawn between the lines of the count and
+      the row of its progress. */
+  readonly ploidy: string;
 }
 
-/** The lines of the variants and the chromosomes, or what stands in
-    their place while they are counted, after a Stop or a failure. */
-function Count({ autoRuns, readOptions }: CountProps): React.JSX.Element {
+/** The lines of the variants and the chromosomes, in each state of their
+    count, the line of the ploidy, the row of the progress with Stop or
+    Count again, and a failure of the count after them. */
+function Count({
+  autoRuns,
+  onCountButton,
+  ploidy,
+}: CountProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
   const project = useAppState((s) => s.project);
-  const countRef = useRef<HTMLDivElement>(null);
+  // The lines of the count, and the element that holds the words of a
+  // failure: one of them takes the focus when the button goes with it.
+  const linesRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
+  // Whether the button went with the focus in the drawing being made.
+  const focusAfterGone = useRef(false);
+  useLayoutEffect(() => {
+    if (!focusAfterGone.current) return;
+    focusAfterGone.current = false;
+    (failureRef.current ?? linesRef.current)?.focus();
+  });
 
   const stop = (): void => {
     store.cancelRun(SUMMARY_ID);
@@ -197,38 +230,78 @@ function Count({ autoRuns, readOptions }: CountProps): React.JSX.Element {
     autoRuns.again(SUMMARY_ID);
   };
   const button = buttonOf(status, autoRuns);
+  const failure =
+    status.kind === "error" ? failedText(status.error, project) : null;
   return (
-    // It takes the focus when Stop goes with it, the count done or
-    // failed, so that the focus is not sent to the top of the page: a
-    // screen reader then reads the two lines, or what stands in their
-    // place. It is not in the order of the Tab key.
-    <div ref={countRef} tabIndex={-1} className={classOf(styles, "count")}>
-      <CountBody
-        status={status}
-        stopped={button?.kind === "run"}
-        readOptions={readOptions}
-        failed={(error) => failedText(error, project)}
-      />
-      {button !== null && (
-        <div className={classOf(styles, "countButton")}>
-          <RunButton
-            button={button}
-            runLabel={COUNT_AGAIN_LABEL}
-            onRun={again}
-            onStop={stop}
-            onGone={() => {
-              // The button went, the count done, and the lines stay:
-              // when the lines go, their own cleanup has already moved
-              // the focus to the open button.
-              countRef.current?.focus();
-            }}
-          />
+    <>
+      {/* It takes the focus when Stop goes with it, the count done, so
+          that the focus is not sent to the top of the page: a screen
+          reader then reads the two lines. It is not in the order of the
+          Tab key. */}
+      <div
+        ref={linesRef}
+        tabIndex={-1}
+        className={classOf(styles, "countLines")}
+      >
+        <CountLines status={status} stopped={button?.kind === "run"} />
+      </div>
+      <p className={classOf(styles, "line")}>{ploidy}</p>
+      {/* The row goes when a failure leaves nothing in it, for the words
+          of the failure to follow the lines: the height of the box
+          changes then anyway. */}
+      {(failure === null || button !== null) && (
+        <div className={classOf(styles, "progress")}>
+          {status.kind === "running" && (
+            <div className={classOf(styles, "progressBar")}>
+              <ProgressBar
+                label={COUNT_BAR_LABEL}
+                value={
+                  status.progress === null
+                    ? null
+                    : progressShare(status.progress)
+                }
+              />
+            </div>
+          )}
+          {button !== null && (
+            <div className={classOf(styles, "progressButton")}>
+              <RunButton
+                button={button}
+                runLabel={COUNT_AGAIN_LABEL}
+                onRun={again}
+                onStop={stop}
+                onButton={onCountButton}
+                onGone={() => {
+                  // The button went, the count done or failed for good, and
+                  // the lines stay: when the lines go, their own cleanup has
+                  // already moved the focus to the open button. The words of
+                  // a failure are drawn by the time the effects of the
+                  // drawing run, after this cleanup.
+                  focusAfterGone.current = true;
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
-    </div>
+      {/* The words of a failure, after the lines, the one change of the
+          height of the box during a count. It takes the focus as the
+          lines do. */}
+      {failure !== null && (
+        <div
+          ref={failureRef}
+          tabIndex={-1}
+          className={classOf(styles, "failure")}
+        >
+          <Problem>{failure}</Problem>
+        </div>
+      )}
+      {status.kind === "locked" && (
+        <p className={classOf(styles, "muted")}>{status.reason}</p>
+      )}
+    </>
   );
 }
-
 /** Stop while the count runs; Count again after a Stop, or after a
     failure it may mend; none otherwise. */
 function buttonOf(
@@ -253,59 +326,58 @@ function buttonOf(
   }
 }
 
-/** What the body of the count is drawn with. */
-interface CountBodyProps {
+/** What the lines of the count are drawn with. */
+interface CountLinesProps {
   readonly status: AnalysisStatus<JobResult>;
   /** Whether a count of the key was stopped. */
   readonly stopped: boolean;
-  /** How the VCF was read, `null` for a `.nei` file. */
-  readonly readOptions: VariantSource["readOptions"];
-  /** The words of a failure. */
-  readonly failed: (error: AnalysisError) => string;
 }
 
-/** The two lines, the bar, or the words of the state of the count. */
-function CountBody({
-  status,
-  stopped,
-  readOptions,
-  failed,
-}: CountBodyProps): React.JSX.Element {
+/** The lines of the variants and the chromosomes: their numbers, or the
+    state of their count in their place. */
+function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
+  let lines: readonly [string, string];
   switch (status.kind) {
-    case "locked":
-      return <p className={classOf(styles, "muted")}>{status.reason}</p>;
+    case "running":
+      lines = [
+        countingVariantsLine(
+          status.progress === null ? null : progressShare(status.progress),
+        ),
+        CHROMOSOMES_COUNTING,
+      ];
+      break;
     case "ready":
     case "removed":
-      return stopped ? (
-        <p className={classOf(styles, "line")}>{STOPPED_TEXT}</p>
-      ) : (
-        <>
-          <p className={classOf(styles, "line")}>{VARIANTS_NOT_COUNTED}</p>
-          <p className={classOf(styles, "line")}>{CHROMOSOMES_NOT_COUNTED}</p>
-        </>
-      );
-    case "running":
-      return <Counting runId={status.runId} progress={status.progress} />;
+      // Not stopped, the count starts by itself in a moment.
+      lines = stopped
+        ? [VARIANTS_NOT_COUNTED, CHROMOSOMES_NOT_COUNTED]
+        : [countingVariantsLine(null), CHROMOSOMES_COUNTING];
+      break;
+    case "locked":
     case "error":
-      return <Problem>{failed(status.error)}</Problem>;
+      lines = [VARIANTS_NOT_COUNTED, CHROMOSOMES_NOT_COUNTED];
+      break;
     case "done":
-      return (
-        <>
-          <p className={classOf(styles, "line")}>
-            {variantsLine(status.result.passStats.numVars, readOptions)}
-          </p>
-          <p className={classOf(styles, "line")}>
-            {chromosomesLine(chromRows(status.result).length)}
-          </p>
-        </>
-      );
+      lines = [
+        variantsLine(status.result.passStats.numVars),
+        chromosomesLine(chromRows(status.result).length),
+      ];
+      break;
   }
+  return (
+    <>
+      <p className={classOf(styles, "line")}>{lines[0]}</p>
+      <p className={classOf(styles, "line")}>{lines[1]}</p>
+    </>
+  );
 }
 
-/** The table of the chromosomes and their variants, once counted. */
-function ChromTable(): React.JSX.Element | null {
+/** The table of the chromosomes and their variants, once counted, which
+    the page draws under the open button. */
+export function ChromTable(): React.JSX.Element | null {
   const status = useAppState(summaryStatus);
-  if (status.kind !== "done") return null;
+  const read = useAppState((s) => s.project.variants?.read.kind === "read");
+  if (!read || status.kind !== "done") return null;
   const rows = chromRows(status.result);
   return (
     <Table
@@ -327,24 +399,3 @@ function ChromTable(): React.JSX.Element | null {
     limited height, so that a file of thousands of scaffolds does not push
     the page thousands of pixels down. */
 const LONG_TABLE = 20;
-
-/** What the bar of a count under way is drawn with. */
-interface CountingProps {
-  /** The id of its request. */
-  readonly runId: number;
-  /** How far it has gone, or `null` until the worker says. */
-  readonly progress: Progress | null;
-}
-
-/** The bar and the line of a count under way, with the seconds since it
-    started. */
-function Counting({ runId, progress }: CountingProps): React.JSX.Element {
-  const seconds = useRunSeconds(runId);
-  const share = progress === null ? null : progressShare(progress);
-  return (
-    <div className={classOf(styles, "running")}>
-      <ProgressBar label={COUNT_BAR_LABEL} value={share} />
-      <p className={classOf(styles, "line")}>{countingText(share, seconds)}</p>
-    </div>
-  );
-}

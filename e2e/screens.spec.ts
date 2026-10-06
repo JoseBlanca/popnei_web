@@ -4381,7 +4381,7 @@ for (const theme of ["light", "dark"] as const) {
         await writeBigVcf(vcf, 200_000);
         await pickOnNewPage(page, vcf);
         await expect(
-          newPageCount(page).getByText(/^Counting the variants · \d+% · /u),
+          newPageCount(page).getByText(/^Variants: counting… \d+%$/u),
         ).toBeVisible({ timeout: 30_000 });
         await save(page, `popgen2-counting${at}-${theme}`);
       });

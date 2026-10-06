@@ -181,4 +181,62 @@ describe("what the status region of the new page says", () => {
       "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: x80 is not a position. Correct the file, or fetch it again, and open it again.",
     ]);
   });
+
+  test("a count that ends with the focus on Stop is not said, since the focus moves onto its lines", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const running = summaryStatus(store.getState());
+    if (running.kind !== "running") throw new Error("not running");
+    const before = store.getState();
+    sent[0]?.({
+      kind: "done",
+      key: running.key,
+      result: {
+        analysis: "variantsSummary",
+        passStats: { numVars: 500, filtering: {} },
+        chroms: ["chr1"],
+        numVarsPerChrom: new Uint32Array([500]),
+      },
+    });
+    await settled();
+    expect(
+      announcementsOf(before, store.getState(), { focusOnCountButton: true }),
+    ).toEqual([]);
+  });
+
+  test("a count refused with the focus on Stop is not said, since the focus moves onto its words", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const before = store.getState();
+    sent[0]?.({
+      kind: "failed",
+      error: {
+        kind: "popnei",
+        message: "line 84 of the VCF, the column POS: `x80` is not a position",
+      },
+    });
+    await settled();
+    expect(
+      announcementsOf(before, store.getState(), { focusOnCountButton: true }),
+    ).toEqual([]);
+  });
+
+  test("a worker that stopped with the focus on Stop is said, since Count again keeps the focus in place of Stop", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const before = store.getState();
+    sent[0]?.({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "the worker stopped" },
+    });
+    await settled();
+    expect(
+      announcementsOf(before, store.getState(), { focusOnCountButton: true }),
+    ).toEqual([
+      "The count stopped unexpectedly. Count again. If it stops again, open panel.vcf.gz again.",
+    ]);
+  });
 });

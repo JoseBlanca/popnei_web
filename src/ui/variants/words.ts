@@ -81,52 +81,69 @@ export function individualsLine(numIndividuals: number): string {
   return `Individuals: ${grouped(numIndividuals)}`;
 }
 
-/** The line of the individuals while the file is read, before its
-    seconds. */
-export const READING_LINE = "Individuals: reading the file.";
+/* Each line of the box keeps one row at 320 pixels in every state of
+   the read and of the count, so that the box keeps its height when a
+   new ploidy reads the file again under a press of the pointer: the
+   words of a value not known yet are short. */
 
-/** The line of the variants once counted, and for a VCF read with only
-    the passed ones, which: "Variants: 1,200 (only those with PASS or . in
-    the FILTER column)". */
-export function variantsLine(
-  numVars: number,
-  readOptions: VcfReadOptions | null,
-): string {
-  const line = `Variants: ${grouped(numVars)}`;
-  return readOptions?.onlyPassed === true
-    ? `${line} (only those with PASS or . in the FILTER column)`
-    : line;
+/** The lines of the individuals, the variants, the chromosomes and the
+    ploidy of a `.nei` file while the file is read. */
+export const INDIVIDUALS_READING = "Individuals: reading…";
+export const VARIANTS_READING = "Variants: reading…";
+export const CHROMOSOMES_READING = "Chromosomes: reading…";
+export const PLOIDY_READING = "Ploidy: reading…";
+
+/** The line under the lines while the file is read, before its
+    seconds. */
+export const READING_TIME_LINE = "Reading the file.";
+
+/** The line of the variants once counted: "Variants: 1,200". Which
+    variants were read, the box of the passed variants under the box says,
+    and its change reads the file again. */
+export function variantsLine(numVars: number): string {
+  return `Variants: ${grouped(numVars)}`;
 }
+
+/** The line of the variants while they are counted: "Variants:
+    counting… 6%", with no share before the first progress. */
+export function countingVariantsLine(share: number | null): string {
+  return share === null
+    ? "Variants: counting…"
+    : `Variants: counting… ${String(share)}%`;
+}
+
+/** The line of the chromosomes while the variants are counted. */
+export const CHROMOSOMES_COUNTING = "Chromosomes: counting…";
 
 /** The line of the chromosomes once counted: "Chromosomes: 1". */
 export function chromosomesLine(numChroms: number): string {
   return `Chromosomes: ${grouped(numChroms)}`;
 }
 
-/** The lines of the variants and the chromosomes before their count. */
-export const VARIANTS_NOT_COUNTED = "Variants: not counted yet";
-export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted yet";
+/** The lines of the variants and the chromosomes after a Stop or a
+    failure of their count. */
+export const VARIANTS_NOT_COUNTED = "Variants: not counted";
+export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
 
 /** The line of the ploidy: for a VCF, the one of the field Default
     ploidy, which the page does not check, since the file does not give it
     and the count does not read the genotypes; for a `.nei` file, the
-    file's. */
+    file's. One row at 320 pixels only for a `.nei` file; for a VCF two in
+    every state, since it does not change with the state. */
 export function ploidyLine(
   ploidy: number,
   readOptions: VcfReadOptions | null,
 ): string {
   return readOptions === null
     ? `Ploidy: ${String(ploidy)} (given by the file)`
-    : `Ploidy: ${String(ploidy)} (the ${DEFAULT_PLOIDY_LABEL}, not checked against the genotypes)`;
+    : `Ploidy: ${String(ploidy)} (as given, not checked against the genotypes)`;
 }
-
-/** The line of the ploidy of a `.nei` file being read. */
-export const PLOIDY_NOT_READ = "Ploidy: not read yet";
 
 /** The button that counts again after a Stop or a failure. */
 export const COUNT_AGAIN_LABEL = "Count again";
 
-/** The line of a count stopped, and what the status region says of it. */
+/** What the status region says of a count stopped, whose lines then say
+    "not counted" beside Count again. */
 export const STOPPED_TEXT =
   "Counting the variants was stopped. Count again counts them from the start.";
 
@@ -260,25 +277,26 @@ export function readingText(variants: VariantSource): string {
 /** The name of the bar of the count. */
 export const COUNT_BAR_LABEL = "Counting the variants";
 
-/** The line under the bar of the count: "Counting the variants · 6% · 12
-    seconds so far", or with no share before the first progress; the
-    seconds as the line of a read gives them. */
-export function countingText(share: number | null, seconds: number): string {
-  const time = `${counted(seconds, "second")} so far`;
-  return share === null
-    ? `${COUNT_BAR_LABEL} · ${time}`
-    : `${COUNT_BAR_LABEL} · ${String(share)}% · ${time}`;
+/** What the page knows of the focus as the store changes. */
+export interface FocusNow {
+  /** Whether the focus is on Stop or Count again of the count, which,
+      when the count ends with no button to show, moves the focus onto
+      its lines or the words of its failure, for a screen reader to read
+      them. */
+  readonly focusOnCountButton: boolean;
 }
 
 /**
  * What the status region says of a change of the store from `before` to
  * `after`, which the user may not be looking at: the file read, with its
  * individuals, or why it was not; and the count done, with its numbers,
- * or why it failed.
+ * or why it failed. The end of a count that moves the focus onto its own
+ * words, `focus` says, is not said again.
  */
 export function announcementsOf(
   before: AppState<JobResult, unknown>,
   after: AppState<JobResult, unknown>,
+  focus: FocusNow = { focusOnCountButton: false },
 ): readonly string[] {
   const texts: string[] = [];
   const variants = after.project.variants;
@@ -300,6 +318,13 @@ export function announcementsOf(
   }
   const then = summaryStatus(before);
   const now = summaryStatus(after);
+  // The button goes with the focus at a count done and at a failure
+  // Count again cannot mend, and the focus moves onto those words.
+  const focusMoves =
+    focus.focusOnCountButton &&
+    (now.kind === "done" ||
+      (now.kind === "error" && !countAgainMends(now.error)));
+  if (focusMoves) return texts;
   if (
     now.kind === "done" &&
     then.kind !== "done" &&

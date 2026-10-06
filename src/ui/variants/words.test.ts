@@ -8,7 +8,7 @@ import {
   chromosomesLine,
   countAgainMends,
   countedText,
-  countingText,
+  countingVariantsLine,
   failedText,
   individualsLine,
   nameAndSizeText,
@@ -39,9 +39,9 @@ describe("the words of the page that opens a variants file", () => {
     );
   });
 
-  test("the ploidy of a VCF is the one of the field Default ploidy, not checked against the genotypes; that of a .nei file the file's", () => {
+  test("the ploidy of a VCF is the one given, not checked against the genotypes; that of a .nei file the file's", () => {
     expect(ploidyLine(4, { ploidy: 4, onlyPassed: true })).toBe(
-      "Ploidy: 4 (the Default ploidy, not checked against the genotypes)",
+      "Ploidy: 4 (as given, not checked against the genotypes)",
     );
     expect(ploidyLine(2, null)).toBe("Ploidy: 2 (given by the file)");
   });
@@ -56,23 +56,13 @@ describe("the words of the page that opens a variants file", () => {
     expect(chromosomesLine(1)).toBe("Chromosomes: 1");
   });
 
-  test("the variants of a VCF read with only the passed ones say so, and the others are the number alone", () => {
-    expect(variantsLine(1200, { ploidy: 2, onlyPassed: true })).toBe(
-      "Variants: 1,200 (only those with PASS or . in the FILTER column)",
-    );
-    expect(variantsLine(1200, { ploidy: 2, onlyPassed: false })).toBe(
-      "Variants: 1,200",
-    );
-    expect(variantsLine(1200, null)).toBe("Variants: 1,200");
+  test("the variants are the number alone, since the box of the passed variants says which are read", () => {
+    expect(variantsLine(1200)).toBe("Variants: 1,200");
   });
 
-  test("the line of a count under way says what is counted and that its time is elapsed", () => {
-    expect(countingText(6, 12)).toBe(
-      "Counting the variants · 6% · 12 seconds so far",
-    );
-    expect(countingText(null, 1)).toBe(
-      "Counting the variants · 1 second so far",
-    );
+  test("the line of the variants while they are counted says the share done, once known", () => {
+    expect(countingVariantsLine(6)).toBe("Variants: counting… 6%");
+    expect(countingVariantsLine(null)).toBe("Variants: counting…");
   });
 
   test("the count, with its nouns in the singular and the plural", () => {
