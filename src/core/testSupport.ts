@@ -63,6 +63,7 @@ import type {
   VariantDistrib,
   VariantFilterKind,
   VariantsSummaryResult,
+  FilterColumn,
   WriteJob,
   Written,
 } from "../worker/protocol.ts";
@@ -1903,12 +1904,15 @@ export function fiveIndividualsProject(
  * application asks popnei for, 1,000 over 0 to 1, every variant in the
  * first, so that every threshold of up to three decimals is an edge, and
  * the statistics of `individuals`, each with no missing genotype and a
- * heterozygosity of 0.25.
+ * heterozygosity of 0.25; and the counts of the FILTER column,
+ * `filterColumn`, `null` by default, as for a `.nei` file that does not
+ * record them.
  */
 export function summaryResult(
   chroms: readonly string[],
   numVarsPerChrom: readonly number[],
   individuals: readonly string[] = ["s000", "s001"],
+  filterColumn: FilterColumn | null = null,
 ): VariantsSummaryResult {
   const numVars = numVarsPerChrom.reduce((sum, count) => sum + count, 0);
   const passStats = { numVars, filtering: {} };
@@ -1939,5 +1943,6 @@ export function summaryResult(
       passStats,
     },
     passStats,
+    filterColumn,
   };
 }

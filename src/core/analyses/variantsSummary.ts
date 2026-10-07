@@ -17,8 +17,9 @@
  * the histograms of `calcPerVarDistribs`, with the bins, the range and the
  * least number of individuals of the histograms of the variants of
  * variantChecks.ts, over every individual; and the statistics of
- * `calcPerIndividualStats`. Its pass reads the genotypes, so a file whose
- * genotypes popnei refuses gives none of the three.
+ * `calcPerIndividualStats`; and, when the file recorded the FILTER of its
+ * variants, how many passed it and how many failed. Its pass reads the
+ * genotypes, so a file whose genotypes popnei refuses gives none of them.
  */
 
 import type { Project } from "../project.ts";
@@ -55,9 +56,9 @@ export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
   defaults: Object.freeze({}),
   // 2 since the result holds the histograms of the variants and the
   // statistics of each individual (docs/plans/live-stats.md), 3 since
-  // their bins are 1,000 that hold their right edge
-  // (docs/plans/popnei-0.2.2.md).
-  keyVersion: 3,
+  // their bins are 1,000 that hold their right edge, 4 since it holds the
+  // variants that failed their FILTER (docs/plans/popnei-0.2.2.md).
+  keyVersion: 4,
   filtersRead: Object.freeze({ variants: false, individuals: false }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -84,6 +85,16 @@ export function numChroms(result: JobResult): number {
     );
   }
   return r.numVarsPerChrom.filter((count) => count > 0).length;
+}
+
+/**
+ * The variants of the file that failed their FILTER, of a result or of a
+ * result so far: popnei's count, or `null` when the file did not record
+ * the FILTER of its variants, a `.nei` file written before format 1.2.
+ * Throws a defect for a result of another analysis.
+ */
+export function numFilterFailures(result: JobResult): number | null {
+  return variantsSummaryResultOf(result).filterColumn?.failed ?? null;
 }
 
 /** Nothing beyond the load, which every key holds: no filter, which
@@ -139,7 +150,9 @@ function numCheckNumbers(): number {
  * each chromosome, one window per chromosome; the histograms of the
  * variants, in `VARIANT_BINS` bins, 40, and not the 1,000 of the job,
  * which the page sums, holding their right edge as those of the job do;
- * and the statistics of each individual. Throws a
+ * the statistics of each individual; and, when the file recorded the
+ * FILTER of its variants, those that failed it, from the counts of
+ * `filter_passed` over a pass of the file opened again. Throws a
  * defect on a project with no variants file, since it is asked only of an
  * analysis that has run.
  */
@@ -174,6 +187,15 @@ function script(p: Project): string {
     '    "missing_genotypes": individual_stats.missing_gt_rate,',
     '    "observed_heterozygosity": individual_stats.obs_het_rate,',
     "}).to_string())",
+    "# The variants that failed their FILTER: neither PASS nor a dot",
+    "if variants_as_read.keeps_passed:",
+    `    variants_passed = ${open}`,
+    "    variants_passed.filter_passed()",
+    "    passed_blocks = variants_passed.iter_blocks(fields=())",
+    "    for _ in passed_blocks:",
+    "        pass",
+    '    passed_counts = passed_blocks.pass_stats.filtering["passed"]',
+    '    print("Failed their FILTER:", passed_counts.vars_processed - passed_counts.vars_kept)',
   ]
     .map((line) => `${line}\n`)
     .join("");

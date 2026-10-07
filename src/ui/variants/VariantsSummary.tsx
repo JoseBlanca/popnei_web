@@ -3,12 +3,16 @@
  * (docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
  * layouts and decisions of 6 October 2026). It says what is known of the
  * file open, line by line: its name and size, its individuals, its
- * variants, its chromosomes and its ploidy, the file's. What the opening
- * knows is shown at once; the individuals and the ploidy once the file is
- * read; the variants and the chromosomes once they are counted, by the
- * one pass that also calculates the statistics of the file, which starts
- * by itself (autoRuns.ts; docs/plans/live-stats.md), with the variants
- * read so far while it runs, from its results so far. Under the lines, a
+ * variants, the variants that failed their FILTER, its chromosomes and
+ * its ploidy, the file's. What the opening knows is shown at once; the
+ * individuals and the ploidy once the file is read; the variants, the
+ * FILTER failures and the chromosomes once they are counted, by the one
+ * pass that also calculates the statistics of the file, which starts by
+ * itself (autoRuns.ts; docs/plans/live-stats.md), with those of the
+ * variants read so far while it runs, from its results so far. The line
+ * of the FILTER failures is there throughout for a VCF, and for a `.nei`
+ * file once a result says the file recorded the FILTER
+ * (docs/plans/popnei-0.2.2.md, "The FILTER failures"). Under the lines, a
  * row of one height in every state holds the seconds of the read, the bar
  * of the pass running with the page's one Stop, or Start again.
  *
@@ -44,6 +48,7 @@ import {
   CHROMOSOMES_NOT_COUNTED,
   CHROMOSOMES_READING,
   COUNT_BAR_LABEL,
+  FAILURES_READING,
   INDIVIDUALS_READING,
   INFO_NAME,
   PLOIDY_READING,
@@ -56,6 +61,7 @@ import {
   chromosomesSoFarLine,
   countingVariantsLine,
   failedText,
+  failuresLineOf,
   individualsLine,
   nameAndSizeText,
   openFailure,
@@ -159,6 +165,9 @@ function Load({
         <>
           <p className={classOf(styles, "line")}>{INDIVIDUALS_READING}</p>
           <p className={classOf(styles, "line")}>{VARIANTS_READING}</p>
+          {variants.format === "vcf" && (
+            <p className={classOf(styles, "line")}>{FAILURES_READING}</p>
+          )}
           <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
           <p className={classOf(styles, "line")}>{PLOIDY_READING}</p>
           <div className={classOf(styles, "progress")}>
@@ -202,6 +211,7 @@ function Load({
             onCountButton={onCountButton}
             ploidy={ploidyLine(read.ploidy)}
             refused={refused}
+            isVcf={variants.format === "vcf"}
           />
         </>
       )}
@@ -218,6 +228,9 @@ interface CountProps {
   readonly ploidy: string;
   /** Whether the words of a file not opened follow the lines. */
   readonly refused: boolean;
+  /** Whether the file is a VCF, which always records the FILTER of its
+      variants. */
+  readonly isVcf: boolean;
 }
 
 /** The lines of the variants and of the chromosomes, in each state of
@@ -228,6 +241,7 @@ function Count({
   onCountButton,
   ploidy,
   refused,
+  isVcf,
 }: CountProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
@@ -273,7 +287,11 @@ function Count({
         tabIndex={-1}
         className={classOf(styles, "countLines")}
       >
-        <CountLines status={status} stopped={button?.kind === "run"} />
+        <CountLines
+          status={status}
+          stopped={button?.kind === "run"}
+          isVcf={isVcf}
+        />
       </div>
       <p className={classOf(styles, "line")}>{ploidy}</p>
       {/* The row goes when it holds nothing and words of a problem
@@ -339,11 +357,20 @@ interface CountLinesProps {
   readonly status: AnalysisStatus<JobResult>;
   /** Whether the count was stopped: Start again is offered. */
   readonly stopped: boolean;
+  /** Whether the file is a VCF. */
+  readonly isVcf: boolean;
 }
 
-/** The lines of the variants and of the chromosomes: their numbers, or
-    the state of their count in their place. */
-function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
+/** The lines of the variants, of the FILTER failures and of the
+    chromosomes: their numbers, or the state of their count in their
+    place; no line of the FILTER failures for a file that did not record
+    them. */
+function CountLines({
+  status,
+  stopped,
+  isVcf,
+}: CountLinesProps): React.JSX.Element {
+  const failures = failuresLineOf(status, stopped, isVcf);
   let lines: readonly [string, string];
   switch (status.kind) {
     case "running":
@@ -385,6 +412,9 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
   return (
     <>
       <p className={classOf(styles, "line")}>{lines[0]}</p>
+      {failures !== null && (
+        <p className={classOf(styles, "line")}>{failures}</p>
+      )}
       <p className={classOf(styles, "line")}>{lines[1]}</p>
     </>
   );

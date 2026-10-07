@@ -68,12 +68,15 @@ leaves out the variants on each of them for now (the owner, 6 October
 October 2026 (docs/plans/one-pass.md). Every variant, whatever its
 FILTER column, stays in the count and the statistics, since the FILTER
 filter as a filter the user sets comes with the filters of that page.
-How many variants of a VCF failed their FILTER, those whose FILTER
-column is neither PASS nor a dot, 300 of 1,200 in low_qual.vcf.gz, is
-not shown: a second pass over the file counted them until 7 October
-2026, when the owner took it out so that the page reads each file once,
-and the count waits for popnei's summary to give it from its own pass,
-popnei issue #12 (JoseBlanca/popnei).
+How many variants failed their FILTER, those whose FILTER column is
+neither PASS nor a dot, is a line of the box of the file, "FILTER
+failures: 300" for low_qual.vcf.gz, 0 for panel.vcf.gz, counted by the
+same one pass from popnei 0.2.2 (docs/plans/popnei-0.2.2.md; popnei
+issue #12), and of the variants read so far while the pass runs. It is
+of every variant of the file. A `.nei` file has the line when it
+recorded the FILTER of its variants, as one written by popnei 0.2.2 from
+a VCF does, and no line otherwise, as panel.nei, written before format
+1.2 of the vars file.
 
 On popgen2.html the distributions of the open file, four of the
 variants and two of the individuals, each carry a threshold that keeps

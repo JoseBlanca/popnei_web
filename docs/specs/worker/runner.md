@@ -51,7 +51,13 @@ far to `toldSoFar` of the run (below, "The result so far"). Revised on
 a second pass over the file, so that popgen2.html reads each file once
 (`docs/plans/one-pass.md`): the job `filterFailures` and the step
 `filterPassed` of the runner's `Steps` are removed; the count waits for
-popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei). The
+popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei).
+Revised on 7 October 2026 for popnei 0.2.2, whose summary gives it
+(`docs/plans/popnei-0.2.2.md`, "The FILTER failures"): the summary asks
+`calcVariantsSummary` for `filterColumn: {}` whenever `keepsPassed` of
+the open `Variants` is true, and its result, and each result so far,
+carries `filterColumn`, or `null` for a source that did not record the
+FILTER. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -632,7 +638,10 @@ the variants, `minNumIndividuals`, 0, `numBins`, 1,000, and `range`,
 ONE_WINDOW_PER_CHROM, chromLengths: {} }, perVar: { stats:
 ["missing_rate", "maf", "obs_het", "unbiased_exp_het"],
 minNumIndividuals, histKwargs: { numBins, range, closed: "right" } },
-perIndividual: {} })`, the bins holding their right edge,
+perIndividual: {}, filterColumn: {} })`, `filterColumn` only when
+`keepsPassed` of the `Variants` is true, since popnei refuses it for a
+source that did not record the FILTER of its variants, the bins holding
+their right edge,
 `VARIANT_BINS_CLOSED` of protocol.ts, as those of a `variantChecks` job
 do from 7 October 2026 (`docs/plans/popnei-0.2.2.md`), one pass that reads the genotypes, and gives back the chromosomes
 and their counts from the density, as one window per chromosome from the
@@ -640,7 +649,11 @@ position 1 whose counts add up to the variants of the pass, else a
 defect; `perVar`, made of popnei's `perVar` as the result of a
 `variantChecks` job is; `perIndividual`, made of popnei's
 `perIndividual` as that of an `individualChecks` job is, a defect when its names are not those the
-open gave; and `passStats`. popnei gives each part the same to the bit
+open gave; `passStats`; and `filterColumn`, popnei's counts of the
+variants that passed and failed their FILTER, or `null` when they were
+not asked for, a defect when popnei gives them unasked or not when asked:
+300 failed of 1,200 for `low_qual.vcf.gz` read with every variant, 0 for
+`panel.vcf.gz`, `null` for `panel.nei`. popnei gives each part the same to the bit
 as its own call; under node on `panel.vcf.gz`, `panel.nei` and
 `tetraploid.vcf.gz` the two parts equal the results of a `variantChecks`
 job with no list and of an `individualChecks` job on the same runner

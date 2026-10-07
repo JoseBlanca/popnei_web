@@ -162,7 +162,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 11, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 12, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -200,7 +200,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 11 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 12 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -523,7 +523,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 11,
+        protocol: 12,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -538,7 +538,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 11 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 12 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -596,17 +596,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 12 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 12 })).toEqual({
+  test("a ready of protocol 13 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 13 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 12 },
+      error: { kind: "otherProtocol", found: 13 },
     });
   });
 
-  test("a ready of protocol 12 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 12 })).toEqual({
+  test("a ready of protocol 13 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 13 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 12 },
+      error: { kind: "otherProtocol", found: 13 },
     });
   });
 
@@ -614,18 +614,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 12 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 13 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 12,
+          protocol: 13,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 12 },
+        error: { kind: "otherProtocol", found: 13 },
       });
     },
   );
@@ -1367,6 +1367,10 @@ const variantsSummaryResult: fc.Arbitrary<VariantsSummaryResult> = fc
         passStats: r.passStats,
       })),
       passStats,
+      filterColumn: fc.option(
+        fc.record({ passed: fc.nat(), failed: fc.nat() }),
+        { nil: null },
+      ),
     }),
   );
 const pcaResult: fc.Arbitrary<PcaResult> = fc
@@ -1486,7 +1490,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(11),
+    protocol: fc.constant(12),
     popneiVersion: text,
   }),
   fc.record({
@@ -1637,7 +1641,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(11) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(12) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -2756,8 +2760,21 @@ describe("PA2 D1 the messages of the LD decay", () => {
     },
   );
 
-  test("the version of the messages is 11", () => {
-    expect(PROTOCOL_VERSION).toBe(11);
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 11, before the summary gave the FILTER failures, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 11 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 11 },
+      });
+    },
+  );
+
+  test("the version of the messages is 12", () => {
+    expect(PROTOCOL_VERSION).toBe(12);
   });
 });
 
@@ -3346,6 +3363,7 @@ const VARIANTS_SUMMARY_RESULT: VariantsSummaryResult = {
     passStats: SUMMARY_PASS,
   },
   passStats: SUMMARY_PASS,
+  filterColumn: { passed: 400, failed: 100 },
 };
 
 describe("open-variants 1 the messages of the summary of the variants file", () => {

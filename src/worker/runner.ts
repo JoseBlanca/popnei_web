@@ -1065,8 +1065,12 @@ interface SoFar {
  * each one with 0 variants, and a variant past the length its header
  * gives would refuse a file otherwise usable); `perVar`, the histograms
  * of the variants with the bins of the job, over every individual as one
- * population; and `perIndividual`. Each part is the same to the bit as
- * its own call gives it. The job has no filter.
+ * population; `perIndividual`; and `filterColumn`, the variants that
+ * passed and failed their FILTER, whenever the source recorded it,
+ * `keepsPassed` (docs/plans/popnei-0.2.2.md, "The FILTER failures"), the
+ * result's `filterColumn` `null` otherwise. Each part is the same to the
+ * bit as its own call gives it. The job has no filter, so the counts are
+ * of every variant the source gives.
  *
  * While the pass runs, popnei gives the summary over the variants read so
  * far every `soFarEvery` seconds, and `toldSoFar` is given each, made as
@@ -1082,38 +1086,53 @@ function runVariantsSummary(
   individuals: readonly string[],
   soFar: SoFar,
 ): Answer<JobResult> {
-  const answer = passOf(pass, (variants, ours) =>
-    calcVariantsSummary(variants, {
+  // Whether the counts of the FILTER column are asked for, which popnei
+  // refuses for a source that did not record them.
+  let filterAsked = false;
+  const answer = passOf(pass, (variants, ours) => {
+    filterAsked = variants.keepsPassed;
+    return calcVariantsSummary(variants, {
       density: { windowSize: ONE_WINDOW_PER_CHROM, chromLengths: {} },
       perVar: perVarOptionsOf(job),
       perIndividual: {},
+      ...(filterAsked && { filterColumn: {} }),
       onSoFar: ours((summary: VariantsSummary) => {
         soFar.toldSoFar(
-          copiedSummary(summaryResultOf(summary, job, individuals)),
+          copiedSummary(
+            summaryResultOf(summary, job, individuals, filterAsked),
+          ),
         );
       }),
       ...(soFar.soFarEvery !== null && { soFarEvery: soFar.soFarEvery }),
-    }),
-  );
+    });
+  });
   if (answer.kind !== "ok") {
     return answer;
   }
   return {
     kind: "ok",
-    value: summaryResultOf(answer.value, job, individuals),
+    value: summaryResultOf(answer.value, job, individuals, filterAsked),
   };
 }
 
 /** The result of the summary of the variants file made of popnei's
-    summary, a result so far or the final one. Throws a defect when popnei
-    gives no value of a part it was asked for. */
+    summary, a result so far or the final one, with the counts of the
+    FILTER column when they were asked for, `filterAsked`. Throws a defect
+    when popnei gives no value of a part it was asked for, or gives the
+    counts unasked. */
 function summaryResultOf(
   summary: VariantsSummary,
   job: VariantsSummaryJob,
   individuals: readonly string[],
+  filterAsked: boolean,
 ): VariantsSummaryResult {
-  const { density, perVar, perIndividual, passStats } = summary;
-  if (density === null || perVar === null || perIndividual === null) {
+  const { density, perVar, perIndividual, passStats, filterColumn } = summary;
+  if (
+    density === null ||
+    perVar === null ||
+    perIndividual === null ||
+    (filterColumn === null) === filterAsked
+  ) {
     throw new Error(
       "popnei_web defect: calcVariantsSummary gave no value of a part it was asked for",
     );
@@ -1128,6 +1147,10 @@ function summaryResultOf(
       job.filters,
     ),
     passStats: passStatsOf(passStats, job.filters),
+    filterColumn:
+      filterColumn === null
+        ? null
+        : { passed: filterColumn.passed, failed: filterColumn.failed },
   };
 }
 

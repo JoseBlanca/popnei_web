@@ -19,6 +19,9 @@ import {
   ploidyLine,
   refusalText,
   variantsLine,
+  FAILURES_COUNTING,
+  FAILURES_NOT_COUNTED,
+  failuresLineOf,
 } from "./words.ts";
 import { hasChainButton, startAgainMends } from "./chain.ts";
 
@@ -375,5 +378,84 @@ describe("live-stats 3 the button of the chain", () => {
         { kind: "locked", reason: "a .nei file" },
       ] satisfies readonly AnalysisStatus<JobResult>[]),
     ).toBe(false);
+  });
+});
+
+describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
+  const KEY = keyFromWire("0".repeat(64));
+  const LOW_QUAL = summaryResult(["1"], [1200], ["s000"], {
+    passed: 900,
+    failed: 300,
+  });
+  const SO_FAR = summaryResult(["1"], [400], ["s000"], {
+    passed: 325,
+    failed: 75,
+  });
+  const NEI = summaryResult(["1"], [1200]);
+  const done = (result: JobResult): AnalysisStatus<JobResult> => ({
+    kind: "done",
+    key: KEY,
+    result,
+    warnings: [],
+    check: null,
+  });
+  const running = (soFar: JobResult | null): AnalysisStatus<JobResult> => ({
+    kind: "running",
+    key: KEY,
+    runId: 1,
+    progress: null,
+    waitsForStatistics: false,
+    soFar,
+  });
+
+  test("done: the count of the result, 300 of low_qual.vcf.gz, and no line for a file that did not record the FILTER", () => {
+    expect(failuresLineOf(done(LOW_QUAL), false, true)).toBe(
+      "FILTER failures: 300",
+    );
+    expect(
+      failuresLineOf(
+        done(
+          summaryResult(["1"], [1200], ["s000"], { passed: 1200, failed: 0 }),
+        ),
+        false,
+        true,
+      ),
+    ).toBe("FILTER failures: 0");
+    expect(failuresLineOf(done(NEI), false, false)).toBeNull();
+    // A .nei file that records its FILTER has the line from its result.
+    expect(failuresLineOf(done(LOW_QUAL), false, false)).toBe(
+      "FILTER failures: 300",
+    );
+  });
+
+  test("running: counting… for a VCF before the first result so far, then the count so far", () => {
+    expect(failuresLineOf(running(null), false, true)).toBe(FAILURES_COUNTING);
+    expect(failuresLineOf(running(null), false, false)).toBeNull();
+    expect(failuresLineOf(running(SO_FAR), false, true)).toBe(
+      "FILTER failures: 75 so far",
+    );
+    expect(failuresLineOf(running(SO_FAR), false, false)).toBe(
+      "FILTER failures: 75 so far",
+    );
+    expect(failuresLineOf(running(NEI), false, false)).toBeNull();
+  });
+
+  test("stopped, about to start, failed or locked: the words of a VCF, nothing for a .nei file", () => {
+    const ready: AnalysisStatus<JobResult> = { kind: "ready", key: KEY };
+    const error: AnalysisStatus<JobResult> = {
+      kind: "error",
+      key: KEY,
+      error: { kind: "refused", message: "x" },
+      ofStatistics: false,
+      waited: false,
+    };
+    expect(failuresLineOf(ready, true, true)).toBe(FAILURES_NOT_COUNTED);
+    expect(failuresLineOf(ready, false, true)).toBe(FAILURES_COUNTING);
+    expect(failuresLineOf(error, false, true)).toBe(FAILURES_NOT_COUNTED);
+    expect(failuresLineOf({ kind: "locked", reason: "x" }, false, true)).toBe(
+      FAILURES_NOT_COUNTED,
+    );
+    expect(failuresLineOf(ready, true, false)).toBeNull();
+    expect(failuresLineOf(error, false, false)).toBeNull();
   });
 });

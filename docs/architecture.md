@@ -1299,10 +1299,13 @@ The page and each worker talk through typed messages
   2026 a count of the variants of a VCF that failed their FILTER
   followed it in the group, a second pass over the file under popnei's
   step `filterPassed`, and the owner took it out the same day
-  (`docs/plans/one-pass.md`). That count waits for popnei's
-  `calcVariantsSummary` to give it from its own pass, popnei issue #12
-  (JoseBlanca/popnei), when it comes in the summary's result and needs
-  no analysis of its own. The summary keeps every variant, whatever its
+  (`docs/plans/one-pass.md`). From popnei 0.2.2 the count comes in the
+  summary's result, from its own pass, popnei issue #12, and needs no
+  analysis of its own: the runner asks `calcVariantsSummary` for
+  `filterColumn` whenever the open variants recorded their FILTER,
+  `keepsPassed`, and the result carries `filterColumn`, the variants
+  that passed and failed, or `null` (`docs/plans/popnei-0.2.2.md`, "The
+  FILTER failures"). The summary keeps every variant, whatever its
   FILTER column. A member of a group can be `locked`, its project
   lacking what it needs: a locked member neither starts nor holds back
   the group, and the box offers no Start again for it; the group of
