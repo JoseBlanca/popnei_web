@@ -926,10 +926,14 @@ const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   obs_het: true,
   ld: true,
 };
-const PASS_FILTER_KINDS: Readonly<Record<PassFilterKind, true>> = {
-  ...VARIANT_FILTER_KINDS,
-  passed: true,
-};
+/** The one kind of the counts of the count of the FILTER failures, which
+    no other result holds. */
+const PASSED_KIND: Readonly<Record<"passed", true>> = { passed: true };
+
+/** The kinds of filter the counts of a pass of a result may hold: those
+    of the variants, or `"passed"` alone. */
+type FilteringKinds =
+  Readonly<Record<VariantFilterKind, true>> | typeof PASSED_KIND;
 const READ_KINDS: Readonly<Record<IndividualsFileRead["kind"], true>> = {
   read: true,
   failed: true,
@@ -2218,22 +2222,13 @@ function checkFilterFailuresResult(
   if (wrong !== null) {
     return wrong;
   }
-  const checked = field(record, "passStats", place, checkPassStats);
+  const checked = field(record, "passStats", place, (v, p) =>
+    checkPassStats(v, p, PASSED_KIND),
+  );
   if (!checked.ok) {
     return checked;
   }
   const filtering = inner(inner(place, "passStats"), "filtering");
-  const others = Object.keys(checked.value.filtering).filter(
-    (kind) => kind !== "passed",
-  );
-  if (others.length > 0) {
-    return refused({
-      kind: "extraFields",
-      messageKind: filtering.messageKind,
-      path: filtering.path,
-      fields: others,
-    });
-  }
   if (checked.value.filtering.passed === undefined) {
     return refused({
       kind: "missingFields",
@@ -2343,8 +2338,13 @@ function checkWritten(value: unknown, place: Place): Checked<Written<Blob>> {
 }
 
 /** The counts of a pass: `numVars`, and the counts of each filter under
-    its kind, a `PassFilterKind`, in the order they came. */
-function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
+    its kind, one of `kinds`, the kinds of the filters of the variants
+    unless given, in the order they came. */
+function checkPassStats(
+  value: unknown,
+  place: Place,
+  kinds: FilteringKinds = VARIANT_FILTER_KINDS,
+): Checked<PassStats> {
   const record = objectWith(value, place, ["numVars", "filtering"]);
   if (!record.ok) {
     return record;
@@ -2353,24 +2353,27 @@ function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
   if (!numVars.ok) {
     return numVars;
   }
-  const filtering = field(record.value, "filtering", place, checkFiltering);
+  const filtering = field(record.value, "filtering", place, (v, p) =>
+    checkFiltering(v, p, kinds),
+  );
   if (!filtering.ok) {
     return filtering;
   }
   return accepted({ numVars: numVars.value, filtering: filtering.value });
 }
 
-/** The counts of the filters of a pass, an object whose fields are
-    `PassFilterKind`s, kept in their order. */
+/** The counts of the filters of a pass, an object whose fields are of
+    `kinds`, kept in their order. */
 function checkFiltering(
   value: unknown,
   place: Place,
+  kinds: FilteringKinds,
 ): Checked<PassStats["filtering"]> {
   if (!isRecord(value)) {
     return wrongType(place, "an object", value);
   }
   const names = Object.keys(value);
-  const extra = names.filter((name) => !isOneOf(name, PASS_FILTER_KINDS));
+  const extra = names.filter((name) => !Object.hasOwn(kinds, name));
   if (extra.length > 0) {
     return refused({
       kind: "extraFields",
@@ -2381,7 +2384,7 @@ function checkFiltering(
   }
   const filtering: Partial<Record<PassFilterKind, FilteringStats>> = {};
   for (const name of names) {
-    if (!isOneOf(name, PASS_FILTER_KINDS)) {
+    if (!isPassFilterKind(name) || !Object.hasOwn(kinds, name)) {
       continue;
     }
     const stats = field(value, name, place, checkFilteringStats);
@@ -3573,6 +3576,11 @@ function isOneOf<K extends string>(
   values: Readonly<Record<K, true>>,
 ): value is K {
   return Object.hasOwn(values, value);
+}
+
+/** Whether `name` is a kind of the counts of a pass. */
+function isPassFilterKind(name: string): name is PassFilterKind {
+  return name === "passed" || isOneOf(name, VARIANT_FILTER_KINDS);
 }
 
 function isRecord(value: unknown): value is object {

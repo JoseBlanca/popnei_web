@@ -1278,7 +1278,6 @@ const passStats: fc.Arbitrary<PassStats> = fc.record({
       obs_het: filteringStats,
       maf: filteringStats,
       ld: filteringStats,
-      passed: filteringStats,
     },
     { requiredKeys: [] },
   ),
@@ -3609,7 +3608,7 @@ describe("live-stats 3 the messages of the count of the FILTER failures", () => 
     expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
   });
 
-  test("passed is a kind of the counts of any pass, which the counts of the filters accept too", () => {
+  test("passed in the counts of a result of another analysis is extraFields", () => {
     const message = resultMessage({
       ...FILTER_COUNTS_RESULT,
       passStats: {
@@ -3620,7 +3619,15 @@ describe("live-stats 3 the messages of the count of the FILTER failures", () => 
         },
       },
     });
-    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+    expect(parseFromRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.passStats.filtering",
+        fields: ["passed"],
+      },
+    });
   });
 
   test("a job with a filter is wrongLength, and one with a list of individuals extraFields", () => {

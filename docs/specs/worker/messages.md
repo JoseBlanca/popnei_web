@@ -54,9 +54,8 @@ checked as `result` is, and `PROTOCOL_VERSION` 9. Revised on 7 October
 2026 for the count of the FILTER failures (`docs/plans/live-stats.md`,
 phase 3): the job `filterFailures`, of exactly `analysis`, `fileId` and
 an empty `filters`, and its result, of exactly `analysis` and
-`passStats`, whose `filtering` holds `passed` and nothing else; the
-fields of any `passStats.filtering` are `PassFilterKind`s, `passed`
-among them; and `PROTOCOL_VERSION` 10.
+`passStats`, whose `filtering` holds `passed` and nothing else, a kind
+no other result accepts; and `PROTOCOL_VERSION` 10.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -425,10 +424,11 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   each individual are as long as its `individuals`, a list of texts; the `counts` of each
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
-  `individuals` of a job is `null` or a list of texts; the fields of
-  `passStats.filtering` are `PassFilterKind`s, the kinds of `VariantFilter`
-  and `passed`, from 7 October 2026; the `filtering` of a `filterFailures`
-  result holds `passed` alone; `filters` of a
+  `individuals` of a job is `null` or a list of texts; the one field of
+  `passStats.filtering` of a `filterFailures` result is `passed`, from 7
+  October 2026, and the fields of that of every other result are kinds
+  of `VariantFilter`, so that `passed` there is `extraFields`; `filters`
+  of a
   `variantChecks` or an `individualChecks` job is empty, the second from
   28 September 2026, and of a `variantsSummary` or a `filterFailures`
   job; for the principal components, from
