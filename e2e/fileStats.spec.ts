@@ -238,6 +238,7 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
 
   const bar = info(page).getByRole("progressbar", {
     name: "Counting the variants",
+    exact: true,
   });
   await expect(bar).toBeVisible({ timeout: 60_000 });
   await info(page).getByRole("button", { name: "Stop" }).click();
@@ -346,7 +347,9 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // the variants and the chromosomes in the box, not on the top of the
   // page.
   const counted = `Variants: ${HELD_VCF_VARIANTS.toLocaleString("en-US")}`;
-  await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
+  await expect(page.locator(":focus")).toHaveText(
+    `${counted}Failed FILTER: 0Chromosomes: 1`,
+  );
   await expect(info(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });

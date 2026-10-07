@@ -76,3 +76,32 @@ export async function release(page: Page, what: Release): Promise<void> {
     [CHANNEL, what] as const,
   );
 }
+
+/** The front of the worker's script that keeps back the result of the
+    count of the FILTER failures, for as long as the page lives, so that
+    the box shows that count running; popnei's clock is left as it is. */
+const FAILURES_FRONT = `{
+  const realPost = self.postMessage.bind(self);
+  self.postMessage = (m, t) => {
+    if (
+      m !== null && typeof m === "object" && m.kind === "result" &&
+      m.result !== null && typeof m.result === "object" &&
+      m.result.analysis === "filterFailures"
+    ) {
+      return;
+    }
+    realPost(m, t);
+  };
+}
+`;
+
+/** Serves every calculation worker of the page with the result of the
+    count of the FILTER failures never posted, so that the count runs
+    until a Stop; to call before the page is opened. */
+export async function holdFailures(page: Page): Promise<void> {
+  await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+    const response = await route.fetch();
+    const script = await response.text();
+    await route.fulfill({ response, body: FAILURES_FRONT + script });
+  });
+}
