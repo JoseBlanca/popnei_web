@@ -59,12 +59,36 @@ bins summed into the bins of the axis, as today; those sums must fall on
 whole fine bins. The key versions of both analyses change, so a result
 of the old bins is never shown under the new ones. `variantsAtMost`
 gives one number; the range, its words and the comment that explains it
-go. A threshold with more than three decimals, which the box can hold
-when typed, is a case the implementer settles and the plan records: the
-count of the nearest edge below, said as exact, would be wrong, so either
-the box rounds to three decimals or the line says the range of the two
-edges around it. The individuals' counts do not change: they come from
+go. A threshold typed with more than three decimals is rounded to three
+by the box, so that the count shown and the filter applied are of the
+same number; on the branch `filters` the threshold becomes the value
+popnei filters at. The individuals' counts do not change: they come from
 popnei's value of each individual.
+
+**Both pages, and both kinds of plot, count an edge the same way.** The
+old page's histograms of the variants (`variantChecks`) share the fine
+bins, so they become right-closed too: a value on an edge falls in the
+bin that ends there. So:
+- its Python scripts, and those of `variantsSummary`, ask for the same
+  bins as the page, `"closed": "right"` added to `hist_kwargs` (Python
+  popnei takes it, `python/popnei/stats.py:424` of popnei); measured
+  under node by the review of this plan, the left- and right-closed 40
+  bins differ in 24 of 120 bins on the fixtures, so without it the
+  script, the CSV and the bars would disagree;
+- the line above the old page's table of bins (`BINS_LINE` of
+  `src/ui/steps/variants/histogramWords.ts`), "Each bin runs from its
+  lower edge up to its upper edge, not included", says the new rule;
+- the histograms of the individuals, which the page bins itself
+  (`src/core/histogram.ts`, left-closed as `numpy.histogram`), become
+  right-closed too, on both pages, so that the two kinds of plot of
+  `popgen2.html` count an edge the same way and a bar ends at "at
+  most", what a threshold keeps;
+- the comment of `variantChecks.ts` that explains why 1,000 bins failed
+  under popnei 0.2.1 goes.
+
+The documents: `docs/architecture.md` section 7, which gives the rule of
+the bins as numpy's, and `docs/functionality.md`, which describes the
+range and the hatched bar, change with the code.
 
 **The FILTER failures.** The summary's job asks `filterColumn` when the
 open variants record their FILTER (`keepsPassed`), which the runner
@@ -80,7 +104,9 @@ from the result, and is said in the report.
 
 **What crosses between the layers.** The result of the summary gains
 `filterColumn: { passed: number; failed: number } | null`, checked by
-`messages.ts`; `PROTOCOL_VERSION` goes up by one. The job does not
+`messages.ts`; `PROTOCOL_VERSION` goes from 11 to 12. The branch
+`filters` also goes to 12, with another change of the messages, so when
+this piece is merged into it the merge raises it to 13. The job does not
 change. This is a field added to an existing message, so the plan goes
 to the `architecture-reviewer`.
 
@@ -97,8 +123,12 @@ to the `architecture-reviewer`.
    the words of the line under each plot of the variants, with tests:
    for thresholds 0.05, 0.1, 0.123 and 0.95 on `panel.vcf.gz` and
    `low_qual.vcf.gz`, the count the page gives equals `varsKept` of
-   popnei's filter of that statistic under node. Screens: the six plots
-   of `panel.vcf.gz` with thresholds that used to give a range.
+   popnei's filter of that statistic under node; the scripts of both
+   pages with `"closed": "right"`; the individuals' bins right-closed.
+   Screens: the six plots of `popgen2.html` on `panel.vcf.gz` with
+   thresholds that used to give a range; the old page's histograms of
+   the variants and of the individuals, with the line above its table
+   of bins.
 3. **The FILTER failures.** The runner, the protocol, the messages, the
    box, with tests: `low_qual.vcf.gz` gives 300 failed of 1,200 (popnei
    under node), `panel.vcf.gz` 0, `panel.nei` as popnei 0.2.2 answers
@@ -109,6 +139,11 @@ to the `architecture-reviewer`.
 
 - The download of the filtered file (#13): a piece of its own after the
   filters.
+- On the branch `filters`, the approved spec
+  `docs/specs/steps/popgen2-filters.md` and the design
+  `docs/designs/stats-filters.md` describe the range "Keeps 1,113 to
+  1,152" and cost 1,280 bins; they are brought up to date when this
+  piece is merged into that branch.
 - The FILTER filter of the filters' design for a `.nei` file that
   records its FILTER: the design leaves it out for every `.nei` file,
   since popnei 0.2.1 could not say which ones record it; `keepsPassed`
