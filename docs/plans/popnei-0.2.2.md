@@ -17,7 +17,7 @@ Case 1 of `docs/use-cases.md`, "open a file and see what it holds", and
 the part of case 2 that the thresholds serve:
 
 - Under each threshold of the variants, the count is one number for any
-  threshold of up to three decimals, "Keeps 1,050 of 1,200 variants",
+  threshold of up to four decimals, "Keeps 1,050 of 1,200 variants",
   never the range "Keeps 1,113 to 1,152 of 1,200 variants" that popnei
   0.2.1's bins forced.
 - The box of a VCF says "FILTER failures: 300" (for `low_qual.vcf.gz`)
@@ -50,16 +50,18 @@ the part of case 2 that the thresholds serve:
 
 ## The design
 
-**The bins.** The fine bins become 1,000 over [0, 1], closed on the
-right, for the summary and for the old page's `variantChecks`, which
-share the constant. A threshold of up to three decimals is then an edge,
+**The bins.** The fine bins become 10,000 over [0, 1], closed on the
+right (1,000 in the first version of this plan; a review found that
+`thresholdStep` gives a step of 0.0001 on an axis narrower than 0.01,
+which 1,000 bins cannot count exactly), for the summary and for the old page's `variantChecks`, which
+share the constant. A threshold of up to four decimals is then an edge,
 and the count of the variants at most it is the sum of the bins below
 it, exactly popnei's filter's count. The plots are drawn from the fine
 bins summed into the bins of the axis, as today; those sums must fall on
 whole fine bins. The key versions of both analyses change, so a result
 of the old bins is never shown under the new ones. `variantsAtMost`
 gives one number; the range, its words and the comment that explains it
-go. A threshold typed with more than three decimals is rounded to three
+go. A threshold typed with more than four decimals is rounded to four
 by the box, so that the count shown and the filter applied are of the
 same number; on the branch `filters` the threshold becomes the value
 popnei filters at. The individuals' counts do not change: they come from
