@@ -220,3 +220,19 @@ such as 0.01, 0.02 and 0.07 cannot be set (0.07 is counted at 0.0703);
 bins of 1/1000 or popnei's edges as lo + (hi − lo) · k / n with another
 number of bins would give them, which is the owner's choice with the
 popnei issue.
+
+The spec and browser review of the fixed screen, in Chromium and WebKit
+(Firefox cannot be started on this Mac), found that four decimals had
+made the counts wrong: the box showed the edge rounded, "Maximum
+0.5203", while the count was of the edge 0.5203125, 51 variants where
+popnei's filter at 0.5203 keeps 49; on `panel.vcf.gz` 19 edges gave such
+a wrong single number. Fixed in 729a9bd: each edge of the variants is
+shown in full, k/1280 up to 8 decimals (0.33984375), so the number
+shown is the number counted, and a test checks, on the 464 edges above
+k/1280 of the three filters on the three files (4,176 cases), that
+popnei's count at the number shown lies within the counts shown; the
+individuals keep four decimals. Also fixed: the note of a number moved
+to an edge goes when an entry is refused (175e03e); each stripe of the
+hatch drawn whole, 5.2:1 on the light background and 7.7:1 on the dark
+(e936489). On e936489: Vitest "4039 passed", Playwright "1224 passed"
+in Chromium and WebKit, the 92 screens of popgen2.
