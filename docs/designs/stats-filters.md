@@ -76,8 +76,17 @@ cannot be opened by an older version of the application, and the old
 page, `popgen.html`, refuses it, since it has no box to show it. Nobody
 loses anything today: the new page saves no project file yet.
 
-**Your choices.** At the end: the approval, and a threshold at the top
-of its axis taken as no filter.
+**Undo and Redo on the new page.** `popgen2.html` has neither today,
+nor the notice that says what a change did. It gains a row with Undo
+and Redo, their keys, and the notice, "The MAF filter changed · Undo".
+A threshold is on or off, said in words: off, its box reads "No
+filter" and nothing is shaded. Only the missing rate of the variants
+starts on, at 0.1. Off is not the same as a line at the top of the
+axis, since popnei's filters of the MAF and of the observed
+heterozygosity drop a variant with no called genotype at any value.
+
+**Your choices.** At the end: the approval, and how a threshold is
+turned off.
 
 ## What the user can do once it is built
 
@@ -153,7 +162,12 @@ by the owner's decisions of 7 October 2026:
 
 The store of `popgen2.html` keeps `counts` and `statistics` at `null`,
 as today (`StoreConfig` of `src/core/store.ts`), and `POPGEN2_ANALYSES`
-of `src/core/apps.ts` does not change.
+of `src/core/apps.ts` does not change. The piece of the first tool
+names the one pass, `variantsSummary`, as the page's `statistics`: the
+store works out the individuals kept, and why a request would keep none
+(`keptNoneReason`), from that setting, and it must read the one pass's
+finished result only, so that a tool started after a Stop waits for a
+whole pass rather than judging the individuals over part of the file.
 
 The price of this choice is that the counts the page shows, each
 threshold alone over the whole file, can differ from what the filters
@@ -177,9 +191,12 @@ filters out takes the failed variants out. In the steps of that reading
 it comes after the regions and before the list of the individuals
 (section 2), where popnei accepts it (`filterPassed` throws only after
 `filterFirstN`, of `Variants` in popnei 0.2.1); its place among the
-steps changes no count of the individuals, which are judged before the
-reading, nor any filter of the variants, each of which judges a variant
-by itself.
+steps changes neither the individuals, which are judged before the
+reading, nor which variants are kept: every filter of the variants but
+the pruning by linkage disequilibrium judges a variant by itself, and
+the pruning comes after them all. What moves with its place is the
+count each filter reports, given and kept, as section 2 says of the
+order of the filters.
 
 A VCF of which no variant passed is shown as any other, since the one
 pass reads every variant. Carried out with the box on, its filters keep
@@ -194,10 +211,12 @@ stores), which holds it beside the filter of the missing rate of the
 variants at 0.1. The old page's first project does not change.
 
 The old page does not offer the filter. A project file that holds it,
-saved by `popgen2.html` once that page saves projects, is refused by
-`popgen.html` with words that say it was made by the new page: the old
-page has no box to show it or turn it off, so its user would have
-variants left out with nothing on the screen saying so.
+on or turned off, saved by `popgen2.html` once that page saves
+projects, is refused by `popgen.html` with words that say it was made
+by the new page: the old page has no box to show it or turn it off, so
+its user would have variants left out with nothing on the screen saying
+so. A filter turned off is refused too, so that the rule is one line
+and a later click cannot turn on a filter that page cannot show.
 
 On a `.nei` file the box is not shown. A new file keeps the filters of
 the project, so a user who had the box on for a VCF and opens a `.nei`
@@ -237,12 +256,36 @@ threshold follow it from the bins, with no change of the project. The
 check box changes the project at each click.
 
 The line and the box show the project's value, so Undo moves them back.
-A threshold at the top of its axis keeps every variant or individual,
-and is no filter in the project: moving it there turns the filter off,
-which the project keeps aside in `filtersOff` as it keeps a filter the
-user turns off on the old page, and a filter off is drawn at the top. The filter of the missing rate of
-the variants starts at 0.1, the default of `docs/functionality.md`;
-the others start off.
+
+A threshold is on or off, and the two are told apart in words, not by
+where the line stands. The top of an axis is no stand-in for off: the
+axis is the range of the file's values, rounded out, 0 to 0.1 for the
+missing rate of `panel.nei`, and it widens while the pass reads; and a
+filter at any value is not the same as no filter, since popnei's
+filters of the MAF and of the observed heterozygosity drop a variant
+with no called genotype at every threshold, and `individualsKept` drops
+an individual whose heterozygosity has no value. Under popnei 0.2.1, on
+a VCF of three variants of which one has no called genotype, a MAF
+filter at 1 keeps two variants, and no filter keeps three.
+
+So, on `popgen2.html`: the filter of the missing rate of the variants
+starts on at 0.1, the default of `docs/functionality.md`, and the
+others start off. A threshold that is off has its box empty, with
+"No filter" in it, and its line at the top of the axis, labelled "No
+filter", with no shading and the line "Keeps every variant". Dragging
+the line or typing a number turns the filter on at that value; emptying
+the box turns it off. Off, the project keeps it aside with its last
+value, in `filtersOff` for the variants and `individualFiltersOff` for
+the individuals, as it keeps a filter the user turns off on the old
+page. A number typed above the axis is kept as typed, and the axis
+widens to show it (`histogramScales`), as today.
+
+The presses of one run of arrow keys not yet made a change are made one
+before any other command reaches the project: Undo, Redo, a click on
+the box, another threshold, opening a file. Otherwise Undo pressed in
+the quiet second would undo the change before the run, and the run,
+made a change after it, would clear Redo; or the run would land on the
+project of another file.
 
 A new file keeps the filters of the project, as on the old page, so the
 thresholds stay where the user left them when another file is opened;
@@ -258,19 +301,44 @@ invariant that no result is shown stale holds: a result so far of the
 file on the screen, marked as partial. The store keeps, for a
 calculation the user stopped, its last result so far beside the state
 `ready` (`stopped: { soFar }`), never cached, with no check numbers,
-dropped by Start again or a new file. A failure still drops the plots,
-since what was read before a refusal of the file may be what the
-refusal is about.
+dropped by Start again or a new file. It is kept under the key of the
+one pass and shown only while that key is the current one; a change of
+a filter, which does not change that key, keeps it. A failure still
+drops the plots, since what was read before a refusal of the file may
+be what the refusal is about.
+
+A failure of the one pass that is not popnei's, the worker ending, is
+today cleared by every change the user makes (`failures.clear()` in
+the store's handling of a change), so that a calculation can be tried
+again. On the old page that is right, since a change gives new keys.
+On `popgen2.html` a change of a filter gives the one pass no new key,
+so the store clears only the failures whose key the change left
+behind: a click on the FILTER box after a crash does not wipe the
+message of the crash; Start again tries again.
 
 The thresholds can be moved over the plots of a Stop, and their counts
 are then of the variants read; the line of each plot says so.
 
-## The notice of a change
+## Undo, Redo and the notice of a change on `popgen2.html`
 
-A change of a threshold or of the box gives the notice of the old page,
-which says what changed, "The MAF filter changed · Undo". On
-`popgen2.html` no calculation is left behind by such a change, so the
-notice says nothing of calculations stopped. With the presses of one
+`popgen2.html` has none of the three today: its page has no shell
+(`src/ui/popgen2.tsx`, "without the stepper, the saving and the
+shell"), and the buttons of Undo and Redo, their keys (Ctrl+Z, Ctrl+Y
+and Cmd+Shift+Z, caught in the shell's header through
+`src/ui/shell/shortcuts.ts`) and the notice (`src/ui/shell/Notice.tsx`)
+are the shell's. The page gains a header row above the box of the file
+with the two buttons, the keys caught as the shell catches them, and
+the notice under it, reused from the shell rather than copied.
+
+The store gives no notice today for a change that removes, leaves
+behind or stops no result (`changedByUser` of `src/core/store.ts` sets
+the notice to `null`), which is every change of a threshold on this
+page. So the store's notice changes: a change of a filter always gives
+one, which says what changed, "The MAF filter changed · Undo". That is
+a change of the store's interface, shared by both pages; on the old
+page it adds the notice to a change of a filter that touched no
+result. On `popgen2.html` no calculation is left behind by such a
+change, so the notice says nothing of calculations stopped. With the presses of one
 run of arrow keys made one change, a screen reader says the notice once
 per run, not at every press.
 
@@ -363,14 +431,16 @@ calculation.
 ## How it is tested, and what would prove it wrong
 
 - In `src/core`: each command of a threshold and of the box gives one
-  change of the project, Undo gives the value back; a threshold at the
-  top of its axis removes the filter; `filtersApplied` leaves `passed`
+  change of the project, with its notice, and Undo gives the value
+  back; emptying a box turns its filter off and keeps its value aside;
+  a failure of the one pass survives a change of a filter; `filtersApplied` leaves `passed`
   out for a `.nei` file and keeps it for a VCF; a project file holding
   `passed` reads back the same, and the old page's reading refuses it.
 - In Playwright, on `popgen2.html` in Chromium and WebKit: the worker
   receives one request for a file, and none while a threshold is
   dragged, typed, moved with the arrow keys, undone, or the box turned;
-  a run of ten arrow presses is one step of Undo; after a Stop the
+  a run of ten arrow presses is one step of Undo, and Ctrl+Z pressed
+  within the quiet second undoes that run; after a Stop the
   plots read so far stay, with their line.
 - Wrong if any change of a filter sends a request to the worker, or a
   plot changes with a threshold.
@@ -391,16 +461,17 @@ Made on this branch once the owner approves, each with its paragraph
 
 - Section 2: the kind `passed` of the filters of the variants, after the
   regions and before the list of the individuals, carried out after the
-  individuals are judged; a threshold at the top of its axis is no
-  filter; `filtersApplied`, the filters that apply to the project's
+  individuals are judged; `filtersApplied`, the filters that apply to the project's
   file.
+- Section 4: the store's notice given for every change of a filter;
+  the failures cleared by a change only when their key is left behind.
 - Section 5: the thresholds of `popgen2.html` change the project and
   start no calculation; the presses of one run of arrow keys make one
   change; the last result so far kept after a Stop; the quiet second and
   the keys that start again recorded for the first tool that starts by
   itself, where the limit of the piece of the filters moves.
 - Section 7: the thresholds of `popgen2.html` show the project's
-  filters; the first project of that page; the tools section, with its
+  filters, on or off; Undo, Redo and the notice on that page; the first project of that page; the tools section, with its
   first tool, once popnei's issue #13 is done.
 - Section 8: the project file with the kind `passed`, and the old page
   refusing it.
@@ -451,8 +522,10 @@ Made on this branch once the owner approves, each with its paragraph
 ## For the owner to decide
 
 1. Approve the design, or what to change in it.
-2. A threshold at the top of its axis is no filter in the project, so
-   that dragging a line to the end turns its filter off and a filter
-   off is drawn there. The other way, a filter at 1 kept in the project,
-   would show in the notice and in what a tool reports a filter that
-   leaves nothing out. The design recommends no filter.
+2. How a threshold is turned off. The design proposes emptying its
+   number box, which shows "No filter", with the line at the top of the
+   axis labelled the same. The other way is a check box beside each
+   threshold, "Filter on", one more control per plot but one a user
+   cannot miss. The two keep the same variants; they differ in what the
+   user has to find. The design recommends the empty box, since the
+   page then gains no control.
