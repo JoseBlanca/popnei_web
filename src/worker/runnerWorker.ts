@@ -118,9 +118,12 @@ function answerRun(held: Runner, request: RunRequest): void {
   });
   switch (answer.kind) {
     case "ok":
-      post(
+      // Thrown here, outside the run, what this throws reaches the catch
+      // of `handle`, which posts it as `crashed`, a defect of ours.
+      postOfRun(
         { kind: "result", id, key, result: answer.value },
         transferablesOf(answer.value),
+        "the result",
       );
       return;
     case "refused":

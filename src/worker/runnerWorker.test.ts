@@ -222,3 +222,39 @@ describe("live-stats 2 the script of the calculation worker: a message it cannot
     },
   );
 });
+
+describe("live-stats 3 the script of the calculation worker: a final result it cannot post", () => {
+  test("a result the browser cannot post is crashed as a defect of ours, and the worker closes", async () => {
+    calls.open = () => ({
+      kind: "ok",
+      value: { individuals: ["s0"], ploidy: 2 },
+    });
+    calls.run = () => ({
+      kind: "ok",
+      value: {
+        analysis: "filterCounts",
+        passStats: { numVars: 0, filtering: {} },
+      },
+    });
+    scope.postError = (posted) =>
+      isKind(posted, "result") ? cloneError() : null;
+    await started();
+
+    fire("message", { data: OPEN });
+    await vi.waitFor(() => {
+      expect(scope.posted).toContainEqual(
+        expect.objectContaining({ kind: "opened" }),
+      );
+    });
+    fire("message", { data: RUN });
+
+    await vi.waitFor(() => {
+      expect(scope.closed).toBe(true);
+    });
+    expect(scope.posted.at(-1)).toEqual({
+      kind: "crashed",
+      message:
+        "popnei_web defect: the result could not be posted: The object can not be cloned.",
+    });
+  });
+});

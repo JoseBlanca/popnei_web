@@ -665,7 +665,9 @@ could not be posted: " and the browser's words, so that the `crashed`
 it ends in reaches the client as a defect, for which Start again is not
 offered, and not as a failure of the worker that starting again could
 mend. A progress the browser cannot post is thrown the same way, "the
-progress could not be posted: ".
+progress could not be posted: ", and so is the final result, "the
+result could not be posted: ", which the script posts after the run,
+where the catch of the request posts it as that `crashed`.
 
 `createRunner` takes `soFarEvery` for the tests, which give 0, a result
 so far after every block, to have some from a small file. Under node on
