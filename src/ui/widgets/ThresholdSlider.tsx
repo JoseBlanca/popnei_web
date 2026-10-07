@@ -11,8 +11,8 @@
  * scrolls the page on a phone; the thumb is dragged.
  *
  * Keyboard: the arrow keys move it one step, Page Up and Page Down ten,
- * where React Aria would move it a tenth of its range, and Home and End
- * to the ends of the axis. Its name is not drawn, since the number field
+ * and so do Shift and an arrow key, where React Aria would move it a
+ * tenth of its range, and Home and End to the ends of the axis. Its name is not drawn, since the number field
  * beside it has the same name in its visible label; its value, for a
  * screen reader, is what the screen says it keeps, "0.1, keeps 1,050 of
  * 1,200 variants", where React Aria would say the number of its own
@@ -28,6 +28,20 @@ import styles from "./ThresholdSlider.module.css";
 
 /** The steps Page Up and Page Down move the thumb by. */
 const PAGE_STEPS = 10;
+
+/** Whether the key of `event` moves the thumb by ten steps, and which
+    way: Page Up and Page Down, with Shift or without, and Shift with an
+    arrow key, up and right up, down and left down; 0 for any other key,
+    and with Alt, Ctrl or ⌘ held. */
+function pageDirectionOf(event: React.KeyboardEvent): -1 | 0 | 1 {
+  if (event.altKey || event.ctrlKey || event.metaKey) return 0;
+  if (event.key === "PageUp") return 1;
+  if (event.key === "PageDown") return -1;
+  if (!event.shiftKey) return 0;
+  if (event.key === "ArrowUp" || event.key === "ArrowRight") return 1;
+  if (event.key === "ArrowDown" || event.key === "ArrowLeft") return -1;
+  return 0;
+}
 
 /** What the line of a threshold is drawn with. */
 export interface ThresholdSliderProps {
@@ -72,16 +86,13 @@ export function ThresholdSlider({
   });
 
   const onKeyDownCapture = (event: React.KeyboardEvent): void => {
-    if (event.key !== "PageUp" && event.key !== "PageDown") return;
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-      return;
-    }
+    const direction = pageDirectionOf(event);
+    if (direction === 0) return;
     // Before React Aria's handler and the browser's, which move it a
     // tenth of the range.
     event.preventDefault();
     event.stopPropagation();
-    const moved =
-      value + (event.key === "PageUp" ? PAGE_STEPS : -PAGE_STEPS) * step;
+    const moved = value + direction * PAGE_STEPS * step;
     const bounded = Math.min(maxValue, Math.max(minValue, moved));
     if (bounded !== value) onChange(bounded);
   };

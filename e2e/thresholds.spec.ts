@@ -273,7 +273,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   );
 });
 
-test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, Home and End the ends of the axis; the range where the bins cannot tell", async ({
+test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, with Shift too, Shift and an arrow ten, Home and End the ends of the axis; the range where the bins cannot tell", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -312,6 +312,20 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, Ho
   await page.keyboard.press("Home");
   await expect(missing.slider).toHaveValue("0");
   await page.keyboard.press("PageUp");
+  await expect(missing.slider).toHaveValue("10");
+  // Shift with Page Up and Down, or with an arrow, ten edges too, and
+  // not React Aria's tenth of the axis, 13 edges of 128.
+  await page.keyboard.press("Shift+PageUp");
+  await expect(missing.slider).toHaveValue("20");
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(missing.slider).toHaveValue("30");
+  await page.keyboard.press("Shift+ArrowUp");
+  await expect(missing.slider).toHaveValue("40");
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(missing.slider).toHaveValue("30");
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect(missing.slider).toHaveValue("20");
+  await page.keyboard.press("Shift+PageDown");
   await expect(missing.slider).toHaveValue("10");
   await page.keyboard.press("End");
   await expect(missing.slider).toHaveValue("128");
