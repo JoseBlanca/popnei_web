@@ -19,8 +19,12 @@ and 28 September 2026, are approved by the owner on 28 September 2026.
 Revised on 30 September 2026 for the specs of stage 5, in sections 4, 9,
 11 and 13, approved by the owner on 30 September 2026 but for the new point 16 of
 section 13, the calculation worker started again after every LD decay,
-which the owner approved on 30 September 2026. What was
-revised each time is at the end
+which the owner approved on 30 September 2026. Revised on 7 October
+2026 for the thresholds of `popgen2.html` as filters of the project,
+in sections 2, 3, 5, 7 and 8, as `docs/designs/stats-filters.md`,
+approved by the owner that day, lists them, each with its paragraph
+"What was revised" at the end of the section. What was
+revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
 results on the screen. What the applications
@@ -427,7 +431,8 @@ every change the user makes is a command that gives a new one.
 interface Project {
   app: "popgen" | "gwas";
   variants: VariantSource | null;     // the load of the file and its identity
-  filters: ProjectVariantFilter[];    // in the fixed order of their kinds, with parameters;
+  filters: ProjectVariantFilter[];    // in the fixed order of their kinds, with parameters,
+                                      // and the FILTER column, { kind: "passed" }, first;
                                       // the LD filter's distance null until the user
                                       // types one, which locks what reads these filters
   filtersOff: ProjectVariantFilter[]; // those turned off, with their values, for the
@@ -591,8 +596,9 @@ holds the numbers of two sessions names the right versions for each
   individuals first, as the owner decided on 28 September 2026, and the
   regions of a BED file before them, as the owner decided later that
   day. The regions come first, once the application has that filter;
+  then the filter of the FILTER column, from 7 October 2026 (below);
   then the one list that the four filters of individuals make, which
-  popnei's `filterIndividuals` puts on the `Variants` after the regions
+  popnei's `filterIndividuals` puts on the `Variants` after those two
   and before any other step (section 4); then the other filters of the
   variants, missing data, observed heterozygosity, the major allele
   frequency (MAF), and the LD pruning last. The project holds each list in its order and refuses a project
@@ -632,6 +638,28 @@ holds the numbers of two sessions names the right versions for each
   list left the counts those filters give with every individual, 1,200
   to 1,152 to 1,152 to 1,128 (`docs/specs/worker/runner.md`, "How it is
   verified", has the script).
+- **The filter of the FILTER column**, `{ kind: "passed" }`, from 7
+  October 2026, keeps the variants of a VCF whose FILTER is `PASS` or a
+  dot, popnei's `filterPassed`, for the check box "Leave out the
+  variants that failed their FILTER" of `popgen2.html`, on in its first
+  project; `popgen.html` does not offer it, and keeps its read option
+  `onlyPassed` (section 8). It comes after the regions and before the
+  list of the individuals kept, where popnei advises it, and it is
+  carried out after the individuals are judged: the statistics of each
+  individual, from which the list is made, read no filter, so an
+  individual's missing rate and heterozygosity are over every variant,
+  the failed ones among them, and a VCF of which no variant passed has
+  its statistics as any other. Its place changes no variant kept, since
+  it keeps a variant by its FILTER alone; the counts of the filters
+  after it are over the variants that passed. It is never applied to a
+  `.nei` file, over which popnei refuses it when the file was written
+  before its format 1.2, which the page cannot tell: a project keeps its
+  filters through a new file, so the filter can be on while a `.nei`
+  file is open, and **`filtersApplied`**, the filters that apply to the
+  project's file, leaves it out then. Everything that reads the filters
+  applied, the keys, the jobs, the counts of each filter, the scripts
+  and the words, reads `filtersApplied` and not `filters`
+  (`docs/specs/core/project.md`, "The filters of popgen2.html").
 - **A filter turned off is kept apart**, with its values, in
   `filtersOff` or `individualFiltersOff`, so that turning it on again
   gives back what the user typed, a distance of the LD filter above all,
@@ -710,6 +738,23 @@ the counts above, and the store's property that no request of the
 statistics carries a filter (`docs/specs/core/store.md`, "How it is
 verified").
 
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day. The filters of the variants gain the
+filter of the FILTER column, `passed`, after the regions and before the
+list of the individuals, and the project gains `filtersApplied`, the
+filters that apply to its file. On `low_qual.vcf.gz`, the panel with 300
+of its 1,200 variants failed, the filter keeps 900, and the missing data
+filter at 0.05 after it 865 of those 900 (node, popnei 0.2.1). The owner
+chose that the filter acts when the filters are carried out, after the
+individuals are judged, so that the plots of the page read each file
+once and a VCF of which no variant passed is shown as any other. Not
+taken: the filter in the one pass, before the individuals are judged,
+the design's previous version, which gave every statistic of the page
+over the variants that passed at the cost of a reading of the file at
+each turn of the box, and of no statistics at all for a VCF of which no
+variant passed. The order of the regions, the list and the other
+filters does not change.
+
 ## 3. Results, and how they go stale
 
 A result is never stored in the project. It is stored in a cache, under
@@ -723,7 +768,8 @@ every key are:
   hash of what it holds;
 - the filters of variants and the filters of individuals that the
   analysis reads, in their order, with their parameters, those that are
-  on and not those kept while off (section 2): all of them for
+  on and not those kept while off, and of the variants those that apply
+  to the file, `filtersApplied` (section 2): all of them for
   every analysis of sections 5 to 8 of `docs/functionality.md`, and not
   the filters that the checks per variant and per individual of its
   section 3 serve to set, whose histograms would otherwise be removed at
@@ -875,6 +921,38 @@ the BED file. The list of the individuals kept is left out of the keys:
 a key that held it, in place of the thresholds, would let two thresholds
 that keep the same individuals share their results, at the cost of a key
 made from a result in the cache rather than from the project alone.
+
+**The notice of a change of a filter on `popgen2.html`.** The one
+calculation of that page, the one pass, reads no filter, so a change of
+a threshold or of the FILTER box removes and stops nothing, and would
+give no notice, while the user needs one to undo from. The store takes
+a setting, on for that page alone, under which every change of a filter
+gives a notice, "The MAF filter changed · Undo"
+(`docs/specs/core/store.md`, "The notice, and the calculations it
+stops"); the old page leaves it off, since its number boxes make a
+change at every press of an arrow key, and a screen reader would read a
+notice at each.
+
+**A failure is forgotten when its key is left behind.** A failure that
+is not popnei's, a crash of the worker, is kept under its key until a
+change of the user leaves that key behind, so that the user can run
+again; until 7 October 2026 every change forgot every such failure. On
+`popgen2.html` a change of a filter gives the one pass no new key, and a
+click on the FILTER box after a crash would have wiped the words of the
+crash; Start again tries again.
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day. The filters of the variants in a key
+are those that apply to the project's file, `filtersApplied`, and no
+longer the project's list as it is: the filter of the FILTER column,
+which a project keeps through a new file, is in no job for a `.nei`
+file, and in its key it would give every analysis of that file a new key
+at a click that changes no calculation. The two paragraphs above are
+new: the setting of the notice of a filter, and the failures forgotten
+only when their key is left behind, where the spec of the store said
+"until the next change of the project". The option not taken for the
+notice was a notice at every change on both pages, which the old page's
+boxes would have made a notice per press of a held arrow key.
 
 ## 4. An analysis is a module
 
@@ -1333,23 +1411,38 @@ The page and each worker talk through typed messages
   the summary is done, gets its Start again too. The
   statistics' section has no bar nor button of its own, and says of each
   part that it is calculated, stopped, or not calculated. After a Stop
-  the store's state is `ready`, as before any run, and the keys
+  the store's state is `ready`, as before any run, holding from 7
+  October 2026 the last result so far of the pass, `stopped`, so that
+  the plots read before the Stop stay, each said to be of the variants
+  read before it; that result is of the key of the one pass, which no
+  filter changes, so no result is shown stale. The keys
   `autoRuns.ts` remembers are the one record that the analysis was
   stopped; its `startedUnder` tells the page whether one ready under a
   key was stopped or waits to start, and its `subscribe` tells the page
   when that changes with no change of the store, as a Stop of a pass
   about to start. The
-  summary reads no filter, the page having none. A limit the piece that
-  adds the filters to that page must settle: an analysis that starts by
-  itself and reads a filter, as the statistics would if they read the
-  filters of individuals, gets a new key at every change of a
-  threshold, and its start, as any new calculation does, stops the
-  calculation left behind, which restarts the worker; so moving a
-  threshold would stop and start the pass at each step. And a key the
-  analysis comes back to, by an undo or by the old threshold typed
-  again, shows it as stopped and does not start it again, since
+  summary reads no filter. From 7 October 2026 the thresholds on the
+  histograms of `popgen2.html` and its FILTER box are filters of the
+  project (`docs/designs/stats-filters.md`): each change is a command,
+  with Undo, and starts no calculation, since the one pass, the only
+  calculation of the page, reads none; a run of presses of the arrow
+  keys on a line or in its box is one change, made at a quiet second after the last
+  press or when the focus leaves, so that a held key does not fill the
+  200 steps of the history. What the filters keep together comes with
+  the reading that carries them out, the download or an analysis, which
+  waits for popnei's issue #13. A limit the first tool that starts by
+  itself and reads a filter must settle: such an analysis gets a new key
+  at every change of a threshold, and its start, as any new calculation
+  does, stops the calculation left behind, which restarts the worker; so
+  moving a threshold would stop and start the pass at each step. And a
+  key the analysis comes back to, by an undo or by the old threshold
+  typed again, shows it as stopped and does not start it again, since
   `autoRuns.ts` remembers that key as started and the undo does not
-  give its request back, which the new start already stopped. For an
+  give its request back, which the new start already stopped. The owner
+  chose on 6 October 2026 how that tool settles both: it starts under a
+  new key only once the filters have had no change for one second, and
+  `autoRuns.ts` forgets a key the store left behind, so that an undo
+  starts it again unless its result is in the cache. For an
   analysis the user starts, an undo while the notice is up gives the
   keys back, and the requests go on; for one that starts by itself it
   does not. A change of the load of the variant file is the exception,
@@ -1386,7 +1479,8 @@ The page and each worker talk through typed messages
   the worker; after a cancel the worker is ended, and its messages reach
   nobody. The store keeps the last one in the request in flight, `soFar`
   of the state `running`, so that it goes with the request at its outcome
-  or its Stop and is never cached; the screen draws its plots from it
+  or its stop and is never cached, but for the last one of a calculation
+  the user stops, kept beside the state `ready` (above); the screen draws its plots from it
   until the result comes. It is not part of the progress, which every
   analysis has and whose bar it would burden with statistics.
 - **Cancelling** a request that is running ends its worker and starts a
@@ -1513,6 +1607,21 @@ one that uses it, and its own wasm memory, which never shrinks (section
 11); and two workers that both needed the kinship would each make it. A
 pool would win if the walking skeleton showed users waiting on several
 independent analyses whose intermediate results are small.
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day. The thresholds and the FILTER box of
+`popgen2.html` change the project and start no calculation, and a run
+of presses of the arrow keys is one change. After a Stop the last result
+so far of the one pass stays on the screen, where until then the plots
+went with the request. The limit of the piece of the filters, that every
+change of a threshold would stop and start a calculation that starts by
+itself, moves to the first tool that starts by itself and reads a
+filter, with the owner's two choices of 6 October 2026 that settle it,
+the quiet second and the keys left behind started again. Not taken: the
+histograms of the variants read again over the individuals kept after a
+quiet second, the owner's decision of 6 October 2026, replaced on 7
+October 2026 by plots that describe every individual and a page that
+reads nothing while the thresholds move.
 
 ## 6. The files of the user
 
@@ -2133,21 +2242,42 @@ for the smallest part of it.
   parameters of the fit, by popnei's formula
   (`docs/specs/analyses/ldDecay.md`, "The fitted curve"). The heatmap
   and the line plot draw the order and the points they are given.
-- **A threshold on a plot can be screen state.** From 7 October 2026
-  each of the six histograms of `popgen2.html` has a threshold that the
-  user drags or types, shown only: React state of the section of the
-  statistics of one load, lost with another file or a reload, in no
-  project and no key, sending nothing to the worker
-  (`docs/plans/thresholds.md`). The plot draws it, with no legend; the
+- **A threshold on a plot shows a filter of the project.** Five of the
+  six histograms of `popgen2.html` have a threshold that the user drags
+  or types, and each is a filter of the project, on or off, said in
+  words: off, its box reads "No filter" and nothing is shaded; the
+  expected heterozygosity has none, since popnei has no filter on it.
+  The line and the box show the project's value, so Undo moves them
+  back, and hold of their own only the value being dragged or typed,
+  which is no part of the project (`docs/designs/stats-filters.md`). A
+  change of a threshold or of the FILTER box is a command; an empty box,
+  or 1, turns a threshold off (`setThreshold` of
+  `docs/specs/core/project.md`). The page has a row with Undo and Redo,
+  their keys, and the notice of a change, reused from the shell of the
+  old page; its first project has the FILTER filter on and the missing
+  rate of the variants at 0.1, the rest off. A tools section after the
+  plots, whose first tool is the download of the filtered file, comes
+  with popnei's issue #13. The plot draws the threshold, with no legend; the
   line the user drags is a React Aria slider of `src/ui` laid over the
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the
   plot keeps no pointer handling of its own. What it keeps is counted by
   `src/core/thresholds.ts` from popnei's fine bins of the variants and
-  from popnei's value of each individual. When the thresholds become
-  filters, `docs/designs/stats-filters.md`, they move into the project.
+  from popnei's value of each individual.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day. The threshold on a plot of
+`popgen2.html` was state of the screen, from the piece `thresholds`
+(`docs/plans/thresholds.md`), lost with another file or a reload, with
+no Undo; it is now the project's filter, on or off, and the page gains
+Undo, Redo and the notice, and its own first project. Not taken: a check
+box beside each threshold to turn it on and off, in place of the empty
+box or 1, the owner's choice of 7 October 2026; and the top of the axis
+as off, since the axis ends where the file's values end, and a filter
+of the MAF or of the observed heterozygosity at any value drops a
+variant with no called genotype, which no filter keeps.
 
 ## 8. The project file, the report and the script
 
@@ -2171,6 +2301,16 @@ for the smallest part of it.
   worker had given the version of popnei, which left a moment after the
   opening in which a changed setting would have been taken for the
   file's own.
+- **The filter of the FILTER column is saved as any filter**,
+  `{ "kind": "passed" }`, in version 1 of the format, from 7 October
+  2026. `popgen.html`, which has no box to show it, refuses a project
+  file that holds it, on or off, with words that say the file was made
+  by the new page: its user would otherwise have variants left out with
+  nothing on the screen saying so, and a later click could turn on a
+  filter that page cannot show (`docs/specs/core/projectFile.md`,
+  "Opening"). A version of the application from before it refuses such
+  a file too, as it refuses any kind of filter it does not know. No file
+  holds it yet: `popgen2.html` saves no project.
 - **The regions of a BED file are saved with the project**, whole, as
   the individuals table is, with the name of their file, so that a
   reopened project asks only for its variants file again; their hash is
@@ -2249,6 +2389,14 @@ for the smallest part of it.
   The `.xlsx` it reads is the one the application wrote, of plain text and
   number cells, so calamine and openpyxl are not asked to agree on the
   hard cases of a user's own file.
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day: the filter of the FILTER column in the
+project file, and `popgen.html` refusing a file that holds it. Not
+taken: the old page opening such a file with the filter dropped, which
+would open a project whose variants are not those it was saved with,
+and the old page showing the filter, which would give it a control the
+owner kept for the new page.
 
 ## 9. The modules
 
