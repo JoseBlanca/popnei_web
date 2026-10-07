@@ -373,3 +373,15 @@ and of a crash during the count; the error bar after a crash of the
 count says Start again, as the box does, where it said to reload;
 tests that nothing guarded (the bar's origin of the count, its
 refusal, a `.nei` showing no FILTER line).
+
+### The browser review of the piece
+
+Over 857368e..681db8e, in Chromium and WebKit (Firefox cannot be
+started on this Mac): no findings. Nothing added to the site's code
+needs more than the floor of `docs/technology.md`; every state was gone
+through on `panel.vcf.gz`, `low_qual.vcf.gz`, `panel.nei` and the VCF of
+200,000 variants, Stop and Start again in each pass, a crash in each
+pass, 320 px. For the owner: after Start again mends a crash, the error
+bar keeps its words until it is closed, as it does elsewhere; after a
+crash of the first pass the count of the FILTER failures still runs, so
+the box can show "Variants: not counted" beside "FILTER failures: 300".
