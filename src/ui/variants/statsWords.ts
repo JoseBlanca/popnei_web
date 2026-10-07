@@ -45,15 +45,47 @@ export const VARIANT_STATISTICS: readonly VariantStatistic[] = Object.freeze([
 export const INDIVIDUAL_STATISTICS: readonly IndividualStatistic[] =
   Object.freeze(["missingGenotypes", "observedHeterozygosity"]);
 
-/** The title of the histogram of the variants of `statistic`, with no
-    mean: "Major allele frequency". */
+/** The title of the histogram of the variants of `statistic`, short, at
+    the start of the row of its threshold: "Obs. het." (the owner, 7
+    October 2026). The axis and the plot's description for a screen
+    reader keep the full name, `variantFullTitle`. */
 export function variantTitle(statistic: VariantStatistic): string {
+  return VARIANT_TITLES[statistic];
+}
+
+/** The short titles of the histograms of the variants, by statistic. */
+const VARIANT_TITLES: Readonly<Record<VariantStatistic, string>> =
+  Object.freeze({
+    missingRate: "Missing genotypes",
+    maf: "Major allele frequency",
+    obsHet: "Obs. het.",
+    unbiasedExpHet: "Exp. het. (unbiased)",
+  });
+
+/** The full name of the histogram of the variants of `statistic`, with
+    no mean, which names its plot and its group for a screen reader:
+    "Observed heterozygosity". */
+export function variantFullTitle(statistic: VariantStatistic): string {
   return VARIANT_HISTOGRAMS[statistic].name;
 }
 
-/** The title of the histogram of the individuals of `statistic`:
-    "Observed heterozygosity of each individual". */
+/** The title of the histogram of the individuals of `statistic`, short:
+    "Missing GTs". */
 export function individualTitle(statistic: IndividualStatistic): string {
+  return INDIVIDUAL_TITLES[statistic];
+}
+
+/** The short titles of the histograms of the individuals, by
+    statistic. */
+const INDIVIDUAL_TITLES: Readonly<Record<IndividualStatistic, string>> =
+  Object.freeze({
+    missingGenotypes: "Missing GTs",
+    observedHeterozygosity: "Obs. het.",
+  });
+
+/** The full name of the histogram of the individuals of `statistic`:
+    "Observed heterozygosity of each individual". */
+export function individualFullTitle(statistic: IndividualStatistic): string {
   return INDIVIDUAL_HISTOGRAMS[statistic].title;
 }
 
@@ -90,36 +122,15 @@ export const PART_FAILED = "Not calculated.";
 /** What a line of a plot drawn from a result so far ends with. */
 const SO_FAR = " so far";
 
-/** The line under the title of a histogram of the variants: "Over 1,200
-    variants", those in its bins, which leaves out a variant with no
-    value; "Over 523 variants so far" while the pass runs, `soFar`. */
-export function overVariantsLine(numVars: number, soFar = false): string {
-  return `Over ${counted(numVars, "variant")}${soFar ? SO_FAR : ""}`;
-}
-
-/** The line under the title of a histogram of the individuals: "Over 200
-    individuals", those in its bins; "Over 200 individuals, from the
-    variants read so far" while the pass runs, `soFar`: every individual
-    is there from the first variant, and their values change as it
-    reads. */
-export function overIndividualsLine(
-  numIndividuals: number,
-  soFar = false,
-): string {
-  const over = `Over ${counted(numIndividuals, "individual")}`;
-  return soFar ? `${over}, from the variants read so far` : over;
-}
-
 /** What the description of a histogram drawn from a result so far ends
-    with, for a screen reader, which does not read the line under its
-    title. */
+    with, for a screen reader. */
 export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
 
 /** What the description of a histogram of the variants says, for a
     screen reader, when its threshold keeps a range: the bar at the line
     is hatched, and why. */
 export const UNDECIDED_DESCRIPTION =
-  "The bar that starts at the dashed line is hatched: the bins cannot tell how many of its variants the line keeps.";
+  "The bar at the dashed line is hatched: the bins cannot tell how many of its variants the line keeps.";
 
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
@@ -196,44 +207,51 @@ export function statsAnnouncementsOf(
   return [];
 }
 
-/** The name of the threshold of the histogram of the variants of
-    `statistic`, which names its line and its box: "Maximum proportion of
-    missing genotypes". */
-export function variantThresholdName(statistic: VariantStatistic): string {
-  return VARIANT_THRESHOLD_NAMES[statistic];
+/** The word after the title of a histogram, before the box of its
+    threshold: "Obs. het. max: [0.04]". */
+const MAX_LABEL = "max:";
+
+/** What is drawn before the box of the threshold of a histogram titled
+    `title`: "Obs. het. max:". */
+export function thresholdShownLabel(title: string): string {
+  return `${title} ${MAX_LABEL}`;
 }
 
-/** The names of the thresholds of the variants, by statistic. */
+/** The name of the box and of the line of the threshold of the histogram
+    of the variants of `statistic`, which starts with the words drawn
+    before the box, so that the name a screen reader or a voice control
+    reads holds the words seen (WCAG 2.5.3), and goes on with the full
+    name: "Obs. het. max: maximum observed heterozygosity". */
+export function variantThresholdName(statistic: VariantStatistic): string {
+  return `${thresholdShownLabel(variantTitle(statistic))} ${VARIANT_THRESHOLD_NAMES[statistic]}`;
+}
+
+/** The full names of the thresholds of the variants, by statistic. */
 const VARIANT_THRESHOLD_NAMES: Readonly<Record<VariantStatistic, string>> =
   Object.freeze({
-    missingRate: "Maximum proportion of missing genotypes",
-    maf: "Maximum major allele frequency",
-    obsHet: "Maximum observed heterozygosity",
-    unbiasedExpHet: "Maximum expected heterozygosity (unbiased)",
+    missingRate: "maximum proportion of missing genotypes",
+    maf: "maximum major allele frequency",
+    obsHet: "maximum observed heterozygosity",
+    unbiasedExpHet: "maximum expected heterozygosity (unbiased)",
   });
 
-/** The name of the threshold of the histogram of the individuals of
-    `statistic`: "Maximum proportion of missing genotypes of an
-    individual", told apart from the variants' of the same statistic. */
+/** The name of the box and of the line of the threshold of the histogram
+    of the individuals of `statistic`, told apart from the variants' of
+    the same statistic: "Missing GTs max: maximum proportion of missing
+    genotypes of an individual". */
 export function individualThresholdName(
   statistic: IndividualStatistic,
 ): string {
-  return INDIVIDUAL_THRESHOLD_NAMES[statistic];
+  return `${thresholdShownLabel(individualTitle(statistic))} ${INDIVIDUAL_THRESHOLD_NAMES[statistic]}`;
 }
 
-/** The names of the thresholds of the individuals, by statistic. */
+/** The full names of the thresholds of the individuals, by statistic. */
 const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
   Record<IndividualStatistic, string>
 > = Object.freeze({
-  missingGenotypes: "Maximum proportion of missing genotypes of an individual",
-  observedHeterozygosity: "Maximum observed heterozygosity of an individual",
+  missingGenotypes: "maximum proportion of missing genotypes of an individual",
+  observedHeterozygosity: "maximum observed heterozygosity of an individual",
 });
-
-/** The word drawn before the box of a threshold, the start of its name,
-    "Maximum proportion of missing genotypes", whose rest the plot above
-    says; the start, so that the name a screen reader or a voice control
-    reads holds the word seen (WCAG 2.5.3). */
-export const THRESHOLD_SHOWN_LABEL = "Maximum";
 
 /** What a threshold keeps of the variants or the individuals of one
     histogram, those with a value: from `keptLow` to `keptHigh`, one
@@ -250,116 +268,60 @@ export interface ThresholdCounts {
 /** The kind of what a histogram counts, in the words under it. */
 export type Counted = "variant" | "individual";
 
-/** The most decimals a threshold of the individuals is shown and typed
-    with, in its box, the words under its plot and the value text of its
-    line: 4, the step of its line. Its count is exact at any number. */
-export const THRESHOLD_DECIMALS = 4;
-
-/** The most decimals a threshold of the variants is shown and typed
-    with: 8, those of popnei's fine edges, k/1280, 0.33984375 for
-    435/1280, each shown in full, since the counts are of the edge and
-    a number rounded off it may keep other variants: on the MAF of
-    panel.vcf.gz popnei keeps 51 at 0.5203125 and 49 at 0.5203. */
-export const VARIANT_THRESHOLD_DECIMALS = 8;
-
-/** `value` rounded to `THRESHOLD_DECIMALS` decimals, as a threshold of
-    the individuals is shown: 0.03 for 0.030000000000000002. */
-export function thresholdShown(value: number): number {
-  return Number(value.toFixed(THRESHOLD_DECIMALS));
-}
-
-/** What the words of a threshold say besides its counts. */
-export interface ThresholdWordsOptions {
-  /** The counts are of the variants read so far, while the pass runs. */
-  readonly soFar?: boolean;
-  /** The threshold was never set and stands at the top of the axis,
-      where it keeps everything: a starting place, not a limit. */
-  readonly noLimit?: boolean;
-  /** The end of the bin that starts at the line, 0.05078125 for the
-      line at 0.05, which the words of a range name. */
-  readonly binEnd?: number;
-}
-
-/** The words after the box of a threshold, under its plot: what it keeps
-    and removes of those with a value, "keeps 1,050 variants and removes
-    150"; "keeps all 1,200 variants", or "(no limit) keeps all 1,200
-    variants" for a threshold never set, `noLimit`; and, with the range
-    the bins allow, why, once: "keeps 1,113 to 1,152 variants; the bins
-    cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05". `shown`
-    is the number of the threshold as the box shows it. While the pass
-    runs, `soFar`, the counts are of the variants read so far and say
-    so. */
-export function thresholdLine(
-  shown: number,
+/** The line under the row of a threshold, over its plot: what it keeps
+    of those with a value, "Keeps 1,050 of 1,200 variants", the range the
+    bins allow, "Keeps 564–566 of 1,200 variants", or "Keeps all 1,200
+    variants"; ending "so far" while the pass runs, `soFar`. No
+    explanation of a range: the hatched bar shows it. */
+export function keepsLine(
   counts: ThresholdCounts,
   noun: Counted,
-  options: ThresholdWordsOptions = {},
+  soFar = false,
 ): string {
-  const { soFar = false, noLimit = false, binEnd } = options;
-  const keeps = `${noLimit ? NO_LIMIT : ""}${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
-  const undecided = counts.keptHigh - counts.keptLow;
-  if (undecided === 0 || binEnd === undefined) return keeps;
-  const from = numberText(shown);
-  const to = numberText(binEnd);
-  return undecided === 1
-    ? `${keeps}; the bins cannot tell whether the ${noun} from ${from} to ${to} is at ${from}`
-    : `${keeps}; the bins cannot tell which of the ${grouped(undecided)} from ${from} to ${to} are at ${from}`;
+  const { keptLow, keptHigh, withValue } = counts;
+  const ending = soFar ? SO_FAR : "";
+  if (withValue === 0) return `No ${noun} has a value${ending}`;
+  if (keptLow === withValue && keptHigh === withValue) {
+    return withValue === 1
+      ? `Keeps the only ${noun}${ending}`
+      : `Keeps all ${counted(withValue, noun)}${ending}`;
+  }
+  const range =
+    keptLow === keptHigh
+      ? grouped(keptLow)
+      : `${grouped(keptLow)}–${grouped(keptHigh)}`;
+  return `Keeps ${range} of ${counted(withValue, noun)}${ending}`;
 }
 
 /** What the line of a threshold says to a screen reader as its value:
-    the number and what it keeps of those with a value, "0.1, keeps 1,050
-    of 1,200 variants", "0.05, keeps 1,113 to 1,152 of 1,200 variants",
-    "0.3, keeps all 1,200 variants", "0.7 (no limit), keeps all 1,200
-    variants" for a threshold never set, `noLimit`; ending "so far" while
-    the pass runs, `soFar`. */
+    the number, `shown` as the box shows it, and what it keeps of those
+    with a value, "0.1, keeps 1,050 of 1,200 variants", "0.05, keeps 1,113
+    to 1,152 of 1,200 variants", "0.3, keeps all 1,200 variants"; ending
+    "so far" while the pass runs, `soFar`. */
 export function thresholdValueText(
   shown: number,
   counts: ThresholdCounts,
   noun: Counted,
-  options: ThresholdWordsOptions = {},
+  soFar = false,
 ): string {
-  const { soFar = false, noLimit = false } = options;
   const { keptLow, keptHigh, withValue } = counts;
-  const keeps =
-    withValue === 0 || (keptLow === withValue && keptHigh === withValue)
-      ? keepsWords(counts, noun)
-      : `keeps ${rangeText(keptLow, keptHigh)} of ${counted(withValue, noun)}`;
-  return `${numberText(shown)}${noLimit ? " (no limit)" : ""}, ${keeps}${soFar ? SO_FAR : ""}`;
-}
-
-/** The line under the box of a threshold of the variants after a number
-    typed was moved to the nearest of popnei's edges, which the counts
-    are of: "0.07 is counted as 0.0703125, the nearest edge of the
-    bins." */
-export function snappedText(typed: number, shown: number): string {
-  return `${numberText(typed)} is counted as ${numberText(shown)}, the nearest edge of the bins.`;
-}
-
-/** The start of the words of a threshold never set. */
-const NO_LIMIT = "(no limit) ";
-
-/** What a threshold keeps, and removes when the bins can tell, in
-    words: one number, or the range of what it keeps, what it removes
-    following from it. */
-function keepsWords(counts: ThresholdCounts, noun: Counted): string {
-  const { keptLow, keptHigh, withValue } = counts;
-  if (withValue === 0) return `no ${noun} has a value`;
-  if (keptLow === withValue && keptHigh === withValue) {
-    return withValue === 1
-      ? `keeps the only ${noun}`
-      : `keeps all ${counted(withValue, noun)}`;
+  const ending = soFar ? SO_FAR : "";
+  let keeps: string;
+  if (withValue === 0) {
+    keeps = `no ${noun} has a value`;
+  } else if (keptLow === withValue && keptHigh === withValue) {
+    keeps =
+      withValue === 1
+        ? `keeps the only ${noun}`
+        : `keeps all ${counted(withValue, noun)}`;
+  } else {
+    const range =
+      keptLow === keptHigh
+        ? grouped(keptLow)
+        : `${grouped(keptLow)} to ${grouped(keptHigh)}`;
+    keeps = `keeps ${range} of ${counted(withValue, noun)}`;
   }
-  const plural = keptLow === 1 && keptHigh === 1 ? noun : `${noun}s`;
-  if (keptLow !== keptHigh) {
-    return `keeps ${rangeText(keptLow, keptHigh)} ${plural}`;
-  }
-  return `keeps ${grouped(keptLow)} ${plural} and removes ${grouped(withValue - keptLow)}`;
-}
-
-/** A count, or the range of two, with commas between thousands: "1,050",
-    "1,113 to 1,152". */
-function rangeText(low: number, high: number): string {
-  return low === high ? grouped(low) : `${grouped(low)} to ${grouped(high)}`;
+  return `${numberText(shown)}, ${keeps}${ending}`;
 }
 
 /** The line under a histogram of the individuals of those with no value,

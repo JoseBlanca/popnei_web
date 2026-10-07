@@ -9,25 +9,6 @@
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 
-/**
- * An edge of popnei's fine bins of the variants. The slider of a
- * histogram moves in edge indices, 0 to the number of bins, step 1, so a
- * number the user types is snapped to an edge by `snapToFineEdge`, not
- * refused by the step of a number field.
- */
-export interface FineEdge {
-  /** Its index among the edges, from 0, the lowest, to the number of
-      bins, the highest. */
-  readonly index: number;
-  /** popnei's edge itself, `binEdges[index]`, what the counts are of. */
-  readonly value: number;
-  /** The number shown for the edge, `index / numBins`: what the box,
-      the words under the plot and the slider's value text print. It
-      differs from `value` on the edges where popnei's is one double
-      above, 0.3 for 0.30000000000000004. */
-  readonly shown: number;
-}
-
 /** What a threshold keeps of the variants. */
 export interface VariantCounts {
   /** The fewest variants it may keep. */
@@ -49,44 +30,124 @@ export interface IndividualCounts {
 }
 
 /**
- * The edge of `binEdges`, popnei's edges of the fine bins of the
- * variants, nearest to `value`, a number the user typed or dragged; of
- * two as near, the higher. A value below the lowest edge gives the
- * lowest, and one above the highest the highest. The edges are popnei's,
- * k · (1/1280), and not k/1280, which on 464 of the 1,281 edges is the
- * double below popnei's, as 0.3 is below 0.30000000000000004. A `value`
- * that is NaN or infinite, and edges that are fewer than two or do not
- * go up, are defects, thrown.
+ * What the threshold `value`, which keeps the values at most it, keeps
+ * of the variants of `part`, by `statistic`, from popnei's fine bins:
+ * from `keptLow` to `keptHigh`, one number when the bins can tell. The
+ * variants it removes are `withValue` minus what it keeps.
+ *
+ * - On one of popnei's edges, `value` equal to k/numBins or to popnei's
+ *   edge k, as `variantsAtEdge` counts it: the bins below the edge, and
+ *   with them the bin that starts at it when a value may sit on the
+ *   edge.
+ * - Between two edges, inside the bin from the edge under `value` to the
+ *   edge over it: from the bins below the edge under it to the bins
+ *   below the edge over it, that bin's variants being on either side of
+ *   `value`, one number when the bin is empty. 0.07 lies inside the bin
+ *   from 89/1280 to 90/1280, 0.0695 to 0.0703.
+ * - Below the first edge, none; at or above the last, every one.
+ *
+ * popnei's issue drafted in docs/designs/stats-filters.popnei-issue.md
+ * (branch design-stats-filters), bins that hold their right edge, would
+ * make the count on an edge one number; this is the one function that
+ * counts the variants of a threshold, so that the fix changes it alone.
+ * A `value` that is NaN or infinite, and edges that are fewer than two
+ * or do not go up, are defects, thrown.
  */
-export function snapToFineEdge(
-  binEdges: Float64Array,
+export function variantsAtMost(
+  part: VariantStatsPart,
+  statistic: VariantStatistic,
   value: number,
-): FineEdge {
+): VariantCounts {
   if (!Number.isFinite(value)) {
-    throw defect(`a threshold of ${String(value)} to snap.`);
+    throw defect(`a threshold of ${String(value)} for the variants.`);
   }
-  checkEdges(binEdges);
+  const edges = part.binEdges;
+  checkEdges(edges);
+  const numBins = edges.length - 1;
+  const nominal = Math.round(value * numBins);
+  if (
+    nominal >= 0 &&
+    nominal <= numBins &&
+    (nominal / numBins === value || at(edges, nominal) === value)
+  ) {
+    return variantsAtEdge(part, statistic, nominal);
+  }
   // The first edge above `value`, or the number of edges when none is.
   let low = 0;
-  let high = binEdges.length;
+  let high = edges.length;
   while (low < high) {
     const middle = Math.floor((low + high) / 2);
-    if (at(binEdges, middle) > value) {
+    if (at(edges, middle) > value) {
       high = middle;
     } else {
       low = middle + 1;
     }
   }
-  const last = binEdges.length - 1;
-  const index =
-    low === 0
-      ? 0
-      : low > last
-        ? last
-        : at(binEdges, low) - value <= value - at(binEdges, low - 1)
-          ? low
-          : low - 1;
-  return { index, value: at(binEdges, index), shown: index / last };
+  if (low === 0) {
+    const { withValue } = variantsAtEdge(part, statistic, numBins);
+    return { keptLow: 0, keptHigh: 0, withValue };
+  }
+  if (low > numBins) return variantsAtEdge(part, statistic, numBins);
+  // `value` lies inside the bin from the edge low - 1 to the edge low.
+  const under = variantsAtEdge(part, statistic, low - 1);
+  const over = variantsAtEdge(part, statistic, low);
+  return {
+    keptLow: under.keptLow,
+    keptHigh: over.keptLow,
+    withValue: under.withValue,
+  };
+}
+
+/** The step a threshold moves by over an axis, and the decimals it is
+    shown and counted with. */
+export interface ThresholdStep {
+  /** A power of ten: 0.01 on an axis of 0 to 1. */
+  readonly step: number;
+  /** Its decimals: 2 for 0.01, 0 for 1. */
+  readonly decimals: number;
+}
+
+/**
+ * The step of a threshold over an axis from `low` to `high`: the power of
+ * ten that gives at most about 100 positions over it,
+ * 10^ceil(log10((high − low) / 100)), 0.01 on an axis of 0 to 1, 0.001 on
+ * 0 to 0.1 or on 0.32 to 0.4 (docs/plans/thresholds.md, "Round 1 with
+ * the owner"). A span off a power of ten by the error of a subtraction,
+ * 0.30000000000000004 − 0.2, takes the step of the power of ten. `high`
+ * at most `low`, or either not finite, is a defect, thrown.
+ */
+export function thresholdStep(low: number, high: number): ThresholdStep {
+  if (!(Number.isFinite(low) && Number.isFinite(high) && high > low)) {
+    throw defect(`an axis from ${String(low)} to ${String(high)}.`);
+  }
+  const exponent = Math.ceil(
+    Math.log10((high - low) / AXIS_POSITIONS) - SPAN_TOLERANCE,
+  );
+  const decimals = Math.max(0, -exponent);
+  return { step: Number(`1e${String(exponent)}`), decimals };
+}
+
+/** The most positions of a threshold over its axis. */
+const AXIS_POSITIONS = 100;
+
+/** How far above a power of ten, in its logarithm, a span may be and
+    still take that power's step: the error of a subtraction of two
+    doubles, far below a digit a user sees. */
+const SPAN_TOLERANCE = 1e-9;
+
+/** `value` rounded to `decimals` decimals, the nearest half up, the
+    number a threshold is shown and counted at: 0.07 for 0.0734 and 0.15
+    for 0.145 with 2. The point is shifted in the text, where 0.145 × 100
+    is 14.499999999999998 and `toFixed` gives 0.14. A `value` that is not
+    finite is a defect, thrown. */
+export function thresholdOnStep(value: number, decimals: number): number {
+  if (!Number.isFinite(value)) {
+    throw defect(`a threshold of ${String(value)} to round.`);
+  }
+  const text = String(value);
+  if (text.includes("e")) return Number(value.toFixed(decimals));
+  const units = Math.round(Number(`${text}e${String(decimals)}`));
+  return Number(`${String(units)}e-${String(decimals)}`);
 }
 
 /**
@@ -118,17 +179,13 @@ export function snapToFineEdge(
  * - never on the top edge, index numBins, which keeps every variant.
  *
  * On the 1,280 bins of popnei, 817 of the 1,281 edges equal k/1280,
- * among them every round number a user types, 0.05, 0.1, 0.5. popnei's
- * issue drafted in docs/designs/stats-filters.popnei-issue.md (branch
- * design-stats-filters), bins that hold their right edge, would make every
- * count one number; this is the one function that counts the variants of
- * a threshold, so that the fix changes it alone.
+ * among them every multiple of 0.05 a user types, 0.05, 0.1, 0.5.
  *
  * An `edgeIndex` that is not a whole number from 0 to the number of
  * bins, and a part whose counts are not one fewer than its edges, are
  * defects, thrown.
  */
-export function variantsAtMost(
+function variantsAtEdge(
   part: VariantStatsPart,
   statistic: VariantStatistic,
   edgeIndex: number,

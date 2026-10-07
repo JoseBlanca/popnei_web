@@ -9,11 +9,11 @@
  * statistics"):
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
- *   and the expected heterozygosity (unbiased), with the number of
- *   variants in their bins;
+ *   and the expected heterozygosity (unbiased), each with its threshold
+ *   and what it keeps of the variants in their bins;
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   with the number of individuals in their bins; and the download of
+ *   each with its threshold and what it keeps; and the download of
  *   their table as CSV, which is not drawn, since there may be thousands
  *   of individuals.
  *
@@ -27,8 +27,8 @@
  *
  * The plots fill in while the pass runs (docs/plans/live-stats.md, "The
  * plots so far"): from the first result so far of the pass, about two
- * seconds after its start, they are drawn from the last one, each saying
- * it is over the variants or the individuals so far, and at the end from
+ * seconds after its start, they are drawn from the last one, the words of
+ * each threshold saying their counts are so far, and at the end from
  * the result. Nothing keeps their room before: the open button under the
  * section moves down as they arrive, which the owner chose over empty
  * space. The download of the table of the individuals comes with the
@@ -284,8 +284,8 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
 
 /** The thresholds of the six histograms, as the user set them: a
     number, or `null` for the top of the axis, which keeps everything and
-    follows the axis as a result so far widens it. Those of the variants
-    are snapped to popnei's fine edges where they are drawn and counted. */
+    follows the axis as a result so far widens it. Each is drawn and
+    counted rounded to the step of its axis. */
 interface Thresholds {
   readonly variants: Readonly<Record<VariantStatistic, number | null>>;
   readonly individuals: Readonly<Record<IndividualStatistic, number | null>>;

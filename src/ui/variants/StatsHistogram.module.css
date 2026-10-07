@@ -1,6 +1,8 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* A histogram: its title, the line of what is in its bins, its plot. */
+/* A histogram: the row of its title and the box of its threshold, the
+   line of what the threshold keeps, its plot. A container, so that the
+   line of what it keeps knows the width of its column. */
 .block {
   display: grid;
   gap: var(--space-2);
@@ -8,45 +10,34 @@
      as what it holds, and a plot drawn wide would keep it wide after the
      window narrows. */
   min-inline-size: 0;
+  container-type: inline-size;
 }
 
-.title {
-  margin: 0;
-  font-weight: 600;
+/* The row of the short title, "max:" and the box. */
+.head {
+  min-inline-size: 0;
 }
 
-.muted {
+/* What the threshold keeps, over the plot. One row high, and two where
+   the column is too narrow for its longest form, "Keeps 1,113–1,152 of
+   1,200 variants so far", so that the plot does not move as the words
+   change while the line is dragged, nor stand at another height than
+   the plot beside it. */
+.keeps {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  min-block-size: calc(1em * var(--leading-body));
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+@container (inline-size < 22rem) {
+  .keeps {
+    min-block-size: calc(2em * var(--leading-body));
+  }
 }
 
 /* The plot and the line of its threshold laid over it. */
 .plot {
   position: relative;
   min-inline-size: 0;
-}
-
-/* The row under the plot: the box of the threshold, and what it keeps
-   and removes beside it, or under it when the column is narrow. */
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: var(--space-3);
-  row-gap: var(--space-1);
-}
-
-/* What the threshold keeps and removes. Two lines kept for it, a
-   minimum, so that the plot and those beside it do not move as the words
-   grow longer while the line is dragged, nor stand at other heights in a
-   row. */
-.line {
-  flex: 1 1 14rem;
-  margin: 0;
-  min-block-size: calc(2em * var(--leading-body));
-  display: flex;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }

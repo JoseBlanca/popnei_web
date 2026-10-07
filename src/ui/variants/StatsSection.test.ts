@@ -345,10 +345,14 @@ describe("the section of the statistics of the open file", () => {
     });
     await settled();
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
-    expect(partsText().match(/Over 523 variants so far/gu)).toHaveLength(4);
-    expect(
-      partsText().match(/Over 2 individuals, from the variants read so far/gu),
-    ).toHaveLength(2);
+    // The line of each threshold, over the variants or the individuals
+    // so far.
+    expect(partsText().match(/Keeps [^.]*523 variants so far/gu)).toHaveLength(
+      4,
+    );
+    expect(partsText().match(/Keeps [^.]*2 individuals so far/gu)).toHaveLength(
+      2,
+    );
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );
@@ -360,13 +364,15 @@ describe("the section of the statistics of the open file", () => {
       await Promise.resolve();
     });
     await settled();
-    expect(partsText().match(/Over 1,000 variants so far/gu)).toHaveLength(4);
+    expect(
+      partsText().match(/Keeps [^.]*1,000 variants so far/gu),
+    ).toHaveLength(4);
     expect([...container.querySelectorAll("svg.chart")]).toEqual(before);
 
     await endDone(page);
     expect(partsText()).not.toContain("so far");
     expect(partsText()).not.toContain("Calculating");
-    expect(partsText().match(/Over 1,200 variants/gu)).toHaveLength(4);
+    expect(partsText().match(/Keeps [^.]*1,200 variants/gu)).toHaveLength(4);
     expect(
       [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
         (element) => element.textContent,

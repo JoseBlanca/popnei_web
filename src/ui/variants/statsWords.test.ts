@@ -3,14 +3,17 @@ import { describe, expect, test } from "vitest";
 import {
   PART_FAILED,
   PART_STOPPED,
-  overIndividualsLine,
-  overVariantsLine,
+  individualFullTitle,
+  individualThresholdName,
+  individualTitle,
+  keepsLine,
   statsFirstText,
   statsRunningLine,
-  snappedText,
-  thresholdLine,
-  thresholdShown,
+  thresholdShownLabel,
   thresholdValueText,
+  variantFullTitle,
+  variantThresholdName,
+  variantTitle,
 } from "./statsWords.ts";
 
 describe("the words of the statistics of the open file", () => {
@@ -30,15 +33,35 @@ describe("the words of the statistics of the open file", () => {
     expect(PART_FAILED).toBe("Not calculated.");
   });
 
-  test("each histogram says how many variants or individuals it is over", () => {
-    expect(overVariantsLine(1200)).toBe("Over 1,200 variants");
-    expect(overIndividualsLine(1)).toBe("Over 1 individual");
+  test("thresholds round 1 the titles are short, the owner's five and the major allele frequency; the plot keeps the full name", () => {
+    expect(
+      (["missingRate", "maf", "obsHet", "unbiasedExpHet"] as const).map(
+        variantTitle,
+      ),
+    ).toEqual([
+      "Missing genotypes",
+      "Major allele frequency",
+      "Obs. het.",
+      "Exp. het. (unbiased)",
+    ]);
+    expect(
+      (["missingGenotypes", "observedHeterozygosity"] as const).map(
+        individualTitle,
+      ),
+    ).toEqual(["Missing GTs", "Obs. het."]);
+    expect(variantFullTitle("obsHet")).toBe("Observed heterozygosity");
+    expect(individualFullTitle("missingGenotypes")).toBe(
+      "Proportion of missing genotypes of each individual",
+    );
   });
 
-  test("live-stats 2 while the pass runs, each histogram says it is over the variants so far, or over every individual from the variants so far", () => {
-    expect(overVariantsLine(523, true)).toBe("Over 523 variants so far");
-    expect(overIndividualsLine(200, true)).toBe(
-      "Over 200 individuals, from the variants read so far",
+  test("thresholds round 1 the name of a box starts with the words drawn before it (WCAG 2.5.3) and goes on with the full name", () => {
+    expect(thresholdShownLabel("Obs. het.")).toBe("Obs. het. max:");
+    expect(variantThresholdName("obsHet")).toBe(
+      "Obs. het. max: maximum observed heterozygosity",
+    );
+    expect(individualThresholdName("missingGenotypes")).toBe(
+      "Missing GTs max: maximum proportion of missing genotypes of an individual",
     );
   });
 
@@ -49,101 +72,84 @@ describe("the words of the statistics of the open file", () => {
   });
 });
 
-describe("thresholds 2 the words of a threshold", () => {
-  test("one number where the bins can tell, a range where they cannot, all when it keeps every one", () => {
-    const exact = { keptLow: 1050, keptHigh: 1050, withValue: 1200 };
-    expect(thresholdLine(0.1, exact, "variant")).toBe(
-      "keeps 1,050 variants and removes 150",
-    );
-    const all = { keptLow: 1200, keptHigh: 1200, withValue: 1200 };
-    expect(thresholdLine(0.3, all, "variant")).toBe("keeps all 1,200 variants");
-    expect(thresholdValueText(0.3, all, "variant")).toBe(
-      "0.3, keeps all 1,200 variants",
-    );
+describe("thresholds round 1 the line of what a threshold keeps", () => {
+  test("one number where the bins can tell, a range where they cannot, all when it keeps every one; no explanation", () => {
+    expect(
+      keepsLine({ keptLow: 1050, keptHigh: 1050, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 1,050 of 1,200 variants");
+    expect(
+      keepsLine({ keptLow: 564, keptHigh: 566, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 564\u2013566 of 1,200 variants");
+    expect(
+      keepsLine({ keptLow: 1200, keptHigh: 1200, withValue: 1200 }, "variant"),
+    ).toBe("Keeps all 1,200 variants");
     // A range that reaches every variant is still a range.
-    const toAll = { keptLow: 1190, keptHigh: 1200, withValue: 1200 };
-    expect(thresholdValueText(0.5, toAll, "variant")).toBe(
-      "0.5, keeps 1,190 to 1,200 of 1,200 variants",
-    );
+    expect(
+      keepsLine({ keptLow: 1190, keptHigh: 1200, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 1,190\u20131,200 of 1,200 variants");
   });
 
-  test("fix 2 a range says why once, with the variants of the bin at the line, and not what it removes", () => {
-    const range = { keptLow: 1113, keptHigh: 1152, withValue: 1200 };
-    expect(thresholdLine(0.05, range, "variant", { binEnd: 0.0508 })).toBe(
-      "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
-    );
+  test("while the pass runs it ends so far", () => {
     expect(
-      thresholdLine(0.05, range, "variant", { binEnd: 0.0508, soFar: true }),
-    ).toBe(
-      "keeps 1,113 to 1,152 variants so far; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
-    );
-    expect(
-      thresholdLine(
-        0,
-        { keptLow: 0, keptHigh: 1, withValue: 1200 },
+      keepsLine(
+        { keptLow: 1113, keptHigh: 1152, withValue: 1200 },
         "variant",
-        { binEnd: 0.0008 },
+        true,
       ),
-    ).toBe(
-      "keeps 0 to 1 variants; the bins cannot tell whether the variant from 0 to 0.0008 is at 0",
-    );
-    expect(thresholdValueText(0.05, range, "variant")).toBe(
-      "0.05, keeps 1,113 to 1,152 of 1,200 variants",
-    );
-  });
-
-  test("fix 5 a threshold never set says it is no limit; one set at the same place does not", () => {
-    const all = { keptLow: 1200, keptHigh: 1200, withValue: 1200 };
-    expect(thresholdLine(0.95, all, "variant", { noLimit: true })).toBe(
-      "(no limit) keeps all 1,200 variants",
-    );
-    expect(thresholdValueText(0.95, all, "variant", { noLimit: true })).toBe(
-      "0.95 (no limit), keeps all 1,200 variants",
-    );
-    expect(thresholdLine(0.95, all, "variant")).toBe(
-      "keeps all 1,200 variants",
-    );
-  });
-
-  test("fix 3 a threshold of the individuals is shown with four decimals", () => {
-    expect(thresholdShown(0.03000000001)).toBe(0.03);
-    expect(thresholdShown(0.0439)).toBe(0.0439);
-  });
-
-  test("th3 fix 1 an edge of the variants is shown in full, the number counted, and a number typed and moved to it says so", () => {
-    expect(snappedText(0.07, 0.0703125)).toBe(
-      "0.07 is counted as 0.0703125, the nearest edge of the bins.",
-    );
+    ).toBe("Keeps 1,113\u20131,152 of 1,200 variants so far");
     expect(
-      thresholdValueText(
-        0.21953125,
-        { keptLow: 15, keptHigh: 15, withValue: 20 },
-        "variant",
+      keepsLine(
+        { keptLow: 180, keptHigh: 180, withValue: 200 },
+        "individual",
+        true,
       ),
-    ).toBe("0.21953125, keeps 15 of 20 variants");
+    ).toBe("Keeps 180 of 200 individuals so far");
   });
 
   test("one, none, and no value at all", () => {
     expect(
-      thresholdLine(
-        0.2,
-        { keptLow: 1, keptHigh: 1, withValue: 3 },
-        "individual",
-      ),
-    ).toBe("keeps 1 individual and removes 2");
+      keepsLine({ keptLow: 1, keptHigh: 1, withValue: 3 }, "individual"),
+    ).toBe("Keeps 1 of 3 individuals");
     expect(
-      thresholdLine(1, { keptLow: 1, keptHigh: 1, withValue: 1 }, "variant"),
-    ).toBe("keeps the only variant");
+      keepsLine({ keptLow: 0, keptHigh: 0, withValue: 3 }, "individual"),
+    ).toBe("Keeps 0 of 3 individuals");
     expect(
-      thresholdLine(0.5, { keptLow: 0, keptHigh: 0, withValue: 0 }, "variant"),
-    ).toBe("no variant has a value");
+      keepsLine({ keptLow: 1, keptHigh: 1, withValue: 1 }, "variant"),
+    ).toBe("Keeps the only variant");
+    expect(
+      keepsLine({ keptLow: 0, keptHigh: 0, withValue: 0 }, "variant"),
+    ).toBe("No variant has a value");
+  });
+
+  test("the value text of the line says the number and what it keeps, a range with 'to'", () => {
     expect(
       thresholdValueText(
-        0.0008,
+        0.1,
+        { keptLow: 1050, keptHigh: 1050, withValue: 1200 },
+        "variant",
+      ),
+    ).toBe("0.1, keeps 1,050 of 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.05,
+        { keptLow: 1113, keptHigh: 1152, withValue: 1200 },
+        "variant",
+      ),
+    ).toBe("0.05, keeps 1,113 to 1,152 of 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.3,
+        { keptLow: 1200, keptHigh: 1200, withValue: 1200 },
+        "variant",
+      ),
+    ).toBe("0.3, keeps all 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.004,
         { keptLow: 2, keptHigh: 2, withValue: 1200 },
         "variant",
-        { soFar: true },
+        true,
       ),
-    ).toBe("0.0008, keeps 2 of 1,200 variants so far");
+    ).toBe("0.004, keeps 2 of 1,200 variants so far");
   });
 });

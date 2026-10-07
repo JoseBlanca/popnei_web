@@ -15,8 +15,7 @@
  * tenth of its range, and Home and End to the ends of the axis. Its name is not drawn, since the number field
  * beside it has the same name in its visible label; its value, for a
  * screen reader, is what the screen says it keeps, "0.1, keeps 1,050 of
- * 1,200 variants", where React Aria would say the number of its own
- * units, the index of an edge. Nothing is announced at each step: the
+ * 1,200 variants", where React Aria would say the number alone. Nothing is announced at each step: the
  * value is read as the thumb moves, as of any slider.
  */
 import { useLayoutEffect, useRef } from "react";

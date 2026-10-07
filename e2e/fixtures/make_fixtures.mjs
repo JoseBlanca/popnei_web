@@ -404,9 +404,37 @@ console.log(
 // popnei's edge is not k/1280 but the double above: the number the page
 // shows for the edge, at which popnei's filter must keep a count the page
 // gives (docs/plans/thresholds.md, the fixes of the review of phase 2).
+// And, under `filterKeptRound`, the variants each of the three keeps at
+// the numbers of two and three decimals listed in `roundNumbers`, every
+// multiple of 0.01 from 0 to 1, of 0.001 from 0 to 0.1 and from 0.32 to
+// 0.4, and 0.105, 0.255, 0.333, 0.521 and 0.699: the numbers a threshold
+// moves by on its axis, most of them inside a fine bin, where the page
+// gives the range from the bins below the bin to those and the bin
+// (docs/plans/thresholds.md, "Round 1 with the owner").
 // And popnei's version, which the tests check against the one installed.
 // The tests of core read it, since they may not call popnei.
 const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
+/** The multiples of `step`, `decimals` decimals, from `from` to `to`
+    units of it. */
+function multiples(from, to, decimals) {
+  const numbers = [];
+  for (let units = from; units <= to; units += 1) {
+    numbers.push(Number(`${String(units)}e-${String(decimals)}`));
+  }
+  return numbers;
+}
+const ROUND_NUMBERS = [
+  ...new Set([
+    ...multiples(0, 100, 2),
+    ...multiples(0, 100, 3),
+    ...multiples(320, 400, 3),
+    0.105,
+    0.255,
+    0.333,
+    0.521,
+    0.699,
+  ]),
+].sort((a, b) => a - b);
 const thresholdFiles = [
   ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
   ["panel.nei", null],
@@ -481,6 +509,19 @@ for (const [name, options] of thresholdFiles) {
         ),
       ),
   );
+  const roundKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        ROUND_NUMBERS.map((number) =>
+          keptByFilter(name, options, filter, number),
+        ),
+      ),
+  );
   thresholdLines.push(
     `  ${JSON.stringify(name)}: {\n` +
       `    "numVars": ${JSON.stringify(summary.passStats.numVars)},\n` +
@@ -490,7 +531,8 @@ for (const [name, options] of thresholdFiles) {
       `    "obsHetRate": ${JSON.stringify([...perIndividual.obsHetRate])},\n` +
       `    "filterKept": {\n${filterKept.join(",\n")}\n    },\n` +
       `    "offEdges": ${JSON.stringify(offEdges)},\n` +
-      `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    }\n  }`,
+      `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    },\n` +
+      `    "filterKeptRound": {\n${roundKept.join(",\n")}\n    }\n  }`,
   );
 }
 const thresholdsPath = join(fixtures, "threshold_counts.json");
@@ -499,6 +541,7 @@ writeFileSync(
   `{\n  "popnei": ${JSON.stringify(version())},\n` +
     `  "numBins": ${String(FINE_BINS)},\n` +
     `  "thresholds": ${JSON.stringify(THRESHOLDS)},\n` +
+    `  "roundNumbers": ${JSON.stringify(ROUND_NUMBERS)},\n` +
     `${thresholdLines.join(",\n")}\n}\n`,
 );
 console.log(

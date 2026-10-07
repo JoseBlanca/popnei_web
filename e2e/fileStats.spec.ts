@@ -71,19 +71,34 @@ function info(page: Page): Locator {
   return page.getByRole("region", { name: "File information" });
 }
 
-/** The titles of the histograms, in their order. */
-function titles(page: Page): Locator {
-  return stats(page).getByRole("group").locator("> p:first-child");
+/** The titles of the histograms, in their order: the short words drawn
+    before the box of each threshold, and the full name of its group,
+    which a screen reader reads. */
+async function titles(
+  page: Page,
+): Promise<readonly (readonly [string, string])[]> {
+  return stats(page)
+    .locator("label")
+    .evaluateAll((labels) =>
+      labels.map(
+        (label) =>
+          [
+            label.firstChild?.textContent ?? "",
+            label.closest("[role=group]")?.getAttribute("aria-label") ?? "",
+          ] as const,
+      ),
+    );
 }
 
-/** The titles of the six histograms, with no mean. */
+/** The titles of the six histograms, with no mean: the short ones of the
+    owner of 7 October 2026, and the full names. */
 const TITLES = [
-  "Proportion of missing genotypes",
-  "Major allele frequency",
-  "Observed heterozygosity",
-  "Expected heterozygosity (unbiased)",
-  "Proportion of missing genotypes of each individual",
-  "Observed heterozygosity of each individual",
+  ["Missing genotypes max:", "Proportion of missing genotypes"],
+  ["Major allele frequency max:", "Major allele frequency"],
+  ["Obs. het. max:", "Observed heterozygosity"],
+  ["Exp. het. (unbiased) max:", "Expected heterozygosity (unbiased)"],
+  ["Missing GTs max:", "Proportion of missing genotypes of each individual"],
+  ["Obs. het. max:", "Observed heterozygosity of each individual"],
 ];
 
 /** The descriptions of the histograms, which say their bins and the
@@ -147,7 +162,7 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
     "Variants",
     "Individuals",
   ]);
-  await expect(titles(page)).toHaveText(TITLES);
+  expect(await titles(page)).toEqual(TITLES);
   // Each axis over the range of its values rounded out, the missing rates
   // from 0; the variants' bins popnei's 1,280 added up, about 40.
   await expect(descriptions(page)).toHaveText([
@@ -158,8 +173,16 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
     "The proportion of missing genotypes of 200 individuals, in 20 bins from 0 to 0.045.",
     "The observed heterozygosity of 200 individuals, in 20 bins from 0.32 to 0.4.",
   ]);
-  await expect(stats(page).getByText("Over 1,200 variants")).toHaveCount(4);
-  await expect(stats(page).getByText("Over 200 individuals")).toHaveCount(2);
+  // What each threshold keeps of the variants or the individuals in its
+  // bins.
+  await expect(
+    stats(page).getByText(
+      /^Keeps [\d,–]+ of 1,200 variants$|^Keeps all 1,200 variants$/u,
+    ),
+  ).toHaveCount(4);
+  await expect(stats(page).getByText("Keeps all 200 individuals")).toHaveCount(
+    2,
+  );
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
@@ -201,7 +224,7 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   await pick(page, join(FIXTURES, "tetraploid.vcf.gz"));
 
   await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
-  await expect(titles(page)).toHaveText(TITLES);
+  expect(await titles(page)).toEqual(TITLES);
   await expect(descriptions(page)).toHaveText([
     "The proportion of missing genotypes of 200 variants, in 32 bins from 0 to 0.3.",
     "The major allele frequency of 200 variants, in 32 bins from 0.3 to 0.6.",
@@ -210,8 +233,14 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
     "The proportion of missing genotypes of 12 individuals, in 20 bins from 0 to 0.09.",
     "The observed heterozygosity of 12 individuals, in 20 bins from 0.93 to 0.99.",
   ]);
-  await expect(stats(page).getByText("Over 200 variants")).toHaveCount(4);
-  await expect(stats(page).getByText("Over 12 individuals")).toHaveCount(2);
+  await expect(
+    stats(page).getByText(
+      /^Keeps [\d,–]+ of 200 variants$|^Keeps all 200 variants$/u,
+    ),
+  ).toHaveCount(4);
+  await expect(stats(page).getByText("Keeps all 12 individuals")).toHaveCount(
+    2,
+  );
   const csv = await downloadCsv(page);
   expect(csv.name).toBe("tetraploid.individual_stats.csv");
   expect(csv.text.split("\n")).toHaveLength(14);
@@ -299,12 +328,12 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // variants so far, with no download yet; the box gives the variants
   // and the chromosomes read so far; the status region says it once.
   await release(page, "allSoFar");
-  const overSoFar = stats(page).getByText(/^Over [\d,]+ variants so far$/u);
+  const overSoFar = stats(page).getByText(
+    /^Keeps [\d,–]+ of [\d,]+ variants so far$|^Keeps all [\d,]+ variants so far$/u,
+  );
   await expect(overSoFar).toHaveCount(4);
   await expect(
-    stats(page).getByText(
-      "Over 1,000 individuals, from the variants read so far",
-    ),
+    stats(page).getByText("Keeps all 1,000 individuals so far"),
   ).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect(downloadButton(page)).toHaveCount(0);
@@ -330,7 +359,7 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   await expect(stats(page).getByText(/so far/u)).toHaveCount(0);
   await expect(
     stats(page).getByText(
-      `Over ${HELD_VCF_VARIANTS.toLocaleString("en-US")} variants`,
+      `Keeps all ${HELD_VCF_VARIANTS.toLocaleString("en-US")} variants`,
       { exact: true },
     ),
   ).not.toHaveCount(0);

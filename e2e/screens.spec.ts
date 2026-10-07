@@ -4621,7 +4621,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         await release(page, "oneSoFar");
         await expect(
-          newPageStats(page).getByText(/^Over [\d,]+ variants so far$/u),
+          newPageStats(page).getByText(/^Keeps .* variants so far$/u),
         ).toHaveCount(4, { timeout: 60_000 });
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-stats-so-far${at}-${theme}`);
@@ -4638,7 +4638,7 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-done${at}-${theme}`);
       });
 
-      test("the thresholds moved: a line dragged into the middle, and one at 0.05 with the range the bins allow", async ({
+      test("the thresholds moved: a line dragged into the middle, and one at 0.05 with the range the bins allow, hatched", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4646,9 +4646,9 @@ for (const theme of ["light", "dark"] as const) {
           name: "Observed heterozygosity",
           exact: true,
         });
-        await expect(
-          het.getByText("(no limit) keeps all 1,200 variants"),
-        ).toBeVisible({ timeout: 20_000 });
+        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
+          timeout: 20_000,
+        });
         // The thumb, around the hidden input of the slider.
         const thumb = het.getByRole("slider").locator("xpath=../..");
         await thumb.scrollIntoViewIfNeeded();
@@ -4669,7 +4669,7 @@ for (const theme of ["light", "dark"] as const) {
         await missing.getByRole("textbox").fill("0.05");
         await missing.getByRole("textbox").press("Enter");
         await expect(
-          missing.getByText(/^keeps 1,113 to 1,152 variants;/u),
+          missing.getByText("Keeps 1,113\u20131,152 of 1,200 variants"),
         ).toBeVisible();
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);
@@ -4681,13 +4681,13 @@ for (const theme of ["light", "dark"] as const) {
           name: "Observed heterozygosity",
           exact: true,
         });
-        await expect(
-          het.getByText("(no limit) keeps all 1,200 variants"),
-        ).toBeVisible({ timeout: 20_000 });
-        // Reached with Shift and the Tab key from its box, under the plot,
-        // so that the ring shows.
+        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
+          timeout: 20_000,
+        });
+        // Reached with the Tab key from its box, over the plot, so that
+        // the ring shows.
         await het.getByRole("textbox").focus();
-        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
         await expect(het.getByRole("slider")).toBeFocused();
         for (let step = 0; step < 3; step += 1) {
           await page.keyboard.press("PageDown");
