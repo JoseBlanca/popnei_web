@@ -102,20 +102,46 @@ the variants among it.
 With the box on, the one pass also gives the count of the failures, in
 popnei's `passed` entry of its counts; the separate pass of the count of
 the failures (`filterFailures` of `live-stats`) runs only while the box
-is off. The box says "Variants: 1,200" from that entry's variants given,
-and the chromosomes are counted over the variants that passed, so a
+is off. The box says "Variants: 1,200" from that entry's variants given, every
+variant of the file; the chromosomes are counted over the variants
+that passed, the only ones the one pass gives per chromosome, so a
 chromosome all of whose variants failed is not among them.
 
-It is on by default on `popgen2.html`: the first project of that page
-holds it. The old page's first project does not change.
+A VCF of which no variant passed, an unfiltered file with the box on,
+gives popnei no variant, and popnei refuses a pass that gives none. So
+when the one pass is refused for that reason alone, the runner reads the
+file again with popnei's `iterBlocks`, which gives the counts of a pass
+of no variant, and answers the one pass with its counts and no
+statistics: the box says "Variants: 1,200" and "FILTER failures:
+1,200", and each part says "No variant passed its FILTER. Turn the box
+off to see them all.", with the box beside it. `filterFailures` falls
+back the same way today (`runFilterFailures` of `src/worker/runner.ts`).
+
+It is on by default on `popgen2.html`: that page gets a first project of
+its own (`firstProject("popgen")` is shared today by both pages'
+stores), which holds it beside the missing data filter at 0.1. The old
+page's first project does not change.
+
+The old page does not apply the filter. A project file that holds it,
+saved by `popgen2.html` once that page saves projects, is refused by
+`popgen.html` with words that say it was made by the new page, since
+its statistics of each individual, `individualChecks`, read no filter
+and would judge the individuals over every variant while its other
+analyses dropped the failed ones first.
 
 On a `.nei` file the box is not shown. A new file keeps the filters of
 the project, so a user who had the box on for a VCF and opens a `.nei`
-file still has it in the project; for a `.nei` file the filter is not
-sent, and the page says nothing of it, as of a filter that does not
-apply: popnei refuses `filterPassed` on a vars file written before its
-format 1.2, and the page cannot tell the format. Opening a VCF again
-gives it back.
+file still has it in the project; for a `.nei` file the filter does not
+apply, as popnei refuses `filterPassed` on a vars file written before
+its format 1.2 and the page cannot tell the format. So one function of
+`src/core/`, the filters that apply to the project's file
+(`filtersApplied`), leaves it out for a `.nei` file, and everything that
+reads the filters reads that function rather than `p.filters`: the
+requests, the keys, the rows and the check numbers of the counts of the
+filters (`filterCountRows` and `numCheckNumbers` of
+`src/core/analyses/filterCounts.ts`, which would otherwise find a filter
+with no count, a defect), the scripts, the words of the warnings. Opening
+a VCF again gives it back.
 
 What approving it commits to: a project file saved with the filter
 cannot be opened by a version of the application from before it, since
@@ -130,8 +156,11 @@ every `script()`, and the reading of the project file. The route that
 `live-stats` built for the count of the failures, a step of its own
 (`Steps.passed` of the runner, already before the list of individuals)
 and a kind of the counts alone (`PassFilterKind`, `PASS_FILTER_ORDER`,
-`PASS_FILTER_KINDS`), goes: the filter is carried in the `filters` of a
-request as any filter is, so that one route reaches the step.
+`isPassFilterKind` of `messages.ts`), goes: the filter is carried in the
+`filters` of a request as any filter is, so that one route reaches the
+step, and the runner's `Steps` takes it out of them and puts it first,
+before the list of the individuals, where `stepsAre` compares it and
+where the regions will go too.
 
 ## Which calculation reads which filter
 
@@ -141,6 +170,17 @@ request as any filter is, so that one route reaches the step.
 | the count of the FILTER failures (`filterFailures`) | how many variants failed their FILTER | the file | only while the box is off, for a VCF |
 | the histograms of the variants over the individuals kept (`variantChecks`) | the four histograms | the file, the FILTER filter and the filters of the individuals | only while the filters of the individuals take some individual out |
 | the counts of the filters (`filterCounts`) | the variants each filter is given and keeps, in order | the file and every filter | at every change of a filter |
+
+The FILTER filter reaches the keys of the one pass and of
+`variantChecks` through their `keyInputs`, not through `filtersRead`,
+which is all the filters of the variants or none: the one pass is the
+store's `statistics`, which may read no filter of either kind
+(`createStore` refuses one that does), and the thresholds of the
+variants must stay out of both keys. Their requests send it, where they
+send `filters: []` today, and the store's words that the statistics of
+the individuals are "over every variant of the file" change. The
+individuals kept are taken from the one pass's finished result only,
+never from a result so far, kept after a Stop or not.
 
 The histograms of the individuals and the count move only with the
 FILTER filter, since popnei gives the value of each individual over the
@@ -172,6 +212,12 @@ values of the individuals (`StoreConfig.statistics` of
 threshold, as that setting requires; and the store's `counts` names
 `filterCounts`, null today too.
 
+What every opening costs: the first project holds the missing data
+filter at 0.1 and the FILTER filter, so the counts of the filters run
+at every opening, a second pass over the file that reads the genotypes,
+after the one pass. The plan measures it beside the restart of the
+worker.
+
 The chain of `autoRuns.ts` runs, in this order: the one pass; the count
 of the FILTER failures, while the box is off; the histograms over the
 individuals kept, when they are needed; the counts of the filters. A
@@ -183,8 +229,13 @@ again starts the first not done.
 ## When a threshold changes the project
 
 A threshold changes the project, one change with its Undo, when the user
-lets go of the line, presses Enter or leaves the number box, or presses
-an arrow key on the line or in the box. While the line is dragged or a
+lets go of the line, presses Enter or leaves the number box. The arrow
+keys, on the line or in the box, move the threshold at once, and the
+presses of one run make one change, at the quiet second below or when
+the focus leaves: an axis has about 100 positions and a held key
+repeats, so a change at each press would fill the 200 steps of the
+history (`MAX_UNDO_STEPS` of `src/core/history.ts`) with two sweeps of
+an axis and drop the opening of the file from it. While the line is dragged or a
 number is typed, the shading and the counts of that threshold follow it
 from the bins, with no calculation and no change of the project. The
 check box changes the project at each click.
@@ -274,13 +325,26 @@ not before: a button that does nothing yet is not on the page.
 "Download filtered file…" writes the variants and individuals the
 filters keep, as the writing of the old page does (`docs/architecture.md`,
 section 5, "Writing the filtered variants is a request of the
-calculation worker"; section 6, "The files written"): the same request,
-the same formats, `.nei` and VCF, a key of the load, the filters and the
-format, its progress and Stop, and the file saved by the browser. The
+calculation worker"; section 6, "The files written"): the same request, a key of the load, the filters and the format, its
+progress and Stop, and the file saved by the browser. The old page
+writes only `.nei` files (`WriteJob.format` of `src/worker/protocol.ts`,
+the store's `startWrite`); a VCF is a change of its own, of the request,
+the store's states of the writing and the runner, and of memory:
+popnei's `writeVcf` builds the whole file in the memory of the worker
+before it crosses to the page, so a VCF holds about twice the text of
+the kept variants uncompressed in the worker, plus the file in the page,
+until the worker is restarted. Whether the first download offers the VCF
+is the owner's (below). The
 store of `popgen2.html` gets the writing that it has as `null` today.
-The writing is started by the user, not by itself, so it waits in the
-chain behind nothing and stops what runs, as a request the user asks for
-does on the old page. What the user chooses before the writing, the
+The writing is started by the user, not by itself. It does not wait for
+the chain: a calculation of the chain running when the user asks for
+the file is stopped, as a request the user asks for stops what runs on
+the old page, and `autoRuns.ts` does not count that as a Stop of the
+user, as it does not for a calculation left behind by a change: it
+starts it again once the file is written. The chain starts nothing
+while the file is written (`anyRunning` of `autoRuns.ts` reads the
+writing too), so that its next calculation does not wait behind the
+writing with a bar of no progress. What the user chooses before the writing, the
 format, is a small dialog opened by the button, with the format and the
 name of the file; its words and layout are the plan's.
 
@@ -334,15 +398,17 @@ Made on this branch once the owner approves, each with its paragraph
 - **A frozen page:** none new. The counts from the bins add 1,280
   numbers at each move of a line, and the individuals kept sort the
   values of the individuals, a few thousand.
-- **Memory:** none new. Each restart gives the memory of the old worker
-  back; the filtered file is written as on the old page, its size the
-  variants kept.
+- **Memory:** a `.nei` file is written as on the old page. A VCF holds
+  about twice the text of the kept variants, uncompressed, in the memory
+  of the worker, until the worker restarts, plus the file in the page.
 - **The keyboard and a screen reader:** each key press on a line or in a
   box is now a change of the project, so a screen reader says the notice
   of the change after each press. To be heard in VoiceOver, the screen
   reader of macOS, before the plan is settled.
-- **Downloads and browsers:** nothing new; the writing is the old
-  page's.
+- **Downloads and browsers:** nothing new to download; the dialog of the
+  format is `<dialog>` with `showModal`, within the floor of
+  `docs/technology.md`; the file is saved through the browser's
+  download, not `showSaveFilePicker`, which only Chrome has.
 
 ## Options not taken
 
@@ -367,5 +433,9 @@ Made on this branch once the owner approves, each with its paragraph
 ## For the owner to decide
 
 1. Approve the design, or what to change in it.
-2. The quiet second, as a first value, to be settled once the restart of
+2. The formats of the first download: `.nei` alone, the old page's
+   writing as it is; or `.nei` and VCF, a VCF being what other tools
+   read, at the cost of the change of the writing and of the memory
+   above. The design recommends both.
+3. The quiet second, as a first value, to be settled once the restart of
    the worker is measured and the owner has tried it.
