@@ -341,3 +341,35 @@ For the owner, asked in the report: at a Stop or a failure the plots so
 far go away, and the ux and accessibility reviews both raise it (a user
 who stops a long file to look at the plots loses them; and the plots
 change every 2 s with no way to pause them but Stop, WCAG 2.2.2).
+
+### Phase 3, the FILTER failures
+
+Commits 84d2034, db331fe, 9cf1949, bfdd858 and c8a4a84; the fixes of
+its review in d63f7e2 to 77d409b, cb51972 and 681db8e. On popnei
+0.2.1 under node, `low_qual.vcf.gz` has 300 of its 1,200 variants that
+failed their FILTER and `panel.vcf.gz` none; the box says "FILTER
+failures: 300" ("Failed FILTER" named no thing, and "Variants failing
+FILTER: not counted" wraps at 320 px). The count is popnei's
+`calcVarDensity` under `filterPassed`, and, when popnei refuses it
+because no variant passed, a pass of `iterBlocks` read to its end,
+whose counts it gives anyway: under node on the VCF of 127.6 MB the
+first takes 0.9 s and the second 2.4 s, since it reads the genotypes.
+Its Python script was checked name by name against popnei's Python
+source and not run: popnei's Python on this Mac is older than its
+source and has no `filter_passed`.
+
+The review sent spec, tests, stale, errors, api, architecture, react,
+accessibility and ux; spec and stale found nothing, and accessibility
+and react nothing. Fixed: a VCF whose variants all failed gets its
+count; the words of a Stop name the pass that was running and promise
+Start again only when the box offers it; when both passes fail the box
+shows both failures, and a refusal of the count gets the remedies of
+the count's words; a locked member of the chain (the count on a `.nei`
+file, or on a file read without its failed variants) starts nothing
+and holds back nothing; the rule of the box's button at the end of the
+chain is written once (`src/ui/variants/chain.ts`); "passed" is
+accepted in the counts of the count's result alone; screens of a Stop
+and of a crash during the count; the error bar after a crash of the
+count says Start again, as the box does, where it said to reload;
+tests that nothing guarded (the bar's origin of the count, its
+refusal, a `.nei` showing no FILTER line).
