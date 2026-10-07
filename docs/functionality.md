@@ -66,8 +66,9 @@ genome, which popnei will give (decided by the owner on 26 September
 leaves out the variants on each of them for now (the owner, 6 October
 2026). It reads each variants file once, as the owner decided on 7
 October 2026 (docs/plans/one-pass.md). Every variant, whatever its
-FILTER column, stays in the count and the statistics, since the FILTER
-filter as a filter the user sets comes with the filters of that page.
+FILTER column, stays in the count and the statistics, since the filter
+of the FILTER column, which the user sets on that page, acts only when
+the filters are carried out (below).
 How many variants of a VCF failed their FILTER, those whose FILTER
 column is neither PASS nor a dot, 300 of 1,200 in low_qual.vcf.gz, is
 not shown: a second pass over the file counted them until 7 October
@@ -75,11 +76,13 @@ not shown: a second pass over the file counted them until 7 October
 and the count waits for popnei's summary to give it from its own pass,
 popnei issue #12 (JoseBlanca/popnei).
 
-On popgen2.html the distributions of the open file, four of the
-variants and two of the individuals, each carry a threshold that keeps
-the values at most it, from 7 October 2026: a line the user drags on
-the plot or a number typed in a box over it, the bars beyond it drawn as
-removed. Over each plot is one row, its short title, "max:" and the box,
+On popgen2.html the distributions of the open file are four of the
+variants and two of the individuals, and five of them carry a threshold
+that keeps the values at most it, from 7 October 2026: a line the user
+drags on the plot or a number typed in a box over it, the bars beyond
+it drawn as removed. The expected heterozygosity has none, since popnei
+has no filter on it; its plot stays, with its title and its count. Over
+each plot with a threshold is one row, its short title, "max:" and the box,
 "Obs. het. max: 0.04", and under that row one line of what the threshold
 keeps, "Keeps 1,050 of 1,200 variants", "Keeps all 1,200 variants", with
 "so far" while the file is read. The short titles are the owner's of 7
@@ -91,10 +94,42 @@ power of ten that gives at most about 100 positions over it: 0.01 on an
 axis of 0 to 1, 0.001 on one of 0 to 0.1 or of 0.32 to 0.4. A number
 typed with more decimals is rounded to that step, and the box then shows
 it; a number set stays as it was set when the file read so far widens
-the axis and its step grows. These thresholds are shown, not applied:
-they are no filters, change no statistic and no other part of the page,
-and start again at another file or a reload, the missing rate of the
-variants at 0.1 and the others at the top of their axis.
+the axis and its step grows.
+
+Each threshold is a filter of the project, as the owner decided on 7
+October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
+the arrow keys or the box, is a change of the project, with Undo and
+Redo and a notice, "The MAF filter changed · Undo", and a run of
+presses of the arrow keys is one change. A threshold is on or off, and
+off is said in words: its box reads "No filter", nothing is shaded, and
+the line under its title reads "No filter: keeps every variant". It is
+turned off by emptying its box, or by giving it 1, the value at which a
+maximum keeps everything, however 1 is reached, typed or by the line
+dragged to the top of an axis that ends at 1; 1 is off and not a filter
+at 1, since popnei's filters of the MAF and of the observed
+heterozygosity drop a variant with no called genotype at any threshold.
+Only the missing rate of the variants starts on, at 0.1, the default of
+section 3; the others start off. The thresholds stay where the user
+left them when another file is opened, and last until the tab is
+closed, since the page saves no project yet.
+
+A check box at the end of the part of the variants, "Leave out the
+variants that failed their FILTER", on by default, for a VCF; it is
+not shown for a .nei file, to which it does not apply. Its filter acts
+when the filters are carried out, after the individuals are judged, so
+an individual's missing rate and heterozygosity are over every variant,
+and a VCF of which no variant passed is shown as any other.
+
+Nothing is read from the file while the filters change: no plot and no
+count changes with a threshold or the box, each plot describes every
+variant and every individual of the file, and its threshold shades
+what it would leave out. What all the filters keep together comes with
+the reading that carries them out, the download of the filtered file or
+an analysis, in a tools section that waits for popnei issue #13, the
+writers handing the file over in pieces; until then the filters are
+set and kept, with Undo, and nothing carries them out. After a Stop,
+the plots read so far stay, each said to be of the variants read
+before the Stop.
 
 The number a threshold of the variants shows is the number it is
 counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
@@ -106,8 +141,7 @@ is on the edge of a bin, since popnei's bins hold their left edge, and
 those of the bin the threshold lies inside otherwise, 1,197 to 1,199 at
 0.07. The range holds until popnei counts it exactly
 (docs/plans/thresholds.md). A threshold of the individuals is counted
-exactly from popnei's value of each. Applying them as filters is the
-design docs/designs/stats-filters.md.
+exactly from popnei's value of each.
 
 ### The filters of variants
 
