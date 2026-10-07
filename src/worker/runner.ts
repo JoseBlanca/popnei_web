@@ -9,10 +9,9 @@
  * between populations with the order of their heatmap, the LD decay of
  * each population, and the summary of the variants file, its chromosomes
  * and the variants on each, the histograms of the variants and the
- * statistics of each individual from one pass, and the count of the
- * variants of a VCF that failed their FILTER, writes the filtered variants as a `.nei` file,
- * and says what to answer when popnei refuses or something breaks
- * (docs/specs/worker/runner.md).
+ * statistics of each individual from one pass, writes the filtered
+ * variants as a `.nei` file, and says what to answer when popnei refuses
+ * or something breaks (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
  * nothing of the worker's globals: the worker's script, runnerWorker.ts,
@@ -26,7 +25,6 @@ import {
   calcPerVarDistribs,
   calcPopDiversity,
   calcPopDists,
-  calcVarDensity,
   calcVariantsSummary,
   correctDistsByLingoes,
   doPcaFromVariants,
@@ -67,7 +65,6 @@ import type {
   PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
-  FilterFailuresResult,
   FilteringStats,
   HeatmapOrder,
   IndividualChecksJob,
@@ -78,7 +75,6 @@ import type {
   LdDecayResult,
   LoadFormat,
   Opened,
-  PassFilterKind,
   PassStats,
   Pops,
   PcaJob,
@@ -90,6 +86,7 @@ import type {
   VariantChecksJob,
   VariantDistrib,
   VariantFilter,
+  VariantFilterKind,
   VariantStatsPart,
   VariantsSummaryJob,
   VariantsSummaryResult,
@@ -212,10 +209,6 @@ const VARIANT_CHECKS_STATS = [
 /** The kind popnei gives the step of `filterIndividuals` in `steps`. */
 const INDIVIDUALS_STEP = "individuals";
 
-/** The kind popnei gives the step of `filterPassed` in `steps`, and its
-    counts in those of a pass. */
-const PASSED_STEP = "passed";
-
 /**
  * The beginnings of popnei's messages for a range of the file that the
  * browser refused or gave short (`crates/popnei-js/src/source.rs` of
@@ -330,7 +323,6 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
     case "variantChecks":
       return variantStatsArrays(result);
     case "filterCounts":
-    case "filterFailures":
       return [];
     case "variantsSummary":
       return [
@@ -400,13 +392,11 @@ type Held =
       readonly individuals: readonly string[];
     };
 
-/** The steps a request asks of the `Variants`: popnei's `filterPassed`
-    when `passed`, first, as popnei advises; the list of the individuals
-    kept, `null` for every individual; and then its filters of the
-    variants, in their order, which count over the individuals of the
+/** The steps a request asks of the `Variants`: the list of the
+    individuals kept, `null` for every individual, and then its filters of
+    the variants, in their order, which count over the individuals of the
     list. */
 interface Steps {
-  readonly passed: boolean;
   readonly individuals: readonly string[] | null;
   readonly filters: readonly VariantFilter[];
 }
@@ -452,8 +442,8 @@ export function createRunner(options: RunnerOptions = {}): Runner {
    * The `Variants` of the load with the steps of the request on it: as it
    * is when its steps are those; with them put on it when it holds no
    * step; otherwise freed and the file opened again, the steps put on the
-   * new one. `filterPassed` goes first, then the list of individuals, so
-   * that the filters of the variants count over the individuals it keeps.
+   * new one. The list of individuals goes first, so that the filters of
+   * the variants count over the individuals it keeps.
    */
   function variantsWithSteps(
     load: LoadToOpen,
@@ -475,13 +465,6 @@ export function createRunner(options: RunnerOptions = {}): Runner {
         variants = openSource(load, file);
       } catch (thrown: unknown) {
         return answerOfOpenAgain(thrown, file.name);
-      }
-    }
-    if (wanted.passed) {
-      try {
-        variants.filterPassed();
-      } catch (thrown: unknown) {
-        return answerOfPopnei(thrown, file.name);
       }
     }
     if (wanted.individuals !== null) {
@@ -563,8 +546,6 @@ export function createRunner(options: RunnerOptions = {}): Runner {
           toldSoFar,
           soFarEvery: options.soFarEvery ?? null,
         });
-      case "filterFailures":
-        return runFilterFailures(pass);
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -588,7 +569,6 @@ export function createRunner(options: RunnerOptions = {}): Runner {
       return { kind: "badRequest", message: why };
     }
     const withSteps = variantsWithSteps(load, file, {
-      passed: false,
       individuals: job.individuals,
       filters: job.filters,
     });
@@ -601,29 +581,21 @@ export function createRunner(options: RunnerOptions = {}): Runner {
   return { open, run, write };
 }
 
-/** The steps a job asks for: `filterPassed`, of the count of the FILTER
-    failures alone; its list of individuals, of every job but the
-    statistics of each individual, the summary of the variants file and
-    the count of the FILTER failures, which read every individual; and its
-    filters of the variants. */
+/** The steps a job asks for: its list of individuals, of every job but
+    the statistics of each individual and the summary of the variants
+    file, which read every individual, and its filters of the variants. */
 function stepsOf(job: Job): Steps {
   switch (job.analysis) {
     case "individualChecks":
     case "variantsSummary":
-      return { passed: false, individuals: null, filters: job.filters };
-    case "filterFailures":
-      return { passed: true, individuals: null, filters: job.filters };
+      return { individuals: null, filters: job.filters };
     case "diversity":
     case "variantChecks":
     case "filterCounts":
     case "pca":
     case "popDists":
     case "ldDecay":
-      return {
-        passed: false,
-        individuals: job.individuals,
-        filters: job.filters,
-      };
+      return { individuals: job.individuals, filters: job.filters };
   }
 }
 
@@ -645,17 +617,11 @@ function openSource(load: LoadToOpen, file: LoadFile): Variants {
   }
 }
 
-/** Whether popnei's steps are those wanted: first, when it is wanted,
-    the step `"passed"`; then, when a list is wanted, the step of the
-    individuals naming the same individuals in the same order; then the
-    filters, the same kinds in the same order, each argument of a step
-    `===` to the field of that name of its filter. */
-function stepsAre(given: readonly Step[], wanted: Steps): boolean {
-  const first = given[0];
-  if (wanted.passed && first?.kind !== PASSED_STEP) {
-    return false;
-  }
-  const steps = wanted.passed ? given.slice(1) : given;
+/** Whether popnei's steps are those wanted: first, when a list is wanted,
+    the step of the individuals naming the same individuals in the same
+    order; then the filters, the same kinds in the same order, each
+    argument of a step `===` to the field of that name of its filter. */
+function stepsAre(steps: readonly Step[], wanted: Steps): boolean {
   const numListSteps = wanted.individuals === null ? 0 : 1;
   if (steps.length !== numListSteps + wanted.filters.length) {
     return false;
@@ -751,7 +717,6 @@ function whyNotToRun(job: Job): string | null {
     case "variantChecks":
     case "filterCounts":
     case "variantsSummary":
-    case "filterFailures":
       return null;
   }
 }
@@ -1204,7 +1169,14 @@ function variantDistribOf(distrib: StatsDistrib): VariantDistrib {
  * around the whole of it, as around a call.
  */
 function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
-  const answer = passOf(pass, iteratedPassStats);
+  const answer = passOf(pass, (variants) => {
+    const blocks = variants.iterBlocks({ fields: [] });
+    let next = blocks.next();
+    while (next.done !== true) {
+      next = blocks.next();
+    }
+    return blocks.passStats;
+  });
   if (answer.kind !== "ok") {
     return answer;
   }
@@ -1213,54 +1185,6 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
-}
-
-/**
- * Counts the variants given to the step `filterPassed` and those it kept,
- * every variant of the file and those whose FILTER is `PASS` or a dot, and
- * gives these counts alone. The pass is `calcVarDensity` with one window
- * per chromosome, which reads no genotype; `chromLengths` is empty, as for
- * the summary, so that a header of thousands of scaffolds does not give a
- * window to each. When popnei refuses it, as it does a pass that keeps no
- * variant, a VCF whose variants all failed, the counts come from a second
- * pass, the blocks iterated to their end, which accepts no variant kept,
- * and its answer is the answer, a refusal of the file among them. The
- * second pass is not the only one because it reads the genotypes: under
- * node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
- * took 2.4 s and `calcVarDensity` 0.9 s. On a vars file written before
- * format 1.2 popnei refuses both at their first block, which the page
- * never asks of it.
- */
-function runFilterFailures(pass: Pass): Answer<JobResult> {
-  const density = passOf(pass, (variants) =>
-    calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
-  );
-  const answer =
-    density.kind === "refused"
-      ? passOf(pass, iteratedPassStats)
-      : density.kind === "ok"
-        ? { kind: "ok" as const, value: density.value.passStats }
-        : density;
-  if (answer.kind !== "ok") {
-    return answer;
-  }
-  const result: FilterFailuresResult = {
-    analysis: "filterFailures",
-    passStats: passStatsOfKinds(answer.value, [PASSED_STEP]),
-  };
-  return { kind: "ok", value: result };
-}
-
-/** Iterates popnei's blocks of `variants`, the genotypes alone, to their
-    end, keeping none, and gives the counts of the pass, read after it:
-    they come also when the steps keep no variant. */
-function iteratedPassStats(variants: Variants): PopneiPassStats {
-  const blocks = variants.iterBlocks({ fields: [] });
-  let next = blocks.next();
-  while (next.done !== true) {
-    next = blocks.next();
-  }
-  return blocks.passStats;
 }
 
 /** The measures of the distances between populations asked of popnei,
@@ -1894,34 +1818,20 @@ function passStatsOf(
   stats: PopneiPassStats,
   filters: readonly VariantFilter[],
 ): PassStats {
-  return passStatsOfKinds(
-    stats,
-    filters.map((filter) => filter.kind),
-  );
-}
-
-/** The counts of a pass as `passStatsOf` makes them, of the filters of
-    the kinds `wanted`, in their order: `"passed"` is the one kind beyond
-    the filters of the variants, of the count of the FILTER failures. The
-    same defects. */
-function passStatsOfKinds(
-  stats: PopneiPassStats,
-  wanted: readonly PassFilterKind[],
-): PassStats {
-  const filtering: Partial<Record<PassFilterKind, FilteringStats>> = {};
-  for (const kind of wanted) {
-    const counts = ownCounts(stats.filtering, kind);
+  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
+  for (const filter of filters) {
+    const counts = ownCounts(stats.filtering, filter.kind);
     if (counts === undefined) {
       throw new Error(
-        `popnei_web defect: the counts of the pass have no filter ${kind}`,
+        `popnei_web defect: the counts of the pass have no filter ${filter.kind}`,
       );
     }
-    filtering[kind] = {
+    filtering[filter.kind] = {
       varsProcessed: counts.varsProcessed,
       varsKept: counts.varsKept,
     };
   }
-  const kinds = new Set<string>(wanted);
+  const kinds = new Set<string>(filters.map((filter) => filter.kind));
   const other = Object.keys(stats.filtering).filter((kind) => !kinds.has(kind));
   if (other.length > 0) {
     throw new Error(
@@ -1935,7 +1845,7 @@ function passStatsOfKinds(
     field of the object itself. */
 function ownCounts(
   filtering: PopneiPassStats["filtering"],
-  kind: PassFilterKind,
+  kind: VariantFilterKind,
 ): PopneiPassStats["filtering"][string] | undefined {
   return Object.hasOwn(filtering, kind) ? filtering[kind] : undefined;
 }

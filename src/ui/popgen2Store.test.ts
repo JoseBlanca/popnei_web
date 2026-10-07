@@ -12,10 +12,8 @@ import { summaryStatus } from "./variants/words.ts";
 // that records the jobs and never ends them.
 
 describe("the store of popgen2.html", () => {
-  test("the page starts by itself the summary, whose one pass gives the statistics too, and then the count of the FILTER failures, one group", () => {
-    expect(POPGEN2_AUTO_GROUPS).toEqual([
-      ["variantsSummary", "filterFailures"],
-    ]);
+  test("one-pass the page starts by itself the summary alone, whose one pass gives the statistics too, one group", () => {
+    expect(POPGEN2_AUTO_GROUPS).toEqual([["variantsSummary"]]);
   });
 
   test("it sends the summary with no filter and the bins of the histograms of the variants, and has no analysis of the statistics of their own", () => {
@@ -62,10 +60,7 @@ describe("the store of popgen2.html", () => {
       },
     ]);
     expect(store.getState().analyses.map((a) => [a.id, a.status.kind])).toEqual(
-      [
-        ["variantsSummary", "running"],
-        ["filterFailures", "locked"],
-      ],
+      [["variantsSummary", "running"]],
     );
   });
 });

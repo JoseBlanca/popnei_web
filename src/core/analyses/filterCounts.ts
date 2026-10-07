@@ -34,7 +34,6 @@ import type {
   FilterCountsResult,
   Job,
   JobResult,
-  PassFilterKind,
   PassStats,
   Run,
   VariantFilterKind,
@@ -231,21 +230,12 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   ];
 }
 
-/** The order in which the filters of a pass are given the variants:
-    `"passed"`, the first step of the count of the FILTER failures, before
-    the fixed order of the filters of the variants. */
-const PASS_FILTER_ORDER: readonly PassFilterKind[] = Object.freeze([
-  "passed",
-  ...VARIANT_FILTER_ORDER,
-]);
-
 /** The variants of the file, as a pass counts them: those given to its
-    first filter, in the order of `PASS_FILTER_ORDER` and not in the order
-    of the fields of `filtering`, so that a count of the FILTER failures
-    gives every variant and not those that passed; or the variants of the
-    pass when it had none. */
+    first filter, in the fixed order of the filters and not in the order of
+    the fields of `filtering`, or the variants of the pass when it had
+    none. */
 export function variantsOfFile(stats: PassStats): number {
-  const first = PASS_FILTER_ORDER.map((kind) => stats.filtering[kind]).find(
+  const first = VARIANT_FILTER_ORDER.map((kind) => stats.filtering[kind]).find(
     (counts) => counts !== undefined,
   );
   return first?.varsProcessed ?? stats.numVars;

@@ -58,13 +58,10 @@ export function barText(
     return `The application met an error of its own as it started: ${text}. Reload the page.`;
   }
   if (page === "noSaving") {
-    // A worker stopped during a pass of the chain is mended by the box's
+    // A worker stopped during the pass of the chain is mended by the box's
     // Start again; one stopped during an opening, or a defect, is not.
     if (first.origin === "countStopped") {
       return `The application stopped as it counted the variants and calculated the statistics: ${text}. Start again, and if it stops again, reload the page and open your files again.`;
-    }
-    if (first.origin === "failuresStopped") {
-      return `The application stopped as it counted the variants that failed their FILTER: ${text}. Start again, and if it stops again, reload the page and open your files again.`;
     }
     return `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }

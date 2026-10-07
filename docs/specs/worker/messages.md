@@ -55,7 +55,12 @@ checked as `result` is, and `PROTOCOL_VERSION` 9. Revised on 7 October
 phase 3): the job `filterFailures`, of exactly `analysis`, `fileId` and
 an empty `filters`, and its result, of exactly `analysis` and
 `passStats`, whose `filtering` holds `passed` and nothing else, a kind
-no other result accepts; and `PROTOCOL_VERSION` 10.
+no other result accepts; and `PROTOCOL_VERSION` 10. Revised on 7
+October 2026 when the owner took that count out, so that popgen2.html
+reads each file once (`docs/plans/one-pass.md`): the job and its result
+are removed, `passed` in the counts of any result is `extraFields`, and
+`PROTOCOL_VERSION` is 11; the count waits for popnei's summary to give
+it, popnei issue #12 (JoseBlanca/popnei).
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -424,14 +429,11 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   each individual are as long as its `individuals`, a list of texts; the `counts` of each
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
-  `individuals` of a job is `null` or a list of texts; the one field of
-  `passStats.filtering` of a `filterFailures` result is `passed`, from 7
-  October 2026, and the fields of that of every other result are kinds
-  of `VariantFilter`, so that `passed` there is `extraFields`; `filters`
-  of a
+  `individuals` of a job is `null` or a list of texts; the fields of
+  `passStats.filtering` of every result are kinds of `VariantFilter`, so
+  that `passed` there is `extraFields`; `filters` of a
   `variantChecks` or an `individualChecks` job is empty, the second from
-  28 September 2026, and of a `variantsSummary` or a `filterFailures`
-  job; for the principal components, from
+  28 September 2026, and of a `variantsSummary` job; for the principal components, from
   stage 4, the `method` of a job and of a result is `"pca"` or
   `"pcoa"`, `numCompsKept` of a job, `numComps` and `numCompsFound` of a
   result are whole numbers, `projections` is as long as `individuals`
@@ -479,7 +481,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 ```
 
 The requests of the calculation worker, and what it sends back.
