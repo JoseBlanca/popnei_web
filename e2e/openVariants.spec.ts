@@ -29,6 +29,7 @@ import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { dropFiles } from "./dropFiles.ts";
+import { holdSummary, release } from "./holdWorker.ts";
 import type { DroppedFile } from "./dropFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -386,7 +387,9 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   // The button gone with the focus on it, at the end of the count, the
   // focus is on the lines of the variants and the chromosomes, not on the
   // top of the page.
-  await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
+  await expect(page.locator(":focus")).toHaveText(
+    `${counted}FILTER failures: 0Chromosomes: 1`,
+  );
   await expectNoViolations(makeAxeBuilder);
 
   // A file dropped with the mouse removes those lines with the focus:
@@ -594,6 +597,61 @@ test("OV2 popnei-0.2.2 a VCF with variants that did not pass is read once, with 
     false,
   );
   await expectNoViolations(makeAxeBuilder);
+});
+
+test("OV2 popnei-0.2.2 the FILTER failures of low_qual.vcf.gz while the pass runs: counting…, then those read so far, not counted after a Stop, and counted after Start again", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await holdSummary(page);
+  await openPage(page);
+  await pick(page, join(FIXTURES, "low_qual.vcf.gz"));
+  await expect(info(page).getByRole("progressbar")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.vcf\.gz · /u,
+    "Individuals: 200",
+    /^Variants: counting…( \d+%)?$/u,
+    "FILTER failures: counting…",
+    "Chromosomes: counting…",
+    "Ploidy: 2",
+  ]);
+  // popnei reads the 1,200 variants in one block: its result so far is
+  // of every variant.
+  await release(page, "oneSoFar");
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.vcf\.gz · /u,
+    "Individuals: 200",
+    "Variants: 1,200 so far",
+    "FILTER failures: 300 so far",
+    "Chromosomes: 1 so far",
+    "Ploidy: 2",
+  ]);
+  await expectNoViolations(makeAxeBuilder);
+  await info(page).getByRole("button", { name: "Stop" }).click();
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.vcf\.gz · /u,
+    "Individuals: 200",
+    "Variants: not counted",
+    "FILTER failures: not counted",
+    "Chromosomes: not counted",
+    "Ploidy: 2",
+  ]);
+  // Start again, in a new worker, served with its results held too: the
+  // count once the result is let through.
+  await info(page).getByRole("button", { name: "Start again" }).click();
+  await expect(info(page).getByRole("progressbar")).toBeVisible();
+  await release(page, "allSoFar");
+  await release(page, "result");
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.vcf\.gz · /u,
+    "Individuals: 200",
+    "Variants: 1,200",
+    "FILTER failures: 300",
+    "Chromosomes: 1",
+    "Ploidy: 2",
+  ]);
 });
 
 test("OV2 another file opened while a count runs ends on the numbers of that file, and the count is checked by axe while it runs", async ({

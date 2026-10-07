@@ -4516,6 +4516,92 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-crash-count${at}-${theme}`);
       });
 
+      test("the FILTER failures of low_qual.vcf.gz while the file is read", async ({
+        page,
+      }) => {
+        await page.route("**/*.wasm", () => undefined);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: reading…"),
+        ).toBeVisible();
+        await expect(page.getByText("1 second so far.")).toBeVisible();
+        await save(page, `popgen2-filter-reading${at}-${theme}`);
+      });
+
+      test("the FILTER failures of low_qual.vcf.gz so far", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await release(page, "oneSoFar");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300 so far"),
+        ).toBeVisible({ timeout: 60_000 });
+        await save(page, `popgen2-filter-so-far${at}-${theme}`);
+      });
+
+      test("the FILTER failures of low_qual.vcf.gz counted", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-filter-done${at}-${theme}`);
+      });
+
+      test("the FILTER failures of low_qual.vcf.gz after a Stop", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageCount(page).getByText("FILTER failures: not counted"),
+        ).toBeVisible();
+        await expect(
+          newPageStats(page).getByText(
+            "Stopped. Start again reads the file from the start.",
+          ),
+        ).toHaveCount(2);
+        await save(page, `popgen2-filter-stopped${at}-${theme}`);
+        // The worker made at the Stop served before the test ends.
+        await newPageCount(page)
+          .getByRole("button", { name: "Start again" })
+          .click();
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+      });
+
+      test("the FILTER failures of low_qual.vcf.gz after a crash of the count", async ({
+        page,
+      }) => {
+        await crashWorkerOn(page, "run");
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("FILTER failures: not counted"),
+        ).toBeVisible();
+        await expect(
+          newPageStats(page).getByText("Not calculated."),
+        ).toHaveCount(2);
+        await save(page, `popgen2-filter-failed${at}-${theme}`);
+      });
+
       test("the statistics running", async ({ page }, testInfo) => {
         test.setTimeout(120_000);
         const vcf = testInfo.outputPath("running.vcf.gz");
