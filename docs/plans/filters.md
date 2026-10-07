@@ -233,8 +233,16 @@ Deliverables:
    `messages.md` that name `keepsPassed`, and `PROTOCOL_VERSION` 14,
    under `SF2 D1` in `src/worker/messages.test.ts`. The fixture
    `e2e/fixtures/low_qual.nei`, the `.nei` file popnei 0.2.2's
-   `writeVars` writes from `low_qual.vcf.gz` read with every variant,
-   is made by `e2e/fixtures/make_fixtures.mjs` and committed.
+   `writeVars` writes from `low_qual.vcf.gz` opened with `onlyPassed:
+   false`, so that it holds the 1,200 variants and not only the 900
+   that passed, is committed, written by `node
+   e2e/fixtures/make_fixtures.mjs --low-qual-nei`. With that flag the
+   script writes `low_qual.nei` and nothing else. Without it the script
+   writes `ld.nei` and `panel_pca.json` again, and under popnei 0.2.2
+   the new `ld.nei` records its FILTER, so the test that `keepsPassed`
+   is false for `ld.nei` would fail; a flag that writes the one file is
+   chosen over a run followed by `git checkout` of the two others, which
+   a later run could forget.
 2. `keepsPassed`, `filtersApplied` and `filtersAppliedTo`: the cases of
    `project.md`, "How it is verified", bullet "The filters of
    popgen2.html", that name them, the two cases "The FILTER box on, then
@@ -266,7 +274,9 @@ Tasks:
 
 - [ ] 2.1 `keepsPassed` in `Opened` of `src/worker/protocol.ts`, its
   check in `src/worker/messages.ts` with `PROTOCOL_VERSION` 14, the
-  runner's `open` in `src/worker/runner.ts`, and the fixture
+  runner's `open` in `src/worker/runner.ts`, and the fixture with the
+  flag `--low-qual-nei` of `e2e/fixtures/make_fixtures.mjs` and its
+  sentence in the comment at the head of the script (deliverable 1)
   (`protocol.md`, the interface `Opened`; `messages.md`, the bullet of
   `opened`; `runner.md`, "Opening the load"); and the read of the
   project, `SourceRead` in `src/core/project.ts`, its record from
@@ -571,13 +581,19 @@ What it gives: for a VCF and for a `.nei` file that records the FILTER
 of its variants, the check box "Leave out the variants that failed
 their FILTER", ticked, at the end of the part of the variants, with its
 line, in every state of the statistics; each click a change of the
-project with its notice; not shown for a `.nei` file without that
-record, as `keepsPassed` of the file says.
+project with its notice; shown only once the opening of the file has
+answered `keepsPassed` true in the read of the file, so not for a
+`.nei` file without that record, not while a file is being opened and
+not after an opening that failed, whatever the format; the page reads
+the read, not `keepsPassed(source)`, which answers by the format before
+it (the screen spec, "The FILTER box").
 
 Deliverables:
 
 1. Flows under `SF9 D1`: the box is there and ticked for
-   `panel.vcf.gz` and for `low_qual.nei`, and not for `panel.nei`; a
+   `panel.vcf.gz` and for `low_qual.nei` once each is opened, and not
+   for `panel.nei`, nor while `panel.vcf.gz` is being opened, nor after
+   `no_ploidy.vcf.gz`, whose opening fails; a
    click gives the notice "The filter of the FILTER column was turned
    off · Undo", changes no plot and sends nothing to the worker, and
    Undo ticks it again; ticked off for a VCF, then `panel.nei` opened,
@@ -679,7 +695,10 @@ Deliverables:
 1. The count, in `src/core/thresholds.ts`, under `SF12 D1`, as the
    owner's answer and the screen spec give it; and a fixture with
    variants with no called genotype, made by `make_fixtures.mjs` with
-   popnei under node, whose count is asserted. No fixture has such a
+   popnei under node, under a flag of its own that writes that file
+   alone, as `--low-qual-nei` does (work package 2), since a run
+   without one writes `ld.nei` and `panel_pca.json` again; its count
+   is asserted. No fixture has such a
    variant on 7 October 2026 (the screen spec, Open 1).
 2. The words, on, off, one variant and after a Stop, under `SF12 D2`.
 3. A flow under `SF12 D3` on that fixture, the sentence on and off; and

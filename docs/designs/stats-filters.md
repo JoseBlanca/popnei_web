@@ -69,7 +69,9 @@ its variants passed its FILTER. It is not shown, and the filter does not
 apply, for a `.nei` file without that record, one written before
 popnei's vars format 1.2, such as `panel.nei` of the tests, since popnei
 cannot filter its variants so. popnei 0.2.2 says which a file is once it
-is open, before any pass. It acts when the
+is open, before any pass, and the box is shown only once that answer has
+come, for a VCF as for a `.nei` file: not while the file is being
+opened, nor after an opening that failed. It acts when the
 filtering is carried out, after the individuals are judged: an
 individual's missing rate and heterozygosity are those of the plots,
 over every variant, and the variants that failed are left out after.
@@ -243,8 +245,9 @@ and a later click cannot turn on a filter that page cannot show.
 On a `.nei` file the box is shown when the file records whether each of
 its variants passed its FILTER, and not otherwise, as the owner decided
 on 7 October 2026. popnei writes that record from its vars format 1.2,
-when the source had it: a `.nei` file written from a VCF by popnei 0.2.1
-or later has it, and one written before format 1.2, as `panel.nei` of
+when the source had it and the file holds one variant at least: a
+`.nei` file written from a VCF by popnei 0.2.1 or later has it, unless
+it holds no variant, and one written before format 1.2, as `panel.nei` of
 the tests, or from such a file, has not; popnei refuses `filterPassed`
 over a file without it. popnei 0.2.2 says which, once the file is open
 and with no pass, in `keepsPassed` of its `Variants`, true for every
@@ -433,10 +436,15 @@ calculation running, moves to that later piece.
 
 The count under each plot of the variants is popnei's bins added up,
 without a pass. From popnei 0.2.2, whose release closed popnei's issue
-#11, the one pass asks for 1,000 bins over 0 to 1 that hold their right
-edge, as the piece `popnei-0.2.2` builds it (`docs/plans/popnei-0.2.2.md`,
-"The design"). A threshold of the variants has three decimals at most,
-so it falls on an edge, and the count is one exact number, the count of
+#11, the one pass asks for 10,000 bins over 0 to 1 that hold their
+right edge, whose edges are k/10,000, as the piece `popnei-0.2.2` builds
+it (`docs/plans/popnei-0.2.2.md`, "The design"). Ten thousand and not a
+thousand because the step of a threshold follows its axis, and is
+0.0001 on an axis narrower than 0.01 (`thresholdStep` of
+`src/core/thresholds.ts`), as the session decided on 7 October 2026. A
+threshold of the variants has four decimals at most, since the box
+rounds a number typed with more to four, so it falls on an edge, and the
+count is one exact number, the count of
 the variants whose value is at most the threshold, which is what
 popnei's filter at that threshold keeps over every variant: "Keeps 1,050
 of 1,200 variants". With popnei 0.2.1 it was a range where the bins

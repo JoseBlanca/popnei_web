@@ -1599,9 +1599,14 @@ The tests of stage 2, each at `open` and `run` of a runner made by
   `onlyPassed` true and false; false for `panel.nei`, `ld.nei` and
   `tetraploid.nei`, written before popnei's vars format 1.2; and true
   for `low_qual.nei`, the `.nei` file that popnei 0.2.2's `writeVars`
-  writes from `low_qual.vcf.gz` read with every variant, a fixture made
-  by `e2e/fixtures/make_fixtures.mjs` (node, popnei 0.2.2, 7 October
-  2026).
+  writes from `low_qual.vcf.gz` opened with `onlyPassed: false`, its
+  1,200 variants, of which 300 failed their FILTER; with the default of
+  `onlyPassed` the file would hold only the 900 that passed. The fixture
+  is written by `node e2e/fixtures/make_fixtures.mjs --low-qual-nei`,
+  which writes that file and no other: a run of the script without the
+  flag writes `ld.nei` again, and popnei 0.2.2 writes it with the
+  record, which would make `keepsPassed` true for it and break the
+  `false` above (node, popnei 0.2.2, 7 October 2026).
 - **The diversity**, with no filter and at 0.05: the table above, the
   populations in the order p0, p2, p1 with 48, 84 and 68 individuals,
   `numVarsWithValue` 1,200 and 1,152 in each, and `passStats`

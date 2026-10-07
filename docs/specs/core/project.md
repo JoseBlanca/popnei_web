@@ -336,9 +336,10 @@ holds it, on or off (`docs/specs/core/projectFile.md`, "Opening").
 **Whether the variants record their FILTER**, `keepsPassed(source)`:
 whether the variants of the file record whether each passed its FILTER,
 which the filter of the FILTER column needs. popnei writes that record
-in a `.nei` file from its vars format 1.2, when the source had it, so a
-`.nei` file written from a VCF by popnei 0.2.1 or later has it, and one
-written before that format, as `panel.nei` of the tests, or from such a
+in a `.nei` file from its vars format 1.2, when the source had it and
+the file holds one variant at least, so a `.nei` file written from a
+VCF by popnei 0.2.1 or later has it, unless it holds no variant, and
+one written before that format, as `panel.nei` of the tests, or from such a
 file, has not; popnei refuses `filterPassed` over a file without it
 (`docs/specs/worker/runner.md`, "The steps"). popnei 0.2.2 says which
 once the file is open, `keepsPassed` of its `Variants`, and the
@@ -346,9 +347,16 @@ calculation worker sends it in `opened`, which the page records in the
 read of the file, `SourceRead` of kind `read` (below, "The TypeScript interface").
 `keepsPassed(source)` gives the read's value once the file is read, and,
 before, or when the read failed, `true` for a VCF, whose variants always
-hold the record, and `false` for a `.nei` file, which may not. The
-screen of `popgen2.html` shows the FILTER box when it is true
-(`docs/specs/steps/popgen2-filters.md`). The owner decided on 7 October
+hold the record, and `false` for a `.nei` file, which may not. That
+answer by the format is for what is worked out from a file whose read
+has not answered: `filtersApplied` while the read is pending, when
+`projectNeeds` waits for the read and no calculation runs, and the
+fingerprint of the reference of a project file, whose read no file
+saves (`docs/specs/core/keys.md`, "The fingerprint of the settings").
+The screen of `popgen2.html` does not read `keepsPassed(source)`: it
+shows the FILTER box only once the read of the file says `keepsPassed`
+true, and not while the file is being opened nor after an opening that
+failed (`docs/specs/steps/popgen2-filters.md`, "The FILTER box"). The owner decided on 7 October
 2026 that the filter applies to a `.nei` file with the record; until
 then it was left out for every `.nei` file, since under popnei 0.2.1
 the page could not tell the two kinds apart.
@@ -1603,7 +1611,9 @@ export function jobFilters(
 
 /** Whether the variants of the file record whether each passed its
     FILTER: the read's keepsPassed once the file is read; before, or
-    when the read failed, true for a VCF and false for a .nei file. */
+    when the read failed, true for a VCF and false for a .nei file, for
+    the filters applied and the fingerprint of a file not yet read. The
+    FILTER box does not read it: it is shown from the read alone. */
 export function keepsPassed(source: VariantSource): boolean;
 
 /** The filters of the variants on that apply to the project's variants
@@ -2608,4 +2618,4 @@ sends `setThreshold` and the two commands of the box, and shows
 fingerprint of `docs/specs/core/keys.md` takes it; `store.md` and the
 specs of the analyses say "a file whose variants do not record their
 FILTER" where they said "a `.nei` file"; and the screen spec shows the
-box when `keepsPassed` of the file is true.
+box once the read of the file says `keepsPassed` true.

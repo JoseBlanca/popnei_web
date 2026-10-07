@@ -99,8 +99,8 @@ when").
 ### The order of the page
 
 From the top: the heading "Popnei"; the row of Undo and Redo; the box of
-the file; the part "Variants", its four histograms and, when the file
-records the FILTER of its variants, the check box of the FILTER column; the part "Individuals", its two
+the file; the part "Variants", its four histograms and, once the opening of
+the file has said that it records the FILTER of its variants, the check box of the FILTER column; the part "Individuals", its two
 histograms and the download of their table; "Open another variants
 file…". The notice is fixed at the bottom of the window, over the page.
 The row of Undo and Redo is above the box of the file, as the design
@@ -184,9 +184,9 @@ The counts of a threshold that is on are those of today: each threshold
 alone, over every variant or individual of the file. Each is one exact
 number, the variants or individuals whose value is at most the
 threshold, which is what popnei's filter at that threshold keeps: from
-popnei 0.2.2 the one pass gives 1,000 bins over 0 to 1 that hold their
-right edge, and a threshold of the variants, of three decimals at most,
-falls on an edge (the design, "The counts of each threshold";
+popnei 0.2.2 the one pass gives 10,000 bins over 0 to 1 that hold
+their right edge, with edges at k/10,000, and a threshold of the
+variants, of four decimals at most, falls on an edge (the design, "The counts of each threshold";
 `docs/plans/popnei-0.2.2.md`). Until then a threshold inside a bin gave
 a range, "Keeps 1,113 to 1,152 of 1,200 variants".
 
@@ -219,8 +219,16 @@ the top of the axis; when a result so far brings a higher value and the
 axis grows to show it, the line moves to the new top and the filter
 stays off.
 
-**A number the box refuses**, above 1, below 0, with too many decimals
-or a character it does not take, gives the sentence under the box of
+**A number with many decimals** is not refused: the box rounds it to
+the step of the axis, as today, and to four decimals at most, the
+nearest half up, and shows it so, 0.0035 for 0.00345 on an axis of 0 to
+0.005; the filter is at that number, and the count under the heading is
+of it, exact, since it falls on an edge of popnei's bins (the design,
+"The counts of each threshold"; the session's decision of 7 October
+2026, in `docs/plans/popnei-0.2.2.md`).
+
+**A number the box refuses**, above 1, below 0, or with a character it
+does not take, gives the sentence under the box of
 today, "1.5 is more than 1; the threshold stays 0.1.", and, while the
 threshold is off, "1.5 is more than 1; there is still no filter."
 
@@ -369,16 +377,28 @@ of a file", says instead that it is for a choice that takes effect later
 than the click: the next pick of a file on the old page, the carrying
 out of the filters on this one.
 
-It is shown when the variants of the file record whether they passed
-their FILTER, `keepsPassed` of the file in `docs/specs/core/project.md`:
-for a VCF, and for a `.nei` file once its opening says so, which comes
-before the one pass starts; and then in every state of the statistics,
+It is shown only once the opening of the file has answered that its
+variants record whether they passed their FILTER, `keepsPassed` true in
+the read of the file (`SourceRead` of kind `read`,
+`docs/specs/core/project.md`), for a VCF as for a `.nei` file. It is not
+shown while the file is being opened, nor after an opening that failed,
+whatever the format. The opening ends before the one pass starts, so
+from then on the box is there in every state of the statistics,
 running, stopped and failed among them, since it is a filter of the
-project and no part of the plots. A `.nei` file written by popnei from
-a VCF in its vars format 1.2 or later has the record, and so will the
-files the page writes; one written before that format, such as
-`panel.nei`, has not. For a file without the record the box is not
-shown; the filter stays in the project, does not apply to that file
+project and no part of the plots. Nothing announces its appearing: it
+appears in its place at the end of the part of the variants, as the
+plots do. The page reads the read of the file for this, and not
+`keepsPassed(source)` of `docs/specs/core/project.md`, which for a file
+not yet read answers by its format, `true` for a VCF.
+
+A `.nei` file has the record when popnei wrote it in its vars format
+1.2 or later from a source that had the record, and it holds one
+variant at least; so a file written from a source that records its
+FILTER records it. One written before that format, such as `panel.nei`,
+or from such a file, has not, nor has a file with no variant, which
+popnei writes with the genotypes alone (the doc comment of
+`keepsPassed` in popnei's `variant.ts`). For a file without the record
+the box is not shown; the filter stays in the project, does not apply to that file
 (`filtersApplied`, `docs/specs/core/project.md`), and is shown again, as
 the project holds it, when a file with the record is opened. The owner
 decided on 7 October 2026 to show it for a `.nei` file with the record,
@@ -431,12 +451,12 @@ Undo and Redo and the notice are there in all of them.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | no file open: the heading, the row of Undo and Redo, "Open variants file…"; no plot, no threshold, no FILTER box | open a file; Undo or Redo when the history has a step, after an opening undone |
-| locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box when the file records the FILTER of its variants, no threshold | tick the FILTER box; open another file |
+| locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box when the opening of the file said that it records the FILTER of its variants, no threshold | tick the FILTER box; open another file |
 | ready | about to start, for a moment: nothing in the parts. After a Stop: the plots read before it with their counts, or "Stopped. Start again reads the file from the start." with no plot | move the thresholds over the plots of a Stop; tick the FILTER box; Start again |
 | running | the share done over each part, the plots so far from the first result so far, 2 seconds after the start, the counts ending "so far" | move the thresholds; tick the FILTER box; Stop |
-| done | the six plots, five thresholds, the FILTER box when the file records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
+| done | the six plots, five thresholds, the FILTER box when the opening of the file said that it records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
 | results removed | the store removed the statistics because what they were calculated from changed. No filter brings this state, since the one pass's key holds the file and no filter. Opening another file does: the page draws the section of the new file, and the notice says the statistics of the file before were removed | Undo, which brings back the file before and its statistics |
-| error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box when the file records the FILTER of its variants | tick the FILTER box, which does not clear the failure; Start again |
+| error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box when the opening of the file said that it records the FILTER of its variants, and none after an opening that failed | tick the FILTER box, when it is there, which does not clear the failure; Start again |
 
 ## What it sends and reads
 
@@ -466,9 +486,11 @@ of `src/core/project.ts` as `docs/specs/core/project.md` gives them.
 It reads the value of each threshold and whether it is on
 (`thresholdValue` of the project); whether the filter of the FILTER
 column is on, from the filters that are on (`project.filters`) and those
-kept with their values while off (`filtersOff`); whether the variants of
-the file record their FILTER, for whether the box is shown
-(`keepsPassed(project.variants)` of the project); what Undo
+kept with their values while off (`filtersOff`); whether the opening of the
+file said that its variants record their FILTER, for whether the box is
+shown (`keepsPassed` of the read of the file, `project.variants.read`
+of kind `read`, and not `keepsPassed(project.variants)`, which answers
+by the format before the read); what Undo
 and Redo would do and the notice (`undo`, `redo` and `notice` of the
 store); and the status of the summary, with its result so far while it
 runs and after a Stop. It holds no value of a filter of its own but the
@@ -563,7 +585,9 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   Undo, and puts the focus on the heading;
 - the expected heterozygosity has no line and no box;
 - the FILTER box is there for `panel.vcf.gz` and for `low_qual.nei`,
-  on, and not for `panel.nei`; turned off for `panel.vcf.gz`, it is
+  on, once each is opened, and not for `panel.nei`, nor while
+  `panel.vcf.gz` is being opened, nor after `no_ploidy.vcf.gz`, whose
+  opening fails; turned off for `panel.vcf.gz`, it is
   still off when `low_qual.nei` is opened; a click gives a notice and
   changes no plot;
 - the thresholds stay through the opening of another file;
