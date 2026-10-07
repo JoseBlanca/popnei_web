@@ -1,8 +1,7 @@
 /* The tokens are those of src/ui/tokens.css. */
 
 /* A histogram: the row of its title and the box of its threshold, the
-   line of what the threshold keeps, its plot. A container, so that the
-   line of what it keeps knows the width of its column. */
+   line of what the threshold keeps, its plot. */
 .block {
   display: grid;
   gap: var(--space-2);
@@ -10,7 +9,6 @@
      as what it holds, and a plot drawn wide would keep it wide after the
      window narrows. */
   min-inline-size: 0;
-  container-type: inline-size;
 }
 
 /* The row of the short title, "max:" and the box. */
@@ -18,22 +16,29 @@
   min-inline-size: 0;
 }
 
-/* What the threshold keeps, over the plot. One row high, and two where
-   the column is too narrow for its longest form, "Keeps 1,113 to 1,152 of
-   1,200 variants so far", so that the plot does not move as the words
+/* What the threshold keeps, over the plot, in the room of its longest
+   form, "Keeps 200,000 to 200,000 of 200,000 variants so far", which the
+   screen gives in data-longest: drawn hidden in the same cell of a grid,
+   it holds the cell at the height that form takes at the width of the
+   column, one row or two, so that the plot does not move as the words
    change while the line is dragged, nor stand at another height than
-   the plot beside it. */
-.keeps {
-  margin: 0;
-  min-block-size: calc(1em * var(--leading-body));
+   the plot beside it, of the same count. Generated content, it is no
+   text of the page, and hidden, no text a screen reader reads. */
+.keepsRoom {
+  display: grid;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
-@container (inline-size < 22rem) {
-  .keeps {
-    min-block-size: calc(2em * var(--leading-body));
-  }
+.keepsRoom::after {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  content: attr(data-longest);
+}
+
+.keeps {
+  grid-area: 1 / 1;
+  margin: 0;
 }
 
 /* The plot and the line of its threshold laid over it. */

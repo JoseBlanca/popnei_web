@@ -7,6 +7,7 @@ import {
   individualThresholdName,
   individualTitle,
   keepsLine,
+  longestKeepsLine,
   statsFirstText,
   statsRunningLine,
   thresholdShownLabel,
@@ -151,5 +152,29 @@ describe("thresholds round 1 the line of what a threshold keeps", () => {
         true,
       ),
     ).toBe("0.004, keeps 2 of 1,200 variants so far");
+  });
+});
+
+describe("th4 fix 1 the room of the line of what a threshold keeps", () => {
+  test("the longest the line can be for the number with a value: a range of two numbers of its digits, so far", () => {
+    expect(longestKeepsLine(200_000, "variant")).toBe(
+      "Keeps 200,000 to 200,000 of 200,000 variants so far",
+    );
+    expect(longestKeepsLine(1200, "variant")).toBe(
+      "Keeps 1,200 to 1,200 of 1,200 variants so far",
+    );
+    expect(longestKeepsLine(12, "individual")).toBe(
+      "Keeps 12 to 12 of 12 individuals so far",
+    );
+    // Every line of a count is at most as long, in characters.
+    for (const counts of [
+      { keptLow: 113_456, keptHigh: 115_789, withValue: 200_000 },
+      { keptLow: 0, keptHigh: 0, withValue: 200_000 },
+      { keptLow: 200_000, keptHigh: 200_000, withValue: 200_000 },
+    ]) {
+      expect(keepsLine(counts, "variant", true).length).toBeLessThanOrEqual(
+        longestKeepsLine(200_000, "variant").length,
+      );
+    }
   });
 });

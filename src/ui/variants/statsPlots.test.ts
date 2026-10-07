@@ -272,6 +272,22 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     });
   });
 
+  test("th4 fix 1: the room of the line of what it keeps is that of its longest form for the variants or the individuals with a value", () => {
+    const plot = variantPlot("missingRate", PANEL.variants, false, null);
+    expect(plot.threshold.longestLine).toBe(
+      "Keeps 1,200 to 1,200 of 1,200 variants so far",
+    );
+    const individuals = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      false,
+      null,
+    ).plot;
+    expect(individuals?.threshold.longestLine).toBe(
+      "Keeps 200 to 200 of 200 individuals so far",
+    );
+  });
+
   test("on an axis of 0 to 0.7, or of 0.5 to 1, the step is 0.01", () => {
     const het = variantPlot("obsHet", PANEL.variants, false, null);
     const { data } = het;

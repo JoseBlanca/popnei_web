@@ -62,6 +62,7 @@ import {
   individualThresholdName,
   individualTitle,
   keepsLine,
+  longestKeepsLine,
   noValueThresholdLine,
   SO_FAR_DESCRIPTION,
   thresholdShownLabel,
@@ -109,6 +110,9 @@ export interface PlotThreshold {
   /** The line under the row of the box: "Keeps 1,050 of 1,200
       variants". */
   readonly line: string;
+  /** The longest that line can be for the variants or the individuals
+      with a value, whose room it is kept in. */
+  readonly longestLine: string;
   /** What a screen reader says as the value of the slider: "0.1, keeps
       1,050 of 1,200 variants". */
   readonly valueText: string;
@@ -312,16 +316,21 @@ function axisOf(data: HistogramData): readonly [number, number] {
   return [low, high];
 }
 
-/** The line under the row of the box and the value text of the
-    slider. */
+/** The line under the row of the box, its longest form, and the value
+    text of the slider. */
 function wordsOf(
   shown: number,
   counts: ThresholdCounts,
   noun: Counted,
   soFar: boolean,
-): { readonly line: string; readonly valueText: string } {
+): {
+  readonly line: string;
+  readonly longestLine: string;
+  readonly valueText: string;
+} {
   return {
     line: keepsLine(counts, noun, soFar),
+    longestLine: longestKeepsLine(counts.withValue, noun),
     valueText: thresholdValueText(shown, counts, noun, soFar),
   };
 }

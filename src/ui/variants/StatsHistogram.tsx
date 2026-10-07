@@ -5,9 +5,10 @@
  * the threshold keeps, "Keeps 1,050 of 1,200 variants"; and the plot,
  * with the line of the threshold the user drags over it
  * (docs/plans/thresholds.md, "Round 1 with the owner"). The line of what
- * it keeps holds one row, kept at the height of its longest form, so
- * that the plot does not move as the words change while the line is
- * dragged. No table of its bins and no download, which the owner wants
+ * it keeps is kept at the height of its longest form for the number with
+ * a value, "Keeps 200,000 to 200,000 of 200,000 variants so far", at the
+ * width of its column, so that the plot does not move as the words
+ * change while the line is dragged or as the pass ends. No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads
  * (docs/plans/file-stats.md, "Where it goes"). Drawn from the result, or
  * from a result so far while the pass runs, whose words say so.
@@ -161,9 +162,16 @@ export function StatsHistogram({
           }}
         />
       </div>
-      <p id={wordsId} className={classOf(styles, "keeps")}>
-        {threshold.line}
-      </p>
+      {/* The room of the longest form of the line, drawn hidden in the
+          same cell, so that the line holds that height at any width. */}
+      <div
+        className={classOf(styles, "keepsRoom")}
+        data-longest={threshold.longestLine}
+      >
+        <p id={wordsId} className={classOf(styles, "keeps")}>
+          {threshold.line}
+        </p>
+      </div>
       <div ref={plotRef} className={classOf(styles, "plot")}>
         <HistogramPlot data={plot.data} onFrame={onFrame} />
         {framed && (

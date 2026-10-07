@@ -286,6 +286,17 @@ export function keepsLine(
   return `${keeps.charAt(0).toUpperCase()}${keeps.slice(1)}${soFar ? SO_FAR : ""}`;
 }
 
+/** The longest the line of a threshold can be over `withValue`
+    variants or individuals with a value: a range of two numbers of the
+    digits of `withValue`, "so far", "Keeps 200,000 to 200,000 of 200,000
+    variants so far". The screen keeps the room of it under the line, so
+    that the plot does not move as the words change, while the line is
+    dragged and at the end of the pass. */
+export function longestKeepsLine(withValue: number, noun: Counted): string {
+  const number = grouped(withValue);
+  return `Keeps ${number} to ${number} of ${counted(withValue, noun)}${SO_FAR}`;
+}
+
 /** What the line of a threshold says to a screen reader as its value:
     the number, `shown` as the box shows it, and what it keeps of those
     with a value, "0.1, keeps 1,050 of 1,200 variants", "0.05, keeps 1,113
