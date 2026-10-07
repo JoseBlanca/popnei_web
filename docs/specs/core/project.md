@@ -106,7 +106,16 @@ individuals leaving no individual with a population and the individuals
 kept leaving no population, made functions here, since the distances
 between populations and the LD decay lock on them too
 (`docs/specs/analyses/popDists.md` and `ldDecay.md`). Approved
-by the owner on 30 September 2026.
+by the owner on 30 September 2026. Revised on 7 October 2026 for the
+thresholds of popgen2.html as filters of the project,
+`docs/designs/stats-filters.md`, approved by the owner that day: the
+filter of the FILTER column, `{ kind: "passed" }`, first in the fixed
+order of the filters of the variants; `filtersApplied`, the filters
+that apply to the project's file, without that filter for a `.nei`
+file, which everything that reads the filters reads in place of
+`filters`; `setThreshold`, the one command of a threshold of
+popgen2.html, which takes an empty box, or 1, as off; and the first
+project of popgen2.html (below, "The filters of popgen2.html").
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -182,12 +191,14 @@ The rules, which every function below keeps:
   second list of one kind would say what one list says. The order is
   fixed and the user does not set it, as the owner decided on 26
   September 2026 (`docs/architecture.md`, section 2): the variants'
-  missing data, observed heterozygosity, the major allele frequency
-  (MAF) and the LD pruning, in that order, the regions of a BED file first once popnei has that filter;
+  FILTER column, missing data, observed heterozygosity, the major allele
+  frequency (MAF) and the LD pruning, in that order, the regions of a
+  BED file first once popnei has that filter, the FILTER column after
+  them since 7 October 2026;
   the individuals' keep, remove, missing data, observed heterozygosity.
   The filter of individuals comes before every filter of the variants
-  but the regions, as popnei's `filterIndividuals` put on the `Variants`
-  after the regions and before any other step, so the other filters of
+  but the regions and the FILTER column, as popnei's `filterIndividuals`
+  put on the `Variants` after them and before any other step, so the other filters of
   the variants count over the individuals kept, as the owner decided on
   28 September 2026; until then it came after them, and they counted
   over every individual of the file. The regions, once the application
@@ -265,6 +276,93 @@ it would apply or count a filter the user had turned off, a wrong
 number on the screen with nothing to show it. The keys would also need
 the filters off taken out before the hash, where now they hash the list
 as it is.
+
+### The filters of popgen2.html
+
+On the new page of population genetics, `popgen2.html`, the thresholds
+the user drags or types on the histograms of the open file, and the
+check box "Leave out the variants that failed their FILTER", are filters
+of the project, each change one step of Undo, as
+`docs/designs/stats-filters.md` decided on 7 October 2026. The old page,
+`popgen.html`, does not change. Four things of this module serve them.
+
+**The filter of the FILTER column**, `{ kind: "passed" }`, keeps the
+variants of a VCF whose FILTER is `PASS` or a dot, popnei's
+`filterPassed`, and has no number (`docs/specs/worker/protocol.md`). It
+is a filter of the variants as the others are: on in `filters`, first in
+the fixed order, and kept in `filtersOff` while off. A click on the box
+is `setVariantFilter(p, { kind: "passed" })` or
+`turnOffVariantFilter(p, "passed")`, one step of Undo each. Only
+`popgen2.html` offers it, and `popgen.html` refuses a project file that
+holds it, on or off (`docs/specs/core/projectFile.md`, "Opening").
+
+**The filters that apply to the file**, `filtersApplied(p)`: the
+filters on, without `passed` when the project's variants file is a
+`.nei` file, and `p.filters` itself, the same array, otherwise. A new
+file keeps the filters of the project (`loadVariants`, below), so a user
+who had the box on for a VCF and opens a `.nei` file still has the
+filter in the project; popnei refuses `filterPassed` over a `.nei`
+file written before its format 1.2, and the page cannot tell the format
+(`docs/specs/worker/runner.md`, "The steps"). So everything that reads
+the filters applied reads `filtersApplied` and never `p.filters`: the
+keys (`docs/specs/core/keys.md`), the filters of every job and of the
+writing, through `jobFilters(filtersApplied(p))`, the rows and the check
+numbers of the counts of each filter, the scripts, and the words that
+name the filters on. Opening a VCF again gives the filter back, since it
+never left the project. What reads `p.filters` as it is: the commands,
+the validation, the project file, which saves the box as the user left
+it, and the screen that shows the box. With no variants file,
+`filtersApplied` gives `p.filters`; nothing is calculated then.
+
+**A threshold, on or off.** The thresholds of `popgen2.html` are five:
+the missing rate, the major allele frequency and the observed
+heterozygosity of the variants, and the missing rate and the observed
+heterozygosity of the individuals; the expected heterozygosity has
+none, since popnei has no filter on it. Each keeps the variants or the
+individuals at most its number. `setThreshold(p, threshold, value)` is
+the one command the page sends for any of them:
+
+- a number below 1 sets the filter on at that number, as
+  `setVariantFilter` or `setIndividualFilter` would;
+- `null`, the box emptied, and 1, the value at which a maximum keeps
+  everything, turn the filter off, as `turnOffVariantFilter` or
+  `turnOffIndividualFilter` would: it is kept in `filtersOff` or
+  `individualFiltersOff` with the value it had while on, not with 1,
+  and a threshold that is off already gives `p` itself.
+
+1 is taken as off, and not as a filter at 1, as the owner chose on 7
+October 2026, because a filter at any value is not the same as no
+filter: popnei's filters of the MAF and of the observed heterozygosity
+drop a variant with no called genotype at every threshold, and
+`individualsKept` drops an individual whose heterozygosity has no
+value. Under popnei 0.2.1, on a VCF of three variants of which one has
+no called genotype, a MAF filter at 1 keeps two variants, and no filter
+keeps three (the design, "When a threshold changes the project"). Every
+threshold of the page is a maximum; a minimum, when one comes, is off at
+0. A line dragged to the top of its axis gives the number at the top,
+the end of the file's values rounded out, 0.1 for the missing rate of
+`panel.nei`, and so a filter: the axis ends where the values end, not
+at 1. The option not taken was a check box beside each threshold to
+turn it on and off.
+
+`thresholdValue(p, threshold)` gives the number of the threshold while
+its filter is on, and `null` while it is off, kept in a list of the
+filters off or never turned on. The line and the box show it, so that
+Undo moves them back. How the page makes one command of a run of
+presses of the arrow keys, and of a drag, is the page's
+(`docs/designs/stats-filters.md`, "When a threshold changes the
+project").
+
+**The first project of `popgen2.html`**, `popgen2FirstProject()` of
+`src/core/apps.ts`: an empty project with the filter of the FILTER
+column on and the filter of the missing rate of the variants on at 0.1,
+`DEFAULT_MAX_MISSING_RATE`, the default of `docs/functionality.md`,
+plink's `--geno`, and no other filter, on or off. The four other
+thresholds start off, never turned on. Until 7 October 2026 both pages
+started from `firstProject("popgen")`, which the old page keeps, with
+the missing data filter alone (`docs/specs/entry.md`, "`src/core/apps.ts`").
+Every user of the new page starts from this project, and a project file
+saved from it will hold `passed`.
 
 ### What an analysis needs of every project
 
@@ -1013,7 +1111,7 @@ export type AnalysisId = string;
 export interface Project {
   app: AppId;
   variants: VariantSource | null;
-  filters: ProjectVariantFilter[];          // on: missing_data, obs_het, maf, ld
+  filters: ProjectVariantFilter[];          // on: passed, missing_data, obs_het, maf, ld
   filtersOff: ProjectVariantFilter[];       // turned off, with their values; the same order
   individualFilters: IndividualFilter[];    // on: keep, remove, missing_data, obs_het
   individualFiltersOff: IndividualThreshold[]; // turned off, with their values: missing_data, obs_het
@@ -1239,6 +1337,18 @@ functions of `project.ts` that no other module imports.
 /** Puts a new load of the variants file, pending. Everything else is kept. */
 export function loadVariants(p: Project, source: VariantLoad): Project;
 
+/** A threshold of popgen2.html: a filter of one number, a maximum. */
+export type Threshold =
+  | { readonly of: "variants"; readonly kind: "missing_data" | "maf" | "obs_het" }
+  | { readonly of: "individuals"; readonly kind: IndividualThreshold["kind"] };
+
+/** Sets the threshold on at `value`; or, for null, an empty box, and for
+    1, at which a maximum keeps everything, turns it off, kept with the
+    value it had. The one command of a threshold of popgen2.html. */
+export function setThreshold(p: Project, threshold: Threshold, value: number | null): Project;
+/** The value of the threshold while its filter is on; null while it is off. */
+export function thresholdValue(p: Project, threshold: Threshold): number | null;
+
 /** Sets the filter of its kind on, in the fixed order of the kinds, and
     drops the one of its kind from filtersOff. */
 export function setVariantFilter(p: Project, filter: ProjectVariantFilter): Project;
@@ -1284,6 +1394,9 @@ What each does where a reader could doubt it:
 | any, every row below included | the value equals the one there: the same filter, the same options of the CSV, the same type, the same grouping, the same options of an analysis, a load with the load id already there and the same other fields | `p` itself |
 | any | a value `parseProject` would refuse in its place | a defect |
 | `turnOffVariantFilter`, `removeIndividualFilter`, `turnOffIndividualFilter` | no filter of that kind on | `p` itself, whatever the list of the filters off holds |
+| `setThreshold` | a number from 0 to below 1 | what `setVariantFilter` or `setIndividualFilter` gives for the filter of that kind at that number |
+| `setThreshold` | `null` or 1 | what `turnOffVariantFilter` or `turnOffIndividualFilter` gives for that kind: the filter in its list of the filters off with the value it had, or `p` itself when it is off already |
+| `setThreshold` | a number below 0 or above 1, or not finite | a defect |
 | `setVariantFilter`, `setIndividualFilter` | a filter of a kind kept off, with the values kept or others | the filter on in its place, and the kind gone from the list of the filters off; the step sends the values kept, so that the filter comes back as it was |
 | `removeIndividuals` | no individuals file | `p` itself |
 | `forgetTypesLost` | no file, a file not read, or `typesLost` empty | `p` itself |
@@ -1416,6 +1529,21 @@ export function variantFilterNeeds(p: Project): string | null;
 export function jobFilters(
   filters: readonly ProjectVariantFilter[],
 ): readonly VariantFilter[];
+
+/** The filters of the variants on that apply to the project's variants
+    file: p.filters without the filter of the FILTER column, `passed`,
+    for a .nei file; p.filters itself, the same array, for a VCF and for
+    no file. What reads the filters applied reads this, never p.filters:
+    the keys, the jobs, through jobFilters(filtersApplied(p)), the
+    counts of each filter, the scripts and the words. */
+export function filtersApplied(p: Project): readonly ProjectVariantFilter[];
+/** The same for a file of `format`, null for no file: for the
+    fingerprint of an opened project file, which knows the file only by
+    its read options (docs/specs/core/keys.md). */
+export function filtersAppliedTo(
+  filters: readonly ProjectVariantFilter[],
+  format: "vcf" | "nei" | null,
+): readonly ProjectVariantFilter[];
 
 /** The first list of individuals popnei would refuse, which of the two
     it is and the reason, or null, and null while projectNeeds gives a
@@ -1754,6 +1882,10 @@ or `null`.
   and each is read as empty: such a project opens with the filters it
   had on, and nothing kept of those off, which those versions did not
   keep. The option not taken was to refuse it, as for `typesSet` above.
+- **The filter of the FILTER column** is `{ "kind": "passed" }`, with no
+  other field; a field more is refused as below, `unknownField`. The
+  validation reads it in both pages; `popgen.html` refuses it after the
+  validation, in `readProjectFile` (`docs/specs/core/projectFile.md`).
 - **A field the type does not have**, in a file whose version this
   application knows, is refused, as `unknownField`: such a file was
   changed by hand or damaged, since this version would not have written
@@ -1784,9 +1916,12 @@ or `null`.
     remove, missing genotypes, observed heterozygosity, and the second one
     is out of that order";
   - the filters of the variants out of their order: "the filters of the
-    variants should be in the order missing genotypes, observed
-    heterozygosity, major allele frequency, linkage disequilibrium, and
-    the second one is out of that order". A project file of version 1
+    variants should be in the order the FILTER column, missing
+    genotypes, observed heterozygosity, major allele frequency, linkage
+    disequilibrium, and the second one is out of that order", the FILTER
+    column first since 7 October 2026; the filter of the FILTER column is
+    named "the FILTER column" in every text, "it has two filters of the
+    variants by the FILTER column, …". A project file of version 1
     whose filters of the variants are in another order, which the
     application of stage 2 could not write, since it had the missing data
     filter alone, is refused so (`docs/architecture.md`, section 2);
@@ -1910,6 +2045,18 @@ or `null`.
   kept with `maxDist` `null`, locks nothing, and, turned on again, is
   locked again with the same reason. The same holds for every other
   filter with a switch, a threshold of the individuals among them.
+- **The FILTER box on, then a `.nei` file opened.** `loadVariants` keeps
+  `passed` in `filters`; `filtersApplied` leaves it out, so the keys and
+  the jobs are those of the same filters without it, and a pass over the
+  `.nei` file never meets `filterPassed`. Opening a VCF again gives it
+  back, with no command.
+- **A threshold typed 1 while it is on at 0.3.** It is turned off and
+  kept at 0.3 in its list of the filters off; `thresholdValue` gives
+  `null`; Undo gives back the filter on at 0.3. Typed 1 again, or the
+  box emptied, while it is off: `p` itself, no step of Undo.
+- **A threshold dragged to the top of its axis**: a filter at the number
+  there, 0.1 for the missing rate of the variants of `panel.nei`, and
+  not off, since the axis ends where the file's values end.
 
 ## How it runs
 
@@ -1982,6 +2129,26 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   `parseProject` of a filter with `maxDist` `null` accepted, of 0
   refused with the `expected` "a whole number, 1 or more, or nothing",
   and of `"1000"` with "a number or nothing".
+- **The filters of popgen2.html.** `setThreshold` of each of the five
+  thresholds at 0.3, then at 1, then at `null`, from
+  `popgen2FirstProject()`: on at 0.3; off, kept at 0.3; `p` itself.
+  Of the missing rate of the variants at 1, from the first project:
+  off, kept at 0.1, and `filters` `[passed]`; at 0.05 then: on, out of
+  `filtersOff`. At 1.5, -0.1 and NaN: a defect. `thresholdValue` of each
+  in each state. `popgen2FirstProject()` is `filters` `[passed,
+  missing_data 0.1]` and the three other lists empty, and
+  `firstProject("popgen")` `[missing_data 0.1]` as before. The FILTER
+  box: `setVariantFilter` of `{ kind: "passed" }` on a project whose
+  filters are `[missing_data, maf]` gives `[passed, missing_data, maf]`;
+  `turnOffVariantFilter` of `passed` keeps `{ kind: "passed" }` in
+  `filtersOff`. `filtersApplied` of a project with `passed` on and a
+  `.nei` file, without it, and of one with a VCF and of one with no
+  file, `p.filters` by `toBe`; `filtersAppliedTo` of the same filters
+  with each format. `parseProject` of `{ "kind": "passed" }` in
+  `filters` and in `filtersOff` accepted, of `{ "kind": "passed",
+  "maxAllowedMaf": 1 }` refused as `unknownField`, and of `passed` after
+  `missing_data` refused as `filterOutOfOrder`, with the text of the
+  order quoted above.
 - **`individualsCheck`**: `null` when either file is not read; the
   individuals found, those missing in the order of the variants file,
   and the rows ignored; and `individualsNeeds` naming the same
@@ -2101,7 +2268,12 @@ of `individualsKept.ts` but types, and nothing of `populations.ts`.
   is a `ProjectVariantFilter`, whose LD filter has no distance in about
   half of the draws; and filters turned off, which `wholeProject` draws
   in `filtersOff` and `individualFiltersOff` and the sequences draw with
-  `turnOffVariantFilter` and `turnOffIndividualFilter`. For every such
+  `turnOffVariantFilter` and `turnOffIndividualFilter`; and, from 7
+  October 2026, the filter `passed`, on and off, which `wholeProject`
+  and the sequences draw with the other kinds, and the command
+  `setThreshold` with numbers from 0 to 1, 1 among them, and `null`.
+  `filtersApplied` of every such project holds the filters of `filters`
+  in their order, all of them but `passed` for a `.nei` file. For every such
   project, `variantFilterNeeds` gives
   a reason exactly when the LD filter of `filters` has no distance, and
   `jobFilters` of its filters throws exactly then. For every sequence of
@@ -2296,3 +2468,23 @@ nothing; `docs/specs/shell.md`, the summary line counts the filters on;
 `docs/specs/steps/variants.md`, the switch turned on sends the filter
 kept; and `docs/specs/worker/protocol.md`, a job carries the filters on
 alone, as before.
+
+For the filters of popgen2.html, 7 October 2026
+(`docs/designs/stats-filters.md`): made the same day in
+`docs/specs/worker/protocol.md`, `messages.md` and `runner.md`, the
+kind `passed` and its place before the list of the individuals;
+`docs/specs/core/projectFile.md`, `popgen.html` refusing a file that
+holds it; `docs/specs/core/keys.md`, the keys and the fingerprint
+reading `filtersApplied`; `docs/specs/core/store.md`, the write's job
+reading it; and `docs/architecture.md`, sections 2, 3, 5, 7 and 8. Not
+made, and asked of the code and of the next revision of each: the specs
+of the analyses that read `p.filters`, `docs/specs/analyses/diversity.md`,
+`pca.md` (`pcaFilters`), `popDists.md`, `ldDecay.md`, `sfs.md`,
+`filterCounts.md` (its rows and check numbers) and `writeVariants.md`,
+and `docs/specs/entry.md`, for the name of a file written and the
+estimate of its size, read `filtersApplied(p)` in its place; on
+`popgen.html`, whose projects never hold `passed`, it gives `p.filters`
+itself, so nothing those specs say changes for a user. The screen spec
+of the filters of `popgen2.html`, `docs/specs/steps/popgen2-filters.md`,
+sends `setThreshold` and the two commands of the box, and shows
+`thresholdValue`.
