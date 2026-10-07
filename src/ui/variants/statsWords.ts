@@ -12,11 +12,12 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import { counted, escaped } from "../../core/project.ts";
+import { counted, escaped, grouped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import { INDIVIDUAL_HISTOGRAMS } from "../steps/variants/individualStats.ts";
+import { numberText } from "../widgets/committedNumber.ts";
 import { summaryStatus } from "./words.ts";
 
 /** The two parts of the statistics of the open file, the parts of the
@@ -187,4 +188,126 @@ export function statsAnnouncementsOf(
     ];
   }
   return [];
+}
+
+/** The name of the threshold of the histogram of the variants of
+    `statistic`, which names its line and its box: "Maximum proportion of
+    missing genotypes". */
+export function variantThresholdName(statistic: VariantStatistic): string {
+  return VARIANT_THRESHOLD_NAMES[statistic];
+}
+
+/** The names of the thresholds of the variants, by statistic. */
+const VARIANT_THRESHOLD_NAMES: Readonly<Record<VariantStatistic, string>> =
+  Object.freeze({
+    missingRate: "Maximum proportion of missing genotypes",
+    maf: "Maximum major allele frequency",
+    obsHet: "Maximum observed heterozygosity",
+    unbiasedExpHet: "Maximum expected heterozygosity (unbiased)",
+  });
+
+/** The name of the threshold of the histogram of the individuals of
+    `statistic`: "Maximum proportion of missing genotypes of an
+    individual", told apart from the variants' of the same statistic. */
+export function individualThresholdName(
+  statistic: IndividualStatistic,
+): string {
+  return INDIVIDUAL_THRESHOLD_NAMES[statistic];
+}
+
+/** The names of the thresholds of the individuals, by statistic. */
+const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
+  Record<IndividualStatistic, string>
+> = Object.freeze({
+  missingGenotypes: "Maximum proportion of missing genotypes of an individual",
+  observedHeterozygosity: "Maximum observed heterozygosity of an individual",
+});
+
+/** What a threshold keeps of the variants or the individuals of one
+    histogram, those with a value: from `keptLow` to `keptHigh`, one
+    number when the two are equal, of `withValue`. */
+export interface ThresholdCounts {
+  /** The fewest it may keep. */
+  readonly keptLow: number;
+  /** The most it may keep, `keptLow` when the bins can tell. */
+  readonly keptHigh: number;
+  /** Those with a value, which it keeps or removes. */
+  readonly withValue: number;
+}
+
+/** The kind of what a histogram counts, in the words under it. */
+export type Counted = "variant" | "individual";
+
+/** The line under a histogram that says its threshold and what it keeps
+    and removes of those with a value: "At most 0.1: keeps 1,050 variants
+    and removes 150"; with the range the bins allow, "At most 0.05: keeps
+    1,113 to 1,152 variants and removes 48 to 87"; "At most 0.3: keeps all
+    1,200 variants". `shown` is the number of the threshold as the box
+    shows it. While the pass runs, `soFar`, the counts are of the
+    variants read so far, and the line ends "so far". */
+export function thresholdLine(
+  shown: number,
+  counts: ThresholdCounts,
+  noun: Counted,
+  soFar = false,
+): string {
+  return `At most ${numberText(shown)}: ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+}
+
+/** What the line of a threshold says to a screen reader as its value:
+    the number and what it keeps of those with a value, "0.1, keeps 1,050
+    of 1,200 variants", "0.05, keeps 1,113 to 1,152 of 1,200 variants",
+    "0.3, keeps all 1,200 variants"; ending "so far" while the pass runs,
+    `soFar`. */
+export function thresholdValueText(
+  shown: number,
+  counts: ThresholdCounts,
+  noun: Counted,
+  soFar = false,
+): string {
+  const { keptLow, keptHigh, withValue } = counts;
+  const keeps =
+    withValue === 0 || (keptLow === withValue && keptHigh === withValue)
+      ? keepsWords(counts, noun)
+      : `keeps ${rangeText(keptLow, keptHigh)} of ${counted(withValue, noun)}`;
+  return `${numberText(shown)}, ${keeps}${soFar ? SO_FAR : ""}`;
+}
+
+/** What a threshold keeps and removes, in words. */
+function keepsWords(counts: ThresholdCounts, noun: Counted): string {
+  const { keptLow, keptHigh, withValue } = counts;
+  if (withValue === 0) return `no ${noun} has a value`;
+  if (keptLow === withValue && keptHigh === withValue) {
+    return withValue === 1
+      ? `keeps the only ${noun}`
+      : `keeps all ${counted(withValue, noun)}`;
+  }
+  const kept = rangeText(keptLow, keptHigh);
+  const removed = rangeText(withValue - keptHigh, withValue - keptLow);
+  const plural = keptLow === 1 && keptHigh === 1 ? noun : `${noun}s`;
+  return `keeps ${kept} ${plural} and removes ${removed}`;
+}
+
+/** A count, or the range of two, with commas between thousands: "1,050",
+    "1,113 to 1,152". */
+function rangeText(low: number, high: number): string {
+  return low === high ? grouped(low) : `${grouped(low)} to ${grouped(high)}`;
+}
+
+/** The line under a histogram of the individuals of those with no value,
+    with a threshold on it, which neither keeps nor removes them: "3
+    individuals with no called genotype are not in the histogram, and the
+    threshold neither keeps nor removes them."; `null` when every one has
+    a value. */
+export function noValueThresholdLine(
+  numNaN: number,
+  soFar = false,
+): string | null {
+  if (numNaN === 0) return null;
+  const which = soFar
+    ? "with no called genotype so far"
+    : "with no called genotype";
+  return numNaN === 1
+    ? `1 individual ${which} is not in the histogram, and the threshold neither keeps nor removes it.`
+    : `${counted(numNaN, "individual")} ${which} are not in the histogram, and the threshold neither keeps nor removes them.`;
 }

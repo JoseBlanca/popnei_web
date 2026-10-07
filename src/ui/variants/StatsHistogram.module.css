@@ -20,3 +20,20 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* The plot and the line of its threshold laid over it. */
+.plot {
+  position: relative;
+  min-inline-size: 0;
+}
+
+/* What the threshold keeps and removes, under the plot. Two lines kept
+   for it, a minimum, so that the plot and those beside it do not move as
+   the words grow longer while the line is dragged, nor stand at other
+   heights in a row. */
+.line {
+  margin: 0;
+  min-block-size: calc(2em * var(--leading-body));
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}

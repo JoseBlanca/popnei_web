@@ -34,7 +34,17 @@
  * space. The download of the table of the individuals comes with the
  * result alone.
  */
-import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+
+import { DEFAULT_MAX_MISSING_RATE } from "../../core/apps.ts";
+import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
+import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
@@ -126,6 +136,10 @@ function Stats({
 }: StatsProps): React.JSX.Element {
   const sectionRef = useRef<HTMLElement>(null);
   const status = useAppState(summaryStatus);
+  // The thresholds on the plots, state of this load alone: another file
+  // is another section, which starts them again. They are shown only,
+  // and change no statistic and no project (docs/plans/thresholds.md).
+  const [thresholds, setThresholds] = useState(START_THRESHOLDS);
   // Selected for what autoRuns knows, which tells a pass stopped from one
   // about to start, and which a Stop with no pass running changes and the
   // store does not.
@@ -186,7 +200,17 @@ function Stats({
           <>
             {variantsLine !== null && <PartLine>{variantsLine}</PartLine>}
             {shown !== null && (
-              <VariantPlots result={shown.result.perVar} soFar={soFar} />
+              <VariantPlots
+                result={shown.result.perVar}
+                soFar={soFar}
+                thresholds={thresholds.variants}
+                onThreshold={(statistic, value) => {
+                  setThresholds((before) => ({
+                    ...before,
+                    variants: { ...before.variants, [statistic]: value },
+                  }));
+                }}
+              />
             )}
           </>
         )}
@@ -201,6 +225,13 @@ function Stats({
               <IndividualPlots
                 result={shown.result.perIndividual}
                 soFar={soFar}
+                thresholds={thresholds.individuals}
+                onThreshold={(statistic, value) => {
+                  setThresholds((before) => ({
+                    ...before,
+                    individuals: { ...before.individuals, [statistic]: value },
+                  }));
+                }}
               />
             )}
             {done !== undefined && (
@@ -251,34 +282,110 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
   return { result, soFar };
 }
 
+/** The thresholds of the six histograms, as the user set them: a
+    number, or `null` for the top of the axis, which keeps everything and
+    follows the axis as a result so far widens it. Those of the variants
+    are snapped to popnei's fine edges where they are drawn and counted. */
+interface Thresholds {
+  readonly variants: Readonly<Record<VariantStatistic, number | null>>;
+  readonly individuals: Readonly<Record<IndividualStatistic, number | null>>;
+}
+
+/** The thresholds of a file just open: the missing rate of the variants
+    at 0.1, the default of its filter in docs/functionality.md, and the
+    five others at the top of their axis (docs/plans/thresholds.md, "The
+    starting values"). */
+const START_THRESHOLDS: Thresholds = Object.freeze({
+  variants: Object.freeze({
+    missingRate: DEFAULT_MAX_MISSING_RATE,
+    maf: null,
+    obsHet: null,
+    unbiasedExpHet: null,
+  }),
+  individuals: Object.freeze({
+    missingGenotypes: null,
+    observedHeterozygosity: null,
+  }),
+});
+
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
   /** The part of the variants of the result, or of a result so far. */
   readonly result: VariantStatsPart;
   /** Whether it is of a result so far. */
   readonly soFar: boolean;
+  /** The thresholds of the four, as the user set them. */
+  readonly thresholds: Thresholds["variants"];
+  /** Called with the threshold the user set on the histogram of
+      `statistic`. */
+  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
 }
 
 /** The four histograms of the variants, each over the variants in its
-    bins. Each keeps its element from one result so far to the next, and
-    is updated in it. */
-function VariantPlots({ result, soFar }: VariantPlotsProps): React.JSX.Element {
-  // Made again only for another result, so that the plots are not drawn
-  // again on renders that changed nothing (react.md, "Mounting a plot").
-  const plots = useMemo(
-    () =>
-      VARIANT_STATISTICS.map((statistic) => ({
-        statistic,
-        plot: variantPlot(statistic, result, soFar),
-      })),
-    [result, soFar],
-  );
+    bins, with its threshold. Each keeps its element from one result so
+    far to the next, and is updated in it. */
+function VariantPlots({
+  result,
+  soFar,
+  thresholds,
+  onThreshold,
+}: VariantPlotsProps): React.JSX.Element {
   return (
     <Plots>
-      {plots.map(({ statistic, plot }) => (
-        <StatsHistogram key={statistic} plot={plot} />
+      {VARIANT_STATISTICS.map((statistic) => (
+        <VariantHistogram
+          key={statistic}
+          statistic={statistic}
+          result={result}
+          soFar={soFar}
+          threshold={thresholds[statistic]}
+          onThreshold={onThreshold}
+        />
       ))}
     </Plots>
+  );
+}
+
+/** What one histogram of the variants is drawn with. */
+interface VariantHistogramProps {
+  readonly statistic: VariantStatistic;
+  readonly result: VariantStatsPart;
+  readonly soFar: boolean;
+  /** Its threshold as the user set it. */
+  readonly threshold: number | null;
+  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
+}
+
+/** A histogram of the variants and its threshold, which follows the
+    number typed in its box before it is committed. */
+function VariantHistogram({
+  statistic,
+  result,
+  soFar,
+  threshold,
+  onThreshold,
+}: VariantHistogramProps): React.JSX.Element {
+  const [typed, setTyped] = useState<number | null>(null);
+  // Made again only when what it shows changes, so that the plot is not
+  // drawn again on renders that changed nothing (react.md, "Mounting a
+  // plot").
+  const set = useMemo(
+    () => variantPlot(statistic, result, soFar, threshold),
+    [statistic, result, soFar, threshold],
+  );
+  const drawn = useMemo(
+    () => (typed === null ? set : variantPlot(statistic, result, soFar, typed)),
+    [set, statistic, result, soFar, typed],
+  );
+  return (
+    <StatsHistogram
+      plot={drawn}
+      boxValue={set.threshold.shown}
+      onThreshold={(value) => {
+        onThreshold(statistic, value);
+      }}
+      onTyped={setTyped}
+    />
   );
 }
 
@@ -288,30 +395,80 @@ interface IndividualPlotsProps {
   readonly result: IndividualStatsPart;
   /** Whether it is of a result so far. */
   readonly soFar: boolean;
+  /** The thresholds of the two, as the user set them. */
+  readonly thresholds: Thresholds["individuals"];
+  /** Called with the threshold the user set on the histogram of
+      `statistic`. */
+  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
 }
 
 /** The two histograms of the individuals, each over the individuals
-    with a value, and under each the line of those with none; a line
-    alone where no individual has a value. */
+    with a value, with its threshold, and under each the line of those
+    with none; a line alone where no individual has a value. */
 function IndividualPlots({
   result,
   soFar,
+  thresholds,
+  onThreshold,
 }: IndividualPlotsProps): React.JSX.Element {
-  const plots = useMemo(
-    () =>
-      INDIVIDUAL_STATISTICS.map((statistic) => ({
-        statistic,
-        shown: individualPlot(statistic, result, soFar),
-      })),
-    [result, soFar],
-  );
   return (
     <Plots>
-      {plots.map(({ statistic, shown }) => (
-        <IndividualPlace key={statistic} noValueLine={shown.noValueLine}>
-          {shown.plot !== null && <StatsHistogram plot={shown.plot} />}
-        </IndividualPlace>
+      {INDIVIDUAL_STATISTICS.map((statistic) => (
+        <IndividualHistogram
+          key={statistic}
+          statistic={statistic}
+          result={result}
+          soFar={soFar}
+          threshold={thresholds[statistic]}
+          onThreshold={onThreshold}
+        />
       ))}
     </Plots>
+  );
+}
+
+/** What one histogram of the individuals is drawn with. */
+interface IndividualHistogramProps {
+  readonly statistic: IndividualStatistic;
+  readonly result: IndividualStatsPart;
+  readonly soFar: boolean;
+  /** Its threshold as the user set it. */
+  readonly threshold: number | null;
+  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
+}
+
+/** A histogram of the individuals and its threshold, which follows the
+    number typed in its box, and the line under it of those with no
+    value. */
+function IndividualHistogram({
+  statistic,
+  result,
+  soFar,
+  threshold,
+  onThreshold,
+}: IndividualHistogramProps): React.JSX.Element {
+  const [typed, setTyped] = useState<number | null>(null);
+  const set = useMemo(
+    () => individualPlot(statistic, result, soFar, threshold),
+    [statistic, result, soFar, threshold],
+  );
+  const drawn = useMemo(
+    () =>
+      typed === null ? set : individualPlot(statistic, result, soFar, typed),
+    [set, statistic, result, soFar, typed],
+  );
+  return (
+    <IndividualPlace noValueLine={drawn.noValueLine}>
+      {drawn.plot !== null && set.plot !== null && (
+        <StatsHistogram
+          plot={drawn.plot}
+          boxValue={set.plot.threshold.shown}
+          onThreshold={(value) => {
+            onThreshold(statistic, value);
+          }}
+          onTyped={setTyped}
+        />
+      )}
+    </IndividualPlace>
   );
 }

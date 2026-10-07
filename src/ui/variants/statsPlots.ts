@@ -12,6 +12,20 @@
  * pass reads values outside them. Pure, so
  * that a test in node checks the counts, a value of NaN among them; the
  * section draws them.
+ *
+ * Each histogram has a threshold that keeps the values at most it
+ * (docs/plans/thresholds.md, "The design"): drawn on the plot with no
+ * legend, since it is no filter, said in the line under the plot with
+ * what it keeps and removes, and moved by a slider laid over the plot,
+ * whose range is the horizontal axis of the plot, `histogramScales`,
+ * widened as the plot widens it to take a threshold outside the bins.
+ * The threshold the user set is `null` until they move it, at the top of
+ * the axis, where it keeps everything and follows the axis as a result
+ * so far widens it. Those of the variants move from one of popnei's
+ * 1,280 fine edges to the next, a number typed being snapped to the
+ * nearest, and are counted from popnei's fine bins, `variantsAtMost`;
+ * those of the individuals move by 0.0001 and are counted from popnei's
+ * value of each, `individualsAtMost`.
  */
 import {
   variantBinsRounded,
@@ -21,8 +35,16 @@ import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import { individualHistogramDescription } from "../../core/analyses/individualChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
-import { histogramRows } from "../../charts/histogram.ts";
-import type { HistogramData } from "../../charts/histogram.ts";
+import {
+  individualsAtMost,
+  snapToFineEdge,
+  variantsAtMost,
+} from "../../core/thresholds.ts";
+import { histogramRows, histogramScales } from "../../charts/histogram.ts";
+import type {
+  HistogramData,
+  HistogramThreshold,
+} from "../../charts/histogram.ts";
 import type {
   IndividualStatsPart,
   VariantStatsPart,
@@ -34,20 +56,86 @@ import {
   noHeterozygosityText,
 } from "../steps/variants/individualStats.ts";
 import {
+  individualThresholdName,
   individualTitle,
+  noValueThresholdLine,
   SO_FAR_DESCRIPTION,
   overIndividualsLine,
   overVariantsLine,
+  thresholdLine,
+  thresholdValueText,
+  variantThresholdName,
   variantTitle,
 } from "./statsWords.ts";
+import type { Counted, ThresholdCounts } from "./statsWords.ts";
+
+/** The step of a threshold of the individuals, and of its box, which
+    takes four decimals, as the thresholds of the individuals of the old
+    page do. */
+export const INDIVIDUAL_THRESHOLD_STEP = 0.0001;
+
+/** The most decimals of a threshold of the variants typed in its box:
+    those of the fine edges, k/1280, 0.00078125 the longest. A number
+    with more is refused, one with fewer snapped to the nearest edge. */
+export const VARIANT_THRESHOLD_DECIMALS = 8;
 
 /** One histogram of the section. */
 export interface StatsPlot {
-  /** What the plot draws, its title among it. */
+  /** What the plot draws, its title and its threshold among it. */
   readonly data: HistogramData;
   /** The line under the title, "Over 1,200 variants", those in its
       bins. */
   readonly countLine: string;
+  /** Its threshold: its slider, its box and its words. */
+  readonly threshold: PlotThreshold;
+}
+
+/** The threshold of a histogram, as its slider, its box and its words
+    show it. */
+export interface PlotThreshold {
+  /** The name of the slider and of the box: "Maximum proportion of
+      missing genotypes". */
+  readonly name: string;
+  /** The number of the threshold as the box and the words show it, an
+      edge of popnei's fine bins, k/1280, for the variants. */
+  readonly shown: number;
+  /** The range of the slider, the horizontal axis of the plot, and where
+      it is, in its own units: the index of a fine edge for the
+      variants, the threshold itself for the individuals. */
+  readonly slider: SliderRange;
+  /** The bounds and the step of the box. */
+  readonly box: BoxRange;
+  /** The line under the plot: "At most 0.1: keeps 1,050 variants and
+      removes 150". */
+  readonly line: string;
+  /** What a screen reader says as the value of the slider: "0.1, keeps
+      1,050 of 1,200 variants". */
+  readonly valueText: string;
+  /** The threshold the user sets by moving the slider to `value`, in
+      the units of the slider. */
+  readonly fromSlider: (value: number) => number;
+}
+
+/** The range of a slider and where its thumb is. */
+export interface SliderRange {
+  /** The left end of the horizontal axis. */
+  readonly min: number;
+  /** The right end. */
+  readonly max: number;
+  /** What an arrow key moves it by; ten of them for Page Up and Down. */
+  readonly step: number;
+  /** Where the thumb is. */
+  readonly value: number;
+}
+
+/** The bounds and the step of the box of a threshold. */
+export interface BoxRange {
+  readonly minValue: number;
+  readonly maxValue: number;
+  /** What an arrow key moves it by. */
+  readonly step: number;
+  /** The most decimals a number typed may have, apart from the step. */
+  readonly decimals: number;
 }
 
 /** A histogram of the individuals, and what is said of those in none of
@@ -62,45 +150,80 @@ export interface IndividualPlot {
 
 /** The histogram of the variants of `statistic`, popnei's bins added up
     over the range of those with a count, rounded out, over the variants
-    in them, which leaves out a variant with no value; its line and its
-    description say "so far" for a result so far, `soFar`. */
+    in them, which leaves out a variant with no value; its line, its
+    description and the words of its threshold say "so far" for a result
+    so far, `soFar`. `threshold` is the number the user set or is typing,
+    snapped to the nearest fine edge, or `null` for the top of the
+    axis. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
-  soFar = false,
+  soFar: boolean,
+  threshold: number | null,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
   const bins = variantBinsRounded(result, statistic);
+  const numBins = result.binEdges.length - 1;
+  // The top of the axis is a fine edge, the nominal k/numBins.
+  const axisHigh = Math.round(at(bins.edges, bins.edges.length - 1) * numBins);
+  const index =
+    threshold === null
+      ? axisHigh
+      : snapToFineEdge(result.binEdges, threshold).index;
+  const shown = index / numBins;
   const plotted = {
     title: variantTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: null,
+    threshold: noLegend(shown),
   };
-  const rows = histogramRows({ ...plotted, description: "" });
+  const rows = histogramRows({ ...plotted, threshold: null, description: "" });
+  const data = {
+    ...plotted,
+    description: describedSoFar(
+      variantHistogramDescription(statistic, rows, null),
+      soFar,
+    ),
+  };
+  const counts = variantsAtMost(result, statistic, index);
+  const [low, high] = axisOf(data);
   return {
-    data: {
-      ...plotted,
-      description: describedSoFar(
-        variantHistogramDescription(statistic, rows, null),
-        soFar,
-      ),
-    },
+    data,
     countLine: overVariantsLine(sumOf(bins.counts), soFar),
+    threshold: {
+      name: variantThresholdName(statistic),
+      shown,
+      slider: {
+        min: Math.round(low * numBins),
+        max: Math.round(high * numBins),
+        step: 1,
+        value: index,
+      },
+      box: {
+        minValue: 0,
+        maxValue: 1,
+        step: 1 / numBins,
+        decimals: VARIANT_THRESHOLD_DECIMALS,
+      },
+      ...wordsOf(shown, counts, "variant", soFar),
+      fromSlider: (value) => value / numBins,
+    },
   };
 }
 
 /** The histogram of the individuals of `statistic`, its values binned
     over their range rounded out, the missing rate from 0, over the
-    individuals with a value; its line, its description and the line of
-    the individuals with no value say "so far" for a result so far,
-    `soFar`. */
+    individuals with a value; its line, its description, the words of its
+    threshold and the line of the individuals with no value say "so far"
+    for a result so far, `soFar`. `threshold` is the number the user set
+    or is typing, or `null` for the top of the axis. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualStatsPart,
-  soFar = false,
+  soFar: boolean,
+  threshold: number | null,
 ): IndividualPlot {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
@@ -111,33 +234,99 @@ export function individualPlot(
     statistic === "missingGenotypes",
   );
   // binValues gives no bins only when every value is NaN.
-  const noValueLine = noHeterozygosityText(
-    bins === null ? values.length : bins.numNaN,
-    soFar,
-  );
-  if (bins === null) return { plot: null, noValueLine };
+  if (bins === null) {
+    return {
+      plot: null,
+      noValueLine: noHeterozygosityText(values.length, soFar),
+    };
+  }
+  const axisHigh = at(bins.edges, bins.edges.length - 1);
+  const shown = threshold ?? axisHigh;
   const plotted = {
     title: individualTitle(statistic),
     xLabel: words.xLabel,
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: null,
+    threshold: noLegend(shown),
   };
-  const rows = histogramRows({ ...plotted, description: "" });
+  const rows = histogramRows({ ...plotted, threshold: null, description: "" });
+  const data = {
+    ...plotted,
+    description: describedSoFar(
+      individualHistogramDescription(statistic, rows, null),
+      soFar,
+    ),
+  };
+  const { kept, removed } = individualsAtMost(values, shown);
+  const counts = { keptLow: kept, keptHigh: kept, withValue: kept + removed };
+  const [low, high] = axisOf(data);
   return {
     plot: {
-      data: {
-        ...plotted,
-        description: describedSoFar(
-          individualHistogramDescription(statistic, rows, null),
-          soFar,
-        ),
-      },
+      data,
       countLine: overIndividualsLine(sumOf(bins.counts), soFar),
+      threshold: {
+        name: individualThresholdName(statistic),
+        shown,
+        slider: {
+          min: low,
+          max: high,
+          step: INDIVIDUAL_THRESHOLD_STEP,
+          value: shown,
+        },
+        box: {
+          minValue: 0,
+          maxValue: 1,
+          step: INDIVIDUAL_THRESHOLD_STEP,
+          decimals: INDIVIDUAL_DECIMALS,
+        },
+        ...wordsOf(shown, counts, "individual", soFar),
+        fromSlider: (value) => Number(value.toFixed(INDIVIDUAL_DECIMALS)),
+      },
     },
-    noValueLine,
+    noValueLine: noValueThresholdLine(bins.numNaN, soFar),
   };
+}
+
+/** The decimals of a threshold of the individuals. */
+const INDIVIDUAL_DECIMALS = 4;
+
+/** A threshold at `value` drawn with no legend: it is no filter, and the
+    line under the plot says what it keeps. */
+function noLegend(value: number): HistogramThreshold {
+  return { value, legend: null };
+}
+
+/** The two ends of the horizontal axis the plot draws `data` with, the
+    bins widened to take the threshold, which the slider spans. */
+function axisOf(data: HistogramData): readonly [number, number] {
+  const [low, high] = histogramScales(data, 1, 1).x.domain();
+  if (low === undefined || high === undefined) {
+    throw new Error("popnei_web defect: a horizontal axis with no ends.");
+  }
+  return [low, high];
+}
+
+/** The line under the plot and the value text of the slider. */
+function wordsOf(
+  shown: number,
+  counts: ThresholdCounts,
+  noun: Counted,
+  soFar: boolean,
+): { readonly line: string; readonly valueText: string } {
+  return {
+    line: thresholdLine(shown, counts, noun, soFar),
+    valueText: thresholdValueText(shown, counts, noun, soFar),
+  };
+}
+
+/** The edge at `index` of `edges`, which the bins made. */
+function at(edges: Float64Array, index: number): number {
+  const edge = edges[index];
+  if (edge === undefined) {
+    throw new Error(`popnei_web defect: no edge at ${String(index)}.`);
+  }
+  return edge;
 }
 
 /** The description of a histogram, which says, for one drawn from a

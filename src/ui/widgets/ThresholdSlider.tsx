@@ -1,0 +1,131 @@
+/**
+ * The line of a threshold that the user drags over a histogram: React
+ * Aria's `Slider` with one thumb, laid over the plot so that the thumb is
+ * the vertical line of the threshold and the track the frame of the plot
+ * (docs/plans/thresholds.md, "The line the user drags"). The plot draws
+ * the dashed line itself; the thumb is a band as wide as a target of
+ * WCAG 2.5.8 around it, clear but for a handle in the margin above the
+ * frame and a solid line over the dashed one while it is hovered,
+ * dragged or focused, so that the line stays thin. The track takes no
+ * pointer, so that a click or a swipe on the bars moves nothing and
+ * scrolls the page on a phone; the thumb is dragged.
+ *
+ * Keyboard: the arrow keys move it one step, Page Up and Page Down ten,
+ * where React Aria would move it a tenth of its range, and Home and End
+ * to the ends of the axis. Its name is not drawn, since the number field
+ * beside it has the same name in its visible label; its value, for a
+ * screen reader, is what the screen says it keeps, "0.1, keeps 1,050 of
+ * 1,200 variants", where React Aria would say the number of its own
+ * units, the index of an edge. Nothing is announced at each step: the
+ * value is read as the thumb moves, as of any slider.
+ */
+import { useLayoutEffect, useRef } from "react";
+import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
+
+import { classOf } from "../classOf.ts";
+import styles from "./ThresholdSlider.module.css";
+
+/** The steps Page Up and Page Down move the thumb by. */
+const PAGE_STEPS = 10;
+
+/** Where the frame of the plot is in its element, in CSS pixels. */
+export interface SliderFrame {
+  /** From the left of the element to the left of the frame. */
+  readonly left: number;
+  /** From the top of the element to the top of the frame, the margin
+      that holds the handle. */
+  readonly top: number;
+  /** The width of the frame, which the track spans. */
+  readonly width: number;
+  /** The height of the frame. */
+  readonly height: number;
+}
+
+/** What the line of a threshold is drawn with. */
+export interface ThresholdSliderProps {
+  /** Its name for a screen reader, the label of the number field beside
+      it: "Maximum proportion of missing genotypes". */
+  readonly label: string;
+  /** The left end of the horizontal axis of the plot, in the units of
+      the slider. */
+  readonly minValue: number;
+  /** The right end. */
+  readonly maxValue: number;
+  /** What an arrow key moves it by. */
+  readonly step: number;
+  /** Where it is. */
+  readonly value: number;
+  /** What a screen reader says as its value. */
+  readonly valueText: string;
+  /** The frame of the plot it is laid over. */
+  readonly frame: SliderFrame;
+  /** Called with each value it is moved to, as it is dragged too. */
+  readonly onChange: (value: number) => void;
+}
+
+/** The line of a threshold, over the frame of its plot. */
+export function ThresholdSlider({
+  label,
+  minValue,
+  maxValue,
+  step,
+  value,
+  valueText,
+  frame,
+  onChange,
+}: ThresholdSliderProps): React.JSX.Element {
+  const inputRef = useRef<HTMLInputElement>(null);
+  // React Aria writes its own value text, the number in the units of the
+  // slider, and takes none from its props: written over it after each
+  // draw, before the browser paints, and before a screen reader reads it,
+  // which it does on the change of the value that caused the draw.
+  useLayoutEffect(() => {
+    inputRef.current?.setAttribute("aria-valuetext", valueText);
+  });
+
+  const onKeyDownCapture = (event: React.KeyboardEvent): void => {
+    if (event.key !== "PageUp" && event.key !== "PageDown") return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+    // Before React Aria's handler and the browser's, which move it a
+    // tenth of the range.
+    event.preventDefault();
+    event.stopPropagation();
+    const moved =
+      value + (event.key === "PageUp" ? PAGE_STEPS : -PAGE_STEPS) * step;
+    const bounded = Math.min(maxValue, Math.max(minValue, moved));
+    if (bounded !== value) onChange(bounded);
+  };
+
+  return (
+    // The keys of the thumb reach it first; the element is no widget.
+    <div
+      className={classOf(styles, "overlay")}
+      style={{
+        insetInlineStart: `${String(frame.left)}px`,
+        inlineSize: `${String(frame.width)}px`,
+        blockSize: `${String(frame.top + frame.height)}px`,
+        ["--frame-top" as string]: `${String(frame.top)}px`,
+      }}
+      onKeyDownCapture={onKeyDownCapture}
+    >
+      <Slider
+        aria-label={label}
+        className={classOf(styles, "slider")}
+        value={value}
+        minValue={minValue}
+        maxValue={maxValue}
+        step={step}
+        onChange={onChange}
+      >
+        <SliderTrack className={classOf(styles, "track")}>
+          <SliderThumb
+            className={classOf(styles, "thumb")}
+            inputRef={inputRef}
+          />
+        </SliderTrack>
+      </Slider>
+    </div>
+  );
+}
