@@ -3,24 +3,17 @@ import { describe, expect, test } from "vitest";
 import { loadIndividuals, loadVariants } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
-import { summaryResult } from "../../core/testSupport.ts";
 import { createDefects } from "../defects.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
-import {
-  FAILURES_ID,
-  SUMMARY_ID,
-  failuresStatus,
-  summaryStatus,
-} from "./words.ts";
+import { SUMMARY_ID, summaryStatus } from "./words.ts";
 import { reportDefects } from "./workerDefects.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
 
 /** The store of the new page with a fake `send` ended by hand, and
-    panel.nei open and read, or low_qual.vcf.gz as the page opens a VCF
-    when `format` is "vcf". */
-function setUp(format: "nei" | "vcf" = "nei"): {
+    panel.nei open and read. */
+function setUp(): {
   readonly store: Store<JobResult, Blob>;
   readonly sent: ((outcome: Outcome<JobResult>) => void)[];
 } {
@@ -38,24 +31,13 @@ function setUp(format: "nei" | "vcf" = "nei"): {
   });
   store.popneiReady("0.1.0");
   store.apply("a new variants file was loaded", (p) =>
-    loadVariants(
-      p,
-      format === "nei"
-        ? {
-            fileId: FILE_ID,
-            name: "panel.nei",
-            size: 261_490,
-            format: "nei",
-            readOptions: null,
-          }
-        : {
-            fileId: FILE_ID,
-            name: "low_qual.vcf.gz",
-            size: 30_000,
-            format: "vcf",
-            readOptions: { ploidy: null, onlyPassed: false },
-          },
-    ),
+    loadVariants(p, {
+      fileId: FILE_ID,
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    }),
   );
   store.variantsRead(FILE_ID, {
     kind: "read",
@@ -98,13 +80,6 @@ function touch(store: Store<JobResult, Blob>): void {
   if (calls.count === 0) {
     throw new Error("the change of the test called no listener");
   }
-}
-
-/** The key of the analysis `id`, running in `store`. */
-function keyOfRunning(store: Store<JobResult, Blob>, id: string): string {
-  const status = store.getState().analyses.find((a) => a.id === id)?.status;
-  if (status?.kind !== "running") throw new Error(`${id} is not running`);
-  return status.key;
 }
 
 /** Lets the outcomes given settle through `startAnalysis`. */
@@ -165,48 +140,6 @@ describe("the defects of the worker given to the error bar of the new page", () 
       more: 0,
     });
   });
-
-  for (const kind of ["workerFailed", "defect"] as const) {
-    test(`a ${kind} during the count of the FILTER failures is reported once, with its origin`, async () => {
-      const { store, sent } = setUp("vcf");
-      const defects = createDefects();
-      reportDefects(store, defects);
-      loadPops(store);
-
-      void startAnalysis(store, SUMMARY_ID);
-      sent[0]?.({
-        kind: "done",
-        key: keyOfRunning(store, SUMMARY_ID),
-        result: summaryResult(["1"], [1200], ["s1", "s2"]),
-      });
-      await settled();
-      void startAnalysis(store, FAILURES_ID);
-      sent[1]?.({
-        kind: "failed",
-        error: { kind, message: "out of memory" },
-      });
-      await settled();
-      touch(store);
-      expect(failuresStatus(store.getState()).kind).toBe("error");
-
-      expect(defects.getState().more).toBe(0);
-      expect(defects.getState().first).toEqual(
-        kind === "workerFailed"
-          ? {
-              message: "out of memory",
-              origin: "failuresStopped",
-              details:
-                "Error 1, the calculation worker stopped during the count of the variants that failed their FILTER, with these words:\nout of memory",
-            }
-          : {
-              message: "out of memory",
-              origin: "worker",
-              details:
-                "Error 1, thrown in the calculation worker during an opening or a calculation, given back to the page as its failure:\nout of memory",
-            },
-      );
-    });
-  }
 
   test("a worker that stopped during the opening is reported once, with what it said", () => {
     const { store } = setUp();

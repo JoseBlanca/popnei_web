@@ -1294,22 +1294,19 @@ The page and each worker talk through typed messages
   were two analyses of their own started after the count
   (`docs/plans/live-stats.md`, "One pass for the count and the
   statistics"; `variantChecks` and `individualChecks` stay on
-  `popgen.html`). From 7 October 2026 a second analysis follows it in
-  the page's one group, `POPGEN2_CHAIN`, `[variantsSummary,
-  filterFailures]`: the count of the variants of a VCF that failed their
-  FILTER, a pass of popnei's `calcVarDensity` under the step
-  `filterPassed`, which reads no genotype, and, when popnei refuses that
-  pass, as it does a VCF whose variants all failed, a second pass of its
-  blocks read to their end, which accepts no variant kept
-  (`docs/specs/worker/runner.md`); its counts carry the kind
-  `"passed"`, a `PassFilterKind` beside the kinds of the filters of the
-  variants, which no project holds. The summary keeps every variant,
-  since that step would take the failed ones out of the statistics. On a
-  `.nei` file the count is `locked`, since one written before format 1.2
-  holds no FILTER, and so it is on a VCF read without its failed
-  variants, `onlyPassed`, which the page never does, since the count
-  would say 0: a locked member neither starts nor holds back the
-  group, and the box offers no Start again for it. `autoRuns.ts` takes its analyses in groups and starts
+  `popgen.html`). The summary is the whole of the page's one group,
+  `POPGEN2_CHAIN`, so that the page reads each file once: on 7 October
+  2026 a count of the variants of a VCF that failed their FILTER
+  followed it in the group, a second pass over the file under popnei's
+  step `filterPassed`, and the owner took it out the same day
+  (`docs/plans/one-pass.md`). That count waits for popnei's
+  `calcVariantsSummary` to give it from its own pass, popnei issue #12
+  (JoseBlanca/popnei), when it comes in the summary's result and needs
+  no analysis of its own. The summary keeps every variant, whatever its
+  FILTER column. A member of a group can be `locked`, its project
+  lacking what it needs: a locked member neither starts nor holds back
+  the group, and the box offers no Start again for it; the group of
+  `popgen2.html` has none today. `autoRuns.ts` takes its analyses in groups and starts
   them one at a time, in their order: the one calculation worker runs one
   request at a time, and the store has no state for a request that waits
   in the client's queue, so two sent at once would both show as running,
@@ -1328,15 +1325,12 @@ The page and each worker talk through typed messages
   and one about to start, which it records as started so that it does
   not start; and, after a Stop or a crash of the worker, one Start again
   in its place (`resume`), which starts the first of the group that is
-  not done and lets the rest follow: after a Stop during the count of the
-  FILTER failures, that count alone, the summary being done. The box
-  shows the bar of the pass running, either of the two, and the focus on
-  Stop moves onto the lines of the box at the end of the group, not at
-  the end of the summary of a VCF, since Stop stays for the next pass.
-  The box decides between the two from
-  the first of the group that is not done, not from the summary alone, so
-  that a later member of the group, stopped after the summary is done,
-  gets its Start again too. The
+  not done and lets the rest follow. The box shows the bar of the pass
+  running, and the focus on Stop moves onto the lines of the box at the
+  end of the group. The box decides between Stop and Start again from
+  the first of the group that is neither done nor locked, not from the
+  summary alone, so that a group of more than one member, stopped after
+  the summary is done, gets its Start again too. The
   statistics' section has no bar nor button of its own, and says of each
   part that it is calculated, stopped, or not calculated. After a Stop
   the store's state is `ready`, as before any run, and the keys
@@ -2271,9 +2265,7 @@ src/core/
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
                     stage 5 popDists and ldDecay; for popgen2.html
-                    variantsSummary and, from 7 October 2026,
-                    filterFailures, the count of the FILTER failures of a
-                    VCF; and sfs.ts, the rows,
+                    variantsSummary; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
                     analysis of its own (docs/specs/analyses/sfs.md)
@@ -2366,11 +2358,10 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
-                    summary of the variants file and the count of the
-                    FILTER failures, POPGEN2_CHAIN, and no counts,
-                    statistics config or writing, and the groups of the
-                    analyses the page starts by itself; apart from the
-                    entry, so that a test in node makes it
+                    summary of the variants file alone, POPGEN2_CHAIN,
+                    and no counts, statistics config or writing, and the
+                    groups of the analyses the page starts by itself;
+                    apart from the entry, so that a test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
@@ -2379,16 +2370,15 @@ src/ui/
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
                     of the pass running, the count of the variants so
-                    far, the FILTER failures of a VCF,
-                    its Stop and Start again, the statistics of the open
-                    file, drawn while the pass runs from its results so
+                    far, its Stop and Start again, the statistics of the
+                    open file, drawn while the pass runs from its results so
                     far (the store's running.soFar, never cached) and
                     then from its result, from 7 October 2026 each with
                     its threshold, its line, its box and its words
                     (statsPlots.ts, StatsHistogram.tsx; section 7), the
-                    page that holds them, their words, the rules of the chain that the box and its
-                    words share (chain.ts: its one button, from the first
-                    neither done nor locked, and the pass a Stop stops),
+                    page that holds them, their words, the rules of the
+                    chain that the box and its words share (chain.ts: its
+                    one button, from the first neither done nor locked),
                     and the defects of the worker given to the error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the

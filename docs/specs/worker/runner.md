@@ -46,7 +46,12 @@ the summary of the variants file is one call of `calcVariantsSummary`
 (below, "The summary of the variants file"). Revised on 7 October 2026
 for the plots that fill in while the file is read
 (`docs/plans/live-stats.md`, phase 2): the summary gives its results so
-far to `toldSoFar` of the run (below, "The result so far"). The
+far to `toldSoFar` of the run (below, "The result so far"). Revised on
+7 October 2026 when the owner took out the count of the FILTER failures,
+a second pass over the file, so that popgen2.html reads each file once
+(`docs/plans/one-pass.md`): the job `filterFailures` and the step
+`filterPassed` of the runner's `Steps` are removed; the count waits for
+popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei). The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -638,32 +643,6 @@ job with no list and of an `individualChecks` job on the same runner
 (`src/worker/runnerVariantsSummary.test.ts`). A refusal of any of the
 three parts refuses the pass, and none of them is given: a genotype
 popnei refuses fails the count too.
-
-### The count of the FILTER failures
-
-A `filterFailures` job, of popgen2.html and for a VCF alone, holds its
-pass with no filter of the variants and no list of individuals. Its
-steps are popnei's `filterPassed` alone, put first, as popnei advises;
-`Steps` of the runner carries it as `passed`, and a `Variants` whose
-first step is not of kind `"passed"` is not the job's. The runner calls
-`calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} })`,
-a pass that reads no genotype, and gives back its `passStats` alone,
-whose `filtering` holds `"passed"` and nothing else, a defect otherwise,
-as for every job. popnei refuses that call when the step keeps no
-variant, a VCF whose variants all failed their FILTER; so when popnei
-refuses it, whatever its words, the runner makes a second pass, the
-blocks of `iterBlocks({ fields: [] })` read to their end, as for a
-`filterCounts` job, and its counts, or its refusal, are the answer. The
-second pass is not the only one because it reads the genotypes: under
-node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
-took 2.4 s, and `calcVarDensity` 0.9 s. The progress of each pass is
-told as it reads, so after a refusal the bar fills a second time. Under
-node on popnei js-v0.2.1, `low_qual.vcf.gz` gives `passed` 1,200 given
-and 900 kept, `panel.vcf.gz` 1,200 and 1,200, and a VCF of 5 variants
-that all failed 5 and 0; on `panel.nei` popnei refuses both passes, "the
-variants hold no record of whether they passed their FILTER...", which
-the page never asks, since the analysis is locked for a `.nei` file
-(`src/worker/runnerFilterFailures.test.ts`).
 
 ### The result so far
 
