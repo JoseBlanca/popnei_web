@@ -294,8 +294,8 @@ the individuals ("The filters turned off", above).
 and three things change for it all the same. It refuses a project file
 that holds the filter of the FILTER column, on or off, with words that
 say the file was made by the new page (`docs/specs/core/projectFile.md`,
-"Opening"). Its store is made with the store's setting of a notice for
-every change of a filter turned off, `filterNotices: false`, so its
+"Opening"). Its store leaves off the store's setting under which every
+change of a filter gives a notice, `filterNotices: false`, so its
 notices are as before (`docs/specs/core/store.md`, "The notice, and the
 calculations it stops"). And a failure of a calculation that is not
 popnei's, a crash of the worker, stays on its screen after a change that
