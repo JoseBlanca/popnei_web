@@ -54,9 +54,8 @@ export interface Project {
   /** The variants file, or `null` before one is loaded. */
   readonly variants: VariantSource | null;
   /** The filters of the variants, at most one of each kind, in the fixed
-      order missing_data, obs_het, maf, ld of `VARIANT_FILTER_ORDER`,
-      whatever the order the user added them in; the LD filter with no
-      distance until the user types one. */
+      order of `VARIANT_FILTER_ORDER`, whatever the order the user added
+      them in; the LD filter with no distance until the user types one. */
   readonly filters: readonly ProjectVariantFilter[];
   /** The filters of the variants the user turned off, with the values
       they had, for the switch that turns them on again; at most one of
@@ -1229,7 +1228,7 @@ function placeOf<K extends string>(
 }
 
 /** Sets the filter of its kind on, in the fixed order of the kinds,
-    missing_data, obs_het, maf, ld, in place of the one of its kind, and
+    `VARIANT_FILTER_ORDER`, in place of the one of its kind, and
     drops the one of its kind from `filtersOff`; the LD filter may have no
     distance yet, `maxDist` `null`. */
 export function setVariantFilter(
