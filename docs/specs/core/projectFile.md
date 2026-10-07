@@ -552,22 +552,11 @@ that the reason given is the one the user can act on:
    as fields it does not know, and `parseReference` asks for versions of
    its own that the file does not hold, a change to the approved
    `project.ts` listed in `docs/specs/stage-2-open-points.md`.
-8. **The filter of the FILTER column on a page that does not offer
-   it.** A project that holds `{ "kind": "passed" }` in `filters` or in
-   `filtersOff` is refused as `newPageFilter` when the caller says its
-   page has no box of the FILTER column, `passedFilter: false`, as
-   `popgen.html` does (`docs/designs/stats-filters.md`, "The FILTER
-   filter"). That page would apply a filter on, or let a later click
-   turn on a filter off, that nothing on its screen shows, so its user
-   would have variants left out with nothing saying so; a filter off is
-   refused too, so that the rule is one line. The check comes after the
-   validation, so that a damaged file is told as damaged. No file holds
-   it on 7 October 2026: `popgen2.html` saves no project yet.
-9. **What this version does not write**, refused as `header` with the
+8. **What this version does not write**, refused as `header` with the
    field `variants` or `individuals`: a read of the variants file that is
    `failed`, and a read of the individuals file that is `pending` or
    `failed`, which this version writes as `notGiven`.
-10. **The count of the check numbers**: each check holds as many numbers
+9. **The count of the check numbers**: each check holds as many numbers
    as `numCheckNumbers` of its analysis gives for the opened project with
    the file's variants file as its variants file, or it is refused as
    `header` with the field `checks`, "the check numbers should be 7
@@ -592,6 +581,20 @@ that the reason given is the one the user can act on:
    `docs/architecture.md`, section 4). Without an individuals file, or
    with the grouping `onePopulation`, the diversity gives 4, the one
    population's three numbers after the number of variants.
+10. **The filter of the FILTER column on a page that does not offer
+   it.** A project that holds `{ "kind": "passed" }` in `filters` or in
+   `filtersOff` is refused as `newPageFilter` when the caller says its
+   page has no box of the FILTER column, `passedFilter: false`, as
+   `popgen.html` does (`docs/designs/stats-filters.md`, "The FILTER
+   filter"). That page would apply a filter on, or let a later click
+   turn on a filter off, that nothing on its screen shows, so its user
+   would have variants left out with nothing saying so; a filter off is
+   refused too, so that the rule is one line. The check comes after
+   every check that refuses a damaged file, the validation of step 7 and
+   the checks of `header` of steps 8 and 9, so that a damaged file that
+   also holds the filter is told it is damaged, which the user can act
+   on, and not sent to a page that would refuse it too. No file holds
+   it on 7 October 2026: `popgen2.html` saves no project yet.
 11. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
    project and the read options of the file's variants file, and put in
@@ -1018,7 +1021,7 @@ export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
   project holds the filter of the FILTER column, on or off, which the
   first project of the new page always does; a file whose user removed
   the filter by hand opens. A file with that filter and another fault
-  is told by its fault, which the validation finds first.
+  is told by its fault, which the checks before it find first.
 - **The same project file opened twice in a session.** Two openings give
   two projects with the same load ids, which is harmless: the reference
   is in no key, and the individuals file enters the keys by its table.
@@ -1131,13 +1134,18 @@ the analyses `done`, `ready` or `removed`.
 - **A byte order mark** before the text of `v1-empty.popnei.json`: it
   opens.
 - **The filter of the FILTER column**, from 7 October 2026: the
-  fixture `v1-passed.popnei.json`, `panel.vcf.gz` with the filter of
-  the FILTER column and the missing data filter at 0.1 on and the MAF
-  filter at 0.9 off, no check, opens with `passedFilter: true` into the
+  fixture `v1-passed.popnei.json`, `panel.vcf.gz` read with the read
+  options `{ "ploidy": 2, "onlyPassed": false }`, those `popgen2.html`
+  opens a VCF with but for its ploidy, which no project file holds as
+  `null` (`VariantSource.readOptions` of `src/core/project.ts`), with
+  the filter of the FILTER column and the missing data filter at 0.1 on
+  and the MAF filter at 0.9 off, no check, opens with `passedFilter:
+  true` into the
   project written as a literal, and is written back byte for byte; with
   `passedFilter: false` it is refused as `newPageFilter`, whose text is
   asserted whole, and so is the same file with `passed` in `filtersOff`
-  and not in `filters`; a fixture of before, `v1-every-filter.popnei.json`,
+  and not in `filters`; the same file with also a check of the wrong
+  count is refused as `header`, not as `newPageFilter`; a fixture of before, `v1-every-filter.popnei.json`,
   opens with `passedFilter: false` as before.
 - **The fingerprints**: each check of an opened file holds
   `settingsFingerprint` of its definition, of the opened project and of
