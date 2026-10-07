@@ -80,7 +80,10 @@ async function settled(): Promise<void> {
     page, with the open button before it, and `panel.nei` opened and
     read, or `low_qual.vcf.gz` as the page opens a VCF when `format` is
     "vcf"; no pass is started until the test syncs. */
-async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
+async function drawPage(
+  format: "nei" | "vcf" = "nei",
+  { read = true }: { readonly read?: boolean } = {},
+): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
@@ -164,12 +167,14 @@ async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
             },
       ),
     );
-    store.variantsRead(FILE_ID, {
-      kind: "read",
-      individuals: ["i1", "i2"],
-      ploidy: 2,
-      numVars: null,
-    });
+    if (read) {
+      store.variantsRead(FILE_ID, {
+        kind: "read",
+        individuals: ["i1", "i2"],
+        ploidy: 2,
+        numVars: null,
+      });
+    }
     await Promise.resolve();
   });
   return { store, autoRuns, requests, said };
@@ -190,6 +195,19 @@ function buttonNamed(name: string): HTMLButtonElement {
   if (found === undefined) throw new Error(`no button ${name} in the box`);
   return found;
 }
+
+describe("live-stats 3 the line of the FILTER failures while the file is read", () => {
+  test("a VCF being read has the line", async () => {
+    await drawPage("vcf", { read: false });
+    expect(linesOf()).toContain("Failed FILTER: reading…");
+  });
+
+  test("a .nei file being read has none", async () => {
+    await drawPage("nei", { read: false });
+    expect(linesOf()).toContain("Variants: reading…");
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+  });
+});
 
 describe("the one button of the box of the variants file", () => {
   test("while the pass is about to start, read and not yet started, the box shows Stop, and its press keeps the pass from starting and offers Start again", async () => {

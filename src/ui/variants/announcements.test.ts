@@ -323,6 +323,30 @@ describe("what the status region of the new page says", () => {
     ]);
   });
 
+  test("popnei's refusal of the count of the FILTER failures is said in words about that count, with a remedy", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const summary = summaryStatus(store.getState());
+    if (summary.kind !== "running") throw new Error("not running");
+    sent[0]?.({
+      kind: "done",
+      key: summary.key,
+      result: summaryResult(["chr1"], [1200]),
+    });
+    await settled();
+    void startAnalysis(store, "filterFailures");
+    const before = store.getState();
+    sent[1]?.({
+      kind: "failed",
+      error: { kind: "popnei", message: "the FILTER of a variant is empty" },
+    });
+    await settled();
+    expect(announcementsOf(before, store.getState())).toEqual([
+      "popnei could not count the variants of panel.vcf.gz that failed their FILTER: the FILTER of a variant is empty. Open the file again, or another file.",
+    ]);
+  });
+
   test("a count refused with the focus on Stop is not said, since the focus moves onto its words", async () => {
     const { store, sent } = setUp();
     openRead(store);

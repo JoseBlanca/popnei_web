@@ -164,6 +164,12 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
         /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.( panel\.vcf\.gz: 0 variants failed their FILTER\.)?( The statistics of panel\.vcf\.gz are calculated\.)?$/u,
       ),
     );
+  // The count of the FILTER failures, said with the count or after it.
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringContaining("panel.vcf.gz: 0 variants failed their FILTER."),
+    );
   await expect(openButton(page)).toHaveText("Open another variants file…");
   await expectNoViolations(makeAxeBuilder);
 
