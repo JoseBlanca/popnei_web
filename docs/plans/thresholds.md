@@ -186,3 +186,37 @@ three files (36 cases); the fixture records popnei's version. On
 `tetraploid.vcf.gz`, the tests reviewer found the bins equal to popnei's
 filter on all 464 edges above k/1280, and popnei's count inside the
 range on all 817 others.
+
+### Phase 2, the thresholds on the plots
+
+Commits f716142, 2f34cc9, 747a926, a1bdcba and b839d33; the fixes of
+its review in a142d12 to da37ce7. Each histogram has a React Aria
+slider whose thumb is the threshold's line over the plot, aligned with
+the chart through a frame the chart tells the page (its margins change
+at 320 px); under the plot one row, "Maximum", the box, and the counts.
+The builder's choices: clicks on the bars do not move the line, so a
+phone scrolls over the plots; the slider's value text is written after
+each render, since React Aria gives no way to set it; Page Up and Down,
+with or without Shift, move ten steps.
+
+The review sent accessibility, ux, react, api, architecture, tests and
+stale, then spec and browser over the fixed screen. Fixed: the bar
+that starts at the line is hatched while the count is a range, where it
+was drawn as removed, against the words; the range says once why ("the
+bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05"); the
+numbers show four decimals, which name every edge apart, and a typed
+number moved to an edge says so; one row under the plot instead of the
+title, a label and a box; "(no limit)" for a line the user has not set;
+a number being typed is no longer replaced when a result so far widens
+the axis; the counts describe the box for a screen reader; Shift with
+Page Up/Down moves ten steps; names and comments say threshold, not
+filter; tests of the boxes' bounds, step and words. Not taken: a drift
+of a few pixels of the line during a drag when the labels of the
+vertical axis grow, which no fix pays for. The page at 320 px is
+2,828 px tall, from 3,116.
+
+For the owner: the line moves in steps of 1/1280, so round numbers
+such as 0.01, 0.02 and 0.07 cannot be set (0.07 is counted at 0.0703);
+bins of 1/1000 or popnei's edges as lo + (hi − lo) · k / n with another
+number of bins would give them, which is the owner's choice with the
+popnei issue.
