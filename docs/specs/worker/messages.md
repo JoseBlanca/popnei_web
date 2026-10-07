@@ -50,7 +50,13 @@ each individual but `analysis`, checked as those results are; and
 `PROTOCOL_VERSION` 8. Revised on 7 October 2026 for the plots that fill
 in while the file is read (`docs/plans/live-stats.md`, phase 2): the
 message `soFar`, the result of a run over the variants read so far,
-checked as `result` is, and `PROTOCOL_VERSION` 9.
+checked as `result` is, and `PROTOCOL_VERSION` 9. Revised on 7 October
+2026 for the count of the FILTER failures (`docs/plans/live-stats.md`,
+phase 3): the job `filterFailures`, of exactly `analysis`, `fileId` and
+an empty `filters`, and its result, of exactly `analysis` and
+`passStats`, whose `filtering` holds `passed` and nothing else; the
+fields of any `passStats.filtering` are `PassFilterKind`s, `passed`
+among them; and `PROTOCOL_VERSION` 10.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -420,9 +426,12 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
   `individuals` of a job is `null` or a list of texts; the fields of
-  `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
+  `passStats.filtering` are `PassFilterKind`s, the kinds of `VariantFilter`
+  and `passed`, from 7 October 2026; the `filtering` of a `filterFailures`
+  result holds `passed` alone; `filters` of a
   `variantChecks` or an `individualChecks` job is empty, the second from
-  28 September 2026; for the principal components, from
+  28 September 2026, and of a `variantsSummary` or a `filterFailures`
+  job; for the principal components, from
   stage 4, the `method` of a job and of a result is `"pca"` or
   `"pcoa"`, `numCompsKept` of a job, `numComps` and `numCompsFound` of a
   result are whole numbers, `projections` is as long as `individuals`
@@ -470,7 +479,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 ```
 
 The requests of the calculation worker, and what it sends back.

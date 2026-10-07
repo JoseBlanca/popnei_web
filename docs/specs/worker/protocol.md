@@ -63,7 +63,10 @@ October 2026 for the plots that fill in while the file is read
 (`docs/plans/live-stats.md`, phase 2): a result so far is a `JobResult`
 of the job's analysis, over the variants read so far, so no type is
 added here; its message, `soFar`, and `PROTOCOL_VERSION` 9 are in
-`messages.ts`.
+`messages.ts`. Revised on 7 October 2026 for the count of the FILTER
+failures (`docs/plans/live-stats.md`, phase 3): `FilterFailuresJob` and
+`FilterFailuresResult`, and `PassFilterKind`, the kinds of the counts of
+a pass, which type `PassStats.filtering`; `PROTOCOL_VERSION` 10.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -242,6 +245,11 @@ export type VariantFilter =
   | { kind: "ld"; maxAllowedR2: number; maxDist: number };  // filterByLd
 
 export type VariantFilterKind = VariantFilter["kind"];
+
+// The kinds of the counts of a pass: those of the filters of the
+// variants, and "passed", popnei's filterPassed, which only the count of
+// the FILTER failures puts on its pass. No project nor file holds it.
+export type PassFilterKind = VariantFilterKind | "passed";
 ```
 
 A job always carries the distance of its LD filter. The project may
@@ -439,7 +447,7 @@ export interface FilteringStats {
 
 export interface PassStats {
   numVars: number;                         // the variants the pass gave, after every step
-  filtering: Partial<Record<VariantFilterKind, FilteringStats>>; // one per filter of the job, in its order
+  filtering: Partial<Record<PassFilterKind, FilteringStats>>; // one per filter of the job, in its order; "passed" first, of filterFailures alone
 }
 ```
 
@@ -611,6 +619,23 @@ export interface VariantsSummaryResult {
   passStats: PassStats;
 }
 
+// The count of the variants of a VCF that failed their FILTER, of
+// popgen2.html: popnei's calcVarDensity with one window per chromosome
+// under the step filterPassed, a pass that reads no genotype. Its counts
+// hold "passed" alone: the variants of the file as varsProcessed, those
+// whose FILTER is PASS or a dot as varsKept; the failures are their
+// difference. Never sent for a .nei file (docs/plans/live-stats.md).
+export interface FilterFailuresJob {
+  analysis: "filterFailures";
+  fileId: string;
+  filters: readonly [];
+}
+
+export interface FilterFailuresResult {
+  analysis: "filterFailures";
+  passStats: PassStats;                    // filtering: { passed } and nothing else
+}
+
 // The principal components, stage 4: a PCA of the genotypes or a PCoA of
 // the Kosman distances, corrected by Lingoes' method when no space holds
 // them (docs/specs/analyses/pca.md), over the filters pcaFilters gives, the first
@@ -707,10 +732,11 @@ export interface LdDecayResult {
 
 export type Job =
   | DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob
-  | PopDistsJob | LdDecayJob | VariantsSummaryJob;
+  | PopDistsJob | LdDecayJob | VariantsSummaryJob | FilterFailuresJob;
 export type JobResult =
   | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult
-  | PcaResult | PopDistsResult | LdDecayResult | VariantsSummaryResult;
+  | PcaResult | PopDistsResult | LdDecayResult | VariantsSummaryResult
+  | FilterFailuresResult;
 ```
 
 The request of a written file is not a `Job`, since it is not an

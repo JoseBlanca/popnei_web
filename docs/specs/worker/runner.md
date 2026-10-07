@@ -639,6 +639,23 @@ job with no list and of an `individualChecks` job on the same runner
 three parts refuses the pass, and none of them is given: a genotype
 popnei refuses fails the count too.
 
+### The count of the FILTER failures
+
+A `filterFailures` job, of popgen2.html and for a VCF alone, holds its
+pass with no filter of the variants and no list of individuals. Its
+steps are popnei's `filterPassed` alone, put first, as popnei advises;
+`Steps` of the runner carries it as `passed`, and a `Variants` whose
+first step is not of kind `"passed"` is not the job's. The runner makes
+one call, `calcVarDensity(variants, ONE_WINDOW_PER_CHROM, {
+chromLengths: {} })`, a pass that reads no genotype, and gives back its
+`passStats` alone, whose `filtering` holds `"passed"` and nothing else,
+a defect otherwise, as for every job. Under node on popnei js-v0.2.1,
+`low_qual.vcf.gz` gives `passed` 1,200 given and 900 kept, and
+`panel.vcf.gz` 1,200 and 1,200; on `panel.nei` popnei refuses the pass,
+"the variants hold no record of whether they passed their FILTER...",
+which the page never asks, since the analysis is locked for a `.nei`
+file (`src/worker/runnerFilterFailures.test.ts`).
+
 ### The result so far
 
 The call of the summary also gives popnei an `onSoFar`, with

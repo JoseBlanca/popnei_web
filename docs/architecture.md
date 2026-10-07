@@ -1294,7 +1294,17 @@ The page and each worker talk through typed messages
   were two analyses of their own started after the count
   (`docs/plans/live-stats.md`, "One pass for the count and the
   statistics"; `variantChecks` and `individualChecks` stay on
-  `popgen.html`). `autoRuns.ts` takes its analyses in groups and starts
+  `popgen.html`). From 7 October 2026 a second analysis follows it in
+  the page's one group, `POPGEN2_CHAIN`, `[variantsSummary,
+  filterFailures]`: the count of the variants of a VCF that failed their
+  FILTER, a pass of popnei's `calcVarDensity` under the step
+  `filterPassed`, which reads no genotype; its counts carry the kind
+  `"passed"`, a `PassFilterKind` beside the kinds of the filters of the
+  variants, which no project holds. The summary keeps every variant,
+  since that step would take the failed ones out of the statistics. On a
+  `.nei` file the count is `locked`, since one written before format 1.2
+  holds no FILTER: a locked member neither starts nor holds back the
+  group, and the box offers no Start again for it. `autoRuns.ts` takes its analyses in groups and starts
   them one at a time, in their order: the one calculation worker runs one
   request at a time, and the store has no state for a request that waits
   in the client's queue, so two sent at once would both show as running,
@@ -1313,7 +1323,12 @@ The page and each worker talk through typed messages
   and one about to start, which it records as started so that it does
   not start; and, after a Stop or a crash of the worker, one Start again
   in its place (`resume`), which starts the first of the group that is
-  not done and lets the rest follow. The box decides between the two from
+  not done and lets the rest follow: after a Stop during the count of the
+  FILTER failures, that count alone, the summary being done. The box
+  shows the bar of the pass running, either of the two, and the focus on
+  Stop moves onto the lines of the box at the end of the group, not at
+  the end of the summary of a VCF, since Stop stays for the next pass.
+  The box decides between the two from
   the first of the group that is not done, not from the summary alone, so
   that a later member of the group, stopped after the summary is done,
   gets its Start again too. The
@@ -2237,7 +2252,10 @@ src/core/
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
-                    stage 5 popDists and ldDecay, and sfs.ts, the rows,
+                    stage 5 popDists and ldDecay; for popgen2.html
+                    variantsSummary and, from 7 October 2026,
+                    filterFailures, the count of the FILTER failures of a
+                    VCF; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
                     analysis of its own (docs/specs/analyses/sfs.md)
@@ -2327,7 +2345,8 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
-                    summary of the variants file alone, and no counts,
+                    summary of the variants file and the count of the
+                    FILTER failures, POPGEN2_CHAIN, and no counts,
                     statistics config or writing, and the groups of the
                     analyses the page starts by itself; apart from the
                     entry, so that a test in node makes it
@@ -2338,7 +2357,8 @@ src/ui/
                     Stop and the start again of a group, stop and resume
   variants/         the screens of popgen2.html: the opening of the
                     variants file, the box of what it holds with the bar
-                    of the one pass, the count of the variants so far,
+                    of the pass running, the count of the variants so
+                    far, the FILTER failures of a VCF,
                     its Stop and Start again, the statistics of the open
                     file, drawn while the pass runs from its results so
                     far (the store's running.soFar, never cached) and
