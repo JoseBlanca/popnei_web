@@ -87,10 +87,11 @@ the full names. A threshold moves by a step that follows its axis, the
 power of ten that gives at most about 100 positions over it: 0.01 on an
 axis of 0 to 1, 0.001 on one of 0 to 0.1 or of 0.32 to 0.4. A number
 typed with more decimals is rounded to that step, and the box then shows
-it. These thresholds are shown, not applied: they are no filters, change
-no statistic and no other part of the page, and start again at another
-file or a reload, the missing rate of the variants at 0.1 and the others
-at the top of their axis.
+it; a number set stays as it was set when the file read so far widens
+the axis and its step grows. These thresholds are shown, not applied:
+they are no filters, change no statistic and no other part of the page,
+and start again at another file or a reload, the missing rate of the
+variants at 0.1 and the others at the top of their axis.
 
 The number a threshold of the variants shows is the number it is
 counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins

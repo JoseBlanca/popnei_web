@@ -7,7 +7,7 @@ import type {
   IndividualChecksResult,
   VariantChecksResult,
 } from "../../worker/protocol.ts";
-import { variantsAtMost } from "../../core/thresholds.ts";
+import { individualsAtMost, variantsAtMost } from "../../core/thresholds.ts";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { keepsLine, UNDECIDED_DESCRIPTION } from "./statsWords.ts";
 import type { VariantStatsPart } from "../../worker/protocol.ts";
@@ -282,16 +282,79 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(maf.threshold.slider.step).toBe(0.01);
   });
 
-  test("a number set is rounded to the step of its axis, shown and counted there", () => {
-    const plot = variantPlot("missingRate", PANEL.variants, false, 0.0734);
+  test("a number typed is rounded to the step of its axis, shown and counted there", () => {
+    const plot = variantPlot(
+      "missingRate",
+      PANEL.variants,
+      false,
+      null,
+      0.0734,
+    );
     expect(plot.threshold.shown).toBe(0.073);
     expect(plot.data.threshold?.value).toBe(0.073);
     expect(plot.threshold.slider.value).toBe(0.073);
     expect(plot.threshold.valueText).toMatch(/^0\.073, keeps /u);
     expect(plot.threshold.onStep(0.0734)).toBe(0.073);
     expect(plot.threshold.onStep(0.07300000000000001)).toBe(0.073);
-    const het = variantPlot("obsHet", PANEL.variants, false, 0.3349);
+    const het = variantPlot("obsHet", PANEL.variants, false, null, 0.3349);
     expect(het.threshold.shown).toBe(0.33);
+  });
+
+  test("th4 fix 6: the number counted is the number shown, rounded, and not the number typed: a missing rate typed 0.0496 is shown 0.05 and counted 1,113 to 1,152", () => {
+    // Counted as typed it would be one number, in the bin below 0.05.
+    const asTyped = variantsAtMost(PANEL.variants, "missingRate", 0.0496);
+    expect(asTyped.keptLow).toBe(asTyped.keptHigh);
+    const plot = variantPlot(
+      "missingRate",
+      PANEL.variants,
+      false,
+      null,
+      0.0496,
+    );
+    expect(plot.threshold.shown).toBe(0.05);
+    expect(plot.threshold.line).toBe("Keeps 1,113 to 1,152 of 1,200 variants");
+    expect(plot.data.threshold?.undecided).toBe(true);
+  });
+
+  test("th4 fix 6: an individual typed 0.0349 is shown 0.035 and counted there, with the individuals at 0.035 kept", () => {
+    const at = (value: number) =>
+      individualsAtMost(PANEL.individuals.missingGtRate, value).kept;
+    expect(at(0.035)).toBeGreaterThan(at(0.0349));
+    const plot = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      false,
+      null,
+      0.0349,
+    ).plot;
+    expect(plot?.threshold.shown).toBe(0.035);
+    expect(plot?.threshold.line).toBe(
+      `Keeps ${String(at(0.035))} of 200 individuals`,
+    );
+  });
+
+  test("th4 fix 12: a number set is shown and counted as set, never rounded again when a result so far widens the axis", () => {
+    // The observed heterozygosity's axis runs from 0 to 0.7, by 0.01.
+    const plot = variantPlot("obsHet", PANEL.variants, true, 0.035);
+    expect(plot.threshold.slider.step).toBe(0.01);
+    expect(plot.threshold.shown).toBe(0.035);
+    expect(plot.data.threshold?.value).toBe(0.035);
+    expect(plot.threshold.slider.value).toBe(0.035);
+    expect(plot.threshold.valueText).toMatch(/^0\.035, keeps /u);
+    expect(plot.threshold.line).toBe(
+      keepsLine(
+        variantsAtMost(PANEL.variants, "obsHet", 0.035),
+        "variant",
+        true,
+      ),
+    );
+    const individual = individualPlot(
+      "observedHeterozygosity",
+      PANEL.individuals,
+      true,
+      0.035,
+    ).plot;
+    expect(individual?.threshold.shown).toBe(0.035);
   });
 
   test("on an edge equal to k/1280 the bins cannot tell the variants on the edge: at 0.05, 1,113 to 1,152 of the missing rate, with no explanation", () => {
@@ -418,11 +481,13 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(at?.threshold.name).toBe(
       "Missing GTs max: maximum proportion of missing genotypes of an individual",
     );
-    // A number of four decimals is counted at three, the number shown.
+    // A number of four decimals typed is counted at three, the number
+    // shown.
     const typed = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
       false,
+      null,
       0.0304,
     ).plot;
     expect(typed?.threshold.shown).toBe(0.03);

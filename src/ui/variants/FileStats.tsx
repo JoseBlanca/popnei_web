@@ -283,9 +283,9 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
 }
 
 /** The thresholds of the six histograms, as the user set them: a
-    number, or `null` for the top of the axis, which keeps everything and
-    follows the axis as a result so far widens it. Each is drawn and
-    counted rounded to the step of its axis. */
+    number, rounded to the step of its axis when it was committed and
+    drawn and counted as it is, or `null` for the top of the axis, which
+    keeps everything and follows the axis as a result so far widens it. */
 interface Thresholds {
   readonly variants: Readonly<Record<VariantStatistic, number | null>>;
   readonly individuals: Readonly<Record<IndividualStatistic, number | null>>;
@@ -374,8 +374,11 @@ function VariantHistogram({
     [statistic, result, soFar, threshold],
   );
   const drawn = useMemo(
-    () => (typed === null ? set : variantPlot(statistic, result, soFar, typed)),
-    [set, statistic, result, soFar, typed],
+    () =>
+      typed === null
+        ? set
+        : variantPlot(statistic, result, soFar, threshold, typed),
+    [set, statistic, result, soFar, threshold, typed],
   );
   return (
     <StatsHistogram
@@ -454,8 +457,10 @@ function IndividualHistogram({
   );
   const drawn = useMemo(
     () =>
-      typed === null ? set : individualPlot(statistic, result, soFar, typed),
-    [set, statistic, result, soFar, typed],
+      typed === null
+        ? set
+        : individualPlot(statistic, result, soFar, threshold, typed),
+    [set, statistic, result, soFar, threshold, typed],
   );
   return (
     <IndividualPlace noValueLine={drawn.noValueLine}>

@@ -20,8 +20,10 @@
  * user set is `null` until they move it, at the top of the axis, where it
  * keeps everything and follows the axis as a result so far widens it. It
  * moves by the step of its axis, `thresholdStep`, 0.01 on an axis of 0 to
- * 1, and is shown and counted at the number the user set rounded to that
- * step, so that the number shown is the number counted: those of the
+ * 1: a number typed is shown and counted rounded to that step, and is
+ * committed so, and a number the user set is shown and counted as set,
+ * never rounded again when a result so far widens the axis and its step
+ * grows. So the number shown is the number counted: those of the
  * variants from popnei's fine bins, `variantsAtMost`, a range where the
  * bins cannot tell, those of the individuals from popnei's value of
  * each, `individualsAtMost`, exact.
@@ -96,7 +98,8 @@ export interface PlotThreshold {
       `shownLabel`: "Obs. het. max: maximum observed heterozygosity". */
   readonly name: string;
   /** The number of the threshold as the box and the words show it, the
-      number set rounded to the step of the axis, the number counted. */
+      number counted: the number set, the number typed rounded to the
+      step of the axis, or the top of the axis. */
   readonly shown: number;
   /** The range of the slider, the horizontal axis of the plot, its step
       and where it is. */
@@ -110,7 +113,7 @@ export interface PlotThreshold {
       1,050 of 1,200 variants". */
   readonly valueText: string;
   /** The threshold for `value`, a number typed or a place of the slider:
-      `value` rounded to the step of the axis. */
+      `value` rounded to the step of the axis, as it is committed. */
   readonly onStep: (value: number) => number;
 }
 
@@ -152,13 +155,15 @@ export interface IndividualPlot {
     over the range of those with a count, rounded out, over the variants
     in them, which leaves out a variant with no value; its description and
     the words of its threshold say "so far" for a result so far, `soFar`.
-    `threshold` is the number the user set or is typing, rounded here to
-    the step of the axis, or `null` for the top of the axis. */
+    `threshold` is the number the user set, drawn and counted as it is, or
+    `null` for the top of the axis; `typed`, a number the user is typing,
+    drawn and counted in its place rounded to the step of the axis. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
   soFar: boolean,
   threshold: number | null,
+  typed: number | null = null,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
   const bins = variantBinsRounded(result, statistic);
@@ -166,7 +171,7 @@ export function variantPlot(
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number => thresholdOnStep(value, decimals);
-  const shown = onStep(threshold ?? axisHigh);
+  const shown = shownOf(threshold, typed, axisHigh, onStep);
   const counts = variantsAtMost(result, statistic, shown);
   // The variants the line may keep or not are in the bar at the line.
   const undecided = counts.keptLow !== counts.keptHigh;
@@ -206,14 +211,14 @@ export function variantPlot(
     over their range rounded out, the missing rate from 0, over the
     individuals with a value; its description, the words of its threshold
     and the line of the individuals with no value say "so far" for a
-    result so far, `soFar`. `threshold` is the number the user set or is
-    typing, rounded here to the step of the axis, or `null` for the top of
-    the axis. */
+    result so far, `soFar`. `threshold` and `typed` are as for
+    `variantPlot`. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualStatsPart,
   soFar: boolean,
   threshold: number | null,
+  typed: number | null = null,
 ): IndividualPlot {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
@@ -234,7 +239,7 @@ export function individualPlot(
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number => thresholdOnStep(value, decimals);
-  const shown = onStep(threshold ?? axisHigh);
+  const shown = shownOf(threshold, typed, axisHigh, onStep);
   const plotted = {
     title: individualFullTitle(statistic),
     xLabel: words.xLabel,
@@ -269,6 +274,22 @@ export function individualPlot(
     },
     noValueLine: noValueThresholdLine(bins.numNaN, soFar),
   };
+}
+
+/** The number a threshold is shown and counted at: `typed`, a number
+    being typed, rounded to the step of the axis by `onStep`; else
+    `threshold`, the number the user set, as it is, since it was rounded
+    to the step of its axis when committed and a result so far that
+    widens the axis must not move it; else the top of the axis,
+    `axisHigh`. */
+function shownOf(
+  threshold: number | null,
+  typed: number | null,
+  axisHigh: number,
+  onStep: (value: number) => number,
+): number {
+  if (typed !== null) return onStep(typed);
+  return threshold ?? onStep(axisHigh);
 }
 
 /** A threshold at `value` drawn with no legend: it is no filter, and the
