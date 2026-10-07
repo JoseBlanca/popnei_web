@@ -40,9 +40,9 @@
 // panel.vcf.gz, panel.nei and tetraploid.vcf.gz it writes the edges and
 // the counts of those bins as calcVariantsSummary gives them, the
 // statistics of each individual of that pass, and the variants each of
-// popnei's three filters of a threshold keeps at 0.05, 0.1 and 0.5, to
-// e2e/fixtures/threshold_counts.json, which the tests of core read
-// (docs/plans/thresholds.md, "The phases", 1). For the LD decay, whose curve the panel cannot show, since its
+// popnei's three filters of a threshold keeps at 0.05, 0.1, 0.3 and 0.5,
+// with popnei's version, to e2e/fixtures/threshold_counts.json, which the
+// tests of core read (docs/plans/thresholds.md, "The phases", 1). For the LD decay, whose curve the panel cannot show, since its
 // variants lie at positions 1 to 1,200 of one chromosome, it copies
 // popnei's tests/reference/ld/ld.vcf.gz, 100 diploid individuals and two
 // chromosomes of 250 variants every 1,000 bp, byte for byte to
@@ -73,7 +73,11 @@
 // tetraploid.nei, are written only when the script is given `--nei`, and
 // ld.nei at every run, 68,354 bytes with popnei js-v0.1.0-dev.3; the
 // statistics and the PCA are calculated from the panel.nei on disk either
-// way. The tests pin the sizes of the committed files, 261,490 and 16,194
+// way. ld.nei and panel_pca.json are rewritten at every run, and popnei
+// 0.2.1 writes both differently from the committed ones (7 October 2026),
+// which the tests pin: after a run for another file, restore them with
+// `git checkout e2e/fixtures/ld.nei e2e/fixtures/panel_pca.json` unless
+// they were meant to change. The tests pin the sizes of the committed files, 261,490 and 16,194
 // bytes, written by popnei 0.1.0 on 24 September 2026, and popnei
 // js-v0.1.0-dev.3 writes them in 261,570 and 16,218 bytes (29 September
 // 2026), so a run for the other files leaves the vars files as they are.
@@ -92,6 +96,7 @@ import {
   init,
   openVars,
   openVcf,
+  version,
   writeVars,
 } from "popnei";
 
@@ -392,9 +397,11 @@ console.log(
 // missingGtRate and obsHetRate of each individual, a NaN written as null;
 // and the variants that each of popnei's three filters of a threshold,
 // filterByMissingData, filterByMaf and filterByObsHet, keeps alone at
-// 0.05, 0.1 and 0.5, the numVars of the pass of iterBlocks read to its
-// end. The tests of core read it, since they may not call popnei.
-const THRESHOLDS = [0.05, 0.1, 0.5];
+// 0.05, 0.1, 0.3 and 0.5, the numVars of the pass of iterBlocks read to its
+// end; 0.3 is an edge one double above 384/1280, the others edges equal
+// to k/1280. And popnei's version, which the tests check against the one
+// installed. The tests of core read it, since they may not call popnei.
+const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
 const thresholdFiles = [
   ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
   ["panel.nei", null],
@@ -466,7 +473,8 @@ for (const [name, options] of thresholdFiles) {
 const thresholdsPath = join(fixtures, "threshold_counts.json");
 writeFileSync(
   thresholdsPath,
-  `{\n  "numBins": ${String(FINE_BINS)},\n` +
+  `{\n  "popnei": ${JSON.stringify(version())},\n` +
+    `  "numBins": ${String(FINE_BINS)},\n` +
     `  "thresholds": ${JSON.stringify(THRESHOLDS)},\n` +
     `${thresholdLines.join(",\n")}\n}\n`,
 );

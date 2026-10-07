@@ -5,7 +5,7 @@
  * popnei 0.2.1 under node on 7 October 2026, since the tests of core may
  * not call popnei: the edges and the counts of the 1,280 fine bins of
  * calcVariantsSummary, the values of each individual of that pass, and
- * the variants that popnei's filters keep at 0.05, 0.1 and 0.5.
+ * the variants that popnei's filters keep at 0.05, 0.1, 0.3 and 0.5.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
@@ -18,6 +18,7 @@ import {
   variantsAtMost,
 } from "./thresholds.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
+import { INSTALLED_POPNEI_VERSION } from "../worker/testSupport.ts";
 
 type FixtureName = "panel.vcf.gz" | "panel.nei" | "tetraploid.vcf.gz";
 
@@ -34,8 +35,9 @@ interface Fixture {
   readonly filterKept: Readonly<Record<FilteredStatistic, readonly number[]>>;
 }
 
-/** The thresholds of popnei's filters in the fixture. */
-const THRESHOLDS = [0.05, 0.1, 0.5] as const;
+/** The thresholds of popnei's filters in the fixture: 0.3 on an edge
+    one double above 384/1280, the others on edges equal to k/1280. */
+const THRESHOLDS = [0.05, 0.1, 0.3, 0.5] as const;
 
 const parsed: unknown = JSON.parse(
   readFileSync(
@@ -66,6 +68,8 @@ function fixture(name: FixtureName): Fixture {
     throw new Error("threshold_counts.json is not of 1,280 bins");
   }
   expect(field(parsed, "thresholds")).toEqual([...THRESHOLDS]);
+  // A fixture of another popnei holds numbers the page would not show.
+  expect(field(parsed, "popnei")).toBe(INSTALLED_POPNEI_VERSION);
   const file = field(parsed, name);
   const numVars = field(file, "numVars");
   if (typeof numVars !== "number") {
@@ -430,51 +434,51 @@ describe("individualsAtMost", () => {
   });
 });
 
-describe("the measurement: the variants the bins keep against popnei's filters", () => {
-  /** The count from the bins, popnei's filter, and the variants the bins
-      leave out, filter minus bins, at 0.05, 0.1 and 0.5, as found on 7
-      October 2026 with popnei 0.2.1. The three thresholds are edges equal
-      to k/1280, where the bins leave out the variants on the edge. */
-  const FOUND: Readonly<
-    Record<
-      "panel.vcf.gz" | "tetraploid.vcf.gz",
-      Readonly<
-        Record<
-          FilteredStatistic,
-          readonly (readonly [number, number, number])[]
-        >
-      >
-    >
-  > = {
-    "panel.vcf.gz": {
-      missingRate: [
-        [1113, 1152, 39],
-        [1200, 1200, 0],
-        [1200, 1200, 0],
-      ],
-      maf: [
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 3, 3],
-      ],
-      obsHet: [
-        [4, 4, 0],
-        [31, 31, 0],
-        [1090, 1098, 8],
-      ],
-    },
+describe("the range against popnei's filters", () => {
+  /** At each of `THRESHOLDS`, the range of variantsAtMost and what
+      popnei's filter keeps, [keptLow, keptHigh, filter], as found on 7
+      October 2026 with popnei 0.2.1. */
+  type Found = Readonly<
+    Record<FilteredStatistic, readonly (readonly [number, number, number])[]>
+  >;
+  const PANEL: Found = {
+    missingRate: [
+      [1113, 1152, 1152],
+      [1200, 1200, 1200],
+      [1200, 1200, 1200],
+      [1200, 1200, 1200],
+    ],
+    maf: [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 3, 3],
+    ],
+    obsHet: [
+      [4, 4, 4],
+      [31, 31, 31],
+      [373, 373, 373],
+      [1090, 1098, 1098],
+    ],
+  };
+  const FOUND: Readonly<Record<FixtureName, Found>> = {
+    "panel.vcf.gz": PANEL,
+    "panel.nei": PANEL,
     "tetraploid.vcf.gz": {
       missingRate: [
-        [115, 115, 0],
-        [175, 175, 0],
-        [200, 200, 0],
+        [115, 115, 115],
+        [175, 175, 175],
+        [200, 200, 200],
+        [200, 200, 200],
       ],
       maf: [
         [0, 0, 0],
         [0, 0, 0],
-        [193, 196, 3],
+        [0, 0, 0],
+        [193, 196, 196],
       ],
       obsHet: [
+        [0, 0, 0],
         [0, 0, 0],
         [0, 0, 0],
         [0, 0, 0],
@@ -482,19 +486,29 @@ describe("the measurement: the variants the bins keep against popnei's filters",
     },
   };
 
-  test.each(["panel.vcf.gz", "tetraploid.vcf.gz"] as const)("%s", (name) => {
-    const { part, filterKept } = fixture(name);
-    const measured = Object.fromEntries(
-      (["missingRate", "maf", "obsHet"] as const).map((statistic) => [
-        statistic,
-        THRESHOLDS.map((threshold, i) => {
-          const edge = snapToFineEdge(part.binEdges, threshold);
-          const kept = variantsAtMost(part, statistic, edge.index).keptLow;
-          const filter = filterKept[statistic][i] ?? NaN;
-          return [kept, filter, filter - kept];
-        }),
-      ]),
-    );
-    expect(measured).toEqual(FOUND[name]);
-  });
+  test.each(["panel.vcf.gz", "panel.nei", "tetraploid.vcf.gz"] as const)(
+    "%s: popnei's filter keeps a number in the range, the number itself where the range is one",
+    (name) => {
+      const { part, filterKept } = fixture(name);
+      const measured = Object.fromEntries(
+        (["missingRate", "maf", "obsHet"] as const).map((statistic) => [
+          statistic,
+          THRESHOLDS.map((threshold, i) => {
+            const edge = snapToFineEdge(part.binEdges, threshold);
+            const { keptLow, keptHigh } = variantsAtMost(
+              part,
+              statistic,
+              edge.index,
+            );
+            const filter = filterKept[statistic][i] ?? NaN;
+            expect(filter).toBeGreaterThanOrEqual(keptLow);
+            expect(filter).toBeLessThanOrEqual(keptHigh);
+            if (keptLow === keptHigh) expect(filter).toBe(keptLow);
+            return [keptLow, keptHigh, filter];
+          }),
+        ]),
+      );
+      expect(measured).toEqual(FOUND[name]);
+    },
+  );
 });
