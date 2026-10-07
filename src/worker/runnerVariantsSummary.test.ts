@@ -48,7 +48,7 @@ const VCF: LoadToOpen = {
 };
 /** The bins of the histograms of the variants that popgen2.html asks
     for, those of variantChecks.ts. */
-const BINS = { minNumIndividuals: 0, numBins: 1280, range: [0, 1] } as const;
+const BINS = { minNumIndividuals: 0, numBins: 1000, range: [0, 1] } as const;
 const JOB: VariantsSummaryJob = {
   analysis: "variantsSummary",
   fileId: FILE_ID,
@@ -493,7 +493,7 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
       numVarsPerChrom: [20_000],
       passStats: { numVars: 20_000, filtering: {} },
     });
-    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perVar.binEdges).toHaveLength(1001);
     expect(result.perIndividual.individuals).toEqual(["s0", "s1", "s2"]);
     // No buffer of a result so far is that of the result or of another
     // result so far, and transferring them leaves the result whole.
@@ -508,7 +508,7 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
       }
       structuredClone(given, { transfer: buffers });
     }
-    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perVar.binEdges).toHaveLength(1001);
   });
 
   test("copiedSummary copies every array transferablesOf lists into a buffer of its own", () => {

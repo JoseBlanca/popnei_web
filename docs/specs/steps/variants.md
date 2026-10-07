@@ -622,8 +622,10 @@ an analysis: "Plot", first and selected when the step is drawn, and
 column, "From", "To", "Variants", or "Individuals" for the histograms of
 the individuals, and, with a threshold, "This filter", whose cells say
 "Kept", "Partly kept" or "Removed"; the line above it says that each bin
-runs from its lower edge up to its upper edge, not included, and that
-the last includes its upper edge. At 320 pixels wide the table fits
+runs from above its lower edge up to its upper edge, included, and that
+the first includes its lower edge too, as popnei's bins asked with
+`closed: "right"` hold them from 7 October 2026
+(`docs/plans/popnei-0.2.2.md`). At 320 pixels wide the table fits
 its four columns with no sideways scroll: below 480 pixels each cell
 keeps 4 pixels of space on each side and not 8, since with 8 the table
 was 311 pixels wide in a frame of 288 with DejaVu Sans, the sans-serif
@@ -662,20 +664,21 @@ beside the filter only those the filters above it kept, as the owner
 decided on 27 September 2026; under the
 plot, in its tab, while the threshold splits a bin that holds any
 variant, the line "The
-threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter
-keeps those of its variants at most 0.5 and removes the others.", which
+threshold 0.51 splits the bin from 0.5 to 0.525, 54 variants: the filter
+keeps those of its variants at most 0.51 and removes the others.", which
 the owner kept on 27 September 2026 rather than a row more in the
 legend, with
 the edges and the threshold to four decimals at most as the description
-of the plot has them, since the plot draws that bin outlined when the
-line falls on its lower edge, and its legend has no row for it
-(`histogram.md`, "Which bins the threshold keeps"); a split bin of no
-variant, as the one from 0 to 0.025 when 0 is typed, has nothing to
-keep or remove, and no line; the table is
+of the plot has them, since the plot draws the part of that bin right
+of the line outlined, and its legend has no row for it
+(`histogram.md`, "Which bins the threshold keeps"); a threshold on an
+edge splits no bin but the first, which holds its lower edge, and a
+split bin of no variant, as the one from 0 to 0.025 when 0 is typed,
+has nothing to keep or remove, and no line; the table is
 named "The bins of the major allele frequency", "… of the observed
 heterozygosity" or "… of the expected heterozygosity (unbiased)", and
-the line above it reads "Each bin runs from its lower edge up to its
-upper edge, not included; the last bin includes its upper edge."
+the line above it reads "Each bin runs from above its lower edge up to
+its upper edge, included; the first bin includes its lower edge too."
 
 **The threshold typed and not yet committed.** The threshold on a
 histogram follows the number the user types, as they type it, while it

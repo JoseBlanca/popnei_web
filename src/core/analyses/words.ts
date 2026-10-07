@@ -352,12 +352,13 @@ export function histogramDescription(
 
 /**
  * The line under a histogram that names the bin its threshold splits,
- * which the plot draws outlined when the threshold is on its lower edge
- * and its legend does not name (docs/specs/steps/variants.md, "The plot
- * and the table of its bins"): "The threshold 0.5 splits the bin from 0.5
- * to 0.525, 62 variants: the filter keeps those of its variants at most
- * 0.5 and removes the others."; `null` with no threshold, no bin split,
- * or a split bin that holds none.
+ * which the plot draws outlined when the threshold is on the lower edge
+ * of the first bin, which holds that edge, and its legend does not name
+ * (docs/specs/steps/variants.md, "The plot and the table of its bins"):
+ * "The threshold 0.51 splits the bin from 0.5 to 0.525, 62 variants: the
+ * filter keeps those of its variants at most 0.51 and removes the
+ * others."; `null` with no threshold, no bin split, or a split bin that
+ * holds none.
  * The edges and the threshold are written as the description writes them;
  * `noun` is what is counted, in the singular, "variant". Throws a defect
  * when more than one bin is split.

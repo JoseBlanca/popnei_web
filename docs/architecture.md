@@ -2112,13 +2112,22 @@ for the smallest part of it.
   know nothing of React or of the project.
 - **A plot draws the bins it is given.** popnei bins the statistics of the
   variants, which can be millions of values, and gives the histograms
-  (`calcPerVarDistribs`). The statistics of each individual come as one
-  value per individual, and core bins them, a pure function of plain
-  arithmetic over a few thousand numbers, with the rule of popnei's bins,
-  a value in the bin whose left edge is at most it and whose right edge is
-  above it, the last bin taking its right edge too, as `numpy.histogram`
-  does, which the Python script uses for the same bins; an individual with
-  no heterozygosity, NaN, is counted apart and said by the screen. That
+  (`calcPerVarDistribs`), asked since 7 October 2026, popnei 0.2.2, for
+  1,000 bins over 0 to 1 that hold their right edge, `closed: "right"`: a
+  value on an edge is in the bin that ends there, the first bin holding
+  its left edge too, so that the bins below an edge t count the variants
+  whose value is at most t, what a threshold and popnei's filters keep,
+  and every number of up to three decimals is an edge, the decimal k /
+  1,000 (`docs/plans/popnei-0.2.2.md`). The plots add those bins up into
+  the bins they draw, and the Python scripts ask popnei for the same bins.
+  The statistics of each individual come as one value per individual,
+  and core bins them, a pure function of plain arithmetic over a few
+  thousand numbers, over the edges `numpy.histogram` makes and with the
+  same rule as the variants', a value in the bin whose left edge is below
+  it and whose right edge is at least it, the first bin taking its left
+  edge too; an individual with no heterozygosity, NaN, is counted apart
+  and said by the screen. The table of the bins of each plot says the
+  rule in words. That
   is the rule of `docs/build-order.md`, section 4, for arithmetic on
   popnei's results, and the table of the individuals needs the values
   anyway. `.claude/skills/coding/charts.md`, which gives every binning to

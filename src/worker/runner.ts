@@ -58,7 +58,11 @@ import type {
 import type { Result } from "../core/result.ts";
 import { DEFECT_START, messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
-import { ONE_WINDOW_PER_CHROM, SHOWN_MEASURES } from "./protocol.ts";
+import {
+  ONE_WINDOW_PER_CHROM,
+  SHOWN_MEASURES,
+  VARIANT_BINS_CLOSED,
+} from "./protocol.ts";
 import type {
   DiversityJob,
   DiversityResult,
@@ -963,20 +967,25 @@ function runVariantChecks(
 }
 
 /** The options of `calcPerVarDistribs` of the histograms of the variants
-    of `job`, written with their keys alone, since popnei refuses a key it
-    does not know. */
+    of `job`, with bins that hold their right edge, written with their
+    keys alone, since popnei refuses a key it does not know. */
 function perVarOptionsOf(job: VariantChecksJob | VariantsSummaryJob): {
   readonly stats: typeof VARIANT_CHECKS_STATS;
   readonly minNumIndividuals: number;
   readonly histKwargs: {
     readonly numBins: number;
     readonly range: readonly [number, number];
+    readonly closed: typeof VARIANT_BINS_CLOSED;
   };
 } {
   return {
     stats: VARIANT_CHECKS_STATS,
     minNumIndividuals: job.minNumIndividuals,
-    histKwargs: { numBins: job.numBins, range: job.range },
+    histKwargs: {
+      numBins: job.numBins,
+      range: job.range,
+      closed: VARIANT_BINS_CLOSED,
+    },
   };
 }
 

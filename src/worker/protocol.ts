@@ -615,6 +615,15 @@ export interface VariantsSummaryJob {
     Python script of the summary writes it. */
 export const ONE_WINDOW_PER_CHROM = Number.MAX_SAFE_INTEGER;
 
+/** The edge each bin of the histograms of the variants holds, popnei's
+    `closed` of `histKwargs`: the right one, the first bin holding its
+    left edge too, so that the bins below an edge t count the variants
+    whose value is at most t, what a threshold and popnei's filters keep
+    (docs/plans/popnei-0.2.2.md, "The design"). The one place it is
+    written: the runner gives it to popnei, and the Python scripts of the
+    histograms of the variants and of the summary write it. */
+export const VARIANT_BINS_CLOSED = "right";
+
 /** The summary of the variants file: its chromosomes, in popnei's order,
     those with variants in the order of their first variant, and the
     variants of each; the histograms of the variants; and the statistics

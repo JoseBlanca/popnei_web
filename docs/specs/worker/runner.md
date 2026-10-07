@@ -585,7 +585,9 @@ options, `minNumIndividuals`, 0, and the bins, `numBins` and `range`
 (`docs/specs/analyses/variantChecks.md`). The runner calls
 `calcPerVarDistribs(variants, { stats: ["missing_rate", "maf",
 "obs_het", "unbiased_exp_het"], minNumIndividuals, histKwargs: {
-numBins, range } })` with no `pops`, which popnei takes as one population, `pop`, of every
+numBins, range, closed: "right" } })`, the bins holding their right
+edge from 7 October 2026 (`VARIANT_BINS_CLOSED` of protocol.ts), with
+no `pops`, which popnei takes as one population, `pop`, of every
 individual the pass gives, those of the list when the job has one. It gives back `binEdges`, one copy of popnei's
 `histBinEdges`, which popnei's four distributions share as one array
 read only; and, of each of the four, `mean`, the one number of popnei's
@@ -624,13 +626,15 @@ a call.
 
 A `variantsSummary` job, of popgen2.html, holds its pass with no filter
 and no list of individuals, and the three options of the histograms of
-the variants, `minNumIndividuals`, 0, `numBins`, 1,280, and `range`,
+the variants, `minNumIndividuals`, 0, `numBins`, 1,000, and `range`,
 [0, 1], as `variantChecks` has them. The runner makes one call,
 `calcVariantsSummary(variants, { density: { windowSize:
 ONE_WINDOW_PER_CHROM, chromLengths: {} }, perVar: { stats:
 ["missing_rate", "maf", "obs_het", "unbiased_exp_het"],
-minNumIndividuals, histKwargs: { numBins, range } }, perIndividual: {}
-})`, one pass that reads the genotypes, and gives back the chromosomes
+minNumIndividuals, histKwargs: { numBins, range, closed: "right" } },
+perIndividual: {} })`, the bins holding their right edge,
+`VARIANT_BINS_CLOSED` of protocol.ts, as those of a `variantChecks` job
+do from 7 October 2026 (`docs/plans/popnei-0.2.2.md`), one pass that reads the genotypes, and gives back the chromosomes
 and their counts from the density, as one window per chromosome from the
 position 1 whose counts add up to the variants of the pass, else a
 defect; `perVar`, made of popnei's `perVar` as the result of a

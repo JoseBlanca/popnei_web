@@ -606,7 +606,7 @@ export interface VariantsSummaryJob {
   fileId: string;
   filters: readonly [];
   minNumIndividuals: number;               // 0
-  numBins: number;                         // 1,280
+  numBins: number;                         // 1,000, holding their right edge
   range: readonly [number, number];        // [0, 1]
 }
 

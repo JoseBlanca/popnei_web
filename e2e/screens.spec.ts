@@ -4564,7 +4564,7 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-done${at}-${theme}`);
       });
 
-      test("the thresholds moved: a line dragged into the middle, and one at 0.05 with the range the bins allow, hatched", async ({
+      test("the thresholds moved: a line dragged into the middle, and the six at numbers whose count of the variants was a range before popnei 0.2.2", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4588,15 +4588,41 @@ for (const theme of ["light", "dark"] as const) {
         await page.mouse.move(frame.x + frame.width * 0.55, y, { steps: 8 });
         await page.mouse.up();
         await page.mouse.move(0, 0);
-        const missing = newPageStats(page).getByRole("group", {
-          name: "Proportion of missing genotypes",
-          exact: true,
-        });
-        await missing.getByRole("textbox").fill("0.05");
-        await missing.getByRole("textbox").press("Enter");
-        await expect(
-          missing.getByText("Keeps 1,113 to 1,152 of 1,200 variants"),
-        ).toBeVisible();
+        // Each count one number, what popnei's filter keeps; under popnei
+        // 0.2.1 the four of the variants were ranges, "Keeps 1,113 to
+        // 1,152 of 1,200 variants" at 0.05 of the missing rate.
+        for (const [name, value, words] of [
+          [
+            "Proportion of missing genotypes",
+            "0.05",
+            "Keeps 1,152 of 1,200 variants",
+          ],
+          ["Major allele frequency", "0.52", "Keeps 49 of 1,200 variants"],
+          ["Observed heterozygosity", "0.3", "Keeps 373 of 1,200 variants"],
+          [
+            "Expected heterozygosity (unbiased)",
+            "0.3",
+            "Keeps 311 of 1,200 variants",
+          ],
+          [
+            "Proportion of missing genotypes of each individual",
+            "0.03",
+            "Keeps 116 of 200 individuals",
+          ],
+          [
+            "Observed heterozygosity of each individual",
+            "0.35",
+            "Keeps 73 of 200 individuals",
+          ],
+        ] as const) {
+          const group = newPageStats(page).getByRole("group", {
+            name,
+            exact: true,
+          });
+          await group.getByRole("textbox").fill(value);
+          await group.getByRole("textbox").press("Enter");
+          await expect(group.getByText(words, { exact: true })).toBeVisible();
+        }
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);
       });

@@ -140,8 +140,8 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     expect(
       binCells({
         from: 0.07500000000000001,
+        fromIncluded: false,
         to: 0.1,
-        toIncluded: false,
         count: 1234,
         state: null,
       }),
@@ -149,20 +149,20 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
     expect(
       binCells({
         from: 0.5,
+        fromIncluded: false,
         to: 0.525,
-        toIncluded: false,
         count: 62,
         state: "partlyKept",
       }),
     ).toEqual(["0.5", "0.525", "62", "Partly kept"]);
     expect(
-      binCells({ from: 0, to: 1, toIncluded: true, count: 1, state: "kept" }),
+      binCells({ from: 0, fromIncluded: true, to: 1, count: 1, state: "kept" }),
     ).toEqual(["0", "1", "1", "Kept"]);
     expect(
       binCells({
         from: 0.975,
+        fromIncluded: false,
         to: 1,
-        toIncluded: true,
         count: 3,
         state: "removed",
       }),

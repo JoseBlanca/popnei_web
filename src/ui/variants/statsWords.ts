@@ -126,12 +126,6 @@ const SO_FAR = " so far";
     with, for a screen reader. */
 export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
 
-/** What the description of a histogram of the variants says, for a
-    screen reader, when its threshold keeps a range: the bar at the line
-    is hatched, and why. */
-export const UNDECIDED_DESCRIPTION =
-  "The bar at the dashed line is hatched: the bins cannot tell how many of its variants the line keeps.";
-
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
     within one of its pauses (`replaces` of status.ts): on a small file the
@@ -256,13 +250,10 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
 });
 
 /** What a threshold keeps of the variants or the individuals of one
-    histogram, those with a value: from `keptLow` to `keptHigh`, one
-    number when the two are equal, of `withValue`. */
+    histogram, those with a value: `kept` of `withValue`. */
 export interface ThresholdCounts {
-  /** The fewest it may keep. */
-  readonly keptLow: number;
-  /** The most it may keep, `keptLow` when the bins can tell. */
-  readonly keptHigh: number;
+  /** Those it keeps, whose value is at most it. */
+  readonly kept: number;
   /** Those with a value, which it keeps or removes. */
   readonly withValue: number;
 }
@@ -271,12 +262,8 @@ export interface ThresholdCounts {
 export type Counted = "variant" | "individual";
 
 /** The line under the row of a threshold, over its plot: what it keeps
-    of those with a value, "Keeps 1,050 of 1,200 variants", the range the
-    bins allow, "Keeps 564 to 566 of 1,200 variants", or "Keeps all 1,200
-    variants"; ending "so far" while the pass runs, `soFar`. No
-    explanation of a range: the hatched bar shows it. The range is
-    written with "to", which a screen reader reads as written, where it
-    may read a dash as nothing, "564 566". */
+    of those with a value, "Keeps 1,050 of 1,200 variants", or "Keeps all
+    1,200 variants"; ending "so far" while the pass runs, `soFar`. */
 export function keepsLine(
   counts: ThresholdCounts,
   noun: Counted,
@@ -287,21 +274,22 @@ export function keepsLine(
 }
 
 /** The longest the line of a threshold can be over `withValue`
-    variants or individuals with a value: a range of two numbers of the
-    digits of `withValue`, "so far", "Keeps 200,000 to 200,000 of 200,000
-    variants so far". The screen keeps the room of it under the line, so
-    that the plot does not move as the words change, while the line is
-    dragged and at the end of the pass. */
+    variants or individuals with a value, "so far": a number of the digits
+    of `withValue`, "Keeps 200,000 of 200,000 variants so far", or the
+    words of all, of the only one or of none when they are longer, "No
+    variant has a value so far". The screen keeps the room of it under the
+    line, so that the plot does not move as the words change, while the
+    line is dragged and at the end of the pass. */
 export function longestKeepsLine(withValue: number, noun: Counted): string {
-  const number = grouped(withValue);
-  return `Keeps ${number} to ${number} of ${counted(withValue, noun)}${SO_FAR}`;
+  const number = `Keeps ${grouped(withValue)} of ${counted(withValue, noun)}${SO_FAR}`;
+  const all = keepsLine({ kept: withValue, withValue }, noun, true);
+  return all.length > number.length ? all : number;
 }
 
 /** What the line of a threshold says to a screen reader as its value:
     the number, `shown` as the box shows it, and what it keeps of those
-    with a value, "0.1, keeps 1,050 of 1,200 variants", "0.05, keeps 1,113
-    to 1,152 of 1,200 variants", "0.3, keeps all 1,200 variants"; ending
-    "so far" while the pass runs, `soFar`. */
+    with a value, "0.1, keeps 1,050 of 1,200 variants", "0.3, keeps all
+    1,200 variants"; ending "so far" while the pass runs, `soFar`. */
 export function thresholdValueText(
   shown: number,
   counts: ThresholdCounts,
@@ -311,21 +299,17 @@ export function thresholdValueText(
   return `${numberText(shown)}, ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
 }
 
-/** What a threshold keeps, in lower case: "keeps 1,113 to 1,152 of 1,200
+/** What a threshold keeps, in lower case: "keeps 1,152 of 1,200
     variants", "keeps all 1,200 variants", "no variant has a value". */
 function keepsWords(counts: ThresholdCounts, noun: Counted): string {
-  const { keptLow, keptHigh, withValue } = counts;
+  const { kept, withValue } = counts;
   if (withValue === 0) return `no ${noun} has a value`;
-  if (keptLow === withValue && keptHigh === withValue) {
+  if (kept === withValue) {
     return withValue === 1
       ? `keeps the only ${noun}`
       : `keeps all ${counted(withValue, noun)}`;
   }
-  const range =
-    keptLow === keptHigh
-      ? grouped(keptLow)
-      : `${grouped(keptLow)} to ${grouped(keptHigh)}`;
-  return `keeps ${range} of ${counted(withValue, noun)}`;
+  return `keeps ${grouped(kept)} of ${counted(withValue, noun)}`;
 }
 
 /** The line under a histogram of the individuals of those with no value,

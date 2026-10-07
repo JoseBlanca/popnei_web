@@ -23,10 +23,11 @@
  * 1: a number typed is shown and counted rounded to that step, and is
  * committed so, and a number the user set is shown and counted as set,
  * never rounded again when a result so far widens the axis and its step
- * grows. So the number shown is the number counted: those of the
- * variants from popnei's fine bins, `variantsAtMost`, a range where the
- * bins cannot tell, those of the individuals from popnei's value of
- * each, `individualsAtMost`, exact.
+ * grows. A threshold of the variants has three decimals at most, and is
+ * 0.001 at least, `variantThresholdOnStep`. So the number shown is the
+ * number counted, exactly: those of the variants from popnei's fine
+ * bins, `variantsAtMost`, those of the individuals from popnei's value
+ * of each, `individualsAtMost`.
  */
 import {
   variantBinsRounded,
@@ -40,6 +41,7 @@ import {
   individualsAtMost,
   thresholdOnStep,
   thresholdStep,
+  variantThresholdOnStep,
   variantsAtMost,
 } from "../../core/thresholds.ts";
 import { histogramRows, histogramScales } from "../../charts/histogram.ts";
@@ -67,7 +69,6 @@ import {
   SO_FAR_DESCRIPTION,
   thresholdShownLabel,
   thresholdValueText,
-  UNDECIDED_DESCRIPTION,
   variantFullTitle,
   variantThresholdName,
   variantTitle,
@@ -174,25 +175,23 @@ export function variantPlot(
   const axisLow = at(bins.edges, 0);
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
-  const onStep = (value: number): number => thresholdOnStep(value, decimals);
+  const onStep = (value: number): number =>
+    variantThresholdOnStep(value, decimals);
   const shown = shownOf(threshold, typed, axisHigh, onStep);
   const counts = variantsAtMost(result, statistic, shown);
-  // The variants the line may keep or not are in the bar at the line.
-  const undecided = counts.keptLow !== counts.keptHigh;
   const plotted = {
     title: variantFullTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown, undecided),
+    threshold: noLegend(shown),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
-  const described = variantHistogramDescription(statistic, rows, null);
   const data = {
     ...plotted,
     description: describedSoFar(
-      undecided ? `${described} ${UNDECIDED_DESCRIPTION}` : described,
+      variantHistogramDescription(statistic, rows, null),
       soFar,
     ),
   };
@@ -204,6 +203,8 @@ export function variantPlot(
       name: variantThresholdName(statistic),
       shown,
       slider: { min: low, max: high, step, value: shown },
+      // From 0, which the box takes and `onStep` raises to 0.001: React
+      // Aria would put a number typed on the steps from its least value.
       box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
       ...wordsOf(shown, counts, "variant", soFar),
       onStep,
@@ -250,7 +251,7 @@ export function individualPlot(
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown, false),
+    threshold: noLegend(shown),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
@@ -261,7 +262,7 @@ export function individualPlot(
     ),
   };
   const { kept, removed } = individualsAtMost(values, shown);
-  const counts = { keptLow: kept, keptHigh: kept, withValue: kept + removed };
+  const counts = { kept, withValue: kept + removed };
   const [low, high] = axisOf(data);
   return {
     plot: {
@@ -297,13 +298,9 @@ function shownOf(
 }
 
 /** A threshold at `value` drawn with no legend: it is no filter, and the
-    line over the plot says what it keeps; the bar at the line hatched,
-    `undecided`, when the counts are a range, with the words of why as its
-    tooltip. */
-function noLegend(value: number, undecided: boolean): HistogramThreshold {
-  return undecided
-    ? { value, legend: null, undecided, undecidedTitle: UNDECIDED_DESCRIPTION }
-    : { value, legend: null, undecided };
+    line over the plot says what it keeps. */
+function noLegend(value: number): HistogramThreshold {
+  return { value, legend: null };
 }
 
 /** The two ends of the horizontal axis the plot draws `data` with, the

@@ -97,17 +97,20 @@ and start again at another file or a reload, the missing rate of the
 variants at 0.1 and the others at the top of their axis.
 
 The number a threshold of the variants shows is the number it is
-counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
-cannot tell whether some variants are kept, the line gives the range
-they allow, "Keeps 1,113 to 1,152 of 1,200 variants" at a missing rate of
-0.05 on panel.vcf.gz, and the bar where the bins cannot tell is hatched:
-the variants of the bin that starts at the threshold, when the threshold
-is on the edge of a bin, since popnei's bins hold their left edge, and
-those of the bin the threshold lies inside otherwise, 1,197 to 1,199 at
-0.07. The range holds until popnei counts it exactly
-(docs/plans/thresholds.md). A threshold of the individuals is counted
-exactly from popnei's value of each. Applying them as filters is the
-design docs/designs/stats-filters.md.
+counted at, and the count is one number, the variants popnei's filter of
+that statistic keeps at it: "Keeps 1,152 of 1,200 variants" at a missing
+rate of 0.05 on panel.vcf.gz. It comes from popnei's 1,000 bins of 0 to
+1, each of which holds its upper edge, so that every threshold of up to
+three decimals is an edge and the variants at most it are the bins below
+it (docs/plans/popnei-0.2.2.md). So a threshold of the variants has three
+decimals at most, and 0.001 at least: the first bin holds 0 and the
+values above it up to 0.001, so a threshold typed or moved to 0 is set
+at 0.001, which on a file of fewer than 1,000 individuals keeps the same
+variants. A threshold of the individuals is counted exactly from
+popnei's value of each, at any number. On both kinds of plot a value on
+the edge between two bars is in the bar to its left, so a bar ends at
+what a threshold keeps, and the table of the bins of popgen.html says
+so. Applying them as filters is the design docs/designs/stats-filters.md.
 
 ### The filters of variants
 

@@ -12,8 +12,9 @@
  * The counts are those of the core functions, `variantsAtMost` and
  * `individualsAtMost`, on popnei's numbers of panel.vcf.gz in
  * e2e/fixtures/threshold_counts.json, which make_fixtures.mjs wrote with
- * popnei 0.2.2 under node: the 1,280 fine bins of each statistic of the
- * variants and the value of each individual.
+ * popnei 0.2.2 under node: the 1,000 fine bins that hold their right
+ * edge of each statistic of the variants, whose sums below a threshold
+ * are what popnei's filter keeps at it, and the value of each individual.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -85,10 +86,7 @@ function variantWords(statistic: VariantStatistic, value: number): string {
     the individuals keeps at `value`, from the core's counts. */
 function individualWords(value: number): string {
   const { kept, removed } = individualsAtMost(PANEL.missingGtRate, value);
-  return keepsLine(
-    { keptLow: kept, keptHigh: kept, withValue: kept + removed },
-    "individual",
-  );
+  return keepsLine({ kept, withValue: kept + removed }, "individual");
 }
 
 async function openPanel(page: Page): Promise<void> {
@@ -105,8 +103,8 @@ async function pick(page: Page, name: string): Promise<void> {
   await (await chooser).setFiles(join(FIXTURES, name));
 }
 
-/** The histogram titled `title`, its box, its line, its words and the
-    bars it hatches. */
+/** The histogram titled `title`, its box, its line, its words and its
+    dashed line. */
 function histogram(
   page: Page,
   title: string,
@@ -117,7 +115,6 @@ function histogram(
   readonly thumb: Locator;
   readonly words: Locator;
   readonly dashed: Locator;
-  readonly hatched: Locator;
 } {
   const group = page
     .getByRole("region", { name: "Statistics of the file" })
@@ -131,7 +128,6 @@ function histogram(
     thumb: slider.locator("xpath=../.."),
     words: group.getByText(/^Keeps |^No \w+ has a value/u),
     dashed: group.locator("line.chart-threshold"),
-    hatched: group.locator("rect.chart-bar-undecided"),
   };
 }
 
@@ -303,20 +299,17 @@ for (const width of [1280, 320]) {
         }),
       );
     const before = await plotTops();
-    // A range, the longest line of the panel, "Keeps 1,113 to 1,152 of 1,200
-    // variants".
+    // A count of four digits, the longest line of the panel.
     await missing.box.fill("0.05");
     await missing.box.press("Enter");
-    await expect(missing.words).toHaveText(
-      "Keeps 1,113 to 1,152 of 1,200 variants",
-    );
+    await expect(missing.words).toHaveText("Keeps 1,152 of 1,200 variants");
     expect(await plotTops()).toEqual(before);
     // The line holds the longest form, with "so far", in its room.
     const fits = await missing.words.evaluate((element) => {
       const room = element.getBoundingClientRect().height;
       const copy = element.cloneNode(false);
       if (!(copy instanceof HTMLElement)) return false;
-      copy.textContent = "Keeps 1,113 to 1,152 of 1,200 variants so far";
+      copy.textContent = "Keeps 1,152 of 1,200 variants so far";
       element.after(copy);
       const height = copy.getBoundingClientRect().height;
       copy.remove();
@@ -367,7 +360,7 @@ test("TH2 the line dragged with the mouse: the box and the words follow it by th
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("TH2 a number typed: the line follows it as it is typed, and at Enter it is rounded to the step of the axis, with no words; an arrow of the box one step; inside a fine bin a range and its bar hatched; eleven decimals refused", async ({
+test("TH2 a number typed: the line follows it as it is typed, and at Enter it is rounded to the step of the axis, with no words; an arrow of the box one step; the count one number, what popnei's filter keeps; eleven decimals refused", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -380,7 +373,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   // Not committed yet: the line and the words follow the number typed.
   await expect(het.slider).toHaveValue("0.3");
   await expect(het.words).toHaveText(variantWords("obsHet", 0.3));
-  await expect(het.words).toHaveText("Keeps 373 to 375 of 1,200 variants");
+  await expect(het.words).toHaveText("Keeps 373 of 1,200 variants");
   expect(
     Math.abs((await middleX(het.dashed)) - (await middleX(het.thumb))),
   ).toBeLessThan(1.5);
@@ -421,17 +414,15 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   await expect(het.box).toHaveValue("0.34");
   await het.box.press("Escape");
 
-  // The MAF at 0.52 lies inside the fine bin from 0.5203125 down to
-  // 0.51953125: a range, and the bar at the line hatched.
+  // The MAF at 0.52, the 49 variants popnei's filter keeps at it.
   const maf = histogram(page, "Major allele frequency");
   await maf.box.fill("0.52");
   await maf.box.press("Enter");
-  await expect(maf.words).toHaveText("Keeps 49 to 51 of 1,200 variants");
+  await expect(maf.words).toHaveText("Keeps 49 of 1,200 variants");
   await expect(maf.words).toHaveText(variantWords("maf", 0.52));
-  await expect(maf.hatched).toHaveCount(1);
   await expect(maf.slider).toHaveAttribute(
     "aria-valuetext",
-    "0.52, keeps 49 to 51 of 1,200 variants",
+    "0.52, keeps 49 of 1,200 variants",
   );
 
   // A threshold beyond the axis widens it, and the line goes with it.
@@ -443,7 +434,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   await expect(missing.words).toHaveText("Keeps all 1,200 variants");
 });
 
-test("TH2 the keys of the line: an arrow one step of the axis, Page Up and Down ten, with Shift too, Shift and an arrow ten, Home and End the ends of the axis; the range where the bins cannot tell", async ({
+test("TH2 the keys of the line: an arrow one step of the axis, Page Up and Down ten, with Shift too, Shift and an arrow ten, Home and End the ends of the axis, Home at 0.001 for the variants", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -466,42 +457,41 @@ test("TH2 the keys of the line: an arrow one step of the axis, Page Up and Down 
   for (let step = 0; step < 9; step += 1) {
     await page.keyboard.press("ArrowLeft");
   }
-  // 0.05, an edge equal to 64/1280: the variants on it are somewhere in
-  // the bin that starts at it.
+  // 0.05: the 1,152 variants popnei's filter keeps at it.
   await expect(missing.slider).toHaveValue("0.05");
   await expect(missing.box).toHaveValue("0.05");
-  await expect(missing.words).toHaveText(
-    "Keeps 1,113 to 1,152 of 1,200 variants",
-  );
+  await expect(missing.words).toHaveText("Keeps 1,152 of 1,200 variants");
   await expect(missing.words).toHaveText(variantWords("missingRate", 0.05));
-  // The bar that starts at the line is hatched, neither kept nor removed.
-  await expect(missing.hatched).toHaveCount(1);
   await expect(missing.slider).toHaveAttribute(
     "aria-valuetext",
-    "0.05, keeps 1,113 to 1,152 of 1,200 variants",
+    "0.05, keeps 1,152 of 1,200 variants",
   );
   await expectNoViolations(makeAxeBuilder);
+  // Home, the left end of the axis, 0, sets the least threshold of the
+  // variants, 0.001: the first fine bin holds 0 and the values up to
+  // 0.001, so the bins cannot count those at most 0.
   await page.keyboard.press("Home");
-  await expect(missing.slider).toHaveValue("0");
+  await expect(missing.slider).toHaveValue("0.001");
+  await expect(missing.box).toHaveValue("0.001");
+  await expect(missing.words).toHaveText("Keeps 2 of 1,200 variants");
   await page.keyboard.press("PageUp");
-  await expect(missing.slider).toHaveValue("0.01");
+  await expect(missing.slider).toHaveValue("0.011");
   // Shift with Page Up and Down, or with an arrow, ten steps too, and
   // not React Aria's tenth of the axis.
   await page.keyboard.press("Shift+PageUp");
-  await expect(missing.slider).toHaveValue("0.02");
+  await expect(missing.slider).toHaveValue("0.021");
   await page.keyboard.press("Shift+ArrowRight");
-  await expect(missing.slider).toHaveValue("0.03");
+  await expect(missing.slider).toHaveValue("0.031");
   await page.keyboard.press("Shift+ArrowUp");
-  await expect(missing.slider).toHaveValue("0.04");
+  await expect(missing.slider).toHaveValue("0.041");
   await page.keyboard.press("Shift+ArrowLeft");
-  await expect(missing.slider).toHaveValue("0.03");
+  await expect(missing.slider).toHaveValue("0.031");
   await page.keyboard.press("Shift+ArrowDown");
-  await expect(missing.slider).toHaveValue("0.02");
+  await expect(missing.slider).toHaveValue("0.021");
   await page.keyboard.press("Shift+PageDown");
-  await expect(missing.slider).toHaveValue("0.01");
+  await expect(missing.slider).toHaveValue("0.011");
   await page.keyboard.press("End");
   await expect(missing.slider).toHaveValue("0.1");
-  await expect(missing.hatched).toHaveCount(0);
   await page.keyboard.press("ArrowRight");
   await expect(missing.slider).toHaveValue("0.1");
 
@@ -619,12 +609,9 @@ test("TH2 a number typed in the box of a threshold at the top of its axis is kep
   await het.box.fill("0.3");
   await het.box.press("Enter");
   await release(page, "result");
-  await expect(het.words).toHaveText(
-    /^Keeps [\d,]+(?: to [\d,]+)? of [\d,]+ variants$/u,
-    {
-      timeout: 60_000,
-    },
-  );
+  await expect(het.words).toHaveText(/^Keeps [\d,]+ of [\d,]+ variants$/u, {
+    timeout: 60_000,
+  });
   await expect(het.box).toHaveValue("0.3");
 });
 
@@ -815,12 +802,11 @@ for (const width of [1280, 320]) {
         ),
       );
     const before = await tops();
-    // A range of numbers of five digits, the longest form of the line:
-    // 0.33 lies inside a fine bin, 0.3297 to 0.3305.
+    // A count of five digits, the longest form of the line.
     await het.box.fill("0.33");
     await het.box.press("Enter");
     await expect(het.words).toHaveText(
-      /^Keeps [\d,]+ to [\d,]+ of [\d,]+ variants so far$/u,
+      /^Keeps [\d,]{5,} of [\d,]+ variants so far$/u,
     );
     expect(await tops()).toEqual(before);
     await release(page, "result");

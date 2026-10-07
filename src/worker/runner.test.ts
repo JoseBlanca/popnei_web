@@ -1699,24 +1699,25 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
     expect(result.obsHet.mean).toBe(0.3528596566999348);
     expect(result.unbiasedExpHet.mean).toBe(0.3749397114515978);
     expect([...result.maf.counts]).toEqual([
-      ...Array.from({ length: 20 }, () => 0),
-      58,
-      86,
-      64,
-      69,
-      70,
+      ...Array.from({ length: 19 }, () => 0),
+      9,
+      49,
+      89,
       61,
+      73,
+      68,
+      59,
       71,
-      77,
-      83,
-      63,
+      80,
+      80,
       69,
-      70,
       63,
-      71,
+      74,
+      59,
+      73,
       56,
       62,
-      52,
+      50,
       33,
       16,
       6,
@@ -1747,8 +1748,8 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
   });
 });
 
-describe("the histograms in 1,280 bins, which the application asks popnei for from 6 October 2026", () => {
-  test("panel.vcf.gz, panel.nei and tetraploid.vcf.gz: the 1,280 bins added up 32 at a time are popnei's 40, the means the same, and the 1,281 edges every 32nd those of the 40", () => {
+describe("the histograms in 1,000 bins that hold their right edge, which the application asks popnei for from 7 October 2026", () => {
+  test("panel.vcf.gz, panel.nei and tetraploid.vcf.gz: the 1,000 bins added up 25 at a time are popnei's 40, the means the same, and the 1,001 edges every 25th those of the 40", () => {
     const tetraploid: LoadToOpen = {
       fileId: FILE_ID,
       format: "vcf",
@@ -1765,14 +1766,14 @@ describe("the histograms in 1,280 bins, which the application asks popnei for fr
       );
       const fine = resultOf(
         opened(name, load).run(
-          { ...variantChecksJob(), numBins: 1280 },
+          { ...variantChecksJob(), numBins: 1000 },
           ignore,
         ),
         "variantChecks",
       );
-      expect(fine.binEdges.length).toBe(1281);
+      expect(fine.binEdges.length).toBe(1001);
       for (let edge = 0; edge <= 40; edge += 1) {
-        expect(fine.binEdges[edge * 32]).toBe(coarse.binEdges[edge]);
+        expect(fine.binEdges[edge * 25]).toBe(coarse.binEdges[edge]);
       }
       for (const statistic of [
         "missingRate",
@@ -1783,7 +1784,7 @@ describe("the histograms in 1,280 bins, which the application asks popnei for fr
         expect(fine[statistic].mean).toBe(coarse[statistic].mean);
         const added = Array.from({ length: 40 }, (_, bin) =>
           fine[statistic].counts
-            .subarray(bin * 32, bin * 32 + 32)
+            .subarray(bin * 25, bin * 25 + 25)
             .reduce((sum, count) => sum + count, 0),
         );
         expect(added).toEqual([...coarse[statistic].counts]);
@@ -1800,8 +1801,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     );
     expect(result.binEdges.length).toBe(41);
     expect(result.binEdges[0]).toBe(0);
-    // The decimals 3 / 40 and 38 / 40, which popnei 0.2.1 gave as the
-    // doubles above them.
+    // The decimals 3 / 40 and 38 / 40.
     expect(result.binEdges[3]).toBe(0.075);
     expect(result.binEdges[38]).toBe(0.95);
     expect(result.binEdges[40]).toBe(1);
@@ -1809,33 +1809,35 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     expect(result.maf.mean).toBe(0.7163445463101891);
     expect(result.obsHet.mean).toBe(0.35429523451520484);
     expect(result.unbiasedExpHet.mean).toBe(0.3754712450806149);
-    // popnei 0.2.0's missing rate of panel.nei, under node.
+    // popnei 0.2.2's missing rate of panel.nei, under node, in bins that
+    // hold their right edge.
     expect(result.missingRate.mean).toBe(0.02969999999999999);
     expect([...result.missingRate.counts]).toEqual([
-      345,
-      768,
-      86,
+      540,
+      612,
+      47,
       1,
       ...Array<number>(36).fill(0),
     ]);
     expect([...result.maf.counts]).toEqual([
-      ...Array<number>(20).fill(0),
-      69,
+      ...Array<number>(19).fill(0),
+      3,
+      66,
       75,
       62,
       71,
-      60,
-      74,
-      72,
-      81,
-      72,
-      68,
-      64,
-      83,
-      64,
       63,
-      67,
-      57,
+      71,
+      72,
+      83,
+      70,
+      70,
+      62,
+      85,
+      62,
+      63,
+      69,
+      55,
       48,
       25,
       22,
@@ -1846,23 +1848,23 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       4,
       9,
       18,
-      20,
-      25,
+      21,
+      24,
       30,
-      34,
-      50,
+      37,
+      47,
       61,
       53,
       69,
       62,
       84,
-      89,
-      101,
-      113,
+      90,
+      105,
+      108,
       102,
       108,
-      58,
-      62,
+      66,
+      54,
       27,
       14,
       5,

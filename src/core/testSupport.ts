@@ -43,6 +43,7 @@ import type {
   VariantSource,
 } from "./project.ts";
 import type { Result } from "./result.ts";
+import { VARIANT_FINE_BINS } from "./analyses/variantChecks.ts";
 import type { IndividualStats } from "./individualsKept.ts";
 import type { AnalysisDef, PassFound, WorkerClient } from "./store.ts";
 import type {
@@ -1898,9 +1899,11 @@ export function fiveIndividualsProject(
 /**
  * A result of the summary of the variants file, of `numVarsPerChrom`
  * variants on each chromosome of `chroms`, for the tests that do not read
- * its statistics: the histograms of the variants in 2 bins over 0 to 1,
- * every variant in the first, and the statistics of `individuals`, each
- * with no missing genotype and a heterozygosity of 0.25.
+ * its statistics: the histograms of the variants in the fine bins the
+ * application asks popnei for, 1,000 over 0 to 1, every variant in the
+ * first, so that every threshold of up to three decimals is an edge, and
+ * the statistics of `individuals`, each with no missing genotype and a
+ * heterozygosity of 0.25.
  */
 export function summaryResult(
   chroms: readonly string[],
@@ -1909,16 +1912,20 @@ export function summaryResult(
 ): VariantsSummaryResult {
   const numVars = numVarsPerChrom.reduce((sum, count) => sum + count, 0);
   const passStats = { numVars, filtering: {} };
-  const distrib = (): VariantDistrib => ({
-    mean: 0.25,
-    counts: Uint32Array.of(numVars, 0),
-  });
+  const distrib = (): VariantDistrib => {
+    const counts = new Uint32Array(VARIANT_FINE_BINS);
+    counts[0] = numVars;
+    return { mean: 0.25, counts };
+  };
   return {
     analysis: "variantsSummary",
     chroms,
     numVarsPerChrom: Uint32Array.from(numVarsPerChrom),
     perVar: {
-      binEdges: Float64Array.of(0, 0.5, 1),
+      binEdges: Float64Array.from(
+        { length: VARIANT_FINE_BINS + 1 },
+        (_, i) => i / VARIANT_FINE_BINS,
+      ),
       missingRate: distrib(),
       maf: distrib(),
       obsHet: distrib(),

@@ -57,14 +57,6 @@
   fill: none;
 }
 
-/* A bar the threshold may keep or remove, the values on its line being
-   somewhere in it: hatched in --chart-bar on the background, outlined as
-   the others, its fill the pattern its style names. */
-.chart-hatch-stripe {
-  stroke: var(--chart-bar);
-  stroke-width: 2px;
-}
-
 .chart-threshold,
 .chart-legend-threshold {
   stroke: var(--chart-threshold);

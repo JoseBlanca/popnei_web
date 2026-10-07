@@ -276,10 +276,22 @@ describe("the section of the statistics of the open file", () => {
     // as the section draws its plots.
     const request = page.requests.at(-1);
     if (request === undefined) throw new Error("no request was sent");
+    const empty = summaryResult(["1"], [0], ["i1", "i2"]);
+    const twoBins = { mean: NaN, counts: Uint32Array.of(0, 0) };
     request.end({
       kind: "done",
       key: request.key,
-      result: summaryResult(["1"], [0], ["i1", "i2"]),
+      result: {
+        ...empty,
+        perVar: {
+          ...empty.perVar,
+          binEdges: Float64Array.of(0, 0.5, 1),
+          missingRate: twoBins,
+          maf: twoBins,
+          obsHet: twoBins,
+          unbiasedExpHet: twoBins,
+        },
+      },
     });
     await settled();
     expect(caught).toHaveLength(1);

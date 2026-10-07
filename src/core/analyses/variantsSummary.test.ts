@@ -134,7 +134,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
       fileId: VARIANTS_ID,
       filters: [],
       minNumIndividuals: 0,
-      numBins: 1280,
+      numBins: 1000,
       range: [0, 1],
     };
     expect(jobs).toEqual([expected]);
@@ -150,7 +150,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
   test("the definition is of population genetics alone, reads no filter, and has no key input, no reason, no option and no warning", () => {
     expect(variantsSummary.id).toBe("variantsSummary");
     expect(variantsSummary.app).toEqual(["popgen"]);
-    expect(variantsSummary.keyVersion).toBe(2);
+    expect(variantsSummary.keyVersion).toBe(3);
     expect(variantsSummary.filtersRead).toEqual({
       variants: false,
       individuals: false,
@@ -205,8 +205,8 @@ describe("open-variants 1 the summary of the variants file: the key", () => {
     }
   });
 
-  test("the key version, 2, and the version of popnei change the key", () => {
-    const later: KeyedDef = { ...variantsSummary, keyVersion: 3 };
+  test("the key version, 3, and the version of popnei change the key", () => {
+    const later: KeyedDef = { ...variantsSummary, keyVersion: 4 };
     expect(keyOf(later, base, "0.1.0", createKeyMemo())).not.toBe(baseKey);
     expect(keyFor(base, "0.2.0")).not.toBe(baseKey);
   });
@@ -273,7 +273,7 @@ describe("open-variants 1 the summary of the variants file: the script", () => {
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40, "closed": "right"},\n' +
         ")\n" +
         "# The statistics of each individual, over every variant of the file\n" +
         "individual_stats = popnei.calc_per_individual_stats(variants_as_read)\n" +

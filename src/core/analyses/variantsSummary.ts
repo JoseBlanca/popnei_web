@@ -23,7 +23,10 @@
 
 import type { Project } from "../project.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
-import { ONE_WINDOW_PER_CHROM } from "../../worker/protocol.ts";
+import {
+  ONE_WINDOW_PER_CHROM,
+  VARIANT_BINS_CLOSED,
+} from "../../worker/protocol.ts";
 import type {
   Job,
   JobResult,
@@ -51,8 +54,10 @@ export const variantsSummary: AnalysisDef<Job, JobResult> = Object.freeze({
   app: Object.freeze(["popgen"] as const),
   defaults: Object.freeze({}),
   // 2 since the result holds the histograms of the variants and the
-  // statistics of each individual (docs/plans/live-stats.md).
-  keyVersion: 2,
+  // statistics of each individual (docs/plans/live-stats.md), 3 since
+  // their bins are 1,000 that hold their right edge
+  // (docs/plans/popnei-0.2.2.md).
+  keyVersion: 3,
   filtersRead: Object.freeze({ variants: false, individuals: false }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -132,8 +137,9 @@ function numCheckNumbers(): number {
  * options for a VCF. popnei's Python has no `calc_variants_summary`, so
  * they are its three calls, three passes over the file: the variants on
  * each chromosome, one window per chromosome; the histograms of the
- * variants, in `VARIANT_BINS` bins, 40, and not the 1,280 of the job,
- * which the page sums; and the statistics of each individual. Throws a
+ * variants, in `VARIANT_BINS` bins, 40, and not the 1,000 of the job,
+ * which the page sums, holding their right edge as those of the job do;
+ * and the statistics of each individual. Throws a
  * defect on a project with no variants file, since it is asked only of an
  * analysis that has run.
  */
@@ -160,7 +166,7 @@ function script(p: Project): string {
     "    variants_as_read,",
     "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
     `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
-    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
+    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}, "closed": "${VARIANT_BINS_CLOSED}"},`,
     ")",
     "# The statistics of each individual, over every variant of the file",
     "individual_stats = popnei.calc_per_individual_stats(variants_as_read)",

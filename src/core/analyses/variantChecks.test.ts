@@ -88,55 +88,58 @@ const THRESHOLDS: readonly IndividualFilter[] = [
     since popnei 0.2.2. */
 const EDGES = Float64Array.from({ length: 41 }, (_, i) => i / 40);
 
-/** The MAF counts of panel.nei: twenty zeros, then those of the spec. */
+/** The MAF counts of panel.nei in popnei 0.2.2's 40 bins that hold their
+    right edge: nineteen zeros, then the 3 variants at 0.5, in the bin
+    that ends there, and the others. */
 const PANEL_MAF = [
-  ...Array.from({ length: 20 }, () => 0),
-  69,
+  ...Array.from({ length: 19 }, () => 0),
+  3,
+  66,
   75,
   62,
   71,
-  60,
-  74,
-  72,
-  81,
-  72,
-  68,
-  64,
-  83,
-  64,
   63,
-  67,
-  57,
+  71,
+  72,
+  83,
+  70,
+  70,
+  62,
+  85,
+  62,
+  63,
+  69,
+  55,
   48,
   25,
   22,
   3,
 ];
 
-/** The counts of the observed heterozygosity of panel.nei: those of the
-    spec, then fifteen zeros. */
+/** The counts of the observed heterozygosity of panel.nei in those bins,
+    then fifteen zeros. */
 const PANEL_OBS_HET = [
   0,
   4,
   9,
   18,
-  20,
-  25,
+  21,
+  24,
   30,
-  34,
-  50,
+  37,
+  47,
   61,
   53,
   69,
   62,
   84,
-  89,
-  101,
-  113,
+  90,
+  105,
+  108,
   102,
   108,
-  58,
-  62,
+  66,
+  54,
   27,
   14,
   5,
@@ -146,16 +149,16 @@ const PANEL_OBS_HET = [
 
 /** The result of panel.nei; the counts of the expected heterozygosity,
     which no test reads, are those of the MAF. The missing rate is
-    popnei 0.2.0's, under node. */
+    popnei 0.2.2's, under node. */
 const PANEL: VariantChecksResult = {
   analysis: "variantChecks",
   binEdges: EDGES,
   missingRate: {
     mean: 0.02969999999999999,
     counts: Uint32Array.from([
-      345,
-      768,
-      86,
+      540,
+      612,
+      47,
       1,
       ...Array.from({ length: 36 }, () => 0),
     ]),
@@ -226,7 +229,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
       filters: [],
       individuals: ["s000"],
       minNumIndividuals: 0,
-      numBins: 1280,
+      numBins: 1000,
       range: [0, 1],
     };
     expect(jobs).toEqual([expected]);
@@ -271,7 +274,7 @@ describe("IP2 D2 the histograms of the variants over the individuals kept", () =
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40, "closed": "right"},\n' +
         ")\n",
     );
   });
@@ -311,19 +314,23 @@ describe("VS3 D1 the histograms of the variants", () => {
     );
   });
 
-  test("the description of the observed heterozygosity of panel.nei at 0.5, whose bin from 0.5 is split", () => {
+  test("the description of the observed heterozygosity of panel.nei at 0.51, whose bin from 0.5 is split", () => {
     expect(
-      variantHistogramDescription("obsHet", binsOf(PANEL_OBS_HET, 21, 20), 0.5),
+      variantHistogramDescription(
+        "obsHet",
+        binsOf(PANEL_OBS_HET, 21, 20),
+        0.51,
+      ),
     ).toBe(
-      "The observed heterozygosity of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.5 keeps the 20 bins up to it, 1,090 variants, splits the bin from 0.5 to 0.525, 62 variants, and removes the 19 bins above it, 48 variants.",
+      "The observed heterozygosity of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.51 keeps the 20 bins up to it, 1,098 variants, splits the bin from 0.5 to 0.525, 54 variants, and removes the 19 bins above it, 48 variants.",
     );
   });
 });
 
 describe("VS6 D2 the line under a histogram of the bin its threshold splits", () => {
-  test("the observed heterozygosity of panel.nei at 0.5 splits the bin from 0.5, 62 variants", () => {
-    expect(splitBinText("variant", binsOf(PANEL_OBS_HET, 21, 20), 0.5)).toBe(
-      "The threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter keeps those of its variants at most 0.5 and removes the others.",
+  test("the observed heterozygosity of panel.nei at 0.51 splits the bin from 0.5, 54 variants", () => {
+    expect(splitBinText("variant", binsOf(PANEL_OBS_HET, 21, 20), 0.51)).toBe(
+      "The threshold 0.51 splits the bin from 0.5 to 0.525, 54 variants: the filter keeps those of its variants at most 0.51 and removes the others.",
     );
   });
 
@@ -394,7 +401,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
   test("the definition reads the filters of individuals alone, and has no key input, no reason and no option", () => {
     expect(variantChecks.id).toBe("variantChecks");
     expect(variantChecks.app).toEqual(["popgen", "gwas"]);
-    expect(variantChecks.keyVersion).toBe(4);
+    expect(variantChecks.keyVersion).toBe(5);
     expect(variantChecks.filtersRead).toEqual({
       variants: false,
       individuals: true,
@@ -417,7 +424,7 @@ describe("VS3 D1 the histograms of the variants: the rest of the module", () => 
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40, "closed": "right"},\n' +
         ")\n",
     );
   });
@@ -515,8 +522,8 @@ describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
 
   test("the states of the bins at a threshold are kept, partly_kept and removed", () => {
     const lines = binsCsv(binsOf(PANEL_OBS_HET, 21, 20)).split("\n");
-    expect(lines[20]).toBe("0.475,0.5,58,kept");
-    expect(lines[21]).toBe("0.5,0.525,62,partly_kept");
+    expect(lines[20]).toBe("0.475,0.5,66,kept");
+    expect(lines[21]).toBe("0.5,0.525,54,partly_kept");
     expect(lines[22]).toBe("0.525,0.55,27,removed");
   });
 
@@ -573,10 +580,10 @@ const STATISTICS: readonly VariantStatistic[] = [
 ];
 
 /**
- * The result of `name`, panel.nei or tetraploid.nei, in the 1,280 bins
- * over 0 to 1 that popnei 0.2.2 gave under node, which
- * e2e/fixtures/make_fixtures.mjs writes to variant_fine_bins.json; the
- * edges are popnei's, the decimals i / 1,280.
+ * The result of `name`, panel.nei or tetraploid.nei, in the 1,000 bins
+ * over 0 to 1 that hold their right edge that popnei 0.2.2 gave under
+ * node, which e2e/fixtures/make_fixtures.mjs writes to
+ * variant_fine_bins.json; the edges are popnei's, the decimals i / 1,000.
  */
 function fineResult(name: "panel.nei" | "tetraploid.nei"): VariantChecksResult {
   const parsed: unknown = JSON.parse(
@@ -585,8 +592,13 @@ function fineResult(name: "panel.nei" | "tetraploid.nei"): VariantChecksResult {
       "utf8",
     ),
   );
-  if (field(parsed, "numBins") !== VARIANT_FINE_BINS) {
-    throw new Error("variant_fine_bins.json is not of 1,280 bins");
+  if (
+    field(parsed, "numBins") !== VARIANT_FINE_BINS ||
+    field(parsed, "closed") !== "right"
+  ) {
+    throw new Error(
+      "variant_fine_bins.json is not of 1,000 bins that hold their right edge",
+    );
   }
   const file = field(parsed, name);
   const distrib = (statistic: VariantStatistic) => {
@@ -630,10 +642,10 @@ function sumOf(counts: Uint32Array): number {
   return counts.reduce((sum, count) => sum + count, 0);
 }
 
-describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
-  test("popnei is asked for 1,280 bins over 0 to 1, 32 in each of the 40 that popgen.html draws", () => {
+describe("the bins of popgen.html, popnei's 1,000 summed 25 at a time", () => {
+  test("popnei is asked for 1,000 bins over 0 to 1, 25 in each of the 40 that popgen.html draws", () => {
     expect(VARIANT_BINS).toBe(40);
-    expect(VARIANT_FINE_BINS).toBe(1280);
+    expect(VARIANT_FINE_BINS).toBe(1000);
   });
 
   test("panel.nei: the 40 bins and their edges are those popnei 0.2.2 gives when asked for 40", () => {
@@ -643,9 +655,9 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
     // The decimal 3 / 40, which popnei 0.2.1 gave as 0.07500000000000001.
     expect(missing.edges[3]).toBe(0.075);
     expect(Array.from(missing.counts)).toEqual([
-      345,
-      768,
-      86,
+      540,
+      612,
+      47,
       1,
       ...Array.from({ length: 36 }, () => 0),
     ]);
@@ -692,34 +704,33 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
       20,
       0,
       0,
-      0,
       5,
-      ...zeros(29),
+      ...zeros(30),
     ]);
     expect(Array.from(variantBins(result, "maf").counts)).toEqual([
       ...zeros(13),
       7,
-      30,
-      71,
-      40,
-      21,
-      16,
-      8,
-      3,
-      3,
+      56,
+      52,
+      33,
+      24,
+      15,
+      9,
+      2,
+      1,
       1,
       ...zeros(17),
     ]);
     expect(Array.from(variantBins(result, "obsHet").counts)).toEqual([
       ...zeros(29),
-      1,
-      1,
-      1,
-      1,
+      2,
+      0,
+      2,
+      0,
       9,
       0,
-      3,
-      55,
+      8,
+      50,
       0,
       0,
       129,
@@ -745,7 +756,7 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
   });
 });
 
-describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the bins with a count, rounded out", () => {
+describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the bins with a count, rounded out", () => {
   /** The first and the last edge of the bins of `statistic`, and their
       number. */
   function rangeOf(
@@ -760,20 +771,20 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
     ];
   }
 
-  test("panel.nei: the missing rate from 0 to 0.1 in 32 bins, the MAF from 0.5 to 1 in 40, the observed heterozygosity from 0 to 0.7 in 32, the expected from 0 to 0.55 in 44", () => {
+  test("panel.nei: the missing rate from 0 to 0.1 in 50 bins, the MAF from 0.45 to 1 in 50, its 0.5 in the bin that ends there, the observed heterozygosity from 0 to 0.7 in 35, the expected from 0 to 0.55 in 50", () => {
     const result = fineResult("panel.nei");
-    expect(rangeOf(result, "missingRate")).toEqual([0, 0.1, 32]);
-    expect(rangeOf(result, "maf")).toEqual([0.5, 1, 40]);
-    expect(rangeOf(result, "obsHet")).toEqual([0, 0.7, 32]);
-    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0, 0.55, 44]);
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.1, 50]);
+    expect(rangeOf(result, "maf")).toEqual([0.45, 1, 50]);
+    expect(rangeOf(result, "obsHet")).toEqual([0, 0.7, 35]);
+    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0, 0.55, 50]);
   });
 
-  test("tetraploid.nei: the missing rate from 0 to 0.3, the MAF from 0.3 to 0.6, the observed heterozygosity from 0.7 to 1, the expected from 0.9 to 1, each in 32 bins", () => {
+  test("tetraploid.nei: the missing rate from 0 to 0.25 in 50 bins, the MAF from 0.3 to 0.6 in 30, the observed heterozygosity from 0.7 to 1 in 30, the expected from 0.9 to 1 in 50", () => {
     const result = fineResult("tetraploid.nei");
-    expect(rangeOf(result, "missingRate")).toEqual([0, 0.3, 32]);
-    expect(rangeOf(result, "maf")).toEqual([0.3, 0.6, 32]);
-    expect(rangeOf(result, "obsHet")).toEqual([0.7, 1, 32]);
-    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0.9, 1, 32]);
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.25, 50]);
+    expect(rangeOf(result, "maf")).toEqual([0.3, 0.6, 30]);
+    expect(rangeOf(result, "obsHet")).toEqual([0.7, 1, 30]);
+    expect(rangeOf(result, "unbiasedExpHet")).toEqual([0.9, 1, 50]);
   });
 
   test("each bin is popnei's bins added up, with popnei's inner edges, and every variant in a bin of popnei is in one", () => {
@@ -802,20 +813,20 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
 
   test("the missing rate of panel.nei: its first bins", () => {
     const bins = variantBinsRounded(fineResult("panel.nei"), "missingRate");
-    // 0.003125 wide, 4 of popnei's bins each, whose counts at the indices
-    // 0, 6, 12 and 19 are 2, 20, 59 and 104.
-    expect(Array.from(bins.counts.subarray(0, 6))).toEqual([
-      2, 20, 0, 59, 104, 0,
+    // 0.002 wide, 2 of popnei's bins each, whose counts at the indices
+    // 0, 5, 10 and 15 are 2, 20, 59 and 104: the missing rates 0, 1 / 200,
+    // 2 / 200 and 3 / 200, each in the bin that ends at it.
+    expect(Array.from(bins.counts.subarray(0, 8))).toEqual([
+      2, 0, 20, 0, 59, 0, 0, 104,
     ]);
   });
 
-  test("the ends are the round numbers 0.3 and 0.6, popnei's edges, which popnei 0.2.1 gave as the doubles above", () => {
+  test("the ends are the round numbers 0.3 and 0.6, popnei's edges", () => {
     const bins = variantBinsRounded(fineResult("tetraploid.nei"), "maf");
     expect(bins.edges[0]).toBe(0.3);
     expect(bins.edges.at(-1)).toBe(0.6);
-    // popnei's edges at those places.
-    expect(fineResult("tetraploid.nei").binEdges[384]).toBe(0.3);
-    expect(fineResult("tetraploid.nei").binEdges[768]).toBe(0.6);
+    expect(fineResult("tetraploid.nei").binEdges[300]).toBe(0.3);
+    expect(fineResult("tetraploid.nei").binEdges[600]).toBe(0.6);
   });
 
   /** The result of panel.nei with the counts of `statistic` 1 in each of
@@ -830,20 +841,20 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
   }
 
   test("a last count in the bin of popnei that ends on 0.6 gives an axis to 0.6", () => {
-    const result = countsAt("maf", [0, 767]);
-    expect(result.binEdges[768]).toBe(0.6);
-    expect(rangeOf(result, "maf")).toEqual([0, 0.6, 32]);
+    const result = countsAt("maf", [0, 599]);
+    expect(result.binEdges[600]).toBe(0.6);
+    expect(rangeOf(result, "maf")).toEqual([0, 0.6, 40]);
   });
 
   test("a last count in the bin of popnei that ends on 0.3 gives an axis to 0.3", () => {
-    const result = countsAt("maf", [0, 383]);
-    expect(result.binEdges[384]).toBe(0.3);
-    expect(rangeOf(result, "maf")).toEqual([0, 0.3, 32]);
+    const result = countsAt("maf", [0, 299]);
+    expect(result.binEdges[300]).toBe(0.3);
+    expect(rangeOf(result, "maf")).toEqual([0, 0.3, 30]);
   });
 
   test("the missing rate's axis starts at 0 when no variant has a missing rate near 0", () => {
-    const result = countsAt("missingRate", [200, 300]);
-    expect(rangeOf(result, "missingRate")).toEqual([0, 0.25, 40]);
+    const result = countsAt("missingRate", [199, 249]);
+    expect(rangeOf(result, "missingRate")).toEqual([0, 0.25, 50]);
   });
 
   test("a range whose rounded end is no edge of popnei's bins is a defect", () => {
@@ -863,9 +874,10 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
   });
 
   test("a variant in a bin of popnei outside those added up is a defect", () => {
-    // The MAF of panel.nei has its 1,200 variants in the bins 20 to 39.
+    // The MAF of panel.nei has its 1,200 variants in the bins 19 to 39,
+    // 3 of them in bin 19.
     expect(() => summed(PANEL, "maf", 0, 20, 5)).toThrow(
-      "popnei_web defect: 1200 variants in bins of popnei outside 0 to 20.",
+      "popnei_web defect: 1197 variants in bins of popnei outside 0 to 20.",
     );
   });
 

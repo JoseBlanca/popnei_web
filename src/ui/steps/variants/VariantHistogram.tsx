@@ -1,8 +1,8 @@
 /**
  * One histogram of the variants beside its filter
  * (docs/specs/steps/variants.md, "The histograms beside the filters of
- * the variants"): popnei's 40 bins over 0 to 1 of its statistic, its 1,280
- * added up 32 at a time (`variantBins`), with the
+ * the variants"): popnei's 40 bins over 0 to 1 of its statistic, its 1,000
+ * added up 25 at a time (`variantBins`), with the
  * threshold of its filter while the filter is on, the number typed while
  * it is typed, and the texts the step writes for it, its title, its axes,
  * its legend, its description, the line of its threshold, the line of
