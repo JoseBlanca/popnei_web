@@ -4638,6 +4638,62 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-done${at}-${theme}`);
       });
 
+      test("the thresholds moved: a line dragged into the middle, and one at 0.05 with the range the bins allow", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const het = newPageStats(page).getByRole("group", {
+          name: "Observed heterozygosity",
+          exact: true,
+        });
+        await expect(het.getByText(/^At most 0.7:/u)).toBeVisible({
+          timeout: 20_000,
+        });
+        // The thumb, around the hidden input of the slider.
+        const thumb = het.getByRole("slider").locator("xpath=../..");
+        await thumb.scrollIntoViewIfNeeded();
+        const box = await thumb.boundingBox();
+        if (box === null) throw new Error("no thumb");
+        const y = box.y + box.height / 2;
+        const frame = await het.locator("svg.chart").boundingBox();
+        if (frame === null) throw new Error("no plot");
+        await page.mouse.move(box.x + box.width / 2, y);
+        await page.mouse.down();
+        await page.mouse.move(frame.x + frame.width * 0.55, y, { steps: 8 });
+        await page.mouse.up();
+        await page.mouse.move(0, 0);
+        const missing = newPageStats(page).getByRole("group", {
+          name: "Proportion of missing genotypes",
+          exact: true,
+        });
+        await missing.getByRole("textbox").fill("0.05");
+        await missing.getByRole("textbox").press("Enter");
+        await expect(
+          missing.getByText(/^At most 0.05: keeps 1,113 to 1,152/u),
+        ).toBeVisible();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-thresholds-moved${at}-${theme}`);
+      });
+
+      test("the focus on the line of a threshold", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const het = newPageStats(page).getByRole("group", {
+          name: "Observed heterozygosity",
+          exact: true,
+        });
+        await expect(het.getByText(/^At most 0.7:/u)).toBeVisible({
+          timeout: 20_000,
+        });
+        // Reached with the Tab key from its box, so that the ring shows.
+        await het.getByRole("textbox").focus();
+        await page.keyboard.press("Tab");
+        await expect(het.getByRole("slider")).toBeFocused();
+        for (let step = 0; step < 3; step += 1) {
+          await page.keyboard.press("PageDown");
+        }
+        await save(page, `popgen2-thresholds-focus${at}-${theme}`);
+      });
+
       test("a VCF whose ploidy could not be read", async ({ page }) => {
         await pickOnNewPage(page, "no_ploidy.vcf.gz");
         await expect(
