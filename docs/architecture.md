@@ -1306,7 +1306,9 @@ The page and each worker talk through typed messages
   variants, which no project holds. The summary keeps every variant,
   since that step would take the failed ones out of the statistics. On a
   `.nei` file the count is `locked`, since one written before format 1.2
-  holds no FILTER: a locked member neither starts nor holds back the
+  holds no FILTER, and so it is on a VCF read without its failed
+  variants, `onlyPassed`, which the page never does, since the count
+  would say 0: a locked member neither starts nor holds back the
   group, and the box offers no Start again for it. `autoRuns.ts` takes its analyses in groups and starts
   them one at a time, in their order: the one calculation worker runs one
   request at a time, and the store has no state for a request that waits

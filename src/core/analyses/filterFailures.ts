@@ -70,14 +70,23 @@ function keyInputs(): null {
   return null;
 }
 
-/** For a `.nei` file, the reason it is not counted: the FILTER of a `.nei`
-    file written before format 1.2 is not in it. `null` for a VCF and with
-    no file, which every analysis needs. */
+/** The reason the variants of the file are not counted: for a `.nei`
+    file, that the FILTER of one written before format 1.2 is not in it;
+    for a VCF read with `onlyPassed`, which popgen2.html never does, that
+    its failed variants were left out, so that `filterPassed` would keep
+    every variant read and the count would say 0. `null` for a VCF read
+    with every variant and with no file, which every analysis needs. */
 function needs(p: Project): string | null {
-  if (p.variants?.format !== "nei") {
-    return null;
+  const variants = p.variants;
+  if (variants === null) return null;
+  const name = escaped(variants.name);
+  if (variants.format === "nei") {
+    return `The variants of ${name} that failed their FILTER are not counted: a .nei file written before format 1.2 holds no FILTER, and the page cannot tell its format.`;
   }
-  return `The variants of ${escaped(p.variants.name)} that failed their FILTER are not counted: a .nei file written before format 1.2 holds no FILTER, and the page cannot tell its format.`;
+  if (variants.readOptions?.onlyPassed === true) {
+    return `The variants of ${name} that failed their FILTER are not counted: the file was read without them.`;
+  }
+  return null;
 }
 
 /** Builds the request, with no filter of the variants, and sends it

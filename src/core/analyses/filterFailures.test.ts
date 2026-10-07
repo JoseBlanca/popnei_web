@@ -39,6 +39,7 @@ function project(
     readonly name?: string;
     readonly fileId?: string;
     readonly filters?: readonly VariantFilter[];
+    readonly onlyPassed?: boolean;
   } = {},
 ): Project {
   const name = options.name ?? "low_qual.vcf.gz";
@@ -50,7 +51,9 @@ function project(
       name,
       size: 30_000,
       format: isNei ? "nei" : "vcf",
-      readOptions: isNei ? null : { ploidy: null, onlyPassed: false },
+      readOptions: isNei
+        ? null
+        : { ploidy: null, onlyPassed: options.onlyPassed ?? false },
       read: {
         kind: "read",
         individuals: ["s000", "s001"],
@@ -140,6 +143,14 @@ describe("live-stats 3 the count of the FILTER failures: the request", () => {
     expect(filterFailures.needs(deepFreeze(emptyProject("popgen")))).toBe(null);
     expect(filterFailures.needs(project({ name: "panel.nei" }))).toBe(
       "The variants of panel.nei that failed their FILTER are not counted: a .nei file written before format 1.2 holds no FILTER, and the page cannot tell its format.",
+    );
+  });
+
+  test("a VCF read without its failed variants is locked, with words that say why", () => {
+    expect(
+      filterFailures.needs(project({ name: "panel.vcf.gz", onlyPassed: true })),
+    ).toBe(
+      "The variants of panel.vcf.gz that failed their FILTER are not counted: the file was read without them.",
     );
   });
 });

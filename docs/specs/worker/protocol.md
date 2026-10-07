@@ -626,7 +626,8 @@ export interface VariantsSummaryResult {
 // iterBlocks read to their end under the same step (runner.md). Its counts
 // hold "passed" alone: the variants of the file as varsProcessed, those
 // whose FILTER is PASS or a dot as varsKept; the failures are their
-// difference. Never sent for a .nei file (docs/plans/live-stats.md).
+// difference. Never sent for a .nei file, nor for a VCF read with
+// onlyPassed, whose failed variants are not read (docs/plans/live-stats.md).
 export interface FilterFailuresJob {
   analysis: "filterFailures";
   fileId: string;
