@@ -60,6 +60,15 @@ export interface HistogramThreshold {
   readonly value: number;
   /** The three rows of the legend at the top right, or null for none. */
   readonly legend: ThresholdLegend | null;
+  /**
+   * Whether the values on the line itself may be kept or removed, as the
+   * screen's counts say when the bins cannot tell (popgen2.html, whose
+   * bins hold their left edge): the bar that starts at the line, the
+   * part right of it of the bin it splits, or the bin from the double
+   * just above it, is then hatched rather than drawn as removed. False
+   * when absent.
+   */
+  readonly undecided?: boolean;
 }
 
 /**
@@ -350,24 +359,37 @@ interface Bar {
   readonly from: number;
   readonly to: number;
   readonly count: number;
-  readonly state: "kept" | "removed" | null;
+  /** Removed, or undecided when the threshold says its values on the line
+      may be kept: the bar that starts at the line. */
+  readonly state: "kept" | "removed" | "undecided" | null;
 }
 
 /**
  * The rects of the bins with a count above 0, a partly kept bin as two,
- * split at the threshold, the left one left out when its width is 0.
+ * split at the threshold, the left one left out when its width is 0. With
+ * a threshold `undecided`, the bar that starts at the line, or at the
+ * double just above it, is undecided rather than removed.
  */
 function barsOf(
   rows: readonly HistogramRow[],
-  threshold: number | null,
+  threshold: HistogramThreshold | null,
 ): Bar[] {
   const bars: Bar[] = [];
+  const undecided = threshold?.undecided === true;
   for (const [index, row] of rows.entries()) {
     if (row.count === 0) continue;
     const { from, to, count, state } = row;
     const key = String(index);
     if (state !== "partlyKept") {
-      bars.push({ key, from, to, count, state });
+      const startsAtLine =
+        undecided && state === "removed" && from <= nextUp(threshold.value);
+      bars.push({
+        key,
+        from,
+        to,
+        count,
+        state: startsAtLine ? "undecided" : state,
+      });
       continue;
     }
     if (threshold === null) {
@@ -375,21 +397,21 @@ function barsOf(
         "popnei_web defect: a bin of a histogram with no threshold is partly kept.",
       );
     }
-    if (threshold > from) {
+    if (threshold.value > from) {
       bars.push({
         key: `${key}-kept`,
         from,
-        to: threshold,
+        to: threshold.value,
         count,
         state: "kept",
       });
     }
     bars.push({
       key: `${key}-removed`,
-      from: threshold,
+      from: threshold.value,
       to,
       count,
-      state: "removed",
+      state: undecided ? "undecided" : "removed",
     });
   }
   return bars;
@@ -401,9 +423,25 @@ function barClass(bar: Bar): string {
       return "chart-bar chart-bar-kept";
     case "removed":
       return "chart-bar chart-bar-removed";
+    case "undecided":
+      return "chart-bar chart-bar-undecided";
     case null:
       return "chart-bar";
   }
+}
+
+/** The side of the tile of the hatch of an undecided bar, in CSS pixels:
+    a stripe every 6 pixels, at 45 degrees. */
+const HATCH_TILE = 6;
+
+/** The number of the next hatch made, which gives each plot an id of its
+    own for the pattern, unique on the page. */
+let hatchCount = 0;
+
+/** The id of a new pattern of the hatch. */
+function nextHatchId(): string {
+  hatchCount += 1;
+  return `chart-hatch-${String(hatchCount)}`;
 }
 
 /** A row of the legend: what its mark shows, and its text. */
@@ -455,16 +493,48 @@ function histogramMargin(data: HistogramData): Margin {
   };
 }
 
-function drawHistogram(frame: Frame, data: HistogramData): void {
+function drawHistogram(
+  frame: Frame,
+  data: HistogramData,
+  hatchId: string,
+): void {
   const { x, y } = histogramScales(data, frame.innerWidth, frame.innerHeight);
   const threshold = data.threshold?.value ?? null;
-  const bars = barsOf(histogramRows(data), threshold);
+  const bars = barsOf(histogramRows(data), data.threshold);
+
+  // The hatch of an undecided bar: thin stripes of the colour of the bars
+  // on the background, so that the dashed line keeps the background on
+  // both sides where it crosses the bar (WCAG 1.4.11), as it does beside
+  // an outlined bar. Made once, before the bars.
+  if (frame.marks.select("defs.chart-hatch").empty()) {
+    const pattern = frame.marks
+      .insert("defs", ":first-child")
+      .attr("class", "chart-hatch")
+      .append("pattern")
+      .attr("id", hatchId)
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", HATCH_TILE)
+      .attr("height", HATCH_TILE)
+      .attr("patternTransform", "rotate(45)");
+    pattern
+      .append("line")
+      .attr("class", "chart-hatch-stripe")
+      .attr("x1", 0)
+      .attr("x2", 0)
+      .attr("y1", 0)
+      .attr("y2", HATCH_TILE);
+  }
 
   frame.marks
     .selectAll<SVGRectElement, Bar>("rect.chart-bar")
     .data(bars, (bar) => bar.key)
     .join("rect")
     .attr("class", barClass)
+    // The fill of a pattern by its id, which the CSS of a class cannot
+    // name; the style attribute wins over the fill of the class.
+    .attr("style", (bar) =>
+      bar.state === "undecided" ? `fill: url(#${hatchId});` : null,
+    )
     .attr("x", (bar) => x(bar.from))
     .attr("width", (bar) => x(bar.to) - x(bar.from))
     .attr("y", (bar) => y(bar.count))
@@ -561,12 +631,13 @@ export const createHistogram: Chart<HistogramData, HistogramEvents> = (
   events = {},
 ) => {
   let told: HistogramFrame | null = null;
+  const hatchId = nextHatchId();
   const definition: Plot2dDefinition<HistogramData> = {
     kind: "histogram",
     check: checkHistogram,
     margin: histogramMargin,
     draw(frame, drawn) {
-      drawHistogram(frame, drawn);
+      drawHistogram(frame, drawn, hatchId);
       const placed: HistogramFrame = {
         left: frame.margin.left,
         top: frame.margin.top,

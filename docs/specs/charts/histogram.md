@@ -70,6 +70,19 @@ lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
 `HistogramEvents.onFrame`.
 
+Such a threshold may also say that the values on its line may be kept
+or removed, `undecided`: on `popgen2.html` the bins hold their left
+edge, so the variants exactly on a line at 0.05 are somewhere in the
+bin that starts at it, and the screen gives a range of what the line
+keeps. The bar that starts at the line, the part right of the line of a
+bin it splits, or the bin that starts at the double just above it, as
+popnei's 0.30000000000000004 above 0.3, is then hatched, thin stripes of
+`--chart-bar` on the background in an outline, and not outlined as
+removed. The stripes leave the background on both sides of the dashed
+line where it crosses the bar, as an outlined bar does (below,
+"Colours and the two themes"). The screen says what the hatch means in
+the description of the plot.
+
 Every filter of `docs/functionality.md` section 3 that has a histogram
 keeps what is at most its threshold, as popnei's filters do, so the kept
 bars are always on the left of the line. A histogram with no threshold,
@@ -219,6 +232,8 @@ export interface HistogramData extends PlotText {
 export interface HistogramThreshold {
   readonly value: number;
   readonly legend: ThresholdLegend | null;
+  /** The bar that starts at the line hatched; false when absent. */
+  readonly undecided?: boolean;
 }
 
 /** The rows of the legend: "Maximum 0.95", "Kept by this filter",
@@ -361,7 +376,9 @@ plot need (WCAG 2.2, 1.4.11), so a filled bar is told from an outlined
 one in both themes, and the outline in `--chart-axis` carries the edge of
 both. The threshold line on a filled bar would be 1.26:1 in the light
 theme, red on blue; it always has the background on its right, since a
-bar the line crosses is split there and is outlined on its right.
+bar the line crosses is split there and is outlined on its right. A hatched bar, undecided, is
+stripes 2 pixels wide every 6 on the background, so the line has the
+background beside it there too.
 
 A change of theme changes the tokens, and the plot on the screen follows
 with no redraw; the exported file is in the light theme (`plot2d.md`,

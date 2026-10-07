@@ -115,6 +115,12 @@ export function overIndividualsLine(
     title. */
 export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
 
+/** What the description of a histogram of the variants says, for a
+    screen reader, when its threshold keeps a range: the bar at the line
+    is hatched, and why. */
+export const UNDECIDED_DESCRIPTION =
+  "The bar that starts at the dashed line is hatched: the bins cannot tell how many of its variants the line keeps.";
+
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
     within one of its pauses (`replaces` of status.ts): on a small file the

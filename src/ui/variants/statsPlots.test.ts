@@ -8,6 +8,7 @@ import type {
   VariantChecksResult,
 } from "../../worker/protocol.ts";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
+import { UNDECIDED_DESCRIPTION } from "./statsWords.ts";
 import type { VariantStatsPart } from "../../worker/protocol.ts";
 
 /** Three individuals, one with no called genotype: its missing rate is 1,
@@ -49,7 +50,11 @@ describe("the histograms of the statistics of the open file", () => {
     expect(maf.countLine).toBe("Over 3 variants");
     expect(maf.data.title).toBe("Major allele frequency");
     // Its threshold, no filter, has no legend, at the top of the axis.
-    expect(maf.data.threshold).toEqual({ value: 0.8, legend: null });
+    expect(maf.data.threshold).toEqual({
+      value: 0.8,
+      legend: null,
+      undecided: false,
+    });
   });
 
   test("live-stats 2 a histogram of a result so far says so in its line, and draws the same bins", () => {
@@ -231,7 +236,11 @@ describe("thresholds 2 the threshold on each histogram", () => {
   test("at the top of the axis, until the user moves it, it keeps every variant and says so; the slider spans the axis in fine edges", () => {
     // The missing rate of panel.vcf.gz runs to 0.0805, its axis to 0.1.
     const plot = variantPlot("missingRate", PANEL.variants, false, null);
-    expect(plot.data.threshold).toEqual({ value: 0.1, legend: null });
+    expect(plot.data.threshold).toEqual({
+      value: 0.1,
+      legend: null,
+      undecided: false,
+    });
     expect(plot.threshold.shown).toBe(0.1);
     expect(plot.threshold.slider).toEqual({
       min: 0,
@@ -253,6 +262,29 @@ describe("thresholds 2 the threshold on each histogram", () => {
       "0.05, keeps 1,113 to 1,152 of 1,200 variants",
     );
     expect(plot.threshold.slider.value).toBe(64);
+  });
+
+  test("a range draws the bar at the line hatched, as undecided, and the description says why; one number draws none", () => {
+    const range = variantPlot("missingRate", PANEL.variants, false, 0.05);
+    expect(range.data.threshold).toEqual({
+      value: 0.05,
+      legend: null,
+      undecided: true,
+    });
+    expect(range.data.description).toContain(UNDECIDED_DESCRIPTION);
+    const exact = variantPlot("obsHet", PANEL.variants, false, 0.3);
+    expect(exact.data.threshold?.undecided).toBe(false);
+    expect(exact.data.description).not.toContain(UNDECIDED_DESCRIPTION);
+    // At the top of the axis, every variant kept, nothing undecided.
+    const top = variantPlot("missingRate", PANEL.variants, false, null);
+    expect(top.data.threshold?.undecided).toBe(false);
+    const individuals = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      false,
+      0.03,
+    ).plot;
+    expect(individuals?.data.threshold?.undecided).toBe(false);
   });
 
   test("on an edge one double above k/1280 the count is one number: the observed heterozygosity at 0.3 keeps 373", () => {

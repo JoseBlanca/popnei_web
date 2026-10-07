@@ -60,6 +60,7 @@ import {
   individualTitle,
   noValueThresholdLine,
   SO_FAR_DESCRIPTION,
+  UNDECIDED_DESCRIPTION,
   overIndividualsLine,
   overVariantsLine,
   thresholdLine,
@@ -171,23 +172,26 @@ export function variantPlot(
       ? axisHigh
       : snapToFineEdge(result.binEdges, threshold).index;
   const shown = index / numBins;
+  const counts = variantsAtMost(result, statistic, index);
+  // The variants on the line are somewhere in the bin that starts at it.
+  const undecided = counts.keptLow !== counts.keptHigh;
   const plotted = {
     title: variantTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown),
+    threshold: noLegend(shown, undecided),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
+  const described = variantHistogramDescription(statistic, rows, null);
   const data = {
     ...plotted,
     description: describedSoFar(
-      variantHistogramDescription(statistic, rows, null),
+      undecided ? `${described} ${UNDECIDED_DESCRIPTION}` : described,
       soFar,
     ),
   };
-  const counts = variantsAtMost(result, statistic, index);
   const [low, high] = axisOf(data);
   return {
     data,
@@ -248,7 +252,7 @@ export function individualPlot(
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown),
+    threshold: noLegend(shown, false),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
@@ -292,9 +296,10 @@ export function individualPlot(
 const INDIVIDUAL_DECIMALS = 4;
 
 /** A threshold at `value` drawn with no legend: it is no filter, and the
-    line under the plot says what it keeps. */
-function noLegend(value: number): HistogramThreshold {
-  return { value, legend: null };
+    line under the plot says what it keeps; the bar at the line hatched,
+    `undecided`, when the counts are a range. */
+function noLegend(value: number, undecided: boolean): HistogramThreshold {
+  return { value, legend: null, undecided };
 }
 
 /** The two ends of the horizontal axis the plot draws `data` with, the

@@ -862,3 +862,94 @@ describe("PA4 D6 the histogram of the spectrum, its defects", () => {
     );
   });
 });
+
+describe("thresholds 2 a threshold whose bin at the line is undecided", () => {
+  /** The histogram of the observed heterozygosity of panel.nei with a
+      threshold at `value` whose bin at the line is undecided. */
+  function undecidedAt(value: number, counts = OBS_HET_COUNTS): HistogramData {
+    return {
+      ...histogramOf(counts, null),
+      threshold: { value, legend: null, undecided: true },
+    };
+  }
+
+  /** The bars of the plot in `element`, from the left. */
+  function barsIn(element: HTMLElement): Element[] {
+    return [...svgOf(element).querySelectorAll("g.chart-marks rect.chart-bar")];
+  }
+
+  test("at 0.5, an edge of the bins, the bar that starts at the line is hatched, neither filled nor an outline, and its pattern is in the SVG", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.5));
+    const svg = svgOf(element);
+    const lineX = numberOf(
+      svg.querySelector("line.chart-threshold") ?? undefined,
+      "x1",
+    );
+    const atLine = barsIn(element).filter(
+      (bar) => numberOf(bar, "x") === lineX,
+    );
+    expect(atLine.map((bar) => bar.getAttribute("class"))).toEqual([
+      "chart-bar chart-bar-undecided",
+    ]);
+    const fill = /^fill: url\(#([^)]+)\);?$/u.exec(
+      atLine[0]?.getAttribute("style") ?? "",
+    );
+    expect(fill).not.toBeNull();
+    expect(svg.querySelector(`pattern#${fill?.[1] ?? ""}`)).not.toBeNull();
+    // Bins 21 to 24 are removed, 1 to 19 kept, as without the hatch.
+    expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(4);
+    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(19);
+  });
+
+  test("at 0.51, inside bin 20, the part of the bin right of the line is hatched and the part left of it filled", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.51));
+    const classes = barsIn(element).map((bar) => bar.getAttribute("class"));
+    expect(
+      classes.filter((name) => name?.includes("undecided") === true),
+    ).toEqual(["chart-bar chart-bar-undecided"]);
+    expect(
+      classes.filter((name) => name?.includes("kept") === true),
+    ).toHaveLength(20);
+  });
+
+  test("at 0.3, on the edge popnei gives as 0.30000000000000004, the double above it, the bin that starts there is hatched", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.3));
+    const svg = svgOf(element);
+    expect(svg.querySelectorAll("rect.chart-bar-undecided")).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(11);
+    // Without the hatch the same bin is removed.
+    const plain = sizedElement(600, 375);
+    createHistogram(plain, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.3, legend: null },
+    });
+    expect(
+      svgOf(plain).querySelectorAll("rect.chart-bar-undecided"),
+    ).toHaveLength(0);
+  });
+
+  test("two plots on a page each have a pattern of their own, and an update to a threshold that can tell takes the hatch away", () => {
+    const one = sizedElement(600, 375);
+    const two = sizedElement(600, 375);
+    const handle = createHistogram(one, undecidedAt(0.5));
+    createHistogram(two, undecidedAt(0.5));
+    const ids = [one, two].map(
+      (element) => element.querySelector("pattern")?.id,
+    );
+    expect(ids[0]).toBeTruthy();
+    expect(ids[0]).not.toBe(ids[1]);
+    handle.update({
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.5, legend: null },
+    });
+    expect(
+      svgOf(one).querySelectorAll("rect.chart-bar-undecided"),
+    ).toHaveLength(0);
+    expect(svgOf(one).querySelectorAll("rect.chart-bar-removed")).toHaveLength(
+      5,
+    );
+  });
+});
