@@ -22,24 +22,12 @@
 import { useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
 
+import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
 import styles from "./ThresholdSlider.module.css";
 
 /** The steps Page Up and Page Down move the thumb by. */
 const PAGE_STEPS = 10;
-
-/** Where the frame of the plot is in its element, in CSS pixels. */
-export interface SliderFrame {
-  /** From the left of the element to the left of the frame. */
-  readonly left: number;
-  /** From the top of the element to the top of the frame, the margin
-      that holds the handle. */
-  readonly top: number;
-  /** The width of the frame, which the track spans. */
-  readonly width: number;
-  /** The height of the frame. */
-  readonly height: number;
-}
 
 /** What the line of a threshold is drawn with. */
 export interface ThresholdSliderProps {
@@ -58,7 +46,7 @@ export interface ThresholdSliderProps {
   /** What a screen reader says as its value. */
   readonly valueText: string;
   /** The frame of the plot it is laid over. */
-  readonly frame: SliderFrame;
+  readonly frame: HistogramFrame;
   /** Called with each value it is moved to, as it is dragged too. */
   readonly onChange: (value: number) => void;
 }

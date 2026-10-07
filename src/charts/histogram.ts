@@ -1,7 +1,9 @@
 /**
- * The histogram of a statistic whose bins are already counted, with the
- * threshold of a filter marked and the bins it keeps, splits and removes
- * (docs/specs/charts/histogram.md). It is drawn on the base of the 2D
+ * The histogram of a statistic whose bins are already counted, with a
+ * threshold marked and the bins it keeps, splits and removes
+ * (docs/specs/charts/histogram.md): the threshold of a filter on
+ * popgen.html, with its legend, and on popgen2.html a threshold that is
+ * only shown, with none. It is drawn on the base of the 2D
  * plots, plot2d.ts, and counts nothing: the bins are popnei's, or those
  * core makes for the statistics of each individual.
  */
@@ -30,7 +32,8 @@ export interface HistogramData extends PlotText {
    * scale gives.
    */
   readonly counts: Uint32Array | Float64Array;
-  /** The threshold of the filter beside the plot, or null for none. */
+  /** The threshold marked on the plot, of a filter beside it on
+      popgen.html or shown only on popgen2.html; null for none. */
   readonly threshold: HistogramThreshold | null;
   /**
    * The top of the vertical axis before it is made round, at least the
@@ -52,7 +55,8 @@ export interface HistogramData extends PlotText {
  * which are no filters.
  */
 export interface HistogramThreshold {
-  /** The number the user typed, as the project holds it; finite. */
+  /** The number of the threshold, as the project holds it for a filter
+      or as the screen holds it; finite. */
   readonly value: number;
   /** The three rows of the legend at the top right, or null for none. */
   readonly legend: ThresholdLegend | null;
@@ -117,10 +121,10 @@ export interface HistogramRow {
   readonly state: BinState | null;
 }
 
-/** The top margin without a threshold, in CSS pixels. */
-const TOP_WITHOUT_THRESHOLD = 12;
+/** The top margin without a legend, in CSS pixels. */
+const TOP_WITHOUT_LEGEND = 12;
 /** The top margin with a legend, which holds its three rows. */
-const TOP_WITH_THRESHOLD = 56;
+const TOP_WITH_LEGEND = 56;
 const RIGHT_MARGIN = 16;
 const BOTTOM_MARGIN = 44;
 /**
@@ -443,8 +447,8 @@ function histogramMargin(data: HistogramData): Margin {
   return {
     top:
       (data.threshold?.legend ?? null) === null
-        ? TOP_WITHOUT_THRESHOLD
-        : TOP_WITH_THRESHOLD,
+        ? TOP_WITHOUT_LEGEND
+        : TOP_WITH_LEGEND,
     right: RIGHT_MARGIN,
     bottom: BOTTOM_MARGIN,
     left: Math.max(LEFT_MARGIN, Y_LABEL_BAND + ticksWidth + Y_TICK_OFFSET),
