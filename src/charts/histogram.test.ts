@@ -942,6 +942,29 @@ describe("thresholds 2 a threshold whose bin at the line is undecided", () => {
     ).toHaveLength(0);
   });
 
+  test("th4 fix 4: the hatched bar has the words of the threshold as its title, its tooltip, and no other bar has one; an update with no words takes it away", () => {
+    const element = sizedElement(600, 375);
+    const words =
+      "The bins cannot tell how many of its variants the line keeps.";
+    const handle = createHistogram(element, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: {
+        value: 0.5,
+        legend: null,
+        undecided: true,
+        undecidedTitle: words,
+      },
+    });
+    const svg = svgOf(element);
+    const titled = [...svg.querySelectorAll("g.chart-marks rect > title")];
+    expect(titled.map((title) => title.textContent)).toEqual([words]);
+    expect(titled[0]?.parentElement?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-undecided",
+    );
+    handle.update(undecidedAt(0.5));
+    expect(svg.querySelectorAll("g.chart-marks rect > title")).toHaveLength(0);
+  });
+
   test("two plots on a page each have a pattern of their own, and an update to a threshold that can tell takes the hatch away", () => {
     const one = sizedElement(600, 375);
     const two = sizedElement(600, 375);

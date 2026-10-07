@@ -69,6 +69,12 @@ export interface HistogramThreshold {
    * when absent.
    */
   readonly undecided?: boolean;
+  /**
+   * With `undecided`, the words of the title of the hatched bar, which
+   * the browser shows as its tooltip: why it is hatched. No title when
+   * absent.
+   */
+  readonly undecidedTitle?: string;
 }
 
 /**
@@ -527,7 +533,7 @@ function drawHistogram(
       .attr("y2", HATCH_TILE);
   }
 
-  frame.marks
+  const rects = frame.marks
     .selectAll<SVGRectElement, Bar>("rect.chart-bar")
     .data(bars, (bar) => bar.key)
     .join("rect")
@@ -541,6 +547,17 @@ function drawHistogram(
     .attr("width", (bar) => x(bar.to) - x(bar.from))
     .attr("y", (bar) => y(bar.count))
     .attr("height", (bar) => frame.innerHeight - y(bar.count));
+  // The tooltip of the hatched bar, which says why it is hatched.
+  const undecidedTitle = data.threshold?.undecidedTitle;
+  rects
+    .selectAll<SVGTitleElement, string>("title")
+    .data((bar) =>
+      bar.state === "undecided" && undecidedTitle !== undefined
+        ? [undecidedTitle]
+        : [],
+    )
+    .join("title")
+    .text((words) => words);
 
   frame.annotations
     .selectAll<SVGLineElement, number>("line.chart-threshold")

@@ -273,9 +273,12 @@ export function individualPlot(
 
 /** A threshold at `value` drawn with no legend: it is no filter, and the
     line over the plot says what it keeps; the bar at the line hatched,
-    `undecided`, when the counts are a range. */
+    `undecided`, when the counts are a range, with the words of why as its
+    tooltip. */
 function noLegend(value: number, undecided: boolean): HistogramThreshold {
-  return { value, legend: null, undecided };
+  return undecided
+    ? { value, legend: null, undecided, undecidedTitle: UNDECIDED_DESCRIPTION }
+    : { value, legend: null, undecided };
 }
 
 /** The two ends of the horizontal axis the plot draws `data` with, the

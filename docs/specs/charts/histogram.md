@@ -85,7 +85,9 @@ middle of its tile so that each shows whole, 3:1 or more on the
 background in both themes, as a filled bar is. The stripes leave the background on both sides of the dashed
 line where it crosses the bar, as an outlined bar does (below,
 "Colours and the two themes"). The screen says what the hatch means in
-the description of the plot.
+the description of the plot, and gives the same words as the title of
+the hatched bar, `undecidedTitle`, which the browser shows as its
+tooltip when the pointer rests on the bar.
 
 Every filter of `docs/functionality.md` section 3 that has a histogram
 keeps what is at most its threshold, as popnei's filters do, so the kept

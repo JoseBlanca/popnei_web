@@ -311,16 +311,18 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(empty.data.threshold?.undecided).toBe(false);
   });
 
-  test("a range draws the bar at the line hatched, as undecided, and the description says why; one number draws none", () => {
+  test("a range draws the bar at the line hatched, as undecided, and the description and the tooltip of the bar say why; one number draws none", () => {
     const range = variantPlot("missingRate", PANEL.variants, false, 0.05);
     expect(range.data.threshold).toEqual({
       value: 0.05,
       legend: null,
       undecided: true,
+      undecidedTitle: UNDECIDED_DESCRIPTION,
     });
     expect(range.data.description).toContain(UNDECIDED_DESCRIPTION);
     const exact = variantPlot("obsHet", PANEL.variants, false, 0.3);
     expect(exact.data.threshold?.undecided).toBe(false);
+    expect(exact.data.threshold?.undecidedTitle).toBeUndefined();
     expect(exact.data.description).not.toContain(UNDECIDED_DESCRIPTION);
     // At the top of the axis, every variant kept, nothing undecided.
     const top = variantPlot("missingRate", PANEL.variants, false, null);
