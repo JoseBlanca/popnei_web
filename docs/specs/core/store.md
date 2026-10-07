@@ -60,7 +60,16 @@ which results fill the counts of the filters (`docs/specs/analyses/popDists.md`,
 `diversity.md` and `ldDecay.md`); approved by the owner on 30 September 2026. Revised on 7 October 2026 for the plots that fill in
 while the file is read (`docs/plans/live-stats.md`, phase 2): the state
 `running` holds the last result so far of its request, `soFar`, which
-`send` gives through `onSoFar`. The store is the one object of core that
+`send` gives through `onSoFar`. Revised on 7 October 2026 for the
+thresholds of popgen2.html as filters of the project
+(`docs/designs/stats-filters.md`, approved by the owner that day): a
+setting of the store, `filterNotices`, on for popgen2.html alone, under
+which every change of a filter gives a notice; a failure that is not
+popnei's forgotten by a change only when the change leaves its key
+behind, where it was forgotten at every change; the last result so far
+of a calculation the user stopped kept beside the state `ready`,
+`stopped`, under its key; and the job of the write taking the filters
+that apply to the file, `filtersApplied`. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -196,10 +205,10 @@ has the kind `removed` in the code.
 | locked | `projectNeeds` gives a reason; or the analysis reads the filters of individuals and `individualListNeeds` gives one; or it reads the filters of the variants and `variantFilterNeeds` gives one; or its `needs` does | the first reason, in that order |
 | done | the cache holds a result under its key | the result, its warnings, and the comparison with the check numbers of an opened project file |
 | running | a calculation of its key is in flight and is not being stopped, whether it waits in the queue of the worker or runs; or a Run of its key waits for the statistics of each individual (below) | its progress, the `Progress` of `docs/specs/worker/protocol.md`, popnei's four numbers of the pass as the worker gave them, passed on unchanged, `null` until the worker gives one; the request's id; whether it waits for the statistics, whose request's progress and id it then holds; and `soFar`, the last result so far the worker gave of its request, `null` until the first, at every new run, while it waits for the statistics, and throughout for an analysis whose calculation gives none (below) |
-| error | popnei refused the calculation of its key, or the calculation failed since the last change; or it reads the filters of individuals and the statistics it waits for were refused, or failed since the last change (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own; and, for that failure, whether a Run of the analysis under its key waited for those statistics when they failed, `waited`, so that the panel says it "was not run" after its Run was pressed and "cannot run" when it was not |
+| error | popnei refused the calculation of its key, or the calculation failed and no change has left its key behind since; or it reads the filters of individuals and the statistics it waits for were refused, or failed and no change has left their key behind since (below) | popnei's message, or the failure, and whether it is the failure of the statistics, `ofStatistics`, so that the panel does not tell it as its own; and, for that failure, whether a Run of the analysis under its key waited for those statistics when they failed, `waited`, so that the panel says it "was not run" after its Run was pressed and "cannot run" when it was not |
 | locked | it reads the filters of individuals, and the list they make keeps no individual, known from the statistics in the cache, or from the project alone when the lists to keep and to remove leave nobody; or its `keptNeeds` gives a reason for that list, the diversity when the list leaves no population, as the owner decided at stop B on 27 September 2026, and from stage 5 when it leaves fewer chromosomes than the draw of its rarefaction while some population of the request has the minimum of individuals; the PCoA when it keeps more than 9,381 individuals (`docs/specs/analyses/pca.md`, "Why it cannot run"); from stage 5, the distances between populations when the list leaves no population or fewer than two with the minimum of individuals, and the LD decay when it leaves no population (`popDists.md` and `ldDecay.md`) | `keptNoneReason` of `docs/specs/core/individualsKept.md`, or the reason of `keptNeeds` |
 | removed | the current notice lists it among the results removed | its key; it can run again |
-| ready | none of the above | its key |
+| ready | none of the above | its key, and, after the user stopped its calculation under that key, `stopped`, the last result so far the calculation gave, or `null` (below) |
 | empty | cannot happen | — |
 
 The key of an analysis is made when none of `projectNeeds`,
@@ -229,15 +238,38 @@ reads the filters of individuals can run, the project gives the
 statistics a key, and no path reaches that defect. The store's property
 of "How it is verified" draws such definitions.
 
-A result so far is kept in the request in flight alone: it is never
-cached, has no warnings and no check numbers, and goes with the request
-at its outcome, done or failed, and at its Stop, so that `done` holds the
-result and never a result so far. One that comes before `send` returns,
+A result so far is kept in the request in flight: it is never cached,
+has no warnings and no check numbers, and goes with the request at its
+outcome, done or failed, and at its stop, but for the last one of a
+calculation the user stops (below), so that `done` holds the result and
+never a result so far. One that comes before `send` returns,
 or after its request left, is passed over, as a progress is. Each one
 gives a new state of the analysis, compared by reference, so that the
 screen draws it; the other analyses keep theirs. Of the analyses of the
 two pages only the summary of the variants file gives one
 (`docs/specs/worker/runner.md`, "The result so far").
+
+A calculation the user stops leaves its last result so far on the
+screen, as the owner chose on 7 October 2026
+(`docs/designs/stats-filters.md`, "The plots after a Stop"): the plots
+of the summary of the variants file, read before the Stop, stay, each
+said to be of the variants read before it. When `cancelRun` stops the
+request in flight of the key the project gives, and that request holds
+a result so far, the store keeps that result under the key, one for
+each analysis, and the state `ready` of that key holds it, `stopped:
+{ soFar }`; it is `null` when the request had given none. It is never
+cached, has no warnings and no check numbers, and is shown only while
+the project gives the analysis that key: a change of a filter on
+`popgen2.html`, which leaves the key of the summary as it is, keeps it
+on the screen. The store forgets it at a `startRun` of the analysis,
+Start again; at a change of the load of the variants file, a new file,
+an undo or a redo to another load, or an opening; and when a failure is
+kept under its key, a request being stopped that ended `failed` rather
+than `cancelled`, since what was read before a refusal of the file may
+be what the refusal is about. A calculation stopped by the store
+itself, one a change left behind, keeps nothing, since its key is no
+longer the project's. A result so far is never `done`: an analysis whose
+result is in the cache shows that result, whatever was kept.
 
 `empty`, nothing to show and nothing the user can do, cannot happen: an
 analysis is locked until its variants file is read, and only a
@@ -447,8 +479,8 @@ definitions, each once. A calculation that was being stopped and ends
 any other.
 
 The notice goes when it is closed or replaced; a change that removes
-nothing, leaves nothing behind, stops nothing and discards no written
-file replaces it with none. An analysis is
+nothing, leaves nothing behind, stops nothing, discards no written file
+and, under `filterNotices`, changes no filter, replaces it with none. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis among the results removed that is done again, when
@@ -526,6 +558,26 @@ learns that the Undo of the notice brings the filters back and not the
 file; it is kept and cleared as `removed` is, and a notice with it alone
 is made, as one with a result removed.
 
+A change of a filter gives a notice of its own on `popgen2.html`,
+where none of the above would: its one calculation, the summary of the
+variants file, reads no filter, so no change of a threshold or of the
+box of the FILTER column removes, leaves behind or stops anything, and
+the user would have no notice to undo from, as the old page has. So
+`createStore` takes a setting, `filterNotices`, true for `popgen2.html`
+alone, as `docs/designs/stats-filters.md` decided on 7 October 2026:
+under it, a command, an undo or a redo after which any of the four
+lists of filters, `filters`, `filtersOff`, `individualFilters` and
+`individualFiltersOff`, is another object than before gives a notice,
+with its cause, "the MAF filter changed", and `filtersChanged` true,
+whatever else it holds. Such a notice stays until it is closed or
+replaced, as one with a result removed does, and the screen writes it
+"The MAF filter changed · Undo". The old page keeps it false: its
+number boxes make a change at every press of an arrow key, and a screen
+reader would read a notice at every press of a held key. On
+`popgen2.html` the page makes one change of a run of presses
+(`docs/specs/core/project.md`, "The filters of popgen2.html"), so a
+screen reader says the notice once per run.
+
 ### A calculation that failed
 
 When popnei refuses a calculation, the store keeps its message under the
@@ -541,19 +593,31 @@ wait again for popnei's refusal.
 
 Any other failure, a worker that crashed, one that could not start, a
 file of the site left from before a deploy, a message that did not
-validate, is kept under its key until the next change of the project, and shown as
-the state `error` with what happened, so that the user learns it and can
-run again; after the next change, the analysis is `ready`, since a second
-try can succeed. A cancel is not a failure: the analysis is `ready`.
+validate, is kept under its key until a change of the user leaves that
+key behind, and shown as the state `error` with what happened, so that
+the user learns it and can run again; after such a change, the analysis
+is `ready` for its new key, and an undo back to the old key shows it
+`ready` too, since a second try can succeed. A cancel is not a failure:
+the analysis is `ready`.
 
-The next change of the project, for a failure that is not popnei's, is
-a command that changed the project, an undo, a redo or an opening; a
-read recorded, a number of variants among them, is not, since it comes
-from the workers and would clear the failure of one analysis when the
-result of another arrives. `startRun` of an analysis in error after
-such a failure forgets the failure, so that a cancel of the new
-calculation leaves the analysis `ready`. Decided here, not by the
-owner, on 24 September 2026.
+A change of the user, for a failure that is not popnei's, is a command
+that changed the project, an undo or a redo; after it the store forgets
+each such failure whose key the new project gives neither to an
+analysis nor to the write. An opening forgets them all, as it starts a
+new history. A read recorded, a number of variants among them, forgets
+none, since it comes from the workers and would clear the failure of
+one analysis when the result of another arrives. `startRun` of an
+analysis in error after such a failure forgets the failure, so that a
+cancel of the new calculation leaves the analysis `ready`. Decided here,
+not by the owner, on 24 September 2026; revised on 7 October 2026, as
+`docs/designs/stats-filters.md` decided, where every change forgot every
+failure: on `popgen2.html` a change of a filter does not change the key
+of the summary of the variants file, and a click on the box of the
+FILTER column after a crash of the worker would have wiped the words of
+the crash, while Start again, `startRun`, tries again. On `popgen.html`
+the rule now keeps the failure of an analysis whose key a change did not
+touch, a crash of the statistics of each individual after a change of
+the MAF filter among them, with its Run offered as before (**Open 1**).
 
 A variants file that the browser could not read again, `reopenFailed`,
 is kept otherwise: under the load id of the file, as the mark of a load
@@ -786,7 +850,7 @@ with a state of its own, `write`:
 | noVariant | a write of its key ended done with no variant, `passStats.numVars` 0, and no change has given the write another key since | its key, and the size and the counts of the file, without the file, which nobody can save |
 | saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
 | running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
-| error | popnei refused the write of its key, or it failed since the last change; or the statistics it waits for were refused, or failed since the last change, while the project has a threshold on the individuals, gives their key, and the cache has none under it, as for an analysis that reads the filters of individuals | popnei's message, or the failure, and `ofStatistics` |
+| error | popnei refused the write of its key, or it failed and no change has left its key behind since; or the statistics it waits for were refused, or failed and no change has left their key behind since, while the project has a threshold on the individuals, gives their key, and the cache has none under it, as for an analysis that reads the filters of individuals | popnei's message, or the failure, and `ofStatistics` |
 | ready | none of the above | its key, and whether the last write of the key before was dropped because it ended after a change of its filters, until the next change of the project |
 
 Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
@@ -800,8 +864,10 @@ show its file, as those of the `.nei` file.
   for the statistics as a Run does when the list is not known, and
   sends, through `write.send` of `createStore`, the job of the write,
   `WriteJob` of `docs/specs/worker/protocol.md`: the load id of the
-  variants file, its filters of the variants as `jobFilters` of
-  `docs/specs/core/project.md` gives them, the list of the
+  variants file, its filters of the variants as
+  `jobFilters(filtersApplied(p))` of `docs/specs/core/project.md` gives
+  them, without the filter of the FILTER column for a `.nei` file, the
+  list of the
   individuals kept and the format, under the key of the write. It
   returns the handles it sent. In any other state it does nothing and
   returns `null`: after a refusal of popnei of the statistics, too, which
@@ -850,7 +916,7 @@ show its file, as those of the `.nei` file.
   behind, as it stops any calculation left behind.
 - **A failure** is kept as an analysis's is: a refusal of popnei under
   the key of the write for the session, `reopenFailed` under the load
-  id, any other until the next change of the project. A refusal for
+  id, any other until a change leaves its key behind. A refusal for
   memory is kept too, as the owner decided on 27 September 2026 at stop
   A of `docs/plans/variants-step.md`: no write that failed for its size
   was a refusal of popnei, and a second try failed the same way
@@ -955,7 +1021,8 @@ export type AnalysisStatus<R> =
       readonly ofStatistics: boolean     // the failure of the statistics it waited for
       readonly waited: boolean }         // with ofStatistics, its own Run waited for them; false without
   | { readonly kind: "removed"; readonly key: Key }
-  | { readonly kind: "ready"; readonly key: Key };
+  | { readonly kind: "ready"; readonly key: Key;
+      readonly stopped: { readonly soFar: R } | null };  // the last result so far of a calculation the user stopped under this key
 
 /** The writing of the filtered variants, in the states of its table above. */
 export type WriteStatus<F> =
@@ -972,7 +1039,7 @@ export type WriteStatus<F> =
 export type AnalysisError =
   | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
   | { readonly kind: "failed";
-      readonly error: Exclude<RunError, { readonly kind: "popnei" }> };  // until the next change; reopenFailed until the load changes
+      readonly error: Exclude<RunError, { readonly kind: "popnei" }> };  // until a change leaves its key behind; reopenFailed until the load changes
 
 /** A calculation in flight; `current` when the project still gives its key. */
 export interface RunView {
@@ -999,6 +1066,7 @@ export interface Notice {
   readonly writeLeftBehind: boolean;           // the writing of the file will be stopped unless undone
   readonly writeStopped: boolean;              // it was stopped at once by a change of the load
   readonly writeDiscarded: boolean;            // a file written and not saved was forgotten by the change
+  readonly filtersChanged: boolean;            // under filterNotices, the change changed a filter; the notice stays for it
 }
 ```
 
@@ -1038,6 +1106,8 @@ export function createStore<J, R, F = never>(config: {
   readonly appVersion: string;
   readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
   readonly maxUndoSteps: number;           // MAX_UNDO_STEPS
+  /** Whether every change of a filter gives a notice: true for popgen2.html alone. */
+  readonly filterNotices: boolean;
 }): Store<R, F>;
 
 /** What the store takes from the pass of a result. */
@@ -1140,8 +1210,10 @@ those in flight:
 - `failed` of kind `popnei`: the message is kept under the key for the
   session. `reopenFailed`: it is kept under the load id of the request,
   until the load changes, as "A calculation that failed" says. Any
-  other kind: it is kept until the next change of the project.
-- `cancelled`: nothing is kept.
+  other kind: it is kept until a change leaves its key behind. Either
+  forgets a result so far kept under the key.
+- `cancelled`: nothing is kept. The last result so far of a request
+  the user stopped was kept at its `cancelRun`, above.
 
 What the store does with the client it binds, and with the calls it is
 given, where the rest of this spec does not say; decided here, not by
@@ -1172,8 +1244,18 @@ the owner, on 24 September 2026:
 - **Run asked twice** for the same key: the second `startRun` returns
   `null`, since the analysis is `running`.
 - **A cancel by the user, a crash, a restart.** The outcome is
-  `cancelled`, and the analysis `ready`; or a failure of the worker, shown
-  until the next change.
+  `cancelled`, and the analysis `ready`, with the last result so far of
+  the request in `stopped` when it had one; or a failure of the worker,
+  shown until a change leaves its key behind.
+- **A Stop, then a change of a filter, on `popgen2.html`.** The key of
+  the summary does not change, so its plots of the variants read before
+  the Stop stay, `stopped` of its state `ready`, and the notice says the
+  filter changed. Start again forgets them and runs; a new file forgets
+  them, and an undo back to the old file does not bring them back.
+- **A crash of the worker, then a click on the box of the FILTER
+  column, on `popgen2.html`.** The failure of the summary stays, since
+  its key did not change, and the notice says the filter changed; Start
+  again tries again.
 - **A progress after the end of its request**, a message the worker had
   sent before the end reached the page: the store no longer has the
   request, and passes it over.
@@ -1194,7 +1276,7 @@ the owner, on 24 September 2026:
   from the worker that is not a key, a `warnings`, `checkNumbers`,
   `countsOf` or `statistics.of` that throws, also keeps the failure `{ kind: "failed",
   error: { kind: "defect", message } }` under the request's key, shown
-  until the next change as other failures are, so that a calculation of
+  until a change leaves its key behind, as other failures are, so that a calculation of
   minutes that ends in a defect does not end in `ready` with nothing
   said; nothing of the result is kept.
 - **An analysis's `run` that throws**: a defect of that analysis. The
@@ -1338,6 +1420,22 @@ whose file is a text.
   `startRun` of the analysis and `cancelRun` of it: the notice no longer
   lists it in `stopped`, and a notice with nothing else in it is `null`. No test waits for a time: the
   store has no clock.
+- **The filters of popgen2.html**, from 7 October 2026, with a fake
+  analysis that reads no filter and gives results so far, as the summary
+  of the variants file does, in a store made with `filterNotices` true:
+  a `setThreshold` of the MAF gives a notice with that cause,
+  `filtersChanged` true and every list empty, and `send` was not called;
+  an undo gives one with the cause of the undo; a command that changes
+  no filter, and every command in a store made with `filterNotices`
+  false, give the notices they give today. The analysis running with a
+  result so far, `cancelRun`: its state is `ready` with that result in
+  `stopped`, the same object; a command that changes a filter keeps it;
+  `startRun` forgets it, and so do a new load and `open`; a request being
+  stopped that ends `failed` forgets it, and the state is `error`. A
+  failure of kind `crashed` of the analysis, then a command that changes
+  a filter: it is still `error`; then a command that changes its key: it
+  is `ready`, and after an undo `ready` too; `startRun` from `error`
+  sends.
 - **A late result**: with the second running, a command, then `runEnded`
   of the old key: the analysis is `ready`, the notice does not list it
   among the results removed and its `leftBehind` is empty, the cache holds
@@ -1523,6 +1621,13 @@ whose file is a text.
   its project and no other filter
   (`docs/architecture.md`, section 2, "What would show the choice
   wrong").
+  From 7 October 2026, the sequences draw the filter `passed` and
+  `.nei` and VCF loads, and: no request and no write carries `passed`
+  for a `.nei` file; a failure that is not popnei's is in a state
+  `error` only under a key no change has left behind since it came; and
+  a result so far is in `stopped` only under the key the project gives,
+  after a `cancelRun` of the analysis and before its next `startRun`,
+  change of the load or opening.
 
 The tests in the browser, of the walking skeleton, check the same through
 the screens, since core reaches them through the store
@@ -1542,6 +1647,18 @@ are the architecture's, approved by the owner on 26 September 2026, or
 decided here and said where they are. The store uses the bound of the
 cache (`docs/specs/core/cache.md`, **Open 1**) and the bound of the
 history (`docs/specs/core/history.md`, **Open 1**).
+
+1. **A failure kept after a change that does not touch its key, on
+   `popgen.html` too.** The design asks it for `popgen2.html`, where a
+   change of a filter gives the summary no new key, and its section of
+   the architecture states it for the store, so this spec makes it the
+   rule of both pages. On `popgen.html` the user then sees the words of
+   a crash of the statistics of each individual, or of a diversity, stay
+   after a change of a setting that analysis does not read, where until
+   now they gave way to Run; Run stays offered beside them. The option
+   of the other answer is the rule under `filterNotices` alone, which
+   keeps the old page as it is at the cost of a store with two rules of
+   failure. Recommended: one rule for both pages. Meanwhile, one rule.
 
 ## Not in this spec
 
