@@ -108,14 +108,16 @@ between populations and the LD decay lock on them too
 (`docs/specs/analyses/popDists.md` and `ldDecay.md`). Approved
 by the owner on 30 September 2026. Revised on 7 October 2026 for the
 thresholds of popgen2.html as filters of the project,
-`docs/designs/stats-filters.md`, approved by the owner that day: the
-filter of the FILTER column, `{ kind: "passed" }`, first in the fixed
-order of the filters of the variants; `filtersApplied`, the filters
-that apply to the project's file, without that filter for a `.nei`
-file, which everything that reads the filters reads in place of
-`filters`; `setThreshold`, the one command of a threshold of
-popgen2.html, which takes an empty box, or 1, as off; and the first
-project of popgen2.html (below, "The filters of popgen2.html").
+`docs/designs/stats-filters.md`, approved by the owner that day: a
+filter of the variants of a new kind, which keeps the variants of a VCF
+that passed their FILTER column, `{ kind: "passed" }`, first in the
+fixed order of the filters of the variants; a function that gives the
+filters on that apply to the project's file, without that filter for a
+`.nei` file, `filtersApplied`, which everything that reads the filters
+applied reads in place of `filters`; one command for the thresholds of
+popgen2.html, `setThreshold`, which takes an empty box, or the value 1,
+as off; and the first project of popgen2.html (below, "The filters of
+popgen2.html").
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -283,8 +285,26 @@ On the new page of population genetics, `popgen2.html`, the thresholds
 the user drags or types on the histograms of the open file, and the
 check box "Leave out the variants that failed their FILTER", are filters
 of the project, each change one step of Undo, as
-`docs/designs/stats-filters.md` decided on 7 October 2026. The old page,
-`popgen.html`, does not change. Four things of this module serve them.
+`docs/designs/stats-filters.md` decided on 7 October 2026. Four things
+of this module serve them, below. A filter turned off is kept, with its
+values, in `filtersOff` for the variants and `individualFiltersOff` for
+the individuals ("The filters turned off", above).
+
+**What changes for `popgen.html`.** The old page offers none of this,
+and three things change for it all the same. It refuses a project file
+that holds the filter of the FILTER column, on or off, with words that
+say the file was made by the new page (`docs/specs/core/projectFile.md`,
+"Opening"). Its store is made with the store's setting of a notice for
+every change of a filter turned off, `filterNotices: false`, so its
+notices are as before (`docs/specs/core/store.md`, "The notice, and the
+calculations it stops"). And a failure of a calculation that is not
+popnei's, a crash of the worker, stays on its screen after a change that
+leaves the key of that calculation as it was, where every change cleared
+it until 7 October 2026 (`docs/specs/core/store.md`, "A calculation
+that failed"). Its keys, jobs, counts and scripts read `filtersApplied`
+in place of `filters`, which gives `p.filters` itself for every project
+it can hold, since none holds the filter of the FILTER column; so they
+do not change.
 
 **The filter of the FILTER column**, `{ kind: "passed" }`, keeps the
 variants of a VCF whose FILTER is `PASS` or a dot, popnei's
@@ -292,13 +312,24 @@ variants of a VCF whose FILTER is `PASS` or a dot, popnei's
 is a filter of the variants as the others are: on in `filters`, first in
 the fixed order, and kept in `filtersOff` while off. A click on the box
 is `setVariantFilter(p, { kind: "passed" })` or
-`turnOffVariantFilter(p, "passed")`, one step of Undo each. Only
+`turnOffVariantFilter(p, "passed")`, one step of Undo each. In
+`src/core/project.ts` it is the first entry of `VARIANT_FILTER_KINDS`,
+the table of the kinds of filter of the variants from which
+`VARIANT_FILTER_ORDER` is made (`keysOf(VARIANT_FILTER_KINDS)`), with
+no fields and the words "the FILTER column" in `FILTER_KIND_WORDS`. So
+every test that draws a kind from `VARIANT_FILTER_ORDER` draws `{ kind:
+"passed" }` too, the property of `src/core/keys.test.ts` that a filter
+turned off is in no key among them (`docs/specs/core/keys.md`). Only
 `popgen2.html` offers it, and `popgen.html` refuses a project file that
 holds it, on or off (`docs/specs/core/projectFile.md`, "Opening").
 
 **The filters that apply to the file**, `filtersApplied(p)`: the
 filters on, without `passed` when the project's variants file is a
-`.nei` file, and `p.filters` itself, the same array, otherwise. A new
+`.nei` file, `p.variants.format` `"nei"`, and `p.filters` itself, the
+same array, otherwise. It is the one place that leaves `passed` out by
+the format: `jobFilters`, which turns the filters of the project into
+those of a job, takes the filters it is given and filters nothing by
+format, so a caller gives it `filtersApplied(p)`, never `p.filters`. A new
 file keeps the filters of the project (`loadVariants`, below), so a user
 who had the box on for a VCF and opens a `.nei` file still has the
 filter in the project; popnei refuses `filterPassed` over a `.nei`
@@ -320,9 +351,10 @@ heterozygosity of the variants, and the missing rate and the observed
 heterozygosity of the individuals; the expected heterozygosity has
 none, since popnei has no filter on it. Each keeps the variants or the
 individuals at most its number. `setThreshold(p, threshold, value)` is
-the one command the page sends for any of them:
+the one command the page sends for any of them, whether the number was
+typed, dragged or moved with the keys:
 
-- a number below 1 sets the filter on at that number, as
+- a number from 0 to below 1 sets the filter on at that number, as
   `setVariantFilter` or `setIndividualFilter` would;
 - `null`, the box emptied, and 1, the value at which a maximum keeps
   everything, turn the filter off, as `turnOffVariantFilter` or
@@ -330,8 +362,10 @@ the one command the page sends for any of them:
   `individualFiltersOff` with the value it had while on, not with 1,
   and a threshold that is off already gives `p` itself.
 
-1 is taken as off, and not as a filter at 1, as the owner chose on 7
-October 2026, because a filter at any value is not the same as no
+1 is taken as off, and not as a filter at 1, however it is reached:
+typed, a number the box rounds to 1, a line dragged to the top of an
+axis that ends at 1, or the End key on such a line. The owner chose it
+on 7 October 2026, because a filter at any value is not the same as no
 filter: popnei's filters of the MAF and of the observed heterozygosity
 drop a variant with no called genotype at every threshold, and
 `individualsKept` drops an individual whose heterozygosity has no
@@ -339,15 +373,21 @@ value. Under popnei 0.2.1, on a VCF of three variants of which one has
 no called genotype, a MAF filter at 1 keeps two variants, and no filter
 keeps three (the design, "When a threshold changes the project"). Every
 threshold of the page is a maximum; a minimum, when one comes, is off at
-0. A line dragged to the top of its axis gives the number at the top,
-the end of the file's values rounded out, 0.1 for the missing rate of
-`panel.nei`, and so a filter: the axis ends where the values end, not
-at 1. The option not taken was a check box beside each threshold to
-turn it on and off.
+0. A line dragged to the top of an axis that ends below 1 gives the
+number at the top, the end of the file's values rounded out, 0.1 for the
+missing rate of `panel.nei`, and so a filter at that number: the axis
+ends where the values end. The design had a line dragged to 1 as a
+filter at 1, so that 1 in the box would have meant a filter in one case
+and no filter in the other; the owner decided on 7 October 2026 that 1
+is off however it is reached. The option not taken was a check box beside each threshold to turn it
+on and off.
 
 `thresholdValue(p, threshold)` gives the number of the threshold while
 its filter is on, and `null` while it is off, kept in a list of the
-filters off or never turned on. The line and the box show it, so that
+filters off or never turned on. The page reads it before and after a
+command to word its notice: "changed" from a number to another, "was
+turned on" from `null` to a number, "was turned off" from a number to
+`null` (`docs/specs/steps/popgen2-filters.md`). The line and the box show it, so that
 Undo moves them back. How the page makes one command of a run of
 presses of the arrow keys, and of a drag, is the page's
 (`docs/designs/stats-filters.md`, "When a threshold changes the
@@ -1298,7 +1338,7 @@ The constants and the types the other modules and the tests use:
 ```ts
 /** The order the filters of the variants are kept in; "regions" joins
     first with popnei's filter of the regions of a BED file. */
-export const VARIANT_FILTER_ORDER: readonly VariantFilterKind[]; // missing_data, obs_het, maf, ld
+export const VARIANT_FILTER_ORDER: readonly VariantFilterKind[]; // passed, missing_data, obs_het, maf, ld
 /** The order the filters of the individuals are kept in. */
 export const INDIVIDUAL_FILTER_ORDER: readonly IndividualFilterKind[]; // keep, remove, missing_data, obs_het
 /** The largest ploidy of a VCF, which popnei's openVcf accepts. */
@@ -1525,7 +1565,9 @@ export function variantFilterNeeds(p: Project): string | null;
     `filters` itself, the same array, once every filter has what popnei
     needs. A defect when the LD filter has no distance, which the lock of
     variantFilterNeeds keeps from every job; each analysis and the
-    writing build their job's filters with it. */
+    writing build their job's filters with it, from filtersApplied(p).
+    It leaves out no filter by the format of the file: that is
+    filtersApplied's. */
 export function jobFilters(
   filters: readonly ProjectVariantFilter[],
 ): readonly VariantFilter[];
@@ -1537,9 +1579,10 @@ export function jobFilters(
     the keys, the jobs, through jobFilters(filtersApplied(p)), the
     counts of each filter, the scripts and the words. */
 export function filtersApplied(p: Project): readonly ProjectVariantFilter[];
-/** The same for a file of `format`, null for no file: for the
-    fingerprint of an opened project file, which knows the file only by
-    its read options (docs/specs/core/keys.md). */
+/** The same for a file of `format`, or for no file, null, which keeps
+    every filter: for the fingerprint of an opened project file, which
+    knows the file only by its read options and passes "nei" for read
+    options null, never null (docs/specs/core/keys.md). */
 export function filtersAppliedTo(
   filters: readonly ProjectVariantFilter[],
   format: "vcf" | "nei" | null,
@@ -1921,7 +1964,8 @@ or `null`.
     disequilibrium, and the second one is out of that order", the FILTER
     column first since 7 October 2026; the filter of the FILTER column is
     named "the FILTER column" in every text, "it has two filters of the
-    variants by the FILTER column, …". A project file of version 1
+    variants by the FILTER column, …", and its words in
+    `FILTER_KIND_WORDS` are "the FILTER column". A project file of version 1
     whose filters of the variants are in another order, which the
     application of stage 2 could not write, since it had the missing data
     filter alone, is refused so (`docs/architecture.md`, section 2);
@@ -2054,9 +2098,11 @@ or `null`.
   kept at 0.3 in its list of the filters off; `thresholdValue` gives
   `null`; Undo gives back the filter on at 0.3. Typed 1 again, or the
   box emptied, while it is off: `p` itself, no step of Undo.
-- **A threshold dragged to the top of its axis**: a filter at the number
-  there, 0.1 for the missing rate of the variants of `panel.nei`, and
-  not off, since the axis ends where the file's values end.
+- **A threshold dragged to the top of its axis**: when the axis ends
+  below 1, a filter at the number there, 0.1 for the missing rate of
+  the variants of `panel.nei`, since the axis ends where the file's
+  values end; when it ends at 1, as the MAF's does on most files, the
+  page sends 1, and the filter is off, as for 1 typed.
 
 ## How it runs
 
