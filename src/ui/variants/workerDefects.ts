@@ -2,26 +2,30 @@
  * The failures of the calculation worker on popgen2.html that the page
  * shows only as a line of the box, given to the error bar, so that they
  * can be copied and reported: a defect of our own code that the opening
- * of the file or the pass of its count and statistics met in the worker,
- * and the worker that stopped on its own, a crash and not a refusal of
- * popnei, during the opening or that pass, with the words it stopped with
+ * of the file, the pass of its count and statistics or the pass of the
+ * count of its FILTER failures met in the worker, and the worker that
+ * stopped on its own, a crash and not a refusal of popnei, during the
+ * opening or one of those passes, with the words it stopped with
  * (the owner, 6 October 2026). Each failure is reported once.
  */
 import type { AnalysisStatus, Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import type { DefectOrigin, Defects } from "../defects.ts";
-import { summaryStatus } from "./words.ts";
+import { failuresStatus, summaryStatus } from "./words.ts";
 
 /** The calculations of the page whose failures are reported, each with
     the status the store gives it and the origin of a stop of the worker
     during it: the summary of the variants file, the one pass of the count
-    and the statistics. */
+    and the statistics, and the count of the FILTER failures after it. */
 const WATCHED: readonly {
   readonly statusOf: (
     s: ReturnType<Store<JobResult, Blob>["getState"]>,
   ) => AnalysisStatus<JobResult>;
   readonly stopped: DefectOrigin;
-}[] = [{ statusOf: summaryStatus, stopped: "countStopped" }];
+}[] = [
+  { statusOf: summaryStatus, stopped: "countStopped" },
+  { statusOf: failuresStatus, stopped: "failuresStopped" },
+];
 
 /** Gives `defects` each defect of our own code that an opening or the
     pass of the count met in the worker, and each stop of the worker

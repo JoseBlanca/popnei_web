@@ -8,7 +8,12 @@ import { summaryResult } from "../../core/testSupport.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { STATS_PROGRESS_KIND, statsAnnouncementsOf } from "./statsWords.ts";
-import { announcementsOf, summaryStatus } from "./words.ts";
+import {
+  announcementsOf,
+  failuresCountedText,
+  failuresStatus,
+  summaryStatus,
+} from "./words.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
 
@@ -43,6 +48,25 @@ const VCF: VariantLoad = {
   size: 87_000,
   format: "vcf",
   readOptions: { ploidy: null, onlyPassed: false },
+};
+
+/** The same file as a .nei file, whose FILTER failures are not counted. */
+const NEI: VariantLoad = {
+  fileId: FILE_ID,
+  name: "panel.nei",
+  size: 261_490,
+  format: "nei",
+  readOptions: null,
+};
+
+/** The count of the FILTER failures of low_qual.vcf.gz, popnei's under
+    node: 1,200 variants given to `filterPassed`, 900 kept. */
+const LOW_QUAL: JobResult = {
+  analysis: "filterFailures",
+  passStats: {
+    numVars: 900,
+    filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
+  },
 };
 
 /** What the region says of `change` applied to the store. */
@@ -200,9 +224,15 @@ describe("what the status region of the new page says", () => {
     ]);
   });
 
-  test("a count that ends with the focus on Stop is not said, since the focus moves onto its lines", async () => {
+  test("a count of a .nei file that ends with the focus on Stop is not said, since the chain ends and the focus moves onto its lines", async () => {
     const { store, sent } = setUp();
-    openRead(store);
+    store.apply("a new variants file was loaded", (p) => loadVariants(p, NEI));
+    store.variantsRead(FILE_ID, {
+      kind: "read",
+      individuals: ["s1", "s2"],
+      ploidy: 2,
+      numVars: null,
+    });
     void startAnalysis(store, "variantsSummary");
     const running = summaryStatus(store.getState());
     if (running.kind !== "running") throw new Error("not running");
@@ -216,6 +246,81 @@ describe("what the status region of the new page says", () => {
     expect(
       announcementsOf(before, store.getState(), { focusOnCountButton: true }),
     ).toEqual([]);
+  });
+
+  test("a count of a VCF that ends with the focus on Stop is said, since Stop stays for the count of the FILTER failures, whose end is not said", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const running = summaryStatus(store.getState());
+    if (running.kind !== "running") throw new Error("not running");
+    const before = store.getState();
+    sent[0]?.({
+      kind: "done",
+      key: running.key,
+      result: summaryResult(["chr1"], [1200]),
+    });
+    await settled();
+    expect(
+      announcementsOf(before, store.getState(), { focusOnCountButton: true }),
+    ).toEqual(["panel.vcf.gz: 1,200 variants on 1 chromosome."]);
+
+    void startAnalysis(store, "filterFailures");
+    const counting = failuresStatus(store.getState());
+    if (counting.kind !== "running") throw new Error("not running");
+    const beforeEnd = store.getState();
+    sent[1]?.({ kind: "done", key: counting.key, result: LOW_QUAL });
+    await settled();
+    expect(
+      announcementsOf(beforeEnd, store.getState(), {
+        focusOnCountButton: true,
+      }),
+    ).toEqual([]);
+  });
+
+  test("the count of the FILTER failures done is said with its number, and its failure with its words", async () => {
+    const { store, sent } = setUp();
+    openRead(store);
+    void startAnalysis(store, "variantsSummary");
+    const running = summaryStatus(store.getState());
+    if (running.kind !== "running") throw new Error("not running");
+    sent[0]?.({
+      kind: "done",
+      key: running.key,
+      result: summaryResult(["chr1"], [1200]),
+    });
+    await settled();
+    void startAnalysis(store, "filterFailures");
+    const counting = failuresStatus(store.getState());
+    if (counting.kind !== "running") throw new Error("not running");
+    const before = store.getState();
+    sent[1]?.({ kind: "done", key: counting.key, result: LOW_QUAL });
+    await settled();
+    expect(announcementsOf(before, store.getState())).toEqual([
+      "panel.vcf.gz: 300 variants failed their FILTER.",
+    ]);
+
+    const failing = setUp();
+    openRead(failing.store);
+    void startAnalysis(failing.store, "variantsSummary");
+    const summary = summaryStatus(failing.store.getState());
+    if (summary.kind !== "running") throw new Error("not running");
+    failing.sent[0]?.({
+      kind: "done",
+      key: summary.key,
+      result: summaryResult(["chr1"], [1200]),
+    });
+    await settled();
+    void startAnalysis(failing.store, "filterFailures");
+    const beforeFailure = failing.store.getState();
+    failing.sent[1]?.({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    expect(announcementsOf(beforeFailure, failing.store.getState())).toEqual([
+      "The variants of panel.vcf.gz that failed their FILTER could not be counted.",
+    ]);
   });
 
   test("a count refused with the focus on Stop is not said, since the focus moves onto its words", async () => {
@@ -351,5 +456,19 @@ describe("what the status region of the new page says of the statistics of the o
         });
       }),
     ).toEqual(["The statistics of panel.vcf.gz are calculated."]);
+  });
+});
+
+describe("live-stats 3 the words of the count of the FILTER failures", () => {
+  test("one variant failed its FILTER, none or many failed theirs", () => {
+    expect(failuresCountedText("a.vcf", 1)).toBe(
+      "a.vcf: 1 variant failed its FILTER.",
+    );
+    expect(failuresCountedText("a.vcf", 0)).toBe(
+      "a.vcf: 0 variants failed their FILTER.",
+    );
+    expect(failuresCountedText("a.vcf", 12_345)).toBe(
+      "a.vcf: 12,345 variants failed their FILTER.",
+    );
   });
 });

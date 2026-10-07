@@ -35,8 +35,9 @@ export interface DefectsState {
     Save the project of the error bar, which caught it; a defect thrown
     in the calculation worker; or that worker stopped on its own, on
     popgen2.html, with the words the browser gave, during the opening of
-    the variants file, or during the pass that counts its variants and
-    calculates its statistics. */
+    the variants file, during the pass that counts its variants and
+    calculates its statistics, or during the pass that counts the variants
+    of a VCF that failed their FILTER. */
 export type DefectOrigin =
   | "event"
   | "rejection"
@@ -45,7 +46,8 @@ export type DefectOrigin =
   | "barSave"
   | "worker"
   | "openingStopped"
-  | "countStopped";
+  | "countStopped"
+  | "failuresStopped";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -88,6 +90,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
     "the calculation worker stopped during the opening of a file, with these words",
   countStopped:
     "the calculation worker stopped during the count of the variants and the statistics of the file, with these words",
+  failuresStopped:
+    "the calculation worker stopped during the count of the variants that failed their FILTER, with these words",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });

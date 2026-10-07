@@ -75,8 +75,9 @@ async function settled(): Promise<void> {
 
 /** Draws the box in <StrictMode>, as the development server draws the
     page, with the open button before it, and `panel.nei` opened and
-    read; no pass is started until the test syncs. */
-async function drawPage(): Promise<Page> {
+    read, or `low_qual.vcf.gz` as the page opens a VCF when `format` is
+    "vcf"; no pass is started until the test syncs. */
+async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
@@ -132,13 +133,24 @@ async function drawPage(): Promise<Page> {
   await act(async () => {
     root.render(tree);
     store.apply("a new variants file was loaded", (p) =>
-      loadVariants(p, {
-        fileId: FILE_ID,
-        name: "panel.nei",
-        size: 261_490,
-        format: "nei",
-        readOptions: null,
-      }),
+      loadVariants(
+        p,
+        format === "nei"
+          ? {
+              fileId: FILE_ID,
+              name: "panel.nei",
+              size: 261_490,
+              format: "nei",
+              readOptions: null,
+            }
+          : {
+              fileId: FILE_ID,
+              name: "low_qual.vcf.gz",
+              size: 30_000,
+              format: "vcf",
+              readOptions: { ploidy: null, onlyPassed: false },
+            },
+      ),
     );
     store.variantsRead(FILE_ID, {
       kind: "read",
@@ -240,5 +252,171 @@ describe("the one button of the box of the variants file", () => {
     expect(lines()).not.toContain("counting");
     // The chromosomes with a variant among those read.
     expect(lines()).toContain("Chromosomes: 2 so far");
+  });
+});
+
+/** The count of the FILTER failures of low_qual.vcf.gz, popnei's under
+    node: 1,200 variants given to `filterPassed`, 900 kept. */
+const LOW_QUAL: JobResult = {
+  analysis: "filterFailures",
+  passStats: {
+    numVars: 900,
+    filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
+  },
+};
+
+/** The lines of the box, each the words of one paragraph. */
+function linesOf(): readonly string[] {
+  return [...container.querySelectorAll("section p")].map(
+    (element) => element.textContent,
+  );
+}
+
+/** The name of the bar of the box, or `null` when there is none. */
+function barName(): string | null {
+  return (
+    container
+      .querySelector('section [role="progressbar"]')
+      ?.getAttribute("aria-label") ?? null
+  );
+}
+
+/** Ends the request `at` with its result, settles, and syncs the page. */
+async function endWith(page: Page, at: number, result: JobResult) {
+  const request = page.requests[at];
+  if (request === undefined) throw new Error(`no request ${String(at)}`);
+  request.end({ kind: "done", key: request.key, result });
+  await settled();
+  act(() => {
+    page.autoRuns.sync();
+  });
+}
+
+describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
+  test("it says counting through both passes, with the bar of each, and then the failures; the focus on Stop moves onto the lines at the end of the chain alone", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toContain("Failed FILTER: counting…");
+    expect(barName()).toBe("Counting the variants");
+    const stop = buttonNamed("Stop");
+    act(() => {
+      stop.focus();
+    });
+
+    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "filterFailures",
+    ]);
+    expect(linesOf()).toContain("Variants: 1,200");
+    expect(linesOf()).toContain("Failed FILTER: counting…");
+    expect(barName()).toBe("Counting the variants that failed their FILTER");
+    expect(buttonsOf()).toEqual(["Stop"]);
+    expect(document.activeElement?.textContent).toBe("Stop");
+
+    await endWith(page, 1, LOW_QUAL);
+    expect(linesOf()).toEqual([
+      "low_qual.vcf.gz · 30 KB",
+      "Individuals: 2",
+      "Variants: 1,200",
+      "Failed FILTER: 300",
+      "Chromosomes: 1",
+      "Ploidy: 2",
+    ]);
+    expect(buttonsOf()).toEqual([]);
+    expect(barName()).toBeNull();
+    expect(document.activeElement?.textContent).toContain("Failed FILTER: 300");
+  });
+
+  test("a Stop while the failures are counted says not counted beside Start again, which counts them alone", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    expect(page.requests[1]?.cancelled).toBe(true);
+    page.requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toContain("Variants: 1,200");
+    expect(linesOf()).toContain("Failed FILTER: not counted");
+    expect(buttonsOf()).toEqual(["Start again"]);
+
+    await act(async () => {
+      buttonNamed("Start again").click();
+      await Promise.resolve();
+    });
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "filterFailures",
+      "filterFailures",
+    ]);
+    expect(linesOf()).toContain("Failed FILTER: counting…");
+    await endWith(page, 2, LOW_QUAL);
+    expect(linesOf()).toContain("Failed FILTER: 300");
+    expect(buttonsOf()).toEqual([]);
+  });
+
+  test("a Stop during the summary says not counted on the three lines", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    page.requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toEqual(
+      expect.arrayContaining([
+        "Variants: not counted",
+        "Failed FILTER: not counted",
+        "Chromosomes: not counted",
+      ]),
+    );
+    expect(buttonsOf()).toEqual(["Start again"]);
+  });
+
+  test("a crash of the worker while the failures are counted says so, with Start again", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+    page.requests[1]?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    expect(linesOf()).toContain("Failed FILTER: not counted");
+    expect(linesOf()).toContain(
+      "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
+    );
+    expect(buttonsOf()).toEqual(["Start again"]);
+  });
+
+  test("a .nei file has no line of the FILTER failures, and its chain ends with the summary", async () => {
+    const page = await drawPage("nei");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+    expect(page.requests).toHaveLength(1);
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+    expect(buttonsOf()).toEqual([]);
   });
 });

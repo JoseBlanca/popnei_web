@@ -32,12 +32,21 @@ import type {
   AnalysisStatus,
   AppState,
 } from "../../core/store.ts";
+import {
+  filterFailures,
+  numFilterFailures,
+} from "../../core/analyses/filterFailures.ts";
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
+
+/** The id of the count of the variants of a VCF that failed their
+    FILTER. */
+export const FAILURES_ID = filterFailures.id;
 
 /** The button that opens the file picker, before a file is open. */
 export const OPEN_LABEL = "Open variants file…";
@@ -137,6 +146,20 @@ export function chromosomesLine(numChroms: number): string {
     failure of their count. */
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
+
+/** The line of the variants of a VCF that failed their FILTER, which a
+    `.nei` file does not have, once counted: "Failed FILTER: 300", 0 when
+    every variant passed. */
+export function failuresLine(numFailures: number): string {
+  return `Failed FILTER: ${grouped(numFailures)}`;
+}
+
+/** The same line while the file is read, while the variants are counted
+    and the failures after them, and after a Stop or a failure of their
+    count. */
+export const FAILURES_READING = "Failed FILTER: reading…";
+export const FAILURES_COUNTING = "Failed FILTER: counting…";
+export const FAILURES_NOT_COUNTED = "Failed FILTER: not counted";
 
 /** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
     this page is the file's: a `.nei` file holds it, and popnei reads that
@@ -282,9 +305,22 @@ export const START_AGAIN_LABEL = "Start again";
 export const STOPPED_TEXT =
   "The count of the variants and the statistics were stopped. Start again calculates them from the start.";
 
+/** What the status region says of a Stop of the count of the FILTER
+    failures, the variants and the statistics done. */
+export const FAILURES_STOPPED_TEXT =
+  "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.";
+
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {
   return `${counted(numVars, "variant")} on ${counted(numChroms, "chromosome")}.`;
+}
+
+/** The words of the count of the FILTER failures of the file `name`
+    done, for the status region: "low_qual.vcf.gz: 300 variants failed
+    their FILTER." */
+export function failuresCountedText(name: string, numFailures: number): string {
+  const verb = numFailures === 1 ? "failed its FILTER" : "failed their FILTER";
+  return `${escaped(name)}: ${counted(numFailures, "variant")} ${verb}.`;
 }
 
 /** popnei's refusal of a variant at the position 0. */
@@ -380,6 +416,29 @@ export function failedText(error: AnalysisError, p: Project): string {
   }
 }
 
+/**
+ * The words of a count of the FILTER failures that failed, after the
+ * variants were counted: popnei's refusal, with its message; a stop of the
+ * worker or a defect of ours, whose words the error bar gives; any other
+ * failure in the words of `failedText`, which say what to do.
+ */
+export function failuresFailedText(error: AnalysisError, p: Project): string {
+  const fileName = escaped(p.variants?.name ?? "the file");
+  if (error.kind === "refused") {
+    return `popnei could not count the variants of ${fileName} that failed their FILTER${saying(withoutBackquotes(error.message))}.`;
+  }
+  switch (error.error.kind) {
+    case "workerFailed":
+    case "defect":
+      return `The variants of ${fileName} that failed their FILTER could not be counted.`;
+    case "reopenFailed":
+    case "couldNotStart":
+    case "protocolMismatch":
+    case "files":
+      return failedText(error, p);
+  }
+}
+
 /** Whether Start again can mend the failure `error`: a worker that
     stopped, and none of these: popnei's refusal, which the same file
     gives again; a file the browser can no longer read, which a new
@@ -403,6 +462,60 @@ export function summaryStatus(
   return view.status;
 }
 
+/** The status of the count of the FILTER failures in `s`; a defect when
+    the store has none. */
+export function failuresStatus(
+  s: AppState<JobResult, unknown>,
+): AnalysisStatus<JobResult> {
+  const view = s.analyses.find((a) => a.id === FAILURES_ID);
+  if (view === undefined) {
+    throw new Error(
+      "popnei_web defect: the store has no count of the FILTER failures.",
+    );
+  }
+  return view.status;
+}
+
+/** The statuses of the chain of the page, `POPGEN2_CHAIN`, in its order,
+    among the `analyses` of the store; a defect when one is not there. A
+    new list at every call, so not a selector of `useAppState`. */
+export function chainStatuses(
+  analyses: AppState<JobResult, unknown>["analyses"],
+): readonly AnalysisStatus<JobResult>[] {
+  return POPGEN2_CHAIN.map((id) => {
+    const view = analyses.find((a) => a.id === id);
+    if (view === undefined) {
+      throw new Error(
+        `popnei_web defect: the store has no analysis ${id} of the chain.`,
+      );
+    }
+    return view.status;
+  });
+}
+
+/** Whether the box shows Stop or Start again for the chain whose statuses
+    are `statuses`, as `buttonOf` of VariantsSummary.tsx decides from the
+    first not done: while one runs, the first not done is ready, or it
+    failed in a way Start again mends; not once every one is done, nor when
+    the first not done is locked or failed for good. */
+export function hasChainButton(
+  statuses: readonly AnalysisStatus<JobResult>[],
+): boolean {
+  if (statuses.some((status) => status.kind === "running")) return true;
+  const first = statuses.find((status) => status.kind !== "done");
+  if (first === undefined) return false;
+  switch (first.kind) {
+    case "ready":
+    case "removed":
+      return true;
+    case "error":
+      return startAgainMends(first.error);
+    case "locked":
+    case "running":
+      return false;
+  }
+}
+
 /** What the status region says as a read starts: "Reading
     panel.vcf.gz." The page reads every file in one way, so it names no
     option. */
@@ -412,6 +525,10 @@ export function readingText(variants: VariantSource): string {
 
 /** The name of the bar of the count. */
 export const COUNT_BAR_LABEL = "Counting the variants";
+
+/** The name of the bar of the count of the FILTER failures. */
+export const FAILURES_BAR_LABEL =
+  "Counting the variants that failed their FILTER";
 
 /** What the page knows of the focus as the store changes. */
 export interface FocusNow {
@@ -425,9 +542,11 @@ export interface FocusNow {
 /**
  * What the status region says of a change of the store from `before` to
  * `after`, which the user may not be looking at: the file read, with its
- * individuals, or why it was not; and the count done, with its numbers,
- * or why it failed. The end of a count that moves the focus onto its own
- * words, `focus` says, is not said again.
+ * individuals, or why it was not; the count done, with its numbers, or
+ * why it failed; and the count of the FILTER failures done, or why it
+ * failed. The end of the chain that moves the focus from its button onto
+ * the lines of the count or the words of a failure, `focus` says, is not
+ * said again.
  */
 export function announcementsOf(
   before: AppState<JobResult, unknown>,
@@ -455,12 +574,10 @@ export function announcementsOf(
   }
   const then = summaryStatus(before);
   const now = summaryStatus(after);
-  // The button goes with the focus at a count done and at a failure
-  // Start again cannot mend, and the focus moves onto those words.
+  // The button goes with the focus at the end of the chain, done or failed
+  // in a way Start again cannot mend, and the focus moves onto its words.
   const focusMoves =
-    focus.focusOnCountButton &&
-    (now.kind === "done" ||
-      (now.kind === "error" && !startAgainMends(now.error)));
+    focus.focusOnCountButton && !hasChainButton(chainStatuses(after.analyses));
   if (focusMoves) return texts;
   if (
     now.kind === "done" &&
@@ -473,6 +590,20 @@ export function announcementsOf(
   }
   if (now.kind === "error" && then.kind !== "error") {
     texts.push(failedText(now.error, after.project));
+  }
+  const failuresThen = failuresStatus(before);
+  const failuresNow = failuresStatus(after);
+  if (
+    failuresNow.kind === "done" &&
+    failuresThen.kind !== "done" &&
+    failuresNow.result.analysis === FAILURES_ID
+  ) {
+    texts.push(
+      failuresCountedText(variants.name, numFilterFailures(failuresNow.result)),
+    );
+  }
+  if (failuresNow.kind === "error" && failuresThen.kind !== "error") {
+    texts.push(failuresFailedText(failuresNow.error, after.project));
   }
   return texts;
 }
