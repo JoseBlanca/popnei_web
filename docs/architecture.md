@@ -2273,6 +2273,9 @@ src/core/
                     imports project.ts and individualsKept.ts, and neither
                     imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
+  thresholds.ts     from 7 October 2026, the counts of a threshold on the
+                    histograms of popgen2.html: the fine edge a number
+                    snaps to, the variants kept, the individuals kept
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
