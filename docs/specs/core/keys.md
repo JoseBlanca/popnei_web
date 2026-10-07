@@ -28,6 +28,12 @@ Revised on 30 September 2026 for stage 5: the LD decay reads every
 filter but the LD pruning, through its own inputs as the PCA does; the
 measure the heatmap of the distances between populations draws is in no
 key; nothing of `keys.ts` changes. Approved by the owner on 30 September 2026.
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): the filters of the variants in a key, a key of a write and a
+fingerprint are those `filtersApplied` of `docs/specs/core/project.md`
+gives, which leaves the filter of the FILTER column out for a `.nei`
+file, and no longer `p.filters` as it is.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
@@ -64,7 +70,7 @@ depend on:
 | `keyVersion` | a number its module raises when what the result means changes for the same inputs | its definition |
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
-| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff` | the project, and the definition's `filtersRead` |
+| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff`; of the variants, those that apply to the file, `filtersApplied(p)`, without the filter of the FILTER column for a `.nei` file | the project, and the definition's `filtersRead` |
 | `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA, and the measure the heatmap of the distances between populations draws (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md` and `popDists.md`) | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
@@ -89,6 +95,15 @@ individuals alone in the same way, and its `keyInputs` gives the
 project's filters of the variants without the LD pruning, so that a
 change of the pruning keeps its key (`docs/specs/analyses/ldDecay.md`,
 "What goes into its key").
+
+The filters of the variants in a key are those that apply to the
+project's file, `filtersApplied(p)` of `docs/specs/core/project.md`,
+and not `p.filters`: a project keeps its filters through a new file, so
+the filter of the FILTER column, `passed`, can be on while the file is a
+`.nei` file, for which no job carries it. A key that held it there would
+name a filter no calculation applied, and a click on the box, which
+`popgen2.html` does not show for that file, would give every analysis
+of the file a new key and calculate it again for nothing.
 
 The list of the individuals the filters keep, which core makes from the
 statistics of each individual (`docs/specs/core/individualsKept.md`), is in no key, as the owner approved on
@@ -226,8 +241,9 @@ tracks it under a key, as it tracks a calculation, so that a change of
 the filters while it is written leaves it behind and an undo gives it
 back (`docs/architecture.md`, section 5). The file holds the variants
 and the individuals the filters keep, in its format, so its key holds
-the load of the variants file, both lists of filters, the format, `"nei"`
-in stage 3, and the version of popnei, which writes it. `writeKeyOf`
+the load of the variants file, both lists of filters, that of the
+variants as `filtersApplied` gives it, the format, `"nei"` in
+stage 3, and the version of popnei, which writes it. `writeKeyOf`
 hashes an object of five fields: `write`, the format; `load`, `filters`
 and `individualFilters`, written as in the key of an analysis; and
 `popneiVersion`. It has no field `analysis` and none `intermediate`, so it
@@ -244,7 +260,10 @@ only the read options are kept. So it names the settings the user chose,
 and nothing of the file loaded, of the version of popnei, or of how the
 application calculates, which the project file saves apart. It is made
 with the same canonical form and the same hash, from another object, so a
-fingerprint and a key never coincide.
+fingerprint and a key never coincide. Its filters of the variants are
+`filtersAppliedTo(p.filters, format)`, the format told by the read
+options it is given, `null` for a `.nei` file and an object for a VCF,
+since it reads nothing of `p.variants`.
 
 ## The TypeScript interface
 
@@ -428,6 +447,12 @@ hash with node's `crypto` to compare with ours; the code is checked with
   fingerprint is saved in a file (`docs/architecture.md`, section 12).
 - **`filtersRead`**: the same analysis reading no filter of the variants
   has a key that does not change with the threshold of `missing_data`.
+- **The filters that apply**: the project of the literal above with the
+  filter `passed` turned on has the same key and the same fingerprint,
+  its file being a `.nei` file, and the same key from `writeKeyOf`; with
+  a VCF load in its place, the key with `passed` differs from the key
+  without it, and its canonical form holds `{"kind":"passed"}` before
+  `missing_data`.
 - **`writeKeyOf`, a literal.** The same project with the filter of
   individuals `missing_data` 0.03, the format `"nei"` and popnei
   `0.1.0`. The canonical form is
