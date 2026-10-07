@@ -3,95 +3,81 @@
  * the file and the open button, which the owner put at the bottom of the
  * page (docs/plans/file-stats.md, "The design" and "Round 1 with the
  * owner"; steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
- * under its heading:
+ * under its heading, both from the result of the summary of the variants
+ * file, whose one pass counts the variants and calculates them
+ * (docs/plans/live-stats.md, "One pass for the count and the
+ * statistics"):
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
- *   and the expected heterozygosity (unbiased), with the number of
- *   variants in their bins;
+ *   and the expected heterozygosity (unbiased), each with its threshold
+ *   and what it keeps of the variants in their bins;
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   with the number of individuals in their bins; and the download of
+ *   each with its threshold and what it keeps; and the download of
  *   their table as CSV, which is not drawn, since there may be thousands
  *   of individuals.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
- * the bins.
+ * the bins, and no bar nor button of its own: the bar of the pass, its
+ * Stop and Start again are in the box of the file. Each part says, over
+ * its plots, that it is calculated, with the share done, or that it was
+ * stopped; once the pass failed, whose words the box says, a short line
+ * in place of its plots. When another file is opened with the focus in
+ * the section, the focus goes to the open button.
  *
- * Above the parts, one row: the bar of the pass running with one Stop for
- * both statistics, or, once stopped or after a crash of the worker, the
- * button that starts again those not done. Each part says, over the room
- * of its plots, what it waits for, that a failure or a Stop before it
- * held it back, that it was stopped, or that it is calculated with its
- * share done; in place of its plots, the words of its own failure; a
- * failure of one hides nothing of the other. When the button goes with
- * the focus on it, the focus goes to the heading of the part that failed,
- * or of the variants; when another file is opened, to the open button.
- *
- * The open button is under the section, so the section keeps its height
- * from the moment it is drawn, the file read, to the end of the second
- * pass: the row of the button is one button high in every state, empty
- * when there is none; the words of a part lie over the room of its
- * plots, which is kept, hidden, until they are drawn; and the download
- * keeps its room, hidden, until the table is there. So a click aimed at
- * the open button as a pass ends, or a press held across that end, is
- * not lost. Only a failure, whose words take the place of the plots, a
- * line of individuals with no called genotype under their plot, and the
- * user's own Stop, which only the bar leaves, change it.
+ * The plots fill in while the pass runs (docs/plans/live-stats.md, "The
+ * plots so far"): from the first result so far of the pass, about two
+ * seconds after its start, they are drawn from the last one, the words of
+ * each threshold saying their counts are so far, and at the end from
+ * the result, where they were: the line of the pass keeps its room,
+ * hidden, once it ended. Nothing keeps their room before: the open button under the
+ * section moves down as they arrive, which the owner chose over empty
+ * space. The download of the table of the individuals comes with the
+ * result alone.
  */
-import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+
+import { DEFAULT_MAX_MISSING_RATE } from "../../core/apps.ts";
+import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
+import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
-  IndividualChecksResult,
+  IndividualStatsPart,
   JobResult,
-  VariantChecksResult,
+  VariantStatsPart,
+  VariantsSummaryResult,
 } from "../../worker/protocol.ts";
-import { RunButton } from "../analyses/RunButton.tsx";
-import type { ButtonOf } from "../analyses/status.ts";
-import { resultOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { classOf } from "../classOf.ts";
-import { POPGEN2_STATISTICS_IDS } from "../popgen2Store.ts";
-import { useAnnouncer } from "../shell/announcer.tsx";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
 import { statsCsvName } from "../steps/variants/individualStats.ts";
 import { useAppState } from "../store.tsx";
-import { Problem } from "../widgets/Problem.tsx";
-import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import {
-  ControlsRow,
   IndividualPlace,
   IndividualsDownload,
   Part,
-  PlotsRoom,
+  PartLine,
+  Plots,
   StatsFrame,
-  StatsRoom,
 } from "./StatsLayout.tsx";
-import styles from "./StatsLayout.module.css";
 import {
   INDIVIDUALS_HEADING,
-  INDIVIDUALS_ID,
   INDIVIDUAL_STATISTICS,
-  RESUME_STATS_LABEL,
-  STATS_PROGRESS_KIND,
-  STATS_STOPPED_TEXT,
-  STOP_STATS_LABEL,
+  PART_FAILED,
+  PART_STOPPED,
   VARIANTS_HEADING,
-  VARIANTS_ID,
   VARIANT_STATISTICS,
-  individualTitle,
-  pendingText,
-  statsBarLabel,
-  statsButton,
-  statsFailedText,
   statsRunningLine,
-  statsStartText,
-  statsStatus,
-  variantTitle,
 } from "./statsWords.ts";
-import type { StatsId } from "./statsWords.ts";
+import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
@@ -99,8 +85,8 @@ import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
 export interface FileStatsProps {
-  /** The analyses the page starts by itself, which stop, start again and
-      say why one has not started. */
+  /** The analyses the page starts by itself, which tell a pass stopped
+      from one about to start. */
   readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the section
       goes with it, another file opened. */
@@ -117,10 +103,7 @@ export function FileStats({
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
-  if (variants === null) return null;
-  // Until the file is read, the room of the statistics, as high as the
-  // section that follows.
-  if (variants.read.kind !== "read") return <StatsRoom />;
+  if (variants?.read.kind !== "read") return null;
   return (
     // Another load is another section, so that the one before goes, with
     // the focus it held.
@@ -152,18 +135,16 @@ function Stats({
   fileId,
   variantsName,
 }: StatsProps): React.JSX.Element {
-  const announcer = useAnnouncer();
   const sectionRef = useRef<HTMLElement>(null);
-  const variantsHeading = useRef<HTMLHeadingElement>(null);
-  const individualsHeading = useRef<HTMLHeadingElement>(null);
-  // Selected for what autoRuns says of the statistics not started, which
-  // changes with the count, and with what autoRuns knows, which a Stop
-  // with no pass running changes and the store does not.
-  useAppState(summaryStatus);
+  const status = useAppState(summaryStatus);
+  // The thresholds on the plots, state of this load alone: another file
+  // is another section, which starts them again. They are shown only,
+  // and change no statistic and no project (docs/plans/thresholds.md).
+  const [thresholds, setThresholds] = useState(START_THRESHOLDS);
+  // Selected for what autoRuns knows, which tells a pass stopped from one
+  // about to start, and which a Stop with no pass running changes and the
+  // store does not.
   useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
-  const individuals = useAppState((s) => statsStatus(s, INDIVIDUALS_ID));
-  const variants = useAppState((s) => statsStatus(s, VARIANTS_ID));
-  const project = useAppState((s) => s.project);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -183,148 +164,92 @@ function Stats({
   // Drawn: the status region may say the statistics of this load.
   useLayoutEffect(() => onShown(fileId), [onShown, fileId]);
 
-  // Whether the button went with the focus in the drawing being made.
-  const focusAfterGone = useRef(false);
-  useLayoutEffect(() => {
-    if (!focusAfterGone.current) return;
-    focusAfterGone.current = false;
-    // The part whose failure took the button, else the variants, the
-    // first part.
-    const failed =
-      individuals.kind === "error" && variants.kind !== "error"
-        ? individualsHeading
-        : variantsHeading;
-    failed.current?.focus();
-  });
-
-  const pendingOf = (id: StatsId, status: AnalysisStatus<JobResult>) =>
-    status.kind === "ready" || status.kind === "removed"
-      ? autoRuns.pending(id)
-      : null;
-  const button = statsButton(
-    [individuals, variants],
-    [pendingOf(INDIVIDUALS_ID, individuals), pendingOf(VARIANTS_ID, variants)],
-    autoRuns.canResume(POPGEN2_STATISTICS_IDS),
-  );
-  const runButton: ButtonOf =
-    button === null
-      ? null
-      : button.kind === "stop"
-        ? { kind: "stop" }
-        : { kind: "run", reason: null };
-  const running: {
-    readonly id: StatsId;
-    readonly share: number | null;
-  } | null =
-    individuals.kind === "running"
-      ? { id: INDIVIDUALS_ID, share: shareOf(individuals) }
-      : variants.kind === "running"
-        ? { id: VARIANTS_ID, share: shareOf(variants) }
-        : null;
-
-  const stop = (): void => {
-    autoRuns.stop(POPGEN2_STATISTICS_IDS);
-    announcer.announce(STATS_STOPPED_TEXT, { replaces: STATS_PROGRESS_KIND });
-  };
-  const resume = (): void => {
-    // Said here, since the store does not tell this start from the second
-    // pass that follows the first; when it says it too, the region says
-    // it once.
-    if (autoRuns.resume(POPGEN2_STATISTICS_IDS)) {
-      announcer.announce(statsStartText(variantsName), {
-        replaces: STATS_PROGRESS_KIND,
-      });
-    }
-  };
-
-  /** What a part says over the room of its plots: its share done while
-      it runs, what holds it back, or nothing once done or failed. */
-  const lineOf = (
-    id: StatsId,
-    status: AnalysisStatus<JobResult>,
-  ): string | null => {
+  /** What a part says over its plots: the share done while the pass
+      runs, that it was stopped, why it cannot run, or nothing once done,
+      failed or about to start. */
+  const lineOf = (part: StatsPart): string | null => {
     switch (status.kind) {
       case "done":
       case "error":
         return null;
       case "running":
-        return statsRunningLine(id, shareOf(status));
+        return statsRunningLine(
+          part,
+          status.progress === null ? null : progressShare(status.progress),
+        );
       case "ready":
       case "removed":
-        // A statistic ready that autoRuns knows nothing of starts by
-        // itself in a moment.
-        return pendingText(
-          autoRuns.pending(id) ?? { kind: "waiting", after: null },
-        );
+        // Not started under its key, the pass starts by itself in a
+        // moment.
+        return autoRuns.startedUnder(status.key) ? PART_STOPPED : null;
       case "locked":
         return status.reason;
     }
   };
 
-  const variantsResult = resultOf(variants, VARIANTS_ID);
-  const individualsResult = resultOf(individuals, INDIVIDUALS_ID);
+  const shown = shownOf(status);
+  const soFar = shown?.soFar ?? false;
+  const done = status.kind === "done" ? shown?.result : undefined;
+  const variantsLine = lineOf("variants");
+  const individualsLine = lineOf("individuals");
   return (
     <StatsFrame sectionRef={sectionRef}>
-      <ControlsRow>
-        {running !== null && (
-          <div className={classOf(styles, "bar")}>
-            <ProgressBar
-              label={statsBarLabel(running.id)}
-              value={running.share}
-            />
-          </div>
-        )}
-        {runButton !== null && (
-          <div className={classOf(styles, "button")}>
-            <RunButton
-              button={runButton}
-              runLabel={RESUME_STATS_LABEL}
-              stopLabel={STOP_STATS_LABEL}
-              onRun={resume}
-              onStop={stop}
-              onGone={() => {
-                // The headings are drawn by the time the effects of the
-                // drawing run, after this cleanup.
-                focusAfterGone.current = true;
-              }}
-            />
-          </div>
-        )}
-      </ControlsRow>
-      <Part heading={VARIANTS_HEADING} headingRef={variantsHeading}>
-        {variants.kind === "error" ? (
-          <Problem>
-            {statsFailedText(VARIANTS_ID, variants.error, project)}
-          </Problem>
-        ) : (
-          <PlotsRoom line={lineOf(VARIANTS_ID, variants)}>
-            <VariantPlots result={variantsResult} />
-          </PlotsRoom>
-        )}
-      </Part>
-      <Part heading={INDIVIDUALS_HEADING} headingRef={individualsHeading}>
-        {individuals.kind === "error" ? (
-          <Problem>
-            {statsFailedText(INDIVIDUALS_ID, individuals.error, project)}
-          </Problem>
+      <Part heading={VARIANTS_HEADING}>
+        {status.kind === "error" ? (
+          <PartLine>{PART_FAILED}</PartLine>
         ) : (
           <>
-            <PlotsRoom line={lineOf(INDIVIDUALS_ID, individuals)}>
-              <IndividualPlots result={individualsResult} />
-            </PlotsRoom>
-            <IndividualsDownload
-              onPress={
-                individualsResult === null
-                  ? null
-                  : () => {
-                      downloadText(
-                        statsCsvName(variantsName),
-                        individualChecksCsv(individualsResult),
-                        "text/csv",
-                      );
-                    }
-              }
+            <LineOrRoom line={variantsLine} part="variants" plots={shown} />
+            {shown !== null && (
+              <VariantPlots
+                result={shown.result.perVar}
+                soFar={soFar}
+                thresholds={thresholds.variants}
+                onThreshold={(statistic, value) => {
+                  setThresholds((before) => ({
+                    ...before,
+                    variants: { ...before.variants, [statistic]: value },
+                  }));
+                }}
+              />
+            )}
+          </>
+        )}
+      </Part>
+      <Part heading={INDIVIDUALS_HEADING}>
+        {status.kind === "error" ? (
+          <PartLine>{PART_FAILED}</PartLine>
+        ) : (
+          <>
+            <LineOrRoom
+              line={individualsLine}
+              part="individuals"
+              plots={shown}
             />
+            {shown !== null && (
+              <IndividualPlots
+                result={shown.result.perIndividual}
+                soFar={soFar}
+                thresholds={thresholds.individuals}
+                onThreshold={(statistic, value) => {
+                  setThresholds((before) => ({
+                    ...before,
+                    individuals: { ...before.individuals, [statistic]: value },
+                  }));
+                }}
+              />
+            )}
+            {done !== undefined && (
+              <IndividualsDownload
+                onPress={() => {
+                  downloadText(
+                    statsCsvName(variantsName),
+                    individualChecksCsv(done.perIndividual),
+                    "text/csv",
+                  );
+                }}
+              />
+            )}
           </>
         )}
       </Part>
@@ -332,77 +257,253 @@ function Stats({
   );
 }
 
-/** The share done of a pass running, or `null` before its first
-    progress. */
-function shareOf(
-  status: Extract<AnalysisStatus<JobResult>, { readonly kind: "running" }>,
-): number | null {
-  return status.progress === null ? null : progressShare(status.progress);
+/** What the line over the plots of a part is drawn with. */
+interface LineOrRoomProps {
+  /** What the part says over its plots, or `null` for nothing. */
+  readonly line: string | null;
+  readonly part: StatsPart;
+  /** What its plots are drawn from, `null` when there are none. */
+  readonly plots: Shown | null;
 }
+
+/** The line over the plots of a part; once the pass ended, with its
+    plots drawn, the room of its last line, "Calculating the statistics of
+    the variants… 100%", hidden, so that the plots, drawn under that line
+    from the results so far, do not move up as the result comes, by 40
+    pixels at 1280 (the review of round 1, ux F2); nothing with no plots
+    and no line. */
+function LineOrRoom({
+  line,
+  part,
+  plots,
+}: LineOrRoomProps): React.JSX.Element | null {
+  if (line !== null) return <PartLine>{line}</PartLine>;
+  if (plots === null) return null;
+  return <PartLine room>{statsRunningLine(part, 100)}</PartLine>;
+}
+
+/** What the plots are drawn from: the result of the summary once done,
+    or its last result so far while it runs, `soFar`. */
+interface Shown {
+  readonly result: VariantsSummaryResult;
+  readonly soFar: boolean;
+}
+
+/** What the plots are drawn from in `status`; `null` before the first
+    result so far, and in any state but running and done. A defect for a
+    result of another analysis, which the store never gives it. */
+function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
+  let result: JobResult;
+  let soFar: boolean;
+  if (status.kind === "done") {
+    result = status.result;
+    soFar = false;
+  } else if (status.kind === "running" && status.soFar !== null) {
+    result = status.soFar;
+    soFar = true;
+  } else {
+    return null;
+  }
+  if (result.analysis !== "variantsSummary") {
+    throw new Error(
+      `popnei_web defect: the summary of the variants file has a result of ${result.analysis}.`,
+    );
+  }
+  return { result, soFar };
+}
+
+/** The thresholds of the six histograms, as the user set them: a
+    number, rounded to the step of its axis when it was committed and
+    drawn and counted as it is, or `null` for the top of the axis, which
+    keeps everything and follows the axis as a result so far widens it. */
+interface Thresholds {
+  readonly variants: Readonly<Record<VariantStatistic, number | null>>;
+  readonly individuals: Readonly<Record<IndividualStatistic, number | null>>;
+}
+
+/** The thresholds of a file just open: the missing rate of the variants
+    at 0.1, the default of its filter in docs/functionality.md, and the
+    five others at the top of their axis (docs/plans/thresholds.md, "The
+    starting values"). */
+const START_THRESHOLDS: Thresholds = Object.freeze({
+  variants: Object.freeze({
+    missingRate: DEFAULT_MAX_MISSING_RATE,
+    maf: null,
+    obsHet: null,
+    unbiasedExpHet: null,
+  }),
+  individuals: Object.freeze({
+    missingGenotypes: null,
+    observedHeterozygosity: null,
+  }),
+});
 
 /** What the plots of the variants are drawn with. */
 interface VariantPlotsProps {
-  /** The result, or `null` before it, for the room of the plots. */
-  readonly result: VariantChecksResult | null;
+  /** The part of the variants of the result, or of a result so far. */
+  readonly result: VariantStatsPart;
+  /** Whether it is of a result so far. */
+  readonly soFar: boolean;
+  /** The thresholds of the four, as the user set them. */
+  readonly thresholds: Thresholds["variants"];
+  /** Called with the threshold the user set on the histogram of
+      `statistic`. */
+  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
 }
 
 /** The four histograms of the variants, each over the variants in its
-    bins, or the room they keep. */
-function VariantPlots({ result }: VariantPlotsProps): React.JSX.Element {
-  // Made again only for another result, so that the plots are not drawn
-  // again on renders that changed nothing (react.md, "Mounting a plot").
-  const plots = useMemo(
-    () =>
-      VARIANT_STATISTICS.map((statistic) => ({
-        statistic,
-        plot: result === null ? null : variantPlot(statistic, result),
-      })),
-    [result],
-  );
+    bins, with its threshold. Each keeps its element from one result so
+    far to the next, and is updated in it. */
+function VariantPlots({
+  result,
+  soFar,
+  thresholds,
+  onThreshold,
+}: VariantPlotsProps): React.JSX.Element {
   return (
-    <>
-      {plots.map(({ statistic, plot }) => (
-        <StatsHistogram
+    <Plots>
+      {VARIANT_STATISTICS.map((statistic) => (
+        <VariantHistogram
           key={statistic}
-          title={variantTitle(statistic)}
-          plot={plot}
+          statistic={statistic}
+          result={result}
+          soFar={soFar}
+          threshold={thresholds[statistic]}
+          onThreshold={onThreshold}
         />
       ))}
-    </>
+    </Plots>
+  );
+}
+
+/** What one histogram of the variants is drawn with. */
+interface VariantHistogramProps {
+  readonly statistic: VariantStatistic;
+  readonly result: VariantStatsPart;
+  readonly soFar: boolean;
+  /** Its threshold as the user set it. */
+  readonly threshold: number | null;
+  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
+}
+
+/** A histogram of the variants and its threshold, which follows the
+    number typed in its box before it is committed. */
+function VariantHistogram({
+  statistic,
+  result,
+  soFar,
+  threshold,
+  onThreshold,
+}: VariantHistogramProps): React.JSX.Element {
+  const [typed, setTyped] = useState<number | null>(null);
+  // Made again only when what it shows changes, so that the plot is not
+  // drawn again on renders that changed nothing (react.md, "Mounting a
+  // plot").
+  const set = useMemo(
+    () => variantPlot(statistic, result, soFar, threshold),
+    [statistic, result, soFar, threshold],
+  );
+  const drawn = useMemo(
+    () =>
+      typed === null
+        ? set
+        : variantPlot(statistic, result, soFar, threshold, typed),
+    [set, statistic, result, soFar, threshold, typed],
+  );
+  return (
+    <StatsHistogram
+      plot={drawn}
+      boxValue={set.threshold.shown}
+      onThreshold={(value) => {
+        onThreshold(statistic, value);
+      }}
+      onTyped={setTyped}
+    />
   );
 }
 
 /** What the plots of the individuals are drawn with. */
 interface IndividualPlotsProps {
-  /** The result, or `null` before it, for the room of the plots. */
-  readonly result: IndividualChecksResult | null;
+  /** The part of the individuals of the result, or of a result so far. */
+  readonly result: IndividualStatsPart;
+  /** Whether it is of a result so far. */
+  readonly soFar: boolean;
+  /** The thresholds of the two, as the user set them. */
+  readonly thresholds: Thresholds["individuals"];
+  /** Called with the threshold the user set on the histogram of
+      `statistic`. */
+  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
 }
 
 /** The two histograms of the individuals, each over the individuals
-    with a value, and under each the line of those with none, or the room
-    they keep. */
-function IndividualPlots({ result }: IndividualPlotsProps): React.JSX.Element {
-  const plots = useMemo(
+    with a value, with its threshold, and under each the line of those
+    with none; a line alone where no individual has a value. */
+function IndividualPlots({
+  result,
+  soFar,
+  thresholds,
+  onThreshold,
+}: IndividualPlotsProps): React.JSX.Element {
+  return (
+    <Plots>
+      {INDIVIDUAL_STATISTICS.map((statistic) => (
+        <IndividualHistogram
+          key={statistic}
+          statistic={statistic}
+          result={result}
+          soFar={soFar}
+          threshold={thresholds[statistic]}
+          onThreshold={onThreshold}
+        />
+      ))}
+    </Plots>
+  );
+}
+
+/** What one histogram of the individuals is drawn with. */
+interface IndividualHistogramProps {
+  readonly statistic: IndividualStatistic;
+  readonly result: IndividualStatsPart;
+  readonly soFar: boolean;
+  /** Its threshold as the user set it. */
+  readonly threshold: number | null;
+  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
+}
+
+/** A histogram of the individuals and its threshold, which follows the
+    number typed in its box, and the line under it of those with no
+    value. */
+function IndividualHistogram({
+  statistic,
+  result,
+  soFar,
+  threshold,
+  onThreshold,
+}: IndividualHistogramProps): React.JSX.Element {
+  const [typed, setTyped] = useState<number | null>(null);
+  const set = useMemo(
+    () => individualPlot(statistic, result, soFar, threshold),
+    [statistic, result, soFar, threshold],
+  );
+  const drawn = useMemo(
     () =>
-      INDIVIDUAL_STATISTICS.map((statistic) => ({
-        statistic,
-        shown: result === null ? null : individualPlot(statistic, result),
-      })),
-    [result],
+      typed === null
+        ? set
+        : individualPlot(statistic, result, soFar, threshold, typed),
+    [set, statistic, result, soFar, threshold, typed],
   );
   return (
-    <>
-      {plots.map(({ statistic, shown }) => (
-        <IndividualPlace
-          key={statistic}
-          noValueLine={shown?.noValueLine ?? null}
-        >
-          <StatsHistogram
-            title={individualTitle(statistic)}
-            plot={shown?.plot ?? null}
-          />
-        </IndividualPlace>
-      ))}
-    </>
+    <IndividualPlace noValueLine={drawn.noValueLine}>
+      {drawn.plot !== null && set.plot !== null && (
+        <StatsHistogram
+          plot={drawn.plot}
+          boxValue={set.plot.threshold.shown}
+          onThreshold={(value) => {
+            onThreshold(statistic, value);
+          }}
+          onTyped={setTyped}
+        />
+      )}
+    </IndividualPlace>
   );
 }

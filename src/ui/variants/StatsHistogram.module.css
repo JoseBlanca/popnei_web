@@ -1,6 +1,7 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* A histogram: its title, the line of what is in its bins, its plot. */
+/* A histogram: the row of its title and the box of its threshold, the
+   line of what the threshold keeps, its plot. */
 .block {
   display: grid;
   gap: var(--space-2);
@@ -10,22 +11,38 @@
   min-inline-size: 0;
 }
 
-/* The room of a histogram not drawn yet: as the block, and hidden, from
-   the eyes and from a screen reader. */
-.space {
-  display: grid;
-  gap: var(--space-2);
+/* The row of the short title, "max:" and the box. */
+.head {
   min-inline-size: 0;
+}
+
+/* What the threshold keeps, over the plot, in the room of its longest
+   form, "Keeps 200,000 to 200,000 of 200,000 variants so far", which the
+   screen gives in data-longest: drawn hidden in the same cell of a grid,
+   it holds the cell at the height that form takes at the width of the
+   column, one row or two, so that the plot does not move as the words
+   change while the line is dragged, nor stand at another height than
+   the plot beside it, of the same count. Generated content, it is no
+   text of the page, and hidden, no text a screen reader reads. */
+.keepsRoom {
+  display: grid;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.keepsRoom::after {
+  grid-area: 1 / 1;
   visibility: hidden;
+  content: attr(data-longest);
 }
 
-.title {
+.keeps {
+  grid-area: 1 / 1;
   margin: 0;
-  font-weight: 600;
 }
 
-.muted {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
+/* The plot and the line of its threshold laid over it. */
+.plot {
+  position: relative;
+  min-inline-size: 0;
 }

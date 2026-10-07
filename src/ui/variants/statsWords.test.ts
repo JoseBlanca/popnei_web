@@ -1,194 +1,180 @@
 import { describe, expect, test } from "vitest";
 
-import { emptyProject, loadVariants } from "../../core/project.ts";
-import type { Key } from "../../core/keys.ts";
-import type { AnalysisStatus } from "../../core/store.ts";
-import type { JobResult } from "../../worker/protocol.ts";
 import {
-  overIndividualsLine,
-  overVariantsLine,
-  pendingText,
-  statsBarLabel,
-  statsButton,
-  statsFailedText,
+  PART_FAILED,
+  PART_STOPPED,
+  individualFullTitle,
+  individualThresholdName,
+  individualTitle,
+  keepsLine,
+  longestKeepsLine,
+  statsFirstText,
   statsRunningLine,
+  thresholdShownLabel,
+  thresholdValueText,
+  variantFullTitle,
+  variantThresholdName,
+  variantTitle,
 } from "./statsWords.ts";
 
-const PANEL = loadVariants(emptyProject("popgen"), {
-  fileId: "0123456789abcdef0123456789abcdef",
-  name: "panel.vcf.gz",
-  size: 1000,
-  format: "vcf",
-  readOptions: { ploidy: null, onlyPassed: false },
-});
-
-const KEY = "k" as Key;
-
-const RUNNING: AnalysisStatus<JobResult> = {
-  kind: "running",
-  key: KEY,
-  runId: 1,
-  progress: null,
-  waitsForStatistics: false,
-};
-const READY: AnalysisStatus<JobResult> = { kind: "ready", key: KEY };
-
 describe("the words of the statistics of the open file", () => {
-  test("the bar and its line name the statistic, with its share once known", () => {
-    expect(statsBarLabel("individualChecks")).toBe(
-      "Calculating the statistics of the individuals",
-    );
-    expect(statsRunningLine("variantChecks", null)).toBe(
+  test("the line of a part while the pass runs names its statistics, with the share once known", () => {
+    expect(statsRunningLine("variants", null)).toBe(
       "Calculating the statistics of the variants…",
     );
-    expect(statsRunningLine("individualChecks", 34)).toBe(
+    expect(statsRunningLine("individuals", 34)).toBe(
       "Calculating the statistics of the individuals… 34%",
     );
   });
 
-  test("a part not started says what it waits for, what held it back, or that it was stopped", () => {
-    expect(pendingText({ kind: "waiting", after: "variantsSummary" })).toBe(
-      "Waiting for the count of the variants.",
+  test("a part stopped, or whose pass failed, says so in a few words, the box saying why", () => {
+    expect(PART_STOPPED).toBe(
+      "Stopped. Start again reads the file from the start.",
     );
-    expect(pendingText({ kind: "waiting", after: "variantChecks" })).toBe(
-      "Waiting for the statistics of the variants.",
-    );
-    expect(pendingText({ kind: "waiting", after: null })).toBeNull();
-    expect(
-      pendingText({
-        kind: "blocked",
-        by: "variantsSummary",
-        because: "failed",
-      }),
-    ).toBe("Not calculated: the variants were not counted.");
-    expect(
-      pendingText({ kind: "blocked", by: "variantChecks", because: "failed" }),
-    ).toBe("Not calculated: the statistics of the variants failed.");
-    expect(
-      pendingText({
-        kind: "blocked",
-        by: "variantsSummary",
-        because: "stopped",
-      }),
-    ).toBe("Not calculated: the count of the variants was stopped.");
-    expect(
-      pendingText({ kind: "blocked", by: "variantChecks", because: "stopped" }),
-    ).toBe("Not calculated: the statistics of the variants were stopped.");
-    expect(pendingText({ kind: "stopped" })).toBe("Stopped.");
-    expect(() =>
-      pendingText({ kind: "blocked", by: "pca", because: "failed" }),
-    ).toThrow(/popnei_web defect/);
+    expect(PART_FAILED).toBe("Not calculated.");
   });
 
-  test("the failures are short: popnei's words, a crash whose details the error bar has, a file that changed", () => {
+  test("thresholds round 1 the titles are short, the owner's five and the major allele frequency; the plot keeps the full name", () => {
     expect(
-      statsFailedText(
-        "individualChecks",
-        {
-          kind: "refused",
-          message:
-            "line 84 of the VCF, the column POS: `x80` is not a position.",
-        },
-        PANEL,
+      (["missingRate", "maf", "obsHet", "unbiasedExpHet"] as const).map(
+        variantTitle,
       ),
-    ).toBe(
-      "popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: `x80` is not a position. Correct the file, or fetch it again, and open it again.",
+    ).toEqual([
+      "Missing genotypes",
+      "Major allele frequency",
+      "Obs. het.",
+      "Exp. het. (unbiased)",
+    ]);
+    expect(
+      (["missingGenotypes", "observedHeterozygosity"] as const).map(
+        individualTitle,
+      ),
+    ).toEqual(["Missing GTs", "Obs. het."]);
+    expect(variantFullTitle("obsHet")).toBe("Observed heterozygosity");
+    expect(individualFullTitle("missingGenotypes")).toBe(
+      "Proportion of missing genotypes of each individual",
     );
-    expect(
-      statsFailedText(
-        "variantChecks",
-        { kind: "refused", message: "a genotype has `3` alleles." },
-        PANEL,
-      ),
-    ).toBe(
-      "popnei could not calculate the statistics of the variants: a genotype has “3” alleles.",
-    );
-    expect(
-      statsFailedText(
-        "individualChecks",
-        {
-          kind: "failed",
-          error: { kind: "workerFailed", message: "out of memory" },
-        },
-        PANEL,
-      ),
-    ).toBe("The statistics of the individuals could not be calculated.");
-    expect(
-      statsFailedText(
-        "variantChecks",
-        { kind: "failed", error: { kind: "defect", message: "a defect" } },
-        PANEL,
-      ),
-    ).toBe("The statistics of the variants could not be calculated.");
-    expect(
-      statsFailedText(
-        "variantChecks",
-        {
-          kind: "failed",
-          error: {
-            kind: "reopenFailed",
-            name: "panel.vcf.gz",
-            message: "changed",
-          },
-        },
-        PANEL,
-      ),
-    ).toBe(
-      "panel.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again.",
-    );
-    expect(() =>
-      statsFailedText(
-        "variantChecks",
-        { kind: "failed", error: { kind: "files", message: "x" } },
-        PANEL,
-      ),
-    ).toThrow(/popnei_web defect/);
   });
 
-  test("each histogram says how many variants or individuals it is over", () => {
-    expect(overVariantsLine(1200)).toBe("Over 1,200 variants");
-    expect(overIndividualsLine(1)).toBe("Over 1 individual");
+  test("thresholds round 1 the name of a box starts with the words drawn before it (WCAG 2.5.3) and goes on with the full name", () => {
+    expect(thresholdShownLabel("Obs. het.")).toBe("Obs. het.\u00a0max:");
+    expect(variantThresholdName("obsHet")).toBe(
+      "Obs. het.\u00a0max: maximum observed heterozygosity",
+    );
+    expect(individualThresholdName("missingGenotypes")).toBe(
+      "Missing GTs\u00a0max: maximum proportion of missing genotypes of an individual",
+    );
   });
 
-  test("one button: Stop while one runs or is about to start, start again when resume would start one, none otherwise", () => {
-    expect(statsButton([RUNNING, READY], [null, null], true)).toEqual({
-      kind: "stop",
-    });
+  test("live-stats 2 the first plots drawn from a result so far are said once, as drawn from the variants read so far", () => {
+    expect(statsFirstText("panel.vcf.gz")).toBe(
+      "Plots of panel.vcf.gz are drawn from the variants read so far, and change as the file is read.",
+    );
+  });
+});
+
+describe("thresholds round 1 the line of what a threshold keeps", () => {
+  test("one number where the bins can tell, a range where they cannot, all when it keeps every one; no explanation", () => {
     expect(
-      statsButton(
-        [
-          {
-            kind: "done",
-            key: KEY,
-            result: null as never,
-            warnings: [],
-            check: null,
-          },
-          READY,
-        ],
-        [null, { kind: "waiting", after: null }],
+      keepsLine({ keptLow: 1050, keptHigh: 1050, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 1,050 of 1,200 variants");
+    expect(
+      keepsLine({ keptLow: 564, keptHigh: 566, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 564 to 566 of 1,200 variants");
+    expect(
+      keepsLine({ keptLow: 1200, keptHigh: 1200, withValue: 1200 }, "variant"),
+    ).toBe("Keeps all 1,200 variants");
+    // A range that reaches every variant is still a range.
+    expect(
+      keepsLine({ keptLow: 1190, keptHigh: 1200, withValue: 1200 }, "variant"),
+    ).toBe("Keeps 1,190 to 1,200 of 1,200 variants");
+  });
+
+  test("while the pass runs it ends so far", () => {
+    expect(
+      keepsLine(
+        { keptLow: 1113, keptHigh: 1152, withValue: 1200 },
+        "variant",
         true,
       ),
-    ).toEqual({ kind: "stop" });
+    ).toBe("Keeps 1,113 to 1,152 of 1,200 variants so far");
     expect(
-      statsButton(
-        [READY, READY],
-        [
-          { kind: "stopped" },
-          { kind: "blocked", by: "variantChecks", because: "stopped" },
-        ],
+      keepsLine(
+        { keptLow: 180, keptHigh: 180, withValue: 200 },
+        "individual",
         true,
       ),
-    ).toEqual({ kind: "resume" });
+    ).toBe("Keeps 180 of 200 individuals so far");
+  });
+
+  test("one, none, and no value at all", () => {
     expect(
-      statsButton(
-        [READY, READY],
-        [
-          { kind: "waiting", after: "variantsSummary" },
-          { kind: "waiting", after: "variantsSummary" },
-        ],
-        false,
+      keepsLine({ keptLow: 1, keptHigh: 1, withValue: 3 }, "individual"),
+    ).toBe("Keeps 1 of 3 individuals");
+    expect(
+      keepsLine({ keptLow: 0, keptHigh: 0, withValue: 3 }, "individual"),
+    ).toBe("Keeps 0 of 3 individuals");
+    expect(
+      keepsLine({ keptLow: 1, keptHigh: 1, withValue: 1 }, "variant"),
+    ).toBe("Keeps the only variant");
+    expect(
+      keepsLine({ keptLow: 0, keptHigh: 0, withValue: 0 }, "variant"),
+    ).toBe("No variant has a value");
+  });
+
+  test("the value text of the line says the number and what it keeps, a range with 'to'", () => {
+    expect(
+      thresholdValueText(
+        0.1,
+        { keptLow: 1050, keptHigh: 1050, withValue: 1200 },
+        "variant",
       ),
-    ).toBeNull();
+    ).toBe("0.1, keeps 1,050 of 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.05,
+        { keptLow: 1113, keptHigh: 1152, withValue: 1200 },
+        "variant",
+      ),
+    ).toBe("0.05, keeps 1,113 to 1,152 of 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.3,
+        { keptLow: 1200, keptHigh: 1200, withValue: 1200 },
+        "variant",
+      ),
+    ).toBe("0.3, keeps all 1,200 variants");
+    expect(
+      thresholdValueText(
+        0.004,
+        { keptLow: 2, keptHigh: 2, withValue: 1200 },
+        "variant",
+        true,
+      ),
+    ).toBe("0.004, keeps 2 of 1,200 variants so far");
+  });
+});
+
+describe("th4 fix 1 the room of the line of what a threshold keeps", () => {
+  test("the longest the line can be for the number with a value: a range of two numbers of its digits, so far", () => {
+    expect(longestKeepsLine(200_000, "variant")).toBe(
+      "Keeps 200,000 to 200,000 of 200,000 variants so far",
+    );
+    expect(longestKeepsLine(1200, "variant")).toBe(
+      "Keeps 1,200 to 1,200 of 1,200 variants so far",
+    );
+    expect(longestKeepsLine(12, "individual")).toBe(
+      "Keeps 12 to 12 of 12 individuals so far",
+    );
+    // Every line of a count is at most as long, in characters.
+    for (const counts of [
+      { keptLow: 113_456, keptHigh: 115_789, withValue: 200_000 },
+      { keptLow: 0, keptHigh: 0, withValue: 200_000 },
+      { keptLow: 200_000, keptHigh: 200_000, withValue: 200_000 },
+    ]) {
+      expect(keepsLine(counts, "variant", true).length).toBeLessThanOrEqual(
+        longestKeepsLine(200_000, "variant").length,
+      );
+    }
   });
 });

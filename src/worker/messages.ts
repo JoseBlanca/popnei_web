@@ -25,9 +25,12 @@ import type {
   PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
+  FilterFailuresJob,
+  FilterFailuresResult,
   FilteringStats,
   IndividualChecksJob,
   IndividualChecksResult,
+  IndividualStatsPart,
   IndividualsFileError,
   IndividualsTable,
   Job,
@@ -39,6 +42,7 @@ import type {
   LeftOut,
   LoadFormat,
   Opened,
+  PassFilterKind,
   PassStats,
   PcaJob,
   PcaMethod,
@@ -48,6 +52,7 @@ import type {
   Separator,
   VariantChecksJob,
   VariantChecksResult,
+  VariantStatsPart,
   VariantDistrib,
   VariantFilter,
   VariantFilterKind,
@@ -62,7 +67,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 10;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -127,6 +132,20 @@ export type FromRunner =
       /** The key the `run` was asked with. */
       readonly key: string;
       /** The result, of the analysis of the job. */
+      readonly result: JobResult;
+    }
+  /** The result so far of a `run` whose calculation gives one, the
+      summary of the variants file: the result over the variants read so
+      far, of the analysis of the job, sent while the pass runs, every 2
+      seconds as popnei gives it, before the `result`. */
+  | {
+      /** Which message this is. */
+      readonly kind: "soFar";
+      /** The id of the `run`. */
+      readonly id: number;
+      /** The key the `run` was asked with. */
+      readonly key: string;
+      /** The result over the variants read so far. */
       readonly result: JobResult;
     }
   /** The answer of a `write`: the file, as a `Blob` the runner made. */
@@ -543,7 +562,8 @@ export function parseFromRunner(
         ploidy: ploidy.value,
       });
     }
-    case "result": {
+    case "result":
+    case "soFar": {
       const wrong = exactFields(record, place, ["kind", "id", "key", "result"]);
       if (wrong !== null) {
         return wrong;
@@ -842,6 +862,7 @@ const FROM_RUNNER_KINDS: Readonly<Record<FromRunner["kind"], true>> = {
   ready: true,
   opened: true,
   result: true,
+  soFar: true,
   written: true,
   refused: true,
   reopenFailed: true,
@@ -869,6 +890,7 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   variantsSummary: true,
+  filterFailures: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -879,6 +901,7 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   variantsSummary: true,
+  filterFailures: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -903,6 +926,14 @@ const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   obs_het: true,
   ld: true,
 };
+/** The one kind of the counts of the count of the FILTER failures, which
+    no other result holds. */
+const PASSED_KIND: Readonly<Record<"passed", true>> = { passed: true };
+
+/** The kinds of filter the counts of a pass of a result may hold: those
+    of the variants, or `"passed"` alone. */
+type FilteringKinds =
+  Readonly<Record<VariantFilterKind, true>> | typeof PASSED_KIND;
 const READ_KINDS: Readonly<Record<IndividualsFileRead["kind"], true>> = {
   read: true,
   failed: true,
@@ -1068,6 +1099,8 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkVariantChecksJob(record, place);
     case "variantsSummary":
       return checkVariantsSummaryJob(record, place);
+    case "filterFailures":
+      return checkFilterFailuresJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
     case "popDists":
@@ -1209,11 +1242,59 @@ function checkIndividualChecksJob(
 }
 
 /** The fields of the request of the summary of the variants file,
-    docs/plans/open-variants.md: the load alone, whose filters are none. */
+    docs/plans/live-stats.md: the load, whose filters are none, and the
+    bins of the histograms of the variants. */
 function checkVariantsSummaryJob(
   record: object,
   place: Place,
 ): Checked<VariantsSummaryJob> {
+  const wrong = exactFields(record, place, [
+    "analysis",
+    "fileId",
+    "filters",
+    "minNumIndividuals",
+    "numBins",
+    "range",
+  ]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const fileId = field(record, "fileId", place, isText);
+  if (!fileId.ok) {
+    return fileId;
+  }
+  const filters = field(record, "filters", place, noFilters);
+  if (!filters.ok) {
+    return filters;
+  }
+  const minNumIndividuals = field(record, "minNumIndividuals", place, isNumber);
+  if (!minNumIndividuals.ok) {
+    return minNumIndividuals;
+  }
+  const numBins = field(record, "numBins", place, isNumber);
+  if (!numBins.ok) {
+    return numBins;
+  }
+  const range = field(record, "range", place, checkRange);
+  if (!range.ok) {
+    return range;
+  }
+  return accepted({
+    analysis: "variantsSummary",
+    fileId: fileId.value,
+    filters: filters.value,
+    minNumIndividuals: minNumIndividuals.value,
+    numBins: numBins.value,
+    range: range.value,
+  });
+}
+
+/** The fields of the request of the count of the FILTER failures,
+    docs/plans/live-stats.md: the load, and no filter of the variants. */
+function checkFilterFailuresJob(
+  record: object,
+  place: Place,
+): Checked<FilterFailuresJob> {
   const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
   if (wrong !== null) {
     return wrong;
@@ -1227,7 +1308,7 @@ function checkVariantsSummaryJob(
     return filters;
   }
   return accepted({
-    analysis: "variantsSummary",
+    analysis: "filterFailures",
     fileId: fileId.value,
     filters: filters.value,
   });
@@ -1692,6 +1773,8 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkFilterCountsResult(record, place);
     case "variantsSummary":
       return checkVariantsSummaryResult(record, place);
+    case "filterFailures":
+      return checkFilterFailuresResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
     case "popDists":
@@ -1930,14 +2013,47 @@ function checkIndividualChecksResult(
 ): Checked<IndividualChecksResult> {
   const wrong = exactFields(record, place, [
     "analysis",
-    "individuals",
-    "missingGtRate",
-    "obsHetRate",
-    "passStats",
+    ...INDIVIDUAL_STATS_FIELDS,
   ]);
   if (wrong !== null) {
     return wrong;
   }
+  const part = individualStatsFields(record, place);
+  if (!part.ok) {
+    return part;
+  }
+  return accepted({ analysis: "individualChecks", ...part.value });
+}
+
+/** The fields of the statistics of each individual, of their own result
+    and of the summary of the variants file. */
+const INDIVIDUAL_STATS_FIELDS = [
+  "individuals",
+  "missingGtRate",
+  "obsHetRate",
+  "passStats",
+] as const;
+
+/** The statistics of each individual, the part `individuals` of the
+    summary of the variants file: an object of exactly their fields. */
+function checkIndividualStatsPart(
+  value: unknown,
+  place: Place,
+): Checked<IndividualStatsPart> {
+  const record = objectWith(value, place, INDIVIDUAL_STATS_FIELDS);
+  if (!record.ok) {
+    return record;
+  }
+  return individualStatsFields(record.value, place);
+}
+
+/** The fields of the statistics of each individual in `record`, whose
+    names the caller checked: the two arrays as long as its
+    individuals. */
+function individualStatsFields(
+  record: object,
+  place: Place,
+): Checked<IndividualStatsPart> {
   const individuals = field(record, "individuals", place, listOf(isText));
   if (!individuals.ok) {
     return individuals;
@@ -1966,7 +2082,6 @@ function checkIndividualChecksResult(
     return passStats;
   }
   return accepted({
-    analysis: "individualChecks",
     individuals: individuals.value,
     missingGtRate: missingGtRate.value,
     obsHetRate: obsHetRate.value,
@@ -1983,16 +2098,48 @@ function checkVariantChecksResult(
 ): Checked<VariantChecksResult> {
   const wrong = exactFields(record, place, [
     "analysis",
-    "binEdges",
-    "missingRate",
-    "maf",
-    "obsHet",
-    "unbiasedExpHet",
-    "passStats",
+    ...VARIANT_STATS_FIELDS,
   ]);
   if (wrong !== null) {
     return wrong;
   }
+  const part = variantStatsFields(record, place);
+  if (!part.ok) {
+    return part;
+  }
+  return accepted({ analysis: "variantChecks", ...part.value });
+}
+
+/** The fields of the histograms of the variants, of their own result and
+    of the summary of the variants file. */
+const VARIANT_STATS_FIELDS = [
+  "binEdges",
+  "missingRate",
+  "maf",
+  "obsHet",
+  "unbiasedExpHet",
+  "passStats",
+] as const;
+
+/** The histograms of the variants, the part `variants` of the summary of
+    the variants file: an object of exactly their fields. */
+function checkVariantStatsPart(
+  value: unknown,
+  place: Place,
+): Checked<VariantStatsPart> {
+  const record = objectWith(value, place, VARIANT_STATS_FIELDS);
+  if (!record.ok) {
+    return record;
+  }
+  return variantStatsFields(record.value, place);
+}
+
+/** The fields of the histograms of the variants in `record`, whose names
+    the caller checked: the counts of each one fewer than the edges. */
+function variantStatsFields(
+  record: object,
+  place: Place,
+): Checked<VariantStatsPart> {
   const binEdges = field(record, "binEdges", place, isFloat64Array);
   if (!binEdges.ok) {
     return binEdges;
@@ -2019,7 +2166,6 @@ function checkVariantChecksResult(
     return passStats;
   }
   return accepted({
-    analysis: "variantChecks",
     binEdges: binEdges.value,
     missingRate: missingRate.value,
     maf: maf.value,
@@ -2065,8 +2211,38 @@ function checkFilterCountsResult(
   return accepted({ analysis: "filterCounts", passStats: checked.value });
 }
 
+/** The fields of the count of the FILTER failures,
+    docs/plans/live-stats.md: the counts of its pass, whose filters are
+    `"passed"` alone. */
+function checkFilterFailuresResult(
+  record: object,
+  place: Place,
+): Checked<FilterFailuresResult> {
+  const wrong = exactFields(record, place, ["analysis", "passStats"]);
+  if (wrong !== null) {
+    return wrong;
+  }
+  const checked = field(record, "passStats", place, (v, p) =>
+    checkPassStats(v, p, PASSED_KIND),
+  );
+  if (!checked.ok) {
+    return checked;
+  }
+  const filtering = inner(inner(place, "passStats"), "filtering");
+  if (checked.value.filtering.passed === undefined) {
+    return refused({
+      kind: "missingFields",
+      messageKind: filtering.messageKind,
+      path: filtering.path,
+      fields: ["passed"],
+    });
+  }
+  return accepted({ analysis: "filterFailures", passStats: checked.value });
+}
+
 /** The fields of the summary of the variants file,
-    docs/plans/open-variants.md, the counts as many as the chromosomes. */
+    docs/plans/live-stats.md, the counts as many as the chromosomes, and
+    its two parts of the statistics. */
 function checkVariantsSummaryResult(
   record: object,
   place: Place,
@@ -2075,6 +2251,8 @@ function checkVariantsSummaryResult(
     "analysis",
     "chroms",
     "numVarsPerChrom",
+    "perVar",
+    "perIndividual",
     "passStats",
   ]);
   if (wrong !== null) {
@@ -2093,6 +2271,19 @@ function checkVariantsSummaryResult(
   if (!numVarsPerChrom.ok) {
     return numVarsPerChrom;
   }
+  const perVar = field(record, "perVar", place, checkVariantStatsPart);
+  if (!perVar.ok) {
+    return perVar;
+  }
+  const perIndividual = field(
+    record,
+    "perIndividual",
+    place,
+    checkIndividualStatsPart,
+  );
+  if (!perIndividual.ok) {
+    return perIndividual;
+  }
   const passStats = field(record, "passStats", place, checkPassStats);
   if (!passStats.ok) {
     return passStats;
@@ -2101,6 +2292,8 @@ function checkVariantsSummaryResult(
     analysis: "variantsSummary",
     chroms: chroms.value,
     numVarsPerChrom: numVarsPerChrom.value,
+    perVar: perVar.value,
+    perIndividual: perIndividual.value,
     passStats: passStats.value,
   });
 }
@@ -2145,8 +2338,13 @@ function checkWritten(value: unknown, place: Place): Checked<Written<Blob>> {
 }
 
 /** The counts of a pass: `numVars`, and the counts of each filter under
-    its kind, a kind of `VariantFilter`, in the order they came. */
-function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
+    its kind, one of `kinds`, the kinds of the filters of the variants
+    unless given, in the order they came. */
+function checkPassStats(
+  value: unknown,
+  place: Place,
+  kinds: FilteringKinds = VARIANT_FILTER_KINDS,
+): Checked<PassStats> {
   const record = objectWith(value, place, ["numVars", "filtering"]);
   if (!record.ok) {
     return record;
@@ -2155,24 +2353,27 @@ function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
   if (!numVars.ok) {
     return numVars;
   }
-  const filtering = field(record.value, "filtering", place, checkFiltering);
+  const filtering = field(record.value, "filtering", place, (v, p) =>
+    checkFiltering(v, p, kinds),
+  );
   if (!filtering.ok) {
     return filtering;
   }
   return accepted({ numVars: numVars.value, filtering: filtering.value });
 }
 
-/** The counts of the filters of a pass, an object whose fields are kinds
-    of `VariantFilter`, kept in their order. */
+/** The counts of the filters of a pass, an object whose fields are of
+    `kinds`, kept in their order. */
 function checkFiltering(
   value: unknown,
   place: Place,
+  kinds: FilteringKinds,
 ): Checked<PassStats["filtering"]> {
   if (!isRecord(value)) {
     return wrongType(place, "an object", value);
   }
   const names = Object.keys(value);
-  const extra = names.filter((name) => !isOneOf(name, VARIANT_FILTER_KINDS));
+  const extra = names.filter((name) => !Object.hasOwn(kinds, name));
   if (extra.length > 0) {
     return refused({
       kind: "extraFields",
@@ -2181,9 +2382,9 @@ function checkFiltering(
       fields: extra,
     });
   }
-  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
+  const filtering: Partial<Record<PassFilterKind, FilteringStats>> = {};
   for (const name of names) {
-    if (!isOneOf(name, VARIANT_FILTER_KINDS)) {
+    if (!isPassFilterKind(name) || !Object.hasOwn(kinds, name)) {
       continue;
     }
     const stats = field(value, name, place, checkFilteringStats);
@@ -3375,6 +3576,11 @@ function isOneOf<K extends string>(
   values: Readonly<Record<K, true>>,
 ): value is K {
   return Object.hasOwn(values, value);
+}
+
+/** Whether `name` is a kind of the counts of a pass. */
+function isPassFilterKind(name: string): name is PassFilterKind {
+  return name === "passed" || isOneOf(name, VARIANT_FILTER_KINDS);
 }
 
 function isRecord(value: unknown): value is object {

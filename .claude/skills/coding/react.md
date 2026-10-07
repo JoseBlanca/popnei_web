@@ -261,7 +261,7 @@ export function PcaPlot({ data, onHover }: PcaPlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<ChartHandle<ScatterData> | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = containerRef.current;
     if (element === null) return;
     if (plotRef.current === null) {
@@ -282,6 +282,13 @@ export function PcaPlot({ data, onHover }: PcaPlotProps) {
 }
 ```
 
+- **Drawn in a layout effect**, which runs before the browser paints,
+  so that what the screen lays over the plot from what the plot told it,
+  as the threshold's slider of popgen2.html is placed from the plot's
+  frame, is drawn in the same paint as the plot. With `useEffect` the
+  plot was drawn after a paint and the slider's handles stood off their
+  lines for a frame at each resize (the review of the thresholds, 7
+  October 2026). `usePlot` of `src/ui/widgets/` does this.
 - **Created once, then updated.** Creating the plot again on every change
   of its data would lose what the user did in it, the rotation of the 3D
   PCA when its colours change, the zoom of the Manhattan plot, and for

@@ -30,6 +30,11 @@
  * otherwise and at each commit, for a screen that follows the number as
  * it is typed (the spec, "The threshold typed and not yet committed").
  *
+ * A field given `onSteps` leaves the stepping to the screen: the arrow
+ * keys, Page Up and Page Down put back the number the field holds, when
+ * something is typed, and give the screen the steps, which it moves its
+ * own number by, the line of a threshold from the number typed.
+ *
  * Escape with something typed puts back the number the field holds, as
  * Ctrl+Z does. The Tab key commits what is typed before the focus moves, so that the
  * next stop of the Tab key is the button the number makes enabled, the
@@ -97,6 +102,15 @@ const COMMIT_KEYS: ReadonlySet<string> = new Set([
     to the start or the end of the text. */
 const CARET_KEYS: ReadonlySet<string> = new Set(["Home", "End"]);
 
+/** The steps each key that steps a number moves it by, for `onSteps`:
+    one for an arrow, ten for Page Up and Page Down, as on a slider. */
+const KEY_STEPS: Readonly<Record<string, number>> = Object.freeze({
+  ArrowUp: 1,
+  ArrowDown: -1,
+  PageUp: 10,
+  PageDown: -10,
+});
+
 /** Moves the caret of `input` to the start of its text, for Home, or to
     its end, for End; with Shift, selects from the anchor of the
     selection, the end that stays, to there, as a field of text does on
@@ -123,6 +137,12 @@ function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
 export interface NumberFieldProps {
   /** The name of the field, shown above it, with its range. */
   readonly label: string;
+  /** The start of `label` that is drawn, before the input on the same
+      line, the rest of it read by a screen reader alone: "Obs. het.
+      max:" of "Obs. het. max: maximum observed heterozygosity", for a
+      field whose short words the screen around it explains. The whole
+      label drawn above the input when absent. */
+  readonly shownLabel?: string;
   /** The number the field shows, from the store or the screen. */
   readonly value: number;
   /** The smallest number it takes. */
@@ -179,11 +199,19 @@ export interface NumberFieldProps {
       as for one typed; not for an arrow key or Page Up and Down, whose
       number is not typed, nor for a number the field refused. */
   readonly onSameCommitted?: (value: number) => void;
+  /** When given, the arrow keys and Page Up and Down do not step the
+      number of the field, nor commit it: what is typed is put back, as
+      Escape does, `onTyped` called with `null`, and `onSteps` with the
+      steps, 1 or −1 for an arrow, 10 or −10 for Page Up and Down; for a
+      screen that steps a number of its own, the line of a threshold,
+      from the number typed. Nothing in an empty field, as without it. */
+  readonly onSteps?: (steps: number) => void;
 }
 
 /** A number field with its label, and the line of a number it refused. */
 export function NumberField({
   label,
+  shownLabel,
   value,
   minValue,
   maxValue,
@@ -197,6 +225,7 @@ export function NumberField({
   onTyped,
   onChange,
   onSameCommitted,
+  onSteps,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
@@ -320,7 +349,11 @@ export function NumberField({
 
   return (
     <AriaNumberField
-      className={classOf(styles, "field")}
+      className={
+        shownLabel === undefined
+          ? classOf(styles, "field")
+          : `${classOf(styles, "field")} ${classOf(styles, "inline")}`
+      }
       value={value}
       minValue={minValue}
       maxValue={maxValue}
@@ -359,7 +392,18 @@ export function NumberField({
         refuse(checked.error);
       }}
     >
-      <Label className={classOf(styles, "label")}>{label}</Label>
+      <Label className={classOf(styles, "label")}>
+        {shownLabel === undefined ? (
+          label
+        ) : (
+          <>
+            {shownLabel}
+            <span className={classOf(styles, "visuallyHidden")}>
+              {hiddenRest(label, shownLabel)}
+            </span>
+          </>
+        )}
+      </Label>
       <FieldInput
         onNotTaken={(text) => {
           refuse({ kind: "notTaken", text });
@@ -392,6 +436,7 @@ export function NumberField({
         onStepKey={() => {
           stepping.current = true;
         }}
+        {...(onSteps !== undefined && { onSteps })}
         onText={(text) => {
           lastText.current = text;
           typed.current = true;
@@ -412,6 +457,18 @@ export function NumberField({
       {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
     </AriaNumberField>
   );
+}
+
+/** The rest of `label` after `shown`, its start, which a screen reader
+    alone reads. A `shown` that does not start the label would make the
+    name read differ from the word seen (WCAG 2.5.3), a defect, thrown. */
+function hiddenRest(label: string, shown: string): string {
+  if (!label.startsWith(shown)) {
+    throw new Error(
+      `popnei_web defect: the label shown "${shown}" does not start the label "${label}".`,
+    );
+  }
+  return label.slice(shown.length);
 }
 
 /** What the input of the field is drawn with. */
@@ -455,6 +512,8 @@ interface FieldInputProps {
   /** Called with a text pasted over the whole field, before React Aria
       commits it. */
   readonly onPasted: (text: string) => void;
+  /** As the field's. */
+  readonly onSteps?: (steps: number) => void;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -476,6 +535,7 @@ function FieldInput({
   isTyped,
   onRevert,
   onPasted,
+  onSteps,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -624,6 +684,24 @@ function FieldInput({
         if (isStepKey(event) && state?.inputValue.trim() === "") {
           event.preventDefault();
           event.stopPropagation();
+          return;
+        }
+        // The screen steps its own number: what is typed is put back, as
+        // Escape does, and nothing is committed.
+        const steps = KEY_STEPS[event.key];
+        if (
+          onSteps !== undefined &&
+          isStepKey(event) &&
+          steps !== undefined &&
+          state !== null
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (isTyped()) {
+            state.setInputValue(committedText);
+            onRevert();
+          }
+          onSteps(steps);
           return;
         }
         if (isStepKey(event)) onStepKey();

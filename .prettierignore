@@ -15,3 +15,7 @@ e2e/fixtures/panel_pca.json
 # The variants of panel.nei and tetraploid.nei in popnei's 1,280 bins, the
 # same, each list on one line.
 e2e/fixtures/variant_fine_bins.json
+
+# The numbers of the thresholds on panel.vcf.gz, panel.nei and
+# tetraploid.vcf.gz, the same, each list on one line.
+e2e/fixtures/threshold_counts.json

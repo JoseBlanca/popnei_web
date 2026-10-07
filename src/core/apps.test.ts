@@ -22,6 +22,7 @@ import {
   FIVE_INDIVIDUALS,
   fiveIndividualsProject,
   noPopDiversity,
+  summaryResult,
 } from "./testSupport.ts";
 import type {
   DiversityResult,
@@ -476,19 +477,14 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
 });
 
 describe("open-variants 1 the summary of the variants file in apps.ts", () => {
-  /** The summary of panel.nei, as popnei gave it on 5 October 2026. */
-  const PANEL_SUMMARY: VariantsSummaryResult = {
-    analysis: "variantsSummary",
-    chroms: ["1"],
-    numVarsPerChrom: Uint32Array.of(1200),
-    passStats: { numVars: 1200, filtering: {} },
-  };
+  /** The summary of panel.nei, its chromosomes as popnei gave them on 5
+      October 2026. */
+  const PANEL_SUMMARY: VariantsSummaryResult = summaryResult(["1"], [1200]);
 
-  test("the new page has the summary, the histograms of the variants and the statistics of each individual, in that order, and the analyses of the old page do not hold the summary", () => {
+  test("the new page has the summary, whose one pass gives the statistics too, and the count of the FILTER failures, and the analyses of the old page do not hold the summary", () => {
     expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
       "variantsSummary",
-      "variantChecks",
-      "individualChecks",
+      "filterFailures",
     ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
@@ -533,14 +529,16 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
         analysis: "variantsSummary",
         fileId: fiveIndividualsProject([]).variants?.fileId,
         filters: [],
+        minNumIndividuals: 0,
+        numBins: 1280,
+        range: [0, 1],
       },
     ]);
     end(store, sent[0], PANEL_SUMMARY);
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
-      ["variantChecks", "ready"],
-      ["individualChecks", "ready"],
+      ["filterFailures", "locked"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

@@ -314,10 +314,18 @@ export function individualThreshold(
 
 /** The line under the histogram of the heterozygosity for the
     individuals in no bin: "3 individuals with no called genotype are not
-    in the histogram."; `null` for none. */
-export function noHeterozygosityText(numNaN: number): string | null {
+    in the histogram."; "3 individuals with no called genotype so far are
+    not in the histogram." for a histogram of the variants read so far,
+    `soFar`, which the old page never draws; `null` for none. */
+export function noHeterozygosityText(
+  numNaN: number,
+  soFar = false,
+): string | null {
   if (numNaN === 0) return null;
+  const which = soFar
+    ? "with no called genotype so far"
+    : "with no called genotype";
   return numNaN === 1
-    ? "1 individual with no called genotype is not in the histogram."
-    : `${counted(numNaN, "individual")} with no called genotype are not in the histogram.`;
+    ? `1 individual ${which} is not in the histogram.`
+    : `${counted(numNaN, "individual")} ${which} are not in the histogram.`;
 }

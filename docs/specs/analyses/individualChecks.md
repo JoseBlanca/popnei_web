@@ -247,12 +247,13 @@ export interface IndividualRow {
   readonly missingGenotypes: number;
   readonly observedHeterozygosity: number | null;
 }
-/** The rows of a result, in the order of the variants file; the same
+/** The rows of a result, or of the part `perIndividual` of the summary
+    of the variants file, in the order of the variants file; the same
     array for the same result. */
-export function individualRows(r: IndividualChecksResult): readonly IndividualRow[];
+export function individualRows(r: IndividualStatsPart): readonly IndividualRow[];
 
 /** The table as the text of a CSV file (the panel, "What it shows"). */
-export function individualChecksCsv(r: IndividualChecksResult): string;
+export function individualChecksCsv(r: IndividualStatsPart): string;
 
 /** The words of a refusal of popnei, for the error state of the panel. */
 export function refusalText(message: string, p: Project): string;

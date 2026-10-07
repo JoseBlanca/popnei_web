@@ -13,6 +13,7 @@ import {
   BGZIP_REFUSAL,
   EMPTY_SOURCE,
   SOURCE_UNREADABLE,
+  VARS_BATCH_UNREADABLE,
   isVcfLineRefusal,
 } from "../../core/analyses/words.ts";
 import {
@@ -31,12 +32,21 @@ import type {
   AnalysisStatus,
   AppState,
 } from "../../core/store.ts";
+import {
+  filterFailures,
+  numFilterFailures,
+} from "../../core/analyses/filterFailures.ts";
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
+import { chainStatuses, hasChainButton } from "./chain.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
+
+/** The id of the count of the variants of a VCF that failed their
+    FILTER. */
+export const FAILURES_ID = filterFailures.id;
 
 /** The button that opens the file picker, before a file is open. */
 export const OPEN_LABEL = "Open variants file…";
@@ -103,15 +113,29 @@ export function variantsLine(numVars: number): string {
 }
 
 /** The line of the variants while they are counted: "Variants:
-    counting… 6%", with no share before the first progress. */
-export function countingVariantsLine(share: number | null): string {
+    counting… 6%", with no share before the first progress; once the pass
+    gave a result so far, the variants it covers alone, "Variants: 52,000
+    so far", with no share beside it, which is of the bytes read and
+    would invite a division of the two; the bar keeps the share. */
+export function countingVariantsLine(
+  share: number | null,
+  numVarsSoFar: number | null = null,
+): string {
+  if (numVarsSoFar !== null) return `Variants: ${grouped(numVarsSoFar)} so far`;
   return share === null
     ? "Variants: counting…"
     : `Variants: counting… ${String(share)}%`;
 }
 
-/** The line of the chromosomes while the variants are counted. */
+/** The line of the chromosomes while the variants are counted, before
+    the first result so far. */
 export const CHROMOSOMES_COUNTING = "Chromosomes: counting…";
+
+/** The line of the chromosomes once the pass gave a result so far, those
+    with a variant among the variants read: "Chromosomes: 1 so far". */
+export function chromosomesSoFarLine(numChroms: number): string {
+  return `Chromosomes: ${grouped(numChroms)} so far`;
+}
 
 /** The line of the chromosomes once counted: "Chromosomes: 1". */
 export function chromosomesLine(numChroms: number): string {
@@ -122,6 +146,20 @@ export function chromosomesLine(numChroms: number): string {
     failure of their count. */
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
+
+/** The line of the variants of a VCF that failed their FILTER, which a
+    `.nei` file does not have, once counted: "FILTER failures: 300", 0 when
+    every variant passed. */
+export function failuresLine(numFailures: number): string {
+  return `FILTER failures: ${grouped(numFailures)}`;
+}
+
+/** The same line while the file is read, while the variants are counted
+    and the failures after them, and after a Stop or a failure of their
+    count. */
+export const FAILURES_READING = "FILTER failures: reading…";
+export const FAILURES_COUNTING = "FILTER failures: counting…";
+export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
 
 /** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
     this page is the file's: a `.nei` file holds it, and popnei reads that
@@ -258,17 +296,45 @@ export function openFailure(p: Project): OpenFailure | null {
   return text === null ? null : { text, remedy: null };
 }
 
-/** The button that counts again after a Stop or a failure. */
-export const COUNT_AGAIN_LABEL = "Count again";
+/** The button that starts the pass of the count and the statistics
+    again after a Stop or a crash of the worker. */
+export const START_AGAIN_LABEL = "Start again";
 
-/** What the status region says of a count stopped, whose lines then say
-    "not counted" beside Count again. */
-export const STOPPED_TEXT =
-  "Counting the variants was stopped. Count again counts them from the start.";
+/** A pass of the chain of the page: the count of the variants and the
+    statistics, or the count of the FILTER failures after it. */
+export type ChainPass = "summary" | "failures";
+
+/** What the status region says of a Stop of the pass `pass`, whose lines
+    then say "not counted", with the way to start it again when the box
+    offers Start again after the Stop, `offersStartAgain`, and not when it
+    does not, after a failure of the summary that Start again cannot mend:
+    "The count of the variants and the statistics were stopped. Start
+    again calculates them from the start." */
+export function stoppedText(
+  pass: ChainPass,
+  offersStartAgain: boolean,
+): string {
+  if (pass === "summary") {
+    return offersStartAgain
+      ? "The count of the variants and the statistics were stopped. Start again calculates them from the start."
+      : "The count of the variants and the statistics were stopped.";
+  }
+  return offersStartAgain
+    ? "The count of the variants that failed their FILTER was stopped. Start again counts them from the start."
+    : "The count of the variants that failed their FILTER was stopped.";
+}
 
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {
   return `${counted(numVars, "variant")} on ${counted(numChroms, "chromosome")}.`;
+}
+
+/** The words of the count of the FILTER failures of the file `name`
+    done, for the status region: "low_qual.vcf.gz: 300 variants failed
+    their FILTER." */
+export function failuresCountedText(name: string, numFailures: number): string {
+  const verb = numFailures === 1 ? "failed its FILTER" : "failed their FILTER";
+  return `${escaped(name)}: ${counted(numFailures, "variant")} ${verb}.`;
 }
 
 /** popnei's refusal of a variant at the position 0. */
@@ -280,14 +346,29 @@ const POSITION_ZERO =
 const PAST_LARGEST =
   /^the window \d+ to \d+ of the chromosome (.*?) ends past/su;
 
+/** popnei's refusal of a genotype of a ploidy other than that the
+    variants are read with, "line 9 of the VCF, the column of s000: its
+    genotype is of the ploidy 1 and the variants are read with the ploidy
+    2; ...", as js-v0.2.1 gives it: the line, and the two ploidies. */
+const OTHER_PLOIDY =
+  /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
+
 /**
- * The words of popnei's refusal `message` of the count of the variants
- * of `p`: a file of no variant; a variant at the position 0; a position of
- * 2^53 or more; a line of the VCF popnei cannot read, or a gzipped file
- * damaged or cut short; any other, with popnei's message. Throws a defect
+ * The words of popnei's refusal `message` of the pass `pass` of `p`, the
+ * count of the variants and the statistics unless given: a file of no
+ * variant; a gzipped file or a `.nei` file damaged or cut short; a variant
+ * at the position 0; a position of 2^53 or more; a genotype of another
+ * ploidy, which may be a correct VCF, haploid males on chrX, and which
+ * fetching the file again does not mend; any other line of the VCF popnei
+ * cannot read; any other, with popnei's message. Each says what the pass
+ * could not do, and a remedy that works for either pass. Throws a defect
  * on a project with no variants file.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  pass: ChainPass = "summary",
+): string {
   const variants = p.variants;
   if (variants === null) {
     throw new Error(
@@ -295,27 +376,43 @@ export function refusalText(message: string, p: Project): string {
     );
   }
   const fileName = escaped(variants.name);
+  const cannot =
+    pass === "summary"
+      ? "the variants cannot be counted, nor their statistics calculated"
+      : "the variants that failed their FILTER cannot be counted";
+  const couldNot =
+    pass === "summary"
+      ? `popnei could not read ${fileName}`
+      : `popnei could not count the variants of ${fileName} that failed their FILTER`;
   if (message.startsWith(EMPTY_SOURCE)) {
     // The page reads every variant, whatever its FILTER column, so a
     // pass of none is a file of none.
     return `${fileName} has no variants. Open another variants file.`;
   }
-  if (message.startsWith(SOURCE_UNREADABLE)) {
+  if (
+    message.startsWith(SOURCE_UNREADABLE) ||
+    VARS_BATCH_UNREADABLE.test(message)
+  ) {
     return `${fileName} could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.`;
   }
   const zero = POSITION_ZERO.exec(message);
   if (zero !== null) {
-    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted. Remove that line from the file and open it again.`;
+    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so ${cannot}. Remove that line from the file and open it again.`;
   }
   const past = PAST_LARGEST.exec(message);
   if (past !== null) {
-    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.`;
+    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, so ${cannot}. Correct the position in the file and open it again.`;
+  }
+  const ploidies = OTHER_PLOIDY.exec(message);
+  if (ploidies !== null) {
+    const [, line, found, read] = ploidies;
+    return `Line ${line ?? ""} of ${fileName} has a genotype of ploidy ${found ?? ""} among genotypes of ploidy ${read ?? ""}, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.`;
   }
   const words = saying(withoutBackquotes(message));
   if (isVcfLineRefusal(message)) {
-    return `popnei could not read ${fileName}${words}. Correct the file, or fetch it again, and open it again.`;
+    return `${couldNot}${words}. Correct the file, or fetch it again, and open it again.`;
   }
-  return `popnei could not count the variants of ${fileName}${words}. Open the file again, or another file.`;
+  return `${couldNot}${words}. Open the file again, or another file.`;
 }
 
 /**
@@ -334,8 +431,8 @@ export function failedText(error: AnalysisError, p: Project): string {
     case "defect":
       // The entry gives what the worker said to the error bar, on the
       // screen with these words, which says what it was and how to report
-      // it; Count again is offered beside them after a stop of the worker.
-      return `The variants of ${fileName} could not be counted.`;
+      // it; Start again is offered beside them after a stop of the worker.
+      return `The variants of ${fileName} could not be counted, nor their statistics calculated.`;
     case "couldNotStart":
       return `The application could not start its calculations. Reload the page and open ${fileName} again.`;
     case "protocolMismatch":
@@ -347,14 +444,28 @@ export function failedText(error: AnalysisError, p: Project): string {
   }
 }
 
-/** Whether Count again can mend the failure `error`: a worker that
-    stopped, and none of these: popnei's refusal, which the same file
-    gives again; a file the browser can no longer read, which a new
-    opening mends; a worker that could not start or a page out of date,
-    which the client fails at once until the page is reloaded; a defect of
-    our own code, which the error bar tells. */
-export function countAgainMends(error: AnalysisError): boolean {
-  return error.kind === "failed" && error.error.kind === "workerFailed";
+/**
+ * The words of a count of the FILTER failures that failed: popnei's
+ * refusal, in the words of `refusalText` for that count, which say what to
+ * do; a stop of the worker or a defect of ours, whose words the error bar
+ * gives; any other failure in the words of `failedText`, which say what to
+ * do.
+ */
+export function failuresFailedText(error: AnalysisError, p: Project): string {
+  const fileName = escaped(p.variants?.name ?? "the file");
+  if (error.kind === "refused") {
+    return refusalText(error.message, p, "failures");
+  }
+  switch (error.error.kind) {
+    case "workerFailed":
+    case "defect":
+      return `The variants of ${fileName} that failed their FILTER could not be counted.`;
+    case "reopenFailed":
+    case "couldNotStart":
+    case "protocolMismatch":
+    case "files":
+      return failedText(error, p);
+  }
 }
 
 /** The status of the summary in `s`; a defect when the store has none. */
@@ -370,6 +481,20 @@ export function summaryStatus(
   return view.status;
 }
 
+/** The status of the count of the FILTER failures in `s`; a defect when
+    the store has none. */
+export function failuresStatus(
+  s: AppState<JobResult, unknown>,
+): AnalysisStatus<JobResult> {
+  const view = s.analyses.find((a) => a.id === FAILURES_ID);
+  if (view === undefined) {
+    throw new Error(
+      "popnei_web defect: the store has no count of the FILTER failures.",
+    );
+  }
+  return view.status;
+}
+
 /** What the status region says as a read starts: "Reading
     panel.vcf.gz." The page reads every file in one way, so it names no
     option. */
@@ -380,9 +505,13 @@ export function readingText(variants: VariantSource): string {
 /** The name of the bar of the count. */
 export const COUNT_BAR_LABEL = "Counting the variants";
 
+/** The name of the bar of the count of the FILTER failures. */
+export const FAILURES_BAR_LABEL =
+  "Counting the variants that failed their FILTER";
+
 /** What the page knows of the focus as the store changes. */
 export interface FocusNow {
-  /** Whether the focus is on Stop or Count again of the count, which,
+  /** Whether the focus is on Stop or Start again of the count, which,
       when the count ends with no button to show, moves the focus onto
       its lines or the words of its failure, for a screen reader to read
       them. */
@@ -392,9 +521,11 @@ export interface FocusNow {
 /**
  * What the status region says of a change of the store from `before` to
  * `after`, which the user may not be looking at: the file read, with its
- * individuals, or why it was not; and the count done, with its numbers,
- * or why it failed. The end of a count that moves the focus onto its own
- * words, `focus` says, is not said again.
+ * individuals, or why it was not; the count done, with its numbers, or
+ * why it failed; and the count of the FILTER failures done, or why it
+ * failed. The end of the chain that moves the focus from its button onto
+ * the lines of the count or the words of a failure, `focus` says, is not
+ * said again.
  */
 export function announcementsOf(
   before: AppState<JobResult, unknown>,
@@ -422,12 +553,10 @@ export function announcementsOf(
   }
   const then = summaryStatus(before);
   const now = summaryStatus(after);
-  // The button goes with the focus at a count done and at a failure
-  // Count again cannot mend, and the focus moves onto those words.
+  // The button goes with the focus at the end of the chain, done or failed
+  // in a way Start again cannot mend, and the focus moves onto its words.
   const focusMoves =
-    focus.focusOnCountButton &&
-    (now.kind === "done" ||
-      (now.kind === "error" && !countAgainMends(now.error)));
+    focus.focusOnCountButton && !hasChainButton(chainStatuses(after.analyses));
   if (focusMoves) return texts;
   if (
     now.kind === "done" &&
@@ -440,6 +569,20 @@ export function announcementsOf(
   }
   if (now.kind === "error" && then.kind !== "error") {
     texts.push(failedText(now.error, after.project));
+  }
+  const failuresThen = failuresStatus(before);
+  const failuresNow = failuresStatus(after);
+  if (
+    failuresNow.kind === "done" &&
+    failuresThen.kind !== "done" &&
+    failuresNow.result.analysis === FAILURES_ID
+  ) {
+    texts.push(
+      failuresCountedText(variants.name, numFilterFailures(failuresNow.result)),
+    );
+  }
+  if (failuresNow.kind === "error" && failuresThen.kind !== "error") {
+    texts.push(failuresFailedText(failuresNow.error, after.project));
   }
   return texts;
 }

@@ -128,8 +128,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 7, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 7 };
+const READY = { kind: "ready", protocol: 10, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 10 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -225,6 +225,11 @@ function noProgress(): void {
   // Nothing: the test does not look at the progress of this run.
 }
 
+/** The results so far of a run the test does not look at. */
+function noSoFar(): void {
+  // Nothing: the test does not look at the results so far of this run.
+}
+
 /** A client over fake workers, with the workers it made and the versions
     it gave `onPopneiReady`, which calls `hooks.onReady` too. */
 function setUp(options: { readonly calculationThrows?: number } = {}): {
@@ -285,16 +290,24 @@ function withA(): ReturnType<typeof setUp> & { readonly first: FakeWorker } {
 }
 
 /** Load A read, a run r1 running on the first worker and a run r2
-    waiting. */
+    waiting, with the results so far that reached the onSoFar of each. */
 function twoRuns(): ReturnType<typeof withA> & {
   readonly r1: ReturnType<ReturnType<typeof createClient>["run"]>;
   readonly r2: ReturnType<ReturnType<typeof createClient>["run"]>;
+  readonly r1SoFar: readonly JobResult[];
+  readonly r2SoFar: readonly JobResult[];
 } {
   const env = withA();
-  const r1 = env.client.run("r1", job("A"), noProgress);
-  const r2 = env.client.run("r2", job("A"), noProgress);
+  const r1SoFar: JobResult[] = [];
+  const r1 = env.client.run("r1", job("A"), noProgress, (result) => {
+    r1SoFar.push(result);
+  });
+  const r2SoFar: JobResult[] = [];
+  const r2 = env.client.run("r2", job("A"), noProgress, (result) => {
+    r2SoFar.push(result);
+  });
   expect(lastSent(env.first)).toMatchObject({ kind: "run", key: "r1" });
-  return { ...env, r1, r2 };
+  return { ...env, r1, r2, r1SoFar, r2SoFar };
 }
 
 /** The new worker after a failure opens A again, and is then sent r2; a
@@ -337,7 +350,7 @@ describe("WS2 D3 the client: the worked sequence", () => {
     expect(open).toMatchObject({ kind: "open", fileId: "A", ...NEI });
     expect(open.kind === "open" && open.file).toBe(FILE_A);
 
-    const k1 = env.client.run("k1", job("A"), noProgress);
+    const k1 = env.client.run("k1", job("A"), noProgress, noSoFar);
     expect(first.posted).toHaveLength(1);
 
     emit(first, opened(open.id));
@@ -353,7 +366,7 @@ describe("WS2 D3 the client: the worked sequence", () => {
       job: job("A"),
     });
 
-    const k2 = env.client.run("k2", job("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress, noSoFar);
     expect(first.posted).toHaveLength(2);
 
     emit(first, resultOf(k1.id, "k1"));
@@ -377,7 +390,7 @@ describe("WS2 D3 the client: the worked sequence", () => {
     expect(reopen.kind === "open" && reopen.file).toBe(FILE_A);
     expect(env.versions).toEqual(["0.1.0"]);
 
-    const k3 = env.client.run("k3", job("A"), noProgress);
+    const k3 = env.client.run("k3", job("A"), noProgress, noSoFar);
     expect(second.posted).toHaveLength(1);
 
     emit(second, opened(reopen.id));
@@ -438,7 +451,7 @@ describe("WS2 D3 the client: the load", () => {
     emit(second, READY);
     emit(second, opened(lastSent(second).id));
 
-    const run = env.client.run("k1", job("A"), noProgress);
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
     expect(second.terminated).toBe(true);
     expect(env.calculation).toHaveLength(3);
     const third = last(env.calculation);
@@ -485,10 +498,10 @@ describe("WS2 D3 the client: cancelling", () => {
 
   test("a run that waits for its open leaves the queue, and the open goes on", async () => {
     const env = withA();
-    const k1 = env.client.run("k1", job("A"), noProgress);
+    const k1 = env.client.run("k1", job("A"), noProgress, noSoFar);
     k1.cancel();
     const second = last(env.calculation);
-    const k2 = env.client.run("k2", job("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress, noSoFar);
     emit(second, READY);
     const open = lastSent(second);
     expect(open).toMatchObject({ kind: "open", fileId: "A" });
@@ -497,7 +510,7 @@ describe("WS2 D3 the client: cancelling", () => {
     expect(second.terminated).toBe(false);
     emit(second, opened(open.id));
     expect(second.posted).toHaveLength(1);
-    const k3 = env.client.run("k3", job("A"), noProgress);
+    const k3 = env.client.run("k3", job("A"), noProgress, noSoFar);
     expect(lastSent(second)).toMatchObject({ kind: "run", id: k3.id });
   });
 
@@ -574,9 +587,9 @@ describe("WS2 D3 the client: the reopen that fails", () => {
     readonly k2: ReturnType<ReturnType<typeof createClient>["run"]>;
   } {
     const env = withA();
-    env.client.run("k1", job("A"), noProgress).cancel();
+    env.client.run("k1", job("A"), noProgress, noSoFar).cancel();
     const second = last(env.calculation);
-    const k2 = env.client.run("k2", job("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress, noSoFar);
     emit(second, READY);
     return { ...env, second, openId: lastSent(second).id, k2 };
   }
@@ -625,7 +638,7 @@ describe("WS2 D3 the client: the reopen that fails", () => {
       id: env.openId,
       message: "not a vars file",
     });
-    const k3 = env.client.run("k3", job("A"), noProgress);
+    const k3 = env.client.run("k3", job("A"), noProgress, noSoFar);
     expect(await now(k3.outcome)).toBe("pending");
     const third = last(env.calculation);
     expect(env.calculation).toHaveLength(3);
@@ -683,9 +696,14 @@ describe("WS2 D3 the client: progress", () => {
   test("each progress of a run reaches its onProgress as it came, then its result ends it", async () => {
     const env = withA();
     const seen: Progress[] = [];
-    const run = env.client.run("k1", job("A"), (p) => {
-      seen.push(p);
-    });
+    const run = env.client.run(
+      "k1",
+      job("A"),
+      (p) => {
+        seen.push(p);
+      },
+      noSoFar,
+    );
     const first = {
       bytesRead: 130000,
       numBytes: 261490,
@@ -707,10 +725,15 @@ describe("WS2 D3 the client: progress", () => {
 
   test("an onProgress that throws: the throw reaches the caller, and the run and the queue go on", async () => {
     const env = withA();
-    const r1 = env.client.run("r1", job("A"), () => {
-      throw new Error("a screen failed");
-    });
-    const r2 = env.client.run("r2", job("A"), noProgress);
+    const r1 = env.client.run(
+      "r1",
+      job("A"),
+      () => {
+        throw new Error("a screen failed");
+      },
+      noSoFar,
+    );
+    const r2 = env.client.run("r2", job("A"), noProgress, noSoFar);
     expect(() => {
       emit(env.first, {
         kind: "progress",
@@ -746,6 +769,108 @@ describe("WS2 D3 the client: progress", () => {
   });
 });
 
+function soFarOf(id: number, key: string): unknown {
+  return { kind: "soFar", id, key, result: RESULT };
+}
+
+describe("live-stats 2 the client: the results so far", () => {
+  test("each result so far of the run running reaches its onSoFar as it came, and the run goes on to its result", async () => {
+    const env = withA();
+    const seen: JobResult[] = [];
+    const run = env.client.run("k1", job("A"), noProgress, (result) => {
+      seen.push(result);
+    });
+    emit(env.first, soFarOf(run.id, "k1"));
+    emit(env.first, soFarOf(run.id, "k1"));
+    expect(seen).toEqual([RESULT, RESULT]);
+    expect(env.first.terminated).toBe(false);
+    emit(env.first, resultOf(run.id, "k1"));
+    expect(await now(run.outcome)).toMatchObject({ kind: "done", key: "k1" });
+    expect(seen).toHaveLength(2);
+  });
+
+  test("a run with no onSoFar passes its results so far over", async () => {
+    const env = withA();
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
+    emit(env.first, soFarOf(run.id, "k1"));
+    emit(env.first, resultOf(run.id, "k1"));
+    expect(await now(run.outcome)).toMatchObject({ kind: "done", key: "k1" });
+  });
+
+  test("a result so far of a run cancelled reaches nobody: its worker was ended", async () => {
+    const env = withA();
+    const seen: JobResult[] = [];
+    const run = env.client.run("k1", job("A"), noProgress, (result) => {
+      seen.push(result);
+    });
+    run.cancel();
+    expect(await now(run.outcome)).toEqual({ kind: "cancelled" });
+    emit(env.first, soFarOf(run.id, "k1"));
+    expect(seen).toEqual([]);
+    expect(env.calculation).toHaveLength(2);
+    expect(last(env.calculation).terminated).toBe(false);
+  });
+
+  test.each([
+    [
+      "of the run waiting",
+      (env: ReturnType<typeof twoRuns>) => soFarOf(env.r2.id, "r2"),
+    ],
+    ["of an id never sent", () => soFarOf(99, "r1")],
+    [
+      "under another key than its run's",
+      (env: ReturnType<typeof twoRuns>) => soFarOf(env.r1.id, "k9"),
+    ],
+    [
+      "of another analysis than its job's",
+      (env: ReturnType<typeof twoRuns>) => ({
+        kind: "soFar",
+        id: env.r1.id,
+        key: "r1",
+        result: { analysis: "filterCounts", passStats: RESULT.passStats },
+      }),
+    ],
+    [
+      "that fails its check",
+      (env: ReturnType<typeof twoRuns>) => ({
+        kind: "soFar",
+        id: env.r1.id,
+        key: "r1",
+      }),
+    ],
+  ])(
+    "a result so far %s is a defect: the run fails, nothing reaches its onSoFar, and the worker is started again",
+    async (_name, message) => {
+      const console_ = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const env = twoRuns();
+      emit(env.first, message(env));
+      expect(await now(env.r1.outcome)).toMatchObject({
+        kind: "failed",
+        error: { kind: "defect" },
+      });
+      expect(env.r1SoFar).toEqual([]);
+      expect(env.r2SoFar).toEqual([]);
+      expect(console_).toHaveBeenCalledOnce();
+      expectRestartedWithR2(env);
+    },
+  );
+
+  test("a result so far after the result of its run, of a run done, is a defect", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const env = twoRuns();
+    emit(env.first, resultOf(env.r1.id, "r1"));
+    expect(await now(env.r1.outcome)).toMatchObject({ kind: "done" });
+    emit(env.first, soFarOf(env.r1.id, "r1"));
+    expect(await now(env.r2.outcome)).toMatchObject({
+      kind: "failed",
+      error: { kind: "defect" },
+    });
+    expect(env.first.terminated).toBe(true);
+  });
+});
+
 describe("WS2 D3 the client: a defect of the page", () => {
   test("a read of a load with no File fails at once as a defect", async () => {
     const env = setUp();
@@ -758,7 +883,7 @@ describe("WS2 D3 the client: a defect of the page", () => {
 
   test("a run of a load with no File fails at once as a defect", async () => {
     const env = withA();
-    const run = env.client.run("k1", job("Z"), noProgress);
+    const run = env.client.run("k1", job("Z"), noProgress, noSoFar);
     expect(await now(run.outcome)).toMatchObject({
       kind: "failed",
       error: { kind: "defect" },
@@ -781,7 +906,7 @@ describe("WS2 D3 the client: a defect of the page", () => {
       kind: "failed",
       error: { kind: "popnei", message: "not a vars file" },
     });
-    const run = env.client.run("k1", job("A"), noProgress);
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
     expect(await now(run.outcome)).toMatchObject({
       kind: "failed",
       error: { kind: "defect" },
@@ -974,7 +1099,7 @@ describe("WS2 D3 the client: crashes, defects, and every read answered", () => {
   test("postMessage that throws: the run fails as a defect with the browser's message, and the worker is started again", async () => {
     const env = withA();
     env.first.postError = new Error("The object could not be cloned.");
-    const r1 = env.client.run("r1", job("A"), noProgress);
+    const r1 = env.client.run("r1", job("A"), noProgress, noSoFar);
     expect(await now(r1.outcome)).toEqual({
       kind: "failed",
       error: { kind: "defect", message: "The object could not be cloned." },
@@ -1659,6 +1784,7 @@ async function explore(sequence: readonly Step[]): Promise<Seen> {
           key,
           next.ld ? ldDecayJob(load) : job(load),
           noProgress,
+          noSoFar,
         );
         track(run.outcome, { kind: "run", id: run.id, key });
         cancels.push(() => {
@@ -1917,9 +2043,9 @@ describe("WS2 D3 the client: what the review of work package 2 found", () => {
 
   test("a read waiting on an open sent for a run gets reopenFailed when that open is refused", async () => {
     const env = withA();
-    env.client.run("k1", job("A"), noProgress).cancel();
+    env.client.run("k1", job("A"), noProgress, noSoFar).cancel();
     const second = last(env.calculation);
-    env.client.run("k2", job("A"), noProgress);
+    env.client.run("k2", job("A"), noProgress, noSoFar);
     emit(second, READY);
     const openId = lastSent(second).id;
     const read = env.client.openVariants({ fileId: "A", ...NEI });
@@ -2136,7 +2262,7 @@ describe("WS2 D3 the client: what the test review found", () => {
 
   test("a run refused sets the count of failures back: one more idle crash starts the worker again", () => {
     const env = crashedOnce();
-    const run = env.client.run("k1", job("A"), noProgress);
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
     emit(env.second, { kind: "refused", id: run.id, message: "no variant" });
     emit(env.second, { kind: "crashed", message: "trap" });
     expect(env.calculation).toHaveLength(3);
@@ -2144,7 +2270,7 @@ describe("WS2 D3 the client: what the test review found", () => {
 
   test("a run answered with its result sets the count of failures back: one more idle crash starts the worker again", () => {
     const env = crashedOnce();
-    const run = env.client.run("k1", job("A"), noProgress);
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
     emit(env.second, resultOf(run.id, "k1"));
     emit(env.second, { kind: "crashed", message: "trap" });
     expect(env.calculation).toHaveLength(3);
@@ -2168,9 +2294,9 @@ describe("WS2 D3 the client: what the test review found", () => {
 
   test("a crash during an open fails the runs waiting on it, and the new worker opens nothing", async () => {
     const env = withA();
-    env.client.run("k1", job("A"), noProgress).cancel();
+    env.client.run("k1", job("A"), noProgress, noSoFar).cancel();
     const second = last(env.calculation);
-    const k2 = env.client.run("k2", job("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress, noSoFar);
     emit(second, READY);
     expect(lastSent(second)).toMatchObject({ kind: "open", fileId: "A" });
     emit(second, { kind: "crashed", message: "trap" });
@@ -2185,12 +2311,12 @@ describe("WS2 D3 the client: what the test review found", () => {
 
   test("two runs that each crash while running do not give the worker up", async () => {
     const env = withA();
-    const r1 = env.client.run("r1", job("A"), noProgress);
+    const r1 = env.client.run("r1", job("A"), noProgress, noSoFar);
     emit(env.first, { kind: "crashed", message: "out of memory" });
     const second = last(env.calculation);
     emit(second, READY);
     emit(second, opened(lastSent(second).id));
-    const r2 = env.client.run("r2", job("A"), noProgress);
+    const r2 = env.client.run("r2", job("A"), noProgress, noSoFar);
     expect(lastSent(second)).toMatchObject({ kind: "run", id: r2.id });
     emit(second, { kind: "crashed", message: "out of memory" });
     expect(await now(r1.outcome)).toMatchObject({ kind: "failed" });
@@ -2199,7 +2325,7 @@ describe("WS2 D3 the client: what the test review found", () => {
       error: { kind: "workerFailed" },
     });
     expect(env.calculation).toHaveLength(3);
-    const r3 = env.client.run("r3", job("A"), noProgress);
+    const r3 = env.client.run("r3", job("A"), noProgress, noSoFar);
     expect(await now(r3.outcome)).toBe("pending");
   });
 
@@ -2238,7 +2364,7 @@ describe("WS2 D3 the client: what the test review found", () => {
   test("an error event through the handler of a worker already ended changes nothing", () => {
     const env = withA();
     const onerror = env.first.onerror;
-    env.client.run("k1", job("A"), noProgress).cancel();
+    env.client.run("k1", job("A"), noProgress, noSoFar).cancel();
     const second = last(env.calculation);
     onerror?.(new ErrorEvent("error", { message: "late" }));
     expect(second.terminated).toBe(false);
@@ -2248,7 +2374,7 @@ describe("WS2 D3 the client: what the test review found", () => {
   test("a messageerror through the handler of a worker already ended changes nothing", () => {
     const env = withA();
     const onmessageerror = env.first.onmessageerror;
-    env.client.run("k1", job("A"), noProgress).cancel();
+    env.client.run("k1", job("A"), noProgress, noSoFar).cancel();
     const second = last(env.calculation);
     onmessageerror?.({ data: null });
     expect(second.terminated).toBe(false);
@@ -2266,7 +2392,7 @@ describe("WS2 D3 the client: what the test review found", () => {
       kind: "failed",
       error: { kind: "workerFailed" },
     });
-    const run = env.client.run("k1", job("A"), noProgress);
+    const run = env.client.run("k1", job("A"), noProgress, noSoFar);
     expect(await now(run.outcome)).toMatchObject({
       kind: "failed",
       error: { kind: "defect" },
@@ -2282,7 +2408,7 @@ function writeAndRun(): ReturnType<typeof withA> & {
 } {
   const env = withA();
   const w1 = env.client.write("w1", writeJob("A"), noProgress);
-  const k5 = env.client.run("k5", job("A"), noProgress);
+  const k5 = env.client.run("k5", job("A"), noProgress, noSoFar);
   expect(lastSent(env.first)).toMatchObject({ kind: "write", key: "w1" });
   return { ...env, w1, k5 };
 }
@@ -2356,9 +2482,9 @@ describe("VS1 D5 the write of the client: a write", () => {
 
   test("a write waits behind a run, and a run behind a write, in the one queue", async () => {
     const env = withA();
-    const k1 = env.client.run("k1", job("A"), noProgress);
+    const k1 = env.client.run("k1", job("A"), noProgress, noSoFar);
     const w1 = env.client.write("w1", writeJob("A"), noProgress);
-    const k2 = env.client.run("k2", job("A"), noProgress);
+    const k2 = env.client.run("k2", job("A"), noProgress, noSoFar);
     expect(lastSent(env.first)).toMatchObject({ kind: "run", key: "k1" });
     emit(env.first, resultOf(k1.id, "k1"));
     expect(lastSent(env.first)).toMatchObject({ kind: "write", key: "w1" });
@@ -2410,7 +2536,7 @@ describe("VS1 D5 the write of the client: the wrong answers", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const env = withA();
-    const k1 = env.client.run("k1", job("A"), noProgress);
+    const k1 = env.client.run("k1", job("A"), noProgress, noSoFar);
     emit(env.first, writtenOf(k1.id, "k1", SMALL_FILE));
     expect(await now(k1.outcome)).toMatchObject({
       kind: "failed",
@@ -2425,7 +2551,7 @@ describe("VS1 D5 the write of the client: the wrong answers", () => {
 describe("VS1 D5 the write of the client: cancelling", () => {
   test("a cancel of a write that waits takes it out of the queue, and no worker is ended", async () => {
     const env = withA();
-    const k1 = env.client.run("k1", job("A"), noProgress);
+    const k1 = env.client.run("k1", job("A"), noProgress, noSoFar);
     const w1 = env.client.write("w1", writeJob("A"), noProgress);
     w1.cancel();
     expect(await now(w1.outcome)).toEqual({ kind: "cancelled" });
@@ -2470,7 +2596,7 @@ describe("VS1 D5 the write of the client: the restart after a large write", () =
     const env = writeAndRun();
     emit(env.first, writtenOf(env.w1.id, "w1", LARGE_FILE));
     expect(await now(env.w1.outcome)).toMatchObject({ kind: "done" });
-    const k6 = env.client.run("k6", job("A"), noProgress);
+    const k6 = env.client.run("k6", job("A"), noProgress, noSoFar);
     const second = last(env.calculation);
     expect(env.calculation).toHaveLength(2);
     expect(second.posted).toEqual([]);
@@ -2533,7 +2659,7 @@ describe("VS1 D5 the write of the client: the restart after a large write", () =
     emit(first, READY);
     emit(first, opened(lastSent(first).id));
     const w1 = client.write("w1", writeJob("A"), noProgress);
-    const k5 = client.run("k5", job("A"), noProgress);
+    const k5 = client.run("k5", job("A"), noProgress, noSoFar);
     const order: string[] = [];
     void w1.outcome.then((outcome) => order.push(`w1 ${outcome.kind}`));
     void k5.outcome.then((outcome) => order.push(`k5 ${outcome.kind}`));
@@ -2732,8 +2858,8 @@ function pcaAndRun(
     individuals: names(numInFile),
     ploidy: 2,
   });
-  const k1 = env.client.run("k1", pca, noProgress);
-  const k6 = env.client.run("k6", job("A"), noProgress);
+  const k1 = env.client.run("k1", pca, noProgress, noSoFar);
+  const k6 = env.client.run("k6", job("A"), noProgress, noSoFar);
   expect(lastSent(first)).toEqual({
     kind: "run",
     id: k1.id,
@@ -2933,8 +3059,9 @@ describe("IP6 D3 the restart after a large PCA", () => {
       "k1",
       pcaJob(names(PCA_RESTART_INDIVIDUALS + 1)),
       noProgress,
+      noSoFar,
     );
-    const k6 = client.run("k6", job("A"), noProgress);
+    const k6 = client.run("k6", job("A"), noProgress, noSoFar);
     const order: string[] = [];
     void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
     void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
@@ -3148,8 +3275,8 @@ describe("PA2 D4 the restart after an LD decay", () => {
         individuals: names(2),
         ploidy: 2,
       });
-      const k1 = client.run("k1", ldDecayJob(), noProgress);
-      const k6 = client.run("k6", job("A"), noProgress);
+      const k1 = client.run("k1", ldDecayJob(), noProgress, noSoFar);
+      const k6 = client.run("k6", job("A"), noProgress, noSoFar);
       const order: string[] = [];
       void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
       void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
@@ -3185,8 +3312,8 @@ describe("PA2 D4 the restart after an LD decay", () => {
       individuals: names(2),
       ploidy: 2,
     });
-    const k1 = client.run("k1", job("A"), noProgress);
-    const k6 = client.run("k6", job("A"), noProgress);
+    const k1 = client.run("k1", job("A"), noProgress, noSoFar);
+    const k6 = client.run("k6", job("A"), noProgress, noSoFar);
     const order: string[] = [];
     void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
     void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));
@@ -3227,8 +3354,8 @@ describe("PA2 D4 the restart after an LD decay", () => {
       individuals: names(2),
       ploidy: 2,
     });
-    const k1 = client.run("k1", job("A"), noProgress);
-    const k6 = client.run("k6", job("A"), noProgress);
+    const k1 = client.run("k1", job("A"), noProgress, noSoFar);
+    const k6 = client.run("k6", job("A"), noProgress, noSoFar);
     const order: string[] = [];
     void k1.outcome.then((outcome) => order.push(`k1 ${outcome.kind}`));
     void k6.outcome.then((outcome) => order.push(`k6 ${outcome.kind}`));

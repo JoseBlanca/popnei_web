@@ -1,58 +1,39 @@
 /**
- * The layout of the statistics of the open file on popgen2.html, and the
- * room it keeps before they are drawn (docs/plans/file-stats.md, "Round 1
- * with the owner"). The open button is under the statistics, so they keep
- * one height from the pick of a file to the end of their second pass,
- * and a click aimed at the button as a pass ends is not lost: the row of
- * their button is one button high in every state; the words of a part
- * lie over the room of its plots, which takes the height of the plots
- * before they are drawn; and the download of the individuals keeps its
- * room, hidden, until the table is there.
+ * The layout of the statistics of the open file on popgen2.html
+ * (docs/plans/file-stats.md, "Round 1 with the owner"): the section, its
+ * two parts, the grid of their plots, the place of a histogram of the
+ * individuals with the line under it, and the download of the
+ * individuals. No room is kept for what is not drawn yet: the open
+ * button under the section moves down as the plots arrive, which the
+ * owner chose over empty space (docs/plans/live-stats.md, "The open
+ * widget moves with the plots").
  *
- * The pieces hold no D3, so that the page draws `StatsRoom`, the whole
- * room with no words, from the pick of a file, while the code of the
- * plots is downloaded and the file read; the section of FileStats.tsx is
- * built of the same pieces, and so takes the same room.
+ * Apart from FileStats.tsx, and with no D3, since StatsSection.tsx draws
+ * the section with it while the code of FileStats.tsx downloads: the
+ * page's first download carries it, and not the plots.
  */
 import { classOf } from "../classOf.ts";
 import { Button } from "../widgets/Button.tsx";
-import { HistogramSpace } from "../widgets/HistogramSpace.tsx";
 import styles from "./StatsLayout.module.css";
-import histogramStyles from "./StatsHistogram.module.css";
-import {
-  INDIVIDUALS_CSV_LABEL,
-  INDIVIDUALS_HEADING,
-  INDIVIDUAL_STATISTICS,
-  STATS_NAME,
-  VARIANTS_HEADING,
-  VARIANT_STATISTICS,
-  individualTitle,
-  variantTitle,
-} from "./statsWords.ts";
+import { INDIVIDUALS_CSV_LABEL, STATS_NAME } from "./statsWords.ts";
 
 /** What the section is drawn with. */
 interface StatsFrameProps {
   /** The element of the section, for the focus that leaves it. */
   readonly sectionRef?: React.Ref<HTMLElement>;
-  /** The row of the button, then the two parts. */
+  /** The two parts. */
   readonly children: React.ReactNode;
-  /** Whether it is the room alone, waiting for the code of the plots or
-      the read of the file, which a screen reader is told by
-      `aria-busy`. */
-  readonly busy?: boolean;
 }
 
 /** The section of the statistics, named for a screen reader. */
 export function StatsFrame({
   sectionRef,
   children,
-  busy = false,
 }: StatsFrameProps): React.JSX.Element {
   return (
     <section
       ref={sectionRef}
       aria-label={STATS_NAME}
-      {...(busy && { "aria-busy": true })}
       className={classOf(styles, "stats")}
     >
       {children}
@@ -60,70 +41,67 @@ export function StatsFrame({
   );
 }
 
-/** The row of the bar of the pass running and the button of the
-    statistics: one button high in every state, empty with no button. */
-export function ControlsRow({
-  children,
-}: {
-  readonly children?: React.ReactNode;
-}): React.JSX.Element {
-  return <div className={classOf(styles, "controls")}>{children}</div>;
-}
-
 /** What a part is drawn with. */
 interface PartProps {
   /** Its heading. */
   readonly heading: string;
-  /** The element of its heading, which takes the focus when the button
-      goes with it. */
-  readonly headingRef?: React.Ref<HTMLHeadingElement>;
   /** What it holds under its heading. */
   readonly children: React.ReactNode;
 }
 
 /** A part of the section: its heading, then what it holds. */
-export function Part({
-  heading,
-  headingRef,
-  children,
-}: PartProps): React.JSX.Element {
+export function Part({ heading, children }: PartProps): React.JSX.Element {
   return (
     <div className={classOf(styles, "part")}>
-      {/* It takes the focus when the button goes with it, and is not in
-          the order of the Tab key. */}
-      <h2 ref={headingRef} tabIndex={-1} className={classOf(styles, "heading")}>
-        {heading}
-      </h2>
+      <h2 className={classOf(styles, "heading")}>{heading}</h2>
       {children}
     </div>
   );
 }
 
-/** What the room of the plots of a part is drawn with. */
-interface PlotsRoomProps {
-  /** The words of the part over its plots, or `null` for none. */
-  readonly line: string | null;
-  /** The plots, or the room they keep. */
+/** What a line of a part is drawn with. */
+interface PartLineProps {
+  /** Its words. */
+  readonly children: string;
+  /** Whether it only keeps its room, hidden, its words those it had: the
+      line of the pass once it ended, so that the plots under it stay
+      where they were. False when absent. */
+  readonly room?: boolean;
+}
+
+/** A line of a part, over its plots: the share calculated, that it was
+    stopped, or that it was not calculated; or, hidden, the room of the
+    line of the pass once it ended. */
+export function PartLine({
+  children,
+  room = false,
+}: PartLineProps): React.JSX.Element {
+  return room ? (
+    <p
+      className={`${classOf(styles, "line")} ${classOf(styles, "room")}`}
+      aria-hidden="true"
+    >
+      {children}
+    </p>
+  ) : (
+    <p className={classOf(styles, "line")}>{children}</p>
+  );
+}
+
+/** What the plots of a part are drawn with. */
+interface PlotsProps {
+  /** The plots. */
   readonly children: React.ReactNode;
 }
 
-/** The plots of a part, two side by side when each has 20rem, and the
-    words of the part over their room, which take no height of it. */
-export function PlotsRoom({
-  line,
-  children,
-}: PlotsRoomProps): React.JSX.Element {
-  return (
-    <div className={classOf(styles, "room")}>
-      {line !== null && <p className={classOf(styles, "roomLine")}>{line}</p>}
-      <div className={classOf(styles, "plots")}>{children}</div>
-    </div>
-  );
+/** The plots of a part, two side by side when each has 20rem. */
+export function Plots({ children }: PlotsProps): React.JSX.Element {
+  return <div className={classOf(styles, "plots")}>{children}</div>;
 }
 
 /** What the place of a histogram of the individuals is drawn with. */
 interface IndividualPlaceProps {
-  /** The histogram, or its room. */
+  /** The histogram, or nothing when no individual has a value. */
   readonly children: React.ReactNode;
   /** The line under it of the individuals with no value, or `null`. */
   readonly noValueLine: string | null;
@@ -145,70 +123,15 @@ export function IndividualPlace({
   );
 }
 
-/** The room of a histogram not drawn yet: its title, a line of one row
-    and the element of the plot, as a histogram drawn has them, hidden
-    from the eyes and from a screen reader. */
-export function PlotSpace({
-  title,
-}: {
-  readonly title: string;
-}): React.JSX.Element {
-  return (
-    <div aria-hidden="true" className={classOf(histogramStyles, "space")}>
-      <p className={classOf(histogramStyles, "title")}>{title}</p>
-      <p className={classOf(histogramStyles, "muted")}>{"\u00a0"}</p>
-      <HistogramSpace />
-    </div>
-  );
-}
-
-/** The download of the statistics of each individual: the button, or,
-    with no `onPress`, its room, hidden and out of reach. */
+/** The download of the statistics of each individual. */
 export function IndividualsDownload({
   onPress,
 }: {
-  readonly onPress: (() => void) | null;
+  readonly onPress: () => void;
 }): React.JSX.Element {
   return (
-    <div
-      className={classOf(
-        styles,
-        onPress === null ? "downloadRoom" : "download",
-      )}
-      {...(onPress === null && { "aria-hidden": true, inert: true })}
-    >
-      <Button
-        label={INDIVIDUALS_CSV_LABEL}
-        onPress={onPress ?? (() => undefined)}
-      />
+    <div className={classOf(styles, "download")}>
+      <Button label={INDIVIDUALS_CSV_LABEL} onPress={onPress} />
     </div>
-  );
-}
-
-/** The room of the statistics with nothing in it, as high as the section
-    whose results are not there yet: drawn from the pick of a file until
-    the file is read and the code of the plots downloaded. */
-export function StatsRoom(): React.JSX.Element {
-  return (
-    <StatsFrame busy>
-      <ControlsRow />
-      <Part heading={VARIANTS_HEADING}>
-        <PlotsRoom line={null}>
-          {VARIANT_STATISTICS.map((statistic) => (
-            <PlotSpace key={statistic} title={variantTitle(statistic)} />
-          ))}
-        </PlotsRoom>
-      </Part>
-      <Part heading={INDIVIDUALS_HEADING}>
-        <PlotsRoom line={null}>
-          {INDIVIDUAL_STATISTICS.map((statistic) => (
-            <IndividualPlace key={statistic} noValueLine={null}>
-              <PlotSpace title={individualTitle(statistic)} />
-            </IndividualPlace>
-          ))}
-        </PlotsRoom>
-        <IndividualsDownload onPress={null} />
-      </Part>
-    </StatsFrame>
   );
 }

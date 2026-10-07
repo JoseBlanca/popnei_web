@@ -2,13 +2,17 @@ import { describe, expect, test } from "vitest";
 
 import { emptyProject, loadVariants } from "../../core/project.ts";
 import type { Project, SourceError } from "../../core/project.ts";
-import type { VcfReadOptions } from "../../worker/protocol.ts";
+import { keyFromWire } from "../../core/keys.ts";
+import { summaryResult } from "../../core/testSupport.ts";
+import type { AnalysisStatus } from "../../core/store.ts";
+import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
-  countAgainMends,
+  chromosomesSoFarLine,
   countedText,
   countingVariantsLine,
   failedText,
+  failuresFailedText,
   individualsLine,
   nameAndSizeText,
   notOpenedText,
@@ -17,6 +21,7 @@ import {
   refusalText,
   variantsLine,
 } from "./words.ts";
+import { hasChainButton, startAgainMends } from "./chain.ts";
 
 /** A project with a VCF of the name `name`, read with `readOptions`. */
 function withVcf(name: string, readOptions: VcfReadOptions): Project {
@@ -187,6 +192,16 @@ describe("the words of the page that opens a variants file", () => {
   test("the line of the variants while they are counted says the share done, once known", () => {
     expect(countingVariantsLine(6)).toBe("Variants: counting… 6%");
     expect(countingVariantsLine(null)).toBe("Variants: counting…");
+    // Once a result so far gave the variants read, the line gives them
+    // alone, no share: one row at 320 pixels, and no count beside a share
+    // of the bytes, which would invite a wrong division.
+    expect(countingVariantsLine(6, 52_000)).toBe("Variants: 52,000 so far");
+    expect(countingVariantsLine(null, 1)).toBe("Variants: 1 so far");
+  });
+
+  test("live-stats 2 the line of the chromosomes once a result so far gave them", () => {
+    expect(chromosomesSoFarLine(1)).toBe("Chromosomes: 1 so far");
+    expect(chromosomesSoFarLine(1250)).toBe("Chromosomes: 1,250 so far");
   });
 
   test("the count, with its nouns in the singular and the plural", () => {
@@ -220,7 +235,7 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted. Remove that line from the file and open it again.",
+      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again.",
     );
   });
 
@@ -231,7 +246,40 @@ describe("the refusals of the count", () => {
         PASSED,
       ),
     ).toBe(
-      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, and too large for the application to count. Correct the position in the file and open it again.",
+      "A variant of chromosome 1 in panel.vcf.gz is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again.",
+    );
+  });
+
+  test("a damaged .nei file, a batch of it that popnei could not read, says it could not be read to its end, without popnei's code words", () => {
+    const nei = loadVariants(emptyProject("popgen"), {
+      fileId: "0123456789abcdef0123456789abcdef",
+      name: "panel.nei",
+      size: 261_490,
+      format: "nei",
+      readOptions: null,
+    });
+    // popnei js-v0.2.1 under node, on panel.nei with 400 bytes from its
+    // middle XOR-ed.
+    const damaged =
+      "the batch 1 of the vars file could not be read, so the file is damaged and has to be fetched or copied again: Ipc error: Expected compressed length of 480000 got 479861";
+    expect(refusalText(damaged, nei)).toBe(
+      "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
+  });
+
+  test("a genotype of another ploidy names its line and the two ploidies, and says to remove those variants or individuals", () => {
+    // popnei js-v0.2.1 under node, on panel.vcf with the genotype of
+    // s000 on line 9 set to 1, read with the ploidy of the file.
+    const haploid =
+      "line 9 of the VCF, the column of s000: its genotype is of the ploidy 1 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies";
+    expect(refusalText(haploid, EVERY)).toBe(
+      "Line 9 of panel.vcf.gz has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.",
+    );
+  });
+
+  test("any other refusal says popnei could not read the file, with popnei's words", () => {
+    expect(refusalText("out of memory", EVERY)).toBe(
+      "popnei could not read panel.vcf.gz: out of memory. Open the file again, or another file.",
     );
   });
 
@@ -265,8 +313,8 @@ describe("the refusals of the count", () => {
       { kind: "failed", error: { kind: "defect", message: "x is undefined" } },
       false,
     ],
-  ] as const)("Count again for %o: %s", (error, mends) => {
-    expect(countAgainMends(error)).toBe(mends);
+  ] as const)("Start again for %o: %s", (error, mends) => {
+    expect(startAgainMends(error)).toBe(mends);
   });
 
   test("a defect of the count is said as one, for the error bar to tell", () => {
@@ -278,7 +326,9 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe("The variants of panel.vcf.gz could not be counted.");
+    ).toBe(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+    );
   });
 
   test("a failure of the worker names the file, the error bar saying the rest", () => {
@@ -290,6 +340,90 @@ describe("the refusals of the count", () => {
         },
         PASSED,
       ),
-    ).toBe("The variants of panel.vcf.gz could not be counted.");
+    ).toBe(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+    );
+  });
+});
+
+describe("live-stats 3 the button of the chain", () => {
+  const KEY = keyFromWire("0".repeat(64));
+  test("a locked member holds back nothing: the one after it, ready, has its button", () => {
+    expect(
+      hasChainButton([
+        {
+          kind: "done",
+          key: KEY,
+          result: summaryResult(["1"], [1]),
+          warnings: [],
+          check: null,
+        },
+        { kind: "locked", reason: "a .nei file" },
+        { kind: "ready", key: KEY },
+      ] satisfies readonly AnalysisStatus<JobResult>[]),
+    ).toBe(true);
+  });
+  test("no button when every member is done or locked", () => {
+    expect(
+      hasChainButton([
+        {
+          kind: "done",
+          key: KEY,
+          result: summaryResult(["1"], [1]),
+          warnings: [],
+          check: null,
+        },
+        { kind: "locked", reason: "a .nei file" },
+      ] satisfies readonly AnalysisStatus<JobResult>[]),
+    ).toBe(false);
+  });
+});
+
+describe("live-stats 3 the failures of the count of the FILTER failures", () => {
+  const refused = (message: string) =>
+    failuresFailedText({ kind: "refused", message }, EVERY);
+
+  test("a file damaged or cut short says so, and to fetch it again", () => {
+    expect(
+      refused("the source could not be read: incomplete deflate stream"),
+    ).toBe(
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
+  });
+
+  test("a file of no variant says to open another", () => {
+    expect(refused("the pass gave no variant and its source holds none")).toBe(
+      "panel.vcf.gz has no variants. Open another variants file.",
+    );
+  });
+
+  test("a variant at position 0 names its chromosome and the count it stops", () => {
+    expect(
+      refused(
+        "a variant of the chromosome chr2 is at the position 0, and the windows of the density of the variants start at the position 1, so it is in none of them; the VCF format puts a telomere there",
+      ),
+    ).toBe(
+      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants that failed their FILTER cannot be counted. Remove that line from the file and open it again.",
+    );
+  });
+
+  test("any other refusal gives popnei's words, with the count they stopped", () => {
+    expect(refused("the FILTER of a variant is empty")).toBe(
+      "popnei could not count the variants of panel.vcf.gz that failed their FILTER: the FILTER of a variant is empty. Open the file again, or another file.",
+    );
+  });
+
+  test("a file that no longer reads says to open it again", () => {
+    expect(
+      failuresFailedText(
+        {
+          kind: "failed",
+          error: { kind: "reopenFailed", name: "panel.vcf.gz", message: "x" },
+        },
+        EVERY,
+      ),
+    ).toBe(
+      "panel.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again.",
+    );
   });
 });

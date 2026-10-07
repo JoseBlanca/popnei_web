@@ -22,17 +22,21 @@ import {
 
 import { loadVariants } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
+import { summaryResult } from "../../core/testSupport.ts";
 import type {
   Job,
   JobResult,
   Outcome,
   Run,
   RunError,
-  VariantDistrib,
 } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
 import type { AutoRuns } from "../autoRuns.ts";
-import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  POPGEN2_CHAIN,
+  createPopgen2Store,
+} from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
@@ -49,46 +53,15 @@ interface Request {
   readonly key: string;
   readonly job: Job;
   readonly end: (outcome: Outcome<JobResult>) => void;
+  /** Gives the store a result so far of the request. */
+  readonly soFar: (result: JobResult) => void;
 }
 
-/** A histogram of the variants of 2 bins, all 1,200 in the first. */
-function distrib(mean: number): VariantDistrib {
-  return { mean, counts: Uint32Array.from([1200, 0]) };
-}
-
-/** The result of each analysis the page starts, by its id. */
+/** The result of each analysis the page starts, by its id: the summary
+    of panel.nei, 1,200 variants on the chromosome 1, with the statistics
+    of its two individuals. */
 const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
-  [
-    "variantsSummary",
-    {
-      analysis: "variantsSummary",
-      passStats: { numVars: 1200, filtering: {} },
-      chroms: ["1"],
-      numVarsPerChrom: new Uint32Array([1200]),
-    },
-  ],
-  [
-    "individualChecks",
-    {
-      analysis: "individualChecks",
-      individuals: ["i1", "i2"],
-      missingGtRate: Float64Array.from([0.02, 0.04]),
-      obsHetRate: Float64Array.from([0.3, 0.4]),
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
-  [
-    "variantChecks",
-    {
-      analysis: "variantChecks",
-      binEdges: Float64Array.from([0, 0.5, 1]),
-      missingRate: distrib(0.03),
-      maf: distrib(0.7),
-      obsHet: distrib(0.35),
-      unbiasedExpHet: distrib(0.37),
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
+  ["variantsSummary", summaryResult(["1"], [1200], ["i1", "i2"])],
 ]);
 
 const FIRST = "0123456789abcdef0123456789abcdef";
@@ -158,10 +131,10 @@ async function drawPage(announced = true): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
   const store = createPopgen2Store({
-    send: (key, job): Run<JobResult> => {
+    send: (key, job, _onProgress, onSoFar): Run<JobResult> => {
       lastId += 1;
       const outcome = new Promise<Outcome<JobResult>>((resolve) => {
-        requests.push({ key, job, end: resolve });
+        requests.push({ key, job, end: resolve, soFar: onSoFar });
       });
       return { id: lastId, outcome, cancel: () => undefined };
     },
@@ -267,23 +240,10 @@ async function endFailed(page: Page, error: RunError): Promise<void> {
   await settled();
 }
 
-/** The analysis of the last request sent. */
-function lastAnalysis(page: Page): string | undefined {
-  return page.requests.at(-1)?.job.analysis;
-}
-
-/** The button of the section named `name`. */
-function button(name: string): HTMLButtonElement {
-  const found = [...container.querySelectorAll("button")].find(
-    (element) => element.textContent === name,
-  );
-  if (found === undefined) throw new Error(`no button ${name}`);
-  return found;
-}
-
-/** The words of what has the focus. */
-function focused(): string {
-  return document.activeElement?.textContent ?? "";
+/** The text of the parts of the section, the line over the room of
+    each. */
+function partsText(): string {
+  return sectionOf()?.textContent ?? "";
 }
 
 describe("the section of the statistics of the open file", () => {
@@ -311,11 +271,17 @@ describe("the section of the statistics of the open file", () => {
     // The words of the status region would throw the same defect first.
     const page = await drawPage(false);
     await open(page, FIRST);
-    await endDone(page);
-    expect(lastAnalysis(page)).toBe("variantChecks");
-    // A failure of the files wasm, which the calculation worker does not
-    // hold, is a defect thrown as the section draws its words.
-    await endFailed(page, { kind: "files", message: "a defect" });
+    // Histograms of 2 bins with no variant in them, which the page draws
+    // as 40 bins over 0 to 1 and popnei never gives, are a defect thrown
+    // as the section draws its plots.
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    request.end({
+      kind: "done",
+      key: request.key,
+      result: summaryResult(["1"], [0], ["i1", "i2"]),
+    });
+    await settled();
     expect(caught).toHaveLength(1);
     expect(container.querySelector("h2")?.textContent).toBe(
       "Statistics of the file",
@@ -323,47 +289,104 @@ describe("the section of the statistics of the open file", () => {
     expect(container.textContent).not.toContain("Variants");
 
     await open(page, SECOND);
-    expect(container.textContent).toContain(
-      "Waiting for the count of the variants.",
+    expect(partsText()).toContain(
+      "Calculating the statistics of the variants…",
     );
     await endDone(page);
-    expect(lastAnalysis(page)).toBe("variantChecks");
-    await endDone(page);
-    await endDone(page);
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "variantsSummary",
+    ]);
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
   });
 
-  test("the button gone with the focus on it, after popnei refused the statistics of the individuals, the focus is on the heading of the individuals", async () => {
+  test("the section has no bar and no button of its own; each part says it is calculated while the pass runs, Stopped. after the Stop of the page, and Not calculated. in place of its plots after a failure", async () => {
     const page = await drawPage();
     await open(page, FIRST);
-    await endDone(page);
-    button("Stop the statistics").focus();
-    await endDone(page);
-    expect(lastAnalysis(page)).toBe("individualChecks");
-    expect(focused()).toBe("Stop the statistics");
+    expect(partsText()).toContain(
+      "Calculating the statistics of the variants…",
+    );
+    expect(partsText()).toContain(
+      "Calculating the statistics of the individuals…",
+    );
+    expect(sectionOf()?.querySelector('[role="progressbar"]')).toBeNull();
+    // Not even the download, which comes with the result.
+    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
 
+    await act(async () => {
+      page.autoRuns.stop(POPGEN2_CHAIN);
+      page.requests.at(-1)?.end({ kind: "cancelled" });
+      await Promise.resolve();
+    });
+    await settled();
+    expect(partsText().match(/Stopped\./gu)).toHaveLength(2);
+
+    await act(async () => {
+      page.autoRuns.resume(POPGEN2_CHAIN);
+      await Promise.resolve();
+    });
     await endFailed(page, {
       kind: "popnei",
       message: "a genotype of 3 alleles",
     });
-    expect(container.textContent).not.toContain("Stop the statistics");
-    expect(document.activeElement?.tagName).toBe("H2");
-    expect(focused()).toBe("Individuals");
+    expect(partsText().match(/Not calculated\./gu)).toHaveLength(2);
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
   });
 
-  test("the button gone with the focus on it, after popnei refused the histograms of the variants, the focus is on the heading of the variants", async () => {
+  test("live-stats 2 the plots are drawn from each result so far while the pass runs, saying so, with no download, and from the result at its end", async () => {
     const page = await drawPage();
     await open(page, FIRST);
-    await endDone(page);
-    button("Stop the statistics").focus();
-
-    await endFailed(page, {
-      kind: "popnei",
-      message: "a genotype of 3 alleles",
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [523], ["i1", "i2"]));
+      await Promise.resolve();
     });
-    expect(page.requests).toHaveLength(2);
-    expect(container.textContent).not.toContain("Stop the statistics");
-    expect(document.activeElement?.tagName).toBe("H2");
-    expect(focused()).toBe("Variants");
+    await settled();
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
+    // The line of each threshold, over the variants or the individuals
+    // so far.
+    expect(partsText().match(/Keeps [^.]*523 variants so far/gu)).toHaveLength(
+      4,
+    );
+    expect(partsText().match(/Keeps [^.]*2 individuals so far/gu)).toHaveLength(
+      2,
+    );
+    expect(partsText()).toContain(
+      "Calculating the statistics of the variants…",
+    );
+    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+    // Each plot keeps its element as the next result so far comes.
+    const before = [...container.querySelectorAll("svg.chart")];
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [1000], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    await settled();
+    expect(
+      partsText().match(/Keeps [^.]*1,000 variants so far/gu),
+    ).toHaveLength(4);
+    expect([...container.querySelectorAll("svg.chart")]).toEqual(before);
+
+    await endDone(page);
+    expect(partsText()).not.toContain("so far");
+    // The line of the pass keeps its room, hidden, so that the plots do
+    // not move up (th4 fix 2); nothing else says it.
+    const rooms = [...(sectionOf()?.querySelectorAll("p") ?? [])].filter(
+      (line) => line.textContent.startsWith("Calculating"),
+    );
+    expect(rooms.map((line) => line.getAttribute("aria-hidden"))).toEqual([
+      "true",
+      "true",
+    ]);
+    expect(partsText().match(/Keeps [^.]*1,200 variants/gu)).toHaveLength(4);
+    expect(
+      [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
+        (element) => element.textContent,
+      ),
+    ).toEqual([
+      "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    ]);
   });
 });

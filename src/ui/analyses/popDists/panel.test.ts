@@ -55,12 +55,10 @@ vi.mock("./words.ts", async (importOriginal) => {
   return { ...words, numberCells: vi.fn(words.numberCells) };
 });
 
+// `APP_VERSION`, which `define` of vite.config.ts writes in, as in the
+// tests, is declared by pageStart.tsx, which the tests compile.
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
-  /** The version of the application, which `define` of vite.config.ts
-      writes in, as in the tests; declared by the entry of the page,
-      which the tests do not compile. */
-  const APP_VERSION: string;
 }
 
 /** A ResizeObserver that reports nothing: jsdom has none. */
@@ -296,6 +294,7 @@ describe("PA5 the options of the distances, drawn by React", () => {
         runId: 1,
         progress: null,
         waitsForStatistics: false,
+        soFar: null,
       },
       { kind: "removed", key: KEY },
       {

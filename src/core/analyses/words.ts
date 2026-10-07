@@ -67,6 +67,13 @@ export function isVcfLineRefusal(message: string): boolean {
     among the causes. */
 export const SOURCE_UNREADABLE = "the source could not be read:";
 
+/** popnei's refusal of a `.nei` file one of whose batches could not be
+    read, "the batch 1 of the vars file could not be read, so the file is
+    damaged and has to be fetched or copied again: Ipc error: ...", as
+    js-v0.2.1 gives it for a file with bytes changed in its middle. */
+export const VARS_BATCH_UNREADABLE =
+  /^the batch \d+ of the vars file could not be read/u;
+
 /** What to change for a calculation that depends on the settings to be
     offered again after a refusal for another reason, the diversity's
     words. */

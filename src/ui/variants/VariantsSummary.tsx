@@ -3,12 +3,17 @@
  * (docs/plans/open-variants.md, "Two widgets" and "Round 3"; the owner's
  * layouts and decisions of 6 October 2026). It says what is known of the
  * file open, line by line: its name and size, its individuals, its
- * variants, its chromosomes and its ploidy, the file's. What the opening
- * knows is shown at once; the individuals and the ploidy once the file is
- * read; the variants and the chromosomes once they are counted, which
- * starts by itself (autoRuns.ts). Under the lines, a row of one height in
- * every state holds the seconds of the read, the bar of the count with
- * its Stop, or Count again.
+ * variants, for a VCF those that failed their FILTER, its chromosomes and
+ * its ploidy, the file's. What the opening knows is shown at once; the
+ * individuals and the ploidy once the file is read; the variants and the
+ * chromosomes once they are counted, by the one pass that also calculates
+ * the statistics of the file, which starts by itself (autoRuns.ts;
+ * docs/plans/live-stats.md), with the variants read so far while it
+ * runs, from its results so far; the FILTER failures once the pass that
+ * counts them, after it in the chain of the page, is done. Under the
+ * lines, a row of one height in every state holds the seconds of the
+ * read, the bar of the pass running with the page's one Stop, or Start
+ * again.
  *
  * The box keeps its height through the read and the count, a value not
  * known yet said in its place, so that the open button under it does not
@@ -18,60 +23,73 @@
  * name, or several files at once, after the lines of the file still open,
  * or alone with none. There is no box before a file is opened or refused.
  */
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
+import { numFilterFailures } from "../../core/analyses/filterFailures.ts";
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import type { VariantSource } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
-import type { ButtonOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
+import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
 import { useAppState, useStore } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
+import {
+  chainButton,
+  chainStatuses,
+  startAgainMends,
+  stoppedPassOf,
+} from "./chain.ts";
 import styles from "./Variants.module.css";
 import {
   CHROMOSOMES_COUNTING,
   CHROMOSOMES_NOT_COUNTED,
   CHROMOSOMES_READING,
-  COUNT_AGAIN_LABEL,
   COUNT_BAR_LABEL,
+  FAILURES_BAR_LABEL,
+  FAILURES_COUNTING,
+  FAILURES_NOT_COUNTED,
+  FAILURES_READING,
   INDIVIDUALS_READING,
   INFO_NAME,
   PLOIDY_READING,
   PYTHON_NAME,
   READING_TIME_LINE,
-  STOPPED_TEXT,
-  SUMMARY_ID,
+  START_AGAIN_LABEL,
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
   chromosomesLine,
-  countAgainMends,
+  chromosomesSoFarLine,
   countingVariantsLine,
   failedText,
+  failuresFailedText,
+  failuresLine,
+  failuresStatus,
   individualsLine,
   nameAndSizeText,
   openFailure,
   ploidyLine,
+  stoppedText,
   summaryStatus,
   variantsLine,
 } from "./words.ts";
 
 /** What the box is drawn with. */
 export interface VariantsSummaryProps {
-  /** The analyses the page starts by itself, for Count again and to tell
-      a count stopped from one not yet started. */
+  /** The analyses the page starts by itself, for Stop and Start again
+      and to tell a count stopped from one not yet started. */
   readonly autoRuns: AutoRuns;
   /** The open button of the page, which takes the focus when the lines
       of a load go while the focus is in them. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
-  /** Called with the element of Stop or Count again while one is shown,
+  /** Called with the element of Stop or Start again while one is shown,
       and with `null` when it goes, for the entry to tell whether the
       focus is on it as the count ends. */
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
@@ -140,7 +158,7 @@ function Load({
     const button = openButton.current;
     return () => {
       // The lines go, a new file opened or dropped, while the focus
-      // is in them, on Stop, on Count again or on the lines of the
+      // is in them, on Stop, on Start again or on the lines of the
       // count: the focus goes to the open button, not to the top of the
       // page. The cleanup of a layout effect runs while the lines are
       // still in the page.
@@ -157,6 +175,9 @@ function Load({
         <>
           <p className={classOf(styles, "line")}>{INDIVIDUALS_READING}</p>
           <p className={classOf(styles, "line")}>{VARIANTS_READING}</p>
+          {variants.format === "vcf" && (
+            <p className={classOf(styles, "line")}>{FAILURES_READING}</p>
+          )}
           <p className={classOf(styles, "line")}>{CHROMOSOMES_READING}</p>
           <p className={classOf(styles, "line")}>{PLOIDY_READING}</p>
           <div className={classOf(styles, "progress")}>
@@ -200,6 +221,7 @@ function Load({
             onCountButton={onCountButton}
             ploidy={ploidyLine(read.ploidy)}
             refused={refused}
+            isVcf={variants.format === "vcf"}
           />
         </>
       )}
@@ -216,20 +238,30 @@ interface CountProps {
   readonly ploidy: string;
   /** Whether the words of a file not opened follow the lines. */
   readonly refused: boolean;
+  /** Whether the file is a VCF, which has the line of the FILTER
+      failures. */
+  readonly isVcf: boolean;
 }
 
-/** The lines of the variants and the chromosomes, in each state of their
-    count, the line of the ploidy, the row of the progress with Stop or
-    Count again, and a failure of the count after them. */
+/** The lines of the variants, of a VCF's FILTER failures and of the
+    chromosomes, in each state of their count, the line of the ploidy, the
+    row of the progress with Stop or Start again, and a failure of a count
+    after them. */
 function Count({
   autoRuns,
   onCountButton,
   ploidy,
   refused,
+  isVcf,
 }: CountProps): React.JSX.Element {
-  const store = useStore();
   const announcer = useAnnouncer();
+  const store = useStore();
   const status = useAppState(summaryStatus);
+  const failures = useAppState(failuresStatus);
+  const analyses = useAppState((s) => s.analyses);
+  // Selected for what autoRuns knows, which a Stop of a pass about to
+  // start changes and the store does not.
+  useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
   const project = useAppState((s) => s.project);
   // The lines of the count, and the element that holds the words of a
   // failure: one of them takes the focus when the button goes with it.
@@ -243,16 +275,37 @@ function Count({
     (failureRef.current ?? linesRef.current)?.focus();
   });
 
+  // The one Stop of the page: the pass running, and one about to start.
+  // The words name the pass stopped, and Start again only when the box
+  // offers it after the Stop, which the store and autoRuns know once the
+  // Stop is made.
   const stop = (): void => {
-    store.cancelRun(SUMMARY_ID);
-    announcer.announce(STOPPED_TEXT);
+    const pass = stoppedPassOf(chainStatuses(store.getState().analyses));
+    autoRuns.stop(POPGEN2_CHAIN);
+    const after = chainButton(chainStatuses(store.getState().analyses), (key) =>
+      autoRuns.startedUnder(key),
+    );
+    announcer.announce(stoppedText(pass, after?.kind === "run"));
   };
   const again = (): void => {
-    autoRuns.again(SUMMARY_ID);
+    autoRuns.resume(POPGEN2_CHAIN);
   };
-  const button = buttonOf(status, autoRuns);
-  const failure =
-    status.kind === "error" ? failedText(status.error, project) : null;
+  const button = chainButton(chainStatuses(analyses), (key) =>
+    autoRuns.startedUnder(key),
+  );
+  // The words of each pass that failed, the summary's first: after a
+  // crash of the summary the count of the FILTER failures runs anyway, and
+  // may fail on its own.
+  const failureTexts = [
+    ...(status.kind === "error" ? [failedText(status.error, project)] : []),
+    ...(failures.kind === "error"
+      ? [failuresFailedText(failures.error, project)]
+      : []),
+  ];
+  const failure = failureTexts.length > 0 ? failureTexts : null;
+  // The bar of the pass running: the count of the variants and the
+  // statistics, or the count of the FILTER failures after it.
+  const running = failures.kind === "running" ? failures : status;
   return (
     <>
       {/* It takes the focus when Stop goes with it, the count done, so
@@ -264,7 +317,11 @@ function Count({
         tabIndex={-1}
         className={classOf(styles, "countLines")}
       >
-        <CountLines status={status} stopped={button?.kind === "run"} />
+        <CountLines
+          status={status}
+          failures={isVcf ? failures : null}
+          stopped={button?.kind === "run"}
+        />
       </div>
       <p className={classOf(styles, "line")}>{ploidy}</p>
       {/* The row goes when it holds nothing and words of a problem
@@ -273,14 +330,16 @@ function Count({
           anyway. */}
       {(button !== null || (failure === null && !refused)) && (
         <div className={classOf(styles, "progress")}>
-          {status.kind === "running" && (
+          {running.kind === "running" && (
             <div className={classOf(styles, "progressBar")}>
               <ProgressBar
-                label={COUNT_BAR_LABEL}
+                label={
+                  running === failures ? FAILURES_BAR_LABEL : COUNT_BAR_LABEL
+                }
                 value={
-                  status.progress === null
+                  running.progress === null
                     ? null
-                    : progressShare(status.progress)
+                    : progressShare(running.progress)
                 }
               />
             </div>
@@ -289,7 +348,7 @@ function Count({
             <div className={classOf(styles, "progressButton")}>
               <RunButton
                 button={button}
-                runLabel={COUNT_AGAIN_LABEL}
+                runLabel={START_AGAIN_LABEL}
                 onRun={again}
                 onStop={stop}
                 onButton={onCountButton}
@@ -315,7 +374,9 @@ function Count({
           tabIndex={-1}
           className={classOf(styles, "failure")}
         >
-          <Problem>{failure}</Problem>
+          {failure.map((text) => (
+            <Problem key={text}>{text}</Problem>
+          ))}
         </div>
       )}
       {status.kind === "locked" && (
@@ -324,49 +385,44 @@ function Count({
     </>
   );
 }
-/** Stop while the count runs; Count again after a Stop, or after a
-    failure it may mend; none otherwise. */
-function buttonOf(
-  status: AnalysisStatus<JobResult>,
-  autoRuns: AutoRuns,
-): ButtonOf {
-  switch (status.kind) {
-    case "running":
-      return { kind: "stop" };
-    case "ready":
-    case "removed":
-      return autoRuns.startedUnder(status.key)
-        ? { kind: "run", reason: null }
-        : null;
-    case "error":
-      return countAgainMends(status.error)
-        ? { kind: "run", reason: null }
-        : null;
-    case "locked":
-    case "done":
-      return null;
-  }
-}
-
 /** What the lines of the count are drawn with. */
 interface CountLinesProps {
+  /** The status of the summary. */
   readonly status: AnalysisStatus<JobResult>;
-  /** Whether a count of the key was stopped. */
+  /** The status of the count of the FILTER failures; `null` for a `.nei`
+      file, which has no line of them. */
+  readonly failures: AnalysisStatus<JobResult> | null;
+  /** Whether a pass of the chain was stopped: Start again is offered. */
   readonly stopped: boolean;
 }
 
-/** The lines of the variants and the chromosomes: their numbers, or the
-    state of their count in their place. */
-function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
+/** The lines of the variants, of the FILTER failures of a VCF and of the
+    chromosomes: their numbers, or the state of their count in their
+    place. */
+function CountLines({
+  status,
+  failures,
+  stopped,
+}: CountLinesProps): React.JSX.Element {
   let lines: readonly [string, string];
   switch (status.kind) {
     case "running":
-      lines = [
-        countingVariantsLine(
-          status.progress === null ? null : progressShare(status.progress),
-        ),
-        CHROMOSOMES_COUNTING,
-      ];
+      // From the first result so far, the variants and the chromosomes
+      // read so far, and the share on the bar alone.
+      lines =
+        status.soFar === null
+          ? [
+              countingVariantsLine(
+                status.progress === null
+                  ? null
+                  : progressShare(status.progress),
+              ),
+              CHROMOSOMES_COUNTING,
+            ]
+          : [
+              countingVariantsLine(null, status.soFar.passStats.numVars),
+              chromosomesSoFarLine(numChroms(status.soFar)),
+            ];
       break;
     case "ready":
     case "removed":
@@ -389,7 +445,40 @@ function CountLines({ status, stopped }: CountLinesProps): React.JSX.Element {
   return (
     <>
       <p className={classOf(styles, "line")}>{lines[0]}</p>
+      {failures !== null && (
+        <p className={classOf(styles, "line")}>
+          {failuresLineOf(failures, status, stopped)}
+        </p>
+      )}
       <p className={classOf(styles, "line")}>{lines[1]}</p>
     </>
   );
+}
+
+/** The line of the FILTER failures, from the status of their count,
+    `failures`, and that of the summary before it, `summary`: the number
+    once counted; "counting…" while it runs, and while it waits for the
+    summary to run or end; "not counted" after a Stop, a failure of its
+    own, and a failure of the summary that holds it back. */
+function failuresLineOf(
+  failures: AnalysisStatus<JobResult>,
+  summary: AnalysisStatus<JobResult>,
+  stopped: boolean,
+): string {
+  switch (failures.kind) {
+    case "done":
+      return failuresLine(numFilterFailures(failures.result));
+    case "running":
+      return FAILURES_COUNTING;
+    case "locked":
+    case "error":
+      return FAILURES_NOT_COUNTED;
+    case "ready":
+    case "removed": {
+      const heldBack =
+        summary.kind === "locked" ||
+        (summary.kind === "error" && !startAgainMends(summary.error));
+      return stopped || heldBack ? FAILURES_NOT_COUNTED : FAILURES_COUNTING;
+    }
+  }
 }

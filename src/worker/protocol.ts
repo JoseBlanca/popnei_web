@@ -38,6 +38,14 @@ export type VariantFilter =
 /** The kind of a filter of the variants; a project holds one of each. */
 export type VariantFilterKind = VariantFilter["kind"];
 
+/** The kind of a filter in the counts of a pass: a filter of the
+    variants, or `"passed"`, popnei's `filterPassed`, which keeps the
+    variants whose FILTER is `PASS` or a dot and which only the count of
+    the FILTER failures puts on its pass. No project nor file holds a
+    filter of that kind (docs/plans/live-stats.md, "The count of the
+    FILTER failures"). */
+export type PassFilterKind = VariantFilterKind | "passed";
+
 /**
  * A filter of the individuals, the application's own, as the project
  * holds it; no job carries one. Core makes of them all the one list of the
@@ -353,9 +361,10 @@ export interface PassStats {
   /** The variants the pass gave, after every step. */
   readonly numVars: number;
   /** The counts of each filter of the variants of the job, under its kind,
-      in the order of the job's filters; empty for a pass with no filter.
-      The step of the individuals has no entry. */
-  readonly filtering: Partial<Record<VariantFilterKind, FilteringStats>>;
+      in the order of the job's filters, after `"passed"` for the count of
+      the FILTER failures; empty for a pass with no filter. The step of
+      the individuals has no entry. */
+  readonly filtering: Partial<Record<PassFilterKind, FilteringStats>>;
 }
 
 /** The request of the diversity of each population
@@ -479,10 +488,10 @@ export interface IndividualChecksJob {
 }
 
 /** The statistics of each individual, one number per individual of the
-    file in each array, in the order of `individuals`. */
-export interface IndividualChecksResult {
-  /** The analysis the result is of. */
-  readonly analysis: "individualChecks";
+    file in each array, in the order of `individuals`: the result of
+    `individualChecks` and the part `individuals` of the summary of the
+    variants file. */
+export interface IndividualStatsPart {
   /** Every individual of the file, in its order, as popnei gave them. */
   readonly individuals: readonly string[];
   /** The proportion of missing genotypes of each individual, popnei's
@@ -493,6 +502,13 @@ export interface IndividualChecksResult {
   readonly obsHetRate: Float64Array;
   /** The counts of the pass. */
   readonly passStats: PassStats;
+}
+
+/** The statistics of each individual as the result of their own
+    request. */
+export interface IndividualChecksResult extends IndividualStatsPart {
+  /** The analysis the result is of. */
+  readonly analysis: "individualChecks";
 }
 
 /** The request of the histograms of the variants, popnei's
@@ -526,10 +542,10 @@ export interface VariantDistrib {
   readonly counts: Uint32Array;
 }
 
-/** The histograms of the variants, four over the same edges. */
-export interface VariantChecksResult {
-  /** The analysis the result is of. */
-  readonly analysis: "variantChecks";
+/** The histograms of the variants, four over the same edges: the result
+    of `variantChecks` and the part `variants` of the summary of the
+    variants file. */
+export interface VariantStatsPart {
   /** The edges of the bins, `numBins` + 1, shared by the four. */
   readonly binEdges: Float64Array;
   /** The missing rate, popnei's `missingRate`: the missing genotypes of
@@ -544,6 +560,12 @@ export interface VariantChecksResult {
   readonly unbiasedExpHet: VariantDistrib;
   /** The counts of the pass; `numVars` is the variants of the file. */
   readonly passStats: PassStats;
+}
+
+/** The histograms of the variants as the result of their own request. */
+export interface VariantChecksResult extends VariantStatsPart {
+  /** The analysis the result is of. */
+  readonly analysis: "variantChecks";
 }
 
 /** The request of the counts of the filters of the variants, from a pass
@@ -569,10 +591,15 @@ export interface FilterCountsResult {
   readonly passStats: PassStats;
 }
 
-/** The request of the summary of the variants file: how many variants
-    it holds and on which chromosomes, from popnei's `calcVarDensity` with
-    one window per chromosome, over every variant and every individual of
-    the file, with no filter (docs/plans/open-variants.md, "The design"). */
+/** The request of the summary of the variants file, from one pass of
+    popnei's `calcVariantsSummary` over every variant and every individual
+    of the file, with no filter: how many variants it holds and on which
+    chromosomes, from its `density` with one window per chromosome; the
+    histograms of the variants, from its `perVar`, with the bins of the
+    request; and the statistics of each individual, from its
+    `perIndividual` (docs/plans/open-variants.md, "The design";
+    docs/plans/live-stats.md, "One pass for the count and the
+    statistics"). */
 export interface VariantsSummaryJob {
   /** The analysis the request is of. */
   readonly analysis: "variantsSummary";
@@ -580,6 +607,13 @@ export interface VariantsSummaryJob {
   readonly fileId: string;
   /** No filter: the summary describes the file as it is. */
   readonly filters: readonly [];
+  /** popnei's `minNumIndividuals` of the histograms of the variants, 0, so
+      that popnei bins the variants with few called genotypes too. */
+  readonly minNumIndividuals: number;
+  /** The bins of each histogram of the variants, popnei's `histKwargs`. */
+  readonly numBins: number;
+  /** The lowest and the highest edge of the bins, popnei's `histKwargs`. */
+  readonly range: readonly [number, number];
 }
 
 /** The size of window, in base pairs, of the pass of the summary of the
@@ -592,7 +626,8 @@ export const ONE_WINDOW_PER_CHROM = Number.MAX_SAFE_INTEGER;
 
 /** The summary of the variants file: its chromosomes, in popnei's order,
     those with variants in the order of their first variant, and the
-    variants of each. */
+    variants of each; the histograms of the variants; and the statistics
+    of each individual, all of the one pass. */
 export interface VariantsSummaryResult {
   /** The analysis the result is of. */
   readonly analysis: "variantsSummary";
@@ -600,7 +635,37 @@ export interface VariantsSummaryResult {
   readonly chroms: readonly string[];
   /** The variants on each chromosome of `chroms`, in its order. */
   readonly numVarsPerChrom: Uint32Array;
+  /** The histograms of the variants, over every individual, popnei's
+      `perVar` of `VariantsSummary`. */
+  readonly perVar: VariantStatsPart;
+  /** The statistics of each individual, popnei's `perIndividual` of
+      `VariantsSummary`. */
+  readonly perIndividual: IndividualStatsPart;
   /** The counts of the pass; `numVars` is the variants of the file. */
+  readonly passStats: PassStats;
+}
+
+/** The request of the count of the FILTER failures of a VCF, from a pass
+    of popnei's `calcVarDensity`, with one window per chromosome, under
+    the step `filterPassed`, which reads no genotype
+    (docs/plans/live-stats.md, "The count of the FILTER failures"). */
+export interface FilterFailuresJob {
+  /** The analysis the request is of. */
+  readonly analysis: "filterFailures";
+  /** The load id of the variants file it reads, a VCF. */
+  readonly fileId: string;
+  /** No filter of the variants: the step `filterPassed` alone. */
+  readonly filters: readonly [];
+}
+
+/** The count of the FILTER failures: the counts of its pass, whose
+    `filtering` holds `"passed"` alone, the variants of the file as
+    `varsProcessed` and those whose FILTER is `PASS` or a dot as
+    `varsKept`. */
+export interface FilterFailuresResult {
+  /** The analysis the result is of. */
+  readonly analysis: "filterFailures";
+  /** The counts of the pass. */
   readonly passStats: PassStats;
 }
 
@@ -845,7 +910,8 @@ export type Job =
   | PcaJob
   | PopDistsJob
   | LdDecayJob
-  | VariantsSummaryJob;
+  | VariantsSummaryJob
+  | FilterFailuresJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -857,7 +923,8 @@ export type JobResult =
   | PcaResult
   | PopDistsResult
   | LdDecayResult
-  | VariantsSummaryResult;
+  | VariantsSummaryResult
+  | FilterFailuresResult;
 
 /**
  * The request of a file of the filtered variants

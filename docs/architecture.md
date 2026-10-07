@@ -168,8 +168,8 @@ day:
   joins them, asks for the read of each file whose read is pending and
   has none under way (section 6, "Who asks for a read"). From 5 October
   2026 the entry of `popgen2.html` also starts by itself the summary of
-  the variants file once the file is read, and from 6 October 2026 the
-  statistics of the open file after it (section 5).
+  the variants file once the file is read, whose one pass gives, from 6
+  October 2026, the statistics of the open file too (section 5).
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
 - The notice offers the reverse of what caused it: Undo after a command
@@ -949,7 +949,11 @@ gains for the new page and a new key version, as the statistics of each
 individual and the histograms of the variants did on 6 October 2026
 (`docs/plans/file-stats.md`), the histograms gaining the missing rate
 and their key version going to 3; each page has its own store, so the
-old page does not change, and does not draw the missing rate.
+old page does not change, and does not draw the missing rate. The same
+day the two left the list again (`docs/plans/live-stats.md`): the
+summary of the variants file gives them from its one pass, its result
+gaining their fields as two parts and its key version going to 2, and
+they stay on the old page as they were.
 
 `needs` is what locks an analysis with its reason: "reading the file"
 while the variant file or the individuals file is being read (section 6),
@@ -1282,44 +1286,69 @@ The page and each worker talk through typed messages
   the variants file again; on `popgen.html` the calculation of the new
   settings starts when the user asks for it, as every calculation there
   does. On `popgen2.html`, from 5 October 2026, `src/ui/autoRuns.ts`
-  starts by itself the summary of the variants file, the count of its
-  variants, and from 6 October 2026 the statistics of the open file after
-  it, the histograms of the variants and then the statistics of each
-  individual, the order of their parts on the page
-  (`docs/plans/file-stats.md`). They start in that order, one
-  at a time: the one calculation worker runs one request at a time, and
-  the store has no state for a request that waits in the client's queue,
-  so three sent at once would all show as running, two of them with no
-  progress. The statistics start only once the count is done; the
-  statistics of each individual once the histograms of the variants are
-  done, or failed in a way that does not fail the next pass too, a crash
-  or a defect of ours, since each is shown apart and a failure of one
-  should not hide the other. popnei's refusal of the file, or a file the browser could not
-  read again, holds them back, since their pass would fail the same way
-  after minutes. Each starts once for each key: when the file is read,
-  again after a read with other options, which is a new load and a new
-  key, and at the user's Count again or start again of the statistics;
-  not again after a failure or a Stop under the same key, and a Stop
-  also keeps those after it from starting, the one about to start
-  between two passes among them. The statistics have one Stop,
-  which stops the one running, and one start again, which starts the
-  first not done and lets the rest of the statistics start after it
-  (`stop` and `resume` of `autoRuns.ts`, which says whether it started
-  one: not while the count is not done, nor after any failure but a
-  crash of the worker, the others failing again or asking for a reload);
-  the count keeps its own Stop and Count
-  again, and since the statistics start only once the count is done, its
-  Stop leaves them not started and its Count again waits behind none of
-  them. After a Stop the store's state is `ready`, as before any run, and
-  the keys `autoRuns.ts` remembers are the one record that the analysis
-  was stopped; its `pending` tells the page whether one not started waits
-  for the one before, is held back by a failure or a Stop of one before
-  it, or was stopped, and its `subscribe` tells the page when that
-  changes with no change of the store, as a Stop between two passes. None
-  of the three reads a filter yet, the page having none. A limit the
-  piece that adds the filters to that page must settle: an analysis that
-  starts by itself and reads a filter, as the histograms of the variants
-  read the filters of individuals, gets a new key at every change of a
+  starts by itself the summary of the variants file, and from 6 October
+  2026 that summary is the one pass of the page: popnei's
+  `calcVariantsSummary` gives in one pass the count of the variants on
+  each chromosome and the statistics of the open file, the histograms of
+  the variants and the statistics of each individual, which until then
+  were two analyses of their own started after the count
+  (`docs/plans/live-stats.md`, "One pass for the count and the
+  statistics"; `variantChecks` and `individualChecks` stay on
+  `popgen.html`). From 7 October 2026 a second analysis follows it in
+  the page's one group, `POPGEN2_CHAIN`, `[variantsSummary,
+  filterFailures]`: the count of the variants of a VCF that failed their
+  FILTER, a pass of popnei's `calcVarDensity` under the step
+  `filterPassed`, which reads no genotype, and, when popnei refuses that
+  pass, as it does a VCF whose variants all failed, a second pass of its
+  blocks read to their end, which accepts no variant kept
+  (`docs/specs/worker/runner.md`); its counts carry the kind
+  `"passed"`, a `PassFilterKind` beside the kinds of the filters of the
+  variants, which no project holds. The summary keeps every variant,
+  since that step would take the failed ones out of the statistics. On a
+  `.nei` file the count is `locked`, since one written before format 1.2
+  holds no FILTER, and so it is on a VCF read without its failed
+  variants, `onlyPassed`, which the page never does, since the count
+  would say 0: a locked member neither starts nor holds back the
+  group, and the box offers no Start again for it. `autoRuns.ts` takes its analyses in groups and starts
+  them one at a time, in their order: the one calculation worker runs one
+  request at a time, and the store has no state for a request that waits
+  in the client's queue, so two sent at once would both show as running,
+  one of them with no progress. A group starts only once the one before
+  it is done; within a group, one that failed in a way that does not fail
+  the next pass too, a crash or a defect of ours, does not hold back the
+  next. popnei's refusal of the file, or a file the browser could not
+  read again, holds back what follows, since its pass would fail the same
+  way after minutes. Each starts once for each key: when the file is
+  read, again after a read with other options, which is a new load and a
+  new key, and at the user's Start again; not again after a failure or a
+  Stop under the same key. The page has one Stop, in the box of the file
+  beside the one bar of the pass, shown while a pass runs or is about to
+  start by itself, which stops the page's one group, `POPGEN2_CHAIN` of
+  `src/ui/popgen2Store.ts` (`stop` of `autoRuns.ts`): the pass running,
+  and one about to start, which it records as started so that it does
+  not start; and, after a Stop or a crash of the worker, one Start again
+  in its place (`resume`), which starts the first of the group that is
+  not done and lets the rest follow: after a Stop during the count of the
+  FILTER failures, that count alone, the summary being done. The box
+  shows the bar of the pass running, either of the two, and the focus on
+  Stop moves onto the lines of the box at the end of the group, not at
+  the end of the summary of a VCF, since Stop stays for the next pass.
+  The box decides between the two from
+  the first of the group that is not done, not from the summary alone, so
+  that a later member of the group, stopped after the summary is done,
+  gets its Start again too. The
+  statistics' section has no bar nor button of its own, and says of each
+  part that it is calculated, stopped, or not calculated. After a Stop
+  the store's state is `ready`, as before any run, and the keys
+  `autoRuns.ts` remembers are the one record that the analysis was
+  stopped; its `startedUnder` tells the page whether one ready under a
+  key was stopped or waits to start, and its `subscribe` tells the page
+  when that changes with no change of the store, as a Stop of a pass
+  about to start. The
+  summary reads no filter, the page having none. A limit the piece that
+  adds the filters to that page must settle: an analysis that starts by
+  itself and reads a filter, as the statistics would if they read the
+  filters of individuals, gets a new key at every change of a
   threshold, and its start, as any new calculation does, stops the
   calculation left behind, which restarts the worker; so moving a
   threshold would stop and start the pass at each step. And a key the
@@ -1351,6 +1380,21 @@ The page and each worker talk through typed messages
   popnei issue #4, and the runner tells them as passes 1 and 2 of 2,
   where popnei tells each as pass 1 of 1, so that the bar fills once
   (`docs/specs/worker/runner.md`, "Progress").
+- **The result so far** is a kind of message beside the progress, sent
+  only by a calculation whose result popnei can give over the variants
+  read so far: the summary of the variants file of `popgen2.html`, whose
+  `calcVariantsSummary` calls its `onSoFar` every 2 seconds while its pass
+  runs (docs/plans/live-stats.md). The runner makes it as it makes the
+  result, copies its arrays, which may be those of popnei's final result,
+  and the worker posts it as `soFar`, checked as the result is. The client
+  gives it to the request only while it is the one running, under its key
+  and of its job's analysis, and takes any other for a defect that ends
+  the worker; after a cancel the worker is ended, and its messages reach
+  nobody. The store keeps the last one in the request in flight, `soFar`
+  of the state `running`, so that it goes with the request at its outcome
+  or its Stop and is never cached; the screen draws its plots from it
+  until the result comes. It is not part of the progress, which every
+  analysis has and whose bar it would burden with statistics.
 - **Cancelling** a request that is running ends its worker and starts a
   new one. While a calculation runs inside wasm, the worker cannot read a
   message that asks it to stop, and without `SharedArrayBuffer`, which
@@ -2023,11 +2067,17 @@ reader of BED files in Python:
 7. The density of variants along each chromosome, of
    `docs/build-order.md`, section 4, given by `js-v0.1.0-dev.3` as
    `calcVarDensity`. From 5 October 2026 the summary of the variants file
-   calls it with one window per chromosome, a window of 2^53 − 1 base
-   pairs, `ONE_WINDOW_PER_CHROM` of `src/worker/protocol.ts`, and with
+   asked it for one window per chromosome, a window of 2^53 − 1 base
+   pairs, `ONE_WINDOW_PER_CHROM` of `src/worker/protocol.ts`, with
    `chromLengths: {}`, so that the lengths of the `##contig` lines are not
-   used (`docs/plans/open-variants.md`, "The design", says why). The
-   density in windows of a size the user chooses is still to come.
+   used (`docs/plans/open-variants.md`, "The design", says why). From 6
+   October 2026 the summary calls `calcVariantsSummary` of
+   `js-v0.2.1` instead, with the same density as one of its three parts
+   beside `perVar` and `perIndividual` (`docs/plans/live-stats.md`). That
+   pass reads the genotypes, and popnei gives no part when one fails, so
+   a file whose genotypes popnei refuses gets no count of its variants
+   either. The density in windows of a size the user chooses is still to
+   come.
 8. A reader of BED files in popnei's Python, for the Python script
    (above, "The regions of a BED file").
 
@@ -2089,6 +2139,19 @@ for the smallest part of it.
   parameters of the fit, by popnei's formula
   (`docs/specs/analyses/ldDecay.md`, "The fitted curve"). The heatmap
   and the line plot draw the order and the points they are given.
+- **A threshold on a plot can be screen state.** From 7 October 2026
+  each of the six histograms of `popgen2.html` has a threshold that the
+  user drags or types, shown only: React state of the section of the
+  statistics of one load, lost with another file or a reload, in no
+  project and no key, sending nothing to the worker
+  (`docs/plans/thresholds.md`). The plot draws it, with no legend; the
+  line the user drags is a React Aria slider of `src/ui` laid over the
+  plot, aligned with its frame, which the histogram tells the screen
+  after each draw that moves it (`HistogramEvents.onFrame`), so that the
+  plot keeps no pointer handling of its own. What it keeps is counted by
+  `src/core/thresholds.ts` from popnei's fine bins of the variants and
+  from popnei's value of each individual. When the thresholds become
+  filters, `docs/designs/stats-filters.md`, they move into the project.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2207,7 +2270,10 @@ src/core/
   analyses/         one module per analysis, with the shape of section 4,
                     the checks of the Variants step among them from stage 3:
                     individualChecks, variantChecks, filterCounts; from
-                    stage 5 popDists and ldDecay, and sfs.ts, the rows,
+                    stage 5 popDists and ldDecay; for popgen2.html
+                    variantsSummary and, from 7 October 2026,
+                    filterFailures, the count of the FILTER failures of a
+                    VCF; and sfs.ts, the rows,
                     the CSV and the warnings of the folded spectrum, which
                     the diversity's module and panel call and which is no
                     analysis of its own (docs/specs/analyses/sfs.md)
@@ -2220,6 +2286,9 @@ src/core/
                     imports project.ts and individualsKept.ts, and neither
                     imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
+  thresholds.ts     from 7 October 2026, the counts of a threshold on the
+                    histograms of popgen2.html: the fine edge a number
+                    snaps to, the variants kept, the individuals kept
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
@@ -2245,7 +2314,8 @@ src/worker/
   runner.ts         the calculation worker: popnei, the variant file, the
                     intermediate results; tested in node
   runnerWorker.ts   the calculation worker's script: it checks each request,
-                    calls runner.ts and posts the answers and the progress
+                    calls runner.ts and posts the answers, the progress
+                    and the results so far
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
   xlsxCells.ts      the cells of an xlsx or its refusal, from what the files
@@ -2295,21 +2365,31 @@ src/ui/
                     page: with pageStart.tsx, its store, the announcements,
                     the analyses that start by themselves, and the page,
                     with no stepper, no saving and no shell
-  popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES and no
-                    counts, statistics config or writing, and the groups
-                    of the analyses the page starts by itself, made from
-                    POPGEN2_ANALYSES; apart from the entry, so that a
-                    test in node makes it
+  popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
+                    summary of the variants file and the count of the
+                    FILTER failures, POPGEN2_CHAIN, and no counts,
+                    statistics config or writing, and the groups of the
+                    analyses the page starts by itself; apart from the
+                    entry, so that a test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
-                    calculation stopped from one waiting or held back by
-                    a failure, and the Stop and start again of the
-                    statistics of the open file
+                    calculation stopped from one about to start, and the
+                    Stop and the start again of a group, stop and resume
   variants/         the screens of popgen2.html: the opening of the
-                    variants file, the summary of what it holds, the page
-                    that holds them, their words, and the defects of the
-                    worker given to the error bar
+                    variants file, the box of what it holds with the bar
+                    of the pass running, the count of the variants so
+                    far, the FILTER failures of a VCF,
+                    its Stop and Start again, the statistics of the open
+                    file, drawn while the pass runs from its results so
+                    far (the store's running.soFar, never cached) and
+                    then from its result, from 7 October 2026 each with
+                    its threshold, its line, its box and its words
+                    (statsPlots.ts, StatsHistogram.tsx; section 7), the
+                    page that holds them, their words, the rules of the chain that the box and its
+                    words share (chain.ts: its one button, from the first
+                    neither done nor locked, and the pass a Stop stops),
+                    and the defects of the worker given to the error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -2346,7 +2426,9 @@ src/ui/
                     its results
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
-                    widget; among them Table.tsx, the plain table of a
+                    widget; among them ThresholdSlider.tsx, from 7
+                    October 2026, the line of a threshold dragged over a
+                    histogram (section 7); Table.tsx, the plain table of a
                     few rows that is only read, SortableTable.tsx, the
                     table sorted by any column, whose Virtualizer draws
                     only the rows in view, for thousands of rows such as

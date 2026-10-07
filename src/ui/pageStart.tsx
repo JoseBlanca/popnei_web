@@ -173,7 +173,8 @@ export function connectStore(
     return client;
   };
   const store = makeStore({
-    send: (key, job, onProgress) => madeClient().run(key, job, onProgress),
+    send: (key, job, onProgress, onSoFar) =>
+      madeClient().run(key, job, onProgress, onSoFar),
     sendWrite: (key, job, onProgress) =>
       madeClient().write(key, job, onProgress),
   });

@@ -5,6 +5,8 @@ import type {
   DiversityResult,
   FilterCountsJob,
   FilterCountsResult,
+  FilterFailuresJob,
+  FilterFailuresResult,
   HeatmapOrder,
   IndividualChecksJob,
   IndividualChecksResult,
@@ -162,7 +164,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 7, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 10, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -200,7 +202,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 7 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 10 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -523,7 +525,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 7,
+        protocol: 10,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -538,7 +540,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 7 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 10 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -596,17 +598,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 8 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 8 })).toEqual({
+  test("a ready of protocol 11 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 11 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 8 },
+      error: { kind: "otherProtocol", found: 11 },
     });
   });
 
-  test("a ready of protocol 8 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 8 })).toEqual({
+  test("a ready of protocol 11 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 11 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 8 },
+      error: { kind: "otherProtocol", found: 11 },
     });
   });
 
@@ -614,18 +616,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 8 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 11 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 8,
+          protocol: 11,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 8 },
+        error: { kind: "otherProtocol", found: 11 },
       });
     },
   );
@@ -1352,6 +1354,20 @@ const variantsSummaryResult: fc.Arbitrary<VariantsSummaryResult> = fc
       analysis: fc.constant("variantsSummary" as const),
       chroms: fc.constant(chroms),
       numVarsPerChrom: uint32s(chroms.length),
+      perVar: variantChecksResult.map((r) => ({
+        binEdges: r.binEdges,
+        missingRate: r.missingRate,
+        maf: r.maf,
+        obsHet: r.obsHet,
+        unbiasedExpHet: r.unbiasedExpHet,
+        passStats: r.passStats,
+      })),
+      perIndividual: individualChecksResult.map((r) => ({
+        individuals: r.individuals,
+        missingGtRate: r.missingGtRate,
+        obsHetRate: r.obsHetRate,
+        passStats: r.passStats,
+      })),
       passStats,
     }),
   );
@@ -1445,12 +1461,20 @@ const popDistsResult: fc.Arbitrary<PopDistsResult> = fc
       passStats,
     });
   });
+const filterFailuresResult: fc.Arbitrary<FilterFailuresResult> = fc.record({
+  analysis: fc.constant("filterFailures" as const),
+  passStats: fc.record({
+    numVars: number,
+    filtering: fc.record({ passed: filteringStats }),
+  }),
+});
 const jobResult = fc.oneof(
   diversityResult,
   individualChecksResult,
   variantChecksResult,
   filterCountsResult,
   variantsSummaryResult,
+  filterFailuresResult,
   pcaResult,
   popDistsResult,
   ldDecayResult,
@@ -1472,7 +1496,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(7),
+    protocol: fc.constant(10),
     popneiVersion: text,
   }),
   fc.record({
@@ -1483,6 +1507,12 @@ const fromRunnerMessage = fc.oneof(
   }),
   fc.record({
     kind: fc.constant("result" as const),
+    id: whole,
+    key: text,
+    result: jobResult,
+  }),
+  fc.record({
+    kind: fc.constant("soFar" as const),
     id: whole,
     key: text,
     result: jobResult,
@@ -1617,7 +1647,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(7) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(10) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1679,6 +1709,14 @@ const variantChecksJob = fc.record({
 });
 const variantsSummaryJob = fc.record({
   analysis: fc.constant("variantsSummary" as const),
+  fileId: text,
+  filters: fc.constant([] as const),
+  minNumIndividuals: number,
+  numBins: number,
+  range: fc.tuple(number, number),
+});
+const filterFailuresJob = fc.record({
+  analysis: fc.constant("filterFailures" as const),
   fileId: text,
   filters: fc.constant([] as const),
 });
@@ -1756,6 +1794,7 @@ const toRunnerMessage = fc.oneof(
       variantChecksJob,
       filterCountsJob,
       variantsSummaryJob,
+      filterFailuresJob,
       pcaJob,
       popDistsJob,
       ldDecayJob,
@@ -2720,8 +2759,8 @@ describe("PA2 D1 the messages of the LD decay", () => {
     },
   );
 
-  test("the version of the messages is 7", () => {
-    expect(PROTOCOL_VERSION).toBe(7);
+  test("the version of the messages is 10", () => {
+    expect(PROTOCOL_VERSION).toBe(10);
   });
 });
 
@@ -3279,18 +3318,37 @@ describe("PA6 D1 the messages of the diversity of stage 5", () => {
 });
 
 // The job and the result of the summary of the variants file
-// (docs/plans/open-variants.md, "The phases", 1).
+// (docs/plans/open-variants.md, "The phases", 1; docs/plans/live-stats.md,
+// phase 1).
 
 const VARIANTS_SUMMARY_JOB: VariantsSummaryJob = {
   analysis: "variantsSummary",
   fileId: "load-a",
   filters: [],
+  minNumIndividuals: 0,
+  numBins: 2,
+  range: [0, 1],
 };
+const SUMMARY_PASS = { numVars: 500, filtering: {} };
 const VARIANTS_SUMMARY_RESULT: VariantsSummaryResult = {
   analysis: "variantsSummary",
   chroms: ["chr1", "chr2"],
   numVarsPerChrom: Uint32Array.of(250, 250),
-  passStats: { numVars: 500, filtering: {} },
+  perVar: {
+    binEdges: Float64Array.of(0, 0.5, 1),
+    missingRate: { mean: 0.1, counts: Uint32Array.of(500, 0) },
+    maf: { mean: 0.8, counts: Uint32Array.of(0, 500) },
+    obsHet: { mean: 0.3, counts: Uint32Array.of(500, 0) },
+    unbiasedExpHet: { mean: 0.3, counts: Uint32Array.of(500, 0) },
+    passStats: SUMMARY_PASS,
+  },
+  perIndividual: {
+    individuals: ["a", "b"],
+    missingGtRate: Float64Array.of(0.1, 0.2),
+    obsHetRate: Float64Array.of(0.3, Number.NaN),
+    passStats: SUMMARY_PASS,
+  },
+  passStats: SUMMARY_PASS,
 };
 
 describe("open-variants 1 the messages of the summary of the variants file", () => {
@@ -3299,6 +3357,58 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
     expect(parseToRunner(run)).toEqual({ ok: true, value: run });
     const message = resultMessage(VARIANTS_SUMMARY_RESULT);
     expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("live-stats 2 a result so far of the summary is accepted as it is, and is checked as the result is", () => {
+    const message = {
+      kind: "soFar",
+      id: 2,
+      key: "k1",
+      result: VARIANTS_SUMMARY_RESULT,
+    };
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+    expect(
+      parseFromRunner({
+        ...message,
+        result: {
+          ...VARIANTS_SUMMARY_RESULT,
+          numVarsPerChrom: Uint32Array.of(250),
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "soFar",
+        path: "result.numVarsPerChrom",
+        expected: 2,
+        found: 1,
+      },
+    });
+    expect(parseFromRunner({ ...message, progress: 1 })).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "soFar",
+        path: "",
+        fields: ["progress"],
+      },
+    });
+    expect(
+      parseFromRunner({
+        kind: "soFar",
+        id: 2,
+        result: VARIANTS_SUMMARY_RESULT,
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "soFar",
+        path: "",
+        fields: ["key"],
+      },
+    });
   });
 
   test("a result of no chromosome, as a pass refused never gives but the check allows, is accepted", () => {
@@ -3391,6 +3501,201 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
         kind: "missingFields",
         path: "result",
         fields: ["passStats"],
+      },
+    });
+  });
+
+  test("a part of the statistics is checked as the result of its own request: counts fewer than the edges, or an array of the individuals shorter than they are, is wrongLength", () => {
+    const perVar = {
+      ...VARIANTS_SUMMARY_RESULT.perVar,
+      maf: { mean: 0.8, counts: Uint32Array.of(500) },
+    };
+    expect(
+      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, perVar })),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.perVar.maf.counts",
+        expected: 2,
+        found: 1,
+      },
+    });
+    const perIndividual = {
+      ...VARIANTS_SUMMARY_RESULT.perIndividual,
+      obsHetRate: Float64Array.of(0.3),
+    };
+    expect(
+      parseFromRunner(
+        resultMessage({ ...VARIANTS_SUMMARY_RESULT, perIndividual }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        path: "result.perIndividual.obsHetRate",
+        expected: 2,
+        found: 1,
+      },
+    });
+  });
+
+  test("a part with the field analysis of its own result is extraFields, and a summary without its parts missingFields", () => {
+    const perVar = {
+      ...VARIANTS_SUMMARY_RESULT.perVar,
+      analysis: "variantChecks",
+    };
+    expect(
+      parseFromRunner(resultMessage({ ...VARIANTS_SUMMARY_RESULT, perVar })),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        path: "result.perVar",
+        fields: ["analysis"],
+      },
+    });
+    const without = Object.fromEntries(
+      Object.entries(VARIANTS_SUMMARY_RESULT).filter(
+        ([name]) => name !== "perVar" && name !== "perIndividual",
+      ),
+    );
+    expect(parseFromRunner(resultMessage(without))).toMatchObject({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        path: "result",
+        fields: ["perVar", "perIndividual"],
+      },
+    });
+  });
+
+  test("a job without the bins of the histograms is missingFields", () => {
+    const withoutBins = Object.fromEntries(
+      Object.entries(VARIANTS_SUMMARY_JOB).filter(
+        ([name]) => name !== "numBins",
+      ),
+    );
+    expect(parseToRunner({ ...RUN, job: withoutBins })).toMatchObject({
+      ok: false,
+      error: { kind: "missingFields", path: "job", fields: ["numBins"] },
+    });
+  });
+});
+
+/** The job of the count of the FILTER failures of low_qual.vcf.gz. */
+const FILTER_FAILURES_JOB: FilterFailuresJob = {
+  analysis: "filterFailures",
+  fileId: "load-1",
+  filters: [],
+};
+
+/** Its result, as popnei gave it under node: 1,200 variants given to
+    `filterPassed`, 900 kept. */
+const FILTER_FAILURES_RESULT: FilterFailuresResult = {
+  analysis: "filterFailures",
+  passStats: {
+    numVars: 900,
+    filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
+  },
+};
+
+describe("live-stats 3 the messages of the count of the FILTER failures", () => {
+  test("its job and its result are accepted", () => {
+    const run = { ...RUN, job: FILTER_FAILURES_JOB };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+    const message = resultMessage(FILTER_FAILURES_RESULT);
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test("passed in the counts of a result of another analysis is extraFields", () => {
+    const message = resultMessage({
+      ...FILTER_COUNTS_RESULT,
+      passStats: {
+        numVars: 1128,
+        filtering: {
+          passed: { varsProcessed: 1300, varsKept: 1200 },
+          ...FILTER_COUNTS_RESULT.passStats.filtering,
+        },
+      },
+    });
+    expect(parseFromRunner(message)).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.passStats.filtering",
+        fields: ["passed"],
+      },
+    });
+  });
+
+  test("a job with a filter is wrongLength, and one with a list of individuals extraFields", () => {
+    expect(
+      parseToRunner({
+        ...RUN,
+        job: { ...FILTER_FAILURES_JOB, filters: FILTERS_AT_0_05 },
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "wrongLength",
+        messageKind: "run",
+        path: "job.filters",
+        expected: 0,
+        found: 1,
+      },
+    });
+    expect(
+      parseToRunner({
+        ...RUN,
+        job: { ...FILTER_FAILURES_JOB, individuals: null },
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "run",
+        path: "job",
+        fields: ["individuals"],
+      },
+    });
+  });
+
+  test("a result whose counts hold a filter beside passed is extraFields", () => {
+    const result = {
+      ...FILTER_FAILURES_RESULT,
+      passStats: {
+        numVars: 900,
+        filtering: {
+          ...FILTER_FAILURES_RESULT.passStats.filtering,
+          maf: { varsProcessed: 900, varsKept: 880 },
+        },
+      },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "extraFields",
+        messageKind: "result",
+        path: "result.passStats.filtering",
+        fields: ["maf"],
+      },
+    });
+  });
+
+  test("a result whose counts do not hold passed is missingFields", () => {
+    const result = {
+      ...FILTER_FAILURES_RESULT,
+      passStats: { numVars: 900, filtering: {} },
+    };
+    expect(parseFromRunner(resultMessage(result))).toEqual({
+      ok: false,
+      error: {
+        kind: "missingFields",
+        messageKind: "result",
+        path: "result.passStats.filtering",
+        fields: ["passed"],
       },
     });
   });

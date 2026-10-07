@@ -10,10 +10,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Runner } from "./runner.ts";
 
-/** What the fake runner's `open` does; each test sets it. */
-const calls: { open: Runner["open"] } = {
+/** What the fake runner's `open` and `run` do; each test sets them. */
+const calls: { open: Runner["open"]; run: Runner["run"] } = {
   open: () => {
     throw new Error("the test set no open");
+  },
+  run: () => {
+    throw new Error("the test runs no job");
   },
 };
 
@@ -21,9 +24,7 @@ vi.mock("./runner.ts", () => ({
   loadPopnei: () => Promise.resolve({ ok: true, value: "0.1.0" }),
   createRunner: (): Runner => ({
     open: (load, file) => calls.open(load, file),
-    run: () => {
-      throw new Error("the test runs no job");
-    },
+    run: (job, told, toldSoFar) => calls.run(job, told, toldSoFar),
     write: () => {
       throw new Error("the test writes no file");
     },
@@ -32,19 +33,30 @@ vi.mock("./runner.ts", () => ({
 }));
 
 /** The fake global scope of the worker: what it posted, whether it
-    closed, and its listeners by the name of their event. */
+    closed, its listeners by the name of their event, and the error its
+    `postMessage` throws for a message, as a DataCloneError, or null. */
 interface Scope {
   readonly posted: unknown[];
   closed: boolean;
   readonly listeners: Map<string, (event: unknown) => void>;
+  postError: (message: unknown) => Error | null;
 }
 
 let scope: Scope;
 
 beforeEach(() => {
   vi.resetModules();
-  const made: Scope = { posted: [], closed: false, listeners: new Map() };
+  const made: Scope = {
+    posted: [],
+    closed: false,
+    listeners: new Map(),
+    postError: () => null,
+  };
   vi.stubGlobal("postMessage", (message: unknown) => {
+    const error = made.postError(message);
+    if (error !== null) {
+      throw error;
+    }
     made.posted.push(message);
   });
   vi.stubGlobal("close", () => {
@@ -128,6 +140,121 @@ describe("VS1 D2 the script of the calculation worker: a mistake of our code", (
     expect(scope.posted.at(-1)).toEqual({
       kind: "crashed",
       message: "Uncaught TypeError: scope.x is not a function",
+    });
+  });
+});
+
+const RUN = {
+  kind: "run",
+  id: 2,
+  key: "k1",
+  job: {
+    analysis: "variantsSummary",
+    fileId: "load-a",
+    filters: [],
+    minNumIndividuals: 0,
+    numBins: 1280,
+    range: [0, 1],
+  },
+};
+
+/** An error as the browser's postMessage throws for a message it cannot
+    copy, a DataCloneError. */
+function cloneError(): Error {
+  const error = new Error("The object can not be cloned.");
+  error.name = "DataCloneError";
+  return error;
+}
+
+/** Whether `message` is a message of the kind `kind`. */
+function isKind(message: unknown, kind: string): boolean {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "kind" in message &&
+    message.kind === kind
+  );
+}
+
+describe("live-stats 2 the script of the calculation worker: a message it cannot post", () => {
+  test.each([
+    [
+      "a result so far",
+      "soFar",
+      "popnei_web defect: the result so far could not be posted: The object can not be cloned.",
+    ],
+    [
+      "a progress",
+      "progress",
+      "popnei_web defect: the progress could not be posted: The object can not be cloned.",
+    ],
+  ])(
+    "%s the browser cannot post is crashed as a defect of ours, and the worker closes",
+    async (_name, kind, message) => {
+      calls.open = () => ({
+        kind: "ok",
+        value: { individuals: ["s0"], ploidy: 2 },
+      });
+      calls.run = (_job, told, toldSoFar) => {
+        told({ bytesRead: 1, numBytes: 2, pass: 1, numPasses: 1 });
+        toldSoFar?.({
+          analysis: "filterCounts",
+          passStats: { numVars: 0, filtering: {} },
+        });
+        throw new Error("the test reached the end of the run");
+      };
+      scope.postError = (posted) =>
+        isKind(posted, kind) ? cloneError() : null;
+      await started();
+
+      fire("message", { data: OPEN });
+      await vi.waitFor(() => {
+        expect(scope.posted).toContainEqual(
+          expect.objectContaining({ kind: "opened" }),
+        );
+      });
+      fire("message", { data: RUN });
+
+      await vi.waitFor(() => {
+        expect(scope.closed).toBe(true);
+      });
+      expect(scope.posted.at(-1)).toEqual({ kind: "crashed", message });
+    },
+  );
+});
+
+describe("live-stats 3 the script of the calculation worker: a final result it cannot post", () => {
+  test("a result the browser cannot post is crashed as a defect of ours, and the worker closes", async () => {
+    calls.open = () => ({
+      kind: "ok",
+      value: { individuals: ["s0"], ploidy: 2 },
+    });
+    calls.run = () => ({
+      kind: "ok",
+      value: {
+        analysis: "filterCounts",
+        passStats: { numVars: 0, filtering: {} },
+      },
+    });
+    scope.postError = (posted) =>
+      isKind(posted, "result") ? cloneError() : null;
+    await started();
+
+    fire("message", { data: OPEN });
+    await vi.waitFor(() => {
+      expect(scope.posted).toContainEqual(
+        expect.objectContaining({ kind: "opened" }),
+      );
+    });
+    fire("message", { data: RUN });
+
+    await vi.waitFor(() => {
+      expect(scope.closed).toBe(true);
+    });
+    expect(scope.posted.at(-1)).toEqual({
+      kind: "crashed",
+      message:
+        "popnei_web defect: the result could not be posted: The object can not be cloned.",
     });
   });
 });

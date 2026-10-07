@@ -596,6 +596,7 @@ describe("PA7 D1 the diversity running, drawn by React", () => {
       runId: 7,
       progress,
       waitsForStatistics: false,
+      soFar: null,
     };
     draw(createElement(AnalysisPanel, { id: "diversity" }));
   }

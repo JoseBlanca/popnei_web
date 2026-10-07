@@ -48,9 +48,11 @@ const OBS_HET_COUNTS = Uint32Array.from([
 function maximum(value: number): HistogramThreshold {
   return {
     value,
-    label: `Maximum ${String(value)}`,
-    keptLabel: "Kept by this filter",
-    removedLabel: "Removed by this filter",
+    legend: {
+      label: `Maximum ${String(value)}`,
+      keptLabel: "Kept by this filter",
+      removedLabel: "Removed by this filter",
+    },
   };
 }
 
@@ -560,6 +562,51 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
   });
 
+  test("thresholds 2 a threshold with no legend draws its line and the bars it keeps and removes, no row of a legend, and keeps the top margin of 12", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.51, legend: null },
+    });
+    const svg = svgOf(element);
+    expect(svg.querySelectorAll("line.chart-threshold")).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.chart-bar-kept").length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      svg.querySelectorAll("rect.chart-bar-removed").length,
+    ).toBeGreaterThan(0);
+    expect(svg.querySelectorAll("g.chart-legend-row")).toHaveLength(0);
+    expect(
+      element.querySelector("g.chart-frame")?.getAttribute("transform"),
+    ).toBe("translate(60,12)");
+  });
+
+  test("thresholds 2 the plot tells where its frame is at its first draw, and again only when a draw moves it", () => {
+    const element = sizedElement(600, 375);
+    const frames: unknown[] = [];
+    const handle = createHistogram(
+      element,
+      {
+        ...histogramOf(MAF_COUNTS, null),
+        threshold: { value: 0.9, legend: null },
+      },
+      { onFrame: (frame) => frames.push(frame) },
+    );
+    // 600 less the margins of 60 and 16, 375 less those of 12 and 44.
+    expect(frames).toEqual([{ left: 60, top: 12, width: 524, height: 319 }]);
+    handle.update({
+      ...histogramOf(MAF_COUNTS, null),
+      threshold: { value: 0.8, legend: null },
+    });
+    expect(frames).toHaveLength(1);
+    handle.update(histogramOf(MAF_COUNTS, 0.8));
+    expect(frames).toEqual([
+      { left: 60, top: 12, width: 524, height: 319 },
+      { left: 60, top: 56, width: 524, height: 275 },
+    ]);
+  });
+
   test("the top margin is 56 with a threshold and 12 without, after an update in each direction", () => {
     const element = sizedElement(600, 375);
     const handle = createHistogram(element, histogramOf(MAF_COUNTS, null));
@@ -812,6 +859,131 @@ describe("PA4 D6 the histogram of the spectrum, its defects", () => {
     expectRefused(
       spectrumOf(P0_SHARES, { yMax: Number.POSITIVE_INFINITY }),
       "not a finite number",
+    );
+  });
+});
+
+describe("thresholds 2 a threshold whose bin at the line is undecided", () => {
+  /** The histogram of the observed heterozygosity of panel.nei with a
+      threshold at `value` whose bin at the line is undecided. */
+  function undecidedAt(value: number, counts = OBS_HET_COUNTS): HistogramData {
+    return {
+      ...histogramOf(counts, null),
+      threshold: { value, legend: null, undecided: true },
+    };
+  }
+
+  /** The bars of the plot in `element`, from the left. */
+  function barsIn(element: HTMLElement): Element[] {
+    return [...svgOf(element).querySelectorAll("g.chart-marks rect.chart-bar")];
+  }
+
+  test("at 0.5, an edge of the bins, the bar that starts at the line is hatched, neither filled nor an outline, and its pattern is in the SVG", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.5));
+    const svg = svgOf(element);
+    const lineX = numberOf(
+      svg.querySelector("line.chart-threshold") ?? undefined,
+      "x1",
+    );
+    const atLine = barsIn(element).filter(
+      (bar) => numberOf(bar, "x") === lineX,
+    );
+    expect(atLine.map((bar) => bar.getAttribute("class"))).toEqual([
+      "chart-bar chart-bar-undecided",
+    ]);
+    const fill = /^fill: url\(#([^)]+)\);?$/u.exec(
+      atLine[0]?.getAttribute("style") ?? "",
+    );
+    expect(fill).not.toBeNull();
+    const pattern = svg.querySelector(`pattern#${fill?.[1] ?? ""}`);
+    expect(pattern).not.toBeNull();
+    // th3 fix 3: the stripe runs down the middle of its tile, so that its
+    // stroke of 2 pixels shows whole and is not cut by the tile's edge.
+    const tile = numberOf(pattern ?? undefined, "width");
+    const stripe = pattern?.querySelector("line.chart-hatch-stripe");
+    expect(numberOf(stripe ?? undefined, "x1")).toBe(tile / 2);
+    expect(numberOf(stripe ?? undefined, "x2")).toBe(tile / 2);
+    expect(numberOf(stripe ?? undefined, "y1")).toBe(0);
+    expect(numberOf(stripe ?? undefined, "y2")).toBe(
+      numberOf(pattern ?? undefined, "height"),
+    );
+    // Bins 21 to 24 are removed, 1 to 19 kept, as without the hatch.
+    expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(4);
+    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(19);
+  });
+
+  test("at 0.51, inside bin 20, the part of the bin right of the line is hatched and the part left of it filled", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.51));
+    const classes = barsIn(element).map((bar) => bar.getAttribute("class"));
+    expect(
+      classes.filter((name) => name?.includes("undecided") === true),
+    ).toEqual(["chart-bar chart-bar-undecided"]);
+    expect(
+      classes.filter((name) => name?.includes("kept") === true),
+    ).toHaveLength(20);
+  });
+
+  test("at 0.3, on the edge popnei gives as 0.30000000000000004, the double above it, the bin that starts there is hatched", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, undecidedAt(0.3));
+    const svg = svgOf(element);
+    expect(svg.querySelectorAll("rect.chart-bar-undecided")).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(11);
+    // Without the hatch the same bin is removed.
+    const plain = sizedElement(600, 375);
+    createHistogram(plain, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.3, legend: null },
+    });
+    expect(
+      svgOf(plain).querySelectorAll("rect.chart-bar-undecided"),
+    ).toHaveLength(0);
+  });
+
+  test("th4 fix 4: the hatched bar has the words of the threshold as its title, its tooltip, and no other bar has one; an update with no words takes it away", () => {
+    const element = sizedElement(600, 375);
+    const words =
+      "The bins cannot tell how many of its variants the line keeps.";
+    const handle = createHistogram(element, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: {
+        value: 0.5,
+        legend: null,
+        undecided: true,
+        undecidedTitle: words,
+      },
+    });
+    const svg = svgOf(element);
+    const titled = [...svg.querySelectorAll("g.chart-marks rect > title")];
+    expect(titled.map((title) => title.textContent)).toEqual([words]);
+    expect(titled[0]?.parentElement?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-undecided",
+    );
+    handle.update(undecidedAt(0.5));
+    expect(svg.querySelectorAll("g.chart-marks rect > title")).toHaveLength(0);
+  });
+
+  test("two plots on a page each have a pattern of their own, and an update to a threshold that can tell takes the hatch away", () => {
+    const one = sizedElement(600, 375);
+    const two = sizedElement(600, 375);
+    const handle = createHistogram(one, undecidedAt(0.5));
+    createHistogram(two, undecidedAt(0.5));
+    const ids = [one, two].map(
+      (element) => element.querySelector("pattern")?.id,
+    );
+    expect(ids[0]).toBeTruthy();
+    expect(ids[0]).not.toBe(ids[1]);
+    handle.update({
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.5, legend: null },
+    });
+    expect(
+      svgOf(one).querySelectorAll("rect.chart-bar-undecided"),
+    ).toHaveLength(0);
+    expect(svgOf(one).querySelectorAll("rect.chart-bar-removed")).toHaveLength(
+      5,
     );
   });
 });

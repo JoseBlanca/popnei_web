@@ -98,6 +98,7 @@ describe("PA5 D1 a change of the measure is announced only over a heatmap", () =
         runId: 1,
         progress: null,
         waitsForStatistics: false,
+        soFar: null,
       },
       {
         kind: "error",

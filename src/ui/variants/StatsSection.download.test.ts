@@ -13,13 +13,8 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Store } from "../../core/store.ts";
-import type {
-  Job,
-  JobResult,
-  Outcome,
-  Run,
-  RunError,
-} from "../../worker/protocol.ts";
+import { summaryResult } from "../../core/testSupport.ts";
+import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 
 /** How the download of the code of the section goes: held until `gate`
     resolves, then failed when `fail`; `calls` counts the downloads. */
@@ -51,50 +46,22 @@ interface Request {
   readonly end: (outcome: Outcome<JobResult>) => void;
 }
 
-/** The result of each analysis the page starts, by its id. */
+/** The result of each analysis the page starts, by its id: the summary
+    of panel.nei, with the statistics of its two individuals. */
 const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
-  [
-    "variantsSummary",
-    {
-      analysis: "variantsSummary",
-      passStats: { numVars: 1200, filtering: {} },
-      chroms: ["1"],
-      numVarsPerChrom: new Uint32Array([1200]),
-    },
-  ],
-  [
-    "individualChecks",
-    {
-      analysis: "individualChecks",
-      individuals: ["i1", "i2"],
-      missingGtRate: Float64Array.from([0.02, 0.04]),
-      obsHetRate: Float64Array.from([0.3, 0.4]),
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
-  [
-    "variantChecks",
-    {
-      analysis: "variantChecks",
-      binEdges: Float64Array.from([0, 0.5, 1]),
-      missingRate: { mean: 0.03, counts: Uint32Array.from([1200, 0]) },
-      maf: { mean: 0.7, counts: Uint32Array.from([1200, 0]) },
-      obsHet: { mean: 0.35, counts: Uint32Array.from([1200, 0]) },
-      unbiasedExpHet: { mean: 0.37, counts: Uint32Array.from([1200, 0]) },
-      passStats: { numVars: 1200, filtering: {} },
-    },
-  ],
+  ["variantsSummary", summaryResult(["1"], [1200], ["i1", "i2"])],
 ]);
 
 const FIRST = "0123456789abcdef0123456789abcdef";
 const SECOND = "fedcba9876543210fedcba9876543210";
 
-/** The page: its store, the requests sent, and every text the status
-    region said. */
+/** The page: its store, the requests sent, every text the status
+    region said, and the loads whose section was drawn, its code there. */
 interface Page {
   readonly store: Store<JobResult, Blob>;
   readonly requests: Request[];
   readonly said: string[];
+  readonly shown: string[];
   readonly open: (fileId: string) => Promise<void>;
 }
 
@@ -191,7 +158,12 @@ async function drawPage(): Promise<Page> {
     const text = announcer.getState();
     if (text !== "") said.push(text);
   });
-  const onShown = announceChanges(store, announcer, () => null);
+  const announceShown = announceChanges(store, announcer, () => null);
+  const shown: string[] = [];
+  const onShown = (fileId: string): (() => void) => {
+    shown.push(fileId);
+    return announceShown(fileId);
+  };
   const openButton = createRef<HTMLButtonElement>();
   const tree = createElement(
     StrictMode,
@@ -231,21 +203,13 @@ async function drawPage(): Promise<Page> {
       await Promise.resolve();
     });
   };
-  return { store, requests, said, open };
+  return { store, requests, said, shown, open };
 }
 
-/** The section of the statistics, once drawn, or `null`; not its room,
-    drawn busy while the code downloads. */
+/** The section of the statistics, once drawn, or `null`. */
 function sectionOf(): Element | null {
   return container.querySelector(
-    'section[aria-label="Statistics of the file"]:not([aria-busy])',
-  );
-}
-
-/** The room of the section, drawn while its code downloads, or `null`. */
-function roomOf(): Element | null {
-  return container.querySelector(
-    'section[aria-label="Statistics of the file"][aria-busy="true"]',
+    'section[aria-label="Statistics of the file"]',
   );
 }
 
@@ -259,23 +223,18 @@ async function endDone(page: Page): Promise<void> {
   await after(0);
 }
 
-/** Ends the last request sent with the failure `error`. */
-async function endFailed(page: Page, error: RunError): Promise<void> {
-  const request = page.requests.at(-1);
-  if (request === undefined) throw new Error("no request was sent");
-  request.end({ kind: "failed", error });
-  await after(0);
-}
-
-/** Waits for the section to be drawn, its code imported afresh with the
-    plots and D3, and then held back 300 ms by React, as the first
-    download is; fails after 5 s. */
-async function sectionDrawn(): Promise<void> {
+/** Waits for the section of the load `fileId` to be drawn, its code
+    imported afresh with the plots and D3, and then held back 300 ms by
+    React, as the first download is, in place of the section drawn while
+    it downloads; fails after 5 s. */
+async function sectionDrawn(page: Page, fileId: string): Promise<void> {
   const start = performance.now();
-  while (sectionOf() === null && performance.now() - start < 5000) {
+  while (!page.shown.includes(fileId) && performance.now() - start < 5000) {
     await after(10);
   }
-  if (sectionOf() === null) throw new Error("the section was not drawn");
+  if (!page.shown.includes(fileId)) {
+    throw new Error("the section was not drawn");
+  }
 }
 
 /** The texts said that speak of the statistics, each the whole text of
@@ -293,21 +252,22 @@ describe("the section of the statistics while its code downloads", () => {
     const page = await drawPage();
     await page.open(FIRST);
     await endDone(page);
-    await endDone(page);
-    await endDone(page);
     expect(page.requests.map((r) => r.job.analysis)).toEqual([
       "variantsSummary",
-      "variantChecks",
-      "individualChecks",
     ]);
     await after(REGION_PAUSE_MS);
-    expect(sectionOf()).toBeNull();
-    // Its room is there, so that the open button under it stays.
-    expect(roomOf()).not.toBeNull();
+    // While its code downloads, the section has its two headings, and
+    // says of each part that it is calculated, never a count done with
+    // no word of the statistics; nothing is said of them yet.
+    expect(sectionOf()?.textContent).toBe(
+      "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…",
+    );
+    expect(page.shown).toEqual([]);
     expect(saidOfStats(page)).toEqual([]);
 
     release();
-    await sectionDrawn();
+    await sectionDrawn(page, FIRST);
+    expect(sectionOf()?.querySelectorAll("svg.chart")).toHaveLength(6);
     await after(REGION_PAUSE_MS);
     expect(saidOfStats(page)).toEqual([
       "The statistics of panel.nei are calculated.",
@@ -322,25 +282,22 @@ describe("the section of the statistics while its code downloads", () => {
     expect(caught).toHaveLength(1);
     expect(sectionOf()).toBeNull();
     await endDone(page);
-    await endFailed(page, {
-      kind: "popnei",
-      message: "a genotype of 3 alleles",
-    });
     await after(REGION_PAUSE_MS);
     expect(saidOfStats(page)).toEqual([]);
-    expect(page.said.join(" ")).not.toContain("3 alleles");
     expect(download.calls).toBe(1);
 
     download.fail = false;
     await page.open(SECOND);
-    await sectionDrawn();
+    await sectionDrawn(page, SECOND);
     expect(download.calls).toBe(2);
     await endDone(page);
     await after(REGION_PAUSE_MS);
-    // Said with the read and the count, in one pause of the region.
+    // Said with the read and the count, in one pause of the region, the
+    // end of the pass in place of its start.
     expect(saidOfStats(page)).toHaveLength(1);
     expect(saidOfStats(page)[0]).toContain(
-      "Calculating the statistics of panel.nei…",
+      "The statistics of panel.nei are calculated.",
     );
+    expect(saidOfStats(page)[0]).not.toContain("Calculating");
   });
 });

@@ -36,7 +36,13 @@
 // missing rate, the MAF, the observed and the unbiased expected
 // heterozygosity, each its mean and its counts, to
 // e2e/fixtures/variant_fine_bins.json, which the tests of core read
-// (docs/plans/file-stats.md, "Round 1 with the owner"). For the LD decay, whose curve the panel cannot show, since its
+// (docs/plans/file-stats.md, "Round 1 with the owner"). From
+// panel.vcf.gz, panel.nei and tetraploid.vcf.gz it writes the edges and
+// the counts of those bins as calcVariantsSummary gives them, the
+// statistics of each individual of that pass, and the variants each of
+// popnei's three filters of a threshold keeps at 0.05, 0.1, 0.3 and 0.5,
+// with popnei's version, to e2e/fixtures/threshold_counts.json, which the
+// tests of core read (docs/plans/thresholds.md, "The phases", 1). For the LD decay, whose curve the panel cannot show, since its
 // variants lie at positions 1 to 1,200 of one chromosome, it copies
 // popnei's tests/reference/ld/ld.vcf.gz, 100 diploid individuals and two
 // chromosomes of 250 variants every 1,000 bp, byte for byte to
@@ -67,7 +73,11 @@
 // tetraploid.nei, are written only when the script is given `--nei`, and
 // ld.nei at every run, 68,354 bytes with popnei js-v0.1.0-dev.3; the
 // statistics and the PCA are calculated from the panel.nei on disk either
-// way. The tests pin the sizes of the committed files, 261,490 and 16,194
+// way. ld.nei and panel_pca.json are rewritten at every run, and popnei
+// 0.2.1 writes both differently from the committed ones (7 October 2026),
+// which the tests pin: after a run for another file, restore them with
+// `git checkout e2e/fixtures/ld.nei e2e/fixtures/panel_pca.json` unless
+// they were meant to change. The tests pin the sizes of the committed files, 261,490 and 16,194
 // bytes, written by popnei 0.1.0 on 24 September 2026, and popnei
 // js-v0.1.0-dev.3 writes them in 261,570 and 16,218 bytes (29 September
 // 2026), so a run for the other files leaves the vars files as they are.
@@ -81,10 +91,12 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import {
   calcPerIndividualStats,
   calcPerVarDistribs,
+  calcVariantsSummary,
   doPcaFromVariants,
   init,
   openVars,
   openVcf,
+  version,
   writeVars,
 } from "popnei";
 
@@ -374,6 +386,208 @@ writeFileSync(
 );
 console.log(
   `${finePath}: panel.nei and tetraploid.nei in ${String(FINE_BINS)} bins`,
+);
+
+// The numbers of the thresholds of popgen2.html (docs/plans/thresholds.md,
+// "The phases", 1), for panel.vcf.gz opened with ploidy 2, panel.nei, and
+// tetraploid.vcf.gz opened with ploidy 4, the VCFs with every variant,
+// passed or not: from one pass of calcVariantsSummary over every variant
+// and every individual, as the page asks for it, the edges of its 1,280
+// bins over 0 to 1 and the counts of its four statistics, and the
+// missingGtRate and obsHetRate of each individual, a NaN written as null;
+// and the variants that each of popnei's three filters of a threshold,
+// filterByMissingData, filterByMaf and filterByObsHet, keeps alone at
+// 0.05, 0.1, 0.3 and 0.5, the numVars of the pass of iterBlocks read to its
+// end; 0.3 is an edge one double above 384/1280, the others edges equal
+// to k/1280; and, under `filterKeptOffEdges`, the variants each of the
+// three keeps at k/1280 for every edge k, listed in `offEdges`, where
+// popnei's edge is not k/1280 but the double above: the number the page
+// shows for the edge, at which popnei's filter must keep a count the page
+// gives (docs/plans/thresholds.md, the fixes of the review of phase 2).
+// And, under `filterKeptRound`, the variants each of the three keeps at
+// the numbers of two and three decimals listed in `roundNumbers`, every
+// multiple of 0.01 from 0 to 1, of 0.001 from 0 to 0.1 and from 0.32 to
+// 0.4, and 0.105, 0.255, 0.333, 0.521 and 0.699: the numbers a threshold
+// moves by on its axis, most of them inside a fine bin, where the page
+// gives the range from the bins below the bin to those and the bin
+// (docs/plans/thresholds.md, "Round 1 with the owner").
+// And, under `histKeptAtMost`, for each of the four statistics, the
+// variants whose value is at most each number of `atMostNumbers`, every
+// multiple of 0.001 and every k/1280 from 0 to 1 but 0: the count of
+// popnei's histogram of one bin over 0 to that number, whose last bin
+// holds its right edge; the one check of the count of the expected
+// heterozygosity, which has no filter of popnei.
+// And popnei's version, which the tests check against the one installed.
+// The tests of core read it, since they may not call popnei.
+const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
+/** The multiples of `step`, `decimals` decimals, from `from` to `to`
+    units of it. */
+function multiples(from, to, decimals) {
+  const numbers = [];
+  for (let units = from; units <= to; units += 1) {
+    numbers.push(Number(`${String(units)}e-${String(decimals)}`));
+  }
+  return numbers;
+}
+const ROUND_NUMBERS = [
+  ...new Set([
+    ...multiples(0, 100, 2),
+    ...multiples(0, 100, 3),
+    ...multiples(320, 400, 3),
+    0.105,
+    0.255,
+    0.333,
+    0.521,
+    0.699,
+  ]),
+].sort((a, b) => a - b);
+const AT_MOST_NUMBERS = [
+  ...new Set([
+    ...multiples(1, 1000, 3),
+    ...Array.from({ length: FINE_BINS }, (_, k) => (k + 1) / FINE_BINS),
+  ]),
+].sort((a, b) => a - b);
+/** The variants of `name` whose value of each of the four statistics is
+    at most `number`, from popnei's histogram of one bin over 0 to it. */
+function keptByHistogram(name, options, number) {
+  const variants = openFixture(name, options);
+  try {
+    const { perVar } = calcVariantsSummary(variants, {
+      perVar: {
+        stats: fineStats,
+        minNumIndividuals: 0,
+        histKwargs: { numBins: 1, range: [0, number] },
+      },
+      perIndividual: {},
+    });
+    return ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+      (statistic) => perVar[statistic].histCounts[0],
+    );
+  } finally {
+    variants.free();
+  }
+}
+const thresholdFiles = [
+  ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
+  ["panel.nei", null],
+  ["tetraploid.vcf.gz", { ploidy: 4, onlyPassed: false }],
+];
+/** Opens the fixture `name`, a vars file when `options` is null. */
+function openFixture(name, options) {
+  const bytes = readFileSync(join(fixtures, name));
+  return options === null ? openVars(bytes) : openVcf(bytes, options);
+}
+/** The variants of `name` that `filter` keeps at `threshold`. */
+function keptByFilter(name, options, filter, threshold) {
+  const variants = openFixture(name, options);
+  try {
+    variants[filter](threshold);
+    const blocks = variants.iterBlocks({ fields: [] });
+    let next = blocks.next();
+    while (next.done !== true) next = blocks.next();
+    return blocks.passStats.numVars;
+  } finally {
+    variants.free();
+  }
+}
+const thresholdLines = [];
+for (const [name, options] of thresholdFiles) {
+  const variants = openFixture(name, options);
+  let summary;
+  try {
+    summary = calcVariantsSummary(variants, {
+      perVar: {
+        stats: fineStats,
+        minNumIndividuals: 0,
+        histKwargs: { numBins: FINE_BINS, range: [0, 1] },
+      },
+      perIndividual: {},
+    });
+  } finally {
+    variants.free();
+  }
+  const { perVar, perIndividual } = summary;
+  const counts = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify([...perVar[statistic].histCounts]),
+  );
+  const filterKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        THRESHOLDS.map((threshold) =>
+          keptByFilter(name, options, filter, threshold),
+        ),
+      ),
+  );
+  const offEdges = [...perVar.maf.histBinEdges].flatMap((edge, index) =>
+    edge === index / FINE_BINS ? [] : [index],
+  );
+  const offEdgeKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        offEdges.map((index) =>
+          keptByFilter(name, options, filter, index / FINE_BINS),
+        ),
+      ),
+  );
+  const roundKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        ROUND_NUMBERS.map((number) =>
+          keptByFilter(name, options, filter, number),
+        ),
+      ),
+  );
+  const byHistogram = AT_MOST_NUMBERS.map((number) =>
+    keptByHistogram(name, options, number),
+  );
+  const histKept = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic, i) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(byHistogram.map((kept) => kept[i])),
+  );
+  thresholdLines.push(
+    `  ${JSON.stringify(name)}: {\n` +
+      `    "numVars": ${JSON.stringify(summary.passStats.numVars)},\n` +
+      `    "binEdges": ${JSON.stringify([...perVar.maf.histBinEdges])},\n` +
+      `    "counts": {\n${counts.join(",\n")}\n    },\n` +
+      `    "missingGtRate": ${JSON.stringify([...perIndividual.missingGtRate])},\n` +
+      `    "obsHetRate": ${JSON.stringify([...perIndividual.obsHetRate])},\n` +
+      `    "filterKept": {\n${filterKept.join(",\n")}\n    },\n` +
+      `    "offEdges": ${JSON.stringify(offEdges)},\n` +
+      `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    },\n` +
+      `    "filterKeptRound": {\n${roundKept.join(",\n")}\n    },\n` +
+      `    "histKeptAtMost": {\n${histKept.join(",\n")}\n    }\n  }`,
+  );
+}
+const thresholdsPath = join(fixtures, "threshold_counts.json");
+writeFileSync(
+  thresholdsPath,
+  `{\n  "popnei": ${JSON.stringify(version())},\n` +
+    `  "numBins": ${String(FINE_BINS)},\n` +
+    `  "thresholds": ${JSON.stringify(THRESHOLDS)},\n` +
+    `  "roundNumbers": ${JSON.stringify(ROUND_NUMBERS)},\n` +
+    `  "atMostNumbers": ${JSON.stringify(AT_MOST_NUMBERS)},\n` +
+    `${thresholdLines.join(",\n")}\n}\n`,
+);
+console.log(
+  `${thresholdsPath}: ${thresholdFiles.map(([name]) => name).join(", ")}`,
 );
 
 // The metadata file with a column of numbers: the rows of panel_pops.csv in

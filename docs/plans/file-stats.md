@@ -242,3 +242,10 @@ of empty page above the open button while the statistics run, and a
 band of about 80 px above "Variants" when done; the options are to keep
 it, to let the button move with the plots, or to put it back above the
 statistics.
+
+### Replaced by live-stats, 6 October 2026
+
+The piece `live-stats` (`docs/plans/live-stats.md`) replaced the two
+analyses of this piece on `popgen2.html`, and their Stop, by one pass
+of popnei's `calcVariantsSummary` with the count, and one Stop in the
+file's box. `variantChecks` and `individualChecks` stay on the old page.

@@ -45,7 +45,7 @@ export function announceChanges(
 
   const sayStats = (after: AppState<JobResult, Blob>): void => {
     for (const { text, replaces } of statsAnnouncementsOf(heard, after)) {
-      announcer.announce(text, ...(replaces === null ? [] : [{ replaces }]));
+      announcer.announce(text, { replaces });
     }
     heard = after;
   };

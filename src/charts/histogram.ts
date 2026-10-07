@@ -1,7 +1,9 @@
 /**
- * The histogram of a statistic whose bins are already counted, with the
- * threshold of a filter marked and the bins it keeps, splits and removes
- * (docs/specs/charts/histogram.md). It is drawn on the base of the 2D
+ * The histogram of a statistic whose bins are already counted, with a
+ * threshold marked and the bins it keeps, splits and removes
+ * (docs/specs/charts/histogram.md): the threshold of a filter on
+ * popgen.html, with its legend, and on popgen2.html a threshold that is
+ * only shown, with none. It is drawn on the base of the 2D
  * plots, plot2d.ts, and counts nothing: the bins are popnei's, or those
  * core makes for the statistics of each individual.
  */
@@ -30,7 +32,8 @@ export interface HistogramData extends PlotText {
    * scale gives.
    */
   readonly counts: Uint32Array | Float64Array;
-  /** The threshold of the filter beside the plot, or null for none. */
+  /** The threshold marked on the plot, of a filter beside it on
+      popgen.html or shown only on popgen2.html; null for none. */
   readonly threshold: HistogramThreshold | null;
   /**
    * The top of the vertical axis before it is made round, at least the
@@ -46,19 +49,71 @@ export interface HistogramData extends PlotText {
 }
 
 /**
- * A threshold that keeps what is at most `value`. The three labels are
- * the rows of the legend: "Maximum 0.95", "Kept by this filter",
- * "Removed by this filter".
+ * A threshold that keeps what is at most `value`, with the legend of a
+ * filter, or with none for a threshold the screen says in words beside
+ * the plot, as popgen2.html does with the thresholds of its histograms,
+ * which are no filters.
  */
 export interface HistogramThreshold {
-  /** The number the user typed, as the project holds it; finite. */
+  /** The number of the threshold, as the project holds it for a filter
+      or as the screen holds it; finite. */
   readonly value: number;
+  /** The three rows of the legend at the top right, or null for none. */
+  readonly legend: ThresholdLegend | null;
+  /**
+   * Whether the values on the line itself may be kept or removed, as the
+   * screen's counts say when the bins cannot tell (popgen2.html, whose
+   * bins hold their left edge): the bar that starts at the line, the
+   * part right of it of the bin it splits, or the bin from the double
+   * just above it, is then hatched rather than drawn as removed. False
+   * when absent.
+   */
+  readonly undecided?: boolean;
+  /**
+   * With `undecided`, the words of the title of the hatched bar, which
+   * the browser shows as its tooltip: why it is hatched. No title when
+   * absent.
+   */
+  readonly undecidedTitle?: string;
+}
+
+/**
+ * The legend of a threshold: "Maximum 0.95", "Kept by this filter",
+ * "Removed by this filter".
+ */
+export interface ThresholdLegend {
   /** The first row of the legend, beside the dashed line: "Maximum 0.95". */
   readonly label: string;
   /** The second row, beside a filled square: "Kept by this filter". */
   readonly keptLabel: string;
   /** The third row, beside an outlined square: "Removed by this filter". */
   readonly removedLabel: string;
+}
+
+/**
+ * Where the frame of a histogram was drawn in its element, in CSS
+ * pixels from the top left of the element: what a screen lays over the
+ * plot to be aligned with its horizontal axis, the line the user drags
+ * on popgen2.html.
+ */
+export interface HistogramFrame {
+  /** From the left of the element to the left of the frame. */
+  readonly left: number;
+  /** From the top of the element to the top of the frame. */
+  readonly top: number;
+  /** The width of the frame. */
+  readonly width: number;
+  /** The height of the frame. */
+  readonly height: number;
+}
+
+/** What a histogram tells the screen. */
+export interface HistogramEvents {
+  /**
+   * The frame was drawn at another place or size than at the draw
+   * before, the first draw among them.
+   */
+  onFrame?(frame: HistogramFrame): void;
 }
 
 /**
@@ -81,10 +136,10 @@ export interface HistogramRow {
   readonly state: BinState | null;
 }
 
-/** The top margin without a threshold, in CSS pixels. */
-const TOP_WITHOUT_THRESHOLD = 12;
-/** The top margin with a threshold, which holds the three rows of the legend. */
-const TOP_WITH_THRESHOLD = 56;
+/** The top margin without a legend, in CSS pixels. */
+const TOP_WITHOUT_LEGEND = 12;
+/** The top margin with a legend, which holds its three rows. */
+const TOP_WITH_LEGEND = 56;
 const RIGHT_MARGIN = 16;
 const BOTTOM_MARGIN = 44;
 /**
@@ -310,24 +365,37 @@ interface Bar {
   readonly from: number;
   readonly to: number;
   readonly count: number;
-  readonly state: "kept" | "removed" | null;
+  /** Removed, or undecided when the threshold says its values on the line
+      may be kept: the bar that starts at the line. */
+  readonly state: "kept" | "removed" | "undecided" | null;
 }
 
 /**
  * The rects of the bins with a count above 0, a partly kept bin as two,
- * split at the threshold, the left one left out when its width is 0.
+ * split at the threshold, the left one left out when its width is 0. With
+ * a threshold `undecided`, the bar that starts at the line, or at the
+ * double just above it, is undecided rather than removed.
  */
 function barsOf(
   rows: readonly HistogramRow[],
-  threshold: number | null,
+  threshold: HistogramThreshold | null,
 ): Bar[] {
   const bars: Bar[] = [];
+  const undecided = threshold?.undecided === true;
   for (const [index, row] of rows.entries()) {
     if (row.count === 0) continue;
     const { from, to, count, state } = row;
     const key = String(index);
     if (state !== "partlyKept") {
-      bars.push({ key, from, to, count, state });
+      const startsAtLine =
+        undecided && state === "removed" && from <= nextUp(threshold.value);
+      bars.push({
+        key,
+        from,
+        to,
+        count,
+        state: startsAtLine ? "undecided" : state,
+      });
       continue;
     }
     if (threshold === null) {
@@ -335,21 +403,21 @@ function barsOf(
         "popnei_web defect: a bin of a histogram with no threshold is partly kept.",
       );
     }
-    if (threshold > from) {
+    if (threshold.value > from) {
       bars.push({
         key: `${key}-kept`,
         from,
-        to: threshold,
+        to: threshold.value,
         count,
         state: "kept",
       });
     }
     bars.push({
       key: `${key}-removed`,
-      from: threshold,
+      from: threshold.value,
       to,
       count,
-      state: "removed",
+      state: undecided ? "undecided" : "removed",
     });
   }
   return bars;
@@ -361,9 +429,27 @@ function barClass(bar: Bar): string {
       return "chart-bar chart-bar-kept";
     case "removed":
       return "chart-bar chart-bar-removed";
+    case "undecided":
+      return "chart-bar chart-bar-undecided";
     case null:
       return "chart-bar";
   }
+}
+
+/** The side of the tile of the hatch of an undecided bar, in CSS pixels:
+    a stripe every 6 pixels, at 45 degrees, drawn down the middle of the
+    tile, so that its stroke of 2 pixels shows whole; at its edge the
+    tile cut half of it away. */
+const HATCH_TILE = 6;
+
+/** The number of the next hatch made, which gives each plot an id of its
+    own for the pattern, unique on the page. */
+let hatchCount = 0;
+
+/** The id of a new pattern of the hatch. */
+function nextHatchId(): string {
+  hatchCount += 1;
+  return `chart-hatch-${String(hatchCount)}`;
 }
 
 /** A row of the legend: what its mark shows, and its text. */
@@ -373,11 +459,12 @@ interface LegendRow {
 }
 
 function legendRowsOf(threshold: HistogramThreshold | null): LegendRow[] {
-  if (threshold === null) return [];
+  const legend = threshold?.legend ?? null;
+  if (legend === null) return [];
   return [
-    { key: "threshold", text: threshold.label },
-    { key: "kept", text: threshold.keptLabel },
-    { key: "removed", text: threshold.removedLabel },
+    { key: "threshold", text: legend.label },
+    { key: "kept", text: legend.keptLabel },
+    { key: "removed", text: legend.removedLabel },
   ];
 }
 
@@ -395,8 +482,8 @@ function longestYTick(data: HistogramData): string {
 }
 
 /**
- * The margins of the histogram of `data`: the top larger with a
- * threshold, for the legend, and the left 60 pixels, or more when the
+ * The margins of the histogram of `data`: the top larger with the legend
+ * of a threshold, and the left 60 pixels, or more when the
  * numbers of the vertical axis are longer than four characters, so that
  * they do not reach the label of the axis. The numbers are counted at 7.2
  * pixels a character and not measured.
@@ -404,27 +491,73 @@ function longestYTick(data: HistogramData): string {
 function histogramMargin(data: HistogramData): Margin {
   const ticksWidth = longestYTick(data).length * CHARACTER_WIDTH;
   return {
-    top: data.threshold === null ? TOP_WITHOUT_THRESHOLD : TOP_WITH_THRESHOLD,
+    top:
+      (data.threshold?.legend ?? null) === null
+        ? TOP_WITHOUT_LEGEND
+        : TOP_WITH_LEGEND,
     right: RIGHT_MARGIN,
     bottom: BOTTOM_MARGIN,
     left: Math.max(LEFT_MARGIN, Y_LABEL_BAND + ticksWidth + Y_TICK_OFFSET),
   };
 }
 
-function drawHistogram(frame: Frame, data: HistogramData): void {
+function drawHistogram(
+  frame: Frame,
+  data: HistogramData,
+  hatchId: string,
+): void {
   const { x, y } = histogramScales(data, frame.innerWidth, frame.innerHeight);
   const threshold = data.threshold?.value ?? null;
-  const bars = barsOf(histogramRows(data), threshold);
+  const bars = barsOf(histogramRows(data), data.threshold);
 
-  frame.marks
+  // The hatch of an undecided bar: thin stripes of the colour of the bars
+  // on the background, so that the dashed line keeps the background on
+  // both sides where it crosses the bar (WCAG 1.4.11), as it does beside
+  // an outlined bar. Made once, before the bars.
+  if (frame.marks.select("defs.chart-hatch").empty()) {
+    const pattern = frame.marks
+      .insert("defs", ":first-child")
+      .attr("class", "chart-hatch")
+      .append("pattern")
+      .attr("id", hatchId)
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", HATCH_TILE)
+      .attr("height", HATCH_TILE)
+      .attr("patternTransform", "rotate(45)");
+    pattern
+      .append("line")
+      .attr("class", "chart-hatch-stripe")
+      .attr("x1", HATCH_TILE / 2)
+      .attr("x2", HATCH_TILE / 2)
+      .attr("y1", 0)
+      .attr("y2", HATCH_TILE);
+  }
+
+  const rects = frame.marks
     .selectAll<SVGRectElement, Bar>("rect.chart-bar")
     .data(bars, (bar) => bar.key)
     .join("rect")
     .attr("class", barClass)
+    // The fill of a pattern by its id, which the CSS of a class cannot
+    // name; the style attribute wins over the fill of the class.
+    .attr("style", (bar) =>
+      bar.state === "undecided" ? `fill: url(#${hatchId});` : null,
+    )
     .attr("x", (bar) => x(bar.from))
     .attr("width", (bar) => x(bar.to) - x(bar.from))
     .attr("y", (bar) => y(bar.count))
     .attr("height", (bar) => frame.innerHeight - y(bar.count));
+  // The tooltip of the hatched bar, which says why it is hatched.
+  const undecidedTitle = data.threshold?.undecidedTitle;
+  rects
+    .selectAll<SVGTitleElement, string>("title")
+    .data((bar) =>
+      bar.state === "undecided" && undecidedTitle !== undefined
+        ? [undecidedTitle]
+        : [],
+    )
+    .join("title")
+    .text((words) => words);
 
   frame.annotations
     .selectAll<SVGLineElement, number>("line.chart-threshold")
@@ -486,17 +619,24 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
   });
 }
 
-/** The definition of the histogram, which the base of the 2D plots draws. */
-const histogramDefinition: Plot2dDefinition<HistogramData> = {
-  kind: "histogram",
-  check: checkHistogram,
-  margin: histogramMargin,
-  draw: drawHistogram,
-};
+/** Whether the frame `before`, null before the first draw, is `after`. */
+function sameFrame(
+  before: HistogramFrame | null,
+  after: HistogramFrame,
+): boolean {
+  return (
+    before !== null &&
+    before.left === after.left &&
+    before.top === after.top &&
+    before.width === after.width &&
+    before.height === after.height
+  );
+}
 
 /**
  * Draws the histogram of `data` in `element`, whose size the screen's CSS
- * gives, and returns its handle. It takes no events.
+ * gives, and returns its handle. It tells `events.onFrame` where its
+ * frame is after each draw that moved it.
  *
  * Throws an `Error`, a defect of the caller, here and in `update`, for no
  * bin, edges that are not one more than the counts, an edge not finite or
@@ -504,5 +644,30 @@ const histogramDefinition: Plot2dDefinition<HistogramData> = {
  * that is not finite, a yMax not finite or below the largest count, and
  * more than MAX_HISTOGRAM_BINS bins.
  */
-export const createHistogram: Chart<HistogramData> = (element, data) =>
-  createPlot2d(element, data, histogramDefinition);
+export const createHistogram: Chart<HistogramData, HistogramEvents> = (
+  element,
+  data,
+  events = {},
+) => {
+  let told: HistogramFrame | null = null;
+  const hatchId = nextHatchId();
+  const definition: Plot2dDefinition<HistogramData> = {
+    kind: "histogram",
+    check: checkHistogram,
+    margin: histogramMargin,
+    draw(frame, drawn) {
+      drawHistogram(frame, drawn, hatchId);
+      const placed: HistogramFrame = {
+        left: frame.margin.left,
+        top: frame.margin.top,
+        width: frame.innerWidth,
+        height: frame.innerHeight,
+      };
+      if (!sameFrame(told, placed)) {
+        told = placed;
+        events.onFrame?.(placed);
+      }
+    },
+  };
+  return createPlot2d(element, data, definition);
+};

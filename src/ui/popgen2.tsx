@@ -45,7 +45,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   drawBar(store, null);
 
   const announcer = createAnnouncer();
-  // Stop or Count again of the count, while one is shown.
+  // Stop or Start again of the box, while one is shown.
   let countButton: HTMLButtonElement | null = null;
   const statsShown = announceChanges(store, announcer, () => countButton);
   reportDefects(store, defects);
@@ -70,9 +70,9 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   );
 }
 
-/** The summary of the variants file, started once the file is read, and
-    the statistics of the open file, started one after the other once the
-    summary is done (docs/plans/file-stats.md). A change of the store
+/** The summary of the variants file, the one pass of the count and the
+    statistics of the open file, started once the file is read
+    (docs/plans/live-stats.md). A change of the store
     starts them after the listeners of that change have all run, so that a
     start is not made in the middle of telling them. */
 function startByThemselves(store: Store<JobResult, Blob>): AutoRuns {

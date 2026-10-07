@@ -3,7 +3,9 @@
  * (docs/plans/open-variants.md, phase 2): steps 1 and 2 of cases 1 and 2
  * of docs/use-cases.md, a variants file opened and what it holds; a file
  * popnei refuses at the opening and one whose count it refuses; a count
- * stopped and counted again; the ploidy read from the file, and a file
+ * stopped and started again, the count being the one pass that also
+ * calculates the statistics of the file (docs/plans/live-stats.md); the
+ * ploidy read from the file, and a file
  * whose ploidy cannot be read; files of another kind dropped; axe at each
  * state reached. A VCF is opened with no ploidy and with every variant,
  * whatever its FILTER column, and the page asks nothing of how it is read
@@ -132,10 +134,13 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
   await expectPanelCounted(page);
+  // Every variant of panel.vcf.gz passed its FILTER, as popnei counts
+  // it under node.
   await expect(lines(page)).toHaveText([
     "panel.vcf.gz · 87 KB",
     "Individuals: 200",
     "Variants: 1,200",
+    "FILTER failures: 0",
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);
@@ -150,22 +155,27 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
   await expect(page.getByRole("table")).toHaveCount(0);
   // The read and the count, said together when they end within the
   // pause of the region.
-  // Read from the record of the region, since the end of the statistics,
-  // which start once the count ends, replaces these words there; the
-  // latest words of the progress of the statistics said within the same
-  // pause may follow them, and nothing else.
+  // Read from the record of the region; the end of the statistics, of
+  // the same pass, may follow them in the same text, and nothing else.
   await expect
     .poll(() => announced(page))
     .toContainEqual(
       expect.stringMatching(
-        /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.( (Calculating the statistics of panel\.vcf\.gz…|The statistics of (the variants of )?panel\.vcf\.gz are calculated\.))?$/u,
+        /panel\.vcf\.gz: 1,200 variants on 1 chromosome\.( panel\.vcf\.gz: 0 variants failed their FILTER\.)?( The statistics of panel\.vcf\.gz are calculated\.)?$/u,
       ),
+    );
+  // The count of the FILTER failures, said with the count or after it.
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringContaining("panel.vcf.gz: 0 variants failed their FILTER."),
     );
   await expect(openButton(page)).toHaveText("Open another variants file…");
   await expectNoViolations(makeAxeBuilder);
 
   await pick(page, join(FIXTURES, "panel.nei"));
 
+  // A .nei file has no line of the FILTER failures.
   await expect(lines(page)).toHaveText([
     "panel.nei · 261 KB",
     "Individuals: 200",
@@ -205,13 +215,15 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
     /^bad_position\.vcf\.gz · /u,
     "Individuals: 200",
     "Variants: not counted",
+    // Held back by the refusal of the count, as autoRuns.ts holds it.
+    "FILTER failures: not counted",
     "Chromosomes: not counted",
     "Ploidy: 2",
     "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
   ]);
-  // popnei's refusal comes again for the same file, so no Count again.
+  // popnei's refusal comes again for the same file, so no Start again.
   await expect(
-    info(page).getByRole("button", { name: "Count again" }),
+    info(page).getByRole("button", { name: "Start again" }),
   ).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -317,7 +329,7 @@ test("OV2 a file refused by its name while another is open is said in the box, a
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 a count stopped says so, Count again counts the variants, and the box keeps its height at 320 pixels", async ({
+test("OV2 a count stopped says so, Start again counts the variants, and the box keeps its height at 320 pixels", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
@@ -335,6 +347,7 @@ test("OV2 a count stopped says so, Count again counts the variants, and the box 
 
   const bar = info(page).getByRole("progressbar", {
     name: "Counting the variants",
+    exact: true,
   });
   await expect(bar).toBeVisible({ timeout: 30_000 });
   // The state of the count in place of the numbers of the variants and
@@ -342,8 +355,11 @@ test("OV2 a count stopped says so, Count again counts the variants, and the box 
   await expect(lines(page)).toHaveText([
     /^stop\.vcf\.gz · /u,
     "Individuals: 1,000",
-    /^Variants: counting…( \d+%)?$/u,
-    "Chromosomes: counting…",
+    // A result so far of the pass, 2 seconds after its start, gives the
+    // variants and the chromosomes read so far in place of the count.
+    /^Variants: (counting…( \d+%)?|[\d,]+ so far)$/u,
+    "FILTER failures: counting…",
+    /^Chromosomes: (counting…|[\d,]+ so far)$/u,
     "Ploidy: 2",
   ]);
   const counting = await height();
@@ -354,11 +370,12 @@ test("OV2 a count stopped says so, Count again counts the variants, and the box 
     /^stop\.vcf\.gz · /u,
     "Individuals: 1,000",
     "Variants: not counted",
+    "FILTER failures: not counted",
     "Chromosomes: not counted",
     "Ploidy: 2",
   ]);
   expect(await height()).toBe(counting);
-  const again = info(page).getByRole("button", { name: "Count again" });
+  const again = info(page).getByRole("button", { name: "Start again" });
   // One button in one place: the focus stays on it.
   await expect(again).toBeFocused();
   await expect(bar).toHaveCount(0);
@@ -370,9 +387,12 @@ test("OV2 a count stopped says so, Count again counts the variants, and the box 
     timeout: 60_000,
   });
   expect(await height()).toBe(counting);
-  // The button gone with the focus on it, the focus is on the lines of
-  // the variants and the chromosomes, not on the top of the page.
-  await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
+  // The button gone with the focus on it, at the end of the count of the
+  // FILTER failures, the focus is on the lines of the variants, the
+  // failures and the chromosomes, not on the top of the page.
+  await expect(page.locator(":focus")).toHaveText(
+    `${counted}FILTER failures: 0Chromosomes: 1`,
+  );
   await expectNoViolations(makeAxeBuilder);
 
   // A file dropped with the mouse removes those lines with the focus:
@@ -383,13 +403,23 @@ test("OV2 a count stopped says so, Count again counts the variants, and the box 
   await expect(openButton(page)).toBeFocused();
 });
 
+/** Waits for the six plots of the statistics of the file and the
+    download of the individuals, which comes with their result. */
+async function expectPlotsDrawn(page: Page): Promise<void> {
+  const stats = page.getByRole("region", { name: "Statistics of the file" });
+  await expect(stats.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
+  await expect(
+    stats.getByRole("button", { name: /^Download the missing genotypes/u }),
+  ).toBeVisible();
+}
+
 /** A name of 24 characters, on which, at 320 pixels, the line "Reading
     <name>." took one row more than the line "<name> is open." (the
     review of 5 October 2026). */
 const NAME_24 = `${"a".repeat(17)}.vcf.gz`;
 
 for (const width of [320, 1280]) {
-  test(`OV2 at ${String(width)} pixels, a file opened again keeps the box above the open button at one height through the read and the count, so the button does not move`, async ({
+  test(`OV2 at ${String(width)} pixels, a file opened again keeps the box above the open button at one height through the read and the count, and the button is back at its place once the plots are drawn`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
@@ -399,16 +429,25 @@ for (const width of [320, 1280]) {
     await openPage(page);
     await pick(page, vcf);
     await expectPanelCounted(page);
-    // The height of the box at every change of it.
-    await info(page).evaluate((box) => {
-      const heights: number[] = [box.getBoundingClientRect().height];
+    // The height of the box at every change of it; the box of each file
+    // is an element of its own, so it is found again at each change.
+    await page.getByRole("main").evaluate((main) => {
+      const box = (): Element | null =>
+        main.querySelector('section[aria-label="File information"]');
+      const heights: number[] = [box()?.getBoundingClientRect().height ?? 0];
       Reflect.set(window, "boxHeights", heights);
       new MutationObserver(() => {
-        heights.push(box.getBoundingClientRect().height);
-      }).observe(box, { subtree: true, childList: true, characterData: true });
+        heights.push(box()?.getBoundingClientRect().height ?? 0);
+      }).observe(main, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
     });
     // Its place in the page, not in the window: the second pick scrolls
-    // the page to the button, which is under the statistics.
+    // the page to the button, which is under the statistics, and moves
+    // down as their plots are drawn (docs/plans/live-stats.md, "The open
+    // widget moves with the plots"), so it is taken once they are.
     const inPage = (): Promise<{
       readonly top: number;
       readonly left: number;
@@ -420,6 +459,7 @@ for (const width of [320, 1280]) {
           left: box.left + window.scrollX,
         };
       });
+    await expectPlotsDrawn(page);
     const at = await inPage();
 
     await pick(page, vcf);
@@ -435,6 +475,7 @@ for (const width of [320, 1280]) {
       )
       .toBe(2);
     await expectPanelCounted(page);
+    await expectPlotsDrawn(page);
     expect(await inPage()).toEqual(at);
 
     const heights = await page.evaluate(
@@ -466,6 +507,7 @@ test("OV2 a file being read is announced once, by its name", async ({
     "panel.vcf.gz · 87 KB",
     "Individuals: reading…",
     "Variants: reading…",
+    "FILTER failures: reading…",
     "Chromosomes: reading…",
     "Ploidy: reading…",
     /^Reading the file\./u,
@@ -473,7 +515,7 @@ test("OV2 a file being read is announced once, by its name", async ({
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 a file dropped while the focus is on Count again moves the focus to the open button, not to the top of the page", async ({
+test("OV2 a file dropped while the focus is on Start again moves the focus to the open button, not to the top of the page", async ({
   page,
 }, testInfo) => {
   test.setTimeout(120_000);
@@ -484,7 +526,7 @@ test("OV2 a file dropped while the focus is on Count again moves the focus to th
   await info(page)
     .getByRole("button", { name: "Stop" })
     .click({ timeout: 30_000 });
-  const again = info(page).getByRole("button", { name: "Count again" });
+  const again = info(page).getByRole("button", { name: "Start again" });
   await expect(again).toBeFocused();
 
   const nei = await readFile(join(FIXTURES, "panel.nei"));
@@ -507,7 +549,7 @@ test("OV2 a gzipped VCF cut short opens, and its count says it could not be read
     ),
   ).toBeVisible();
   await expect(
-    info(page).getByRole("button", { name: "Count again" }),
+    info(page).getByRole("button", { name: "Start again" }),
   ).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -526,17 +568,34 @@ test("OV2 ld.vcf.gz shows its 500 variants on two chromosomes", async ({
   ).toBeVisible();
 });
 
-test("OV2 a VCF with variants that did not pass is read with every variant, whatever its FILTER column", async ({
+test("OV2 live-stats 3 a VCF with variants that did not pass is read with every variant, whatever its FILTER column, and the box says how many failed it", async ({
   page,
+  makeAxeBuilder,
 }) => {
+  await recordAnnouncements(page);
   await openPage(page);
   await pick(page, join(FIXTURES, "low_qual.vcf.gz"));
 
-  // popnei's numbers: 900 of the 1,200 variants have PASS, and the 300
-  // with LowQual are read too.
-  await expect(
-    info(page).getByText("Variants: 1,200", { exact: true }),
-  ).toBeVisible();
+  // popnei's numbers under node: 900 of the 1,200 variants have PASS,
+  // and the 300 with LowQual are read too, and counted as failed.
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.vcf\.gz · /u,
+    "Individuals: 200",
+    "Variants: 1,200",
+    "FILTER failures: 300",
+    "Chromosomes: 1",
+    "Ploidy: 2",
+  ]);
+  await expect(info(page).getByRole("button")).toHaveCount(0);
+  await expect(info(page).getByRole("progressbar")).toHaveCount(0);
+  await expect
+    .poll(() => announced(page))
+    .toContainEqual(
+      expect.stringContaining(
+        "low_qual.vcf.gz: 300 variants failed their FILTER.",
+      ),
+    );
+  await expectNoViolations(makeAxeBuilder);
 });
 
 test("OV2 another file opened while a count runs ends on the numbers of that file, and the count is checked by axe while it runs", async ({
@@ -549,7 +608,10 @@ test("OV2 another file opened while a count runs ends on the numbers of that fil
   await openPage(page);
   await pick(page, vcf);
   await expect(
-    info(page).getByRole("progressbar", { name: "Counting the variants" }),
+    info(page).getByRole("progressbar", {
+      name: "Counting the variants",
+      exact: true,
+    }),
   ).toBeVisible({ timeout: 30_000 });
   await expectNoViolations(makeAxeBuilder);
 
@@ -595,7 +657,7 @@ test("OV2 a crash of the worker during the opening goes to the error bar, and th
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("OV2 a crash of the worker during the count goes to the error bar, which says to count again, as the box offers", async ({
+test("OV2 a crash of the worker during the count goes to the error bar, which says to start again, as the box offers", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -604,15 +666,16 @@ test("OV2 a crash of the worker during the count goes to the error bar, which sa
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
   await expect(
-    info(page).getByText("The variants of panel.vcf.gz could not be counted.", {
-      exact: true,
-    }),
+    info(page).getByText(
+      "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
-    info(page).getByRole("button", { name: "Count again" }),
+    info(page).getByRole("button", { name: "Start again" }),
   ).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText(
-    /^The application stopped as it counted the variants: .*a crash of the test.*\. Count again, and if it stops again, reload the page and open your files again\.$/u,
+    /^The application stopped as it counted the variants and calculated the statistics: .*a crash of the test.*\. Start again, and if it stops again, reload the page and open your files again\.$/u,
   );
   await expectNoViolations(makeAxeBuilder);
 });

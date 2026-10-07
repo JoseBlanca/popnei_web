@@ -8,15 +8,18 @@
  *
  * Their code, the plots, D3 and the table, which no one needs before a
  * file is open, is downloaded apart from the page's, from the moment a
- * file is picked, so that it is there when the statistics start after the
- * file is read and its variants counted: the page's first download does
- * not carry it. Until it is there, the section's room is drawn, empty,
- * by code the page has (StatsLayout.tsx), so that the open button under
- * it is where it will stay. Once downloaded, the section of the next file is drawn at
- * once, with no pause. A download that fails is caught by the boundary,
- * which gives it to the error bar, whose words say to reload the page; the
- * next file picked asks for it again, which WebKit 26.6 downloads, and
- * Chromium 153 does not, keeping the failure until the page is reloaded.
+ * file is picked, so that it is there when the pass that calculates the
+ * statistics starts after the file is read: the page's first download
+ * does not carry it. Until it is there, once the file is read, the
+ * section has the headings of its two parts and says of each that it is
+ * calculated, drawn with the layout of StatsLayout.tsx, which holds no
+ * D3: the box of the file may then show a count done, and the page would
+ * otherwise say no word of the statistics. Once downloaded, the section
+ * of the next file is drawn at once, with no pause. A download that fails is
+ * caught by the boundary, which gives it to the error bar, whose words say
+ * to reload the page; the next file picked asks for it again, which WebKit
+ * 26.6 downloads, and Chromium 153 does not, keeping the failure until the
+ * page is reloaded.
  */
 import { Suspense, lazy } from "react";
 
@@ -24,8 +27,13 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import type { FileStatsProps } from "./FileStats.tsx";
-import { StatsRoom } from "./StatsLayout.tsx";
-import { STATS_NAME } from "./statsWords.ts";
+import { Part, PartLine, StatsFrame } from "./StatsLayout.tsx";
+import {
+  INDIVIDUALS_HEADING,
+  STATS_NAME,
+  VARIANTS_HEADING,
+  statsRunningLine,
+} from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 
 /** What the section is drawn with. */
@@ -39,8 +47,7 @@ export interface StatsSectionProps {
   readonly onShown: StatsShown;
 }
 
-/** The statistics of the open file, or their room; nothing before a file
-    is picked. */
+/** The statistics of the open file; nothing before a file is picked. */
 export function StatsSection({
   autoRuns,
   openButton,
@@ -83,15 +90,31 @@ async function loadFileStats(): Promise<{
   }
 }
 
-/** The statistics of one load, drawn once their code is there, and their
-    room until then, so that the open button under them does not move
-    when the code arrives. */
+/** The statistics of one load, drawn once their code is there. */
 function LoadedStats(props: StatsSectionProps): React.JSX.Element {
   // Read as it is drawn, since a failed download replaces it.
   const FileStats = LazyFileStats;
   return (
-    <Suspense fallback={<StatsRoom />}>
+    <Suspense fallback={<StatsWaiting />}>
       <FileStats {...props} />
     </Suspense>
+  );
+}
+
+/** The section while its code downloads: nothing before the file is
+    read, as the section itself, then the headings of the two parts, each
+    saying that it is calculated. */
+function StatsWaiting(): React.JSX.Element | null {
+  const read = useAppState((s) => s.project.variants?.read.kind === "read");
+  if (!read) return null;
+  return (
+    <StatsFrame>
+      <Part heading={VARIANTS_HEADING}>
+        <PartLine>{statsRunningLine("variants", null)}</PartLine>
+      </Part>
+      <Part heading={INDIVIDUALS_HEADING}>
+        <PartLine>{statsRunningLine("individuals", null)}</PartLine>
+      </Part>
+    </StatsFrame>
   );
 }

@@ -7,7 +7,8 @@
  * variants file, which the owner put after the statistics on 6 October
  * 2026, and which is alone under the heading before a file is opened.
  * Each is in a boundary of errors that draws its name alone in its place,
- * that of the statistics made again for each file; and the status region
+ * those of the box and of the statistics made again for each file; and
+ * the status region
  * says what changes away from the focus. The page holds the words of the last file
  * not opened, which the opening says and the box shows.
  */
@@ -17,6 +18,7 @@ import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
+import { useAppState } from "../store.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
@@ -29,7 +31,7 @@ import { INFO_NAME, OPENING_NAME } from "./words.ts";
 export interface VariantsPageProps {
   /** The analyses the page starts by itself. */
   readonly autoRuns: AutoRuns;
-  /** Called with the element of Stop or Count again of the count while
+  /** Called with the element of Stop or Start again of the box while
       one is shown, and with `null` when it goes, for the entry to tell
       whether the focus is on it as the count ends. */
   readonly onCountButton: (node: HTMLButtonElement | null) => void;
@@ -46,6 +48,7 @@ export function VariantsPage({
 }: VariantsPageProps): React.JSX.Element {
   const openButton = useRef<HTMLButtonElement>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -54,7 +57,10 @@ export function VariantsPage({
         <h1 tabIndex={-1} className={classOf(styles, "title")}>
           Popnei
         </h1>
-        <ErrorBoundary heading={INFO_NAME} level={2}>
+        {/* Another load is another boundary, which has caught nothing, so
+            that a throw while the box of one file is drawn leaves the
+            next file its box, its Stop and its Start again. */}
+        <ErrorBoundary key={fileId ?? "none"} heading={INFO_NAME} level={2}>
           <VariantsSummary
             autoRuns={autoRuns}
             openButton={openButton}
