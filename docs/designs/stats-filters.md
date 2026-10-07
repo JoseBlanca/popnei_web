@@ -23,6 +23,57 @@ heterozygosity is taken off; the plots read so far stay after a Stop;
 and a tools section holds "Download filtered file…", the population
 analyses and the GWAS joining it as each is built.
 
+## The design in short, for the owner
+
+This section holds what the approval rests on; the sections after it
+are for the reviewers and the builders of the piece, and can be skipped.
+
+**What the page calculates.** At the opening of a VCF, with the FILTER
+box on, one reading of the file gives the count of the variants, the
+count of those that failed their FILTER, each individual's missing rate
+and heterozygosity, and the histograms of the variants, all over the
+variants that passed. A second reading follows at once, which counts
+what each filter keeps, in order, and what they all keep together; it
+reads the genotypes, so it takes about as long as the first (not
+measured yet: the first takes about 2.5 s on this Mac for a VCF of
+200,000 variants and 1,000 individuals). Turning the box off reads the
+file again over every variant, plus a quick reading that counts the
+failures.
+
+**When a threshold moves.** A threshold of the variants changes no
+plot: only the counts are read again. A threshold of the individuals
+that takes individuals out reads the file again for the four histograms
+of the variants, over the individuals kept; one that takes nobody out
+reads nothing. Each new reading starts one second after the last change,
+so that holding an arrow key starts one reading, not a hundred. While a
+reading runs its plots are empty and then fill, in their place; after a
+Stop the plots read so far stay, marked as read before the Stop.
+
+**Two special files.** A VCF where no variant passed its FILTER shows its
+counts, and each part says that no variant passed and that turning the
+box off shows them all. A `.nei` file has no FILTER box, since popnei
+cannot tell for an older `.nei` file whether its variants passed.
+
+**The download.** A "Tools" section after the plots, with "Download
+filtered file…", which writes the variants and individuals the filters
+keep. The old page writes `.nei` files only; offering a VCF too is new
+work in the worker, and costs memory: popnei builds the whole VCF in the
+worker's memory before handing it over, about twice its uncompressed
+size. For 1,000 diploid individuals and 100,000 kept variants a VCF is
+about 400 MB uncompressed (four characters per genotype), so about
+800 MB in the worker, on top of the open file, held until the worker
+restarts; a browser tab runs out of memory somewhere above 2 to 4 GB.
+
+**What approving commits to that is hard to undo.** The FILTER box is a
+new kind of filter in the project file. A project file holding it
+cannot be opened by an older version of the application, and the old
+page, `popgen.html`, refuses it, since it would judge the individuals
+over every variant. Nobody loses anything today: the new page saves no
+project file yet.
+
+**Your choices.** At the end: the approval, the formats of the first
+download, and the quiet second as a first value.
+
 ## What the user can do once it is built
 
 Cases 1 and 2 of `docs/use-cases.md` together: the user reads the
@@ -436,6 +487,9 @@ Made on this branch once the owner approves, each with its paragraph
 2. The formats of the first download: `.nei` alone, the old page's
    writing as it is; or `.nei` and VCF, a VCF being what other tools
    read, at the cost of the change of the writing and of the memory
-   above. The design recommends both.
+   above (about 800 MB in the worker for 100,000 variants of 1,000
+   individuals), with a bound that refuses a VCF too large for the tab,
+   as the old page bounds a `.nei` file. The design recommends both,
+   with the bound.
 3. The quiet second, as a first value, to be settled once the restart of
    the worker is measured and the owner has tried it.
