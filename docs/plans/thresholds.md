@@ -276,3 +276,31 @@ So, decided by the session within those words:
   the owner did not name, keeps "Major allele frequency". Variants: "Missing genotypes", "Major allele frequency",
   "Obs. het.", "Exp. het. (unbiased)"; individuals: "Missing GTs",
   "Obs. het.".
+
+The review of round 1 sent spec, tests, ux, react and accessibility.
+Fixed in 5446dd7 to b9b08e4: the bin at the edge is added only when the
+number counted is popnei's edge, for every statistic, so "Exp. het.
+max: 0.3" says 311 where it said 311 to 313, checked against popnei's
+one-bin histogram over [0, t] at 2,240 numbers for the four statistics
+of the three files; the handles stood off their lines for a frame at
+each resize, since the plot was drawn after a paint and the slider
+placed later (208 px off after a resize from 1280 to 600): the frame is
+now written as CSS variables in the draw, and the plot is drawn in a
+layout effect, under 1.5 px; a number the user set is counted and shown
+as set, never re-rounded when the axis widens; the keeps line holds the
+height of its longest form for the file's count, so a range on a file
+of 200,000 variants does not move the plot; the line of the progress
+keeps its room once the pass ends, so the plots do not move up 40 px;
+"max:" joined to the title's last word at 320 px; the hatched bar has a
+tooltip with the reason; the box's keys go beyond the axis, and a quick
+second key is not lost; the range is written "1,113 to 1,152". On
+b9b08e4: Vitest "4073 passed", Playwright "1238 passed" in Chromium and
+WebKit, the 92 screens of popgen2.
+
+For the owner: on the finished page an empty band of about 40 px under
+"Variants" and "Individuals", where the progress line was, is the price
+of plots that do not move when the pass ends; and the ranges can be
+wide on real data, "Keeps 185 to 345" at a missing rate of 0.02 on
+`panel.vcf.gz`, since 0.02 lies inside one of popnei's bins: bins of
+1/1000 that hold their right edge would make every step of 0.01 or
+0.001 one number.
