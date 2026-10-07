@@ -49,6 +49,24 @@ spectrum among them, which rides in the diversity's result
 (`docs/specs/analyses/diversity.md` and `sfs.md`); and the distances
 between populations (`popDists.md`) and the LD decay (`ldDecay.md`)
 join `Job` and `JobResult`. Approved by the owner on 30 September 2026.
+Revised on 6 October 2026 for the one pass of popgen2.html
+(`docs/plans/live-stats.md`, phase 1, ordered by the owner that day with
+the plan reviewed in place of a spec): the summary of the variants file,
+built for `docs/plans/open-variants.md` without a revision here, is
+written in, its job with the bins of the histograms of the variants and
+its result with two parts, `perVar` and `perIndividual`, popnei's own
+names in `VariantsSummary`, the fields of
+the results of the histograms of the variants and of the statistics of
+each individual without `analysis`, which `VariantStatsPart` and
+`IndividualStatsPart` name and those two results extend. Revised on 7
+October 2026 for the plots that fill in while the file is read
+(`docs/plans/live-stats.md`, phase 2): a result so far is a `JobResult`
+of the job's analysis, over the variants read so far, so no type is
+added here; its message, `soFar`, and `PROTOCOL_VERSION` 9 are in
+`messages.ts`. Revised on 7 October 2026 for the count of the FILTER
+failures (`docs/plans/live-stats.md`, phase 3): `FilterFailuresJob` and
+`FilterFailuresResult`, and `PassFilterKind`, the kinds of the counts of
+a pass, which type `PassStats.filtering`; `PROTOCOL_VERSION` 10.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -227,6 +245,11 @@ export type VariantFilter =
   | { kind: "ld"; maxAllowedR2: number; maxDist: number };  // filterByLd
 
 export type VariantFilterKind = VariantFilter["kind"];
+
+// The kinds of the counts of a pass: those of the filters of the
+// variants, and "passed", popnei's filterPassed, which only the count of
+// the FILTER failures puts on its pass. No project nor file holds it.
+export type PassFilterKind = VariantFilterKind | "passed";
 ```
 
 A job always carries the distance of its LD filter. The project may
@@ -369,7 +392,11 @@ file the pass has read, `bytesRead`, of the bytes of the file,
 `numBytes`, counted on the disk, so a gzipped VCF compressed; the pass
 that reads, `pass`, 1 for the first; and the passes of the run,
 `numPasses`. The run is `(pass − 1 + bytesRead / numBytes) / numPasses`
-done (`docs/specs/worker/messages.md`, "The progress").
+done (`docs/specs/worker/messages.md`, "The progress"). A run of the
+summary of the variants file also gives, while its pass runs, results so
+far, each a `JobResult` of its analysis over the variants read so far,
+which the client gives to the store beside the progress and not in the
+`Run` (`docs/specs/worker/client.md`, "The result so far").
 
 ```ts
 export interface Progress { bytesRead: number; numBytes: number; pass: number; numPasses: number }
@@ -420,7 +447,7 @@ export interface FilteringStats {
 
 export interface PassStats {
   numVars: number;                         // the variants the pass gave, after every step
-  filtering: Partial<Record<VariantFilterKind, FilteringStats>>; // one per filter of the job, in its order
+  filtering: Partial<Record<PassFilterKind, FilteringStats>>; // one per filter of the job, in its order; "passed" first, of filterFailures alone
 }
 ```
 
@@ -507,12 +534,17 @@ export interface IndividualChecksJob {
   filters: readonly [];                    // none
 }
 
-export interface IndividualChecksResult {
-  analysis: "individualChecks";
+// The fields of the statistics of each individual, which the result of
+// their own request and the summary of the variants file share.
+export interface IndividualStatsPart {
   individuals: readonly string[];          // every individual of the file, in its order, as popnei gave them
   missingGtRate: Float64Array;             // popnei's names; one per individual, in that order
   obsHetRate: Float64Array;                // NaN for an individual with no called genotype
   passStats: PassStats;
+}
+
+export interface IndividualChecksResult extends IndividualStatsPart {
+  analysis: "individualChecks";
 }
 
 // The histograms of the variants, calcPerVarDistribs over every variant
@@ -532,13 +564,19 @@ export interface VariantDistrib {
   counts: Uint32Array;                     // the variants in each bin
 }
 
-export interface VariantChecksResult {
-  analysis: "variantChecks";
-  binEdges: Float64Array;                  // numBins + 1, shared by the three
+// The fields of the histograms of the variants, which the result of
+// their own request and the summary of the variants file share.
+export interface VariantStatsPart {
+  binEdges: Float64Array;                  // numBins + 1, shared by the four
+  missingRate: VariantDistrib;             // popnei's missing rate: the missing genotypes of a variant over the individuals of the pass
   maf: VariantDistrib;                     // popnei's major allele frequency
   obsHet: VariantDistrib;
   unbiasedExpHet: VariantDistrib;
   passStats: PassStats;
+}
+
+export interface VariantChecksResult extends VariantStatsPart {
+  analysis: "variantChecks";
 }
 
 // The counts of the filters of the variants, from a pass that gives
@@ -553,6 +591,52 @@ export interface FilterCountsJob {
 export interface FilterCountsResult {
   analysis: "filterCounts";
   passStats: PassStats;
+}
+
+// The summary of the variants file of popgen2.html, from one pass of
+// popnei's calcVariantsSummary over every variant and every individual,
+// with no filter: the chromosomes, from its density of one window per
+// chromosome (ONE_WINDOW_PER_CHROM, 2^53 − 1); the histograms of the
+// variants, from its perVar, with the bins of the job over every
+// individual as one population; and the statistics of each individual,
+// from its perIndividual. Each part is what its own call gives, to the
+// bit (docs/plans/live-stats.md).
+export interface VariantsSummaryJob {
+  analysis: "variantsSummary";
+  fileId: string;
+  filters: readonly [];
+  minNumIndividuals: number;               // 0
+  numBins: number;                         // 1,280
+  range: readonly [number, number];        // [0, 1]
+}
+
+export interface VariantsSummaryResult {
+  analysis: "variantsSummary";
+  chroms: readonly string[];               // those with variants, in the order of their first variant
+  numVarsPerChrom: Uint32Array;            // as chroms
+  perVar: VariantStatsPart;                // popnei's names of the parts of VariantsSummary
+  perIndividual: IndividualStatsPart;
+  passStats: PassStats;
+}
+
+// The count of the variants of a VCF that failed their FILTER, of
+// popgen2.html: popnei's calcVarDensity with one window per chromosome
+// under the step filterPassed, a pass that reads no genotype, or, when
+// popnei refuses it, as it does when no variant passed, the blocks of
+// iterBlocks read to their end under the same step (runner.md). Its counts
+// hold "passed" alone: the variants of the file as varsProcessed, those
+// whose FILTER is PASS or a dot as varsKept; the failures are their
+// difference. Never sent for a .nei file, nor for a VCF read with
+// onlyPassed, whose failed variants are not read (docs/plans/live-stats.md).
+export interface FilterFailuresJob {
+  analysis: "filterFailures";
+  fileId: string;
+  filters: readonly [];
+}
+
+export interface FilterFailuresResult {
+  analysis: "filterFailures";
+  passStats: PassStats;                    // filtering: { passed } and nothing else
 }
 
 // The principal components, stage 4: a PCA of the genotypes or a PCoA of
@@ -651,10 +735,11 @@ export interface LdDecayResult {
 
 export type Job =
   | DiversityJob | IndividualChecksJob | VariantChecksJob | FilterCountsJob | PcaJob
-  | PopDistsJob | LdDecayJob;
+  | PopDistsJob | LdDecayJob | VariantsSummaryJob | FilterFailuresJob;
 export type JobResult =
   | DiversityResult | IndividualChecksResult | VariantChecksResult | FilterCountsResult
-  | PcaResult | PopDistsResult | LdDecayResult;
+  | PcaResult | PopDistsResult | LdDecayResult | VariantsSummaryResult
+  | FilterFailuresResult;
 ```
 
 The request of a written file is not a `Job`, since it is not an

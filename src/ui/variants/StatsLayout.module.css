@@ -1,0 +1,60 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The section: the two parts. */
+.stats {
+  display: grid;
+  gap: var(--space-8);
+  min-inline-size: 0;
+}
+
+/* A part: its heading, its line, its plots, and for the individuals
+   their download. */
+.part {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-heading);
+}
+
+.line {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The line of the pass once it ended: its room kept, its words hidden,
+   so that the plots under it do not move up. */
+.room {
+  visibility: hidden;
+}
+
+/* The download of the individuals, at the start of its row. */
+.download {
+  display: flex;
+}
+
+/* The plots of a part, two side by side when each has 20rem, one under
+   the other below that, as at 320 pixels; a plot is as narrow as its
+   column. The plots of a row stand on one line, whatever the lines of
+   their titles: a title that wraps moves its own title up, not its plot
+   down. */
+.plots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-6) var(--space-4);
+  align-items: end;
+}
+
+/* A histogram of the individuals and the line under it of those with no
+   value. */
+.plot {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}

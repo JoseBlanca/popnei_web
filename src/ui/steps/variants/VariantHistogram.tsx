@@ -1,7 +1,8 @@
 /**
  * One histogram of the variants beside its filter
  * (docs/specs/steps/variants.md, "The histograms beside the filters of
- * the variants"): the bins popnei gave for its statistic, with the
+ * the variants"): popnei's 40 bins over 0 to 1 of its statistic, its 1,280
+ * added up 32 at a time (`variantBins`), with the
  * threshold of its filter while the filter is on, the number typed while
  * it is typed, and the texts the step writes for it, its title, its axes,
  * its legend, its description, the line of its threshold, the line of
@@ -11,6 +12,7 @@ import { useMemo } from "react";
 
 import {
   binsCsvName,
+  variantBins,
   variantHistogramDescription,
 } from "../../../core/analyses/variantChecks.ts";
 import type { VariantStatistic } from "../../../core/analyses/variantChecks.ts";
@@ -37,6 +39,9 @@ export interface VariantHistogramProps {
   readonly threshold: number | null;
   /** The name of the variants file, which the CSV is named after. */
   readonly variantsName: string;
+  /** The line under the title that says how many variants it is over,
+      on popgen2.html. */
+  readonly countLine?: string;
 }
 
 /** A histogram of the variants, with its table of bins. */
@@ -45,6 +50,7 @@ export function VariantHistogram({
   result,
   threshold,
   variantsName,
+  countLine,
 }: VariantHistogramProps): React.JSX.Element {
   const words = VARIANT_HISTOGRAMS[statistic];
   const distrib = result[statistic];
@@ -52,12 +58,13 @@ export function VariantHistogram({
   // plot is not drawn again on renders that changed neither (react.md,
   // "Mounting a plot").
   const { data, rows } = useMemo(() => {
+    const bins = variantBins(result, statistic);
     const plotted = {
       title: histogramTitle(words.name, distrib.mean),
       xLabel: words.name,
       yLabel: words.countLabel,
-      edges: result.binEdges,
-      counts: distrib.counts,
+      edges: bins.edges,
+      counts: bins.counts,
       threshold: threshold === null ? null : histogramThreshold(threshold),
     };
     const binRows = histogramRows({ ...plotted, description: "" });
@@ -66,7 +73,7 @@ export function VariantHistogram({
       description: variantHistogramDescription(statistic, binRows, threshold),
     };
     return { data: described, rows: binRows };
-  }, [words, distrib, result.binEdges, threshold, statistic]);
+  }, [words, distrib, result, threshold, statistic]);
 
   return (
     <HistogramBlock
@@ -74,6 +81,7 @@ export function VariantHistogram({
       rows={rows}
       countLabel={words.countLabel}
       tableName={words.tableName}
+      {...(countLine !== undefined && { countLine })}
       thresholdLine={
         threshold === null || words.filterName === null
           ? null

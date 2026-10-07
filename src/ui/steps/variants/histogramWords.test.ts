@@ -63,16 +63,27 @@ describe("VS6 D2 the words of the histograms of the variants", () => {
   test("the threshold and the rows of its legend", () => {
     expect(histogramThreshold(0.95)).toEqual({
       value: 0.95,
-      label: "Maximum 0.95",
-      keptLabel: "Kept by this filter",
-      removedLabel: "Removed by this filter",
+      legend: {
+        label: "Maximum 0.95",
+        keptLabel: "Kept by this filter",
+        removedLabel: "Removed by this filter",
+      },
     });
     expect(thresholdText("the MAF filter", 0.9)).toBe(
       "Threshold of the MAF filter: 0.9, drawn over every variant of the file",
     );
   });
 
-  test("the three histograms, their axes and their tables", () => {
+  test("the four histograms, their axes and their tables", () => {
+    expect(VARIANT_HISTOGRAMS.missingRate.name).toBe(
+      "Proportion of missing genotypes",
+    );
+    expect(VARIANT_HISTOGRAMS.missingRate.tableName).toBe(
+      "The bins of the proportion of missing genotypes",
+    );
+    expect(VARIANT_HISTOGRAMS.missingRate.filterName).toBe(
+      "the filter of the variants by missing data",
+    );
     expect(VARIANT_HISTOGRAMS.maf.name).toBe("Major allele frequency");
     expect(VARIANT_HISTOGRAMS.obsHet.name).toBe("Observed heterozygosity");
     expect(VARIANT_HISTOGRAMS.unbiasedExpHet.name).toBe(

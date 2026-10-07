@@ -676,7 +676,7 @@ p1,68,0.3498365468860467,0.35603713961547323,0.9157986111111112,,,,,,
   test("refusalText of a genotype of another ploidy tells to set the ploidy", () => {
     expect(
       refusalText(
-        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies, and the ploidy is an argument of the reader",
+        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
         project({ variantsName: "tetraploid.vcf.gz" }),
       ),
     ).toBe(

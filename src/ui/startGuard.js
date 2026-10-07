@@ -1,0 +1,81 @@
+/* global window, document -- the script runs in the page, in a browser */
+// The start guard of the pages of the applications (docs/specs/entry.md,
+// "The page"): plain script, written once here and put by vite.config.ts
+// inline in the head of each page where the comment of the guard stands,
+// GUARD_MARK of vite.config.ts, so that it runs before the
+// application's code, and written for a browser older than the floor: no
+// const, no arrow function, no trailing comma in a call, no method newer
+// than 2015.
+// It says in #root that the browser is too old, or that the
+// application could not be loaded or started, until the entry takes
+// over with remove().
+(function () {
+  "use strict";
+  // toSorted, which the core calls and which Chrome 110, Firefox 115 and
+  // Safari 16 were the first to have, by MDN: the closest single test of
+  // the floor of the message, Chrome 111 and Safari 16.4, which a Chrome
+  // 110 or a Safari before 16.4 passes (docs/specs/entry.md).
+  var tooOld = typeof Array.prototype.toSorted !== "function";
+  var TOO_OLD =
+    "The application needs Chrome or Edge 111, Firefox 115 or Safari 16.4, or a newer version, and this browser is older.";
+  var NOT_LOADED = "The application could not be loaded. Reload the page.";
+
+  // Writes a sentence in place of what #root holds; #root is below
+  // this script, so before the page is parsed it waits for it.
+  function show(text) {
+    function write() {
+      var root = document.getElementById("root");
+      if (root === null) return;
+      var paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      root.textContent = "";
+      root.appendChild(paragraph);
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", write);
+    } else {
+      write();
+    }
+  }
+
+  // A throw while the modules of the application are first run. The
+  // message loses the "Uncaught " Chromium puts before it and its last
+  // full stop, since the sentence adds its own.
+  function onError(event) {
+    if (tooOld) return;
+    var message = String(event.message);
+    if (message.indexOf("Uncaught ") === 0) {
+      message = message.slice("Uncaught ".length);
+    }
+    if (message.charAt(message.length - 1) === ".") {
+      message = message.slice(0, -1);
+    }
+    var text = "The application could not start: " + message;
+    show(text + ". Reload the page.");
+  }
+
+  // A module script whose file was not found fires its error on the
+  // element and not on the window; it does not bubble, so it is
+  // caught on its way down to the element, in the capture phase.
+  function onScriptError(event) {
+    if (tooOld) return;
+    var target = event.target;
+    if (target !== null && target.tagName === "SCRIPT") {
+      show(NOT_LOADED);
+    }
+  }
+
+  if (tooOld) {
+    show(TOO_OLD);
+  }
+  window.addEventListener("error", onError);
+  document.addEventListener("error", onScriptError, true);
+
+  window.__startGuard = {
+    tooOld: tooOld,
+    remove: function () {
+      window.removeEventListener("error", onError);
+      document.removeEventListener("error", onScriptError, true);
+    },
+  };
+})();

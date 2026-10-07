@@ -32,6 +32,30 @@ populations: the checks of the fields the diversity gains, of the jobs
 and results of the distances between populations and of the LD decay
 (`docs/specs/analyses/diversity.md`, `sfs.md`, `popDists.md` and
 `ldDecay.md`), and `PROTOCOL_VERSION` 4; approved by the owner on 30 September 2026.
+Revised on 6 October 2026 for the page that opens a variants file,
+popgen2.html (`docs/plans/open-variants.md`): the job and the result of
+the summary of the variants file, `PROTOCOL_VERSION` 5; and a VCF opened
+with no ploidy, a ploidy of `null` in the read options of `open`, for
+popnei to read it from the file, `PROTOCOL_VERSION` 6. Revised on 6
+October 2026 for the statistics of the open file (`docs/plans/file-stats.md`):
+the result of the histograms of the variants holds a fourth distribution,
+`missingRate`, checked as the other three are, and `PROTOCOL_VERSION` 7.
+Revised on 6 October 2026 for the one pass of popgen2.html
+(`docs/plans/live-stats.md`, phase 1): the job of the summary of the
+variants file gains `minNumIndividuals`, `numBins` and `range`, checked
+as those of the histograms of the variants are, and its result the parts
+`perVar` and `perIndividual`, each an object of exactly the fields of
+the result of the histograms of the variants or of the statistics of
+each individual but `analysis`, checked as those results are; and
+`PROTOCOL_VERSION` 8. Revised on 7 October 2026 for the plots that fill
+in while the file is read (`docs/plans/live-stats.md`, phase 2): the
+message `soFar`, the result of a run over the variants read so far,
+checked as `result` is, and `PROTOCOL_VERSION` 9. Revised on 7 October
+2026 for the count of the FILTER failures (`docs/plans/live-stats.md`,
+phase 3): the job `filterFailures`, of exactly `analysis`, `fileId` and
+an empty `filters`, and its result, of exactly `analysis` and
+`passStats`, whose `filtering` holds `passed` and nothing else, a kind
+no other result accepts; and `PROTOCOL_VERSION` 10.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -74,7 +98,7 @@ received it is ended (below):
 | request | to | its answer, when it goes right | when the input is refused |
 |---|---|---|---|
 | `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
-| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
+| `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` and its `soFar` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `write`: write the filtered variants as a file | the calculation worker | `written`, the file under the key it was asked with, after its `progress` | as `run` |
 | `readIndividuals`: read the individuals file, a CSV, a TSV or an xlsx | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer, and so is a files wasm that could not be downloaded |
 
@@ -85,11 +109,15 @@ received it is ended (below):
   that passed its filters are kept, the two options of popnei's `openVcf`
   (`js/popnei/src/io_vcf.ts`); the owner decided on 25 September 2026
   that the walking skeleton reads both formats, and a VCF with its ploidy
-  as a read option, 2 unless the user sets another. popnei cannot read
-  the ploidy of a VCF from the file: it takes it as given, and refuses a
-  genotype of another number of alleles when a pass reads it, not when
-  the file is opened. So an `open` of a VCF of the wrong ploidy ends
-  `opened`, and the first `run` on it ends `refused` (the cases, below).
+  as a read option, 2 unless the user sets another. A ploidy given is
+  taken as given: popnei refuses a genotype of another number of alleles
+  when a pass reads it, not when the file is opened. So an `open` of a
+  VCF of the wrong ploidy ends `opened`, and the first `run` on it ends
+  `refused` (the cases, below). From popnei's release `js-v0.2.0` the
+  ploidy may be `null`, as popgen2.html sends every VCF: popnei reads it
+  from the file, the number of alleles of the first genotype with alleles
+  among the first 4,096 lines, and refuses the `open` when it finds none
+  or the file has no variant.
 - **`opened` carries what popnei gives once the file is open**, its
   `individuals` and its `ploidy`, with no pass over the variants
   (`docs/architecture.md`, section 6). The number of variants comes later,
@@ -159,6 +187,12 @@ received it is ended (below):
 - **`progress`** reports how far a `run` or a `write` has gone, as
   popnei's `Progress` gives it (below, "The progress"). Either may get any
   number of them before its answer, and an `open` gets none.
+- **`soFar`** carries the result of a `run` over the variants read so
+  far, with its id and its key, sent while the pass runs by a
+  calculation whose result popnei gives so far: the summary of the
+  variants file, every 2 seconds, popnei's `soFarEvery` left as it is
+  (below, "The result so far"). A run of another analysis gets none, a
+  `write` and an `open` none.
 
 ### The File travels in the request that needs it
 
@@ -214,6 +248,20 @@ change to that approved file (`docs/specs/stage-2-open-points.md`,
 built and deployed; it is 2 from stage 3, since `write`, `written`, the
 jobs and the results change, and 3 from stage 4 (below, "The ready
 message").
+
+### The result so far
+
+A `soFar` has the fields of a `result`, `id`, `key` and `result`, and is
+checked as a `result` is, every array of its `result` of its typed array
+and as long as what it goes with: a result so far is drawn as the result
+is, so a shape it does not have would put a wrong number on the screen
+as surely. Its arrays are transferred, each over a buffer of its own that
+the runner made by copying popnei's (`docs/specs/worker/runner.md`, "The
+result so far"). It is a message of its own and not a field of
+`progress`, which every run and write has and which would then carry
+statistics for one analysis alone (`docs/plans/live-stats.md`). The last
+one before the `result`, when popnei gives one after its last block,
+holds the same numbers as the `result`.
 
 ### A worker that cannot go on
 
@@ -291,7 +339,15 @@ check, because they differ in `ready`:
   change here, and whose job and result of the PCA join `Job` and
   `JobResult` (`docs/specs/analyses/pca.md`), and is 4 from stage 5,
   whose diversity gains fields and whose distances between populations
-  and LD decay join the unions; one number for the stage.
+  and LD decay join the unions. From then on it is raised with each
+  change rather than once for a stage: 5 on 5 October 2026, when the job
+  and the result of the summary of the variants file join the unions; 6
+  on 6 October, when the read options of a VCF take a ploidy of `null`,
+  which popnei reads from the file; 7 the same day, when the histograms
+  of the variants gain `missingRate`; 8, when the summary becomes the one
+  pass that also gives `perVar` and `perIndividual`
+  (`docs/plans/live-stats.md`, phase 1); and 9, when `soFar` joins
+  `FromRunner` (phase 2).
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -368,10 +424,14 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   each individual are as long as its `individuals`, a list of texts; the `counts` of each
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
-  `individuals` of a job is `null` or a list of texts; the fields of
-  `passStats.filtering` are kinds of `VariantFilter`; `filters` of a
+  `individuals` of a job is `null` or a list of texts; the one field of
+  `passStats.filtering` of a `filterFailures` result is `passed`, from 7
+  October 2026, and the fields of that of every other result are kinds
+  of `VariantFilter`, so that `passed` there is `extraFields`; `filters`
+  of a
   `variantChecks` or an `individualChecks` job is empty, the second from
-  28 September 2026; for the principal components, from
+  28 September 2026, and of a `variantsSummary` or a `filterFailures`
+  job; for the principal components, from
   stage 4, the `method` of a job and of a result is `"pca"` or
   `"pcoa"`, `numCompsKept` of a job, `numComps` and `numCompsFound` of a
   result are whole numbers, `projections` is as long as `individuals`
@@ -419,7 +479,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 10;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -428,7 +488,7 @@ The requests of the calculation worker, and what it sends back.
 export type ToRunner =
   | { kind: "open"; id: number; fileId: string; file: File;
       format: "vcf" | "nei";
-      readOptions: { ploidy: number; onlyPassed: boolean } | null } // null for .nei
+      readOptions: { ploidy: number | null; onlyPassed: boolean } | null } // null for .nei; a ploidy of null is read from the file
   | { kind: "run"; id: number; key: string; job: Job }
   | { kind: "write"; id: number; key: string; job: WriteJob };
 
@@ -436,6 +496,7 @@ export type FromRunner =
   | { kind: "ready"; protocol: number; popneiVersion: string }
   | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
   | { kind: "result"; id: number; key: string; result: JobResult }
+  | { kind: "soFar"; id: number; key: string; result: JobResult } // the result over the variants read so far, of a run running
   | { kind: "written"; id: number; key: string; result: Written<Blob> } // the file, as a Blob
   | { kind: "refused"; id: number; message: string }        // popnei refused the input
   | { kind: "reopenFailed"; id: number; name: string; message: string } // the file no longer reads
@@ -625,6 +686,12 @@ File(["…"], "panel.nei")`.
   kind `pcoa` of `[0, 0, 2]`, and a `notPlaced` without its `message`;
   a result of the LD decay of two populations and 50 bins with 99 values
   of `meanR2`, `wrongLength`.
+- **The result so far**: a `soFar` of the summary of the variants file
+  is accepted as it is; one whose `numVarsPerChrom` holds one count for
+  two chromosomes gives `wrongLength` at `result.numVarsPerChrom`, with
+  `messageKind` `soFar`, as a `result` would; one with a field
+  `progress` gives `extraFields`, and one without `key` `missingFields`.
+  The property above draws `soFar` messages too.
 - **The version**: a `ready` with `protocol: 3`, stage 4's, and no
   other field gives `otherProtocol` with 3 from both checks of the page,
   and so does `protocol: 5` with 5; with `protocol: "4"`, `wrongType`.

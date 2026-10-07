@@ -34,6 +34,39 @@ function appVersion(): string {
   throw new Error("package.json has no version, which the site is built with.");
 }
 
+/** The comment of a page where the start guard goes. */
+const GUARD_MARK = "<!-- the start guard -->";
+
+/**
+ * Puts the start guard, `src/ui/startGuard.js`, inline where a page has
+ * the comment `GUARD_MARK`, so that the pages of the applications share
+ * one guard that still runs before their code and needs no request of
+ * its own (docs/specs/entry.md, "The page"). The file is read for each
+ * page, so that an edit reaches the dev server; a page whose entry is
+ * under src/ui/ and has no comment stops the build.
+ */
+function startGuard(): Plugin {
+  const path = resolve(import.meta.dirname, "src/ui/startGuard.js");
+  return {
+    name: "popnei-web-start-guard",
+    transformIndexHtml: {
+      order: "pre",
+      handler: (html, context) => {
+        // A page of the applications, whose entry is under src/ui/, needs
+        // the guard, and the build stops when its comment is missing.
+        if (html.includes('src="/src/ui/') && !html.includes(GUARD_MARK)) {
+          throw new Error(
+            `${context.path} loads the application and has no ${GUARD_MARK}.`,
+          );
+        }
+        // Read at each page, so that an edit reaches the dev server.
+        const source = readFileSync(path, { encoding: "utf8" });
+        return html.replace(GUARD_MARK, () => `<script>\n${source}</script>`);
+      },
+    },
+  };
+}
+
 /** Whether a build of the site is followed by that of the pages of the tests. */
 const testPages = process.env["POPNEI_TEST_PAGES"] !== undefined;
 
@@ -72,6 +105,7 @@ export default defineConfig(({ mode }) => {
     // "React Aria Components"). The entry sets React Aria's language to it.
     plugins: [
       react(),
+      startGuard(),
       optimizeLocales.vite({ locales: ["en-US"] }),
       testPagesBuild(),
     ],
@@ -92,6 +126,7 @@ export default defineConfig(({ mode }) => {
           index: page("index"),
           probe: page("probe"),
           popgen: page("popgen"),
+          popgen2: page("popgen2"),
         },
     // The second build writes beside the site, under dist/e2e/ alone: it
     // keeps what the first wrote and does not copy public/ again.
@@ -103,6 +138,62 @@ export default defineConfig(({ mode }) => {
     build: {
       target: ["chrome111", "edge111", "firefox115", "safari16.4"],
       ...(testPagesOnly && { emptyOutDir: false, assetsDir: "e2e/assets" }),
+      // A file loaded with import(), the 3D view of the PCA or the
+      // statistics of the open file, has none of its scripts preloaded
+      // with a link before its import, neither its own nor those it
+      // imports: WebKit 26.6 keeps the failure of such a link, a 404 or a
+      // network down, and gives it to the next import() of the file
+      // without asking the network, so Try again of the 3D view never
+      // downloaded it (load3d.ts). The bundler adds such links once the
+      // file imports a chunk of another page, which a chunk shared with
+      // the statistics may become (docs/plans/file-stats.md, phase 2). Its
+      // styles are still preloaded, which import() does not fetch; the
+      // links of a page's own scripts, in its HTML, stay.
+      modulePreload: {
+        resolveDependencies: (
+          _filename: string,
+          deps: string[],
+          context: { readonly hostType: "html" | "js" },
+        ) =>
+          context.hostType === "js"
+            ? deps.filter((dep) => dep.endsWith(".css"))
+            : deps,
+      },
+      // The code two pages or more share goes into chunks named for what
+      // they hold and for the pages, or the files loaded with import(),
+      // that share them, rather than one the bundler names after a module
+      // in it: React, which the probe shares too, and our code with D3 and
+      // React Aria. Each set of pages gets a chunk of its own, so that a
+      // page downloads only what it uses: popgen2.html loads the plots,
+      // D3 and the sortable table only with the statistics of the open
+      // file, by import() once a file is picked
+      // (src/ui/variants/StatsSection.tsx), and they are in a chunk
+      // popgen.html shares with that file. In one chunk for every page,
+      // they were in popgen2.html's first download, 257.0 kB of gzip
+      // against 181.7 without them, on 6 October 2026. A helper of the
+      // bundler is left to the bundler.
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: (id: string) =>
+                  /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/u.test(
+                    id,
+                  )
+                    ? "react"
+                    : /[\\/](node_modules|src[\\/](core|ui|worker|charts))[\\/]/u.test(
+                          id,
+                        )
+                      ? "shared"
+                      : null,
+                minShareCount: 2,
+                entriesAware: true,
+              },
+            ],
+          },
+        },
+      },
     },
     // A module worker, not the default, "iife" (worker.md).
     worker: { format: "es" },

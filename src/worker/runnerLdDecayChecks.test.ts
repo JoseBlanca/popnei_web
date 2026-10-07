@@ -17,6 +17,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { LdDecayJob, Pops } from "./protocol.ts";
 import { createRunner, loadPopnei } from "./runner.ts";
+import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
 
 /** How the bins of the second population are changed; not while `null`. */
 const tampering: {
@@ -73,7 +74,10 @@ const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
 const FILE_ID = "load-1";
 
 beforeAll(async () => {
-  expect(await loadPopnei()).toEqual({ ok: true, value: "0.1.0" });
+  expect(await loadPopnei()).toEqual({
+    ok: true,
+    value: INSTALLED_POPNEI_VERSION,
+  });
 });
 
 afterEach(() => {

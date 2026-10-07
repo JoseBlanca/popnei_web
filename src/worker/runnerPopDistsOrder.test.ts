@@ -21,6 +21,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { Pops, PopDistsJob, PopDistsResult } from "./protocol.ts";
 import { createRunner, loadPopnei } from "./runner.ts";
+import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
 
 /** The changes made to popnei's answers, none while every field is
     `null`. */
@@ -94,7 +95,10 @@ const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
 const FILE_ID = "load-1";
 
 beforeAll(async () => {
-  expect(await loadPopnei()).toEqual({ ok: true, value: "0.1.0" });
+  expect(await loadPopnei()).toEqual({
+    ok: true,
+    value: INSTALLED_POPNEI_VERSION,
+  });
 });
 
 afterEach(() => {

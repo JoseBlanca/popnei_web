@@ -6,9 +6,12 @@
  * diversity, the three analyses of the Variants step, the statistics of
  * each individual, the histograms of the variants and the counts of the
  * filters, the principal components, a PCA or a PCoA, the distances
- * between populations with the order of their heatmap, and the LD decay of
- * each population, writes the filtered variants as a `.nei` file, and says
- * what to answer when popnei refuses or something breaks
+ * between populations with the order of their heatmap, the LD decay of
+ * each population, and the summary of the variants file, its chromosomes
+ * and the variants on each, the histograms of the variants and the
+ * statistics of each individual from one pass, and the count of the
+ * variants of a VCF that failed their FILTER, writes the filtered variants as a `.nei` file,
+ * and says what to answer when popnei refuses or something breaks
  * (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
@@ -23,6 +26,8 @@ import {
   calcPerVarDistribs,
   calcPopDiversity,
   calcPopDists,
+  calcVarDensity,
+  calcVariantsSummary,
   correctDistsByLingoes,
   doPcaFromVariants,
   doPcoa,
@@ -38,13 +43,16 @@ import type {
   LdBins,
   PassStats as PopneiPassStats,
   PcoaResult,
+  PerIndividualStats,
   PerVarDistribs,
   PopDists,
   PopDiversity,
   PopDiversityStat,
   StatsDistrib,
   Step,
+  VarDensity,
   Variants,
+  VariantsSummary,
   VariantsPcaResult,
   VariantsPcoaResult,
 } from "popnei";
@@ -52,23 +60,25 @@ import type {
 import type { Result } from "../core/result.ts";
 import { DEFECT_START, messageOf } from "./messages.ts";
 import type { FromRunner, WorkerStop } from "./messages.ts";
-import { SHOWN_MEASURES } from "./protocol.ts";
+import { ONE_WINDOW_PER_CHROM, SHOWN_MEASURES } from "./protocol.ts";
 import type {
   DiversityJob,
   DiversityResult,
   PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
+  FilterFailuresResult,
   FilteringStats,
   HeatmapOrder,
   IndividualChecksJob,
-  IndividualChecksResult,
+  IndividualStatsPart,
   Job,
   JobResult,
   LdDecayJob,
   LdDecayResult,
   LoadFormat,
   Opened,
+  PassFilterKind,
   PassStats,
   Pops,
   PcaJob,
@@ -78,10 +88,11 @@ import type {
   Progress,
   ShownMeasure,
   VariantChecksJob,
-  VariantChecksResult,
   VariantDistrib,
   VariantFilter,
-  VariantFilterKind,
+  VariantStatsPart,
+  VariantsSummaryJob,
+  VariantsSummaryResult,
   WriteJob,
   Written,
 } from "./protocol.ts";
@@ -136,12 +147,24 @@ export interface Runner {
    * Runs the job over the load opened, first opening the file again when
    * the steps of the `Variants` are not the job's, its list of individuals
    * and then its filters of the variants, and gives `told` each
-   * `Progress` of popnei as it comes. `badRequest` for a run before the
-   * open or of another load, an empty list of individuals and two
-   * populations of one name. Throws what `told` throws, and a defect of
-   * ours.
+   * `Progress` of popnei as it comes, and `toldSoFar`, when given, each
+   * result so far of a calculation that gives one, the summary of the
+   * variants file, a copy over buffers of its own that can be
+   * transferred. `badRequest`
+   * for a run before the open or of another load, an empty list of
+   * individuals and two populations of one name. Throws what `told` or
+   * `toldSoFar` throws, and a defect of ours, one in making a result so
+   * far among them. `toldSoFar` is optional, unlike the `onSoFar` of
+   * `Client.run`: its one caller of the page, `answerRun` of
+   * `runnerWorker.ts`, is beside the runner and always gives it, while
+   * the tests of the runners, most of which look at no result so far,
+   * leave it out.
    */
-  run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  run(
+    job: Job,
+    told: (progress: Progress) => void,
+    toldSoFar?: (result: JobResult) => void,
+  ): Answer<JobResult>;
   /**
    * Writes the variants the job's filters keep, of the individuals of its
    * list, as a `.nei` file, opening the file again as `run` does, and
@@ -179,10 +202,19 @@ const ONE_POP_DIVERSITY_STATS = ["num_alleles", "fis", "folded_sfs"] as const;
 
 /** The statistics of the histograms of the variants, in the order of
     `VariantChecksResult`. */
-const VARIANT_CHECKS_STATS = ["maf", "obs_het", "unbiased_exp_het"] as const;
+const VARIANT_CHECKS_STATS = [
+  "missing_rate",
+  "maf",
+  "obs_het",
+  "unbiased_exp_het",
+] as const;
 
 /** The kind popnei gives the step of `filterIndividuals` in `steps`. */
 const INDIVIDUALS_STEP = "individuals";
+
+/** The kind popnei gives the step of `filterPassed` in `steps`, and its
+    counts in those of a pass. */
+const PASSED_STEP = "passed";
 
 /**
  * The beginnings of popnei's messages for a range of the file that the
@@ -199,11 +231,15 @@ const RANGE_NOT_GIVEN = [
  * does not have, "popnei: `numCompsKept` is not an option of
  * `doPcoaFromVariants`, whose options are `minNumSnps` and
  * `correctByLingoes`" (`onlyTheseOptions` of popnei's
- * `js/popnei/src/arguments.ts`, from `js-v0.1.0-dev.3`): only the runner
- * writes those objects, so it is a defect of ours.
+ * `js/popnei/src/arguments.ts`, from `js-v0.1.0-dev.3`), and, from
+ * js-v0.2.1, of an option of a part that takes none, "`x` is not an
+ * option of `calcVariantsSummary.perIndividual`, which takes no option",
+ * and of a key of `histKwargs`, "`x` is not a key of `histKwargs`, whose
+ * keys are ...": only the runner writes those objects, so it is a defect
+ * of ours.
  */
 const UNKNOWN_OPTION =
-  /^popnei: `[^`]*` is not an option of `[^`]*`, whose options are /u;
+  /^popnei: `[^`]*` is not (an option|a key) of `[^`]*`, (whose|which takes)/u;
 
 let popneiLoading: Promise<Result<string, string>> | null = null;
 
@@ -290,16 +326,18 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
         ...result.foldedSfs.filter((sfs) => sfs !== null),
       ];
     case "individualChecks":
-      return [result.missingGtRate, result.obsHetRate];
+      return individualStatsArrays(result);
     case "variantChecks":
-      return [
-        result.binEdges,
-        result.maf.counts,
-        result.obsHet.counts,
-        result.unbiasedExpHet.counts,
-      ];
+      return variantStatsArrays(result);
     case "filterCounts":
+    case "filterFailures":
       return [];
+    case "variantsSummary":
+      return [
+        result.numVarsPerChrom,
+        ...variantStatsArrays(result.perVar),
+        ...individualStatsArrays(result.perIndividual),
+      ];
     case "pca":
       return [result.projections, result.explainedVariancePercent];
     case "popDists":
@@ -328,6 +366,26 @@ function arraysOf(result: JobResult): readonly (Float64Array | Uint32Array)[] {
   }
 }
 
+/** The typed arrays of the histograms of the variants. */
+function variantStatsArrays(
+  part: VariantStatsPart,
+): readonly (Float64Array | Uint32Array)[] {
+  return [
+    part.binEdges,
+    part.missingRate.counts,
+    part.maf.counts,
+    part.obsHet.counts,
+    part.unbiasedExpHet.counts,
+  ];
+}
+
+/** The typed arrays of the statistics of each individual. */
+function individualStatsArrays(
+  part: IndividualStatsPart,
+): readonly Float64Array[] {
+  return [part.missingGtRate, part.obsHetRate];
+}
+
 /** What the runner holds: nothing before the `open`; a load whose open
     gave no `Variants`, refused by popnei, a file the browser did not give,
     or a crash; or the load it opened. */
@@ -342,17 +400,27 @@ type Held =
       readonly individuals: readonly string[];
     };
 
-/** The steps a request asks of the `Variants`: the list of the
-    individuals kept, `null` for every individual, and then its filters of
-    the variants, in their order, which count over the individuals of the
+/** The steps a request asks of the `Variants`: popnei's `filterPassed`
+    when `passed`, first, as popnei advises; the list of the individuals
+    kept, `null` for every individual; and then its filters of the
+    variants, in their order, which count over the individuals of the
     list. */
 interface Steps {
+  readonly passed: boolean;
   readonly individuals: readonly string[] | null;
   readonly filters: readonly VariantFilter[];
 }
 
+/** What a runner is made with, for the tests. */
+export interface RunnerOptions {
+  /** The seconds between two results so far, popnei's `soFarEvery`;
+      popnei's 2 when not given. A test gives 0, a result so far after
+      every block, to have one from a small file. */
+  readonly soFarEvery?: number;
+}
+
 /** A runner holding nothing; `loadPopnei` has to have given `ok`. */
-export function createRunner(): Runner {
+export function createRunner(options: RunnerOptions = {}): Runner {
   let held: Held = { kind: "none" };
   /** The `Variants` of the load opened; `null` before the open, after an
       open that gave none, and after an open again that popnei refused. */
@@ -384,8 +452,8 @@ export function createRunner(): Runner {
    * The `Variants` of the load with the steps of the request on it: as it
    * is when its steps are those; with them put on it when it holds no
    * step; otherwise freed and the file opened again, the steps put on the
-   * new one. The list of individuals goes first, so that the filters of
-   * the variants count over the individuals it keeps.
+   * new one. `filterPassed` goes first, then the list of individuals, so
+   * that the filters of the variants count over the individuals it keeps.
    */
   function variantsWithSteps(
     load: LoadToOpen,
@@ -407,6 +475,13 @@ export function createRunner(): Runner {
         variants = openSource(load, file);
       } catch (thrown: unknown) {
         return answerOfOpenAgain(thrown, file.name);
+      }
+    }
+    if (wanted.passed) {
+      try {
+        variants.filterPassed();
+      } catch (thrown: unknown) {
+        return answerOfPopnei(thrown, file.name);
       }
     }
     if (wanted.individuals !== null) {
@@ -458,6 +533,7 @@ export function createRunner(): Runner {
   function run(
     job: Job,
     told: (progress: Progress) => void,
+    toldSoFar: (result: JobResult) => void = () => undefined,
   ): Answer<JobResult> {
     const theLoad = openedFor("run", job.fileId);
     if (theLoad.kind !== "ok") {
@@ -482,6 +558,13 @@ export function createRunner(): Runner {
         return runVariantChecks(pass, job);
       case "filterCounts":
         return runFilterCounts(pass, job);
+      case "variantsSummary":
+        return runVariantsSummary(pass, job, individuals, {
+          toldSoFar,
+          soFarEvery: options.soFarEvery ?? null,
+        });
+      case "filterFailures":
+        return runFilterFailures(pass);
       case "pca":
         return runPca(pass, job, individuals);
       case "popDists":
@@ -505,6 +588,7 @@ export function createRunner(): Runner {
       return { kind: "badRequest", message: why };
     }
     const withSteps = variantsWithSteps(load, file, {
+      passed: false,
       individuals: job.individuals,
       filters: job.filters,
     });
@@ -517,42 +601,61 @@ export function createRunner(): Runner {
   return { open, run, write };
 }
 
-/** The steps a job asks for: its list of individuals, of every job but
-    the statistics of each individual, which read every individual, and
-    its filters of the variants. */
+/** The steps a job asks for: `filterPassed`, of the count of the FILTER
+    failures alone; its list of individuals, of every job but the
+    statistics of each individual, the summary of the variants file and
+    the count of the FILTER failures, which read every individual; and its
+    filters of the variants. */
 function stepsOf(job: Job): Steps {
   switch (job.analysis) {
     case "individualChecks":
-      return { individuals: null, filters: job.filters };
+    case "variantsSummary":
+      return { passed: false, individuals: null, filters: job.filters };
+    case "filterFailures":
+      return { passed: true, individuals: null, filters: job.filters };
     case "diversity":
     case "variantChecks":
     case "filterCounts":
     case "pca":
     case "popDists":
     case "ldDecay":
-      return { individuals: job.individuals, filters: job.filters };
+      return {
+        passed: false,
+        individuals: job.individuals,
+        filters: job.filters,
+      };
   }
 }
 
-/** Opens the file of the load with popnei, reading its `source` anew. */
+/** Opens the file of the load with popnei, reading its `source` anew; a
+    VCF with no ploidy is opened without one, and popnei reads it from the
+    file. */
 function openSource(load: LoadToOpen, file: LoadFile): Variants {
   const source = file.source;
   switch (load.format) {
     case "nei":
       return openVars(source);
-    case "vcf":
-      return openVcf(source, {
-        ploidy: load.readOptions.ploidy,
-        onlyPassed: load.readOptions.onlyPassed,
-      });
+    case "vcf": {
+      const { ploidy, onlyPassed } = load.readOptions;
+      return openVcf(
+        source,
+        ploidy === null ? { onlyPassed } : { ploidy, onlyPassed },
+      );
+    }
   }
 }
 
-/** Whether popnei's steps are those wanted: first, when a list is wanted,
-    the step of the individuals naming the same individuals in the same
-    order; then the filters, the same kinds in the same order, each
-    argument of a step `===` to the field of that name of its filter. */
-function stepsAre(steps: readonly Step[], wanted: Steps): boolean {
+/** Whether popnei's steps are those wanted: first, when it is wanted,
+    the step `"passed"`; then, when a list is wanted, the step of the
+    individuals naming the same individuals in the same order; then the
+    filters, the same kinds in the same order, each argument of a step
+    `===` to the field of that name of its filter. */
+function stepsAre(given: readonly Step[], wanted: Steps): boolean {
+  const first = given[0];
+  if (wanted.passed && first?.kind !== PASSED_STEP) {
+    return false;
+  }
+  const steps = wanted.passed ? given.slice(1) : given;
   const numListSteps = wanted.individuals === null ? 0 : 1;
   if (steps.length !== numListSteps + wanted.filters.length) {
     return false;
@@ -647,6 +750,8 @@ function whyNotToRun(job: Job): string | null {
     case "individualChecks":
     case "variantChecks":
     case "filterCounts":
+    case "variantsSummary":
+    case "filterFailures":
       return null;
   }
 }
@@ -688,18 +793,36 @@ interface Pass {
   readonly told: (progress: Progress) => void;
 }
 
+/** Wraps a function of ours that popnei calls while a pass reads, so
+    that what it throws is recorded as ours, as what `told` throws is. */
+type RecordThrown = <A>(call: (argument: A) => void) => (argument: A) => void;
+
 /**
  * Makes the pass of `consume`, the one call to popnei that reads the file,
  * with `told` given every `Progress`, and answers what it threw as popnei's
- * refusal. What `told` throws is thrown on, a defect of ours, and not taken
- * for popnei's refusal nor dropped: while a pass reads it ends the pass and
- * popnei's call throws that same value back; at the end of the run popnei's
- * call returns, and it is thrown here.
+ * refusal. What `told` throws, and what throws a function of ours that
+ * `consume` gives popnei wrapped by `ours`, its `onSoFar`, is thrown on, a
+ * defect of ours, and not taken for popnei's refusal nor dropped: while a
+ * pass reads it ends the pass and popnei's call throws that same value
+ * back; at the end of the run popnei's call returns, and it is thrown
+ * here.
  */
-function passOf<T>(pass: Pass, consume: (variants: Variants) => T): Answer<T> {
+function passOf<T>(
+  pass: Pass,
+  consume: (variants: Variants, ours: RecordThrown) => T,
+): Answer<T> {
   const { variants, name, told } = pass;
-  /** What `told` threw, none or one value. */
-  const thrownByTold: unknown[] = [];
+  /** What `told` threw, or a function of ours wrapped by `ours`, none or
+      one value. */
+  const thrownByOurs: unknown[] = [];
+  const ours: RecordThrown = (call) => (argument) => {
+    try {
+      call(argument);
+    } catch (thrown: unknown) {
+      thrownByOurs.push(thrown);
+      throw thrown;
+    }
+  };
   variants.onProgress((progress) => {
     try {
       told({
@@ -709,23 +832,23 @@ function passOf<T>(pass: Pass, consume: (variants: Variants) => T): Answer<T> {
         numPasses: progress.numPasses,
       });
     } catch (thrown: unknown) {
-      thrownByTold.push(thrown);
+      thrownByOurs.push(thrown);
       throw thrown;
     }
   });
   let value: T;
   try {
-    value = consume(variants);
+    value = consume(variants, ours);
   } catch (thrown: unknown) {
-    if (thrownByTold.some((caught) => caught === thrown)) {
+    if (thrownByOurs.some((caught) => caught === thrown)) {
       throw thrown;
     }
     return answerOfPopnei(thrown, name);
   }
   // popnei throws back what `told` threw while a pass reads, and drops what
   // it threw at the calls of the end of the run, which is thrown here.
-  if (thrownByTold.length > 0) {
-    throw thrownByTold[0];
+  if (thrownByOurs.length > 0) {
+    throw thrownByOurs[0];
   }
   return { kind: "ok", value };
 }
@@ -802,20 +925,38 @@ function passNumbered(pass: Pass, number: number, numPasses: number): Pass {
 
 /**
  * Runs `calcPerIndividualStats` and gives popnei's names and arrays as
- * they are, which popnei copies out of the memory of wasm. Throws a defect
- * when the names are not `individuals`, those the open gave, in their
- * order, since the numbers would then be read under other names.
+ * they are, `individualStatsPartOf`.
  */
 function runIndividualChecks(
   pass: Pass,
   job: IndividualChecksJob,
   individuals: readonly string[],
 ): Answer<JobResult> {
-  const answer = passOf(pass, calcPerIndividualStats);
+  const answer = passOf(pass, (variants) => calcPerIndividualStats(variants));
   if (answer.kind !== "ok") {
     return answer;
   }
-  const stats = answer.value;
+  return {
+    kind: "ok",
+    value: {
+      analysis: "individualChecks",
+      ...individualStatsPartOf(answer.value, individuals, job.filters),
+    },
+  };
+}
+
+/**
+ * The statistics of each individual made of popnei's: its names and
+ * arrays as they are, which popnei copies out of the memory of wasm.
+ * Throws a defect when the names are not `individuals`, those the open
+ * gave, in their order, since the numbers would then be read under other
+ * names.
+ */
+function individualStatsPartOf(
+  stats: PerIndividualStats,
+  individuals: readonly string[],
+  filters: readonly VariantFilter[],
+): IndividualStatsPart {
   if (
     stats.individuals.length !== individuals.length ||
     stats.individuals.some((name, index) => name !== individuals[index])
@@ -824,52 +965,229 @@ function runIndividualChecks(
       "popnei_web defect: the statistics of each individual are not of the individuals the open gave, in their order",
     );
   }
-  const result: IndividualChecksResult = {
-    analysis: "individualChecks",
+  return {
     individuals: stats.individuals,
     missingGtRate: stats.missingGtRate,
     obsHetRate: stats.obsHetRate,
-    passStats: passStatsOf(stats.passStats, job.filters),
+    passStats: passStatsOf(stats.passStats, filters),
   };
-  return { kind: "ok", value: result };
 }
 
 /**
  * Runs `calcPerVarDistribs` over the individuals of the pass, those of the
  * job's list when it has one, as one population, with
- * the bins of the job, and gives one copy of the edges, which popnei's
- * three distributions share, and of each distribution its mean and its
- * counts.
+ * the bins of the job, `variantStatsPartOf`.
  */
 function runVariantChecks(
   pass: Pass,
   job: VariantChecksJob,
 ): Answer<JobResult> {
   const answer = passOf(pass, (variants) =>
-    calcPerVarDistribs(variants, {
-      stats: VARIANT_CHECKS_STATS,
-      minNumIndividuals: job.minNumIndividuals,
-      histKwargs: { numBins: job.numBins, range: job.range },
+    calcPerVarDistribs(variants, perVarOptionsOf(job)),
+  );
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  return {
+    kind: "ok",
+    value: {
+      analysis: "variantChecks",
+      ...variantStatsPartOf(answer.value, job.filters),
+    },
+  };
+}
+
+/** The options of `calcPerVarDistribs` of the histograms of the variants
+    of `job`, written with their keys alone, since popnei refuses a key it
+    does not know. */
+function perVarOptionsOf(job: VariantChecksJob | VariantsSummaryJob): {
+  readonly stats: typeof VARIANT_CHECKS_STATS;
+  readonly minNumIndividuals: number;
+  readonly histKwargs: {
+    readonly numBins: number;
+    readonly range: readonly [number, number];
+  };
+} {
+  return {
+    stats: VARIANT_CHECKS_STATS,
+    minNumIndividuals: job.minNumIndividuals,
+    histKwargs: { numBins: job.numBins, range: job.range },
+  };
+}
+
+/**
+ * The histograms of the variants made of popnei's distributions: one copy
+ * of the edges, which popnei's four distributions share, and of each
+ * distribution its mean and its counts. Throws a defect when popnei gave
+ * no value of one of the four, which it was asked for.
+ */
+function variantStatsPartOf(
+  distribs: PerVarDistribs,
+  filters: readonly VariantFilter[],
+): VariantStatsPart {
+  const { missingRate, maf, obsHet, unbiasedExpHet, passStats } = distribs;
+  if (
+    missingRate === null ||
+    maf === null ||
+    obsHet === null ||
+    unbiasedExpHet === null
+  ) {
+    throw new Error(
+      "popnei_web defect: calcPerVarDistribs gave no value of a statistic it was asked for",
+    );
+  }
+  return {
+    binEdges: Float64Array.from(maf.histBinEdges),
+    missingRate: variantDistribOf(missingRate),
+    maf: variantDistribOf(maf),
+    obsHet: variantDistribOf(obsHet),
+    unbiasedExpHet: variantDistribOf(unbiasedExpHet),
+    passStats: passStatsOf(passStats, filters),
+  };
+}
+
+/**
+ * The chromosomes of the summary of the variants file made of popnei's
+ * density of one window per chromosome: its chromosomes in popnei's order
+ * and the counts of their windows. Throws a defect when a chromosome has
+ * more than one window, a window does not start at 1, the arrays differ in
+ * length, or the counts do not add up to the variants of the pass, which a
+ * window of 2^53 − 1 base pairs rules out.
+ */
+export function chromsOf(
+  density: VarDensity,
+): Pick<VariantsSummaryResult, "chroms" | "numVarsPerChrom"> {
+  const { chroms, start, numVars, passStats } = density;
+  let counted = 0;
+  for (const count of numVars) {
+    counted += count;
+  }
+  if (
+    new Set(chroms).size !== chroms.length ||
+    start.length !== chroms.length ||
+    numVars.length !== chroms.length ||
+    start.some((first) => first !== 1) ||
+    counted !== passStats.numVars
+  ) {
+    throw new Error(
+      "popnei_web defect: calcVarDensity gave other than one window per chromosome, from the position 1, whose counts add up to the variants of the pass",
+    );
+  }
+  return { chroms, numVarsPerChrom: numVars };
+}
+
+/** How the summary gives its results so far: the function told each
+    one, and the seconds between two, `null` for popnei's 2. */
+interface SoFar {
+  readonly toldSoFar: (result: JobResult) => void;
+  readonly soFarEvery: number | null;
+}
+
+/**
+ * Runs `calcVariantsSummary`, the one pass over every variant and every
+ * individual of the file, with its three parts: `density` with one window
+ * per chromosome, `chromLengths` empty so that the lengths of the source
+ * are not used (with them, a header of thousands of scaffolds would give
+ * each one with 0 variants, and a variant past the length its header
+ * gives would refuse a file otherwise usable); `perVar`, the histograms
+ * of the variants with the bins of the job, over every individual as one
+ * population; and `perIndividual`. Each part is the same to the bit as
+ * its own call gives it. The job has no filter.
+ *
+ * While the pass runs, popnei gives the summary over the variants read so
+ * far every `soFarEvery` seconds, and `toldSoFar` is given each, made as
+ * the result is and copied, since its arrays may be those of popnei's
+ * next result so far or of its final result, which a transfer of them
+ * would empty. What making it, copying it or `toldSoFar` throws is ours
+ * (`passOf`). Throws a defect when popnei gives no value of a part it was
+ * asked for, in a result so far or in the result.
+ */
+function runVariantsSummary(
+  pass: Pass,
+  job: VariantsSummaryJob,
+  individuals: readonly string[],
+  soFar: SoFar,
+): Answer<JobResult> {
+  const answer = passOf(pass, (variants, ours) =>
+    calcVariantsSummary(variants, {
+      density: { windowSize: ONE_WINDOW_PER_CHROM, chromLengths: {} },
+      perVar: perVarOptionsOf(job),
+      perIndividual: {},
+      onSoFar: ours((summary: VariantsSummary) => {
+        soFar.toldSoFar(
+          copiedSummary(summaryResultOf(summary, job, individuals)),
+        );
+      }),
+      ...(soFar.soFarEvery !== null && { soFarEvery: soFar.soFarEvery }),
     }),
   );
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { maf, obsHet, unbiasedExpHet, passStats } = answer.value;
-  if (maf === null || obsHet === null || unbiasedExpHet === null) {
+  return {
+    kind: "ok",
+    value: summaryResultOf(answer.value, job, individuals),
+  };
+}
+
+/** The result of the summary of the variants file made of popnei's
+    summary, a result so far or the final one. Throws a defect when popnei
+    gives no value of a part it was asked for. */
+function summaryResultOf(
+  summary: VariantsSummary,
+  job: VariantsSummaryJob,
+  individuals: readonly string[],
+): VariantsSummaryResult {
+  const { density, perVar, perIndividual, passStats } = summary;
+  if (density === null || perVar === null || perIndividual === null) {
     throw new Error(
-      "popnei_web defect: calcPerVarDistribs gave no value of a statistic it was asked for",
+      "popnei_web defect: calcVariantsSummary gave no value of a part it was asked for",
     );
   }
-  const result: VariantChecksResult = {
-    analysis: "variantChecks",
-    binEdges: Float64Array.from(maf.histBinEdges),
-    maf: variantDistribOf(maf),
-    obsHet: variantDistribOf(obsHet),
-    unbiasedExpHet: variantDistribOf(unbiasedExpHet),
+  return {
+    analysis: "variantsSummary",
+    ...chromsOf(density),
+    perVar: variantStatsPartOf(perVar, job.filters),
+    perIndividual: individualStatsPartOf(
+      perIndividual,
+      individuals,
+      job.filters,
+    ),
     passStats: passStatsOf(passStats, job.filters),
   };
-  return { kind: "ok", value: result };
+}
+
+/** A copy of a summary whose every typed array is over a buffer of its
+    own, of its length, that no other array shares. Its arrays are listed
+    here and in `arraysOf`; the tests compare the two through
+    `transferablesOf`, which is why it is exported: no caller of the page
+    uses it. */
+export function copiedSummary(
+  result: VariantsSummaryResult,
+): VariantsSummaryResult {
+  const { perVar, perIndividual } = result;
+  return {
+    ...result,
+    numVarsPerChrom: result.numVarsPerChrom.slice(),
+    perVar: {
+      ...perVar,
+      binEdges: perVar.binEdges.slice(),
+      missingRate: copiedDistrib(perVar.missingRate),
+      maf: copiedDistrib(perVar.maf),
+      obsHet: copiedDistrib(perVar.obsHet),
+      unbiasedExpHet: copiedDistrib(perVar.unbiasedExpHet),
+    },
+    perIndividual: {
+      ...perIndividual,
+      missingGtRate: perIndividual.missingGtRate.slice(),
+      obsHetRate: perIndividual.obsHetRate.slice(),
+    },
+  };
+}
+
+/** A copy of a distribution, its counts over a buffer of their own. */
+function copiedDistrib(distrib: VariantDistrib): VariantDistrib {
+  return { ...distrib, counts: distrib.counts.slice() };
 }
 
 /** The mean and the counts of popnei's distribution of its one
@@ -886,14 +1204,7 @@ function variantDistribOf(distrib: StatsDistrib): VariantDistrib {
  * around the whole of it, as around a call.
  */
 function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
-  const answer = passOf(pass, (variants) => {
-    const blocks = variants.iterBlocks({ fields: [] });
-    let next = blocks.next();
-    while (next.done !== true) {
-      next = blocks.next();
-    }
-    return blocks.passStats;
-  });
+  const answer = passOf(pass, iteratedPassStats);
   if (answer.kind !== "ok") {
     return answer;
   }
@@ -902,6 +1213,54 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
     passStats: passStatsOf(answer.value, job.filters),
   };
   return { kind: "ok", value: result };
+}
+
+/**
+ * Counts the variants given to the step `filterPassed` and those it kept,
+ * every variant of the file and those whose FILTER is `PASS` or a dot, and
+ * gives these counts alone. The pass is `calcVarDensity` with one window
+ * per chromosome, which reads no genotype; `chromLengths` is empty, as for
+ * the summary, so that a header of thousands of scaffolds does not give a
+ * window to each. When popnei refuses it, as it does a pass that keeps no
+ * variant, a VCF whose variants all failed, the counts come from a second
+ * pass, the blocks iterated to their end, which accepts no variant kept,
+ * and its answer is the answer, a refusal of the file among them. The
+ * second pass is not the only one because it reads the genotypes: under
+ * node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
+ * took 2.4 s and `calcVarDensity` 0.9 s. On a vars file written before
+ * format 1.2 popnei refuses both at their first block, which the page
+ * never asks of it.
+ */
+function runFilterFailures(pass: Pass): Answer<JobResult> {
+  const density = passOf(pass, (variants) =>
+    calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
+  );
+  const answer =
+    density.kind === "refused"
+      ? passOf(pass, iteratedPassStats)
+      : density.kind === "ok"
+        ? { kind: "ok" as const, value: density.value.passStats }
+        : density;
+  if (answer.kind !== "ok") {
+    return answer;
+  }
+  const result: FilterFailuresResult = {
+    analysis: "filterFailures",
+    passStats: passStatsOfKinds(answer.value, [PASSED_STEP]),
+  };
+  return { kind: "ok", value: result };
+}
+
+/** Iterates popnei's blocks of `variants`, the genotypes alone, to their
+    end, keeping none, and gives the counts of the pass, read after it:
+    they come also when the steps keep no variant. */
+function iteratedPassStats(variants: Variants): PopneiPassStats {
+  const blocks = variants.iterBlocks({ fields: [] });
+  let next = blocks.next();
+  while (next.done !== true) {
+    next = blocks.next();
+  }
+  return blocks.passStats;
 }
 
 /** The measures of the distances between populations asked of popnei,
@@ -1535,20 +1894,34 @@ function passStatsOf(
   stats: PopneiPassStats,
   filters: readonly VariantFilter[],
 ): PassStats {
-  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
-  for (const filter of filters) {
-    const counts = ownCounts(stats.filtering, filter.kind);
+  return passStatsOfKinds(
+    stats,
+    filters.map((filter) => filter.kind),
+  );
+}
+
+/** The counts of a pass as `passStatsOf` makes them, of the filters of
+    the kinds `wanted`, in their order: `"passed"` is the one kind beyond
+    the filters of the variants, of the count of the FILTER failures. The
+    same defects. */
+function passStatsOfKinds(
+  stats: PopneiPassStats,
+  wanted: readonly PassFilterKind[],
+): PassStats {
+  const filtering: Partial<Record<PassFilterKind, FilteringStats>> = {};
+  for (const kind of wanted) {
+    const counts = ownCounts(stats.filtering, kind);
     if (counts === undefined) {
       throw new Error(
-        `popnei_web defect: the counts of the pass have no filter ${filter.kind}`,
+        `popnei_web defect: the counts of the pass have no filter ${kind}`,
       );
     }
-    filtering[filter.kind] = {
+    filtering[kind] = {
       varsProcessed: counts.varsProcessed,
       varsKept: counts.varsKept,
     };
   }
-  const kinds = new Set<string>(filters.map((filter) => filter.kind));
+  const kinds = new Set<string>(wanted);
   const other = Object.keys(stats.filtering).filter((kind) => !kinds.has(kind));
   if (other.length > 0) {
     throw new Error(
@@ -1562,7 +1935,7 @@ function passStatsOf(
     field of the object itself. */
 function ownCounts(
   filtering: PopneiPassStats["filtering"],
-  kind: VariantFilterKind,
+  kind: PassFilterKind,
 ): PopneiPassStats["filtering"][string] | undefined {
   return Object.hasOwn(filtering, kind) ? filtering[kind] : undefined;
 }

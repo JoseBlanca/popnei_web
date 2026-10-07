@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  POPGEN2_ANALYSES,
   POPGEN_ANALYSES,
   POPGEN_ANALYSIS_STEPS,
   POPGEN_STEPS,
@@ -21,6 +22,7 @@ import {
   FIVE_INDIVIDUALS,
   fiveIndividualsProject,
   noPopDiversity,
+  summaryResult,
 } from "./testSupport.ts";
 import type {
   DiversityResult,
@@ -35,6 +37,7 @@ import type {
   Run,
   VariantChecksResult,
   VariantDistrib,
+  VariantsSummaryResult,
 } from "../worker/protocol.ts";
 
 /** The counts of a pass of the missing data filter over 1,200 variants,
@@ -259,6 +262,7 @@ describe("VS3 D5 countsOf, writeCountsOf and individualStatsOf", () => {
     const result: VariantChecksResult = {
       analysis: "variantChecks",
       binEdges: Float64Array.from([0, 1]),
+      missingRate: distrib(),
       maf: distrib(),
       obsHet: distrib(),
       unbiasedExpHet: distrib(),
@@ -413,6 +417,7 @@ const FIVE_STATS: IndividualChecksResult = {
 const HISTOGRAMS: VariantChecksResult = {
   analysis: "variantChecks",
   binEdges: Float64Array.from([0, 1]),
+  missingRate: distrib(),
   maf: distrib(),
   obsHet: distrib(),
   unbiasedExpHet: distrib(),
@@ -468,5 +473,74 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
     const histograms = state.analyses.find((a) => a.id === "variantChecks");
     expect(histograms?.status.kind).toBe("done");
     expect(state.individualsKept?.list.kind).toBe("needsStatistics");
+  });
+});
+
+describe("open-variants 1 the summary of the variants file in apps.ts", () => {
+  /** The summary of panel.nei, its chromosomes as popnei gave them on 5
+      October 2026. */
+  const PANEL_SUMMARY: VariantsSummaryResult = summaryResult(["1"], [1200]);
+
+  test("the new page has the summary, whose one pass gives the statistics too, and the count of the FILTER failures, and the analyses of the old page do not hold the summary", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
+      "variantsSummary",
+      "filterFailures",
+    ]);
+    expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
+      "variantsSummary",
+    );
+    expect(Object.keys(POPGEN_ANALYSIS_STEPS)).not.toContain("variantsSummary");
+  });
+
+  test("countsOf of a summary, whose pass has no filter, gives the variants of the file and no counts", () => {
+    expect(countsOf(PANEL_SUMMARY)).toStrictEqual({
+      numVarsRead: 1200,
+      counts: null,
+    });
+  });
+
+  test("a store of the new page sends the summary of the load, and its result records the 1,200 variants into the variants file", () => {
+    const sent: Sent[] = [];
+    const store = createStore<Job, JobResult>({
+      first: emptyProject("popgen"),
+      analyses: POPGEN2_ANALYSES,
+      send: (key, job): Run<JobResult> => {
+        const id = sent.length + 1;
+        sent.push({ id, key, job });
+        return {
+          id,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      countsOf,
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1_000_000,
+      maxUndoSteps: 100,
+    });
+    store.popneiReady("0.1.0");
+    store.open({ ...fiveIndividualsProject([]), individuals: null });
+    store.startRun("variantsSummary");
+    expect(sent.map((request) => request.job)).toEqual([
+      {
+        analysis: "variantsSummary",
+        fileId: fiveIndividualsProject([]).variants?.fileId,
+        filters: [],
+        minNumIndividuals: 0,
+        numBins: 1280,
+        range: [0, 1],
+      },
+    ]);
+    end(store, sent[0], PANEL_SUMMARY);
+    const state = store.getState();
+    expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
+      ["variantsSummary", "done"],
+      ["filterFailures", "locked"],
+    ]);
+    const read = state.project.variants?.read;
+    expect(read?.kind === "read" ? read.numVars : null).toBe(1200);
   });
 });

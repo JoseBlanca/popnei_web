@@ -1,21 +1,29 @@
 /**
- * The histograms of the variants: the major allele frequency, the
- * observed heterozygosity and the unbiased expected heterozygosity of
- * every variant of the file, before any filter of the variants and over
- * the individuals the filters of individuals keep, each in 40 bins over 0
- * to 1 with its mean, so that each shows the number its filter keeps a
- * variant by, counted as the filter counts it. The module says what they are
- * calculated from, the request, the warning, the check numbers, the lines
- * of the Python script, the words of a refusal and the descriptions of
- * the three histograms (docs/specs/analyses/variantChecks.md, "The
- * module").
+ * The histograms of the variants: the missing rate, the major allele
+ * frequency, the observed heterozygosity and the unbiased expected
+ * heterozygosity of every variant of the file, before any filter of the
+ * variants and over the individuals the filters of individuals keep, each
+ * in 40 bins over 0 to 1 with its mean, so that each shows the number its
+ * filter keeps a variant by, counted as the filter counts it. The module
+ * says what they are calculated from, the request, the warning, the check
+ * numbers, the lines of the Python script, the words of a refusal and the
+ * descriptions of the histograms of the MAF and of the two
+ * heterozygosities (docs/specs/analyses/variantChecks.md, "The module").
+ * The missing rate joined them on 6 October 2026, for popgen2.html
+ * (docs/plans/file-stats.md); popgen.html does not draw it.
  *
  * The bins and the means are popnei's, from one call of
  * `calcPerVarDistribs` in the calculation worker; this module computes
- * none of them.
+ * none of them. popnei is asked for 1,280 bins over 0 to 1, and the bins
+ * drawn are made of them by addition alone: popgen.html draws them 32 at
+ * a time, popnei's 40 bins over 0 to 1; popgen2.html draws about 40 over
+ * the range of the bins with a count, rounded out to round numbers
+ * (docs/plans/file-stats.md, "Round 1 with the owner"). The Python script
+ * asks popnei for the 40 bins, which are those sums.
  */
 
 import { variantsStem } from "../fileNames.ts";
+import { roundedRange } from "../histogram.ts";
 import { counted, escaped, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
 import type {
@@ -31,12 +39,14 @@ import type {
   JobResult,
   Run,
   VariantChecksResult,
+  VariantStatsPart,
 } from "../../worker/protocol.ts";
 import {
   defect,
   histogramDescription,
   orNull,
   parseNoOptions,
+  pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
 import type { DescribedBin } from "./words.ts";
@@ -44,11 +54,36 @@ import type { DescribedBin } from "./words.ts";
 /** The id of the analysis. */
 const ID = "variantChecks";
 
-/** The bins of each histogram, popnei's default, given so that a new
-    default of popnei does not change them unsaid. */
+/** The bins of each histogram of popgen.html and of the Python script,
+    popnei's default over 0 to 1, written here so that a new default of
+    popnei does not change them unsaid. */
 export const VARIANT_BINS = 40;
 
-/** The lowest and the highest edge of the bins, popnei's default range. */
+/**
+ * The bins popnei is asked for over 0 to 1, 1,280: 32 in each of the 40
+ * of popgen.html, so that 32 of them added up are popnei's bin of 40 to
+ * the last count. popnei's edges are i × (1 / numBins), and 1 / 1,280 is
+ * 1 / 40 halved five times, which a double holds exactly; so the edge
+ * 32 × k of the 1,280 is the double of the edge k of the 40, and a value
+ * on an edge falls on the same side of both. With 1,000 bins, 8 of the
+ * 41 edges differ in their last place, 0.075 against the
+ * 0.07500000000000001 of the 40, and a missing rate of 15 / 200 would
+ * move to the next bin. The bins of 0.05 hold 64 of them, so that every
+ * range of popgen2.html, rounded to steps of 0.05 at least, starts and
+ * ends on an edge of popnei. Each of the four counts is 5,120 bytes and
+ * the edges 10,248 bytes, 30,728 bytes in a result where the 40 bins took
+ * 968.
+ *
+ * The summary of the variants file of popgen2.html asks popnei for the
+ * same bins, as do `VARIANT_RANGE` and `VARIANT_MIN_NUM_INDIVIDUALS`, so
+ * a change of any of the three changes the result of both analyses and
+ * raises the `keyVersion` of both, this one and variantsSummary.ts.
+ */
+export const VARIANT_FINE_BINS = VARIANT_BINS * 32;
+
+/** The lowest and the highest edge of the bins, popnei's default range;
+    the summary of popgen2.html asks for it too, so a change raises the
+    `keyVersion` of both analyses (`VARIANT_FINE_BINS`). */
 export const VARIANT_RANGE: readonly [number, number] = Object.freeze([
   0, 1,
 ] as const);
@@ -56,7 +91,8 @@ export const VARIANT_RANGE: readonly [number, number] = Object.freeze([
 /** popnei's `minNumIndividuals` of the histograms: 0, so that a variant
     with few called genotypes has a value, where popnei's default of 20
     would leave out the variants the missing data filter is there to
-    find. */
+    find. The summary of popgen2.html asks for it too, so a change raises
+    the `keyVersion` of both analyses (`VARIANT_FINE_BINS`). */
 export const VARIANT_MIN_NUM_INDIVIDUALS = 0;
 
 /**
@@ -101,13 +137,16 @@ export function refusalText(message: string, p: Project): string {
   });
 }
 
-/** The three statistics of the variants that have a histogram, as the
-    result names them. */
-export type VariantStatistic = "maf" | "obsHet" | "unbiasedExpHet";
+/** The four statistics of the variants that have a histogram, as the
+    result names them. The old page draws the three that stand beside
+    their filters, and not the missing rate, which popgen2.html draws. */
+export type VariantStatistic =
+  "missingRate" | "maf" | "obsHet" | "unbiasedExpHet";
 
 /** What each histogram counts, at the start of its description. */
 const HISTOGRAM_SUBJECTS: Readonly<Record<VariantStatistic, string>> =
   Object.freeze({
+    missingRate: "The proportion of missing genotypes",
     maf: "The major allele frequency",
     obsHet: "The observed heterozygosity",
     unbiasedExpHet: "The unbiased expected heterozygosity",
@@ -139,6 +178,7 @@ export function variantHistogramDescription(
 /** The part of the name of each file of a histogram that names its
     statistic. */
 const FILE_PARTS: Readonly<Record<VariantStatistic, string>> = Object.freeze({
+  missingRate: "missing_genotypes",
   maf: "maf",
   obsHet: "obs_het",
   unbiasedExpHet: "exp_het",
@@ -146,8 +186,9 @@ const FILE_PARTS: Readonly<Record<VariantStatistic, string>> = Object.freeze({
 
 /**
  * The name of the download of the bins of the histogram of `statistic`:
- * the stem of the variants file, `variantsStem`, then `.variant_maf`,
- * `.variant_obs_het` or `.variant_exp_het`, then `_bins.csv`;
+ * the stem of the variants file, `variantsStem`, then
+ * `.variant_missing_genotypes`, `.variant_maf`, `.variant_obs_het` or
+ * `.variant_exp_het`, then `_bins.csv`;
  * `panel.vcf.gz` gives `panel.variant_maf_bins.csv`
  * (docs/specs/analyses/variantChecks.md, "What it shows").
  */
@@ -164,7 +205,9 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   id: ID,
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
-  keyVersion: 2,
+  // 3 since the result holds the missing rate, 4 since its bins are
+  // 1,280 (docs/plans/file-stats.md).
+  keyVersion: 4,
   filtersRead: Object.freeze({ variants: false, individuals: true }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -202,7 +245,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
     filters: [],
     individuals: c.individuals,
     minNumIndividuals: VARIANT_MIN_NUM_INDIVIDUALS,
-    numBins: VARIANT_BINS,
+    numBins: VARIANT_FINE_BINS,
     range: VARIANT_RANGE,
   });
 }
@@ -247,7 +290,9 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
 
 /** The check numbers: the variants of the file, then the means of the
     major allele frequency, the observed heterozygosity and the unbiased
-    expected heterozygosity, `null` for a NaN. */
+    expected heterozygosity, `null` for a NaN. Not the mean missing rate:
+    a fifth number would make every project file saved with four refused
+    at its opening (docs/plans/file-stats.md, "The design"). */
 function checkNumbers(result: JobResult): readonly (number | null)[] {
   const r = variantChecksResultOf(result);
   return [
@@ -269,21 +314,18 @@ function numCheckNumbers(): number {
  * filter off: `popnei.open_vars` for a `.nei` file, `popnei.open_vcf` with
  * the read options for a VCF; then the list of the individuals kept,
  * `individuals_kept`, which src/core/script.ts makes before any filter,
- * when the project has a filter of individuals. Throws a defect on a
- * project with no variants file, since it is asked only of an analysis
- * that has run.
+ * when the project has a filter of individuals. It asks popnei for
+ * `VARIANT_BINS` bins, 40, as many as the rows of the CSV of the bins and
+ * the bars of popgen.html, and not for the 1,280 of the job, which the page
+ * sums. Throws a defect on a project with no variants file, since it is
+ * asked only of an analysis that has run.
  */
 function script(p: Project): string {
   const variants = p.variants;
   if (variants === null) {
     throw defect("the script of the histograms of the variants needs a file.");
   }
-  const name = JSON.stringify(variants.name);
-  const options = variants.readOptions;
-  const open =
-    options === null
-      ? `popnei.open_vars(${name})`
-      : `popnei.open_vcf(${name}, ploidy=${String(options.ploidy)}, only_passed=${options.onlyPassed ? "True" : "False"})`;
+  const open = pythonOpenVariants(variants);
   const [low, high] = VARIANT_RANGE;
   return [
     "# The histograms of the variants, over every variant of the file and the individuals kept",
@@ -293,7 +335,7 @@ function script(p: Project): string {
       : ["variants_as_read.filter_individuals(individuals_kept)"]),
     "variant_distribs = popnei.calc_per_var_distribs(",
     "    variants_as_read,",
-    "    stats=[popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
+    "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
     `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
     `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
     ")",
@@ -311,4 +353,159 @@ function variantChecksResultOf(r: JobResult): VariantChecksResult {
     );
   }
   return r;
+}
+
+/** The bins of a histogram as they are drawn. */
+export interface VariantBins {
+  /** The edges, one more than the bins, increasing. */
+  readonly edges: Float64Array;
+  /** The variants in each bin. */
+  readonly counts: Uint32Array;
+}
+
+/**
+ * The 40 bins over 0 to 1 that popgen.html draws of `statistic`: popnei's
+ * bins added up 32 at a time, with popnei's edges at every 32nd, which
+ * are those of popnei's 40 bins (`VARIANT_FINE_BINS`). Throws a defect
+ * for a result whose bins are not 40 times a whole number.
+ */
+export function variantBins(
+  result: VariantStatsPart,
+  statistic: VariantStatistic,
+): VariantBins {
+  const numFine = result[statistic].counts.length;
+  if (numFine === 0 || numFine % VARIANT_BINS !== 0) {
+    throw defect(
+      `${String(numFine)} bins of the variants, not ${String(VARIANT_BINS)} times a whole number.`,
+    );
+  }
+  return summed(result, statistic, 0, numFine, numFine / VARIANT_BINS);
+}
+
+/** The steps the range of a histogram of popgen2.html is rounded to: 0.05
+    at least, 64 of popnei's bins, so that its two ends are edges of
+    popnei's. */
+const SMALLEST_STEP = 0.05;
+
+/** The bins of a histogram of popgen2.html, about this many over its
+    range. */
+const ROUNDED_BINS = 40;
+
+/**
+ * The bins of `statistic` that popgen2.html draws: over the range from
+ * the first bin of popnei with a count to the last, from 0 for the
+ * missing rate, the ends taken as i / 1,280 and not as popnei's edges,
+ * rounded out to steps of 0.05 at least (`roundedRange` of
+ * histogram.ts), the number of popnei's bins in each that makes the bins
+ * nearest 40, the fewer of two as near, every bin the same number of
+ * popnei's. Each count is popnei's counts added up; the inner edges are
+ * popnei's, and the two ends the round numbers, which popnei's edges
+ * equal or exceed by one in their last place, 0.30000000000000004 for
+ * 0.3. On panel.nei the missing rate is 0 to 0.1 in 32 bins of 4. With no
+ * variant in a bin, the 40 bins over 0 to 1. Throws a defect for a result
+ * whose ends of a range are not edges of its bins.
+ */
+export function variantBinsRounded(
+  result: VariantStatsPart,
+  statistic: VariantStatistic,
+): VariantBins {
+  const counts = result[statistic].counts;
+  const numFine = counts.length;
+  const first = counts.findIndex((count) => count > 0);
+  if (first === -1) {
+    return variantBins(result, statistic);
+  }
+  const last = counts.findLastIndex((count) => count > 0) + 1;
+  // The nominal edges, i / numFine, and not popnei's i × (1 / numFine),
+  // which at 0.3 or 0.6 is one last place above the round number and
+  // would be rounded up to the next step.
+  const [low, high] = roundedRange(
+    statistic === "missingRate" ? 0 : first / numFine,
+    last / numFine,
+    SMALLEST_STEP,
+  );
+  const from = fineIndexOf(low, numFine);
+  const to = fineIndexOf(high, numFine);
+  const bins = summed(result, statistic, from, to, perBinOf(to - from));
+  const edges = bins.edges.slice();
+  edges[0] = low;
+  edges[edges.length - 1] = high;
+  return { edges, counts: bins.counts };
+}
+
+/** The number of popnei's bins in each of those over `numFine` of them
+    that makes them nearest `ROUNDED_BINS`, a divisor of `numFine`, the
+    larger of two as near. */
+function perBinOf(numFine: number): number {
+  let best = numFine;
+  for (let perBin = numFine; perBin >= 1; perBin -= 1) {
+    if (numFine % perBin !== 0) continue;
+    const distance = Math.abs(numFine / perBin - ROUNDED_BINS);
+    if (distance < Math.abs(numFine / best - ROUNDED_BINS)) best = perBin;
+  }
+  return best;
+}
+
+/** The index of popnei's edge at `value`, a multiple of 1 / `numFine`
+    within a rounding; a defect when it is none. */
+function fineIndexOf(value: number, numFine: number): number {
+  const index = Math.round(value * numFine);
+  if (Math.abs(index - value * numFine) > 1e-9) {
+    throw defect(
+      `${String(value)} is no edge of ${String(numFine)} bins over 0 to 1.`,
+    );
+  }
+  return index;
+}
+
+/**
+ * popnei's bins of `statistic` from the index `from` up to `to` added up
+ * `perBin` at a time, with popnei's edges at the start of each and at
+ * `to`. Throws a defect when a variant is in a bin of popnei outside
+ * them, which the range of the bins with a count rules out; exported so
+ * that a test reaches that defect, which `variantBins` and
+ * `variantBinsRounded` never give it.
+ */
+export function summed(
+  result: VariantStatsPart,
+  statistic: VariantStatistic,
+  from: number,
+  to: number,
+  perBin: number,
+): VariantBins {
+  const fine = result[statistic].counts;
+  const numBins = (to - from) / perBin;
+  const edges = new Float64Array(numBins + 1);
+  const counts = new Uint32Array(numBins);
+  for (let bin = 0; bin <= numBins; bin += 1) {
+    edges[bin] = edgeAt(result.binEdges, from + bin * perBin);
+  }
+  let total = 0;
+  let inBins = 0;
+  for (const [index, count] of fine.entries()) {
+    total += count;
+    if (index < from || index >= to) continue;
+    const bin = Math.floor((index - from) / perBin);
+    const before = counts[bin];
+    if (before === undefined) {
+      throw defect(`no bin at ${String(bin)} of ${String(numBins)}.`);
+    }
+    counts[bin] = before + count;
+    inBins += count;
+  }
+  if (inBins !== total) {
+    throw defect(
+      `${String(total - inBins)} variants in bins of popnei outside ${String(from)} to ${String(to)}.`,
+    );
+  }
+  return { edges, counts };
+}
+
+/** popnei's edge at `index`, which the callers bound. */
+function edgeAt(edges: Float64Array, index: number): number {
+  const edge = edges[index];
+  if (edge === undefined) {
+    throw defect(`no edge of the bins at ${String(index)}.`);
+  }
+  return edge;
 }

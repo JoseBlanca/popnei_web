@@ -22,13 +22,14 @@ import {
   shown,
 } from "../project.ts";
 import { populationsColumnOf } from "../populations.ts";
-import type { Project } from "../project.ts";
+import type { Project, VariantSource } from "../project.ts";
 import type { Result } from "../result.ts";
 import type { Warning } from "../store.ts";
 
 /** The start of popnei's refusal of a pass over a source that holds no
     variant, whatever the filters. */
-const EMPTY_SOURCE = "the pass gave no variant and its source holds none";
+export const EMPTY_SOURCE =
+  "the pass gave no variant and its source holds none";
 
 /** The start of popnei's refusal of a pass that gave no variant from a
     source that held some: with its colon, which the refusal of a source
@@ -43,13 +44,35 @@ export const ONLY_PASSED_BOX =
 
 /** popnei's refusal of a genotype of another ploidy than the one the VCF
     was read with: the line, the individual, the ploidy found and the one
-    given. */
+    given or read from the file, in the words of release js-v0.2.0. */
 const OTHER_PLOIDY =
-  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the reader was asked for the ploidy (\d+)/su;
+  /^line (\d+) of the VCF, the column of (.*?): its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
 
 /** The start of popnei's refusals of a gzipped VCF damaged or cut
     short. */
-const BGZIP_REFUSAL = "the VCF was written by bgzip";
+export const BGZIP_REFUSAL = "the VCF was written by bgzip";
+
+/** Whether popnei's refusal `message` is of a line of the VCF it cannot
+    read, or of a gzipped VCF damaged or cut short that bgzip wrote: a
+    fault of the file, which the words of a refusal say to correct or
+    fetch again. */
+export function isVcfLineRefusal(message: string): boolean {
+  return (
+    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL)
+  );
+}
+
+/** The start of popnei's refusal of a source whose bytes could not be
+    read to their end, a file compressed with plain gzip and cut short
+    among the causes. */
+export const SOURCE_UNREADABLE = "the source could not be read:";
+
+/** popnei's refusal of a `.nei` file one of whose batches could not be
+    read, "the batch 1 of the vars file could not be read, so the file is
+    damaged and has to be fetched or copied again: Ipc error: ...", as
+    js-v0.2.1 gives it for a file with bytes changed in its middle. */
+export const VARS_BATCH_UNREADABLE =
+  /^the batch \d+ of the vars file could not be read/u;
 
 /** What to change for a calculation that depends on the settings to be
     offered again after a refusal for another reason, the diversity's
@@ -119,9 +142,7 @@ export function refusalWords(
   if (order !== null) {
     return order;
   }
-  const isVcfLine =
-    /^line \d+ of the VCF/u.test(message) || message.startsWith(BGZIP_REFUSAL);
-  if (isVcfLine) {
+  if (isVcfLineRefusal(message)) {
     return `popnei could not read ${fileName}${saying(message)}. Correct the file, or fetch it again, and load it in the Variants step.`;
   }
   return `popnei could not ${words.calculate}${saying(message.replaceAll("`", ""))}. ${words.change}, ${words.again}.`;
@@ -570,6 +591,28 @@ export function parseNoOptions(options: unknown): Result<JsonObject, string> {
     !Array.isArray(options) &&
     Reflect.ownKeys(options).length === 0;
   return isEmpty ? { ok: true, value: {} } : { ok: false, error: NO_OPTION };
+}
+
+/**
+ * The call of popnei's Python that opens the variants file again, for the
+ * lines of the Python script of an analysis: `popnei.open_vars` for a
+ * `.nei` file, and `popnei.open_vcf` with the ploidy and `only_passed` of
+ * the read options for a VCF, and with no ploidy when none was given, so
+ * that popnei reads it from the file; the name is written as JSON quotes it,
+ * which Python reads as the same text.
+ */
+export function pythonOpenVariants(
+  variants: Pick<VariantSource, "name" | "readOptions">,
+): string {
+  const name = JSON.stringify(variants.name);
+  const read = variants.readOptions;
+  // No ploidy given, popnei's Python reads it from the file, as the page
+  // did.
+  const ploidy = read?.ploidy ?? null;
+  const ploidyArgument = ploidy === null ? "" : `ploidy=${String(ploidy)}, `;
+  return read === null
+    ? `popnei.open_vars(${name})`
+    : `popnei.open_vcf(${name}, ${ploidyArgument}only_passed=${read.onlyPassed ? "True" : "False"})`;
 }
 
 /** An error for a state the code makes impossible. */

@@ -335,8 +335,26 @@ function passedWords(onlyPassed: boolean): string {
     : "every variant";
 }
 
+/** How the Variants step of popgen.html reads a VCF: with the ploidy of
+    its field, never `null`, which only popgen2.html gives, for popnei to
+    read it from the file. */
+export type GivenReadOptions = VcfReadOptions & { readonly ploidy: number };
+
+/** `options` as the Variants step reads with them; a defect for options
+    with no ploidy, which the step never makes and a project file
+    refuses. */
+export function givenOptions(options: VcfReadOptions): GivenReadOptions {
+  const ploidy = options.ploidy;
+  if (ploidy === null) {
+    throw new Error(
+      "popnei_web defect: the Variants step was given a VCF read with no ploidy, which only popgen2.html opens.",
+    );
+  }
+  return { ...options, ploidy };
+}
+
 /** The line of how a VCF was read: "Read with ploidy 2, every variant". */
-export function readWithText(options: VcfReadOptions): string {
+export function readWithText(options: GivenReadOptions): string {
   return `Read with ploidy ${String(options.ploidy)}, ${passedWords(options.onlyPassed)}`;
 }
 
@@ -353,8 +371,8 @@ export const ONLY_PASSED_LABEL =
  */
 export function readAgainLabel(
   name: string,
-  loaded: VcfReadOptions,
-  chosen: VcfReadOptions,
+  loaded: GivenReadOptions,
+  chosen: GivenReadOptions,
 ): string | null {
   const changes: string[] = [];
   if (chosen.ploidy !== loaded.ploidy) {

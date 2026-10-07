@@ -40,8 +40,14 @@ diversity, `calcPopDiversity`, with the folded site frequency spectrum
 in it, told as the second pass of the run (below, "The diversity" and
 "Progress"); the distances between populations with the order of their
 heatmap; the LD decay; the memory of the LD decay; and their tests.
-Approved by the owner on 30 September 2026. The calculation
-worker is the thread of the browser tab, beside the page, that runs
+Approved by the owner on 30 September 2026. Revised on 6 October 2026
+for the one pass of popgen2.html (`docs/plans/live-stats.md`, phase 1):
+the summary of the variants file is one call of `calcVariantsSummary`
+(below, "The summary of the variants file"). Revised on 7 October 2026
+for the plots that fill in while the file is read
+(`docs/plans/live-stats.md`, phase 2): the summary gives its results so
+far to `toldSoFar` of the run (below, "The result so far"). The
+calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
 the page's requests there: it loads popnei, opens the variants file the
@@ -176,7 +182,10 @@ release, "0.1.0-dev.2" and on; it is asked of popnei
 until it is done the version in a key is only as good as the one
 `version()` gives. `js-v0.1.0-dev.3` gives "0.1.0" too (node, 28 September 2026), so
 a check number saved with the application of stage 3 is compared with
-one of stage 4 as made by the same popnei. The numbers of the two
+one of stage 4 as made by the same popnei. The release `js-v0.2.0` of
+6 October 2026 is the first to raise it, and gives "0.2.0", so a check
+number saved with an earlier release is compared as made by another
+popnei. The numbers of the two
 scripts of "How it is verified", `numbers.mjs`, `numbers3.mjs` and
 `orderA.mjs`, and
 those of the PCA are the same with both releases, and only the size of
@@ -569,12 +578,12 @@ variant of the file over the individuals kept, as the owner decided on
 28 September 2026 (`docs/architecture.md`, section 4), and three
 options, `minNumIndividuals`, 0, and the bins, `numBins` and `range`
 (`docs/specs/analyses/variantChecks.md`). The runner calls
-`calcPerVarDistribs(variants, { stats: ["maf", "obs_het",
-"unbiased_exp_het"], minNumIndividuals, histKwargs: { numBins, range }
-})` with no `pops`, which popnei takes as one population, `pop`, of every
+`calcPerVarDistribs(variants, { stats: ["missing_rate", "maf",
+"obs_het", "unbiased_exp_het"], minNumIndividuals, histKwargs: {
+numBins, range } })` with no `pops`, which popnei takes as one population, `pop`, of every
 individual the pass gives, those of the list when the job has one. It gives back `binEdges`, one copy of popnei's
-`histBinEdges`, which popnei's three distributions share as one array
-read only; and, of each of the three, `mean`, the one number of popnei's
+`histBinEdges`, which popnei's four distributions share as one array
+read only; and, of each of the four, `mean`, the one number of popnei's
 `mean`, and `counts`, popnei's `histCounts`, `numBins` numbers for the
 one population; with `passStats`.
 
@@ -605,6 +614,94 @@ wasm, which is the cost section 11 of the architecture measures against
 a pass of the diversity. What the iteration throws, it throws at a
 block, and the runner catches it around the whole iteration as it would
 a call.
+
+### The summary of the variants file
+
+A `variantsSummary` job, of popgen2.html, holds its pass with no filter
+and no list of individuals, and the three options of the histograms of
+the variants, `minNumIndividuals`, 0, `numBins`, 1,280, and `range`,
+[0, 1], as `variantChecks` has them. The runner makes one call,
+`calcVariantsSummary(variants, { density: { windowSize:
+ONE_WINDOW_PER_CHROM, chromLengths: {} }, perVar: { stats:
+["missing_rate", "maf", "obs_het", "unbiased_exp_het"],
+minNumIndividuals, histKwargs: { numBins, range } }, perIndividual: {}
+})`, one pass that reads the genotypes, and gives back the chromosomes
+and their counts from the density, as one window per chromosome from the
+position 1 whose counts add up to the variants of the pass, else a
+defect; `perVar`, made of popnei's `perVar` as the result of a
+`variantChecks` job is; `perIndividual`, made of popnei's
+`perIndividual` as that of an `individualChecks` job is, a defect when its names are not those the
+open gave; and `passStats`. popnei gives each part the same to the bit
+as its own call; under node on `panel.vcf.gz`, `panel.nei` and
+`tetraploid.vcf.gz` the two parts equal the results of a `variantChecks`
+job with no list and of an `individualChecks` job on the same runner
+(`src/worker/runnerVariantsSummary.test.ts`). A refusal of any of the
+three parts refuses the pass, and none of them is given: a genotype
+popnei refuses fails the count too.
+
+### The count of the FILTER failures
+
+A `filterFailures` job, of popgen2.html and for a VCF alone, holds its
+pass with no filter of the variants and no list of individuals. Its
+steps are popnei's `filterPassed` alone, put first, as popnei advises;
+`Steps` of the runner carries it as `passed`, and a `Variants` whose
+first step is not of kind `"passed"` is not the job's. The runner calls
+`calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} })`,
+a pass that reads no genotype, and gives back its `passStats` alone,
+whose `filtering` holds `"passed"` and nothing else, a defect otherwise,
+as for every job. popnei refuses that call when the step keeps no
+variant, a VCF whose variants all failed their FILTER; so when popnei
+refuses it, whatever its words, the runner makes a second pass, the
+blocks of `iterBlocks({ fields: [] })` read to their end, as for a
+`filterCounts` job, and its counts, or its refusal, are the answer. The
+second pass is not the only one because it reads the genotypes: under
+node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
+took 2.4 s, and `calcVarDensity` 0.9 s. The progress of each pass is
+told as it reads, so after a refusal the bar fills a second time. Under
+node on popnei js-v0.2.1, `low_qual.vcf.gz` gives `passed` 1,200 given
+and 900 kept, `panel.vcf.gz` 1,200 and 1,200, and a VCF of 5 variants
+that all failed 5 and 0; on `panel.nei` popnei refuses both passes, "the
+variants hold no record of whether they passed their FILTER...", which
+the page never asks, since the analysis is locked for a `.nei` file
+(`src/worker/runnerFilterFailures.test.ts`).
+
+### The result so far
+
+The call of the summary also gives popnei an `onSoFar`, with
+`soFarEvery` left at popnei's 2 seconds, and popnei calls it after a
+block when 2 seconds have gone by since the start of the pass or the
+last call, with the summary over the variants read so far. The runner
+makes it into a result as it makes the final one, with the same checks,
+copies every typed array of it into a buffer of its own, since popnei's
+arrays of the last call may be those of the result it then returns,
+which a transfer would empty, and gives it to `toldSoFar` of the run,
+which the worker's script posts as a `soFar` with its arrays transferred
+(`docs/specs/worker/messages.md`, "The result so far"). No other job
+gives one.
+
+What making it, copying it or `toldSoFar` throws, the `postMessage` of
+the worker among it, is recorded as what `told` throws is and thrown on,
+a defect of ours, and never answered as popnei's refusal of the file:
+while the pass reads, popnei's call throws that value back; at the last
+block, where popnei's call returns and drops it, the runner throws it
+after the call. What the worker's `postMessage` throws, a DataCloneError
+of a message the browser cannot copy, the script throws on as an error
+whose message starts with `popnei_web defect: `, "the result so far
+could not be posted: " and the browser's words, so that the `crashed`
+it ends in reaches the client as a defect, for which Start again is not
+offered, and not as a failure of the worker that starting again could
+mend. A progress the browser cannot post is thrown the same way, "the
+progress could not be posted: ", and so is the final result, "the
+result could not be posted: ", which the script posts after the run,
+where the catch of the request posts it as that `crashed`.
+
+`createRunner` takes `soFarEvery` for the tests, which give 0, a result
+so far after every block, to have some from a small file. Under node on
+popnei js-v0.2.1, a VCF of 20,000 variants and two diploid individuals
+is read in two blocks of 10,000, and with 0 gives results so far over
+10,000 and then 20,000 variants, the last equal to the result; the
+fixtures, of one block each, and `panel.vcf.gz` with 2 seconds, give
+none.
 
 ### The principal components
 
@@ -994,7 +1091,7 @@ decided it on 29 September 2026 (stops A 9 and C 6 of
 | what happened | answer | on the page (`RunError`) | the worker |
 |---|---|---|---|
 | a call to popnei that reads the file, the open, a calculation, the iteration of the counts or the write, threw a plain `Error` whose message is one of popnei's of a range the browser refused or gave short (below) | `reopenFailed`, with the name of the file and popnei's message | `reopenFailed` | goes on |
-| a call to popnei threw a plain `Error` whose message is popnei's refusal of an option it does not know, "popnei: `‹key›` is not an option of `‹function›`, whose options are …", which only the application can send, since the runner writes every object of options with its keys alone (above, "The principal components", step 2) | `crashed`, with "popnei_web defect: " and popnei's message | `defect` | closes |
+| a call to popnei threw a plain `Error` whose message is popnei's refusal of an option it does not know, "popnei: `‹key›` is not an option of `‹function›`, whose options are …", or "… which takes no option", or of a key of `histKwargs`, "popnei: `‹key›` is not a key of `histKwargs`, whose keys are …", which only the application can send, since the runner writes every object of options with its keys alone (above, "The principal components", step 2) | `crashed`, with "popnei_web defect: " and popnei's message | `defect` | closes |
 | a call to popnei threw any other plain `Error`, whose prototype is `Error.prototype` itself: a refusal of the data, filters that keep no variant, a list of individuals that names one twice, a file the memory of the tab does not take | `refused`, with the message as it is | `popnei` | goes on |
 | a call to popnei threw anything else: a `WebAssembly.RuntimeError`, a trap of the wasm, a panic of Rust among the causes; a `RangeError` of a memory that cannot grow | `crashed`, with its message | `workerFailed` | closes |
 | popnei refused the open of the file again, in a request whose steps changed or after an open again that failed, whatever its message | `reopenFailed`, with the name of the file and popnei's message; the runner holds no `Variants`, and the next run opens the file again | `reopenFailed` | goes on |
@@ -1136,7 +1233,8 @@ export type Answer<T> =
 The runner of one worker, which holds its one load. The three functions
 throw only for a defect of ours, which the worker's script posts as
 `crashed`. `run` and `write` give `told` each `Progress` of popnei as it
-comes, and the worker's script posts it.
+comes, and `run` gives `toldSoFar`, when given, each result so far of
+the summary, and the worker's script posts both.
 
 ```ts
 export interface Runner {
@@ -1144,11 +1242,16 @@ export interface Runner {
     readonly individuals: readonly string[];
     readonly ploidy: number;
   }>;
-  run(job: Job, told: (progress: Progress) => void): Answer<JobResult>;
+  run(job: Job, told: (progress: Progress) => void,
+      toldSoFar?: (result: JobResult) => void): Answer<JobResult>;
   write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>;
 }
 
-export function createRunner(): Runner; // after loadPopnei has given ok
+export interface RunnerOptions {
+  readonly soFarEvery?: number; // popnei's 2 seconds when not given; tests give 0
+}
+
+export function createRunner(options?: RunnerOptions): Runner; // after loadPopnei has given ok
 ```
 
 The answer of what a call to popnei threw, `refused` for a plain `Error`
@@ -1177,9 +1280,9 @@ export function transferablesOf(result: JobResult): ArrayBuffer[];
   genotypes hold four alleles, opened with ploidy 2: `opened`, 12
   individuals, ploidy 2. The first diversity on it is `refused` with
   "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4
-  and the reader was asked for the ploidy 2; popnei does not read a VCF
-  whose genotypes are of different ploidies, and the ploidy is an
-  argument of the reader", which the store keeps under the key of that
+  and the variants are read with the ploidy 2; popnei does not read a VCF
+  whose genotypes are of different ploidies", in the words of
+  `js-v0.2.0`, which the store keeps under the key of that
   run (`docs/specs/core/store.md`). The user reads the file again with
   ploidy 4, a new load.
 - **A file that is not of its format.** `bad.vcf`, a line of text, is
@@ -1522,6 +1625,13 @@ The tests of stage 2, each at `open` and `run` of a runner made by
 - **What `told` throws**: a `told` that throws `new Error("told")` at
   its first call makes `run` throw that very value, compared with
   `toBe`, and not answer `refused`.
+- **The result so far**: with `soFarEvery` 0, the VCF of 20,000
+  variants of two individuals gives two results so far, over 10,000 and
+  20,000 variants, the last equal to the result; no buffer of one is the
+  result's or another's, and transferring them leaves the result whole;
+  `panel.vcf.gz` with popnei's 2 seconds gives none; a `toldSoFar` that
+  throws at its first call, or at the last block, makes `run` throw that
+  very value (`src/worker/runnerVariantsSummary.test.ts`).
 - **The order of the populations**: p0, p2 and p1 renamed "10", "2" and
   "p1" come back in that order, with the values of p0 under "10".
 - **popnei's refusals**, each `refused` with the message of "The cases"
@@ -1884,7 +1994,9 @@ list gives.
   id, the `File`, the format and the read options, `run`, with the key
   and a `Job`, and `write`, with the key and a `WriteJob`; the answers
   `ready`, `opened`, `result`, `written`, `refused`, `reopenFailed`,
-  `progress` with popnei's four fields, and `crashed` and `badRequest`,
+  `progress` with popnei's four fields, `soFar` with the key and the
+  result so far of the summary of the variants file (from
+  `docs/plans/live-stats.md`, phase 2), and `crashed` and `badRequest`,
   after which the worker closes itself; `parseToRunner`, which the
   worker's script calls on every request.
 - **`docs/specs/worker/client.md`**: every worker receives at most one

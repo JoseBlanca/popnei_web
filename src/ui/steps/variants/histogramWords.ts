@@ -73,11 +73,19 @@ export interface VariantHistogramWords {
   readonly filterName: string | null;
 }
 
-/** The three histograms of the variants, by statistic (the spec, the
-    table of the texts the histogram asks of the screen). */
+/** The four histograms of the variants, by statistic (the spec, the
+    table of the texts the histogram asks of the screen); the old page
+    draws all but the missing rate. */
 export const VARIANT_HISTOGRAMS: Readonly<
   Record<VariantStatistic, VariantHistogramWords>
 > = Object.freeze({
+  missingRate: {
+    statistic: "missingRate",
+    name: "Proportion of missing genotypes",
+    countLabel: "Variants",
+    tableName: "The bins of the proportion of missing genotypes",
+    filterName: filterNameInSentence("missing_data"),
+  },
   maf: {
     statistic: "maf",
     name: "Major allele frequency",
@@ -116,9 +124,11 @@ export function histogramTitle(name: string, mean: number): string {
 export function histogramThreshold(value: number): HistogramThreshold {
   return {
     value,
-    label: `Maximum ${String(value)}`,
-    keptLabel: KEPT_LABEL,
-    removedLabel: REMOVED_LABEL,
+    legend: {
+      label: `Maximum ${String(value)}`,
+      keptLabel: KEPT_LABEL,
+      removedLabel: REMOVED_LABEL,
+    },
   };
 }
 

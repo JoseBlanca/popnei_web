@@ -44,6 +44,8 @@ import {
   turnOffIndividualFilter,
   turnOffVariantFilter,
   variantFilterNeeds,
+  variantsOpenNeeds,
+  withoutBackquotes,
   variantsStepNeeds,
   individualsStepMissing,
   individualsStepNeeds,
@@ -199,6 +201,21 @@ describe("WP1 D3 the commands", () => {
         read: { kind: "pending" },
       });
       expectKept(p, q, ["variants"]);
+    });
+
+    test("loadVariants takes a VCF with no ploidy, read from the file", () => {
+      const p = sampleProject();
+      const load = {
+        fileId: NEW_ID,
+        name: "tetraploid.vcf.gz",
+        size: 4096,
+        format: "vcf",
+        readOptions: { ploidy: null, onlyPassed: true },
+      } as const;
+      expect(loadVariants(p, load).variants).toEqual({
+        ...load,
+        read: { kind: "pending" },
+      });
     });
 
     test("setVariantFilter puts a new kind in the fixed order", () => {
@@ -2290,6 +2307,21 @@ describe("WP1 D5 the validation", () => {
       });
     });
 
+    test("a ploidy of null in the read options, which only the page that opens a variants file gives, and no project file holds", () => {
+      expect(
+        errorOf(
+          parse(
+            variantsWith({
+              format: "vcf",
+              readOptions: { ploidy: null, onlyPassed: true },
+            }),
+          ),
+        ),
+      ).toMatchObject({
+        path: ["variants", "readOptions", "ploidy"],
+      });
+    });
+
     test("a ploidy of 255 is accepted, and of 256 in the read refused", () => {
       const ok = variantsWith({
         format: "vcf",
@@ -3758,6 +3790,107 @@ describe("WS1 D3 the additions to project.ts", () => {
         ),
       ).toBe(
         "panel.nei could not be read; it may have changed on the disk since it was picked. Choose it again.",
+      );
+    });
+  });
+
+  describe("variantsOpenNeeds, the words of the page that opens a variants file", () => {
+    test("no variants file, and a file read, need nothing", () => {
+      expect(variantsOpenNeeds(deepFreeze(emptyProject("popgen")))).toBeNull();
+      expect(variantsOpenNeeds(sampleProject())).toBeNull();
+    });
+
+    test("the variants file being read", () => {
+      expect(variantsOpenNeeds(pendingProject())).toBe("Reading panel.vcf.");
+    });
+
+    test("popnei refused the file: its message, and open another file", () => {
+      expect(
+        variantsOpenNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "the file has no header line." },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: the file has no header line. Open another file.",
+      );
+    });
+
+    test("popnei's backquotes become quotes, and one with no pair is taken out", () => {
+      expect(
+        variantsOpenNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: {
+              kind: "popnei",
+              message: "the source is not a VCF: it starts with `This is a`",
+            },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: the source is not a VCF: it starts with \u201cThis is a\u201d. Open another file.",
+      );
+      expect(withoutBackquotes("`a` and `b`, and ` alone")).toBe(
+        "\u201ca\u201d and \u201cb\u201d, and  alone",
+      );
+      // The Variants step of the old page keeps them, as before.
+      expect(
+        variantsStepNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: { kind: "popnei", message: "it starts with `This`" },
+          }),
+        ),
+      ).toBe(
+        "popnei could not read panel.nei: it starts with `This`. Choose another file.",
+      );
+    });
+
+    test.each([
+      [
+        { kind: "workerFailed", message: "out of memory" },
+        "the calculation stopped unexpectedly. Open it again.",
+      ],
+      [
+        { kind: "couldNotStart", reason: "no ready message, twice" },
+        "the application could not start its calculations. Reload the page and open panel.nei again.",
+      ],
+      [
+        { kind: "protocolMismatch" },
+        "the page is out of date. Reload the page and open panel.nei again.",
+      ],
+    ] as const)(
+      "the worker failed with %o: what happened, and what to do, with no project to save",
+      (error, words) => {
+        expect(
+          variantsOpenNeeds(
+            withVariantsRead({
+              kind: "failed",
+              error: { kind: "worker", error },
+            }),
+          ),
+        ).toBe(`panel.nei could not be read: ${words}`);
+      },
+    );
+
+    test("a variants file the browser can no longer read: open it again", () => {
+      expect(
+        variantsOpenNeeds(
+          withVariantsRead({
+            kind: "failed",
+            error: {
+              kind: "worker",
+              error: {
+                kind: "reopenFailed",
+                name: "panel.nei",
+                message: "the browser did not give popnei the bytes",
+              },
+            },
+          }),
+        ),
+      ).toBe(
+        "panel.nei could not be read; it may have changed on the disk since it was picked. Open it again.",
       );
     });
   });

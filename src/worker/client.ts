@@ -93,8 +93,19 @@ export interface Client {
     csv: CsvOptions | null,
   ): Read<IndividualsAnswer>;
 
-  /** Sends a calculation, under its key; the store's `send`. */
-  run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
+  /** Sends a calculation, under its key; the store's `send`. `onSoFar`
+      is given each result so far of the run while it is the one running,
+      of a calculation that gives one, the summary of the variants file;
+      none reaches it after the outcome, nor after a cancel. It is
+      required, so that a caller that forgets to pass it on, as the page's
+      `send` could, fails the type check instead of losing the plots so
+      far in silence. */
+  run(
+    key: string,
+    job: Job,
+    onProgress: (p: Progress) => void,
+    onSoFar: (result: JobResult) => void,
+  ): Run<JobResult>;
 
   /** Writes the variants the job's filters keep as a file, under its key;
       the store's `write.send`. Its outcome is `done` with the file, a
@@ -433,8 +444,10 @@ export function createClient(config: {
         );
         // A defect of ours thrown in the worker, or popnei's refusal of an
         // option it does not know, is told as a defect of the
-        // application, and not as a crash, whose words send the user to
-        // load the file again or blame the memory of the tab.
+        // application, and not as a crash: the old page's words of a crash
+        // send the user to load the file again or blame the memory of the
+        // tab, which mends neither; the new page gives both to its error
+        // bar.
         calculationBroken(
           message.message.startsWith(DEFECT_START)
             ? {
@@ -504,24 +517,33 @@ export function createClient(config: {
           `${message.kind} of the id ${String(message.id)}, which is not a request it runs`,
         );
         return;
-      case "result": {
+      case "result":
+      case "soFar": {
+        // A result so far is checked as the result is: of the run running,
+        // under its key, of its job's analysis. A cancel ends the worker,
+        // whose messages then reach nobody, so one of a run stopped or
+        // superseded is a defect.
         const run = calc.running;
         if (run?.kind !== "run" || run.id !== message.id) {
           wrongCalculationMessage(
-            `a result of the id ${String(message.id)}, which is not a run it runs`,
+            `a ${message.kind} of the id ${String(message.id)}, which is not a run it runs`,
           );
           return;
         }
         if (message.key !== run.key) {
           wrongCalculationMessage(
-            `a result under the key ${message.key} for a run of the key ${run.key}`,
+            `a ${message.kind} under the key ${message.key} for a run of the key ${run.key}`,
           );
           return;
         }
         if (message.result.analysis !== run.job.analysis) {
           wrongCalculationMessage(
-            "a result of another analysis than its job's",
+            `a ${message.kind} of another analysis than its job's`,
           );
+          return;
+        }
+        if (message.kind === "soFar") {
+          run.onSoFar(message.result);
           return;
         }
         // A large PCA ends the worker, whose memory of wasm grew by its
@@ -1071,7 +1093,7 @@ export function createClient(config: {
       };
     },
 
-    run(key, job, onProgress) {
+    run(key, job, onProgress, onSoFar) {
       const { promise, resolve } = promiseWithResolver<Outcome<JobResult>>();
       const request: RunRequest = {
         kind: "run",
@@ -1079,6 +1101,7 @@ export function createClient(config: {
         key,
         job,
         onProgress,
+        onSoFar,
         answer: settler(resolve),
       };
       sendJob(request);
@@ -1218,6 +1241,7 @@ interface RunRequest {
   readonly key: string;
   readonly job: Job;
   readonly onProgress: (p: Progress) => void;
+  readonly onSoFar: (result: JobResult) => void;
   readonly answer: Settler<Outcome<JobResult>>;
 }
 

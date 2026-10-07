@@ -30,14 +30,38 @@
 // PCA's own LD filter at r² 0.1 within 50,000 base pairs, cut to its first
 // 10 components as the calculation worker cuts it, to
 // e2e/fixtures/panel_pca.json, which the tests of the panel's functions of
-// core read. For the LD decay, whose curve the panel cannot show, since its
+// core read. From panel.nei and tetraploid.nei it writes the histograms of
+// the variants that popnei's calcPerVarDistribs gives in 1,280 bins over 0
+// to 1, over every variant and individual, with minNumIndividuals 0, the
+// missing rate, the MAF, the observed and the unbiased expected
+// heterozygosity, each its mean and its counts, to
+// e2e/fixtures/variant_fine_bins.json, which the tests of core read
+// (docs/plans/file-stats.md, "Round 1 with the owner"). From
+// panel.vcf.gz, panel.nei and tetraploid.vcf.gz it writes the edges and
+// the counts of those bins as calcVariantsSummary gives them, the
+// statistics of each individual of that pass, and the variants each of
+// popnei's three filters of a threshold keeps at 0.05, 0.1, 0.3 and 0.5,
+// with popnei's version, to e2e/fixtures/threshold_counts.json, which the
+// tests of core read (docs/plans/thresholds.md, "The phases", 1). For the LD decay, whose curve the panel cannot show, since its
 // variants lie at positions 1 to 1,200 of one chromosome, it copies
 // popnei's tests/reference/ld/ld.vcf.gz, 100 diploid individuals and two
 // chromosomes of 250 variants every 1,000 bp, byte for byte to
 // e2e/fixtures/ld.vcf.gz, writes it as the vars file e2e/fixtures/ld.nei,
 // and writes its two populations, `i000` to `i049` in `pop_a` and `i050` to
 // `i099` in `pop_b`, to e2e/fixtures/ld_pops.csv with the header `IID,pop`
-// (docs/specs/analyses/ldDecay.md, "The fixture").
+// (docs/specs/analyses/ldDecay.md, "The fixture"). For the summary of the
+// variants file, whose pass reads the position of every variant, it writes
+// e2e/fixtures/bad_position.vcf.gz, the header and the first 100 variants
+// of panel.vcf.gz, gzipped, with the position of the 80th, at line 84 of
+// the VCF, written `x80`: a file that popnei opens, since the open reads
+// its header, and whose pass popnei refuses at that line
+// (docs/plans/open-variants.md, "The phases"). For the page that opens a
+// variants file it writes e2e/fixtures/cut_short.vcf.gz, two thirds of the
+// bytes of panel.vcf.gz; e2e/fixtures/low_qual.vcf.gz, the panel with
+// LowQual in the FILTER column of every fourth variant; and
+// e2e/fixtures/no_ploidy.vcf.gz, the first 5 variants of the panel with
+// every genotype a single dot, whose ploidy popnei cannot read; and
+// e2e/fixtures/no_variants.vcf, the header of the panel alone.
 //
 // Run it from anywhere with `node e2e/fixtures/make_fixtures.mjs`, and again
 // only when popnei's format of vars files or its panel changes; the files it
@@ -49,7 +73,11 @@
 // tetraploid.nei, are written only when the script is given `--nei`, and
 // ld.nei at every run, 68,354 bytes with popnei js-v0.1.0-dev.3; the
 // statistics and the PCA are calculated from the panel.nei on disk either
-// way. The tests pin the sizes of the committed files, 261,490 and 16,194
+// way. ld.nei and panel_pca.json are rewritten at every run, and popnei
+// 0.2.1 writes both differently from the committed ones (7 October 2026),
+// which the tests pin: after a run for another file, restore them with
+// `git checkout e2e/fixtures/ld.nei e2e/fixtures/panel_pca.json` unless
+// they were meant to change. The tests pin the sizes of the committed files, 261,490 and 16,194
 // bytes, written by popnei 0.1.0 on 24 September 2026, and popnei
 // js-v0.1.0-dev.3 writes them in 261,570 and 16,218 bytes (29 September
 // 2026), so a run for the other files leaves the vars files as they are.
@@ -58,13 +86,17 @@
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 import {
   calcPerIndividualStats,
+  calcPerVarDistribs,
+  calcVariantsSummary,
   doPcaFromVariants,
   init,
   openVars,
   openVcf,
+  version,
   writeVars,
 } from "popnei";
 
@@ -133,6 +165,106 @@ const ldPopsLines = [
 const ldPopsPath = join(fixtures, "ld_pops.csv");
 writeFileSync(ldPopsPath, `${ldPopsLines.join("\n")}\n`);
 console.log(`${ldPopsPath}: ${String(ldPopsLines.length)} lines`);
+
+// The VCF with a position that is not a number on a later line: the
+// header and the first 100 variants of the panel, whose 80th, at the
+// position 80, is given the position `x80`.
+const panelLines = gunzipSync(readFileSync(join(fixtures, "panel.vcf.gz")))
+  .toString("utf8")
+  .split("\n");
+const panelHeader = panelLines.filter((line) => line.startsWith("#"));
+const badPositionVariants = panelLines
+  .filter((line) => line !== "" && !line.startsWith("#"))
+  .slice(0, 100)
+  .map((line, i) => {
+    if (i !== 79) {
+      return line;
+    }
+    if (!line.startsWith("1\t80\t")) {
+      throw new Error("the 80th variant of panel.vcf.gz is not at 1:80");
+    }
+    return line.replace("1\t80\t", "1\tx80\t");
+  });
+const badPositionPath = join(fixtures, "bad_position.vcf.gz");
+writeFileSync(
+  badPositionPath,
+  gzipSync(`${[...panelHeader, ...badPositionVariants].join("\n")}\n`),
+);
+console.log(
+  `${badPositionPath}: ${String(panelHeader.length)} lines of header, ` +
+    `${String(badPositionVariants.length)} variants`,
+);
+
+// A gzipped VCF cut short: panel.vcf.gz, compressed with plain gzip and
+// not bgzip, cut to two thirds of its bytes, so that popnei opens its
+// header and its pass stops where the bytes end, "the source could not be
+// read: incomplete deflate stream" (docs/plans/open-variants.md, phase 2).
+const panelGz = readFileSync(join(fixtures, "panel.vcf.gz"));
+const cutShortPath = join(fixtures, "cut_short.vcf.gz");
+writeFileSync(
+  cutShortPath,
+  panelGz.subarray(0, Math.floor((panelGz.length * 2) / 3)),
+);
+console.log(`${cutShortPath}: two thirds of panel.vcf.gz`);
+
+// A VCF with variants that did not pass: the panel, every fourth variant,
+// the 4th, 8th and so on, with LowQual in its FILTER column, so that
+// reading only the passed variants keeps 900 of its 1,200.
+const panelVariants = panelLines.filter(
+  (line) => line !== "" && !line.startsWith("#"),
+);
+const lowQualVariants = panelVariants.map((line, i) => {
+  if (i % 4 !== 3) return line;
+  const columns = line.split("\t");
+  if (columns[6] !== "PASS") {
+    throw new Error(`the variant ${String(i + 1)} of panel.vcf.gz is not PASS`);
+  }
+  columns[6] = "LowQual";
+  return columns.join("\t");
+});
+const lowQualPath = join(fixtures, "low_qual.vcf.gz");
+writeFileSync(
+  lowQualPath,
+  gzipSync(`${[...panelHeader, ...lowQualVariants].join("\n")}\n`),
+);
+console.log(
+  `${lowQualPath}: ${String(lowQualVariants.length)} variants, ` +
+    `${String(lowQualVariants.filter((line) => line.includes("\tLowQual\t")).length)} of them LowQual`,
+);
+
+// A VCF whose ploidy cannot be read from the file: the header and the
+// first 5 variants of the panel, with every genotype a single dot, a
+// missing genotype of any ploidy, so that popnei's openVcf with no ploidy
+// refuses it, "the first 5 data lines of the VCF hold no genotype with
+// alleles", and opens it with one given (docs/plans/open-variants.md,
+// "Round 3").
+const noPloidyVariants = panelVariants.slice(0, 5).map((line) => {
+  const columns = line.split("\t");
+  if (columns[8] !== "GT") {
+    throw new Error(
+      `a variant of panel.vcf.gz whose FORMAT is not GT: ${line}`,
+    );
+  }
+  return columns.map((column, i) => (i < 9 ? column : ".")).join("\t");
+});
+const noPloidyPath = join(fixtures, "no_ploidy.vcf.gz");
+writeFileSync(
+  noPloidyPath,
+  gzipSync(`${[...panelHeader, ...noPloidyVariants].join("\n")}\n`),
+);
+console.log(
+  `${noPloidyPath}: ${String(noPloidyVariants.length)} variants, every genotype a single dot`,
+);
+
+// A VCF of no variant: the header of the panel alone, 200 individuals,
+// plain text, which popnei's openVcf with no ploidy refuses, "the file
+// has no variants and the ploidy can't be inferred" with js-v0.2.0
+// (docs/plans/open-variants.md, "Round 3").
+const noVariantsPath = join(fixtures, "no_variants.vcf");
+writeFileSync(noVariantsPath, `${panelHeader.join("\n")}\n`);
+console.log(
+  `${noVariantsPath}: ${String(panelHeader.length)} lines of header, no variant`,
+);
 
 // The populations: the copy, and the same rows as a CSV. The names hold no
 // comma nor quote, so no cell is quoted; a name that did would stop here.
@@ -212,6 +344,250 @@ writeFileSync(
 console.log(
   `${statsPath}: ${String(individualStats.individuals.length)} individuals, ` +
     `${String(individualStats.passStats.numVars)} variants`,
+);
+
+// The histograms of the variants of panel.nei and tetraploid.nei in the
+// bins the application asks popnei for from 6 October 2026, 1,280 over 0
+// to 1 (VARIANT_FINE_BINS of src/core/analyses/variantChecks.ts), over
+// every variant and every individual with minNumIndividuals 0: for each
+// statistic its mean and its counts, each list on one line.
+const FINE_BINS = 1280;
+const fineStats = ["missing_rate", "maf", "obs_het", "unbiased_exp_het"];
+const fineLines = [];
+for (const name of ["panel.nei", "tetraploid.nei"]) {
+  const variants = openVars(readFileSync(join(fixtures, name)));
+  let distribs;
+  try {
+    distribs = calcPerVarDistribs(variants, {
+      stats: fineStats,
+      minNumIndividuals: 0,
+      histKwargs: { numBins: FINE_BINS, range: [0, 1] },
+    });
+  } finally {
+    variants.free();
+  }
+  const of = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic) =>
+      `    ${JSON.stringify(statistic)}: {\n` +
+      `      "mean": ${JSON.stringify(distribs[statistic].mean[0])},\n` +
+      `      "counts": ${JSON.stringify([...distribs[statistic].histCounts])}\n` +
+      "    }",
+  );
+  fineLines.push(
+    `  ${JSON.stringify(name)}: {\n` +
+      `    "numVars": ${JSON.stringify(distribs.passStats.numVars)},\n` +
+      `${of.join(",\n")}\n  }`,
+  );
+}
+const finePath = join(fixtures, "variant_fine_bins.json");
+writeFileSync(
+  finePath,
+  `{\n  "numBins": ${String(FINE_BINS)},\n${fineLines.join(",\n")}\n}\n`,
+);
+console.log(
+  `${finePath}: panel.nei and tetraploid.nei in ${String(FINE_BINS)} bins`,
+);
+
+// The numbers of the thresholds of popgen2.html (docs/plans/thresholds.md,
+// "The phases", 1), for panel.vcf.gz opened with ploidy 2, panel.nei, and
+// tetraploid.vcf.gz opened with ploidy 4, the VCFs with every variant,
+// passed or not: from one pass of calcVariantsSummary over every variant
+// and every individual, as the page asks for it, the edges of its 1,280
+// bins over 0 to 1 and the counts of its four statistics, and the
+// missingGtRate and obsHetRate of each individual, a NaN written as null;
+// and the variants that each of popnei's three filters of a threshold,
+// filterByMissingData, filterByMaf and filterByObsHet, keeps alone at
+// 0.05, 0.1, 0.3 and 0.5, the numVars of the pass of iterBlocks read to its
+// end; 0.3 is an edge one double above 384/1280, the others edges equal
+// to k/1280; and, under `filterKeptOffEdges`, the variants each of the
+// three keeps at k/1280 for every edge k, listed in `offEdges`, where
+// popnei's edge is not k/1280 but the double above: the number the page
+// shows for the edge, at which popnei's filter must keep a count the page
+// gives (docs/plans/thresholds.md, the fixes of the review of phase 2).
+// And, under `filterKeptRound`, the variants each of the three keeps at
+// the numbers of two and three decimals listed in `roundNumbers`, every
+// multiple of 0.01 from 0 to 1, of 0.001 from 0 to 0.1 and from 0.32 to
+// 0.4, and 0.105, 0.255, 0.333, 0.521 and 0.699: the numbers a threshold
+// moves by on its axis, most of them inside a fine bin, where the page
+// gives the range from the bins below the bin to those and the bin
+// (docs/plans/thresholds.md, "Round 1 with the owner").
+// And, under `histKeptAtMost`, for each of the four statistics, the
+// variants whose value is at most each number of `atMostNumbers`, every
+// multiple of 0.001 and every k/1280 from 0 to 1 but 0: the count of
+// popnei's histogram of one bin over 0 to that number, whose last bin
+// holds its right edge; the one check of the count of the expected
+// heterozygosity, which has no filter of popnei.
+// And popnei's version, which the tests check against the one installed.
+// The tests of core read it, since they may not call popnei.
+const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
+/** The multiples of `step`, `decimals` decimals, from `from` to `to`
+    units of it. */
+function multiples(from, to, decimals) {
+  const numbers = [];
+  for (let units = from; units <= to; units += 1) {
+    numbers.push(Number(`${String(units)}e-${String(decimals)}`));
+  }
+  return numbers;
+}
+const ROUND_NUMBERS = [
+  ...new Set([
+    ...multiples(0, 100, 2),
+    ...multiples(0, 100, 3),
+    ...multiples(320, 400, 3),
+    0.105,
+    0.255,
+    0.333,
+    0.521,
+    0.699,
+  ]),
+].sort((a, b) => a - b);
+const AT_MOST_NUMBERS = [
+  ...new Set([
+    ...multiples(1, 1000, 3),
+    ...Array.from({ length: FINE_BINS }, (_, k) => (k + 1) / FINE_BINS),
+  ]),
+].sort((a, b) => a - b);
+/** The variants of `name` whose value of each of the four statistics is
+    at most `number`, from popnei's histogram of one bin over 0 to it. */
+function keptByHistogram(name, options, number) {
+  const variants = openFixture(name, options);
+  try {
+    const { perVar } = calcVariantsSummary(variants, {
+      perVar: {
+        stats: fineStats,
+        minNumIndividuals: 0,
+        histKwargs: { numBins: 1, range: [0, number] },
+      },
+      perIndividual: {},
+    });
+    return ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+      (statistic) => perVar[statistic].histCounts[0],
+    );
+  } finally {
+    variants.free();
+  }
+}
+const thresholdFiles = [
+  ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
+  ["panel.nei", null],
+  ["tetraploid.vcf.gz", { ploidy: 4, onlyPassed: false }],
+];
+/** Opens the fixture `name`, a vars file when `options` is null. */
+function openFixture(name, options) {
+  const bytes = readFileSync(join(fixtures, name));
+  return options === null ? openVars(bytes) : openVcf(bytes, options);
+}
+/** The variants of `name` that `filter` keeps at `threshold`. */
+function keptByFilter(name, options, filter, threshold) {
+  const variants = openFixture(name, options);
+  try {
+    variants[filter](threshold);
+    const blocks = variants.iterBlocks({ fields: [] });
+    let next = blocks.next();
+    while (next.done !== true) next = blocks.next();
+    return blocks.passStats.numVars;
+  } finally {
+    variants.free();
+  }
+}
+const thresholdLines = [];
+for (const [name, options] of thresholdFiles) {
+  const variants = openFixture(name, options);
+  let summary;
+  try {
+    summary = calcVariantsSummary(variants, {
+      perVar: {
+        stats: fineStats,
+        minNumIndividuals: 0,
+        histKwargs: { numBins: FINE_BINS, range: [0, 1] },
+      },
+      perIndividual: {},
+    });
+  } finally {
+    variants.free();
+  }
+  const { perVar, perIndividual } = summary;
+  const counts = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify([...perVar[statistic].histCounts]),
+  );
+  const filterKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        THRESHOLDS.map((threshold) =>
+          keptByFilter(name, options, filter, threshold),
+        ),
+      ),
+  );
+  const offEdges = [...perVar.maf.histBinEdges].flatMap((edge, index) =>
+    edge === index / FINE_BINS ? [] : [index],
+  );
+  const offEdgeKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        offEdges.map((index) =>
+          keptByFilter(name, options, filter, index / FINE_BINS),
+        ),
+      ),
+  );
+  const roundKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        ROUND_NUMBERS.map((number) =>
+          keptByFilter(name, options, filter, number),
+        ),
+      ),
+  );
+  const byHistogram = AT_MOST_NUMBERS.map((number) =>
+    keptByHistogram(name, options, number),
+  );
+  const histKept = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic, i) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(byHistogram.map((kept) => kept[i])),
+  );
+  thresholdLines.push(
+    `  ${JSON.stringify(name)}: {\n` +
+      `    "numVars": ${JSON.stringify(summary.passStats.numVars)},\n` +
+      `    "binEdges": ${JSON.stringify([...perVar.maf.histBinEdges])},\n` +
+      `    "counts": {\n${counts.join(",\n")}\n    },\n` +
+      `    "missingGtRate": ${JSON.stringify([...perIndividual.missingGtRate])},\n` +
+      `    "obsHetRate": ${JSON.stringify([...perIndividual.obsHetRate])},\n` +
+      `    "filterKept": {\n${filterKept.join(",\n")}\n    },\n` +
+      `    "offEdges": ${JSON.stringify(offEdges)},\n` +
+      `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    },\n` +
+      `    "filterKeptRound": {\n${roundKept.join(",\n")}\n    },\n` +
+      `    "histKeptAtMost": {\n${histKept.join(",\n")}\n    }\n  }`,
+  );
+}
+const thresholdsPath = join(fixtures, "threshold_counts.json");
+writeFileSync(
+  thresholdsPath,
+  `{\n  "popnei": ${JSON.stringify(version())},\n` +
+    `  "numBins": ${String(FINE_BINS)},\n` +
+    `  "thresholds": ${JSON.stringify(THRESHOLDS)},\n` +
+    `  "roundNumbers": ${JSON.stringify(ROUND_NUMBERS)},\n` +
+    `  "atMostNumbers": ${JSON.stringify(AT_MOST_NUMBERS)},\n` +
+    `${thresholdLines.join(",\n")}\n}\n`,
+);
+console.log(
+  `${thresholdsPath}: ${thresholdFiles.map(([name]) => name).join(", ")}`,
 );
 
 // The metadata file with a column of numbers: the rows of panel_pops.csv in

@@ -27,6 +27,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./axe.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { keepDrawingBuffer } from "./drawingBuffer.ts";
+import { INSTALLED_POPNEI_VERSION } from "../src/worker/testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -1231,7 +1232,7 @@ test.describe("the explained variance and the table", () => {
 
     await expect(
       panel.getByText(
-        "Calculated with popnei 0.1.0, in version 0.1.0 of the application.",
+        `Calculated with popnei ${INSTALLED_POPNEI_VERSION}, in version 0.1.0 of the application.`,
         { exact: true },
       ),
     ).toBeVisible();

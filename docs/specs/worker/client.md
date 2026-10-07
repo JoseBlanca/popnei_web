@@ -28,7 +28,10 @@ Revised on 30 September 2026 for stage 5: the calculation worker is
 started again after every LD decay (`docs/specs/analyses/ldDecay.md`),
 a third exception to point 2 of section 13 of `docs/architecture.md`,
 its point 16, approved by the owner on 30 September 2026
-(`docs/specs/stage-5-open-points.md`, point 12). The worker client is the page's one door to the two workers, the threads of the tab
+(`docs/specs/stage-5-open-points.md`, point 12). Revised on 7 October
+2026 for the plots that fill in while the file is read
+(`docs/plans/live-stats.md`, phase 2): a run gives each `soFar` of its
+id to its `onSoFar` (below, "The result so far"). The worker client is the page's one door to the two workers, the threads of the tab
 beside the page where the files are read and the calculations run
 (`docs/architecture.md`, section 1): it starts them, keeps the `File` of
 every file the user picked, sends each worker one request at a time and
@@ -468,7 +471,7 @@ was ready:
 | any other `crashed`, or an `error` event of the worker | fails with `workerFailed`, its message | ended, and started again |
 | `messageerror`, a message the browser could not copy | fails with `workerFailed` | ended, and started again |
 | `badRequest` | fails with `defect`, its message | ended, and started again |
-| a message that fails its check, an answer of another request's id or of the wrong kind for the request, a `result` to a `write` or a `written` to a `run` among them, a result or a file under another key than its request's, a result of another analysis than its job's | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
+| a message that fails its check, an answer of another request's id or of the wrong kind for the request, a `result` to a `write` or a `written` to a `run` among them, a result or a file under another key than its request's, a result of another analysis than its job's; a `soFar` of the same: of a request that is not the run running, under another key, of another analysis | fails with `defect`; the client writes what was wrong to the console of the browser | ended, and started again |
 | `postMessage` of the request throws, a `DataCloneError` of a job that holds what cannot be copied | fails with `defect`, the browser's message | ended, and started again |
 
 The client's `onerror` of each worker calls `event.preventDefault()`.
@@ -532,6 +535,20 @@ run over a `.nei` file ends with its `result` before `bytesRead` reaches
 `write`, or of an id that is not running, is a message of the wrong kind
 for the request, a defect, as the table above has it.
 
+### The result so far
+
+`onSoFar` of a run is called with the `result` of each `soFar` of its
+id (`docs/specs/worker/messages.md`, "The result so far"), and the store
+keeps the last one in the state `running` of its analysis
+(`docs/specs/core/store.md`, "The state of an analysis"). A `soFar` is
+handled as a `result` is: of the run running, under its key, of its
+job's analysis, or a defect that ends the worker, as the table above
+has it. A run that was cancelled is never given one, since its cancel
+ended its worker, whose messages then reach nobody; nor is a run done,
+since the worker has gone on to the next request, or idles, and a
+`soFar` of its id is a defect. A run sent with no `onSoFar` passes them
+over. The client keeps none.
+
 ## The TypeScript interface
 
 Every field is `readonly`, and every array `readonly T[]`, in the code.
@@ -579,7 +596,8 @@ export interface Client {
   readIndividuals(fileId: string, csv: CsvOptions | null): Read<IndividualsAnswer>;  // null for an xlsx
 
   /** Sends a calculation, under its key; the store's `send`. */
-  run(key: string, job: Job, onProgress: (p: Progress) => void): Run<JobResult>;
+  run(key: string, job: Job, onProgress: (p: Progress) => void,
+      onSoFar?: (result: JobResult) => void): Run<JobResult>;
 
   /** Writes the variants the job's filters keep as a file, under its key;
       the store's `write.send`. */
@@ -655,8 +673,8 @@ here:
   two types above. A `cancelled` records nothing, and the entry asks
   again while the source is still pending.
 
-- **The store** is given `send: (key, job, onProgress) => client.run(key,
-  job, onProgress)` and, from stage 3, `write.send: (key, job,
+- **The store** is given `send: (key, job, onProgress, onSoFar) =>
+  client.run(key, job, onProgress, onSoFar)` and, from stage 3, `write.send: (key, job,
   onProgress) => client.write(key, job, onProgress)`
   (`docs/specs/core/store.md`, `createStore`), and the client is given
   `onPopneiReady: (v) => store.popneiReady(v)`. The list of the
@@ -836,6 +854,12 @@ walking skeleton, a diversity `Job` and a CSV.
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a
   defect, and the worker is ended.
+- **The result so far**: two `soFar` of a run's id reach its `onSoFar`,
+  and its `result` then ends it; a run with no `onSoFar` passes them
+  over; a `soFar` of a run cancelled reaches nobody; a `soFar` of the run
+  waiting, of an id never sent, under another key, of another analysis,
+  or that fails its check, fails the running run as a defect and starts
+  the worker again; and one after the `result` of its run is a defect.
 - **A defect of the page**: `openVariants` and `run` of a load with no
   `File`, and `run` of a load whose first `open` was refused, give
   `failed` with `defect` at once. `onPopneiReady` that throws:

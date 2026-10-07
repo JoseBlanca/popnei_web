@@ -1,0 +1,73 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* Over the plot, from the top of its element to the bottom of its frame,
+   as wide as the frame; placed by the frame the plot gives, the custom
+   properties --frame-left, --frame-top, --frame-width and --frame-height
+   that the screen sets around it, in pixels. It takes no pointer but on
+   the thumb. */
+.overlay {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--frame-left);
+  inline-size: var(--frame-width);
+  block-size: calc(var(--frame-top) + var(--frame-height));
+  pointer-events: none;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+}
+
+/* React Aria makes the track relative, the box the thumb is placed in. */
+.track {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* The band of the thumb, centred on the line: as wide as a target, as
+   high as the frame and the margin above it. React Aria places it at the
+   value, `left` and a translation of half its size. */
+.thumb {
+  inset-block-start: 50%;
+  inline-size: var(--target-min);
+  block-size: 100%;
+  pointer-events: auto;
+  cursor: ew-resize;
+}
+
+/* The handle, in the margin above the frame, which shows that the line
+   can be taken. */
+.thumb::before {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 50%;
+  inline-size: 0.625rem;
+  block-size: var(--frame-top);
+  border-radius: var(--radius-sm);
+  background: var(--chart-threshold);
+  content: "";
+  transform: translateX(-50%);
+}
+
+/* The line, solid over the dashed one of the plot while it is taken. */
+.thumb::after {
+  position: absolute;
+  inset-block: var(--frame-top) 0;
+  inset-inline-start: calc(50% - 1px);
+  inline-size: 2px;
+  background: transparent;
+  content: "";
+}
+
+.thumb[data-hovered]::after,
+.thumb[data-dragging]::after,
+.thumb[data-focus-visible]::after {
+  background: var(--chart-threshold);
+}
+
+.thumb[data-focus-visible] {
+  border-radius: var(--radius-sm);
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}

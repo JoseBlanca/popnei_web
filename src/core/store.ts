@@ -216,13 +216,18 @@ export type AnalysisStatus<R> =
       `waitsForStatistics`, and `runId` and `progress` are then those of
       the request of the statistics; `progress`, popnei's four numbers of
       the pass as the worker gave them, is `null` until the worker gives
-      one. */
+      one; `soFar`, the last result so far the worker gave of the run,
+      over the variants read so far, is `null` until the first, at every
+      new run, while it waits for the statistics, and throughout for an
+      analysis whose calculation gives none. A result so far is never
+      cached, and has no warnings and no check numbers. */
   | {
       readonly kind: "running";
       readonly key: Key;
       readonly runId: number;
       readonly progress: Progress | null;
       readonly waitsForStatistics: boolean;
+      readonly soFar: R | null;
     }
   /** popnei refused the calculation of its key, or the calculation
       failed since the last change; or, `ofStatistics`, it reads the
@@ -379,11 +384,13 @@ export interface StoreConfig<J, R, F = never> {
       the screens show them, each of its own id. */
   readonly analyses: readonly AnalysisDef<J, R>[];
   /** The function of the worker client that sends a request under a
-      key, `Client.run`. */
+      key, `Client.run`, which gives `onSoFar` each result so far of the
+      request while it runs. */
   readonly send: (
     key: string,
     job: J,
     onProgress: (p: Progress) => void,
+    onSoFar: (r: R) => void,
   ) => Run<R>;
   /** What the pass of a result counted: the number of variants of the
       file, recorded into the variants file of the request's load, and
@@ -599,6 +606,9 @@ interface InFlight<J, R, F> {
   /** Its handle, to stop it. */
   readonly handle: Run<R> | Run<Written<F>>;
   readonly progress: Progress | null;
+  /** The last result so far the worker gave of it, `null` until the
+      first, and for the writing. */
+  readonly soFar: R | null;
   readonly stopping: boolean;
   readonly afterStop: boolean;
   /** Whether the Run of its own analysis sent it, and not a Run that
@@ -1104,11 +1114,14 @@ export function createStore<J, R, F = never>(
         runId: running.runId,
         progress: running.progress,
         waitsForStatistics: false,
+        soFar: running.soFar,
       };
     }
     const waiting = waitingFor(index, key, keys);
     if (waiting !== null) {
-      return waiting;
+      // Its run and progress are those of the statistics, whose results so
+      // far are not its own.
+      return { ...waiting, soFar: null };
     }
     const error = errorOf(key);
     if (error !== undefined) {
@@ -1632,6 +1645,17 @@ export function createStore<J, R, F = never>(
     }
   };
 
+  /** The result so far of the request `runId`, passed over when the
+      request is no longer in flight; kept in the request alone, which
+      its outcome or its Stop drops, so that it is never cached. */
+  const soFarred = (runId: number, soFar: R): void => {
+    const request = requests.get(runId);
+    if (request !== undefined) {
+      requests.set(runId, { ...request, soFar });
+      changed();
+    }
+  };
+
   /** Takes the analysis `id` out of the notice's `stopped`: the user ran
       it again, and `settle` drops a notice left empty. */
   const runAgain = (id: AnalysisId): void => {
@@ -1706,13 +1730,22 @@ export function createStore<J, R, F = never>(
           );
         }
         sending.afterStop = beforeSend();
-        // A progress given before `send` returns has no request to go
-        // to, and is passed over.
-        const sent = config.send(key, job, (progress) => {
-          if (sending.handle !== null) {
-            progressed(sending.handle.id, progress);
-          }
-        });
+        // A progress or a result so far given before `send` returns has
+        // no request to go to, and is passed over.
+        const sent = config.send(
+          key,
+          job,
+          (progress) => {
+            if (sending.handle !== null) {
+              progressed(sending.handle.id, progress);
+            }
+          },
+          (soFar) => {
+            if (sending.handle !== null) {
+              soFarred(sending.handle.id, soFar);
+            }
+          },
+        );
         sending.handle = sent;
         return sent;
       },
@@ -1745,6 +1778,7 @@ export function createStore<J, R, F = never>(
       popneiVersion: version,
       handle,
       progress: null,
+      soFar: null,
       stopping: false,
       afterStop: sending.afterStop,
       byOwnRun,
@@ -1798,6 +1832,7 @@ export function createStore<J, R, F = never>(
       popneiVersion: version,
       handle,
       progress: null,
+      soFar: null,
       stopping: false,
       afterStop,
       byOwnRun: true,
@@ -2605,7 +2640,8 @@ function sameStatus<R>(a: AnalysisStatus<R>, b: AnalysisStatus<R>): boolean {
         a.key === b.key &&
         a.runId === b.runId &&
         a.progress === b.progress &&
-        a.waitsForStatistics === b.waitsForStatistics
+        a.waitsForStatistics === b.waitsForStatistics &&
+        a.soFar === b.soFar
       );
     case "error":
       return (

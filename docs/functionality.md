@@ -62,7 +62,49 @@ The number of individuals, the number of variants, the ploidy, the
 chromosomes with their number of variants, and the density of variants
 along each chromosome, the number of variants in each window of the
 genome, which popnei will give (decided by the owner on 26 September
-2026).
+2026). The new page, popgen2.html, gives the number of chromosomes and
+leaves out the variants on each of them for now (the owner, 6 October
+2026). For a VCF it also gives how many variants failed their FILTER,
+those whose FILTER column is neither PASS nor a dot, counted by a second
+pass after the first, "FILTER failures: 300" of 1,200 on low_qual.vcf.gz;
+every variant, failed or not, stays in the count and the statistics,
+since the FILTER filter as a filter the user sets comes with the filters
+of that page. A .nei file has no such line, since one written before
+format 1.2 of popnei holds no FILTER (docs/plans/live-stats.md).
+
+On popgen2.html the distributions of the open file, four of the
+variants and two of the individuals, each carry a threshold that keeps
+the values at most it, from 7 October 2026: a line the user drags on
+the plot or a number typed in a box over it, the bars beyond it drawn as
+removed. Over each plot is one row, its short title, "max:" and the box,
+"Obs. het. max: 0.04", and under that row one line of what the threshold
+keeps, "Keeps 1,050 of 1,200 variants", "Keeps all 1,200 variants", with
+"so far" while the file is read. The short titles are the owner's of 7
+October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
+and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
+het." for the individuals; the axes and what a screen reader reads keep
+the full names. A threshold moves by a step that follows its axis, the
+power of ten that gives at most about 100 positions over it: 0.01 on an
+axis of 0 to 1, 0.001 on one of 0 to 0.1 or of 0.32 to 0.4. A number
+typed with more decimals is rounded to that step, and the box then shows
+it; a number set stays as it was set when the file read so far widens
+the axis and its step grows. These thresholds are shown, not applied:
+they are no filters, change no statistic and no other part of the page,
+and start again at another file or a reload, the missing rate of the
+variants at 0.1 and the others at the top of their axis.
+
+The number a threshold of the variants shows is the number it is
+counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
+cannot tell whether some variants are kept, the line gives the range
+they allow, "Keeps 1,113 to 1,152 of 1,200 variants" at a missing rate of
+0.05 on panel.vcf.gz, and the bar where the bins cannot tell is hatched:
+the variants of the bin that starts at the threshold, when the threshold
+is on the edge of a bin, since popnei's bins hold their left edge, and
+those of the bin the threshold lies inside otherwise, 1,197 to 1,199 at
+0.07. The range holds until popnei counts it exactly
+(docs/plans/thresholds.md). A threshold of the individuals is counted
+exactly from popnei's value of each. Applying them as filters is the
+design docs/designs/stats-filters.md.
 
 ### The filters of variants
 

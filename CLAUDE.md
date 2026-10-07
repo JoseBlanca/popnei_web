@@ -51,6 +51,12 @@ popnei of the same version that install leaves the old package in place,
 and the build keeps the old wasm, as the plan of stage 4 found on 28
 September 2026 with `js-v0.1.0-dev.3` over `dev.2`, both "0.1.0"; so
 `node_modules/popnei` is removed first, or `npm ci` run, before it. A
+development server that was running keeps the old popnei's JavaScript in
+its cache, `node_modules/.vite`, beside the new wasm, so the calculation
+worker stops on the first call ("wasm.default_ploidy is not a function",
+seen by the owner on 6 October 2026); it is started again with
+`npm run dev -- --force`, and the owner is told so whenever popnei is
+installed under a server they may have running. A
 link, `npm link`
 or `"file:../popnei/js/popnei"`, does not do: the development server
 refuses to serve popnei's `.wasm` through it, "403 Forbidden", and

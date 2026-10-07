@@ -5,6 +5,7 @@ import {
   fourDecimals,
   percentOf,
   populationWarnings,
+  pythonOpenVariants,
 } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
 import type { Project } from "../project.ts";
@@ -284,5 +285,37 @@ describe("PA10 csvField, a cell of text of every CSV of the application", () => 
     expect(csvNumber(-0.0128)).toBe("-0.0128");
     expect(csvNumber(0.5)).toBe("0.5");
     expect(csvNumber(null)).toBe("");
+  });
+});
+
+describe("the Python call that opens the variants file", () => {
+  test("a .nei file is opened with open_vars, its name quoted as JSON quotes it", () => {
+    expect(
+      pythonOpenVariants({ name: 'my "panel".nei', readOptions: null }),
+    ).toBe('popnei.open_vars("my \\"panel\\".nei")');
+  });
+
+  test("a VCF is opened with open_vcf and its ploidy and onlyPassed", () => {
+    expect(
+      pythonOpenVariants({
+        name: "panel.vcf.gz",
+        readOptions: { ploidy: 4, onlyPassed: true },
+      }),
+    ).toBe('popnei.open_vcf("panel.vcf.gz", ploidy=4, only_passed=True)');
+    expect(
+      pythonOpenVariants({
+        name: "panel.vcf.gz",
+        readOptions: { ploidy: 2, onlyPassed: false },
+      }),
+    ).toBe('popnei.open_vcf("panel.vcf.gz", ploidy=2, only_passed=False)');
+  });
+
+  test("a VCF with no ploidy given is opened with open_vcf and no ploidy, which popnei reads from the file", () => {
+    expect(
+      pythonOpenVariants({
+        name: "tetraploid.vcf.gz",
+        readOptions: { ploidy: null, onlyPassed: true },
+      }),
+    ).toBe('popnei.open_vcf("tetraploid.vcf.gz", only_passed=True)');
   });
 });

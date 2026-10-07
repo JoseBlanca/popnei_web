@@ -1,14 +1,18 @@
 /**
  * The runner of the calculation worker in node, over the fixtures of
  * e2e/fixtures/ given as bytes (docs/specs/worker/runner.md, "How it is
- * verified"). The numbers are popnei's of the release js-v0.1.0-dev.3,
- * compared exactly: the runner passes them on with no arithmetic. They are
- * those of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
- * written, which are dev.3's own.
+ * verified"). The numbers are popnei's of the release js-v0.2.0, compared
+ * exactly: the runner passes them on with no arithmetic. They are those
+ * of js-v0.1.0-dev.2 in the spec's table, but the sizes of the files
+ * written, which are of the release installed. The ploidy read from the
+ * file, and the words of popnei's refusals of a genotype of another ploidy,
+ * of a ploidy above 255, of a VCF whose ploidy cannot be read and of one
+ * of no variant opened with no ploidy, are those of js-v0.2.0
+ * (docs/plans/open-variants.md, "Round 3").
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gunzipSync } from "node:zlib";
+import { crc32, deflateRawSync, gunzipSync, gzipSync } from "node:zlib";
 
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test spies on free() of popnei's Variants, which the runner never exposes, and calls calcPopDiversity itself to compare its spectra with the runner's
 import { Variants, calcPopDiversity, openVars } from "popnei";
@@ -51,6 +55,7 @@ import {
   transferablesOf,
 } from "./runner.ts";
 import type { Answer, LoadFile, LoadToOpen, Runner } from "./runner.ts";
+import { INSTALLED_POPNEI_VERSION } from "./testSupport.ts";
 
 const FIXTURES = join(import.meta.dirname, "..", "..", "e2e", "fixtures");
 
@@ -125,6 +130,36 @@ function opened(
   return runner;
 }
 
+/** `bytes` compressed as bgzip writes them: gzip members of at most
+    65,280 bytes of input, each with the BC field of its size, and the
+    empty member of 28 bytes that ends the file (the SAM/BAM format
+    specification, section 4.1). */
+function bgzip(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const members: Uint8Array[] = [];
+  const member = (input: Uint8Array): Uint8Array => {
+    const deflated = deflateRawSync(input);
+    const out = new Uint8Array(18 + deflated.length + 8);
+    const view = new DataView(out.buffer);
+    out.set([0x1f, 0x8b, 8, 4, 0, 0, 0, 0, 0, 0xff, 6, 0, 0x42, 0x43, 2, 0]);
+    view.setUint16(16, out.length - 1, true);
+    out.set(deflated, 18);
+    view.setUint32(18 + deflated.length, crc32(input), true);
+    view.setUint32(22 + deflated.length, input.length, true);
+    return out;
+  };
+  for (let start = 0; start < bytes.length; start += 65_280) {
+    members.push(member(bytes.subarray(start, start + 65_280)));
+  }
+  members.push(member(new Uint8Array(0)));
+  const out = new Uint8Array(members.reduce((sum, m) => sum + m.length, 0));
+  let at = 0;
+  for (const m of members) {
+    out.set(m, at);
+    at += m.length;
+  }
+  return out;
+}
+
 function ignore(): void {
   // The progress, which these tests do not look at.
 }
@@ -190,7 +225,7 @@ const AT_0_05 = {
 
 beforeAll(async () => {
   const loaded = await loadPopnei();
-  expect(loaded).toEqual({ ok: true, value: "0.1.0" });
+  expect(loaded).toEqual({ ok: true, value: INSTALLED_POPNEI_VERSION });
 });
 
 describe("WS3 D1 the open and the diversity", () => {
@@ -830,7 +865,126 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(runner.run(job, ignore)).toEqual({
       kind: "refused",
       message:
-        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies, and the ploidy is an argument of the reader",
+        "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
+    });
+  });
+
+  test("a VCF opened with no ploidy is opened with the ploidy popnei reads from the file: 4 for tetraploid.vcf.gz, 2 for panel.vcf.gz", () => {
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: true },
+    };
+    const tetraploid = valueOf(
+      createRunner().open(fromFile, {
+        name: "tetraploid.vcf.gz",
+        source: bytesOf("tetraploid.vcf.gz"),
+      }),
+    );
+    expect(tetraploid.individuals.length).toBe(12);
+    expect(tetraploid.ploidy).toBe(4);
+    const panel = valueOf(
+      createRunner().open(fromFile, {
+        name: "panel.vcf.gz",
+        source: bytesOf("panel.vcf.gz"),
+      }),
+    );
+    expect(panel.individuals.length).toBe(200);
+    expect(panel.ploidy).toBe(2);
+  });
+
+  test("a VCF whose every genotype is a single dot is refused with no ploidy, with popnei's words, and opened with one given", () => {
+    const file = {
+      name: "no_ploidy.vcf.gz",
+      source: bytesOf("no_ploidy.vcf.gz"),
+    };
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: true },
+    };
+    expect(createRunner().open(fromFile, file)).toEqual({
+      kind: "refused",
+      message:
+        "the first 5 data lines of the VCF hold no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+    });
+    const given = valueOf(createRunner().open(VCF, file));
+    expect(given.individuals.length).toBe(200);
+    expect(given.ploidy).toBe(2);
+  });
+
+  test("no_variants.vcf, a header and no variant, is refused with no ploidy, with popnei's words, and opened with one given", () => {
+    const file = {
+      name: "no_variants.vcf",
+      source: bytesOf("no_variants.vcf"),
+    };
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    expect(createRunner().open(fromFile, file)).toEqual({
+      kind: "refused",
+      message: "the file has no variants and the ploidy can't be inferred",
+    });
+    expect(valueOf(createRunner().open(VCF, file)).individuals.length).toBe(
+      200,
+    );
+  });
+
+  test("a VCF of one variant whose genotypes are single dots is refused with no ploidy, with popnei's words of one data line", () => {
+    const vcf =
+      "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb\n" +
+      "1\t1\t.\tA\tT\t.\tPASS\t.\tGT\t.\t.\n";
+    expect(
+      createRunner().open(
+        { ...VCF, readOptions: { ploidy: null, onlyPassed: false } },
+        { name: "one.vcf", source: new TextEncoder().encode(vcf) },
+      ),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the one data line of the VCF holds no genotype with alleles, so its ploidy cannot be read from the file; give the ploidy",
+    });
+  });
+
+  test("a VCF cut short before its first genotype with alleles is refused at the open with no ploidy, gzipped or bgzipped", () => {
+    const fromFile: LoadToOpen = {
+      ...VCF,
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    // 2,000 variants of single dots, then 1,000 of genotypes with alleles:
+    // half of the bytes holds none of the second.
+    const lines = [
+      "##fileformat=VCFv4.2",
+      "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ta\tb",
+    ];
+    for (let position = 1; position <= 3000; position += 1) {
+      const genotype = position <= 2000 ? "." : "0/1";
+      lines.push(
+        `1\t${String(position)}\t.\tA\tT\t.\tPASS\t.\tGT\t${genotype}\t.`,
+      );
+    }
+    const text = new TextEncoder().encode(`${lines.join("\n")}\n`);
+    const gzipped = gzipSync(text);
+    expect(
+      createRunner().open(fromFile, {
+        name: "cut.vcf.gz",
+        source: new Uint8Array(
+          gzipped.subarray(0, Math.floor(gzipped.length / 2)),
+        ),
+      }),
+    ).toEqual({
+      kind: "refused",
+      message: "the source could not be read: incomplete deflate stream",
+    });
+    const bgzipped = bgzip(text);
+    expect(
+      createRunner().open(fromFile, {
+        name: "cut.vcf.bgz",
+        source: bgzipped.slice(0, Math.floor(bgzipped.length / 2)),
+      }),
+    ).toEqual({
+      kind: "refused",
+      message:
+        "the VCF was written by bgzip and does not end with the empty member of 28 bytes that marks the end of a bgzipped file, so the file is cut short and the variants after the cut are not in it; the file has to be fetched or copied again. bcftools says of the same file `no BGZF EOF marker; file may be truncated`",
     });
   });
 
@@ -871,7 +1025,7 @@ describe("WS3 D2 what goes wrong: told, popnei's refusals and the defects", () =
     expect(createRunner().open(load, file)).toEqual({
       kind: "refused",
       message:
-        "the ploidy asked of the VCF reader is 256, and a genotype holds one allele at least and 255 at most",
+        "the ploidy 256 is not one popnei reads: a genotype holds one allele at least and 255 at most",
     });
   });
 
@@ -1054,6 +1208,20 @@ describe("WS3 D2 what goes wrong: answerOfThrown", () => {
       message: other,
     });
   });
+
+  test.each([
+    "popnei: `x` is not an option of `calcVariantsSummary.perIndividual`, which takes no option",
+    "popnei: `x` is not a key of `histKwargs`, whose keys are `range`, the two ends of the histogram, `numBins` and `binType`",
+    "popnei: `y` is not an option of `calcVariantsSummary.perVar`, whose options are `stats`, `pops`, `minNumIndividuals`, `histKwargs`, `ploidy` and `polyThreshold`",
+  ])(
+    "popnei's refusal of an option of a part, or of a key of histKwargs, as js-v0.2.1 gives it under node, is crashed as a defect of the application: %s",
+    (unknown) => {
+      expect(answerOfThrown(new Error(unknown))).toEqual({
+        kind: "crashed",
+        message: `popnei_web defect: ${unknown}`,
+      });
+    },
+  );
 
   test("a TypeError, a mistake of the code, is crashed", () => {
     expect(answerOfThrown(new TypeError("x is not a function"))).toEqual({
@@ -1579,6 +1747,51 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
   });
 });
 
+describe("the histograms in 1,280 bins, which the application asks popnei for from 6 October 2026", () => {
+  test("panel.vcf.gz, panel.nei and tetraploid.vcf.gz: the 1,280 bins added up 32 at a time are popnei's 40, the means the same, and the 1,281 edges every 32nd those of the 40", () => {
+    const tetraploid: LoadToOpen = {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    for (const [name, load] of [
+      ["panel.vcf.gz", VCF],
+      ["panel.nei", NEI],
+      ["tetraploid.vcf.gz", tetraploid],
+    ] as const) {
+      const coarse = resultOf(
+        opened(name, load).run(variantChecksJob(), ignore),
+        "variantChecks",
+      );
+      const fine = resultOf(
+        opened(name, load).run(
+          { ...variantChecksJob(), numBins: 1280 },
+          ignore,
+        ),
+        "variantChecks",
+      );
+      expect(fine.binEdges.length).toBe(1281);
+      for (let edge = 0; edge <= 40; edge += 1) {
+        expect(fine.binEdges[edge * 32]).toBe(coarse.binEdges[edge]);
+      }
+      for (const statistic of [
+        "missingRate",
+        "maf",
+        "obsHet",
+        "unbiasedExpHet",
+      ] as const) {
+        expect(fine[statistic].mean).toBe(coarse[statistic].mean);
+        const added = Array.from({ length: 40 }, (_, bin) =>
+          fine[statistic].counts
+            .subarray(bin * 32, bin * 32 + 32)
+            .reduce((sum, count) => sum + count, 0),
+        );
+        expect(added).toEqual([...coarse[statistic].counts]);
+      }
+    }
+  });
+});
+
 describe("VS1 D3 the passes of the runner: the histograms and the counts", () => {
   test("the histograms of panel.nei with no filter, 40 bins from 0 to 1: popnei's edges, means and counts", () => {
     const result = resultOf(
@@ -1594,6 +1807,15 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     expect(result.maf.mean).toBe(0.7163445463101891);
     expect(result.obsHet.mean).toBe(0.35429523451520484);
     expect(result.unbiasedExpHet.mean).toBe(0.3754712450806149);
+    // popnei 0.2.0's missing rate of panel.nei, under node.
+    expect(result.missingRate.mean).toBe(0.02969999999999999);
+    expect([...result.missingRate.counts]).toEqual([
+      345,
+      768,
+      86,
+      1,
+      ...Array<number>(36).fill(0),
+    ]);
     expect([...result.maf.counts]).toEqual([
       ...Array<number>(20).fill(0),
       69,
@@ -1669,7 +1891,12 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       69,
       ...Array<number>(19).fill(0),
     ]);
-    for (const distrib of [result.maf, result.obsHet, result.unbiasedExpHet]) {
+    for (const distrib of [
+      result.missingRate,
+      result.maf,
+      result.obsHet,
+      result.unbiasedExpHet,
+    ]) {
       expect(distrib.counts.reduce((sum, count) => sum + count, 0)).toBe(1200);
     }
     expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
@@ -1685,6 +1912,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       "variantChecks",
     );
     expect(ofVcf.maf.mean).toBe(0.7163445463101891);
+    expect(ofVcf.missingRate.mean).toBe(0.02969999999999999);
     expect(ofVcf).toEqual(ofNei);
   });
 
@@ -1822,7 +2050,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
   test.each([
     [
       "with no entry of a filter of the job",
-      { numVars: 1152, filtering: {} },
+      { numVars: 1152, filtering: {}, stoppedEarly: false },
       /^popnei_web defect: the counts of the pass have no filter missing_data$/,
     ],
     [
@@ -1833,6 +2061,7 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
           missing_data: { varsProcessed: 1200, varsKept: 1152 },
           maf: { varsProcessed: 1152, varsKept: 1152 },
         },
+        stoppedEarly: false,
       },
       /^popnei_web defect: the counts of the pass have filters the job has not: maf$/,
     ],
@@ -1910,7 +2139,7 @@ describe("VS1 D3 the passes of the runner: transferablesOf", () => {
     ]);
   });
 
-  test("of the histograms, the buffers of the edges and of the three counts, and one buffer held by two fields once", () => {
+  test("of the histograms, the buffers of the edges and of the four counts, and one buffer held by two fields once", () => {
     const result = resultOf(
       opened("panel.nei").run(variantChecksJob(), ignore),
       "variantChecks",
@@ -1918,16 +2147,17 @@ describe("VS1 D3 the passes of the runner: transferablesOf", () => {
     const buffers = transferablesOf(result);
     expect(buffers).toEqual([
       result.binEdges.buffer,
+      result.missingRate.counts.buffer,
       result.maf.counts.buffer,
       result.obsHet.counts.buffer,
       result.unbiasedExpHet.counts.buffer,
     ]);
-    expect(new Set(buffers).size).toBe(4);
+    expect(new Set(buffers).size).toBe(5);
     const twice = {
       ...result,
       obsHet: { ...result.obsHet, counts: result.maf.counts },
     };
-    expect(transferablesOf(twice).length).toBe(3);
+    expect(transferablesOf(twice).length).toBe(4);
   });
 
   test("of the counts of the filters, no buffer", () => {

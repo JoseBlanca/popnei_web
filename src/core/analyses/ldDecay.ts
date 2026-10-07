@@ -47,6 +47,7 @@ import {
   csvNumber,
   defect,
   populationWarnings,
+  pythonOpenVariants,
   refusalWords,
 } from "./words.ts";
 import type { PopulationWords } from "./words.ts";
@@ -1087,12 +1088,7 @@ function script(p: Project): string {
       "the script of the LD decay needs a variants file and a largest distance.",
     );
   }
-  const name = JSON.stringify(variants.name);
-  const read = variants.readOptions;
-  const open =
-    read === null
-      ? `popnei.open_vars(${name})`
-      : `popnei.open_vcf(${name}, ploidy=${String(read.ploidy)}, only_passed=${read.onlyPassed ? "True" : "False"})`;
+  const open = pythonOpenVariants(variants);
   return [
     ...scriptComment(p),
     `ld_variants = ${open}`,

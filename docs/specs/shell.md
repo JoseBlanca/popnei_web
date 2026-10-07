@@ -595,6 +595,10 @@ or, when the error came before the store was made, as the page started,
 and there is no project to save: "The application met an error of its
 own as it started: ‹message›. Reload the page."
 
+or, on a page that saves no project, `popgen2.html` from 5 October 2026,
+where the bar has no Save: "The application met an error of its own:
+‹message›. Reload the page, and open your files again."
+
 It has three buttons:
 
 - **Save the project**, which saves through the saving of the entry,

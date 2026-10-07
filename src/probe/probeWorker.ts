@@ -160,7 +160,9 @@ async function bytesOf(request: ToProbe): Promise<Uint8Array> {
 /**
  * Opens the bytes with popnei, as a VCF when the name says so and as a
  * vars file otherwise, and frees what popnei gave. A VCF is opened with
- * popnei's default ploidy, 2, which is then given and not read. `openMs`
+ * the ploidy 2, given and not read: popnei's default until its main of 6
+ * October 2026, which reads it from the file when none is given, and the
+ * probe measures the open as it did. `openMs`
  * is the time of popnei's call alone, not of the fetch or the read. What
  * popnei's call throws is a refusal of the file, but for a trap, which is
  * thrown on for the caller to stop the worker; what throws after it is the
@@ -171,7 +173,7 @@ function open(bytes: Uint8Array, target: Target): FromProbe {
   const started = performance.now();
   let variants: Variants;
   try {
-    variants = isVcf ? openVcf(bytes) : openVars(bytes);
+    variants = isVcf ? openVcf(bytes, { ploidy: 2 }) : openVars(bytes);
   } catch (error) {
     if (error instanceof WebAssembly.RuntimeError) {
       throw error;

@@ -15,10 +15,14 @@
 }
 
 /* The paragraphs of the bar without the browser's margins, so that the
-   gap of the bar alone spaces them. */
+   gap of the bar alone spaces them. A word longer than the line breaks
+   where it must: the error of a download that failed holds the whole
+   address of the file, with no space, which made the page scroll
+   sideways at 320 px in Chromium 153. */
 .message {
   margin: 0;
   font-weight: bold;
+  overflow-wrap: anywhere;
 }
 
 .more {

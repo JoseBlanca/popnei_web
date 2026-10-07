@@ -518,7 +518,7 @@ describe("the saved line with Write disabled, and no text of the section that na
     const messages = [
       "the pass gave no variant and its source holds none",
       "the pass gave no variant: the filters kept none of the 1200 variants",
-      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2",
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2",
       "line 12 of the VCF: a field is missing",
       "the VCF was written by bgzip and is cut short",
       "memory could not grow",

@@ -26,6 +26,7 @@ import type {
 } from "../store.ts";
 import type {
   IndividualChecksResult,
+  IndividualStatsPart,
   Job,
   JobResult,
   Run,
@@ -60,13 +61,13 @@ export interface IndividualRow {
 
 /** The rows of each result, so that a screen drawn again gets the same
     array. */
-const ROWS = new WeakMap<IndividualChecksResult, readonly IndividualRow[]>();
+const ROWS = new WeakMap<IndividualStatsPart, readonly IndividualRow[]>();
 
 /** The rows of a result, in the order of the variants file; the same
     array for the same result. Throws a defect when an array of the result
     is shorter than its individuals. */
 export function individualRows(
-  r: IndividualChecksResult,
+  r: IndividualStatsPart,
 ): readonly IndividualRow[] {
   const kept = ROWS.get(r);
   if (kept !== undefined) {
@@ -96,7 +97,7 @@ const CSV_HEADER = "individual,missing_genotypes,observed_heterozygosity";
  * ended by a new line. The column Kept of the screen is not in it: it is
  * of the thresholds, not of the result.
  */
-export function individualChecksCsv(r: IndividualChecksResult): string {
+export function individualChecksCsv(r: IndividualStatsPart): string {
   const lines = individualRows(r).map((row) =>
     [
       csvField(row.individual),

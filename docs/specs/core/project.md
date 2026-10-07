@@ -1046,7 +1046,13 @@ The variants file. The load id is 16 random bytes written as 32 lower
 case hexadecimal digits, made by the page when the user picks the file
 (`docs/architecture.md`, section 3). The ploidy of a VCF is a whole
 number from 1 to 255, which popnei's `openVcf` accepts
-(`js/popnei/src/io_vcf.ts`).
+(`js/popnei/src/io_vcf.ts`), or `null`, for the ploidy popnei reads
+from the file, the number of alleles of its first genotype with
+alleles, since its release `js-v0.2.0`. popgen2.html opens every VCF with
+`null` (`docs/plans/open-variants.md`, "Round 3"); the Variants step of
+popgen.html always gives one; and a project file refuses `null`, until
+the piece that saves the projects of popgen2.html decides how a ploidy
+read from the file is saved.
 
 ```ts
 export interface VariantSource {
@@ -1054,7 +1060,7 @@ export interface VariantSource {
   name: string;          // as the browser gives it; in no key
   size: number;          // bytes; in no key
   format: "vcf" | "nei";
-  readOptions: { ploidy: number; onlyPassed: boolean } | null; // a VCF's; null for .nei
+  readOptions: { ploidy: number | null; onlyPassed: boolean } | null; // a VCF's; null for .nei
   read: SourceRead;
 }
 

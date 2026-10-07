@@ -1,0 +1,113 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The opening: the zone. */
+.section {
+  display: grid;
+  align-content: start;
+}
+
+/* The box of the file: a solid border, where the zone's is dashed. */
+.box {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* The lines of one load of the file, one under the other. */
+.lines {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The lines of the variants and the chromosomes, which take the focus
+   when the count ends with the focus on Stop. */
+.countLines {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* The words of a failure of the count, which take the focus in the same
+   way. */
+.failure {
+  display: grid;
+}
+
+.countLines:focus-visible,
+.failure:focus-visible,
+.code:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* The row under the lines: the seconds of the read, the bar of the count
+   and Stop, Start again, or nothing. It is as high as a button in every
+   state, and what it holds keeps to one row, so that the box keeps its
+   height through the read and the count. */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: calc(var(--leading-body) * 1em + 2 * var(--space-1) + 2px);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bar takes the room left beside the button, up to its own
+   largest. */
+.progressBar {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 24rem;
+}
+
+.progressButton {
+  flex: none;
+}
+
+/* The seconds of the read, on one row at any width. */
+.progressLine {
+  margin: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* Muted words inside a line. */
+.mutedText {
+  color: var(--color-text-muted);
+}
+
+/* Lines of Python to copy, each on its own row; the block scrolls
+   sideways inside the box rather than the page at 320 pixels, and takes
+   the focus of the Tab key for the keyboard to scroll it (WCAG 2.1.1). */
+.code {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  white-space: pre;
+}

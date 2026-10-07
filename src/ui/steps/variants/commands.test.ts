@@ -17,7 +17,7 @@ import {
 } from "./commands.ts";
 import type { StepCommand } from "./commands.ts";
 import { createVcfOptions } from "./vcfOptions.ts";
-import { readAgainLabel } from "./words.ts";
+import { givenOptions, readAgainLabel } from "./words.ts";
 
 /** The store of the page, with the analyses of the application and a
     worker that is never asked for anything here. */
@@ -242,7 +242,11 @@ describe("the options of a VCF the Variants step shows", () => {
     expect(shown.ploidy).toBe(2);
     expect(store.getState().project.variants?.readOptions?.ploidy).toBe(2);
     expect(
-      readAgainLabel("a.vcf", { ploidy: 2, onlyPassed: true }, shown),
+      readAgainLabel(
+        "a.vcf",
+        { ploidy: 2, onlyPassed: true },
+        givenOptions(shown),
+      ),
     ).toBe(null);
   });
 

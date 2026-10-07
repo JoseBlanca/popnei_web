@@ -336,7 +336,7 @@ describe("VS6 D2 the name of a filter of the variants inside a sentence", () => 
 describe("VS3 D1 the counts of the filters: refusalText", () => {
   test("a genotype of another ploidy tells to set the ploidy", () => {
     const message =
-      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the reader was asked for the ploidy 2";
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2";
     expect(
       refusalText(
         message,
@@ -344,6 +344,19 @@ describe("VS3 D1 the counts of the filters: refusalText", () => {
       ),
     ).toBe(
       "At line 5 of tetraploid.vcf.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2. If every genotype of the file has 4 alleles, set the ploidy of the VCF to 4 in the Variants step and read the file again. A file that mixes ploidies, such as one with the X of males haploid among diploid autosomes, cannot be read in this version.",
+    );
+  });
+
+  test("a genotype of another ploidy in the words of popnei's main of 6 October 2026 tells the same", () => {
+    const message =
+      "line 5 of the VCF, the column of t00: its genotype is of the ploidy 4 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies";
+    expect(
+      refusalText(
+        message,
+        project([], { name: "tetraploid.vcf.gz", onlyPassed: true }),
+      ),
+    ).toMatch(
+      /^At line 5 of tetraploid\.vcf\.gz, the genotype of t00 has 4 alleles, and the file was read with ploidy 2\./u,
     );
   });
 

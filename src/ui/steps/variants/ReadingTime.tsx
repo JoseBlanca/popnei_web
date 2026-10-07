@@ -1,8 +1,9 @@
 /**
- * The seconds since the step saw a read start, after "Reading
- * panel.nei." (docs/specs/steps/variants.md, "The states", running). The
- * step keeps them while it is on the screen and loses them when it is
- * left; a new load is a new count, by the `key` the step gives.
+ * The seconds since the screen that shows it saw a read start, after
+ * "Reading panel.nei." (docs/specs/steps/variants.md, "The states",
+ * running): the Variants step of popgen.html and the opening of
+ * popgen2.html. The screen keeps them while it is drawn and loses them
+ * when it goes; a new load is a new count, by the `key` the screen gives.
  */
 import { useEffect, useState } from "react";
 

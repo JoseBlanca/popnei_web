@@ -12,6 +12,8 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page, Route } from "@playwright/test";
 
 import { writeBigVcf } from "./bigVcf.ts";
+import { crashWorkerOn } from "./crashWorker.ts";
+import { holdFailures, holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -4324,3 +4326,382 @@ test("popgen.html, its code not loaded", async ({ page }) => {
   ).toBeVisible();
   await save(page, "popgen-not-loaded-light");
 });
+
+/** Picks `file`, a fixture or a path, with the button of popgen2.html. */
+async function pickOnNewPage(page: Page, file: string): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Variants file" })
+    .getByRole("button", { name: /^Open (another )?variants file…$/ })
+    .click();
+  await (
+    await chooser
+  ).setFiles(file.startsWith("/") ? file : join(FIXTURES, file));
+}
+
+/** The box of the file open on popgen2.html, which holds the count of
+    its variants. */
+function newPageCount(page: Page): Locator {
+  return page.getByRole("region", { name: "File information" });
+}
+
+/** The statistics of the open file on popgen2.html, above the open
+    button. */
+function newPageStats(page: Page): Locator {
+  return page.getByRole("region", { name: "Statistics of the file" });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [null, 320] as const) {
+    const at = width === null ? "" : `-${String(width)}`;
+    test.describe(`popgen2.html, ${theme}${width === null ? "" : `, at ${String(width)} px`}`, () => {
+      test.beforeEach(async ({ page }) => {
+        await page.emulateMedia({
+          colorScheme: theme,
+          reducedMotion: "reduce",
+        });
+        if (width !== null) {
+          await page.setViewportSize({ width, height: 900 });
+        }
+        await page.goto("popgen2.html");
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Popnei" }),
+        ).toBeVisible();
+      });
+
+      test("nothing opened", async ({ page }) => {
+        await save(page, `popgen2-empty${at}-${theme}`);
+      });
+
+      test("reading the file", async ({ page }) => {
+        // The wasm is held back, so the read waits for the calculation
+        // worker; the page was opened before, so it is fetched again.
+        await page.route("**/*.wasm", () => undefined);
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByText("1 second so far.")).toBeVisible();
+        await save(page, `popgen2-reading${at}-${theme}`);
+      });
+
+      test("counting the variants", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("count.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageCount(page).getByText(
+            /^Variants: (counting… \d+%|[\d,]+ so far)$/u,
+          ),
+        ).toBeVisible({ timeout: 30_000 });
+        await expect(newPageStats(page)).toBeVisible();
+        await save(page, `popgen2-counting${at}-${theme}`);
+      });
+
+      test("the summary", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("Chromosomes: 1"),
+        ).toBeVisible();
+        // No variant of panel.vcf.gz failed its FILTER.
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 0"),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-summary${at}-${theme}`);
+      });
+
+      test("counting the FILTER failures", async ({ page }) => {
+        // The result of the count of the failures is never posted, so the
+        // count runs after the summary is done.
+        await holdFailures(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("Variants: 1,200"),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("FILTER failures: counting…"),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByRole("progressbar", {
+            name: "Counting the variants that failed their FILTER",
+          }),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-counting${at}-${theme}`);
+      });
+
+      test("the FILTER failures counted", async ({ page }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300"),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-done${at}-${theme}`);
+      });
+
+      test("the count of the FILTER failures stopped", async ({ page }) => {
+        // The result of the count of the failures is never posted, so the
+        // count runs until the Stop.
+        await holdFailures(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByRole("progressbar", {
+            name: "Counting the variants that failed their FILTER",
+          }),
+        ).toBeVisible();
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("FILTER failures: not counted"),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-stopped${at}-${theme}`);
+      });
+
+      test("a crash during the count of the FILTER failures", async ({
+        page,
+      }) => {
+        await crashWorkerOn(page, "run", "filterFailures", true);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByText(
+            "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
+          ),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-crash${at}-${theme}`);
+      });
+
+      test("a .nei summary", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(
+          newPageCount(page).getByText("Chromosomes: 1"),
+        ).toBeVisible();
+        await save(page, `popgen2-nei-summary${at}-${theme}`);
+      });
+
+      test("a file refused by its name", async ({ page }) => {
+        const chooser = page.waitForEvent("filechooser");
+        await page.getByRole("button", { name: "Open variants file…" }).click();
+        await (await chooser).setFiles(join(FIXTURES, "panel_pops.csv"));
+        await expect(
+          page.getByText(/^panel_pops\.csv was not opened/u),
+        ).toBeVisible();
+        await save(page, `popgen2-name-refused${at}-${theme}`);
+      });
+
+      test("a file refused by its name while another is open", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(
+          newPageCount(page).getByText("Chromosomes: 1"),
+        ).toBeVisible();
+        await pickOnNewPage(page, "panel_pops.csv");
+        await expect(
+          page.getByText(/^panel_pops\.csv was not opened/u),
+        ).toBeVisible();
+        await save(page, `popgen2-name-refused-open${at}-${theme}`);
+      });
+
+      test("a file popnei could not read", async ({ page }) => {
+        await pickOnNewPage(page, "bad.vcf");
+        await expect(
+          page.getByText(/^popnei could not read bad\.vcf/u),
+        ).toBeVisible();
+        await save(page, `popgen2-not-read${at}-${theme}`);
+      });
+
+      test("a count that failed", async ({ page }) => {
+        await pickOnNewPage(page, "bad_position.vcf.gz");
+        await expect(
+          newPageCount(page).getByText(/^popnei could not read bad_position/u),
+        ).toBeVisible();
+        await expect(
+          newPageStats(page).getByText("Not calculated."),
+        ).toHaveCount(2);
+        await save(page, `popgen2-count-failed${at}-${theme}`);
+      });
+
+      test("a count stopped", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("stop.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageCount(page).getByRole("progressbar", {
+            name: "Counting the variants",
+            exact: true,
+          }),
+        ).toBeVisible({ timeout: 60_000 });
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(
+          newPageStats(page).getByText(
+            "Stopped. Start again reads the file from the start.",
+          ),
+        ).toHaveCount(2);
+        await save(page, `popgen2-count-stopped${at}-${theme}`);
+      });
+
+      test("a VCF of no variant", async ({ page }) => {
+        await pickOnNewPage(page, "no_variants.vcf");
+        await expect(
+          newPageCount(page).getByText(
+            "no_variants.vcf has no variants. Open another variants file.",
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-no-variants${at}-${theme}`);
+      });
+
+      test("a crash at the opening", async ({ page }) => {
+        await crashWorkerOn(page, "open");
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("panel.vcf.gz could not be read."),
+        ).toBeVisible();
+        await save(page, `popgen2-crash-opening${at}-${theme}`);
+      });
+
+      test("a crash during the count", async ({ page }) => {
+        await crashWorkerOn(page, "run");
+        await page.reload();
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(
+          newPageStats(page).getByText("Not calculated."),
+        ).toHaveCount(2);
+        await save(page, `popgen2-crash-count${at}-${theme}`);
+      });
+
+      test("the statistics running", async ({ page }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("running.vcf.gz");
+        await writeBigVcf(vcf, 200_000);
+        await pickOnNewPage(page, vcf);
+        await expect(
+          newPageStats(page).getByText(
+            /^Calculating the statistics of the variants… \d+%$/u,
+          ),
+        ).toBeVisible({ timeout: 60_000 });
+        await save(page, `popgen2-stats-running${at}-${theme}`);
+      });
+
+      test("the statistics running, with their plots so far", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        // The first result so far let through and the others and the
+        // result held (holdWorker.ts), so that the plots stay those of
+        // popnei's first block in the browser, 5,000 variants of 30,000.
+        const vcf = testInfo.outputPath("so_far.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        // The page was opened before, so its worker is fetched again.
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await release(page, "oneSoFar");
+        await expect(
+          newPageStats(page).getByText(/^Keeps .* variants so far$/u),
+        ).toHaveCount(4, { timeout: 60_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-stats-so-far${at}-${theme}`);
+      });
+
+      test("the statistics done", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageStats(page).getByRole("button", {
+            name: /^Download the missing genotypes/u,
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-stats-done${at}-${theme}`);
+      });
+
+      test("the thresholds moved: a line dragged into the middle, and one at 0.05 with the range the bins allow, hatched", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const het = newPageStats(page).getByRole("group", {
+          name: "Observed heterozygosity",
+          exact: true,
+        });
+        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
+          timeout: 20_000,
+        });
+        // The thumb, around the hidden input of the slider.
+        const thumb = het.getByRole("slider").locator("xpath=../..");
+        await thumb.scrollIntoViewIfNeeded();
+        const box = await thumb.boundingBox();
+        if (box === null) throw new Error("no thumb");
+        const y = box.y + box.height / 2;
+        const frame = await het.locator("svg.chart").boundingBox();
+        if (frame === null) throw new Error("no plot");
+        await page.mouse.move(box.x + box.width / 2, y);
+        await page.mouse.down();
+        await page.mouse.move(frame.x + frame.width * 0.55, y, { steps: 8 });
+        await page.mouse.up();
+        await page.mouse.move(0, 0);
+        const missing = newPageStats(page).getByRole("group", {
+          name: "Proportion of missing genotypes",
+          exact: true,
+        });
+        await missing.getByRole("textbox").fill("0.05");
+        await missing.getByRole("textbox").press("Enter");
+        await expect(
+          missing.getByText("Keeps 1,113 to 1,152 of 1,200 variants"),
+        ).toBeVisible();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-thresholds-moved${at}-${theme}`);
+      });
+
+      test("the focus on the line of a threshold", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const het = newPageStats(page).getByRole("group", {
+          name: "Observed heterozygosity",
+          exact: true,
+        });
+        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
+          timeout: 20_000,
+        });
+        // Reached with the Tab key from its box, over the plot, so that
+        // the ring shows.
+        await het.getByRole("textbox").focus();
+        await page.keyboard.press("Tab");
+        await expect(het.getByRole("slider")).toBeFocused();
+        for (let step = 0; step < 3; step += 1) {
+          await page.keyboard.press("PageDown");
+        }
+        await save(page, `popgen2-thresholds-focus${at}-${theme}`);
+      });
+
+      test("a VCF whose ploidy could not be read", async ({ page }) => {
+        await pickOnNewPage(page, "no_ploidy.vcf.gz");
+        await expect(
+          newPageCount(page).getByText(/^No genotype with alleles was found/u),
+        ).toBeVisible();
+        await save(page, `popgen2-ploidy-not-read${at}-${theme}`);
+      });
+    });
+  }
+}

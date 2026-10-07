@@ -11,6 +11,7 @@ import { join } from "node:path";
 import type { Locator, Page, Worker } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
+import { INSTALLED_POPNEI_VERSION } from "../src/worker/testSupport.ts";
 
 /** The bar's words for an error thrown with the message "test", once the
     store is made. */
@@ -566,5 +567,9 @@ test("WS7 D2 the details of the errors give popnei's version once the calculatio
   await page.getByRole("button", { name: "Copy the details" }).click();
   const box = page.getByRole("textbox", { name: "The details of the errors" });
 
-  await expect(box).toHaveValue(/\npopnei: 0\.1\.0\n/);
+  await expect(box).toHaveValue(
+    new RegExp(
+      `\\npopnei: ${INSTALLED_POPNEI_VERSION.replaceAll(".", String.raw`\.`)}\\n`,
+    ),
+  );
 });

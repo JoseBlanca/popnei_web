@@ -5,7 +5,7 @@
  * bar's first line, which change once that Save has failed. Apart from the bar, so
  * that a test in node drives it on the real store and saving.
  */
-import type { Defects } from "../defects.ts";
+import type { Defect, Defects } from "../defects.ts";
 import type { Saving } from "../saving.ts";
 import { handedText } from "./saveOpen.ts";
 
@@ -34,18 +34,39 @@ export function saveFromBar(
   }
 }
 
-/** The words of the bar for the first error, `message` without its last
-    full stop, since the sentence adds its own: with a store, that the
-    project is intact and to save it, or, once `saveFailed`, that it could
-    not be saved; without one, as the page started, to reload. */
+/** Where the page is when the bar shows an error: `starting`, before
+    the store is made; `saving`, with a store and the saving of a project;
+    `noSaving`, with a store on a page that saves no project, popgen2.html
+    for now. */
+export type BarPage = "starting" | "saving" | "noSaving";
+
+/** The words of the bar for the first error, `first`, its message
+    without its last full stop, since the sentence adds its own: with the
+    saving, that the project is intact and to save it, or, once
+    `saveFailed`, that it could not be saved; on a page that saves no
+    project, to start again after the worker stopped during the pass of
+    the count and the statistics, as the box offers, and otherwise to
+    reload the page and open the files again; before the store, as the page started, to reload. */
 export function barText(
-  message: string,
-  hasStore: boolean,
+  first: Pick<Defect, "message" | "origin">,
+  page: BarPage,
   saveFailed: boolean,
 ): string {
+  const message = first.message;
   const text = message.endsWith(".") ? message.slice(0, -1) : message;
-  if (!hasStore) {
+  if (page === "starting") {
     return `The application met an error of its own as it started: ${text}. Reload the page.`;
+  }
+  if (page === "noSaving") {
+    // A worker stopped during a pass of the chain is mended by the box's
+    // Start again; one stopped during an opening, or a defect, is not.
+    if (first.origin === "countStopped") {
+      return `The application stopped as it counted the variants and calculated the statistics: ${text}. Start again, and if it stops again, reload the page and open your files again.`;
+    }
+    if (first.origin === "failuresStopped") {
+      return `The application stopped as it counted the variants that failed their FILTER: ${text}. Start again, and if it stops again, reload the page and open your files again.`;
+    }
+    return `The application met an error of its own: ${text}. Reload the page, and open your files again.`;
   }
   return saveFailed
     ? `The application met an error of its own: ${text}. Your project could not be saved; copy the details and report them.`

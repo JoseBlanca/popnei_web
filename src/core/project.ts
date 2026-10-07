@@ -119,8 +119,10 @@ export interface VariantSource {
   readonly size: number;
   /** The format of the file. */
   readonly format: LoadFormat["format"];
-  /** How a VCF is read, its ploidy a whole number from 1 to 255; `null`
-      for a `.nei`. */
+  /** How a VCF is read, its ploidy a whole number from 1 to 255, or
+      `null` for the ploidy read from the file, which only the page that
+      opens a variants file, popgen2.html, gives and no project file
+      holds; `null` for a `.nei`. */
   readonly readOptions: VcfReadOptions | null;
   /** What the calculation worker read of the file. */
   readonly read: SourceRead;
@@ -615,8 +617,8 @@ function loadIdError(fileId: string, path: FieldPath): ProjectError | null {
 export type VariantLoad = Omit<VariantSource, "read">;
 
 /** Checks a load of the variants file: its load id, a finite size, and
-    read options for a VCF, with a ploidy from 1 to 255, and none for a
-    `.nei`. */
+    read options for a VCF, with a ploidy from 1 to 255 or `null`, read
+    from the file, and none for a `.nei`. */
 function variantLoadError(
   load: VariantLoad,
   path: FieldPath,
@@ -644,10 +646,11 @@ function variantLoadError(
       "given, since a VCF file is read with a ploidy",
     );
   }
-  return wholeNumberError(load.readOptions.ploidy, 1, MAX_PLOIDY, [
-    ...optionsPath,
-    "ploidy",
-  ]);
+  // A ploidy of null is read from the file by popnei.
+  const ploidy = load.readOptions.ploidy;
+  return ploidy === null
+    ? null
+    : wholeNumberError(ploidy, 1, MAX_PLOIDY, [...optionsPath, "ploidy"]);
 }
 
 /** Checks that a grouping is of the application `app`: the populations
@@ -1776,6 +1779,8 @@ const REOPEN_FAILED =
 /** The ends of the reason of a file that was not read: what the user can
     do, where the reason is shown. */
 interface ReasonEnds {
+  /** popnei's message as the reason gives it; as it is when absent. */
+  readonly message?: (message: string) => string;
   /** After a refusal of the file's reader. */
   readonly refused: string;
   /** After a failure that a new load of the file mends. */
@@ -1868,7 +1873,9 @@ function variantsReadNeeds(
       return `Reading ${fileName}.`;
     case "failed":
       if (read.error.kind === "popnei") {
-        return `popnei could not read ${fileName}${saying(read.error.message)}. ${ends.refused}`;
+        const message =
+          ends.message?.(read.error.message) ?? read.error.message;
+        return `popnei could not read ${fileName}${saying(message)}. ${ends.refused}`;
       }
       return read.error.error.kind === "reopenFailed"
         ? `${fileName} ${REOPEN_FAILED} ${ends.again}`
@@ -1890,6 +1897,30 @@ export function variantsStepNeeds(p: Project): string | null {
   return p.variants === null
     ? null
     : variantsReadNeeds(p.variants, VARIANTS_STEP_ENDS);
+}
+
+/** The ends of a reason of the variants file on the page that opens it,
+    popgen2.html, beside its button "Open another variants file…", which
+    has no project to save before a reload. */
+const VARIANTS_OPEN_ENDS: ReasonEnds = {
+  message: withoutBackquotes,
+  refused: "Open another file.",
+  again: "Open it again.",
+  reload: (fileName) => `Reload the page and open ${fileName} again.`,
+};
+
+/**
+ * The reason of the variants file being read or not read, in the words
+ * of the page that opens it, popgen2.html, or `null` when the project has
+ * no variants file or its file is read: those of `variantsStepNeeds`,
+ * with "Open another file." after a refusal of popnei, "Open it again."
+ * after a failure that a new load mends, and a reload with no project to
+ * save after one that only a new page mends.
+ */
+export function variantsOpenNeeds(p: Project): string | null {
+  return p.variants === null
+    ? null
+    : variantsReadNeeds(p.variants, VARIANTS_OPEN_ENDS);
 }
 
 /** What each application calls its individuals file, as the owner
@@ -2810,6 +2841,15 @@ export function counted(count: number, noun: string): string {
     in every browser: "1,203,554". */
 export function grouped(count: number): string {
   return String(count).replace(/\B(?=(\d{3})+$)/g, ",");
+}
+
+/** popnei's message with each pair of its backquotes, around a name of
+    its code or a piece of the user's file, written as quotes, which a
+    user of the application reads as the bounds of what they hold: "it
+    starts with `This is a line o`" becomes "it starts with “This is a line
+    o”". A backquote with no pair is taken out. */
+export function withoutBackquotes(message: string): string {
+  return message.replace(/`([^`]*)`/gu, "\u201c$1\u201d").replaceAll("`", "");
 }
 
 /** What follows "could not read panel.nei": a colon and the message of
@@ -4660,6 +4700,13 @@ export function escaped(value: string): string {
     among them, and half of a pair that encodes one character, alone. */
 const HIDDEN = /^[\p{Cc}\p{Cf}\p{Cs}]$/u;
 
+/** Whether `character`, one character of a value, is one that a text
+    escapes, `escapedCharacters` and the strings of popnei's Python that
+    the page writes. */
+export function isHidden(character: string): boolean {
+  return HIDDEN.test(character);
+}
+
 /** The escapes of the commonest control characters. */
 const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
   ["\n", "\\n"],
@@ -4674,7 +4721,7 @@ const NAMED_ESCAPES: ReadonlyMap<string, string> = new Map([
     escape. */
 export function escapedCharacters(value: string): readonly string[] {
   return Array.from(value, (character) => {
-    if (!HIDDEN.test(character)) {
+    if (!isHidden(character)) {
       return character;
     }
     const named = NAMED_ESCAPES.get(character);
