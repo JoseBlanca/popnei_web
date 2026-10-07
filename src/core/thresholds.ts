@@ -9,13 +9,23 @@
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 
-/** An edge of popnei's fine bins of the variants. */
+/**
+ * An edge of popnei's fine bins of the variants. The slider of a
+ * histogram moves in edge indices, 0 to the number of bins, step 1, so a
+ * number the user types is snapped to an edge by `snapToFineEdge`, not
+ * refused by the step of a number field.
+ */
 export interface FineEdge {
   /** Its index among the edges, from 0, the lowest, to the number of
       bins, the highest. */
   readonly index: number;
-  /** popnei's edge itself, `binEdges[index]`. */
+  /** popnei's edge itself, `binEdges[index]`, what the counts are of. */
   readonly value: number;
+  /** The number shown for the edge, `index / numBins`: what the box,
+      the words under the plot and the slider's value text print. It
+      differs from `value` on the edges where popnei's is one double
+      above, 0.3 for 0.30000000000000004. */
+  readonly shown: number;
 }
 
 /** What a threshold keeps of the variants. */
@@ -67,14 +77,16 @@ export function snapToFineEdge(
       low = middle + 1;
     }
   }
-  if (low === 0) return { index: 0, value: at(binEdges, 0) };
   const last = binEdges.length - 1;
-  if (low > last) return { index: last, value: at(binEdges, last) };
-  const below = at(binEdges, low - 1);
-  const above = at(binEdges, low);
-  return above - value <= value - below
-    ? { index: low, value: above }
-    : { index: low - 1, value: below };
+  const index =
+    low === 0
+      ? 0
+      : low > last
+        ? last
+        : at(binEdges, low) - value <= value - at(binEdges, low - 1)
+          ? low
+          : low - 1;
+  return { index, value: at(binEdges, index), shown: index / last };
 }
 
 /**

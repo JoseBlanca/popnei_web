@@ -128,16 +128,32 @@ describe("snapToFineEdge", () => {
     [1, 4, 1],
     [0.75, 3, 0.75],
   ])("%s snaps to the edge %i, %s", (value, index, edge) => {
-    expect(snapToFineEdge(edges, value)).toEqual({ index, value: edge });
+    expect(snapToFineEdge(edges, value)).toEqual({
+      index,
+      value: edge,
+      shown: index / 4,
+    });
   });
 
   test("of two edges as near, the higher", () => {
-    expect(snapToFineEdge(edges, 0.375)).toEqual({ index: 2, value: 0.5 });
+    expect(snapToFineEdge(edges, 0.375)).toEqual({
+      index: 2,
+      value: 0.5,
+      shown: 0.5,
+    });
   });
 
   test("beyond the axis, the end of it", () => {
-    expect(snapToFineEdge(edges, -0.2)).toEqual({ index: 0, value: 0 });
-    expect(snapToFineEdge(edges, 1.5)).toEqual({ index: 4, value: 1 });
+    expect(snapToFineEdge(edges, -0.2)).toEqual({
+      index: 0,
+      value: 0,
+      shown: 0,
+    });
+    expect(snapToFineEdge(edges, 1.5)).toEqual({
+      index: 4,
+      value: 1,
+      shown: 1,
+    });
   });
 
   test("a value that is NaN or infinite is a defect", () => {
@@ -154,17 +170,23 @@ describe("snapToFineEdge", () => {
     );
   });
 
-  test("on popnei's edges, the edge itself: 0.3 snaps to 0.30000000000000004, the edge 384", () => {
+  test("on popnei's edges, the edge itself: 0.3 snaps to 0.30000000000000004, the edge 384, shown as 0.3", () => {
     const binEdges = fixture("panel.vcf.gz").part.binEdges;
     expect(snapToFineEdge(binEdges, 0.3)).toEqual({
       index: 384,
       value: 0.30000000000000004,
+      shown: 0.3,
     });
-    expect(snapToFineEdge(binEdges, 0.1)).toEqual({ index: 128, value: 0.1 });
+    expect(snapToFineEdge(binEdges, 0.1)).toEqual({
+      index: 128,
+      value: 0.1,
+      shown: 0.1,
+    });
     // Just below the middle of the edges 0.1 and 0.1 + 1/1280.
     expect(snapToFineEdge(binEdges, 0.1 + 0.39 / 1280)).toEqual({
       index: 128,
       value: 0.1,
+      shown: 0.1,
     });
     expect(snapToFineEdge(binEdges, 0.1 + 0.61 / 1280).index).toBe(129);
   });
