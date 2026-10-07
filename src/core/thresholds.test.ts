@@ -348,16 +348,21 @@ describe("individualsAtMost", () => {
     [-1, 0, 4],
     [5, 4, 0],
   ])(
-    "at %s, %i kept and %i removed, the NaN in neither",
+    "at %s, %i kept and %i removed, the NaN with no value",
     (threshold, kept, removed) => {
-      expect(individualsAtMost(values, threshold)).toEqual({ kept, removed });
+      expect(individualsAtMost(values, threshold)).toEqual({
+        kept,
+        removed,
+        noValue: 1,
+      });
     },
   );
 
-  test("every value NaN: none kept and none removed", () => {
+  test("every value NaN: none kept and none removed, both with no value", () => {
     expect(individualsAtMost(Float64Array.from([NaN, NaN]), 0.5)).toEqual({
       kept: 0,
       removed: 0,
+      noValue: 2,
     });
   });
 
@@ -373,14 +378,17 @@ describe("individualsAtMost", () => {
       expect(individualsAtMost(missingGtRate, 0.028333333333333332)).toEqual({
         kept: 89,
         removed: 111,
+        noValue: 0,
       });
       expect(individualsAtMost(missingGtRate, 0.03)).toEqual({
         kept: 116,
         removed: 84,
+        noValue: 0,
       });
       expect(individualsAtMost(obsHetRate, 0.35)).toEqual({
         kept: 73,
         removed: 127,
+        noValue: 0,
       });
     },
   );
@@ -390,10 +398,12 @@ describe("individualsAtMost", () => {
     expect(individualsAtMost(missingGtRate, 0.05)).toEqual({
       kept: 8,
       removed: 4,
+      noValue: 0,
     });
     expect(individualsAtMost(obsHetRate, 0.5)).toEqual({
       kept: 0,
       removed: 12,
+      noValue: 0,
     });
   });
 });

@@ -28,12 +28,14 @@ export interface VariantCounts {
   readonly withValue: number;
 }
 
-/** What a threshold keeps and removes. */
-export interface ThresholdCounts {
-  /** The variants or the individuals it keeps. */
+/** What a threshold keeps and removes of the individuals. */
+export interface IndividualCounts {
+  /** The individuals it keeps, those with a value at most it. */
   readonly kept: number;
-  /** Those it removes. */
+  /** The individuals with a value above it. */
   readonly removed: number;
+  /** The individuals with no value, NaN, in neither count. */
+  readonly noValue: number;
 }
 
 /**
@@ -151,28 +153,39 @@ export function variantsAtMost(
  * What the threshold `threshold` keeps and removes of the individuals
  * whose values are `values`, popnei's `missingGtRate` or `obsHetRate` of
  * each: kept, those whose value is at most the threshold; removed, the
- * others with a value. An individual whose value is NaN, one with no
- * called genotype for the observed heterozygosity, is in neither. Exact
- * for any threshold. A `threshold` that is NaN is a defect, thrown.
+ * others with a value; and apart, `noValue`, the individuals whose value
+ * is NaN, with no called genotype for the observed heterozygosity. Exact
+ * for any threshold.
+ *
+ * The threshold alone removes none of those with no value, but
+ * `individualsKept` (individualsKept.ts), which applies the filters of
+ * the project, removes them, since NaN is at most no threshold; so when
+ * the threshold becomes a filter, the individuals it removes are
+ * `removed` plus `noValue`. A `threshold` that is NaN is a defect,
+ * thrown.
  */
 export function individualsAtMost(
   values: Float64Array,
   threshold: number,
-): ThresholdCounts {
+): IndividualCounts {
   if (Number.isNaN(threshold)) {
     throw defect("a threshold of NaN for the individuals.");
   }
   let kept = 0;
   let removed = 0;
+  let noValue = 0;
   for (const value of values) {
-    if (Number.isNaN(value)) continue;
+    if (Number.isNaN(value)) {
+      noValue += 1;
+      continue;
+    }
     if (value <= threshold) {
       kept += 1;
     } else {
       removed += 1;
     }
   }
-  return { kept, removed };
+  return { kept, removed, noValue };
 }
 
 /** Throws a defect when `binEdges` are fewer than two or do not go up. */
