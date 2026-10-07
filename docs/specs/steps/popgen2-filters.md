@@ -5,7 +5,8 @@ The screen spec of what `popgen2.html` gains with the design
 2026: the thresholds on the histograms of the statistics become filters
 of the project, a check box leaves out the variants that failed their
 FILTER, and the page gets Undo, Redo and the notice that says what a
-change did. Written on 7 October 2026, not reviewed or approved yet. No
+change did. Written on 7 October 2026, and revised the same day for
+the findings of its reviews; not approved yet. No
 code of it exists. What it builds on is the page as the pieces
 `thresholds` and `one-pass` left it (`docs/plans/thresholds.md`,
 `docs/plans/one-pass.md`), where a threshold is state of the page,
@@ -40,6 +41,11 @@ them and does not repeat them.
   two presses.
 - **A result so far** is what the one pass has read before it ends,
   which the plots are drawn from while it runs.
+- **The filter of the FILTER column** is the filter that leaves out the
+  variants of a VCF that failed their FILTER, which the check box "Leave
+  out the variants that failed their FILTER" turns on and off; its kind
+  is `passed` in the project (`docs/specs/core/project.md`). Every text
+  of the page and of the specs calls it so.
 
 ## What changes for the user
 
@@ -110,10 +116,12 @@ summary of the variants file: "Statistics of the file", the name the
 section already has for a screen reader (decided here, a matter of
 words).
 
-With the store's setting on (`docs/specs/core/store.md`), every change
-of a filter gives a notice, and on this page it removes and stops
-nothing, so the notice is the change alone: "The MAF filter changed ·
-Undo". Opening another file follows the store's ordinary rule: with the
+The store of this page is made with the setting under which every
+change of a filter gives a notice, `filterNotices: true`, and with the
+first project of this page (`docs/specs/core/store.md`, "The notice, and
+the calculations it stops"). On this page such a change removes and
+stops nothing, so the notice is the change alone: "The MAF filter
+changed · Undo". Opening another file follows the store's ordinary rule: with the
 statistics of the file before done or running, "Statistics of the file
 removed because a new variants file was loaded · Undo", or "The
 calculation of Statistics of the file stopped because a new variants
@@ -152,12 +160,13 @@ bin's variants it keeps (`docs/plans/thresholds.md`, "Round 1 with the
 owner").
 
 **Turning a threshold off.** Two ways, as the owner chose on 7 October
-2026: emptying the box and pressing Enter, Tab or leaving it; or typing
-1, the value at which a maximum keeps everything. A number typed that
-the step of the axis rounds to 1 is taken as 1. A typed 1 is off, not a
+2026: emptying the box and pressing Enter, Tab or leaving it; or giving
+it 1, the value at which a maximum keeps everything. 1 is off however
+it is reached: typed, a number typed that the step of the axis rounds to
+1, the line dragged to the top of an axis that ends at 1, as the MAF's
+does on most files, or the End key on such a line. 1 is off, not a
 filter at 1, so a variant with no called genotype is kept, as with no
-filter. Typing 1 into a box that already shows 1, a line dragged there,
-also turns the filter off.
+filter. So the box never shows 1.
 
 **Turning it on.** Dragging the line, or typing a number other than 1,
 turns it on at that value. From off, the arrow keys on the line turn it
@@ -165,14 +174,14 @@ on one step below the top of the axis, Page Down ten steps below, Home
 at the bottom; Up, Right, Page Up and End leave it off. In the empty box
 the arrow keys do nothing, as today.
 
-**The top of the axis.** A line dragged to the top of its axis is a
-filter at that value, since the axis ends where the file's values end,
-not at 1: on `panel.nei` the axis of the missing rate runs from 0 to
-0.1. Where the axis ends at 1, the MAF of most files, the box then shows
-1 and the filter is on (**Open 2**). A number typed above the top of the
-axis, up to 1, is kept as typed, and the axis widens to show it, as
-today. Off, the line stays at the top as a result so far widens the
-axis.
+**The top of the axis.** A line dragged to the top of an axis that
+ends below 1 is a filter at that value, since the axis ends where the
+file's values end: on `panel.nei` the axis of the missing rate runs from
+0 to 0.1, and the line at its top is a filter at 0.1. A line dragged to
+the top of an axis that ends at 1 is off, as said above. A number typed
+above the top of the axis, below 1, is kept as typed, and the axis
+widens to show it, as today. Off, the line stays at the top as a result
+so far widens the axis.
 
 **A number the box refuses**, above 1, below 0, with too many decimals
 or a character it does not take, gives the line of today, "1.5 is more
@@ -205,7 +214,27 @@ One change, with its notice and its step of Undo, is made:
 While the line is dragged, a number is typed or a run of presses waits,
 the shading and the count of that threshold follow it from the bins, and
 nothing else on the page changes. A change that gives the value the
-project already has is no change and leaves no step of Undo.
+project already has is no change and leaves no step of Undo. So a run
+or a drag that ends where it started makes no change, no step of Undo
+and no notice: from off, where the line stands at the top of the axis,
+Down then Up ends at the top, and the filter stays off, although a line
+dragged there from another place would be a filter at that value.
+
+**The end of a drag, and the keys.** The line is React Aria's slider,
+whose call at the end of a change, `onChangeEnd`, comes at the release
+of the pointer and also at every press of a key: React Aria marks the
+thumb as dragged for the length of each press and calls it when the
+mark ends (`keyboardUpdate` of its `useSliderThumb`, which calls
+`setThumbDragging`, whose end calls `onChangeEnd` in `useSliderState`).
+Taken as the end of a drag, it would make a change at each press. So
+the page makes a change from the line only when the pointer is
+released, and every press of a key, the arrows, Page Up, Page Down,
+Home and End, goes to the run, whatever React Aria reports. The line,
+`src/ui/widgets/ThresholdSlider.tsx`, gains a prop called with the value
+when the user lets go of the thumb after moving it with a pointer, and
+never for a key; the Page Up and Page Down it moves by ten steps itself,
+before React Aria sees them, call its `onChange` as the other keys do,
+and so go to the run too.
 
 The reason for the runs: an axis has at most about 100 positions, the
 step of a threshold chosen so (`docs/plans/thresholds.md`, "Round 1
@@ -228,6 +257,17 @@ waiting a change first, and commits a number typed and not yet
 committed, as the old page commits it before an opening
 (`onCommitReady` of the number box).
 
+**A threshold that leaves the page.** A crash of the worker turns the
+statistics to the state error, and a Stop before the first result so
+far leaves no plots; in both the thresholds leave the page, the one the
+user is moving among them. A run waiting, a drag or a number typed and
+not yet committed is made a change before its threshold goes, so that
+what the user did is kept, with its Undo. The focus, which was on the
+line or the box that went, goes to the heading of the page, "Popnei",
+so that a user of the keyboard is not left on nothing, where the next
+press of Tab would start again from the top of the page in some
+browsers and from the end in others.
+
 ### The number box
 
 The number box shared by both pages, `src/ui/widgets/NumberField.tsx`,
@@ -243,7 +283,7 @@ emptied box put back its number, as they do for anything typed.
 
 `popgen2.html` gets a first project of its own: the filter of the
 missing rate of the variants on at 0.1, the default of
-`docs/functionality.md`, the FILTER filter on, and the four other
+`docs/functionality.md`, the filter of the FILTER column on, and the four other
 thresholds off. Opening another file keeps the filters of the project,
 so the thresholds stay where the user left them; today they go back to
 their starting values. A threshold whose value lies above the new file's
@@ -262,7 +302,15 @@ under it: "The plots show every variant, these among them." (decided
 here, a matter of words: ticking the box changes nothing on the page but
 the notice, and the line says why). On by default. It is a check box and
 not a switch because it takes effect later, when the filters are
-carried out, as `src/ui/widgets/Checkbox.tsx` says of its use.
+carried out. The check box of the widgets, `src/ui/widgets/Checkbox.tsx`,
+takes no line under it today; it gains a prop, `description`, a line
+drawn under the box and tied to it, so that a screen reader reads it
+after the box's name (`aria-describedby`, which names the element that
+describes another), and the FILTER box gives it its line. The doc
+comment of the check box, which says it is for a choice that takes
+effect "at the next pick of a file", says instead that it is for a
+choice that takes effect later than the click, the next pick of a file
+on the old page, the carrying out of the filters on this one.
 
 It is shown for a VCF once the opening has read the file's individuals,
 which comes before the one pass starts, and then in every state of the
@@ -272,8 +320,10 @@ stays in the project, does not apply to that file (`filtersApplied`,
 `docs/specs/core/project.md`), and is shown again, as the project holds
 it, when a VCF is opened.
 
-Each click is one change, with its notice: "The FILTER filter was turned
-off · Undo", "The FILTER filter was turned on · Undo". It changes no
+Each click is one change, with its notice: "The filter of the FILTER
+column was turned off · Undo", "The filter of the FILTER column was
+turned on · Undo". The box is only ever turned on or off, so its notice
+says which, as a threshold's does when it is turned on or off. It changes no
 plot and no count. The count of the variants that failed their FILTER
 waits for popnei's issue #12, and a VCF of which no variant passed is
 shown as any other.
@@ -330,25 +380,28 @@ ends its notice:
 
 | what the user does | the command | the description |
 |---|---|---|
-| a threshold of the variants changed | `setVariantFilter` with the kind and its number | "the MAF filter changed", "the filter of the variants by missing data changed", "the filter of the variants by observed heterozygosity changed" |
-| a threshold of the variants turned on from off | `setVariantFilter` | "the MAF filter was turned on" |
-| a threshold of the variants turned off | `turnOffVariantFilter`, which keeps its last value in `filtersOff` | "the MAF filter was turned off" |
-| a threshold of the individuals changed, turned on or off | `setIndividualFilter`, `turnOffIndividualFilter` | "the filter of individuals by missing data changed", "… was turned on", "… was turned off" |
-| the FILTER box | `setVariantFilter` with the kind `passed`, `turnOffVariantFilter` | "the FILTER filter was turned on", "… was turned off" |
+| any of the five thresholds changed, turned on or turned off, by a drag, a run of keys or the box | `setThreshold(p, threshold, value)`, with the number, or `null` for an emptied box; 1 turns it off there | "the MAF filter changed", "the MAF filter was turned on", "the MAF filter was turned off"; "the filter of the variants by missing data changed", "the filter of individuals by missing data was turned off", and so for each |
+| the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the filter of the FILTER column was turned on", "… was turned off" |
 | Undo, Redo, Close of the notice | `store.undo()`, `store.redo()`, `store.dismissNotice()` | |
 
-The descriptions are those of the old page's commands
-(`src/ui/steps/variants/commands.ts`, `individualThresholds.ts`), with
-the name of the kind `passed`, "the FILTER filter", added beside the
-others (`FILTER_NAMES` of `src/core/analyses/filterCounts.ts`). The
-commands are those of `src/core/project.ts` as
-`docs/specs/core/project.md` gives them.
+The page words the description of a threshold from `thresholdValue` of
+the project before the command and of the project the command gives:
+a number then another, "changed"; `null` then a number, "was turned
+on"; a number then `null`, "was turned off"; the same value both times,
+no command, since nothing changed. The names of the filters are those
+of the old page's commands (`src/ui/steps/variants/commands.ts`,
+`individualThresholds.ts`), with the name of the kind `passed`, "The
+filter of the FILTER column", added beside the others in `FILTER_NAMES`
+of `src/core/analyses/filterCounts.ts`, and its words "the FILTER
+column" in `FILTER_KIND_WORDS` of `src/core/project.ts`. The commands
+are those of `src/core/project.ts` as `docs/specs/core/project.md`
+gives them.
 
-It reads `project.filters`, `filtersOff`, `individualFilters` and
-`individualFiltersOff` for the value and the on or off of each
-threshold and of the box; `project.variants.format` for whether the box
-is shown; `undo`, `redo` and `notice` of the store; and the status of
-the summary, with its result so far while it runs and after a Stop. It
+It reads `thresholdValue` of the project for the value and the on or
+off of each threshold; `project.filters` and `filtersOff` for the on or
+off of the box; `project.variants.format` for whether the box is shown;
+`undo`, `redo` and `notice` of the store; and the status of the
+summary, with its result so far while it runs and after a Stop. It
 holds no value of a filter of its own but the number being dragged,
 typed or moved by a run of arrow keys.
 
@@ -356,14 +409,14 @@ typed or moved by a run of arrow keys.
 
 | where | the words |
 |---|---|
-| the box of a threshold that is off | "No filter", in grey |
+| the box of a threshold that is off | "No filter", in grey with a contrast of at least 4.5:1 against the box |
 | beside the line at the top of the axis, off | "No filter" |
 | the line under the head, off | "No filter: keeps every variant", "No filter: keeps every individual" |
 | the line's value for a screen reader, off | "No filter, keeps every variant" |
 | a number refused while off | "1.5 is more than 1; there is still no filter." |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant, these among them." |
-| the notice of a change of a filter | "The MAF filter changed · Undo"; "The FILTER filter was turned off · Undo" |
+| the notice of a change of a filter | "The MAF filter changed · Undo"; "The MAF filter was turned off · Undo"; "The filter of the FILTER column was turned off · Undo" |
 | after an undo, by the notice or the status region | "Undone: the MAF filter changed" |
 | the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start." |
@@ -374,10 +427,14 @@ The page has no help drawer yet.
 
 ## Accessibility
 
-**The order of the Tab key.** Undo, Redo; Stop or Start again in the
-box of the file; then, for each histogram, its box and its line; the
-FILTER box; the download of the table of the individuals; "Open another
-variants file…". The notice is reached with F6, as on the old page.
+**The order of the Tab key.** The order of the page (WCAG 2.2, 2.4.3):
+Undo, Redo; Stop or Start again in the box of the file; then, for each
+histogram of the variants with a threshold, its box and its line; the
+FILTER box, after the four histograms of the variants and before the
+part of the individuals, where it stands; for each histogram of the
+individuals, its box and its line; the download of the table of the
+individuals; "Open another variants file…". The notice is reached with
+F6, as on the old page.
 
 **What is said without moving the focus** (WCAG 2.2, 4.1.3). The notice,
 read once when it appears: once per run of arrow keys, not at each
@@ -388,7 +445,19 @@ line's value is read as it moves, as of any slider.
 **Off in words.** A threshold that is off is told by the words "No
 filter" in the box, beside the line and in the line under the head, and
 by the line's value; not by the line's place at the top of the axis
-alone, nor by the absence of shading (1.4.1).
+alone, nor by the absence of shading (1.4.1). The grey of "No filter"
+in the empty box has a contrast of at least 4.5:1 against the box, in
+light and in dark (1.4.3): a placeholder of the browser's default grey
+is often fainter, and these words are what tells the user the filter is
+off.
+
+**The notice over the focus.** The notice is fixed at the bottom of the
+window and stays until it is closed or replaced; at 320 pixels wide it
+can cover the control that has the focus, the last threshold or the
+FILTER box, and a user of the keyboard would not see where they are
+(2.4.11). The page keeps room at its bottom as tall as the notice while
+the notice is up, so that the browser scrolls the control with the
+focus above it.
 
 **The keys that would be lost.** Ctrl+Z and Ctrl+Y on a line holding a
 run are caught by the threshold, as said above, so that a user of the
@@ -412,9 +481,14 @@ In Playwright on `popgen2.html`, in Chromium and WebKit, on the fixtures
   Undo;
 - a run of ten arrow presses gives one step of Undo and one notice, and
   Ctrl+Z pressed within the second after it undoes that run;
-- emptying the box and typing 1 each turn the filter off, with "No
-  filter" in the box and beside the line and no shading; Undo turns it
-  on again at its value;
+- emptying the box, typing 1, and dragging the line of the MAF to the
+  top of its axis at 1, each turn the filter off, with "No filter" in
+  the box and beside the line and no shading; Undo turns it on again at
+  its value;
+- a run of Down then Up on a line that is off leaves no step of Undo
+  and no notice;
+- a crash of the worker while a run waits keeps the run, as a step of
+  Undo, and puts the focus on the heading;
 - the expected heterozygosity has no line and no box;
 - the FILTER box is there for `panel.vcf.gz`, on, and not for
   `panel.nei`; a click gives a notice and changes no plot;
@@ -424,7 +498,14 @@ In Playwright on `popgen2.html`, in Chromium and WebKit, on the fixtures
 - no plot changes with a threshold or the box.
 
 The screens: a threshold off, on, and after a Stop; the notice up; the
-FILTER box; light and dark; 1280 and 320 pixels wide.
+FILTER box; light and dark; 1280 and 320 pixels wide; and at 320 pixels
+the notice up with the focus on the last control of the page, the
+notice not over it.
+
+In Vitest, beside those: a run that ends where it started sends no
+command; a press of a key on the line never makes a change by itself,
+only the end of its run does; the line's prop of the end of a drag is
+called at the release of a pointer and not at a key.
 
 ## Left for the running application
 
@@ -451,19 +532,9 @@ and was not measured on the fixtures for this spec. Recommended: the
 line, which shows nothing when there are none. Meanwhile: nothing, as
 today.
 
-**Open 2. A line dragged to 1.** Typing 1 turns a filter off, and a
-line dragged to the top of an axis that ends at 1, which the MAF's does
-on most files, is a filter at 1, with 1 in the box: the same number in
-the box means a filter in one case and no filter in the other, and the
-two differ by the variants with no called genotype. The options: keep
-it, as the design has it, and the line under the head tells the two
-apart ("Keeps all 1,200 variants" against "No filter: keeps every
-variant"); or make a line dragged to exactly 1 off as well, so that 1 in
-the box never shows. The second is the simpler to read, and takes from
-the user only a filter at 1, which differs from no filter by the
-variants with no called genotype alone, and which no number typed gives
-either, since a number rounded to 1 is off. Recommended: the second. Meanwhile: the design's, a
-filter at 1.
+Open 2, a line dragged to 1, was closed on 7 October 2026 by the
+owner's decision that 1 is off however it is reached ("A threshold, on
+and off", above).
 
 ## Not in this spec
 
