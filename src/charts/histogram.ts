@@ -431,7 +431,9 @@ function barClass(bar: Bar): string {
 }
 
 /** The side of the tile of the hatch of an undecided bar, in CSS pixels:
-    a stripe every 6 pixels, at 45 degrees. */
+    a stripe every 6 pixels, at 45 degrees, drawn down the middle of the
+    tile, so that its stroke of 2 pixels shows whole; at its edge the
+    tile cut half of it away. */
 const HATCH_TILE = 6;
 
 /** The number of the next hatch made, which gives each plot an id of its
@@ -519,8 +521,8 @@ function drawHistogram(
     pattern
       .append("line")
       .attr("class", "chart-hatch-stripe")
-      .attr("x1", 0)
-      .attr("x2", 0)
+      .attr("x1", HATCH_TILE / 2)
+      .attr("x2", HATCH_TILE / 2)
       .attr("y1", 0)
       .attr("y2", HATCH_TILE);
   }

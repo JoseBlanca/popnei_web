@@ -896,7 +896,18 @@ describe("thresholds 2 a threshold whose bin at the line is undecided", () => {
       atLine[0]?.getAttribute("style") ?? "",
     );
     expect(fill).not.toBeNull();
-    expect(svg.querySelector(`pattern#${fill?.[1] ?? ""}`)).not.toBeNull();
+    const pattern = svg.querySelector(`pattern#${fill?.[1] ?? ""}`);
+    expect(pattern).not.toBeNull();
+    // th3 fix 3: the stripe runs down the middle of its tile, so that its
+    // stroke of 2 pixels shows whole and is not cut by the tile's edge.
+    const tile = numberOf(pattern ?? undefined, "width");
+    const stripe = pattern?.querySelector("line.chart-hatch-stripe");
+    expect(numberOf(stripe ?? undefined, "x1")).toBe(tile / 2);
+    expect(numberOf(stripe ?? undefined, "x2")).toBe(tile / 2);
+    expect(numberOf(stripe ?? undefined, "y1")).toBe(0);
+    expect(numberOf(stripe ?? undefined, "y2")).toBe(
+      numberOf(pattern ?? undefined, "height"),
+    );
     // Bins 21 to 24 are removed, 1 to 19 kept, as without the hatch.
     expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(4);
     expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(19);

@@ -78,7 +78,9 @@ keeps. The bar that starts at the line, the part right of the line of a
 bin it splits, or the bin that starts at the double just above it, as
 popnei's 0.30000000000000004 above 0.3, is then hatched, thin stripes of
 `--chart-bar` on the background in an outline, and not outlined as
-removed. The stripes leave the background on both sides of the dashed
+removed: a stripe of 2 pixels every 6 at 45 degrees, drawn down the
+middle of its tile so that each shows whole, 3:1 or more on the
+background in both themes, as a filled bar is. The stripes leave the background on both sides of the dashed
 line where it crosses the bar, as an outlined bar does (below,
 "Colours and the two themes"). The screen says what the hatch means in
 the description of the plot.
