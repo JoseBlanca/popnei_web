@@ -4404,7 +4404,7 @@ for (const theme of ["light", "dark"] as const) {
         ).toBeVisible();
         // No variant of panel.vcf.gz failed its FILTER.
         await expect(
-          newPageCount(page).getByText("Failed FILTER: 0"),
+          newPageCount(page).getByText("FILTER failures: 0"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-summary${at}-${theme}`);
@@ -4420,7 +4420,7 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByText("Variants: 1,200"),
         ).toBeVisible();
         await expect(
-          newPageCount(page).getByText("Failed FILTER: counting…"),
+          newPageCount(page).getByText("FILTER failures: counting…"),
         ).toBeVisible();
         await expect(
           newPageCount(page).getByRole("progressbar", {
@@ -4434,7 +4434,7 @@ for (const theme of ["light", "dark"] as const) {
       test("the FILTER failures counted", async ({ page }) => {
         await pickOnNewPage(page, "low_qual.vcf.gz");
         await expect(
-          newPageCount(page).getByText("Failed FILTER: 300"),
+          newPageCount(page).getByText("FILTER failures: 300"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-failures-done${at}-${theme}`);
@@ -4456,7 +4456,7 @@ for (const theme of ["light", "dark"] as const) {
           newPageCount(page).getByRole("button", { name: "Start again" }),
         ).toBeVisible();
         await expect(
-          newPageCount(page).getByText("Failed FILTER: not counted"),
+          newPageCount(page).getByText("FILTER failures: not counted"),
         ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-failures-stopped${at}-${theme}`);

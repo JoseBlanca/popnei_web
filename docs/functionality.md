@@ -66,7 +66,7 @@ genome, which popnei will give (decided by the owner on 26 September
 leaves out the variants on each of them for now (the owner, 6 October
 2026). For a VCF it also gives how many variants failed their FILTER,
 those whose FILTER column is neither PASS nor a dot, counted by a second
-pass after the first, "Failed FILTER: 300" of 1,200 on low_qual.vcf.gz;
+pass after the first, "FILTER failures: 300" of 1,200 on low_qual.vcf.gz;
 every variant, failed or not, stays in the count and the statistics,
 since the FILTER filter as a filter the user sets comes with the filters
 of that page. A .nei file has no such line, since one written before

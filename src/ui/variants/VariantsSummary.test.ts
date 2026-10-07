@@ -199,7 +199,7 @@ function buttonNamed(name: string): HTMLButtonElement {
 describe("live-stats 3 the line of the FILTER failures while the file is read", () => {
   test("a VCF being read has the line", async () => {
     await drawPage("vcf", { read: false });
-    expect(linesOf()).toContain("Failed FILTER: reading…");
+    expect(linesOf()).toContain("FILTER failures: reading…");
   });
 
   test("a .nei file being read has none", async () => {
@@ -328,7 +328,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     act(() => {
       page.autoRuns.sync();
     });
-    expect(linesOf()).toContain("Failed FILTER: counting…");
+    expect(linesOf()).toContain("FILTER failures: counting…");
     expect(barName()).toBe("Counting the variants");
     const stop = buttonNamed("Stop");
     act(() => {
@@ -341,7 +341,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       "filterFailures",
     ]);
     expect(linesOf()).toContain("Variants: 1,200");
-    expect(linesOf()).toContain("Failed FILTER: counting…");
+    expect(linesOf()).toContain("FILTER failures: counting…");
     expect(barName()).toBe("Counting the variants that failed their FILTER");
     expect(buttonsOf()).toEqual(["Stop"]);
     expect(document.activeElement?.textContent).toBe("Stop");
@@ -351,13 +351,15 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       "low_qual.vcf.gz · 30 KB",
       "Individuals: 2",
       "Variants: 1,200",
-      "Failed FILTER: 300",
+      "FILTER failures: 300",
       "Chromosomes: 1",
       "Ploidy: 2",
     ]);
     expect(buttonsOf()).toEqual([]);
     expect(barName()).toBeNull();
-    expect(document.activeElement?.textContent).toContain("Failed FILTER: 300");
+    expect(document.activeElement?.textContent).toContain(
+      "FILTER failures: 300",
+    );
   });
 
   test("a Stop while the failures are counted says not counted beside Start again, which counts them alone", async () => {
@@ -378,7 +380,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       page.autoRuns.sync();
     });
     expect(linesOf()).toContain("Variants: 1,200");
-    expect(linesOf()).toContain("Failed FILTER: not counted");
+    expect(linesOf()).toContain("FILTER failures: not counted");
     expect(buttonsOf()).toEqual(["Start again"]);
     expect(page.said).toEqual([
       "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.",
@@ -393,9 +395,9 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       "filterFailures",
       "filterFailures",
     ]);
-    expect(linesOf()).toContain("Failed FILTER: counting…");
+    expect(linesOf()).toContain("FILTER failures: counting…");
     await endWith(page, 2, LOW_QUAL);
-    expect(linesOf()).toContain("Failed FILTER: 300");
+    expect(linesOf()).toContain("FILTER failures: 300");
     expect(buttonsOf()).toEqual([]);
   });
 
@@ -416,7 +418,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     expect(linesOf()).toEqual(
       expect.arrayContaining([
         "Variants: not counted",
-        "Failed FILTER: not counted",
+        "FILTER failures: not counted",
         "Chromosomes: not counted",
       ]),
     );
@@ -437,7 +439,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       error: { kind: "workerFailed", message: "out of memory" },
     });
     await settled();
-    expect(linesOf()).toContain("Failed FILTER: not counted");
+    expect(linesOf()).toContain("FILTER failures: not counted");
     expect(linesOf()).toContain(
       "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
     );
@@ -462,7 +464,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       "low_qual.vcf.gz · 30 KB",
       "Individuals: 2",
       "Variants: 5",
-      "Failed FILTER: 5",
+      "FILTER failures: 5",
       "Chromosomes: 1",
       "Ploidy: 2",
     ]);
@@ -551,7 +553,7 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     expect(linesOf()).toEqual(
       expect.arrayContaining([
         "Variants: not counted",
-        "Failed FILTER: not counted",
+        "FILTER failures: not counted",
         "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
         "low_qual.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
       ]),
@@ -617,8 +619,8 @@ describe("live-stats 3 the line of the FILTER failures across a new file and a f
     await openOther(page, "vcf");
     expect(page.requests[1]?.cancelled).toBe(true);
     await endWith(page, 1, LOW_QUAL);
-    expect(linesOf()).toContain("Failed FILTER: counting…");
-    expect(linesOf()).not.toContain("Failed FILTER: 300");
+    expect(linesOf()).toContain("FILTER failures: counting…");
+    expect(linesOf()).not.toContain("FILTER failures: 300");
     expect(page.requests.map((r) => r.job.analysis)).toEqual([
       "variantsSummary",
       "filterFailures",
@@ -659,7 +661,7 @@ describe("live-stats 3 the line of the FILTER failures across a new file and a f
       expect(linesOf()).toEqual(
         expect.arrayContaining([
           "Variants: not counted",
-          "Failed FILTER: 300",
+          "FILTER failures: 300",
           "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
         ]),
       );

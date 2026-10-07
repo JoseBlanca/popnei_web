@@ -140,7 +140,7 @@ test("OV2 panel.vcf.gz shows its individuals, its variants, its chromosomes and 
     "panel.vcf.gz · 87 KB",
     "Individuals: 200",
     "Variants: 1,200",
-    "Failed FILTER: 0",
+    "FILTER failures: 0",
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);
@@ -216,7 +216,7 @@ test("OV2 bad_position.vcf.gz opens, and its count is refused at the line of the
     "Individuals: 200",
     "Variants: not counted",
     // Held back by the refusal of the count, as autoRuns.ts holds it.
-    "Failed FILTER: not counted",
+    "FILTER failures: not counted",
     "Chromosomes: not counted",
     "Ploidy: 2",
     "popnei could not read bad_position.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and open it again.",
@@ -358,7 +358,7 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
     // A result so far of the pass, 2 seconds after its start, gives the
     // variants and the chromosomes read so far in place of the count.
     /^Variants: (counting…( \d+%)?|[\d,]+ so far)$/u,
-    "Failed FILTER: counting…",
+    "FILTER failures: counting…",
     /^Chromosomes: (counting…|[\d,]+ so far)$/u,
     "Ploidy: 2",
   ]);
@@ -370,7 +370,7 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
     /^stop\.vcf\.gz · /u,
     "Individuals: 1,000",
     "Variants: not counted",
-    "Failed FILTER: not counted",
+    "FILTER failures: not counted",
     "Chromosomes: not counted",
     "Ploidy: 2",
   ]);
@@ -391,7 +391,7 @@ test("OV2 a count stopped says so, Start again counts the variants, and the box 
   // FILTER failures, the focus is on the lines of the variants, the
   // failures and the chromosomes, not on the top of the page.
   await expect(page.locator(":focus")).toHaveText(
-    `${counted}Failed FILTER: 0Chromosomes: 1`,
+    `${counted}FILTER failures: 0Chromosomes: 1`,
   );
   await expectNoViolations(makeAxeBuilder);
 
@@ -507,7 +507,7 @@ test("OV2 a file being read is announced once, by its name", async ({
     "panel.vcf.gz · 87 KB",
     "Individuals: reading…",
     "Variants: reading…",
-    "Failed FILTER: reading…",
+    "FILTER failures: reading…",
     "Chromosomes: reading…",
     "Ploidy: reading…",
     /^Reading the file\./u,
@@ -582,7 +582,7 @@ test("OV2 live-stats 3 a VCF with variants that did not pass is read with every 
     /^low_qual\.vcf\.gz · /u,
     "Individuals: 200",
     "Variants: 1,200",
-    "Failed FILTER: 300",
+    "FILTER failures: 300",
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);

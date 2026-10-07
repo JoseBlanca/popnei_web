@@ -148,18 +148,18 @@ export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
 
 /** The line of the variants of a VCF that failed their FILTER, which a
-    `.nei` file does not have, once counted: "Failed FILTER: 300", 0 when
+    `.nei` file does not have, once counted: "FILTER failures: 300", 0 when
     every variant passed. */
 export function failuresLine(numFailures: number): string {
-  return `Failed FILTER: ${grouped(numFailures)}`;
+  return `FILTER failures: ${grouped(numFailures)}`;
 }
 
 /** The same line while the file is read, while the variants are counted
     and the failures after them, and after a Stop or a failure of their
     count. */
-export const FAILURES_READING = "Failed FILTER: reading…";
-export const FAILURES_COUNTING = "Failed FILTER: counting…";
-export const FAILURES_NOT_COUNTED = "Failed FILTER: not counted";
+export const FAILURES_READING = "FILTER failures: reading…";
+export const FAILURES_COUNTING = "FILTER failures: counting…";
+export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
 
 /** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
     this page is the file's: a `.nei` file holds it, and popnei reads that
