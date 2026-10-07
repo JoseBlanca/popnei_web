@@ -63,8 +63,8 @@ threshold:
 
 From 7 October 2026 a threshold may come with no legend, for the
 thresholds of `popgen2.html`, which are no filters and which the screen
-says in words under the plot, "At most 0.1: keeps 1,050 variants and
-removes 150" (`docs/plans/thresholds.md`): the line and the bars as
+says in words under the plot, "Maximum 0.1, keeps 1,050 variants and
+removes 150", the number in a box (`docs/plans/thresholds.md`): the line and the bars as
 above, no legend, and the top margin of a plot without one. The screen
 lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
