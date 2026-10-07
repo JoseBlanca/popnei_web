@@ -2368,8 +2368,10 @@ src/ui/
                     file, drawn while the pass runs from its results so
                     far (the store's running.soFar, never cached) and
                     then from its result, the page that holds them, their
-                    words, and the defects of the worker given to the
-                    error bar
+                    words, the rules of the chain that the box and its
+                    words share (chain.ts: its one button, from the first
+                    neither done nor locked, and the pass a Stop stops),
+                    and the defects of the worker given to the error bar
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
