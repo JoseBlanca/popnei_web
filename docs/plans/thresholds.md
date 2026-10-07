@@ -86,7 +86,7 @@ an edge one double above k/1280 the count is exact and the plot gives
 one number; on an edge equal to k/1280 the variants on the edge are
 somewhere in the bin that starts at it, and the plot gives the range
 the bins allow, from the bins below the edge to those plus that bin,
-"At most 0.05: keeps 1,113 to 1,170 variants", one number again when
+"At most 0.05: keeps 1,113 to 1,152 variants", one number again when
 that bin is empty. The range is computed from popnei's bins, as the
 counts are, and says no more than they know. The owner chooses between
 it, "below" with one number, and the popnei issue.
