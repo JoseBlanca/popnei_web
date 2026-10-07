@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { filterFailures } from "../core/analyses/filterFailures.ts";
 import { individualChecks } from "../core/analyses/individualChecks.ts";
 import { variantChecks } from "../core/analyses/variantChecks.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
@@ -33,11 +34,12 @@ interface Request {
 }
 
 /** The analyses a test may start by itself, by their ids: the summary of
-    popgen2.html, and two analyses of the old page that make a second
+    popgen2.html and its count of the FILTER failures, and two analyses of the old page that make a second
     group after it, as the statistics of the open file were before the one
     pass (docs/plans/file-stats.md). */
 const DEFS: ReadonlyMap<string, AnalysisDef<Job, JobResult>> = new Map([
   [variantsSummary.id, variantsSummary],
+  [filterFailures.id, filterFailures],
   [variantChecks.id, variantChecks],
   [individualChecks.id, individualChecks],
 ]);
@@ -100,16 +102,32 @@ function setUp(groups: readonly (readonly string[])[] = POPGEN2_AUTO_GROUPS): {
   return { store, sent, requests, auto, status };
 }
 
-/** Loads `panel.nei` under `fileId` and records its read. */
-function open(store: Store<JobResult, Blob>, fileId: string): void {
+/** Loads `panel.nei` under `fileId`, or `low_qual.vcf.gz` as the page
+    opens a VCF when `format` is "vcf", and records its read. */
+function open(
+  store: Store<JobResult, Blob>,
+  fileId: string,
+  format: "nei" | "vcf" = "nei",
+): void {
   store.apply("a new variants file was loaded", (p) =>
-    loadVariants(p, {
-      fileId,
-      name: "panel.nei",
-      size: 261_490,
-      format: "nei",
-      readOptions: null,
-    }),
+    loadVariants(
+      p,
+      format === "nei"
+        ? {
+            fileId,
+            name: "panel.nei",
+            size: 261_490,
+            format: "nei",
+            readOptions: null,
+          }
+        : {
+            fileId,
+            name: "low_qual.vcf.gz",
+            size: 30_000,
+            format: "vcf",
+            readOptions: { ploidy: null, onlyPassed: false },
+          },
+    ),
   );
   store.variantsRead(fileId, {
     kind: "read",
@@ -261,6 +279,16 @@ function distrib(mean: number): VariantDistrib {
     individuals of the file `open` reads. */
 const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
   [ID, SUMMARY],
+  [
+    "filterFailures",
+    {
+      analysis: "filterFailures",
+      passStats: {
+        numVars: 900,
+        filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
+      },
+    },
+  ],
   [
     "individualChecks",
     {
@@ -758,5 +786,115 @@ describe("one group of two, the summary and an analysis after it, as the chain o
     auto.sync();
     expect(auto.resume(CHAIN)).toBe(true);
     expect(analysesOf(requests)).toEqual([ID, AFTER, ID]);
+  });
+});
+
+describe("live-stats 3 the chain of popgen2.html: the summary, then the count of the FILTER failures", () => {
+  const FAILURES = filterFailures.id;
+
+  test("the page's one group is the summary and then the count of the FILTER failures", () => {
+    expect(POPGEN2_CHAIN).toEqual([ID, FAILURES]);
+    expect(POPGEN2_AUTO_GROUPS).toEqual([POPGEN2_CHAIN]);
+  });
+
+  test("on a VCF the count starts once the summary is done, and nothing more after it", async () => {
+    const { store, requests, auto, status } = setUp();
+    open(store, FIRST, "vcf");
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID]);
+    expect(status(FAILURES).kind).toBe("ready");
+
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID, FAILURES]);
+    expect(requests[1]?.job).toEqual({
+      analysis: FAILURES,
+      fileId: FIRST,
+      filters: [],
+    });
+
+    endDone(requests[1]);
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(2);
+    expect(status(FAILURES).kind).toBe("done");
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
+  });
+
+  test("a Stop while the count runs leaves it ready under a key it was started under, the summary done; Start again starts the count alone", async () => {
+    const { store, requests, auto, status } = setUp();
+    open(store, FIRST, "vcf");
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+
+    auto.stop(POPGEN2_CHAIN);
+    expect(requests[1]?.cancelled).toBe(true);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(2);
+    expect(status(ID).kind).toBe("done");
+    const stopped = status(FAILURES);
+    expect(stopped.kind === "ready" && auto.startedUnder(stopped.key)).toBe(
+      true,
+    );
+
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(true);
+    expect(analysesOf(requests)).toEqual([ID, FAILURES, FAILURES]);
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(status(FAILURES).kind).toBe("done");
+  });
+
+  test("a Stop between the end of the summary and the start of the count keeps the count from starting, and Start again starts it", async () => {
+    const { store, requests, auto, status } = setUp();
+    open(store, FIRST, "vcf");
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    // The page has not synced yet: the count is about to start.
+    auto.stop(POPGEN2_CHAIN);
+    auto.sync();
+    expect(requests).toHaveLength(1);
+    const stopped = status(FAILURES);
+    expect(stopped.kind === "ready" && auto.startedUnder(stopped.key)).toBe(
+      true,
+    );
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(true);
+    expect(analysesOf(requests)).toEqual([ID, FAILURES]);
+  });
+
+  test("on a .nei file the count is locked: the summary done ends the chain, nothing else is sent, and Start again is not offered for it", async () => {
+    const { store, requests, auto, status } = setUp();
+    open(store, FIRST, "nei");
+    expect(status(FAILURES).kind).toBe("locked");
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    auto.sync();
+    expect(analysesOf(requests)).toEqual([ID]);
+    expect(status(ID).kind).toBe("done");
+    expect(status(FAILURES).kind).toBe("locked");
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
+    auto.stop(POPGEN2_CHAIN);
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
+    expect(requests).toHaveLength(1);
+  });
+
+  test("popnei's refusal of the summary holds the count back, and Start again starts nothing", async () => {
+    const { store, requests, auto, status } = setUp();
+    open(store, FIRST, "vcf");
+    auto.sync();
+    fail(requests[0], { kind: "popnei", message: "not a VCF" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(1);
+    expect(status(FAILURES).kind).toBe("ready");
+    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
   });
 });

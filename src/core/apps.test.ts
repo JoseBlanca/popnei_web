@@ -481,8 +481,11 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
       October 2026. */
   const PANEL_SUMMARY: VariantsSummaryResult = summaryResult(["1"], [1200]);
 
-  test("the new page has the summary alone, whose one pass gives the statistics too, and the analyses of the old page do not hold the summary", () => {
-    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual(["variantsSummary"]);
+  test("the new page has the summary, whose one pass gives the statistics too, and the count of the FILTER failures, and the analyses of the old page do not hold the summary", () => {
+    expect(POPGEN2_ANALYSES.map((def) => def.id)).toEqual([
+      "variantsSummary",
+      "filterFailures",
+    ]);
     expect(POPGEN_ANALYSES.map((def) => def.id)).not.toContain(
       "variantsSummary",
     );
@@ -535,6 +538,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
     const state = store.getState();
     expect(state.analyses.map((view) => [view.id, view.status.kind])).toEqual([
       ["variantsSummary", "done"],
+      ["filterFailures", "locked"],
     ]);
     const read = state.project.variants?.read;
     expect(read?.kind === "read" ? read.numVars : null).toBe(1200);

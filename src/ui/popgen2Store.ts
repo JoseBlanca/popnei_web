@@ -9,6 +9,7 @@
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
+import { filterFailures } from "../core/analyses/filterFailures.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import { POPGEN2_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
@@ -18,13 +19,15 @@ import { createStore } from "../core/store.ts";
 import type { Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 
-/** The one group of the analyses the page starts by itself, which the
-    one Stop of the box stops and its Start again starts again: the
-    summary of the variants file, whose one pass gives the count of the
-    variants and the statistics of the open file
-    (docs/plans/live-stats.md). */
+/** The one group of the analyses the page starts by itself, in their
+    order, which the one Stop of the box stops and its Start again starts
+    again: the summary of the variants file, whose one pass gives the
+    count of the variants and the statistics of the open file, and then
+    the count of the variants of a VCF that failed their FILTER, locked
+    for a `.nei` file (docs/plans/live-stats.md). */
 export const POPGEN2_CHAIN: readonly AnalysisId[] = Object.freeze([
   variantsSummary.id,
+  filterFailures.id,
 ]);
 
 /** The analyses the page starts by itself, in the groups `createAutoRuns`

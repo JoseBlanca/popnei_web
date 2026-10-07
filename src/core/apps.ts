@@ -14,6 +14,7 @@ import { ldDecay } from "./analyses/ldDecay.ts";
 import { pca } from "./analyses/pca.ts";
 import { popDists } from "./analyses/popDists.ts";
 import { variantChecks } from "./analyses/variantChecks.ts";
+import { filterFailures } from "./analyses/filterFailures.ts";
 import { variantsSummary } from "./analyses/variantsSummary.ts";
 import { defect } from "./analyses/words.ts";
 import type { IndividualStats } from "./individualsKept.ts";
@@ -64,13 +65,14 @@ export const POPGEN_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
     which starts the screens again from the use cases: the summary of the
     variants file, whose one pass gives the count of the variants and the
     statistics of the open file, steps 3 and 4 of case 2 of
-    docs/use-cases.md (docs/plans/live-stats.md). The histograms of the
+    docs/use-cases.md, and the count of the variants of a VCF that failed
+    their FILTER (docs/plans/live-stats.md). The histograms of the
     variants and the statistics of each individual of their own requests
     are the old page's. It is a list apart from `POPGEN_ANALYSES`, so that
     the old page neither shows the summary nor changes
     (docs/plans/open-variants.md, "Its own list of analyses"). */
 export const POPGEN2_ANALYSES: readonly AnalysisDef<Job, JobResult>[] =
-  Object.freeze([variantsSummary]);
+  Object.freeze([variantsSummary, filterFailures]);
 
 /** The steps of the population genetics application, by their ids, in
     their order. */
@@ -116,8 +118,8 @@ export function firstProject(app: "popgen"): Project {
  * kept and the filters of the variants of its request's project, told by
  * the analysis of the result: the diversity, the distances between
  * populations and `filterCounts` itself, and not the statistics of each
- * individual and the summary of the variants file, whose passes have no
- * filter, nor the histograms of the variants, whose pass has the list and
+ * individual, the summary of the variants file and the count of the
+ * FILTER failures, whose passes have no filter of the project, nor the histograms of the variants, whose pass has the list and
  * no filter of the variants, nor the PCA, whose filters of missing data, MAF
  * and LD can be its own in the place of the project's, nor the LD decay,
  * whose filters are the project's but the LD pruning
@@ -133,6 +135,7 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
     case "individualChecks":
     case "variantChecks":
     case "variantsSummary":
+    case "filterFailures":
     case "pca":
     case "ldDecay":
       return { numVarsRead, counts: null };

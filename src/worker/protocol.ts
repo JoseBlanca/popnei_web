@@ -38,6 +38,14 @@ export type VariantFilter =
 /** The kind of a filter of the variants; a project holds one of each. */
 export type VariantFilterKind = VariantFilter["kind"];
 
+/** The kind of a filter in the counts of a pass: a filter of the
+    variants, or `"passed"`, popnei's `filterPassed`, which keeps the
+    variants whose FILTER is `PASS` or a dot and which only the count of
+    the FILTER failures puts on its pass. No project nor file holds a
+    filter of that kind (docs/plans/live-stats.md, "The count of the
+    FILTER failures"). */
+export type PassFilterKind = VariantFilterKind | "passed";
+
 /**
  * A filter of the individuals, the application's own, as the project
  * holds it; no job carries one. Core makes of them all the one list of the
@@ -353,9 +361,10 @@ export interface PassStats {
   /** The variants the pass gave, after every step. */
   readonly numVars: number;
   /** The counts of each filter of the variants of the job, under its kind,
-      in the order of the job's filters; empty for a pass with no filter.
-      The step of the individuals has no entry. */
-  readonly filtering: Partial<Record<VariantFilterKind, FilteringStats>>;
+      in the order of the job's filters, after `"passed"` for the count of
+      the FILTER failures; empty for a pass with no filter. The step of
+      the individuals has no entry. */
+  readonly filtering: Partial<Record<PassFilterKind, FilteringStats>>;
 }
 
 /** The request of the diversity of each population
@@ -636,6 +645,30 @@ export interface VariantsSummaryResult {
   readonly passStats: PassStats;
 }
 
+/** The request of the count of the FILTER failures of a VCF, from a pass
+    of popnei's `calcVarDensity`, with one window per chromosome, under
+    the step `filterPassed`, which reads no genotype
+    (docs/plans/live-stats.md, "The count of the FILTER failures"). */
+export interface FilterFailuresJob {
+  /** The analysis the request is of. */
+  readonly analysis: "filterFailures";
+  /** The load id of the variants file it reads, a VCF. */
+  readonly fileId: string;
+  /** No filter of the variants: the step `filterPassed` alone. */
+  readonly filters: readonly [];
+}
+
+/** The count of the FILTER failures: the counts of its pass, whose
+    `filtering` holds `"passed"` alone, the variants of the file as
+    `varsProcessed` and those whose FILTER is `PASS` or a dot as
+    `varsKept`. */
+export interface FilterFailuresResult {
+  /** The analysis the result is of. */
+  readonly analysis: "filterFailures";
+  /** The counts of the pass. */
+  readonly passStats: PassStats;
+}
+
 /** The method of the principal components: a PCA of the genotypes, or a
     PCoA of the Kosman distances, corrected by Lingoes' method when no
     space holds them. */
@@ -877,7 +910,8 @@ export type Job =
   | PcaJob
   | PopDistsJob
   | LdDecayJob
-  | VariantsSummaryJob;
+  | VariantsSummaryJob
+  | FilterFailuresJob;
 
 /** The result of a calculation, one member per analysis, tagged by
     `analysis` as its request. */
@@ -889,7 +923,8 @@ export type JobResult =
   | PcaResult
   | PopDistsResult
   | LdDecayResult
-  | VariantsSummaryResult;
+  | VariantsSummaryResult
+  | FilterFailuresResult;
 
 /**
  * The request of a file of the filtered variants
