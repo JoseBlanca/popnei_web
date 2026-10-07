@@ -168,3 +168,21 @@ core may not call popnei). On 533a95c Vitest "4010 passed". A line at 0
 keeps nothing by the bins, since the values of 0 are in the bin to the
 right of the edge 0: on `panel.vcf.gz` 2 variants have a missing rate
 of 0; the range covers it.
+
+The review of phase 1 sent tests, spec, api and architecture. Fixed in
+0899b6d to 6424107: the range is given by core, `variantsAtMost` →
+`{ keptLow, keptHigh, withValue }`, one number on an edge one double
+above k/1280 for the statistics popnei computes as one division (the
+missing rate, the MAF, the observed heterozygosity), a range on an edge
+equal to k/1280 whose bin holds variants, and a range on every such
+edge for the expected heterozygosity, which popnei computes as
+1 − Σ pᵏ and which can land on an edge above k/1280; the individuals
+with no value are counted apart, `{ kept, removed, noValue }`, with the
+note that the filters of the project remove them; each edge carries the
+number shown, k/1280; popnei's filter count lies inside the range, and
+equals it where one number is given, at 0.05, 0.1, 0.3 and 0.5 on the
+three files (36 cases); the fixture records popnei's version. On
+6424107 Vitest "4015 passed". Over every edge of `panel.vcf.gz` and
+`tetraploid.vcf.gz`, the tests reviewer found the bins equal to popnei's
+filter on all 464 edges above k/1280, and popnei's count inside the
+range on all 817 others.
