@@ -42,6 +42,19 @@ the write waits for the statistics of each individual once per load; and
 the numbers with the thresholds are recomputed. These revisions are
 approved by the owner on 28 September 2026; they change the code of stage 3.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its job, its key, the name of its file (`writtenName`) and
+the estimate of its size (`writeEstimate`) read the filters of the
+variants that apply to the project's file, `filtersApplied(p)` of
+`docs/specs/core/project.md`, in place of `p.filters`. A project keeps
+its filters through a new file, so the filter of the FILTER column,
+`passed`, can be on while a `.nei` file is open, and popnei refuses it
+over a `.nei` file written before its format 1.2; `filtersApplied`
+leaves it out then, and gives `p.filters` itself otherwise. On
+`popgen.html`, whose projects never hold that filter, the two are the
+same array, so nothing a user sees changes.
+
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
 no other place for it. It has no definition of that shape, no result in
@@ -83,7 +96,7 @@ analysis does:
 {
   format: "nei",
   fileId: p.variants.fileId,
-  filters: jobFilters(p.filters),
+  filters: jobFilters(filtersApplied(p)),
   individuals: readonly string[] | null, // the individuals kept, as the store
                                          // hands them to every analysis; null
                                          // when the filters remove nobody
@@ -169,8 +182,9 @@ decided on 26 September 2026 (point G of
 The name, `writtenName` of `src/core/fileNames.ts` (below, "The
 functions of core"), is the stem of the variants file, `variantsStem` of
 the same module, with `.filtered.nei`: `panel.vcf.gz` gives
-`panel.filtered.nei`. With no filter of the variants and no filter of
-individuals the name is the stem with `.nei`, `panel.nei`, since the
+`panel.filtered.nei`. With no filter of the variants that applies to
+the file, `filtersApplied(p)` empty, and no filter of individuals the
+name is the stem with `.nei`, `panel.nei`, since the
 file is then the variants file converted, which is what the application
 suggests doing once with a VCF (`docs/functionality.md`, section 3). The
 size is `numBytes` as `sizeText` writes it, below: "251 KB", "19.2 MB",
@@ -374,7 +388,8 @@ export function sizeText(numBytes: number): string;
 
 `writeEstimate` takes the variants from `variantsKept`, exact; when it
 is `null`, from `numVars` of the read of the variants file, exact with
-no filter of the variants and a bound with one; and `null` when neither
+no filter of the variants that applies to the file, `filtersApplied(p)`
+empty, and a bound with one; and `null` when neither
 is known. It takes the individuals from `kept.list`: all those of the
 file when the list is `known` with `null`, the length of the list when
 it is `known` with one, both exact; `byLists`, a bound, when it is

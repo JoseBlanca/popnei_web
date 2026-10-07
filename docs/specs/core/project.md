@@ -2522,15 +2522,18 @@ kind `passed` and its place before the list of the individuals;
 `docs/specs/core/projectFile.md`, `popgen.html` refusing a file that
 holds it; `docs/specs/core/keys.md`, the keys and the fingerprint
 reading `filtersApplied`; `docs/specs/core/store.md`, the write's job
-reading it; and `docs/architecture.md`, sections 2, 3, 5, 7 and 8. Not
-made, and asked of the code and of the next revision of each: the specs
-of the analyses that read `p.filters`, `docs/specs/analyses/diversity.md`,
-`pca.md` (`pcaFilters`), `popDists.md`, `ldDecay.md`, `sfs.md`,
-`filterCounts.md` (its rows and check numbers) and `writeVariants.md`,
-and `docs/specs/entry.md`, for the name of a file written and the
-estimate of its size, read `filtersApplied(p)` in its place; on
-`popgen.html`, whose projects never hold `passed`, it gives `p.filters`
-itself, so nothing those specs say changes for a user. The screen spec
+reading it; and `docs/architecture.md`, sections 2, 3, 5, 7 and 8, and
+after the review of the specs 9, 11, 12 and point 3 of 13. Made the
+same day after that review: the specs of the analyses that read
+`p.filters` read `filtersApplied(p)` in its place,
+`docs/specs/analyses/diversity.md`, `pca.md` (`pcaFilters`),
+`popDists.md`, `ldDecay.md` (its `keyInputs` and `ldDecayFilters`),
+`sfs.md` (the warning of the MAF filter), `filterCounts.md` (its rows
+and check numbers) and `writeVariants.md` (its job, the name of its
+file and the estimate of its size), and `docs/specs/entry.md`
+(`countsOf`, `writeCountsOf` and the first project of `popgen2.html`);
+on `popgen.html`, whose projects never hold `passed`, it gives
+`p.filters` itself, so nothing those specs say changes for a user. The screen spec
 of the filters of `popgen2.html`, `docs/specs/steps/popgen2-filters.md`,
 sends `setThreshold` and the two commands of the box, and shows
 `thresholdValue`.

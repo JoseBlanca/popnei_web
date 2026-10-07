@@ -57,6 +57,16 @@ below under "The page", are this spec's. The stages are those of
 `docs/build-order.md`; this one is stage 2, the walking skeleton, the
 smallest application that goes through every part once.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): `countsOf` and `writeCountsOf` of `src/core/apps.ts` speak of
+the filters that apply to the file, `filtersApplied` of
+`docs/specs/core/project.md`, which leaves the filter of the FILTER
+column out for a `.nei` file, in place of the project's filters as they
+are; and `popgen2.html` gets a first project of its own. On
+`popgen.html`, whose projects never hold that filter, nothing a user
+sees changes.
+
 The words of the web used here, as they are used in this application:
 
 - **A web worker** is a second thread of the browser tab, which cannot
@@ -304,7 +314,13 @@ population genetics application alone until stage 7:
 - **its first project**: `emptyProject("popgen")` with the missing data
   filter on at 0.1, as the owner decided on 25 September 2026
   (`docs/specs/steps/variants.md`, "The missing data filter"), since
-  `emptyProject` holds no filter;
+  `emptyProject` holds no filter. From 7 October 2026 `popgen2.html` has
+  a first project of its own, `popgen2FirstProject()`: the filter of
+  the FILTER column on and the missing data filter on at 0.1, and no
+  other (`docs/specs/core/project.md`, "The filters of popgen2.html"),
+  which `createPopgen2Store` passes with `filterNotices: true`
+  (`docs/specs/core/store.md`); the old page keeps
+  `firstProject("popgen")`;
 - **`countsOf`**, which replaces `numVarsOf` of stage 2: the store's
   function that gives, of the result of any analysis, what its pass
   counted (`docs/specs/core/store.md`, "What each filter kept";
@@ -318,7 +334,8 @@ population genetics application alone until stage 7:
   - the counts of the filters, a result of `filterCounts`, `{ analysis:
     "filterCounts", passStats }`, for a result whose pass had the list
     of the individuals kept and the filters of the variants of its
-    request's project: the diversity, whose result carries the counts
+    request's project, those that apply to its file, `filtersApplied`
+    of `docs/specs/core/project.md`: the diversity, whose result carries the counts
     of the first of its two passes from stage 5, the distances between
     populations from stage 5, and `filterCounts` itself; `null`
     for the statistics of each individual, whose pass has no filter
@@ -334,7 +351,8 @@ population genetics application alone until stage 7:
     "Which variants it reads");
 - **`writeCountsOf`**, the store's `write.countsOf`: the result of
   `filterCounts` made of the `passStats` of a written file, whose pass
-  always had the filters of its project;
+  always had the filters of its project that apply to its file,
+  `filtersApplied`;
 - **`individualStatsOf`**, the store's `statistics.of`: the statistics
   of each individual in a result of `individualChecks`, its
   `individuals`, `missingGtRate` and `obsHetRate`, as

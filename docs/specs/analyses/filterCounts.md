@@ -39,6 +39,21 @@ populations fill the counts, the diversity from the first of its two
 passes, and the LD decay does not, as `docs/specs/analyses/popDists.md`,
 `diversity.md` and `ldDecay.md` have it; approved by the owner on 30 September 2026.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its job, its key, its rows (`filterCountRows`), its check
+numbers (`numCheckNumbers`) and its script read the filters of the
+variants that apply to the project's file, `filtersApplied(p)` of
+`docs/specs/core/project.md`, in place of `p.filters`. A project keeps
+its filters through a new file, so the filter of the FILTER column,
+`passed`, can be on while a `.nei` file is open, and popnei refuses it
+over a `.nei` file written before its format 1.2; `filtersApplied`
+leaves it out then, and gives `p.filters` itself otherwise. On
+`popgen.html`, whose projects never hold that filter, the two are the
+same array, so nothing a user sees changes. So a Count over a `.nei`
+file has no row for the filter of the FILTER column, and its check
+numbers count the filters that apply.
+
 ## The module
 
 ### What it does
@@ -121,7 +136,7 @@ variants of the file.
 ### The request
 
 ```ts
-{ analysis: "filterCounts", fileId: p.variants.fileId, filters: jobFilters(p.filters),
+{ analysis: "filterCounts", fileId: p.variants.fileId, filters: jobFilters(filtersApplied(p)),
   individuals: c.individuals }
 ```
 
@@ -195,7 +210,7 @@ numbers.
 filter in its order: 1 + the number of filters, `[1200, 1152, 1152, 1128]`
 for the missing data filter at 0.05, the filter by heterozygosity at 0.9
 and the MAF filter at 0.95. `numCheckNumbers(p)` gives 1 +
-`p.filters.length`.
+`filtersApplied(p).length`.
 
 ### Its lines of the Python script
 
@@ -236,8 +251,9 @@ export interface FilterCountRow {
   readonly given: number;
   readonly kept: number;
 }
-/** The rows of a result, in the order of the filters of the project it
-    was asked for; a defect when a filter of it has no count. */
+/** The rows of a result, in the order of the filters that apply to the
+    file of the project it was asked for, filtersApplied(p); a defect
+    when a filter of it has no count. */
 export function filterCountRows(r: FilterCountsResult, p: Project): readonly FilterCountRow[];
 
 /** The words of a refusal of popnei, for the error state of the Count

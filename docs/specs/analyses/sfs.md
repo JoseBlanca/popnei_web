@@ -28,6 +28,20 @@ rows `analyses/` and `charts/` of its section 9. It depends on
 and on `docs/specs/charts/histogram.md`, which draws it; what it needs of
 them is listed at the end, in "What this spec asks of other documents".
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its warning of the MAF filter, `spectrumWarnings`, reads the
+project's MAF filter from the filters of the variants that apply to the
+project's file, `filtersApplied(p)` of `docs/specs/core/project.md`, in
+place of `p.filters`. A project keeps its filters through a new file, so
+the filter of the FILTER column, `passed`, can be on while a `.nei` file
+is open, and popnei refuses it over a `.nei` file written before its
+format 1.2; `filtersApplied` leaves it out then, and gives `p.filters`
+itself otherwise. On `popgen.html`, whose projects never hold that
+filter, the two are the same array, so nothing a user sees changes. The
+MAF filter is never left out by `filtersApplied`, so the warning is the
+same.
+
 A few words are used throughout. The **spectrum** of a population counts
 its variants by how many copies of the rarer allele they show. **Folded**
 means that the count j and the count n − j are one bin, since nothing in

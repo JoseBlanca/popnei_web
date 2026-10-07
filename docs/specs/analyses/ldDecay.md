@@ -29,6 +29,20 @@ and `client.md`, and on the plot written beside it,
 `docs/specs/charts/line.md`. What it asks of those specs is at the end,
 and they are not changed here.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its key, through `ldDecayFilters` in its `keyInputs`, its job
+and its script read the filters of the variants that apply to the
+project's file, `filtersApplied(p)` of `docs/specs/core/project.md`, in
+place of `p.filters`. A project keeps its filters through a new file, so
+the filter of the FILTER column, `passed`, can be on while a `.nei` file
+is open, and popnei refuses it over a `.nei` file written before its
+format 1.2; `filtersApplied` leaves it out then, and gives `p.filters`
+itself otherwise. On `popgen.html`, whose projects never hold that
+filter, the two are the same array, so nothing a user sees changes. The
+filter of the FILTER column comes through `ldDecayFilters`, which leaves
+out the LD pruning alone.
+
 The words of the documents used here, as `docs/specs/analyses/diversity.md`
 defines them: the **key** of a result, a hash of everything it was
 calculated from, under which the store shows it; the **load** of the
@@ -109,8 +123,8 @@ variants and `pop_a` 174 pairs, with a half distance of 1,474 bp (node,
 It has no filter of its own, unlike the PCA, whose own filters replace
 the dataset's (`docs/specs/analyses/pca.md`, "Which variants it reads").
 `ldDecayFilters(filters)` is the project's filters of the variants that
-are on, in their order, without the one of kind `ld`, whatever its
-distance. So the LD pruning of the Variants step with no distance typed,
+are on and apply to its file, `filtersApplied(p)`, in their order,
+without the one of kind `ld`, whatever its distance. So the LD pruning of the Variants step with no distance typed,
 which locks every analysis that reads it, does not lock the LD decay.
 
 Beside the filters of the dataset, popnei leaves out of each population
@@ -198,7 +212,7 @@ the store does not ask `variantFilterNeeds` of the LD decay
 ```ts
 {
   pops: populationsOf(p),                   // the column's pairs, "all" or null
-  filters: ldDecayFilters(p.filters),       // the project's but the LD pruning
+  filters: ldDecayFilters(filtersApplied(p)), // the filters that apply but the LD pruning
   options: { maxDist: number | null, maxAllowedMaf: number },
 }
 ```
@@ -302,7 +316,7 @@ its words (`diversity.md`, "Why it cannot run").
 {
   analysis: "ldDecay",
   fileId: p.variants.fileId,
-  filters: jobFilters(ldDecayFilters(p.filters)),
+  filters: jobFilters(ldDecayFilters(filtersApplied(p))),
   individuals: c.individuals,          // the individuals kept; null when the filters remove nobody
   pops,                                // populationsKept(p, c.individuals).pops
   minDist: 1,                          // LD_DECAY_MIN_DIST

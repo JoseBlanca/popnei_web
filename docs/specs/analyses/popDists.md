@@ -37,6 +37,18 @@ filters, the states of the panel and the words they share. It depends on
 `runner.md` and `messages.md`, which it asks to change, in "What this
 spec asks of other documents" at the end.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its job, its key and its script read the filters of the
+variants that apply to the project's file, `filtersApplied(p)` of
+`docs/specs/core/project.md`, in place of `p.filters`. A project keeps
+its filters through a new file, so the filter of the FILTER column,
+`passed`, can be on while a `.nei` file is open, and popnei refuses it
+over a `.nei` file written before its format 1.2; `filtersApplied`
+leaves it out then, and gives `p.filters` itself otherwise. On
+`popgen.html`, whose projects never hold that filter, the two are the
+same array, so nothing a user sees changes.
+
 The owner decided on 30 September 2026, before this spec was written
 (`docs/specs/stage-5-open-points.md`, decisions 1 and 2):
 
@@ -276,7 +288,7 @@ sends:
 {
   analysis: "popDists",
   fileId: p.variants.fileId,
-  filters: jobFilters(p.filters),
+  filters: jobFilters(filtersApplied(p)),
   individuals: c.individuals,   // null when the filters remove nobody
   pops,                         // the populations with the minimum, in the order of the file
   leftOut,                      // [population, its individuals kept][], in the order of the file

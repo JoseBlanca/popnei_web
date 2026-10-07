@@ -106,6 +106,18 @@ section 6 of `docs/functionality.md` headed "Diversity", section 4 of
 parts it relies on are listed at the end, in "What this spec relies on in
 the specs written beside it".
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its job, its key and its script read the filters of the
+variants that apply to the project's file, `filtersApplied(p)` of
+`docs/specs/core/project.md`, in place of `p.filters`. A project keeps
+its filters through a new file, so the filter of the FILTER column,
+`passed`, can be on while a `.nei` file is open, and popnei refuses it
+over a `.nei` file written before its format 1.2; `filtersApplied`
+leaves it out then, and gives `p.filters` itself otherwise. On
+`popgen.html`, whose projects never hold that filter, the two are the
+same array, so nothing a user sees changes.
+
 The walking skeleton is stage 2 of `docs/build-order.md`, the smallest
 application that goes through every part once. For it the owner decided,
 on 25 September 2026: the inbreeding coefficient F waits for stage 5, and
@@ -727,7 +739,7 @@ it only when `needs` gives `null`, so the variants file is read.
 {
   analysis: "diversity",
   fileId: p.variants.fileId,
-  filters: jobFilters(p.filters), // the project's, whose LD filter has its distance
+  filters: jobFilters(filtersApplied(p)), // the filters that apply, whose LD filter has its distance
   individuals: c.individuals, // the individuals kept, in the order of the variants
                               // file; null when the filters remove nobody
   pops,                     // populationsKept(p, c.individuals).pops: the populations

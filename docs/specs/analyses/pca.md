@@ -76,6 +76,21 @@ and on the revision of `docs/specs/core/project.md` for stage 4, the
 grouping of one population. What it relies on in them is listed at the
 end.
 
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): its key, through `pcaFilters`, its job and its script read
+the filters of the variants that apply to the project's file,
+`filtersApplied(p)` of `docs/specs/core/project.md`, in place of
+`p.filters`. A project keeps its filters through a new file, so the
+filter of the FILTER column, `passed`, can be on while a `.nei` file is
+open, and popnei refuses it over a `.nei` file written before its format
+1.2; `filtersApplied` leaves it out then, and gives `p.filters` itself
+otherwise. On `popgen.html`, whose projects never hold that filter, the
+two are the same array, so nothing a user sees changes. `pcaFilters`
+takes `filtersApplied(p)` as the project's filters on; the filter of the
+FILTER column, of which the PCA has no own, comes through it as the
+dataset's, as the regions will.
+
 The words of the documents used here, as `docs/specs/analyses/diversity.md`
 and `individualChecks.md` define them: the **key** of a result, a hash of
 everything it was calculated from, under which the store shows it, so
@@ -276,7 +291,8 @@ the individuals it places. The list of the individuals kept is in the
 job, as for every analysis.
 
 `pcaFilters(filters, options)` makes the list of the filters of the
-variants, a pure function of the project's filters on and the options.
+variants, a pure function of the project's filters on that apply to
+its file, `filtersApplied(p)`, and the options.
 Worked examples, from the filters of a new project, the missing data
 filter at 0.1 (`firstProject` of `src/core/apps.ts`). In the column of
 the options, "defaults" is the three filters as in the Variants step,
@@ -472,7 +488,7 @@ PCA's `needs` gives that reason when its LD filter follows the dataset's
 ```ts
 {
   method: "pca" | "pcoa",
-  filters: pcaFilters(p.filters, pcaOptions(p)),  // an LD filter with no distance included
+  filters: pcaFilters(filtersApplied(p), pcaOptions(p)),  // an LD filter with no distance included
 }
 ```
 
@@ -680,7 +696,7 @@ why (below, "Its words").
 {
   analysis: "pca",
   fileId: p.variants.fileId,
-  filters: jobFilters(pcaFilters(p.filters, pcaOptions(p))), // every LD filter with its distance
+  filters: jobFilters(pcaFilters(filtersApplied(p), pcaOptions(p))), // every LD filter with its distance
   individuals: c.individuals,   // the individuals kept; null when the filters remove nobody
   method: "pca",                // or "pcoa"
   numCompsKept: 10,             // PCA_NUM_COMPS_KEPT
@@ -1117,7 +1133,8 @@ export const MAX_COLOUR_GROUPS = 1000;
 /** The options of the project for the PCA, or the defaults. */
 export function pcaOptions(p: Project): PcaOptions;
 
-/** The filters of the job: the project's filters on, with the PCA's own
+/** The filters of the job: the project's filters on that apply to its
+    file, filtersApplied(p), with the PCA's own
     of each kind in the place of the dataset's (above, "Which variants it
     reads"). The same frozen value for the same inputs. */
 export function pcaFilters(
