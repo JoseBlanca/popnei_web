@@ -588,17 +588,18 @@ since the count of what all the filters keep together comes with the
 tools. The first tells the user before the tools exist, at the cost of
 one sentence under two plots.
 
-The count needs no second reading of the file: it is the last of
-popnei's bins of the missing rate, the 1,280 bins over 0 to 1 that the
-one pass already gives. That bin, from 1279/1280 to 1, holds only the
-variants with a missing rate of 1 on any file of fewer than 1,280
-individuals, since a variant with one genotype called among n
-individuals has a missing rate of (n − 1)/n, below 1279/1280 for those
-files; on larger files it would also hold variants with a few genotypes
-called. How often the sentence would show, measured with popnei 0.2.1
-under node on 7 October 2026: no variant with every genotype missing in
-`panel.vcf.gz`, `low_qual.vcf.gz` or `panel.nei`, 0 of 1,200 in each,
-by popnei's last bin and, for the two VCFs, by reading their genotypes.
+The count needs no second reading of the file: it is the variants of
+the file less those in popnei's histogram of the MAF, which the one pass
+already gives, since popnei puts in that histogram only the variants
+with a value. Checked with popnei 0.2.1 under node on 7 October 2026, on
+a VCF of four variants and four individuals of which one variant has no
+called genotype: the histograms of the missing rate hold 4 variants,
+those of the MAF and of the observed heterozygosity 3. The count is
+exact at any number of individuals; the last bin of the missing rate is
+not, since on a file of 1,280 individuals or more it also holds
+variants with a few genotypes called. How often the sentence would
+show, measured the same day: no variant with every genotype missing in
+`panel.vcf.gz`, `low_qual.vcf.gz` or `panel.nei`, 0 of 1,200 in each.
 So on the fixtures it would never show, and a fixture with such
 variants would be needed to check it. Recommended: the sentence, which
 shows nothing when there are none. Meanwhile: nothing, as today.

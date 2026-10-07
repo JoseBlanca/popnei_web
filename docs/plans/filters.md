@@ -591,8 +591,7 @@ Tasks:
   layout the session chose, the list of the screen spec's "Words and
   layout chosen by the session"; Open 1, the sentence on the variants
   with no called genotype, with the screen spec's options, its
-  recommendation and the limit of its count on files of 1,280
-  individuals or more (below, work package 12); and what VoiceOver says,
+  recommendation (below, work package 12); and what VoiceOver says,
   in Safari, of a run of ten presses on a line (one notice), of an empty
   box (it should say "No filter: keeps every variant") and of the FILTER
   box with its sentence. The screen spec asks for VoiceOver to be heard
@@ -644,18 +643,13 @@ Tasks:
   deliverables. Then the `ux` and `accessibility` reviewers on it, and
   the owner sees it.
 
-What could go wrong: the count. The screen spec takes it from the last
-of popnei's 1,280 bins of the missing rate, which holds only the
-variants with no called genotype on a file of fewer than 1,280
-individuals, and on a larger file also variants with a few genotypes
-called, so that the sentence would count those too. The count of the
-variants of the file less the sum of popnei's bins of the MAF, the way
-the first version of Open 1 had it, has no such limit, if those bins
-hold only the variants with a value, which the task checks under node
-first. The owner
-chooses between the two ways of counting with Open 1 at the stop; if
-they choose the count less the MAF's bins, the screen spec is changed
-to say so before 12.2.
+What could go wrong: the count. The screen spec takes it as the
+variants of the file less the sum of popnei's bins of the MAF, exact at
+any number of individuals since popnei puts in those bins only the
+variants with a value (checked by the session under node with popnei
+0.2.1 on 7 October 2026: 4 variants, one with no called genotype, 3 in
+the bins of the MAF). The new fixture has such variants, and a test
+checks the count against popnei's own on it.
 
 ## Work package 13: the end
 
