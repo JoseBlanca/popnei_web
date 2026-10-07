@@ -93,12 +93,15 @@ async function titles(
 /** The titles of the six histograms, with no mean: the short ones of the
     owner of 7 October 2026, and the full names. */
 const TITLES = [
-  ["Missing genotypes max:", "Proportion of missing genotypes"],
-  ["Major allele frequency max:", "Major allele frequency"],
-  ["Obs. het. max:", "Observed heterozygosity"],
-  ["Exp. het. (unbiased) max:", "Expected heterozygosity (unbiased)"],
-  ["Missing GTs max:", "Proportion of missing genotypes of each individual"],
-  ["Obs. het. max:", "Observed heterozygosity of each individual"],
+  ["Missing genotypes\u00a0max:", "Proportion of missing genotypes"],
+  ["Major allele frequency\u00a0max:", "Major allele frequency"],
+  ["Obs. het.\u00a0max:", "Observed heterozygosity"],
+  ["Exp. het. (unbiased)\u00a0max:", "Expected heterozygosity (unbiased)"],
+  [
+    "Missing GTs\u00a0max:",
+    "Proportion of missing genotypes of each individual",
+  ],
+  ["Obs. het.\u00a0max:", "Observed heterozygosity of each individual"],
 ];
 
 /** The descriptions of the histograms, which say their bins and the

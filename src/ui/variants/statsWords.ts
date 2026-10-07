@@ -212,9 +212,11 @@ export function statsAnnouncementsOf(
 const MAX_LABEL = "max:";
 
 /** What is drawn before the box of the threshold of a histogram titled
-    `title`: "Obs. het. max:". */
+    `title`: "Obs. het. max:", the last word of the title joined to "max:"
+    by a no-break space, so that where the column is narrow the words wrap
+    as "Major allele / frequency max:", never with "max:" alone. */
 export function thresholdShownLabel(title: string): string {
-  return `${title} ${MAX_LABEL}`;
+  return `${title}\u00a0${MAX_LABEL}`;
 }
 
 /** The name of the box and of the line of the threshold of the histogram

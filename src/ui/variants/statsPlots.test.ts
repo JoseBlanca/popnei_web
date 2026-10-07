@@ -47,12 +47,12 @@ describe("the histograms of the statistics of the open file", () => {
     const missing = variantPlot("missingRate", VARIANTS, false, null);
     expect(missing.threshold.line).toBe("Keeps all 4 variants");
     expect(missing.data.title).toBe("Proportion of missing genotypes");
-    expect(missing.threshold.shownLabel).toBe("Missing genotypes max:");
+    expect(missing.threshold.shownLabel).toBe("Missing genotypes\u00a0max:");
     const maf = variantPlot("maf", VARIANTS, false, null);
     expect(maf.threshold.line).toBe("Keeps all 3 variants");
     expect(maf.data.title).toBe("Major allele frequency");
     expect(maf.data.xLabel).toBe("Major allele frequency");
-    expect(maf.threshold.shownLabel).toBe("Major allele frequency max:");
+    expect(maf.threshold.shownLabel).toBe("Major allele frequency\u00a0max:");
     expect(variantPlot("obsHet", VARIANTS, false, null).data.xLabel).toBe(
       "Observed heterozygosity",
     );
@@ -143,7 +143,7 @@ describe("the histograms of the statistics of the open file", () => {
       null,
     );
     expect(missing.plot?.threshold.line).toBe("Keeps all 3 individuals");
-    expect(missing.plot?.threshold.shownLabel).toBe("Missing GTs max:");
+    expect(missing.plot?.threshold.shownLabel).toBe("Missing GTs\u00a0max:");
     expect(missing.noValueLine).toBeNull();
     expect(missing.plot?.data.edges[0]).toBe(0);
     expect(missing.plot?.data.edges.at(-1)).toBe(1);
@@ -155,7 +155,7 @@ describe("the histograms of the statistics of the open file", () => {
       null,
     );
     expect(het.plot?.threshold.line).toBe("Keeps all 2 individuals");
-    expect(het.plot?.threshold.shownLabel).toBe("Obs. het. max:");
+    expect(het.plot?.threshold.shownLabel).toBe("Obs. het.\u00a0max:");
     expect(het.noValueLine).toBe(
       "1 individual with no called genotype is not in the histogram, and the threshold neither keeps nor removes it.",
     );
@@ -260,7 +260,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(plot.threshold.line).toBe("Keeps all 1,200 variants");
     expect(plot.threshold.valueText).toBe("0.1, keeps all 1,200 variants");
     expect(plot.threshold.name).toBe(
-      "Missing genotypes max: maximum proportion of missing genotypes",
+      "Missing genotypes\u00a0max: maximum proportion of missing genotypes",
     );
     // The box: from 0 to 1, the arrow keys by the step, a number typed
     // of up to ten decimals, rounded to the step.
@@ -479,7 +479,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(at?.threshold.onStep(0.030000000000000002)).toBe(0.03);
     expect(at?.threshold.onStep(0.0304)).toBe(0.03);
     expect(at?.threshold.name).toBe(
-      "Missing GTs max: maximum proportion of missing genotypes of an individual",
+      "Missing GTs\u00a0max: maximum proportion of missing genotypes of an individual",
     );
     // A number of four decimals typed is counted at three, the number
     // shown.

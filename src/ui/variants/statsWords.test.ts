@@ -56,12 +56,12 @@ describe("the words of the statistics of the open file", () => {
   });
 
   test("thresholds round 1 the name of a box starts with the words drawn before it (WCAG 2.5.3) and goes on with the full name", () => {
-    expect(thresholdShownLabel("Obs. het.")).toBe("Obs. het. max:");
+    expect(thresholdShownLabel("Obs. het.")).toBe("Obs. het.\u00a0max:");
     expect(variantThresholdName("obsHet")).toBe(
-      "Obs. het. max: maximum observed heterozygosity",
+      "Obs. het.\u00a0max: maximum observed heterozygosity",
     );
     expect(individualThresholdName("missingGenotypes")).toBe(
-      "Missing GTs max: maximum proportion of missing genotypes of an individual",
+      "Missing GTs\u00a0max: maximum proportion of missing genotypes of an individual",
     );
   });
 

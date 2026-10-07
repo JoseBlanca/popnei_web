@@ -216,12 +216,12 @@ const GROUPS = [
 
 /** The short titles drawn before the boxes, in the order of `GROUPS`. */
 const SHOWN = [
-  "Missing genotypes max:",
-  "Major allele frequency max:",
-  "Obs. het. max:",
-  "Exp. het. (unbiased) max:",
-  "Missing GTs max:",
-  "Obs. het. max:",
+  "Missing genotypes\u00a0max:",
+  "Major allele frequency\u00a0max:",
+  "Obs. het.\u00a0max:",
+  "Exp. het. (unbiased)\u00a0max:",
+  "Missing GTs\u00a0max:",
+  "Obs. het.\u00a0max:",
 ] as const;
 
 for (const width of [1280, 320]) {
@@ -255,11 +255,37 @@ for (const width of [1280, 320]) {
       ) {
         throw new Error(`${title} not drawn`);
       }
-      // One row: the box beside the label, its middle within the label's
-      // height, whose words may wrap at 320 pixels.
+      // One row: the box beside the label, whose words may wrap at 320
+      // pixels, its middle on the last line of the label, which ends with
+      // "max:" and its word before.
+      const lastLine = await label.evaluate((element) => {
+        const text = element.firstChild;
+        const content = text?.textContent ?? "";
+        if (text === null || content === "") return null;
+        const whole = document.createRange();
+        whole.selectNodeContents(text);
+        const last = [...whole.getClientRects()].at(-1);
+        // The last word of the title and "max:".
+        const tail = document.createRange();
+        tail.setStart(
+          text,
+          content.lastIndexOf(" ", content.indexOf("max:") - 2) + 1,
+        );
+        tail.setEnd(text, content.length);
+        return last === undefined
+          ? null
+          : {
+              top: last.top,
+              bottom: last.bottom,
+              tailRects: tail.getClientRects().length,
+            };
+      });
+      if (lastLine === null) throw new Error(`${title} has no label text`);
+      // The last word and "max:" on one line.
+      expect(lastLine.tailRects).toBe(1);
       const middle = inputBox.y + inputBox.height / 2;
-      expect(middle).toBeGreaterThan(labelBox.y);
-      expect(middle).toBeLessThan(labelBox.y + labelBox.height);
+      expect(middle).toBeGreaterThan(lastLine.top - 4);
+      expect(middle).toBeLessThan(lastLine.bottom + 4);
       expect(inputBox.x).toBeGreaterThan(labelBox.x + labelBox.width - 1);
       // Nothing beyond the width of the page.
       expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(width);
