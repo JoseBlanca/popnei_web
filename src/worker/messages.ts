@@ -25,8 +25,6 @@ import type {
   PopDiversityFields,
   FilterCountsJob,
   FilterCountsResult,
-  FilterFailuresJob,
-  FilterFailuresResult,
   FilteringStats,
   IndividualChecksJob,
   IndividualChecksResult,
@@ -42,7 +40,6 @@ import type {
   LeftOut,
   LoadFormat,
   Opened,
-  PassFilterKind,
   PassStats,
   PcaJob,
   PcaMethod,
@@ -67,7 +64,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -890,7 +887,6 @@ const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   variantsSummary: true,
-  filterFailures: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -901,7 +897,6 @@ const RESULT_ANALYSES: Readonly<Record<JobResult["analysis"], true>> = {
   variantChecks: true,
   filterCounts: true,
   variantsSummary: true,
-  filterFailures: true,
   pca: true,
   popDists: true,
   ldDecay: true,
@@ -926,14 +921,6 @@ const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   obs_het: true,
   ld: true,
 };
-/** The one kind of the counts of the count of the FILTER failures, which
-    no other result holds. */
-const PASSED_KIND: Readonly<Record<"passed", true>> = { passed: true };
-
-/** The kinds of filter the counts of a pass of a result may hold: those
-    of the variants, or `"passed"` alone. */
-type FilteringKinds =
-  Readonly<Record<VariantFilterKind, true>> | typeof PASSED_KIND;
 const READ_KINDS: Readonly<Record<IndividualsFileRead["kind"], true>> = {
   read: true,
   failed: true,
@@ -1099,8 +1086,6 @@ function checkJob(value: unknown, place: Place): Checked<Job> {
       return checkVariantChecksJob(record, place);
     case "variantsSummary":
       return checkVariantsSummaryJob(record, place);
-    case "filterFailures":
-      return checkFilterFailuresJob(record, place);
     case "pca":
       return checkPcaJob(record, place);
     case "popDists":
@@ -1286,31 +1271,6 @@ function checkVariantsSummaryJob(
     minNumIndividuals: minNumIndividuals.value,
     numBins: numBins.value,
     range: range.value,
-  });
-}
-
-/** The fields of the request of the count of the FILTER failures,
-    docs/plans/live-stats.md: the load, and no filter of the variants. */
-function checkFilterFailuresJob(
-  record: object,
-  place: Place,
-): Checked<FilterFailuresJob> {
-  const wrong = exactFields(record, place, ["analysis", "fileId", "filters"]);
-  if (wrong !== null) {
-    return wrong;
-  }
-  const fileId = field(record, "fileId", place, isText);
-  if (!fileId.ok) {
-    return fileId;
-  }
-  const filters = field(record, "filters", place, noFilters);
-  if (!filters.ok) {
-    return filters;
-  }
-  return accepted({
-    analysis: "filterFailures",
-    fileId: fileId.value,
-    filters: filters.value,
   });
 }
 
@@ -1773,8 +1733,6 @@ function checkJobResult(value: unknown, place: Place): Checked<JobResult> {
       return checkFilterCountsResult(record, place);
     case "variantsSummary":
       return checkVariantsSummaryResult(record, place);
-    case "filterFailures":
-      return checkFilterFailuresResult(record, place);
     case "pca":
       return checkPcaResult(record, place);
     case "popDists":
@@ -2211,35 +2169,6 @@ function checkFilterCountsResult(
   return accepted({ analysis: "filterCounts", passStats: checked.value });
 }
 
-/** The fields of the count of the FILTER failures,
-    docs/plans/live-stats.md: the counts of its pass, whose filters are
-    `"passed"` alone. */
-function checkFilterFailuresResult(
-  record: object,
-  place: Place,
-): Checked<FilterFailuresResult> {
-  const wrong = exactFields(record, place, ["analysis", "passStats"]);
-  if (wrong !== null) {
-    return wrong;
-  }
-  const checked = field(record, "passStats", place, (v, p) =>
-    checkPassStats(v, p, PASSED_KIND),
-  );
-  if (!checked.ok) {
-    return checked;
-  }
-  const filtering = inner(inner(place, "passStats"), "filtering");
-  if (checked.value.filtering.passed === undefined) {
-    return refused({
-      kind: "missingFields",
-      messageKind: filtering.messageKind,
-      path: filtering.path,
-      fields: ["passed"],
-    });
-  }
-  return accepted({ analysis: "filterFailures", passStats: checked.value });
-}
-
 /** The fields of the summary of the variants file,
     docs/plans/live-stats.md, the counts as many as the chromosomes, and
     its two parts of the statistics. */
@@ -2338,13 +2267,8 @@ function checkWritten(value: unknown, place: Place): Checked<Written<Blob>> {
 }
 
 /** The counts of a pass: `numVars`, and the counts of each filter under
-    its kind, one of `kinds`, the kinds of the filters of the variants
-    unless given, in the order they came. */
-function checkPassStats(
-  value: unknown,
-  place: Place,
-  kinds: FilteringKinds = VARIANT_FILTER_KINDS,
-): Checked<PassStats> {
+    its kind, a kind of `VariantFilter`, in the order they came. */
+function checkPassStats(value: unknown, place: Place): Checked<PassStats> {
   const record = objectWith(value, place, ["numVars", "filtering"]);
   if (!record.ok) {
     return record;
@@ -2353,27 +2277,24 @@ function checkPassStats(
   if (!numVars.ok) {
     return numVars;
   }
-  const filtering = field(record.value, "filtering", place, (v, p) =>
-    checkFiltering(v, p, kinds),
-  );
+  const filtering = field(record.value, "filtering", place, checkFiltering);
   if (!filtering.ok) {
     return filtering;
   }
   return accepted({ numVars: numVars.value, filtering: filtering.value });
 }
 
-/** The counts of the filters of a pass, an object whose fields are of
-    `kinds`, kept in their order. */
+/** The counts of the filters of a pass, an object whose fields are kinds
+    of `VariantFilter`, kept in their order. */
 function checkFiltering(
   value: unknown,
   place: Place,
-  kinds: FilteringKinds,
 ): Checked<PassStats["filtering"]> {
   if (!isRecord(value)) {
     return wrongType(place, "an object", value);
   }
   const names = Object.keys(value);
-  const extra = names.filter((name) => !Object.hasOwn(kinds, name));
+  const extra = names.filter((name) => !isOneOf(name, VARIANT_FILTER_KINDS));
   if (extra.length > 0) {
     return refused({
       kind: "extraFields",
@@ -2382,9 +2303,9 @@ function checkFiltering(
       fields: extra,
     });
   }
-  const filtering: Partial<Record<PassFilterKind, FilteringStats>> = {};
+  const filtering: Partial<Record<VariantFilterKind, FilteringStats>> = {};
   for (const name of names) {
-    if (!isPassFilterKind(name) || !Object.hasOwn(kinds, name)) {
+    if (!isOneOf(name, VARIANT_FILTER_KINDS)) {
       continue;
     }
     const stats = field(value, name, place, checkFilteringStats);
@@ -3576,11 +3497,6 @@ function isOneOf<K extends string>(
   values: Readonly<Record<K, true>>,
 ): value is K {
   return Object.hasOwn(values, value);
-}
-
-/** Whether `name` is a kind of the counts of a pass. */
-function isPassFilterKind(name: string): name is PassFilterKind {
-  return name === "passed" || isOneOf(name, VARIANT_FILTER_KINDS);
 }
 
 function isRecord(value: unknown): value is object {

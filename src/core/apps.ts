@@ -117,11 +117,12 @@ export function firstProject(app: "popgen"): Project {
  * kept and the filters of the variants of its request's project, told by
  * the analysis of the result: the diversity, the distances between
  * populations and `filterCounts` itself, and not the statistics of each
- * individual, the summary of the variants file and the count of the
- * FILTER failures, whose passes have no filter of the project, nor the histograms of the variants, whose pass has the list and
- * no filter of the variants, nor the PCA, whose filters of missing data, MAF
- * and LD can be its own in the place of the project's, nor the LD decay,
- * whose filters are the project's but the LD pruning
+ * individual and the summary of the variants file, whose passes have no
+ * filter of the project, nor the histograms of the variants, whose pass
+ * has the list and no filter of the variants, nor the PCA, whose filters
+ * of missing data, MAF and LD can be its own in the place of the
+ * project's, nor the LD decay, whose filters are the project's but the LD
+ * pruning
  * (docs/architecture.md, section 4; docs/specs/entry.md).
  */
 export function countsOf(r: JobResult): PassFound<JobResult> {
@@ -134,7 +135,6 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
     case "individualChecks":
     case "variantChecks":
     case "variantsSummary":
-    case "filterFailures":
     case "pca":
     case "ldDecay":
       return { numVarsRead, counts: null };
