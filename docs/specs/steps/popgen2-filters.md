@@ -5,8 +5,8 @@ The screen spec of what `popgen2.html` gains with the design
 2026: the thresholds on the histograms of the statistics become filters
 of the project, a check box leaves out the variants that failed their
 FILTER, and the page gets Undo, Redo and the notice that says what a
-change did. Written on 7 October 2026; not approved yet. No code of it
-exists. What it builds on is the page as the pieces `thresholds` and
+change did. Written on 7 October 2026 and approved by the owner the same day. No
+code of it exists yet. What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
 and is lost when another file is opened. It covers cases 1 and 2 of
@@ -575,34 +575,14 @@ called at the release of a pointer and not at a key.
 
 ## Open points
 
-**Open 1. Saying how many variants have no called genotype on the MAF
-and observed heterozygosity plots.** A variant with no called genotype
-has no MAF and no observed heterozygosity, so it is in neither
-histogram, and popnei's filters of the two drop it at any threshold. The
-count under the heading counts only the variants with a value, "Keeps
-all 1,200 variants", while the filter, once carried out, drops the
-others too. The options: a sentence under those two plots, as the
-individuals' plots have, "15 variants with no called genotype are not in
-the histogram, and this filter removes them."; or nothing, as today,
-since the count of what all the filters keep together comes with the
-tools. The first tells the user before the tools exist, at the cost of
-one sentence under two plots.
-
-The count needs no second reading of the file: it is the variants of
-the file less those in popnei's histogram of the MAF, which the one pass
-already gives, since popnei puts in that histogram only the variants
-with a value. Checked with popnei 0.2.1 under node on 7 October 2026, on
-a VCF of four variants and four individuals of which one variant has no
-called genotype: the histograms of the missing rate hold 4 variants,
-those of the MAF and of the observed heterozygosity 3. The count is
-exact at any number of individuals; the last bin of the missing rate is
-not, since on a file of 1,280 individuals or more it also holds
-variants with a few genotypes called. How often the sentence would
-show, measured the same day: no variant with every genotype missing in
-`panel.vcf.gz`, `low_qual.vcf.gz` or `panel.nei`, 0 of 1,200 in each.
-So on the fixtures it would never show, and a fixture with such
-variants would be needed to check it. Recommended: the sentence, which
-shows nothing when there are none. Meanwhile: nothing, as today.
+**Open 1, closed.** Whether the MAF and observed heterozygosity plots say
+how many variants have no called genotype, which those two filters
+remove at any threshold. The owner answered on 7 October 2026: nothing,
+as today; the number comes with the tools that carry the filters out.
+For a later revision: the count would be the variants of the file less
+those in popnei's histogram of the MAF, exact at any number of
+individuals (popnei 0.2.1 under node: of four variants, one with no
+called genotype, 3 in the MAF's histogram).
 
 ## Not in this spec
 

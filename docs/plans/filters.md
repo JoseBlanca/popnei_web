@@ -1,7 +1,7 @@
 # Plan: the thresholds of popgen2.html as filters, with Undo
 
-7 October 2026; a draft, to be approved by the owner before its first
-task. It builds the design `docs/designs/stats-filters.md`, approved by
+7 October 2026; approved by the owner the same day, with Open 1 of the
+screen spec answered "nothing", so work package 12 is not done. It builds the design `docs/designs/stats-filters.md`, approved by
 the owner on 7 October 2026: the thresholds the user drags or types on
 the histograms of `popgen2.html` become filters of the project, with
 Undo, Redo and a notice that says what each change did; a check box
@@ -612,6 +612,8 @@ skill says; the stop does not wait for them, since none changes what the
 owner tries.
 
 ## Work package 12: the variants with no called genotype, only if the owner says yes
+
+Not done: the owner answered "nothing" on 7 October 2026.
 
 Done only when the owner answers Open 1 of the screen spec with the
 sentence; otherwise its boxes are ticked with "not built: the owner chose
