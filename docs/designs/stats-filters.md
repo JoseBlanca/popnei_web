@@ -103,11 +103,11 @@ filter, as that setting requires; and the store's `counts` names
 
 The chain of `autoRuns.ts` runs, in this order: the one pass; the
 FILTER failures, for a VCF; the histograms over the individuals kept,
-when they are needed; the counts of the filters. Today a calculation that
-is locked, as `filterFailures` is on a `.nei` file, or not done, holds
-back every one after it in the chain; the chain instead passes over one
-that is locked or not needed, so that the counts of the filters start
-on a `.nei` file and while no individual is taken out. The one Stop
+when they are needed; the counts of the filters. Since `live-stats`, a
+calculation that is locked, as `filterFailures` is on a `.nei` file,
+neither starts nor holds back the rest of the chain; the chain also
+passes over one that is not needed, so that the counts of the filters
+start while no individual is taken out. The one Stop
 stops whichever runs and keeps the rest from starting; Start again
 starts the first not done.
 
@@ -308,6 +308,15 @@ Made on this branch once the owner approves, each with its paragraph
   behind that start again; the notice of `popgen2.html`; the limit
   recorded for this piece removed.
 - Section 8: the project file with the kind `passed`.
+
+And in the code that `live-stats` built for the count of the FILTER
+failures, which reaches popnei's `filterPassed` by a step of its own
+(`Steps.passed` of the runner, placed before the list of individuals)
+and counts it under a kind of the counts alone (`PassFilterKind`,
+`PASS_FILTER_ORDER`, `PASS_FILTER_KINDS`): those go, the request of
+`filterFailures` carries the filter `{ kind: "passed" }` in its
+`filters` as any filter is carried, and the runner places it where the
+order of the filters puts it, so that one route reaches the step.
 
 ## The costs of the web
 
