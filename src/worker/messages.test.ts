@@ -3596,6 +3596,50 @@ describe("open-variants 1 the messages of the summary of the variants file", () 
       error: { kind: "missingFields", path: "job", fields: ["numBins"] },
     });
   });
+
+  test("popnei-0.2.2 its counts of the FILTER may be null", () => {
+    const message = resultMessage({
+      ...VARIANTS_SUMMARY_RESULT,
+      filterColumn: null,
+    });
+    expect(parseFromRunner(message)).toEqual({ ok: true, value: message });
+  });
+
+  test.each([
+    [
+      "a count not whole",
+      { passed: 1, failed: 1.5 },
+      { kind: "wrongType", path: "result.filterColumn.failed" },
+    ],
+    [
+      "a count missing",
+      { passed: 1 },
+      {
+        kind: "missingFields",
+        path: "result.filterColumn",
+        fields: ["failed"],
+      },
+    ],
+    [
+      "a field more",
+      { passed: 1, failed: 1, x: 0 },
+      { kind: "extraFields", path: "result.filterColumn", fields: ["x"] },
+    ],
+    [
+      "a string",
+      "1 failed",
+      { kind: "wrongType", path: "result.filterColumn" },
+    ],
+  ])(
+    "popnei-0.2.2 its counts of the FILTER with %s are refused",
+    (_name, filterColumn, error) => {
+      expect(
+        parseFromRunner(
+          resultMessage({ ...VARIANTS_SUMMARY_RESULT, filterColumn }),
+        ),
+      ).toMatchObject({ ok: false, error });
+    },
+  );
 });
 
 describe("one-pass the count of the FILTER failures is no longer a message", () => {
