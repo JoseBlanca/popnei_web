@@ -289,7 +289,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
   test("a number below 0.001 committed for the variants is raised to 0.001 with a line, and the individuals' threshold is never raised", () => {
     const plot = variantPlot("missingRate", PANEL.variants, false, null);
     expect(plot.threshold.raisedLine).toBe(
-      "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.",
+      "Counted as 0.001, the smallest threshold.",
     );
     expect(plot.threshold.raises(0)).toBe(true);
     expect(plot.threshold.onStep(0)).toBe(0.001);

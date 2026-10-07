@@ -421,14 +421,16 @@ const BIN_STATE_WORDS: Readonly<
 });
 
 /** The header of the CSV of the bins of a histogram: each bin holds its
-    upper edge and not its lower one, but the first, which holds both. */
-const BINS_CSV_HEADER = "from_excluded,to_included,count,state";
+    upper edge, `to_included`, and not its lower one, but the first, which
+    holds both; so `from` says nothing of its lower edge, which a name
+    "from_excluded" would say wrongly of the first row. */
+const BINS_CSV_HEADER = "from,to_included,count,state";
 
 /**
  * The CSV of the bins of a histogram, from the rows that `histogramRows`
  * of src/charts/histogram.ts gives (docs/specs/steps/variants.md, "The
  * plot and the table of its bins"): the header
- * `from_excluded,to_included,count,state`, then a row per bin from the
+ * `from,to_included,count,state`, then a row per bin from the
  * left, the first of which holds its lower edge too, its edges with every digit, as `String`
  * writes them, its count, and what the threshold does to it, `kept`,
  * `partly_kept` or `removed`, empty with no threshold. Each line ends in

@@ -641,9 +641,10 @@ built and tested now without a button
 (`docs/specs/charts/plot2d.md`, "The export"; point C of
 `docs/specs/stage-3-open-points.md`). The CSV is named
 as the plot is, with `_bins`, `panel.variant_maf_bins.csv`; it has the
-header `from_excluded,to_included,count,state`, named so because each
-bin holds its upper edge and not its lower one, but the first bin,
-which holds its lower edge too; a row per bin, the edges with every
+header `from,to_included,count,state`, named so because each bin holds
+its upper edge and not its lower one, but the first bin, which holds its
+lower edge too, so that the name of the lower edge says nothing of
+whether it is held; a row per bin, the edges with every
 digit popnei gave, as the diversity's CSV writes its numbers, and the
 state `kept`, `partly_kept` or `removed`, empty with no threshold.
 

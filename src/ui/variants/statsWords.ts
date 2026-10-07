@@ -251,13 +251,15 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
 });
 
 /** The line under the box of a threshold of the variants after a number
-    below 0.001 is set, which the box raises to 0.001, as it shows: the
-    first of popnei's fine bins holds 0 and the values above it up to
-    0.001, so the count of the variants at most 0 cannot be told from it.
-    Said, since a box never turns a number typed into another without a
-    word (docs/specs/steps/variants.md, "A number the fields do not
-    take"). */
-export const THRESHOLD_RAISED_LINE = `A threshold below ${numberText(LEAST_VARIANT_THRESHOLD)} is counted as ${numberText(LEAST_VARIANT_THRESHOLD)}, the smallest the bins tell apart.`;
+    is set that lands below 0.001, typed so or rounded to 0 on the step of
+    its axis, which the box raises to 0.001, as it shows: the first of
+    popnei's fine bins holds 0 and the values above it up to 0.001, so the
+    count of the variants at most 0 cannot be told from it. Said, since a
+    box never turns a number typed into another without a word
+    (docs/specs/steps/variants.md, "A number the fields do not take"); in
+    words true of both ways, and short enough to take one line of the
+    plot's column at 320 pixels. */
+export const THRESHOLD_RAISED_LINE = `Counted as ${numberText(LEAST_VARIANT_THRESHOLD)}, the smallest threshold.`;
 
 /** What a threshold keeps of the variants or the individuals of one
     histogram, those with a value: `kept` of `withValue`. */

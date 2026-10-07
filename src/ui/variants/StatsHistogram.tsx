@@ -9,9 +9,9 @@
  * a value, "Keeps 200,000 of 200,000 variants so far", at the width of
  * its column, so that the plot does not move as the words change while
  * the line is dragged or as the pass ends. Under it, for the variants,
- * the room of the line said when a number committed below 0.001 is
- * raised to 0.001, "A threshold below 0.001 is counted as 0.001, the
- * smallest the bins tell apart.", which is also announced; it shows
+ * the room of the line said when a number committed lands below 0.001
+ * and is raised to 0.001, "Counted as 0.001, the smallest threshold.",
+ * one line at any width of the column, which is also announced; it shows
  * while the threshold is the one raised, and its room is always kept, so
  * that the plot does not move when it comes or goes. No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads

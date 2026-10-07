@@ -4727,9 +4727,7 @@ for (const theme of ["light", "dark"] as const) {
         await missing.getByRole("textbox").fill("0");
         await missing.getByRole("textbox").press("Enter");
         await expect(
-          missing.getByText(
-            "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.",
-          ),
+          missing.getByText("Counted as 0.001, the smallest threshold."),
         ).toBeVisible();
         await save(page, `popgen2-threshold-raised${at}-${theme}`);
       });

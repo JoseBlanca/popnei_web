@@ -37,8 +37,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The line under the box of a threshold of the variants raised to
     0.001. */
-const RAISED_LINE =
-  "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.";
+const RAISED_LINE = "Counted as 0.001, the smallest threshold.";
 
 /** popnei's numbers of panel.vcf.gz in the fixture. */
 const PANEL = panelOf(

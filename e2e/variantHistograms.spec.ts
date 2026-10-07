@@ -747,7 +747,7 @@ test("VS6 D2 the CSV of the bins of the MAF: panel.variant_maf_bins.csv, its hea
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("panel.variant_maf_bins.csv");
   const lines = (await readFile(await download.path(), "utf8")).split("\n");
-  expect(lines[0]).toBe("from_excluded,to_included,count,state");
+  expect(lines[0]).toBe("from,to_included,count,state");
   expect(lines).toHaveLength(42);
   expect(lines.at(-1)).toBe("");
   expect(lines[39]).toBe("0.95,0.975,22,");
