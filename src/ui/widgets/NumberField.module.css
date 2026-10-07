@@ -10,17 +10,28 @@
   font-weight: 600;
 }
 
-/* A field whose label shows its first word only, before the input on the
-   same line; the line of a refusal under the two. */
+/* A field whose label shows its first words only, before the input on
+   the same line, "Obs. het. max: [0.04]"; the line of a refusal under the
+   two. The input stays on the line of the label, whose words wrap where
+   the column is too narrow for them, as "Major allele frequency max:"
+   may at 320 pixels. */
 .inline {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) auto;
+  justify-content: start;
   align-items: center;
   column-gap: var(--space-2);
+  row-gap: var(--space-1);
 }
 
 .inline > p {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
+}
+
+/* The input of such a field, a threshold of up to six characters,
+   0.0345, at any size of the text. */
+.inline .input {
+  inline-size: calc(7ch + 2 * var(--space-2));
 }
 
 /* The rest of a label shown in part, read by a screen reader alone. */

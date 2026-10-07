@@ -255,12 +255,12 @@ for (const width of [1280, 320]) {
       ) {
         throw new Error(`${title} not drawn`);
       }
-      // One row: the label and the box share their middle line.
-      expect(
-        Math.abs(
-          labelBox.y + labelBox.height / 2 - (inputBox.y + inputBox.height / 2),
-        ),
-      ).toBeLessThan(4);
+      // One row: the box beside the label, its middle within the label's
+      // height, whose words may wrap at 320 pixels.
+      const middle = inputBox.y + inputBox.height / 2;
+      expect(middle).toBeGreaterThan(labelBox.y);
+      expect(middle).toBeLessThan(labelBox.y + labelBox.height);
+      expect(inputBox.x).toBeGreaterThan(labelBox.x + labelBox.width - 1);
       // Nothing beyond the width of the page.
       expect(inputBox.x + inputBox.width).toBeLessThanOrEqual(width);
       // The line under the row, the plot under the line.
