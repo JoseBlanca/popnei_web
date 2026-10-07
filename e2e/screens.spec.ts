@@ -4531,9 +4531,9 @@ for (const theme of ["light", "dark"] as const) {
         page,
       }, testInfo) => {
         test.setTimeout(120_000);
-        // Three blocks of popnei, the first result so far let through and
-        // the others and the result held (holdWorker.ts), so that the
-        // plots stay those of the first 10,000 variants of 30,000.
+        // The first result so far let through and the others and the
+        // result held (holdWorker.ts), so that the plots stay those of
+        // popnei's first block in the browser, 5,000 variants of 30,000.
         const vcf = testInfo.outputPath("so_far.vcf.gz");
         await writeBigVcf(vcf, 30_000);
         // The page was opened before, so its worker is fetched again.

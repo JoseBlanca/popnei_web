@@ -37,7 +37,8 @@ import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
-/** The variants of the VCF of FS2, three blocks of popnei. */
+/** The variants of the VCF of FS2, six blocks of popnei in the
+    browser. */
 const HELD_VCF_VARIANTS = 30_000;
 
 /** What each part says once the pass is stopped. */
@@ -222,7 +223,8 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   page,
   makeAxeBuilder,
 }, testInfo) => {
-  // A VCF of three blocks of popnei, whose results so far and result the
+  // A VCF of six blocks of popnei in the browser, 5,000 variants each,
+  // whose results so far and result the
   // worker holds until the test lets them through (holdWorker.ts), so
   // that Stop is pressed while the pass runs and each state stays on the
   // screen as long as its checks take.
