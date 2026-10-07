@@ -7,7 +7,9 @@ import {
   overVariantsLine,
   statsFirstText,
   statsRunningLine,
+  snappedText,
   thresholdLine,
+  thresholdShown,
   thresholdValueText,
 } from "./statsWords.ts";
 
@@ -51,16 +53,10 @@ describe("thresholds 2 the words of a threshold", () => {
   test("one number where the bins can tell, a range where they cannot, all when it keeps every one", () => {
     const exact = { keptLow: 1050, keptHigh: 1050, withValue: 1200 };
     expect(thresholdLine(0.1, exact, "variant")).toBe(
-      "At most 0.1: keeps 1,050 variants and removes 150",
-    );
-    const range = { keptLow: 1113, keptHigh: 1152, withValue: 1200 };
-    expect(thresholdLine(0.05, range, "variant")).toBe(
-      "At most 0.05: keeps 1,113 to 1,152 variants and removes 48 to 87",
+      "keeps 1,050 variants and removes 150",
     );
     const all = { keptLow: 1200, keptHigh: 1200, withValue: 1200 };
-    expect(thresholdLine(0.3, all, "variant")).toBe(
-      "At most 0.3: keeps all 1,200 variants",
-    );
+    expect(thresholdLine(0.3, all, "variant")).toBe("keeps all 1,200 variants");
     expect(thresholdValueText(0.3, all, "variant")).toBe(
       "0.3, keeps all 1,200 variants",
     );
@@ -71,6 +67,59 @@ describe("thresholds 2 the words of a threshold", () => {
     );
   });
 
+  test("fix 2 a range says why once, with the variants of the bin at the line, and not what it removes", () => {
+    const range = { keptLow: 1113, keptHigh: 1152, withValue: 1200 };
+    expect(thresholdLine(0.05, range, "variant", { binEnd: 0.0508 })).toBe(
+      "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
+    );
+    expect(
+      thresholdLine(0.05, range, "variant", { binEnd: 0.0508, soFar: true }),
+    ).toBe(
+      "keeps 1,113 to 1,152 variants so far; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
+    );
+    expect(
+      thresholdLine(
+        0,
+        { keptLow: 0, keptHigh: 1, withValue: 1200 },
+        "variant",
+        { binEnd: 0.0008 },
+      ),
+    ).toBe(
+      "keeps 0 to 1 variants; the bins cannot tell whether the variant from 0 to 0.0008 is at 0",
+    );
+    expect(thresholdValueText(0.05, range, "variant")).toBe(
+      "0.05, keeps 1,113 to 1,152 of 1,200 variants",
+    );
+  });
+
+  test("fix 5 a threshold never set says it is no limit; one set at the same place does not", () => {
+    const all = { keptLow: 1200, keptHigh: 1200, withValue: 1200 };
+    expect(thresholdLine(0.95, all, "variant", { noLimit: true })).toBe(
+      "(no limit) keeps all 1,200 variants",
+    );
+    expect(thresholdValueText(0.95, all, "variant", { noLimit: true })).toBe(
+      "0.95 (no limit), keeps all 1,200 variants",
+    );
+    expect(thresholdLine(0.95, all, "variant")).toBe(
+      "keeps all 1,200 variants",
+    );
+  });
+
+  test("fix 3 a threshold is shown with four decimals, and a number typed and moved to an edge says so", () => {
+    expect(thresholdShown(435 / 1280)).toBe(0.3398);
+    expect(thresholdShown(90 / 1280)).toBe(0.0703);
+    expect(thresholdShown(64 / 1280)).toBe(0.05);
+    expect(thresholdShown(0.0439)).toBe(0.0439);
+    // Four decimals name each of the 1,281 edges apart.
+    const shown = new Set(
+      Array.from({ length: 1281 }, (_, k) => thresholdShown(k / 1280)),
+    );
+    expect(shown.size).toBe(1281);
+    expect(snappedText(0.07, 0.0703)).toBe(
+      "0.07 is counted as 0.0703, the nearest edge of the bins.",
+    );
+  });
+
   test("one, none, and no value at all", () => {
     expect(
       thresholdLine(
@@ -78,24 +127,20 @@ describe("thresholds 2 the words of a threshold", () => {
         { keptLow: 1, keptHigh: 1, withValue: 3 },
         "individual",
       ),
-    ).toBe("At most 0.2: keeps 1 individual and removes 2");
-    expect(
-      thresholdLine(0, { keptLow: 0, keptHigh: 2, withValue: 1200 }, "variant"),
-    ).toBe("At most 0: keeps 0 to 2 variants and removes 1,198 to 1,200");
+    ).toBe("keeps 1 individual and removes 2");
     expect(
       thresholdLine(1, { keptLow: 1, keptHigh: 1, withValue: 1 }, "variant"),
-    ).toBe("At most 1: keeps the only variant");
+    ).toBe("keeps the only variant");
     expect(
       thresholdLine(0.5, { keptLow: 0, keptHigh: 0, withValue: 0 }, "variant"),
-    ).toBe("At most 0.5: no variant has a value");
-    // The number as the box shows it, every decimal and no exponent.
+    ).toBe("no variant has a value");
     expect(
       thresholdValueText(
-        0.00078125,
+        0.0008,
         { keptLow: 2, keptHigh: 2, withValue: 1200 },
         "variant",
-        true,
+        { soFar: true },
       ),
-    ).toBe("0.00078125, keeps 2 of 1,200 variants so far");
+    ).toBe("0.0008, keeps 2 of 1,200 variants so far");
   });
 });

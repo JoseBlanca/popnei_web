@@ -10,6 +10,29 @@
   font-weight: 600;
 }
 
+/* A field whose label shows its first word only, before the input on the
+   same line; the line of a refusal under the two. */
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+}
+
+.inline > p {
+  flex-basis: 100%;
+}
+
+/* The rest of a label shown in part, read by a screen reader alone. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .input {
   /* Wide enough for a threshold of two decimals or a ploidy of three
      digits, at any size of the text. */
@@ -23,11 +46,6 @@
   color: var(--color-text);
   font: inherit;
   font-variant-numeric: tabular-nums;
-}
-
-/* Wide enough for ten characters, 0.04296875, at any size of the text. */
-.long {
-  inline-size: calc(11ch + 2 * var(--space-2));
 }
 
 .input[data-focus-visible] {

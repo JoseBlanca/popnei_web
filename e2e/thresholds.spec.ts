@@ -2,8 +2,9 @@
  * The thresholds on the six histograms of popgen2.html, on the built site
  * (docs/plans/thresholds.md, phase 2): the line dragged with the mouse
  * and the box and the words following it; a number typed and the line
- * following it, snapped to popnei's fine edges; the keys of the line; a
- * new file starting them again; axe at each state.
+ * following it, snapped to popnei's fine edges, which is said; the keys
+ * of the line and of the box; a new file starting them again; what is
+ * typed kept while a result so far widens the axis; axe at each state.
  *
  * The counts are those of the core functions, `variantsAtMost` and
  * `individualsAtMost`, on popnei's numbers of panel.vcf.gz in
@@ -25,6 +26,7 @@ import type { VariantStatistic } from "../src/core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../src/worker/protocol.ts";
 import {
   thresholdLine,
+  thresholdShown,
   thresholdValueText,
 } from "../src/ui/variants/statsWords.ts";
 import { expect, test } from "./axe.ts";
@@ -75,24 +77,28 @@ function numbersOf(value: unknown): number[] {
   return value.map((one: unknown) => (typeof one === "number" ? one : NaN));
 }
 
-/** The words under the histogram of `statistic` of the variants with its
-    threshold at the fine edge `index`, from the core's counts. */
+/** The words after the box of the histogram of `statistic` of the
+    variants with its threshold set at the fine edge `index`, from the
+    core's counts. */
 function variantWords(statistic: VariantStatistic, index: number): string {
   return thresholdLine(
-    index / 1280,
+    thresholdShown(index / 1280),
     variantsAtMost(PANEL.variants, statistic, index),
     "variant",
+    { binEnd: thresholdShown((index + 1) / 1280) },
   );
 }
 
-/** The words under the histogram of the missing rate of the individuals
-    with its threshold at `value`, from the core's counts. */
-function individualWords(value: number): string {
+/** The words after the box of the histogram of the missing rate of the
+    individuals with its threshold at `value`, from the core's counts;
+    `noLimit` for the threshold never set. */
+function individualWords(value: number, noLimit = false): string {
   const { kept, removed } = individualsAtMost(PANEL.missingGtRate, value);
   return thresholdLine(
     value,
     { keptLow: kept, keptHigh: kept, withValue: kept + removed },
     "individual",
+    { noLimit },
   );
 }
 
@@ -110,28 +116,33 @@ async function pick(page: Page, name: string): Promise<void> {
   await (await chooser).setFiles(join(FIXTURES, name));
 }
 
-/** The histogram titled `title`, its box, its line and its words. */
+/** The histogram titled `title`, its box, its line, its words and the
+    bars it hatches. */
 function histogram(
   page: Page,
   title: string,
 ): {
+  readonly group: Locator;
   readonly box: Locator;
   readonly slider: Locator;
   readonly thumb: Locator;
   readonly words: Locator;
   readonly dashed: Locator;
+  readonly hatched: Locator;
 } {
   const group = page
     .getByRole("region", { name: "Statistics of the file" })
     .getByRole("group", { name: title, exact: true });
   const slider = group.getByRole("slider");
   return {
+    group,
     box: group.getByRole("textbox"),
     slider,
     // The input is in a hidden box inside the thumb.
     thumb: slider.locator("xpath=../.."),
-    words: group.getByText(/^At most /u),
+    words: group.getByText(/^(?:\(no limit\) )?keeps |^no \w+ has a value/u),
     dashed: group.locator("line.chart-threshold"),
+    hatched: group.locator("rect.chart-bar-undecided"),
   };
 }
 
@@ -148,7 +159,7 @@ async function expectNoViolations(
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 }
 
-test("TH2 at the start: the missing rate of the variants at 0.1, the five others at the top of their axis, each line named and saying what it keeps, and axe", async ({
+test("TH2 at the start: the missing rate of the variants at 0.1, the five others at the top of their axis and no limit, each box after the word Maximum, named and described by its words, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -157,12 +168,21 @@ test("TH2 at the start: the missing rate of the variants at 0.1, the five others
   await expect(missing.words).toHaveText(variantWords("missingRate", 128), {
     timeout: 20_000,
   });
-  await expect(missing.words).toHaveText(
-    "At most 0.1: keeps all 1,200 variants",
-  );
+  // 0.1 is set, a limit that keeps every variant, not "no limit".
+  await expect(missing.words).toHaveText("keeps all 1,200 variants");
   await expect(missing.box).toHaveValue("0.1");
   await expect(missing.box).toHaveAccessibleName(
     "Maximum proportion of missing genotypes",
+  );
+  // One row under the plot: the word, the box, the words of the counts,
+  // which a screen reader reads with the box.
+  // The label shows "Maximum", and the rest of the name to a screen
+  // reader alone.
+  const label = missing.group.locator("label");
+  await expect(label).toHaveText("Maximum proportion of missing genotypes");
+  expect((await label.boundingBox())?.width ?? 0).toBeLessThan(100);
+  await expect(missing.box).toHaveAccessibleDescription(
+    "keeps all 1,200 variants",
   );
   await expect(missing.slider).toHaveAccessibleName(
     "Maximum proportion of missing genotypes",
@@ -177,20 +197,26 @@ test("TH2 at the start: the missing rate of the variants at 0.1, the five others
   await expect(histogram(page, "Observed heterozygosity").box).toHaveValue(
     "0.7",
   );
-  await expect(
-    histogram(page, "Expected heterozygosity (unbiased)").words,
-  ).toHaveText("At most 0.55: keeps all 1,200 variants");
+  const expected = histogram(page, "Expected heterozygosity (unbiased)");
+  await expect(expected.words).toHaveText(
+    "(no limit) keeps all 1,200 variants",
+  );
+  await expect(expected.box).toHaveValue("0.55");
+  await expect(expected.slider).toHaveAttribute(
+    "aria-valuetext",
+    "0.55 (no limit), keeps all 1,200 variants",
+  );
   const individuals = histogram(
     page,
     "Proportion of missing genotypes of each individual",
   );
-  await expect(individuals.words).toHaveText(individualWords(0.045));
+  await expect(individuals.words).toHaveText(individualWords(0.045, true));
   await expect(individuals.slider).toHaveAccessibleName(
     "Maximum proportion of missing genotypes of an individual",
   );
   await expect(
     histogram(page, "Observed heterozygosity of each individual").words,
-  ).toHaveText("At most 0.4: keeps all 200 individuals");
+  ).toHaveText("(no limit) keeps all 200 individuals");
   await expect(page.getByText("Kept by this filter")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });
@@ -201,7 +227,7 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
 }) => {
   await openPanel(page);
   const het = histogram(page, "Observed heterozygosity");
-  await expect(het.words).toHaveText("At most 0.7: keeps all 1,200 variants", {
+  await expect(het.words).toHaveText("(no limit) keeps all 1,200 variants", {
     timeout: 20_000,
   });
   await het.thumb.scrollIntoViewIfNeeded();
@@ -216,7 +242,7 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
   const index = Number(await het.slider.inputValue());
   expect(index).toBeGreaterThan(0);
   expect(index).toBeLessThan(896);
-  const shown = index / 1280;
+  const shown = thresholdShown(index / 1280);
   await expect(het.box).toHaveValue(String(shown));
   await expect(het.words).toHaveText(variantWords("obsHet", index));
   await expect(het.slider).toHaveAttribute(
@@ -234,33 +260,69 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows", async ({
+test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows with four decimals and a line says; an arrow of the box one edge; five decimals refused", async ({
   page,
+  makeAxeBuilder,
 }) => {
   await openPanel(page);
   const het = histogram(page, "Observed heterozygosity");
-  await expect(het.words).toHaveText("At most 0.7: keeps all 1,200 variants", {
+  await expect(het.words).toHaveText("(no limit) keeps all 1,200 variants", {
     timeout: 20_000,
   });
   await het.box.fill("0.3");
   // Not committed yet: the line and the words follow the number typed.
   await expect(het.slider).toHaveValue("384");
   await expect(het.words).toHaveText(variantWords("obsHet", 384));
-  await expect(het.words).toHaveText(
-    "At most 0.3: keeps 373 variants and removes 827",
-  );
+  await expect(het.words).toHaveText("keeps 373 variants and removes 827");
   expect(
     Math.abs((await middleX(het.dashed)) - (await middleX(het.thumb))),
   ).toBeLessThan(1.5);
 
-  // 0.07 × 1280 is 89.6, the nearest edge 90, 0.0703125.
+  // 0.07 × 1280 is 89.6, the nearest edge 90, 0.0703125, shown 0.0703.
   await het.box.fill("0.07");
   await het.box.press("Enter");
   const edge = snapToFineEdge(PANEL.variants.binEdges, 0.07);
   expect(edge.index).toBe(90);
-  await expect(het.box).toHaveValue("0.0703125");
+  await expect(het.box).toHaveValue("0.0703");
+  // On the step of the box, 0.0001, so React Aria does not mark it
+  // invalid, as it would with the step of the edges.
+  await expect(het.box).not.toHaveAttribute("aria-invalid", "true");
   await expect(het.slider).toHaveValue("90");
   await expect(het.words).toHaveText(variantWords("obsHet", 90));
+  const snapped = het.group.getByText(
+    "0.07 is counted as 0.0703, the nearest edge of the bins.",
+  );
+  await expect(snapped).toBeVisible();
+  await expect(het.box).toHaveAccessibleDescription(
+    `${variantWords("obsHet", 90)} 0.07 is counted as 0.0703, the nearest edge of the bins.`,
+  );
+  await expectNoViolations(makeAxeBuilder);
+
+  // The Up arrow in the box: the next fine edge, 91, 0.07109375, shown
+  // 0.0711; the line of the number moved goes.
+  await het.box.press("ArrowUp");
+  await expect(het.box).toHaveValue("0.0711");
+  await expect(het.slider).toHaveValue("91");
+  await expect(het.words).toHaveText(variantWords("obsHet", 91));
+  await expect(snapped).toHaveCount(0);
+
+  // Four decimals, the most the box takes, an edge typed as shown: 0.3398
+  // is 435/1280, 0.33984375, and moved nowhere.
+  await het.box.fill("0.3398");
+  await het.box.press("Enter");
+  await expect(het.slider).toHaveValue("435");
+  await expect(het.box).toHaveValue("0.3398");
+  await expect(het.group.getByText(/is counted as/u)).toHaveCount(0);
+  // Five decimals are refused, and the threshold stays.
+  await het.box.fill("0.12345");
+  await het.box.press("Enter");
+  await expect(
+    het.group.getByText(
+      "0.12345 has more than four decimals; the threshold stays 0.3398.",
+    ),
+  ).toBeVisible();
+  await expect(het.box).toHaveValue("0.3398");
+  await expect(het.slider).toHaveValue("435");
 
   // A threshold beyond the axis widens it, and the line goes with it.
   const missing = histogram(page, "Proportion of missing genotypes");
@@ -268,9 +330,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   await missing.box.press("Enter");
   await expect(missing.slider).toHaveValue("640");
   await expect(missing.slider).toHaveAttribute("max", "640");
-  await expect(missing.words).toHaveText(
-    "At most 0.5: keeps all 1,200 variants",
-  );
+  await expect(missing.words).toHaveText("keeps all 1,200 variants");
 });
 
 test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, with Shift too, Shift and an arrow ten, Home and End the ends of the axis; the range where the bins cannot tell", async ({
@@ -279,14 +339,14 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
 }) => {
   await openPanel(page);
   const missing = histogram(page, "Proportion of missing genotypes");
-  await expect(missing.words).toHaveText(
-    "At most 0.1: keeps all 1,200 variants",
-    { timeout: 20_000 },
-  );
+  await expect(missing.words).toHaveText("keeps all 1,200 variants", {
+    timeout: 20_000,
+  });
   await missing.slider.focus();
   await page.keyboard.press("ArrowLeft");
   await expect(missing.slider).toHaveValue("127");
-  await expect(missing.box).toHaveValue(String(127 / 1280));
+  // 127/1280 is 0.09921875, shown with four decimals.
+  await expect(missing.box).toHaveValue("0.0992");
   await page.keyboard.press("PageDown");
   await expect(missing.slider).toHaveValue("117");
   for (let step = 0; step < 5; step += 1) {
@@ -301,9 +361,11 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
   await expect(missing.slider).toHaveValue("64");
   await expect(missing.box).toHaveValue("0.05");
   await expect(missing.words).toHaveText(
-    "At most 0.05: keeps 1,113 to 1,152 variants and removes 48 to 87",
+    "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
   );
   await expect(missing.words).toHaveText(variantWords("missingRate", 64));
+  // The bar that starts at the line is hatched, neither kept nor removed.
+  await expect(missing.hatched).toHaveCount(1);
   await expect(missing.slider).toHaveAttribute(
     "aria-valuetext",
     "0.05, keeps 1,113 to 1,152 of 1,200 variants",
@@ -329,6 +391,7 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
   await expect(missing.slider).toHaveValue("10");
   await page.keyboard.press("End");
   await expect(missing.slider).toHaveValue("128");
+  await expect(missing.hatched).toHaveCount(0);
   await page.keyboard.press("ArrowRight");
   await expect(missing.slider).toHaveValue("128");
 
@@ -348,10 +411,9 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
 test("TH2 another file starts the thresholds again", async ({ page }) => {
   await openPanel(page);
   const missing = histogram(page, "Proportion of missing genotypes");
-  await expect(missing.words).toHaveText(
-    "At most 0.1: keeps all 1,200 variants",
-    { timeout: 20_000 },
-  );
+  await expect(missing.words).toHaveText("keeps all 1,200 variants", {
+    timeout: 20_000,
+  });
   await missing.box.fill("0.05");
   await missing.box.press("Enter");
   const het = histogram(page, "Observed heterozygosity");
@@ -360,10 +422,9 @@ test("TH2 another file starts the thresholds again", async ({ page }) => {
   await expect(het.box).toHaveValue("0.3");
 
   await pick(page, "panel.vcf.gz");
-  await expect(missing.words).toHaveText(
-    "At most 0.1: keeps all 1,200 variants",
-    { timeout: 20_000 },
-  );
+  await expect(missing.words).toHaveText("keeps all 1,200 variants", {
+    timeout: 20_000,
+  });
   await expect(missing.box).toHaveValue("0.1");
   await expect(het.box).toHaveValue("0.7");
 });
@@ -387,24 +448,73 @@ test("TH2 while the pass runs the words are of the variants read so far, and a t
   await release(page, "allSoFar");
 
   const het = histogram(page, "Observed heterozygosity");
-  await expect(het.words).toHaveText(/^At most [\d.]+: keeps .* so far$/u, {
-    timeout: 60_000,
-  });
+  await expect(het.words).toHaveText(
+    /^\(no limit\) keeps all [\d,]+ variants so far$/u,
+    { timeout: 60_000 },
+  );
   await expect(het.slider).toHaveAttribute("aria-valuetext", /so far$/u);
   await het.slider.focus();
   // Home: the left end of the axis, below every variant read so far.
   await page.keyboard.press("Home");
   await expect(het.words).toHaveText(
-    /^At most [\d.]+: keeps 0 variants and removes [\d,]+ so far$/u,
+    /^keeps 0 variants and removes [\d,]+ so far$/u,
   );
   const atHome = await het.box.inputValue();
   await expectNoViolations(makeAxeBuilder);
 
   // The result: the same threshold, its words no longer so far.
   await release(page, "result");
-  await expect(het.words).toHaveText(
-    `At most ${atHome}: keeps 0 variants and removes 30,000`,
-    { timeout: 60_000 },
-  );
+  await expect(het.words).toHaveText("keeps 0 variants and removes 30,000", {
+    timeout: 60_000,
+  });
   await expect(het.box).toHaveValue(atHome);
+});
+
+test("TH2 a number typed in the box of a threshold at the top of its axis is kept while a result so far widens the axis", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stats.vcf.gz");
+  await writeBigVcf(vcf, 30_000);
+  await holdSummary(page);
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Open variants file…" }).click();
+  await (await chooser).setFiles(vcf);
+  await expect(
+    page.getByText("Calculating the statistics of the variants… 100%"),
+  ).toBeVisible({ timeout: 60_000 });
+  // The first result so far: the line never set, at the top of its axis.
+  await release(page, "oneSoFar");
+  const het = histogram(page, "Observed heterozygosity");
+  await expect(het.words).toHaveText(/^\(no limit\) keeps .* so far$/u, {
+    timeout: 60_000,
+  });
+  const top = await het.box.inputValue();
+  const over = het.group.getByText(/^Over [\d,]+ variants so far$/u);
+  const overFirst = await over.innerText();
+
+  await het.box.click();
+  await het.box.press("ControlOrMeta+a");
+  await page.keyboard.type("0.3");
+  // Every other result so far, which read most of the file.
+  await release(page, "allSoFar");
+  // The plot drawn from more variants.
+  await expect(over).not.toHaveText(overFirst);
+  await expect(het.box).toHaveValue("0.3");
+  await expect(het.box).toBeFocused();
+  // Escape puts back what the box showed at its focus, and leaving it
+  // shows the top of the axis now, which the results so far moved.
+  await het.box.press("Escape");
+  await expect(het.box).toHaveValue(top);
+  await het.box.blur();
+  await expect(het.box).not.toHaveValue(top);
+  // Typed again and committed, it stays at the result.
+  await het.box.fill("0.3");
+  await het.box.press("Enter");
+  await release(page, "result");
+  await expect(het.words).toHaveText(/^keeps [\d,]+ variants and removes/u, {
+    timeout: 60_000,
+  });
+  await expect(het.box).toHaveValue("0.3");
 });

@@ -229,6 +229,12 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
   observedHeterozygosity: "Maximum observed heterozygosity of an individual",
 });
 
+/** The word drawn before the box of a threshold, the start of its name,
+    "Maximum proportion of missing genotypes", whose rest the plot above
+    says; the start, so that the name a screen reader or a voice control
+    reads holds the word seen (WCAG 2.5.3). */
+export const THRESHOLD_SHOWN_LABEL = "Maximum";
+
 /** What a threshold keeps of the variants or the individuals of one
     histogram, those with a value: from `keptLow` to `keptHigh`, one
     number when the two are equal, of `withValue`. */
@@ -244,42 +250,90 @@ export interface ThresholdCounts {
 /** The kind of what a histogram counts, in the words under it. */
 export type Counted = "variant" | "individual";
 
-/** The line under a histogram that says its threshold and what it keeps
-    and removes of those with a value: "At most 0.1: keeps 1,050 variants
-    and removes 150"; with the range the bins allow, "At most 0.05: keeps
-    1,113 to 1,152 variants and removes 48 to 87"; "At most 0.3: keeps all
-    1,200 variants". `shown` is the number of the threshold as the box
-    shows it. While the pass runs, `soFar`, the counts are of the
-    variants read so far, and the line ends "so far". */
+/** The most decimals a threshold is shown with, in its box, the words
+    under its plot and the value text of its line: 4, which name each of
+    popnei's 1,281 fine edges apart, 0.3398 for 435/1280, and the step of
+    the thresholds of the individuals. */
+export const THRESHOLD_DECIMALS = 4;
+
+/** `value` rounded to `THRESHOLD_DECIMALS` decimals, as a threshold is
+    shown: 0.3398 for 0.33984375, 0.05 for 0.05. */
+export function thresholdShown(value: number): number {
+  return Number(value.toFixed(THRESHOLD_DECIMALS));
+}
+
+/** What the words of a threshold say besides its counts. */
+export interface ThresholdWordsOptions {
+  /** The counts are of the variants read so far, while the pass runs. */
+  readonly soFar?: boolean;
+  /** The threshold was never set and stands at the top of the axis,
+      where it keeps everything: a starting place, not a limit. */
+  readonly noLimit?: boolean;
+  /** The end of the bin that starts at the line, as shown, 0.0508 for
+      the line at 0.05, which the words of a range name. */
+  readonly binEnd?: number;
+}
+
+/** The words after the box of a threshold, under its plot: what it keeps
+    and removes of those with a value, "keeps 1,050 variants and removes
+    150"; "keeps all 1,200 variants", or "(no limit) keeps all 1,200
+    variants" for a threshold never set, `noLimit`; and, with the range
+    the bins allow, why, once: "keeps 1,113 to 1,152 variants; the bins
+    cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05". `shown`
+    is the number of the threshold as the box shows it. While the pass
+    runs, `soFar`, the counts are of the variants read so far and say
+    so. */
 export function thresholdLine(
   shown: number,
   counts: ThresholdCounts,
   noun: Counted,
-  soFar = false,
+  options: ThresholdWordsOptions = {},
 ): string {
-  return `At most ${numberText(shown)}: ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+  const { soFar = false, noLimit = false, binEnd } = options;
+  const keeps = `${noLimit ? NO_LIMIT : ""}${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+  const undecided = counts.keptHigh - counts.keptLow;
+  if (undecided === 0 || binEnd === undefined) return keeps;
+  const from = numberText(shown);
+  const to = numberText(binEnd);
+  return undecided === 1
+    ? `${keeps}; the bins cannot tell whether the ${noun} from ${from} to ${to} is at ${from}`
+    : `${keeps}; the bins cannot tell which of the ${grouped(undecided)} from ${from} to ${to} are at ${from}`;
 }
 
 /** What the line of a threshold says to a screen reader as its value:
     the number and what it keeps of those with a value, "0.1, keeps 1,050
     of 1,200 variants", "0.05, keeps 1,113 to 1,152 of 1,200 variants",
-    "0.3, keeps all 1,200 variants"; ending "so far" while the pass runs,
-    `soFar`. */
+    "0.3, keeps all 1,200 variants", "0.7 (no limit), keeps all 1,200
+    variants" for a threshold never set, `noLimit`; ending "so far" while
+    the pass runs, `soFar`. */
 export function thresholdValueText(
   shown: number,
   counts: ThresholdCounts,
   noun: Counted,
-  soFar = false,
+  options: ThresholdWordsOptions = {},
 ): string {
+  const { soFar = false, noLimit = false } = options;
   const { keptLow, keptHigh, withValue } = counts;
   const keeps =
     withValue === 0 || (keptLow === withValue && keptHigh === withValue)
       ? keepsWords(counts, noun)
       : `keeps ${rangeText(keptLow, keptHigh)} of ${counted(withValue, noun)}`;
-  return `${numberText(shown)}, ${keeps}${soFar ? SO_FAR : ""}`;
+  return `${numberText(shown)}${noLimit ? " (no limit)" : ""}, ${keeps}${soFar ? SO_FAR : ""}`;
 }
 
-/** What a threshold keeps and removes, in words. */
+/** The line under the box of a threshold of the variants after a number
+    typed was moved to the nearest of popnei's edges, which the counts
+    are of: "0.07 is counted as 0.0703, the nearest edge of the bins." */
+export function snappedText(typed: number, shown: number): string {
+  return `${numberText(typed)} is counted as ${numberText(shown)}, the nearest edge of the bins.`;
+}
+
+/** The start of the words of a threshold never set. */
+const NO_LIMIT = "(no limit) ";
+
+/** What a threshold keeps, and removes when the bins can tell, in
+    words: one number, or the range of what it keeps, what it removes
+    following from it. */
 function keepsWords(counts: ThresholdCounts, noun: Counted): string {
   const { keptLow, keptHigh, withValue } = counts;
   if (withValue === 0) return `no ${noun} has a value`;
@@ -288,10 +342,11 @@ function keepsWords(counts: ThresholdCounts, noun: Counted): string {
       ? `keeps the only ${noun}`
       : `keeps all ${counted(withValue, noun)}`;
   }
-  const kept = rangeText(keptLow, keptHigh);
-  const removed = rangeText(withValue - keptHigh, withValue - keptLow);
   const plural = keptLow === 1 && keptHigh === 1 ? noun : `${noun}s`;
-  return `keeps ${kept} ${plural} and removes ${removed}`;
+  if (keptLow !== keptHigh) {
+    return `keeps ${rangeText(keptLow, keptHigh)} ${plural}`;
+  }
+  return `keeps ${grouped(keptLow)} ${plural} and removes ${grouped(withValue - keptLow)}`;
 }
 
 /** A count, or the range of two, with commas between thousands: "1,050",

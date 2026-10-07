@@ -27,13 +27,26 @@
   min-inline-size: 0;
 }
 
-/* What the threshold keeps and removes, under the plot. Two lines kept
-   for it, a minimum, so that the plot and those beside it do not move as
-   the words grow longer while the line is dragged, nor stand at other
-   heights in a row. */
+/* The row under the plot: the box of the threshold, and what it keeps
+   and removes beside it, or under it when the column is narrow. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+}
+
+/* What the threshold keeps and removes. Two lines kept for it, a
+   minimum, so that the plot and those beside it do not move as the words
+   grow longer while the line is dragged, nor stand at other heights in a
+   row. */
 .line {
+  flex: 1 1 14rem;
   margin: 0;
   min-block-size: calc(2em * var(--leading-body));
+  display: flex;
+  align-items: center;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }

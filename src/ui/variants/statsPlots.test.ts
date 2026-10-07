@@ -248,15 +248,32 @@ describe("thresholds 2 the threshold on each histogram", () => {
       step: 1,
       value: 128,
     });
-    expect(plot.threshold.line).toBe("At most 0.1: keeps all 1,200 variants");
-    expect(plot.threshold.valueText).toBe("0.1, keeps all 1,200 variants");
+    // Never set: a starting place, no limit.
+    expect(plot.threshold.line).toBe("(no limit) keeps all 1,200 variants");
+    expect(plot.threshold.valueText).toBe(
+      "0.1 (no limit), keeps all 1,200 variants",
+    );
     expect(plot.threshold.name).toBe("Maximum proportion of missing genotypes");
+    // The box: from 0 to 1, four decimals, on which React Aria checks
+    // the number it shows.
+    expect(plot.threshold.box).toEqual({
+      minValue: 0,
+      maxValue: 1,
+      step: 0.0001,
+      decimals: 4,
+    });
+    // Set at the same place, as the missing rate starts at 0.1, a limit
+    // that keeps every variant.
+    const set = variantPlot("missingRate", PANEL.variants, false, 0.1);
+    expect(set.threshold.line).toBe("keeps all 1,200 variants");
+    expect(set.threshold.valueText).toBe("0.1, keeps all 1,200 variants");
   });
 
   test("on an edge equal to k/1280 the bins cannot tell the variants on the edge, and the words give the range: at 0.05, 1,113 to 1,152 of the missing rate", () => {
     const plot = variantPlot("missingRate", PANEL.variants, false, 0.05);
+    // 39 variants in the bin from 0.05 to 0.05078125, 0.0508 shown.
     expect(plot.threshold.line).toBe(
-      "At most 0.05: keeps 1,113 to 1,152 variants and removes 48 to 87",
+      "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
     );
     expect(plot.threshold.valueText).toBe(
       "0.05, keeps 1,113 to 1,152 of 1,200 variants",
@@ -290,19 +307,28 @@ describe("thresholds 2 the threshold on each histogram", () => {
   test("on an edge one double above k/1280 the count is one number: the observed heterozygosity at 0.3 keeps 373", () => {
     const plot = variantPlot("obsHet", PANEL.variants, false, 0.3);
     expect(plot.threshold.shown).toBe(0.3);
-    expect(plot.threshold.line).toBe(
-      "At most 0.3: keeps 373 variants and removes 827",
-    );
+    expect(plot.threshold.line).toBe("keeps 373 variants and removes 827");
     expect(plot.threshold.valueText).toBe("0.3, keeps 373 of 1,200 variants");
   });
 
-  test("a number typed is snapped to the nearest fine edge, which the box then shows", () => {
-    // 0.07 × 1280 is 89.6: the edge 90, 0.0703125.
+  test("a number typed is snapped to the nearest fine edge, which the box then shows with four decimals, and says so", () => {
+    // 0.07 × 1280 is 89.6: the edge 90, 0.0703125, shown 0.0703.
     const plot = variantPlot("obsHet", PANEL.variants, false, 0.07);
-    expect(plot.threshold.shown).toBe(0.0703125);
+    expect(plot.threshold.shown).toBe(0.0703);
     expect(plot.threshold.slider.value).toBe(90);
     expect(plot.threshold.fromSlider(90)).toBe(0.0703125);
     expect(plot.data.threshold?.value).toBe(0.0703125);
+    expect(plot.threshold.valueText).toMatch(/^0\.0703, keeps /u);
+    expect(plot.threshold.snapped(0.07)).toBe(0.0703);
+    // A number shown as typed, and an edge an arrow key stepped to, are
+    // not moved.
+    expect(plot.threshold.snapped(0.0703)).toBeNull();
+    expect(plot.threshold.snapped(0.05)).toBeNull();
+    expect(plot.threshold.snapped(436 / 1280)).toBeNull();
+    // 435/1280 is 0.33984375, shown 0.3398, and 0.3398 typed is that edge.
+    const middle = variantPlot("obsHet", PANEL.variants, false, 0.3398);
+    expect(middle.threshold.slider.value).toBe(435);
+    expect(middle.threshold.shown).toBe(0.3398);
   });
 
   test("the slider spans the horizontal axis of the plot, widened as the plot widens it to take a threshold beyond the bins", () => {
@@ -322,18 +348,28 @@ describe("thresholds 2 the threshold on each histogram", () => {
     expect(maf.threshold.slider.min).toBe(320);
     expect(low).toBe(0.25);
     expect(maf.threshold.slider.max).toBe(Math.round((high ?? 0) * 1280));
-    expect(maf.threshold.line).toBe(
-      "At most 0.25: keeps 0 variants and removes 1,200",
-    );
+    expect(maf.threshold.line).toBe("keeps 0 variants and removes 1,200");
   });
 
   test("while the pass runs the words say the counts are so far", () => {
     const plot = variantPlot("obsHet", PANEL.variants, true, 0.3);
     expect(plot.threshold.line).toBe(
-      "At most 0.3: keeps 373 variants and removes 827 so far",
+      "keeps 373 variants and removes 827 so far",
     );
     expect(plot.threshold.valueText).toBe(
       "0.3, keeps 373 of 1,200 variants so far",
+    );
+    const individuals = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      true,
+      0.03,
+    ).plot;
+    expect(individuals?.threshold.line).toBe(
+      "keeps 116 individuals and removes 84 so far",
+    );
+    expect(individuals?.threshold.valueText).toBe(
+      "0.03, keeps 116 of 200 individuals so far",
     );
   });
 
@@ -352,18 +388,22 @@ describe("thresholds 2 the threshold on each histogram", () => {
       step: 0.0001,
       value: 0.045,
     });
-    expect(top?.threshold.line).toBe(
-      "At most 0.045: keeps all 200 individuals",
-    );
+    expect(top?.threshold.line).toBe("(no limit) keeps all 200 individuals");
+    // The box: from 0 to 1, by 0.0001, four decimals.
+    expect(top?.threshold.box).toEqual({
+      minValue: 0,
+      maxValue: 1,
+      step: 0.0001,
+      decimals: 4,
+    });
     const at = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
       false,
       0.03,
     ).plot;
-    expect(at?.threshold.line).toBe(
-      "At most 0.03: keeps 116 individuals and removes 84",
-    );
+    expect(at?.threshold.line).toBe("keeps 116 individuals and removes 84");
+    expect(at?.threshold.snapped(0.03)).toBeNull();
     expect(at?.threshold.valueText).toBe("0.03, keeps 116 of 200 individuals");
     expect(at?.threshold.fromSlider(0.030000000000000002)).toBe(0.03);
     expect(at?.threshold.name).toBe(
@@ -378,9 +418,7 @@ describe("thresholds 2 the threshold on each histogram", () => {
       false,
       0.35,
     );
-    expect(het.plot?.threshold.line).toBe(
-      "At most 0.35: keeps 1 individual and removes 1",
-    );
+    expect(het.plot?.threshold.line).toBe("keeps 1 individual and removes 1");
     expect(het.plot?.threshold.valueText).toBe(
       "0.35, keeps 1 of 2 individuals",
     );

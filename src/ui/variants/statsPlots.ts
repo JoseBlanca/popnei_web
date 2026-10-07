@@ -15,13 +15,14 @@
  *
  * Each histogram has a threshold that keeps the values at most it
  * (docs/plans/thresholds.md, "The design"): drawn on the plot with no
- * legend, since it is no filter, said in the line under the plot with
+ * legend, since it is no filter, said under the plot, after its box, with
  * what it keeps and removes, and moved by a slider laid over the plot,
  * whose range is the horizontal axis of the plot, `histogramScales`,
  * widened as the plot widens it to take a threshold outside the bins.
  * The threshold the user set is `null` until they move it, at the top of
  * the axis, where it keeps everything and follows the axis as a result
- * so far widens it. Those of the variants move from one of popnei's
+ * so far widens it, and its words say "(no limit)". Each is shown with
+ * at most four decimals. Those of the variants move from one of popnei's
  * 1,280 fine edges to the next, a number typed being snapped to the
  * nearest, and are counted from popnei's fine bins, `variantsAtMost`;
  * those of the individuals move by 0.0001 and are counted from popnei's
@@ -63,22 +64,25 @@ import {
   UNDECIDED_DESCRIPTION,
   overIndividualsLine,
   overVariantsLine,
+  THRESHOLD_DECIMALS,
   thresholdLine,
+  thresholdShown,
   thresholdValueText,
   variantThresholdName,
   variantTitle,
 } from "./statsWords.ts";
-import type { Counted, ThresholdCounts } from "./statsWords.ts";
+import type {
+  Counted,
+  ThresholdCounts,
+  ThresholdWordsOptions,
+} from "./statsWords.ts";
 
 /** The step of a threshold of the individuals, and of its box, which
     takes four decimals, as the thresholds of the individuals of the old
-    page do. */
+    page do. The box of the variants takes four too, `THRESHOLD_DECIMALS`,
+    a number with more refused and one with fewer snapped to the nearest
+    fine edge, and has the same step. */
 export const INDIVIDUAL_THRESHOLD_STEP = 0.0001;
-
-/** The most decimals of a threshold of the variants typed in its box:
-    those of the fine edges, k/1280, 0.00078125 the longest. A number
-    with more is refused, one with fewer snapped to the nearest edge. */
-export const VARIANT_THRESHOLD_DECIMALS = 8;
 
 /** One histogram of the section. */
 export interface StatsPlot {
@@ -97,8 +101,9 @@ export interface PlotThreshold {
   /** The name of the slider and of the box: "Maximum proportion of
       missing genotypes". */
   readonly name: string;
-  /** The number of the threshold as the box and the words show it, an
-      edge of popnei's fine bins, k/1280, for the variants. */
+  /** The number of the threshold as the box and the words show it, with
+      at most four decimals: for the variants an edge of popnei's fine
+      bins, k/1280, so rounded, 0.3398 for 435/1280. */
   readonly shown: number;
   /** The range of the slider, the horizontal axis of the plot, and where
       it is, in its own units: the index of a fine edge for the
@@ -106,7 +111,7 @@ export interface PlotThreshold {
   readonly slider: SliderRange;
   /** The bounds and the step of the box. */
   readonly box: BoxRange;
-  /** The line under the plot: "At most 0.1: keeps 1,050 variants and
+  /** The words after the box, under the plot: "keeps 1,050 variants and
       removes 150". */
   readonly line: string;
   /** What a screen reader says as the value of the slider: "0.1, keeps
@@ -115,6 +120,10 @@ export interface PlotThreshold {
   /** The threshold the user sets by moving the slider to `value`, in
       the units of the slider. */
   readonly fromSlider: (value: number) => number;
+  /** The number the box will show for `value`, a number committed in it,
+      when that differs from `value`, which was moved to the nearest fine
+      edge, 0.0703 for 0.07; `null` when it is shown as committed. */
+  readonly snapped: (value: number) => number | null;
 }
 
 /** The range of a slider and where its thumb is. */
@@ -133,7 +142,9 @@ export interface SliderRange {
 export interface BoxRange {
   readonly minValue: number;
   readonly maxValue: number;
-  /** What an arrow key moves it by. */
+  /** The step of the number the box shows, 0.0001, which React Aria
+      checks it against; the arrow keys of the box move the threshold by
+      the step of the slider, one fine edge for the variants. */
   readonly step: number;
   /** The most decimals a number typed may have, apart from the step. */
   readonly decimals: number;
@@ -171,7 +182,8 @@ export function variantPlot(
     threshold === null
       ? axisHigh
       : snapToFineEdge(result.binEdges, threshold).index;
-  const shown = index / numBins;
+  const edge = index / numBins;
+  const shown = thresholdShown(edge);
   const counts = variantsAtMost(result, statistic, index);
   // The variants on the line are somewhere in the bin that starts at it.
   const undecided = counts.keptLow !== counts.keptHigh;
@@ -181,7 +193,7 @@ export function variantPlot(
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown, undecided),
+    threshold: noLegend(edge, undecided),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const described = variantHistogramDescription(statistic, rows, null);
@@ -208,11 +220,24 @@ export function variantPlot(
       box: {
         minValue: 0,
         maxValue: 1,
-        step: 1 / numBins,
-        decimals: VARIANT_THRESHOLD_DECIMALS,
+        step: INDIVIDUAL_THRESHOLD_STEP,
+        decimals: THRESHOLD_DECIMALS,
       },
-      ...wordsOf(shown, counts, "variant", soFar),
+      ...wordsOf(shown, counts, "variant", {
+        soFar,
+        noLimit: threshold === null,
+        ...(index < numBins && {
+          binEnd: thresholdShown((index + 1) / numBins),
+        }),
+      }),
       fromSlider: (value) => value / numBins,
+      snapped: (value) => {
+        // An edge itself, as an arrow key of the box steps to, is no
+        // number moved, though it is shown with four decimals.
+        const nearest = snapToFineEdge(result.binEdges, value).shown;
+        const moved = thresholdShown(nearest);
+        return nearest === value || moved === value ? null : moved;
+      },
     },
   };
 }
@@ -282,21 +307,22 @@ export function individualPlot(
           minValue: 0,
           maxValue: 1,
           step: INDIVIDUAL_THRESHOLD_STEP,
-          decimals: INDIVIDUAL_DECIMALS,
+          decimals: THRESHOLD_DECIMALS,
         },
-        ...wordsOf(shown, counts, "individual", soFar),
-        fromSlider: (value) => Number(value.toFixed(INDIVIDUAL_DECIMALS)),
+        ...wordsOf(shown, counts, "individual", {
+          soFar,
+          noLimit: threshold === null,
+        }),
+        fromSlider: thresholdShown,
+        snapped: () => null,
       },
     },
     noValueLine: noValueThresholdLine(bins.numNaN, soFar),
   };
 }
 
-/** The decimals of a threshold of the individuals. */
-const INDIVIDUAL_DECIMALS = 4;
-
 /** A threshold at `value` drawn with no legend: it is no filter, and the
-    line under the plot says what it keeps; the bar at the line hatched,
+    words under the plot say what it keeps; the bar at the line hatched,
     `undecided`, when the counts are a range. */
 function noLegend(value: number, undecided: boolean): HistogramThreshold {
   return { value, legend: null, undecided };
@@ -312,16 +338,16 @@ function axisOf(data: HistogramData): readonly [number, number] {
   return [low, high];
 }
 
-/** The line under the plot and the value text of the slider. */
+/** The words after the box and the value text of the slider. */
 function wordsOf(
   shown: number,
   counts: ThresholdCounts,
   noun: Counted,
-  soFar: boolean,
+  options: ThresholdWordsOptions,
 ): { readonly line: string; readonly valueText: string } {
   return {
-    line: thresholdLine(shown, counts, noun, soFar),
-    valueText: thresholdValueText(shown, counts, noun, soFar),
+    line: thresholdLine(shown, counts, noun, options),
+    valueText: thresholdValueText(shown, counts, noun, options),
   };
 }
 

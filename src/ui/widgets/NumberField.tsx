@@ -123,6 +123,12 @@ function moveCaret(input: HTMLInputElement, key: string, shift: boolean): void {
 export interface NumberFieldProps {
   /** The name of the field, shown above it, with its range. */
   readonly label: string;
+  /** The start of `label` that is drawn, before the input on the same
+      line, the rest of it read by a screen reader alone: "Maximum" of
+      "Maximum proportion of missing genotypes", for a field whose plot
+      above names the rest. The whole label drawn above the input when
+      absent. */
+  readonly shownLabel?: string;
   /** The number the field shows, from the store or the screen. */
   readonly value: number;
   /** The smallest number it takes. */
@@ -179,16 +185,12 @@ export interface NumberFieldProps {
       as for one typed; not for an arrow key or Page Up and Down, whose
       number is not typed, nor for a number the field refused. */
   readonly onSameCommitted?: (value: number) => void;
-  /** The width of the input: "short", for a threshold of two decimals
-      or a ploidy of three digits, or "long", for a number of ten
-      characters, a threshold on popnei's fine bins, 0.04296875; short
-      when absent. */
-  readonly width?: "short" | "long";
 }
 
 /** A number field with its label, and the line of a number it refused. */
 export function NumberField({
   label,
+  shownLabel,
   value,
   minValue,
   maxValue,
@@ -202,7 +204,6 @@ export function NumberField({
   onTyped,
   onChange,
   onSameCommitted,
-  width = "short",
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
@@ -326,7 +327,11 @@ export function NumberField({
 
   return (
     <AriaNumberField
-      className={classOf(styles, "field")}
+      className={
+        shownLabel === undefined
+          ? classOf(styles, "field")
+          : `${classOf(styles, "field")} ${classOf(styles, "inline")}`
+      }
       value={value}
       minValue={minValue}
       maxValue={maxValue}
@@ -365,7 +370,18 @@ export function NumberField({
         refuse(checked.error);
       }}
     >
-      <Label className={classOf(styles, "label")}>{label}</Label>
+      <Label className={classOf(styles, "label")}>
+        {shownLabel === undefined ? (
+          label
+        ) : (
+          <>
+            {shownLabel}
+            <span className={classOf(styles, "visuallyHidden")}>
+              {hiddenRest(label, shownLabel)}
+            </span>
+          </>
+        )}
+      </Label>
       <FieldInput
         onNotTaken={(text) => {
           refuse({ kind: "notTaken", text });
@@ -386,7 +402,6 @@ export function NumberField({
         }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
-        width={width}
         // An empty field, given NaN, holds no text: "NaN" is no number
         // of the field to put back.
         committedText={Number.isNaN(value) ? "" : numberText(value)}
@@ -421,6 +436,18 @@ export function NumberField({
   );
 }
 
+/** The rest of `label` after `shown`, its start, which a screen reader
+    alone reads. A `shown` that does not start the label would make the
+    name read differ from the word seen (WCAG 2.5.3), a defect, thrown. */
+function hiddenRest(label: string, shown: string): string {
+  if (!label.startsWith(shown)) {
+    throw new Error(
+      `popnei_web defect: the label shown "${shown}" does not start the label "${label}".`,
+    );
+  }
+  return label.slice(shown.length);
+}
+
 /** What the input of the field is drawn with. */
 interface FieldInputProps {
   /** Called with what was typed or pasted and thrown away. */
@@ -452,8 +479,6 @@ interface FieldInputProps {
       point (docs/specs/steps/variants.md, "A character the fields do
       not take"). */
   readonly inputMode: "numeric" | "text";
-  /** As the field's. */
-  readonly width: "short" | "long";
   /** The number the field holds as it shows it, which Ctrl+Z puts back
       while something is typed. */
   readonly committedText: string;
@@ -481,7 +506,6 @@ function FieldInput({
   onCommitReady,
   onText,
   inputMode,
-  width,
   committedText,
   isTyped,
   onRevert,
@@ -560,11 +584,7 @@ function FieldInput({
   return (
     <Input
       ref={inputRef}
-      className={
-        width === "long"
-          ? `${classOf(styles, "input")} ${classOf(styles, "long")}`
-          : classOf(styles, "input")
-      }
+      className={classOf(styles, "input")}
       inputMode={inputMode}
       {...{ [NUMBER_FIELD_ATTRIBUTE]: "" }}
       onChange={(event) => {
