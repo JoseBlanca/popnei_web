@@ -33,7 +33,7 @@ import { classOf } from "../classOf.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
-import { useAppState, useStore } from "../store.tsx";
+import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
@@ -230,7 +230,6 @@ function Count({
   refused,
 }: CountProps): React.JSX.Element {
   const announcer = useAnnouncer();
-  const store = useStore();
   const status = useAppState(summaryStatus);
   const analyses = useAppState((s) => s.analyses);
   // Selected for what autoRuns knows, which a Stop of a pass about to
@@ -250,14 +249,10 @@ function Count({
   });
 
   // The one Stop of the page: the pass running, and one about to start.
-  // The words name Start again only when the box offers it after the
-  // Stop, which the store and autoRuns know once the Stop is made.
+  // The box then offers Start again, which the words name.
   const stop = (): void => {
     autoRuns.stop(POPGEN2_CHAIN);
-    const after = chainButton(chainStatuses(store.getState().analyses), (key) =>
-      autoRuns.startedUnder(key),
-    );
-    announcer.announce(stoppedText(after?.kind === "run"));
+    announcer.announce(stoppedText());
   };
   const again = (): void => {
     autoRuns.resume(POPGEN2_CHAIN);

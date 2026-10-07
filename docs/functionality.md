@@ -70,10 +70,10 @@ FILTER column, stays in the count and the statistics, since the FILTER
 filter as a filter the user sets comes with the filters of that page.
 How many variants of a VCF failed their FILTER, those whose FILTER
 column is neither PASS nor a dot, 300 of 1,200 in low_qual.vcf.gz, is
-not shown: from 7 October 2026 a second pass over the file counted
-them, and the owner took it out, so that the count waits for popnei's
-summary to give it from its own pass, popnei issue #12
-(JoseBlanca/popnei).
+not shown: a second pass over the file counted them until 7 October
+2026, when the owner took it out so that the page reads each file once,
+and the count waits for popnei's summary to give it from its own pass,
+popnei issue #12 (JoseBlanca/popnei).
 
 On popgen2.html the distributions of the open file, four of the
 variants and two of the individuals, each carry a threshold that keeps

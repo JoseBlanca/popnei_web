@@ -4411,6 +4411,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-nei-summary${at}-${theme}`);
       });
 

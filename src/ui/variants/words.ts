@@ -280,14 +280,11 @@ export const START_AGAIN_LABEL = "Start again";
 
 /** What the status region says of a Stop of the count of the variants
     and the statistics, whose lines then say "not counted", with the way
-    to start it again when the box offers Start again after the Stop,
-    `offersStartAgain`, and not when it does not: "The count of the
-    variants and the statistics were stopped. Start again calculates them
-    from the start." */
-export function stoppedText(offersStartAgain: boolean): string {
-  return offersStartAgain
-    ? "The count of the variants and the statistics were stopped. Start again calculates them from the start."
-    : "The count of the variants and the statistics were stopped.";
+    to start it again, since the box then offers Start again: "The count
+    of the variants and the statistics were stopped. Start again
+    calculates them from the start." */
+export function stoppedText(): string {
+  return "The count of the variants and the statistics were stopped. Start again calculates them from the start.";
 }
 
 /** The line of the count: "1,200 variants on 1 chromosome." */

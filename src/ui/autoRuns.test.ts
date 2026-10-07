@@ -32,10 +32,10 @@ interface Request {
   readonly end: (outcome: Outcome<JobResult>) => void;
 }
 
-/** An analysis locked on a `.nei` file, for a group with a member that
-    starts nothing and holds back nothing: the histograms of the variants
-    under another id, which a `.nei` file locks. It is never started on
-    one. */
+/** An analysis that a `.nei` file locks, made for the test from the
+    histograms of the variants under another id, for a group with a member
+    that starts nothing and holds back nothing. It is never started on a
+    `.nei` file. */
 const LOCKED_ON_NEI: AnalysisDef<Job, JobResult> = Object.freeze({
   ...variantChecks,
   id: "lockedOnNei",
