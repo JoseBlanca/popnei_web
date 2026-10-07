@@ -162,7 +162,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 11, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 12, popneiVersion: "0.1.0" },
     ],
     ["opened", { kind: "opened", id: 1, individuals: ["i1", "i2"], ploidy: 2 }],
     ["the progress of a run", PROGRESS],
@@ -200,7 +200,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 11 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 12 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -523,7 +523,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 11,
+        protocol: 12,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -538,7 +538,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 11 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 12 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -596,17 +596,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 12 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 12 })).toEqual({
+  test("a ready of protocol 13 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 13 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 12 },
+      error: { kind: "otherProtocol", found: 13 },
     });
   });
 
-  test("a ready of protocol 12 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 12 })).toEqual({
+  test("a ready of protocol 13 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 13 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 12 },
+      error: { kind: "otherProtocol", found: 13 },
     });
   });
 
@@ -614,18 +614,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 12 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 13 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 12,
+          protocol: 13,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 12 },
+        error: { kind: "otherProtocol", found: 13 },
       });
     },
   );
@@ -1272,6 +1272,7 @@ const passStats: fc.Arbitrary<PassStats> = fc.record({
   numVars: number,
   filtering: fc.record(
     {
+      passed: filteringStats,
       missing_data: filteringStats,
       obs_het: filteringStats,
       maf: filteringStats,
@@ -1486,7 +1487,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(11),
+    protocol: fc.constant(12),
     popneiVersion: text,
   }),
   fc.record({
@@ -1637,7 +1638,7 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(11) }),
+  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(12) }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1649,6 +1650,7 @@ const fromFilesRunnerMessage = fc.oneof(
 // The requests of the page, drawn by fast-check.
 
 const variantFilter = fc.oneof(
+  fc.record({ kind: fc.constant("passed" as const) }),
   fc.record({
     kind: fc.constant("missing_data" as const),
     maxAllowedMissingRate: number,
@@ -2756,8 +2758,21 @@ describe("PA2 D1 the messages of the LD decay", () => {
     },
   );
 
-  test("the version of the messages is 11", () => {
-    expect(PROTOCOL_VERSION).toBe(11);
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 11, before the filter of the FILTER column, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 11 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 11 },
+      });
+    },
+  );
+
+  test("the version of the messages is 12", () => {
+    expect(PROTOCOL_VERSION).toBe(12);
   });
 });
 
@@ -3596,25 +3611,65 @@ describe("one-pass the count of the FILTER failures is no longer a message", () 
       },
     });
   });
+});
 
-  test("passed in the counts of a result is extraFields", () => {
+// The filter of the FILTER column in the messages, from 7 October 2026
+// (docs/specs/worker/messages.md, "How it is verified"; the numbers are
+// those of low_qual.vcf.gz under passed and the missing data filter).
+
+describe("SF1 D2 the filter of the FILTER column in the messages", () => {
+  const PASSED_AND_MISSING = [
+    { kind: "passed" },
+    { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+  ] as const;
+
+  test("parseToRunner accepts a diversity job whose filters are passed and the missing data filter", () => {
+    const run = { ...RUN, job: { ...JOB, filters: PASSED_AND_MISSING } };
+    expect(parseToRunner(run)).toEqual({ ok: true, value: run });
+  });
+
+  test("parseToRunner accepts a write whose filters are passed and the missing data filter", () => {
+    const write = {
+      kind: "write",
+      id: 5,
+      key: "k2",
+      job: { ...WRITE_JOB, filters: PASSED_AND_MISSING },
+    };
+    expect(parseToRunner(write)).toEqual({ ok: true, value: write });
+  });
+
+  test("parseFromRunner accepts a result whose counts hold passed before missing_data, and keeps that order", () => {
     const message = resultMessage({
-      ...FILTER_COUNTS_RESULT,
+      ...RESULT,
       passStats: {
-        numVars: 1128,
+        numVars: 865,
         filtering: {
-          passed: { varsProcessed: 1300, varsKept: 1200 },
-          ...FILTER_COUNTS_RESULT.passStats.filtering,
+          passed: { varsProcessed: 1200, varsKept: 900 },
+          missing_data: { varsProcessed: 900, varsKept: 865 },
         },
       },
     });
-    expect(parseFromRunner(message)).toEqual({
+    const checked = parseFromRunner(message);
+    expect(checked).toEqual({ ok: true, value: message });
+    expect(
+      checked.ok && checked.value.kind === "result"
+        ? Object.keys(checked.value.result.passStats.filtering)
+        : null,
+    ).toEqual(["passed", "missing_data"]);
+  });
+
+  test("a filter passed with a threshold in a diversity job is extraFields at job.filters.0", () => {
+    const job = {
+      ...JOB,
+      filters: [{ kind: "passed", maxAllowedMissingRate: 0.1 }],
+    };
+    expect(parseToRunner({ ...RUN, job })).toEqual({
       ok: false,
       error: {
         kind: "extraFields",
-        messageKind: "result",
-        path: "result.passStats.filtering",
-        fields: ["passed"],
+        messageKind: "run",
+        path: "job.filters.0",
+        fields: ["maxAllowedMissingRate"],
       },
     });
   });

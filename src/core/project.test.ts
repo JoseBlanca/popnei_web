@@ -4032,8 +4032,9 @@ function withListsOfPanel(
 
 describe("VS2 D1 the filters of a project", () => {
   describe("the fixed order of the variants' filters", () => {
-    test("VARIANT_FILTER_ORDER is missing data, observed heterozygosity, MAF, LD", () => {
+    test("VARIANT_FILTER_ORDER is the FILTER column, missing data, observed heterozygosity, MAF, LD", () => {
       expect(VARIANT_FILTER_ORDER).toEqual([
+        "passed",
         "missing_data",
         "obs_het",
         "maf",
@@ -4214,7 +4215,7 @@ describe("VS2 D1 the filters of a project", () => {
         error: { kind: "filterOutOfOrder", path: ["filters", 1] },
       });
       expect(projectErrorText(errorOf(result))).toBe(
-        "The project file cannot be opened: the filters of the variants should be in the order missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+        "The project file cannot be opened: the filters of the variants should be in the order the FILTER column, missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
       );
     });
 
@@ -7071,4 +7072,86 @@ describe("PA6 D7 the options of the three analyses of the populations in a proje
     },
     PROPERTY_TIMEOUT_MS,
   );
+});
+
+// The filter of the FILTER column as a kind of filter of the variants,
+// from 7 October 2026: the project spec, "The filters of popgen2.html"
+// and "The validation", and the cases of "How it is verified" that
+// concern the kind alone.
+
+describe("SF1 D3 the filter of the FILTER column in the project", () => {
+  const PASSED = { kind: "passed" } as const;
+  const MISSING_DATA = {
+    kind: "missing_data",
+    maxAllowedMissingRate: 0.1,
+  } as const;
+
+  test("setVariantFilter of passed on a project whose filters are [missing_data, maf] puts it first, and keeps the other filters and parts", () => {
+    const p = deepFreeze(sampleProject());
+    const q = setVariantFilter(p, PASSED);
+    expect(q.filters).toEqual([PASSED, ...p.filters]);
+    expect(q.filters[1]).toBe(p.filters[0]);
+    expect(q.filters[2]).toBe(p.filters[1]);
+    expectKept(p, q, ["filters"]);
+    expect(setVariantFilter(deepFreeze(q), PASSED)).toBe(q);
+  });
+
+  test("turnOffVariantFilter of passed keeps it in filtersOff, and setVariantFilter of what is kept puts it back first", () => {
+    const p = deepFreeze(setVariantFilter(sampleProject(), PASSED));
+    const q = deepFreeze(turnOffVariantFilter(p, "passed"));
+    expect(q.filters).toEqual(p.filters.slice(1));
+    expect(q.filtersOff).toEqual([PASSED]);
+    expectKept(p, q, ["filters", "filtersOff"]);
+    const kept = q.filtersOff[0];
+    if (kept === undefined) {
+      throw new Error("popnei_web defect: the test expected a filter kept.");
+    }
+    const again = setVariantFilter(q, kept);
+    expect(again.filters).toEqual(p.filters);
+    expect(again.filtersOff).toEqual([]);
+  });
+
+  test("parseProject accepts passed in filters and in filtersOff", () => {
+    const on = parse(fileWith({ filters: [PASSED, MISSING_DATA] }));
+    expect(on.ok && on.value.filters).toEqual([PASSED, MISSING_DATA]);
+    const off = parse(
+      fileWith({ filters: [MISSING_DATA], filtersOff: [PASSED] }),
+    );
+    expect(off.ok && off.value.filtersOff).toEqual([PASSED]);
+  });
+
+  test('parseProject refuses { "kind": "passed", "maxAllowedMaf": 1 } as unknownField', () => {
+    expect(
+      parse(fileWith({ filters: [{ kind: "passed", maxAllowedMaf: 1 }] })),
+    ).toEqual({
+      ok: false,
+      error: {
+        kind: "unknownField",
+        path: ["filters", 0],
+        name: "maxAllowedMaf",
+      },
+    });
+  });
+
+  test("parseProject refuses passed after missing_data as filterOutOfOrder, with the text of the order", () => {
+    const result = parse(fileWith({ filters: [MISSING_DATA, PASSED] }));
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: "filterOutOfOrder", path: ["filters", 1] },
+    });
+    expect(projectErrorText(errorOf(result))).toBe(
+      "The project file cannot be opened: the filters of the variants should be in the order the FILTER column, missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+    );
+  });
+
+  test("two filters of the FILTER column are named so in the text", () => {
+    const result = parse(fileWith({ filters: [PASSED, PASSED] }));
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "twoFiltersOfAKind", path: ["filters", 1] },
+    });
+    expect(projectErrorText(errorOf(result))).toContain(
+      "it has two filters of the variants by the FILTER column, and a project has at most one of each kind",
+    );
+  });
 });

@@ -64,7 +64,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -920,6 +920,7 @@ const VARIANT_FILTER_KINDS: Readonly<Record<VariantFilterKind, true>> = {
   maf: true,
   obs_het: true,
   ld: true,
+  passed: true,
 };
 const READ_KINDS: Readonly<Record<IndividualsFileRead["kind"], true>> = {
   read: true,
@@ -1625,8 +1626,8 @@ function checkRange(
   return accepted([low.value, high.value] as const);
 }
 
-/** A filter of the variants, with the one threshold of its kind, or the
-    two of `ld`. */
+/** A filter of the variants, with the one threshold of its kind, the
+    two of `ld`, or none for `passed`. */
 function checkVariantFilter(
   value: unknown,
   place: Place,
@@ -1685,6 +1686,13 @@ function checkVariantFilter(
         maxAllowedR2: maxAllowedR2.value,
         maxDist: maxDist.value,
       });
+    }
+    case "passed": {
+      const wrong = exactFields(record, place, ["kind"]);
+      if (wrong !== null) {
+        return wrong;
+      }
+      return accepted({ kind: tag });
     }
   }
 }

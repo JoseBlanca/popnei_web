@@ -1194,6 +1194,31 @@ describe("PA2 D5 script", () => {
   });
 });
 
+describe("SF1 D3 the script of the LD decay with the filter of the FILTER column", () => {
+  test("filter_passed comes first, before the list of the individuals kept, where the runner puts it", () => {
+    const lines = ldDecay
+      .script(
+        project({
+          table: null,
+          vcf: true,
+          variantsName: "ld.vcf.gz",
+          filters: [
+            { kind: "passed" },
+            { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+          ],
+          individualFilters: [{ kind: "remove", individuals: ["i000"] }],
+        }),
+      )
+      .split("\n");
+    expect(lines.slice(2, 6)).toStrictEqual([
+      'ld_variants = popnei.open_vcf("ld.vcf.gz", ploidy=2, only_passed=True)',
+      "ld_variants.filter_passed()",
+      "ld_variants.filter_individuals(individuals_kept)",
+      "ld_variants.filter_by_missing_data(0.1)",
+    ]);
+  });
+});
+
 describe("PA2 D5 ldPlotOmittedText", () => {
   const named = (count: number): LdDecayResult =>
     resultOf(Array.from({ length: count }, (_, i) => flowPop(`q${String(i)}`)));

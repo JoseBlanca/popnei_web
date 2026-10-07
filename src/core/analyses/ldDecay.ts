@@ -1092,10 +1092,15 @@ function script(p: Project): string {
   return [
     ...scriptComment(p),
     `ld_variants = ${open}`,
+    ...ldDecayFilters(p.filters)
+      .filter((filter) => filter.kind === "passed")
+      .map(filterLine),
     ...(p.individualFilters.length === 0
       ? []
       : ["ld_variants.filter_individuals(individuals_kept)"]),
-    ...ldDecayFilters(p.filters).map(filterLine),
+    ...ldDecayFilters(p.filters)
+      .filter((filter) => filter.kind !== "passed")
+      .map(filterLine),
     ...scriptPops(p),
     "ld = popnei.calc_ld_and_dist_per_pop(",
     `    ld_variants, pops=pops, min_dist=${String(LD_DECAY_MIN_DIST)}, max_dist=${String(options.maxDist)}, num_bins=${String(LD_DECAY_NUM_BINS)},`,
@@ -1157,9 +1162,13 @@ function scriptPops(p: Project): readonly string[] {
 }
 
 /** The line of the script that puts one filter of the job on
-    `ld_variants`, its numbers as `String` writes them. */
+    `ld_variants`, its numbers as `String` writes them; the filter of the
+    FILTER column is popnei's `filter_passed`, which the script puts
+    before the list of the individuals, where the runner puts it. */
 function filterLine(filter: LdDecayFilter): string {
   switch (filter.kind) {
+    case "passed":
+      return "ld_variants.filter_passed()";
     case "missing_data":
       return `ld_variants.filter_by_missing_data(${String(filter.maxAllowedMissingRate)})`;
     case "obs_het":

@@ -12,12 +12,12 @@
  */
 
 /**
- * A filter of the variants, one of the four of popnei's that the
+ * A filter of the variants, one of the five of popnei's that the
  * application gives, with the names of the arguments of popnei's methods
  * of `Variants`. `kind` is the name popnei gives the filter in the counts
- * of a pass. Each keeps the variants whose number is at most its
- * threshold; the thresholds are numbers from 0 to 1, given to popnei as
- * the user typed them.
+ * of a pass. Each of the four with a threshold keeps the variants whose
+ * number is at most it; the thresholds are numbers from 0 to 1, given to
+ * popnei as the user typed them. The fifth, `passed`, has no number.
  */
 export type VariantFilter =
   /** `filterByMissingData`: the largest proportion of missing genotypes. */
@@ -33,7 +33,14 @@ export type VariantFilter =
       readonly kind: "ld";
       readonly maxAllowedR2: number;
       readonly maxDist: number;
-    };
+    }
+  /** `filterPassed`: keeps the variants of a VCF whose FILTER is `PASS` or
+      a dot. Only for a VCF opened with every variant: over a `.nei` file
+      written before popnei's format 1.2 popnei refuses it at the first
+      block, and over a VCF opened with only the passed variants it keeps
+      them all. The runner puts it first, before the list of the
+      individuals kept. */
+  | { readonly kind: "passed" };
 
 /** The kind of a filter of the variants; a project holds one of each. */
 export type VariantFilterKind = VariantFilter["kind"];

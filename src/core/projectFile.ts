@@ -294,6 +294,8 @@ function sourceReadOut(read: SourceRead): Fields {
 
 function variantFilterOut(filter: ProjectVariantFilter): Fields {
   switch (filter.kind) {
+    case "passed":
+      return fields([["kind", filter.kind]]);
     case "missing_data":
       return fields([
         ["kind", filter.kind],

@@ -92,9 +92,10 @@ export function followLabel(
         ? `${start}${r2}, its distance still to be typed there`
         : `${start}${r2} within ${numberText(filter.maxDist)} base pairs`;
     }
+    case "passed":
     case "obs_het":
       throw new Error(
-        "popnei_web defect: the principal components have no filter of observed heterozygosity of their own.",
+        `popnei_web defect: the principal components have no filter of their own of the kind ${filter.kind}.`,
       );
   }
 }

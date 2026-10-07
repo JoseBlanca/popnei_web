@@ -95,6 +95,8 @@ export function turnedOnFilter(
   const kept = p.filtersOff.find((filter) => filter.kind === kind);
   if (kept !== undefined) return kept;
   switch (kind) {
+    case "passed":
+      return { kind };
     case "missing_data":
       return { kind, maxAllowedMissingRate: DEFAULT_MAX_MISSING_RATE };
     case "obs_het":

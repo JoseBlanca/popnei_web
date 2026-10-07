@@ -392,13 +392,18 @@ type Held =
       readonly individuals: readonly string[];
     };
 
-/** The steps a request asks of the `Variants`: the list of the
-    individuals kept, `null` for every individual, and then its filters of
-    the variants, in their order, which count over the individuals of the
-    list. */
+/** The steps a request asks of the `Variants`, in the order they are
+    put: the filter of the FILTER column, when `passed`; the list of the
+    individuals kept, `null` for every individual; and then the other
+    filters of the variants, in their order, which count over the
+    variants that passed and the individuals of the list. */
 interface Steps {
+  /** Whether the request's filters hold the filter of the FILTER column,
+      which is put first, before the list. */
+  readonly passed: boolean;
   readonly individuals: readonly string[] | null;
-  readonly filters: readonly VariantFilter[];
+  /** The filters of the request but the filter of the FILTER column. */
+  readonly filters: readonly Exclude<VariantFilter, { kind: "passed" }>[];
 }
 
 /** What a runner is made with, for the tests. */
@@ -442,8 +447,10 @@ export function createRunner(options: RunnerOptions = {}): Runner {
    * The `Variants` of the load with the steps of the request on it: as it
    * is when its steps are those; with them put on it when it holds no
    * step; otherwise freed and the file opened again, the steps put on the
-   * new one. The list of individuals goes first, so that the filters of
-   * the variants count over the individuals it keeps.
+   * new one. The filter of the FILTER column goes first, where popnei
+   * advises it, then the list of individuals, so that the other filters
+   * of the variants count over the variants that passed and the
+   * individuals the list keeps.
    */
   function variantsWithSteps(
     load: LoadToOpen,
@@ -465,6 +472,13 @@ export function createRunner(options: RunnerOptions = {}): Runner {
         variants = openSource(load, file);
       } catch (thrown: unknown) {
         return answerOfOpenAgain(thrown, file.name);
+      }
+    }
+    if (wanted.passed) {
+      try {
+        variants.filterPassed();
+      } catch (thrown: unknown) {
+        return answerOfPopnei(thrown, file.name);
       }
     }
     if (wanted.individuals !== null) {
@@ -568,10 +582,11 @@ export function createRunner(options: RunnerOptions = {}): Runner {
     if (why !== null) {
       return { kind: "badRequest", message: why };
     }
-    const withSteps = variantsWithSteps(load, file, {
-      individuals: job.individuals,
-      filters: job.filters,
-    });
+    const withSteps = variantsWithSteps(
+      load,
+      file,
+      stepsWith(job.individuals, job.filters),
+    );
     if (withSteps.kind !== "ok") {
       return withSteps;
     }
@@ -588,15 +603,34 @@ function stepsOf(job: Job): Steps {
   switch (job.analysis) {
     case "individualChecks":
     case "variantsSummary":
-      return { individuals: null, filters: job.filters };
+      return stepsWith(null, job.filters);
     case "diversity":
     case "variantChecks":
     case "filterCounts":
     case "pca":
     case "popDists":
     case "ldDecay":
-      return { individuals: job.individuals, filters: job.filters };
+      return stepsWith(job.individuals, job.filters);
   }
+}
+
+/** The steps of a list of individuals and of the filters of a request:
+    the filter of the FILTER column taken out of the filters, wherever it
+    is, to be put first. */
+function stepsWith(
+  individuals: readonly string[] | null,
+  filters: readonly VariantFilter[],
+): Steps {
+  let passed = false;
+  const others: Exclude<VariantFilter, { kind: "passed" }>[] = [];
+  for (const filter of filters) {
+    if (filter.kind === "passed") {
+      passed = true;
+    } else {
+      others.push(filter);
+    }
+  }
+  return { passed, individuals, filters: others };
 }
 
 /** Opens the file of the load with popnei, reading its `source` anew; a
@@ -617,23 +651,30 @@ function openSource(load: LoadToOpen, file: LoadFile): Variants {
   }
 }
 
-/** Whether popnei's steps are those wanted: first, when a list is wanted,
-    the step of the individuals naming the same individuals in the same
-    order; then the filters, the same kinds in the same order, each
-    argument of a step `===` to the field of that name of its filter. */
+/** Whether popnei's steps are those wanted: first, when it is wanted,
+    the step of the filter of the FILTER column, with no argument; then,
+    when a list is wanted, the step of the individuals naming the same
+    individuals in the same order; then the filters, the same kinds in the
+    same order, each argument of a step `===` to the field of that name of
+    its filter. */
 function stepsAre(steps: readonly Step[], wanted: Steps): boolean {
+  const numPassedSteps = wanted.passed ? 1 : 0;
   const numListSteps = wanted.individuals === null ? 0 : 1;
-  if (steps.length !== numListSteps + wanted.filters.length) {
+  const numFirstSteps = numPassedSteps + numListSteps;
+  if (steps.length !== numFirstSteps + wanted.filters.length) {
     return false;
   }
   return steps.every((step, index) => {
-    if (index < numListSteps) {
+    if (index < numPassedSteps) {
+      return stepIsFilter(step, { kind: "passed" });
+    }
+    if (index < numFirstSteps) {
       if (wanted.individuals === null) {
         throw new Error("popnei_web defect: a step of a list not wanted");
       }
       return stepIsIndividuals(step, wanted.individuals);
     }
-    const filter = wanted.filters[index - numListSteps];
+    const filter = wanted.filters[index - numFirstSteps];
     if (filter === undefined) {
       throw new Error("popnei_web defect: a step beyond those wanted");
     }
@@ -675,8 +716,12 @@ function stepIsIndividuals(
   );
 }
 
-/** Puts one filter on the variants with its method of popnei. */
-function putFilter(variants: Variants, filter: VariantFilter): void {
+/** Puts one filter on the variants with its method of popnei; the filter
+    of the FILTER column is put apart, before the list of individuals. */
+function putFilter(
+  variants: Variants,
+  filter: Exclude<VariantFilter, { kind: "passed" }>,
+): void {
   switch (filter.kind) {
     case "missing_data":
       variants.filterByMissingData(filter.maxAllowedMissingRate);

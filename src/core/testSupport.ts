@@ -282,9 +282,11 @@ const PLAIN = { noNullPrototype: true } as const;
 
 const threshold = fc.double({ min: 0, max: 1, noNaN: true });
 
-/** Any filter of the variants as the project holds it; the LD filter
-    has no distance, `maxDist` `null`, in about half of the draws. */
+/** Any filter of the variants as the project holds it, the filter of
+    the FILTER column among them; the LD filter has no distance, `maxDist`
+    `null`, in about half of the draws. */
 const variantFilter: fc.Arbitrary<ProjectVariantFilter> = fc.oneof(
+  fc.constant<ProjectVariantFilter>({ kind: "passed" }),
   threshold.map((t): ProjectVariantFilter => ({
     kind: "missing_data",
     maxAllowedMissingRate: t,
@@ -312,10 +314,7 @@ const variantFilter: fc.Arbitrary<ProjectVariantFilter> = fc.oneof(
 );
 
 const variantFilterKind = fc.constantFrom<VariantFilterKind>(
-  "missing_data",
-  "maf",
-  "obs_het",
-  "ld",
+  ...VARIANT_FILTER_ORDER,
 );
 
 const individualNames = fc.subarray(["i1", "i2", "i3", "i4"]);
@@ -532,7 +531,10 @@ export const anyLoadId: fc.Arbitrary<string> =
     fixed order of the project; the LD filter with no distance in about
     half of the lists that have it. */
 export const variantFilters: fc.Arbitrary<readonly ProjectVariantFilter[]> = fc
-  .uniqueArray(variantFilter, { selector: (f) => f.kind, maxLength: 4 })
+  .uniqueArray(variantFilter, {
+    selector: (f) => f.kind,
+    maxLength: VARIANT_FILTER_ORDER.length,
+  })
   .map((filters) =>
     filters.toSorted(
       (a, b) =>
@@ -559,7 +561,13 @@ export const individualFilters: fc.Arbitrary<readonly IndividualFilter[]> = fc
 export const variantFiltersOnAndOff: fc.Arbitrary<
   Pick<Project, "filters" | "filtersOff">
 > = fc
-  .tuple(variantFilters, fc.array(fc.boolean(), { minLength: 4, maxLength: 4 }))
+  .tuple(
+    variantFilters,
+    fc.array(fc.boolean(), {
+      minLength: VARIANT_FILTER_ORDER.length,
+      maxLength: VARIANT_FILTER_ORDER.length,
+    }),
+  )
   .map(([filters, off]) => ({
     filters: filters.filter((_, at) => off[at] !== true),
     filtersOff: filters.filter((_, at) => off[at] === true),

@@ -381,8 +381,8 @@ export function pcaFilters(
 }
 
 /** The PCA's own filter of the kind `kind`, or `null` while it follows
-    the Variants step, and for the observed heterozygosity, which the PCA
-    has none of. */
+    the Variants step, and for the FILTER column and the observed
+    heterozygosity, which the PCA has none of. */
 function ownFilter(
   kind: ProjectVariantFilter["kind"],
   o: PcaOptions,
@@ -407,6 +407,7 @@ function ownFilter(
             maxAllowedR2: o.ld.maxAllowedR2,
             maxDist: o.ld.maxDist,
           });
+    case "passed":
     case "obs_het":
       return null;
   }
@@ -670,6 +671,7 @@ const COMMENT_WIDTH = 71;
     of the script. */
 const FILTER_WORDS: Readonly<Record<ProjectVariantFilter["kind"], string>> =
   Object.freeze({
+    passed: "FILTER column",
     missing_data: "missing data",
     obs_het: "observed heterozygosity",
     maf: "MAF",
@@ -719,10 +721,11 @@ function script(p: Project): string {
   return [
     ...commentLines(scriptComment(o)),
     `pca_variants = ${open}`,
+    ...filters.filter((filter) => filter.kind === "passed").map(filterLine),
     ...(p.individualFilters.length === 0
       ? []
       : ["pca_variants.filter_individuals(individuals_kept)"]),
-    ...filters.map(filterLine),
+    ...filters.filter((filter) => filter.kind !== "passed").map(filterLine),
     ...call,
   ]
     .map((line) => `${line}\n`)
@@ -767,9 +770,13 @@ function commentLines(text: string): string[] {
 }
 
 /** The line of the script that puts one filter of the job on
-    `pca_variants`, its numbers as `String` writes them. */
+    `pca_variants`, its numbers as `String` writes them; the filter of the
+    FILTER column is popnei's `filter_passed`, which the script puts
+    before the list of the individuals, where the runner puts it. */
 function filterLine(filter: ProjectVariantFilter): string {
   switch (filter.kind) {
+    case "passed":
+      return "pca_variants.filter_passed()";
     case "missing_data":
       return `pca_variants.filter_by_missing_data(${String(filter.maxAllowedMissingRate)})`;
     case "obs_het":

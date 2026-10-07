@@ -1412,6 +1412,24 @@ describe("IP6 D4 script", () => {
     );
   });
 
+  test("SF1 D3 a VCF read with only_passed False, with the filter of the FILTER column and a filter of individuals: filter_passed first, before the list, where the runner puts it", () => {
+    const p = project({
+      variantsName: "panel.vcf.gz",
+      readOptions: { ploidy: 2, onlyPassed: false },
+      filters: [
+        { kind: "passed" },
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      ],
+      individualFilters: [{ kind: "remove", individuals: ["s000"] }],
+    });
+    expect(pca.script(p).split("\n").slice(2, 6)).toStrictEqual([
+      'pca_variants = popnei.open_vcf("panel.vcf.gz", ploidy=2, only_passed=False)',
+      "pca_variants.filter_passed()",
+      "pca_variants.filter_individuals(individuals_kept)",
+      "pca_variants.filter_by_missing_data(0.1)",
+    ]);
+  });
+
   test("a VCF read with only_passed False, and the step's missing data, observed heterozygosity and MAF filters that the PCA follows, each in its line with its value", () => {
     const p = project({
       variantsName: "panel.vcf.gz",

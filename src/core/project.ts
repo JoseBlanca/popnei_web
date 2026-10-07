@@ -345,6 +345,7 @@ export type FieldPath = readonly (string | number)[];
 const FILTER_KIND_WORDS: Readonly<
   Record<VariantFilterKind | IndividualFilterKind, string>
 > = {
+  passed: "the FILTER column",
   missing_data: "missing genotypes",
   maf: "major allele frequency",
   obs_het: "observed heterozygosity",
@@ -354,8 +355,9 @@ const FILTER_KIND_WORDS: Readonly<
 };
 
 /** The kinds of filter of the variants, in the order a project keeps
-    them. */
+    them: the filter of the FILTER column first, which has no field. */
 const VARIANT_FILTER_KINDS: Kinds<VariantFilterKind> = {
+  passed: { fields: [], words: FILTER_KIND_WORDS.passed },
   missing_data: {
     fields: ["maxAllowedMissingRate"],
     words: FILTER_KIND_WORDS.missing_data,
@@ -365,9 +367,9 @@ const VARIANT_FILTER_KINDS: Kinds<VariantFilterKind> = {
   ld: { fields: ["maxAllowedR2", "maxDist"], words: FILTER_KIND_WORDS.ld },
 };
 
-/** The order the filters of the variants are kept in: missing_data,
-    obs_het, maf, ld. "regions" joins first with popnei's filter of the
-    regions of a BED file. */
+/** The order the filters of the variants are kept in: passed,
+    missing_data, obs_het, maf, ld. "regions" joins first with popnei's
+    filter of the regions of a BED file. */
 export const VARIANT_FILTER_ORDER: readonly VariantFilterKind[] =
   keysOf(VARIANT_FILTER_KINDS);
 
@@ -561,6 +563,8 @@ function variantFilterError(
   path: FieldPath,
 ): ProjectError | null {
   switch (filter.kind) {
+    case "passed":
+      return null;
     case "missing_data":
       return thresholdError(filter.maxAllowedMissingRate, [
         ...path,
@@ -1186,6 +1190,8 @@ function copyVariantLoad(source: VariantLoad): VariantLoad {
 
 function copyVariantFilter(filter: ProjectVariantFilter): ProjectVariantFilter {
   switch (filter.kind) {
+    case "passed":
+      return { kind: filter.kind };
     case "missing_data":
       return {
         kind: filter.kind,
@@ -3377,6 +3383,9 @@ function parseVariantFilter(
   const { kind, fields } = read.value;
   let filter: ProjectVariantFilter;
   switch (kind) {
+    case "passed":
+      filter = { kind };
+      break;
     case "missing_data": {
       const rate = numberField(fields, path, "maxAllowedMissingRate");
       if (!rate.ok) {

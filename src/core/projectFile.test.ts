@@ -1717,7 +1717,7 @@ describe("VS3 D8 the project file of stage 3", () => {
       error: expected,
     });
     expect(projectFileErrorText(expected, "run1.popnei.json")).toBe(
-      "The project file cannot be opened: the filters of the variants should be in the order missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
+      "The project file cannot be opened: the filters of the variants should be in the order the FILTER column, missing genotypes, observed heterozygosity, major allele frequency, linkage disequilibrium, and the second one is out of that order. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
     );
   });
 

@@ -56,6 +56,7 @@ const ID = "filterCounts";
     say "of the variants", as their switches do. */
 export const FILTER_NAMES: Readonly<Record<VariantFilterKind, string>> =
   Object.freeze({
+    passed: "The filter of the FILTER column",
     missing_data: "The filter of the variants by missing data",
     obs_het: "The filter of the variants by observed heterozygosity",
     maf: "The MAF filter",
