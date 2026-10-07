@@ -716,3 +716,36 @@ checks the count against popnei's own on it.
   `main` when the owner says so.
 
 ## What was done
+
+### Work package 1, 7 October 2026
+
+Commit d6475fc (tasks 1.1 and 1.2 together, since the type check needs
+both). Different from the plan: the property tests did not draw
+`passed` by themselves, since the arbitraries of `src/core/testSupport.ts`
+listed the kinds; they now take the kinds and their number from
+`VARIANT_FILTER_ORDER`. The scripts print `<variants>.filter_passed()`
+first among the filters, before `filter_individuals`, where the runner
+puts it, with a script test for the PCA and the LD decay. One line each
+in `src/ui/analyses/pca/words.ts`, `src/core/projectFile.ts` and
+`commands.ts` for the compiler's switches over the kinds.
+`PROTOCOL_VERSION` 12.
+
+Checks on d6475fc: typecheck and lint clean, Vitest 4,054 tests in 118
+files (4,035 before), format clean; the whole browser suite, 619 passed
+in Chromium and 619 in WebKit (the implementer's run).
+
+Review, spec and stale; tests and api. The tests of the package fail on
+the code before it, and four mutations of the new code are caught; the
+numbers were recounted in Python from the genotypes. Fixed in 93c747b:
+two doc comments that gave the order of the filters without `passed`.
+Noted, not fixed here: the warning `filterKeptNone` of
+`src/core/analyses/filterCounts.ts` would tell the user to loosen the
+filter of the FILTER column, which has no number; no page shows it
+today, and the piece that carries the filters out words it. Not to be
+merged before package 4, since until then `popgen.html` would open a
+project file holding `passed` without a box to show it.
+
+The review found that a `.nei` file written from a VCF records its
+FILTER, which popnei 0.2.2 tells by `keepsPassed`; the owner decided on
+7 October 2026 that the FILTER box shows and acts for such a file
+(a1a4a8a, 728cf14, 0383590).
