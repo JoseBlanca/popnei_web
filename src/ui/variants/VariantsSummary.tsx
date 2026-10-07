@@ -37,11 +37,16 @@ import { classOf } from "../classOf.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { ReadingTime } from "../steps/variants/ReadingTime.tsx";
-import { useAppState } from "../store.tsx";
+import { useAppState, useStore } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
-import { chainButton, chainStatuses, startAgainMends } from "./chain.ts";
+import {
+  chainButton,
+  chainStatuses,
+  startAgainMends,
+  stoppedPassOf,
+} from "./chain.ts";
 import styles from "./Variants.module.css";
 import {
   CHROMOSOMES_COUNTING,
@@ -52,14 +57,12 @@ import {
   FAILURES_COUNTING,
   FAILURES_NOT_COUNTED,
   FAILURES_READING,
-  FAILURES_STOPPED_TEXT,
   INDIVIDUALS_READING,
   INFO_NAME,
   PLOIDY_READING,
   PYTHON_NAME,
   READING_TIME_LINE,
   START_AGAIN_LABEL,
-  STOPPED_TEXT,
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
   chromosomesLine,
@@ -73,6 +76,7 @@ import {
   nameAndSizeText,
   openFailure,
   ploidyLine,
+  stoppedText,
   summaryStatus,
   variantsLine,
 } from "./words.ts";
@@ -251,6 +255,7 @@ function Count({
   isVcf,
 }: CountProps): React.JSX.Element {
   const announcer = useAnnouncer();
+  const store = useStore();
   const status = useAppState(summaryStatus);
   const failures = useAppState(failuresStatus);
   const analyses = useAppState((s) => s.analyses);
@@ -271,11 +276,16 @@ function Count({
   });
 
   // The one Stop of the page: the pass running, and one about to start.
+  // The words name the pass stopped, and Start again only when the box
+  // offers it after the Stop, which the store and autoRuns know once the
+  // Stop is made.
   const stop = (): void => {
+    const pass = stoppedPassOf(chainStatuses(store.getState().analyses));
     autoRuns.stop(POPGEN2_CHAIN);
-    announcer.announce(
-      status.kind === "done" ? FAILURES_STOPPED_TEXT : STOPPED_TEXT,
+    const after = chainButton(chainStatuses(store.getState().analyses), (key) =>
+      autoRuns.startedUnder(key),
     );
+    announcer.announce(stoppedText(pass, after?.kind === "run"));
   };
   const again = (): void => {
     autoRuns.resume(POPGEN2_CHAIN);

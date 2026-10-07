@@ -300,15 +300,29 @@ export function openFailure(p: Project): OpenFailure | null {
     again after a Stop or a crash of the worker. */
 export const START_AGAIN_LABEL = "Start again";
 
-/** What the status region says of a Stop, whose lines then say "not
-    counted" beside Start again. */
-export const STOPPED_TEXT =
-  "The count of the variants and the statistics were stopped. Start again calculates them from the start.";
+/** Which pass of the chain a Stop stopped: the count of the variants and
+    the statistics, or the count of the FILTER failures after it. */
+export type StoppedPass = "summary" | "failures";
 
-/** What the status region says of a Stop of the count of the FILTER
-    failures, the variants and the statistics done. */
-export const FAILURES_STOPPED_TEXT =
-  "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.";
+/** What the status region says of a Stop of the pass `pass`, whose lines
+    then say "not counted", with the way to start it again when the box
+    offers Start again after the Stop, `offersStartAgain`, and not when it
+    does not, after a failure of the summary that Start again cannot mend:
+    "The count of the variants and the statistics were stopped. Start
+    again calculates them from the start." */
+export function stoppedText(
+  pass: StoppedPass,
+  offersStartAgain: boolean,
+): string {
+  if (pass === "summary") {
+    return offersStartAgain
+      ? "The count of the variants and the statistics were stopped. Start again calculates them from the start."
+      : "The count of the variants and the statistics were stopped.";
+  }
+  return offersStartAgain
+    ? "The count of the variants that failed their FILTER was stopped. Start again counts them from the start."
+    : "The count of the variants that failed their FILTER was stopped.";
+}
 
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {

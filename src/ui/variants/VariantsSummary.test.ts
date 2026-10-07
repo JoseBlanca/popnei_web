@@ -22,6 +22,7 @@ import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
+import type { Announcer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { VariantsSummary } from "./VariantsSummary.tsx";
 
@@ -45,6 +46,8 @@ interface Page {
   readonly store: Store<JobResult, Blob>;
   readonly autoRuns: AutoRuns;
   readonly requests: Request[];
+  /** The texts given to the status region, in their order. */
+  readonly said: string[];
 }
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
@@ -110,6 +113,15 @@ async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
     groups: POPGEN2_AUTO_GROUPS,
     start: (id) => startAnalysis(store, id),
   });
+  const said: string[] = [];
+  const regionAnnouncer = createAnnouncer();
+  const announcer: Announcer = {
+    ...regionAnnouncer,
+    announce: (text, options) => {
+      said.push(text);
+      regionAnnouncer.announce(text, options);
+    },
+  };
   const openButton = createRef<HTMLButtonElement>();
   const tree = createElement(
     StrictMode,
@@ -119,7 +131,7 @@ async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
       { value: store },
       createElement(
         AnnouncerProvider,
-        { value: createAnnouncer() },
+        { value: announcer },
         createElement("button", { ref: openButton }, "Open variants file…"),
         createElement(VariantsSummary, {
           autoRuns,
@@ -160,7 +172,7 @@ async function drawPage(format: "nei" | "vcf" = "nei"): Promise<Page> {
     });
     await Promise.resolve();
   });
-  return { store, autoRuns, requests };
+  return { store, autoRuns, requests, said };
 }
 
 /** The buttons of the box, by their words. */
@@ -350,6 +362,9 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     expect(linesOf()).toContain("Variants: 1,200");
     expect(linesOf()).toContain("Failed FILTER: not counted");
     expect(buttonsOf()).toEqual(["Start again"]);
+    expect(page.said).toEqual([
+      "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.",
+    ]);
 
     await act(async () => {
       buttonNamed("Start again").click();
@@ -388,6 +403,9 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       ]),
     );
     expect(buttonsOf()).toEqual(["Start again"]);
+    expect(page.said).toEqual([
+      "The count of the variants and the statistics were stopped. Start again calculates them from the start.",
+    ]);
   });
 
   test("a crash of the worker while the failures are counted says so, with Start again", async () => {
@@ -429,6 +447,64 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
       "Failed FILTER: 5",
       "Chromosomes: 1",
       "Ploidy: 2",
+    ]);
+    expect(buttonsOf()).toEqual([]);
+  });
+
+  test("after a crash of the summary, a Stop of the count of the FILTER failures names that count, with Start again", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    page.requests[0]?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "filterFailures",
+    ]);
+    page.said.length = 0;
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    expect(page.said).toEqual([
+      "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.",
+    ]);
+    expect(buttonsOf()).toEqual(["Start again"]);
+  });
+
+  test("after a defect of ours in the summary, a Stop of the count of the FILTER failures names that count, and no Start again, which the box does not offer", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    page.requests[0]?.end({
+      kind: "failed",
+      error: { kind: "defect", message: "a defect" },
+    });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(page.requests).toHaveLength(2);
+    page.said.length = 0;
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    page.requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(page.said).toEqual([
+      "The count of the variants that failed their FILTER was stopped.",
     ]);
     expect(buttonsOf()).toEqual([]);
   });
