@@ -63,8 +63,9 @@ threshold:
 
 From 7 October 2026 a threshold may come with no legend, for the
 thresholds of `popgen2.html`, which are no filters and which the screen
-says in words under the plot, "Maximum 0.1, keeps 1,050 variants and
-removes 150", the number in a box (`docs/plans/thresholds.md`): the line and the bars as
+says in words over the plot, the number in a box after the short title,
+"Obs. het. max: 0.04", and under it "Keeps 1,050 of 1,200 variants"
+(`docs/plans/thresholds.md`): the line and the bars as
 above, no legend, and the top margin of a plot without one. The screen
 lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
@@ -73,8 +74,9 @@ which the histogram tells it after each draw that moves it,
 Such a threshold may also say that the values on its line may be kept
 or removed, `undecided`: on `popgen2.html` the bins hold their left
 edge, so the variants exactly on a line at 0.05 are somewhere in the
-bin that starts at it, and the screen gives a range of what the line
-keeps. The bar that starts at the line, the part right of the line of a
+bin that starts at it, and those of a fine bin that a line at 0.07 lies
+inside are on either side of it; the screen gives a range of what the
+line keeps. The bar that starts at the line, the part right of the line of a
 bin it splits, or the bin that starts at the double just above it, as
 popnei's 0.30000000000000004 above 0.3, is then hatched, thin stripes of
 `--chart-bar` on the background in an outline, and not outlined as

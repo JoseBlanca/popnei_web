@@ -75,25 +75,35 @@ format 1.2 of popnei holds no FILTER (docs/plans/live-stats.md).
 On popgen2.html the distributions of the open file, four of the
 variants and two of the individuals, each carry a threshold that keeps
 the values at most it, from 7 October 2026: a line the user drags on
-the plot or a number typed in a box under it, after the word "Maximum",
-the bars beyond it drawn as removed, and beside the box what it keeps
-and removes, "keeps 1,050 variants and removes 150", or "(no limit)
-keeps all 1,200 variants" for one the user has not set. A threshold of
-the variants is shown in full, up to eight decimals, 0.33984375, since
-its count is of that number and a number rounded off it may keep other
-variants; one of the individuals with at most four decimals. These
-thresholds are shown, not applied: they are no filters, change no
-statistic and no other part of the page, and start again at another
+the plot or a number typed in a box over it, the bars beyond it drawn as
+removed. Over each plot is one row, its short title, "max:" and the box,
+"Obs. het. max: 0.04", and under that row one line of what the threshold
+keeps, "Keeps 1,050 of 1,200 variants", "Keeps all 1,200 variants", with
+"so far" while the file is read. The short titles are the owner's of 7
+October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
+and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
+het." for the individuals; the axes and what a screen reader reads keep
+the full names. A threshold moves by a step that follows its axis, the
+power of ten that gives at most about 100 positions over it: 0.01 on an
+axis of 0 to 1, 0.001 on one of 0 to 0.1 or of 0.32 to 0.4. A number
+typed with more decimals is rounded to that step, and the box then shows
+it. These thresholds are shown, not applied: they are no filters, change
+no statistic and no other part of the page, and start again at another
 file or a reload, the missing rate of the variants at 0.1 and the others
-at the top of their axis. A threshold of the variants moves by popnei's
-bins of 1/1280, a number typed being moved to the nearest edge with a
-line that says so; where those bins cannot tell whether the variants
-whose value is on the threshold itself are kept, the words give the
-range they allow and why, "keeps 1,113 to 1,152 variants; the bins
-cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05" on
-panel.vcf.gz, and the bar that starts at the line is hatched, until
-popnei counts it exactly (docs/plans/thresholds.md). Applying them as
-filters is the design docs/designs/stats-filters.md.
+at the top of their axis.
+
+The number a threshold of the variants shows is the number it is
+counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
+cannot tell whether some variants are kept, the line gives the range
+they allow, "Keeps 1,113–1,152 of 1,200 variants" at a missing rate of
+0.05 on panel.vcf.gz, and the bar where the bins cannot tell is hatched:
+the variants of the bin that starts at the threshold, when the threshold
+is on the edge of a bin, since popnei's bins hold their left edge, and
+those of the bin the threshold lies inside otherwise, 1,197–1,199 at
+0.07. The range holds until popnei counts it exactly
+(docs/plans/thresholds.md). A threshold of the individuals is counted
+exactly from popnei's value of each. Applying them as filters is the
+design docs/designs/stats-filters.md.
 
 ### The filters of variants
 
