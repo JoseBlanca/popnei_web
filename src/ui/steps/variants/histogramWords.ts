@@ -124,9 +124,11 @@ export function histogramTitle(name: string, mean: number): string {
 export function histogramThreshold(value: number): HistogramThreshold {
   return {
     value,
-    label: `Maximum ${String(value)}`,
-    keptLabel: KEPT_LABEL,
-    removedLabel: REMOVED_LABEL,
+    legend: {
+      label: `Maximum ${String(value)}`,
+      keptLabel: KEPT_LABEL,
+      removedLabel: REMOVED_LABEL,
+    },
   };
 }
 

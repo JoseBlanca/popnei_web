@@ -77,9 +77,11 @@ const MAF: HistogramData = {
   counts: MAF_COUNTS,
   threshold: {
     value: 0.95,
-    label: "Maximum 0.95",
-    keptLabel: "Kept by this filter",
-    removedLabel: "Removed by this filter",
+    legend: {
+      label: "Maximum 0.95",
+      keptLabel: "Kept by this filter",
+      removedLabel: "Removed by this filter",
+    },
   },
 };
 

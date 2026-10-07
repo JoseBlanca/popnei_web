@@ -61,6 +61,15 @@ threshold:
   of what is kept, and an outlined square and the words of what is
   removed. The three texts are given by the screen.
 
+From 7 October 2026 a threshold may come with no legend, for the
+thresholds of `popgen2.html`, which are no filters and which the screen
+says in words under the plot, "At most 0.1: keeps 1,050 variants and
+removes 150" (`docs/plans/thresholds.md`): the line and the bars as
+above, no legend, and the top margin of a plot without one. The screen
+lays the line the user drags over the plot, aligned with its frame,
+which the histogram tells it after each draw that moves it,
+`HistogramEvents.onFrame`.
+
 Every filter of `docs/functionality.md` section 3 that has a histogram
 keeps what is at most its threshold, as popnei's filters do, so the kept
 bars are always on the left of the line. A histogram with no threshold,
@@ -205,24 +214,41 @@ export interface HistogramData extends PlotText {
   readonly xWholeNumbers?: boolean;
 }
 
-/**
- * A threshold that keeps what is at most `value`. The three labels are
- * the rows of the legend: "Maximum 0.95", "Kept by this filter",
- * "Removed by this filter".
- */
+/** A threshold that keeps what is at most `value`, with the legend of
+    a filter, or with none (7 October 2026). */
 export interface HistogramThreshold {
   readonly value: number;
+  readonly legend: ThresholdLegend | null;
+}
+
+/** The rows of the legend: "Maximum 0.95", "Kept by this filter",
+    "Removed by this filter". */
+export interface ThresholdLegend {
   readonly label: string;
   readonly keptLabel: string;
   readonly removedLabel: string;
 }
 
-export const createHistogram: Chart<HistogramData> = (element, data) =>
-  createPlot2d(element, data, histogramDefinition);
+/** Where the frame was drawn, in CSS pixels from the top left of the
+    element. */
+export interface HistogramFrame {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface HistogramEvents {
+  /** At the first draw, and at each draw that moves the frame. */
+  onFrame?(frame: HistogramFrame): void;
+}
+
+export const createHistogram: Chart<HistogramData, HistogramEvents>;
 ```
 
-No events: the histogram has no hover and no selection in this stage
-(below, "Not in this spec").
+The one event, from 7 October 2026, says where the frame is, for the
+line of a threshold that `popgen2.html` lays over the plot; the
+histogram has no hover and no selection (below, "Not in this spec").
 
 What each bin holds and what the threshold does to it, as numbers. The
 screen draws the table of the bins from these rows, and writes its
@@ -275,17 +301,17 @@ no `chart-overlay`, since the histogram takes no pointer events
   kept one.
 
 In `chart-annotations`, when there is a threshold, `line.chart-threshold`
-from the bottom of the frame to its top, and in `chart-legend` its three
-rows.
+from the bottom of the frame to its top, and in `chart-legend` the three
+rows of its legend when it has one.
 
 The legend is placed without measuring its text, as the margins are
 (`plot2d.md`, "The SVG and its frame"): each row has its text anchored at its end, `text-anchor: end`,
 and its mark to the right of the text, at the right edge of the frame, in
-the top margin. So the top margin is larger when there is a threshold.
+the top margin. So the top margin is larger when there is a legend.
 The margins are named constants of `histogram.ts`, meanwhile these, in CSS
 pixels, refined in the running application:
 
-| margin | without a threshold | with one |
+| margin | without a legend | with one |
 |---|---|---|
 | top | 12 | 56 |
 | right | 16 | 16 |
@@ -491,7 +517,7 @@ calls:
 - an `update` from the threshold 0.95 to `null` removes the line and the
   legend and leaves every bar filled, in the same `<svg>` element;
 - an `update` to 20 bins of a count of 1 each gives 20 rects, in the same `<svg>` element;
-- the top margin 56 with a threshold and 12 without, after an `update`
+- the top margin 56 with a legend and 12 without, after an `update`
   in each direction;
 - the left margin 60 for shares up to 0.5, of at most four characters
   at any height, and 67 for shares of 0.044 and 0.02, whose axis ends

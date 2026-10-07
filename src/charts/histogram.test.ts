@@ -48,9 +48,11 @@ const OBS_HET_COUNTS = Uint32Array.from([
 function maximum(value: number): HistogramThreshold {
   return {
     value,
-    label: `Maximum ${String(value)}`,
-    keptLabel: "Kept by this filter",
-    removedLabel: "Removed by this filter",
+    legend: {
+      label: `Maximum ${String(value)}`,
+      keptLabel: "Kept by this filter",
+      removedLabel: "Removed by this filter",
+    },
   };
 }
 
@@ -558,6 +560,51 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     handle.update(histogramOf(new Uint32Array(20).fill(1), null, edges));
     expect(svgOf(element)).toBe(svg);
     expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+  });
+
+  test("thresholds 2 a threshold with no legend draws its line and the bars it keeps and removes, no row of a legend, and keeps the top margin of 12", () => {
+    const element = sizedElement(600, 375);
+    createHistogram(element, {
+      ...histogramOf(OBS_HET_COUNTS, null),
+      threshold: { value: 0.51, legend: null },
+    });
+    const svg = svgOf(element);
+    expect(svg.querySelectorAll("line.chart-threshold")).toHaveLength(1);
+    expect(svg.querySelectorAll("rect.chart-bar-kept").length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      svg.querySelectorAll("rect.chart-bar-removed").length,
+    ).toBeGreaterThan(0);
+    expect(svg.querySelectorAll("g.chart-legend-row")).toHaveLength(0);
+    expect(
+      element.querySelector("g.chart-frame")?.getAttribute("transform"),
+    ).toBe("translate(60,12)");
+  });
+
+  test("thresholds 2 the plot tells where its frame is at its first draw, and again only when a draw moves it", () => {
+    const element = sizedElement(600, 375);
+    const frames: unknown[] = [];
+    const handle = createHistogram(
+      element,
+      {
+        ...histogramOf(MAF_COUNTS, null),
+        threshold: { value: 0.9, legend: null },
+      },
+      { onFrame: (frame) => frames.push(frame) },
+    );
+    // 600 less the margins of 60 and 16, 375 less those of 12 and 44.
+    expect(frames).toEqual([{ left: 60, top: 12, width: 524, height: 319 }]);
+    handle.update({
+      ...histogramOf(MAF_COUNTS, null),
+      threshold: { value: 0.8, legend: null },
+    });
+    expect(frames).toHaveLength(1);
+    handle.update(histogramOf(MAF_COUNTS, 0.8));
+    expect(frames).toEqual([
+      { left: 60, top: 12, width: 524, height: 319 },
+      { left: 60, top: 56, width: 524, height: 275 },
+    ]);
   });
 
   test("the top margin is 56 with a threshold and 12 without, after an update in each direction", () => {

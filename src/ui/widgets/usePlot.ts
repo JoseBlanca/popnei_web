@@ -18,20 +18,25 @@ import type { Chart, ChartHandle } from "../../charts/types.ts";
  * Mounts the plot `create` makes of `data` in the element given the ref
  * it returns. `create` is a function of src/charts, the same at every
  * render; `data` is the same object until something in it changes, so
- * that the plot is not drawn again on every render.
+ * that the plot is not drawn again on every render. `events`, those of
+ * the first render, are given to the plot when it is created, as
+ * charts.md has it: their handlers must not depend on values that
+ * change, which a setter of `useState` does not.
  */
-export function usePlot<Data>(
-  create: Chart<Data>,
+export function usePlot<Data, Events = object>(
+  create: Chart<Data, Events>,
   data: Data,
+  events?: Events,
 ): RefObject<HTMLDivElement | null> {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<ChartHandle<Data> | null>(null);
+  const eventsRef = useRef(events);
 
   useEffect(() => {
     const element = containerRef.current;
     if (element === null) return;
     if (plotRef.current === null) {
-      plotRef.current = create(element, data);
+      plotRef.current = create(element, data, eventsRef.current);
     } else {
       plotRef.current.update(data);
     }

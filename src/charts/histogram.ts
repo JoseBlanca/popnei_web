@@ -46,19 +46,55 @@ export interface HistogramData extends PlotText {
 }
 
 /**
- * A threshold that keeps what is at most `value`. The three labels are
- * the rows of the legend: "Maximum 0.95", "Kept by this filter",
- * "Removed by this filter".
+ * A threshold that keeps what is at most `value`, with the legend of a
+ * filter, or with none for a threshold the screen says in words beside
+ * the plot, as popgen2.html does with the thresholds of its histograms,
+ * which are no filters.
  */
 export interface HistogramThreshold {
   /** The number the user typed, as the project holds it; finite. */
   readonly value: number;
+  /** The three rows of the legend at the top right, or null for none. */
+  readonly legend: ThresholdLegend | null;
+}
+
+/**
+ * The legend of a threshold: "Maximum 0.95", "Kept by this filter",
+ * "Removed by this filter".
+ */
+export interface ThresholdLegend {
   /** The first row of the legend, beside the dashed line: "Maximum 0.95". */
   readonly label: string;
   /** The second row, beside a filled square: "Kept by this filter". */
   readonly keptLabel: string;
   /** The third row, beside an outlined square: "Removed by this filter". */
   readonly removedLabel: string;
+}
+
+/**
+ * Where the frame of a histogram was drawn in its element, in CSS
+ * pixels from the top left of the element: what a screen lays over the
+ * plot to be aligned with its horizontal axis, the line the user drags
+ * on popgen2.html.
+ */
+export interface HistogramFrame {
+  /** From the left of the element to the left of the frame. */
+  readonly left: number;
+  /** From the top of the element to the top of the frame. */
+  readonly top: number;
+  /** The width of the frame. */
+  readonly width: number;
+  /** The height of the frame. */
+  readonly height: number;
+}
+
+/** What a histogram tells the screen. */
+export interface HistogramEvents {
+  /**
+   * The frame was drawn at another place or size than at the draw
+   * before, the first draw among them.
+   */
+  onFrame?(frame: HistogramFrame): void;
 }
 
 /**
@@ -83,7 +119,7 @@ export interface HistogramRow {
 
 /** The top margin without a threshold, in CSS pixels. */
 const TOP_WITHOUT_THRESHOLD = 12;
-/** The top margin with a threshold, which holds the three rows of the legend. */
+/** The top margin with a legend, which holds its three rows. */
 const TOP_WITH_THRESHOLD = 56;
 const RIGHT_MARGIN = 16;
 const BOTTOM_MARGIN = 44;
@@ -373,11 +409,12 @@ interface LegendRow {
 }
 
 function legendRowsOf(threshold: HistogramThreshold | null): LegendRow[] {
-  if (threshold === null) return [];
+  const legend = threshold?.legend ?? null;
+  if (legend === null) return [];
   return [
-    { key: "threshold", text: threshold.label },
-    { key: "kept", text: threshold.keptLabel },
-    { key: "removed", text: threshold.removedLabel },
+    { key: "threshold", text: legend.label },
+    { key: "kept", text: legend.keptLabel },
+    { key: "removed", text: legend.removedLabel },
   ];
 }
 
@@ -395,8 +432,8 @@ function longestYTick(data: HistogramData): string {
 }
 
 /**
- * The margins of the histogram of `data`: the top larger with a
- * threshold, for the legend, and the left 60 pixels, or more when the
+ * The margins of the histogram of `data`: the top larger with the legend
+ * of a threshold, and the left 60 pixels, or more when the
  * numbers of the vertical axis are longer than four characters, so that
  * they do not reach the label of the axis. The numbers are counted at 7.2
  * pixels a character and not measured.
@@ -404,7 +441,10 @@ function longestYTick(data: HistogramData): string {
 function histogramMargin(data: HistogramData): Margin {
   const ticksWidth = longestYTick(data).length * CHARACTER_WIDTH;
   return {
-    top: data.threshold === null ? TOP_WITHOUT_THRESHOLD : TOP_WITH_THRESHOLD,
+    top:
+      (data.threshold?.legend ?? null) === null
+        ? TOP_WITHOUT_THRESHOLD
+        : TOP_WITH_THRESHOLD,
     right: RIGHT_MARGIN,
     bottom: BOTTOM_MARGIN,
     left: Math.max(LEFT_MARGIN, Y_LABEL_BAND + ticksWidth + Y_TICK_OFFSET),
@@ -486,17 +526,24 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
   });
 }
 
-/** The definition of the histogram, which the base of the 2D plots draws. */
-const histogramDefinition: Plot2dDefinition<HistogramData> = {
-  kind: "histogram",
-  check: checkHistogram,
-  margin: histogramMargin,
-  draw: drawHistogram,
-};
+/** Whether the frame `before`, null before the first draw, is `after`. */
+function sameFrame(
+  before: HistogramFrame | null,
+  after: HistogramFrame,
+): boolean {
+  return (
+    before !== null &&
+    before.left === after.left &&
+    before.top === after.top &&
+    before.width === after.width &&
+    before.height === after.height
+  );
+}
 
 /**
  * Draws the histogram of `data` in `element`, whose size the screen's CSS
- * gives, and returns its handle. It takes no events.
+ * gives, and returns its handle. It tells `events.onFrame` where its
+ * frame is after each draw that moved it.
  *
  * Throws an `Error`, a defect of the caller, here and in `update`, for no
  * bin, edges that are not one more than the counts, an edge not finite or
@@ -504,5 +551,29 @@ const histogramDefinition: Plot2dDefinition<HistogramData> = {
  * that is not finite, a yMax not finite or below the largest count, and
  * more than MAX_HISTOGRAM_BINS bins.
  */
-export const createHistogram: Chart<HistogramData> = (element, data) =>
-  createPlot2d(element, data, histogramDefinition);
+export const createHistogram: Chart<HistogramData, HistogramEvents> = (
+  element,
+  data,
+  events = {},
+) => {
+  let told: HistogramFrame | null = null;
+  const definition: Plot2dDefinition<HistogramData> = {
+    kind: "histogram",
+    check: checkHistogram,
+    margin: histogramMargin,
+    draw(frame, drawn) {
+      drawHistogram(frame, drawn);
+      const placed: HistogramFrame = {
+        left: frame.margin.left,
+        top: frame.margin.top,
+        width: frame.innerWidth,
+        height: frame.innerHeight,
+      };
+      if (!sameFrame(told, placed)) {
+        told = placed;
+        events.onFrame?.(placed);
+      }
+    },
+  };
+  return createPlot2d(element, data, definition);
+};
