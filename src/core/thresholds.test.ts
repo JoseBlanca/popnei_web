@@ -39,6 +39,11 @@ interface Fixture {
   readonly filterKeptRound: Readonly<
     Record<FilteredStatistic, readonly number[]>
   >;
+  /** The variants whose value is at most each of `AT_MOST_NUMBERS`, by
+      popnei's histogram of one bin over 0 to it, in their order. */
+  readonly histKeptAtMost: Readonly<
+    Record<VariantStatistic, readonly number[]>
+  >;
 }
 
 /** The thresholds of popnei's filters in the fixture: 0.3 on an edge
@@ -94,6 +99,12 @@ function fixture(name: FixtureName): Fixture {
   const round = field(file, "filterKeptRound");
   const roundOf = (statistic: FilteredStatistic) =>
     numbersOf(field(round, statistic), `${name} filterKeptRound ${statistic}`);
+  const histKept = field(file, "histKeptAtMost");
+  const histOf = (statistic: VariantStatistic) =>
+    numbersOf(
+      field(histKept, statistic),
+      `${name} histKeptAtMost ${statistic}`,
+    );
   return {
     part: {
       binEdges: Float64Array.from(
@@ -121,12 +132,26 @@ function fixture(name: FixtureName): Fixture {
       maf: roundOf("maf"),
       obsHet: roundOf("obsHet"),
     },
+    histKeptAtMost: {
+      missingRate: histOf("missingRate"),
+      maf: histOf("maf"),
+      obsHet: histOf("obsHet"),
+      unbiasedExpHet: histOf("unbiasedExpHet"),
+    },
   };
 }
 
 /** The numbers of two and three decimals at which the fixture has
     popnei's filters, `filterKeptRound`. */
 const ROUND_NUMBERS = numbersOf(field(parsed, "roundNumbers"), "roundNumbers");
+
+/** Every multiple of 0.001 and every k/1280 from 0 to 1 but 0, at which
+    the fixture has popnei's count of the values at most each,
+    `histKeptAtMost`. */
+const AT_MOST_NUMBERS = numbersOf(
+  field(parsed, "atMostNumbers"),
+  "atMostNumbers",
+);
 
 /** Four bins over 0 to 1, with 1, 2, 3 and 4 variants of the missing
     rate and the MAF. Its objects are frozen; a typed array with elements
@@ -284,27 +309,26 @@ describe("variantsAtMost", () => {
     unbiasedExpHet: { mean: 0.5, counts: Uint32Array.from([1, 2, 3, 4]) },
   });
 
-  test("on an edge the double above k/4, one number for the missing rate, the MAF and the observed heterozygosity", () => {
+  test("at k/4, below an edge the double above it, one number for every statistic: a value of k/4 lies in the bin to the left", () => {
     expect(ABOVE.binEdges[1]).not.toBe(1 / 4);
-    for (const statistic of ["missingRate", "maf"] as const) {
-      for (const value of [0.25, ABOVE.binEdges[1] ?? NaN]) {
-        expect(variantsAtMost(ABOVE, statistic, value)).toEqual({
-          keptLow: 1,
-          keptHigh: 1,
-          withValue: 10,
-        });
-      }
+    for (const statistic of ["missingRate", "maf", "unbiasedExpHet"] as const) {
+      expect(variantsAtMost(ABOVE, statistic, 0.25)).toEqual({
+        keptLow: 1,
+        keptHigh: 1,
+        withValue: 10,
+      });
     }
   });
 
-  test("on an edge the double above k/4, a range for the expected heterozygosity, which can land on it", () => {
-    expect(variantsAtMost(ABOVE, "unbiasedExpHet", 0.25)).toEqual({
-      keptLow: 1,
-      keptHigh: 3,
-      withValue: 10,
-    });
-    // popnei's 1 - p² of 0.7 is 0.30000000000000004, its edge 384.
-    expect(1 - 0.7).toBe(384 * (1 / 1280));
+  test("on that edge itself, a range for every statistic: a value on it is in the bin that starts at it", () => {
+    const edge = ABOVE.binEdges[1] ?? NaN;
+    for (const statistic of ["missingRate", "maf", "unbiasedExpHet"] as const) {
+      expect(variantsAtMost(ABOVE, statistic, edge)).toEqual({
+        keptLow: 1,
+        keptHigh: 3,
+        withValue: 10,
+      });
+    }
   });
 
   test("a threshold that is NaN or infinite is a defect", () => {
@@ -379,7 +403,7 @@ describe("variantsAtMost", () => {
     },
   );
 
-  test("panel.vcf.gz: at 0.3, one number for the observed heterozygosity, 373, and a range for the expected, 311 to 313", () => {
+  test("panel.vcf.gz: at 0.3, below popnei's edge 0.30000000000000004, one number for the observed heterozygosity, 373, and for the expected, 311", () => {
     const { part } = fixture("panel.vcf.gz");
     expect(variantsAtMost(part, "obsHet", 0.3)).toEqual({
       keptLow: 373,
@@ -388,7 +412,7 @@ describe("variantsAtMost", () => {
     });
     expect(variantsAtMost(part, "unbiasedExpHet", 0.3)).toEqual({
       keptLow: 311,
-      keptHigh: 313,
+      keptHigh: 311,
       withValue: 1200,
     });
   });
@@ -598,5 +622,48 @@ describe("the count at numbers of two and three decimals against popnei's filter
       keptHigh: 81,
       withValue: 1200,
     });
+  });
+});
+
+describe("the count against popnei's histogram of one bin over 0 to the threshold", () => {
+  test.each(["panel.vcf.gz", "panel.nei", "tetraploid.vcf.gz"] as const)(
+    "%s: at every 0.001 and every k/1280, for the four statistics, popnei's count of the values at most it is in the range, the number itself where the range is one",
+    (name) => {
+      const { part, histKeptAtMost } = fixture(name);
+      expect(AT_MOST_NUMBERS).toHaveLength(2240);
+      let ranges = 0;
+      for (const statistic of [
+        "missingRate",
+        "maf",
+        "obsHet",
+        "unbiasedExpHet",
+      ] as const) {
+        const kept = histKeptAtMost[statistic];
+        expect(kept).toHaveLength(AT_MOST_NUMBERS.length);
+        for (const [i, number] of AT_MOST_NUMBERS.entries()) {
+          const { keptLow, keptHigh } = variantsAtMost(part, statistic, number);
+          const popnei = kept[i] ?? NaN;
+          expect(popnei).toBeGreaterThanOrEqual(keptLow);
+          expect(popnei).toBeLessThanOrEqual(keptHigh);
+          if (keptLow === keptHigh) expect(popnei).toBe(keptLow);
+          else ranges += 1;
+        }
+      }
+      expect(ranges).toBeGreaterThan(0);
+    },
+  );
+
+  test("panel.vcf.gz: the expected heterozygosity at k/1280 below popnei's edge is one number, the count of popnei's histogram, at the 464 such numbers", () => {
+    const { part, histKeptAtMost } = fixture("panel.vcf.gz");
+    let below = 0;
+    for (const [i, number] of AT_MOST_NUMBERS.entries()) {
+      const k = Math.round(number * 1280);
+      if (k / 1280 !== number || part.binEdges[k] === number) continue;
+      const counts = variantsAtMost(part, "unbiasedExpHet", number);
+      expect(counts.keptLow).toBe(counts.keptHigh);
+      expect(counts.keptLow).toBe(histKeptAtMost.unbiasedExpHet[i]);
+      below += 1;
+    }
+    expect(below).toBe(464);
   });
 });

@@ -411,6 +411,12 @@ console.log(
 // moves by on its axis, most of them inside a fine bin, where the page
 // gives the range from the bins below the bin to those and the bin
 // (docs/plans/thresholds.md, "Round 1 with the owner").
+// And, under `histKeptAtMost`, for each of the four statistics, the
+// variants whose value is at most each number of `atMostNumbers`, every
+// multiple of 0.001 and every k/1280 from 0 to 1 but 0: the count of
+// popnei's histogram of one bin over 0 to that number, whose last bin
+// holds its right edge; the one check of the count of the expected
+// heterozygosity, which has no filter of popnei.
 // And popnei's version, which the tests check against the one installed.
 // The tests of core read it, since they may not call popnei.
 const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
@@ -435,6 +441,32 @@ const ROUND_NUMBERS = [
     0.699,
   ]),
 ].sort((a, b) => a - b);
+const AT_MOST_NUMBERS = [
+  ...new Set([
+    ...multiples(1, 1000, 3),
+    ...Array.from({ length: FINE_BINS }, (_, k) => (k + 1) / FINE_BINS),
+  ]),
+].sort((a, b) => a - b);
+/** The variants of `name` whose value of each of the four statistics is
+    at most `number`, from popnei's histogram of one bin over 0 to it. */
+function keptByHistogram(name, options, number) {
+  const variants = openFixture(name, options);
+  try {
+    const { perVar } = calcVariantsSummary(variants, {
+      perVar: {
+        stats: fineStats,
+        minNumIndividuals: 0,
+        histKwargs: { numBins: 1, range: [0, number] },
+      },
+      perIndividual: {},
+    });
+    return ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+      (statistic) => perVar[statistic].histCounts[0],
+    );
+  } finally {
+    variants.free();
+  }
+}
 const thresholdFiles = [
   ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
   ["panel.nei", null],
@@ -522,6 +554,14 @@ for (const [name, options] of thresholdFiles) {
         ),
       ),
   );
+  const byHistogram = AT_MOST_NUMBERS.map((number) =>
+    keptByHistogram(name, options, number),
+  );
+  const histKept = ["missingRate", "maf", "obsHet", "unbiasedExpHet"].map(
+    (statistic, i) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(byHistogram.map((kept) => kept[i])),
+  );
   thresholdLines.push(
     `  ${JSON.stringify(name)}: {\n` +
       `    "numVars": ${JSON.stringify(summary.passStats.numVars)},\n` +
@@ -532,7 +572,8 @@ for (const [name, options] of thresholdFiles) {
       `    "filterKept": {\n${filterKept.join(",\n")}\n    },\n` +
       `    "offEdges": ${JSON.stringify(offEdges)},\n` +
       `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    },\n` +
-      `    "filterKeptRound": {\n${roundKept.join(",\n")}\n    }\n  }`,
+      `    "filterKeptRound": {\n${roundKept.join(",\n")}\n    },\n` +
+      `    "histKeptAtMost": {\n${histKept.join(",\n")}\n    }\n  }`,
   );
 }
 const thresholdsPath = join(fixtures, "threshold_counts.json");
@@ -542,6 +583,7 @@ writeFileSync(
     `  "numBins": ${String(FINE_BINS)},\n` +
     `  "thresholds": ${JSON.stringify(THRESHOLDS)},\n` +
     `  "roundNumbers": ${JSON.stringify(ROUND_NUMBERS)},\n` +
+    `  "atMostNumbers": ${JSON.stringify(AT_MOST_NUMBERS)},\n` +
     `${thresholdLines.join(",\n")}\n}\n`,
 );
 console.log(

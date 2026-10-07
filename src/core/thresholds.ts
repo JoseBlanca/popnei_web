@@ -37,8 +37,9 @@ export interface IndividualCounts {
  *
  * - On one of popnei's edges, `value` equal to k/numBins or to popnei's
  *   edge k, as `variantsAtEdge` counts it: the bins below the edge, and
- *   with them the bin that starts at it when a value may sit on the
- *   edge.
+ *   with them the bin that starts at it when `value` is the edge itself,
+ *   where a value equal to it falls; one number at k/numBins below an
+ *   edge the double above it.
  * - Between two edges, inside the bin from the edge under `value` to the
  *   edge over it: from the bins below the edge under it to the bins
  *   below the edge over it, that bin's variants being on either side of
@@ -70,7 +71,7 @@ export function variantsAtMost(
     nominal <= numBins &&
     (nominal / numBins === value || at(edges, nominal) === value)
   ) {
-    return variantsAtEdge(part, statistic, nominal);
+    return variantsAtEdge(part, statistic, nominal, value);
   }
   // The first edge above `value`, or the number of edges when none is.
   let low = 0;
@@ -83,14 +84,15 @@ export function variantsAtMost(
       low = middle + 1;
     }
   }
+  const top = at(edges, numBins);
   if (low === 0) {
-    const { withValue } = variantsAtEdge(part, statistic, numBins);
+    const { withValue } = variantsAtEdge(part, statistic, numBins, top);
     return { keptLow: 0, keptHigh: 0, withValue };
   }
-  if (low > numBins) return variantsAtEdge(part, statistic, numBins);
+  if (low > numBins) return variantsAtEdge(part, statistic, numBins, top);
   // `value` lies inside the bin from the edge low - 1 to the edge low.
-  const under = variantsAtEdge(part, statistic, low - 1);
-  const over = variantsAtEdge(part, statistic, low);
+  const under = variantsAtEdge(part, statistic, low - 1, value);
+  const over = variantsAtEdge(part, statistic, low, value);
   return {
     keptLow: under.keptLow,
     keptHigh: over.keptLow,
@@ -151,32 +153,24 @@ export function thresholdOnStep(value: number, decimals: number): number {
 }
 
 /**
- * What the threshold at the fine edge of index `edgeIndex` keeps of the
+ * What the threshold `value`, at or below the fine edge of index
+ * `edgeIndex` and above every value of the bins below it, keeps of the
  * variants of `part`, by `statistic`, when it keeps the values at most
- * the edge: from `keptLow`, the variants of the bins below the edge, to
+ * it: from `keptLow`, the variants of the bins below the edge, to
  * `keptHigh`, those and the variants of the bin that starts at the edge
- * when a value may sit exactly on the edge, or `keptLow` again when none
- * can, one number. The variants it removes are `withValue` minus what it
- * keeps.
+ * when `value` is the edge itself, or `keptLow` again when it is not, one
+ * number. The variants it removes are `withValue` minus what it keeps.
  *
  * Why a range: popnei's bins hold their left edge, a value on an edge
- * falling in the bin to its right, while its filters keep the values at
- * most their threshold. So the variants on the edge, which "at most"
- * keeps, are somewhere in the bin that starts at it, and the bins cannot
- * tell how many. When a value can sit on the edge:
- *
- * - on an edge equal to k/numBins, `binEdges[k] === k / numBins`, for
- *   every statistic, a missing rate of 10/200 on 0.05;
- * - for the expected heterozygosity, `unbiasedExpHet`, on every edge:
- *   popnei computes it as 1 − Σ pᵏ, which can land on an edge that
- *   popnei made as k · (1/numBins), one double above k/numBins, as
- *   `1 - 0.7` is 0.30000000000000004, popnei's edge 384 of 1,280;
- * - never for the missing rate, the MAF and the observed heterozygosity
- *   on an edge one double above k/numBins: each is one division a/b of
- *   two counts, which rounds to k/numBins when it equals it, the double
- *   below the edge, in the bin to the left and kept, and otherwise lies
- *   far from both;
- * - never on the top edge, index numBins, which keeps every variant.
+ * falling in the bin to its right (`bin_of`, the first edge above the
+ * value), while its filters keep the values at most their threshold. So
+ * the variants on the edge, which "at most" keeps, are somewhere in the
+ * bin that starts at it, and the bins cannot tell how many. When `value`
+ * is below the edge, a value equal to `value` lies in the bin to the
+ * left, already kept, and one on the edge is above `value`, removed: as
+ * 0.3, k/1280 for k = 384, is below popnei's edge 384, which popnei made
+ * as 384 · (1/1280), 0.30000000000000004, the double above. Neither on
+ * the top edge, index numBins, which keeps every variant.
  *
  * On the 1,280 bins of popnei, 817 of the 1,281 edges equal k/1280,
  * among them every multiple of 0.05 a user types, 0.05, 0.1, 0.5.
@@ -189,6 +183,7 @@ function variantsAtEdge(
   part: VariantStatsPart,
   statistic: VariantStatistic,
   edgeIndex: number,
+  value: number,
 ): VariantCounts {
   const counts = part[statistic].counts;
   const numBins = counts.length;
@@ -209,9 +204,7 @@ function variantsAtEdge(
     withValue += count;
   }
   const onEdgeMayBeKept =
-    edgeIndex < numBins &&
-    (statistic === "unbiasedExpHet" ||
-      at(part.binEdges, edgeIndex) === edgeIndex / numBins);
+    edgeIndex < numBins && at(part.binEdges, edgeIndex) === value;
   const keptHigh = onEdgeMayBeKept
     ? keptLow + (counts[edgeIndex] ?? 0)
     : keptLow;
