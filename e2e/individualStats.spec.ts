@@ -500,7 +500,7 @@ test("IP2 D3, VS7 D1 the CSVs of the bins of the two histograms: their names, th
     const download = await downloading;
     expect(download.suggestedFilename()).toBe(name);
     const lines = (await readFile(await download.path(), "utf8")).split("\n");
-    expect(lines[0]).toBe("from,to,count,state");
+    expect(lines[0]).toBe("from_excluded,to_included,count,state");
     expect(lines).toHaveLength(22);
     expect(lines[1]).toMatch(first);
   }

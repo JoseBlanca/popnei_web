@@ -600,7 +600,7 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
   });
 }
 
-test("VS6 D2 the filter by observed heterozygosity at 0.5, an edge, splits no bin, the bins holding their upper edge; at 0.51 it splits the bin from 0.5, which a line under its plot names; at 0.65, inside an empty bin, it splits none", async ({
+test("VS6 D2 the filter by observed heterozygosity at 0.5, an edge, splits no bin, the bins holding their upper edge; at 0.51 it splits the bin from 0.5, which a line under its plot names; at 0.65, inside an empty bin, it splits none; at 0 it splits the first bin, of no variant, and no line names it", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -633,6 +633,17 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5, an edge, splits no bi
       {
         exact: true,
       },
+    ),
+  ).toBeVisible();
+  await expect(line).toHaveCount(0);
+  // At 0 the first bin, which holds its lower edge, is split, but on
+  // panel.nei it holds no variant, every one above 0.025: no line.
+  await obsHet.fill("0");
+  await obsHet.press("Enter");
+  await expect(
+    group.getByText(
+      "Threshold of the filter of the variants by observed heterozygosity: 0, drawn over every variant of the file",
+      { exact: true },
     ),
   ).toBeVisible();
   await expect(line).toHaveCount(0);
@@ -736,7 +747,7 @@ test("VS6 D2 the CSV of the bins of the MAF: panel.variant_maf_bins.csv, its hea
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("panel.variant_maf_bins.csv");
   const lines = (await readFile(await download.path(), "utf8")).split("\n");
-  expect(lines[0]).toBe("from,to,count,state");
+  expect(lines[0]).toBe("from_excluded,to_included,count,state");
   expect(lines).toHaveLength(42);
   expect(lines.at(-1)).toBe("");
   expect(lines[39]).toBe("0.95,0.975,22,");

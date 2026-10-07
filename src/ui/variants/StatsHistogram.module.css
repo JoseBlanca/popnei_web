@@ -17,7 +17,8 @@
 }
 
 /* What the threshold keeps, over the plot, in the room of its longest
-   form, "Keeps 200,000 to 200,000 of 200,000 variants so far", which the
+   form, "Keeps 200,000 of 200,000 variants so far", and for the variants,
+   on a line of its own, the line of a number raised to 0.001, which the
    screen gives in data-longest: drawn hidden in the same cell of a grid,
    it holds the cell at the height that form takes at the width of the
    column, one row or two, so that the plot does not move as the words
@@ -33,11 +34,16 @@
 .keepsRoom::after {
   grid-area: 1 / 1;
   visibility: hidden;
+  /* The two lines on lines of their own, as the screen draws them. */
+  white-space: pre-line;
   content: attr(data-longest);
 }
 
-.keeps {
+.keepsShown {
   grid-area: 1 / 1;
+}
+
+.keeps {
   margin: 0;
 }
 

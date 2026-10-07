@@ -217,9 +217,12 @@ describe("the bins over a range given, as popgen2.html draws those of the indivi
 });
 
 describe("the range of an axis rounded out to round numbers", () => {
-  test("the variants' ranges of panel.nei and tetraploid.nei, from the edges of popnei's 1,280 bins with a count, at steps of 0.05 at least", () => {
-    // The edges of the first and the last bin with a count, popnei 0.2.0
-    // under node, 6 October 2026; the missing rate from 0.
+  test("ranges like those of the variants, at steps of 0.05 at least", () => {
+    // Ends of the shape the variants' bins give, uneven decimals: the
+    // edges of the first and the last bin with a count of panel.nei and
+    // tetraploid.nei under popnei 0.2.0's 1,280 bins, 6 October 2026,
+    // kept since roundedRange takes any two numbers; the missing rate
+    // from 0.
     expect(roundedRange(0, 0.08046875, 0.05)).toEqual([0, 0.1]);
     expect(roundedRange(0.5, 0.9875, 0.05)).toEqual([0.5, 1]);
     expect(roundedRange(0.025781250000000002, 0.61328125, 0.05)).toEqual([

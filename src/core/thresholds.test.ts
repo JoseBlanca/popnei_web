@@ -22,6 +22,7 @@ import {
   thresholdOnStep,
   thresholdStep,
   variantThresholdOnStep,
+  variantThresholdRaised,
   variantsAtMost,
 } from "./thresholds.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
@@ -382,6 +383,30 @@ describe("variantThresholdOnStep", () => {
       const shown = variantThresholdOnStep(units / 10000, 3);
       expect(() => variantsAtMost(part, "maf", shown)).not.toThrow();
     }
+  });
+});
+
+describe("variantThresholdRaised", () => {
+  test.each([
+    [0, 2, true],
+    [0.0004, 3, true],
+    [0.0004, 10, true],
+    [0.004, 2, true],
+    [0.0005, 3, false],
+    [0.001, 3, false],
+    [0.05, 2, false],
+    [1, 2, false],
+  ])("%s at %i decimals is raised to 0.001: %s", (value, decimals, raised) => {
+    expect(variantThresholdRaised(value, decimals)).toBe(raised);
+    if (raised) {
+      expect(variantThresholdOnStep(value, decimals)).toBe(
+        LEAST_VARIANT_THRESHOLD,
+      );
+    }
+  });
+
+  test("a value that is NaN is a defect", () => {
+    expect(() => variantThresholdRaised(NaN, 2)).toThrow(/popnei_web defect/);
   });
 });
 

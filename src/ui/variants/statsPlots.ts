@@ -24,7 +24,8 @@
  * committed so, and a number the user set is shown and counted as set,
  * never rounded again when a result so far widens the axis and its step
  * grows. A threshold of the variants has three decimals at most, and is
- * 0.001 at least, `variantThresholdOnStep`. So the number shown is the
+ * 0.001 at least, `variantThresholdOnStep`, which a line under the box
+ * says when a number typed is raised, `raisedLine`. So the number shown is the
  * number counted, exactly: those of the variants from popnei's fine
  * bins, `variantsAtMost`, those of the individuals from popnei's value
  * of each, `individualsAtMost`.
@@ -42,6 +43,7 @@ import {
   thresholdOnStep,
   thresholdStep,
   variantThresholdOnStep,
+  variantThresholdRaised,
   variantsAtMost,
 } from "../../core/thresholds.ts";
 import { histogramRows, histogramScales } from "../../charts/histogram.ts";
@@ -67,6 +69,7 @@ import {
   longestKeepsLine,
   noValueThresholdLine,
   SO_FAR_DESCRIPTION,
+  THRESHOLD_RAISED_LINE,
   thresholdShownLabel,
   thresholdValueText,
   variantFullTitle,
@@ -120,6 +123,15 @@ export interface PlotThreshold {
   /** The threshold for `value`, a number typed or a place of the slider:
       `value` rounded to the step of the axis, as it is committed. */
   readonly onStep: (value: number) => number;
+  /** The line said under the box when a number typed and committed is
+      raised by `onStep` to the least threshold, `raises`, and kept room
+      for under the line of what it keeps, so that the plot does not move
+      when it appears: `THRESHOLD_RAISED_LINE` for the variants, `null`
+      for the individuals, whose threshold is never raised. */
+  readonly raisedLine: string | null;
+  /** Whether `onStep` raises `value`, a number committed, to the least
+      threshold of the variants, 0.001; never for the individuals. */
+  readonly raises: (value: number) => boolean;
 }
 
 /** The range of a slider and where its thumb is. */
@@ -208,6 +220,8 @@ export function variantPlot(
       box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
       ...wordsOf(shown, counts, "variant", soFar),
       onStep,
+      raisedLine: THRESHOLD_RAISED_LINE,
+      raises: (value) => variantThresholdRaised(value, decimals),
     },
   };
 }
@@ -275,6 +289,8 @@ export function individualPlot(
         box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
         ...wordsOf(shown, counts, "individual", soFar),
         onStep,
+        raisedLine: null,
+        raises: () => false,
       },
     },
     noValueLine: noValueThresholdLine(bins.numNaN, soFar),

@@ -12,6 +12,7 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
+import { LEAST_VARIANT_THRESHOLD } from "../../core/thresholds.ts";
 import { counted, escaped, grouped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -248,6 +249,15 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
   missingGenotypes: "maximum proportion of missing genotypes of an individual",
   observedHeterozygosity: "maximum observed heterozygosity of an individual",
 });
+
+/** The line under the box of a threshold of the variants after a number
+    below 0.001 is set, which the box raises to 0.001, as it shows: the
+    first of popnei's fine bins holds 0 and the values above it up to
+    0.001, so the count of the variants at most 0 cannot be told from it.
+    Said, since a box never turns a number typed into another without a
+    word (docs/specs/steps/variants.md, "A number the fields do not
+    take"). */
+export const THRESHOLD_RAISED_LINE = `A threshold below ${numberText(LEAST_VARIANT_THRESHOLD)} is counted as ${numberText(LEAST_VARIANT_THRESHOLD)}, the smallest the bins tell apart.`;
 
 /** What a threshold keeps of the variants or the individuals of one
     histogram, those with a value: `kept` of `withValue`. */

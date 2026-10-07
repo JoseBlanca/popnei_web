@@ -4627,6 +4627,27 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);
       });
 
+      test("a threshold of the variants typed at 0 and raised to 0.001", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const missing = newPageStats(page).getByRole("group", {
+          name: "Proportion of missing genotypes",
+          exact: true,
+        });
+        await expect(missing.getByText(/^Keeps .* variants$/u)).toBeVisible({
+          timeout: 20_000,
+        });
+        await missing.getByRole("textbox").fill("0");
+        await missing.getByRole("textbox").press("Enter");
+        await expect(
+          missing.getByText(
+            "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.",
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-threshold-raised${at}-${theme}`);
+      });
+
       test("the focus on the line of a threshold", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         const het = newPageStats(page).getByRole("group", {

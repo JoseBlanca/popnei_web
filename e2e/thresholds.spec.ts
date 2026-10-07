@@ -28,11 +28,17 @@ import {
   keepsLine,
   thresholdValueText,
 } from "../src/ui/variants/statsWords.ts";
+import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
+
+/** The line under the box of a threshold of the variants raised to
+    0.001. */
+const RAISED_LINE =
+  "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.";
 
 /** popnei's numbers of panel.vcf.gz in the fixture. */
 const PANEL = panelOf(
@@ -432,6 +438,78 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   await expect(missing.slider).toHaveValue("0.5");
   await expect(missing.slider).toHaveAttribute("max", "0.5");
   await expect(missing.words).toHaveText("Keeps all 1,200 variants");
+});
+
+test("TH5 a number below 0.001 typed for the variants is raised to 0.001, said under the box and announced, and the plot does not move", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await recordAnnouncements(page);
+  await openPanel(page);
+  const missing = histogram(page, "Proportion of missing genotypes");
+  await expect(missing.words).toHaveText(variantWords("missingRate", 0.1), {
+    timeout: 20_000,
+  });
+  const raised = missing.group.getByText(RAISED_LINE, { exact: true });
+  const plotTop = async (): Promise<number> => {
+    const box = await missing.group.locator("svg").first().boundingBox();
+    if (box === null) throw new Error("the plot is not drawn");
+    return box.y;
+  };
+  const before = await plotTop();
+  await expect(raised).toHaveCount(0);
+
+  await missing.box.fill("0");
+  await missing.box.press("Enter");
+  await expect(missing.box).toHaveValue("0.001");
+  await expect(missing.slider).toHaveValue("0.001");
+  await expect(missing.words).toHaveText("Keeps 2 of 1,200 variants");
+  await expect(raised).toBeVisible();
+  await expect(missing.box).toHaveAccessibleDescription(
+    `Keeps 2 of 1,200 variants ${RAISED_LINE}`,
+  );
+  // Said alone, or after another text said within the pause of the
+  // region.
+  await expect
+    .poll(async () =>
+      (await announced(page)).some((text) => text.endsWith(RAISED_LINE)),
+    )
+    .toBe(true);
+  expect(await plotTop()).toBe(before);
+  await expectNoViolations(makeAxeBuilder);
+
+  // A number the threshold is not raised from: the line goes, the plot
+  // stays where it was.
+  await missing.box.fill("0.05");
+  await missing.box.press("Enter");
+  await expect(missing.words).toHaveText("Keeps 1,152 of 1,200 variants");
+  await expect(raised).toHaveCount(0);
+  expect(await plotTop()).toBe(before);
+
+  // 0.0004 is raised too; the line moved to 0.001 by Home is not, and
+  // says nothing.
+  await missing.box.fill("0.0004");
+  await missing.box.press("Enter");
+  await expect(missing.box).toHaveValue("0.001");
+  await expect(raised).toBeVisible();
+  await missing.slider.focus();
+  await page.keyboard.press("End");
+  await expect(missing.slider).toHaveValue("0.1");
+  await expect(raised).toHaveCount(0);
+  await page.keyboard.press("Home");
+  await expect(missing.slider).toHaveValue("0.001");
+  await expect(raised).toHaveCount(0);
+
+  // The individuals' threshold takes 0 as it is.
+  const individuals = histogram(
+    page,
+    "Proportion of missing genotypes of each individual",
+  );
+  await individuals.box.fill("0");
+  await individuals.box.press("Enter");
+  await expect(individuals.box).toHaveValue("0");
+  await expect(individuals.words).toHaveText(individualWords(0));
+  await expect(individuals.group.getByText(RAISED_LINE)).toHaveCount(0);
 });
 
 test("TH2 the keys of the line: an arrow one step of the axis, Page Up and Down ten, with Shift too, Shift and an arrow ten, Home and End the ends of the axis, Home at 0.001 for the variants", async ({

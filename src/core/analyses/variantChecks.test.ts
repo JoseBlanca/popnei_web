@@ -511,7 +511,7 @@ describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
   test("the bins of the MAF of panel.nei with no threshold: the header, 40 rows, the 39th with the edges as popnei gave them", () => {
     const bins = binsOf(PANEL_MAF, 40).map((bin) => ({ ...bin, state: null }));
     const lines = binsCsv(bins).split("\n");
-    expect(lines[0]).toBe("from,to,count,state");
+    expect(lines[0]).toBe("from_excluded,to_included,count,state");
     // 40 rows, and the empty text after the last new line.
     expect(lines).toHaveLength(42);
     expect(lines.at(-1)).toBe("");

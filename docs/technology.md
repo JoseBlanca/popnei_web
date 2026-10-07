@@ -582,16 +582,17 @@ popnei, with its hash in the lockfile.
 
 So the package is taken from a GitHub Release of popnei:
 
-1. In popnei, a tag such as `js-v0.2.0`; the package built with
+1. In popnei, a tag such as `js-v0.2.2`; the package built with
    `npm run build`, packed with `npm pack`, and the `.tgz` attached to the
-   release of that tag. popnei has made its four releases so far by hand,
+   release of that tag. popnei has made its six releases so far by hand,
    as their notes say: the pre-releases `js-v0.1.0-dev.1` to
-   `js-v0.1.0-dev.3`, and `js-v0.2.0` of 6 October 2026; a GitHub
+   `js-v0.1.0-dev.3`, `js-v0.2.0` and `js-v0.2.1` of 6 October 2026, and
+   `js-v0.2.2` of 7 October 2026; a GitHub
    Actions workflow that does it on a tag was the
    recommendation of `docs/specs/site.md`, open point 2, and is not
    written yet.
 2. The `package.json` of the application names that file by its URL,
-   `"popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.2.0/popnei-0.2.0.tgz"`,
+   `"popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.2.2/popnei-0.2.2.tgz"`,
    and the lockfile keeps its hash.
 3. A newer popnei in the application is a new tag in popnei and a new URL
    here.

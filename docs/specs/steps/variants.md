@@ -641,9 +641,11 @@ built and tested now without a button
 (`docs/specs/charts/plot2d.md`, "The export"; point C of
 `docs/specs/stage-3-open-points.md`). The CSV is named
 as the plot is, with `_bins`, `panel.variant_maf_bins.csv`; it has the
-header `from,to,count,state`, a row per bin, the edges with every digit
-popnei gave, as the diversity's CSV writes its numbers, and the state
-`kept`, `partly_kept` or `removed`, empty with no threshold.
+header `from_excluded,to_included,count,state`, named so because each
+bin holds its upper edge and not its lower one, but the first bin,
+which holds its lower edge too; a row per bin, the edges with every
+digit popnei gave, as the diversity's CSV writes its numbers, and the
+state `kept`, `partly_kept` or `removed`, empty with no threshold.
 
 The words of each block, which the specs above leave to the screen,
 written with the code on 27 September 2026 and accepted by the owner
@@ -672,9 +674,13 @@ the edges and the threshold to four decimals at most as the description
 of the plot has them, since the plot draws the part of that bin right
 of the line outlined, and its legend has no row for it
 (`histogram.md`, "Which bins the threshold keeps"); a threshold on an
-edge splits no bin but the first, which holds its lower edge, and a
-split bin of no variant, as the one from 0 to 0.025 when 0 is typed,
-has nothing to keep or remove, and no line; the table is
+edge splits no bin but the first, at 0, since that bin holds its lower
+edge too: the filter keeps the variants of the bin at 0 and removes the
+others, and the line names the bin when it holds any variant, "The
+threshold 0 splits the bin from 0 to 0.025, 12 variants: …"; a split
+bin of no variant has nothing to keep or remove, and no line, as the
+first bin of the observed heterozygosity of `panel.nei` when 0 is
+typed, every one of its variants above 0.025; the table is
 named "The bins of the major allele frequency", "… of the observed
 heterozygosity" or "… of the expected heterozygosity (unbiased)", and
 the line above it reads "Each bin runs from above its lower edge up to

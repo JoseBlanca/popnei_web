@@ -286,6 +286,27 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     );
   });
 
+  test("a number below 0.001 committed for the variants is raised to 0.001 with a line, and the individuals' threshold is never raised", () => {
+    const plot = variantPlot("missingRate", PANEL.variants, false, null);
+    expect(plot.threshold.raisedLine).toBe(
+      "A threshold below 0.001 is counted as 0.001, the smallest the bins tell apart.",
+    );
+    expect(plot.threshold.raises(0)).toBe(true);
+    expect(plot.threshold.onStep(0)).toBe(0.001);
+    expect(plot.threshold.raises(0.0004)).toBe(true);
+    expect(plot.threshold.raises(0.001)).toBe(false);
+    expect(plot.threshold.raises(0.05)).toBe(false);
+    const individuals = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      false,
+      null,
+    ).plot;
+    expect(individuals?.threshold.raisedLine).toBeNull();
+    expect(individuals?.threshold.raises(0)).toBe(false);
+    expect(individuals?.threshold.onStep(0)).toBe(0);
+  });
+
   test("on an axis of 0 to 0.7, or of 0.45 to 1, the MAF of 0.5 in the bin that ends there, the step is 0.01", () => {
     const het = variantPlot("obsHet", PANEL.variants, false, null);
     const { data } = het;

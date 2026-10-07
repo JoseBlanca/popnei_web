@@ -131,10 +131,12 @@ export const createScatter: Chart<ScatterData, ScatterEvents> = ...
   of the heatmap and thinning are calculations, and calculations are in Rust
   where Python gets the same ones, with one exception: the statistics of
   each individual come as one value per individual, a few thousand
-  numbers, and core bins them, `src/core/histogram.ts`, with the rule of
-  popnei's bins and the edges of `numpy.histogram`, which the Python
-  script uses for the same bins (`docs/architecture.md`, section 7;
-  `docs/specs/analyses/individualChecks.md`). The bins of the statistics
+  numbers, and core bins them, `src/core/histogram.ts`, over the edges
+  of `numpy.histogram` with each bin holding its upper edge, the first
+  its lower edge too, as popnei's bins of the variants do, so that a bar
+  ends at what a threshold keeps; the Python script prints each
+  individual's values, not their bins (`docs/architecture.md`, section
+  7; `docs/specs/analyses/individualChecks.md`). The bins of the statistics
   of the variants, which can be millions of values, stay popnei's. Two
   more from stage 5, decided by the owner on 30 September 2026: the
   points of the fitted curve of the LD decay, from popnei's parameters;

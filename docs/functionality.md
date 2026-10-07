@@ -106,7 +106,10 @@ it (docs/plans/popnei-0.2.2.md). So a threshold of the variants has three
 decimals at most, and 0.001 at least: the first bin holds 0 and the
 values above it up to 0.001, so a threshold typed or moved to 0 is set
 at 0.001, which on a file of fewer than 1,000 individuals keeps the same
-variants. A threshold of the individuals is counted exactly from
+variants, as the owner decided on 7 October 2026. A number below 0.001
+typed in the box is raised with a line under it, since a box never turns
+a number typed into another without a word: "A threshold below 0.001 is
+counted as 0.001, the smallest the bins tell apart." A threshold of the individuals is counted exactly from
 popnei's value of each, at any number. On both kinds of plot a value on
 the edge between two bars is in the bar to its left, so a bar ends at
 what a threshold keeps, and the table of the bins of popgen.html says

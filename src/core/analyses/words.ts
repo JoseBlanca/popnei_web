@@ -352,13 +352,14 @@ export function histogramDescription(
 
 /**
  * The line under a histogram that names the bin its threshold splits,
- * which the plot draws outlined when the threshold is on the lower edge
- * of the first bin, which holds that edge, and its legend does not name
- * (docs/specs/steps/variants.md, "The plot and the table of its bins"):
- * "The threshold 0.51 splits the bin from 0.5 to 0.525, 62 variants: the
- * filter keeps those of its variants at most 0.51 and removes the
- * others."; `null` with no threshold, no bin split, or a split bin that
- * holds none.
+ * which the plot draws filled left of the threshold and outlined right of
+ * it, the whole bin outlined when the threshold is on the lower edge of
+ * the first bin, which that bin holds too, and its legend does not name
+ * (docs/specs/steps/variants.md, "The plot and the table of its bins"): "The threshold 0.51 splits the bin
+ * from 0.5 to 0.525, 54 variants: the filter keeps those of its variants
+ * at most 0.51 and removes the others."; `null` with no threshold, no bin
+ * split, or a split bin that holds none. A threshold on an edge splits no
+ * bin, each holding its upper edge, but the first at its lower edge.
  * The edges and the threshold are written as the description writes them;
  * `noun` is what is counted, in the singular, "variant". Throws a defect
  * when more than one bin is split.
@@ -419,14 +420,16 @@ const BIN_STATE_WORDS: Readonly<
   removed: "removed",
 });
 
-/** The header of the CSV of the bins of a histogram. */
-const BINS_CSV_HEADER = "from,to,count,state";
+/** The header of the CSV of the bins of a histogram: each bin holds its
+    upper edge and not its lower one, but the first, which holds both. */
+const BINS_CSV_HEADER = "from_excluded,to_included,count,state";
 
 /**
  * The CSV of the bins of a histogram, from the rows that `histogramRows`
  * of src/charts/histogram.ts gives (docs/specs/steps/variants.md, "The
- * plot and the table of its bins"): the header `from,to,count,state`, then
- * a row per bin from the left, its edges with every digit, as `String`
+ * plot and the table of its bins"): the header
+ * `from_excluded,to_included,count,state`, then a row per bin from the
+ * left, the first of which holds its lower edge too, its edges with every digit, as `String`
  * writes them, its count, and what the threshold does to it, `kept`,
  * `partly_kept` or `removed`, empty with no threshold. Each line ends in
  * a new line.

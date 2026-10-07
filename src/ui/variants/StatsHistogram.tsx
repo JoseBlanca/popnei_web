@@ -6,9 +6,14 @@
  * with the line of the threshold the user drags over it
  * (docs/plans/thresholds.md, "Round 1 with the owner"). The line of what
  * it keeps is kept at the height of its longest form for the number with
- * a value, "Keeps 200,000 to 200,000 of 200,000 variants so far", at the
- * width of its column, so that the plot does not move as the words
- * change while the line is dragged or as the pass ends. No table of its bins and no download, which the owner wants
+ * a value, "Keeps 200,000 of 200,000 variants so far", at the width of
+ * its column, so that the plot does not move as the words change while
+ * the line is dragged or as the pass ends. Under it, for the variants,
+ * the room of the line said when a number committed below 0.001 is
+ * raised to 0.001, "A threshold below 0.001 is counted as 0.001, the
+ * smallest the bins tell apart.", which is also announced; it shows
+ * while the threshold is the one raised, and its room is always kept, so
+ * that the plot does not move when it comes or goes. No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads
  * (docs/plans/file-stats.md, "Where it goes"). Drawn from the result, or
  * from a result so far while the pass runs, whose words say so.
@@ -90,6 +95,7 @@ export function StatsHistogram({
   onTyped,
 }: StatsHistogramProps): React.JSX.Element {
   const wordsId = useId();
+  const raisedId = useId();
   const announcer = useAnnouncer();
   // The element of the plot and the line, on which the frame of the plot
   // is written as the plot draws it, the frame last drawn, and whether it
@@ -113,7 +119,15 @@ export function StatsHistogram({
   // The number the box keeps from the first change of its text to its
   // first commit or its blur; null when it shows `boxValue`.
   const [held, setHeld] = useState<number | null>(null);
+  // The threshold a number committed was raised to, whose line shows
+  // while the threshold is that one; null when the last number set was
+  // not raised.
+  const [raisedTo, setRaisedTo] = useState<number | null>(null);
   const { threshold } = plot;
+  const raisedShown =
+    threshold.raisedLine !== null &&
+    raisedTo !== null &&
+    raisedTo === threshold.shown;
   return (
     <div
       role="group"
@@ -137,7 +151,7 @@ export function StatsHistogram({
           maxValue={threshold.box.maxValue}
           step={threshold.box.step}
           decimals={threshold.box.decimals}
-          describedBy={wordsId}
+          describedBy={raisedShown ? `${wordsId} ${raisedId}` : wordsId}
           refusedText={thresholdRefusedText}
           onRefused={(text) => {
             announcer.announce(text);
@@ -145,7 +159,14 @@ export function StatsHistogram({
           onTyped={onTyped}
           onChange={(value) => {
             setHeld(null);
-            onThreshold(threshold.onStep(value));
+            const set = threshold.onStep(value);
+            if (threshold.raisedLine !== null && threshold.raises(value)) {
+              setRaisedTo(set);
+              announcer.announce(threshold.raisedLine);
+            } else {
+              setRaisedTo(null);
+            }
+            onThreshold(set);
           }}
           // From where the line is, at the number typed when one is, which
           // the field puts back and tells the screen it is typed no more.
@@ -156,6 +177,7 @@ export function StatsHistogram({
               Math.min(maxValue, Math.max(minValue, value + steps * step)),
             );
             setHeld(null);
+            setRaisedTo(null);
             // Set even when it is the number set: a number typed at the
             // bound of the box, stepped past it, is then set.
             onThreshold(moved);
@@ -166,11 +188,22 @@ export function StatsHistogram({
           same cell, so that the line holds that height at any width. */}
       <div
         className={classOf(styles, "keepsRoom")}
-        data-longest={threshold.longestLine}
+        data-longest={
+          threshold.raisedLine === null
+            ? threshold.longestLine
+            : `${threshold.longestLine}\n${threshold.raisedLine}`
+        }
       >
-        <p id={wordsId} className={classOf(styles, "keeps")}>
-          {threshold.line}
-        </p>
+        <div className={classOf(styles, "keepsShown")}>
+          <p id={wordsId} className={classOf(styles, "keeps")}>
+            {threshold.line}
+          </p>
+          {raisedShown && (
+            <p id={raisedId} className={classOf(styles, "keeps")}>
+              {threshold.raisedLine}
+            </p>
+          )}
+        </div>
       </div>
       <div ref={plotRef} className={classOf(styles, "plot")}>
         <HistogramPlot data={plot.data} onFrame={onFrame} />
@@ -183,6 +216,7 @@ export function StatsHistogram({
             value={threshold.slider.value}
             valueText={threshold.valueText}
             onChange={(value) => {
+              setRaisedTo(null);
               onThreshold(threshold.onStep(value));
             }}
           />

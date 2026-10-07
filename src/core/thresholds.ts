@@ -102,6 +102,24 @@ export function variantThresholdOnStep(
   );
 }
 
+/**
+ * Whether `variantThresholdOnStep` raises `value` to
+ * `LEAST_VARIANT_THRESHOLD`: `value` rounded as it rounds it is below
+ * 0.001, which the screen says in words, since a box never turns a
+ * number typed into another one without a word. The rounding to the
+ * step of the axis is not counted: the box shows it. A `value` that is
+ * not finite is a defect, thrown.
+ */
+export function variantThresholdRaised(
+  value: number,
+  decimals: number,
+): boolean {
+  return (
+    thresholdOnStep(value, Math.min(decimals, VARIANT_THRESHOLD_DECIMALS)) <
+    LEAST_VARIANT_THRESHOLD
+  );
+}
+
 /** The step a threshold moves by over an axis, and the decimals it is
     shown and counted with. */
 export interface ThresholdStep {

@@ -321,7 +321,7 @@ export interface VariantChecksResult {
 }
 
 export const variantChecks: AnalysisDef<Job, JobResult>;
-// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 4;
+// id "variantChecks"; app ["popgen", "gwas"]; keyVersion 5;
 // filtersRead { variants: false, individuals: true }; defaults {}
 
 /** The words of a refusal of popnei, for the error state of the panel. */
