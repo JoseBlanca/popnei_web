@@ -781,3 +781,54 @@ test("TH4 after a resize, the line of each threshold is over its dashed line in 
   );
   expect(Math.max(...seen.map(Math.abs))).toBeLessThan(1.5);
 });
+
+for (const width of [1280, 320]) {
+  test(`TH4 at ${String(width)} px the plots do not move as the pass ends, nor as the line of a large count turns into a range`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width, height: 900 });
+    const vcf = testInfo.outputPath("stats.vcf.gz");
+    await writeBigVcf(vcf, 30_000);
+    await holdSummary(page);
+    await page.goto("popgen2.html");
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Open variants file…" }).click();
+    await (await chooser).setFiles(vcf);
+    await expect(
+      page.getByText("Calculating the statistics of the variants… 100%"),
+    ).toBeVisible({ timeout: 60_000 });
+    await release(page, "allSoFar");
+    const het = histogram(page, "Observed heterozygosity");
+    await expect(het.words).toHaveText(/^Keeps all [\d,]+ variants so far$/u, {
+      timeout: 60_000,
+    });
+    // The tops of the plots in the page, wherever it is scrolled to.
+    const tops = async (): Promise<number[]> =>
+      Promise.all(
+        GROUPS.map(async (title) =>
+          histogram(page, title)
+            .group.locator("svg.chart")
+            .evaluate(
+              (svg) => svg.getBoundingClientRect().top + window.scrollY,
+            ),
+        ),
+      );
+    const before = await tops();
+    // A range of numbers of five digits, the longest form of the line:
+    // 0.33 lies inside a fine bin, 0.3297 to 0.3305.
+    await het.box.fill("0.33");
+    await het.box.press("Enter");
+    await expect(het.words).toHaveText(
+      /^Keeps [\d,]+ to [\d,]+ of [\d,]+ variants so far$/u,
+    );
+    expect(await tops()).toEqual(before);
+    await release(page, "result");
+    await expect(het.words).not.toHaveText(/so far$/u, { timeout: 60_000 });
+    // The line of the pass gone from sight, its room kept.
+    await expect(
+      page.getByText(/^Calculating the statistics/u).filter({ visible: true }),
+    ).toHaveCount(0);
+    expect(await tops()).toEqual(before);
+  });
+}

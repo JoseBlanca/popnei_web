@@ -28,6 +28,12 @@
   overflow-wrap: anywhere;
 }
 
+/* The line of the pass once it ended: its room kept, its words hidden,
+   so that the plots under it do not move up. */
+.room {
+  visibility: hidden;
+}
+
 /* The download of the individuals, at the start of its row. */
 .download {
   display: flex;

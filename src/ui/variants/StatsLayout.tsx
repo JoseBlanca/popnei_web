@@ -63,12 +63,29 @@ export function Part({ heading, children }: PartProps): React.JSX.Element {
 interface PartLineProps {
   /** Its words. */
   readonly children: string;
+  /** Whether it only keeps its room, hidden, its words those it had: the
+      line of the pass once it ended, so that the plots under it stay
+      where they were. False when absent. */
+  readonly room?: boolean;
 }
 
 /** A line of a part, over its plots: the share calculated, that it was
-    stopped, or that it was not calculated. */
-export function PartLine({ children }: PartLineProps): React.JSX.Element {
-  return <p className={classOf(styles, "line")}>{children}</p>;
+    stopped, or that it was not calculated; or, hidden, the room of the
+    line of the pass once it ended. */
+export function PartLine({
+  children,
+  room = false,
+}: PartLineProps): React.JSX.Element {
+  return room ? (
+    <p
+      className={`${classOf(styles, "line")} ${classOf(styles, "room")}`}
+      aria-hidden="true"
+    >
+      {children}
+    </p>
+  ) : (
+    <p className={classOf(styles, "line")}>{children}</p>
+  );
 }
 
 /** What the plots of a part are drawn with. */

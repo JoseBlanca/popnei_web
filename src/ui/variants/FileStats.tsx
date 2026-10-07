@@ -29,7 +29,8 @@
  * plots so far"): from the first result so far of the pass, about two
  * seconds after its start, they are drawn from the last one, the words of
  * each threshold saying their counts are so far, and at the end from
- * the result. Nothing keeps their room before: the open button under the
+ * the result, where they were: the line of the pass keeps its room,
+ * hidden, once it ended. Nothing keeps their room before: the open button under the
  * section moves down as they arrive, which the owner chose over empty
  * space. The download of the table of the individuals comes with the
  * result alone.
@@ -198,7 +199,7 @@ function Stats({
           <PartLine>{PART_FAILED}</PartLine>
         ) : (
           <>
-            {variantsLine !== null && <PartLine>{variantsLine}</PartLine>}
+            <LineOrRoom line={variantsLine} part="variants" plots={shown} />
             {shown !== null && (
               <VariantPlots
                 result={shown.result.perVar}
@@ -220,7 +221,11 @@ function Stats({
           <PartLine>{PART_FAILED}</PartLine>
         ) : (
           <>
-            {individualsLine !== null && <PartLine>{individualsLine}</PartLine>}
+            <LineOrRoom
+              line={individualsLine}
+              part="individuals"
+              plots={shown}
+            />
             {shown !== null && (
               <IndividualPlots
                 result={shown.result.perIndividual}
@@ -250,6 +255,31 @@ function Stats({
       </Part>
     </StatsFrame>
   );
+}
+
+/** What the line over the plots of a part is drawn with. */
+interface LineOrRoomProps {
+  /** What the part says over its plots, or `null` for nothing. */
+  readonly line: string | null;
+  readonly part: StatsPart;
+  /** What its plots are drawn from, `null` when there are none. */
+  readonly plots: Shown | null;
+}
+
+/** The line over the plots of a part; once the pass ended, with its
+    plots drawn, the room of its last line, "Calculating the statistics of
+    the variants… 100%", hidden, so that the plots, drawn under that line
+    from the results so far, do not move up as the result comes, by 40
+    pixels at 1280 (the review of round 1, ux F2); nothing with no plots
+    and no line. */
+function LineOrRoom({
+  line,
+  part,
+  plots,
+}: LineOrRoomProps): React.JSX.Element | null {
+  if (line !== null) return <PartLine>{line}</PartLine>;
+  if (plots === null) return null;
+  return <PartLine room>{statsRunningLine(part, 100)}</PartLine>;
 }
 
 /** What the plots are drawn from: the result of the summary once done,

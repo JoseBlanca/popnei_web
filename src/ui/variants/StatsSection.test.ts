@@ -371,7 +371,15 @@ describe("the section of the statistics of the open file", () => {
 
     await endDone(page);
     expect(partsText()).not.toContain("so far");
-    expect(partsText()).not.toContain("Calculating");
+    // The line of the pass keeps its room, hidden, so that the plots do
+    // not move up (th4 fix 2); nothing else says it.
+    const rooms = [...(sectionOf()?.querySelectorAll("p") ?? [])].filter(
+      (line) => line.textContent.startsWith("Calculating"),
+    );
+    expect(rooms.map((line) => line.getAttribute("aria-hidden"))).toEqual([
+      "true",
+      "true",
+    ]);
     expect(partsText().match(/Keeps [^.]*1,200 variants/gu)).toHaveLength(4);
     expect(
       [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
