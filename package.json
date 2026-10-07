@@ -26,7 +26,7 @@
     "d3-scale-chromatic": "3.1.0",
     "d3-selection": "3.0.0",
     "d3-shape": "3.2.0",
-    "popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.2.1/popnei-0.2.1.tgz",
+    "popnei": "https://github.com/JoseBlanca/popnei/releases/download/js-v0.2.2/popnei-0.2.2.tgz",
     "react": "19.3.0",
     "react-aria-components": "1.21.1",
     "react-dom": "19.3.0",

@@ -182,7 +182,7 @@ describe("the histograms of the statistics of the open file", () => {
 
 /** popnei's fine bins and values of each individual of panel.vcf.gz,
     from e2e/fixtures/threshold_counts.json, which make_fixtures.mjs wrote
-    with popnei 0.2.1 under node: 1,200 variants of 200 individuals. */
+    with popnei 0.2.2 under node: 1,200 variants of 200 individuals. */
 const THRESHOLD_COUNTS: unknown = JSON.parse(
   readFileSync(
     new URL("../../../e2e/fixtures/threshold_counts.json", import.meta.url),
@@ -399,7 +399,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       undecidedTitle: UNDECIDED_DESCRIPTION,
     });
     expect(range.data.description).toContain(UNDECIDED_DESCRIPTION);
-    const exact = variantPlot("obsHet", PANEL.variants, false, 0.3);
+    const exact = variantPlot("obsHet", PANEL.variants, false, 0.1);
     expect(exact.data.threshold?.undecided).toBe(false);
     expect(exact.data.threshold?.undecidedTitle).toBeUndefined();
     expect(exact.data.description).not.toContain(UNDECIDED_DESCRIPTION);
@@ -415,11 +415,11 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(individuals?.data.threshold?.undecided).toBe(false);
   });
 
-  test("on an edge one double above k/1280 the count is one number: the observed heterozygosity at 0.3 keeps 373", () => {
-    const plot = variantPlot("obsHet", PANEL.variants, false, 0.3);
-    expect(plot.threshold.shown).toBe(0.3);
-    expect(plot.threshold.line).toBe("Keeps 373 of 1,200 variants");
-    expect(plot.threshold.valueText).toBe("0.3, keeps 373 of 1,200 variants");
+  test("on an edge whose bin is empty the count is one number: the observed heterozygosity at 0.1 keeps 31", () => {
+    const plot = variantPlot("obsHet", PANEL.variants, false, 0.1);
+    expect(plot.threshold.shown).toBe(0.1);
+    expect(plot.threshold.line).toBe("Keeps 31 of 1,200 variants");
+    expect(plot.threshold.valueText).toBe("0.1, keeps 31 of 1,200 variants");
   });
 
   test("the slider spans the horizontal axis of the plot, widened as the plot widens it to take a threshold beyond the bins", () => {
@@ -443,10 +443,10 @@ describe("thresholds round 1 the threshold on each histogram", () => {
   });
 
   test("while the pass runs the words say the counts are so far", () => {
-    const plot = variantPlot("obsHet", PANEL.variants, true, 0.3);
-    expect(plot.threshold.line).toBe("Keeps 373 of 1,200 variants so far");
+    const plot = variantPlot("obsHet", PANEL.variants, true, 0.1);
+    expect(plot.threshold.line).toBe("Keeps 31 of 1,200 variants so far");
     expect(plot.threshold.valueText).toBe(
-      "0.3, keeps 373 of 1,200 variants so far",
+      "0.1, keeps 31 of 1,200 variants so far",
     );
     const individuals = individualPlot(
       "missingGenotypes",

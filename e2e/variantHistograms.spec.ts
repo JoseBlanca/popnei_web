@@ -215,7 +215,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
     ),
   ).toBeVisible();
   await expect(mafSvg).toHaveAccessibleName(
-    `${MAF_TITLE} The major allele frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, and removes the 2 bins above it, 25 variants.`,
+    `${MAF_TITLE} The major allele frequency of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, splits the bin from 0.95 to 0.975, 22 variants, and removes the bin above it, 3 variants.`,
   );
   await expect(
     histogram(page, OBS_HET_TITLE).getByText(
@@ -600,7 +600,7 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
   });
 }
 
-test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.5, which a line under its plot names; at 0.6 it splits none", async ({
+test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.5, which a line under its plot names; at 0.65, inside an empty bin, it splits none", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -616,11 +616,11 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.
   );
   await expectNoViolations(makeAxeBuilder);
   const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
-  await obsHet.fill("0.6");
+  await obsHet.fill("0.65");
   await obsHet.press("Enter");
   await expect(
     group.getByText(
-      "Threshold of the filter of the variants by observed heterozygosity: 0.6, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.65, drawn over every variant of the file",
       {
         exact: true,
       },
@@ -679,7 +679,7 @@ test("VS6 D2 the table of the bins reached with the keyboard: the tabs one stop,
   await expect(rows.nth(39).getByRole("cell")).toHaveText([
     "0.975",
     "22",
-    "Removed",
+    "Partly kept",
   ]);
   await expect(rows.nth(38).getByRole("cell")).toHaveText([
     "0.95",
@@ -730,7 +730,7 @@ test("VS6 D2 the CSV of the bins of the MAF: panel.variant_maf_bins.csv, its hea
   expect(lines[0]).toBe("from,to,count,state");
   expect(lines).toHaveLength(42);
   expect(lines.at(-1)).toBe("");
-  expect(lines[39]).toBe("0.9500000000000001,0.9750000000000001,22,");
+  expect(lines[39]).toBe("0.95,0.975,22,");
 
   // The other two, by their names, and the states with a threshold.
   await flip(page, OBS_HET_SWITCH);

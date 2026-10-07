@@ -2,7 +2,7 @@
  * The counts of the thresholds (docs/plans/thresholds.md, "The phases",
  * 1). The numbers of popnei are those of
  * e2e/fixtures/threshold_counts.json, which make_fixtures.mjs wrote with
- * popnei 0.2.1 under node on 7 October 2026, since the tests of core may
+ * popnei 0.2.2 under node on 7 October 2026, since the tests of core may
  * not call popnei: the edges and the counts of the 1,280 fine bins of
  * calcVariantsSummary, the values of each individual of that pass, and
  * the variants that popnei's filters keep at 0.05, 0.1, 0.3 and 0.5,
@@ -219,12 +219,10 @@ describe("thresholdOnStep", () => {
 });
 
 describe("popnei's edges", () => {
-  test("popnei's edges are the double above k/1280 on 464 of the 1,281, as the comment of variantsAtMost says", () => {
+  test("popnei's edges are the decimals k/1280, all 1,281 of them since popnei 0.2.2, which gave the double above on 464", () => {
     const binEdges = fixture("panel.vcf.gz").part.binEdges;
-    const above = [...binEdges].filter((edge, k) => edge !== k / 1280);
     expect(binEdges.length).toBe(1281);
-    expect(above.length).toBe(464);
-    expect([...binEdges].every((edge, k) => edge >= k / 1280)).toBe(true);
+    expect([...binEdges].every((edge, k) => edge === k / 1280)).toBe(true);
   });
 });
 
@@ -407,16 +405,16 @@ describe("variantsAtMost", () => {
     },
   );
 
-  test("panel.vcf.gz: at 0.3, below popnei's edge 0.30000000000000004, one number for the observed heterozygosity, 373, and for the expected, 311", () => {
+  test("panel.vcf.gz: at 0.3, popnei's edge since popnei 0.2.2, the observed heterozygosity keeps 373 to 375 and the expected 311 to 313", () => {
     const { part } = fixture("panel.vcf.gz");
     expect(variantsAtMost(part, "obsHet", 0.3)).toEqual({
       keptLow: 373,
-      keptHigh: 373,
+      keptHigh: 375,
       withValue: 1200,
     });
     expect(variantsAtMost(part, "unbiasedExpHet", 0.3)).toEqual({
       keptLow: 311,
-      keptHigh: 311,
+      keptHigh: 313,
       withValue: 1200,
     });
   });
@@ -505,7 +503,7 @@ describe("individualsAtMost", () => {
 describe("the range against popnei's filters", () => {
   /** At each of `THRESHOLDS`, the range of variantsAtMost and what
       popnei's filter keeps, [keptLow, keptHigh, filter], as found on 7
-      October 2026 with popnei 0.2.1. */
+      October 2026 with popnei 0.2.2. */
   type Found = Readonly<
     Record<FilteredStatistic, readonly (readonly [number, number, number])[]>
   >;
@@ -525,7 +523,7 @@ describe("the range against popnei's filters", () => {
     obsHet: [
       [4, 4, 4],
       [31, 31, 31],
-      [373, 373, 373],
+      [373, 375, 373],
       [1090, 1098, 1098],
     ],
   };
@@ -656,18 +654,4 @@ describe("the count against popnei's histogram of one bin over 0 to the threshol
       expect(ranges).toBeGreaterThan(0);
     },
   );
-
-  test("panel.vcf.gz: the expected heterozygosity at k/1280 below popnei's edge is one number, the count of popnei's histogram, at the 464 such numbers", () => {
-    const { part, histKeptAtMost } = fixture("panel.vcf.gz");
-    let below = 0;
-    for (const [i, number] of AT_MOST_NUMBERS.entries()) {
-      const k = Math.round(number * 1280);
-      if (k / 1280 !== number || part.binEdges[k] === number) continue;
-      const counts = variantsAtMost(part, "unbiasedExpHet", number);
-      expect(counts.keptLow).toBe(counts.keptHigh);
-      expect(counts.keptLow).toBe(histKeptAtMost.unbiasedExpHet[i]);
-      below += 1;
-    }
-    expect(below).toBe(464);
-  });
 });

@@ -84,8 +84,9 @@ const THRESHOLDS: readonly IndividualFilter[] = [
   { kind: "obs_het", maxAllowedObsHet: 0.38 },
 ];
 
-/** The 41 edges of popnei's 40 bins over 0 to 1, i × (1 / 40). */
-const EDGES = Float64Array.from({ length: 41 }, (_, i) => i * (1 / 40));
+/** The 41 edges of popnei's 40 bins over 0 to 1, the decimals i / 40
+    since popnei 0.2.2. */
+const EDGES = Float64Array.from({ length: 41 }, (_, i) => i / 40);
 
 /** The MAF counts of panel.nei: twenty zeros, then those of the spec. */
 const PANEL_MAF = [
@@ -97,8 +98,8 @@ const PANEL_MAF = [
   60,
   74,
   72,
-  83,
-  70,
+  81,
+  72,
   68,
   64,
   83,
@@ -508,13 +509,13 @@ describe("VS6 D2 the CSV of the bins of a histogram and its name", () => {
     expect(lines).toHaveLength(42);
     expect(lines.at(-1)).toBe("");
     expect(lines[1]).toBe("0,0.025,0,");
-    expect(lines[39]).toBe("0.9500000000000001,0.9750000000000001,22,");
-    expect(lines[40]).toBe("0.9750000000000001,1,3,");
+    expect(lines[39]).toBe("0.95,0.975,22,");
+    expect(lines[40]).toBe("0.975,1,3,");
   });
 
   test("the states of the bins at a threshold are kept, partly_kept and removed", () => {
     const lines = binsCsv(binsOf(PANEL_OBS_HET, 21, 20)).split("\n");
-    expect(lines[20]).toBe("0.47500000000000003,0.5,58,kept");
+    expect(lines[20]).toBe("0.475,0.5,58,kept");
     expect(lines[21]).toBe("0.5,0.525,62,partly_kept");
     expect(lines[22]).toBe("0.525,0.55,27,removed");
   });
@@ -573,9 +574,9 @@ const STATISTICS: readonly VariantStatistic[] = [
 
 /**
  * The result of `name`, panel.nei or tetraploid.nei, in the 1,280 bins
- * over 0 to 1 that popnei 0.2.0 gave under node, which
+ * over 0 to 1 that popnei 0.2.2 gave under node, which
  * e2e/fixtures/make_fixtures.mjs writes to variant_fine_bins.json; the
- * edges are popnei's, i × (1 / 1,280) and 1 for the last.
+ * edges are popnei's, the decimals i / 1,280.
  */
 function fineResult(name: "panel.nei" | "tetraploid.nei"): VariantChecksResult {
   const parsed: unknown = JSON.parse(
@@ -602,11 +603,11 @@ function fineResult(name: "panel.nei" | "tetraploid.nei"): VariantChecksResult {
       ),
     };
   };
-  const width = 1 / VARIANT_FINE_BINS;
   return {
     analysis: "variantChecks",
-    binEdges: Float64Array.from({ length: VARIANT_FINE_BINS + 1 }, (_, i) =>
-      i === VARIANT_FINE_BINS ? 1 : i * width,
+    binEdges: Float64Array.from(
+      { length: VARIANT_FINE_BINS + 1 },
+      (_, i) => i / VARIANT_FINE_BINS,
     ),
     missingRate: distrib("missingRate"),
     maf: distrib("maf"),
@@ -635,12 +636,12 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
     expect(VARIANT_FINE_BINS).toBe(1280);
   });
 
-  test("panel.nei: the 40 bins and their edges are those popnei 0.2.0 gives when asked for 40", () => {
+  test("panel.nei: the 40 bins and their edges are those popnei 0.2.2 gives when asked for 40", () => {
     const result = fineResult("panel.nei");
     const missing = variantBins(result, "missingRate");
     expect(Array.from(missing.edges)).toEqual(Array.from(EDGES));
-    // An edge popnei computes as 3 × (1 / 40), above 0.075.
-    expect(missing.edges[3]).toBe(0.07500000000000001);
+    // The decimal 3 / 40, which popnei 0.2.1 gave as 0.07500000000000001.
+    expect(missing.edges[3]).toBe(0.075);
     expect(Array.from(missing.counts)).toEqual([
       345,
       768,
@@ -678,7 +679,7 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
     ]);
   });
 
-  test("tetraploid.nei: the 40 bins are those popnei 0.2.0 gives when asked for 40", () => {
+  test("tetraploid.nei: the 40 bins are those popnei 0.2.2 gives when asked for 40", () => {
     const result = fineResult("tetraploid.nei");
     const zeros = (length: number): number[] => Array.from({ length }, () => 0);
     expect(Array.from(variantBins(result, "missingRate").counts)).toEqual([
@@ -702,8 +703,8 @@ describe("the bins of popgen.html, popnei's 1,280 summed 32 at a time", () => {
       71,
       40,
       21,
-      18,
-      6,
+      16,
+      8,
       3,
       3,
       1,
@@ -808,15 +809,13 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
     ]);
   });
 
-  test("the ends are the round numbers, 0.3 and not popnei's edge 0.30000000000000004", () => {
+  test("the ends are the round numbers 0.3 and 0.6, popnei's edges, which popnei 0.2.1 gave as the doubles above", () => {
     const bins = variantBinsRounded(fineResult("tetraploid.nei"), "maf");
     expect(bins.edges[0]).toBe(0.3);
     expect(bins.edges.at(-1)).toBe(0.6);
     // popnei's edges at those places.
-    expect(fineResult("tetraploid.nei").binEdges[384]).toBe(
-      0.30000000000000004,
-    );
-    expect(fineResult("tetraploid.nei").binEdges[768]).toBe(0.6000000000000001);
+    expect(fineResult("tetraploid.nei").binEdges[384]).toBe(0.3);
+    expect(fineResult("tetraploid.nei").binEdges[768]).toBe(0.6);
   });
 
   /** The result of panel.nei with the counts of `statistic` 1 in each of
@@ -830,15 +829,15 @@ describe("the bins of popgen2.html, popnei's 1,280 summed over the range of the 
     return { ...fineResult("panel.nei"), [statistic]: { mean: 0.5, counts } };
   }
 
-  test("a last count in the bin of popnei that ends on 0.6 gives an axis to 0.6, although popnei's edge there is 0.6000000000000001", () => {
+  test("a last count in the bin of popnei that ends on 0.6 gives an axis to 0.6", () => {
     const result = countsAt("maf", [0, 767]);
-    expect(result.binEdges[768]).toBe(0.6000000000000001);
+    expect(result.binEdges[768]).toBe(0.6);
     expect(rangeOf(result, "maf")).toEqual([0, 0.6, 32]);
   });
 
-  test("a last count in the bin of popnei that ends on 0.3 gives an axis to 0.3, although popnei's edge there is 0.30000000000000004", () => {
+  test("a last count in the bin of popnei that ends on 0.3 gives an axis to 0.3", () => {
     const result = countsAt("maf", [0, 383]);
-    expect(result.binEdges[384]).toBe(0.30000000000000004);
+    expect(result.binEdges[384]).toBe(0.3);
     expect(rangeOf(result, "maf")).toEqual([0, 0.3, 32]);
   });
 

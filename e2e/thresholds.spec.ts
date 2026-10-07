@@ -12,7 +12,7 @@
  * The counts are those of the core functions, `variantsAtMost` and
  * `individualsAtMost`, on popnei's numbers of panel.vcf.gz in
  * e2e/fixtures/threshold_counts.json, which make_fixtures.mjs wrote with
- * popnei 0.2.1 under node: the 1,280 fine bins of each statistic of the
+ * popnei 0.2.2 under node: the 1,280 fine bins of each statistic of the
  * variants and the value of each individual.
  */
 import { readFileSync } from "node:fs";
@@ -380,7 +380,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   // Not committed yet: the line and the words follow the number typed.
   await expect(het.slider).toHaveValue("0.3");
   await expect(het.words).toHaveText(variantWords("obsHet", 0.3));
-  await expect(het.words).toHaveText("Keeps 373 of 1,200 variants");
+  await expect(het.words).toHaveText("Keeps 373 to 375 of 1,200 variants");
   expect(
     Math.abs((await middleX(het.dashed)) - (await middleX(het.thumb))),
   ).toBeLessThan(1.5);

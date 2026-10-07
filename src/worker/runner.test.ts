@@ -1703,18 +1703,18 @@ describe("IP2 D1 the worker in the new order: the histograms and the counts with
       58,
       86,
       64,
-      73,
-      66,
+      69,
+      70,
       61,
       71,
-      80,
-      80,
+      77,
+      83,
       63,
       69,
       70,
       63,
-      73,
-      54,
+      71,
+      56,
       62,
       52,
       33,
@@ -1800,8 +1800,10 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
     );
     expect(result.binEdges.length).toBe(41);
     expect(result.binEdges[0]).toBe(0);
-    expect(result.binEdges[3]).toBe(0.07500000000000001);
-    expect(result.binEdges[38]).toBe(0.9500000000000001);
+    // The decimals 3 / 40 and 38 / 40, which popnei 0.2.1 gave as the
+    // doubles above them.
+    expect(result.binEdges[3]).toBe(0.075);
+    expect(result.binEdges[38]).toBe(0.95);
     expect(result.binEdges[40]).toBe(1);
     expect(result.binEdges.buffer.byteLength).toBe(41 * 8);
     expect(result.maf.mean).toBe(0.7163445463101891);
@@ -1825,8 +1827,8 @@ describe("VS1 D3 the passes of the runner: the histograms and the counts", () =>
       60,
       74,
       72,
-      83,
-      70,
+      81,
+      72,
       68,
       64,
       83,
