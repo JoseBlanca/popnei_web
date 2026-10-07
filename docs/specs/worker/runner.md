@@ -51,7 +51,13 @@ far to `toldSoFar` of the run (below, "The result so far"). Revised on
 a second pass over the file, so that popgen2.html reads each file once
 (`docs/plans/one-pass.md`): the job `filterFailures` and the step
 `filterPassed` of the runner's `Steps` are removed; the count waits for
-popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei). The
+popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei).
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): the filter of the FILTER column, `passed`, comes in the
+`filters` of a job or a write as any filter, and the runner puts
+popnei's `filterPassed` for it before the list of the individuals kept
+(below, "The steps"), with its tests on `low_qual.vcf.gz`. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -103,8 +109,9 @@ The words used here:
   carries, `individuals`, `null` for every individual, in the jobs of the
   analyses that read the filters of individuals and in a write
   (`docs/specs/worker/protocol.md`). The runner puts it on the
-  `Variants` first, with popnei's `filterIndividuals`, which popnei lists
-  among the steps with the kind `"individuals"`.
+  `Variants` with popnei's `filterIndividuals`, which popnei lists among
+  the steps with the kind `"individuals"`: first, but for the filter of
+  the FILTER column, which goes before it.
 - The **key** of a result is the text the page makes from everything the
   result was calculated from; the page sends it with each request and
   puts the result in its cache under it (`docs/architecture.md`, section
@@ -271,11 +278,24 @@ diversity, after the user moved the threshold, would be refused with
 the variants that the stricter of the two keeps alone", as the release
 gave in node on 25 September 2026.
 
-The steps a job asks for are, when the job has `individuals` and it is
-a list, the step of the individuals with that list, and then its
-filters of the variants, in their order; a job without the field, or
-with `null`, keeps every individual (`docs/specs/worker/protocol.md`,
-"Job and JobResult").
+The steps a job asks for are, in this order: its filter of the FILTER
+column, `passed`, when its `filters` hold one; when the job has
+`individuals` and it is a list, the step of the individuals with that
+list; and then its other filters of the variants, in their order. A job
+without the field `individuals`, or with `null`, keeps every individual
+(`docs/specs/worker/protocol.md`, "Job and JobResult"). The runner's
+`Steps` holds the three parts apart, `passed` taken out of the job's
+`filters` wherever it is, and core gives it first, since it is first in
+the fixed order of the project (`VARIANT_FILTER_ORDER` of
+`docs/specs/core/project.md`); so the counts of the pass, which popnei
+gives in the order of the steps, are in the order of the job's filters.
+The filter of the FILTER column goes before the list as
+`docs/designs/stats-filters.md` decided on 7 October 2026, where popnei
+advises it ("Add it first, or right after `filterByRegions`",
+`filterPassed` of `variant.d.ts`, popnei 0.2.1); it keeps a variant by
+its FILTER alone, so its place changes no variant kept, and the filters
+after it count over the variants that passed. The regions of a BED
+file, once the application has that filter, go before it.
 The list comes first, so the filters of the variants count over the
 individuals it keeps, as the owner decided on 28 September 2026
 (`docs/architecture.md`, section 2): popnei's `filterByMissingData` put
@@ -287,8 +307,9 @@ of any analysis and a `write`, goes through the same rule. For each, the
 runner reads the steps its `Variants` holds from popnei's `steps`, and:
 
 - **When those steps are the job's**, the same kinds in the same order,
-  the step of the individuals, when there is one, first and naming the
-  same individuals in the same order, compared name by name, and each
+  the step of `passed` first when the job has it, with no argument, then
+  the step of the individuals, when there is one, naming the same
+  individuals in the same order, compared name by name, and each
   argument of a filter's step equal with `===` to the field of the same
   name of the filter, it runs on that `Variants` as it is.
 - **When the `Variants` holds no step**, as it does after the open, it
@@ -362,12 +383,18 @@ it builds, so what the `free()` keeps from
 piling up is smaller; it has not been measured with a `File`, which only
 a browser can open.
 
-The runner puts first the list of the individuals, when the job has
-one, with `filterIndividuals(job.individuals)`; then each filter with
-its method, `filterByMissingData`, `filterByMaf`, `filterByObsHet`,
-`filterByLd`, with the numbers of the job as they are, in the order of
-the job, which is the fixed order of the project; the runner does not
-sort them. The number the user typed is the number popnei is given, so a
+The runner puts first the filter of the FILTER column, when the job has
+it, with `filterPassed()`; then the list of the individuals, when the
+job has one, with `filterIndividuals(job.individuals)`; then each other
+filter with its method, `filterByMissingData`, `filterByMaf`,
+`filterByObsHet`, `filterByLd`, with the numbers of the job as they
+are, in the order of the job, which is the fixed order of the project;
+the runner does not sort them. A job with `passed` over a `.nei` file,
+which core never sends (`filtersApplied` of
+`docs/specs/core/project.md`), is refused by popnei at the first block
+of its pass, "the variants hold no record of whether they passed their
+FILTER…", and the runner answers it `refused` with that message, as
+any refusal of popnei's, rather than check the format itself. The number the user typed is the number popnei is given, so a
 variant with a missing rate at the threshold is kept
 (`docs/specs/worker/protocol.md`). An empty list is a defect of the
 page, answered `badRequest` before any step is put: core never sends one,
@@ -525,7 +552,9 @@ The store finds the number of variants of the file in a result of any
 kind through `countsOf`, which `src/core/apps.ts` gives in the place of
 `numVarsOf` (`docs/architecture.md`, section 4, "What each filter
 kept"): `varsProcessed` of the first filter, or `numVars` when the job
-had none; of a VCF read with only the passed variants, it counts those.
+had none; of a VCF read with only the passed variants, it counts those,
+and under the filter of the FILTER column, first, every variant of the
+file.
 It
 records that number into the load, and fills the counts beside the
 filters from any pass that had the project's filters. Seen in node on 26
@@ -1785,6 +1814,23 @@ as core would. Each test at `run` or `write` of a runner made by
   list of other order; a run with the same filter and the same list does
   not. The test counts the reads of the source as the test of an open
   again that popnei refuses does.
+- **The filter of the FILTER column**, on `low_qual.vcf.gz` opened with
+  `{ ploidy: 2, onlyPassed: false }`, the panel with 300 of its 1,200
+  variants failed: a diversity with `passed` alone gives `passStats`
+  `numVars` 900 and `filtering` `passed` 1,200 to 900; with `passed`,
+  the missing data filter at 0.05 and the MAF filter at 0.95 and no
+  list, `numVars` 847 and `passed` 1,200 to 900, `missing_data` 900 to
+  865 and `maf` 865 to 847, its fields in that order; with the same
+  filters and the list of the first 111 individuals of the file, `s000`
+  to `s110`, popnei's `steps` are of the kinds `passed`, `individuals`,
+  `missing_data` and `maf`, in that order, and `numVars` 779, `passed`
+  1,200 to 900, `missing_data` 900 to 797 and `maf` 797 to 779 (node,
+  popnei 0.2.1, 7 October 2026, `iterBlocks` with no field read to its
+  end). A second run with the same job does not open the file again,
+  and one without `passed` does. On `panel.vcf.gz`, whose variants all
+  passed, `passed` keeps 1,200 of 1,200. A job with `passed` on
+  `panel.nei` is `refused` with popnei's message, which starts "the
+  variants hold no record of whether they passed their FILTER".
 - **The histograms of the variants**, with no filter and no list,
   `minNumIndividuals` 0, 40 bins and the range 0 to 1, popnei's
   defaults: `binEdges` of 41 numbers from 0 to 1, over a buffer of its
