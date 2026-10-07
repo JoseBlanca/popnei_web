@@ -281,7 +281,12 @@ others start off. A threshold that is off has its box empty, with
 "No filter" in it, and its line at the top of the axis, labelled "No
 filter", with no shading and the line "Keeps every variant". Dragging
 the line or typing a number turns the filter on at that value; emptying
-the box turns it off. Off, the project keeps it aside with its last
+the box turns it off. The number box shared by both pages,
+`src/ui/widgets/NumberField.tsx`, gives nothing today for an empty box
+and shows its value again; it gains an option, used by `popgen2.html`
+only, under which Enter or leaving an empty box commits "off". From off,
+the arrow keys in the empty box do nothing, as today; on the line they
+turn the filter on, one step below the top of the axis. Off, the project keeps it aside with its last
 value, in `filtersOff` for the variants and `individualFiltersOff` for
 the individuals, as it keeps a filter the user turns off on the old
 page. A number typed above the axis is kept as typed, and the axis
@@ -289,7 +294,13 @@ widens to show it (`histogramScales`), as today.
 
 The presses of one run of arrow keys not yet made a change are made one
 before any other command reaches the project: Undo, Redo, a click on
-the box, another threshold, opening a file. Otherwise Undo pressed in
+the box, another threshold, opening a file. A click elsewhere takes the
+focus from the line, and leaving it makes the change, before the click
+acts. Ctrl+Z and Ctrl+Y keep the focus on the line, and are caught on
+`window` by the page; so the line catches them itself while it holds
+presses not yet made a change, makes the change, and then lets the
+Undo or Redo go on, as the number box already catches Ctrl+Z while
+something is typed in it. Otherwise Undo pressed in
 the quiet second would undo the change before the run, and the run,
 made a change after it, would clear Redo; or the run would land on the
 project of another file.
@@ -336,16 +347,20 @@ and Cmd+Shift+Z, caught in the shell's header through
 `src/ui/shell/shortcuts.ts`) and the notice (`src/ui/shell/Notice.tsx`)
 are the shell's. The page gains a header row above the box of the file
 with the two buttons, the keys caught as the shell catches them, and
-the notice under it, reused from the shell rather than copied.
+the notice under it, reused from the shell rather than copied. The
+notice takes its words from the shell's words (`ShellWords` of
+`src/ui/shell/words.ts`), which ask for the old page's steps and counts
+that `popgen2.html` does not have; so the words the notice needs are
+split out of them into a set of their own, which both pages give.
 
 The store gives no notice today for a change that removes, leaves
 behind or stops no result (`changedByUser` of `src/core/store.ts` sets
 the notice to `null`), which is every change of a threshold on this
-page. So the store's notice changes: a change of a filter always gives
-one, which says what changed, "The MAF filter changed · Undo". That is
-a change of the store's interface, shared by both pages; on the old
-page it adds the notice to a change of a filter that touched no
-result. On `popgen2.html` no calculation is left behind by such a
+page. So the store gains a setting, on for `popgen2.html` only, under
+which a change of a filter always gives a notice, which says what
+changed, "The MAF filter changed · Undo". The old page does not turn it
+on: its number boxes make a change at every press of an arrow key, and
+a screen reader would read a notice at every press of a held key. On `popgen2.html` no calculation is left behind by such a
 change, so the notice says nothing of calculations stopped. With the presses of one
 run of arrow keys made one change, a screen reader says the notice once
 per run, not at every press.
@@ -471,8 +486,11 @@ Made on this branch once the owner approves, each with its paragraph
   regions and before the list of the individuals, carried out after the
   individuals are judged; `filtersApplied`, the filters that apply to the project's
   file.
-- Section 4: the store's notice given for every change of a filter;
-  the failures cleared by a change only when their key is left behind.
+- Section 3: the store's setting of a notice for every change of a
+  filter; the failures cleared by a change only when their key is left
+  behind. The spec of the store, `docs/specs/core/store.md`, which says
+  a failure lasts "until the next change of the project", changes with
+  it.
 - Section 5: the thresholds of `popgen2.html` change the project and
   start no calculation; the presses of one run of arrow keys make one
   change; the last result so far kept after a Stop; the quiet second and
