@@ -19,9 +19,9 @@
  *
  * The arrow keys in the box move the threshold as they move the line, one
  * step of the line, Page Up and Page Down ten, from where the line is,
- * at the number typed when one is: React Aria would step from the number
- * shown, with four decimals, to the edge nearest it, which for 0.0703,
- * shown for the edge 0.0703125, is the same edge.
+ * at the number typed when one is: React Aria would step by its own
+ * step from the number the box holds, which a number typed leaves off
+ * the edges.
  *
  * From its focus to the first commit or to its blur, the box keeps the
  * number it showed when it took the focus: a threshold never set follows
@@ -182,6 +182,7 @@ export function StatsHistogram({
           maxValue={threshold.box.maxValue}
           step={threshold.box.step}
           decimals={threshold.box.decimals}
+          width="long"
           describedBy={
             snappedLine === null ? wordsId : `${wordsId} ${snappedId}`
           }

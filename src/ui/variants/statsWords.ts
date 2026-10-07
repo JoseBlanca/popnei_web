@@ -250,14 +250,20 @@ export interface ThresholdCounts {
 /** The kind of what a histogram counts, in the words under it. */
 export type Counted = "variant" | "individual";
 
-/** The most decimals a threshold is shown with, in its box, the words
-    under its plot and the value text of its line: 4, which name each of
-    popnei's 1,281 fine edges apart, 0.3398 for 435/1280, and the step of
-    the thresholds of the individuals. */
+/** The most decimals a threshold of the individuals is shown and typed
+    with, in its box, the words under its plot and the value text of its
+    line: 4, the step of its line. Its count is exact at any number. */
 export const THRESHOLD_DECIMALS = 4;
 
-/** `value` rounded to `THRESHOLD_DECIMALS` decimals, as a threshold is
-    shown: 0.3398 for 0.33984375, 0.05 for 0.05. */
+/** The most decimals a threshold of the variants is shown and typed
+    with: 8, those of popnei's fine edges, k/1280, 0.33984375 for
+    435/1280, each shown in full, since the counts are of the edge and
+    a number rounded off it may keep other variants: on the MAF of
+    panel.vcf.gz popnei keeps 51 at 0.5203125 and 49 at 0.5203. */
+export const VARIANT_THRESHOLD_DECIMALS = 8;
+
+/** `value` rounded to `THRESHOLD_DECIMALS` decimals, as a threshold of
+    the individuals is shown: 0.03 for 0.030000000000000002. */
 export function thresholdShown(value: number): number {
   return Number(value.toFixed(THRESHOLD_DECIMALS));
 }
@@ -269,8 +275,8 @@ export interface ThresholdWordsOptions {
   /** The threshold was never set and stands at the top of the axis,
       where it keeps everything: a starting place, not a limit. */
   readonly noLimit?: boolean;
-  /** The end of the bin that starts at the line, as shown, 0.0508 for
-      the line at 0.05, which the words of a range name. */
+  /** The end of the bin that starts at the line, 0.05078125 for the
+      line at 0.05, which the words of a range name. */
   readonly binEnd?: number;
 }
 
@@ -279,7 +285,7 @@ export interface ThresholdWordsOptions {
     150"; "keeps all 1,200 variants", or "(no limit) keeps all 1,200
     variants" for a threshold never set, `noLimit`; and, with the range
     the bins allow, why, once: "keeps 1,113 to 1,152 variants; the bins
-    cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05". `shown`
+    cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05". `shown`
     is the number of the threshold as the box shows it. While the pass
     runs, `soFar`, the counts are of the variants read so far and say
     so. */
@@ -323,7 +329,8 @@ export function thresholdValueText(
 
 /** The line under the box of a threshold of the variants after a number
     typed was moved to the nearest of popnei's edges, which the counts
-    are of: "0.07 is counted as 0.0703, the nearest edge of the bins." */
+    are of: "0.07 is counted as 0.0703125, the nearest edge of the
+    bins." */
 export function snappedText(typed: number, shown: number): string {
   return `${numberText(typed)} is counted as ${numberText(shown)}, the nearest edge of the bins.`;
 }

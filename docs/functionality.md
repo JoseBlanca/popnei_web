@@ -78,8 +78,10 @@ the values at most it, from 7 October 2026: a line the user drags on
 the plot or a number typed in a box under it, after the word "Maximum",
 the bars beyond it drawn as removed, and beside the box what it keeps
 and removes, "keeps 1,050 variants and removes 150", or "(no limit)
-keeps all 1,200 variants" for one the user has not set. A threshold is
-shown with at most four decimals. These
+keeps all 1,200 variants" for one the user has not set. A threshold of
+the variants is shown in full, up to eight decimals, 0.33984375, since
+its count is of that number and a number rounded off it may keep other
+variants; one of the individuals with at most four decimals. These
 thresholds are shown, not applied: they are no filters, change no
 statistic and no other part of the page, and start again at another
 file or a reload, the missing rate of the variants at 0.1 and the others
@@ -88,7 +90,7 @@ bins of 1/1280, a number typed being moved to the nearest edge with a
 line that says so; where those bins cannot tell whether the variants
 whose value is on the threshold itself are kept, the words give the
 range they allow and why, "keeps 1,113 to 1,152 variants; the bins
-cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05" on
+cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05" on
 panel.vcf.gz, and the bar that starts at the line is hatched, until
 popnei counts it exactly (docs/plans/thresholds.md). Applying them as
 filters is the design docs/designs/stats-filters.md.

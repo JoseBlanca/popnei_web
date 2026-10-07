@@ -26,7 +26,6 @@ import type { VariantStatistic } from "../src/core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../src/worker/protocol.ts";
 import {
   thresholdLine,
-  thresholdShown,
   thresholdValueText,
 } from "../src/ui/variants/statsWords.ts";
 import { expect, test } from "./axe.ts";
@@ -78,14 +77,14 @@ function numbersOf(value: unknown): number[] {
 }
 
 /** The words after the box of the histogram of `statistic` of the
-    variants with its threshold set at the fine edge `index`, from the
-    core's counts. */
+    variants with its threshold set at the fine edge `index`, shown in
+    full, from the core's counts. */
 function variantWords(statistic: VariantStatistic, index: number): string {
   return thresholdLine(
-    thresholdShown(index / 1280),
+    index / 1280,
     variantsAtMost(PANEL.variants, statistic, index),
     "variant",
-    { binEnd: thresholdShown((index + 1) / 1280) },
+    { binEnd: (index + 1) / 1280 },
   );
 }
 
@@ -242,7 +241,8 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
   const index = Number(await het.slider.inputValue());
   expect(index).toBeGreaterThan(0);
   expect(index).toBeLessThan(896);
-  const shown = thresholdShown(index / 1280);
+  // The edge in full, the number counted.
+  const shown = index / 1280;
   await expect(het.box).toHaveValue(String(shown));
   await expect(het.words).toHaveText(variantWords("obsHet", index));
   await expect(het.slider).toHaveAttribute(
@@ -260,7 +260,7 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows with four decimals and a line says; an arrow of the box one edge; five decimals refused", async ({
+test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows in full, the number counted, and a line says; an arrow of the box one edge; nine decimals refused", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -278,50 +278,57 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
     Math.abs((await middleX(het.dashed)) - (await middleX(het.thumb))),
   ).toBeLessThan(1.5);
 
-  // 0.07 × 1280 is 89.6, the nearest edge 90, 0.0703125, shown 0.0703.
+  // 0.07 × 1280 is 89.6, the nearest edge 90, 0.0703125.
   await het.box.fill("0.07");
   await het.box.press("Enter");
   const edge = snapToFineEdge(PANEL.variants.binEdges, 0.07);
   expect(edge.index).toBe(90);
-  await expect(het.box).toHaveValue("0.0703");
-  // On the step of the box, 0.0001, so React Aria does not mark it
-  // invalid, as it would with the step of the edges.
+  await expect(het.box).toHaveValue("0.0703125");
+  // On the step of the box, one fine edge, so React Aria does not mark
+  // it invalid.
   await expect(het.box).not.toHaveAttribute("aria-invalid", "true");
   await expect(het.slider).toHaveValue("90");
   await expect(het.words).toHaveText(variantWords("obsHet", 90));
   const snapped = het.group.getByText(
-    "0.07 is counted as 0.0703, the nearest edge of the bins.",
+    "0.07 is counted as 0.0703125, the nearest edge of the bins.",
   );
   await expect(snapped).toBeVisible();
   await expect(het.box).toHaveAccessibleDescription(
-    `${variantWords("obsHet", 90)} 0.07 is counted as 0.0703, the nearest edge of the bins.`,
+    `${variantWords("obsHet", 90)} 0.07 is counted as 0.0703125, the nearest edge of the bins.`,
   );
   await expectNoViolations(makeAxeBuilder);
 
-  // The Up arrow in the box: the next fine edge, 91, 0.07109375, shown
-  // 0.0711; the line of the number moved goes.
+  // The Up arrow in the box: the next fine edge, 91, 0.07109375; the line
+  // of the number moved goes.
   await het.box.press("ArrowUp");
-  await expect(het.box).toHaveValue("0.0711");
+  await expect(het.box).toHaveValue("0.07109375");
   await expect(het.slider).toHaveValue("91");
   await expect(het.words).toHaveText(variantWords("obsHet", 91));
   await expect(snapped).toHaveCount(0);
 
-  // Four decimals, the most the box takes, an edge typed as shown: 0.3398
-  // is 435/1280, 0.33984375, and moved nowhere.
-  await het.box.fill("0.3398");
+  // An edge typed in full, 435/1280, is moved nowhere.
+  await het.box.fill("0.33984375");
   await het.box.press("Enter");
   await expect(het.slider).toHaveValue("435");
-  await expect(het.box).toHaveValue("0.3398");
+  await expect(het.box).toHaveValue("0.33984375");
   await expect(het.group.getByText(/is counted as/u)).toHaveCount(0);
-  // Five decimals are refused, and the threshold stays.
-  await het.box.fill("0.12345");
+
+  // Four decimals are no edge: 0.3398 is counted as 0.33984375.
+  await het.box.fill("0.3398");
+  await het.box.press("Enter");
+  const moved = het.group.getByText(
+    "0.3398 is counted as 0.33984375, the nearest edge of the bins.",
+  );
+  await expect(moved).toBeVisible();
+  // Nine decimals are refused, and the threshold stays.
+  await het.box.fill("0.123456789");
   await het.box.press("Enter");
   await expect(
     het.group.getByText(
-      "0.12345 has more than four decimals; the threshold stays 0.3398.",
+      "0.123456789 has more than 8 decimals; the threshold stays 0.33984375.",
     ),
   ).toBeVisible();
-  await expect(het.box).toHaveValue("0.3398");
+  await expect(het.box).toHaveValue("0.33984375");
   await expect(het.slider).toHaveValue("435");
 
   // A threshold beyond the axis widens it, and the line goes with it.
@@ -345,8 +352,8 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
   await missing.slider.focus();
   await page.keyboard.press("ArrowLeft");
   await expect(missing.slider).toHaveValue("127");
-  // 127/1280 is 0.09921875, shown with four decimals.
-  await expect(missing.box).toHaveValue("0.0992");
+  // 127/1280 is 0.09921875, shown in full.
+  await expect(missing.box).toHaveValue("0.09921875");
   await page.keyboard.press("PageDown");
   await expect(missing.slider).toHaveValue("117");
   for (let step = 0; step < 5; step += 1) {
@@ -361,7 +368,7 @@ test("TH2 the keys of the line: an arrow one fine edge, Page Up and Down ten, wi
   await expect(missing.slider).toHaveValue("64");
   await expect(missing.box).toHaveValue("0.05");
   await expect(missing.words).toHaveText(
-    "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
+    "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05",
   );
   await expect(missing.words).toHaveText(variantWords("missingRate", 64));
   // The bar that starts at the line is hatched, neither kept nor removed.

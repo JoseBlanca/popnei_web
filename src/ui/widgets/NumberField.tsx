@@ -185,6 +185,11 @@ export interface NumberFieldProps {
       as for one typed; not for an arrow key or Page Up and Down, whose
       number is not typed, nor for a number the field refused. */
   readonly onSameCommitted?: (value: number) => void;
+  /** The width of the input: "short", for a threshold of two decimals
+      or a ploidy of three digits, or "long", for a number of ten
+      characters, a threshold on popnei's fine bins, 0.33984375; short
+      when absent. */
+  readonly width?: "short" | "long";
 }
 
 /** A number field with its label, and the line of a number it refused. */
@@ -204,6 +209,7 @@ export function NumberField({
   onTyped,
   onChange,
   onSameCommitted,
+  width = "short",
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
@@ -402,6 +408,7 @@ export function NumberField({
         }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
+        width={width}
         // An empty field, given NaN, holds no text: "NaN" is no number
         // of the field to put back.
         committedText={Number.isNaN(value) ? "" : numberText(value)}
@@ -479,6 +486,8 @@ interface FieldInputProps {
       point (docs/specs/steps/variants.md, "A character the fields do
       not take"). */
   readonly inputMode: "numeric" | "text";
+  /** As the field's. */
+  readonly width: "short" | "long";
   /** The number the field holds as it shows it, which Ctrl+Z puts back
       while something is typed. */
   readonly committedText: string;
@@ -506,6 +515,7 @@ function FieldInput({
   onCommitReady,
   onText,
   inputMode,
+  width,
   committedText,
   isTyped,
   onRevert,
@@ -584,7 +594,11 @@ function FieldInput({
   return (
     <Input
       ref={inputRef}
-      className={classOf(styles, "input")}
+      className={
+        width === "long"
+          ? `${classOf(styles, "input")} ${classOf(styles, "long")}`
+          : classOf(styles, "input")
+      }
       inputMode={inputMode}
       {...{ [NUMBER_FIELD_ATTRIBUTE]: "" }}
       onChange={(event) => {

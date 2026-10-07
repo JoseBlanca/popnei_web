@@ -105,19 +105,22 @@ describe("thresholds 2 the words of a threshold", () => {
     );
   });
 
-  test("fix 3 a threshold is shown with four decimals, and a number typed and moved to an edge says so", () => {
-    expect(thresholdShown(435 / 1280)).toBe(0.3398);
-    expect(thresholdShown(90 / 1280)).toBe(0.0703);
-    expect(thresholdShown(64 / 1280)).toBe(0.05);
+  test("fix 3 a threshold of the individuals is shown with four decimals", () => {
+    expect(thresholdShown(0.03000000001)).toBe(0.03);
     expect(thresholdShown(0.0439)).toBe(0.0439);
-    // Four decimals name each of the 1,281 edges apart.
-    const shown = new Set(
-      Array.from({ length: 1281 }, (_, k) => thresholdShown(k / 1280)),
+  });
+
+  test("th3 fix 1 an edge of the variants is shown in full, the number counted, and a number typed and moved to it says so", () => {
+    expect(snappedText(0.07, 0.0703125)).toBe(
+      "0.07 is counted as 0.0703125, the nearest edge of the bins.",
     );
-    expect(shown.size).toBe(1281);
-    expect(snappedText(0.07, 0.0703)).toBe(
-      "0.07 is counted as 0.0703, the nearest edge of the bins.",
-    );
+    expect(
+      thresholdValueText(
+        0.21953125,
+        { keptLow: 15, keptHigh: 15, withValue: 20 },
+        "variant",
+      ),
+    ).toBe("0.21953125, keeps 15 of 20 variants");
   });
 
   test("one, none, and no value at all", () => {

@@ -7,6 +7,8 @@ import type {
   IndividualChecksResult,
   VariantChecksResult,
 } from "../../worker/protocol.ts";
+import { variantsAtMost } from "../../core/thresholds.ts";
+import { numberText } from "../widgets/committedNumber.ts";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { UNDECIDED_DESCRIPTION } from "./statsWords.ts";
 import type { VariantStatsPart } from "../../worker/protocol.ts";
@@ -176,22 +178,24 @@ describe("the histograms of the statistics of the open file", () => {
 /** popnei's fine bins and values of each individual of panel.vcf.gz,
     from e2e/fixtures/threshold_counts.json, which make_fixtures.mjs wrote
     with popnei 0.2.1 under node: 1,200 variants of 200 individuals. */
-const PANEL = panelOf(
-  JSON.parse(
-    readFileSync(
-      new URL("../../../e2e/fixtures/threshold_counts.json", import.meta.url),
-      "utf8",
-    ),
-  ) as unknown,
+const THRESHOLD_COUNTS: unknown = JSON.parse(
+  readFileSync(
+    new URL("../../../e2e/fixtures/threshold_counts.json", import.meta.url),
+    "utf8",
+  ),
 );
+const PANEL = partsOf(THRESHOLD_COUNTS, "panel.vcf.gz");
 
-/** The part of the variants and the part of the individuals of
-    panel.vcf.gz in the fixture `parsed`. */
-function panelOf(parsed: unknown): {
+/** The part of the variants and the part of the individuals of the file
+    `name` in the fixture `parsed`. */
+function partsOf(
+  parsed: unknown,
+  name: string,
+): {
   readonly variants: VariantStatsPart;
   readonly individuals: IndividualChecksResult;
 } {
-  const file = fieldOf(fieldOf(parsed, "panel.vcf.gz"), "");
+  const file = fieldOf(parsed, name);
   const counts = fieldOf(file, "counts");
   const distrib = (statistic: string) => ({
     mean: NaN,
@@ -254,13 +258,13 @@ describe("thresholds 2 the threshold on each histogram", () => {
       "0.1 (no limit), keeps all 1,200 variants",
     );
     expect(plot.threshold.name).toBe("Maximum proportion of missing genotypes");
-    // The box: from 0 to 1, four decimals, on which React Aria checks
-    // the number it shows.
+    // The box: from 0 to 1, the eight decimals of the fine edges, k/1280,
+    // on whose step React Aria checks the number it shows.
     expect(plot.threshold.box).toEqual({
       minValue: 0,
       maxValue: 1,
-      step: 0.0001,
-      decimals: 4,
+      step: 1 / 1280,
+      decimals: 8,
     });
     // Set at the same place, as the missing rate starts at 0.1, a limit
     // that keeps every variant.
@@ -271,9 +275,9 @@ describe("thresholds 2 the threshold on each histogram", () => {
 
   test("on an edge equal to k/1280 the bins cannot tell the variants on the edge, and the words give the range: at 0.05, 1,113 to 1,152 of the missing rate", () => {
     const plot = variantPlot("missingRate", PANEL.variants, false, 0.05);
-    // 39 variants in the bin from 0.05 to 0.05078125, 0.0508 shown.
+    // 39 variants in the bin from 0.05 to 0.05078125.
     expect(plot.threshold.line).toBe(
-      "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.0508 are at 0.05",
+      "keeps 1,113 to 1,152 variants; the bins cannot tell which of the 39 from 0.05 to 0.05078125 are at 0.05",
     );
     expect(plot.threshold.valueText).toBe(
       "0.05, keeps 1,113 to 1,152 of 1,200 variants",
@@ -311,24 +315,26 @@ describe("thresholds 2 the threshold on each histogram", () => {
     expect(plot.threshold.valueText).toBe("0.3, keeps 373 of 1,200 variants");
   });
 
-  test("a number typed is snapped to the nearest fine edge, which the box then shows with four decimals, and says so", () => {
-    // 0.07 × 1280 is 89.6: the edge 90, 0.0703125, shown 0.0703.
+  test("th3 fix 1 a number typed is snapped to the nearest fine edge, which the box then shows in full, the number counted, and says so", () => {
+    // 0.07 × 1280 is 89.6: the edge 90, 0.0703125.
     const plot = variantPlot("obsHet", PANEL.variants, false, 0.07);
-    expect(plot.threshold.shown).toBe(0.0703);
+    expect(plot.threshold.shown).toBe(0.0703125);
     expect(plot.threshold.slider.value).toBe(90);
     expect(plot.threshold.fromSlider(90)).toBe(0.0703125);
     expect(plot.data.threshold?.value).toBe(0.0703125);
-    expect(plot.threshold.valueText).toMatch(/^0\.0703, keeps /u);
-    expect(plot.threshold.snapped(0.07)).toBe(0.0703);
-    // A number shown as typed, and an edge an arrow key stepped to, are
-    // not moved.
-    expect(plot.threshold.snapped(0.0703)).toBeNull();
+    expect(plot.threshold.valueText).toMatch(/^0\.0703125, keeps /u);
+    expect(plot.threshold.snapped(0.07)).toBe(0.0703125);
+    // Four decimals are no edge either.
+    expect(plot.threshold.snapped(0.0703)).toBe(0.0703125);
+    // An edge typed, or stepped to by an arrow key, is not moved.
+    expect(plot.threshold.snapped(0.0703125)).toBeNull();
     expect(plot.threshold.snapped(0.05)).toBeNull();
     expect(plot.threshold.snapped(436 / 1280)).toBeNull();
-    // 435/1280 is 0.33984375, shown 0.3398, and 0.3398 typed is that edge.
+    // 0.3398 typed is the edge 435, 0.33984375.
     const middle = variantPlot("obsHet", PANEL.variants, false, 0.3398);
     expect(middle.threshold.slider.value).toBe(435);
-    expect(middle.threshold.shown).toBe(0.3398);
+    expect(middle.threshold.shown).toBe(0.33984375);
+    expect(middle.threshold.snapped(0.3398)).toBe(0.33984375);
   });
 
   test("the slider spans the horizontal axis of the plot, widened as the plot widens it to take a threshold beyond the bins", () => {
@@ -426,4 +432,41 @@ describe("thresholds 2 the threshold on each histogram", () => {
       "1 individual with no called genotype is not in the histogram, and the threshold neither keeps nor removes it.",
     );
   });
+});
+
+describe("th3 fix 1 the number shown for a threshold of the variants is the number counted", () => {
+  // On every edge where popnei's edge is the double above k/1280, the
+  // number shown, k/1280, is not popnei's edge; popnei's filter at the
+  // number shown, which make_fixtures.mjs ran under node, keeps a count
+  // that the words give. Four decimals, shown before, broke it on 10
+  // edges of the MAF and 9 of the observed heterozygosity of
+  // panel.vcf.gz, "0.5203: keeps 51" where popnei keeps 49.
+  const filtered = ["missingRate", "maf", "obsHet"] as const;
+  for (const name of ["panel.vcf.gz", "panel.nei", "tetraploid.vcf.gz"]) {
+    test(`on the 464 edges of ${name} off k/1280, popnei's filter at the number shown keeps a count the words give`, () => {
+      const file = fieldOf(THRESHOLD_COUNTS, name);
+      const { variants } = partsOf(THRESHOLD_COUNTS, name);
+      const offEdges = numbersOf(fieldOf(file, "offEdges"));
+      expect(offEdges).toHaveLength(464);
+      const kept = fieldOf(file, "filterKeptOffEdges");
+      let checked = 0;
+      for (const statistic of filtered) {
+        const popnei = numbersOf(fieldOf(kept, statistic));
+        for (const [i, index] of offEdges.entries()) {
+          const plot = variantPlot(statistic, variants, false, index / 1280);
+          const { shown, slider, valueText } = plot.threshold;
+          // The number popnei was given, and the edge counted.
+          expect(shown).toBe(index / 1280);
+          expect(slider.value).toBe(index);
+          expect(valueText.startsWith(`${numberText(shown)}, `)).toBe(true);
+          const counts = variantsAtMost(variants, statistic, index);
+          const count = popnei[i] ?? NaN;
+          expect(count).toBeGreaterThanOrEqual(counts.keptLow);
+          expect(count).toBeLessThanOrEqual(counts.keptHigh);
+          checked += 1;
+        }
+      }
+      expect(checked).toBe(3 * 464);
+    });
+  }
 });

@@ -399,8 +399,13 @@ console.log(
 // filterByMissingData, filterByMaf and filterByObsHet, keeps alone at
 // 0.05, 0.1, 0.3 and 0.5, the numVars of the pass of iterBlocks read to its
 // end; 0.3 is an edge one double above 384/1280, the others edges equal
-// to k/1280. And popnei's version, which the tests check against the one
-// installed. The tests of core read it, since they may not call popnei.
+// to k/1280; and, under `filterKeptOffEdges`, the variants each of the
+// three keeps at k/1280 for every edge k, listed in `offEdges`, where
+// popnei's edge is not k/1280 but the double above: the number the page
+// shows for the edge, at which popnei's filter must keep a count the page
+// gives (docs/plans/thresholds.md, the fixes of the review of phase 2).
+// And popnei's version, which the tests check against the one installed.
+// The tests of core read it, since they may not call popnei.
 const THRESHOLDS = [0.05, 0.1, 0.3, 0.5];
 const thresholdFiles = [
   ["panel.vcf.gz", { ploidy: 2, onlyPassed: false }],
@@ -460,6 +465,22 @@ for (const [name, options] of thresholdFiles) {
         ),
       ),
   );
+  const offEdges = [...perVar.maf.histBinEdges].flatMap((edge, index) =>
+    edge === index / FINE_BINS ? [] : [index],
+  );
+  const offEdgeKept = [
+    ["missingRate", "filterByMissingData"],
+    ["maf", "filterByMaf"],
+    ["obsHet", "filterByObsHet"],
+  ].map(
+    ([statistic, filter]) =>
+      `      ${JSON.stringify(statistic)}: ` +
+      JSON.stringify(
+        offEdges.map((index) =>
+          keptByFilter(name, options, filter, index / FINE_BINS),
+        ),
+      ),
+  );
   thresholdLines.push(
     `  ${JSON.stringify(name)}: {\n` +
       `    "numVars": ${JSON.stringify(summary.passStats.numVars)},\n` +
@@ -467,7 +488,9 @@ for (const [name, options] of thresholdFiles) {
       `    "counts": {\n${counts.join(",\n")}\n    },\n` +
       `    "missingGtRate": ${JSON.stringify([...perIndividual.missingGtRate])},\n` +
       `    "obsHetRate": ${JSON.stringify([...perIndividual.obsHetRate])},\n` +
-      `    "filterKept": {\n${filterKept.join(",\n")}\n    }\n  }`,
+      `    "filterKept": {\n${filterKept.join(",\n")}\n    },\n` +
+      `    "offEdges": ${JSON.stringify(offEdges)},\n` +
+      `    "filterKeptOffEdges": {\n${offEdgeKept.join(",\n")}\n    }\n  }`,
   );
 }
 const thresholdsPath = join(fixtures, "threshold_counts.json");

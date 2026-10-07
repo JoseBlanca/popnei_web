@@ -21,12 +21,14 @@
  * widened as the plot widens it to take a threshold outside the bins.
  * The threshold the user set is `null` until they move it, at the top of
  * the axis, where it keeps everything and follows the axis as a result
- * so far widens it, and its words say "(no limit)". Each is shown with
- * at most four decimals. Those of the variants move from one of popnei's
- * 1,280 fine edges to the next, a number typed being snapped to the
- * nearest, and are counted from popnei's fine bins, `variantsAtMost`;
- * those of the individuals move by 0.0001 and are counted from popnei's
- * value of each, `individualsAtMost`.
+ * so far widens it, and its words say "(no limit)". Those of the
+ * variants move from one of popnei's 1,280 fine edges to the next, a
+ * number typed being snapped to the nearest, are counted from popnei's
+ * fine bins, `variantsAtMost`, and are shown in full, k/1280, up to
+ * eight decimals, 0.33984375, so that the number shown is the number
+ * counted; those of the individuals move by 0.0001, are shown with at
+ * most four decimals and are counted from popnei's value of each,
+ * `individualsAtMost`, exact at any number.
  */
 import {
   variantBinsRounded,
@@ -65,6 +67,7 @@ import {
   overIndividualsLine,
   overVariantsLine,
   THRESHOLD_DECIMALS,
+  VARIANT_THRESHOLD_DECIMALS,
   thresholdLine,
   thresholdShown,
   thresholdValueText,
@@ -79,9 +82,10 @@ import type {
 
 /** The step of a threshold of the individuals, and of its box, which
     takes four decimals, as the thresholds of the individuals of the old
-    page do. The box of the variants takes four too, `THRESHOLD_DECIMALS`,
-    a number with more refused and one with fewer snapped to the nearest
-    fine edge, and has the same step. */
+    page do. The box of the variants takes eight,
+    `VARIANT_THRESHOLD_DECIMALS`, those of the fine edges, a number with
+    more refused and one off an edge snapped to the nearest, and its step
+    is one fine edge. */
 export const INDIVIDUAL_THRESHOLD_STEP = 0.0001;
 
 /** One histogram of the section. */
@@ -101,9 +105,10 @@ export interface PlotThreshold {
   /** The name of the slider and of the box: "Maximum proportion of
       missing genotypes". */
   readonly name: string;
-  /** The number of the threshold as the box and the words show it, with
-      at most four decimals: for the variants an edge of popnei's fine
-      bins, k/1280, so rounded, 0.3398 for 435/1280. */
+  /** The number of the threshold as the box and the words show it: for
+      the variants an edge of popnei's fine bins in full, k/1280,
+      0.33984375 for 435/1280, the number its counts are of; for the
+      individuals at most four decimals. */
   readonly shown: number;
   /** The range of the slider, the horizontal axis of the plot, and where
       it is, in its own units: the index of a fine edge for the
@@ -122,7 +127,7 @@ export interface PlotThreshold {
   readonly fromSlider: (value: number) => number;
   /** The number the box will show for `value`, a number committed in it,
       when that differs from `value`, which was moved to the nearest fine
-      edge, 0.0703 for 0.07; `null` when it is shown as committed. */
+      edge, 0.0703125 for 0.07; `null` when it is shown as committed. */
   readonly snapped: (value: number) => number | null;
 }
 
@@ -142,9 +147,10 @@ export interface SliderRange {
 export interface BoxRange {
   readonly minValue: number;
   readonly maxValue: number;
-  /** The step of the number the box shows, 0.0001, which React Aria
-      checks it against; the arrow keys of the box move the threshold by
-      the step of the slider, one fine edge for the variants. */
+  /** The step of the number the box shows, which React Aria checks it
+      against: one fine edge, 1/1280, for the variants, 0.0001 for the
+      individuals; the arrow keys of the box move the threshold by the
+      step of the slider. */
   readonly step: number;
   /** The most decimals a number typed may have, apart from the step. */
   readonly decimals: number;
@@ -182,8 +188,8 @@ export function variantPlot(
     threshold === null
       ? axisHigh
       : snapToFineEdge(result.binEdges, threshold).index;
-  const edge = index / numBins;
-  const shown = thresholdShown(edge);
+  // Shown in full, the number counted (VARIANT_THRESHOLD_DECIMALS).
+  const shown = index / numBins;
   const counts = variantsAtMost(result, statistic, index);
   // The variants on the line are somewhere in the bin that starts at it.
   const undecided = counts.keptLow !== counts.keptHigh;
@@ -193,7 +199,7 @@ export function variantPlot(
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(edge, undecided),
+    threshold: noLegend(shown, undecided),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const described = variantHistogramDescription(statistic, rows, null);
@@ -220,23 +226,20 @@ export function variantPlot(
       box: {
         minValue: 0,
         maxValue: 1,
-        step: INDIVIDUAL_THRESHOLD_STEP,
-        decimals: THRESHOLD_DECIMALS,
+        step: 1 / numBins,
+        decimals: VARIANT_THRESHOLD_DECIMALS,
       },
       ...wordsOf(shown, counts, "variant", {
         soFar,
         noLimit: threshold === null,
         ...(index < numBins && {
-          binEnd: thresholdShown((index + 1) / numBins),
+          binEnd: (index + 1) / numBins,
         }),
       }),
       fromSlider: (value) => value / numBins,
       snapped: (value) => {
-        // An edge itself, as an arrow key of the box steps to, is no
-        // number moved, though it is shown with four decimals.
         const nearest = snapToFineEdge(result.binEdges, value).shown;
-        const moved = thresholdShown(nearest);
-        return nearest === value || moved === value ? null : moved;
+        return nearest === value ? null : nearest;
       },
     },
   };

@@ -48,6 +48,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Wide enough for ten characters, 0.33984375, at any size of the text. */
+.long {
+  inline-size: calc(11ch + 2 * var(--space-2));
+}
+
 .input[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
