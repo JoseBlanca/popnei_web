@@ -408,6 +408,31 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     expect(buttonsOf()).toEqual(["Start again"]);
   });
 
+  test("a VCF whose variants all failed gives their number, with no failure", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    await endWith(page, 0, summaryResult(["1"], [5], ["i1", "i2"]));
+    // popnei's counts under node of a VCF of 5 variants, all LowQual.
+    await endWith(page, 1, {
+      analysis: "filterFailures",
+      passStats: {
+        numVars: 0,
+        filtering: { passed: { varsProcessed: 5, varsKept: 0 } },
+      },
+    });
+    expect(linesOf()).toEqual([
+      "low_qual.vcf.gz · 30 KB",
+      "Individuals: 2",
+      "Variants: 5",
+      "Failed FILTER: 5",
+      "Chromosomes: 1",
+      "Ploidy: 2",
+    ]);
+    expect(buttonsOf()).toEqual([]);
+  });
+
   test("a .nei file has no line of the FILTER failures, and its chain ends with the summary", async () => {
     const page = await drawPage("nei");
     act(() => {

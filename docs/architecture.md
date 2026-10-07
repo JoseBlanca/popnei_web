@@ -1298,7 +1298,10 @@ The page and each worker talk through typed messages
   the page's one group, `POPGEN2_CHAIN`, `[variantsSummary,
   filterFailures]`: the count of the variants of a VCF that failed their
   FILTER, a pass of popnei's `calcVarDensity` under the step
-  `filterPassed`, which reads no genotype; its counts carry the kind
+  `filterPassed`, which reads no genotype, and, when popnei refuses that
+  pass, as it does a VCF whose variants all failed, a second pass of its
+  blocks read to their end, which accepts no variant kept
+  (`docs/specs/worker/runner.md`); its counts carry the kind
   `"passed"`, a `PassFilterKind` beside the kinds of the filters of the
   variants, which no project holds. The summary keeps every variant,
   since that step would take the failed ones out of the statistics. On a

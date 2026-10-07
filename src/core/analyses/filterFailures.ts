@@ -6,9 +6,9 @@
  * module says what it is calculated from, the request, the check number
  * and the lines of the Python script.
  *
- * The numbers are popnei's, from one pass of `calcVarDensity` with one
- * window per chromosome under the step `filterPassed`, which keeps the
- * variants that passed; the pass reads no genotype. Its counts give the
+ * The numbers are popnei's, from one pass under the step `filterPassed`,
+ * which keeps the variants that passed (the worker's runner says which
+ * pass, and why a second when no variant passed). Its counts give the
  * variants of the file, given to that step, and those it kept; the
  * failures are the difference. The step would take the failed variants out
  * of every result of its pass, which is why it has a pass of its own and
@@ -21,7 +21,6 @@
 import type { Project } from "../project.ts";
 import { escaped } from "../project.ts";
 import type { AnalysisDef, Warning, WorkerClient } from "../store.ts";
-import { ONE_WINDOW_PER_CHROM } from "../../worker/protocol.ts";
 import type {
   FilterFailuresResult,
   Job,
@@ -109,10 +108,10 @@ function numCheckNumbers(): number {
 /**
  * The lines of the Python script that print the same count, opening the
  * VCF again with every variant, `only_passed=False`, as the page reads it,
- * and putting `filter_passed` on it, with popnei's `calc_var_density` and
- * one window per chromosome, as the page does. Throws a defect on a
- * project with no variants file, since it is asked only of an analysis
- * that has run.
+ * putting `filter_passed` on it, and reading its blocks to their end, a
+ * pass that gives its counts also when no variant passed, where the page's
+ * `calc_var_density` is refused. Throws a defect on a project with no
+ * variants file, since it is asked only of an analysis that has run.
  */
 function script(p: Project): string {
   const variants = p.variants;
@@ -125,12 +124,10 @@ function script(p: Project): string {
     "# The variants that failed their FILTER: neither PASS nor a dot",
     `variants_passed = ${pythonOpenVariants(variants)}`,
     "variants_passed.filter_passed()",
-    "passed_density = popnei.calc_var_density(",
-    "    variants_passed,",
-    `    ${String(ONE_WINDOW_PER_CHROM)},`,
-    "    chrom_lengths={},",
-    ")",
-    'passed_counts = passed_density.pass_stats.filtering["passed"]',
+    "passed_blocks = variants_passed.iter_blocks(fields=())",
+    "for _ in passed_blocks:",
+    "    pass",
+    'passed_counts = passed_blocks.pass_stats.filtering["passed"]',
     'print("Failed their FILTER:", passed_counts.vars_processed - passed_counts.vars_kept)',
   ]
     .map((line) => `${line}\n`)

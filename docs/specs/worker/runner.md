@@ -645,16 +645,25 @@ A `filterFailures` job, of popgen2.html and for a VCF alone, holds its
 pass with no filter of the variants and no list of individuals. Its
 steps are popnei's `filterPassed` alone, put first, as popnei advises;
 `Steps` of the runner carries it as `passed`, and a `Variants` whose
-first step is not of kind `"passed"` is not the job's. The runner makes
-one call, `calcVarDensity(variants, ONE_WINDOW_PER_CHROM, {
-chromLengths: {} })`, a pass that reads no genotype, and gives back its
-`passStats` alone, whose `filtering` holds `"passed"` and nothing else,
-a defect otherwise, as for every job. Under node on popnei js-v0.2.1,
-`low_qual.vcf.gz` gives `passed` 1,200 given and 900 kept, and
-`panel.vcf.gz` 1,200 and 1,200; on `panel.nei` popnei refuses the pass,
-"the variants hold no record of whether they passed their FILTER...",
-which the page never asks, since the analysis is locked for a `.nei`
-file (`src/worker/runnerFilterFailures.test.ts`).
+first step is not of kind `"passed"` is not the job's. The runner calls
+`calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} })`,
+a pass that reads no genotype, and gives back its `passStats` alone,
+whose `filtering` holds `"passed"` and nothing else, a defect otherwise,
+as for every job. popnei refuses that call when the step keeps no
+variant, a VCF whose variants all failed their FILTER; so when popnei
+refuses it, whatever its words, the runner makes a second pass, the
+blocks of `iterBlocks({ fields: [] })` read to their end, as for a
+`filterCounts` job, and its counts, or its refusal, are the answer. The
+second pass is not the only one because it reads the genotypes: under
+node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
+took 2.4 s, and `calcVarDensity` 0.9 s. The progress of each pass is
+told as it reads, so after a refusal the bar fills a second time. Under
+node on popnei js-v0.2.1, `low_qual.vcf.gz` gives `passed` 1,200 given
+and 900 kept, `panel.vcf.gz` 1,200 and 1,200, and a VCF of 5 variants
+that all failed 5 and 0; on `panel.nei` popnei refuses both passes, "the
+variants hold no record of whether they passed their FILTER...", which
+the page never asks, since the analysis is locked for a `.nei` file
+(`src/worker/runnerFilterFailures.test.ts`).
 
 ### The result so far
 

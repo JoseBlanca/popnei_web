@@ -1204,14 +1204,7 @@ function variantDistribOf(distrib: StatsDistrib): VariantDistrib {
  * around the whole of it, as around a call.
  */
 function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
-  const answer = passOf(pass, (variants) => {
-    const blocks = variants.iterBlocks({ fields: [] });
-    let next = blocks.next();
-    while (next.done !== true) {
-      next = blocks.next();
-    }
-    return blocks.passStats;
-  });
+  const answer = passOf(pass, iteratedPassStats);
   if (answer.kind !== "ok") {
     return answer;
   }
@@ -1223,26 +1216,51 @@ function runFilterCounts(pass: Pass, job: FilterCountsJob): Answer<JobResult> {
 }
 
 /**
- * Runs `calcVarDensity` with one window per chromosome under the step
- * `filterPassed`, a pass that reads no genotype, and gives its counts
- * alone: `"passed"` was given every variant of the file and kept those
- * whose FILTER is `PASS` or a dot. `chromLengths` is empty, as for the
- * summary, so that a header of thousands of scaffolds does not give a
- * window to each. On a vars file written before format 1.2 popnei refuses
- * the pass at its first block, which the page never asks of it.
+ * Counts the variants given to the step `filterPassed` and those it kept,
+ * every variant of the file and those whose FILTER is `PASS` or a dot, and
+ * gives these counts alone. The pass is `calcVarDensity` with one window
+ * per chromosome, which reads no genotype; `chromLengths` is empty, as for
+ * the summary, so that a header of thousands of scaffolds does not give a
+ * window to each. When popnei refuses it, as it does a pass that keeps no
+ * variant, a VCF whose variants all failed, the counts come from a second
+ * pass, the blocks iterated to their end, which accepts no variant kept,
+ * and its answer is the answer, a refusal of the file among them. The
+ * second pass is not the only one because it reads the genotypes: under
+ * node on a VCF of 200,000 variants and 1,000 individuals (127.6 MB) it
+ * took 2.4 s and `calcVarDensity` 0.9 s. On a vars file written before
+ * format 1.2 popnei refuses both at their first block, which the page
+ * never asks of it.
  */
 function runFilterFailures(pass: Pass): Answer<JobResult> {
-  const answer = passOf(pass, (variants) =>
+  const density = passOf(pass, (variants) =>
     calcVarDensity(variants, ONE_WINDOW_PER_CHROM, { chromLengths: {} }),
   );
+  const answer =
+    density.kind === "refused"
+      ? passOf(pass, iteratedPassStats)
+      : density.kind === "ok"
+        ? { kind: "ok" as const, value: density.value.passStats }
+        : density;
   if (answer.kind !== "ok") {
     return answer;
   }
   const result: FilterFailuresResult = {
     analysis: "filterFailures",
-    passStats: passStatsOfKinds(answer.value.passStats, [PASSED_STEP]),
+    passStats: passStatsOfKinds(answer.value, [PASSED_STEP]),
   };
   return { kind: "ok", value: result };
+}
+
+/** Iterates popnei's blocks of `variants`, the genotypes alone, to their
+    end, keeping none, and gives the counts of the pass, read after it:
+    they come also when the steps keep no variant. */
+function iteratedPassStats(variants: Variants): PopneiPassStats {
+  const blocks = variants.iterBlocks({ fields: [] });
+  let next = blocks.next();
+  while (next.done !== true) {
+    next = blocks.next();
+  }
+  return blocks.passStats;
 }
 
 /** The measures of the distances between populations asked of popnei,

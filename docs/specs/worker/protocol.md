@@ -621,7 +621,9 @@ export interface VariantsSummaryResult {
 
 // The count of the variants of a VCF that failed their FILTER, of
 // popgen2.html: popnei's calcVarDensity with one window per chromosome
-// under the step filterPassed, a pass that reads no genotype. Its counts
+// under the step filterPassed, a pass that reads no genotype, or, when
+// popnei refuses it, as it does when no variant passed, the blocks of
+// iterBlocks read to their end under the same step (runner.md). Its counts
 // hold "passed" alone: the variants of the file as varsProcessed, those
 // whose FILTER is PASS or a dot as varsKept; the failures are their
 // difference. Never sent for a .nei file (docs/plans/live-stats.md).

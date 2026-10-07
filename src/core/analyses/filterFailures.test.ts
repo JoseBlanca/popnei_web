@@ -198,18 +198,16 @@ describe("live-stats 3 the count of the FILTER failures: the result", () => {
 });
 
 describe("live-stats 3 the count of the FILTER failures: the Python script", () => {
-  test("opens the VCF with every variant, keeps those that passed, and prints the difference of popnei's counts", () => {
+  test("opens the VCF with every variant, keeps those that passed, reads its blocks to the end, also when none passed, and prints the difference of popnei's counts", () => {
     expect(filterFailures.script(project())).toBe(
       [
         "# The variants that failed their FILTER: neither PASS nor a dot",
         'variants_passed = popnei.open_vcf("low_qual.vcf.gz", only_passed=False)',
         "variants_passed.filter_passed()",
-        "passed_density = popnei.calc_var_density(",
-        "    variants_passed,",
-        "    9007199254740991,",
-        "    chrom_lengths={},",
-        ")",
-        'passed_counts = passed_density.pass_stats.filtering["passed"]',
+        "passed_blocks = variants_passed.iter_blocks(fields=())",
+        "for _ in passed_blocks:",
+        "    pass",
+        'passed_counts = passed_blocks.pass_stats.filtering["passed"]',
         'print("Failed their FILTER:", passed_counts.vars_processed - passed_counts.vars_kept)',
         "",
       ].join("\n"),

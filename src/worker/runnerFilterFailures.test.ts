@@ -7,7 +7,10 @@
  * low_qual.vcf.gz gave `passed` 1,200 given and 900 kept, 300 failures
  * with FILTER LowQual; panel.vcf.gz 1,200 and 1,200; and on panel.nei
  * popnei refused the pass, "the variants hold no record of whether they
- * passed their FILTER...".
+ * passed their FILTER...". On a VCF of 5 variants that all failed,
+ * `calcVarDensity` refused the pass, "the pass gave no variant...", and
+ * `iterBlocks({fields: []})` read to its end gave `passed` 5 given and 0
+ * kept, told its progress twice.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,6 +60,20 @@ function opened(name: string): Runner {
   return runner;
 }
 
+/** A VCF of two individuals and 5 variants, every one with FILTER
+    LowQual. */
+function allFailedVcf(): Uint8Array {
+  const lines = [
+    "##fileformat=VCFv4.2",
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ts1\ts2",
+  ];
+  for (let i = 1; i <= 5; i++) {
+    lines.push(`1\t${String(i * 10)}\t.\tA\tG\t.\tLowQual\t.\tGT\t0/1\t1/1`);
+  }
+  return new TextEncoder().encode(`${lines.join("\n")}\n`);
+}
+
 function ignore(): void {
   // The progress, which these tests do not look at.
 }
@@ -93,6 +110,26 @@ describe("live-stats 3 the runner's count of the FILTER failures", () => {
       numVars: 1200,
       filtering: { passed: { varsProcessed: 1200, varsKept: 1200 } },
     });
+  });
+
+  test("a VCF whose 5 variants all failed: 5 given to passed, none kept, with its progress told", () => {
+    const runner = createRunner();
+    const load: LoadToOpen = {
+      fileId: FILE_ID,
+      format: "vcf",
+      readOptions: { ploidy: null, onlyPassed: false },
+    };
+    const name = "all_failed.vcf";
+    expect(runner.open(load, { name, source: allFailedVcf() }).kind).toBe("ok");
+    let numTold = 0;
+    const answer = runner.run(JOB, () => {
+      numTold += 1;
+    });
+    expect(countsOf(answer)).toEqual({
+      numVars: 0,
+      filtering: { passed: { varsProcessed: 5, varsKept: 0 } },
+    });
+    expect(numTold).toBeGreaterThan(0);
   });
 
   test("after the summary, over the same load, and the summary again after it, each with its own steps", () => {
