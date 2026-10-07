@@ -51,7 +51,7 @@ variants that apply to the project's file, `filtersApplied(p)` of
 its filters through a new file, so the filter of the FILTER column,
 `passed`, can be on while a `.nei` file is open, and popnei refuses it
 over a `.nei` file written before its format 1.2; `filtersApplied`
-leaves it out then, and gives `p.filters` itself otherwise. On
+leaves it out for such a file, and gives `p.filters` itself otherwise. On
 `popgen.html`, whose projects never hold that filter, the two are the
 same array, so nothing a user sees changes.
 

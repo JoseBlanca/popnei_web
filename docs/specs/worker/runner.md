@@ -57,7 +57,13 @@ of the project (`docs/designs/stats-filters.md`, approved by the owner
 that day): the filter of the FILTER column, `passed`, comes in the
 `filters` of a job or a write as any filter, and the runner puts
 popnei's `filterPassed` for it before the list of the individuals kept
-(below, "The steps"), with its tests on `low_qual.vcf.gz`. The
+(below, "The steps"), with its tests on `low_qual.vcf.gz`. Revised
+again on 7 October 2026 for the owner's decision that the filter applies
+to a `.nei` file whose variants record whether they passed their FILTER
+(`docs/designs/stats-filters.md`, "What the owner decided"): the open
+answers `keepsPassed` of popnei 0.2.2's `Variants` with the individuals
+and the ploidy (below, "Opening the load"), with its tests on a `.nei`
+file written from `low_qual.vcf.gz`. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -231,8 +237,16 @@ reads from it the ranges it needs, never the whole file
    open of `panel.vcf.gz` asked for its 87,304 bytes from 0. No byte of
    the file is copied by our code, and the memory of wasm holds the
    ranges being read and not the file.
-3. The worker posts `opened`, with the `individuals` and the `ploidy` of
-   the `Variants`, which popnei gives with no pass over the variants.
+3. The worker posts `opened`, with the `individuals`, the `ploidy` and
+   `keepsPassed` of the `Variants`, which popnei gives with no pass over
+   the variants. `keepsPassed`, from popnei 0.2.2, says whether the
+   variants record whether they passed their FILTER: true for a VCF,
+   read with every variant or with only the passed ones, and for a
+   `.nei` file written by popnei from its vars format 1.2 from a source
+   with the record; false for one written before that format, such as
+   `panel.nei`, or from such a file. popnei reads it from the header of
+   the VCF or the schema of the `.nei` file, which the open has read
+   already, so it costs no read of the file.
 
 The ploidy of a VCF is the one given, since popnei does not read it from
 the file. A genotype of another ploidy is refused at the first pass that
@@ -389,7 +403,8 @@ job has one, with `filterIndividuals(job.individuals)`; then each other
 filter with its method, `filterByMissingData`, `filterByMaf`,
 `filterByObsHet`, `filterByLd`, with the numbers of the job as they
 are, in the order of the job, which is the fixed order of the project;
-the runner does not sort them. A job with `passed` over a `.nei` file,
+the runner does not sort them. A job with `passed` over a file whose
+variants do not record their FILTER, `keepsPassed` false at the open,
 which core never sends (`filtersApplied` of
 `docs/specs/core/project.md`), is refused by popnei at the first block
 of its pass, "the variants hold no record of whether they passed their
@@ -1246,10 +1261,7 @@ the summary, and the worker's script posts both.
 
 ```ts
 export interface Runner {
-  open(load: LoadToOpen, file: LoadFile): Answer<{
-    readonly individuals: readonly string[];
-    readonly ploidy: number;
-  }>;
+  open(load: LoadToOpen, file: LoadFile): Answer<Opened>; // individuals, ploidy, keepsPassed (docs/specs/worker/protocol.md)
   run(job: Job, told: (progress: Progress) => void,
       toldSoFar?: (result: JobResult) => void): Answer<JobResult>;
   write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>;
@@ -1583,6 +1595,13 @@ The tests of stage 2, each at `open` and `run` of a runner made by
 
 - **The open**: `panel.nei` gives 200 individuals, the first `s000`, and
   ploidy 2; `panel.vcf.gz` with `{ ploidy: 2, onlyPassed: true }` the same.
+  `keepsPassed` is true for `panel.vcf.gz` and for `low_qual.vcf.gz`, with
+  `onlyPassed` true and false; false for `panel.nei`, `ld.nei` and
+  `tetraploid.nei`, written before popnei's vars format 1.2; and true
+  for `low_qual.nei`, the `.nei` file that popnei 0.2.2's `writeVars`
+  writes from `low_qual.vcf.gz` read with every variant, a fixture made
+  by `e2e/fixtures/make_fixtures.mjs` (node, popnei 0.2.2, 7 October
+  2026).
 - **The diversity**, with no filter and at 0.05: the table above, the
   populations in the order p0, p2, p1 with 48, 84 and 68 individuals,
   `numVarsWithValue` 1,200 and 1,152 in each, and `passStats`
@@ -1828,9 +1847,13 @@ as core would. Each test at `run` or `write` of a runner made by
   popnei 0.2.1, 7 October 2026, `iterBlocks` with no field read to its
   end). A second run with the same job does not open the file again,
   and one without `passed` does. On `panel.vcf.gz`, whose variants all
-  passed, `passed` keeps 1,200 of 1,200. A job with `passed` on
-  `panel.nei` is `refused` with popnei's message, which starts "the
-  variants hold no record of whether they passed their FILTER".
+  passed, `passed` keeps 1,200 of 1,200. On `low_qual.nei`, whose open
+  says `keepsPassed` true, a diversity with `passed` alone gives
+  `numVars` 900 and `passed` 1,200 to 900, as on the VCF it was written
+  from (node, popnei 0.2.2, 7 October 2026). A job with `passed` on
+  `panel.nei`, whose open says `keepsPassed` false, is `refused` with
+  popnei's message, which starts "the variants hold no record of whether
+  they passed their FILTER".
 - **The histograms of the variants**, with no filter and no list,
   `minNumIndividuals` 0, 40 bins and the range 0 to 1, popnei's
   defaults: `binEdges` of 41 numbers from 0 to 1, over a buffer of its
@@ -2018,7 +2041,7 @@ list gives.
 - **`docs/specs/worker/messages.md`**: the requests `open`, with the load
   id, the `File`, the format and the read options, `run`, with the key
   and a `Job`, and `write`, with the key and a `WriteJob`; the answers
-  `ready`, `opened`, `result`, `written`, `refused`, `reopenFailed`,
+  `ready`, `opened`, with `keepsPassed` from 7 October 2026, `result`, `written`, `refused`, `reopenFailed`,
   `progress` with popnei's four fields, `soFar` with the key and the
   result so far of the summary of the variants file (from
   `docs/plans/live-stats.md`, phase 2), and `crashed` and `badRequest`,

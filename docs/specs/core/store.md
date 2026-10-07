@@ -77,7 +77,10 @@ the last result so far of a calculation the user stopped is kept beside
 the state `ready`, as `stopped`, under its key; and the job of the
 write takes the filters that apply to the file, `filtersApplied` of
 `docs/specs/core/project.md`, which are the filters on without that of
-the FILTER column for a `.nei` file. The store is the one object of core that
+the FILTER column for a file whose variants do not record their FILTER,
+a `.nei` file written before popnei's vars format 1.2 (revised again
+that day, for the owner's decision that the filter applies to a `.nei`
+file with that record, where it said "for a `.nei` file"). The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -911,7 +914,8 @@ show its file, as those of the `.nei` file.
   `WriteJob` of `docs/specs/worker/protocol.md`: the load id of the
   variants file, its filters of the variants as
   `jobFilters(filtersApplied(p))` of `docs/specs/core/project.md` gives
-  them, without the filter of the FILTER column for a `.nei` file, the
+  them, without the filter of the FILTER column for a file whose
+  variants do not record their FILTER, the
   list of the
   individuals kept and the format, under the key of the write. It
   returns the handles it sent. In any other state it does nothing and
@@ -1681,8 +1685,9 @@ whose file is a text.
   (`docs/architecture.md`, section 2, "What would show the choice
   wrong").
   From 7 October 2026, the sequences draw the filter `passed` and
-  `.nei` and VCF loads, and: no request and no write carries `passed`
-  for a `.nei` file; a failure that is not popnei's is in a state
+  `.nei` and VCF loads, the reads of a `.nei` load with `keepsPassed`
+  true and false, and: no request and no write carries `passed` for a
+  file whose read says `keepsPassed` false; a failure that is not popnei's is in a state
   `error` only under a key no change has left behind since it came; and
   a result so far is in `stopped` only under the key the project gives,
   after a `cancelRun` of the analysis and before its next `startRun`,

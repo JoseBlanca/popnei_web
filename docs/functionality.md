@@ -114,8 +114,11 @@ left them when another file is opened, and last until the tab is
 closed, since the page saves no project yet.
 
 A check box at the end of the part of the variants, "Leave out the
-variants that failed their FILTER", on by default, for a VCF; it is
-not shown for a .nei file, to which it does not apply. Its filter acts
+variants that failed their FILTER", on by default, for a VCF and for
+a .nei file that records whether each variant passed its FILTER, which
+popnei writes from its vars format 1.2; it is not shown for a .nei file
+written before that format, to which it does not apply (the owner, 7
+October 2026). Its filter acts
 when the filters are carried out, after the individuals are judged, so
 an individual's missing rate and heterozygosity are over every variant,
 and a VCF of which no variant passed is shown as any other.

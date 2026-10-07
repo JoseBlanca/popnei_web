@@ -469,7 +469,9 @@ interface VariantSource {
 type SourceRead =
   | { kind: "pending" }               // the worker is opening the file
   | { kind: "read"; individuals: string[]; ploidy: number;
-      numVars: number | null }        // null until a pass has counted them
+      numVars: number | null;         // null until a pass has counted them
+      keepsPassed: boolean }          // whether its variants record whether
+                                      // they passed their FILTER, from popnei
   | { kind: "failed"; error: SourceError };
 
 // popnei refused the file, or the worker failed before popnei answered:
@@ -640,7 +642,8 @@ holds the numbers of two sessions names the right versions for each
   to 1,152 to 1,152 to 1,128 (`docs/specs/worker/runner.md`, "How it is
   verified", has the script).
 - **The filter of the FILTER column**, `{ kind: "passed" }`, from 7
-  October 2026, keeps the variants of a VCF whose FILTER is `PASS` or a
+  October 2026, keeps the variants of a VCF, or of a `.nei` file that
+  records the FILTER of its variants, whose FILTER is `PASS` or a
   dot, popnei's `filterPassed`, for the check box "Leave out the
   variants that failed their FILTER" of `popgen2.html`, on in its first
   project; `popgen.html` does not offer it, and keeps its read option
@@ -653,11 +656,19 @@ holds the numbers of two sessions names the right versions for each
   its statistics as any other. Its place changes no variant kept, since
   it keeps a variant by its FILTER alone; the counts of the filters
   after it are over the variants that passed. It is never applied to a
-  `.nei` file, over which popnei refuses it when the file was written
-  before its format 1.2, which the page cannot tell: a project keeps its
-  filters through a new file, so the filter can be on while a `.nei`
-  file is open, and **`filtersApplied`**, the filters that apply to the
-  project's file, leaves it out then. Everything that reads the filters
+  file whose variants do not record whether they passed, a `.nei` file
+  written before popnei's vars format 1.2 or from such a file, over
+  which popnei refuses it. popnei 0.2.2 says which a file is once it is
+  open, `keepsPassed` of its `Variants`, true for every VCF; the
+  calculation worker sends it with the individuals and the ploidy, and
+  the read of the file holds it (above). A project keeps its filters
+  through a new file, so the filter can be on while such a file is
+  open, and **`filtersApplied`**, the filters that apply to the
+  project's file, leaves it out then. Until the owner's decision of 7
+  October 2026, after the design was approved, it was left out for every
+  `.nei` file, since under popnei 0.2.1 the page could not tell the two
+  kinds apart; a `.nei` file written from a VCF would then have kept its
+  failed variants with nothing on the page saying so. Everything that reads the filters
   applied, the keys, the jobs, the counts of each filter, the scripts
   and the words, reads `filtersApplied` and not `filters`
   (`docs/specs/core/project.md`, "The filters of popgen2.html").
@@ -745,8 +756,10 @@ filter of the FILTER column, `passed`, after the regions and before the
 list of the individuals, and the project gains `filtersApplied`, the
 filters that apply to its file. On `low_qual.vcf.gz`, the panel with 300
 of its 1,200 variants failed, the filter keeps 900, and the missing data
-filter at 0.05 after it 865 of those 900 (node, popnei 0.2.1). The owner
-chose that the filter acts when the filters are carried out, after the
+filter at 0.05 after it 865 of those 900 (node, popnei 0.2.1); on a
+`.nei` file written by popnei 0.2.2 from that VCF, which records the
+FILTER of its variants, it keeps the same 900 (node, popnei 0.2.2). The
+owner chose that the filter acts when the filters are carried out, after the
 individuals are judged, so that the plots of the page read each file
 once and a VCF of which no variant passed is shown as any other. Not
 taken: the filter in the one pass, before the individuals are judged,
@@ -754,7 +767,10 @@ the design's previous version, which gave every statistic of the page
 over the variants that passed at the cost of a reading of the file at
 each turn of the box, and of no statistics at all for a VCF of which no
 variant passed. The order of the regions, the list and the other
-filters does not change.
+filters does not change. The same day, once popnei 0.2.2 said whether a
+file records the FILTER of its variants, the owner decided that the
+filter applies to a `.nei` file with that record, and the read of a
+variants file gained `keepsPassed`.
 
 ## 3. Results, and how they go stale
 
@@ -770,7 +786,8 @@ every key are:
 - the filters of variants and the filters of individuals that the
   analysis reads, in their order, with their parameters, those that are
   on and not those kept while off, and of the variants those that apply
-  to the file, `filtersApplied` (section 2): all of them for
+  to the file, `filtersApplied` (section 2), without the filter of the
+  FILTER column for a file whose variants do not record it: all of them for
   every analysis of sections 5 to 8 of `docs/functionality.md`, and not
   the filters that the checks per variant and per individual of its
   section 3 serve to set, whose histograms would otherwise be removed at
@@ -953,8 +970,8 @@ What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day. The filters of the variants in a key
 are those that apply to the project's file, `filtersApplied`, and no
 longer the project's list as it is: the filter of the FILTER column,
-which a project keeps through a new file, is in no job for a `.nei`
-file, and in its key it would give every analysis of that file a new key
+which a project keeps through a new file, is in no job for a file whose
+variants do not record their FILTER, and in its key it would give every analysis of that file a new key
 at a click that changes no calculation. The two paragraphs above are
 new: the setting of the notice of a filter, and the failures forgotten
 only when their key is left behind, where the spec of the store said
@@ -1681,8 +1698,10 @@ themselves stay large whatever the reading (section 11).
    the size, the format and the read options; the command puts into the
    project a `VariantSource` with them and its `read` pending.
 2. **The calculation worker opens the file** and sends back the
-   individuals and the ploidy, which popnei gives once the file is open,
-   with no pass over the variants.
+   individuals, the ploidy and, from 7 October 2026, whether its
+   variants record whether they passed their FILTER, popnei's
+   `keepsPassed`, which popnei gives once the file is open, with no pass
+   over the variants.
 3. **The store records them into that same `VariantSource`**, the one
    with that file id and no other, as an event that is not a step of
    undo, in the current project and in every project of the history that
@@ -1801,7 +1820,8 @@ source from being asked for again.
 The read of a variants file is asked for as that of any other file. The
 worker client opens the file on the calculation worker, which it starts
 again first when the load changed (section 5), and the worker sends back
-the individuals and the ploidy as soon as the file is open. An undo back
+the individuals, the ploidy and whether the variants record their FILTER
+as soon as the file is open. An undo back
 to a load already read finds its source read, and so asks for nothing;
 the client opens that file again before the next request on it, and
 what the worker sends then is not recorded, since the source is already

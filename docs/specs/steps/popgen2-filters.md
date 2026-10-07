@@ -5,7 +5,12 @@ The screen spec of what `popgen2.html` gains with the design
 2026: the thresholds on the histograms of the statistics become filters
 of the project, a check box leaves out the variants that failed their
 FILTER, and the page gets Undo, Redo and the notice that says what a
-change did. Written on 7 October 2026 and approved by the owner the same day. No
+change did. Written on 7 October 2026 and approved by the owner the same day.
+Revised the same day for two things that came after the approval: the
+owner's decision that the FILTER box is shown, and its filter applied,
+for a `.nei` file that records the FILTER of its variants, as for a VCF
+(the design, "What the owner decided"); and the exact count under each
+threshold that popnei 0.2.2 gives, in place of a range. No
 code of it exists yet. What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
@@ -63,7 +68,8 @@ them and does not repeat them.
   Down on one threshold, or of Home or End on its line, with less than
   one second between two presses.
 - **The filter of the FILTER column** is the filter that leaves out the
-  variants of a VCF that failed their FILTER, which the check box "Leave
+  variants that failed their FILTER, of a VCF or of a `.nei` file that
+  records the FILTER of its variants, which the check box "Leave
   out the variants that failed their FILTER" turns on and off; its kind
   is `passed` in the project (`docs/specs/core/project.md`). Every text
   of the page and of the specs calls it so.
@@ -76,7 +82,8 @@ them and does not repeat them.
 - A threshold is on or off, and off is said in words: "No filter".
 - Only the missing rate of the variants starts on, at 0.1.
 - A check box "Leave out the variants that failed their FILTER", on by
-  default, for a VCF.
+  default, for a VCF and for a `.nei` file that records the FILTER of
+  its variants.
 - The thresholds stay where they are when another file is opened.
 - After a Stop, the plots read so far stay, marked as made from the
   variants read before the Stop.
@@ -92,8 +99,8 @@ when").
 ### The order of the page
 
 From the top: the heading "Popnei"; the row of Undo and Redo; the box of
-the file; the part "Variants", its four histograms and, for a VCF, the
-check box of the FILTER column; the part "Individuals", its two
+the file; the part "Variants", its four histograms and, when the file
+records the FILTER of its variants, the check box of the FILTER column; the part "Individuals", its two
 histograms and the download of their table; "Open another variants
 file…". The notice is fixed at the bottom of the window, over the page.
 The row of Undo and Redo is above the box of the file, as the design
@@ -174,11 +181,14 @@ empty box means no filter in either case. For the individuals the
 sentence says "every individual".
 
 The counts of a threshold that is on are those of today: each threshold
-alone, over every variant or individual of the file. They are given as a
-range, "Keeps 1,113 to 1,152 of 1,200 variants", when the threshold
-falls inside one of popnei's bins, since the bins cannot tell how many
-of that bin's variants it keeps (`docs/plans/thresholds.md`, "Round 1
-with the owner").
+alone, over every variant or individual of the file. Each is one exact
+number, the variants or individuals whose value is at most the
+threshold, which is what popnei's filter at that threshold keeps: from
+popnei 0.2.2 the one pass gives 1,000 bins over 0 to 1 that hold their
+right edge, and a threshold of the variants, of three decimals at most,
+falls on an edge (the design, "The counts of each threshold";
+`docs/plans/popnei-0.2.2.md`). Until then a threshold inside a bin gave
+a range, "Keeps 1,113 to 1,152 of 1,200 variants".
 
 **Turning a threshold off.** Two ways, as the owner chose on 7 October
 2026: emptying the box and then pressing Enter or Tab or clicking
@@ -359,19 +369,29 @@ of a file", says instead that it is for a choice that takes effect later
 than the click: the next pick of a file on the old page, the carrying
 out of the filters on this one.
 
-It is shown for a VCF once the opening has read the file's individuals,
-which comes before the one pass starts, and then in every state of the
-statistics, running, stopped and failed among them, since it is a filter
-of the project and no part of the plots. For a `.nei` file it is not
+It is shown when the variants of the file record whether they passed
+their FILTER, `keepsPassed` of the file in `docs/specs/core/project.md`:
+for a VCF, and for a `.nei` file once its opening says so, which comes
+before the one pass starts; and then in every state of the statistics,
+running, stopped and failed among them, since it is a filter of the
+project and no part of the plots. A `.nei` file written by popnei from
+a VCF in its vars format 1.2 or later has the record, and so will the
+files the page writes; one written before that format, such as
+`panel.nei`, has not. For a file without the record the box is not
 shown; the filter stays in the project, does not apply to that file
 (`filtersApplied`, `docs/specs/core/project.md`), and is shown again, as
-the project holds it, when a VCF is opened.
+the project holds it, when a file with the record is opened. The owner
+decided on 7 October 2026 to show it for a `.nei` file with the record,
+since a `.nei` file written from a VCF would otherwise keep its failed
+variants with nothing on the page saying so.
 
 Each click is one change, with its notice: "The filter of the FILTER
 column was turned off · Undo", "The filter of the FILTER column was
 turned on · Undo". It changes no plot and no count. The count of the
-variants that failed their FILTER waits for popnei's issue #12, and a
-VCF of which no variant passed is shown as any other.
+variants that failed their FILTER is in the box of the file, "FILTER
+failures: 300" for `low_qual.vcf.gz`, from the one pass, as the piece
+`popnei-0.2.2` builds it; a file of which no variant passed is shown as
+any other.
 
 ### The plots after a Stop
 
@@ -411,12 +431,12 @@ Undo and Redo and the notice are there in all of them.
 | state | what the user sees | what they can do |
 |---|---|---|
 | empty | no file open: the heading, the row of Undo and Redo, "Open variants file…"; no plot, no threshold, no FILTER box | open a file; Undo or Redo when the history has a step, after an opening undone |
-| locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box for a VCF, no threshold | tick the FILTER box; open another file |
+| locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box when the file records the FILTER of its variants, no threshold | tick the FILTER box; open another file |
 | ready | about to start, for a moment: nothing in the parts. After a Stop: the plots read before it with their counts, or "Stopped. Start again reads the file from the start." with no plot | move the thresholds over the plots of a Stop; tick the FILTER box; Start again |
 | running | the share done over each part, the plots so far from the first result so far, 2 seconds after the start, the counts ending "so far" | move the thresholds; tick the FILTER box; Stop |
-| done | the six plots, five thresholds, the FILTER box for a VCF | move, type and turn off the thresholds; tick the box; Undo and Redo |
+| done | the six plots, five thresholds, the FILTER box when the file records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
 | results removed | the store removed the statistics because what they were calculated from changed. No filter brings this state, since the one pass's key holds the file and no filter. Opening another file does: the page draws the section of the new file, and the notice says the statistics of the file before were removed | Undo, which brings back the file before and its statistics |
-| error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box for a VCF | tick the FILTER box, which does not clear the failure; Start again |
+| error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box when the file records the FILTER of its variants | tick the FILTER box, which does not clear the failure; Start again |
 
 ## What it sends and reads
 
@@ -446,8 +466,9 @@ of `src/core/project.ts` as `docs/specs/core/project.md` gives them.
 It reads the value of each threshold and whether it is on
 (`thresholdValue` of the project); whether the filter of the FILTER
 column is on, from the filters that are on (`project.filters`) and those
-kept with their values while off (`filtersOff`); whether the file is a
-VCF, for whether the box is shown (`project.variants.format`); what Undo
+kept with their values while off (`filtersOff`); whether the variants of
+the file record their FILTER, for whether the box is shown
+(`keepsPassed(project.variants)` of the project); what Undo
 and Redo would do and the notice (`undo`, `redo` and `notice` of the
 store); and the status of the summary, with its result so far while it
 runs and after a Stop. It holds no value of a filter of its own but the
@@ -521,7 +542,8 @@ variant"; the FILTER box with its sentence.
 ## How it is checked
 
 In Playwright on `popgen2.html`, in Chromium and WebKit, on the fixtures
-`panel.vcf.gz` and `panel.nei`, beside the checks of
+`panel.vcf.gz` and `panel.nei`, and `low_qual.nei`, the `.nei` file
+popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the checks of
 `docs/specs/core/` for the commands:
 
 - the worker receives one request for a file, and none while a threshold
@@ -540,8 +562,10 @@ In Playwright on `popgen2.html`, in Chromium and WebKit, on the fixtures
 - a crash of the worker while a run waits keeps the run, as a step of
   Undo, and puts the focus on the heading;
 - the expected heterozygosity has no line and no box;
-- the FILTER box is there for `panel.vcf.gz`, on, and not for
-  `panel.nei`; a click gives a notice and changes no plot;
+- the FILTER box is there for `panel.vcf.gz` and for `low_qual.nei`,
+  on, and not for `panel.nei`; turned off for `panel.vcf.gz`, it is
+  still off when `low_qual.nei` is opened; a click gives a notice and
+  changes no plot;
 - the thresholds stay through the opening of another file;
 - after a Stop the plots read so far stay with the words of a Stop, and
   a threshold moved over them changes the project;
@@ -589,8 +613,8 @@ called genotype, 3 in the MAF's histogram).
 - The tools section and the download of the filtered file, which wait
   for popnei's issue #13 (the design, "The tools section and the
   download of the filtered file").
-- The count of the variants that failed their FILTER, which waits for
-  popnei's issue #12.
+- The count of the variants that failed their FILTER, in the box of the
+  file: the piece `popnei-0.2.2` (`docs/plans/popnei-0.2.2.md`).
 - What all the filters keep together, which comes with the reading that
   carries them out.
 - The quiet second before a calculation that reads the filters starts
@@ -598,5 +622,3 @@ called genotype, 3 in the MAF's histogram).
   calculation that reads a filter starts by itself").
 - The saving of the project on `popgen2.html`: the filters last until
   the tab is closed.
-- Exact counts of a threshold on every edge of popnei's bins, popnei's
-  issue #11.

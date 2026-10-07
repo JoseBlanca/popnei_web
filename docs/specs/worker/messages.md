@@ -67,7 +67,14 @@ filter of the variants of the kind `passed`, of exactly the field
 `kind`, is accepted in the `filters` of a write and of every job whose
 filters may be other than empty, `passed` is a kind of the counts of any
 result, and
-`PROTOCOL_VERSION` is 12.
+`PROTOCOL_VERSION` is 12. Revised again on 7 October 2026 for the
+owner's decision that the filter of the FILTER column applies to a
+`.nei` file whose variants record whether they passed their FILTER
+(`docs/designs/stats-filters.md`, "What the owner decided"): `opened`
+carries `keepsPassed`, popnei 0.2.2's answer to that, a boolean, and
+`PROTOCOL_VERSION` is 14, one above the 13 that the merge of the branch
+`popnei-0.2.2` into the branch of the filters gives it, since that
+branch also raised it, to 12, for another change.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -109,7 +116,7 @@ received it is ended (below):
 
 | request | to | its answer, when it goes right | when the input is refused |
 |---|---|---|---|
-| `open`: open the variants file of a load | the calculation worker | `opened`, the individuals and the ploidy | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
+| `open`: open the variants file of a load | the calculation worker | `opened`, the individuals, the ploidy, and whether the variants record their FILTER | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `run`: calculate the result of an analysis | the calculation worker | `result`, under the key it was asked with, after its `progress` and its `soFar` | `refused`, popnei's message; `reopenFailed`, a file the browser no longer reads |
 | `write`: write the filtered variants as a file | the calculation worker | `written`, the file under the key it was asked with, after its `progress` | as `run` |
 | `readIndividuals`: read the individuals file, a CSV, a TSV or an xlsx | the light worker | `individuals`, the table, or the ways the file is wrong | none: a file the reader refuses is its answer, and so is a files wasm that could not be downloaded |
@@ -131,8 +138,14 @@ received it is ended (below):
   among the first 4,096 lines, and refuses the `open` when it finds none
   or the file has no variant.
 - **`opened` carries what popnei gives once the file is open**, its
-  `individuals` and its `ploidy`, with no pass over the variants
-  (`docs/architecture.md`, section 6). The number of variants comes later,
+  `individuals`, its `ploidy`, and `keepsPassed`, whether its variants
+  record whether they passed their FILTER, with no pass over the
+  variants (`docs/architecture.md`, section 6). `keepsPassed` is true
+  for every VCF, and for a `.nei` file written by popnei from its vars
+  format 1.2 from a source with the record; core leaves the filter of
+  the FILTER column out of every job on a file for which it is false
+  (`docs/specs/worker/protocol.md`, "The filters of the variants are
+  popnei's"). The number of variants comes later,
   in the counts of the pass of the first run, which every result holds
   (`docs/specs/worker/protocol.md`, `PassStats`; `docs/specs/core/store.md`,
   `countsOf`).
@@ -359,7 +372,12 @@ check, because they differ in `ready`:
   of the variants gain `missingRate`; 8, when the summary becomes the one
   pass that also gives `perVar` and `perIndividual`
   (`docs/plans/live-stats.md`, phase 1); and 9, when `soFar` joins
-  `FromRunner` (phase 2).
+  `FromRunner` (phase 2); 10 and 11 when the job of the count of the
+  FILTER failures joined and left (phase 3, `docs/plans/one-pass.md`);
+  12 on the branch of the filters, for the kind
+  `passed`; 13 at the merge of the branch `popnei-0.2.2`, which gave 12
+  to the count of the FILTER failures of the summary; and 14 when
+  `opened` gains `keepsPassed`.
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -490,7 +508,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 14;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -505,7 +523,8 @@ export type ToRunner =
 
 export type FromRunner =
   | { kind: "ready"; protocol: number; popneiVersion: string }
-  | { kind: "opened"; id: number; individuals: string[]; ploidy: number }
+  | { kind: "opened"; id: number; individuals: string[]; ploidy: number;
+      keepsPassed: boolean }  // whether the variants record whether they passed their FILTER
   | { kind: "result"; id: number; key: string; result: JobResult }
   | { kind: "soFar"; id: number; key: string; result: JobResult } // the result over the variants read so far, of a run running
   | { kind: "written"; id: number; key: string; result: Written<Blob> } // the file, as a Blob
@@ -643,7 +662,8 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a `run` of each of the seven jobs, a diversity
+  and of a `.nei` file, an `opened` with `keepsPassed` true and one with
+  false, a `run` of each of the seven jobs, a diversity
   job and a `write` whose filters are `passed` and the missing data
   filter, and a result whose `passStats.filtering` holds `passed` before
   `missing_data`, the principal
@@ -692,7 +712,8 @@ File(["…"], "panel.nei")`.
   1,999 numbers for 200 individuals and 10 components, `wrongLength`,
   or whose `explainedVariancePercent` has 9, `wrongLength`; a result of
   the PCA with `numVarsUsed` `null`, `wrongType`; a result of the PCoA
-  with `lingoesConstant` `null`, `wrongType`; from stage 5, a diversity
+  with `lingoesConstant` `null`, `wrongType`; an `opened` without
+  `keepsPassed`, `missingFields`, and one with `keepsPassed` `"true"`, `wrongType`; from stage 5, a diversity
   job with `numCalledAlleles` 1, and one whose `popDiversityPops` names a
   population not in `pops`, or two in another order than theirs; a
   diversity result with `numVarsEveryPop` a number and

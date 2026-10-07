@@ -117,7 +117,16 @@ filters on that apply to the project's file, without that filter for a
 applied reads in place of `filters`; one command for the thresholds of
 popgen2.html, `setThreshold`, which takes an empty box, or the value 1,
 as off; and the first project of popgen2.html (below, "The filters of
-popgen2.html").
+popgen2.html"). Revised again on 7 October 2026 for the owner's decision
+that the filter of the FILTER column applies to a `.nei` file whose
+variants record whether they passed their FILTER, and not only to a VCF
+(`docs/designs/stats-filters.md`, "What the owner decided"): the read
+of the variants file holds `keepsPassed`, popnei 0.2.2's answer to that,
+which the calculation worker gives when it opens the file; `keepsPassed`
+of a source gives it, true for a VCF before its read; and
+`filtersApplied` and `filtersAppliedTo` leave the filter out for a file
+whose variants do not record their FILTER, in place of every `.nei`
+file.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the
@@ -307,7 +316,8 @@ it can hold, since none holds the filter of the FILTER column; so they
 do not change.
 
 **The filter of the FILTER column**, `{ kind: "passed" }`, keeps the
-variants of a VCF whose FILTER is `PASS` or a dot, popnei's
+variants of a VCF, or of a `.nei` file that records the FILTER of its
+variants, whose FILTER is `PASS` or a dot, popnei's
 `filterPassed`, and has no number (`docs/specs/worker/protocol.md`). It
 is a filter of the variants as the others are: on in `filters`, first in
 the fixed order, and kept in `filtersOff` while off. A click on the box
@@ -323,24 +333,42 @@ turned off is in no key among them (`docs/specs/core/keys.md`). Only
 `popgen2.html` offers it, and `popgen.html` refuses a project file that
 holds it, on or off (`docs/specs/core/projectFile.md`, "Opening").
 
+**Whether the variants record their FILTER**, `keepsPassed(source)`:
+whether the variants of the file record whether each passed its FILTER,
+which the filter of the FILTER column needs. popnei writes that record
+in a `.nei` file from its vars format 1.2, when the source had it, so a
+`.nei` file written from a VCF by popnei 0.2.1 or later has it, and one
+written before that format, as `panel.nei` of the tests, or from such a
+file, has not; popnei refuses `filterPassed` over a file without it
+(`docs/specs/worker/runner.md`, "The steps"). popnei 0.2.2 says which
+once the file is open, `keepsPassed` of its `Variants`, and the
+calculation worker sends it in `opened`, which the page records in the
+read of the file, `SourceRead` of kind `read` (below, "The TypeScript interface").
+`keepsPassed(source)` gives the read's value once the file is read, and,
+before, or when the read failed, `true` for a VCF, whose variants always
+hold the record, and `false` for a `.nei` file, which may not. The
+screen of `popgen2.html` shows the FILTER box when it is true
+(`docs/specs/steps/popgen2-filters.md`). The owner decided on 7 October
+2026 that the filter applies to a `.nei` file with the record; until
+then it was left out for every `.nei` file, since under popnei 0.2.1
+the page could not tell the two kinds apart.
+
 **The filters that apply to the file**, `filtersApplied(p)`: the
-filters on, without `passed` when the project's variants file is a
-`.nei` file, `p.variants.format` `"nei"`, and `p.filters` itself, the
-same array, otherwise. It is the one place that leaves `passed` out by
-the format: `jobFilters`, which turns the filters of the project into
-those of a job, takes the filters it is given and filters nothing by
-format, so a caller gives it `filtersApplied(p)`, never `p.filters`. A new
-file keeps the filters of the project (`loadVariants`, below), so a user
-who had the box on for a VCF and opens a `.nei` file still has the
-filter in the project; popnei refuses `filterPassed` over a `.nei`
-file written before its format 1.2, and the page cannot tell the format
-(`docs/specs/worker/runner.md`, "The steps"). So everything that reads
+filters on, without `passed` when the variants of the project's file do
+not record their FILTER, `keepsPassed(p.variants)` false, and
+`p.filters` itself, the same array, otherwise. It is the one place that
+leaves `passed` out by the file: `jobFilters`, which turns the filters
+of the project into those of a job, takes the filters it is given and
+filters nothing by file, so a caller gives it `filtersApplied(p)`, never
+`p.filters`. A new file keeps the filters of the project (`loadVariants`,
+below), so a user who had the box on for a VCF and opens a `.nei` file
+without the record still has the filter in the project. So everything that reads
 the filters applied reads `filtersApplied` and never `p.filters`: the
 keys (`docs/specs/core/keys.md`), the filters of every job and of the
 writing, through `jobFilters(filtersApplied(p))`, the rows and the check
 numbers of the counts of each filter, the scripts, and the words that
-name the filters on. Opening a VCF again gives the filter back, since it
-never left the project. What reads `p.filters` as it is: the commands,
+name the filters on. Opening a file with the record again gives the
+filter back, since it never left the project. What reads `p.filters` as it is: the commands,
 the validation, the project file, which saves the box as the user left
 it, and the screen that shows the box. With no variants file,
 `filtersApplied` gives `p.filters`; nothing is calculated then.
@@ -1204,7 +1232,8 @@ export interface VariantSource {
 
 export type SourceRead =
   | { kind: "pending" }
-  | { kind: "read"; individuals: string[]; ploidy: number; numVars: number | null }
+  | { kind: "read"; individuals: string[]; ploidy: number; numVars: number | null;
+      keepsPassed: boolean }  // whether its variants record whether they passed their FILTER, popnei's Variants.keepsPassed
   | { kind: "failed"; error: SourceError };
 
 /** popnei refused the file, or the worker failed before popnei answered:
@@ -1572,20 +1601,26 @@ export function jobFilters(
   filters: readonly ProjectVariantFilter[],
 ): readonly VariantFilter[];
 
+/** Whether the variants of the file record whether each passed its
+    FILTER: the read's keepsPassed once the file is read; before, or
+    when the read failed, true for a VCF and false for a .nei file. */
+export function keepsPassed(source: VariantSource): boolean;
+
 /** The filters of the variants on that apply to the project's variants
     file: p.filters without the filter of the FILTER column, `passed`,
-    for a .nei file; p.filters itself, the same array, for a VCF and for
-    no file. What reads the filters applied reads this, never p.filters:
-    the keys, the jobs, through jobFilters(filtersApplied(p)), the
-    counts of each filter, the scripts and the words. */
+    when keepsPassed(p.variants) is false; p.filters itself, the same
+    array, when it is true and for no file. What reads the filters
+    applied reads this, never p.filters: the keys, the jobs, through
+    jobFilters(filtersApplied(p)), the counts of each filter, the
+    scripts and the words. */
 export function filtersApplied(p: Project): readonly ProjectVariantFilter[];
-/** The same for a file of `format`, or for no file, null, which keeps
-    every filter: for the fingerprint of an opened project file, which
-    knows the file only by its read options and passes "nei" for read
-    options null, never null (docs/specs/core/keys.md). */
+/** The same for a file whose variants record their FILTER or not, as
+    `keepsPassed` says: `filters` itself when it is true, without
+    `passed` when it is false. For the fingerprint of the settings,
+    which is given the file it is made for (docs/specs/core/keys.md). */
 export function filtersAppliedTo(
   filters: readonly ProjectVariantFilter[],
-  format: "vcf" | "nei" | null,
+  keepsPassed: boolean,
 ): readonly ProjectVariantFilter[];
 
 /** The first list of individuals popnei would refuse, which of the two
@@ -1925,6 +1960,20 @@ or `null`.
   and each is read as empty: such a project opens with the filters it
   had on, and nothing kept of those off, which those versions did not
   keep. The option not taken was to refuse it, as for `typesSet` above.
+- **`keepsPassed` is not saved in the project file.** The read of the
+  variants file is saved with its individuals, its ploidy and its number
+  of variants, as before 7 October 2026, and read back with
+  `keepsPassed` `true` for a VCF and `false` for a `.nei` file, what
+  `keepsPassed` of a source gives a file not yet read. No file saved
+  today holds the filter of the FILTER column, since only `popgen2.html`
+  sets it and that page saves no project, so the value changes no
+  fingerprint of a file's settings. Saving it would have added a field
+  to every project file of `popgen.html`, which a version of the
+  application from before it would refuse; the piece that makes
+  `popgen2.html` save projects decides how its files hold it (below,
+  "Not in this spec"). The identity of the
+  file given again, which the reference is compared with
+  (`docs/specs/core/projectFile.md`), does not compare it.
 - **The filter of the FILTER column** is `{ "kind": "passed" }`, with no
   other field; a field more is refused as below, `unknownField`. The
   validation reads it in both pages; `popgen.html` refuses it after the
@@ -2089,11 +2138,18 @@ or `null`.
   kept with `maxDist` `null`, locks nothing, and, turned on again, is
   locked again with the same reason. The same holds for every other
   filter with a switch, a threshold of the individuals among them.
-- **The FILTER box on, then a `.nei` file opened.** `loadVariants` keeps
-  `passed` in `filters`; `filtersApplied` leaves it out, so the keys and
-  the jobs are those of the same filters without it, and a pass over the
-  `.nei` file never meets `filterPassed`. Opening a VCF again gives it
-  back, with no command.
+- **The FILTER box on, then a `.nei` file without the record opened.**
+  `loadVariants` keeps `passed` in `filters`; `filtersApplied` leaves it
+  out, from the pick, since `keepsPassed` of a `.nei` file not yet read
+  is false, and after the read, which says false, so the keys and the
+  jobs are those of the same filters without it, and a pass over the
+  file never meets `filterPassed`. Opening a VCF, or a `.nei` file with
+  the record, gives it back, with no command.
+- **The FILTER box on, then a `.nei` file with the record opened.** Until
+  its read comes back, `filtersApplied` leaves `passed` out, and no
+  calculation runs, since `projectNeeds` waits for the read; the read
+  says `keepsPassed` true, and from then on `filtersApplied` keeps it,
+  as for a VCF.
 - **A threshold typed 1 while it is on at 0.3.** It is turned off and
   kept at 0.3 in its list of the filters off; `thresholdValue` gives
   `null`; Undo gives back the filter on at 0.3. Typed 1 again, or the
@@ -2188,9 +2244,12 @@ project frozen deeply with `Object.freeze`, so that a write into it throws
   filters are `[missing_data, maf]` gives `[passed, missing_data, maf]`;
   `turnOffVariantFilter` of `passed` keeps `{ kind: "passed" }` in
   `filtersOff`. `filtersApplied` of a project with `passed` on and a
-  `.nei` file, without it, and of one with a VCF and of one with no
-  file, `p.filters` by `toBe`; `filtersAppliedTo` of the same filters
-  with each format. `parseProject` of `{ "kind": "passed" }` in
+  `.nei` file whose read says `keepsPassed` false, or that is not read
+  yet, without it; of one with a `.nei` file whose read says true, of
+  one with a VCF read or not, and of one with no file, `p.filters` by
+  `toBe`; `filtersAppliedTo` of the same filters with `true` and with
+  `false`. `keepsPassed` of a VCF and of a `.nei` file, pending, read
+  with each value, and failed. `parseProject` of `{ "kind": "passed" }` in
   `filters` and in `filtersOff` accepted, of `{ "kind": "passed",
   "maxAllowedMaf": 1 }` refused as `unknownField`, and of `passed` after
   `missing_data` refused as `filterOutOfOrder`, with the text of the
@@ -2319,7 +2378,9 @@ of `individualsKept.ts` but types, and nothing of `populations.ts`.
   and the sequences draw with the other kinds, and the command
   `setThreshold` with numbers from 0 to 1, 1 among them, and `null`.
   `filtersApplied` of every such project holds the filters of `filters`
-  in their order, all of them but `passed` for a `.nei` file. For every such
+  in their order, all of them but `passed` when `keepsPassed` of its file
+  is false; the reads drawn give `keepsPassed` both values for a `.nei`
+  file and `true` for a VCF. For every such
   project, `variantFilterNeeds` gives
   a reason exactly when the LD filter of `filters` has no distance, and
   `jobFilters` of its filters throws exactly then. For every sequence of
@@ -2463,6 +2524,10 @@ of them changes those texts and their tests, and nothing else.
   `docs/specs/worker/files.md`.
 - The populations edited with a lasso on the PCA: not in stage 4; a
   design of its own.
+- How a project file of `popgen2.html` holds `keepsPassed` of the read
+  of its variants file, which the fingerprint of a file holding the
+  filter of the FILTER column needs for a `.nei` file with the record:
+  the piece that makes that page save projects.
 
 ## What this spec asks of other documents
 
@@ -2536,4 +2601,11 @@ on `popgen.html`, whose projects never hold `passed`, it gives
 `p.filters` itself, so nothing those specs say changes for a user. The screen spec
 of the filters of `popgen2.html`, `docs/specs/steps/popgen2-filters.md`,
 sends `setThreshold` and the two commands of the box, and shows
-`thresholdValue`.
+`thresholdValue`. For the owner's later decision of that day, the filter for a
+`.nei` file that records the FILTER of its variants: `opened` carries
+`keepsPassed` in `docs/specs/worker/protocol.md`, `messages.md` and
+`runner.md`; `docs/specs/entry.md` records it in the read; the
+fingerprint of `docs/specs/core/keys.md` takes it; `store.md` and the
+specs of the analyses say "a file whose variants do not record their
+FILTER" where they said "a `.nei` file"; and the screen spec shows the
+box when `keepsPassed` of the file is true.

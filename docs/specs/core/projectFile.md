@@ -51,7 +51,12 @@ of the project (`docs/designs/stats-filters.md`, approved by the owner
 that day): the filter of the FILTER column, `{ "kind": "passed" }`,
 written in version 1 as any filter, and a file that holds it, on or
 off, refused by `popgen.html`, which has no box to show it, with words
-that say the file was made by the new page.
+that say the file was made by the new page. Revised again that day, when
+the read of the variants file gained `keepsPassed`, whether its variants
+record their FILTER (`docs/specs/core/project.md`, "The filters of
+popgen2.html"): the file does not write it, the reading gives it from
+the format, the identity does not compare it, and the fingerprints are
+made with it.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -298,7 +303,7 @@ options, all of its fields, the others at their defaults.
 
 | part of the project | what the file holds |
 |---|---|
-| `variants`, a file loaded and read | the source as it is, its load id included |
+| `variants`, a file loaded and read | the source as it is, its load id included, but `keepsPassed` of its read, which no file holds (`docs/specs/core/project.md`, "The validation") and the reading gives as `true` for a VCF and `false` for a `.nei` file |
 | `variants`, a file loaded whose read is pending or failed, and a reference whose identity it does not differ from and whose read options are its own | the reference's `variants`, which knows more of the same file |
 | `variants` null, a reference | the reference's `variants`, so that a project opened and saved again before its file is given still names the file it was made with |
 | `variants` null, no reference | `null` |
@@ -597,8 +602,9 @@ that the reason given is the one the user can act on:
    it on 7 October 2026: `popgen2.html` saves no project yet.
 11. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
-   project and the read options of the file's variants file, and put in
-   place of the placeholders.
+   project and the file's variants file, its read options and its
+   `keepsPassed` as the reading gives it, and put in place of the
+   placeholders.
 
 The project given has `variants` null, since the user gives the variants
 file again; `individuals`, the filters, the grouping and the options of
@@ -658,6 +664,10 @@ order:
 | the ploidy | both read | "has ploidy 4 where that one had 2" |
 | the choice of the passed variants | both VCF files | "is read with every variant where that one was read with only the variants with PASS or . in the FILTER column", or the other way round |
 | the number of variants | both counted | "has 1,203,600 variants" |
+
+Whether the variants record their FILTER, `keepsPassed` of the read, is
+not compared: the file does not hold it, and the same file gives the
+same value.
 
 The size is compared only between two files of the same format, as the
 owner decided on 26 September 2026 (point 2 of the review of work
@@ -1149,7 +1159,7 @@ the analyses `done`, `ready` or `removed`.
   opens with `passedFilter: false` as before.
 - **The fingerprints**: each check of an opened file holds
   `settingsFingerprint` of its definition, of the opened project and of
-  the read options of the file's variants file.
+  the file's variants file.
 - **The count with the diversity's own definition**:
   `v1-nei-diversity.popnei.json` opens with the definitions of
   `src/core/apps.ts`, and is refused with one of its 7 numbers removed.
@@ -1180,7 +1190,9 @@ the analyses `done`, `ready` or `removed`.
     the filters, the individuals file when it was read, its whole
     `typesSet` included, the individuals file `notGiven` when it
     was pending, failed or `notGiven`, the grouping and
-    the options; `variants` null; the reference's variants file as written.
+    the options; `variants` null; the reference's variants file as written,
+    with `keepsPassed` of its read `true` for a VCF and `false` for a
+    `.nei` file, whatever it was in `s`.
   - Written, opened, and written again from a state with no result and
     the same version of popnei, a project gives the same text: the check
     numbers of the first file are carried whole into the second.

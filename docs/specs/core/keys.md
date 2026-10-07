@@ -33,7 +33,13 @@ of the project (`docs/designs/stats-filters.md`, approved by the owner
 that day): the filters of the variants in a key, a key of a write and a
 fingerprint are those `filtersApplied` of `docs/specs/core/project.md`
 gives, which leaves the filter of the FILTER column out for a `.nei`
-file, and no longer `p.filters` as it is.
+file, and no longer `p.filters` as it is. Revised again that day for the
+owner's decision that the filter applies to a `.nei` file whose variants
+record their FILTER (`docs/designs/stats-filters.md`, "What the owner
+decided"): `filtersApplied` leaves it out for a file whose variants do
+not record their FILTER, as `keepsPassed` of `docs/specs/core/project.md`
+says, and the fingerprint is given the variants file it is made for,
+whose read options and `keepsPassed` it reads.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
@@ -70,7 +76,7 @@ depend on:
 | `keyVersion` | a number its module raises when what the result means changes for the same inputs | its definition |
 | `popneiVersion` | the version of popnei, from the calculation worker when it starts | the store |
 | `load` | the load id of the variants file, new at every pick, and its read options | the project |
-| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff`; of the variants, those that apply to the file, `filtersApplied(p)`, without the filter of the FILTER column for a `.nei` file | the project, and the definition's `filtersRead` |
+| `filters`, `individualFilters` | the filters the analysis reads, in their fixed order, with their parameters: the thresholds on the individuals, and not the list of the individuals they keep; the filters on alone, and not those the project keeps while they are off, `filtersOff` and `individualFiltersOff`; of the variants, those that apply to the file, `filtersApplied(p)`, without the filter of the FILTER column for a file whose variants do not record their FILTER | the project, and the definition's `filtersRead` |
 | `inputs` | what else the analysis depends on: the columns of the individuals table and the grouping it uses, its options but those that change only how the result is drawn, as the colour, the axes and the view of the PCA, and the measure the heatmap of the distances between populations draws (`docs/architecture.md`, section 4; `docs/specs/analyses/pca.md` and `popDists.md`) | its `keyInputs` |
 
 Every analysis of sections 5 to 8 of `docs/functionality.md` reads all the
@@ -100,7 +106,8 @@ The filters of the variants in a key are those that apply to the
 project's file, `filtersApplied(p)` of `docs/specs/core/project.md`,
 and not `p.filters`: a project keeps its filters through a new file, so
 the filter of the FILTER column, `passed`, can be on while the file is a
-`.nei` file, for which no job carries it. A key that held it there would
+`.nei` file whose variants do not record their FILTER, one written
+before popnei's vars format 1.2, for which no job carries it. A key that held it there would
 name a filter no calculation applied, and a click on the box, which
 `popgen2.html` does not show for that file, would give every analysis
 of the file a new key and calculate it again for nothing.
@@ -260,18 +267,20 @@ only the read options are kept. So it names the settings the user chose,
 and nothing of the file loaded, of the version of popnei, or of how the
 application calculates, which the project file saves apart. It is made
 with the same canonical form and the same hash, from another object, so a
-fingerprint and a key never coincide. Its filters of the variants are
-those that apply to the file its read options describe, since it reads
-nothing of `p.variants`:
+fingerprint and a key never coincide. It is given the variants file it
+is made for, and reads nothing of `p.variants`: its read options go in,
+and its filters of the variants are those that apply to that file:
 
 ```ts
-filtersAppliedTo(p.filters, readOptions === null ? "nei" : "vcf")
+filtersAppliedTo(p.filters, keepsPassed(source))
 ```
 
-Read options `null` are those of a `.nei` file, and give `"nei"`; they
-never give the format `null` of `filtersAppliedTo`, which means no file
-and keeps every filter, and which would put the filter of the FILTER
-column in the fingerprint of a `.nei` file.
+`keepsPassed` of `docs/specs/core/project.md` gives the read's value, or,
+for a file not read, `true` for a VCF and `false` for a `.nei` file. A
+project file does not save it, so the source of a reference gives it by
+the format (`docs/specs/core/project.md`, "The validation"); no project
+file holds the filter of the FILTER column today, so this changes no
+fingerprint of one.
 
 ## The TypeScript interface
 
@@ -325,7 +334,7 @@ export function intermediateKeyOf(
 
 export function settingsFingerprint(
   def: KeyedDef, p: Project,
-  readOptions: VariantSource["readOptions"],
+  source: VariantSource,   // the file it is made for: its readOptions, and keepsPassed of its read
   memo: KeyMemo | null,
 ): string;
 ```
@@ -335,10 +344,12 @@ writer of the VCF: it is the `format` of `WriteJob`, the job of the
 write in `docs/specs/worker/protocol.md`. `writeKeyOf` throws a defect, as `keyOf` does,
 when the project has no variants file.
 
-`settingsFingerprint` takes the read options apart because, when a
+`settingsFingerprint` takes the variants file apart because, when a
 project file is opened, the project has no variants file yet: it is
-called with the read options of the reference's source then, and with
-those of the current source when the settings now are compared with them.
+called with the reference's source then, and with the current source
+when the settings now are compared with them. It reads of it the read
+options and `keepsPassed`, and nothing else: the load id, the name and
+the identity stay out of the fingerprint.
 
 A key that comes back from a worker with its result, a text on the wire,
 enters the cache through `keyFromWire`, the other place a `Key` is made. A
@@ -462,12 +473,14 @@ hash with node's `crypto` to compare with ours; the code is checked with
   has a key that does not change with the threshold of `missing_data`.
 - **The filters that apply**: the project of the literal above with the
   filter `passed` turned on has the same key and the same fingerprint,
-  its file being a `.nei` file, and the same key from `writeKeyOf`; its
-  fingerprint with read options `null` is the fingerprint of the project
-  without `passed`, and with the read options of a VCF it is not; with
-  a VCF load in its place, the key with `passed` differs from the key
-  without it, and its canonical form holds `{"kind":"passed"}` before
-  `missing_data`.
+  its file being a `.nei` file whose read says `keepsPassed` false, and
+  the same key from `writeKeyOf`; its fingerprint made for a `.nei`
+  source not read, or read with `keepsPassed` false, is the fingerprint
+  of the project without `passed`, and made for a VCF source, or a
+  `.nei` source read with `keepsPassed` true, it is not; with a VCF load
+  in its place, or a `.nei` load whose read says `keepsPassed` true, the
+  key with `passed` differs from the key without it, and its canonical
+  form holds `{"kind":"passed"}` before `missing_data`.
 - **`writeKeyOf`, a literal.** The same project with the filter of
   individuals `missing_data` 0.03, the format `"nei"` and popnei
   `0.1.0`. The canonical form is

@@ -77,10 +77,18 @@ of the project, `docs/designs/stats-filters.md`, approved by the owner
 that day: the filter of the FILTER column, `{ kind: "passed" }`, popnei's
 `filterPassed`, joins `VariantFilter`, first in the fixed order, and the
 runner puts it before the list of the individuals kept; its checks and
-`PROTOCOL_VERSION` 12 are in `messages.md`.
+`PROTOCOL_VERSION` 12 are in `messages.md`. Revised again on 7 October
+2026 for the owner's decision that the filter applies to a `.nei` file
+whose variants record whether they passed their FILTER
+(`docs/designs/stats-filters.md`, "What the owner decided"): `Opened`,
+what the calculation worker answers when it opens a variants file,
+gains `keepsPassed`, popnei 0.2.2's value of that name, and no job
+carries the filter for a file whose variants do not record their FILTER;
+the check of the message and its `PROTOCOL_VERSION` are in
+`messages.md`.
 
 This spec gives the part of `src/worker/protocol.ts` that core
-names: the filters of the variants and of the individuals, the table of
+names: what an opened variants file says, the filters of the variants and of the individuals, the table of
 the individuals file and the types of its columns, a request to a
 worker with its progress and its outcome, the request and the result
 of each analysis, `Job` and `JobResult`, and the request of a written
@@ -144,16 +152,26 @@ fifth with no number, the filter of the FILTER column (below):
 The filter of the FILTER column, `{ kind: "passed" }`, keeps the
 variants of a VCF whose FILTER is `PASS` or a dot, popnei's
 `filterPassed`, whose kind in the counts of a pass is `"passed"` and
-whose `args` are `{}` (popnei 0.2.1, `variant.d.ts`). It works only on a
-VCF opened with `onlyPassed: false`, as `popgen2.html` opens every VCF;
-over a VCF opened with only the passed variants it keeps every variant,
-and over a `.nei` file written before popnei's format 1.2 its pass
-throws at the first block, "the variants hold no record of whether they
-passed their FILTER…" (seen in node with popnei 0.2.1 on `panel.nei`, 7
-October 2026). So no job carries it for a `.nei` file: core builds the
-filters of a job from `filtersApplied` of `docs/specs/core/project.md`,
-which leaves it out for one, and only `popgen2.html` lets a project hold
-it (`docs/designs/stats-filters.md`, "The FILTER filter"). The runner
+whose `args` are `{}` (popnei 0.2.1, `variant.d.ts`). It works on a
+VCF opened with `onlyPassed: false`, as `popgen2.html` opens every VCF,
+and on a `.nei` file whose variants record whether they passed their
+FILTER, which popnei writes from its vars format 1.2 when the source had
+the record; over a VCF opened with only the passed variants it keeps
+every variant, and over a `.nei` file without the record, one written
+before format 1.2 such as `panel.nei`, its pass throws at the first
+block, "the variants hold no record of whether they passed their
+FILTER…" (seen in node with popnei 0.2.1 on `panel.nei`, 7 October
+2026). popnei 0.2.2 says which a file is once it is open, with no pass:
+`keepsPassed` of its `Variants`, true for every VCF, false for
+`panel.nei`, and true for a `.nei` file written by popnei 0.2.2 from
+`low_qual.vcf.gz`, over which the filter keeps 900 of the 1,200 variants
+(node, popnei 0.2.2, 7 October 2026). The runner sends that value in
+`Opened`, below, and core holds it in the read of the file. So no job
+carries the filter for a file whose variants do not record their
+FILTER: core builds the filters of a job from `filtersApplied` of
+`docs/specs/core/project.md`, which leaves it out for such a file, and
+only `popgen2.html` lets a project hold it
+(`docs/designs/stats-filters.md`, "The FILTER filter"). The runner
 puts it on the `Variants` after the regions, once the application has
 that filter, and before the list of the individuals kept, where popnei
 advises it, "Add it first, or right after `filterByRegions`", and where
@@ -272,6 +290,21 @@ of variants of the file, which the store records into the load, is
 Every field is `readonly`, and every array `readonly T[]`, in the code, as
 core asks of the project (`.claude/skills/coding/SKILL.md`, "The core");
 `readonly` is left out of the fields below to keep them short.
+
+What popnei gives once a variants file is open, with no pass over its
+variants, which the calculation worker sends back to an `open`
+(`messages.md`): the individuals, the ploidy, and whether the variants
+record whether they passed their FILTER, popnei's `keepsPassed`, which
+decides whether the filter of the FILTER column applies to the file
+(above).
+
+```ts
+export interface Opened {
+  individuals: string[];  // of the file, in its order
+  ploidy: number;         // the ploidy popnei opened the file with
+  keepsPassed: boolean;   // Variants.keepsPassed: true for a VCF, and for a .nei file of format 1.2 with the record
+}
+```
 
 A filter of the variants, with popnei's argument names. The thresholds
 are numbers from 0 to 1, and `maxDist` a whole number of base pairs from

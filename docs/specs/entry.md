@@ -62,7 +62,9 @@ of the project (`docs/designs/stats-filters.md`, approved by the owner
 that day): `countsOf` and `writeCountsOf` of `src/core/apps.ts` speak of
 the filters that apply to the file, `filtersApplied` of
 `docs/specs/core/project.md`, which leaves the filter of the FILTER
-column out for a `.nei` file, in place of the project's filters as they
+column out for a file whose variants do not record their FILTER (a
+`.nei` file until the owner's decision of the same day that the filter
+applies to a `.nei` file with that record), in place of the project's filters as they
 are; and `popgen2.html` gets a first project of its own. On
 `popgen.html`, whose projects never hold that filter, nothing a user
 sees changes.
@@ -419,7 +421,7 @@ it").
 
 | the outcome | recorded as |
 |---|---|
-| `opened`: the individuals and the ploidy of the variants file | `variantsRead(fileId, { kind: "read", individuals, ploidy, numVars: null })` |
+| `opened`: the individuals and the ploidy of the variants file, and whether its variants record their FILTER, `keepsPassed` | `variantsRead(fileId, { kind: "read", individuals, ploidy, numVars: null, keepsPassed })` |
 | `failed`, with `popnei`: popnei refused the file | `variantsRead(fileId, { kind: "failed", error: { kind: "popnei", message } })` |
 | `failed`, any other kind: the browser could not read the file, `reopenFailed`; the calculation worker crashed, could not start, is of another version, or a message was a defect | `variantsRead(fileId, { kind: "failed", error: { kind: "worker", error } })`, the error as the client gives it, whose words `projectNeeds` gives by its kind |
 | `read`: the individuals file read, its table, the types of its columns, and the options of the CSV it used, set or found | `individualsRead(fileId, csv, { kind: "read", table, columns, found })` |

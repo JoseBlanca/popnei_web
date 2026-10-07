@@ -37,7 +37,7 @@ project's file, `filtersApplied(p)` of `docs/specs/core/project.md`, in
 place of `p.filters`. A project keeps its filters through a new file, so
 the filter of the FILTER column, `passed`, can be on while a `.nei` file
 is open, and popnei refuses it over a `.nei` file written before its
-format 1.2; `filtersApplied` leaves it out then, and gives `p.filters`
+format 1.2; `filtersApplied` leaves it out for such a file, and gives `p.filters`
 itself otherwise. On `popgen.html`, whose projects never hold that
 filter, the two are the same array, so nothing a user sees changes. The
 filter of the FILTER column comes through `ldDecayFilters`, which leaves
