@@ -297,3 +297,47 @@ popnei's words at a refusal while on Stop, and of a refused genotype
 failing the one pass. Not taken: the title of the click flow, which
 phase 2 removes; the pandas import of the scripts, since no code joins
 them into one script yet.
+
+### Phase 2, the result so far
+
+Commits be989fc, d1338fd, 326a046, 7769306 and b8187a7; the fixes of
+its review in c4327c8 to 0c2ea51. popnei sends a result so far at most
+every 2 seconds of its pass; on this Mac a pass over the VCF of 200,000
+variants and 1,000 individuals (127.6 MB) takes about 2.5 s, so it
+shows one result so far; a file of minutes shows one every 2 s. The
+builder's choices: `createRunner` takes `{soFarEvery}` for the tests;
+the CSV download comes with the final result only; the status region
+says once per pass that the plots are drawn from the variants read so
+far.
+
+The review sent spec, tests, stale, errors, api and architecture over
+phase 2, and react, accessibility and ux over the screen of phases 1
+and 2; stale found nothing; browser is sent after phase 3. Fixed:
+`onSoFar` is required on `Client.run`, so that dropping it in the page
+does not typecheck, and a test goes through the page's `connectStore`;
+the copy of a result so far is tested against arrays that share a
+buffer, and the first result so far of a test file whose halves differ
+equals popnei's result over its first block; what the browser cannot
+post, a result so far or a progress, is our defect and not a crash the
+user is told to start again; the words while the file is read say what
+holds so far ("…with no called genotype so far", "Over 200
+individuals, from the variants read so far", the plots' descriptions
+for a screen reader, the status region); the box says "Variants:
+155,000 so far" and "Chromosomes: 1 so far" with no percentage, one
+row each at 320 px, so that Stop does not move when the first result
+arrives; after a Stop each part says "Stopped. Start again reads the
+file from the start."; the failure words name the count and the
+statistics; while the code of the plots downloads, the parts say they
+are calculated; the box's error boundary is made again for each file,
+so that one error does not leave it empty for the next files; the
+Playwright flow of the plots so far no longer races the pass (it
+failed on a pass 22% shorter): in the test, the worker's clock runs
+fast and its final result is held until the test releases it, with no
+change to the site's code; the results so far across a new file and an
+undo are tested; specs and section 9 of the architecture. Not taken:
+`copiedSummary` stays exported, for its direct test.
+
+For the owner, asked in the report: at a Stop or a failure the plots so
+far go away, and the ux and accessibility reviews both raise it (a user
+who stops a long file to look at the plots loses them; and the plots
+change every 2 s with no way to pause them but Stop, WCAG 2.2.2).
