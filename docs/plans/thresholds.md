@@ -70,11 +70,26 @@ this count equals what popnei's filter at the threshold keeps on 464 of
 the 1,281 edges and, on the other 817, leaves out the variants whose
 value is exactly on the edge (`docs/designs/stats-filters.md`, "Exact
 counts need popnei", with the popnei issue drafted there). The words say
-"at most", as the filters of the old page and `docs/use-cases.md` do;
-the report to the owner gives, on the fixtures, how many variants the
-counts leave out at the usual thresholds, measured against popnei's
-filters under node. The counting is one function of `src/core/`, so that
-the popnei fix changes one place.
+"at most", as the filters of the old page and `docs/use-cases.md` do.
+The counting is one function of `src/core/` (`variantsAtMost` of
+`src/core/thresholds.ts`), so that the popnei fix changes one place.
+
+Measured in phase 1 against popnei's filters under node: on
+`panel.vcf.gz`, "missing rate at most 0.05" keeps 1,152 variants by
+popnei's filter and 1,113 by the bins below the edge, 39 left out; at
+0.5 the bins leave out 3 variants for the MAF and 8 for the observed
+heterozygosity; on `tetraploid.vcf.gz`, 3 for the MAF at 0.5. The round
+numbers a user types, 0.05, 0.1 and 0.5, all fall on edges equal to
+k/1280, where the bins undercount. So a single number would mislead.
+Decided by the session on 7 October 2026, until the owner chooses: on
+an edge one double above k/1280 the count is exact and the plot gives
+one number; on an edge equal to k/1280 the variants on the edge are
+somewhere in the bin that starts at it, and the plot gives the range
+the bins allow, from the bins below the edge to those plus that bin,
+"At most 0.05: keeps 1,113 to 1,170 variants", one number again when
+that bin is empty. The range is computed from popnei's bins, as the
+counts are, and says no more than they know. The owner chooses between
+it, "below" with one number, and the popnei issue.
 
 **Counting, the individuals.** From popnei's value of each individual:
 those with a value at most the threshold are kept, the others with a
@@ -113,7 +128,7 @@ threshold it is given.
 
 ## The phases
 
-**1. The counts.** The core functions: snapping a number to a fine edge,
+**1. The counts.** Done in 533a95c (see "What was done"). The core functions: snapping a number to a fine edge,
 the variants kept and removed at an edge from the fine bins, the
 individuals kept and removed at a threshold; tests with numbers from
 popnei under node on `panel.vcf.gz`, `panel.nei` and
@@ -143,4 +158,13 @@ line, light and dark, 1280 and 320 px.
 
 ## What was done
 
-(Filled in as the work goes.)
+### Phase 1, the counts
+
+Commit 533a95c: `snapToFineEdge`, `variantsAtMost` and
+`individualsAtMost` of `src/core/thresholds.ts`, tested on hand-made
+inputs and on popnei's numbers, which `e2e/fixtures/make_fixtures.mjs`
+writes to `e2e/fixtures/threshold_counts.json` under node (the tests of
+core may not call popnei). On 533a95c Vitest "4010 passed". A line at 0
+keeps nothing by the bins, since the values of 0 are in the bin to the
+right of the edge 0: on `panel.vcf.gz` 2 variants have a missing rate
+of 0; the range covers it.
