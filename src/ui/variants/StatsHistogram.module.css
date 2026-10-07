@@ -19,7 +19,7 @@
 }
 
 /* What the threshold keeps, over the plot. One row high, and two where
-   the column is too narrow for its longest form, "Keeps 1,113–1,152 of
+   the column is too narrow for its longest form, "Keeps 1,113 to 1,152 of
    1,200 variants so far", so that the plot does not move as the words
    change while the line is dragged, nor stand at another height than
    the plot beside it. */

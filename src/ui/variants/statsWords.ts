@@ -270,27 +270,18 @@ export type Counted = "variant" | "individual";
 
 /** The line under the row of a threshold, over its plot: what it keeps
     of those with a value, "Keeps 1,050 of 1,200 variants", the range the
-    bins allow, "Keeps 564–566 of 1,200 variants", or "Keeps all 1,200
+    bins allow, "Keeps 564 to 566 of 1,200 variants", or "Keeps all 1,200
     variants"; ending "so far" while the pass runs, `soFar`. No
-    explanation of a range: the hatched bar shows it. */
+    explanation of a range: the hatched bar shows it. The range is
+    written with "to", which a screen reader reads as written, where it
+    may read a dash as nothing, "564 566". */
 export function keepsLine(
   counts: ThresholdCounts,
   noun: Counted,
   soFar = false,
 ): string {
-  const { keptLow, keptHigh, withValue } = counts;
-  const ending = soFar ? SO_FAR : "";
-  if (withValue === 0) return `No ${noun} has a value${ending}`;
-  if (keptLow === withValue && keptHigh === withValue) {
-    return withValue === 1
-      ? `Keeps the only ${noun}${ending}`
-      : `Keeps all ${counted(withValue, noun)}${ending}`;
-  }
-  const range =
-    keptLow === keptHigh
-      ? grouped(keptLow)
-      : `${grouped(keptLow)}–${grouped(keptHigh)}`;
-  return `Keeps ${range} of ${counted(withValue, noun)}${ending}`;
+  const keeps = keepsWords(counts, noun);
+  return `${keeps.charAt(0).toUpperCase()}${keeps.slice(1)}${soFar ? SO_FAR : ""}`;
 }
 
 /** What the line of a threshold says to a screen reader as its value:
@@ -304,24 +295,24 @@ export function thresholdValueText(
   noun: Counted,
   soFar = false,
 ): string {
+  return `${numberText(shown)}, ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+}
+
+/** What a threshold keeps, in lower case: "keeps 1,113 to 1,152 of 1,200
+    variants", "keeps all 1,200 variants", "no variant has a value". */
+function keepsWords(counts: ThresholdCounts, noun: Counted): string {
   const { keptLow, keptHigh, withValue } = counts;
-  const ending = soFar ? SO_FAR : "";
-  let keeps: string;
-  if (withValue === 0) {
-    keeps = `no ${noun} has a value`;
-  } else if (keptLow === withValue && keptHigh === withValue) {
-    keeps =
-      withValue === 1
-        ? `keeps the only ${noun}`
-        : `keeps all ${counted(withValue, noun)}`;
-  } else {
-    const range =
-      keptLow === keptHigh
-        ? grouped(keptLow)
-        : `${grouped(keptLow)} to ${grouped(keptHigh)}`;
-    keeps = `keeps ${range} of ${counted(withValue, noun)}`;
+  if (withValue === 0) return `no ${noun} has a value`;
+  if (keptLow === withValue && keptHigh === withValue) {
+    return withValue === 1
+      ? `keeps the only ${noun}`
+      : `keeps all ${counted(withValue, noun)}`;
   }
-  return `${numberText(shown)}, ${keeps}${ending}`;
+  const range =
+    keptLow === keptHigh
+      ? grouped(keptLow)
+      : `${grouped(keptLow)} to ${grouped(keptHigh)}`;
+  return `keeps ${range} of ${counted(withValue, noun)}`;
 }
 
 /** The line under a histogram of the individuals of those with no value,

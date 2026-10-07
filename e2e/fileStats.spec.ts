@@ -177,7 +177,7 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   // bins.
   await expect(
     stats(page).getByText(
-      /^Keeps [\d,–]+ of 1,200 variants$|^Keeps all 1,200 variants$/u,
+      /^Keeps [\d,]+(?: to [\d,]+)? of 1,200 variants$|^Keeps all 1,200 variants$/u,
     ),
   ).toHaveCount(4);
   await expect(stats(page).getByText("Keeps all 200 individuals")).toHaveCount(
@@ -235,7 +235,7 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   ]);
   await expect(
     stats(page).getByText(
-      /^Keeps [\d,–]+ of 200 variants$|^Keeps all 200 variants$/u,
+      /^Keeps [\d,]+(?: to [\d,]+)? of 200 variants$|^Keeps all 200 variants$/u,
     ),
   ).toHaveCount(4);
   await expect(stats(page).getByText("Keeps all 12 individuals")).toHaveCount(
@@ -329,7 +329,7 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // and the chromosomes read so far; the status region says it once.
   await release(page, "allSoFar");
   const overSoFar = stats(page).getByText(
-    /^Keeps [\d,–]+ of [\d,]+ variants so far$|^Keeps all [\d,]+ variants so far$/u,
+    /^Keeps [\d,]+(?: to [\d,]+)? of [\d,]+ variants so far$|^Keeps all [\d,]+ variants so far$/u,
   );
   await expect(overSoFar).toHaveCount(4);
   await expect(

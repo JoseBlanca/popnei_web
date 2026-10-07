@@ -79,14 +79,14 @@ describe("thresholds round 1 the line of what a threshold keeps", () => {
     ).toBe("Keeps 1,050 of 1,200 variants");
     expect(
       keepsLine({ keptLow: 564, keptHigh: 566, withValue: 1200 }, "variant"),
-    ).toBe("Keeps 564\u2013566 of 1,200 variants");
+    ).toBe("Keeps 564 to 566 of 1,200 variants");
     expect(
       keepsLine({ keptLow: 1200, keptHigh: 1200, withValue: 1200 }, "variant"),
     ).toBe("Keeps all 1,200 variants");
     // A range that reaches every variant is still a range.
     expect(
       keepsLine({ keptLow: 1190, keptHigh: 1200, withValue: 1200 }, "variant"),
-    ).toBe("Keeps 1,190\u20131,200 of 1,200 variants");
+    ).toBe("Keeps 1,190 to 1,200 of 1,200 variants");
   });
 
   test("while the pass runs it ends so far", () => {
@@ -96,7 +96,7 @@ describe("thresholds round 1 the line of what a threshold keeps", () => {
         "variant",
         true,
       ),
-    ).toBe("Keeps 1,113\u20131,152 of 1,200 variants so far");
+    ).toBe("Keeps 1,113 to 1,152 of 1,200 variants so far");
     expect(
       keepsLine(
         { keptLow: 180, keptHigh: 180, withValue: 200 },

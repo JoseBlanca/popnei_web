@@ -294,21 +294,17 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(het.threshold.shown).toBe(0.33);
   });
 
-  test("on an edge equal to k/1280 the bins cannot tell the variants on the edge: at 0.05, 1,113–1,152 of the missing rate, with no explanation", () => {
+  test("on an edge equal to k/1280 the bins cannot tell the variants on the edge: at 0.05, 1,113 to 1,152 of the missing rate, with no explanation", () => {
     const plot = variantPlot("missingRate", PANEL.variants, false, 0.05);
-    expect(plot.threshold.line).toBe(
-      "Keeps 1,113\u20131,152 of 1,200 variants",
-    );
+    expect(plot.threshold.line).toBe("Keeps 1,113 to 1,152 of 1,200 variants");
     expect(plot.threshold.valueText).toBe(
       "0.05, keeps 1,113 to 1,152 of 1,200 variants",
     );
   });
 
-  test("inside a fine bin the bins cannot tell its variants: at 0.07, 1,197–1,199 of the missing rate; one number when the bin is empty, 81 at 0.012", () => {
+  test("inside a fine bin the bins cannot tell its variants: at 0.07, 1,197 to 1,199 of the missing rate; one number when the bin is empty, 81 at 0.012", () => {
     const plot = variantPlot("missingRate", PANEL.variants, false, 0.07);
-    expect(plot.threshold.line).toBe(
-      "Keeps 1,197\u20131,199 of 1,200 variants",
-    );
+    expect(plot.threshold.line).toBe("Keeps 1,197 to 1,199 of 1,200 variants");
     expect(plot.data.threshold?.undecided).toBe(true);
     const empty = variantPlot("missingRate", PANEL.variants, false, 0.012);
     expect(empty.threshold.line).toBe("Keeps 81 of 1,200 variants");

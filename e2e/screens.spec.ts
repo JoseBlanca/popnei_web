@@ -4669,7 +4669,7 @@ for (const theme of ["light", "dark"] as const) {
         await missing.getByRole("textbox").fill("0.05");
         await missing.getByRole("textbox").press("Enter");
         await expect(
-          missing.getByText("Keeps 1,113\u20131,152 of 1,200 variants"),
+          missing.getByText("Keeps 1,113 to 1,152 of 1,200 variants"),
         ).toBeVisible();
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);

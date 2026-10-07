@@ -277,12 +277,12 @@ for (const width of [1280, 320]) {
         }),
       );
     const before = await plotTops();
-    // A range, the longest line of the panel, "Keeps 1,113–1,152 of 1,200
+    // A range, the longest line of the panel, "Keeps 1,113 to 1,152 of 1,200
     // variants".
     await missing.box.fill("0.05");
     await missing.box.press("Enter");
     await expect(missing.words).toHaveText(
-      "Keeps 1,113–1,152 of 1,200 variants",
+      "Keeps 1,113 to 1,152 of 1,200 variants",
     );
     expect(await plotTops()).toEqual(before);
     // The line holds the longest form, with "so far", in its room.
@@ -290,7 +290,7 @@ for (const width of [1280, 320]) {
       const room = element.getBoundingClientRect().height;
       const copy = element.cloneNode(false);
       if (!(copy instanceof HTMLElement)) return false;
-      copy.textContent = "Keeps 1,113\u20131,152 of 1,200 variants so far";
+      copy.textContent = "Keeps 1,113 to 1,152 of 1,200 variants so far";
       element.after(copy);
       const height = copy.getBoundingClientRect().height;
       copy.remove();
@@ -400,7 +400,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   const maf = histogram(page, "Major allele frequency");
   await maf.box.fill("0.52");
   await maf.box.press("Enter");
-  await expect(maf.words).toHaveText("Keeps 49–51 of 1,200 variants");
+  await expect(maf.words).toHaveText("Keeps 49 to 51 of 1,200 variants");
   await expect(maf.words).toHaveText(variantWords("maf", 0.52));
   await expect(maf.hatched).toHaveCount(1);
   await expect(maf.slider).toHaveAttribute(
@@ -444,7 +444,9 @@ test("TH2 the keys of the line: an arrow one step of the axis, Page Up and Down 
   // the bin that starts at it.
   await expect(missing.slider).toHaveValue("0.05");
   await expect(missing.box).toHaveValue("0.05");
-  await expect(missing.words).toHaveText("Keeps 1,113–1,152 of 1,200 variants");
+  await expect(missing.words).toHaveText(
+    "Keeps 1,113 to 1,152 of 1,200 variants",
+  );
   await expect(missing.words).toHaveText(variantWords("missingRate", 0.05));
   // The bar that starts at the line is hatched, neither kept nor removed.
   await expect(missing.hatched).toHaveCount(1);
@@ -591,8 +593,11 @@ test("TH2 a number typed in the box of a threshold at the top of its axis is kep
   await het.box.fill("0.3");
   await het.box.press("Enter");
   await release(page, "result");
-  await expect(het.words).toHaveText(/^Keeps [\d,–]+ of [\d,]+ variants$/u, {
-    timeout: 60_000,
-  });
+  await expect(het.words).toHaveText(
+    /^Keeps [\d,]+(?: to [\d,]+)? of [\d,]+ variants$/u,
+    {
+      timeout: 60_000,
+    },
+  );
   await expect(het.box).toHaveValue("0.3");
 });
