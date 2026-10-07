@@ -287,8 +287,10 @@ box, and typing the value at which the filter would keep everything, 1
 for a maximum and 0 for a minimum. Every threshold of this page is a
 maximum, so typing 1 turns it off. That value is taken as off, not as a
 filter at 1, so a variant with no called genotype is kept, as with no
-filter. A line dragged to the top of its axis is a filter at that value,
-since the axis ends where the file's values end, not at 1. The number box shared by both pages,
+filter. The value 1 is off however it is reached, typed or dragged, as
+the session settled on 7 October 2026 after the approval. A line dragged
+to the top of an axis that ends below 1 is a filter at that value, since
+the axis ends where the file's values end. The number box shared by both pages,
 `src/ui/widgets/NumberField.tsx`, gives nothing today for an empty box
 and shows its value again; it gains an option, used by `popgen2.html`
 only, under which Enter or leaving an empty box commits "off"; a typed 1 is
