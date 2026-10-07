@@ -22,8 +22,9 @@ section 13, the calculation worker started again after every LD decay,
 which the owner approved on 30 September 2026. Revised on 7 October
 2026 for the thresholds of `popgen2.html` as filters of the project,
 in sections 2, 3, 5, 7 and 8, as `docs/designs/stats-filters.md`,
-approved by the owner that day, lists them, each with its paragraph
-"What was revised" at the end of the section. What was
+approved by the owner that day, lists them, and in sections 9, 11 and
+12 and point 3 of section 13, which the review of its specs found
+stale, each section with its paragraph "What was revised" at its end. What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -939,7 +940,14 @@ change of the user leaves that key behind, so that the user can run
 again; until 7 October 2026 every change forgot every such failure. On
 `popgen2.html` a change of a filter gives the one pass no new key, and a
 click on the FILTER box after a crash would have wiped the words of the
-crash; Start again tries again.
+crash; Start again tries again. The design asked for the rule on
+`popgen2.html`; that it holds on `popgen.html` too, so that the store
+has one rule of failure, is the session's decision of 7 October 2026,
+not the design's, and the owner is told of it with the specs. On the
+old page it changes one thing a user sees: the words of a crash of an
+analysis stay after a change of a setting the analysis does not read,
+where they gave way to its Run button (`docs/specs/core/store.md`, "A
+calculation that failed").
 
 What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day. The filters of the variants in a key
@@ -2251,10 +2259,12 @@ for the smallest part of it.
   back, and hold of their own only the value being dragged or typed,
   which is no part of the project (`docs/designs/stats-filters.md`). A
   change of a threshold or of the FILTER box is a command; an empty box,
-  or 1, turns a threshold off (`setThreshold` of
+  or 1 however it is reached, typed or by the line dragged to the top of
+  an axis that ends at 1, turns a threshold off (`setThreshold` of
   `docs/specs/core/project.md`). The page has a row with Undo and Redo,
   their keys, and the notice of a change, reused from the shell of the
-  old page; its first project has the FILTER filter on and the missing
+  old page, "The filter of the FILTER column was turned off · Undo"; its
+  first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. A tools section after the
   plots, whose first tool is the download of the filtered file, comes
   with popnei's issue #13. The plot draws the threshold, with no legend; the
@@ -2275,9 +2285,11 @@ no Undo; it is now the project's filter, on or off, and the page gains
 Undo, Redo and the notice, and its own first project. Not taken: a check
 box beside each threshold to turn it on and off, in place of the empty
 box or 1, the owner's choice of 7 October 2026; and the top of the axis
-as off, since the axis ends where the file's values end, and a filter
-of the MAF or of the observed heterozygosity at any value drops a
-variant with no called genotype, which no filter keeps.
+as off whatever its number, since the axis ends where the file's values
+end, and a filter of the MAF or of the observed heterozygosity at any
+value drops a variant with no called genotype, which no filter keeps.
+The top of an axis that ends at 1 is off, as 1 is however it is
+reached, the owner's decision of 7 October 2026.
 
 ## 8. The project file, the report and the script
 
@@ -2402,7 +2414,12 @@ owner kept for the new page.
 
 ```
 src/core/
-  project.ts        the Project, its commands, the validation of a project file
+  project.ts        the Project, its commands, the validation of a project file;
+                    from 7 October 2026 also filtersApplied, the filters
+                    of the variants that apply to the project's file,
+                    which everything that reads the filters applied
+                    reads, and setThreshold, the command of a threshold
+                    of popgen2.html
   result.ts         the Result type of what can fail with good code
   keys.ts           the canonical form of the inputs of a result, and its hash
   history.ts        undo and redo over projects
@@ -2435,7 +2452,9 @@ src/core/
                     counted, the statistics of each individual, the
                     variants the filters keep; from 5 October 2026 also
                     POPGEN2_ANALYSES, the analyses of the new page
-                    popgen2.html, which has no steps
+                    popgen2.html, which has no steps; from 7 October
+                    2026 popgen2FirstProject, the first project of that
+                    page
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file
   writeEstimate.ts  the size expected of a file of the filtered variants,
@@ -2504,12 +2523,17 @@ src/ui/
   popgen2.tsx       from 5 October 2026, the entry of popgen2.html, the new
                     page: with pageStart.tsx, its store, the announcements,
                     the analyses that start by themselves, and the page,
-                    with no stepper, no saving and no shell
+                    with no stepper and no saving; from 7 October 2026
+                    with the row of Undo and Redo, their keys and the
+                    notice, reused from shell/, though not the rest of
+                    the shell
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
                     groups of the analyses the page starts by itself;
-                    apart from the entry, so that a test in node makes it
+                    from 7 October 2026 made with filterNotices true and
+                    popgen2FirstProject; apart from the entry, so that a
+                    test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
@@ -2520,9 +2544,13 @@ src/ui/
                     of the pass running, the count of the variants so
                     far, its Stop and Start again, the statistics of the
                     open file, drawn while the pass runs from its results so
-                    far (the store's running.soFar, never cached) and
-                    then from its result, from 7 October 2026 each with
-                    its threshold, its line, its box and its words
+                    far (the store's running.soFar, never cached), after a
+                    Stop from the last of them (from 7 October 2026, the
+                    store's stopped.soFar of the state ready, never
+                    cached) and then from its result, from 7 October
+                    2026 each with its threshold, a filter of the
+                    project, its line, its box and its words, and the
+                    FILTER box
                     (statsPlots.ts, StatsHistogram.tsx; section 7), the
                     page that holds them, their words, the rules of the
                     chain that the box and its words share (chain.ts: its
@@ -2544,7 +2572,13 @@ src/ui/
                     status.ts, what is read to a screen reader;
                     words.ts, the words of the shell made from the store;
                     and shellWords.tsx, which gives the components of the
-                    shell what those words need of the application
+                    shell what those words need of the application. From
+                    7 October 2026 the buttons of Undo and Redo with
+                    their keys are a part of their own, which the header
+                    of popgen.html and the row of popgen2.html draw, and
+                    the words of the notice, the title of each analysis,
+                    are a set of their own, which both pages give and
+                    the shell's words take in
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -2566,7 +2600,11 @@ src/ui/
   widgets/          React Aria components with our styles, one wrapper per
                     widget; among them ThresholdSlider.tsx, from 7
                     October 2026, the line of a threshold dragged over a
-                    histogram (section 7); Table.tsx, the plain table of a
+                    histogram (section 7), which tells the end of a drag
+                    with a pointer apart from a key; NumberField.tsx,
+                    with an option, popgen2.html's alone, under which an
+                    emptied box commits "off"; Checkbox.tsx, with a line
+                    under the box that describes it; Table.tsx, the plain table of a
                     few rows that is only read, SortableTable.tsx, the
                     table sorted by any column, whose Virtualizer draws
                     only the rows in view, for thousands of rows such as
@@ -2608,6 +2646,15 @@ at `/popnei_web/popgen.html` as section 4 of `docs/technology.md` has it
 (`docs/specs/site.md`). The probe, `src/probe/` with `probe.html`, is
 linked from no other page; nothing of `src/` imports it, and it imports
 popnei and React and nothing of `src/`.
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day, and its specs: the rows of `project.ts`,
+`apps.ts`, `popgen2.tsx`, `popgen2Store.ts`, `variants/`, `shell/` and
+`widgets/`, for the thresholds of `popgen2.html` as filters of the
+project, its Undo, Redo and notice, and its plots kept after a Stop. No
+module is added and no rule of the imports changes: `popgen2.tsx` takes
+the part of the shell with Undo and Redo, and the notice, and not the
+shell itself, whose stepper and summary line that page does not have.
 
 ## 10. The walking skeleton
 
@@ -2861,10 +2908,14 @@ tests of the application are the same with it.
   over a gzipped VCF of gigabytes the pass takes minutes. The user sets the individuals first, in the
   order of the Variants step, and then reads the histograms of the
   variants to set the filters of the variants, which take nothing off.
-- **The thresholds are set in number fields**, and not by dragging a line
-  on a histogram, so no drag needs a way for the keyboard (WCAG 2.2,
-  success criterion 2.5.7). The histograms are drawn with the D3 modules
-  `docs/technology.md` chose, and add no dependency.
+- **The thresholds of `popgen.html` are set in number fields**, and not
+  by dragging a line on a histogram, so no drag there needs a way for the
+  keyboard (WCAG 2.2, success criterion 2.5.7). On `popgen2.html`, from
+  7 October 2026, each threshold is a line dragged over its histogram
+  and a number box beside it: the box, and the arrow keys on the line,
+  are the ways for the keyboard and for a user who cannot drag (section
+  7). The histograms are drawn with the D3 modules `docs/technology.md`
+  chose, and add no dependency.
 - **The counts of the filters cost a pass** only when no analysis has made
   one with the same filters, of the variants and of the individuals. The pass is `iterBlocks`, which copies every
   block of genotypes out of wasm (section 4); its time against a pass of
@@ -2896,6 +2947,11 @@ tests of the application are the same with it.
   specs and the architecture review of stage 4 on 27 September 2026, and
   not yet seen in a browser (section 13, point 10).
 
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day: the thresholds set in number fields are
+those of `popgen.html`; on `popgen2.html` a threshold is a line and a
+box.
+
 ## 12. What is hard to undo
 
 - **The format of the project file**, which users keep. It carries the
@@ -2917,6 +2973,17 @@ tests of the application are the same with it.
   (`docs/specs/stage-3-open-points.md`, point E). What the filter of the regions
   means, the regions counted as BED counts them and a variant's position
   as a VCF counts it, is kept by every file saved with one.
+- **The kind `passed` in version 1 of the project file**, from 7
+  October 2026 (section 8): a file saved with the filter of the FILTER
+  column cannot be opened by a version of the application from before
+  it, which refuses a kind of filter it does not know, and `popgen.html`
+  refuses it. No file holds it until `popgen2.html` saves projects.
+- **The first project of `popgen2.html`**, from 7 October 2026: the
+  filter of the FILTER column on and the missing rate of the variants at
+  0.1, the rest off (section 7). Every user of the page starts from it,
+  and every project file the page will save holds the filter of the
+  FILTER column, on or off, so a later change of that start changes what
+  those files hold.
 
 The canonical form of the keys is not among these. No key and no fingerprint of
 settings is saved in a file: the cache lives in the tab, the calculation
@@ -2924,6 +2991,11 @@ worker's keys are made by the same page, and the fingerprints of an
 opened project are made from its settings when it is opened (section 8).
 A change to the canonical form, in a new version of the site, costs a
 user nothing but the results of a tab left open across the deploy.
+
+What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
+approved by the owner that day: the kind `passed` in version 1 of the
+project file, and the first project of `popgen2.html`, which that
+design lists as hard to undo.
 
 ## 13. Open points
 
@@ -2957,7 +3029,12 @@ that day:
    (section 2, where the options and their costs are). The order among
    the filters of the variants is as it was, but for the regions, which
    go before the filter of individuals, as the owner decided later that
-   day (point 15).
+   day (point 15). From 7 October 2026, with the design
+   `docs/designs/stats-filters.md` approved by the owner that day, the
+   filter of the FILTER column, `passed`, comes after the regions and
+   before the list of the individuals: the regions, the FILTER column,
+   the list of the individuals, missing data, observed heterozygosity,
+   MAF, and the LD pruning last (section 2).
 4. **An individual with no called genotype** is removed by the filter by
    heterozygosity (section 4). Not taken: keeping it, which a NaN would
    otherwise let through whatever the threshold.
