@@ -300,9 +300,9 @@ export function openFailure(p: Project): OpenFailure | null {
     again after a Stop or a crash of the worker. */
 export const START_AGAIN_LABEL = "Start again";
 
-/** Which pass of the chain a Stop stopped: the count of the variants and
-    the statistics, or the count of the FILTER failures after it. */
-export type StoppedPass = "summary" | "failures";
+/** A pass of the chain of the page: the count of the variants and the
+    statistics, or the count of the FILTER failures after it. */
+export type ChainPass = "summary" | "failures";
 
 /** What the status region says of a Stop of the pass `pass`, whose lines
     then say "not counted", with the way to start it again when the box
@@ -311,7 +311,7 @@ export type StoppedPass = "summary" | "failures";
     "The count of the variants and the statistics were stopped. Start
     again calculates them from the start." */
 export function stoppedText(
-  pass: StoppedPass,
+  pass: ChainPass,
   offersStartAgain: boolean,
 ): string {
   if (pass === "summary") {
@@ -354,15 +354,21 @@ const OTHER_PLOIDY =
   /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
 
 /**
- * The words of popnei's refusal `message` of the pass of the count and
- * the statistics of `p`: a file of no variant; a gzipped file or a `.nei`
- * file damaged or cut short; a variant at the position 0; a position of
- * 2^53 or more; a genotype of another ploidy, which may be a correct VCF,
- * haploid males on chrX, and which fetching the file again does not mend;
- * any other line of the VCF popnei cannot read; any other, with popnei's
- * message. Throws a defect on a project with no variants file.
+ * The words of popnei's refusal `message` of the pass `pass` of `p`, the
+ * count of the variants and the statistics unless given: a file of no
+ * variant; a gzipped file or a `.nei` file damaged or cut short; a variant
+ * at the position 0; a position of 2^53 or more; a genotype of another
+ * ploidy, which may be a correct VCF, haploid males on chrX, and which
+ * fetching the file again does not mend; any other line of the VCF popnei
+ * cannot read; any other, with popnei's message. Each says what the pass
+ * could not do, and a remedy that works for either pass. Throws a defect
+ * on a project with no variants file.
  */
-export function refusalText(message: string, p: Project): string {
+export function refusalText(
+  message: string,
+  p: Project,
+  pass: ChainPass = "summary",
+): string {
   const variants = p.variants;
   if (variants === null) {
     throw new Error(
@@ -370,6 +376,14 @@ export function refusalText(message: string, p: Project): string {
     );
   }
   const fileName = escaped(variants.name);
+  const cannot =
+    pass === "summary"
+      ? "the variants cannot be counted, nor their statistics calculated"
+      : "the variants that failed their FILTER cannot be counted";
+  const couldNot =
+    pass === "summary"
+      ? `popnei could not read ${fileName}`
+      : `popnei could not count the variants of ${fileName} that failed their FILTER`;
   if (message.startsWith(EMPTY_SOURCE)) {
     // The page reads every variant, whatever its FILTER column, so a
     // pass of none is a file of none.
@@ -383,11 +397,11 @@ export function refusalText(message: string, p: Project): string {
   }
   const zero = POSITION_ZERO.exec(message);
   if (zero !== null) {
-    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so the variants cannot be counted, nor their statistics calculated. Remove that line from the file and open it again.`;
+    return `A variant of chromosome ${shown(zero[1] ?? "")} in ${fileName} is at position 0, where the VCF format puts a telomere and not a variant, so ${cannot}. Remove that line from the file and open it again.`;
   }
   const past = PAST_LARGEST.exec(message);
   if (past !== null) {
-    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, so the variants cannot be counted, nor their statistics calculated. Correct the position in the file and open it again.`;
+    return `A variant of chromosome ${shown(past[1] ?? "")} in ${fileName} is at a position beyond 2,147,483,647, the largest the VCF format allows, so ${cannot}. Correct the position in the file and open it again.`;
   }
   const ploidies = OTHER_PLOIDY.exec(message);
   if (ploidies !== null) {
@@ -396,9 +410,9 @@ export function refusalText(message: string, p: Project): string {
   }
   const words = saying(withoutBackquotes(message));
   if (isVcfLineRefusal(message)) {
-    return `popnei could not read ${fileName}${words}. Correct the file, or fetch it again, and open it again.`;
+    return `${couldNot}${words}. Correct the file, or fetch it again, and open it again.`;
   }
-  return `popnei could not read ${fileName}${words}. Open the file again, or another file.`;
+  return `${couldNot}${words}. Open the file again, or another file.`;
 }
 
 /**
@@ -431,15 +445,16 @@ export function failedText(error: AnalysisError, p: Project): string {
 }
 
 /**
- * The words of a count of the FILTER failures that failed, after the
- * variants were counted: popnei's refusal, with its message; a stop of the
- * worker or a defect of ours, whose words the error bar gives; any other
- * failure in the words of `failedText`, which say what to do.
+ * The words of a count of the FILTER failures that failed: popnei's
+ * refusal, in the words of `refusalText` for that count, which say what to
+ * do; a stop of the worker or a defect of ours, whose words the error bar
+ * gives; any other failure in the words of `failedText`, which say what to
+ * do.
  */
 export function failuresFailedText(error: AnalysisError, p: Project): string {
   const fileName = escaped(p.variants?.name ?? "the file");
   if (error.kind === "refused") {
-    return `popnei could not count the variants of ${fileName} that failed their FILTER${saying(withoutBackquotes(error.message))}.`;
+    return refusalText(error.message, p, "failures");
   }
   switch (error.error.kind) {
     case "workerFailed":

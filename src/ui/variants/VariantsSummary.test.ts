@@ -509,6 +509,37 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     expect(buttonsOf()).toEqual([]);
   });
 
+  test("after a crash of the summary, popnei's refusal of the count of the FILTER failures gives its words too", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    page.requests[0]?.end({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    page.requests[1]?.end({
+      kind: "failed",
+      error: {
+        kind: "popnei",
+        message: "the source could not be read: incomplete deflate stream",
+      },
+    });
+    await settled();
+    expect(linesOf()).toEqual(
+      expect.arrayContaining([
+        "Variants: not counted",
+        "Failed FILTER: not counted",
+        "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
+        "low_qual.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+      ]),
+    );
+  });
+
   test("a .nei file has no line of the FILTER failures, and its chain ends with the summary", async () => {
     const page = await drawPage("nei");
     act(() => {

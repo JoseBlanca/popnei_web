@@ -12,6 +12,7 @@ import {
   countedText,
   countingVariantsLine,
   failedText,
+  failuresFailedText,
   individualsLine,
   nameAndSizeText,
   notOpenedText,
@@ -375,5 +376,54 @@ describe("live-stats 3 the button of the chain", () => {
         { kind: "locked", reason: "a .nei file" },
       ] satisfies readonly AnalysisStatus<JobResult>[]),
     ).toBe(false);
+  });
+});
+
+describe("live-stats 3 the failures of the count of the FILTER failures", () => {
+  const refused = (message: string) =>
+    failuresFailedText({ kind: "refused", message }, EVERY);
+
+  test("a file damaged or cut short says so, and to fetch it again", () => {
+    expect(
+      refused("the source could not be read: incomplete deflate stream"),
+    ).toBe(
+      "panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
+    );
+  });
+
+  test("a file of no variant says to open another", () => {
+    expect(refused("the pass gave no variant and its source holds none")).toBe(
+      "panel.vcf.gz has no variants. Open another variants file.",
+    );
+  });
+
+  test("a variant at position 0 names its chromosome and the count it stops", () => {
+    expect(
+      refused(
+        "a variant of the chromosome chr2 is at the position 0, and the windows of the density of the variants start at the position 1, so it is in none of them; the VCF format puts a telomere there",
+      ),
+    ).toBe(
+      "A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the variants that failed their FILTER cannot be counted. Remove that line from the file and open it again.",
+    );
+  });
+
+  test("any other refusal gives popnei's words, with the count they stopped", () => {
+    expect(refused("the FILTER of a variant is empty")).toBe(
+      "popnei could not count the variants of panel.vcf.gz that failed their FILTER: the FILTER of a variant is empty. Open the file again, or another file.",
+    );
+  });
+
+  test("a file that no longer reads says to open it again", () => {
+    expect(
+      failuresFailedText(
+        {
+          kind: "failed",
+          error: { kind: "reopenFailed", name: "panel.vcf.gz", message: "x" },
+        },
+        EVERY,
+      ),
+    ).toBe(
+      "panel.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again.",
+    );
   });
 });

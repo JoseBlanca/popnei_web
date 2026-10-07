@@ -20,7 +20,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { filterFailures } from "../../core/analyses/filterFailures.ts";
 import type { ButtonOf } from "../analyses/status.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
-import type { StoppedPass } from "./words.ts";
+import type { ChainPass } from "./words.ts";
 
 /** The id of the count of the FILTER failures in the chain. */
 const FAILURES_ID = filterFailures.id;
@@ -103,7 +103,7 @@ export function hasChainButton(
     since the box shows Stop only while one of them is. */
 export function stoppedPassOf(
   statuses: readonly AnalysisStatus<JobResult>[],
-): StoppedPass {
+): ChainPass {
   const running = statuses.findIndex((status) => status.kind === "running");
   const at =
     running >= 0

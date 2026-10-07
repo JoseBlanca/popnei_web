@@ -293,12 +293,16 @@ function Count({
   const button = chainButton(chainStatuses(analyses), (key) =>
     autoRuns.startedUnder(key),
   );
-  const failure =
-    status.kind === "error"
-      ? failedText(status.error, project)
-      : failures.kind === "error"
-        ? failuresFailedText(failures.error, project)
-        : null;
+  // The words of each pass that failed, the summary's first: after a
+  // crash of the summary the count of the FILTER failures runs anyway, and
+  // may fail on its own.
+  const failureTexts = [
+    ...(status.kind === "error" ? [failedText(status.error, project)] : []),
+    ...(failures.kind === "error"
+      ? [failuresFailedText(failures.error, project)]
+      : []),
+  ];
+  const failure = failureTexts.length > 0 ? failureTexts : null;
   // The bar of the pass running: the count of the variants and the
   // statistics, or the count of the FILTER failures after it.
   const running = failures.kind === "running" ? failures : status;
@@ -370,7 +374,9 @@ function Count({
           tabIndex={-1}
           className={classOf(styles, "failure")}
         >
-          <Problem>{failure}</Problem>
+          {failure.map((text) => (
+            <Problem key={text}>{text}</Problem>
+          ))}
         </div>
       )}
       {status.kind === "locked" && (
