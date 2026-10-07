@@ -1,7 +1,9 @@
 # The thresholds of the statistics as filters
 
 A design of 6 and 7 October 2026, approved by the owner on 7 October
-2026. It
+2026, and revised the same day with the owner's decision on the FILTER
+box of a `.nei` file and with the exact counts of popnei 0.2.2 (below,
+"What the owner decided"). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -22,11 +24,13 @@ reuses and changes in the places its section "What changes in
 The owner decided on 7 October 2026 what this version follows: the
 thresholds become filters of the project, with Undo; a check box "Leave
 out the variants that failed their FILTER", on by default, for a VCF
-only; one pass per file, and no pass while the thresholds or the box
+and for a `.nei` file that records the FILTER of its variants; one pass per file, and no pass while the thresholds or the box
 change; the FILTER filter acts when the filtering is carried out, after
 the individuals are judged, so that a VCF of which no variant passed is
 shown as any other; the plots of the variants always describe every
-individual; no count of the FILTER failures until popnei's issue #12;
+individual; no count of the FILTER failures until popnei's issue #12,
+which popnei 0.2.2 closed, and with which the piece `popnei-0.2.2`
+(`docs/plans/popnei-0.2.2.md`) puts the count in the box of the file;
 the line of the expected heterozygosity taken off, its plot kept; the
 plots read so far kept after a Stop; and a tools section whose download
 waits for popnei's issue #13.
@@ -52,23 +56,29 @@ threshold.
 
 **What a threshold says.** Each line keeps its count of that threshold
 alone, over every variant or individual of the file, as today: "Keeps
-1,050 of 1,200 variants", or a range where popnei's bins cannot tell,
-until popnei's issue #11. How many variants all the filters keep
+1,050 of 1,200 variants", one exact number since popnei 0.2.2 and the
+piece `popnei-0.2.2`. How many variants all the filters keep
 together, which depends on their order, the individuals taken out and
 the FILTER column, is not on the page while the thresholds move. It
 comes with the reading that carries the filtering out, the download or
 an analysis, which gives what each filter kept.
 
 **The FILTER box.** At the end of the part of the variants, on by
-default, for a VCF; not shown for a `.nei` file. It acts when the
+default, for a VCF and for a `.nei` file that records whether each of
+its variants passed its FILTER. It is not shown, and the filter does not
+apply, for a `.nei` file without that record, one written before
+popnei's vars format 1.2, such as `panel.nei` of the tests, since popnei
+cannot filter its variants so. popnei 0.2.2 says which a file is once it
+is open, before any pass. It acts when the
 filtering is carried out, after the individuals are judged: an
 individual's missing rate and heterozygosity are those of the plots,
 over every variant, and the variants that failed are left out after.
 So a VCF of which no variant passed is shown as any other. Ticking the
 box changes no plot and no count on the page, only the project and the
 notice; what it does is seen in what a tool reports. The box counts
-nothing: the count of the failures comes back when popnei's
-summary gives it in its one reading, popnei's issue #12.
+nothing: the count of the failures is in the box of the file, "FILTER
+failures: 300" for `low_qual.vcf.gz`, from the one reading, as the piece
+`popnei-0.2.2` builds it.
 
 **The download.** A "Tools" section after the plots, whose first tool
 is "Download filtered file…", as a `.nei` file or a VCF. It waits for
@@ -94,7 +104,9 @@ axis, since popnei's filters of the MAF and of the observed
 heterozygosity drop a variant with no called genotype at any value.
 
 **The owner's choices of 7 October 2026.** The design approved; a
-threshold turned off by emptying its box or typing 1.
+threshold turned off by emptying its box or typing 1; and, after the
+approval, the FILTER box for a `.nei` file that records the FILTER of
+its variants.
 
 ## What the user can do once it is built
 
@@ -110,7 +122,8 @@ out, the download and the analyses, comes with the tools.
   project. The expected heterozygosity has no threshold: popnei has no
   filter on it.
 - A check box at the end of the part of the variants, "Leave out the
-  variants that failed their FILTER", on by default, for a VCF.
+  variants that failed their FILTER", on by default, for a VCF and for
+  a `.nei` file that records the FILTER of its variants.
 - Every change of a threshold or of the box is a change of the project,
   with Undo and Redo, and a notice that says what changed.
 - No plot changes with a threshold or the box: each plot shows the
@@ -165,8 +178,9 @@ by the owner's decisions of 7 October 2026:
   (`variantChecks`): the four histograms of the variants are always
   over every individual, and a threshold of the individuals acts when
   the filters are carried out;
-- a separate count of the FILTER failures: it comes in the one pass
-  when popnei's issue #12 is done, and changes nothing else here.
+- a separate count of the FILTER failures: the one pass gives it from
+  popnei 0.2.2 (the piece `popnei-0.2.2`), and it changes nothing else
+  here.
 
 The store of `popgen2.html` keeps `counts` and `statistics` at `null`,
 as today (`StoreConfig` of `src/core/store.ts`), and `POPGEN2_ANALYSES`
@@ -210,8 +224,8 @@ A VCF of which no variant passed is shown as any other, since the one
 pass reads every variant. Carried out with the box on, its filters keep
 no variant, and popnei refuses a pass that gives none; the tool then
 says that no variant of the file passed its FILTER and that turning the
-box off keeps them. Once popnei's issue #12 gives the count of the
-failures, the box can say it before.
+box off keeps them. The count of the failures in the box of the file,
+from the one pass, says it before.
 
 It is on by default on `popgen2.html`: that page gets a first project of
 its own (`firstProject("popgen")` is shared today by both pages'
@@ -226,20 +240,38 @@ its user would have variants left out with nothing on the screen saying
 so. A filter turned off is refused too, so that the rule is one line
 and a later click cannot turn on a filter that page cannot show.
 
-On a `.nei` file the box is not shown. A new file keeps the filters of
-the project, so a user who had the box on for a VCF and opens a `.nei`
-file still has it in the project; for a `.nei` file the filter does not
-apply, as popnei refuses `filterPassed` on a vars file written before
-its format 1.2, and the page cannot tell the format. So one function of
-`src/core/`, the filters that apply to the project's file
-(`filtersApplied`), leaves it out for a `.nei` file, and everything that
-reads the filters reads that function rather than `p.filters`: the
-requests and the keys of the readings that carry the filters out, the
-rows and check numbers of the counts of each filter they give, the
-scripts, the words of the warnings. Opening a VCF again gives it back.
+On a `.nei` file the box is shown when the file records whether each of
+its variants passed its FILTER, and not otherwise, as the owner decided
+on 7 October 2026. popnei writes that record from its vars format 1.2,
+when the source had it: a `.nei` file written from a VCF by popnei 0.2.1
+or later has it, and one written before format 1.2, as `panel.nei` of
+the tests, or from such a file, has not; popnei refuses `filterPassed`
+over a file without it. popnei 0.2.2 says which, once the file is open
+and with no pass, in `keepsPassed` of its `Variants`, true for every
+VCF. So the calculation worker sends that value with the individuals and
+the ploidy when it opens the file, and the project holds it in what was
+read of the file. The approved version of this design, under popnei
+0.2.1, which could not tell the two kinds of `.nei` file apart, left the
+filter out for every `.nei` file; a `.nei` file the page writes from a
+VCF would then have kept its failed variants with nothing on the page
+saying so: one written by popnei 0.2.1 from `low_qual.vcf.gz` holds the
+record, and `filterPassed` over it keeps 900 of its 1,200 variants.
 
-In the code it changes the kinds of filter a project and its file can
-hold: `VariantFilterKind` of `src/worker/protocol.ts`, from which the
+A new file keeps the filters of the project, so a user who had the box
+on for a VCF and opens a `.nei` file without the record still has it in
+the project; for that file the filter does not apply. So one function of
+`src/core/`, the filters that apply to the project's file
+(`filtersApplied`), leaves it out for a file whose variants do not
+record their FILTER, and everything that reads the filters reads that
+function rather than `p.filters`: the requests and the keys of the
+readings that carry the filters out, the rows and check numbers of the
+counts of each filter they give, the scripts, the words of the warnings.
+Opening a file with the record gives it back.
+
+In the code it changes the answer of the calculation worker to the
+opening of a file, `opened`, which gains `keepsPassed`, and the read of
+the file in the project, which holds it; and the kinds of filter a
+project and its file can hold: `VariantFilterKind` of `src/worker/protocol.ts`, from which the
 kinds of the project come, `VARIANT_FILTER_ORDER`, the tables of the
 project that take a kind with no number (`Kinds`, `filtersOff`), the
 check of the messages (`checkFiltering`, `PROTOCOL_VERSION`), the steps
@@ -397,18 +429,21 @@ The limit that `docs/architecture.md` section 5 records for the piece of
 the filters, that every change of a threshold would stop the
 calculation running, moves to that later piece.
 
-## The counts of each threshold, until popnei gives the edges
+## The counts of each threshold
 
-The count under each plot is popnei's bins added up, without a pass, and
-with popnei 0.2.1 it is a range where the bins cannot tell, as the
-piece `thresholds` built it: "Keeps 1,113 to 1,152 of 1,200 variants",
-popnei's count always inside it. popnei's issue #11,
-https://github.com/JoseBlanca/popnei/issues/11, asks for the edges of
-the bins to be given by the caller and for bins that hold their right
-edge; with both, the page gives the edges 0, 0.001, …, 1 and every count
-of a threshold of up to three decimals is one exact number, and the key
-version of the one pass changes. The filters do not wait for it: a
-filter carried out is given the number on the screen, exactly.
+The count under each plot of the variants is popnei's bins added up,
+without a pass. From popnei 0.2.2, whose release closed popnei's issue
+#11, the one pass asks for 1,000 bins over 0 to 1 that hold their right
+edge, as the piece `popnei-0.2.2` builds it (`docs/plans/popnei-0.2.2.md`,
+"The design"). A threshold of the variants has three decimals at most,
+so it falls on an edge, and the count is one exact number, the count of
+the variants whose value is at most the threshold, which is what
+popnei's filter at that threshold keeps over every variant: "Keeps 1,050
+of 1,200 variants". With popnei 0.2.1 it was a range where the bins
+could not tell, "Keeps 1,113 to 1,152 of 1,200 variants". A filter
+carried out is given the number on the screen. The counts of the
+individuals come from popnei's value of each individual, and were
+exact before.
 
 ## The expected heterozygosity
 
@@ -468,14 +503,17 @@ calculation.
   back; emptying a box or typing 1 turns its filter off and keeps its
   value aside;
   a failure of the one pass survives a change of a filter; `filtersApplied` leaves `passed`
-  out for a `.nei` file and keeps it for a VCF; a project file holding
+  out for a file whose variants do not record their FILTER and keeps it
+  for a VCF and for a `.nei` file that records it; a project file holding
   `passed` reads back the same, and the old page's reading refuses it.
 - In Playwright, on `popgen2.html` in Chromium and WebKit: the worker
   receives one request for a file, and none while a threshold is
   dragged, typed, moved with the arrow keys, undone, or the box turned;
   a run of ten arrow presses is one step of Undo, and Ctrl+Z pressed
   within the quiet second undoes that run; after a Stop the
-  plots read so far stay, with their line.
+  plots read so far stay, with their line; the FILTER box is shown for
+  `panel.vcf.gz` and for a `.nei` file written by popnei 0.2.2 from
+  `low_qual.vcf.gz`, and not for `panel.nei`.
 - Wrong if any change of a filter sends a request to the worker, or a
   plot changes with a threshold.
 
@@ -496,7 +534,8 @@ Made on this branch once the owner approves, each with its paragraph
 - Section 2: the kind `passed` of the filters of the variants, after the
   regions and before the list of the individuals, carried out after the
   individuals are judged; `filtersApplied`, the filters that apply to the project's
-  file.
+  file; the read of a variants file holding whether its variants record
+  their FILTER.
 - Section 3: the store's setting of a notice for every change of a
   filter; the failures cleared by a change only when their key is left
   behind. The spec of the store, `docs/specs/core/store.md`, which says
@@ -510,13 +549,16 @@ Made on this branch once the owner approves, each with its paragraph
 - Section 7: the thresholds of `popgen2.html` show the project's
   filters, on or off; Undo, Redo and the notice on that page; the first project of that page; the tools section, with its
   first tool, once popnei's issue #13 is done.
+- Section 6: the answer to the opening of a variants file carries
+  whether its variants record their FILTER, with the individuals and the
+  ploidy.
 - Section 8: the project file with the kind `passed`, and the old page
   refusing it.
 
 ## The costs of the web
 
-- **A frozen page:** none new. The counts from the bins add 1,280
-  numbers at each move of a line, and the individuals kept sort the
+- **A frozen page:** none new. The counts from the bins add at most
+  1,000 numbers at each move of a line, and the individuals kept sort the
   values of the individuals, a few thousand.
 - **Memory:** none new; the download, which would add the file written,
   waits for popnei's issue #13.
@@ -552,13 +594,33 @@ Made on this branch once the owner approves, each with its paragraph
 - **A download now, with the file built whole in memory,** about 800 MB
   for a VCF of 100,000 variants and 1,000 individuals: rejected by the
   owner; it waits for popnei's issue #13.
+- **The FILTER box left out for every `.nei` file,** the version of
+  this design approved under popnei 0.2.1, which could not tell a `.nei`
+  file with the record from one without: a `.nei` file written from a
+  VCF would have kept its failed variants with nothing on the page
+  saying so. The owner chose on 7 October 2026 the box for a `.nei` file
+  that records the FILTER of its variants.
 - **The thresholds kept as state of the page,** as the piece
   `thresholds` built them: no Undo, lost on another file, and nothing to
   carry out later.
 
-## What the owner decided on approving it
+## What the owner decided
 
 On 7 October 2026 the owner approved the design and chose how a
 threshold is turned off: by emptying its box, or by typing the value at
 which it keeps everything, 1 for a maximum and 0 for a minimum, rather
 than by a check box beside each threshold.
+
+Later on 7 October 2026, once popnei 0.2.2 was published (release
+`js-v0.2.2`), the owner decided that the FILTER box is shown, and its
+filter applied, for a `.nei` file that records whether each of its
+variants passed its FILTER, as for a VCF, and that it is hidden, and its
+filter not applied, for a `.nei` file that does not, one written before
+popnei's vars format 1.2. The reason: popnei 0.2.2 says, once a file is
+open, whether its variants hold the record (`keepsPassed`), where under
+popnei 0.2.1 the page could not tell, so the approved version left the
+filter out for every `.nei` file, and a `.nei` file the page writes from
+a VCF would have kept its failed variants with nothing saying so. The
+design stays approved with this revision, which also gives the exact
+counts of popnei 0.2.2 in place of the range of its bins (above, "The
+counts of each threshold").
