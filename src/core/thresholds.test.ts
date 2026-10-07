@@ -180,26 +180,69 @@ describe("snapToFineEdge", () => {
 
 describe("variantsAtMost", () => {
   test.each([
-    [0, 0, 10],
-    [1, 1, 9],
-    [2, 3, 7],
-    [4, 10, 0],
+    [0, 0, 1],
+    [1, 1, 3],
+    [2, 3, 6],
+    [3, 6, 10],
   ])(
-    "at the edge %i, the bins below it are kept, %i, and those from it on removed, %i",
-    (index, kept, removed) => {
-      expect(variantsAtMost(SMALL, "maf", index)).toEqual({ kept, removed });
+    "on the edge %i, equal to k/4, from the bins below it, %i, to those and the bin that starts at it, %i",
+    (index, keptLow, keptHigh) => {
+      expect(variantsAtMost(SMALL, "maf", index)).toEqual({
+        keptLow,
+        keptHigh,
+        withValue: 10,
+      });
     },
   );
 
+  test("on the top edge, every variant with a value, one number", () => {
+    expect(variantsAtMost(SMALL, "maf", 4)).toEqual({
+      keptLow: 10,
+      keptHigh: 10,
+      withValue: 10,
+    });
+  });
+
   test("of the statistic asked for", () => {
     expect(variantsAtMost(SMALL, "obsHet", 1)).toEqual({
-      kept: 4,
-      removed: 0,
+      keptLow: 4,
+      keptHigh: 4,
+      withValue: 4,
     });
     expect(variantsAtMost(SMALL, "unbiasedExpHet", 2)).toEqual({
-      kept: 0,
-      removed: 0,
+      keptLow: 0,
+      keptHigh: 0,
+      withValue: 0,
     });
+  });
+
+  /** SMALL with its edge 1 the double above 1/4, as popnei's edge 384 is
+      above 384/1280. */
+  const ABOVE: VariantStatsPart = Object.freeze({
+    ...SMALL,
+    binEdges: Float64Array.from([0, 0.25 + 2 ** -54, 0.5, 0.75, 1]),
+    unbiasedExpHet: { mean: 0.5, counts: Uint32Array.from([1, 2, 3, 4]) },
+  });
+
+  test("on an edge the double above k/4, one number for the missing rate, the MAF and the observed heterozygosity", () => {
+    expect(ABOVE.binEdges[1]).not.toBe(1 / 4);
+    for (const statistic of ["missingRate", "maf"] as const) {
+      expect(variantsAtMost(ABOVE, statistic, 1)).toEqual({
+        keptLow: 1,
+        keptHigh: 1,
+        withValue: 10,
+      });
+    }
+  });
+
+  test("on an edge the double above k/4, a range for the expected heterozygosity, which can land on it", () => {
+    expect(variantsAtMost(ABOVE, "unbiasedExpHet", 1)).toEqual({
+      keptLow: 1,
+      keptHigh: 3,
+      withValue: 10,
+    });
+    // popnei's 1 - p² of 0.7 is 0.30000000000000004, its edge 384.
+    expect(1 - 0.7).toBe(384 * (1 / 1280));
   });
 
   test("an edge that is not a whole number from 0 to the bins is a defect", () => {
@@ -219,7 +262,7 @@ describe("variantsAtMost", () => {
   });
 
   test.each(["panel.vcf.gz", "panel.nei", "tetraploid.vcf.gz"] as const)(
-    "%s: at every edge, kept and removed add up to the variants, kept never falling",
+    "%s: at every edge, low at most high, both at most the variants, neither falling",
     (name) => {
       const { part } = fixture(name);
       for (const statistic of [
@@ -228,19 +271,22 @@ describe("variantsAtMost", () => {
         "obsHet",
         "unbiasedExpHet",
       ] as const) {
-        let before = 0;
+        let before = { keptLow: 0, keptHigh: 0 };
         for (let index = 0; index <= 1280; index += 1) {
-          const { kept, removed } = variantsAtMost(part, statistic, index);
-          expect(kept + removed).toBe(part.passStats.numVars);
-          expect(kept).toBeGreaterThanOrEqual(before);
-          before = kept;
+          const counts = variantsAtMost(part, statistic, index);
+          expect(counts.withValue).toBe(part.passStats.numVars);
+          expect(counts.keptLow).toBeLessThanOrEqual(counts.keptHigh);
+          expect(counts.keptHigh).toBeLessThanOrEqual(counts.withValue);
+          expect(counts.keptLow).toBeGreaterThanOrEqual(before.keptLow);
+          expect(counts.keptHigh).toBeGreaterThanOrEqual(before.keptHigh);
+          before = counts;
         }
       }
     },
   );
 
   test.each(["panel.vcf.gz", "panel.nei"] as const)(
-    "%s: the missing rate at 0.05 keeps 1,113 and removes 87; at 0 keeps none, the 2 at 0 being on the edge; at 1 and beyond keeps the 1,200",
+    "%s: the missing rate at 0.05 keeps 1,113 to 1,152; at 0.3 one number; at 0 none to the 2 at 0; at 1 and beyond the 1,200",
     (name) => {
       const { part } = fixture(name);
       const at = (value: number) =>
@@ -249,19 +295,44 @@ describe("variantsAtMost", () => {
           "missingRate",
           snapToFineEdge(part.binEdges, value).index,
         );
-      expect(at(0.05)).toEqual({ kept: 1113, removed: 87 });
-      expect(at(0)).toEqual({ kept: 0, removed: 1200 });
-      expect(at(1)).toEqual({ kept: 1200, removed: 0 });
-      expect(at(3)).toEqual({ kept: 1200, removed: 0 });
+      expect(at(0.05)).toEqual({
+        keptLow: 1113,
+        keptHigh: 1152,
+        withValue: 1200,
+      });
+      expect(at(0.3)).toEqual({
+        keptLow: 1200,
+        keptHigh: 1200,
+        withValue: 1200,
+      });
+      expect(at(0)).toEqual({ keptLow: 0, keptHigh: 2, withValue: 1200 });
+      expect(at(1)).toEqual({ keptLow: 1200, keptHigh: 1200, withValue: 1200 });
+      expect(at(3)).toEqual({ keptLow: 1200, keptHigh: 1200, withValue: 1200 });
     },
   );
 
-  test("tetraploid.vcf.gz: the MAF at 0.5 keeps 193 of 200", () => {
+  test("panel.vcf.gz: at 0.3, one number for the observed heterozygosity, 373, and a range for the expected, 311 to 313", () => {
+    const { part } = fixture("panel.vcf.gz");
+    const edge = snapToFineEdge(part.binEdges, 0.3);
+    expect(variantsAtMost(part, "obsHet", edge.index)).toEqual({
+      keptLow: 373,
+      keptHigh: 373,
+      withValue: 1200,
+    });
+    expect(variantsAtMost(part, "unbiasedExpHet", edge.index)).toEqual({
+      keptLow: 311,
+      keptHigh: 313,
+      withValue: 1200,
+    });
+  });
+
+  test("tetraploid.vcf.gz: the MAF at 0.5 keeps 193 to 196 of 200", () => {
     const { part } = fixture("tetraploid.vcf.gz");
     const edge = snapToFineEdge(part.binEdges, 0.5);
     expect(variantsAtMost(part, "maf", edge.index)).toEqual({
-      kept: 193,
-      removed: 7,
+      keptLow: 193,
+      keptHigh: 196,
+      withValue: 200,
     });
   });
 });
@@ -386,7 +457,7 @@ describe("the measurement: the variants the bins keep against popnei's filters",
         statistic,
         THRESHOLDS.map((threshold, i) => {
           const edge = snapToFineEdge(part.binEdges, threshold);
-          const { kept } = variantsAtMost(part, statistic, edge.index);
+          const kept = variantsAtMost(part, statistic, edge.index).keptLow;
           const filter = filterKept[statistic][i] ?? NaN;
           return [kept, filter, filter - kept];
         }),

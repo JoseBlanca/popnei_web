@@ -18,6 +18,16 @@ export interface FineEdge {
   readonly value: number;
 }
 
+/** What a threshold keeps of the variants. */
+export interface VariantCounts {
+  /** The fewest variants it may keep. */
+  readonly keptLow: number;
+  /** The most it may keep. */
+  readonly keptHigh: number;
+  /** The variants with a value of the statistic. */
+  readonly withValue: number;
+}
+
 /** What a threshold keeps and removes. */
 export interface ThresholdCounts {
   /** The variants or the individuals it keeps. */
@@ -66,24 +76,39 @@ export function snapToFineEdge(
 }
 
 /**
- * What the threshold at the fine edge of index `edgeIndex` keeps and
- * removes of the variants of `part`, by `statistic`: kept, the variants
- * of the bins below the edge; removed, those of the bins from it on. The
- * two add up to the variants with a value of the statistic.
+ * What the threshold at the fine edge of index `edgeIndex` keeps of the
+ * variants of `part`, by `statistic`, when it keeps the values at most
+ * the edge: from `keptLow`, the variants of the bins below the edge, to
+ * `keptHigh`, those and the variants of the bin that starts at the edge
+ * when a value may sit exactly on the edge, or `keptLow` again when none
+ * can, one number. The variants it removes are `withValue` minus what it
+ * keeps.
  *
- * The screens say that it keeps the values "at most" the threshold,
- * which is not always what this count is. popnei's bins hold their left
- * edge, a value on an edge falling in the bin to its right, while its
- * filters keep the values at most their threshold. So the count equals
- * what popnei's filter at the round number k/1280 keeps on the 464 edges
- * where popnei's edge is the double above k/1280, 0.30000000000000004
- * for 0.3, and on the other 817 it counts as removed the variants whose
- * value is exactly on the edge, which the filter keeps
- * (docs/designs/stats-filters.md, "Exact counts need popnei", on the
- * branch design-stats-filters, with the issue of popnei drafted there
- * for bins that hold their right edge). This is the one function that
- * counts the variants of a threshold, so that the fix of popnei changes
- * it alone.
+ * Why a range: popnei's bins hold their left edge, a value on an edge
+ * falling in the bin to its right, while its filters keep the values at
+ * most their threshold. So the variants on the edge, which "at most"
+ * keeps, are somewhere in the bin that starts at it, and the bins cannot
+ * tell how many. When a value can sit on the edge:
+ *
+ * - on an edge equal to k/numBins, `binEdges[k] === k / numBins`, for
+ *   every statistic, a missing rate of 10/200 on 0.05;
+ * - for the expected heterozygosity, `unbiasedExpHet`, on every edge:
+ *   popnei computes it as 1 − Σ pᵏ, which can land on an edge that
+ *   popnei made as k · (1/numBins), one double above k/numBins, as
+ *   `1 - 0.7` is 0.30000000000000004, popnei's edge 384 of 1,280;
+ * - never for the missing rate, the MAF and the observed heterozygosity
+ *   on an edge one double above k/numBins: each is one division a/b of
+ *   two counts, which rounds to k/numBins when it equals it, the double
+ *   below the edge, in the bin to the left and kept, and otherwise lies
+ *   far from both;
+ * - never on the top edge, index numBins, which keeps every variant.
+ *
+ * On the 1,280 bins of popnei, 817 of the 1,281 edges equal k/1280,
+ * among them every round number a user types, 0.05, 0.1, 0.5. popnei's
+ * issue drafted in docs/designs/stats-filters.popnei-issue.md (branch
+ * design-stats-filters), bins that hold their right edge, would make every
+ * count one number; this is the one function that counts the variants of
+ * a threshold, so that the fix changes it alone.
  *
  * An `edgeIndex` that is not a whole number from 0 to the number of
  * bins, and a part whose counts are not one fewer than its edges, are
@@ -93,32 +118,33 @@ export function variantsAtMost(
   part: VariantStatsPart,
   statistic: VariantStatistic,
   edgeIndex: number,
-): ThresholdCounts {
+): VariantCounts {
   const counts = part[statistic].counts;
-  if (counts.length !== part.binEdges.length - 1) {
+  const numBins = counts.length;
+  if (numBins !== part.binEdges.length - 1) {
     throw defect(
-      `${String(counts.length)} bins of ${statistic} over ${String(part.binEdges.length)} edges.`,
+      `${String(numBins)} bins of ${statistic} over ${String(part.binEdges.length)} edges.`,
     );
   }
-  if (
-    !Number.isInteger(edgeIndex) ||
-    edgeIndex < 0 ||
-    edgeIndex > counts.length
-  ) {
+  if (!Number.isInteger(edgeIndex) || edgeIndex < 0 || edgeIndex > numBins) {
     throw defect(
-      `an edge of index ${String(edgeIndex)} of ${String(counts.length)} bins.`,
+      `an edge of index ${String(edgeIndex)} of ${String(numBins)} bins.`,
     );
   }
-  let kept = 0;
-  let removed = 0;
+  let keptLow = 0;
+  let withValue = 0;
   for (const [index, count] of counts.entries()) {
-    if (index < edgeIndex) {
-      kept += count;
-    } else {
-      removed += count;
-    }
+    if (index < edgeIndex) keptLow += count;
+    withValue += count;
   }
-  return { kept, removed };
+  const onEdgeMayBeKept =
+    edgeIndex < numBins &&
+    (statistic === "unbiasedExpHet" ||
+      at(part.binEdges, edgeIndex) === edgeIndex / numBins);
+  const keptHigh = onEdgeMayBeKept
+    ? keptLow + (counts[edgeIndex] ?? 0)
+    : keptLow;
+  return { keptLow, keptHigh, withValue };
 }
 
 /**
