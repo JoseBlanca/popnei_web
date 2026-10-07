@@ -2139,6 +2139,19 @@ for the smallest part of it.
   parameters of the fit, by popnei's formula
   (`docs/specs/analyses/ldDecay.md`, "The fitted curve"). The heatmap
   and the line plot draw the order and the points they are given.
+- **A threshold on a plot can be screen state.** From 7 October 2026
+  each of the six histograms of `popgen2.html` has a threshold that the
+  user drags or types, shown only: React state of the section of the
+  statistics of one load, lost with another file or a reload, in no
+  project and no key, sending nothing to the worker
+  (`docs/plans/thresholds.md`). The plot draws it, with no legend; the
+  line the user drags is a React Aria slider of `src/ui` laid over the
+  plot, aligned with its frame, which the histogram tells the screen
+  after each draw that moves it (`HistogramEvents.onFrame`), so that the
+  plot keeps no pointer handling of its own. What it keeps is counted by
+  `src/core/thresholds.ts` from popnei's fine bins of the variants and
+  from popnei's value of each individual. When the thresholds become
+  filters, `docs/designs/stats-filters.md`, they move into the project.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2370,8 +2383,10 @@ src/ui/
                     its Stop and Start again, the statistics of the open
                     file, drawn while the pass runs from its results so
                     far (the store's running.soFar, never cached) and
-                    then from its result, the page that holds them, their
-                    words, the rules of the chain that the box and its
+                    then from its result, from 7 October 2026 each with
+                    its threshold, its line, its box and its words
+                    (statsPlots.ts, StatsHistogram.tsx; section 7), the
+                    page that holds them, their words, the rules of the chain that the box and its
                     words share (chain.ts: its one button, from the first
                     neither done nor locked, and the pass a Stop stops),
                     and the defects of the worker given to the error bar
@@ -2411,7 +2426,9 @@ src/ui/
                     its results
   report/           renders the report model into its HTML page, with the plots
   widgets/          React Aria components with our styles, one wrapper per
-                    widget; among them Table.tsx, the plain table of a
+                    widget; among them ThresholdSlider.tsx, from 7
+                    October 2026, the line of a threshold dragged over a
+                    histogram (section 7); Table.tsx, the plain table of a
                     few rows that is only read, SortableTable.tsx, the
                     table sorted by any column, whose Virtualizer draws
                     only the rows in view, for thousands of rows such as
