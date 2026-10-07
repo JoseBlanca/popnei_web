@@ -31,7 +31,6 @@ import type { VariantSource } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { RunButton } from "../analyses/RunButton.tsx";
-import type { ButtonOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { classOf } from "../classOf.ts";
@@ -42,6 +41,7 @@ import { useAppState } from "../store.tsx";
 import { Problem } from "../widgets/Problem.tsx";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
+import { chainButton, chainStatuses, startAgainMends } from "./chain.ts";
 import styles from "./Variants.module.css";
 import {
   CHROMOSOMES_COUNTING,
@@ -62,7 +62,6 @@ import {
   STOPPED_TEXT,
   VARIANTS_NOT_COUNTED,
   VARIANTS_READING,
-  chainStatuses,
   chromosomesLine,
   chromosomesSoFarLine,
   countingVariantsLine,
@@ -74,7 +73,6 @@ import {
   nameAndSizeText,
   openFailure,
   ploidyLine,
-  startAgainMends,
   summaryStatus,
   variantsLine,
 } from "./words.ts";
@@ -282,7 +280,9 @@ function Count({
   const again = (): void => {
     autoRuns.resume(POPGEN2_CHAIN);
   };
-  const button = buttonOf(chainStatuses(analyses), autoRuns);
+  const button = chainButton(chainStatuses(analyses), (key) =>
+    autoRuns.startedUnder(key),
+  );
   const failure =
     status.kind === "error"
       ? failedText(status.error, project)
@@ -369,39 +369,6 @@ function Count({
     </>
   );
 }
-/** The button of the chain of the page, `POPGEN2_CHAIN`, decided from
-    the first of it that is neither done nor locked, as `resume` starts
-    that one, a locked member holding back nothing: Stop while one of the
-    chain runs, or the first such is about to start by itself; Start again
-    after it was stopped, or after a failure Start again may mend; none
-    when every one is done or locked, or the first such failed for good. */
-function buttonOf(
-  statuses: readonly AnalysisStatus<JobResult>[],
-  autoRuns: AutoRuns,
-): ButtonOf {
-  if (statuses.some((status) => status.kind === "running")) {
-    return { kind: "stop" };
-  }
-  const first = statuses.find(
-    (status) => status.kind !== "done" && status.kind !== "locked",
-  );
-  if (first === undefined) return null;
-  switch (first.kind) {
-    case "ready":
-    case "removed":
-      // Not started under its key, it starts by itself in a moment.
-      return autoRuns.startedUnder(first.key)
-        ? { kind: "run", reason: null }
-        : { kind: "stop" };
-    case "error":
-      return startAgainMends(first.error)
-        ? { kind: "run", reason: null }
-        : null;
-    case "running":
-      return null;
-  }
-}
-
 /** What the lines of the count are drawn with. */
 interface CountLinesProps {
   /** The status of the summary. */

@@ -9,11 +9,9 @@ import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
   chromosomesSoFarLine,
-  startAgainMends,
   countedText,
   countingVariantsLine,
   failedText,
-  hasChainButton,
   individualsLine,
   nameAndSizeText,
   notOpenedText,
@@ -22,6 +20,7 @@ import {
   refusalText,
   variantsLine,
 } from "./words.ts";
+import { hasChainButton, startAgainMends } from "./chain.ts";
 
 /** A project with a VCF of the name `name`, read with `readOptions`. */
 function withVcf(name: string, readOptions: VcfReadOptions): Project {

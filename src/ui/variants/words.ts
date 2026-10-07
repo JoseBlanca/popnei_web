@@ -39,7 +39,7 @@ import {
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
-import { POPGEN2_CHAIN } from "../popgen2Store.ts";
+import { chainStatuses, hasChainButton } from "./chain.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
@@ -439,16 +439,6 @@ export function failuresFailedText(error: AnalysisError, p: Project): string {
   }
 }
 
-/** Whether Start again can mend the failure `error`: a worker that
-    stopped, and none of these: popnei's refusal, which the same file
-    gives again; a file the browser can no longer read, which a new
-    opening mends; a worker that could not start or a page out of date,
-    which the client fails at once until the page is reloaded; a defect of
-    our own code, which the error bar tells. */
-export function startAgainMends(error: AnalysisError): boolean {
-  return error.kind === "failed" && error.error.kind === "workerFailed";
-}
-
 /** The status of the summary in `s`; a defect when the store has none. */
 export function summaryStatus(
   s: AppState<JobResult, unknown>,
@@ -474,48 +464,6 @@ export function failuresStatus(
     );
   }
   return view.status;
-}
-
-/** The statuses of the chain of the page, `POPGEN2_CHAIN`, in its order,
-    among the `analyses` of the store; a defect when one is not there. A
-    new list at every call, so not a selector of `useAppState`. */
-export function chainStatuses(
-  analyses: AppState<JobResult, unknown>["analyses"],
-): readonly AnalysisStatus<JobResult>[] {
-  return POPGEN2_CHAIN.map((id) => {
-    const view = analyses.find((a) => a.id === id);
-    if (view === undefined) {
-      throw new Error(
-        `popnei_web defect: the store has no analysis ${id} of the chain.`,
-      );
-    }
-    return view.status;
-  });
-}
-
-/** Whether the box shows Stop or Start again for the chain whose statuses
-    are `statuses`, as `buttonOf` of VariantsSummary.tsx decides from the
-    first neither done nor locked, a locked member holding back nothing:
-    while one runs, the first such is ready, or it failed in a way Start
-    again mends; not once every one is done or locked, nor when the first
-    such failed for good. */
-export function hasChainButton(
-  statuses: readonly AnalysisStatus<JobResult>[],
-): boolean {
-  if (statuses.some((status) => status.kind === "running")) return true;
-  const first = statuses.find(
-    (status) => status.kind !== "done" && status.kind !== "locked",
-  );
-  if (first === undefined) return false;
-  switch (first.kind) {
-    case "ready":
-    case "removed":
-      return true;
-    case "error":
-      return startAgainMends(first.error);
-    case "running":
-      return false;
-  }
 }
 
 /** What the status region says as a read starts: "Reading
