@@ -13,7 +13,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 
 import { writeBigVcf } from "./bigVcf.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
-import { holdFailures, holdSummary, release } from "./holdWorker.ts";
+import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 const SCREENS = join(import.meta.dirname, "..", "screens");
@@ -4402,83 +4402,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           newPageCount(page).getByText("Chromosomes: 1"),
         ).toBeVisible();
-        // No variant of panel.vcf.gz failed its FILTER.
-        await expect(
-          newPageCount(page).getByText("FILTER failures: 0"),
-        ).toBeVisible();
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
         await save(page, `popgen2-summary${at}-${theme}`);
-      });
-
-      test("counting the FILTER failures", async ({ page }) => {
-        // The result of the count of the failures is never posted, so the
-        // count runs after the summary is done.
-        await holdFailures(page);
-        await page.reload();
-        await pickOnNewPage(page, "low_qual.vcf.gz");
-        await expect(
-          newPageCount(page).getByText("Variants: 1,200"),
-        ).toBeVisible();
-        await expect(
-          newPageCount(page).getByText("FILTER failures: counting…"),
-        ).toBeVisible();
-        await expect(
-          newPageCount(page).getByRole("progressbar", {
-            name: "Counting the variants that failed their FILTER",
-          }),
-        ).toBeVisible();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await save(page, `popgen2-failures-counting${at}-${theme}`);
-      });
-
-      test("the FILTER failures counted", async ({ page }) => {
-        await pickOnNewPage(page, "low_qual.vcf.gz");
-        await expect(
-          newPageCount(page).getByText("FILTER failures: 300"),
-        ).toBeVisible();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await save(page, `popgen2-failures-done${at}-${theme}`);
-      });
-
-      test("the count of the FILTER failures stopped", async ({ page }) => {
-        // The result of the count of the failures is never posted, so the
-        // count runs until the Stop.
-        await holdFailures(page);
-        await page.reload();
-        await pickOnNewPage(page, "low_qual.vcf.gz");
-        await expect(
-          newPageCount(page).getByRole("progressbar", {
-            name: "Counting the variants that failed their FILTER",
-          }),
-        ).toBeVisible();
-        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
-        await expect(
-          newPageCount(page).getByRole("button", { name: "Start again" }),
-        ).toBeVisible();
-        await expect(
-          newPageCount(page).getByText("FILTER failures: not counted"),
-        ).toBeVisible();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await save(page, `popgen2-failures-stopped${at}-${theme}`);
-      });
-
-      test("a crash during the count of the FILTER failures", async ({
-        page,
-      }) => {
-        await crashWorkerOn(page, "run", "filterFailures", true);
-        await page.reload();
-        await pickOnNewPage(page, "low_qual.vcf.gz");
-        await expect(page.getByRole("alert")).toBeVisible();
-        await expect(
-          newPageCount(page).getByText(
-            "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
-          ),
-        ).toBeVisible();
-        await expect(
-          newPageCount(page).getByRole("button", { name: "Start again" }),
-        ).toBeVisible();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await save(page, `popgen2-failures-crash${at}-${theme}`);
       });
 
       test("a .nei summary", async ({ page }) => {
