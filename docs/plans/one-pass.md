@@ -66,3 +66,34 @@ a `.nei` file done.
   design `docs/designs/stats-filters.md` and popnei #12.
 
 ## What was done
+
+### Phase 1, 7 October 2026
+
+Commits 4bb6312 (the box and the chain), 91b6a58 (core and the
+worker), 359c5f6 (the flows and the screens), 65c8235 (the documents).
+The analysis is removed whole, with what only it used: the runner's
+step of the FILTER column and the kind of the counts `PassFilterKind`.
+The design `docs/designs/stats-filters.md` brings the FILTER column
+back as an ordinary filter of the project. `PROTOCOL_VERSION` of the
+worker's messages went to 11 rather than back to 9, so that a worker of
+an older build is reported as another version. The worker specs
+`docs/specs/worker/{protocol,messages,runner}.md` were brought up to
+date too.
+
+Checks on 65c8235: typecheck and lint clean, Vitest 4,035 tests in 117
+files (4,073 on 86ee7e3, the count's tests removed), format clean;
+Playwright in Chromium and WebKit, the flows of opening a file, its
+statistics and the thresholds, 96 passed; the screens of popgen2, 76.
+
+Review: spec and stale, tests and api, ux and accessibility. No
+finding changed what a user sees. Fixed in 2568302: the words of a
+Stop lost a branch no state reaches; a test comment that read as if
+the real histograms lock on a `.nei` file; a date of
+`docs/functionality.md`; the screenshot of a `.nei` file was taken
+before the code of the plots arrived, and its test now waits for the
+plots. Not taken: `startAgainMends` of `chain.ts` stays exported, since
+its test checks its table.
+
+Seen in Chromium through the screenshots (light and dark, 1280 and 320
+px): a VCF while read, done, stopped, crashed and refused, and a `.nei`
+file done. Not seen in WebKit or Firefox by eye.
