@@ -236,3 +236,43 @@ to an edge goes when an entry is refused (175e03e); each stripe of the
 hatch drawn whole, 5.2:1 on the light background and 7.7:1 on the dark
 (e936489). On e936489: Vitest "4039 passed", Playwright "1224 passed"
 in Chromium and WebKit, the 92 screens of popgen2.
+
+### Round 1 with the owner, 7 October 2026
+
+The owner, trying the page: "1. the numbers in the boxes should have
+less decimals, for instance 2 when we're in a range from 0 to 1. 2.
+'keeps 564 to 566 variants; the bins cannot tell which of the 2 from
+0.69921875 to 0.7 are at 0.69921875' I don't think we need that much
+information, it is already quite clear in the plots and moreover, it
+makes the page change the position of the chart in a bad way. 3. maybe
+we would put the max. and the number widget with the plot title like:
+'Obs. het. max: 0.04' 4. The titles could be shorter: 'Proportion of
+missing genotypes' -> 'Missing genotypes', 'Observed heterozygosity' ->
+'Obs. het.', 'Expected heterozygosity (unbiased)' -> 'Exp. het.
+(unbiased)', 'Proportion of missing genotypes of each individual' ->
+'Missing GTs', 'Observed heterozygosity of each individual' -> 'Obs.
+het.'"
+
+So, decided by the session within those words:
+
+- The step of a threshold, and its decimals, follow its axis: the power
+  of ten that gives at most about 100 positions over the axis,
+  10^ceil(log10(span / 100)): 0.01, two decimals, on an axis of 0 to 1;
+  0.001 on 0 to 0.1 or 0.32 to 0.40. The same for the individuals.
+- The number shown is the number counted: a number that is not one of
+  popnei's edges is counted as the range between the edges around it,
+  from the bins below the edge under it to the bins below the edge over
+  it (plus that edge's bin when the number is on it and its values may
+  be kept, as now); one number when the two agree. The hatched bar
+  marks the bins it cannot tell. The words give no explanation.
+- The head of each plot is one row: the short title, "max:" and the
+  box, "Obs. het. max: [0.04]"; under it one line, of a fixed height,
+  "Keeps 1,050 of 1,200 variants", "Keeps 564–566 of 1,200 variants",
+  "Keeps all 1,200 variants", with "so far" while the pass runs; it
+  replaces "Over 1,200 variants" and the line under the plot. The axis
+  labels and the descriptions for a screen reader keep the full names;
+  the box's accessible name contains its visible words (WCAG 2.5.3).
+- The titles are the owner's five; the major allele frequency, which
+  the owner did not name, keeps "Major allele frequency". Variants: "Missing genotypes", "Major allele frequency",
+  "Obs. het.", "Exp. het. (unbiased)"; individuals: "Missing GTs",
+  "Obs. het.".
