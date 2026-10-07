@@ -46,6 +46,12 @@ version 1; the diversity's key version 3 with its check numbers as they
 were; the check numbers of the two new analyses; and a fixture of a
 project with the options of all three (`docs/specs/analyses/diversity.md`,
 `popDists.md` and `ldDecay.md`). Approved by the owner on 30 September 2026.
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project (`docs/designs/stats-filters.md`, approved by the owner
+that day): the filter of the FILTER column, `{ "kind": "passed" }`,
+written in version 1 as any filter, and a file that holds it, on or
+off, refused by `popgen.html`, which has no box to show it, with words
+that say the file was made by the new page.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -546,11 +552,22 @@ that the reason given is the one the user can act on:
    as fields it does not know, and `parseReference` asks for versions of
    its own that the file does not hold, a change to the approved
    `project.ts` listed in `docs/specs/stage-2-open-points.md`.
-8. **What this version does not write**, refused as `header` with the
+8. **The filter of the FILTER column on a page that does not offer
+   it.** A project that holds `{ "kind": "passed" }` in `filters` or in
+   `filtersOff` is refused as `newPageFilter` when the caller says its
+   page has no box of the FILTER column, `passedFilter: false`, as
+   `popgen.html` does (`docs/designs/stats-filters.md`, "The FILTER
+   filter"). That page would apply a filter on, or let a later click
+   turn on a filter off, that nothing on its screen shows, so its user
+   would have variants left out with nothing saying so; a filter off is
+   refused too, so that the rule is one line. The check comes after the
+   validation, so that a damaged file is told as damaged. No file holds
+   it on 7 October 2026: `popgen2.html` saves no project yet.
+9. **What this version does not write**, refused as `header` with the
    field `variants` or `individuals`: a read of the variants file that is
    `failed`, and a read of the individuals file that is `pending` or
    `failed`, which this version writes as `notGiven`.
-9. **The count of the check numbers**: each check holds as many numbers
+10. **The count of the check numbers**: each check holds as many numbers
    as `numCheckNumbers` of its analysis gives for the opened project with
    the file's variants file as its variants file, or it is refused as
    `header` with the field `checks`, "the check numbers should be 7
@@ -575,7 +592,7 @@ that the reason given is the one the user can act on:
    `docs/architecture.md`, section 4). Without an individuals file, or
    with the grouping `onePopulation`, the diversity gives 4, the one
    population's three numbers after the number of variants.
-10. **The fingerprints** of the settings of each check are made, with
+11. **The fingerprints** of the settings of each check are made, with
    `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
    project and the read options of the file's variants file, and put in
    place of the placeholders.
@@ -794,6 +811,12 @@ this spec makes precise:
   and their filter join version 1 with popnei's release that filters by
   them; a development version before them refuses a file that has them,
   as it refuses every field it does not write.
+- **The filter of the FILTER column does not raise it**, 7 October
+  2026: `{ "kind": "passed" }` joins version 1, as the regions will. A
+  version from before it refuses a file that holds it, as it refuses a
+  filter of a kind it does not know, as a `wrongValue` at its `kind`,
+  whose text lists the kinds that version knows, and
+  `popgen.html` refuses it as `newPageFilter` (above, "Opening").
 - **Stage 5 does not raise it.** The distances between populations and
   the LD decay are new ids, which the rule above covers, and the
   diversity's options gain a field, the chromosomes of the rarefaction,
@@ -858,12 +881,17 @@ export function projectFileName(p: Project): string;
 The project of a project file, or why it cannot be opened. `analyses` are
 the definitions of the application's analyses, whose `parseOptions`
 checks their options and whose `keyInputs` the fingerprints read.
+`page.passedFilter` says whether the page that opens the file has the
+box of the FILTER column: `false` on `popgen.html`, through its saving,
+`createSaving` of `src/ui/saving.ts`; `true` on `popgen2.html` once it
+opens project files.
 
 ```ts
 export function readProjectFile<J, R>(
   text: string,
   app: AppId,
   analyses: readonly AnalysisDef<J, R>[],
+  page: { readonly passedFilter: boolean },
 ): Result<Project, ProjectFileError>;
 
 export type ProjectFileError =
@@ -879,13 +907,15 @@ export type ProjectFileError =
         | "checks" | "variants" | "individuals";
       expected: string }
   // the rest, as the validation of the project gives it, the checks among it
-  | { kind: "project"; error: ProjectError };
+  | { kind: "project"; error: ProjectError }
+  // the filter of the FILTER column, on or off, on a page without its box
+  | { kind: "newPageFilter" };
 
 /** The text the user reads; `fileName` is the name of the file picked. */
 export function projectFileErrorText(error: ProjectFileError, fileName: string): string;
 ```
 
-The texts, the first three naming the file, since it may not be a project
+The texts, the first three and the last naming the file, since it may not be a project
 file at all, and the others in the pattern of `projectErrorText` of
 `docs/specs/core/project.md`, which gives the text of `project` itself:
 
@@ -897,6 +927,7 @@ file at all, and the others in the pattern of `projectErrorText` of
 | `newerFormat` | "This project file was saved by a newer version of the application, 0.4.0, in a format this version cannot read. Reload the page to get the newest version, and open the file again." Without ", 0.4.0" when the file's `appVersion` is not a text; the version is a value of the file, so it is shown escaped and cut after 40 characters, as `docs/specs/core/project.md` shows one. These words replace those that spec quoted for this case, which it left to this one. |
 | `header` | "The project file cannot be opened: the version of its format should be a whole number, 1 or more. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again." The fields in words: the version of its format, the application, the version of the application that saved it, the version of popnei it was saved with, the date it was saved, the check numbers, what was read of the variants file, what was read of the individuals file. |
 | `unknownField`, `missingField` | "The project file cannot be opened: it has a field "notes", which the application does not write." and "The project file cannot be opened: its field "checks" is missing.", each followed by the same last two sentences; the name shown escaped and cut. |
+| `newPageFilter` | "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page." (**Open 4**) |
 
 The comparison of the identity, and its warning. `saved` is the
 reference's variants file and `now` the one loaded; what neither read
@@ -982,6 +1013,12 @@ export function uncomparedText(p: Project, analysis: AnalysisId): string | null;
 - **Save before the calculation worker started.** `popneiVersion` is
   `null` in the header; no analysis can be `done` yet, so every check in
   the file is one carried, with its own versions.
+- **A project file of `popgen2.html` opened in `popgen.html`**, once
+  the new page saves projects: refused as `newPageFilter` whenever its
+  project holds the filter of the FILTER column, on or off, which the
+  first project of the new page always does; a file whose user removed
+  the filter by hand opens. A file with that filter and another fault
+  is told by its fault, which the validation finds first.
 - **The same project file opened twice in a session.** Two openings give
   two projects with the same load ids, which is harmless: the reference
   is in no key, and the individuals file enters the keys by its table.
@@ -1093,6 +1130,15 @@ the analyses `done`, `ready` or `removed`.
   whole.
 - **A byte order mark** before the text of `v1-empty.popnei.json`: it
   opens.
+- **The filter of the FILTER column**, from 7 October 2026: the
+  fixture `v1-passed.popnei.json`, `panel.vcf.gz` with the filter of
+  the FILTER column and the missing data filter at 0.1 on and the MAF
+  filter at 0.9 off, no check, opens with `passedFilter: true` into the
+  project written as a literal, and is written back byte for byte; with
+  `passedFilter: false` it is refused as `newPageFilter`, whose text is
+  asserted whole, and so is the same file with `passed` in `filtersOff`
+  and not in `filters`; a fixture of before, `v1-every-filter.popnei.json`,
+  opens with `passedFilter: false` as before.
 - **The fingerprints**: each check of an opened file holds
   `settingsFingerprint` of its definition, of the opened project and of
   the read options of the file's variants file.
@@ -1184,6 +1230,17 @@ check with its own (point E there).
    order, would differ from those of the same variants file, a
    difference the comparison would blame on the file.
 
+4. **The words of a file of the new page opened in the old one**,
+   `newPageFilter`. The design asks for words that say the file was
+   made by the new page, and the users have no name for that page yet:
+   the old one is "population genetics", and the new one is
+   `popgen2.html` in its address. Meanwhile, "pops.popnei.json was saved
+   by the new page of population genetics, which can leave out the
+   variants that failed their FILTER, and this page cannot show that
+   choice. Open it in the new page.", to be judged when the new page
+   saves projects, since no file can meet them before. Another answer
+   changes that text and its test.
+
 ## What this spec relies on in the specs written beside it
 
 - `docs/specs/analyses/diversity.md`: the id `"diversity"`, a key version
@@ -1201,7 +1258,9 @@ check with its own (point E there).
   user gave in the dialog of Save, which starts at `projectFileName`, at any time, a pending read included; and the page's
   map of files holds no file under the load ids of an opened project,
   whose sources are read or `notGiven`, and the entry asks for the read
-  of a pending source alone, so nothing of the opening asks for a read.
+  of a pending source alone, so nothing of the opening asks for a read;
+  and, from 7 October 2026, its opening calls `readProjectFile` with
+  `{ passedFilter: false }`.
 - `docs/specs/shell.md`: Save project calls that `save()`; Open project…
   refuses a file above `MAX_PROJECT_FILE_BYTES`, reads it with
   `File.text()`, shows `projectFileErrorText` of a file refused, asks
