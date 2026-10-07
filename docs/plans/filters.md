@@ -6,7 +6,8 @@ the owner on 7 October 2026: the thresholds the user drags or types on
 the histograms of `popgen2.html` become filters of the project, with
 Undo, Redo and a notice that says what each change did; a check box
 "Leave out the variants that failed their FILTER", on by default for a
-VCF; and the plots read before a Stop stay on the page. It is carried
+VCF and for a `.nei` file that records the FILTER of its variants, as
+the owner decided later on 7 October 2026; and the plots read before a Stop stay on the page. It is carried
 out as the `building` skill says, its work packages being the phases of
 that skill's loop, on the branch `filters` in
 `.claude/worktrees/filters`.
@@ -25,7 +26,9 @@ carried out, which waits for the tools section.
 
 The specs, called below by their file names, are those revised or
 written for the design on 7 October 2026 (`git log --oneline
-50b1d6b..0e27a62`):
+50b1d6b..0e27a62`), and revised again that day for the owner's decision
+on the FILTER box of a `.nei` file and the exact counts of popnei 0.2.2
+(commits a1a4a8a and 728cf14):
 
 - the worker: `docs/specs/worker/protocol.md`, `messages.md`,
   `runner.md`;
@@ -83,16 +86,18 @@ In: the thirteen work packages below, the eleventh of which is the stop. Out, ea
 - the tools section and the download of the filtered file, and so the
   filters carried out on `popgen2.html`: popnei's issue #13 (the
   design, "The tools section and the download of the filtered file");
-- the count of the variants that failed their FILTER: popnei's issue
-  #12;
+- the count of the variants that failed their FILTER: the piece
+  `popnei-0.2.2`, which puts it in the box of the file;
 - what all the filters keep together: with the reading that carries
   them out, the first tool;
 - the quiet second before a calculation that reads the filters starts
   by itself, and the keys left behind that start again: with the first
   such tool (the design, "When a calculation that reads a filter starts
   by itself");
-- the saving of the project on `popgen2.html`; exact counts of a
-  threshold on popnei's bins, popnei's issue #11.
+- the saving of the project on `popgen2.html`, and with it how its
+  project files hold whether the variants record their FILTER
+  (`project.md`, "Not in this spec"); exact counts of a threshold on
+  popnei's bins: the piece `popnei-0.2.2`.
 
 The open points of the specs that are not answered:
 
@@ -199,50 +204,91 @@ hold it. The task writes `<variants>.filter_passed()`, popnei's Python
 method of that name, first among the filters, where the runner puts it,
 names it in its commit message, and the session records it here.
 
+Work package 2 starts only after the branch `popnei-0.2.2` is merged
+into `main` and then into `filters`, as the owner ordered on 7 October
+2026: it reads popnei 0.2.2's `keepsPassed`, which popnei 0.2.1 does not
+have, and the merge raises `PROTOCOL_VERSION` to 13, from which this
+package raises it to 14. The literals of the work packages from here on
+are taken under node from popnei 0.2.2, the release that merge installs.
+
 ## Work package 2: the filters that apply to the file
 
-What it gives: a project that holds the filter of the FILTER column
-while a `.nei` file is open gives the keys, the jobs, the counts and the
-words of the same filters without it, so no job carries `passed` to a
-file popnei would refuse it on.
+What it gives: the page learns, when it opens a variants file, whether
+its variants record whether they passed their FILTER, and a project that
+holds the filter of the FILTER column while a file without that record
+is open, a `.nei` file written before popnei's vars format 1.2, gives
+the keys, the jobs, the counts and the words of the same filters
+without it, so no job carries `passed` to a file popnei would refuse it
+on. A `.nei` file with the record keeps the filter, as a VCF does, as
+the owner decided on 7 October 2026 (the design, "What the owner
+decided").
 
 Deliverables:
 
-1. `filtersApplied` and `filtersAppliedTo`: the cases of `project.md`,
-   "How it is verified", bullet "The filters of popgen2.html", that name
-   them, and the property that `filtersApplied` of every project drawn
-   holds the filters of `filters` in their order, but `passed` for a
-   `.nei` file, under `SF2 D1`.
-2. The keys: the cases of `keys.md`, "How it is verified", "A filter
+1. The worker answers whether the variants record their FILTER: the
+   bullet "The open" of `runner.md`, "How it is verified", on its
+   `keepsPassed` of each fixture, and the sentences of the bullet "The
+   filter of the FILTER column" on `low_qual.nei`, under `SF2 D1` in
+   `src/worker/runner.test.ts` or a file beside it; the cases of
+   `messages.md` that name `keepsPassed`, and `PROTOCOL_VERSION` 14,
+   under `SF2 D1` in `src/worker/messages.test.ts`. The fixture
+   `e2e/fixtures/low_qual.nei`, the `.nei` file popnei 0.2.2's
+   `writeVars` writes from `low_qual.vcf.gz` read with every variant,
+   is made by `e2e/fixtures/make_fixtures.mjs` and committed.
+2. `keepsPassed`, `filtersApplied` and `filtersAppliedTo`: the cases of
+   `project.md`, "How it is verified", bullet "The filters of
+   popgen2.html", that name them, the two cases "The FILTER box on, then
+   a `.nei` file … opened" of "The cases", and the property that
+   `filtersApplied` of every project drawn holds the filters of
+   `filters` in their order, but `passed` when `keepsPassed` of its file
+   is false, under `SF2 D2`; the read recorded from `opened` with its
+   `keepsPassed` (`entry.md`, the table of the outcomes), and a project
+   file read with `keepsPassed` from the format (`projectFile.md`, the
+   property of "How it is verified"), under the same tag.
+3. The keys: the cases of `keys.md`, "How it is verified", "A filter
    turned off is in no key" with `passed` drawn and "The filters that
-   apply", under `SF2 D2` in `src/core/keys.test.ts`.
-3. The readers: no request and no write carries `passed` for a `.nei`
-   file, the property of `store.md`, "How it is verified", last
-   paragraph of the sequences, first clause, under `SF2 D3`; and, for
-   each analysis of `docs/specs/analyses/` whose revision of 7 October
-   2026 names a reader (its job, key, script, rows, check numbers, file
-   name or estimate), one test with `passed` on and a `.nei` load that
-   reads the result without `passed`, under `SF2 D3` in that analysis's
-   test file.
-4. Every test that existed passes; the old page's flows that read the
+   apply", with a `.nei` source of each `keepsPassed`, under `SF2 D3` in
+   `src/core/keys.test.ts`; the fingerprint given the variants file in
+   place of its read options, and its literal hash unchanged.
+4. The readers: no request and no write carries `passed` for a file
+   whose read says `keepsPassed` false, the property of `store.md`, "How
+   it is verified", last paragraph of the sequences, first clause, under
+   `SF2 D4`; and, for each analysis of `docs/specs/analyses/` whose
+   revision of 7 October 2026 names a reader (its job, key, script,
+   rows, check numbers, file name or estimate), one test with `passed`
+   on and a `.nei` load whose read says `keepsPassed` false that reads
+   the result without `passed`, under `SF2 D4` in that analysis's test
+   file.
+5. Every test that existed passes; the old page's flows that read the
    filters, `-g "VS|WS|PA"` of the browser check, among them.
 
 Tasks:
 
-- [ ] 2.1 `filtersApplied` and `filtersAppliedTo` in
+- [ ] 2.1 `keepsPassed` in `Opened` of `src/worker/protocol.ts`, its
+  check in `src/worker/messages.ts` with `PROTOCOL_VERSION` 14, the
+  runner's `open` in `src/worker/runner.ts`, and the fixture
+  (`protocol.md`, the interface `Opened`; `messages.md`, the bullet of
+  `opened`; `runner.md`, "Opening the load"); and the read of the
+  project, `SourceRead` in `src/core/project.ts`, its record from
+  `opened` in the page's handling of the outcomes (`entry.md`), and its
+  reading from a project file (`project.md`, "The validation"),
+  since the compiler asks for `keepsPassed` wherever a read is built.
+  Deliverable 1, and the parts of 2 on the read.
+- [ ] 2.2 `keepsPassed`, `filtersApplied` and `filtersAppliedTo` in
   `src/core/project.ts`, and the keys and the fingerprint in
-  `src/core/keys.ts` (`keys.md`, "What it does", the table of the inputs
-  and "The fingerprint of the settings"). Deliverables 1 and 2. A key
-  that kept `p.filters` would be silent, so this is a commit of its own,
-  guarded by deliverable 2.
-- [ ] 2.2 Every other reader of `p.filters` in place of the filters
+  `src/core/keys.ts`, with its callers in `src/core/store.ts` and
+  `src/core/projectFile.ts` (`keys.md`, "What it does", the table of the
+  inputs and "The fingerprint of the settings"). Deliverables 2 and 3. A
+  key that kept `p.filters` would be silent, so this is a commit of its
+  own, guarded by deliverable 3.
+- [ ] 2.3 Every other reader of `p.filters` in place of the filters
   applied: the analyses of `src/core/analyses/`, `countsOf` and
   `writeCountsOf` of `src/core/apps.ts` (`entry.md`), the job of the
   write in `src/core/store.ts` (`store.md`, "The writing of the filtered
   variants"), `src/core/writeEstimate.ts`, `src/core/fileNames.ts`, and
   the words that name the filters on in `src/ui/` (`project.md`, "The
   filters of popgen2.html", the paragraph of `filtersApplied`, which
-  lists what reads `p.filters` as it is). Deliverables 3 and 4.
+  lists what reads `p.filters` as it is). Deliverables 4 and 5.
 
 ## Work package 3: the commands of a threshold, and the first project of popgen2.html
 
@@ -521,19 +567,22 @@ What could go wrong:
 
 ## Work package 9: the FILTER box
 
-What it gives: for a VCF, the check box "Leave out the variants that
-failed their FILTER", ticked, at the end of the part of the variants,
-with its line, in every state of the statistics; each click a change of
-the project with its notice; not shown for a `.nei` file.
+What it gives: for a VCF and for a `.nei` file that records the FILTER
+of its variants, the check box "Leave out the variants that failed
+their FILTER", ticked, at the end of the part of the variants, with its
+line, in every state of the statistics; each click a change of the
+project with its notice; not shown for a `.nei` file without that
+record, as `keepsPassed` of the file says.
 
 Deliverables:
 
 1. Flows under `SF9 D1`: the box is there and ticked for
-   `panel.vcf.gz`, and not for `panel.nei`; a click gives the notice "The
-   filter of the FILTER column was turned off · Undo", changes no plot
-   and sends nothing to the worker, and Undo ticks it again; ticked off
-   for a VCF, then `panel.nei` opened, then the VCF again, it is still
-   off; it is there while the pass runs, after a Stop and after a crash,
+   `panel.vcf.gz` and for `low_qual.nei`, and not for `panel.nei`; a
+   click gives the notice "The filter of the FILTER column was turned
+   off · Undo", changes no plot and sends nothing to the worker, and
+   Undo ticks it again; ticked off for a VCF, then `panel.nei` opened,
+   then `low_qual.nei`, it is off there, and still off for the VCF
+   again; it is there while the pass runs, after a Stop and after a crash,
    and a click after a crash leaves the words of the crash; its line is
    read as its description; the Tab order puts it after the four
    histograms of the variants and before the part of the individuals;
@@ -586,8 +635,8 @@ Tasks:
   takes the screenshots again; then reports to the owner as the
   `building` skill says, with how to start the page from the worktree
   (`npm run dev`, `popgen2.html`, the files `e2e/fixtures/panel.vcf.gz`,
-  `low_qual.vcf.gz` and `panel.nei`), the states worth going through,
-  and four questions: whether the screen is accepted; the words and the
+  `low_qual.vcf.gz`, `panel.nei` and `low_qual.nei`), the states worth
+  going through, and four questions: whether the screen is accepted; the words and the
   layout the session chose, the list of the screen spec's "Words and
   layout chosen by the session"; Open 1, the sentence on the variants
   with no called genotype, with the screen spec's options, its
