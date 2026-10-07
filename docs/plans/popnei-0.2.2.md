@@ -155,3 +155,71 @@ to the `architecture-reviewer`.
   now does. A revision of that design, said to the owner.
 
 ## What was done
+
+### Phases 1 and 2, 7 October 2026
+
+Commits f52b969 (the release js-v0.2.2, with the test literals its
+decimal edges change: the MAF 40-bin counts of panel.nei, tetraploid.nei
+and the 111-individual list; the edges 0.075, 0.475, 0.95, 0.975) and
+31bcc42 (exact counts). The fine bins stay 1,000: the session asked for
+10,000 after a review, and the implementer showed that the variants'
+axes never step below 0.001 (above). Different from the plan: a variants'
+threshold below 0.001 is raised to 0.001, since the first bin holds 0
+with the values up to 0.001; the owner chose this on 7 October 2026 over
+allowing 0 with a popnei issue. It differs from a filter at 0 only on a
+file of 1,000 individuals or more. The hatched bar of the chart, used by
+nothing any more, was removed with its spec. No protocol change in
+these phases. popgen2's axes show 30 to 50 bars, where 1,280 bins gave
+32 to 44.
+
+Checks on 31bcc42: typecheck, lint clean; Vitest 4,026 in 117 files;
+format clean; Playwright 619 in Chromium and 619 in WebKit; screens
+popgen2 76, the old Variants step 6. The count equals popnei's filter at
+every k/1000 from 0.001 to 1 on panel.vcf.gz, low_qual.vcf.gz, panel.nei
+and tetraploid.vcf.gz.
+
+Review: spec and stale; tests and errors; ux and accessibility. The
+tests reviewer recomputed every literal under node and broke the code
+seven ways, each caught. Fixed in e8cbc03: the raise to 0.001 said in
+words and announced; the CSV columns; a key version in a spec; six
+stale comments; the releases of `docs/technology.md`. Not a defect: the
+MAF axis at 320 px starts at 0.45 and d3 labels 0.6, 0.8, 1.0.
+
+### Phase 3, 7 October 2026
+
+Commits 7c553d5 (the runner asks `filterColumn` when the open variants'
+`keepsPassed` is true; the summary's result carries it; PROTOCOL_VERSION
+12; summary key version 4; the box; the Python script prints the count
+when `keeps_passed`) and e519b3b (flows and screens). A "300 so far"
+state while reading; the status region does not announce the count.
+
+Checks on e519b3b: Vitest 4,051 in 117 files; the rest clean;
+Playwright on popgen2 and the old Variants step, 228 in Chromium and 228
+in WebKit; screens 176.
+
+Review: spec and api; tests and errors; ux and accessibility. Found: the
+raised-threshold words were false for a typed 0.004 that rounds to 0 on
+an axis of step 0.01; two blank lines under each variants plot; the CSV
+header false for the first bin; no test of the refusals of
+`filterColumn` nor of the runner's defect check; a `.nei` that records
+its FILTER loses its line after a Stop; a stale example of threshold 0.
+Sent as one list of fixes. Noted for the filters' work package 2: once
+the opening tells whether a `.nei` records its FILTER, its box can show
+the line from the opening and not move. Seen by a reviewer, popnei's
+own words: for a VCF opened with only the passed variants, all of which
+failed, popnei says "its source holds none" while the source holds 2.
+
+Fixed in ff9fa0e, 354fd66, efdbfe4, 743282f: the words "Counted as
+0.001, the smallest threshold.", one line at 1280 px and two at 320 px,
+so the band under each variants plot is one line on a computer; the CSV
+header `from,to_included,count,state`; four tests of the refusals of
+`filterColumn`, and the runner's defect check tested through a mock of
+popnei; the condition of a `.nei` file written into
+`docs/functionality.md`, since after a Stop the store keeps no result so
+far. Not changed: the old Variants step still takes a threshold of 0,
+so its example stays. Noted: the check of the messages accepts a
+negative count, as `isWhole` does everywhere.
+
+Checks on 743282f: Vitest 4,060 in 118 files, the rest clean;
+Playwright on popgen2 and the old steps, 190 in Chromium and 190 in
+WebKit; screens of popgen2 100.
