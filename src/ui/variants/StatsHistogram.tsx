@@ -11,7 +11,7 @@
  * the line is dragged or as the pass ends. Under it, for the variants,
  * the room of the line said when a number committed lands below 0.001
  * and is raised to 0.001, "Counted as 0.001, the smallest threshold.",
- * one line at any width of the column, which is also announced; it shows
+ * one line at 1280 pixels and two at 320, which is also announced; it shows
  * while the threshold is the one raised, and its room is always kept, so
  * that the plot does not move when it comes or goes. No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads

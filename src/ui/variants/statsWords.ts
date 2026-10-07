@@ -257,8 +257,8 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
     count of the variants at most 0 cannot be told from it. Said, since a
     box never turns a number typed into another without a word
     (docs/specs/steps/variants.md, "A number the fields do not take"); in
-    words true of both ways, and short enough to take one line of the
-    plot's column at 320 pixels. */
+    words true of both ways, one line of the plot's column at 1280
+    pixels and two at 320. */
 export const THRESHOLD_RAISED_LINE = `Counted as ${numberText(LEAST_VARIANT_THRESHOLD)}, the smallest threshold.`;
 
 /** What a threshold keeps of the variants or the individuals of one
