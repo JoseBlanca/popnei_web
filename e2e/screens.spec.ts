@@ -4440,6 +4440,47 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-failures-done${at}-${theme}`);
       });
 
+      test("the count of the FILTER failures stopped", async ({ page }) => {
+        // The result of the count of the failures is never posted, so the
+        // count runs until the Stop.
+        await holdFailures(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByRole("progressbar", {
+            name: "Counting the variants that failed their FILTER",
+          }),
+        ).toBeVisible();
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByText("Failed FILTER: not counted"),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-stopped${at}-${theme}`);
+      });
+
+      test("a crash during the count of the FILTER failures", async ({
+        page,
+      }) => {
+        await crashWorkerOn(page, "run", "filterFailures", true);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(
+          newPageCount(page).getByText(
+            "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
+          ),
+        ).toBeVisible();
+        await expect(
+          newPageCount(page).getByRole("button", { name: "Start again" }),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-failures-crash${at}-${theme}`);
+      });
+
       test("a .nei summary", async ({ page }) => {
         await pickOnNewPage(page, "panel.nei");
         await expect(
