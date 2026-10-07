@@ -62,14 +62,22 @@ while the file is read (`docs/plans/live-stats.md`, phase 2): the state
 `running` holds the last result so far of its request, `soFar`, which
 `send` gives through `onSoFar`. Revised on 7 October 2026 for the
 thresholds of popgen2.html as filters of the project
-(`docs/designs/stats-filters.md`, approved by the owner that day): a
-setting of the store, `filterNotices`, on for popgen2.html alone, under
+(`docs/designs/stats-filters.md`, approved by the owner that day). On
+popgen2.html the one calculation is the summary of the variants file,
+the reading of the file at its opening that gives the count of the
+variants, the statistics of each individual and the histograms of the
+variants; its key, the hash of everything a result is calculated from
+under which the store files it, holds the file and no filter, and the page's button
+Start again sends `startRun` of it. Four things change: a setting of
+`createStore`, `filterNotices`, true for popgen2.html alone, under
 which every change of a filter gives a notice; a failure that is not
-popnei's forgotten by a change only when the change leaves its key
-behind, where it was forgotten at every change; the last result so far
-of a calculation the user stopped kept beside the state `ready`,
-`stopped`, under its key; and the job of the write taking the filters
-that apply to the file, `filtersApplied`. The store is the one object of core that
+popnei's, which every change of the user forgot, is forgotten only by a
+change after which the project no longer gives its key, on both pages;
+the last result so far of a calculation the user stopped is kept beside
+the state `ready`, as `stopped`, under its key; and the job of the
+write takes the filters that apply to the file, `filtersApplied` of
+`docs/specs/core/project.md`, which are the filters on without that of
+the FILTER column for a `.nei` file. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -93,7 +101,8 @@ shown, whether it is the result of the settings on screen, whether a
 change took it off and an undo can bring it back, whether a calculation
 is running for it, and whether that calculation will be stopped. The
 store shows a result only under the key that the current project gives
-it, and so never one of other settings (`docs/architecture.md`, section
+it, the hash of everything the result is calculated from
+(`docs/specs/core/keys.md`), and so never one of other settings (`docs/architecture.md`, section
 3).
 
 A calculation runs in the calculation worker, and the page learns its
@@ -257,7 +266,12 @@ said to be of the variants read before it. When `cancelRun` stops the
 request in flight of the key the project gives, and that request holds
 a result so far, the store keeps that result under the key, one for
 each analysis, and the state `ready` of that key holds it, `stopped:
-{ soFar }`; it is `null` when the request had given none. It is never
+{ soFar }`; it is `null` when the request had given none. What is kept
+is the last result so far the request held when `cancelRun` was
+called: one that arrives after it, before the outcome `cancelled`
+reaches the store, is passed over, as one that arrives after its
+request left is, so that the plots do not move after the user pressed
+Stop. It is never
 cached, has no warnings and no check numbers, and is shown only while
 the project gives the analysis that key: a change of a filter on
 `popgen2.html`, which leaves the key of the summary as it is, keeps it
@@ -399,7 +413,8 @@ calculation that will be stopped unless the change is undone: its
 until the notice is closed or replaced, since what it tells has
 happened, and a notice with nothing else in it stays until then, but
 for one thing: a `startRun` of an analysis in `stopped` takes it out,
-and a notice left with nothing goes. The user has run that analysis
+and a notice left with nothing goes, unless it tells of a change of a
+filter, `filtersChanged` (below). The user has run that analysis
 again, and the line that says its calculation was stopped by the new
 file would otherwise stay beside the new run, and after a Stop of the
 user's own would tell of that Stop as if the file had caused it.
@@ -480,7 +495,12 @@ any other.
 
 The notice goes when it is closed or replaced; a change that removes
 nothing, leaves nothing behind, stops nothing, discards no written file
-and, under `filterNotices`, changes no filter, replaces it with none. An analysis is
+and, under `filterNotices`, changes no filter, replaces it with none. A
+notice is left with nothing when its results removed, its calculations
+left behind and stopped, its Runs that wait and its writing left behind,
+stopped or discarded are all gone, and it does not tell of a change of a
+filter, `filtersChanged` false; such a notice goes, in the cases this
+section names. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
 `ready`. An analysis among the results removed that is done again, when
@@ -564,19 +584,36 @@ variants file, reads no filter, so no change of a threshold or of the
 box of the FILTER column removes, leaves behind or stops anything, and
 the user would have no notice to undo from, as the old page has. So
 `createStore` takes a setting, `filterNotices`, true for `popgen2.html`
-alone, as `docs/designs/stats-filters.md` decided on 7 October 2026:
-under it, a command, an undo or a redo after which any of the four
-lists of filters, `filters`, `filtersOff`, `individualFilters` and
-`individualFiltersOff`, is another object than before gives a notice,
-with its cause, "the MAF filter changed", and `filtersChanged` true,
-whatever else it holds. Such a notice stays until it is closed or
-replaced, as one with a result removed does, and the screen writes it
-"The MAF filter changed · Undo". The old page keeps it false: its
-number boxes make a change at every press of an arrow key, and a screen
-reader would read a notice at every press of a held key. On
+alone, as `docs/designs/stats-filters.md` decided on 7 October 2026.
+Under it, a command, an undo or a redo after which the filters differ
+from those before gives a notice, with its cause, "the MAF filter
+changed", and `filtersChanged` true, whatever else it holds. The
+filters are compared by value: the four lists, `filters`, `filtersOff`,
+`individualFilters` and `individualFiltersOff`, each the same length
+before and after, with the same kinds and the same numbers at each
+place. A command that makes new arrays and leaves every filter as it
+was, as loading another variants file may, gives no notice of a filter,
+since none changed; a comparison of the arrays themselves would have
+told the user that a filter changed when they opened a file. `settle`,
+which takes out of a notice what is no longer true and drops a notice
+left with nothing, keeps a notice with `filtersChanged` true, since the
+change of the filter it tells of stays true until the next change: such
+a notice goes only when it is closed or replaced. The screen writes it
+"The MAF filter changed · Undo". The old page keeps the setting false:
+its number boxes make a change at every press of an arrow key, and a
+screen reader would read a notice at every press of a held key. On
 `popgen2.html` the page makes one change of a run of presses
-(`docs/specs/core/project.md`, "The filters of popgen2.html"), so a
-screen reader says the notice once per run.
+(`docs/specs/steps/popgen2-filters.md`, "When a threshold changes the
+project"), so a screen reader says the notice once per run.
+
+The store of each page passes the setting: `createPopgen2Store` of
+`src/ui/popgen2Store.ts` passes `filterNotices: true` and the first
+project of that page, `popgen2FirstProject()` of `src/core/apps.ts`
+(`docs/specs/core/project.md`, "The filters of popgen2.html"), where it
+passes `firstProject("popgen")` until then; the store of `popgen.html`,
+`src/ui/popgenStore.ts`, passes `filterNotices: false` and
+`firstProject("popgen")` as before. The field is required, so that a
+third page chooses.
 
 ### A calculation that failed
 
@@ -593,31 +630,39 @@ wait again for popnei's refusal.
 
 Any other failure, a worker that crashed, one that could not start, a
 file of the site left from before a deploy, a message that did not
-validate, is kept under its key until a change of the user leaves that
-key behind, and shown as the state `error` with what happened, so that
-the user learns it and can run again; after such a change, the analysis
-is `ready` for its new key, and an undo back to the old key shows it
-`ready` too, since a second try can succeed. A cancel is not a failure:
-the analysis is `ready`.
+validate, is shown as the state `error` with what happened, so that the
+user learns it and can run again. It lasts until the user makes a change
+after which the project no longer gives its key. Such a change is a
+command that changed the project, an undo or a redo, and after it the
+store forgets each failure of this kind whose key the new project gives
+neither to an analysis nor to the write; a failure whose key the change
+left as it was stays. The analysis is then `ready` under its new key,
+and `ready` too if an undo gives its old key back, since a second try
+can succeed. An opening of a project file forgets every failure, as it
+starts a new history. A read recorded, a number of variants among them,
+forgets none, since it comes from the workers and would clear the
+failure of one analysis when the result of another arrives. `startRun`
+of an analysis in error after such a failure forgets the failure, so
+that a cancel of the new calculation leaves the analysis `ready`. A
+cancel is not a failure: the analysis is `ready`.
 
-A change of the user, for a failure that is not popnei's, is a command
-that changed the project, an undo or a redo; after it the store forgets
-each such failure whose key the new project gives neither to an
-analysis nor to the write. An opening forgets them all, as it starts a
-new history. A read recorded, a number of variants among them, forgets
-none, since it comes from the workers and would clear the failure of
-one analysis when the result of another arrives. `startRun` of an
-analysis in error after such a failure forgets the failure, so that a
-cancel of the new calculation leaves the analysis `ready`. Decided here,
-not by the owner, on 24 September 2026; revised on 7 October 2026, as
-`docs/designs/stats-filters.md` decided, where every change forgot every
-failure: on `popgen2.html` a change of a filter does not change the key
-of the summary of the variants file, and a click on the box of the
-FILTER column after a crash of the worker would have wiped the words of
-the crash, while Start again, `startRun`, tries again. On `popgen.html`
-the rule now keeps the failure of an analysis whose key a change did not
-touch, a crash of the statistics of each individual after a change of
-the MAF filter among them, with its Run offered as before (**Open 1**).
+Until 7 October 2026 every change of the user forgot every such
+failure, as decided here, not by the owner, on 24 September 2026. The
+design `docs/designs/stats-filters.md` asked for the change on
+`popgen2.html`: there a change of a filter leaves the key of the
+summary of the variants file as it is, and forgetting its failure at
+every change would wipe the words of a crash of the worker when the
+user ticks the box of the FILTER column, while Start again is what
+tries again. That the rule holds on `popgen.html` too, so that the
+store has one rule of failure and not one under `filterNotices` and
+another without it, is the session's decision of 7 October 2026, not
+the design's, and the owner is told of it with these specs. On
+`popgen.html` it changes one thing a user sees: the words of a crash of
+an analysis stay after a change of a setting that the analysis does not
+read, where they gave way to its Run button, which stays offered beside
+them. The statistics of each individual, for instance, read no filter,
+so the words of a crash of their calculation stay when the user then
+changes the MAF filter.
 
 A variants file that the browser could not read again, `reopenFailed`,
 is kept otherwise: under the load id of the file, as the mark of a load
@@ -1418,18 +1463,30 @@ whose file is a text.
   old request has been cancelled once and no more. The same with an undo
   and with a redo that change the load. Again, then the new file read,
   `startRun` of the analysis and `cancelRun` of it: the notice no longer
-  lists it in `stopped`, and a notice with nothing else in it is `null`. No test waits for a time: the
+  lists it in `stopped`, and a notice with nothing else in it is `null`.
+  In a store made with `filterNotices` true, the same with one command
+  given to `apply` that loads another variants file and changes a
+  filter: after `startRun`
+  and `cancelRun` the notice no longer lists the analysis in `stopped`,
+  and stays, with `filtersChanged` true. No test waits for a time: the
   store has no clock.
 - **The filters of popgen2.html**, from 7 October 2026, with a fake
   analysis that reads no filter and gives results so far, as the summary
   of the variants file does, in a store made with `filterNotices` true:
   a `setThreshold` of the MAF gives a notice with that cause,
   `filtersChanged` true and every list empty, and `send` was not called;
-  an undo gives one with the cause of the undo; a command that changes
-  no filter, and every command in a store made with `filterNotices`
-  false, give the notices they give today. The analysis running with a
+  the notice is still there after the store's next change of state, a
+  result so far of the analysis among them, and goes at
+  `dismissNotice` or at the next command; an undo gives one with the
+  cause of the undo; a command that changes no filter, a new variants
+  file loaded among them, whose project has the same filters in new
+  arrays, gives no notice of a filter, `filtersChanged` false or no
+  notice, and every command in a store made with `filterNotices`
+  false gives the notices it gives today. The analysis running with a
   result so far, `cancelRun`: its state is `ready` with that result in
-  `stopped`, the same object; a command that changes a filter keeps it;
+  `stopped`, the same object; a result so far given for the request
+  after `cancelRun` and before its outcome `cancelled` leaves `stopped`
+  as it was, the same object; a command that changes a filter keeps it;
   `startRun` forgets it, and so do a new load and `open`; a request being
   stopped that ends `failed` forgets it, and the state is `error`. A
   failure of kind `crashed` of the analysis, then a command that changes
@@ -1444,8 +1501,10 @@ whose file is a text.
 - **A refusal**: `runEnded` with `{ kind: "failed", error: { kind:
   "popnei", message: "…" } }` gives `error` of kind `refused`; a command,
   then its undo, give it again, and `startRun` returns `null`. The same
-  with `workerFailed` gives `error` of kind `failed`, `startRun` works,
-  and after a command and its undo the analysis is `ready`. With
+  with `workerFailed` gives `error` of kind `failed`, `startRun` works;
+  after a command that changes the analysis's key, and after that
+  command's undo, the analysis is `ready`; after a command that leaves
+  its key as it was, it is still `error` of kind `failed`. With
   `reopenFailed`, the analysis is `error` with it, after a command that
   changes its key and after that command's undo, and `startRun` returns
   `null` and calls no `send`; a new variants file loaded and read makes
@@ -1648,17 +1707,10 @@ decided here and said where they are. The store uses the bound of the
 cache (`docs/specs/core/cache.md`, **Open 1**) and the bound of the
 history (`docs/specs/core/history.md`, **Open 1**).
 
-1. **A failure kept after a change that does not touch its key, on
-   `popgen.html` too.** The design asks it for `popgen2.html`, where a
-   change of a filter gives the summary no new key, and its section of
-   the architecture states it for the store, so this spec makes it the
-   rule of both pages. On `popgen.html` the user then sees the words of
-   a crash of the statistics of each individual, or of a diversity, stay
-   after a change of a setting that analysis does not read, where until
-   now they gave way to Run; Run stays offered beside them. The option
-   of the other answer is the rule under `filterNotices` alone, which
-   keeps the old page as it is at the cost of a store with two rules of
-   failure. Recommended: one rule for both pages. Meanwhile, one rule.
+The open point of 7 October 2026, whether a failure is kept after a
+change that does not touch its key on `popgen.html` too, was closed the
+same day by the session's decision of one rule for both pages ("A
+calculation that failed", above); no point is open.
 
 ## Not in this spec
 
