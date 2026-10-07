@@ -60,7 +60,14 @@ October 2026 when the owner took that count out, so that popgen2.html
 reads each file once (`docs/plans/one-pass.md`): the job and its result
 are removed, `passed` in the counts of any result is `extraFields`, and
 `PROTOCOL_VERSION` is 11; the count waits for popnei's summary to give
-it, popnei issue #12 (JoseBlanca/popnei).
+it, popnei issue #12 (JoseBlanca/popnei). Revised on 7 October 2026 for
+the thresholds of popgen2.html as filters of the project
+(`docs/designs/stats-filters.md`, approved by the owner that day): a
+filter of the variants of the kind `passed`, of exactly the field
+`kind`, is accepted in the `filters` of a write and of every job whose
+filters may be other than empty, `passed` is a kind of the counts of any
+result, and
+`PROTOCOL_VERSION` is 12.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -429,9 +436,11 @@ and of `.claude/skills/coding/worker.md`, "Validation at the boundary":
   each individual are as long as its `individuals`, a list of texts; the `counts` of each
   histogram of the variants are one fewer than its `binEdges`; a
   population of a `Job` is a pair, its name and its individuals;
-  `individuals` of a job is `null` or a list of texts; the fields of
-  `passStats.filtering` of every result are kinds of `VariantFilter`, so
-  that `passed` there is `extraFields`; `filters` of a
+  `individuals` of a job is `null` or a list of texts; a filter of the
+  variants has exactly the fields of its kind, `kind` alone for
+  `passed`; the fields of `passStats.filtering` of every result are
+  kinds of `VariantFilter`, `passed` among them from 7 October 2026;
+  `filters` of a
   `variantChecks` or an `individualChecks` job is empty, the second from
   28 September 2026, and of a `variantsSummary` job; for the principal components, from
   stage 4, the `method` of a job and of a result is `"pca"` or
@@ -481,7 +490,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -634,7 +643,10 @@ with a refusal. Node has `File`, so the requests are built with `new
 File(["…"], "panel.nei")`.
 
 - **Every kind is accepted**: a message of each kind, the `open` of a VCF
-  and of a `.nei` file, a `run` of each of the seven jobs, the principal
+  and of a `.nei` file, a `run` of each of the seven jobs, a diversity
+  job and a `write` whose filters are `passed` and the missing data
+  filter, and a result whose `passStats.filtering` holds `passed` before
+  `missing_data`, the principal
   components with the method `"pca"` and with `"pcoa"`, with
   `individuals` `null` and with a list, its `progress`, `{ kind:
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
@@ -666,7 +678,9 @@ File(["…"], "panel.nei")`.
   `extraFields`, and without `individuals`, `missingFields`; a result
   without `passStats`, and one with `numVars` at its top, as stage 2 had
   it; a `passStats.filtering` with a field `regions`, before popnei has
-  that filter, `extraFields`; an `obsHetRate` of 199 numbers beside a
+  that filter, `extraFields`; a filter `{ kind: "passed",
+  maxAllowedMissingRate: 0.1 }` in a diversity job, `extraFields` at
+  `job.filters.0`; an `obsHetRate` of 199 numbers beside a
   `missingGtRate` of 200, `wrongLength`, and so an `individuals` of 199; `binEdges` of 41 numbers and
   the `counts` of the MAF of 41, `wrongLength`; a `variantChecks` job
   with a filter; a `written` whose `numBytes` is 3593 and its file's
