@@ -260,7 +260,7 @@ test("TH2 the line dragged with the mouse: the box and the words follow it, the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows in full, the number counted, and a line says; an arrow of the box one edge; nine decimals refused", async ({
+test("TH2 a number typed: the line follows it as it is typed, and at Enter it is snapped to the nearest fine edge, which the box shows in full, the number counted, and a line says until the box changes or refuses a number; an arrow of the box one edge; nine decimals refused", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -320,7 +320,8 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
     "0.3398 is counted as 0.33984375, the nearest edge of the bins.",
   );
   await expect(moved).toBeVisible();
-  // Nine decimals are refused, and the threshold stays.
+  // Nine decimals are refused, the threshold stays, and the line of the
+  // number moved goes, which named another entry.
   await het.box.fill("0.123456789");
   await het.box.press("Enter");
   await expect(
@@ -328,8 +329,17 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
       "0.123456789 has more than 8 decimals; the threshold stays 0.33984375.",
     ),
   ).toBeVisible();
+  await expect(moved).toHaveCount(0);
   await expect(het.box).toHaveValue("0.33984375");
   await expect(het.slider).toHaveValue("435");
+  // A key typed in the box takes it away too.
+  await het.box.fill("0.3398");
+  await het.box.press("Enter");
+  await expect(moved).toBeVisible();
+  await het.box.press("End");
+  await het.box.press("1");
+  await expect(moved).toHaveCount(0);
+  await het.box.press("Escape");
 
   // A threshold beyond the axis widens it, and the line goes with it.
   const missing = histogram(page, "Proportion of missing genotypes");

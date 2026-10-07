@@ -15,7 +15,9 @@
  * dragged or moved with the keys. The words of the counts describe the
  * box, so that a screen reader reads them as the box takes the focus. A
  * number typed and moved to the nearest of popnei's fine edges is said
- * once under the row, until the next change.
+ * once under the row, until the next change of the threshold or of the
+ * text of the box, or a number the box refuses, since it names an entry
+ * no longer there.
  *
  * The arrow keys in the box move the threshold as they move the line, one
  * step of the line, Page Up and Page Down ten, from where the line is,
@@ -152,6 +154,12 @@ export function StatsHistogram({
         onBlur={() => {
           setHeld(null);
         }}
+        // A key typed or a text pasted in the box, which the line of a
+        // number moved no longer names. React Aria writes the number
+        // committed with no input event.
+        onInput={() => {
+          setSnapped(null);
+        }}
         onKeyDownCapture={(event) => {
           const steps = boxStepsOf(event);
           // An empty box is left to the field, which moves nothing.
@@ -188,6 +196,7 @@ export function StatsHistogram({
           }
           refusedText={thresholdRefusedText}
           onRefused={(text) => {
+            setSnapped(null);
             announcer.announce(text);
           }}
           onTyped={onTyped}
