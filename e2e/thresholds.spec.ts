@@ -692,3 +692,66 @@ test("TH4 while a result so far widens an axis, a box with the focus and nothing
   });
   await expect(individuals.box).toHaveValue("0.391");
 });
+
+test("TH4 after a resize, the line of each threshold is over its dashed line in every frame the plots are drawn in", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openPanel(page);
+  const missing = histogram(page, GROUPS[0]);
+  await expect(missing.words).toHaveText("Keeps all 1,200 variants", {
+    timeout: 20_000,
+  });
+  // At each change of a plot, before the browser paints it, the distance
+  // across from the middle of its thumb to its dashed line. Only the plot
+  // that changed: the others are drawn again in the same frame, after.
+  await page.evaluate(() => {
+    const offsetOf = (group: Element): number | null => {
+      const line = group.querySelector("line.chart-threshold");
+      const thumb = group
+        .querySelector('input[type="range"]')
+        ?.closest('[class*="thumb"]');
+      if (line === null || thumb === null || thumb === undefined) return null;
+      const box = thumb.getBoundingClientRect();
+      return box.x + box.width / 2 - line.getBoundingClientRect().x;
+    };
+    const seen: number[] = [];
+    const observer = new MutationObserver((records) => {
+      const groups = new Set(
+        records.flatMap((record) => {
+          const target =
+            record.target instanceof Element
+              ? record.target
+              : record.target.parentElement;
+          const group = target?.closest('[role="group"]');
+          return group === null || group === undefined ? [] : [group];
+        }),
+      );
+      for (const group of groups) {
+        const offset = offsetOf(group);
+        if (offset !== null) seen.push(offset);
+      }
+    });
+    for (const svg of document.querySelectorAll("svg.chart")) {
+      observer.observe(svg, { attributes: true, subtree: true });
+    }
+    Object.assign(window, { seenOffsets: seen });
+  });
+  // From two plots a row, 360 pixels wide, to one, 568 wide.
+  await page.setViewportSize({ width: 600, height: 900 });
+  // Every plot drawn again at the new width.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (Reflect.get(window, "seenOffsets") as number[] | undefined)
+            ?.length ?? 0,
+      ),
+    )
+    .toBeGreaterThan(5);
+  await page.waitForTimeout(500);
+  const seen = await page.evaluate(
+    () => Reflect.get(window, "seenOffsets") as number[],
+  );
+  expect(Math.max(...seen.map(Math.abs))).toBeLessThan(1.5);
+});

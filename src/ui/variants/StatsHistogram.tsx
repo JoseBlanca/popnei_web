@@ -33,7 +33,7 @@
  * React Aria would put the new number over what the user is typing. Until
  * the user types, the box shows the number counted, as the line does.
  */
-import { useId, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
@@ -63,6 +63,24 @@ export interface StatsHistogramProps {
   readonly onTyped: (typed: number | null) => void;
 }
 
+/** Writes `frame`, where the plot drew its frame, on `element`, around
+    the plot and its line, as the custom properties the line is placed
+    by; nothing when either is not there yet. */
+function writeFrame(
+  element: HTMLElement | null,
+  frame: HistogramFrame | null,
+): void {
+  if (element === null || frame === null) return;
+  for (const [name, pixels] of [
+    ["--frame-left", frame.left],
+    ["--frame-top", frame.top],
+    ["--frame-width", frame.width],
+    ["--frame-height", frame.height],
+  ] as const) {
+    element.style.setProperty(name, `${String(pixels)}px`);
+  }
+}
+
 /** A histogram of the section, with its threshold. */
 export function StatsHistogram({
   plot,
@@ -72,9 +90,25 @@ export function StatsHistogram({
 }: StatsHistogramProps): React.JSX.Element {
   const wordsId = useId();
   const announcer = useAnnouncer();
-  // Where the plot drew its frame, which the line is laid over; none
-  // before its first draw.
-  const [frame, setFrame] = useState<HistogramFrame | null>(null);
+  // The element of the plot and the line, on which the frame of the plot
+  // is written as the plot draws it, the frame last drawn, and whether it
+  // was drawn once, before which the line has nowhere to go.
+  const plotRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HistogramFrame | null>(null);
+  const [framed, setFramed] = useState(false);
+  // Written as custom properties during the draw, before the browser
+  // paints: the line, placed by them, is painted with the plot after a
+  // resize. A state of React would place it a frame later. The first
+  // draw, in the layout effect of the plot, comes before the element has
+  // its ref, and is written by the layout effect below.
+  const onFrame = (frame: HistogramFrame): void => {
+    frameRef.current = frame;
+    writeFrame(plotRef.current, frame);
+    setFramed(true);
+  };
+  useLayoutEffect(() => {
+    writeFrame(plotRef.current, frameRef.current);
+  }, []);
   // The number the box keeps from the first change of its text to its
   // first commit or its blur; null when it shows `boxValue`.
   const [held, setHeld] = useState<number | null>(null);
@@ -130,9 +164,9 @@ export function StatsHistogram({
       <p id={wordsId} className={classOf(styles, "keeps")}>
         {threshold.line}
       </p>
-      <div className={classOf(styles, "plot")}>
-        <HistogramPlot data={plot.data} onFrame={setFrame} />
-        {frame !== null && (
+      <div ref={plotRef} className={classOf(styles, "plot")}>
+        <HistogramPlot data={plot.data} onFrame={onFrame} />
+        {framed && (
           <ThresholdSlider
             label={threshold.name}
             minValue={threshold.slider.min}
@@ -140,7 +174,6 @@ export function StatsHistogram({
             step={threshold.slider.step}
             value={threshold.slider.value}
             valueText={threshold.valueText}
-            frame={frame}
             onChange={(value) => {
               onThreshold(threshold.onStep(value));
             }}

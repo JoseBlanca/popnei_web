@@ -2,7 +2,11 @@
  * The line of a threshold that the user drags over a histogram: React
  * Aria's `Slider` with one thumb, laid over the plot so that the thumb is
  * the vertical line of the threshold and the track the frame of the plot
- * (docs/plans/thresholds.md, "The line the user drags"). The plot draws
+ * (docs/plans/thresholds.md, "The line the user drags"). It is placed by
+ * the custom properties of the frame of the plot, `--frame-left`,
+ * `--frame-top`, `--frame-width` and `--frame-height`, which the screen
+ * sets on an element around it as the plot draws, so that the line and
+ * the plot are painted together after a resize. The plot draws
  * the dashed line itself; the thumb is a band as wide as a target of
  * WCAG 2.5.8 around it, clear but for a handle in the margin above the
  * frame and a solid line over the dashed one while it is hovered,
@@ -21,7 +25,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
 
-import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
 import styles from "./ThresholdSlider.module.css";
 
@@ -58,8 +61,6 @@ export interface ThresholdSliderProps {
   readonly value: number;
   /** What a screen reader says as its value. */
   readonly valueText: string;
-  /** The frame of the plot it is laid over. */
-  readonly frame: HistogramFrame;
   /** Called with each value it is moved to, as it is dragged too. */
   readonly onChange: (value: number) => void;
 }
@@ -72,7 +73,6 @@ export function ThresholdSlider({
   step,
   value,
   valueText,
-  frame,
   onChange,
 }: ThresholdSliderProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,12 +100,6 @@ export function ThresholdSlider({
     // The keys of the thumb reach it first; the element is no widget.
     <div
       className={classOf(styles, "overlay")}
-      style={{
-        insetInlineStart: `${String(frame.left)}px`,
-        inlineSize: `${String(frame.width)}px`,
-        blockSize: `${String(frame.top + frame.height)}px`,
-        ["--frame-top" as string]: `${String(frame.top)}px`,
-      }}
       onKeyDownCapture={onKeyDownCapture}
     >
       <Slider

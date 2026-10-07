@@ -25,8 +25,11 @@ export interface HistogramPlotProps {
   readonly shape?: "wide" | "tall";
   /** Told where the frame of the plot is drawn in its element, at the
       first draw and whenever a draw moves it: for what the screen lays
-      over the plot, the line of a threshold the user drags. The one of
-      the first render is kept, so it must not depend on values that
+      over the plot, the line of a threshold the user drags. Called during
+      the draw, which a resize makes in an animation frame, before the
+      browser paints: what it changes outside React, a style, is painted
+      with the plot, and a state of React would be a frame late. The one
+      of the first render is kept, so it must not depend on values that
       change. */
   readonly onFrame?: (frame: HistogramFrame) => void;
 }

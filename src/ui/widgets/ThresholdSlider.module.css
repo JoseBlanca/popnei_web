@@ -1,11 +1,16 @@
 /* The tokens are those of src/ui/tokens.css. */
 
 /* Over the plot, from the top of its element to the bottom of its frame,
-   as wide as the frame; placed by the frame the plot gives. It takes no
-   pointer but on the thumb. */
+   as wide as the frame; placed by the frame the plot gives, the custom
+   properties --frame-left, --frame-top, --frame-width and --frame-height
+   that the screen sets around it, in pixels. It takes no pointer but on
+   the thumb. */
 .overlay {
   position: absolute;
   inset-block-start: 0;
+  inset-inline-start: var(--frame-left);
+  inline-size: var(--frame-width);
+  block-size: calc(var(--frame-top) + var(--frame-height));
   pointer-events: none;
 }
 
