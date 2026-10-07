@@ -2,7 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import { emptyProject, loadVariants } from "../../core/project.ts";
 import type { Project, SourceError } from "../../core/project.ts";
-import type { VcfReadOptions } from "../../worker/protocol.ts";
+import { keyFromWire } from "../../core/keys.ts";
+import { summaryResult } from "../../core/testSupport.ts";
+import type { AnalysisStatus } from "../../core/store.ts";
+import type { JobResult, VcfReadOptions } from "../../worker/protocol.ts";
 import {
   chromosomesLine,
   chromosomesSoFarLine,
@@ -10,6 +13,7 @@ import {
   countedText,
   countingVariantsLine,
   failedText,
+  hasChainButton,
   individualsLine,
   nameAndSizeText,
   notOpenedText,
@@ -339,5 +343,38 @@ describe("the refusals of the count", () => {
     ).toBe(
       "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.",
     );
+  });
+});
+
+describe("live-stats 3 the button of the chain", () => {
+  const KEY = keyFromWire("0".repeat(64));
+  test("a locked member holds back nothing: the one after it, ready, has its button", () => {
+    expect(
+      hasChainButton([
+        {
+          kind: "done",
+          key: KEY,
+          result: summaryResult(["1"], [1]),
+          warnings: [],
+          check: null,
+        },
+        { kind: "locked", reason: "a .nei file" },
+        { kind: "ready", key: KEY },
+      ] satisfies readonly AnalysisStatus<JobResult>[]),
+    ).toBe(true);
+  });
+  test("no button when every member is done or locked", () => {
+    expect(
+      hasChainButton([
+        {
+          kind: "done",
+          key: KEY,
+          result: summaryResult(["1"], [1]),
+          warnings: [],
+          check: null,
+        },
+        { kind: "locked", reason: "a .nei file" },
+      ] satisfies readonly AnalysisStatus<JobResult>[]),
+    ).toBe(false);
   });
 });

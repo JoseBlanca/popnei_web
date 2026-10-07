@@ -495,14 +495,17 @@ export function chainStatuses(
 
 /** Whether the box shows Stop or Start again for the chain whose statuses
     are `statuses`, as `buttonOf` of VariantsSummary.tsx decides from the
-    first not done: while one runs, the first not done is ready, or it
-    failed in a way Start again mends; not once every one is done, nor when
-    the first not done is locked or failed for good. */
+    first neither done nor locked, a locked member holding back nothing:
+    while one runs, the first such is ready, or it failed in a way Start
+    again mends; not once every one is done or locked, nor when the first
+    such failed for good. */
 export function hasChainButton(
   statuses: readonly AnalysisStatus<JobResult>[],
 ): boolean {
   if (statuses.some((status) => status.kind === "running")) return true;
-  const first = statuses.find((status) => status.kind !== "done");
+  const first = statuses.find(
+    (status) => status.kind !== "done" && status.kind !== "locked",
+  );
   if (first === undefined) return false;
   switch (first.kind) {
     case "ready":
@@ -510,7 +513,6 @@ export function hasChainButton(
       return true;
     case "error":
       return startAgainMends(first.error);
-    case "locked":
     case "running":
       return false;
   }

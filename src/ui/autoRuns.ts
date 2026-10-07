@@ -12,7 +12,8 @@
  * at a time, in their order, since the one calculation worker runs one
  * request at a time and the store has no state for a request that waits
  * in the client's queue. An analysis starts once every one before it is
- * done; within its group, one before it that failed in a way a new
+ * done or locked, a locked analysis starting nothing and holding back
+ * nothing; within its group, one before it that failed in a way a new
  * calculation may mend, a crash or a defect of ours, does not hold it
  * back, since each analysis of a group is shown apart and a failure of
  * one should not hide the other. popnei's refusal, or a variants file the
@@ -59,20 +60,20 @@ export interface AutoRuns {
       popgen2.html: the one running is left ready under a key it was
       started under, so
       neither it nor those after it start again by themselves. Once every
-      analysis before the group is done, those of the group not started
+      analysis before the group is done or locked, those of the group not started
       are recorded as started too, so that one about to start, between the
       end of one pass and the start of the next, does not start. */
   stop(group: readonly AnalysisId[]): void;
   /** Starts again, at the user's start again of `group`, one of the
       groups, after a Stop or a crash of the worker, the first of it that
-      is not done, under the key it is ready under or crashed under, and
-      gives back those after it in the group that are not done, which
-      then start by themselves, one after the other. Returns whether it
-      started one. It starts nothing, and returns false, when one of the
-      analyses of every group runs; when one before the group is not
-      done; when every one of the group is done; and when the first not
-      done is locked, or in error from anything but a crash of the
-      worker. */
+      is neither done nor locked, under the key it is ready under or
+      crashed under, and gives back those after it in the group that are
+      not done, which then start by themselves, one after the other.
+      Returns whether it started one. It starts nothing, and returns
+      false, when one of the analyses of every group runs; when one
+      before the group is neither done nor locked; when every one of the
+      group is done or locked; and when the first neither done nor locked
+      is in error from anything but a crash of the worker. */
   resume(group: readonly AnalysisId[]): boolean;
   /** Calls `listener` after every change of what this knows beyond the
       store, which keys were started and which were given back; returns
@@ -98,6 +99,13 @@ function startableKey(status: AnalysisStatus<unknown>): Key | null {
     case "error":
       return null;
   }
+}
+
+/** Whether `status` is passed over by its group: done, or locked, since
+    a locked member starts nothing and holds back nothing
+    (docs/architecture.md, section 5). */
+function isPassedOver(status: AnalysisStatus<unknown>): boolean {
+  return status.kind === "done" || status.kind === "locked";
 }
 
 /** Whether `status` is an error that does not hold back those after it
@@ -190,13 +198,13 @@ export function createAutoRuns(deps: {
   }
 
   /** The first analysis before `id`, at `index` of `ids`, that holds it
-      back: one not done, but for a mendable error of its own group;
-      `null` when none does. */
+      back: one neither done nor locked, but for a mendable error of its
+      own group; `null` when none does. */
   function holderOf(id: AnalysisId, index: number): AnalysisId | null {
     const own = groupOf.get(id);
     for (const before of ids.slice(0, index)) {
       const status = statusOf(before);
-      if (status.kind === "done") continue;
+      if (isPassedOver(status)) continue;
       if (isMendable(status) && groupOf.get(before) === own) continue;
       return before;
     }
@@ -232,10 +240,10 @@ export function createAutoRuns(deps: {
   } | null {
     const place = placeOf(group);
     if (anyRunning()) return null;
-    if (ids.slice(0, place).some((id) => statusOf(id).kind !== "done")) {
+    if (ids.slice(0, place).some((id) => !isPassedOver(statusOf(id)))) {
       return null;
     }
-    const at = group.findIndex((id) => statusOf(id).kind !== "done");
+    const at = group.findIndex((id) => !isPassedOver(statusOf(id)));
     const first = group[at];
     if (first === undefined) return null;
     const key = againKey(statusOf(first));
@@ -244,12 +252,10 @@ export function createAutoRuns(deps: {
 
   function stop(group: readonly AnalysisId[]): void {
     const place = placeOf(group);
-    // A group waits for those before it: while one of them is not done,
-    // none of the group is about to start, and a Stop of it leaves them
-    // waiting.
-    const free = ids
-      .slice(0, place)
-      .every((id) => statusOf(id).kind === "done");
+    // A group waits for those before it: while one of them is neither
+    // done nor locked, none of the group is about to start, and a Stop of
+    // it leaves them waiting.
+    const free = ids.slice(0, place).every((id) => isPassedOver(statusOf(id)));
     for (const id of group) {
       resumed.delete(id);
       const status = statusOf(id);

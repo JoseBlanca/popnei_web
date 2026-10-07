@@ -370,11 +370,11 @@ function Count({
   );
 }
 /** The button of the chain of the page, `POPGEN2_CHAIN`, decided from
-    the first of it that is not done, as `resume` starts that one: Stop
-    while one of the chain runs, or the first not done is about to start
-    by itself; Start again after it was stopped, or after a failure Start
-    again may mend; none when every one is done, or the first not done is
-    locked or failed for good. */
+    the first of it that is neither done nor locked, as `resume` starts
+    that one, a locked member holding back nothing: Stop while one of the
+    chain runs, or the first such is about to start by itself; Start again
+    after it was stopped, or after a failure Start again may mend; none
+    when every one is done or locked, or the first such failed for good. */
 function buttonOf(
   statuses: readonly AnalysisStatus<JobResult>[],
   autoRuns: AutoRuns,
@@ -382,7 +382,9 @@ function buttonOf(
   if (statuses.some((status) => status.kind === "running")) {
     return { kind: "stop" };
   }
-  const first = statuses.find((status) => status.kind !== "done");
+  const first = statuses.find(
+    (status) => status.kind !== "done" && status.kind !== "locked",
+  );
   if (first === undefined) return null;
   switch (first.kind) {
     case "ready":
@@ -395,7 +397,6 @@ function buttonOf(
       return startAgainMends(first.error)
         ? { kind: "run", reason: null }
         : null;
-    case "locked":
     case "running":
       return null;
   }

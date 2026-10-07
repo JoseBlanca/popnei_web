@@ -898,3 +898,48 @@ describe("live-stats 3 the chain of popgen2.html: the summary, then the count of
     expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
   });
 });
+
+describe("live-stats 3 a locked member of a group starts nothing and holds back nothing", () => {
+  const FAILURES = filterFailures.id;
+  /** A group whose middle member, the count of the FILTER failures, is
+      locked on a `.nei` file. */
+  const GROUP = [ID, FAILURES, "variantChecks"];
+
+  test("the summary done, the count locked, the one after it starts by itself", async () => {
+    const { store, requests, auto, status } = setUp([GROUP]);
+    open(store, FIRST, "nei");
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    expect(status(FAILURES).kind).toBe("locked");
+    expect(analysesOf(requests)).toEqual([ID, "variantChecks"]);
+  });
+
+  test("a Stop of the one after it, and resume starts that one, passing over the locked count", async () => {
+    const { store, requests, auto, status } = setUp([GROUP]);
+    open(store, FIRST, "nei");
+    auto.sync();
+    endDone(requests[0]);
+    await settled();
+    auto.sync();
+    auto.stop(GROUP);
+    expect(requests[1]?.cancelled).toBe(true);
+    requests[1]?.end({ kind: "cancelled" });
+    await settled();
+    auto.sync();
+    expect(requests).toHaveLength(2);
+
+    expect(auto.resume(GROUP)).toBe(true);
+    expect(analysesOf(requests)).toEqual([
+      ID,
+      "variantChecks",
+      "variantChecks",
+    ]);
+    endDone(requests[2]);
+    await settled();
+    auto.sync();
+    expect(status("variantChecks").kind).toBe("done");
+    expect(auto.resume(GROUP)).toBe(false);
+  });
+});
