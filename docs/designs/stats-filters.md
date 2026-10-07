@@ -1,6 +1,7 @@
 # The thresholds of the statistics as filters
 
-A design of 6 and 7 October 2026, waiting for the owner's approval. It
+A design of 6 and 7 October 2026, approved by the owner on 7 October
+2026. It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -92,8 +93,8 @@ starts on, at 0.1. Off is not the same as a line at the top of the
 axis, since popnei's filters of the MAF and of the observed
 heterozygosity drop a variant with no called genotype at any value.
 
-**Your choices.** At the end: the approval, and how a threshold is
-turned off.
+**The owner's choices of 7 October 2026.** The design approved; a
+threshold turned off by emptying its box or typing 1.
 
 ## What the user can do once it is built
 
@@ -280,11 +281,18 @@ starts on at 0.1, the default of `docs/functionality.md`, and the
 others start off. A threshold that is off has its box empty, with
 "No filter" in it, and its line at the top of the axis, labelled "No
 filter", with no shading and the line "Keeps every variant". Dragging
-the line or typing a number turns the filter on at that value; emptying
-the box turns it off. The number box shared by both pages,
+the line or typing a number turns the filter on at that value. Two
+things turn it off, as the owner chose on 7 October 2026: emptying the
+box, and typing the value at which the filter would keep everything, 1
+for a maximum and 0 for a minimum. Every threshold of this page is a
+maximum, so typing 1 turns it off. That value is taken as off, not as a
+filter at 1, so a variant with no called genotype is kept, as with no
+filter. A line dragged to the top of its axis is a filter at that value,
+since the axis ends where the file's values end, not at 1. The number box shared by both pages,
 `src/ui/widgets/NumberField.tsx`, gives nothing today for an empty box
 and shows its value again; it gains an option, used by `popgen2.html`
-only, under which Enter or leaving an empty box commits "off". From off,
+only, under which Enter or leaving an empty box commits "off"; a typed 1 is
+an ordinary number to the box, and the page turns it into off. From off,
 the arrow keys in the empty box do nothing, as today; on the line they
 turn the filter on, one step below the top of the axis. Off, the project keeps it aside with its last
 value, in `filtersOff` for the variants and `individualFiltersOff` for
@@ -455,7 +463,8 @@ calculation.
 
 - In `src/core`: each command of a threshold and of the box gives one
   change of the project, with its notice, and Undo gives the value
-  back; emptying a box turns its filter off and keeps its value aside;
+  back; emptying a box or typing 1 turns its filter off and keeps its
+  value aside;
   a failure of the one pass survives a change of a filter; `filtersApplied` leaves `passed`
   out for a `.nei` file and keeps it for a VCF; a project file holding
   `passed` reads back the same, and the old page's reading refuses it.
@@ -545,13 +554,9 @@ Made on this branch once the owner approves, each with its paragraph
   `thresholds` built them: no Undo, lost on another file, and nothing to
   carry out later.
 
-## For the owner to decide
+## What the owner decided on approving it
 
-1. Approve the design, or what to change in it.
-2. How a threshold is turned off. The design proposes emptying its
-   number box, which shows "No filter", with the line at the top of the
-   axis labelled the same. The other way is a check box beside each
-   threshold, "Filter on", one more control per plot but one a user
-   cannot miss. The two keep the same variants; they differ in what the
-   user has to find. The design recommends the empty box, since the
-   page then gains no control.
+On 7 October 2026 the owner approved the design and chose how a
+threshold is turned off: by emptying its box, or by typing the value at
+which it keeps everything, 1 for a maximum and 0 for a minimum, rather
+than by a check box beside each threshold.
