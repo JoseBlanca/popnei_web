@@ -601,3 +601,94 @@ test("TH2 a number typed in the box of a threshold at the top of its axis is kep
   );
   await expect(het.box).toHaveValue("0.3");
 });
+
+test("TH4 the keys of the box: from 0.11, beyond the bins, Down then Up returns to 0.11; after a number typed, the next key steps from the number the first one set", async ({
+  page,
+}) => {
+  await openPanel(page);
+  const missing = histogram(page, "Proportion of missing genotypes");
+  await expect(missing.words).toHaveText("Keeps all 1,200 variants", {
+    timeout: 20_000,
+  });
+  // The axis of the bins runs from 0 to 0.1, by 0.001; 0.11 widens it.
+  await missing.box.fill("0.11");
+  await missing.box.press("Enter");
+  await expect(missing.box).toHaveValue("0.11");
+  await missing.box.press("ArrowDown");
+  await expect(missing.box).toHaveValue("0.109");
+  await expect(missing.slider).toHaveValue("0.109");
+  await missing.box.press("ArrowUp");
+  await expect(missing.box).toHaveValue("0.11");
+  await expect(missing.slider).toHaveValue("0.11");
+  await missing.box.press("ArrowUp");
+  await expect(missing.box).toHaveValue("0.111");
+
+  // 0.11 set, 0.109 typed and not committed: Up sets 0.11, the number
+  // set already, and the next Up steps from it, not from 0.109 again.
+  await missing.box.press("ArrowDown");
+  await missing.box.press("ArrowDown");
+  await expect(missing.box).toHaveValue("0.109");
+  await missing.box.fill("0.108");
+  await expect(missing.slider).toHaveValue("0.108");
+  await missing.box.press("ArrowUp");
+  await expect(missing.slider).toHaveValue("0.109");
+  await expect(missing.box).toHaveValue("0.109");
+  await missing.box.press("ArrowUp");
+  await expect(missing.slider).toHaveValue("0.11");
+  await expect(missing.box).toHaveValue("0.11");
+});
+
+test("TH4 while a result so far widens an axis, a box with the focus and nothing typed follows the top of its axis, the number counted, and a number set stays as set", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stats.vcf.gz");
+  await writeBigVcf(vcf, 30_000);
+  await holdSummary(page);
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Open variants file…" }).click();
+  await (await chooser).setFiles(vcf);
+  await expect(
+    page.getByText("Calculating the statistics of the variants… 100%"),
+  ).toBeVisible({ timeout: 60_000 });
+  await release(page, "oneSoFar");
+  const het = histogram(page, "Observed heterozygosity");
+  await expect(het.words).toHaveText(/^Keeps all [\d,]+ variants so far$/u, {
+    timeout: 60_000,
+  });
+  // The first result so far: the axis of the observed heterozygosity of
+  // the variants runs to 0.55, that of the individuals from 0.37 to
+  // 0.415, by 0.001.
+  await expect(het.box).toHaveValue("0.55");
+  const individuals = histogram(
+    page,
+    "Observed heterozygosity of each individual",
+  );
+  await expect(individuals.slider).toHaveAttribute("step", "0.001");
+  await individuals.box.fill("0.391");
+  await individuals.box.press("Enter");
+  await expect(individuals.box).toHaveValue("0.391");
+  // The focus in the box of a threshold at the top of its axis, nothing
+  // typed.
+  await het.box.focus();
+
+  // Every other result so far: the axis of the variants runs to 0.6, the
+  // individuals' from 0.38 to 0.402.
+  await release(page, "allSoFar");
+  await expect(het.slider).toHaveValue("0.6", { timeout: 60_000 });
+  await expect(het.box).toHaveValue("0.6");
+  await expect(het.box).toBeFocused();
+  await expect(het.slider).toHaveAttribute(
+    "aria-valuetext",
+    /^0\.6, keeps all [\d,]+ variants so far$/u,
+  );
+  await expect(individuals.slider).toHaveAttribute("max", "0.402");
+  await expect(individuals.box).toHaveValue("0.391");
+  await expect(individuals.slider).toHaveValue("0.391");
+  await release(page, "result");
+  await expect(het.words).toHaveText(/^Keeps all [\d,]+ variants$/u, {
+    timeout: 60_000,
+  });
+  await expect(individuals.box).toHaveValue("0.391");
+});

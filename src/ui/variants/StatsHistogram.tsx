@@ -22,13 +22,16 @@
  *
  * The arrow keys in the box move the threshold as they move the line, one
  * step of the axis, Page Up and Page Down ten, from where the line is,
- * at the number typed when one is: React Aria would step from the number
- * the box holds.
+ * at the number typed when one is, which the box puts back first: React
+ * Aria would step from the number the box holds. They are bounded by the range of the box, 0 to 1, and
+ * not by the axis, which ends at a threshold beyond the bins: from 0.11
+ * on an axis of bins to 0.1, Down gives 0.109 and Up 0.11 again.
  *
- * From its focus to the first commit or to its blur, the box keeps the
- * number it showed when it took the focus: a threshold never set follows
- * the top of the axis, which a result so far can widen, and React Aria
- * would put the new number over what the user is typing.
+ * From the first change of its text to the first commit or to its blur,
+ * the box keeps the number it showed at that change: a threshold never
+ * set follows the top of the axis, which a result so far can widen, and
+ * React Aria would put the new number over what the user is typing. Until
+ * the user types, the box shows the number counted, as the line does.
  */
 import { useId, useState } from "react";
 
@@ -60,32 +63,6 @@ export interface StatsHistogramProps {
   readonly onTyped: (typed: number | null) => void;
 }
 
-/** The steps an arrow key in the box moves the threshold by, and which
-    way: one for the Up and the Down arrow, ten for Page Up and Page
-    Down; 0 for another key, or with a modifier held, which the box
-    leaves to the browser. */
-function boxStepsOf(event: React.KeyboardEvent): number {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-    return 0;
-  }
-  switch (event.key) {
-    case "ArrowUp":
-      return 1;
-    case "ArrowDown":
-      return -1;
-    case "PageUp":
-      return PAGE_STEPS;
-    case "PageDown":
-      return -PAGE_STEPS;
-    default:
-      return 0;
-  }
-}
-
-/** The steps of the line that Page Up and Page Down move it by, in the
-    box as on the line. */
-const PAGE_STEPS = 10;
-
 /** A histogram of the section, with its threshold. */
 export function StatsHistogram({
   plot,
@@ -98,8 +75,8 @@ export function StatsHistogram({
   // Where the plot drew its frame, which the line is laid over; none
   // before its first draw.
   const [frame, setFrame] = useState<HistogramFrame | null>(null);
-  // The number the box keeps from its focus to its first commit or its
-  // blur; null when it shows `boxValue`.
+  // The number the box keeps from the first change of its text to its
+  // first commit or its blur; null when it shows `boxValue`.
   const [held, setHeld] = useState<number | null>(null);
   const { threshold } = plot;
   return (
@@ -110,33 +87,11 @@ export function StatsHistogram({
     >
       <div
         className={classOf(styles, "head")}
-        onFocus={() => {
+        onInput={() => {
           if (held === null) setHeld(boxValue);
         }}
         onBlur={() => {
           setHeld(null);
-        }}
-        onKeyDownCapture={(event) => {
-          const steps = boxStepsOf(event);
-          // An empty box is left to the field, which moves nothing.
-          if (
-            steps === 0 ||
-            !(event.target instanceof HTMLInputElement) ||
-            event.target.value.trim() === ""
-          ) {
-            return;
-          }
-          // Before the field and React Aria, which would step from the
-          // number shown.
-          event.preventDefault();
-          event.stopPropagation();
-          const { min, max, step, value } = threshold.slider;
-          const moved = threshold.onStep(
-            Math.min(max, Math.max(min, value + steps * step)),
-          );
-          if (moved === value) return;
-          setHeld(null);
-          onThreshold(moved);
         }}
       >
         <NumberField
@@ -156,6 +111,19 @@ export function StatsHistogram({
           onChange={(value) => {
             setHeld(null);
             onThreshold(threshold.onStep(value));
+          }}
+          // From where the line is, at the number typed when one is, which
+          // the field puts back and tells the screen it is typed no more.
+          onSteps={(steps) => {
+            const { step, value } = threshold.slider;
+            const { minValue, maxValue } = threshold.box;
+            const moved = threshold.onStep(
+              Math.min(maxValue, Math.max(minValue, value + steps * step)),
+            );
+            setHeld(null);
+            // Set even when it is the number set: a number typed at the
+            // bound of the box, stepped past it, is then set.
+            onThreshold(moved);
           }}
         />
       </div>
