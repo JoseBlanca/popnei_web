@@ -196,17 +196,14 @@ function buttonNamed(name: string): HTMLButtonElement {
   return found;
 }
 
-describe("live-stats 3 the line of the FILTER failures while the file is read", () => {
-  test("a VCF being read has the line", async () => {
-    await drawPage("vcf", { read: false });
-    expect(linesOf()).toContain("FILTER failures: reading…");
-  });
-
-  test("a .nei file being read has none", async () => {
-    await drawPage("nei", { read: false });
-    expect(linesOf()).toContain("Variants: reading…");
-    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
-  });
+describe("one-pass the box of a file being read has no line of the FILTER failures", () => {
+  for (const format of ["vcf", "nei"] as const) {
+    test(`a ${format} file`, async () => {
+      await drawPage(format, { read: false });
+      expect(linesOf()).toContain("Variants: reading…");
+      expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+    });
+  }
 });
 
 describe("the one button of the box of the variants file", () => {
@@ -285,16 +282,6 @@ describe("the one button of the box of the variants file", () => {
   });
 });
 
-/** The count of the FILTER failures of low_qual.vcf.gz, popnei's under
-    node: 1,200 variants given to `filterPassed`, 900 kept. */
-const LOW_QUAL: JobResult = {
-  analysis: "filterFailures",
-  passStats: {
-    numVars: 900,
-    filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
-  },
-};
-
 /** The lines of the box, each the words of one paragraph. */
 function linesOf(): readonly string[] {
   return [...container.querySelectorAll("section p")].map(
@@ -322,13 +309,12 @@ async function endWith(page: Page, at: number, result: JobResult) {
   });
 }
 
-describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
-  test("it says counting through both passes, with the bar of each, and then the failures; the focus on Stop moves onto the lines at the end of the chain alone", async () => {
+describe("one-pass a VCF is read once", () => {
+  test("the summary is the one pass: its end ends the chain, with no line of the FILTER failures, and the focus on Stop moves onto the lines", async () => {
     const page = await drawPage("vcf");
     act(() => {
       page.autoRuns.sync();
     });
-    expect(linesOf()).toContain("FILTER failures: counting…");
     expect(barName()).toBe("Counting the variants");
     const stop = buttonNamed("Stop");
     act(() => {
@@ -338,70 +324,20 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
     expect(page.requests.map((r) => r.job.analysis)).toEqual([
       "variantsSummary",
-      "filterFailures",
     ]);
-    expect(linesOf()).toContain("Variants: 1,200");
-    expect(linesOf()).toContain("FILTER failures: counting…");
-    expect(barName()).toBe("Counting the variants that failed their FILTER");
-    expect(buttonsOf()).toEqual(["Stop"]);
-    expect(document.activeElement?.textContent).toBe("Stop");
-
-    await endWith(page, 1, LOW_QUAL);
     expect(linesOf()).toEqual([
       "low_qual.vcf.gz · 30 KB",
       "Individuals: 2",
       "Variants: 1,200",
-      "FILTER failures: 300",
       "Chromosomes: 1",
       "Ploidy: 2",
     ]);
     expect(buttonsOf()).toEqual([]);
     expect(barName()).toBeNull();
-    expect(document.activeElement?.textContent).toContain(
-      "FILTER failures: 300",
-    );
+    expect(document.activeElement?.textContent).toContain("Variants: 1,200");
   });
 
-  test("a Stop while the failures are counted says not counted beside Start again, which counts them alone", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
-
-    await act(async () => {
-      buttonNamed("Stop").click();
-      await Promise.resolve();
-    });
-    expect(page.requests[1]?.cancelled).toBe(true);
-    page.requests[1]?.end({ kind: "cancelled" });
-    await settled();
-    act(() => {
-      page.autoRuns.sync();
-    });
-    expect(linesOf()).toContain("Variants: 1,200");
-    expect(linesOf()).toContain("FILTER failures: not counted");
-    expect(buttonsOf()).toEqual(["Start again"]);
-    expect(page.said).toEqual([
-      "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.",
-    ]);
-
-    await act(async () => {
-      buttonNamed("Start again").click();
-      await Promise.resolve();
-    });
-    expect(page.requests.map((r) => r.job.analysis)).toEqual([
-      "variantsSummary",
-      "filterFailures",
-      "filterFailures",
-    ]);
-    expect(linesOf()).toContain("FILTER failures: counting…");
-    await endWith(page, 2, LOW_QUAL);
-    expect(linesOf()).toContain("FILTER failures: 300");
-    expect(buttonsOf()).toEqual([]);
-  });
-
-  test("a Stop during the summary says not counted on the three lines", async () => {
+  test("a Stop during the summary says not counted on the two lines, beside Start again", async () => {
     const page = await drawPage("vcf");
     act(() => {
       page.autoRuns.sync();
@@ -415,232 +351,21 @@ describe("live-stats 3 the line of the FILTER failures of a VCF", () => {
     act(() => {
       page.autoRuns.sync();
     });
-    expect(linesOf()).toEqual(
-      expect.arrayContaining([
-        "Variants: not counted",
-        "FILTER failures: not counted",
-        "Chromosomes: not counted",
-      ]),
-    );
+    expect(linesOf()).toEqual([
+      "low_qual.vcf.gz · 30 KB",
+      "Individuals: 2",
+      "Variants: not counted",
+      "Chromosomes: not counted",
+      "Ploidy: 2",
+    ]);
     expect(buttonsOf()).toEqual(["Start again"]);
     expect(page.said).toEqual([
       "The count of the variants and the statistics were stopped. Start again calculates them from the start.",
     ]);
   });
 
-  test("a crash of the worker while the failures are counted says so, with Start again", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
-    page.requests[1]?.end({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
-    });
-    await settled();
-    expect(linesOf()).toContain("FILTER failures: not counted");
-    expect(linesOf()).toContain(
-      "The variants of low_qual.vcf.gz that failed their FILTER could not be counted.",
-    );
-    expect(buttonsOf()).toEqual(["Start again"]);
-  });
-
-  test("a VCF whose variants all failed gives their number, with no failure", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    await endWith(page, 0, summaryResult(["1"], [5], ["i1", "i2"]));
-    // popnei's counts under node of a VCF of 5 variants, all LowQual.
-    await endWith(page, 1, {
-      analysis: "filterFailures",
-      passStats: {
-        numVars: 0,
-        filtering: { passed: { varsProcessed: 5, varsKept: 0 } },
-      },
-    });
-    expect(linesOf()).toEqual([
-      "low_qual.vcf.gz · 30 KB",
-      "Individuals: 2",
-      "Variants: 5",
-      "FILTER failures: 5",
-      "Chromosomes: 1",
-      "Ploidy: 2",
-    ]);
-    expect(buttonsOf()).toEqual([]);
-  });
-
-  test("after a crash of the summary, a Stop of the count of the FILTER failures names that count, with Start again", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    page.requests[0]?.end({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
-    });
-    await settled();
-    act(() => {
-      page.autoRuns.sync();
-    });
-    expect(page.requests.map((r) => r.job.analysis)).toEqual([
-      "variantsSummary",
-      "filterFailures",
-    ]);
-    page.said.length = 0;
-    await act(async () => {
-      buttonNamed("Stop").click();
-      await Promise.resolve();
-    });
-    expect(page.said).toEqual([
-      "The count of the variants that failed their FILTER was stopped. Start again counts them from the start.",
-    ]);
-    expect(buttonsOf()).toEqual(["Start again"]);
-  });
-
-  test("after a defect of ours in the summary, a Stop of the count of the FILTER failures names that count, and no Start again, which the box does not offer", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    page.requests[0]?.end({
-      kind: "failed",
-      error: { kind: "defect", message: "a defect" },
-    });
-    await settled();
-    act(() => {
-      page.autoRuns.sync();
-    });
-    expect(page.requests).toHaveLength(2);
-    page.said.length = 0;
-    await act(async () => {
-      buttonNamed("Stop").click();
-      await Promise.resolve();
-    });
-    page.requests[1]?.end({ kind: "cancelled" });
-    await settled();
-    act(() => {
-      page.autoRuns.sync();
-    });
-    expect(page.said).toEqual([
-      "The count of the variants that failed their FILTER was stopped.",
-    ]);
-    expect(buttonsOf()).toEqual([]);
-  });
-
-  test("after a crash of the summary, popnei's refusal of the count of the FILTER failures gives its words too", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    page.requests[0]?.end({
-      kind: "failed",
-      error: { kind: "workerFailed", message: "out of memory" },
-    });
-    await settled();
-    act(() => {
-      page.autoRuns.sync();
-    });
-    page.requests[1]?.end({
-      kind: "failed",
-      error: {
-        kind: "popnei",
-        message: "the source could not be read: incomplete deflate stream",
-      },
-    });
-    await settled();
-    expect(linesOf()).toEqual(
-      expect.arrayContaining([
-        "Variants: not counted",
-        "FILTER failures: not counted",
-        "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
-        "low_qual.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again.",
-      ]),
-    );
-  });
-
-  test("a .nei file has no line of the FILTER failures, and its chain ends with the summary", async () => {
-    const page = await drawPage("nei");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
-    expect(page.requests).toHaveLength(1);
-    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
-    expect(buttonsOf()).toEqual([]);
-  });
-});
-
-const OTHER_FILE_ID = "fedcba9876543210fedcba9876543210";
-
-/** Opens and reads another file on the page: other.vcf.gz as the page
-    opens a VCF, or other.nei. */
-async function openOther(page: Page, format: "vcf" | "nei"): Promise<void> {
-  await act(async () => {
-    page.store.apply("a new variants file was loaded", (p) =>
-      loadVariants(
-        p,
-        format === "vcf"
-          ? {
-              fileId: OTHER_FILE_ID,
-              name: "other.vcf.gz",
-              size: 10,
-              format: "vcf",
-              readOptions: { ploidy: null, onlyPassed: false },
-            }
-          : {
-              fileId: OTHER_FILE_ID,
-              name: "other.nei",
-              size: 10,
-              format: "nei",
-              readOptions: null,
-            },
-      ),
-    );
-    page.store.variantsRead(OTHER_FILE_ID, {
-      kind: "read",
-      individuals: ["i1", "i2"],
-      ploidy: 2,
-      numVars: null,
-    });
-    await Promise.resolve();
-  });
-}
-
-describe("live-stats 3 the line of the FILTER failures across a new file and a failure of the summary", () => {
-  test("a new VCF opened while the failures are counted: the old count, ended late, is never shown, and the new line says counting", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
-    await openOther(page, "vcf");
-    expect(page.requests[1]?.cancelled).toBe(true);
-    await endWith(page, 1, LOW_QUAL);
-    expect(linesOf()).toContain("FILTER failures: counting…");
-    expect(linesOf()).not.toContain("FILTER failures: 300");
-    expect(page.requests.map((r) => r.job.analysis)).toEqual([
-      "variantsSummary",
-      "filterFailures",
-      "variantsSummary",
-    ]);
-  });
-
-  test("a .nei file opened while the failures of a VCF are counted has no line of them", async () => {
-    const page = await drawPage("vcf");
-    act(() => {
-      page.autoRuns.sync();
-    });
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
-    await openOther(page, "nei");
-    await endWith(page, 1, LOW_QUAL);
-    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
-  });
-
   for (const kind of ["defect", "workerFailed"] as const) {
-    test(`after a ${kind} of the summary the count of the FILTER failures runs and ends at 300`, async () => {
+    test(`after a ${kind} of the summary no other pass starts, and its words follow the lines`, async () => {
       const page = await drawPage("vcf");
       act(() => {
         page.autoRuns.sync();
@@ -655,20 +380,62 @@ describe("live-stats 3 the line of the FILTER failures across a new file and a f
       });
       expect(page.requests.map((r) => r.job.analysis)).toEqual([
         "variantsSummary",
-        "filterFailures",
       ]);
-      await endWith(page, 1, LOW_QUAL);
-      expect(linesOf()).toEqual(
-        expect.arrayContaining([
-          "Variants: not counted",
-          "FILTER failures: 300",
-          "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
-        ]),
-      );
+      expect(linesOf()).toEqual([
+        "low_qual.vcf.gz · 30 KB",
+        "Individuals: 2",
+        "Variants: not counted",
+        "Chromosomes: not counted",
+        "Ploidy: 2",
+        "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",
+      ]);
       // Start again mends a crash of the worker, not a defect of ours.
       expect(buttonsOf()).toEqual(
         kind === "workerFailed" ? ["Start again"] : [],
       );
     });
   }
+});
+
+const OTHER_FILE_ID = "fedcba9876543210fedcba9876543210";
+
+/** Opens and reads another file on the page, other.vcf.gz, as the page
+    opens a VCF. */
+async function openOther(page: Page): Promise<void> {
+  await act(async () => {
+    page.store.apply("a new variants file was loaded", (p) =>
+      loadVariants(p, {
+        fileId: OTHER_FILE_ID,
+        name: "other.vcf.gz",
+        size: 10,
+        format: "vcf",
+        readOptions: { ploidy: null, onlyPassed: false },
+      }),
+    );
+    page.store.variantsRead(OTHER_FILE_ID, {
+      kind: "read",
+      individuals: ["i1", "i2"],
+      ploidy: 2,
+      numVars: null,
+    });
+    await Promise.resolve();
+  });
+}
+
+describe("one-pass a new file opened while the summary runs", () => {
+  test("the old count, ended late, is never shown, and the new file is counted", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    await openOther(page);
+    expect(page.requests[0]?.cancelled).toBe(true);
+    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+    expect(linesOf()).not.toContain("Variants: 1,200");
+    expect(linesOf()).toContain("Variants: counting…");
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "variantsSummary",
+    ]);
+  });
 });

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import { filterFailures } from "../core/analyses/filterFailures.ts";
 import { individualChecks } from "../core/analyses/individualChecks.ts";
 import { variantChecks } from "../core/analyses/variantChecks.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
@@ -33,15 +32,26 @@ interface Request {
   readonly end: (outcome: Outcome<JobResult>) => void;
 }
 
+/** An analysis locked on a `.nei` file, for a group with a member that
+    starts nothing and holds back nothing: the histograms of the variants
+    under another id, which a `.nei` file locks. It is never started on
+    one. */
+const LOCKED_ON_NEI: AnalysisDef<Job, JobResult> = Object.freeze({
+  ...variantChecks,
+  id: "lockedOnNei",
+  needs: (p: Parameters<typeof variantChecks.needs>[0]) =>
+    p.variants?.format === "nei" ? "Not for a .nei file." : null,
+});
+
 /** The analyses a test may start by itself, by their ids: the summary of
-    popgen2.html and its count of the FILTER failures, and two analyses of the old page that make a second
-    group after it, as the statistics of the open file were before the one
-    pass (docs/plans/file-stats.md). */
+    popgen2.html, two analyses of the old page that make a second group
+    after it, as the statistics of the open file were before the one pass
+    (docs/plans/file-stats.md), and one locked on a `.nei` file. */
 const DEFS: ReadonlyMap<string, AnalysisDef<Job, JobResult>> = new Map([
   [variantsSummary.id, variantsSummary],
-  [filterFailures.id, filterFailures],
   [variantChecks.id, variantChecks],
   [individualChecks.id, individualChecks],
+  [LOCKED_ON_NEI.id, LOCKED_ON_NEI],
 ]);
 
 /** A store as that of the new page, with the analyses of `groups` and a
@@ -279,16 +289,6 @@ function distrib(mean: number): VariantDistrib {
     individuals of the file `open` reads. */
 const RESULTS: ReadonlyMap<string, JobResult> = new Map<string, JobResult>([
   [ID, SUMMARY],
-  [
-    "filterFailures",
-    {
-      analysis: "filterFailures",
-      passStats: {
-        numVars: 900,
-        filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
-      },
-    },
-  ],
   [
     "individualChecks",
     {
@@ -730,7 +730,7 @@ describe("two groups, a count and then two statistics after it, one after the ot
   });
 });
 
-describe("one group of two, the summary and an analysis after it, as the chain of popgen2.html once it counts the FILTER failures", () => {
+describe("one group of two, the summary and an analysis after it", () => {
   const CHAIN = [ID, "variantChecks"];
   const AFTER = "variantChecks";
 
@@ -789,134 +789,55 @@ describe("one group of two, the summary and an analysis after it, as the chain o
   });
 });
 
-describe("live-stats 3 the chain of popgen2.html: the summary, then the count of the FILTER failures", () => {
-  const FAILURES = filterFailures.id;
-
-  test("the page's one group is the summary and then the count of the FILTER failures", () => {
-    expect(POPGEN2_CHAIN).toEqual([ID, FAILURES]);
+describe("one-pass the chain of popgen2.html: the summary alone", () => {
+  test("the page's one group is the summary alone", () => {
+    expect(POPGEN2_CHAIN).toEqual([ID]);
     expect(POPGEN2_AUTO_GROUPS).toEqual([POPGEN2_CHAIN]);
   });
 
-  test("on a VCF the count starts once the summary is done, and nothing more after it", async () => {
+  test("on a VCF the summary done ends the chain: nothing more is sent, and Start again is not offered", async () => {
     const { store, requests, auto, status } = setUp();
     open(store, FIRST, "vcf");
     auto.sync();
     expect(analysesOf(requests)).toEqual([ID]);
-    expect(status(FAILURES).kind).toBe("ready");
-
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
-    expect(analysesOf(requests)).toEqual([ID, FAILURES]);
-    expect(requests[1]?.job).toEqual({
-      analysis: FAILURES,
-      fileId: FIRST,
-      filters: [],
-    });
-
-    endDone(requests[1]);
-    await settled();
-    auto.sync();
-    expect(requests).toHaveLength(2);
-    expect(status(FAILURES).kind).toBe("done");
-    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
-  });
-
-  test("a Stop while the count runs leaves it ready under a key it was started under, the summary done; Start again starts the count alone", async () => {
-    const { store, requests, auto, status } = setUp();
-    open(store, FIRST, "vcf");
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    auto.sync();
-
-    auto.stop(POPGEN2_CHAIN);
-    expect(requests[1]?.cancelled).toBe(true);
-    requests[1]?.end({ kind: "cancelled" });
-    await settled();
-    auto.sync();
-    expect(requests).toHaveLength(2);
-    expect(status(ID).kind).toBe("done");
-    const stopped = status(FAILURES);
-    expect(stopped.kind === "ready" && auto.startedUnder(stopped.key)).toBe(
-      true,
-    );
-
-    expect(auto.resume(POPGEN2_CHAIN)).toBe(true);
-    expect(analysesOf(requests)).toEqual([ID, FAILURES, FAILURES]);
-    endDone(requests[2]);
-    await settled();
-    auto.sync();
-    expect(status(FAILURES).kind).toBe("done");
-  });
-
-  test("a Stop between the end of the summary and the start of the count keeps the count from starting, and Start again starts it", async () => {
-    const { store, requests, auto, status } = setUp();
-    open(store, FIRST, "vcf");
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    // The page has not synced yet: the count is about to start.
-    auto.stop(POPGEN2_CHAIN);
-    auto.sync();
-    expect(requests).toHaveLength(1);
-    const stopped = status(FAILURES);
-    expect(stopped.kind === "ready" && auto.startedUnder(stopped.key)).toBe(
-      true,
-    );
-    expect(auto.resume(POPGEN2_CHAIN)).toBe(true);
-    expect(analysesOf(requests)).toEqual([ID, FAILURES]);
-  });
-
-  test("on a .nei file the count is locked: the summary done ends the chain, nothing else is sent, and Start again is not offered for it", async () => {
-    const { store, requests, auto, status } = setUp();
-    open(store, FIRST, "nei");
-    expect(status(FAILURES).kind).toBe("locked");
-    auto.sync();
     endDone(requests[0]);
     await settled();
     auto.sync();
     auto.sync();
     expect(analysesOf(requests)).toEqual([ID]);
     expect(status(ID).kind).toBe("done");
-    expect(status(FAILURES).kind).toBe("locked");
     expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
-    auto.stop(POPGEN2_CHAIN);
-    expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
-    expect(requests).toHaveLength(1);
   });
 
-  test("popnei's refusal of the summary holds the count back, and Start again starts nothing", async () => {
-    const { store, requests, auto, status } = setUp();
+  test("popnei's refusal of the summary ends the chain, and Start again starts nothing", async () => {
+    const { store, requests, auto } = setUp();
     open(store, FIRST, "vcf");
     auto.sync();
     fail(requests[0], { kind: "popnei", message: "not a VCF" });
     await settled();
     auto.sync();
     expect(requests).toHaveLength(1);
-    expect(status(FAILURES).kind).toBe("ready");
     expect(auto.resume(POPGEN2_CHAIN)).toBe(false);
   });
 });
 
 describe("live-stats 3 a locked member of a group starts nothing and holds back nothing", () => {
-  const FAILURES = filterFailures.id;
-  /** A group whose middle member, the count of the FILTER failures, is
-      locked on a `.nei` file. */
-  const GROUP = [ID, FAILURES, "variantChecks"];
+  const LOCKED = LOCKED_ON_NEI.id;
+  /** A group whose middle member is locked on a `.nei` file. */
+  const GROUP = [ID, LOCKED, "variantChecks"];
 
-  test("the summary done, the count locked, the one after it starts by itself", async () => {
+  test("the summary done, the middle one locked, the one after it starts by itself", async () => {
     const { store, requests, auto, status } = setUp([GROUP]);
     open(store, FIRST, "nei");
     auto.sync();
     endDone(requests[0]);
     await settled();
     auto.sync();
-    expect(status(FAILURES).kind).toBe("locked");
+    expect(status(LOCKED).kind).toBe("locked");
     expect(analysesOf(requests)).toEqual([ID, "variantChecks"]);
   });
 
-  test("a Stop of the one after it, and resume starts that one, passing over the locked count", async () => {
+  test("a Stop of the one after it, and resume starts that one, passing over the locked one", async () => {
     const { store, requests, auto, status } = setUp([GROUP]);
     open(store, FIRST, "nei");
     auto.sync();

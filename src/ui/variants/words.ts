@@ -32,10 +32,6 @@ import type {
   AnalysisStatus,
   AppState,
 } from "../../core/store.ts";
-import {
-  filterFailures,
-  numFilterFailures,
-} from "../../core/analyses/filterFailures.ts";
 import { numChroms } from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -43,10 +39,6 @@ import { chainStatuses, hasChainButton } from "./chain.ts";
 
 /** The id of the summary of the variants file. */
 export const SUMMARY_ID = "variantsSummary";
-
-/** The id of the count of the variants of a VCF that failed their
-    FILTER. */
-export const FAILURES_ID = filterFailures.id;
 
 /** The button that opens the file picker, before a file is open. */
 export const OPEN_LABEL = "Open variants file…";
@@ -146,20 +138,6 @@ export function chromosomesLine(numChroms: number): string {
     failure of their count. */
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
-
-/** The line of the variants of a VCF that failed their FILTER, which a
-    `.nei` file does not have, once counted: "FILTER failures: 300", 0 when
-    every variant passed. */
-export function failuresLine(numFailures: number): string {
-  return `FILTER failures: ${grouped(numFailures)}`;
-}
-
-/** The same line while the file is read, while the variants are counted
-    and the failures after them, and after a Stop or a failure of their
-    count. */
-export const FAILURES_READING = "FILTER failures: reading…";
-export const FAILURES_COUNTING = "FILTER failures: counting…";
-export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
 
 /** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
     this page is the file's: a `.nei` file holds it, and popnei reads that
@@ -300,41 +278,21 @@ export function openFailure(p: Project): OpenFailure | null {
     again after a Stop or a crash of the worker. */
 export const START_AGAIN_LABEL = "Start again";
 
-/** A pass of the chain of the page: the count of the variants and the
-    statistics, or the count of the FILTER failures after it. */
-export type ChainPass = "summary" | "failures";
-
-/** What the status region says of a Stop of the pass `pass`, whose lines
-    then say "not counted", with the way to start it again when the box
-    offers Start again after the Stop, `offersStartAgain`, and not when it
-    does not, after a failure of the summary that Start again cannot mend:
-    "The count of the variants and the statistics were stopped. Start
-    again calculates them from the start." */
-export function stoppedText(
-  pass: ChainPass,
-  offersStartAgain: boolean,
-): string {
-  if (pass === "summary") {
-    return offersStartAgain
-      ? "The count of the variants and the statistics were stopped. Start again calculates them from the start."
-      : "The count of the variants and the statistics were stopped.";
-  }
+/** What the status region says of a Stop of the count of the variants
+    and the statistics, whose lines then say "not counted", with the way
+    to start it again when the box offers Start again after the Stop,
+    `offersStartAgain`, and not when it does not: "The count of the
+    variants and the statistics were stopped. Start again calculates them
+    from the start." */
+export function stoppedText(offersStartAgain: boolean): string {
   return offersStartAgain
-    ? "The count of the variants that failed their FILTER was stopped. Start again counts them from the start."
-    : "The count of the variants that failed their FILTER was stopped.";
+    ? "The count of the variants and the statistics were stopped. Start again calculates them from the start."
+    : "The count of the variants and the statistics were stopped.";
 }
 
 /** The line of the count: "1,200 variants on 1 chromosome." */
 export function countedText(numVars: number, numChroms: number): string {
   return `${counted(numVars, "variant")} on ${counted(numChroms, "chromosome")}.`;
-}
-
-/** The words of the count of the FILTER failures of the file `name`
-    done, for the status region: "low_qual.vcf.gz: 300 variants failed
-    their FILTER." */
-export function failuresCountedText(name: string, numFailures: number): string {
-  const verb = numFailures === 1 ? "failed its FILTER" : "failed their FILTER";
-  return `${escaped(name)}: ${counted(numFailures, "variant")} ${verb}.`;
 }
 
 /** popnei's refusal of a variant at the position 0. */
@@ -354,21 +312,17 @@ const OTHER_PLOIDY =
   /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
 
 /**
- * The words of popnei's refusal `message` of the pass `pass` of `p`, the
- * count of the variants and the statistics unless given: a file of no
+ * The words of popnei's refusal `message` of the count of the variants
+ * and the statistics of `p`: a file of no
  * variant; a gzipped file or a `.nei` file damaged or cut short; a variant
  * at the position 0; a position of 2^53 or more; a genotype of another
  * ploidy, which may be a correct VCF, haploid males on chrX, and which
  * fetching the file again does not mend; any other line of the VCF popnei
- * cannot read; any other, with popnei's message. Each says what the pass
- * could not do, and a remedy that works for either pass. Throws a defect
- * on a project with no variants file.
+ * cannot read; any other, with popnei's message. Each says what the count
+ * could not do, and a remedy. Throws a defect on a project with no
+ * variants file.
  */
-export function refusalText(
-  message: string,
-  p: Project,
-  pass: ChainPass = "summary",
-): string {
+export function refusalText(message: string, p: Project): string {
   const variants = p.variants;
   if (variants === null) {
     throw new Error(
@@ -377,13 +331,8 @@ export function refusalText(
   }
   const fileName = escaped(variants.name);
   const cannot =
-    pass === "summary"
-      ? "the variants cannot be counted, nor their statistics calculated"
-      : "the variants that failed their FILTER cannot be counted";
-  const couldNot =
-    pass === "summary"
-      ? `popnei could not read ${fileName}`
-      : `popnei could not count the variants of ${fileName} that failed their FILTER`;
+    "the variants cannot be counted, nor their statistics calculated";
+  const couldNot = `popnei could not read ${fileName}`;
   if (message.startsWith(EMPTY_SOURCE)) {
     // The page reads every variant, whatever its FILTER column, so a
     // pass of none is a file of none.
@@ -444,30 +393,6 @@ export function failedText(error: AnalysisError, p: Project): string {
   }
 }
 
-/**
- * The words of a count of the FILTER failures that failed: popnei's
- * refusal, in the words of `refusalText` for that count, which say what to
- * do; a stop of the worker or a defect of ours, whose words the error bar
- * gives; any other failure in the words of `failedText`, which say what to
- * do.
- */
-export function failuresFailedText(error: AnalysisError, p: Project): string {
-  const fileName = escaped(p.variants?.name ?? "the file");
-  if (error.kind === "refused") {
-    return refusalText(error.message, p, "failures");
-  }
-  switch (error.error.kind) {
-    case "workerFailed":
-    case "defect":
-      return `The variants of ${fileName} that failed their FILTER could not be counted.`;
-    case "reopenFailed":
-    case "couldNotStart":
-    case "protocolMismatch":
-    case "files":
-      return failedText(error, p);
-  }
-}
-
 /** The status of the summary in `s`; a defect when the store has none. */
 export function summaryStatus(
   s: AppState<JobResult, unknown>,
@@ -476,20 +401,6 @@ export function summaryStatus(
   if (view === undefined) {
     throw new Error(
       "popnei_web defect: the store has no summary of the variants file.",
-    );
-  }
-  return view.status;
-}
-
-/** The status of the count of the FILTER failures in `s`; a defect when
-    the store has none. */
-export function failuresStatus(
-  s: AppState<JobResult, unknown>,
-): AnalysisStatus<JobResult> {
-  const view = s.analyses.find((a) => a.id === FAILURES_ID);
-  if (view === undefined) {
-    throw new Error(
-      "popnei_web defect: the store has no count of the FILTER failures.",
     );
   }
   return view.status;
@@ -505,10 +416,6 @@ export function readingText(variants: VariantSource): string {
 /** The name of the bar of the count. */
 export const COUNT_BAR_LABEL = "Counting the variants";
 
-/** The name of the bar of the count of the FILTER failures. */
-export const FAILURES_BAR_LABEL =
-  "Counting the variants that failed their FILTER";
-
 /** What the page knows of the focus as the store changes. */
 export interface FocusNow {
   /** Whether the focus is on Stop or Start again of the count, which,
@@ -521,9 +428,8 @@ export interface FocusNow {
 /**
  * What the status region says of a change of the store from `before` to
  * `after`, which the user may not be looking at: the file read, with its
- * individuals, or why it was not; the count done, with its numbers, or
- * why it failed; and the count of the FILTER failures done, or why it
- * failed. The end of the chain that moves the focus from its button onto
+ * individuals, or why it was not; and the count done, with its numbers,
+ * or why it failed. The end of the chain that moves the focus from its button onto
  * the lines of the count or the words of a failure, `focus` says, is not
  * said again.
  */
@@ -569,20 +475,6 @@ export function announcementsOf(
   }
   if (now.kind === "error" && then.kind !== "error") {
     texts.push(failedText(now.error, after.project));
-  }
-  const failuresThen = failuresStatus(before);
-  const failuresNow = failuresStatus(after);
-  if (
-    failuresNow.kind === "done" &&
-    failuresThen.kind !== "done" &&
-    failuresNow.result.analysis === FAILURES_ID
-  ) {
-    texts.push(
-      failuresCountedText(variants.name, numFilterFailures(failuresNow.result)),
-    );
-  }
-  if (failuresNow.kind === "error" && failuresThen.kind !== "error") {
-    texts.push(failuresFailedText(failuresNow.error, after.project));
   }
   return texts;
 }

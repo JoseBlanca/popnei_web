@@ -3,8 +3,7 @@
  * of the file and its words share: the statuses of the chain, whether
  * Start again can mend a failure, and the one button of the box, Stop or
  * Start again, decided from the first of the chain that is neither done
- * nor locked, as `resume` of autoRuns.ts starts that one, and the pass a
- * Stop stops
+ * nor locked, as `resume` of autoRuns.ts starts that one
  * (docs/architecture.md, section 5). Written once, so that the button the
  * box draws, the focus that follows it and the status region's silence
  * at the end of the chain agree. Pure, so that a test in node checks it.
@@ -17,13 +16,8 @@ import type {
   AppState,
 } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
-import { filterFailures } from "../../core/analyses/filterFailures.ts";
 import type { ButtonOf } from "../analyses/status.ts";
 import { POPGEN2_CHAIN } from "../popgen2Store.ts";
-import type { ChainPass } from "./words.ts";
-
-/** The id of the count of the FILTER failures in the chain. */
-const FAILURES_ID = filterFailures.id;
 
 /** The statuses of the chain of the page, `POPGEN2_CHAIN`, in its order,
     among the `analyses` of the store; a defect when one is not there. A
@@ -95,21 +89,4 @@ export function hasChainButton(
   statuses: readonly AnalysisStatus<JobResult>[],
 ): boolean {
   return chainButton(statuses, () => false) !== null;
-}
-
-/** The pass of the chain whose statuses are `statuses` that a Stop now
-    stops: the one running, or else the first about to start by itself,
-    ready or removed; the summary, the first of the chain, when none is,
-    since the box shows Stop only while one of them is. */
-export function stoppedPassOf(
-  statuses: readonly AnalysisStatus<JobResult>[],
-): ChainPass {
-  const running = statuses.findIndex((status) => status.kind === "running");
-  const at =
-    running >= 0
-      ? running
-      : statuses.findIndex(
-          (status) => status.kind === "ready" || status.kind === "removed",
-        );
-  return at === POPGEN2_CHAIN.indexOf(FAILURES_ID) ? "failures" : "summary";
 }
