@@ -261,9 +261,17 @@ and nothing of the file loaded, of the version of popnei, or of how the
 application calculates, which the project file saves apart. It is made
 with the same canonical form and the same hash, from another object, so a
 fingerprint and a key never coincide. Its filters of the variants are
-`filtersAppliedTo(p.filters, format)`, the format told by the read
-options it is given, `null` for a `.nei` file and an object for a VCF,
-since it reads nothing of `p.variants`.
+those that apply to the file its read options describe, since it reads
+nothing of `p.variants`:
+
+```ts
+filtersAppliedTo(p.filters, readOptions === null ? "nei" : "vcf")
+```
+
+Read options `null` are those of a `.nei` file, and give `"nei"`; they
+never give the format `null` of `filtersAppliedTo`, which means no file
+and keeps every filter, and which would put the filter of the FILTER
+column in the fingerprint of a `.nei` file.
 
 ## The TypeScript interface
 
@@ -445,11 +453,18 @@ hash with node's `crypto` to compare with ours; the code is checked with
   the canonical form: a change to it fails the test and is then a
   decision, which breaks nothing a user keeps, since no key and no
   fingerprint is saved in a file (`docs/architecture.md`, section 12).
+- **A filter turned off is in no key**, the property of
+  `src/core/keys.test.ts` that draws a kind from `VARIANT_FILTER_ORDER`:
+  from 7 October 2026 it draws `{ kind: "passed" }` too, the first kind
+  of that order (`docs/specs/core/project.md`, "The filters of
+  popgen2.html").
 - **`filtersRead`**: the same analysis reading no filter of the variants
   has a key that does not change with the threshold of `missing_data`.
 - **The filters that apply**: the project of the literal above with the
   filter `passed` turned on has the same key and the same fingerprint,
-  its file being a `.nei` file, and the same key from `writeKeyOf`; with
+  its file being a `.nei` file, and the same key from `writeKeyOf`; its
+  fingerprint with read options `null` is the fingerprint of the project
+  without `passed`, and with the read options of a VCF it is not; with
   a VCF load in its place, the key with `passed` differs from the key
   without it, and its canonical form holds `{"kind":"passed"}` before
   `missing_data`.
