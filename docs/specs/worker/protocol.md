@@ -72,6 +72,12 @@ popgen2.html reads each file once (`docs/plans/one-pass.md`): the two
 types and `PassFilterKind` are removed, `PassStats.filtering` is typed by
 `VariantFilterKind` again, and `PROTOCOL_VERSION` is 11. The count waits
 for popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei).
+Revised on 7 October 2026 for the thresholds of popgen2.html as filters
+of the project, `docs/designs/stats-filters.md`, approved by the owner
+that day: the filter of the FILTER column, `{ kind: "passed" }`, popnei's
+`filterPassed`, joins `VariantFilter`, first in the fixed order, and the
+runner puts it before the list of the individuals kept; its checks and
+`PROTOCOL_VERSION` 12 are in `messages.md`.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: the filters of the variants and of the individuals, the table of
@@ -105,10 +111,11 @@ calculation worker reads cannot describe it in two ways.
 
 ### The filters of the variants are popnei's
 
-They are the four that popnei 0.1.0 has, methods of its `Variants` in
+They are four of the filters of popnei's `Variants`, methods in
 `js/popnei/src/variant.ts`, with the names of their arguments, and the
 project holds the numbers popnei is given, as section 3 of
-`docs/functionality.md` describes them:
+`docs/functionality.md` describes them; and, from 7 October 2026, a
+fifth with no number, the filter of the FILTER column (below):
 
 - **Each keeps the variants whose number is at most a threshold.** The
   missing data filter takes the largest missing rate allowed,
@@ -127,10 +134,38 @@ project holds the numbers popnei is given, as section 3 of
   calculation worker that answers its requests and puts the filters on a
   `Variants`, never adds a second.
 - **They are in a fixed order**, as the owner decided on 26 September
-  2026 (`docs/architecture.md`, section 2): missing data, observed
-  heterozygosity, MAF, and the LD pruning last. The project holds them in
-  that order, and a job carries them so; the runner puts them on the
-  `Variants` in the order of the job, and does not sort them.
+  2026 (`docs/architecture.md`, section 2): the FILTER column, missing
+  data, observed heterozygosity, MAF, and the LD pruning last. The
+  project holds them in that order, and a job carries them so; the
+  runner puts them on the `Variants` in the order of the job, and does
+  not sort them, but for the FILTER column, which it puts before the
+  list of the individuals kept (below).
+
+The filter of the FILTER column, `{ kind: "passed" }`, keeps the
+variants of a VCF whose FILTER is `PASS` or a dot, popnei's
+`filterPassed`, whose kind in the counts of a pass is `"passed"` and
+whose `args` are `{}` (popnei 0.2.1, `variant.d.ts`). It works only on a
+VCF opened with `onlyPassed: false`, as `popgen2.html` opens every VCF;
+over a VCF opened with only the passed variants it keeps every variant,
+and over a `.nei` file written before popnei's format 1.2 its pass
+throws at the first block, "the variants hold no record of whether they
+passed their FILTER…" (seen in node with popnei 0.2.1 on `panel.nei`, 7
+October 2026). So no job carries it for a `.nei` file: core builds the
+filters of a job from `filtersApplied` of `docs/specs/core/project.md`,
+which leaves it out for one, and only `popgen2.html` lets a project hold
+it (`docs/designs/stats-filters.md`, "The FILTER filter"). The runner
+puts it on the `Variants` after the regions, once the application has
+that filter, and before the list of the individuals kept, where popnei
+advises it, "Add it first, or right after `filterByRegions`", and where
+it accepts it: `filterPassed` throws only on a second one and after
+`filterFirstN`. Its place changes no variant kept, since it judges a
+variant by its FILTER alone, and no individual kept, since the
+individuals are judged from the statistics of each individual, whose
+job carries no filter; what moves with its place is the counts of the
+filters after it, which are over the variants that passed. On
+`low_qual.vcf.gz`, the panel with 300 of its 1,200 variants failed, it
+keeps 900 of 1,200, and the missing data filter at 0.05 after it 865 of
+those 900 (node, popnei 0.2.1, 7 October 2026).
 
 The PCA has its own filters of missing data, MAF and LD, as the owner
 decided on 28 September 2026, each following the Variants step until the
@@ -187,11 +222,11 @@ Variants step"; `src/core/individualsKept.ts`), and an analysis that
 reads the filters of individuals puts it in its job, as the store puts
 it in the job of a write, `individuals`, which is `null` when the
 filters remove nobody. The calculation worker never sees the filters of individuals:
-the runner puts the list it is given on the `Variants` before any filter
-of the variants, with `filterIndividuals`, as the owner decided on 28
-September 2026 (`docs/architecture.md`, section 2). So the filters of
-the variants count over the individuals kept, and the list changes
-their counts: on `panel.nei`, the missing data filter at 0.05 keeps
+the runner puts the list it is given on the `Variants` before every
+filter of the variants but the FILTER column, with `filterIndividuals`,
+as the owner decided on 28 September 2026 (`docs/architecture.md`,
+section 2). So the filters of the variants after it count over the
+individuals kept, and the list changes their counts: on `panel.nei`, the missing data filter at 0.05 keeps
 1,152 of the 1,200 variants with every individual and 1,117 with the 111
 individuals of the thresholds of `docs/specs/core/individualsKept.md`.
 popnei's step of individuals has no entry in the counts of a pass
@@ -247,10 +282,15 @@ export type VariantFilter =
   | { kind: "missing_data"; maxAllowedMissingRate: number } // filterByMissingData
   | { kind: "maf"; maxAllowedMaf: number }                  // filterByMaf: the major allele
   | { kind: "obs_het"; maxAllowedObsHet: number }           // filterByObsHet
-  | { kind: "ld"; maxAllowedR2: number; maxDist: number };  // filterByLd
+  | { kind: "ld"; maxAllowedR2: number; maxDist: number }   // filterByLd
+  | { kind: "passed" };                                      // filterPassed: FILTER PASS or a dot
 
 export type VariantFilterKind = VariantFilter["kind"];
 ```
+
+The union keeps the order of the members as the code has them, the
+four with a number and `passed` last; the fixed order of the project is
+`VARIANT_FILTER_ORDER` of `docs/specs/core/project.md`, `passed` first.
 
 A job always carries the distance of its LD filter. The project may
 hold an LD filter whose distance the user has not typed yet, which is
@@ -465,9 +505,10 @@ and its spec gives the fields. What every member keeps, decided here:
   every individual and never empty, in a job of an analysis that reads
   the filters of individuals and in a write. A job without the field
   reads every individual (`docs/architecture.md`, section 4,
-  `filtersRead`). The runner puts the list first and the filters after
-  it, in their order. Core builds each job so, and the runner applies what
-  the job says.
+  `filtersRead`). The runner puts the filter of the FILTER column first,
+  when the job has it, then the list, and then the other filters, in
+  their order. Core builds each job so, and the runner applies what the
+  job says.
 - **Every result holds `passStats`.**
 
 Stage 3 has four members: the diversity
@@ -791,7 +832,9 @@ beside the messages it versions, and not here: core has no use for it.
   filter since the owner's decision of 28 September 2026
   (`docs/specs/analyses/individualChecks.md`), so they are refused only
   when the file itself gives no variant: a file that holds none, or a
-  VCF none of whose variants passed, read with only those. The PCA
+  VCF none of whose variants passed, read with only those. A job with
+  the filter of the FILTER column over a VCF none of whose variants
+  passed is refused the same way, since the filter keeps none. The PCA
   of the release words it "there are no variants to do a PCA with",
   whether the file holds none or the filters kept none
   (`docs/specs/analyses/pca.md`, "The request"). The
@@ -820,9 +863,10 @@ used: the tests of core build projects with every kind of filter, and
 of the browser, which is why `Written` is generic in its file. That the
 fields of the filters are popnei's arguments, and the boundary above, at
 0.05, are checked by the tests of the runner (`docs/specs/worker/runner.md`);
-so are the counts of a pass in the order of the job, and the list of
+so are the counts of a pass in the order of the job, the list of
 individuals put before the filters of the variants, which then count
-over the individuals it keeps.
+over the individuals it keeps, and the filter of the FILTER column put
+before the list.
 
 ## Open points
 
