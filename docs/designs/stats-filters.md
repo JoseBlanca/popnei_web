@@ -35,6 +35,11 @@ waits for popnei's issue #13.
 This section holds what the approval rests on; the sections after it
 are for the reviewers and the builders of the piece, and can be skipped.
 
+**The project** is everything the user has set on the page: the file
+open, the filters and their values. Undo and Redo step through its
+earlier values. The old page saves it as a project file; the new page
+saves nothing yet, so the filters last until the tab is closed.
+
 **What the page reads.** At the opening of a file, one reading, as
 today: the count of the variants, each individual's missing rate and
 heterozygosity, and the histograms of the variants, all over every
@@ -58,8 +63,10 @@ default, for a VCF; not shown for a `.nei` file. It acts when the
 filtering is carried out, after the individuals are judged: an
 individual's missing rate and heterozygosity are those of the plots,
 over every variant, and the variants that failed are left out after.
-So a VCF of which no variant passed is shown as any other. The box
-counts nothing: the count of the failures comes back when popnei's
+So a VCF of which no variant passed is shown as any other. Ticking the
+box changes no plot and no count on the page, only the project and the
+notice; what it does is seen in what a tool reports. The box counts
+nothing: the count of the failures comes back when popnei's
 summary gives it in its one reading, popnei's issue #12.
 
 **The download.** A "Tools" section after the plots, whose first tool
@@ -312,8 +319,9 @@ today cleared by every change the user makes (`failures.clear()` in
 the store's handling of a change), so that a calculation can be tried
 again. On the old page that is right, since a change gives new keys.
 On `popgen2.html` a change of a filter gives the one pass no new key,
-so the store clears only the failures whose key the change left
-behind: a click on the FILTER box after a crash does not wipe the
+so the store clears only the failures of the calculations whose
+inputs the change altered, which a change of a filter does not do for
+the one pass: a click on the FILTER box after a crash does not wipe the
 message of the crash; Start again tries again.
 
 The thresholds can be moved over the plots of a Stop, and their counts
