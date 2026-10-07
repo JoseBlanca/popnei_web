@@ -64,13 +64,16 @@ along each chromosome, the number of variants in each window of the
 genome, which popnei will give (decided by the owner on 26 September
 2026). The new page, popgen2.html, gives the number of chromosomes and
 leaves out the variants on each of them for now (the owner, 6 October
-2026). For a VCF it also gives how many variants failed their FILTER,
-those whose FILTER column is neither PASS nor a dot, counted by a second
-pass after the first, "FILTER failures: 300" of 1,200 on low_qual.vcf.gz;
-every variant, failed or not, stays in the count and the statistics,
-since the FILTER filter as a filter the user sets comes with the filters
-of that page. A .nei file has no such line, since one written before
-format 1.2 of popnei holds no FILTER (docs/plans/live-stats.md).
+2026). It reads each variants file once, as the owner decided on 7
+October 2026 (docs/plans/one-pass.md). Every variant, whatever its
+FILTER column, stays in the count and the statistics, since the FILTER
+filter as a filter the user sets comes with the filters of that page.
+How many variants of a VCF failed their FILTER, those whose FILTER
+column is neither PASS nor a dot, 300 of 1,200 in low_qual.vcf.gz, is
+not shown: from 7 October 2026 a second pass over the file counted
+them, and the owner took it out, so that the count waits for popnei's
+summary to give it from its own pass, popnei issue #12
+(JoseBlanca/popnei).
 
 On popgen2.html the distributions of the open file, four of the
 variants and two of the individuals, each carry a threshold that keeps
