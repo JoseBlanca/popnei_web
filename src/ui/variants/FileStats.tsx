@@ -58,7 +58,6 @@
 import {
   Suspense,
   lazy,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -129,12 +128,12 @@ export function FileStats({
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
-  // Asked for here, before the read, so that it is there when the pass
-  // starts; a download that fails is said by the plots that wait for it.
-  useEffect(() => {
-    loadPlotsCode().catch(() => undefined);
-  }, []);
-  if (variants?.read.kind !== "read") return null;
+  if (variants === null) return null;
+  // Asked for as the file is picked, before the read, so that it is there
+  // when the pass starts; a download that fails is said by the plots that
+  // wait for it, once the file is read.
+  const plots = plotsDownload(variants.fileId).plots;
+  if (variants.read.kind !== "read") return null;
   return (
     // Another load is another section, so that the one before goes, with
     // the focus it held.
@@ -143,6 +142,7 @@ export function FileStats({
       autoRuns={autoRuns}
       openButton={openButton}
       onShown={onShown}
+      plots={plots}
       fileId={variants.fileId}
       variantsName={variants.name}
       ploidy={variants.read.ploidy}
@@ -153,52 +153,68 @@ export function FileStats({
 /** The module of the code of the plots. */
 type PlotsCode = typeof PlotsModule;
 
-/** The download of the code of the plots, once asked for; `null` before,
-    and again after a download that failed, so that the next file picked
-    asks for it again. */
-let plotsCode: Promise<PlotsCode> | null = null;
-
-/** Downloads the code of the plots, or gives the download already asked
-    for, done or not. */
-function loadPlotsCode(): Promise<PlotsCode> {
-  plotsCode ??= import("./SectionPlots.tsx").catch((error: unknown) => {
-    plotsCode = null;
-    lazyPlots = lazyPlotsOf();
-    throw error;
-  });
-  return plotsCode;
-}
-
-/** The components of the code of the plots, each drawn once it is
-    there. Made once, and drawn for every file after: a lazy component
-    made for each file would wait for its code each time, even once
-    downloaded, and React then holds what it draws back 300 ms (React
-    19.3). Made again after a download that failed, which they would
-    otherwise keep. */
-function lazyPlotsOf(): {
+/** The components of the code of the plots, each drawn once that code
+    is there, and each throwing to the boundary of the section when its
+    download failed. */
+interface LazyPlots {
   readonly CodeMark: React.LazyExoticComponent<PlotsCode["PlotsCodeMark"]>;
   readonly VariantPlots: React.LazyExoticComponent<PlotsCode["VariantPlots"]>;
   readonly IndividualPlots: React.LazyExoticComponent<
     PlotsCode["IndividualPlots"]
   >;
-} {
-  return {
-    CodeMark: lazy(async () => ({
-      default: (await loadPlotsCode()).PlotsCodeMark,
-    })),
-    VariantPlots: lazy(async () => ({
-      default: (await loadPlotsCode()).VariantPlots,
-    })),
-    IndividualPlots: lazy(async () => ({
-      default: (await loadPlotsCode()).IndividualPlots,
-    })),
-  };
 }
 
-let lazyPlots = lazyPlotsOf();
+/** A download of the code of the plots. */
+interface PlotsDownload {
+  /** The load it was asked for. */
+  readonly fileId: string;
+  /** Whether it failed. */
+  failed: boolean;
+  /** Its components. */
+  readonly plots: LazyPlots;
+}
+
+/** The download of the code of the plots, once asked for. */
+let download: PlotsDownload | null = null;
+
+/** The download of the code of the plots for the load `fileId`: the one
+    asked for before, under way or done, which every file after draws at
+    once, or failed for this same load; or a new one, the first, or after
+    a download that failed for another load, so that the next file picked
+    asks for the code again, which WebKit 26.6 downloads, and Chromium 153
+    does not, keeping the failure until the page is reloaded. A lazy
+    component made for each file would wait for its code each time, even
+    once downloaded, and React then holds what it draws back 300 ms
+    (React 19.3). Called as the section is drawn, as lazy() itself asks
+    for its code. */
+function plotsDownload(fileId: string): PlotsDownload {
+  if (download === null || (download.failed && download.fileId !== fileId)) {
+    const code = import("./SectionPlots.tsx");
+    const made: PlotsDownload = {
+      fileId,
+      failed: false,
+      plots: {
+        CodeMark: lazy(async () => ({ default: (await code).PlotsCodeMark })),
+        VariantPlots: lazy(async () => ({
+          default: (await code).VariantPlots,
+        })),
+        IndividualPlots: lazy(async () => ({
+          default: (await code).IndividualPlots,
+        })),
+      },
+    };
+    code.catch(() => {
+      made.failed = true;
+    });
+    download = made;
+  }
+  return download;
+}
 
 /** What the section of one load is drawn with. */
 interface StatsProps extends FileStatsProps {
+  /** The components of the code of the plots. */
+  readonly plots: LazyPlots;
   /** The id of the load. */
   readonly fileId: string;
   /** The name of the variants file, which the downloads are named
@@ -225,6 +241,7 @@ function Stats({
   autoRuns,
   openButton,
   onShown,
+  plots,
   fileId,
   variantsName,
   ploidy,
@@ -239,8 +256,7 @@ function Stats({
   // about to start, and which a Stop with no pass running changes and the
   // store does not.
   useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
-  // Read as it is drawn, since a failed download replaces them.
-  const { CodeMark, VariantPlots, IndividualPlots } = lazyPlots;
+  const { CodeMark, VariantPlots, IndividualPlots } = plots;
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
