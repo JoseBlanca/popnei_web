@@ -103,6 +103,7 @@ import {
   deepFreeze,
   projectJson,
   readBack,
+  variantSource,
   testAnalysis,
   drawnCommand,
   jsonObjectOf,
@@ -7370,21 +7371,18 @@ describe("SF2 D2 the filters that apply to the file", () => {
 
   test("the reads drawn give keepsPassed both values for a .nei file and true for a VCF", () => {
     const seen = { neiTrue: false, neiFalse: false, vcfFalse: false };
-    fc.assert(
-      fc.property(wholeProject, (p) => {
-        const read = p.variants?.read;
-        if (p.variants === null || read?.kind !== "read") {
-          return;
-        }
-        if (p.variants.format === "nei") {
-          seen.neiTrue ||= read.keepsPassed;
-          seen.neiFalse ||= !read.keepsPassed;
-        } else {
-          seen.vcfFalse ||= !read.keepsPassed;
-        }
-      }),
-      { numRuns: 500 },
-    );
+    for (const source of fc.sample(variantSource, { numRuns: 1000, seed: 7 })) {
+      const read = source.read;
+      if (read.kind !== "read") {
+        continue;
+      }
+      if (source.format === "nei") {
+        seen.neiTrue ||= read.keepsPassed;
+        seen.neiFalse ||= !read.keepsPassed;
+      } else {
+        seen.vcfFalse ||= !read.keepsPassed;
+      }
+    }
     expect(seen).toEqual({ neiTrue: true, neiFalse: true, vcfFalse: false });
   });
 });

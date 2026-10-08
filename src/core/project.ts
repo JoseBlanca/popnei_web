@@ -2041,9 +2041,14 @@ export function keepsPassed(source: VariantSource): boolean {
  * scripts and the words.
  */
 export function filtersApplied(p: Project): readonly ProjectVariantFilter[] {
-  return p.variants === null
-    ? p.filters
-    : filtersAppliedTo(p.filters, keepsPassed(p.variants));
+  // `p.variants` is read only when the filter is on: the `keyInputs` of
+  // the PCA and the LD decay call this, and read nothing of the file for
+  // a project without it, as every project of popgen.html is
+  // (docs/specs/core/keys.md, "What it does").
+  if (!p.filters.some((f) => f.kind === "passed") || p.variants === null) {
+    return p.filters;
+  }
+  return filtersAppliedTo(p.filters, keepsPassed(p.variants));
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   analysisOptions,
   emptyProject,
   individualListNeeds,
+  filtersApplied,
   jobFilters,
   loadIndividuals,
   loadVariants,
@@ -6270,17 +6271,88 @@ describe("IP3 D1 an LD filter with no distance in the store", () => {
   });
 });
 
+describe("SF2 D4 the filter of the FILTER column reaches no file without the record", () => {
+  test("for every sequence of commands, .nei and VCF loads, reads of a .nei load with keepsPassed true and false, and the filter passed turned on and off: no request and no write carries passed for a file whose read says keepsPassed false", () => {
+    // The requests and writes made with passed on and a file whose read
+    // says false, which must not carry it; and those that carried it.
+    let withheld = 0;
+    let carriedPassed = 0;
+    fc.assert(
+      fc.property(
+        fc.array(ldStep, { maxLength: 30, size: "max" }),
+        fc.tuple(anyFiltersRead, anyFiltersRead, anyFiltersRead),
+        fc.boolean(),
+        fc.boolean(),
+        (drawn, reads, keeps, passedOn) => {
+          const { store, sent, writes, carried } = ldStore(
+            reads,
+            sampleKeeping(keeps, passedOn),
+          );
+          const ended = new Set<number>();
+          for (const s of drawn) {
+            const before = store.getState().project;
+            const numWrites = writes.length;
+            runLdStep(store, s, sent, writes, ended);
+            for (const w of writes.slice(numWrites)) {
+              const passed = w.job.filters.some((f) => f.kind === "passed");
+              if (readKeepsPassed(before) === false) {
+                expect(passed).toBe(false);
+                withheld += before.filters.some((f) => f.kind === "passed")
+                  ? 1
+                  : 0;
+              }
+              carriedPassed += passed ? 1 : 0;
+            }
+          }
+          for (const c of carried) {
+            const passed = c.filters.some((f) => f.kind === "passed");
+            if (c.keepsPassed === false) {
+              expect(passed).toBe(false);
+            }
+            carriedPassed += passed ? 1 : 0;
+          }
+          withheld += carried.filter(
+            (c) =>
+              c.keepsPassed === false &&
+              !c.filters.some((f) => f.kind === "passed"),
+          ).length;
+        },
+      ),
+      { numRuns: 200 },
+    );
+    expect(withheld).toBeGreaterThan(20);
+    expect(carriedPassed).toBeGreaterThan(20);
+  });
+});
+
+/** `sampleWithoutThreshold` with the read of its `.nei` file saying
+    `keeps` of the FILTER of its variants, and the filter passed on when
+    `passedOn`. */
+function sampleKeeping(keeps: boolean, passedOn: boolean): Project {
+  const p = sampleWithoutThreshold();
+  const variants = p.variants;
+  if (variants?.read.kind !== "read") {
+    throw new Error("popnei_web defect: the sample has a variants file read");
+  }
+  const q: Project = {
+    ...p,
+    variants: { ...variants, read: { ...variants.read, keepsPassed: keeps } },
+  };
+  return passedOn ? setVariantFilter(q, { kind: "passed" }) : q;
+}
+
 /** A step of the property of the LD filter with no distance. */
 type LdStep =
   | { readonly kind: "command"; readonly command: DrawnCommand }
   | { readonly kind: "ld"; readonly maxDist: number | null }
   | { readonly kind: "ldOff" }
+  | { readonly kind: "passed" }
   | { readonly kind: "off"; readonly filter: VariantFilterKind }
   | { readonly kind: "onKept"; readonly which: number }
   | { readonly kind: "undo" }
   | { readonly kind: "redo" }
   | { readonly kind: "open"; readonly empty: boolean }
-  | { readonly kind: "read" }
+  | { readonly kind: "read"; readonly keepsPassed: boolean }
   | { readonly kind: "startRun"; readonly analysis: string }
   | { readonly kind: "startWrite" }
   | { readonly kind: "end"; readonly which: number; readonly ok: boolean };
@@ -6302,9 +6374,16 @@ const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
     weight: 3,
   },
   { arbitrary: fc.constant<LdStep>({ kind: "ldOff" }), weight: 1 },
+  { arbitrary: fc.constant<LdStep>({ kind: "passed" }), weight: 1 },
   {
     arbitrary: fc
-      .constantFrom<VariantFilterKind>("missing_data", "obs_het", "maf", "ld")
+      .constantFrom<VariantFilterKind>(
+        "passed",
+        "missing_data",
+        "obs_het",
+        "maf",
+        "ld",
+      )
       .map((filter): LdStep => ({ kind: "off", filter })),
     weight: 4,
   },
@@ -6318,7 +6397,12 @@ const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
     arbitrary: fc.boolean().map((empty): LdStep => ({ kind: "open", empty })),
     weight: 1,
   },
-  { arbitrary: fc.constant<LdStep>({ kind: "read" }), weight: 2 },
+  {
+    arbitrary: fc
+      .boolean()
+      .map((keepsPassed): LdStep => ({ kind: "read", keepsPassed })),
+    weight: 2,
+  },
   {
     arbitrary: fc
       .constantFrom("pops", "vars", "stats", "counts")
@@ -6334,11 +6418,19 @@ const ldStep: fc.Arbitrary<LdStep> = fc.oneof(
   },
 );
 
-/** The filters of the variants a request carried, and the filters off of
-    the project it was made from. */
+/** The filters of the variants a request carried, the filters off of
+    the project it was made from, and what the read of its variants file
+    says of their FILTER, `null` while it is not read. */
 interface Carried {
   readonly filters: readonly ProjectVariantFilter[];
   readonly off: readonly ProjectVariantFilter[];
+  readonly keepsPassed: boolean | null;
+}
+
+/** What the read of the variants file of `p` says of their FILTER, or
+    `null` while it is not read. */
+function readKeepsPassed(p: Project): boolean | null {
+  return p.variants?.read.kind === "read" ? p.variants.read.keepsPassed : null;
 }
 
 /** Whether a list of filters holds a filter of a kind of `off`. */
@@ -6371,9 +6463,9 @@ function sampleWithoutThreshold(): Project {
  * A store that writes, of popnei 0.1.0 with the project `first` opened,
  * whose populations, variants and counts read the filters `reads`, and
  * the statistics none; each of the three records the filters of the
- * variants its request carries, `jobFilters` of its project when it
- * reads them and none otherwise, as the analyses of the application
- * build them.
+ * variants its request carries, `jobFilters(filtersApplied(p))` of its
+ * project when it reads them and none otherwise, as the analyses of the
+ * application build them.
  */
 function ldStore(
   reads: readonly [
@@ -6403,8 +6495,9 @@ function ldStore(
       filtersRead: read,
       run: (p, c) => {
         carried.push({
-          filters: read.variants ? jobFilters(p.filters) : [],
+          filters: read.variants ? jobFilters(filtersApplied(p)) : [],
           off: p.filtersOff,
+          keepsPassed: readKeepsPassed(p),
         });
         return def.run(p, c);
       },
@@ -6471,6 +6564,11 @@ function runLdStep(
         turnOffVariantFilter(p, "ld"),
       );
       return;
+    case "passed":
+      store.apply("the filter of the FILTER column changed", (p) =>
+        setVariantFilter(p, { kind: "passed" }),
+      );
+      return;
     case "off":
       store.apply("a filter was turned off", (p) =>
         turnOffVariantFilter(p, s.filter),
@@ -6496,12 +6594,14 @@ function runLdStep(
     case "read": {
       const variants = before.variants;
       if (variants?.read.kind === "pending") {
+        // A VCF always records the FILTER of its variants; a .nei file
+        // may or may not.
         store.variantsRead(variants.fileId, {
           kind: "read",
           individuals: [...MODEL_INDIVIDUALS],
           ploidy: variants.readOptions?.ploidy ?? 2,
           numVars: null,
-          keepsPassed: false,
+          keepsPassed: variants.format === "vcf" || s.keepsPassed,
         });
       }
       return;

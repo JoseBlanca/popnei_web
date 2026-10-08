@@ -18,6 +18,7 @@ import { hasIndividualThreshold, individualsKept } from "../individualsKept.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
+  filtersApplied,
   ONE_POPULATION,
   analysisOptions,
   counted,
@@ -607,7 +608,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(p.filters),
+    filters: jobFilters(filtersApplied(p)),
     individuals: c.individuals,
     pops: kept.pops,
     minNumIndividuals: options.minNumIndividuals,

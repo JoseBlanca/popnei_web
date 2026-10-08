@@ -7,6 +7,7 @@
  * (docs/specs/analyses/writeVariants.md, "The functions of core").
  */
 
+import { filtersApplied } from "./project.ts";
 import type { Project } from "./project.ts";
 
 /** The stem of a name that is only an extension, `.nei`. */
@@ -38,6 +39,7 @@ export function writtenName(p: Project): string {
     return `${FALLBACK_STEM}.nei`;
   }
   const stem = variantsStem(p.variants.name);
-  const filtered = p.filters.length > 0 || p.individualFilters.length > 0;
+  const filtered =
+    filtersApplied(p).length > 0 || p.individualFilters.length > 0;
   return filtered ? `${stem}.filtered.nei` : `${stem}.nei`;
 }

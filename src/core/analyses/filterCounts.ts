@@ -16,6 +16,7 @@
  */
 
 import {
+  filtersApplied,
   VARIANT_FILTER_ORDER,
   escaped,
   grouped,
@@ -90,7 +91,7 @@ export function filterCountRows(
   r: FilterCountsResult,
   p: Project,
 ): readonly FilterCountRow[] {
-  return p.filters.map((filter) => {
+  return filtersApplied(p).map((filter) => {
     const counts = r.passStats.filtering[filter.kind];
     if (counts === undefined) {
       throw defect(
@@ -188,7 +189,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(p.filters),
+    filters: jobFilters(filtersApplied(p)),
     individuals: c.individuals,
   });
 }
@@ -258,7 +259,7 @@ function checkNumbers(result: JobResult): readonly (number | null)[] {
 /** How many numbers `checkNumbers` gives: the variants of the file, and
     one for each filter of the variants. */
 function numCheckNumbers(p: Project): number {
-  return 1 + p.filters.length;
+  return 1 + filtersApplied(p).length;
 }
 
 /** The lines of the Python script that print the same counts, after the

@@ -24,6 +24,7 @@ import type { JsonObject, JsonValue, Key, WriteFormat } from "./keys.ts";
 import { individualsKept, keptNoneReason } from "./individualsKept.ts";
 import type { IndividualStats, IndividualsKept } from "./individualsKept.ts";
 import {
+  filtersApplied,
   freezeProject,
   individualListNeeds,
   jobFilters,
@@ -1805,7 +1806,7 @@ export function createStore<J, R, F = never>(
     const job: WriteJob = {
       format,
       fileId,
-      filters: jobFilters(project.filters),
+      filters: jobFilters(filtersApplied(project)),
       individuals,
     };
     const afterStop = beforeSend();

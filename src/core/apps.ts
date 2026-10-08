@@ -114,8 +114,8 @@ export function firstProject(app: "popgen"): Project {
  * its load, what the first filter of the pass was given, or what the pass
  * gave when it had no filter; and the counts of its filters, a result of
  * `filterCounts`, for a result whose pass had the list of the individuals
- * kept and the filters of the variants of its request's project, told by
- * the analysis of the result: the diversity, the distances between
+ * kept and the filters of the variants of its request's project that
+ * apply to its file, `filtersApplied`, told by the analysis of the result: the diversity, the distances between
  * populations and `filterCounts` itself, and not the statistics of each
  * individual and the summary of the variants file, whose passes have no
  * filter of the project, nor the histograms of the variants, whose pass
@@ -143,7 +143,8 @@ export function countsOf(r: JobResult): PassFound<JobResult> {
 
 /** The result of `filterCounts` made of the counts of the pass of a
     written file, as the store's `write.countsOf`: the pass of a write
-    always has the filters of the variants of its project. */
+    always has the filters of the variants of its project that apply to
+    its file, `filtersApplied`. */
 export function writeCountsOf(pass: PassStats): JobResult {
   return { analysis: "filterCounts", passStats: pass };
 }

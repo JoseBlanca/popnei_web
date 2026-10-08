@@ -35,7 +35,7 @@ import {
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import { createStore } from "../store.ts";
 import type { Warning, WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, withPassedOn } from "../testSupport.ts";
 import type {
   Cell,
   IndividualFilter,
@@ -108,6 +108,9 @@ function project(
     readonly individuals?: readonly string[];
     readonly variantsName?: string;
     readonly vcf?: boolean;
+    /** Whether the read of the file says its variants record their
+        FILTER; true for a VCF and false for a `.nei` file unless given. */
+    readonly keepsPassed?: boolean;
   } = {},
 ): Project {
   const table = options.table === undefined ? LD_POPS : options.table;
@@ -126,7 +129,7 @@ function project(
         individuals: options.individuals ?? LD_INDIVIDUALS,
         ploidy: 2,
         numVars: null,
-        keepsPassed: false,
+        keepsPassed: options.keepsPassed ?? options.vcf === true,
       },
     },
     filters: options.filters ?? [MISSING_DATA, LD_PRUNING],
@@ -1740,5 +1743,42 @@ describe("PA6 the small rules of the populations, shared from project.ts", () =>
       code: "fewIndividuals",
       text: "Populations p3, p5 and p6 have fewer than 20 individuals, 12, 8 and 5. With fewer than 20, r² is higher than in the population by chance alone, more than the fitted curve corrects for, so their curves, when they have one, lie higher and their half distances are longer than those of a larger population.",
     });
+  });
+});
+
+describe("SF2 D4 the LD decay reads the filters that apply to the file", () => {
+  /** A client that keeps the jobs it is given. */
+  function fakeClientOf(individuals: readonly string[] | null): {
+    readonly client: WorkerClient<Job, JobResult>;
+    readonly jobs: Job[];
+  } {
+    const jobs: Job[] = [];
+    const client: WorkerClient<Job, JobResult> = {
+      run: (job: Job): Run<JobResult> => {
+        jobs.push(job);
+        return {
+          id: 1,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => undefined,
+        };
+      },
+      intermediateKey: () => "",
+      individuals,
+    };
+    return { client, jobs };
+  }
+
+  test("with passed on and a .nei file whose read says keepsPassed false, the job, the key and the script are those of the filters without it", () => {
+    const base = project();
+    const p = withPassedOn(base, false);
+    const { client, jobs } = fakeClientOf(null);
+    ldDecay.run(p, client);
+    ldDecay.run(base, client);
+    expect(jobs[0]).toEqual(jobs[1]);
+    expect(keyOfLd(p)).toBe(keyOfLd(base));
+    expect(ldDecay.script(p)).toBe(ldDecay.script(base));
+    const keeping = withPassedOn(base, true);
+    expect(keyOfLd(keeping)).not.toBe(keyOfLd(base));
+    expect(ldDecay.script(keeping)).toMatch(/ld_variants\.filter_passed\(\)/);
   });
 });

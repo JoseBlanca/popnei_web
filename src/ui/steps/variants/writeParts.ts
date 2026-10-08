@@ -8,7 +8,7 @@
  */
 
 import { writtenName } from "../../../core/fileNames.ts";
-import { variantFilterNeeds } from "../../../core/project.ts";
+import { filtersApplied, variantFilterNeeds } from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import type { WriteStatus } from "../../../core/store.ts";
 import { WRITE_MAX_BYTES } from "../../../core/writeEstimate.ts";
@@ -109,7 +109,7 @@ function writeButton(
   // The variants are a bound while a filter of the variants is not
   // counted; a bound of the individuals alone, which the Count does not
   // make exact, is not refused.
-  const variantsBound = count !== "counted" && p.filters.length > 0;
+  const variantsBound = count !== "counted" && filtersApplied(p).length > 0;
   if (variantsBound && estimate.numBytes >= WRITE_MAX_BYTES) {
     return disabled(mayBeTooLargeText(estimate, count === "counting"));
   }

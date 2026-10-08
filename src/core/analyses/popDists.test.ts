@@ -24,7 +24,7 @@ import { individualsNeeds } from "../project.ts";
 import { populationsKeptNeeds } from "../populations.ts";
 import type { Project } from "../project.ts";
 import type { Warning, WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, withPassedOn } from "../testSupport.ts";
 import type {
   Cell,
   HeatmapOrder,
@@ -1678,5 +1678,22 @@ describe("PA6 the small rules of the populations, shared from project.ts and ind
       individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.5 }],
     });
     expect(popDists.numCheckNumbers(p)).toBeNull();
+  });
+});
+
+describe("SF2 D4 the distances between populations read the filters that apply to the file", () => {
+  test("with passed on and a .nei file whose read says keepsPassed false, the job and the key are those of the filters without it", () => {
+    const base = exampleProject(1);
+    const p = withPassedOn(base, false);
+    const { client, jobs } = fakeClient(null);
+    popDists.run(p, client);
+    popDists.run(base, client);
+    expect(jobs[0]?.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+    expect(jobs[0]).toStrictEqual(jobs[1]);
+    expect(keyOfDists(p)).toBe(keyOfDists(base));
+    popDists.run(withPassedOn(base, true), client);
+    expect(jobs[2]?.filters[0]).toEqual({ kind: "passed" });
   });
 });

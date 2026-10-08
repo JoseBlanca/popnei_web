@@ -19,7 +19,7 @@ import {
 import { emptyProject } from "../project.ts";
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import type { WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, withPassedOn } from "../testSupport.ts";
 import type {
   FilterCountsJob,
   FilterCountsResult,
@@ -55,7 +55,7 @@ function project(
         individuals: ["s000", "s001"],
         ploidy: 2,
         numVars: null,
-        keepsPassed: false,
+        keepsPassed: options.onlyPassed !== undefined,
       },
     },
     filters,
@@ -447,5 +447,26 @@ describe("IP3 D1 the filters of the job of the counts", () => {
     const { client, jobs } = recordingClient(null);
     expect(() => filterCounts.run(p, client)).toThrow(/^popnei_web defect: /);
     expect(jobs).toStrictEqual([]);
+  });
+});
+
+describe("SF2 D4 the counts of the filters read the filters that apply to the file", () => {
+  test("with passed on and a .nei file whose read says keepsPassed false, the job, the rows and the number of check numbers are those of the filters without it", () => {
+    const base = project(THREE_FILTERS);
+    const p = withPassedOn(base, false);
+    const { client, jobs } = recordingClient(null);
+    filterCounts.run(p, client);
+    filterCounts.run(base, client);
+    expect(jobs[0]).toEqual(jobs[1]);
+    expect(
+      jobs[0]?.analysis === "filterCounts"
+        ? jobs[0].filters.map((f) => f.kind)
+        : null,
+    ).toEqual(["missing_data", "obs_het", "maf"]);
+    expect(filterCountRows(THREE_PASS, p)).toEqual(
+      filterCountRows(THREE_PASS, base),
+    );
+    expect(filterCounts.numCheckNumbers(p)).toBe(4);
+    expect(filterCounts.numCheckNumbers(withPassedOn(base, true))).toBe(5);
   });
 });

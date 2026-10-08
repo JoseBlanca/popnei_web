@@ -175,6 +175,27 @@ function sourceReadBack(source: VariantSource): VariantSource {
 }
 
 /**
+ * `p` with the filter of the FILTER column on, first among its filters,
+ * and the read of its variants file saying `keeps` of the FILTER of its
+ * variants; frozen deeply. For the tests that an analysis reads the
+ * filters that apply to the file.
+ */
+export function withPassedOn(p: Project, keeps: boolean): Project {
+  const variants = p.variants;
+  if (variants?.read.kind !== "read") {
+    throw new Error("popnei_web defect: the project of the test is read.");
+  }
+  return deepFreeze<Project>({
+    ...p,
+    filters: [
+      { kind: "passed" },
+      ...p.filters.filter((f) => f.kind !== "passed"),
+    ],
+    variants: { ...variants, read: { ...variants.read, keepsPassed: keeps } },
+  });
+}
+
+/**
  * Freezes a value and everything it holds, so that a function that writes
  * into it throws in a test, since ES modules run in strict mode. Gives the
  * value itself.

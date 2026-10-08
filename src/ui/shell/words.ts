@@ -26,6 +26,7 @@ import {
   columnWarningsOf,
   counted,
   escaped,
+  filtersApplied,
   grouped,
   individualListNeeds,
   individualsCheck,
@@ -343,7 +344,7 @@ function variantsPart(
         parts.push(
           read.numVars === 0
             ? "no variant"
-            : p.filters.length === 0
+            : filtersApplied(p).length === 0
               ? ofFile
               : variantsKept === null
                 ? `${ofFile} before the filters`
@@ -382,7 +383,7 @@ function individualsPart(
 /** The part of the summary line on the filters of the variants and of
     the individuals: "no filter", "1 filter", "2 filters". */
 function filtersPart(p: Project): string {
-  const numFilters = p.filters.length + p.individualFilters.length;
+  const numFilters = filtersApplied(p).length + p.individualFilters.length;
   return numFilters === 0 ? "no filter" : counted(numFilters, "filter");
 }
 

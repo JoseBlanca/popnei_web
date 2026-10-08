@@ -66,7 +66,7 @@ function project(
         individuals: options.individuals ?? ["i1", "i2", "i3"],
         ploidy: 2,
         numVars: null,
-        keepsPassed: false,
+        keepsPassed: isVcf,
       },
     },
     filters: options.filters ?? [],

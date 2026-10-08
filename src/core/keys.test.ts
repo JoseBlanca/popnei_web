@@ -1055,10 +1055,13 @@ describe("VS2 D3 the key of a write", () => {
     },
   );
 
-  test("changes the key with any change of the filters of the variants", () => {
+  test("changes the key with any change of the filters of the variants that apply to the file", () => {
     fc.assert(
       fc.property(projectWithVariants, variantFilters, (p, filters) => {
-        fc.pre(canonical(filters, null) !== canonical(p.filters, null));
+        fc.pre(
+          canonical(filtersApplied({ ...p, filters }), null) !==
+            canonical(filtersApplied(p), null),
+        );
         const memo = createKeyMemo();
         expect(neiKeyOf({ ...p, filters }, memo)).not.toBe(neiKeyOf(p, memo));
       }),

@@ -31,7 +31,7 @@ import type { Project, VariantSource } from "../project.ts";
 import { spectrumWarnings } from "./sfs.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisStatus, Warning, WorkerClient } from "../store.ts";
-import { deepFreeze, noPopDiversity } from "../testSupport.ts";
+import { deepFreeze, noPopDiversity, withPassedOn } from "../testSupport.ts";
 import type {
   Cell,
   DiversityJob,
@@ -3105,5 +3105,23 @@ describe("PA6 D3 the default draw", () => {
       variants: { ...p.variants, read: { kind: "pending" } },
     });
     expect(defaultDrawOf(pending)).toBeNull();
+  });
+});
+
+describe("SF2 D4 the diversity reads the filters that apply to the file", () => {
+  test("with passed on and a .nei file whose read says keepsPassed false, the job and the key are those of the filters without it", () => {
+    const p = withPassedOn(project(), false);
+    const keeping = withPassedOn(project(), true);
+    const { client, jobs } = recordingClient();
+    diversity.run(p, client);
+    diversity.run(project(), client);
+    expect(jobs[0]?.filters).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+    expect(jobs[0]).toEqual(jobs[1]);
+    expect(keyOfDiversity(p)).toBe(keyOfDiversity(project()));
+    diversity.run(keeping, client);
+    expect(jobs[2]?.filters[0]).toEqual({ kind: "passed" });
+    expect(keyOfDiversity(keeping)).not.toBe(keyOfDiversity(project()));
   });
 });

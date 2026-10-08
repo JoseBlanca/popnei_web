@@ -7,7 +7,7 @@
 import { describe, expect, test } from "vitest";
 import type { IndividualsKept, KeptList } from "./individualsKept.ts";
 import type { Project } from "./project.ts";
-import { deepFreeze, sampleProject } from "./testSupport.ts";
+import { deepFreeze, sampleProject, withPassedOn } from "./testSupport.ts";
 import {
   WRITE_MAX_BYTES,
   WRITE_WARN_BYTES,
@@ -212,5 +212,21 @@ describe("IP10 D3 the warning of the size, one byte below its bound", () => {
     const below = writeEstimate(projectOf(null, []), individuals, 723_589);
     expect(below?.numBytes).toBe(WRITE_WARN_BYTES - 1);
     expect(below?.warn).toBe(false);
+  });
+});
+
+describe("SF2 D4 the estimate of the write reads the filters that apply to the file", () => {
+  test("with passed alone on and a .nei file whose read says keepsPassed false, the variants of the read are exact, as with no filter", () => {
+    const kept = keptOf({ kind: "known", individuals: ["i1", "i2"] });
+    const base = projectOf(1200, []);
+    expect(writeEstimate(withPassedOn(base, false), kept, null)).toEqual(
+      writeEstimate(base, kept, null),
+    );
+    expect(writeEstimate(withPassedOn(base, false), kept, null)?.bound).toBe(
+      false,
+    );
+    expect(writeEstimate(withPassedOn(base, true), kept, null)?.bound).toBe(
+      true,
+    );
   });
 });

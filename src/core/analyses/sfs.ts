@@ -10,7 +10,7 @@
  * histograms draw.
  */
 
-import { grouped } from "../project.ts";
+import { filtersApplied, grouped } from "../project.ts";
 import type { Project } from "../project.ts";
 import type { Warning } from "../store.ts";
 import { csvField, defect } from "./words.ts";
@@ -173,7 +173,7 @@ const MAF_KEEPS_ALL = 1;
  * `r` have them.
  */
 export function spectrumWarnings(r: DiversityResult, p: Project): Warning[] {
-  const filter = p.filters.find((f) => f.kind === "maf");
+  const filter = filtersApplied(p).find((f) => f.kind === "maf");
   const counts = r.passStats.filtering.maf;
   if (
     filter?.kind !== "maf" ||

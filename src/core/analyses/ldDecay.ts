@@ -16,6 +16,7 @@
 import { hasIndividualThreshold } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
+  filtersApplied,
   ONE_POPULATION,
   analysisOptions,
   bothOf,
@@ -783,7 +784,7 @@ function keyInputs(p: Project): JsonObject {
   const options = ldDecayOptions(p);
   return {
     pops: populationsOf(p),
-    filters: ldDecayFilters(p.filters),
+    filters: ldDecayFilters(filtersApplied(p)),
     options: {
       maxDist: options.maxDist,
       maxAllowedMaf: options.maxAllowedMaf,
@@ -846,7 +847,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: ldDecayFilters(p.filters),
+    filters: ldDecayFilters(filtersApplied(p)),
     individuals: c.individuals,
     pops: kept.pops,
     minDist: LD_DECAY_MIN_DIST,
@@ -1092,13 +1093,13 @@ function script(p: Project): string {
   return [
     ...scriptComment(p),
     `ld_variants = ${open}`,
-    ...ldDecayFilters(p.filters)
+    ...ldDecayFilters(filtersApplied(p))
       .filter((filter) => filter.kind === "passed")
       .map(filterLine),
     ...(p.individualFilters.length === 0
       ? []
       : ["ld_variants.filter_individuals(individuals_kept)"]),
-    ...ldDecayFilters(p.filters)
+    ...ldDecayFilters(filtersApplied(p))
       .filter((filter) => filter.kind !== "passed")
       .map(filterLine),
     ...scriptPops(p),

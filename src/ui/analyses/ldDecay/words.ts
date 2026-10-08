@@ -19,7 +19,12 @@ import {
 } from "../../../core/analyses/ldDecay.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import { counted, escaped, grouped } from "../../../core/project.ts";
+import {
+  counted,
+  escaped,
+  filtersApplied,
+  grouped,
+} from "../../../core/project.ts";
 import type { Project } from "../../../core/project.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";
@@ -91,7 +96,7 @@ export const LD_PRUNING_LINE =
     its options in every state, that of a plot shown among them, since
     the pruning turned on keeps the plot (ldDecay.md, "The cases"). */
 export function pruningLine(p: Project): string | null {
-  return p.filters.some((filter) => filter.kind === "ld")
+  return filtersApplied(p).some((filter) => filter.kind === "ld")
     ? LD_PRUNING_LINE
     : null;
 }

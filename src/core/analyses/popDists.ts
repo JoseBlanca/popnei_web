@@ -21,6 +21,7 @@ import {
   bothOf,
   counted,
   escaped,
+  filtersApplied,
   grouped,
   individualsNeeds,
   jobFilters,
@@ -422,7 +423,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(p.filters),
+    filters: jobFilters(filtersApplied(p)),
     individuals: c.individuals,
     pops: withMinimum,
     leftOut: under,

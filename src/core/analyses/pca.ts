@@ -22,6 +22,7 @@
 import type { IndividualStats, IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
+  filtersApplied,
   MAX_LD_DIST,
   ONE_POPULATION,
   VARIANT_FILTER_ORDER,
@@ -518,7 +519,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
   return c.run({
     analysis: ID,
     fileId: p.variants.fileId,
-    filters: jobFilters(pcaFilters(p.filters, o)),
+    filters: jobFilters(pcaFilters(filtersApplied(p), o)),
     individuals: c.individuals,
     method: o.method,
     numCompsKept: PCA_NUM_COMPS_KEPT,
@@ -537,7 +538,7 @@ function run(p: Project, c: WorkerClient<Job, JobResult>): Run<JobResult> {
  */
 function keyInputs(p: Project): JsonObject {
   const o = pcaOptions(p);
-  return { method: o.method, filters: pcaFilters(p.filters, o) };
+  return { method: o.method, filters: pcaFilters(filtersApplied(p), o) };
 }
 
 /** The name of a method in the words of the panel. */
@@ -557,7 +558,7 @@ function warnings(result: JobResult, p: Project): readonly Warning[] {
   const r = pcaResultOf(result);
   const name = methodName(r.method);
   const found: Warning[] = [];
-  const filters = pcaFilters(p.filters, pcaOptions(p));
+  const filters = pcaFilters(filtersApplied(p), pcaOptions(p));
   if (!filters.some((filter) => filter.kind === "ld")) {
     found.push({
       code: "pruningOff",
@@ -697,7 +698,7 @@ function script(p: Project): string {
     throw defect("the script of the PCA needs a variants file.");
   }
   const o = pcaOptions(p);
-  const filters = jobFilters(pcaFilters(p.filters, o));
+  const filters = jobFilters(pcaFilters(filtersApplied(p), o));
   const open = pythonOpenVariants(variants);
   const kept = PCA_NUM_COMPS_KEPT;
   const prints = (result: string): string[] => [

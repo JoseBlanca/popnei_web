@@ -33,7 +33,7 @@ import {
 import type { Project, ProjectVariantFilter } from "../project.ts";
 import { createStore } from "../store.ts";
 import type { AnalysisView, WorkerClient } from "../store.ts";
-import { deepFreeze } from "../testSupport.ts";
+import { deepFreeze, withPassedOn } from "../testSupport.ts";
 import type {
   IndividualFilter,
   IndividualsTable,
@@ -90,6 +90,9 @@ interface Setting {
   } | null;
   /** The variants a pass counted in the file, `null` when none has. */
   readonly numVars?: number | null;
+  /** Whether the read says the variants record their FILTER; true for a
+      VCF and false for a `.nei` file unless given. */
+  readonly keepsPassed?: boolean;
   /** The filters of individuals; none. */
   readonly individualFilters?: readonly IndividualFilter[];
   /** The individuals file: read with every individual, pending, or none. */
@@ -129,7 +132,9 @@ function project(setting: Setting = {}): Project {
         individuals,
         ploidy: 2,
         numVars: setting.numVars ?? null,
-        keepsPassed: false,
+        keepsPassed:
+          setting.keepsPassed ??
+          (setting.readOptions !== undefined && setting.readOptions !== null),
       },
     },
     filters: setting.filters ?? [MISSING_01],
@@ -2156,5 +2161,22 @@ describe("IP10 D3 the cases of the PCA in the store", () => {
     expect(made.status().kind).toBe("locked");
     expect(made.store.startRun("pca")).toBeNull();
     expect(made.sent).toEqual([]);
+  });
+});
+
+describe("SF2 D4 the PCA reads the filters that apply to the file", () => {
+  test("with passed on and a .nei file whose read says keepsPassed false, the job, the key and the script are those of the filters without it", () => {
+    const base = project();
+    const p = withPassedOn(base, false);
+    const { client, jobs } = recordingClient(null);
+    pca.run(p, client);
+    pca.run(base, client);
+    expect(jobs[0]).toEqual(jobs[1]);
+    expect(keyOfPca(p)).toBe(keyOfPca(base));
+    expect(pca.script(p)).toBe(pca.script(base));
+    expect(pca.script(p)).not.toMatch(/filter_passed/);
+    const keeping = withPassedOn(base, true);
+    expect(keyOfPca(keeping)).not.toBe(keyOfPca(base));
+    expect(pca.script(keeping)).toMatch(/pca_variants\.filter_passed\(\)/);
   });
 });

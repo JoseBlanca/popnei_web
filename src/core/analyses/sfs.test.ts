@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { spectraCsv, spectraOf, spectrumWarnings } from "./sfs.ts";
 import type { Project } from "../project.ts";
-import { deepFreeze, noPopDiversity, sampleProject } from "../testSupport.ts";
+import {
+  deepFreeze,
+  noPopDiversity,
+  sampleProject,
+  withPassedOn,
+} from "../testSupport.ts";
 import type {
   DiversityResult,
   FilteringStats,
@@ -329,5 +334,15 @@ describe("PA6 D6 the spectrum's module: the numbers of popnei", () => {
     expect(p2?.shares?.[0]).toBe(0.042616971066566346);
     expect(p1?.shares?.[14]).toBe(0.05618145165329451);
     expect(spectraOf(PANEL).largestShare).toBe(0.05618145165329451);
+  });
+});
+
+describe("SF2 D4 the warning of the spectrum reads the filters that apply to the file", () => {
+  test("with passed on and a .nei file whose read says keepsPassed false, the warnings are those of the filters without it", () => {
+    const base = projectWith([{ kind: "maf", maxAllowedMaf: 0.95 }]);
+    const r = workedExample();
+    expect(spectrumWarnings(r, withPassedOn(base, false))).toEqual(
+      spectrumWarnings(r, base),
+    );
   });
 });

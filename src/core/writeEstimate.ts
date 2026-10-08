@@ -9,7 +9,7 @@
  */
 
 import type { IndividualsKept } from "./individualsKept.ts";
-import { grouped } from "./project.ts";
+import { filtersApplied, grouped } from "./project.ts";
 import type { Project } from "./project.ts";
 
 /** The bytes of the file per genotype of a variant kept and an individual
@@ -88,7 +88,7 @@ export function writeEstimate(
     varsBound = false;
   } else if (read.numVars !== null) {
     numVars = read.numVars;
-    varsBound = p.filters.length > 0;
+    varsBound = filtersApplied(p).length > 0;
   } else {
     return null;
   }

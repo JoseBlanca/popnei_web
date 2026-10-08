@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { variantsStem, writtenName } from "./fileNames.ts";
 import type { Project } from "./project.ts";
-import { deepFreeze, sampleProject } from "./testSupport.ts";
+import { deepFreeze, sampleProject, withPassedOn } from "./testSupport.ts";
 
 describe("the stem of the name of a variants file", () => {
   test("drops .nei, .vcf and .vcf.gz, in any case", () => {
@@ -76,5 +76,13 @@ describe("VS2 D4 the name of the written file of the filtered variants", () => {
   test("a project with no variants file gives project.nei", () => {
     const p = deepFreeze<Project>({ ...sampleProject(), variants: null });
     expect(writtenName(p)).toBe("project.nei");
+  });
+});
+
+describe("SF2 D4 the name of the written file reads the filters that apply to the file", () => {
+  test("panel.nei with passed alone on, its read saying keepsPassed false, gives panel.nei, the file converted", () => {
+    const p = projectNamed("panel.nei", { filters: [], individualFilters: [] });
+    expect(writtenName(withPassedOn(p, false))).toBe("panel.nei");
+    expect(writtenName(withPassedOn(p, true))).toBe("panel.filtered.nei");
   });
 });
