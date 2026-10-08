@@ -643,6 +643,50 @@ test("SF9 D5 a crash of the worker while a run waits keeps the run as a step of 
   );
 });
 
+test("SF9 D5 a crash of the worker during a drag of a line makes the drag a step of Undo as the line leaves, before the mouse is released", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const vcf = testInfo.outputPath("stats.vcf.gz");
+  await writeBigVcf(vcf, 30_000);
+  await holdSummary(page);
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Open variants file…" }).click();
+  await (await chooser).setFiles(vcf);
+  await expect(
+    page.getByText("Calculating the statistics of the variants… 100%"),
+  ).toBeVisible({ timeout: 60_000 });
+  await release(page, "oneSoFar");
+  const missing = histogram(page, MISSING);
+  await expect(missing.box).toHaveValue("0.1", { timeout: 60_000 });
+  await expect(undoButton(page)).toBeDisabled();
+  // The drag under way: the pointer down and moved, not released.
+  await missing.thumb.scrollIntoViewIfNeeded();
+  const box = await missing.thumb.boundingBox();
+  if (box === null) throw new Error("no thumb");
+  const y = box.y + box.height / 2;
+  const x = box.x + box.width / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 60, y, { steps: 8 });
+  await expect(missing.box).not.toHaveValue("0.1");
+  await release(page, "crash");
+  await expect(
+    stats(page).getByText("Not calculated.", { exact: true }).first(),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(missing.slider).toHaveCount(0);
+  // No run waits for a drag: Undo is enabled only if the threshold made
+  // the drag a change as it left.
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the filter of the variants by missing data changed",
+  );
+  await page.mouse.up();
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the filter of the variants by missing data changed",
+  );
+});
+
 test("SF9 D5 the expected heterozygosity has its plot and title, and no line and no box", async ({
   page,
 }) => {

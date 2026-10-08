@@ -241,10 +241,17 @@ the number of bins is the piece `popnei-0.2.2`'s,
 when no individual's value of popnei's lies above it. While the file is
 read the grey follows the result so far: the missing rate at 0.1 on a
 file whose first variants all lie below it is grey, and loses its grey
-when a variant above it is read. Nothing is said when the grey comes or
-goes; the line's value and the box's description change with it, and a
-screen reader reads them when the user next reaches the line or the
-box.
+when a variant above it is read. The line's value and the box's
+description change with the grey, and a screen reader reads them when
+the user next reaches the line or the box. Besides, a change the user
+makes from the keyboard that turns a threshold on, on and grey, or off
+from another of the three, a number committed in the box or a run of
+the arrow keys once it is made a change, is announced once in the
+status region (below, "Its words"), since a sighted user sees the
+colour change and a user of a screen reader would otherwise not hear
+it until they came back to the threshold; decided by the session on 8
+October 2026. Nothing is said at each press of a run, nor for a drag,
+which is seen, nor when the grey comes or goes as the file is read.
 
 The line has two parts, and both are grey together: the line drawn by
 the histogram of `src/charts/`, dotted in the grey when the screen asks
@@ -591,6 +598,7 @@ number being dragged, typed or moved by a run of keys.
 | the line's value for a screen reader | on: its number, "0.05"; on and grey: "0.1, keeps every variant of the plot", "… every individual of the plot"; off: "1, keeps every variant", "1, keeps every individual" |
 | the description of the box, for a screen reader alone | on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; off: "This filter removes nothing."; none otherwise |
 | a number refused while off | "1.5 is more than 1; the threshold stays 1." |
+| announced when a number committed in the box, or a run of the keys made a change, changes the look | into on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; into off: "This filter removes nothing."; back to removing some: the number alone, as the line reads it, "0.05"; nothing when the look stays |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
 | after an undo, in the status region | "Undone: the MAF filter changed."; "Undone: the variants that failed their FILTER are kept." |
@@ -614,8 +622,12 @@ another variants file…".
 **What is said without moving the focus** (4.1.3, "Status messages").
 An undo or a redo, in the status region. A number refused, as today. A
 change of a filter itself is heard as the change of the control the
-user acted on, and nothing more is said. Nothing at each press of an arrow
-key: the line's value is read as it moves, as of any slider.
+user acted on, and nothing more is said, except when it turns the
+threshold on, grey or off from another of the three: then the words of
+the new look are said once (above, "Its words"). Nothing at each press
+of an arrow key: the line's value is read as it moves, as of any
+slider; a run that changes the look is said once it is made a change,
+and an Undo straight after drops what it would have said.
 
 **The grey in words** (1.4.1, "Use of color"). A threshold that keeps
 every value of its plot, off or on, is shown on the screen by its grey
@@ -723,8 +735,12 @@ called at the release of a pointer and not at a key.
   variant.", when a number committed in the box turned the grey on or
   off. None of those stays: the words say "of the plot", which the plot
   drawn from a result so far is, and whose description already says
-  "Drawn from the variants read so far."; and nothing is announced as
-  the grey comes or goes (above, "A threshold, on and off").
+  "Drawn from the variants read so far." The announcement came back
+  after the build, on 8 October 2026, in the words of the set: a
+  number committed in the box, or a run of the keys made a change, that
+  turns a threshold on, grey or off from another of the three says the
+  box's description of the new look, or the number alone when it
+  removes some again (above, "Its words").
 - "1.5 is more than 1; the threshold stays 1." for a number refused
   while the threshold is off, the words of a threshold on with 1, the
   number the box shows.

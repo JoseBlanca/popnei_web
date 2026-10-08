@@ -305,6 +305,24 @@ export function thresholdHiddenDescription(
   }
 }
 
+/** What the page announces when a number committed in the box of a
+    threshold, or a run of the arrow keys made a change, turns its look
+    from `before` to `after` (docs/specs/steps/popgen2-filters.md, "Its
+    words"): into grey or off, the description of the box in that look,
+    "This filter removes no variant of the plot.", "This filter removes
+    nothing."; back to removing some, its number alone, `shown`, as the
+    line reads it, "0.05"; `null` when the look stays. A sighted user sees
+    the grey come or go; this is how a screen reader hears it. */
+export function thresholdLookChangeText(
+  before: ThresholdLook,
+  after: ThresholdLook,
+  shown: number,
+  noun: Counted,
+): string | null {
+  if (before === after) return null;
+  return thresholdHiddenDescription(after, noun) ?? numberText(shown);
+}
+
 /** The line under a histogram of the individuals of those with no value,
     `numNaN`, which a filter on removes, since no value is at most any
     threshold (individualsKept.ts), and a filter off keeps: on, "3

@@ -502,7 +502,7 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
   await expectGrey(missing, true);
 });
 
-test("SF9 D4 a number committed in the box that turns the threshold grey or back is announced by nothing; the description of the box says it, read when the user next reaches it", async ({
+test("SF9 D5 a number committed in the box, or a run of the keys made a change, that turns the threshold on, grey or off is announced once; a change that keeps the look, and each press, are not", async ({
   page,
 }) => {
   await recordAnnouncements(page);
@@ -514,30 +514,53 @@ test("SF9 D4 a number committed in the box that turns the threshold grey or back
     { timeout: 20_000 },
   );
   // The end of the pass is announced too: its result waited for, and the
-  // words of the thresholds looked for in the texts.
+  // texts said from here looked at.
   await expect(downloadOf(page)).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(async () => (await announced(page)).join(" "))
+    .toContain("The statistics of panel.vcf.gz are calculated.");
+  const start = (await announced(page)).length;
   const said = async (): Promise<readonly string[]> =>
-    (await announced(page)).flatMap(
-      (text) => text.match(/This (filter|threshold) removes [^.]*\./gu) ?? [],
-    );
-  // Grey to red by Enter.
+    (await announced(page)).slice(start);
+
+  // Grey to on by Enter: the number alone.
   await missing.box.fill("0.05");
   await missing.box.press("Enter");
   await expectGrey(missing, false);
-  await expect(missing.box).toHaveAccessibleDescription("");
-  // Red to grey by leaving the box.
+  await expect.poll(said).toEqual(["0.05"]);
+  // On to on: nothing.
+  await missing.box.fill("0.04");
+  await missing.box.press("Enter");
+  // On to grey by leaving the box: the box's description in the grey.
   await missing.box.fill("0.09");
   await missing.box.press("Tab");
   await expectGrey(missing, true);
   await expect(missing.box).toHaveAccessibleDescription(REMOVES_NO_VARIANT);
-  // Grey to red by the line: its value says it.
+  await expect.poll(said).toEqual(["0.05", REMOVES_NO_VARIANT]);
+
+  // Grey to on by a run of the line: nothing at the presses, the number
+  // once the run is a change, at the focus leaving it.
   await missing.slider.focus();
   // 0.08 keeps the variant with 16 of 200 genotypes missing; 0.07 not.
   await page.keyboard.press("PageDown");
   await page.keyboard.press("PageDown");
   await expectGrey(missing, false);
   await expect(missing.slider).toHaveAttribute("aria-valuetext", "0.07");
-  expect(await said()).toEqual([]);
+  await page.keyboard.press("Tab");
+  await expect.poll(said).toEqual(["0.05", REMOVES_NO_VARIANT, "0.07"]);
+  // A run that keeps the look: nothing.
+  await missing.slider.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(missing.slider).toHaveValue("0.069");
+  await page.keyboard.press("Tab");
+
+  // On to off by an emptied box.
+  await missing.box.fill("");
+  await missing.box.press("Enter");
+  await expect(missing.box).toHaveValue("1");
+  await expect
+    .poll(said)
+    .toEqual(["0.05", REMOVES_NO_VARIANT, "0.07", REMOVES_NOTHING]);
 });
 
 test("TH5 the owner's first round: 0 typed for the variants is a threshold of 0, with nothing said, red where some variant has a value above it; the plot does not move", async ({

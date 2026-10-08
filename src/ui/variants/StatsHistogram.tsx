@@ -25,8 +25,10 @@
  * threshold keeps: one that keeps every variant or individual of its
  * plot, or is off, is drawn in grey, its line and the number in its box,
  * and a screen reader hears it in the value of the line and in a
- * description of the box that the screen does not draw. Nothing is
- * announced as the grey comes or goes.
+ * description of the box that the screen does not draw. A number
+ * committed in the box, or a run of the keys made a change, that turns
+ * the threshold on, grey or off from another of the three is announced
+ * once, in the words of thresholdLookChangeText; a drag, seen, is not.
  *
  * Ctrl+Z and Ctrl+Y on the line or in the box while a run waits make the
  * run a change, and then go on to the page's Undo or Redo, so that Undo
@@ -40,12 +42,14 @@ import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { shortcutOf } from "../shell/shortcuts.ts";
+import type { ThresholdLook } from "../../core/thresholds.ts";
 import { thresholdRefusedText } from "../steps/variants/words.ts";
 import { HistogramPlot } from "../widgets/HistogramPlot.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
 import { ThresholdSlider } from "../widgets/ThresholdSlider.tsx";
 import { useRunGate } from "./runGate.tsx";
 import type { PlotThreshold, StatsPlot } from "./statsPlots.ts";
+import { thresholdLookChangeText } from "./statsWords.ts";
 import styles from "./StatsHistogram.module.css";
 import { createThresholdRun } from "./thresholdRun.ts";
 import type { ThresholdRun } from "./thresholdRun.ts";
@@ -76,6 +80,10 @@ export interface StatsHistogramProps {
       Undo names it while a run of the keys waits. */
   readonly describeSet: (value: number) => string | null;
 }
+
+/** The kind of the announcement of a threshold's look, of which only the
+    latest is said, and which an undo just after drops. */
+const LOOK_ANNOUNCED = "thresholdLook";
 
 /** Writes `frame`, where the plot drew its frame, on `element`, around
     the plot and its line, as the custom properties the line is placed
@@ -132,11 +140,22 @@ export function StatsHistogram({
   const onSetRef = useRef(onSet);
   const onMovingRef = useRef(onMoving);
   const describeSetRef = useRef(describeSet);
+  const setRef = useRef(set);
   useLayoutEffect(() => {
     onSetRef.current = onSet;
     onMovingRef.current = onMoving;
     describeSetRef.current = describeSet;
+    setRef.current = set;
   });
+  // Says once that a change turned the threshold on, grey or off from
+  // another of the three; nothing while it leaves the page.
+  const leavingRef = useRef(false);
+  const announceLook = (text: string | null): void => {
+    if (text === null || leavingRef.current) return;
+    announcer.announce(text, { replaces: LOOK_ANNOUNCED });
+  };
+  // The look of the threshold where the run waiting started.
+  const runFromLookRef = useRef<ThresholdLook | null>(null);
   // The run of the keys of this threshold, made at its first press; read
   // in the handlers alone.
   const runRef = useRef<ThresholdRun | null>(null);
@@ -144,8 +163,17 @@ export function StatsHistogram({
     runRef.current ??= createThresholdRun({
       gate,
       describe: (to) => describeSetRef.current(to),
+      // The threshold drawn at the end of the run is drawn at `to`, in
+      // the look the change gives it.
       change: (to) => {
+        const before = runFromLookRef.current;
+        const after = setRef.current;
         onSetRef.current(to);
+        if (before !== null && after !== null) {
+          announceLook(
+            thresholdLookChangeText(before, after.look, to, after.counted),
+          );
+        }
       },
       ended: () => {
         onMovingRef.current(null);
@@ -174,9 +202,19 @@ export function StatsHistogram({
   // and has not made a change is made one, and the focus it held goes to
   // the heading of the page once it is gone, not to nothing. Before the
   // elements go: the cleanup of a layout effect runs while they are in
-  // the page.
+  // the page. The commands it gives the store, and the state it sets on
+  // the histogram above, come in React's commit and not in a render, as
+  // from a layout effect: React draws what they change once the commit
+  // ends, and drops without a warning a state set on a component that is
+  // leaving (StatsSection.test.ts checks that nothing is warned). Nothing
+  // is announced from here.
+  // Set again after the cleanup that <StrictMode> runs at the mount.
+  useLayoutEffect(() => {
+    leavingRef.current = false;
+  }, []);
   useLayoutEffect(
     () => () => {
+      leavingRef.current = true;
       const block = blockRef.current;
       const hadFocus = block?.contains(document.activeElement) === true;
       if (boxRef.current?.contains(document.activeElement) === true) {
@@ -217,6 +255,7 @@ export function StatsHistogram({
 
   /** A press of a key moved the threshold to `value`, on its step. */
   const pressed = (value: number): void => {
+    if (runRef.current?.waiting() !== true) runFromLookRef.current = set.look;
     runOf().press(set.slider.value, value);
     onMoving(value);
   };
@@ -264,13 +303,27 @@ export function StatsHistogram({
             commitRef.current = commit;
           }}
           onTyped={onTyped}
+          // The threshold drawn is drawn at the number committed, which
+          // was typed, and the one set is the project's.
           onChange={(value) => {
             runRef.current?.end();
-            onSet(threshold.onStep(value));
+            const committed = threshold.onStep(value);
+            onSet(committed);
+            announceLook(
+              thresholdLookChangeText(
+                set.look,
+                threshold.look,
+                committed,
+                threshold.counted,
+              ),
+            );
           }}
           onEmptied={() => {
             runRef.current?.end();
             onSet(null);
+            announceLook(
+              thresholdLookChangeText(set.look, "off", 1, threshold.counted),
+            );
           }}
           // From where the line is, at the number typed when one is, which
           // the field puts back and tells the screen it is typed no more.

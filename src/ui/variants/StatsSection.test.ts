@@ -18,6 +18,7 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 
 import { loadVariants } from "../../core/project.ts";
@@ -361,6 +362,49 @@ describe("the section of the statistics of the open file", () => {
     });
     expect(partsText().match(/Not calculated\./gu)).toHaveLength(2);
     expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+  });
+
+  test("SF9 D5 a run of the keys waiting in a box when its plot leaves the page, the pass failed, is made a change at once, with no warning of React", async () => {
+    const warned = vi.spyOn(console, "error");
+    try {
+      const page = await drawPage();
+      await open(page, FIRST);
+      const request = page.requests.at(-1);
+      if (request === undefined) throw new Error("no request was sent");
+      await act(async () => {
+        request.soFar(summaryResult(["1"], [523], ["i1", "i2"]));
+        await Promise.resolve();
+      });
+      await settled();
+      const box = sectionOf()?.querySelector(
+        '[role="group"][aria-label="Major allele frequency"] input[data-number-field]',
+      );
+      if (!(box instanceof HTMLInputElement)) throw new Error("no MAF box");
+      // Down from off turns the MAF on below the top of its axis, in a run
+      // that waits a second before it is a change.
+      await act(async () => {
+        box.focus();
+        box.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+        );
+        await Promise.resolve();
+      });
+      // The run waits: the last step of Undo is still the opening.
+      expect(page.store.getState().undo).toBe("a new variants file was loaded");
+      const pressedAt = performance.now();
+
+      await endFailed(page, {
+        kind: "popnei",
+        message: "a genotype of 3 alleles",
+      });
+      expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+      // Made by the threshold as it left, well before the run's second.
+      expect(performance.now() - pressedAt).toBeLessThan(500);
+      expect(page.store.getState().undo).toBe("the MAF filter was turned on");
+      expect(warned).not.toHaveBeenCalled();
+    } finally {
+      warned.mockRestore();
+    }
   });
 
   test("live-stats 2 the plots are drawn from each result so far while the pass runs, saying so, with no download, and from the result at its end", async () => {

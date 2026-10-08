@@ -119,6 +119,8 @@ export interface PlotThreshold {
   readonly name: string;
   /** How it is drawn: on, on and grey, or off, the last two in grey. */
   readonly look: ThresholdLook;
+  /** What its histogram counts, in its words: variants or individuals. */
+  readonly counted: Counted;
   /** The range of the slider, the horizontal axis of the plot, its step
       and where it is: the threshold, or the top of the axis when it is
       off. */
@@ -237,6 +239,7 @@ export function variantPlot(
       shownLabel: thresholdShownLabel(shortTitle),
       name: variantThresholdName(statistic),
       look,
+      counted: "variant",
       slider: { min: low, max: high, step, value: shown },
       box: boxOf(shown, look, step),
       ...wordsOf(shown, look, "variant"),
@@ -305,6 +308,7 @@ export function individualPlot(
         shownLabel: thresholdShownLabel(shortTitle),
         name: individualThresholdName(statistic),
         look,
+        counted: "individual",
         slider: { min: low, max: high, step, value: shown },
         box: boxOf(shown, look, step),
         ...wordsOf(shown, look, "individual"),
