@@ -873,3 +873,35 @@ The review found that a `.nei` file written from a VCF records its
 FILTER, which popnei 0.2.2 tells by `keepsPassed`; the owner decided on
 7 October 2026 that the FILTER box shows and acts for such a file
 (a1a4a8a, 728cf14, 0383590).
+
+### Work package 2, 8 October 2026
+
+Commits b2d80e6 (2.1: the reply to opening a file carries
+`keepsPassed`, PROTOCOL_VERSION 14, the fixture `low_qual.nei` written by
+`make_fixtures.mjs --low-qual-nei`), b528be4 (2.2), cb19d8b (2.3).
+Different from the plan: `keyInputs` of the PCA and the LD decay read
+`p.variants` through `filtersApplied`; the session decided that this is
+the rule (`keyInputs` reads the variants file only through whether it
+recorded its FILTER, and a key stays across the read only while that
+answer is the same), since every analysis is locked until the read
+comes back.
+
+Checks on cb19d8b: Vitest 4,141 in 119 files; the rest clean;
+Playwright 622 in Chromium and 622 in WebKit.
+
+Review: architecture and spec; api and errors; tests and stale. No
+result shown under a key that does not hold its inputs, and no path
+left for `passed` to reach popnei over a file that did not record its
+FILTER. Found: the comparison of a project file's numbers would be lost,
+or falsely said to differ, for a `.nei` that records its FILTER and for
+the PCA and the LD decay, once `popgen2.html` saves projects; an import
+cycle keys.ts ↔ project.ts; two words of 2.3 untested; a key property
+narrowed more than needed; test fixtures giving a VCF `keepsPassed`
+false; a stale comment; a test that failed under load. Fixed in
+8d14845, f402c90, bebb6fe, 4800dc6, 12c5f09, b3b1194, 5151f16: each
+check keeps, from the opening, one fingerprint for each answer of
+`keepsPassed`, and the comparison takes the one of the file once it is
+read (the project file's format unchanged); the three functions in
+`src/core/filtersApplied.ts`; the specs keys.md, store.md, projectFile.md,
+project.md, pca.md, ldDecay.md say the rule. Vitest 4,197, twice;
+Playwright 622 and 622.
