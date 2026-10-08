@@ -105,12 +105,17 @@ of the format, a `.nei` file or a VCF compressed with bgzip, `.vcf.gz`,
 and its buttons; while the file is written it shows a bar and Stop, and
 then a Save button with the name and the size of the file. There is no
 "Tools" section, as the owner decided on 8 October 2026. popnei 0.2.2
-hands the file over in pieces of 1 MiB, so the memory of the tab holds
-the file about once, where the old page's write held it four to six
-times; the worker gathers the pieces into one file and hands it to the
-page. When the filters keep no variant the download ends in an error;
+hands the file over in pieces of 1 MiB. The worker gathers them into
+one `Blob`, the browser's object for a file made in the page, which it
+hands to the page with no copy; so the tab holds the file about once,
+where the old page's write held 4.4 times its size in Chromium and up to
+6.1 times in WebKit (measured on 27 September 2026, files up to 1.98
+GB). That once is argued from Chromium's sources and is still to be
+measured in each browser, in the plan. When the filters keep no variant the download ends in an error;
 nothing else is refused or warned of before the write, and no limit of
 size is set: the plan measures the largest file each browser writes.
+A file too large for the browser ends in an error, except where the
+browser closes the tab, which the measurement looks for.
 
 **What approving commits to that is hard to undo.** The FILTER box is a
 new kind of filter in the project file. A project file holding it
@@ -615,10 +620,12 @@ open file, which the owner judged unacceptable on 7 October 2026.
    is written the dialog shows the bar of the write in place of the
    choice, from popnei's `onProgress`, one pass over the open file, and
    Stop. Stop ends the write, which ends the worker and starts another,
-   as any Stop does (`docs/architecture.md`, section 5). Escape does
-   nothing while the file is written, so that a key pressed by habit
-   does not throw away minutes of writing; Stop is reached with the Tab
-   key, so the keyboard can still end it (WCAG 2.2, 2.1.1). The page's
+   as any Stop does (`docs/architecture.md`, section 5). The Escape key
+   does nothing while the file is written, so that a key pressed by
+   habit does not throw away minutes of writing; a user without a mouse
+   still reaches Stop by moving to it with the Tab key and pressing it,
+   as WCAG 2.2, the standard of accessibility the applications follow,
+   asks of every action (its criterion 2.1.1). The page's
    `Dialog.tsx` closes on Escape today, and gains that option. This is
    the session's reading of "only the choice of the
    format": a write of a large file takes minutes, and without a bar and
@@ -800,7 +807,9 @@ writing follows: no limit before the write. A write the browser cannot
 hold ends in an error that says so, the worker's crash, "workerFailed"
 of the client, or a `Blob` that cannot be read (above), in words that say the file was too large for the
 memory of this tab and that popnei in Python writes any size; only a tab
-the browser closes says nothing, which the plan measures. The plan
+the browser closes says nothing: the user sees the browser's page of a
+closed tab and loses the filters set, which is what the plan's
+measurement looks for. The plan
 measures the largest file written and saved in Chromium and WebKit on
 the built site, files of 2, 4 and 8 GB from `e2e/bigVcf.ts` as the old
 page's `VS5 D5` did, with the memory of each process, a file past
