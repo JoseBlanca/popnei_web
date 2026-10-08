@@ -1055,3 +1055,13 @@ to popgen2.html, and no result of a previous file can be shown under the
 new one; the store spec's reason for stopping at an opening said for
 popgen2.html too. Noted for later: the cache entries and the `File`
 handles of the files opened before stay until evicted, unreachable.
+
+### Work package 8, 8 October 2026
+
+Commit ba47789: `NumberField` gains `onEmptied` (an emptied box committed
+by Enter, Tab or leaving it) and `hiddenDescription` (a line only a
+screen reader reads); without them the box behaves as before. Not wired
+to popgen2.html, which task 9.2 does. The grey (`muted`) and the page's
+choice of what an arrow key gives (`onSteps`) already existed. Vitest
+4,285; Playwright on popgen2's thresholds, fileStats, Undo and Filter
+flows 41 and 41, the old page's VS and IP flows 310 and 310.
