@@ -24,6 +24,7 @@ import {
   setIndividualFilter,
   setVariantFilter,
   variantFilterNeeds,
+  VARIANT_FILTER_ORDER,
 } from "./project.ts";
 import { filtersApplied } from "./filtersApplied.ts";
 import type {
@@ -6528,7 +6529,7 @@ function ldStore(
       countsOf: (pass): TestResult => ({
         kind: "counts",
         numVars: pass.numVars,
-        kept: new Uint32Array(4).fill(pass.numVars),
+        kept: new Uint32Array(LD_COUNTS).fill(pass.numVars),
       }),
     },
     appVersion: "0.1.0",
@@ -6638,6 +6639,12 @@ function runLdStep(
   }
 }
 
+/** The counts of a result of the fake counts of the property of the LD
+    filter, one of every kind of variant filter its steps can turn on: with
+    fewer, a sequence that turns them all on, the LD filter last, reached
+    a filter with no count, as the seed 1590003994 did on 8 October 2026. */
+const LD_COUNTS = VARIANT_FILTER_ORDER.length;
+
 /** A result of the fake analysis of the request `job`. */
 function fakeResultOf(job: TestJob): TestResult {
   switch (job.analysis) {
@@ -6655,7 +6662,7 @@ function fakeResultOf(job: TestJob): TestResult {
       return {
         kind: "counts",
         numVars: 1150,
-        kept: new Uint32Array(4).fill(1150),
+        kept: new Uint32Array(LD_COUNTS).fill(1150),
       };
   }
 }
