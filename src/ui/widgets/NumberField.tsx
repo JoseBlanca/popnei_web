@@ -46,6 +46,19 @@
  * it is typed, says so in the same line, and refuses the next commit,
  * unless a deletion mended the text before it (the spec, "A character
  * the field does not take").
+ *
+ * Three options serve popgen2.html alone, where a threshold is off by an
+ * empty box or by 1 (docs/specs/steps/popgen2-filters.md, "The number
+ * box"). A field given `onEmptied` calls it when it is committed empty,
+ * by Enter, by Tab or by losing the focus, and shows the number the
+ * screen then gives it: 1 there, which the page turns into off. `muted`
+ * draws the number in the grey of a threshold that keeps every value of
+ * its plot, and `hiddenDescription` is a description that a screen
+ * reader reads and the screen does not show, which says the grey in
+ * words. The number an arrow key gives, which the page chooses from off,
+ * is the page's through `onSteps`, above. Without these options the
+ * field is as on the old page: an emptied field gives nothing and shows
+ * its number again.
  */
 import {
   useContext,
@@ -163,6 +176,10 @@ export interface NumberFieldProps {
   /** A line under the field, which a screen reader reads with it, after
       the line of a refusal and the elements of `describedBy`. */
   readonly description?: string;
+  /** A description a screen reader reads after the others, and the screen
+      does not show: "This filter removes nothing." for a threshold that is
+      off on popgen2.html, whose grey says it to the eye. */
+  readonly hiddenDescription?: string;
   /** Whether the number is drawn in grey, for a number that does
       nothing as it is, a threshold that removes nothing on popgen2.html;
       the field is not disabled, and the screen says it in words to a
@@ -211,6 +228,13 @@ export interface NumberFieldProps {
       screen that steps a number of its own, the line of a threshold,
       from the number typed. Nothing in an empty field, as without it. */
   readonly onSteps?: (steps: number) => void;
+  /** When given, called when the field is committed empty, by Enter, Tab
+      or the loss of the focus, after the user deleted its text; the field
+      then shows the number the screen gives it, the one it held when the
+      screen gives the same. For a field whose empty box means something,
+      a threshold turned off on popgen2.html. Without it an emptied field
+      gives nothing and shows its number again. */
+  readonly onEmptied?: () => void;
 }
 
 /** A number field with its label, and the line of a number it refused. */
@@ -224,6 +248,7 @@ export function NumberField({
   decimals,
   describedBy,
   description,
+  hiddenDescription,
   muted = false,
   refusedText,
   onRefused,
@@ -232,9 +257,11 @@ export function NumberField({
   onChange,
   onSameCommitted,
   onSteps,
+  onEmptied,
 }: NumberFieldProps): React.JSX.Element {
   const refusedId = useId();
   const descriptionId = useId();
+  const hiddenDescriptionId = useId();
   // The line of the last number refused, which is the screen's: it goes
   // at the next commit, and when the value changes otherwise, by an undo
   // or a new load, since it names the value kept.
@@ -351,6 +378,7 @@ export function NumberField({
     ...(refused !== null ? [refusedId] : []),
     ...(describedBy !== undefined && describedBy !== "" ? [describedBy] : []),
     ...(description !== undefined ? [descriptionId] : []),
+    ...(hiddenDescription !== undefined ? [hiddenDescriptionId] : []),
   ];
 
   return (
@@ -378,8 +406,17 @@ export function NumberField({
         // value it was given again. After the Tab key, the blur commits
         // again what that key committed.
         if (refusing.current || tabbed.current) return;
-        // An empty field gives NaN, which sends nothing.
-        if (!Number.isFinite(committed)) return;
+        // An empty field gives NaN, which sends nothing, or the call of an
+        // emptied field when the screen gives one. React Aria has put back
+        // the number it was given, which the screen may now change.
+        if (!Number.isFinite(committed)) {
+          if (Number.isNaN(committed) && onEmptied !== undefined) {
+            answered.current = true;
+            setRefused(null);
+            onEmptied();
+          }
+          return;
+        }
         answered.current = true;
         const checked = checkCommitted(
           committed,
@@ -459,6 +496,14 @@ export function NumberField({
       {description !== undefined && (
         <p id={descriptionId} className={classOf(styles, "description")}>
           {description}
+        </p>
+      )}
+      {hiddenDescription !== undefined && (
+        <p
+          id={hiddenDescriptionId}
+          className={classOf(styles, "visuallyHidden")}
+        >
+          {hiddenDescription}
         </p>
       )}
       {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
@@ -691,7 +736,7 @@ function FieldInput({
         // range, the Up arrow to the least, the Down arrow to the
         // largest, a number the user never typed: the keys that step a
         // number do nothing there. Enter commits the empty field, which
-        // sends nothing.
+        // sends nothing, or calls `onEmptied` when the field has it.
         if (isStepKey(event) && state?.inputValue.trim() === "") {
           event.preventDefault();
           event.stopPropagation();
