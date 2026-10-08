@@ -475,6 +475,7 @@ export function NumberField({
         muted={muted}
         // An empty field, given NaN, holds no text: "NaN" is no number
         // of the field to put back.
+        value={value}
         committedText={Number.isNaN(value) ? "" : numberText(value)}
         isTyped={() => typed.current}
         onRevert={revert}
@@ -560,8 +561,11 @@ interface FieldInputProps {
       point (docs/specs/steps/variants.md, "A character the fields do
       not take"). */
   readonly inputMode: "numeric" | "text";
+  /** The number the field holds, NaN when it is empty. */
+  readonly value: number;
   /** The number the field holds as it shows it, which Ctrl+Z puts back
-      while something is typed. */
+      while something is typed, and which the text is put back to when
+      it holds another number with nothing typed. */
   readonly committedText: string;
   /** Whether anything was typed since the last commit. */
   readonly isTyped: () => boolean;
@@ -591,6 +595,7 @@ function FieldInput({
   onCommitReady,
   onText,
   inputMode,
+  value,
   committedText,
   isTyped,
   onRevert,
@@ -642,6 +647,27 @@ function FieldInput({
       input.removeEventListener("beforeinput", onBeforeInput);
     };
   }, [state, onNotTaken, onNotTakenPending, onMended, onText]);
+
+  // The text follows the number the field is given whenever nothing is
+  // typed. React Aria puts the text in step only in the render where the
+  // number changes, and its commit at the loss of the focus sets again the
+  // text it holds, an update React keeps unapplied with the priority of
+  // the blur: a number given next in a render of lower priority, the drag
+  // of a threshold's line, is put in the text, and then that update is
+  // applied over it, so the box showed 0.9 typed with its line dragged to
+  // 1. Checked after every render, which is when React Aria's state
+  // changes.
+  useLayoutEffect(() => {
+    if (
+      state === null ||
+      isTyped() ||
+      Object.is(state.numberValue, value) ||
+      state.inputValue === committedText
+    ) {
+      return;
+    }
+    state.setInputValue(committedText);
+  }, [state, isTyped, value, committedText]);
 
   useEffect(() => {
     if (state === null || onCommitReady === undefined) return;

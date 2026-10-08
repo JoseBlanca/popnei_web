@@ -288,13 +288,8 @@ test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each tu
   await expectOff(maf, "1", "variant");
   await backOn();
 
-  // The line dragged to the top of its axis, which ends at 1, from a
-  // value it was dragged to. From 0.9 typed in the box the box keeps
-  // showing 0.9 after that drag, with the line at the top, seen in
-  // Chromium and WebKit on 8 October 2026: a defect of its own, reported,
-  // which the Undo this test clicked before the drag used to hide.
-  await drag(page, maf, -100);
-  await expect(maf.box).not.toHaveValue("0.9");
+  // The line dragged to the top of its axis, which ends at 1, straight
+  // from 0.9 typed in the box, with the focus still in the box.
   await drag(page, maf, 400);
   await expectOff(maf, "1", "variant");
   await backOn();
@@ -307,6 +302,24 @@ test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each tu
   await expect(
     maf.group.getByText("1.5 is more than 1; the threshold stays 1."),
   ).toBeVisible();
+});
+
+test("SF9 D5 a number typed in the missing rate's box, then its line dragged to either end of its axis in one move: the box shows the end, 0.1 or 0", async ({
+  page,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  const missing = histogram(page, MISSING);
+  await missing.box.fill("0.09");
+  await missing.box.press("Enter");
+  await drag(page, missing, 400);
+  await expect(missing.slider).toHaveValue("0.1");
+  await expect(missing.box).toHaveValue("0.1");
+
+  await missing.box.fill("0.01");
+  await missing.box.press("Enter");
+  await drag(page, missing, -400);
+  await expect(missing.slider).toHaveValue("0");
+  await expect(missing.box).toHaveValue("0");
 });
 
 test("SF9 D5 on panel.nei the missing rate at 0.1, the top of its axis, is on and grey, with the words of the plot; at 0.05 it leaves the grey and the words; axe in each", async ({

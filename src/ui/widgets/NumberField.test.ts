@@ -10,7 +10,7 @@
  * is as on the old page: an emptied box gives nothing and shows its number
  * again.
  */
-import { StrictMode, act, createElement } from "react";
+import { StrictMode, act, createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -138,6 +138,38 @@ function press(
       new KeyboardEvent("keyup", { key, bubbles: true, ...modifiers }),
     );
   });
+}
+
+/** Types `text` into `input` key by key over its selection, as a
+    browser does: each character is offered in a `beforeinput`, and put
+    in the text, with an `input`, unless the event was cancelled. */
+function typeKeys(input: HTMLInputElement, text: string): void {
+  // The setter of the prototype, which React's tracker of the value does
+  // not see, so that React takes the text for one the user typed.
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with the input, by call
+  const setValue = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  for (const character of text) {
+    act(() => {
+      const offered = input.dispatchEvent(
+        new InputEvent("beforeinput", {
+          data: character,
+          inputType: "insertText",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      if (!offered) return;
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? start;
+      const next = `${input.value.slice(0, start)}${character}${input.value.slice(end)}`;
+      setValue?.call(input, next);
+      input.setSelectionRange(start + 1, start + 1);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
 }
 
 function blur(input: HTMLInputElement): void {
@@ -372,6 +404,50 @@ describe("SF8 D1 the options of the number box", () => {
     expect(describedWords(input)).toBeNull();
     expect(input.hasAttribute("data-muted")).toBe(false);
   });
+
+  // The page, as popgen2.html does, keeps the number committed and gives
+  // it back to the box, and gives the number of a drag on its line in a
+  // render of React outside any event of the box, as `give` does here,
+  // after the loss of the focus committed the number the box held.
+  test.each([
+    [1, "1"],
+    [0, "0"],
+    [0.5, "0.5"],
+  ])(
+    "a number typed and committed, the focus gone, then %s given by the page: the box shows %s",
+    (given, shown) => {
+      let give: (value: number) => void = () => undefined;
+      function Page(): React.JSX.Element {
+        const [value, setValue] = useState(1);
+        give = setValue;
+        return createElement(NumberField, {
+          ...thresholdProps(value, newCalls()),
+          onChange: setValue,
+          onEmptied: () => undefined,
+          onSteps: () => undefined,
+        });
+      }
+      act(() => {
+        root.render(createElement(StrictMode, null, createElement(Page)));
+      });
+      const input = container.querySelector("input");
+      if (input === null) throw new Error("no input drawn");
+      focus(input);
+      act(() => {
+        input.setSelectionRange(0, input.value.length);
+      });
+      typeKeys(input, "0.9");
+      press(input, "Enter");
+      blur(input);
+      expect(input.value).toBe("0.9");
+
+      act(() => {
+        give(given);
+      });
+
+      expect(input.value).toBe(shown);
+    },
+  );
 
   test("muted draws the number in the grey, with the box still enabled", () => {
     const calls = newCalls();
