@@ -25,6 +25,8 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
+import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
+import { announceChanges } from "./announceChanges.ts";
 import {
   downloadPlace,
   endOfWrite,
@@ -514,7 +516,7 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
     expect(noVariantAnnouncement(certain, store.getState())).toBeNull();
   });
 
-  test("nothing is said when the one pass ends with it, nor when the file changes", () => {
+  test("nothing is said when the one pass ends with it", () => {
     const { store, jobs } = storeOfPanel();
     store.startRun("variantsSummary");
     const running = store.getState();
@@ -526,9 +528,17 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
     });
     expect(placeOf(store).kind).toBe("sentence");
     expect(noVariantAnnouncement(running, store.getState())).toBeNull();
+  });
 
-    // Another file, read and its pass finished, as certain as the first.
+  test("nothing is said when another file comes with it, from a file with the button", () => {
+    const { store, jobs } = storeOfPanel();
+    // Every variant passed: the button, not the sentence.
+    finishPass(store, jobs, pass(false));
     const first = store.getState();
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+
+    // Another file, read and its pass finished, none of whose variants
+    // passed: certain.
     const fileId = "d".repeat(32);
     openVariantsFile(store, {
       fileId,
@@ -570,6 +580,30 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
       text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
     });
     expect(noVariantAnnouncement(written, store.getState())).toBeNull();
+  });
+
+  test("the region of the page says it, through announceChanges", () => {
+    vi.useFakeTimers();
+    try {
+      const { store, jobs } = storeOfPanel();
+      store.apply("the FILTER box changed", (p) =>
+        turnOffVariantFilter(p, "passed"),
+      );
+      finishPass(store, jobs, pass(true));
+      const announcer = createAnnouncer();
+      announceChanges(store, announcer, () => null);
+
+      store.apply("the FILTER box changed", (p) =>
+        setVariantFilter(p, { kind: "passed" }),
+      );
+      vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+
+      expect(announcer.getState()).toBe(
+        "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("a write of no variant is not said here: its sentence takes the focus", () => {
