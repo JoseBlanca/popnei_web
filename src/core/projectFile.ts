@@ -167,8 +167,8 @@ type CheckWritten = Omit<Check, "settings">;
  * The check numbers of each analysis, in the order of `analyses` (the
  * spec, "The check numbers"): those of its result when it is done, with
  * the versions now; otherwise the reference's, with their own versions,
- * when the fingerprint of its settings now is the one the reference kept
- * and the variants file loaded, if there is one, does not differ from the
+ * when its settings now are those the reference kept, `carried`, and the
+ * variants file loaded, if there is one, does not differ from the
  * reference's; otherwise none.
  */
 function checksWritten<J, R>(
@@ -207,8 +207,7 @@ function checksWritten<J, R>(
     if (kept === undefined) {
       continue;
     }
-    const source = p.variants ?? reference.variants;
-    if (settingsAsSaved(def, p, kept, source, null)) {
+    if (carried(def, p, kept, p.variants ?? reference.variants)) {
       checks.push({
         analysis: kept.analysis,
         numbers: finiteNumbers(def.id, kept.numbers),
@@ -219,6 +218,33 @@ function checksWritten<J, R>(
     }
   }
   return checks;
+}
+
+/**
+ * Whether the settings of `p` for `source`, the variants file loaded or
+ * the reference's when none is, are those `kept` was saved with. With the
+ * file loaded and read, `settingsAsSaved`. Otherwise, with no file loaded
+ * or its read pending, both fingerprints of `kept` must be those of the
+ * settings now: the read gives whether the variants record their FILTER,
+ * which picks one, and the reference's read answers by the format, false
+ * for every `.nei` file, whose variants may record it; so a check saved
+ * with the filter of the FILTER column on and turned off since, or the
+ * other way round, would be carried beside settings whose numbers differ.
+ */
+function carried<J, R>(
+  def: AnalysisDef<J, R>,
+  p: Project,
+  kept: Check,
+  source: VariantSource,
+): boolean {
+  if (p.variants !== null && source.read.kind === "read") {
+    return settingsAsSaved(def, p, kept, source, null);
+  }
+  const now = checkSettings(def, p, source, null);
+  return (
+    now.passedKept === kept.settings.passedKept &&
+    now.passedNotKept === kept.settings.passedNotKept
+  );
 }
 
 /** The check numbers of an analysis, after checking that each is finite

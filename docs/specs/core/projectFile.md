@@ -417,7 +417,15 @@ comparison, since section 9 of `docs/functionality.md` names it.
 The fingerprint now is made for the variants file loaded, or for the
 reference's when none is: its read options, and its `keepsPassed`, which
 also picks the fingerprint of the reference it is compared with,
-`settingsAsSaved` of `docs/specs/core/keys.md`.
+`settingsAsSaved` of `docs/specs/core/keys.md`. That holds once the file
+loaded is read. With no file loaded, or its read pending, both
+fingerprints the reference kept, `checkSettings`, must be those of the
+settings now, since `keepsPassed` before the read answers by the format,
+`false` for every `.nei` file, whose variants may record their FILTER:
+so a project saved with the filter of the FILTER column on over
+`low_qual.nei`, opened, the filter turned off and saved again before the
+file is given, has no check of the analyses that read the filter, and
+the other way round the same.
 
 **Never written**: the `File` of either file, which is not JSON and stays
 in the page; the results and their warnings, of which only the check

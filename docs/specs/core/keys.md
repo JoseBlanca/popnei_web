@@ -311,7 +311,17 @@ variants file and the one saved for the same answer of `keepsPassed`
 of that file, `savedFingerprint`: the store compares them for the file
 given again once its read comes back, and before that compares nothing,
 the analysis being locked; the Save compares them for the file given
-again, or for the reference's file when none is. So a `.nei` file whose
+again once it is read. Before that read, with no file given or its read
+pending, the Save carries a check only when both fingerprints saved are
+those of the settings now for that file, or for the reference's when
+none is given. The reason is `keepsPassed`: of a file not read, and of
+the reference's, whose read an opened project file makes by the format,
+it is `false` for every `.nei` file, also for one whose variants record
+their FILTER. One fingerprint alone would then carry the numbers of a
+project saved with the filter on beside settings with it turned off
+since, or the other way round, and once the file is read the panel
+would say they are not the same numbers when nothing is wrong. So a
+`.nei` file whose
 variants record their FILTER, saved with the filter on and given again,
 has the settings saved, and with the filter turned off since, it has
 other settings, since the numbers saved left out the variants that

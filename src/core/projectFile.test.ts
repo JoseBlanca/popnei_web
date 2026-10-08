@@ -3821,6 +3821,58 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       expect(settingsAsSaved(def, off, check, source, null)).toBe(same);
     },
   );
+
+  /** The project of `given` before its variants file is read again: none
+      given, or given and its read pending. */
+  function beforeTheRead(given: Project, variants: "none" | "pending") {
+    return deepFreeze<Project>({
+      ...given,
+      variants:
+        variants === "none"
+          ? null
+          : { ...LOW_QUAL_NEI, read: { kind: "pending" } },
+    });
+  }
+
+  const beforeRead = [true, false].flatMap((savedOn) =>
+    (["none", "pending"] as const).map(
+      (variants) => [savedOn ? "on" : "off", variants, savedOn] as const,
+    ),
+  );
+
+  test.each(beforeRead)(
+    "low_qual.nei saved with the FILTER filter %s, saved again with the variants file %s and nothing changed: the check is carried",
+    (_on, variants, savedOn) => {
+      const def = defIn(DEFS, "diversity");
+      const { given } = givenAgain(def, settingsWith(savedOn), LOW_QUAL_NEI);
+      expect(checksSaved(beforeTheRead(given, variants))).toEqual([
+        {
+          analysis: def.id,
+          numbers: [1],
+          keyVersion: def.keyVersion,
+          popneiVersion: "0.2.2",
+          appVersion: "0.2.0",
+        },
+      ]);
+    },
+  );
+
+  // The file read again may record the FILTER of its variants, which the
+  // reference's read, by its format, says it does not; so a save before
+  // the read cannot tell whether turning the filter on or off changed the
+  // numbers, and carries none.
+  test.each(beforeRead)(
+    "low_qual.nei saved with the FILTER filter %s, turned the other way and saved again with the variants file %s: no check is carried",
+    (_on, variants, savedOn) => {
+      const def = defIn(DEFS, "diversity");
+      const { given } = givenAgain(def, settingsWith(savedOn), LOW_QUAL_NEI);
+      const before = beforeTheRead(given, variants);
+      const turned = savedOn
+        ? turnOffVariantFilter(before, "passed")
+        : setVariantFilter(before, { kind: "passed" });
+      expect(checksSaved(turned)).toEqual([]);
+    },
+  );
 });
 
 /** The definition of `id` among `defs`. */
