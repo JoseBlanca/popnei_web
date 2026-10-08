@@ -26,7 +26,10 @@ notice, which it had until then, "The MAF filter changed · Undo"; and
 opening a file, the first or another, is not a step of Undo but starts
 the page's history afresh, where until then it was, "Undo: panel.nei
 opened". The FILTER box and Undo and Redo are built (`docs/plans/filters.md`,
-work packages 6 and 7); the thresholds as filters are not yet. What it builds on is the page as the pieces `thresholds` and
+work packages 6 and 7), and so are the thresholds as filters (work
+package 9), which settled the words a screen reader hears of a grey
+threshold in the set of this spec (below, "Words and layout chosen by
+the session"). What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
 and is lost when another file is opened. It covers cases 1 and 2 of
@@ -699,7 +702,17 @@ called at the release of a pointer and not at a key.
 - The words a screen reader alone hears for a grey threshold: the
   line's value, "1, keeps every variant" and "0.1, keeps every variant
   of the plot", and the box's description, "This filter removes
-  nothing." and "This filter removes no variant of the plot."
+  nothing." and "This filter removes no variant of the plot." Settled
+  in this set by work package 9 of `docs/plans/filters.md` on 8 October
+  2026, over the set the piece `popnei-0.2.2` had built: "0.1, keeps
+  every variant", "This threshold removes no variant.", both ending
+  "so far" while the file was read, and an announcement, "This
+  threshold removes variants." or "This threshold removes no
+  variant.", when a number committed in the box turned the grey on or
+  off. None of those stays: the words say "of the plot", which the plot
+  drawn from a result so far is, and whose description already says
+  "Drawn from the variants read so far."; and nothing is announced as
+  the grey comes or goes (above, "A threshold, on and off").
 - "1.5 is more than 1; the threshold stays 1." for a number refused
   while the threshold is off, the words of a threshold on with 1, the
   number the box shows.
