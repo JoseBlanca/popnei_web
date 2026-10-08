@@ -107,6 +107,17 @@ export function firstProject(app: "popgen"): Project {
   });
 }
 
+/** The first project of the new page of population genetics,
+    popgen2.html: an empty project with the filter of the FILTER column on,
+    the box "Leave out the variants that failed their FILTER" ticked, and
+    the threshold of the missing rate of the variants on at 0.1, and no
+    other filter, on or off, so the four other thresholds start off,
+    never turned on (docs/specs/core/project.md, "The first project of
+    popgen2.html"). The old page keeps `firstProject`. */
+export function popgen2FirstProject(): Project {
+  return setVariantFilter(firstProject("popgen"), { kind: "passed" });
+}
+
 /**
  * What the pass of a result counted, as the store's `countsOf`, from the
  * counts of the pass every result holds, `passStats`: the number of

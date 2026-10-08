@@ -21,6 +21,7 @@ import {
   setCsvOptions,
   setGrouping,
   setIndividualFilter,
+  setThreshold,
   setVariantFilter,
   turnOffIndividualFilter,
   turnOffVariantFilter,
@@ -39,6 +40,7 @@ import type {
   ParsedAnalysis,
   Project,
   ProjectVariantFilter,
+  Threshold,
   SourceRead,
   VariantSource,
 } from "./project.ts";
@@ -448,6 +450,24 @@ const csvOptions: fc.Arbitrary<CsvOptions> = fc.record(
   PLAIN,
 );
 
+/** The five thresholds of popgen2.html. */
+export const THRESHOLDS: readonly Threshold[] = [
+  { of: "variants", kind: "missing_data" },
+  { of: "variants", kind: "maf" },
+  { of: "variants", kind: "obs_het" },
+  { of: "individuals", kind: "missing_data" },
+  { of: "individuals", kind: "obs_het" },
+];
+
+/** A value of a threshold's box: a number from 0 to 1, 1 itself, which
+    turns it off, or `null`, the box emptied, 1 and `null` each drawn
+    about a sixth of the time. */
+export const thresholdBoxValue: fc.Arbitrary<number | null> = fc.oneof(
+  { arbitrary: threshold, weight: 4 },
+  { arbitrary: fc.constant(1), weight: 1 },
+  { arbitrary: fc.constant(null), weight: 1 },
+);
+
 /** A few load ids, so that a load sometimes repeats the one there. */
 const loadId = fc.constantFrom(
   SAMPLE_VARIANTS_ID,
@@ -470,7 +490,8 @@ const seed = fc.nat();
  * Any of the commands of the project spec, with arguments valid on the
  * project it is bound to, starting from `sampleProject`, a project of
  * population genetics; and the switch of a filter kept off turned on
- * again, `setVariantFilter` or `setIndividualFilter` of the values kept.
+ * again, `setVariantFilter` or `setIndividualFilter` of the values kept;
+ * and `setThreshold` of each of the five thresholds of popgen2.html.
  */
 export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
   fc
@@ -533,6 +554,11 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
       return kept === undefined ? null : (q) => setIndividualFilter(q, kept);
     }),
   ),
+  fc
+    .tuple(fc.constantFrom(...THRESHOLDS), thresholdBoxValue)
+    .map(([which, value]) =>
+      command("setThreshold", () => (p) => setThreshold(p, which, value)),
+    ),
   fc
     .record({ fileId: loadId, csv: fc.option(csvOptions) })
     .map(({ fileId, csv }) =>

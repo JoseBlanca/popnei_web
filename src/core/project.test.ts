@@ -39,8 +39,10 @@ import {
   setCsvOptions,
   setGrouping,
   setIndividualFilter,
+  setThreshold,
   setVariantFilter,
   shown,
+  thresholdValue,
   turnOffIndividualFilter,
   turnOffVariantFilter,
   variantFilterNeeds,
@@ -78,8 +80,10 @@ import type {
   ParsedAnalysis,
   Project,
   ProjectError,
+  ProjectVariantFilter,
   SourceError,
   SourceRead,
+  Threshold,
   VariantLoad,
 } from "./project.ts";
 import type { Result } from "./result.ts";
@@ -89,6 +93,7 @@ import type {
   Cell,
   ColumnType,
   CsvOptions,
+  IndividualFilter,
   IndividualsFileError,
   IndividualsTable,
   Pops,
@@ -101,6 +106,8 @@ import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
   TEST_ANALYSES,
+  THRESHOLDS,
+  thresholdBoxValue,
   asProjectFile,
   deepFreeze,
   projectJson,
@@ -113,6 +120,7 @@ import {
   sampleProject,
   wholeProject,
 } from "./testSupport.ts";
+import { firstProject, popgen2FirstProject } from "./apps.ts";
 import { diversity } from "./analyses/diversity.ts";
 import { ldDecay } from "./analyses/ldDecay.ts";
 import { popDists } from "./analyses/popDists.ts";
@@ -7392,5 +7400,274 @@ describe("SF2 D2 the filters that apply to the file", () => {
       }
     }
     expect(seen).toEqual({ neiTrue: true, neiFalse: true, vcfFalse: false });
+  });
+});
+
+describe("SF3 D1 the commands of a threshold, and the first project of popgen2.html", () => {
+  const PASSED = { kind: "passed" } as const;
+  const MISSING_DATA = {
+    kind: "missing_data",
+    maxAllowedMissingRate: 0.1,
+  } as const;
+  const VARIANTS_MISSING: Threshold = { of: "variants", kind: "missing_data" };
+  const VARIANTS_MAF: Threshold = { of: "variants", kind: "maf" };
+
+  /** The filter of a threshold of the variants at `value`. */
+  function variantAt(
+    kind: Extract<Threshold, { of: "variants" }>["kind"],
+    value: number,
+  ): ProjectVariantFilter {
+    switch (kind) {
+      case "missing_data":
+        return { kind, maxAllowedMissingRate: value };
+      case "maf":
+        return { kind, maxAllowedMaf: value };
+      case "obs_het":
+        return { kind, maxAllowedObsHet: value };
+    }
+  }
+
+  /** The filter of a threshold of the individuals at `value`. */
+  function individualAt(
+    kind: Extract<Threshold, { of: "individuals" }>["kind"],
+    value: number,
+  ): IndividualFilter {
+    return kind === "missing_data"
+      ? { kind, maxAllowedMissingRate: value }
+      : { kind, maxAllowedObsHet: value };
+  }
+
+  /** The filter of the threshold at `value`, as the project holds it. */
+  function filterAt(
+    threshold: Threshold,
+    value: number,
+  ): ProjectVariantFilter | IndividualFilter {
+    return threshold.of === "variants"
+      ? variantAt(threshold.kind, value)
+      : individualAt(threshold.kind, value);
+  }
+
+  /** The list of the filters on of the side of the threshold. */
+  function onOf(
+    p: Project,
+    threshold: Threshold,
+  ): readonly (ProjectVariantFilter | IndividualFilter)[] {
+    return threshold.of === "variants" ? p.filters : p.individualFilters;
+  }
+
+  /** The list of the filters off of the side of the threshold. */
+  function offOf(
+    p: Project,
+    threshold: Threshold,
+  ): readonly (ProjectVariantFilter | IndividualFilter)[] {
+    return threshold.of === "variants" ? p.filtersOff : p.individualFiltersOff;
+  }
+
+  test("popgen2FirstProject() has the FILTER filter and the missing rate of the variants at 0.1 on, and no other filter, on or off", () => {
+    const p = popgen2FirstProject();
+    expect(p).toEqual({
+      ...emptyProject("popgen"),
+      filters: [PASSED, MISSING_DATA],
+    });
+    expect(p.filtersOff).toEqual([]);
+    expect(p.individualFilters).toEqual([]);
+    expect(p.individualFiltersOff).toEqual([]);
+    expect(parse(asProjectFile(p))).toEqual({ ok: true, value: p });
+  });
+
+  test.each(THRESHOLDS)(
+    "the threshold %o from the first project: at 0.3 on, at 1 off and kept at 0.3, at null p itself",
+    (threshold) => {
+      const first = deepFreeze(popgen2FirstProject());
+      const at3 = deepFreeze(setThreshold(first, threshold, 0.3));
+      const side =
+        threshold.of === "variants"
+          ? (["filters", "filtersOff"] as const)
+          : (["individualFilters", "individualFiltersOff"] as const);
+      expectKept(first, at3, side);
+      expect(onOf(at3, threshold)).toContainEqual(filterAt(threshold, 0.3));
+      expect(thresholdValue(at3, threshold)).toBe(0.3);
+      for (const other of THRESHOLDS.filter((t) => t !== threshold)) {
+        expect(thresholdValue(at3, other)).toBe(thresholdValue(first, other));
+      }
+
+      const at1 = deepFreeze(setThreshold(at3, threshold, 1));
+      expectKept(at3, at1, side);
+      expect(onOf(at1, threshold).map((f) => f.kind)).not.toContain(
+        threshold.kind,
+      );
+      expect(offOf(at1, threshold)).toContainEqual(filterAt(threshold, 0.3));
+      expect(thresholdValue(at1, threshold)).toBeNull();
+
+      expect(setThreshold(at1, threshold, null)).toBe(at1);
+      expect(setThreshold(at1, threshold, 1)).toBe(at1);
+      expect(setThreshold(at3, threshold, 0.3)).toBe(at3);
+      expect(setThreshold(at3, threshold, null)).toEqual(at1);
+    },
+  );
+
+  test("the missing rate of the variants at 1 from the first project: off, kept at 0.1, filters [passed]; at 0.05 then: on, out of filtersOff", () => {
+    const first = deepFreeze(popgen2FirstProject());
+    expect(thresholdValue(first, VARIANTS_MISSING)).toBe(0.1);
+    const off = deepFreeze(setThreshold(first, VARIANTS_MISSING, 1));
+    expect(off.filters).toEqual([PASSED]);
+    expect(off.filtersOff).toEqual([MISSING_DATA]);
+    expect(thresholdValue(off, VARIANTS_MISSING)).toBeNull();
+    const on = setThreshold(off, VARIANTS_MISSING, 0.05);
+    expect(on.filters).toEqual([
+      PASSED,
+      { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+    ]);
+    expect(on.filtersOff).toEqual([]);
+    expect(thresholdValue(on, VARIANTS_MISSING)).toBe(0.05);
+  });
+
+  test.each(THRESHOLDS)(
+    "the threshold %o is off in the first project, never turned on, but the missing rate of the variants, on at 0.1",
+    (threshold) => {
+      expect(thresholdValue(popgen2FirstProject(), threshold)).toBe(
+        threshold.of === "variants" && threshold.kind === "missing_data"
+          ? 0.1
+          : null,
+      );
+    },
+  );
+
+  test("0 is a threshold, on at 0, and a number just below 1 is on at it", () => {
+    const first = deepFreeze(popgen2FirstProject());
+    for (const threshold of THRESHOLDS) {
+      expect(thresholdValue(setThreshold(first, threshold, 0), threshold)).toBe(
+        0,
+      );
+      expect(
+        thresholdValue(setThreshold(first, threshold, 0.999_999), threshold),
+      ).toBe(0.999_999);
+    }
+  });
+
+  test.each([1.5, -0.1, Number.NaN, Infinity, -Infinity])(
+    "setThreshold at %d is a defect",
+    (value) => {
+      for (const threshold of THRESHOLDS) {
+        expect(() =>
+          setThreshold(popgen2FirstProject(), threshold, value),
+        ).toThrow(/^popnei_web defect: setThreshold was given/);
+      }
+    },
+  );
+
+  test("the rows of the table of the commands: a number is what setVariantFilter or setIndividualFilter gives, null and 1 what the command that turns it off gives", () => {
+    const p = deepFreeze<Project>({
+      ...sampleProject(),
+      filtersOff: [{ kind: "obs_het", maxAllowedObsHet: 0.6 }],
+      individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.4 }],
+      individualFiltersOff: [
+        { kind: "missing_data", maxAllowedMissingRate: 0.2 },
+      ],
+    });
+    for (const threshold of THRESHOLDS) {
+      const set =
+        threshold.of === "variants"
+          ? setVariantFilter(p, variantAt(threshold.kind, 0.25))
+          : setIndividualFilter(p, individualAt(threshold.kind, 0.25));
+      expect(setThreshold(p, threshold, 0.25)).toEqual(set);
+      const off =
+        threshold.of === "variants"
+          ? turnOffVariantFilter(p, threshold.kind)
+          : turnOffIndividualFilter(p, threshold.kind);
+      expect(setThreshold(p, threshold, 1)).toEqual(off);
+      expect(setThreshold(p, threshold, null)).toEqual(off);
+    }
+  });
+
+  test("a threshold typed 1 while it is on at 0.3 is turned off and kept at 0.3, Undo gives it back, and typed 1 again or emptied is p itself, no step of Undo", () => {
+    const on = deepFreeze(
+      setThreshold(popgen2FirstProject(), VARIANTS_MAF, 0.3),
+    );
+    let h = startHistory(on, MAX_UNDO_STEPS);
+    const off = deepFreeze(setThreshold(on, VARIANTS_MAF, 1));
+    expect(off.filtersOff).toEqual([{ kind: "maf", maxAllowedMaf: 0.3 }]);
+    expect(thresholdValue(off, VARIANTS_MAF)).toBeNull();
+    h = commit(h, off, "the MAF filter was turned off");
+    expect(commit(h, setThreshold(off, VARIANTS_MAF, 1), "")).toBe(h);
+    expect(commit(h, setThreshold(off, VARIANTS_MAF, null), "")).toBe(h);
+    h = undo(h);
+    expect(h.present.project).toBe(on);
+    expect(thresholdValue(h.present.project, VARIANTS_MAF)).toBe(0.3);
+  });
+
+  test("a threshold dragged to the top of an axis that ends at 0.1 is a filter at 0.1, and to the top of one that ends at 1 is off", () => {
+    const first = deepFreeze(popgen2FirstProject());
+    const offMissing = deepFreeze(setThreshold(first, VARIANTS_MISSING, null));
+    const atTop = setThreshold(offMissing, VARIANTS_MISSING, 0.1);
+    expect(atTop.filters).toEqual(first.filters);
+    expect(thresholdValue(atTop, VARIANTS_MISSING)).toBe(0.1);
+    const mafOn = deepFreeze(setThreshold(first, VARIANTS_MAF, 0.4));
+    const mafAtTop = setThreshold(mafOn, VARIANTS_MAF, 1);
+    expect(thresholdValue(mafAtTop, VARIANTS_MAF)).toBeNull();
+    expect(mafAtTop.filtersOff).toEqual([{ kind: "maf", maxAllowedMaf: 0.4 }]);
+  });
+
+  test(
+    "for every project drawn, setThreshold gives thresholdValue the number from 0 to below 1, null for 1 and null, keeps the other thresholds, and the parts of the other side",
+    () => {
+      fc.assert(
+        fc.property(
+          wholeProject,
+          fc.constantFrom(...THRESHOLDS),
+          fc.oneof(
+            fc.double({ min: 0, max: 1, noNaN: true }),
+            fc.constant(1),
+            fc.constant(null),
+          ),
+          (p, threshold, value) => {
+            const q = setThreshold(deepFreeze(p), threshold, value);
+            expect(thresholdValue(q, threshold)).toBe(
+              value === 1 ? null : value,
+            );
+            for (const other of THRESHOLDS.filter((t) => t !== threshold)) {
+              expect(thresholdValue(q, other)).toBe(thresholdValue(p, other));
+            }
+            if (threshold.of === "variants") {
+              expect(q.individualFilters).toBe(p.individualFilters);
+              expect(q.individualFiltersOff).toBe(p.individualFiltersOff);
+            } else {
+              expect(q.filters).toBe(p.filters);
+              expect(q.filtersOff).toBe(p.filtersOff);
+            }
+            expect(setThreshold(q, threshold, value)).toBe(q);
+          },
+        ),
+      );
+    },
+    PROPERTY_TIMEOUT_MS,
+  );
+
+  test("the property sequences draw setThreshold of each of the five thresholds, with numbers from 0 to below 1, with 1 and with null", () => {
+    const names = fc
+      .sample(drawnCommand, { numRuns: 2000, seed: 3 })
+      .map((drawn) => drawn.name);
+    expect(names).toContain("setThreshold");
+    const values = fc.sample(thresholdBoxValue, { numRuns: 200, seed: 3 });
+    expect(values).toContain(1);
+    expect(values).toContain(null);
+    expect(values.some((v) => v !== null && v >= 0 && v < 1)).toBe(true);
+    expect(values.every((v) => v === null || (v >= 0 && v <= 1))).toBe(true);
+    expect(THRESHOLDS.map((t) => `${t.of} ${t.kind}`)).toEqual([
+      "variants missing_data",
+      "variants maf",
+      "variants obs_het",
+      "individuals missing_data",
+      "individuals obs_het",
+    ]);
+  });
+});
+
+describe("SF3 D2 the first project of popgen.html", () => {
+  test('firstProject("popgen") is unchanged: the missing data filter at 0.1 and nothing else', () => {
+    expect(firstProject("popgen")).toEqual({
+      ...emptyProject("popgen"),
+      filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    });
   });
 });

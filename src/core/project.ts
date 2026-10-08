@@ -1406,6 +1406,113 @@ export function turnOffIndividualFilter(
   };
 }
 
+/** A threshold of popgen2.html: a filter of one number, a maximum, of
+    the variants, the missing rate, the MAF and the observed
+    heterozygosity, or of the individuals, the missing rate and the
+    observed heterozygosity. */
+export type Threshold =
+  | {
+      readonly of: "variants";
+      readonly kind: "missing_data" | "maf" | "obs_het";
+    }
+  | { readonly of: "individuals"; readonly kind: ThresholdKind };
+
+/** The value at which a threshold, a maximum, keeps everything, and so
+    the value `setThreshold` takes as off, not as a filter at that value:
+    popnei's filters of the MAF and of the observed heterozygosity drop a
+    variant with no called genotype at every threshold, so a filter at 1
+    is not the same as no filter, as the owner decided on 7 October 2026
+    (docs/specs/core/project.md, "A threshold, on or off"). */
+const THRESHOLD_OFF_AT = 1;
+
+/** The filter of a threshold of the variants on at `value`. */
+function variantThresholdFilter(
+  kind: Extract<Threshold, { readonly of: "variants" }>["kind"],
+  value: number,
+): ProjectVariantFilter {
+  switch (kind) {
+    case "missing_data":
+      return { kind, maxAllowedMissingRate: value };
+    case "maf":
+      return { kind, maxAllowedMaf: value };
+    case "obs_het":
+      return { kind, maxAllowedObsHet: value };
+  }
+}
+
+/** The filter of a threshold of the individuals on at `value`. */
+function individualThresholdFilter(
+  kind: ThresholdKind,
+  value: number,
+): IndividualThreshold {
+  switch (kind) {
+    case "missing_data":
+      return { kind, maxAllowedMissingRate: value };
+    case "obs_het":
+      return { kind, maxAllowedObsHet: value };
+  }
+}
+
+/** Sets the threshold on at `value`, a number from 0 to below 1, as
+    `setVariantFilter` or `setIndividualFilter` would; for `null`, its
+    box emptied, and for 1, the value at which a maximum keeps
+    everything, turns it off, as `turnOffVariantFilter` or
+    `turnOffIndividualFilter` would, kept with the value it had while on
+    and not with 1, and `p` itself when it is off already. The one
+    command of a threshold of popgen2.html, whether its number was typed,
+    dragged or moved with the keys. A number below 0 or above 1, or one
+    not finite, is a defect. */
+export function setThreshold(
+  p: Project,
+  threshold: Threshold,
+  value: number | null,
+): Project {
+  if (value !== null && !(Number.isFinite(value) && value >= 0 && value <= 1)) {
+    throw defect(
+      `setThreshold was given ${String(value)}, where a number from 0 to 1, or null, was expected.`,
+    );
+  }
+  const off = value === null || value === THRESHOLD_OFF_AT;
+  if (threshold.of === "variants") {
+    return off
+      ? turnOffVariantFilter(p, threshold.kind)
+      : setVariantFilter(p, variantThresholdFilter(threshold.kind, value));
+  }
+  return off
+    ? turnOffIndividualFilter(p, threshold.kind)
+    : setIndividualFilter(p, individualThresholdFilter(threshold.kind, value));
+}
+
+/** The value of the threshold while its filter is on; `null` while it is
+    off, kept in its list of the filters off or never turned on. */
+export function thresholdValue(
+  p: Project,
+  threshold: Threshold,
+): number | null {
+  const filter =
+    threshold.of === "variants"
+      ? p.filters.find((f) => f.kind === threshold.kind)
+      : p.individualFilters.find((f) => f.kind === threshold.kind);
+  if (filter === undefined) {
+    return null;
+  }
+  switch (filter.kind) {
+    case "missing_data":
+      return filter.maxAllowedMissingRate;
+    case "maf":
+      return filter.maxAllowedMaf;
+    case "obs_het":
+      return filter.maxAllowedObsHet;
+    case "passed":
+    case "ld":
+    case "keep":
+    case "remove":
+      throw defect(
+        `the threshold ${JSON.stringify(threshold)} found the filter ${JSON.stringify(filter.kind)}.`,
+      );
+  }
+}
+
 function copyCsvOptions(csv: CsvOptions): CsvOptions {
   return {
     encoding: csv.encoding,
