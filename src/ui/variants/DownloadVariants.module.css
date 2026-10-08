@@ -1,0 +1,52 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The download, at the end of the Individuals part. */
+.download {
+  display: grid;
+  min-inline-size: 0;
+}
+
+/* The button at the start of its row, with its reason beside it. */
+.button {
+  display: flex;
+}
+
+/* The text after the download, or a sentence, in place of the button:
+   a line that reads well, its focus ring drawn when the code moves the
+   focus to it. */
+.text {
+  margin: 0;
+  max-inline-size: 70ch;
+  overflow-wrap: anywhere;
+}
+
+.text:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* The buttons of the dialog side by side, wrapping when there is no
+   room. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The line of the write over its bar. */
+.writing {
+  display: grid;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  margin: 0;
+}
+
+/* The words of a failure of the write. */
+.failure {
+  margin: 0;
+}

@@ -18,7 +18,9 @@
  *   heterozygosity of each individual, binned here from popnei's values,
  *   each with its threshold, grey when it keeps every one or is off; and
  *   the download of their table as CSV, which is not drawn, since there
- *   may be thousands of individuals.
+ *   may be thousands of individuals; and, last, the download of the
+ *   filtered variants (DownloadVariants.tsx), drawn whenever the section
+ *   is, disabled until the one pass is finished.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
  * the bins, and no bar nor button of its own: the bar of the pass, its
@@ -81,6 +83,7 @@ import { progressShare } from "../analyses/words.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { individualChecksCsv } from "../../core/analyses/individualChecks.ts";
 import { downloadText } from "../download.ts";
+import { DownloadVariants } from "./DownloadVariants.tsx";
 import { statsCsvName } from "../steps/variants/individualStats.ts";
 import { useAppState } from "../store.tsx";
 import {
@@ -375,6 +378,7 @@ function Stats({
             )}
           </Suspense>
         )}
+        <DownloadVariants />
       </Part>
     </StatsFrame>
   );

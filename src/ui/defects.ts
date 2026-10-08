@@ -45,7 +45,8 @@ export type DefectOrigin =
   | "barSave"
   | "worker"
   | "openingStopped"
-  | "countStopped";
+  | "countStopped"
+  | "writeStopped";
 
 /** The log of the errors, made once by the entry of the page. */
 export interface Defects {
@@ -88,6 +89,8 @@ const ORIGIN_TEXT: Readonly<Record<DefectOrigin, string>> = {
     "the calculation worker stopped during the opening of a file, with these words",
   countStopped:
     "the calculation worker stopped during the count of the variants and the statistics of the file, with these words",
+  writeStopped:
+    "the calculation worker stopped during the writing of the filtered variants, with these words",
 };
 
 const EMPTY: DefectsState = Object.freeze({ first: null, more: 0 });

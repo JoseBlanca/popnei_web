@@ -238,6 +238,14 @@ function readUnwrapped(page: Page, fileId: string): void {
 }
 
 /** The section of the statistics, once drawn, or `null`. */
+/** The words of each button of the section, with " disabled" after
+    those that are. */
+function buttonsOf(): string[] {
+  return [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
+    (button) => `${button.textContent}${button.disabled ? " disabled" : ""}`,
+  );
+}
+
 function sectionOf(): Element | null {
   return container.querySelector(
     'section[aria-label="Statistics of the file"]',
@@ -344,8 +352,9 @@ describe("the section of the statistics of the open file", () => {
       "Calculating the statistics of the individuals…",
     );
     expect(sectionOf()?.querySelector('[role="progressbar"]')).toBeNull();
-    // Not even the download, which comes with the result.
-    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+    // Not even the download of the table, which comes with the result;
+    // the download of the filtered variants waits, disabled.
+    expect(buttonsOf()).toEqual(["Download filtered variants… disabled"]);
 
     await act(async () => {
       page.autoRuns.stop(POPGEN2_CHAIN);
@@ -438,7 +447,7 @@ describe("the section of the statistics of the open file", () => {
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );
-    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+    expect(buttonsOf()).toEqual(["Download filtered variants… disabled"]);
     // Each plot keeps its element as the next result so far comes.
     const before = [...container.querySelectorAll("svg.chart")];
     await act(async () => {
@@ -471,6 +480,7 @@ describe("the section of the statistics of the open file", () => {
       ),
     ).toEqual([
       "Download the missing genotypes and heterozygosity of each individual (CSV)",
+      "Download filtered variants…",
     ]);
   });
 });
@@ -522,7 +532,7 @@ describe("SF10 D2 the plots after a Stop, in the section", () => {
       );
     }
     expect(partsText()).not.toContain("so far");
-    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+    expect(buttonsOf()).toEqual(["Download filtered variants… disabled"]);
   });
 
   test("Start again drops them and reads the file again", async () => {

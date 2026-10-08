@@ -5,7 +5,10 @@
  * of the file or the pass of its count and statistics met in the worker,
  * and the worker that stopped on its own, a crash and not a refusal of
  * popnei, during the opening or that pass, with the words it stopped with
- * (the owner, 6 October 2026). Each failure is reported once.
+ * (the owner, 6 October 2026); and the same two failures of the write of
+ * the filtered variants, whose words the dialog of the download says
+ * (docs/specs/steps/popgen2-download.md, "When the write fails"). Each
+ * failure is reported once.
  */
 import type { Store } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
@@ -22,6 +25,8 @@ export function reportDefects(
   // The status of the summary of the variants file, the one pass of the
   // count and the statistics, at the last change.
   let then = summaryStatus(store.getState());
+  // The state of the write at the last change.
+  let writeThen = store.getState().write;
   // The load whose opening was last reported, so that a failure recorded
   // again is not reported twice.
   let readReported: string | null = null;
@@ -61,5 +66,20 @@ export function reportDefects(
       }
     }
     then = now;
+    const write = state.write;
+    if (
+      write !== writeThen &&
+      write?.kind === "error" &&
+      write.error.kind === "failed" &&
+      !(writeThen?.kind === "error" && writeThen.key === write.key)
+    ) {
+      const failure = write.error.error;
+      if (failure.kind === "defect") {
+        defects.report(failure.message, "worker", null);
+      } else if (failure.kind === "workerFailed") {
+        defects.report(failure.message, "writeStopped", null);
+      }
+    }
+    writeThen = write;
   });
 }

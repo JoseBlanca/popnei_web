@@ -41,6 +41,10 @@ export interface RadioGroupProps<T extends string> {
   readonly describedBy?: string;
   /** Called with the id of the button the user chose. */
   readonly onChange: (id: T) => void;
+  /** Whether the button chosen takes the focus when the group is drawn,
+      as the format of the dialog of the download of popgen2.html does as
+      it opens; false when absent. */
+  readonly autoFocus?: boolean;
 }
 
 /** A group of radio buttons with its name. */
@@ -50,6 +54,7 @@ export function RadioGroup<T extends string>({
   value,
   describedBy,
   onChange,
+  autoFocus = false,
 }: RadioGroupProps<T>): React.JSX.Element {
   return (
     <AriaRadioGroup
@@ -63,7 +68,11 @@ export function RadioGroup<T extends string>({
     >
       <Label className={classOf(styles, "label")}>{label}</Label>
       {items.map((item) => (
-        <RadioField key={item.id} value={item.id}>
+        <RadioField
+          key={item.id}
+          value={item.id}
+          autoFocus={autoFocus && item.id === value}
+        >
           <RadioButton className={classOf(styles, "radio")}>
             <span className={classOf(styles, "circle")} aria-hidden="true">
               <span className={classOf(styles, "dot")} />
