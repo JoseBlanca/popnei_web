@@ -77,9 +77,11 @@ issue #12), and of the variants read so far while the pass runs. It is
 of every variant of the file. A `.nei` file has the line when it
 recorded its FILTER, as one written by popnei 0.2.2 from a VCF does,
 from the first variants read; after a Stop or a failure before the end,
-its box loses it, since the page learns whether the file recorded its
-FILTER only from a result, until the opening of the file tells it (the
-filters, their work package 2). A `.nei` file that did not record it has
+its box loses it, since the box learns whether the file recorded its
+FILTER only from a result. The opening of the file has told it since 8
+October 2026 (`keepsPassed`, docs/plans/filters.md, work package 2),
+and the FILTER box below reads that answer, but the box of the file
+does not read it yet. A `.nei` file that did not record it has
 no line, as panel.nei, written before format 1.2 of the vars file.
 
 On popgen2.html the distributions of the open file are four of the
@@ -158,8 +160,8 @@ variants that failed their FILTER", on by default, for a VCF and for
 a .nei file that records whether each variant passed its FILTER, which
 popnei writes from its vars format 1.2; it is not shown for a .nei file
 written before that format, to which it does not apply (the owner, 7
-October 2026). A click on it is a change of the project, with Undo and
-Redo and no notice. Its filter acts
+October 2026). A click on it is a change of the project, with no
+notice. Its filter acts
 when the filters are carried out, after the individuals are judged, so
 an individual's missing rate and heterozygosity are over every variant,
 and a VCF of which no variant passed is shown as any other.
@@ -171,7 +173,7 @@ what it would leave out. What all the filters keep together comes with
 the reading that carries them out, the download of the filtered file or
 an analysis, in a tools section that waits for popnei issue #13, the
 writers handing the file over in pieces; until then the filters are
-set and kept, with Undo, and nothing carries them out. After a Stop,
+set and kept, and nothing carries them out. After a Stop,
 the plots read so far stay, each said to be of the variants read
 before the Stop.
 

@@ -126,7 +126,13 @@ which the calculation worker gives when it opens the file; `keepsPassed`
 of a source gives it, true for a VCF before its read; and
 `filtersApplied` and `filtersAppliedTo` leave the filter out for a file
 whose variants do not record their FILTER, in place of every `.nei`
-file.
+file. Built on the branch `filters`, work packages 1 to 3 of
+`docs/plans/filters.md`, on 7 and 8 October 2026, in
+`src/core/project.ts`, `src/core/filtersApplied.ts` (`keepsPassed`,
+`filtersApplied` and `filtersAppliedTo`, in a module of their own so
+that `keys.ts` reads them with no cycle of imports) and, for
+`popgen2FirstProject`, `src/core/apps.ts`; the screen that sends these
+commands was accepted by the owner on 8 October 2026.
 
 The project is everything the user has set in one application: the
 variants file they loaded, the filters, the individuals file with the

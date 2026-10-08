@@ -17,11 +17,13 @@ decides how the thresholds that the user drags on the histograms of
 column becomes a filter; what the page reads from the file, and when,
 under the owner's rule of one pass per file; and where the page will
 offer what is done with the variants the filters keep, a tools section
-whose first tool is the download of the filtered file. Until it is
-approved nothing of it is built: the thresholds of the piece
+whose first tool is the download of the filtered file. It is built, but
+for the tools section, which waits for popnei's issue #13, on the branch
+`filters` (`docs/plans/filters.md`), and the owner accepted the page on
+8 October 2026. Before it, the thresholds of the piece
 `thresholds` (plan `docs/plans/thresholds.md`, merged into `main` on 7
-October 2026) are state of the page, change no statistic and are lost on
-a reload. The page and its one pass over the file are those of
+October 2026) were state of the page, changed no statistic and were lost
+on a reload. The page and its one pass over the file are those of
 `docs/plans/live-stats.md`, without the second pass that counted the
 FILTER failures, which the piece `one-pass` (`docs/plans/one-pass.md`)
 takes out. The filters and the writing of the old page, `popgen.html`,
@@ -58,8 +60,8 @@ today: the count of the variants, each individual's missing rate and
 heterozygosity, and the histograms of the variants, all over every
 variant and every individual of the file. Nothing else is read while
 the user works on the thresholds: moving a line, typing a number,
-ticking the FILTER box or pressing Undo changes the project and the
-shading of the plots, and reads nothing. The plots never change with a
+or ticking the FILTER box changes the project and the shading of the
+plots, and reads nothing. The plots never change with a
 threshold.
 
 **What a threshold shows.** Its line on the plot, its number in its
@@ -95,8 +97,8 @@ is "Download filtered file…", as a `.nei` file or a VCF. It waits for
 popnei's issue #13: popnei builds the whole file in memory before
 handing it over, about 800 MB for a VCF of 100,000 variants and 1,000
 individuals, which the owner judged unacceptable. Until then the page
-has no tools section, and the filters are set and kept, with Undo, but
-not yet carried out by anything.
+has no tools section, and the filters are set and kept, but not yet
+carried out by anything.
 
 **What approving commits to that is hard to undo.** The FILTER box is a
 new kind of filter in the project file. A project file holding it
@@ -135,8 +137,8 @@ on the page for now.
 
 Cases 1 and 2 of `docs/use-cases.md`: the user reads the distributions
 of the open file, sets on them the thresholds of the filters, sees on
-each plot what its threshold would leave out, and changes them, with Undo and Redo, until the
-thresholds are the ones they want to work with. Carrying the filters
+each plot what its threshold would leave out, and changes them until
+the thresholds are the ones they want to work with. Carrying the filters
 out, the download and the analyses, comes with the tools.
 
 - A threshold on the missing rate, the major allele frequency or the
@@ -148,8 +150,9 @@ out, the download and the analyses, comes with the tools.
   variants that failed their FILTER", on by default, for a VCF and for
   a `.nei` file that records the FILTER of its variants.
 - Every change of a threshold or of the box is a change of the project,
-  with Undo and Redo, and no notice. Opening a file is not a step of
-  Undo.
+  with no notice. The page has no Undo and no Redo for now (below, "What
+  the owner decided", 6), and opening a file starts the project's
+  history afresh.
 - No plot changes with a threshold or the box: each plot shows the
   whole file, and its threshold shades what it would leave out.
 
@@ -603,9 +606,11 @@ calculation.
   `passed` reads back the same, and the old page's reading refuses it.
 - In Playwright, on `popgen2.html` in Chromium and WebKit: the worker
   receives one request for a file, and none while a threshold is
-  dragged, typed, moved with the arrow keys, undone, or the box turned;
-  a run of ten arrow presses is one step of Undo, and Ctrl+Z pressed
-  within the quiet second undoes that run; after a Stop the
+  dragged, typed, moved with the arrow keys, or the box turned; the
+  keys of Undo and Redo change nothing on the page, which draws neither
+  (below, "What the owner decided", 6), so that a run of arrow presses
+  as one step of Undo, and an Undo within its quiet second, are tested
+  in Vitest (`src/ui/variants/thresholdRun.test.ts`); after a Stop the
   plots read so far stay, with the words of a Stop; a threshold off shows 1 and
   its line in grey, as does one dragged to the top of an axis that ends
   below 1; the FILTER box is shown for

@@ -65,6 +65,12 @@ number of variants each filter removed, to write in their methods.
 **What they must see to decide:** the distribution of the missing rate and
 of the major allele frequency over the variants, with the thresholds
 marked on them; and, for each threshold, how many variants it keeps.
+While the thresholds are set, the owner decided on 8 October 2026, no
+count stands under them: each plot shades what its threshold would
+leave out, and draws in grey a threshold that removes none of its
+values. How many variants each filter removed, and how many are left,
+come with the reading that carries the filters out, the download of the
+filtered file of step 5 (`docs/designs/stats-filters.md`).
 
 **Where they could go wrong:** a threshold of the major allele frequency
 read as one of the minor allele frequency. The two differ for a variant
@@ -259,7 +265,11 @@ case 4.
 So the screens are built in this order:
 
 1. Cases 2 and 1 together, since they open the same file and the
-   filters are chosen from the distributions.
+   filters are chosen from the distributions. By 8 October 2026 they
+   are built up to the setting of the filters (`docs/plans/filters.md`).
+   Not built yet: the writing of the filtered file, step 5 of case 1,
+   which waits for a tools section and popnei's issue #13; and, of case
+   2, the site frequency spectrum and the download of the plots.
 2. Case 3.
 3. Case 4.
 4. Case 5, last, since the association application opens the files,

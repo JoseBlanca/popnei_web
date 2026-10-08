@@ -34,10 +34,15 @@ after trying the thresholds: the page draws no Undo and no Redo, and
 catches none of their keys, until a later feature needs them ("we might
 want them for other features, we'll see"); what is kept ready for them
 is in "Undo, Redo and their keys" below, and what this spec says of
-Undo holds when the page draws it again. What it builds on is the page as the pieces `thresholds` and
+Undo holds when the page draws it again. Built on the branch `filters`
+(`docs/plans/filters.md`) and accepted by the owner on 8 October 2026,
+after a defect of the number box, which kept a typed number in the box
+when the line was then dragged to the end of its axis, was fixed the
+same day (below, "The number box"); this spec says what the screen now
+is. What it built on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
-where a threshold is state of the page, changes nothing in the project
-and is lost when another file is opened. It covers cases 1 and 2 of
+where a threshold was state of the page, changed nothing in the project
+and was lost when another file was opened. It covers cases 1 and 2 of
 `docs/use-cases.md` up to the point where the filters are carried out,
 which waits for the tools section.
 
@@ -194,9 +199,11 @@ then an opening was a step of Undo, named by the file, "Undo:
 panel.nei opened".
 
 The part of the shell's header that draws the two buttons and listens
-for the keys is taken out of `src/ui/shell/Header.tsx` into a part that
-both pages draw; the old page's header draws it beside Open project…
-and Save project, which `popgen2.html` does not have.
+for the keys was taken out of `src/ui/shell/Header.tsx` into a part of
+its own, `src/ui/shell/UndoRedoButtons.tsx`, which the old page's
+header draws beside Open project… and Save project, which
+`popgen2.html` does not have, and which this page drew until 8 October
+2026.
 
 ### No notice
 
@@ -466,6 +473,19 @@ which the page uses from off. Without them the box is as today: an
 emptied box gives nothing and shows its number again. A typed 1 is an
 ordinary number to the box; the page turns it into off.
 
+The box shows the number it is given whenever nothing is typed in it.
+React Aria's number field (react-stately 3.50.0) did not always: with
+0.9 typed in the MAF's box and committed by Enter, a press on the line
+took the focus from the box, React Aria's commit at that loss of the
+focus set its text again in an update React kept for later, and a drag
+whose first move reached the top of the axis gave the box 1 and then
+had that update put 0.9 back, so the box said 0.9 while the line stood
+at 1, off. It showed for every threshold, at either end of its axis, in
+Chromium and WebKit. Since 8 October 2026 the box, after every render
+in which nothing is typed and its text holds another number than the
+one it is given, puts the text back to that number. The box is shared,
+so this holds on the old page too.
+
 ### The starting values and another file
 
 `popgen2.html` gets a first project of its own: the filter of the
@@ -687,11 +707,15 @@ Ctrl+Y on a line holding a run are caught by the threshold, as said
 above, so that a user of the keyboard never undoes the change before the
 run while meaning the run.
 
-**To be heard before the plan is settled**, as the design asks: in
-VoiceOver on macOS with Safari, a run of ten presses on a line gives one
-step of Undo; a box that is off is announced with its value 1 and "This
-filter removes nothing.", and the line with "1, keeps every variant";
-the FILTER box with its sentence.
+**Not yet heard in VoiceOver.** The design asked that VoiceOver on
+macOS with Safari be heard before the plan was settled, which could not
+be done before the screen existed; the session cannot run VoiceOver,
+and by 8 October 2026, when the owner accepted the screen, nobody had
+heard it. What is to be heard: a box that is off announced with its
+value 1 and "This filter removes nothing.", and the line with "1, keeps
+every variant"; a line on and grey with "0.1, keeps every variant of
+the plot"; the FILTER box with its sentence; and, once the page draws
+Undo again, a run of ten presses on a line as one step of Undo.
 
 ## How it is checked
 
@@ -740,13 +764,29 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   changes no plot, and a second click ticks it again;
 - no change gives a notice: the page has no element of the notice's role;
 - the thresholds stay through the opening of another file;
+- a number typed in a box and committed, then the line dragged in one
+  move to the top or the bottom of its axis, leaves the box at that
+  end, 1 and off for the MAF, 0.1 or 0 for the missing rate on
+  `panel.vcf.gz`; and so for the MAF at 0.9 kept through the opening of
+  `panel.nei`;
+- a file dropped while a run of the keys waits opens with the threshold
+  the run moved;
+- a crash of the worker during a drag takes the line away before the
+  pointer is released, and the release changes nothing;
+- a number committed in the box, or a run made a change, that turns a
+  threshold on, grey or off is announced once, and a change that keeps
+  its look is not;
+- at 320 pixels the line of the individuals with no called genotype
+  keeps the room of its longer words, so nothing under it moves as the
+  filter turns on and off;
 - after a Stop the plots read so far stay with the words of a Stop, and
   a threshold moved over them changes the project;
 - no plot changes with a threshold or the box.
 
 The screens: a threshold off, on with some values beyond it, on and
-grey at the top of an axis below 1, and after a Stop; the FILTER box,
-ticked and unticked;
+grey at the top of an axis below 1, the MAF dragged off to the top of
+its axis after 0.9 was typed, and after a Stop; the FILTER box, ticked
+and unticked, and for `low_qual.nei`;
 light and dark; 1280 and 320 pixels wide.
 
 In Vitest, beside those: whether a threshold is grey, at an edge of
@@ -758,7 +798,10 @@ called at the release of a pointer and not at a key; the store's
 history, a run of the keys as one step of Undo and an opening as a new
 history, kept for the row that the page no longer draws.
 
-## Words and layout chosen by the session, to be changed when the owner tries the screen
+## Words and layout chosen by the session, accepted by the owner
+
+The owner tried the screen on 8 October 2026 and changed none of these;
+they stand until the owner asks for others.
 
 - The words a screen reader alone hears for a grey threshold: the
   line's value, "1, keeps every variant" and "0.1, keeps every variant

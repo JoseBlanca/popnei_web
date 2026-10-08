@@ -68,7 +68,10 @@ to a `.nei` file whose variants record whether they passed their FILTER
 (`docs/designs/stats-filters.md`, "What the owner decided"): the open
 answers `keepsPassed` of popnei 0.2.2's `Variants` with the individuals
 and the ploidy (below, "Opening the load"), with its tests on a `.nei`
-file written from `low_qual.vcf.gz`. The
+file written from `low_qual.vcf.gz`. Built on the branch `filters`, work
+packages 1 and 2 of `docs/plans/filters.md`, on 7 and 8 October 2026,
+with that file, `e2e/fixtures/low_qual.nei`, written by
+`make_fixtures.mjs --low-qual-nei`. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers

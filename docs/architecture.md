@@ -24,7 +24,12 @@ which the owner approved on 30 September 2026. Revised on 7 October
 in sections 2, 3, 5, 7 and 8, as `docs/designs/stats-filters.md`,
 approved by the owner that day, lists them, and in sections 9, 11 and
 12 and point 3 of section 13, which the review of its specs found
-stale, each section with its paragraph "What was revised" at its end. What was
+stale, each section with its paragraph "What was revised" at its end;
+and revised on 8 October 2026 for the owner's decisions on trying that
+piece, in sections 3 and 7, in a paragraph "What was revised on 8
+October 2026" at their ends, and in the rows of section 9 of the
+modules it built. The piece is built on the branch `filters` and was
+accepted by the owner on 8 October 2026 (`docs/plans/filters.md`). What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -1465,7 +1470,7 @@ The page and each worker talk through typed messages
   summary reads no filter. From 7 October 2026 the thresholds on the
   histograms of `popgen2.html` and its FILTER box are filters of the
   project (`docs/designs/stats-filters.md`): each change is a command,
-  with Undo, and starts no calculation, since the one pass, the only
+  a step of the store's history, and starts no calculation, since the one pass, the only
   calculation of the page, reads none; a run of presses of the arrow
   keys on a line or in its box is one change, made at a quiet second after the last
   press or when the focus leaves, so that a held key does not fill the
@@ -2338,7 +2343,8 @@ approved by the owner that day. The threshold on a plot of
 (`docs/plans/thresholds.md`), lost with another file or a reload, with
 no Undo; it is now the project's filter, on or off, and the page gains
 Undo and Redo, and its own first project; the notice it gained with
-them was taken off on 8 October 2026, the owner's decision. Not taken: a check
+them was taken off on 8 October 2026, and later that day the row of
+Undo and Redo was hidden, both the owner's decisions. Not taken: a check
 box beside each threshold to turn it on and off, in place of the empty
 box or 1, the owner's choice of 7 October 2026; and the top of the axis
 as off whatever its number, since the axis ends where the file's values
@@ -2598,9 +2604,9 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper and no saving; from 7 October 2026
                     with the row of Undo and Redo and their keys, reused
-                    from shell/, though not the rest of the shell, which
-                    the owner hid on 8 October 2026, and, from that
-                    day, no notice
+                    from shell/ without the rest of the shell, a row the
+                    owner hid on 8 October 2026 until a later feature
+                    needs it, and, from that day, no notice
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
@@ -2626,7 +2632,10 @@ src/ui/
                     2026 each with its threshold, a filter of the
                     project, its line, its box and its words, and the
                     FILTER box
-                    (statsPlots.ts, StatsHistogram.tsx; section 7), the
+                    (statsPlots.ts, StatsHistogram.tsx; section 7); a
+                    run of the arrow keys made one change, and made a
+                    change before any other command or an opening
+                    (thresholdRun.ts, runGate.tsx); the
                     page that holds them, their words, the rules of the
                     chain that the box and its words share (chain.ts: its
                     one button, from the first neither done nor locked),
@@ -2649,8 +2658,10 @@ src/ui/
                     and shellWords.tsx, which gives the components of the
                     shell what those words need of the application. From
                     7 October 2026 the buttons of Undo and Redo with
-                    their keys are a part of their own, which the header
-                    of popgen.html and the row of popgen2.html draw
+                    their keys are a part of their own,
+                    UndoRedoButtons.tsx, which the header of popgen.html
+                    draws, and the row of popgen2.html drew until the
+                    owner hid it on 8 October 2026
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -2675,7 +2686,11 @@ src/ui/
                     histogram (section 7), which tells the end of a drag
                     with a pointer apart from a key; NumberField.tsx,
                     with an option, popgen2.html's alone, under which an
-                    emptied box commits "off"; Checkbox.tsx, with a line
+                    emptied box commits "off", and, from 8 October 2026,
+                    its text put back to the number it is given whenever
+                    nothing is typed, since React Aria's commit at the
+                    loss of the focus could leave the old number in the
+                    box after a drag of the line; Checkbox.tsx, with a line
                     under the box that describes it; Table.tsx, the plain table of a
                     few rows that is only read, SortableTable.tsx, the
                     table sorted by any column, whose Virtualizer draws

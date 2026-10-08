@@ -48,7 +48,8 @@ each check, for a file whose variants record their FILTER and for one
 whose variants do not, and the comparison takes the one of the file
 given again once it is read, so that both of its sides are made for the
 same file; and the inputs of a fingerprint are those of the project
-with that file's filters.
+with that file's filters. Built on the branch `filters`, work package 2
+of `docs/plans/filters.md`, on 8 October 2026.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an

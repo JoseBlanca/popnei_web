@@ -93,7 +93,12 @@ notice there, and opening a file there is not a step of Undo. The
 setting `filterNotices` and the field `filtersChanged` of the notice
 are gone, since no page turned them on any more; the page opens a file
 with `open`, which starts a new history (below, "The notice, and the
-calculations it stops", and "Commands and events"). The store is the one object of core that
+calculations it stops", and "Commands and events"); `open` takes a
+function of the current project, so that a run of the arrow keys
+waiting when a file is opened is made a change before the new history
+starts, a defect found by the review of that day. Built on the branch
+`filters`, work package 5 of `docs/plans/filters.md` and the rounds
+after it, on 8 October 2026. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

@@ -91,7 +91,8 @@ what the calculation worker answers when it opens a variants file,
 gains `keepsPassed`, popnei 0.2.2's value of that name, and no job
 carries the filter for a file whose variants do not record their FILTER;
 the check of the message and its `PROTOCOL_VERSION` are in
-`messages.md`.
+`messages.md`. Built on the branch `filters`, work packages 1 and 2 of
+`docs/plans/filters.md`, on 7 and 8 October 2026.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: what an opened variants file says, the filters of the variants and of the individuals, the table of

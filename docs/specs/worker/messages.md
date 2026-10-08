@@ -78,7 +78,8 @@ FILTER column applies to a `.nei` file whose variants record whether
 they passed their FILTER (`docs/designs/stats-filters.md`, "What the
 owner decided"): `opened` carries `keepsPassed`, popnei 0.2.2's answer
 to that, a boolean, and `PROTOCOL_VERSION` is 14, one above the 13 of
-that merge.
+that merge. Built on the branch `filters`, work packages 1 and 2 of
+`docs/plans/filters.md`, on 7 and 8 October 2026.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest

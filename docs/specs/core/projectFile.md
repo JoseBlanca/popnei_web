@@ -60,9 +60,11 @@ made with it. Revised on 8 October 2026 after the review of that work:
 each check of an opened file keeps two fingerprints, for a file whose
 variants record their FILTER and for one whose do not, and a comparison
 takes the one of the variants file it is made for; the file is the same.
-There was no
-code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
-of section 9 of `docs/architecture.md`. The project file is the file
+Built on the branch `filters`, work packages 2 and 4 of
+`docs/plans/filters.md`, on 8 October 2026, with the words of the
+refusal by the old page that closed Open 4 that day. The code is
+`src/core/projectFile.ts`, the row `projectFile.ts` of section 9 of
+`docs/architecture.md`. The project file is the file
 `<name>.popnei.json` that a user saves to take their work out of the
 browser and open it again later, on another day or another computer
 (`docs/functionality.md`, section 9). This module writes it from the
