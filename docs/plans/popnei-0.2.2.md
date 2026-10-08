@@ -246,3 +246,24 @@ The owner tried the page and asked:
 3. A check box to leave out the variants that failed their FILTER: the
    FILTER box of the filters (`docs/plans/filters.md`, work package 9),
    moved there to come right after Undo and Redo.
+
+Built in a2794e9, a16726c, f4672cf; reviewed (ux and accessibility;
+tests and stale); fixed with the owner's further request of 8 October
+2026, a bluish grey of its own for a threshold that removes nothing
+("still ready to be used, like the blue bar, but a bit greyed"), in
+2a4b571, f5eefd8, a14ede4, 8448db1, a5b2234, 48bae50: token
+`--chart-threshold-keeps-all`, #54758c light (4.88:1) and #6387a1 dark
+(4.67:1); that line dotted and its handle hollow, so that a red–green
+colour deficiency tells it from the red one (a review simulated
+deuteranopia: grey against red, contrast 1.10); the missing rate's
+zeros in a first bar of their own, from 0 to 0.001, so that a threshold
+of 0 shades the plot right; its bars a whole number of values wide,
+falling back to "no narrower than 1/n" where that gives fewer than 5
+bars; an announcement when a typed threshold starts or stops removing
+anything; the grey state not shown when no individual has a value.
+Accepted: the MAF's bars may ripple, since its values are not on an even
+grid when genotypes are missing.
+
+Checks on 48bae50: Vitest 4,060 in 118 files, the rest clean;
+Playwright on popgen2 and the old Variants and Individuals steps, 258 in
+Chromium and 258 in WebKit; screens of popgen2 108.
