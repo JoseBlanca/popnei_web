@@ -1096,3 +1096,27 @@ item 1 did not hold (React Aria puts the number back at every commit,
 so the guard after Tab is a safeguard nothing reaches; left with a
 comment). Vitest 4,309, twice; Playwright 656 in Chromium and 656 in
 WebKit; screens 144.
+
+### Work package 10, 8 October 2026
+
+Commits 5eea455 (the guard after Tab in `NumberField` commented as a
+safeguard), f09d2b1 (the plots after a Stop), 29d8f58 (flows SF10 D2),
+824ac0c (screens), d23bc99 (a flow of popgen2Undo counts only the
+visible "Stopped." lines). The flow FS2 was not changed: its Stop comes
+before any plot. A failure of a pass being stopped cannot happen in the
+browser (the client ends a cancelled request at once); jsdom tests it.
+Vitest 4,319; Playwright 663 in Chromium, 662 in WebKit with one flow of
+the old page, WS9 D3, timing out at a load average of 60 to 110 from
+other processes, and passing when run again by the session.
+
+Review, ux, react and tests: no stale result (Start again, another
+file and a failure drop the kept plots; Undo and Redo of a filter keep
+them). Fixed in 63e1cda: the words over each part after a Stop with
+plots, "Stopped. The plots are of the variants read before the Stop."
+(the session's, so the room kept for them is two lines at 320 px; with
+no plots, "Stopped. Start again reads the file from the start." as
+before); the room of the line on the individuals with no called
+genotype always that of its longest wording; the screenshots at 320 px
+retaken (the old ones were stale: the plots do not move at a Stop, y of
+the first plot 559 before and after in Chromium and WebKit). Vitest
+4,319; popgen2 flows 144; screens 148.
