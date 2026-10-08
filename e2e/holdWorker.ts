@@ -113,8 +113,11 @@ export async function holdSummary(page: Page): Promise<void> {
   });
 }
 
-/** Lets the worker of the page post what `what` names of what it held. */
-export async function release(page: Page, what: Release): Promise<void> {
+/** Waits until every calculation worker the page made has said it
+    listens, so served: also before a flow ends with a worker made after
+    a Stop, whose script would otherwise still be served as the page
+    closes, which Playwright reports as an error of the route. */
+export async function workersListening(page: Page): Promise<void> {
   await page.waitForFunction((counts) => {
     const record = (
       window as unknown as Record<
@@ -126,6 +129,11 @@ export async function release(page: Page, what: Release): Promise<void> {
       record !== undefined && record.made > 0 && record.listening >= record.made
     );
   }, COUNTS);
+}
+
+/** Lets the worker of the page post what `what` names of what it held. */
+export async function release(page: Page, what: Release): Promise<void> {
+  await workersListening(page);
   await page.evaluate(
     ([channel, message]) => {
       const sent = new BroadcastChannel(channel);

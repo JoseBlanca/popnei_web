@@ -29,7 +29,7 @@ import { STOP_VCF_VARIANTS, writeBigVcf } from "./bigVcf.ts";
 import { announced, recordAnnouncements } from "./announced.ts";
 import { crashWorkerOn } from "./crashWorker.ts";
 import { dropFiles } from "./dropFiles.ts";
-import { holdSummary, release } from "./holdWorker.ts";
+import { holdSummary, release, workersListening } from "./holdWorker.ts";
 import type { DroppedFile } from "./dropFiles.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -704,6 +704,34 @@ test("filters 2 low_qual.nei, which records the FILTER of its variants, has the 
     "Chromosomes: 1",
     "Ploidy: 2",
   ]);
+});
+
+test("filters 2 panel.nei, which did not record the FILTER of its variants, has no line of the FILTER failures while counted nor after a Stop", async ({
+  page,
+}) => {
+  await holdSummary(page);
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.nei"));
+  await expect(info(page).getByRole("progressbar")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(lines(page)).toHaveText([
+    /^panel\.nei · /u,
+    "Individuals: 200",
+    /^Variants: counting…( \d+%)?$/u,
+    "Chromosomes: counting…",
+    "Ploidy: 2",
+  ]);
+  await info(page).getByRole("button", { name: "Stop" }).click();
+  await expect(lines(page)).toHaveText([
+    /^panel\.nei · /u,
+    "Individuals: 200",
+    "Variants: not counted",
+    "Chromosomes: not counted",
+    "Ploidy: 2",
+  ]);
+  // The worker made after the Stop served before the page closes.
+  await workersListening(page);
 });
 
 test("filters 2 after a crash of the count of low_qual.nei the line of the FILTER failures says not counted, as for a VCF", async ({

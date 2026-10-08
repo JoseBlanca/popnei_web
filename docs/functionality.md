@@ -76,8 +76,9 @@ same one pass from popnei 0.2.2 (docs/plans/popnei-0.2.2.md; popnei
 issue #12), and of the variants read so far while the pass runs. It is
 of every variant of the file. A `.nei` file has the line when it
 recorded its FILTER, as one written by popnei 0.2.2 from a VCF does, as
-a VCF has it: "counting…" until the first variants are read, and "not
-counted" after a Stop or a failure before the end. The box of the file
+a VCF has it: "counting…" until the first count so far, about 2
+seconds into the pass, and "not counted" after a Stop or a failure
+before the end. The box of the file
 learns whether the file recorded its FILTER from the opening of the
 file (`keepsPassed`, docs/plans/filters.md, work package 2), the same
 answer the FILTER box below reads, since 8 October 2026; until then it

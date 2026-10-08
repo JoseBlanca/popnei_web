@@ -422,10 +422,14 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
       ),
     ).toBe("FILTER failures: 0");
     expect(failuresLineOf(done(NEI), false, false)).toBeNull();
-    // A .nei file that records its FILTER, low_qual.nei, has the line
-    // from its result, as a VCF has it.
-    expect(failuresLineOf(done(LOW_QUAL), false, true)).toBe(
+  });
+
+  test("done or running: the count of a result, whole or so far, is shown whatever the opening said of the FILTER, since the result says it itself", () => {
+    expect(failuresLineOf(done(LOW_QUAL), false, false)).toBe(
       "FILTER failures: 300",
+    );
+    expect(failuresLineOf(running(SO_FAR), false, false)).toBe(
+      "FILTER failures: 75 so far",
     );
   });
 
