@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { emptyProject } from "../../../core/project.ts";
+import { emptyProject, setVariantFilter } from "../../../core/project.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import {
   LD_LOCKED_LINE,
@@ -13,6 +13,7 @@ import {
   OBS_HET_LINE,
   distanceRefusedText,
   elapsedText,
+  filtersTotalText,
   formatOfName,
   keptText,
   notLoadedText,
@@ -403,3 +404,34 @@ const LD_REASON =
 /** The reason of a list of individuals refused, whole. */
 const LIST_REASON =
   "The list of individuals to keep names 1 individual that is not in panel.nei: ind_900. Change the list, or remove the filter, in the Variants step.";
+
+describe("SF2 D4 the line of the total reads the filters that apply to the file", () => {
+  test("the FILTER filter alone on over panel.nei, whose variants do not record their FILTER: the line says no filter", () => {
+    // panel.nei as popnei 0.2.2 reads it: 200 individuals, 1,200
+    // variants, keepsPassed false.
+    const p: Project = setVariantFilter(
+      {
+        ...emptyProject("popgen"),
+        variants: {
+          fileId: "0123456789abcdef0123456789abcdef",
+          name: "panel.nei",
+          size: 261_490,
+          format: "nei",
+          readOptions: null,
+          read: {
+            kind: "read",
+            individuals: Array.from({ length: 200 }, (_, i) => `i${String(i)}`),
+            ploidy: 2,
+            numVars: 1200,
+            keepsPassed: false,
+          },
+        },
+      },
+      { kind: "passed" },
+    );
+    expect(p.filters).toEqual([{ kind: "passed" }]);
+    expect(filtersTotalText(p, 1200)).toBe(
+      "1,200 variants in panel.nei, with no filter.",
+    );
+  });
+});

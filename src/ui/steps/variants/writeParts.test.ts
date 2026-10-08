@@ -630,3 +630,17 @@ describe("the saved line with Write disabled, and no text of the section that na
     expect(texts.filter((text) => text.includes("Variants step"))).toEqual([]);
   });
 });
+
+describe("SF2 D4 the bound of the variants reads the filters that apply to the file", () => {
+  test("the FILTER filter alone on over panel.nei, whose variants do not record their FILTER, before a Count: the variants are exact, and a bound of the individuals at the largest size offers Write", () => {
+    // sampleProject's panel.nei, whose read says keepsPassed false.
+    const p: Project = { ...PROJECT, filters: [{ kind: "passed" }] };
+    const bound = estimateOf(2_000_000, 1000, true);
+    expect(writeParts(READY, bound, p, "notCounted").button).toEqual({
+      kind: "write",
+      disabled: false,
+      description:
+        "At most about 2.0 GB: 2,000,000 variants of 1,000 individuals.",
+    });
+  });
+});
