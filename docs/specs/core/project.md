@@ -428,9 +428,12 @@ above, is a defect. A -0 is stored as 0, so that the page never shows
 `thresholdValue(p, threshold)` gives the number of the threshold while
 its filter is on, and `null` while it is off, kept in a list of the
 filters off or never turned on. The page reads it before and after a
-command to word its notice: "changed" from a number to another, "was
-turned on" from `null` to a number, "was turned off" from a number to
-`null` (`docs/specs/steps/popgen2-filters.md`). The line and the box show it, so that
+command to name its step of Undo, which the hint of Undo and Redo and
+the status region after an undo say: "changed" from a number to
+another, "was turned on" from `null` to a number, "was turned off" from
+a number to `null`, and no step when both are the same
+(`thresholdChange` of `src/ui/variants/thresholdChange.ts`;
+`docs/specs/steps/popgen2-filters.md`). The page shows no notice. The line and the box show it, so that
 Undo moves them back. How the page makes one command of a run of
 presses of the arrow keys, and of a drag, is the page's
 (`docs/designs/stats-filters.md`, "When a threshold changes the

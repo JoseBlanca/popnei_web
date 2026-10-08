@@ -101,13 +101,21 @@ red. The two differ by their shape too, for a reader who does not tell
 the colours apart: the grey line is dotted and its handle hollow, the
 red line dashed and its handle filled. With no individual with a value,
 none is grey, since a filter would remove them all. A screen reader
-hears the grey in words: the value of the line, "1, keeps every
-variant", with "so far" while the file is read, and the description of
-the box, "This threshold removes no variant."; otherwise the value is
-the number alone. A number committed in the box that turns the
-threshold grey or back is announced once, "This threshold removes no
-variant." or "This threshold removes variants.", since a screen reader
-reads the description of the box only as the box takes the focus. The short titles are the owner's of 7
+hears the grey in words, which the screen does not show: the value of
+the line, "0.1, keeps every variant of the plot" for a filter on and
+grey, "1, keeps every variant" for one off, and the description of the
+box, "This filter removes no variant of the plot." and "This filter
+removes nothing."; "individual" in place of "variant" for the
+individuals. A filter that removes some has the number alone as the
+value of its line, "0.05", and no description. A number committed in
+the box, or a run of the arrow keys once it is made a change, that
+turns a threshold on, grey or off from another of the three is
+announced once, since a screen reader reads the line's value and the
+box's description only as they take the focus: into grey or off, the
+box's description of that look, "This filter removes no variant of the
+plot." or "This filter removes nothing."; back to removing some, the
+number alone, "0.05" (`docs/specs/steps/popgen2-filters.md`, "Its
+words"). The short titles are the owner's of 7
 October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
 and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
 het." for the individuals; the axes and what a screen reader reads keep
