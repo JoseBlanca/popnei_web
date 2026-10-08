@@ -189,8 +189,11 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
-  // download is the one button.
-  await expect(stats(page).getByRole("button")).toHaveCount(1);
+  // download is a button, beside the download of the filtered variants.
+  await expect(stats(page).getByRole("button")).toHaveCount(2);
+  await expect(
+    stats(page).getByRole("button", { name: "Download filtered variants…" }),
+  ).toBeEnabled();
   await expect(stats(page).getByRole("tab")).toHaveCount(0);
   await expect(stats(page).getByRole("grid")).toHaveCount(0);
   await expect(stats(page).getByRole("table")).toHaveCount(0);
@@ -289,7 +292,11 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
-  await expect(stats(page).getByRole("button")).toHaveCount(0);
+  // The one button, the download of the filtered variants, waits.
+  await expect(stats(page).getByRole("button")).toHaveCount(1);
+  await expect(
+    stats(page).getByRole("button", { name: "Download filtered variants…" }),
+  ).toBeDisabled();
   await expect
     .poll(() => announced(page))
     .toContainEqual(
