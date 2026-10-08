@@ -2102,6 +2102,33 @@ for (const theme of ["light", "dark"] as const) {
           fullPage: false,
         });
       });
+
+      test(`the shell with a project file of the new page refused${at}`, async ({
+        page,
+      }) => {
+        if (width !== null) await page.setViewportSize({ width, height: 640 });
+        await openProject(page, {
+          name: "pops.popnei.json",
+          text: await readFile(
+            join(
+              import.meta.dirname,
+              "..",
+              "src",
+              "core",
+              "fixtures",
+              "projectFile",
+              "v1-passed.popnei.json",
+            ),
+            "utf8",
+          ),
+        });
+        await expect(page.getByRole("button", { name: "OK" })).toBeFocused();
+        await save(
+          page,
+          `popgen-shell-open-new-page-refused${suffix}-${theme}`,
+          { fullPage: false },
+        );
+      });
     }
 
     test("the shell with the dialog of Save, the name empty", async ({

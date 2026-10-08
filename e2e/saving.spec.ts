@@ -629,6 +629,44 @@ test("WS9 D3 a project file refused whose read ends while the dialog of Save is 
   await expect(openButton(page)).toBeFocused();
 });
 
+test("SF4 D2 Open project… with a project file that holds the filter of the FILTER column shows the text of newPageFilter, leaves the project as it was, and axe", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPopgen(page);
+  const text = await readFile(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "core",
+      "fixtures",
+      "projectFile",
+      "v1-passed.popnei.json",
+    ),
+    "utf8",
+  );
+
+  await openProject(page, { name: "pops.popnei.json", text });
+
+  const dialog = page.getByRole("alertdialog", {
+    name: "pops.popnei.json was not opened",
+  });
+  await expect(dialog).toHaveAccessibleDescription(
+    "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.",
+  );
+  await expect(dialog.getByRole("button", { name: "OK" })).toBeFocused();
+  await expectNoViolations(makeAxeBuilder);
+
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toHaveCount(0);
+  await expect(openButton(page)).toBeFocused();
+  // Nothing of the file was opened: the page still asks for a variants
+  // file, and not for the file the project was made with.
+  await expect(page.getByText(/^This project was made with/)).toHaveCount(0);
+});
+
 test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge", async ({
   page,
 }, testInfo) => {

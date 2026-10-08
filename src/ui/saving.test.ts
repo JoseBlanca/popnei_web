@@ -453,3 +453,56 @@ describe("VS5 D1 saveWritten", () => {
     expect(store.getState().write?.kind).toBe("ready");
   });
 });
+
+describe("SF4 D2 the saving of popgen.html reads a project file as a page with no box of the FILTER column", () => {
+  /** The text a save of the old page downloads, panel.nei loaded and the
+      missing data filter at 0.05, with the filter of the FILTER column
+      added by `withPassed` to its JSON. */
+  function savedWith(
+    withPassed: (file: Readonly<Record<string, unknown>>) => object,
+  ): string {
+    const { store, downloads, saving } = setup();
+    loadPanel(store);
+    setThreshold(store, 0.05);
+    saving.save("panel");
+    const [saved] = downloads;
+    if (saved === undefined) throw new Error("nothing downloaded");
+    const file: unknown = JSON.parse(saved.text);
+    if (typeof file !== "object" || file === null) throw new Error("no file");
+    return JSON.stringify(withPassed(Object.fromEntries(Object.entries(file))));
+  }
+
+  test.each([
+    [
+      "on",
+      (file: Readonly<Record<string, unknown>>) => ({
+        ...file,
+        filters: [
+          { kind: "passed" },
+          { kind: "missing_data", maxAllowedMissingRate: 0.05 },
+        ],
+      }),
+    ],
+    [
+      "off",
+      (file: Readonly<Record<string, unknown>>) => ({
+        ...file,
+        filtersOff: [{ kind: "passed" }],
+      }),
+    ],
+  ])(
+    "a project file with the filter of the FILTER column %s is refused as newPageFilter",
+    (_state, withPassed) => {
+      const { saving } = setup();
+      expect(saving.read(savedWith(withPassed))).toEqual({
+        ok: false,
+        error: { kind: "newPageFilter" },
+      });
+    },
+  );
+
+  test("the same project file without it opens", () => {
+    const { saving } = setup();
+    expect(saving.read(savedWith((file) => file)).ok).toBe(true);
+  });
+});
