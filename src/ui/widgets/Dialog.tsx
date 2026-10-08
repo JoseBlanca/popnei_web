@@ -42,6 +42,12 @@ export interface DialogProps<C extends DialogContent> {
   /** A dialog, or an alert dialog for a question or an error; a dialog
       when absent. */
   readonly role?: "dialog" | "alertdialog";
+  /** Whether Escape closes it; true when absent. False while the dialog
+      of the download of popgen2.html writes a file, so that a key
+      pressed by habit does not throw away minutes of writing
+      (docs/specs/steps/popgen2-download.md, "While the file is
+      written"). */
+  readonly escapeCloses?: boolean;
   /** What it holds under its words, its fields and its buttons, drawn
       from its content. */
   readonly children: (content: C) => React.ReactNode;
@@ -52,6 +58,7 @@ export function Dialog<C extends DialogContent>({
   content,
   onClose,
   role = "dialog",
+  escapeCloses = true,
   children,
 }: DialogProps<C>): React.JSX.Element {
   const textId = useId();
@@ -59,6 +66,7 @@ export function Dialog<C extends DialogContent>({
   return (
     <ModalOverlay
       isOpen={content !== null}
+      isKeyboardDismissDisabled={!escapeCloses}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
