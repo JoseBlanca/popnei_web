@@ -17,7 +17,7 @@ import {
   intermediateKeyOf,
   keyFromWire,
   keyOf,
-  settingsFingerprint,
+  settingsAsSaved,
   writeKeyOf,
 } from "./keys.ts";
 import type { JsonObject, JsonValue, Key, WriteFormat } from "./keys.ts";
@@ -87,8 +87,10 @@ export interface AnalysisDef<J, R> {
     formatVersion: number,
   ): Result<JsonObject, string>;
   /** What its key holds beyond the load of the variants file and the
-      filters, all of it. It answers for any project and does not read
-      `p.variants`. */
+      filters, all of it. It answers for any project and reads nothing of
+      `p.variants` but through `filtersApplied`, whether its variants
+      record their FILTER; so the key stays across the read of the file
+      only while that answer is the same (docs/specs/core/keys.md). */
   keyInputs(p: Project): JsonValue;
   /** The reason it cannot run beyond what every analysis needs, in the
       words the screen shows next to its Run button, or `null`. */
@@ -117,7 +119,7 @@ export interface AnalysisDef<J, R> {
   checkNumbers(r: R): readonly (number | null)[];
   /** How many numbers `checkNumbers` gives for a result of the project
       `p`, whose variants file is read, or `null` when the project does
-      not fix it. Unlike `keyInputs`, it reads `p.variants`. The project
+      not fix it. Unlike `keyInputs`, it reads `p.variants` whole. The project
       file refuses, at the opening, a check of another count; the store
       does not call it. */
   numCheckNumbers(p: Project): number | null;
@@ -830,10 +832,13 @@ export function createStore<J, R, F = never>(
       }
       const saved =
         p.reference?.checks.find((c) => c.analysis === def.id) ?? null;
+      // Compared once the variants file is read, whose keepsPassed picks
+      // the fingerprint of the reference; until then it is locked.
       const check =
         saved !== null &&
         p.variants !== null &&
-        settingsFingerprint(def, p, p.variants, memo) === saved.settings
+        p.variants.read.kind === "read" &&
+        settingsAsSaved(def, p, saved, p.variants, memo)
           ? saved
           : null;
       return {

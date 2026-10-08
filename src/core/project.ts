@@ -281,9 +281,27 @@ export interface Check {
   readonly popneiVersion: string;
   /** The version of the application the numbers were calculated with. */
   readonly appVersion: string;
-  /** The fingerprint of its settings in the file, 64 lower case
-      hexadecimal digits; made when the file is opened, never saved. */
-  readonly settings: string;
+  /** The fingerprints of its settings in the file, made when the file
+      is opened, never saved. */
+  readonly settings: CheckSettings;
+}
+
+/**
+ * The fingerprints of the settings of a check, each 64 lower case
+ * hexadecimal digits: one for a variants file whose variants record
+ * whether they passed their FILTER, `keepsPassed` true, and one for a
+ * file whose variants do not. The two differ only when the filter of the
+ * FILTER column is on, which applies to the first file and not to the
+ * second. A project file does not say which its file is, so both are
+ * made when it is opened, and the comparison takes the one of the
+ * variants file the user gave again, as its read tells
+ * (docs/specs/core/keys.md, "The fingerprint of the settings").
+ */
+export interface CheckSettings {
+  /** For a file whose variants record their FILTER. */
+  readonly passedKept: string;
+  /** For a file whose variants do not. */
+  readonly passedNotKept: string;
 }
 
 /**
@@ -4525,14 +4543,9 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
   if (!appVersion.ok) {
     return appVersion;
   }
-  const settings = parseText(f["settings"], [...path, "settings"]);
+  const settings = parseCheckSettings(f["settings"], [...path, "settings"]);
   if (!settings.ok) {
     return settings;
-  }
-  if (!FINGERPRINT.test(settings.value)) {
-    return failure(
-      wrongValue([...path, "settings"], "64 lower case hexadecimal digits"),
-    );
   }
   return success({
     analysis: analysis.value,
@@ -4542,6 +4555,43 @@ function parseCheck(value: unknown, path: FieldPath): Parsed<Check> {
     appVersion: appVersion.value,
     settings: settings.value,
   });
+}
+
+function parseCheckSettings(
+  value: unknown,
+  path: FieldPath,
+): Parsed<CheckSettings> {
+  const fields = readObject(value, path, ["passedKept", "passedNotKept"]);
+  if (!fields.ok) {
+    return fields;
+  }
+  const f = fields.value;
+  const passedKept = parseFingerprint(f["passedKept"], [...path, "passedKept"]);
+  if (!passedKept.ok) {
+    return passedKept;
+  }
+  const passedNotKept = parseFingerprint(f["passedNotKept"], [
+    ...path,
+    "passedNotKept",
+  ]);
+  if (!passedNotKept.ok) {
+    return passedNotKept;
+  }
+  return success({
+    passedKept: passedKept.value,
+    passedNotKept: passedNotKept.value,
+  });
+}
+
+function parseFingerprint(value: unknown, path: FieldPath): Parsed<string> {
+  const text = parseText(value, path);
+  if (!text.ok) {
+    return text;
+  }
+  if (!FINGERPRINT.test(text.value)) {
+    return failure(wrongValue(path, "64 lower case hexadecimal digits"));
+  }
+  return text;
 }
 
 // The text the user reads.
@@ -5107,6 +5157,16 @@ const FIELD_WORDS: readonly FieldWords[] = [
     ["reference", "checks", N, "settings"],
     (o) =>
       `the record of the settings the ${nth(o, 0)} analysis with check numbers was calculated with`,
+  ],
+  [
+    ["reference", "checks", N, "settings", "passedKept"],
+    (o) =>
+      `the record of the settings the ${nth(o, 0)} analysis with check numbers was calculated with, for a variants file that records whether each variant passed its FILTER`,
+  ],
+  [
+    ["reference", "checks", N, "settings", "passedNotKept"],
+    (o) =>
+      `the record of the settings the ${nth(o, 0)} analysis with check numbers was calculated with, for a variants file that does not record whether each variant passed its FILTER`,
   ],
 ];
 

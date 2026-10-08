@@ -1008,7 +1008,10 @@ describe("WS5 D2 the key", () => {
             keyVersion: 1,
             popneiVersion: "0.1.0",
             appVersion: "0.1.0",
-            settings: "0".repeat(64),
+            settings: {
+              passedKept: "0".repeat(64),
+              passedNotKept: "0".repeat(64),
+            },
           },
         ],
       },

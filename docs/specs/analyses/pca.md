@@ -493,7 +493,12 @@ PCA's `needs` gives that reason when its LD filter follows the dataset's
 ```
 
 the method, and the filters popnei is given, with those of the PCA's own
-in the place of the dataset's, as they reach popnei. An LD filter with
+in the place of the dataset's, as they reach popnei. `filtersApplied` reads of `p.variants` only `keepsPassed`, and only
+when the filter of the FILTER column is on: the one reading of the file
+a `keyInputs` may make (`docs/specs/core/keys.md`, "What it does"), so
+its key changes when the read of a `.nei` file whose variants record
+their FILTER comes back with that filter on, while the analysis is
+locked anyway. An LD filter with
 no distance, the dataset's or the PCA's own, is in the list with
 `maxDist` `null`, so the key tells it from no LD filter, whether or not
 a key is ever asked for while the PCA is locked, since `keyInputs`

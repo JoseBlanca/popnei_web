@@ -40,6 +40,15 @@ decided"): `filtersApplied` leaves it out for a file whose variants do
 not record their FILTER, as `keepsPassed` of `docs/specs/core/project.md`
 says, and the fingerprint is given the variants file it is made for,
 whose read options and `keepsPassed` it reads.
+Revised on 8 October 2026 after the review of that work: a `keyInputs`
+reads `p.variants` only through `filtersApplied`, and a key stays across
+the read of the file only while `keepsPassed` gives the same answer
+before and after it; an opened project file keeps two fingerprints for
+each check, for a file whose variants record their FILTER and for one
+whose variants do not, and the comparison takes the one of the file
+given again once it is read, so that both of its sides are made for the
+same file; and the inputs of a fingerprint are those of the project
+with that file's filters.
 A key is the name a result is stored under in the cache: a SHA-256
 hash of everything the result was calculated from, so that a result whose
 inputs changed is never shown, and a result whose inputs came back, by an
@@ -129,8 +138,18 @@ of an analysis whether or not the list is known
 `keyInputs` gives everything else the result depends on, and when in
 doubt it includes a part: a part too many costs a calculation, a part
 missing shows a stale result (`.claude/skills/coding/SKILL.md`, "Keys").
-It does not read `p.variants`, which `keyOf` puts in itself, and it gives
-a value for every project, a locked one included, since the fingerprint
+It reads nothing of `p.variants`, which `keyOf` puts in itself, but
+through `filtersApplied` of `docs/specs/core/project.md`, which reads of
+it only `keepsPassed`, whether the variants of the file record whether
+each passed its FILTER: the PCA and the LD decay read their filters so.
+So a key stays the same across the read of the file only while
+`keepsPassed` gives the same answer before the read, by the format, and
+after it, from the read. A `.nei` file whose variants record their
+FILTER, with the filter of the FILTER column on, changes the key when its
+read comes back; nothing is lost by it, since every analysis is locked
+until the read comes back (`projectNeeds`), and the one pass of
+`popgen2.html`, whose key holds no filter, does not change. It gives a
+value for every project, a locked one included, since the fingerprint
 of an opened project is made from it with no variants file loaded, and a
 function that throws on some projects would be a defect waiting for one.
 The store itself makes the key of an analysis only when none of
@@ -269,18 +288,40 @@ application calculates, which the project file saves apart. It is made
 with the same canonical form and the same hash, from another object, so a
 fingerprint and a key never coincide. It is given the variants file it
 is made for, and reads nothing of `p.variants`: its read options go in,
-and its filters of the variants are those that apply to that file:
+its filters of the variants are those that apply to that file,
 
 ```ts
 filtersAppliedTo(p.filters, keepsPassed(source))
 ```
 
-`keepsPassed` of `docs/specs/core/project.md` gives the read's value, or,
-for a file not read, `true` for a VCF and `false` for a `.nei` file. A
-project file does not save it, so the source of a reference gives it by
-the format (`docs/specs/core/project.md`, "The validation"); no project
-file holds the filter of the FILTER column today, so this changes no
-fingerprint of one.
+and its inputs are what `keyInputs` gives for the project with those
+filters and no variants file, so that the PCA and the LD decay, which
+read `filtersApplied`, read the same filters. `keepsPassed` of
+`docs/specs/core/project.md` gives the read's value, or, for a file not
+read, `true` for a VCF and `false` for a `.nei` file.
+
+A project file does not say whether the variants of its file record
+their FILTER, so an opened project file keeps two fingerprints for each
+check, `checkSettings`: one made as for a file whose variants record it,
+and one as for a file whose variants do not, both with the read options
+of the reference's file. They differ only when the filter of the FILTER
+column is on. The comparison of the settings now with those saved,
+`settingsAsSaved`, takes the fingerprint of the settings now for a
+variants file and the one saved for the same answer of `keepsPassed`
+of that file, `savedFingerprint`: the store compares them for the file
+given again once its read comes back, and before that compares nothing,
+the analysis being locked; the Save compares them for the file given
+again, or for the reference's file when none is. So a `.nei` file whose
+variants record their FILTER, saved with the filter on and given again,
+has the settings saved, and with the filter turned off since, it has
+other settings, since the numbers saved left out the variants that
+failed; for a `.nei` file whose variants do not record their FILTER, the
+filter on and off give the settings saved, since it applied to neither.
+Two fingerprints made at the opening were chosen over the store making
+the reference's fingerprint again once the file is read: the store keeps
+no copy of the settings opened once a command has changed them, and the
+Save, which compares the same way, is given the state of the store and
+no history.
 
 ## The TypeScript interface
 
@@ -337,6 +378,21 @@ export function settingsFingerprint(
   source: VariantSource,   // the file it is made for: its readOptions, and keepsPassed of its read
   memo: KeyMemo | null,
 ): string;
+
+/** The two fingerprints an opened project file keeps for a check, both
+    with the read options of `source`: for a file whose variants record
+    their FILTER, and for one whose variants do not. */
+export function checkSettings(
+  def: KeyedDef, p: Project, source: VariantSource, memo: KeyMemo | null,
+): CheckSettings;
+
+/** The fingerprint of `check` for the answer of keepsPassed(source). */
+export function savedFingerprint(check: Check, source: VariantSource): string;
+
+/** Whether settingsFingerprint(def, p, source) is savedFingerprint(check, source). */
+export function settingsAsSaved(
+  def: KeyedDef, p: Project, check: Check, source: VariantSource, memo: KeyMemo | null,
+): boolean;
 ```
 
 `WriteFormat` is `"nei"` in stage 3, and gains `"vcf"` with popnei's
@@ -504,15 +560,30 @@ hash with node's `crypto` to compare with ours; the code is checked with
   are not named `__proto__`, which the example above covers. For any two
   projects that differ in one part of the table of the parts, the keys
   differ; for two that differ in a part the table does not hold, the name
-  of the variants file or its read, or the filters turned off, the keys
-  are the same, those of `writeKeyOf` among them. For any
+  of the variants file, its read while `filtersApplied` gives the same
+  filters before and after it, or the filters turned off, the keys are
+  the same, those of `writeKeyOf` among them. A change of the order of
+  two filters changes the key when both apply to the file. For any
   project, the fingerprint does not change when the load id, the key
   version or the version of popnei does, and changes when the filters, the
   read options or the inputs do.
 - **Every analysis has its table of what changes its key**, in its own
   spec, as `.claude/skills/coding/SKILL.md` asks, and a test that its
   `keyInputs` gives a value for `emptyProject` and for a project whose
-  reads are pending, without reading `p.variants`.
+  reads are pending, reading `p.variants` only through `filtersApplied`.
+- **The fingerprints of an opened project**, under `SF2 D3` in
+  `src/core/projectFile.test.ts`: for each analysis of `POPGEN_ANALYSES`
+  and `POPGEN2_ANALYSES`, with the filter of the FILTER column on and off,
+  and for `low_qual.nei`, whose read says `keepsPassed` true, `panel.nei`,
+  whose read says false, and a VCF, the settings of the project opened
+  with that file as its reference and the file given again are those
+  saved, `settingsAsSaved`, and a Save carries the check; saved with the
+  filter on and given again with it off, the diversity has other
+  settings with `low_qual.nei` and with the VCF, and the settings saved
+  with `panel.nei`. Under the same tag in `src/core/store.test.ts`, the
+  same with the store: a `.nei` file read with `keepsPassed` true and
+  the filter turned off since gives no comparison of the numbers, and
+  with the filter on, or read with `keepsPassed` false, it does.
 
 ## Open points
 

@@ -36,7 +36,7 @@ import type {
 } from "./project.ts";
 import type { Result } from "./result.ts";
 import type { AnalysisDef, AppState, CheckVerdict } from "./store.ts";
-import { settingsFingerprint } from "./keys.ts";
+import { checkSettings, settingsAsSaved } from "./keys.ts";
 import type { ColumnType, IndividualFilter } from "../worker/protocol.ts";
 
 /** The text of the field `format`, which tells a project file from any
@@ -208,7 +208,7 @@ function checksWritten<J, R>(
       continue;
     }
     const source = p.variants ?? reference.variants;
-    if (settingsFingerprint(def, p, source, null) === kept.settings) {
+    if (settingsAsSaved(def, p, kept, source, null)) {
       checks.push({
         analysis: kept.analysis,
         numbers: finiteNumbers(def.id, kept.numbers),
@@ -714,7 +714,10 @@ export function readProjectFile<J, R>(
               variants,
               checks: checks.map((check) => ({
                 ...check,
-                settings: NO_FINGERPRINT,
+                settings: {
+                  passedKept: NO_FINGERPRINT,
+                  passedNotKept: NO_FINGERPRINT,
+                },
               })),
             },
     },
@@ -767,7 +770,7 @@ export function readProjectFile<J, R>(
         ...reference,
         checks: reference.checks.map((check) => ({
           ...check,
-          settings: settingsFingerprint(
+          settings: checkSettings(
             definitionOf(analyses, check.analysis),
             project,
             reference.variants,

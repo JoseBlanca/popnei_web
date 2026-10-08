@@ -12,7 +12,12 @@ import {
   filtersAppliedTo,
   keepsPassed,
 } from "./filtersApplied.ts";
-import type { Project, VariantSource } from "./project.ts";
+import type {
+  Check,
+  CheckSettings,
+  Project,
+  VariantSource,
+} from "./project.ts";
 import type { AnalysisDef } from "./store.ts";
 
 /** A JSON value, which every part of a key and of the project is. */
@@ -486,17 +491,18 @@ export function writeKeyOf(
 }
 
 /**
- * The fingerprint of the settings of an analysis, which an opened project
- * file keeps for each analysis: the hash of the canonical form of the key
- * without the version of popnei, the key version and the load id, and
- * with the read options of `source` in place of the load. It names only
- * what the user chose, and never coincides with a key, whose object has
- * other fields. Its filters of the variants are those that apply to
- * `source`, `filtersAppliedTo(p.filters, keepsPassed(source))`.
+ * The fingerprint of the settings of an analysis for the variants file
+ * `source`: the hash of the canonical form of the key without the version
+ * of popnei, the key version and the load id, and with the read options of
+ * `source` in place of the load. It names only what the user chose, and
+ * never coincides with a key, whose object has other fields. Its filters
+ * of the variants are those that apply to `source`,
+ * `filtersAppliedTo(p.filters, keepsPassed(source))`, and the inputs are
+ * what `keyInputs` gives for `p` with `source` as its variants file, so
+ * that `p.variants` changes nothing of it.
  *
- * It is given the variants file it is made for, and reads nothing of
- * `p.variants`, so it is made also when no variants file is loaded, as
- * when a project file is opened, for the reference's file.
+ * It is made also when no variants file is loaded, as when a project file
+ * is opened, for the reference's file.
  */
 export function settingsFingerprint(
   def: KeyedDef,
@@ -504,16 +510,79 @@ export function settingsFingerprint(
   source: VariantSource,
   memo: KeyMemo | null,
 ): string {
+  return fingerprintOf(def, p, source.readOptions, keepsPassed(source), memo);
+}
+
+/**
+ * The two fingerprints of the settings of `p` for the variants file
+ * `source`, as an opened project file keeps them for each check: for a
+ * file whose variants record whether they passed their FILTER, and for
+ * one whose variants do not, both with the read options of `source`. A
+ * project file does not hold which `source` is, so the comparison picks
+ * one once the file given again is read, `savedFingerprint`.
+ */
+export function checkSettings(
+  def: KeyedDef,
+  p: Project,
+  source: VariantSource,
+  memo: KeyMemo | null,
+): CheckSettings {
+  return {
+    passedKept: fingerprintOf(def, p, source.readOptions, true, memo),
+    passedNotKept: fingerprintOf(def, p, source.readOptions, false, memo),
+  };
+}
+
+/**
+ * The fingerprint `check` saved for a variants file whose variants record
+ * their FILTER as `keepsPassed(source)` says, which is the one to compare
+ * with `settingsFingerprint` of the same `source`: so both sides hold the
+ * filters that apply to the same file.
+ */
+export function savedFingerprint(check: Check, source: VariantSource): string {
+  return keepsPassed(source)
+    ? check.settings.passedKept
+    : check.settings.passedNotKept;
+}
+
+/**
+ * Whether the settings of `p` for the variants file `source` are those
+ * `check` was saved with: `settingsFingerprint` of `source` and
+ * `savedFingerprint` of `check` for it are the same. The store compares
+ * the check numbers of an analysis only then, and a project file carries
+ * them only then.
+ */
+export function settingsAsSaved(
+  def: KeyedDef,
+  p: Project,
+  check: Check,
+  source: VariantSource,
+  memo: KeyMemo | null,
+): boolean {
+  return (
+    settingsFingerprint(def, p, source, memo) ===
+    savedFingerprint(check, source)
+  );
+}
+
+/** The fingerprint of the settings of `p` for a variants file read with
+    `readOptions` whose variants record their FILTER as `keeps` says. The
+    inputs are those of `p` with those filters and no variants file, so
+    that `filtersApplied` in a `keyInputs` gives the same filters. */
+function fingerprintOf(
+  def: KeyedDef,
+  p: Project,
+  readOptions: VariantSource["readOptions"],
+  keeps: boolean,
+  memo: KeyMemo | null,
+): string {
+  const applied = filtersAppliedTo(p.filters, keeps);
   const text = canonicalOf(
     {
       analysis: def.id,
-      ...filtersReadBy(
-        def,
-        filtersAppliedTo(p.filters, keepsPassed(source)),
-        p,
-      ),
-      inputs: def.keyInputs(p),
-      readOptions: source.readOptions,
+      ...filtersReadBy(def, applied, p),
+      inputs: def.keyInputs({ ...p, filters: applied, variants: null }),
+      readOptions,
     },
     memo,
     `the fingerprint of the analysis ${JSON.stringify(def.id)}`,

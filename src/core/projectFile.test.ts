@@ -2,16 +2,22 @@ import { readFileSync } from "node:fs";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { popDists } from "./analyses/popDists.ts";
-import { POPGEN_ANALYSES, countsOf, individualStatsOf } from "./apps.ts";
-import { keyFromWire, settingsFingerprint } from "./keys.ts";
+import {
+  POPGEN2_ANALYSES,
+  POPGEN_ANALYSES,
+  countsOf,
+  individualStatsOf,
+} from "./apps.ts";
+import { checkSettings, keyFromWire, settingsAsSaved } from "./keys.ts";
 import {
   emptyProject,
   freezeProject,
   individualsNeeds,
   setVariantFilter,
+  turnOffVariantFilter,
   variantFilterNeeds,
 } from "./project.ts";
-import type { Project, Reference, VariantSource } from "./project.ts";
+import type { Check, Project, Reference, VariantSource } from "./project.ts";
 import {
   askedFileText,
   checkVerdictText,
@@ -190,7 +196,7 @@ function referenceFor(settingsOf: Project): Reference {
         keyVersion: 1,
         popneiVersion: "0.1.0",
         appVersion: "0.1.0",
-        settings: settingsFingerprint(DIVERSITY, settingsOf, PANEL_SAVED, null),
+        settings: checkSettings(DIVERSITY, settingsOf, PANEL_SAVED, null),
       },
     ],
   };
@@ -269,7 +275,7 @@ describe("WS6 D1 what is written", () => {
       checks: [
         {
           ...CARRIED_CHECK,
-          settings: settingsFingerprint(DIVERSITY, p, savedVcf, null),
+          settings: checkSettings(DIVERSITY, p, savedVcf, null),
         },
       ],
     };
@@ -522,7 +528,7 @@ describe("WS6 D1 what is written", () => {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(DIVERSITY, p, savedVcf, null),
+          settings: checkSettings(DIVERSITY, p, savedVcf, null),
         },
       ],
     };
@@ -801,7 +807,7 @@ function forwardProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(defOf("pca"), p, PANEL_VCF, null),
+          settings: checkSettings(defOf("pca"), p, PANEL_VCF, null),
         },
       ],
     },
@@ -871,7 +877,7 @@ function reversedProject(): Project {
     reference: {
       checks: [
         {
-          settings: settingsFingerprint(defOf("pca"), p, PANEL_VCF, null),
+          settings: checkSettings(defOf("pca"), p, PANEL_VCF, null),
           appVersion: "0.1.0",
           popneiVersion: "0.1.0",
           keyVersion: 1,
@@ -976,7 +982,7 @@ function neiDiversityProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: "",
+          settings: { passedKept: "", passedNotKept: "" },
         },
       ],
     },
@@ -1015,7 +1021,7 @@ function vcfPendingProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: "",
+          settings: { passedKept: "", passedNotKept: "" },
         },
       ],
     },
@@ -1036,7 +1042,7 @@ function opened(p: Project): Project {
       ...reference,
       checks: reference.checks.map((check) => ({
         ...check,
-        settings: settingsFingerprint(
+        settings: checkSettings(
           defOf(check.analysis),
           p,
           reference.variants,
@@ -1214,7 +1220,14 @@ describe("WS6 D2 the opening", () => {
     expect(
       refusalOf((file) => ({
         ...file,
-        checks: [checkWith({ settings: "0".repeat(64) })],
+        checks: [
+          checkWith({
+            settings: {
+              passedKept: "0".repeat(64),
+              passedNotKept: "0".repeat(64),
+            },
+          }),
+        ],
       })),
     ).toMatchObject({ kind: "header", field: "checks" });
   });
@@ -1502,7 +1515,7 @@ describe("WS6 D2 the opening", () => {
       onlyPassed: true,
     });
     expect(p.reference.checks.map((check) => check.settings)).toEqual([
-      settingsFingerprint(DIVERSITY, p, p.reference.variants, null),
+      checkSettings(DIVERSITY, p, p.reference.variants, null),
     ]);
   });
 });
@@ -1589,7 +1602,7 @@ const DIVERSITY_CHECK = {
   keyVersion: 1,
   popneiVersion: "0.1.0",
   appVersion: "0.1.0",
-  settings: "0".repeat(64),
+  settings: { passedKept: "0".repeat(64), passedNotKept: "0".repeat(64) },
 } as const;
 
 /** A project opened from a file made with `VCF_2026`, with the check of
@@ -1696,7 +1709,7 @@ function everyFilterProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: "",
+          settings: { passedKept: "", passedNotKept: "" },
         },
       ],
     },
@@ -2180,7 +2193,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
                 matched[index] === true
                   ? {
                       ...check,
-                      settings: settingsFingerprint(
+                      settings: checkSettings(
                         defOf(check.analysis),
                         p,
                         p.variants ?? reference.variants,
@@ -2362,7 +2375,7 @@ function expectedChecks(
       continue;
     }
     const source = p.variants ?? reference.variants;
-    if (settingsFingerprint(def, p, source, null) === kept.settings) {
+    if (settingsAsSaved(def, p, kept, source, null)) {
       checks.push({
         analysis: kept.analysis,
         numbers: kept.numbers,
@@ -2889,7 +2902,7 @@ function openedInPopgen(p: Project): Project {
         }
         return {
           ...check,
-          settings: settingsFingerprint(def, p, reference.variants, null),
+          settings: checkSettings(def, p, reference.variants, null),
         };
       }),
     },
@@ -3061,7 +3074,7 @@ function onePopulationProject(): Project {
           keyVersion: 2,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: "",
+          settings: { passedKept: "", passedNotKept: "" },
         },
       ],
     },
@@ -3518,7 +3531,7 @@ function stage5OptionsProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(popDists, p, variants, null),
+          settings: checkSettings(popDists, p, variants, null),
         },
       ],
     },
@@ -3656,3 +3669,168 @@ describe("SF2 D2 a project file read gives keepsPassed by the format", () => {
     },
   );
 });
+
+describe("SF2 D3 an opened project and the variants file given again give the same fingerprint", () => {
+  /** Every analysis of the two pages of population genetics. */
+  const DEFS = [...POPGEN_ANALYSES, ...POPGEN2_ANALYSES];
+
+  /** low_qual.nei as the test needs it: 200 individuals of ploidy 2 and
+      1,200 variants that record their FILTER, keepsPassed true, as popnei
+      0.2.2 opens it under node; the names of the individuals are the
+      test's. */
+  const LOW_QUAL_NEI: VariantSource = {
+    fileId: SAMPLE_VARIANTS_ID,
+    name: "low_qual.nei",
+    size: 261746,
+    format: "nei",
+    readOptions: null,
+    read: {
+      kind: "read",
+      individuals: individualsNamed(200),
+      ploidy: 2,
+      numVars: 1200,
+      keepsPassed: true,
+    },
+  };
+
+  /** A VCF read with every variant, as popgen2.html opens each. */
+  const ALL_VCF: VariantSource = {
+    ...PANEL_VCF,
+    readOptions: { ploidy: 2, onlyPassed: false },
+  };
+
+  /** `source` as an opened project file keeps it: under the load id of
+      another session, its read with keepsPassed by the format, as
+      readProjectFile gives it. */
+  function asSaved(source: VariantSource): VariantSource {
+    if (source.read.kind !== "read") {
+      throw new Error("the source of the test is read");
+    }
+    return {
+      ...source,
+      fileId: "99999999999999999999999999999999",
+      read: { ...source.read, keepsPassed: source.format === "vcf" },
+    };
+  }
+
+  /** The project of population genetics, with the filter of the FILTER
+      column on when `passedOn`. */
+  function settingsWith(passedOn: boolean): Project {
+    const p = emptyProject("popgen");
+    return passedOn ? setVariantFilter(p, { kind: "passed" }) : p;
+  }
+
+  /** The project opened from a file saved with `saved`'s settings and
+      `source`, with a check of `def` whose fingerprints are made as the
+      opening makes them, and `source` given again and read. */
+  function givenAgain(
+    def: (typeof DEFS)[number],
+    saved: Project,
+    source: VariantSource,
+  ): { readonly given: Project; readonly check: Check } {
+    const reference = asSaved(source);
+    const opened: Project = { ...saved, variants: null };
+    const check: Check = {
+      analysis: def.id,
+      numbers: [1],
+      keyVersion: def.keyVersion,
+      popneiVersion: "0.2.2",
+      appVersion: "0.2.0",
+      settings: checkSettings(def, opened, reference, null),
+    };
+    return {
+      given: deepFreeze<Project>({
+        ...opened,
+        variants: source,
+        reference: { variants: reference, checks: [check] },
+      }),
+      check,
+    };
+  }
+
+  /** The checks the file saved of `p` holds, with every analysis ready. */
+  function checksSaved(p: Project): unknown {
+    const state = deepFreeze<AppState<JobResult>>({
+      project: p,
+      undo: null,
+      redo: null,
+      historyMoves: 0,
+      popneiVersion: "0.2.2",
+      analyses: DEFS.map((def) => ({
+        id: def.id,
+        status: { kind: "ready", key: A_KEY },
+      })),
+      runs: [],
+      notice: null,
+      individualsKept: null,
+      write: null,
+    });
+    const file: unknown = JSON.parse(
+      writeProjectFile(state, DEFS, "0.2.0", "2026-10-08T10:00:00.000Z"),
+    );
+    return typeof file === "object" && file !== null && "checks" in file
+      ? file.checks
+      : null;
+  }
+
+  const cases = DEFS.flatMap((def) =>
+    [true, false].flatMap((passedOn) =>
+      [LOW_QUAL_NEI, PANEL, ALL_VCF].map(
+        (source) =>
+          [def.id, passedOn ? "on" : "off", source.name, def, source] as const,
+      ),
+    ),
+  );
+
+  test.each(cases)(
+    "%s with the FILTER filter on %s and %s: the settings are those saved, and a save carries the check",
+    (_id, passedOn, _name, def, source) => {
+      const { given, check } = givenAgain(
+        def,
+        settingsWith(passedOn === "on"),
+        source,
+      );
+      expect(settingsAsSaved(def, given, check, source, null)).toBe(true);
+      expect(checksSaved(given)).toEqual([
+        {
+          analysis: def.id,
+          numbers: [1],
+          keyVersion: def.keyVersion,
+          popneiVersion: "0.2.2",
+          appVersion: "0.2.0",
+        },
+      ]);
+    },
+  );
+
+  test.each([
+    [
+      "low_qual.nei, whose variants record their FILTER",
+      "other",
+      LOW_QUAL_NEI,
+      false,
+    ],
+    ["panel.nei, whose variants do not", "the same", PANEL, true],
+    ["a VCF", "other", ALL_VCF, false],
+  ])(
+    "saved with the FILTER filter on and given again with it off, %s: the settings of the diversity are %s",
+    (_name, _words, source, same) => {
+      const def = defIn(DEFS, "diversity");
+      const { given, check } = givenAgain(def, settingsWith(true), source);
+      const off = turnOffVariantFilter(given, "passed");
+      expect(settingsAsSaved(def, off, check, source, null)).toBe(same);
+    },
+  );
+});
+
+/** The definition of `id` among `defs`. */
+function defIn<T extends { readonly id: string }>(
+  defs: readonly T[],
+  id: string,
+): T {
+  const def = defs.find((d) => d.id === id);
+  if (def === undefined) {
+    throw new Error(`no definition ${id}`);
+  }
+  return def;
+}

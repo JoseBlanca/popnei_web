@@ -2174,7 +2174,10 @@ const REFERENCE = {
       keyVersion: 1,
       popneiVersion: "0.1.0",
       appVersion: "0.2.0",
-      settings: "0123456789abcdef".repeat(4),
+      settings: {
+        passedKept: "0123456789abcdef".repeat(4),
+        passedNotKept: "fedcba9876543210".repeat(4),
+      },
     },
   ],
 };
@@ -2553,10 +2556,13 @@ describe("WP1 D5 the validation", () => {
     });
 
     test("a check whose fingerprint has 63 digits", () => {
-      const settings = "0123456789abcdef".repeat(4).slice(1);
+      const settings = {
+        passedKept: "0123456789abcdef".repeat(4),
+        passedNotKept: "0123456789abcdef".repeat(4).slice(1),
+      };
       expect(parse(checkWith({ settings }))).toEqual(
         wrong(
-          ["reference", "checks", 0, "settings"],
+          ["reference", "checks", 0, "settings", "passedNotKept"],
           "64 lower case hexadecimal digits",
         ),
       );

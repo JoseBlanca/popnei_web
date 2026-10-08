@@ -1762,7 +1762,10 @@ describe("IP6 D5 the key, the rows of 'What goes into its key'", () => {
             keyVersion: 1,
             popneiVersion: "0.1.0",
             appVersion: "0.1.0",
-            settings: "0".repeat(64),
+            settings: {
+              passedKept: "0".repeat(64),
+              passedNotKept: "0".repeat(64),
+            },
           },
         ],
       },

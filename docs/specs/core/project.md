@@ -350,9 +350,11 @@ before, or when the read failed, `true` for a VCF, whose variants always
 hold the record, and `false` for a `.nei` file, which may not. That
 answer by the format is for what is worked out from a file whose read
 has not answered: `filtersApplied` while the read is pending, when
-`projectNeeds` waits for the read and no calculation runs, and the
-fingerprint of the reference of a project file, whose read no file
-saves (`docs/specs/core/keys.md`, "The fingerprint of the settings").
+`projectNeeds` waits for the read and no calculation runs, and the Save
+of a project whose variants file is not given again, which compares the
+settings with the reference's for the reference's file, whose read no
+file saves (`docs/specs/core/keys.md`, "The fingerprint of the
+settings").
 The screen of `popgen2.html` does not read `keepsPassed(source)`: it
 shows the FILTER box only once the read of the file says `keepsPassed`
 true, and not while the file is being opened nor after an opening that
@@ -759,8 +761,11 @@ That comparison means something only while the settings of the analysis
 are those the file had. So, when a project file is opened, a fingerprint
 of the settings of each analysis as the file had them is made and kept in
 the project, beside its numbers: a hash of the filters, the read options
-of the variants file, and what the analysis's own key holds
-(`docs/specs/core/keys.md`, "The fingerprint of the settings"). After a
+of the variants file, and what the analysis's own key holds; two of
+them, for a file whose variants record whether they passed their FILTER
+and for one whose variants do not, since the file does not say which
+its file is (`docs/specs/core/keys.md`, "The fingerprint of the
+settings"). After a
 run, the numbers are compared only while the fingerprint of the settings
 now is that one. The owner decided it on 24 September 2026. The option
 not taken was to compare with a key of the file's settings, which could
@@ -1342,7 +1347,12 @@ export interface Check {
   keyVersion: number;          // the analysis's key version when it was run
   popneiVersion: string;       // the version of popnei it was run with
   appVersion: string;          // the version of the application it was run with
-  settings: string;            // the fingerprint of its settings in the file; never saved
+  settings: CheckSettings;     // the fingerprints of its settings in the file; never saved
+}
+
+export interface CheckSettings {
+  passedKept: string;          // for a file whose variants record their FILTER
+  passedNotKept: string;       // for a file whose variants do not
 }
 ```
 
@@ -1980,8 +1990,10 @@ or `null`.
   `keepsPassed` `true` for a VCF and `false` for a `.nei` file, what
   `keepsPassed` of a source gives a file not yet read. No file saved
   today holds the filter of the FILTER column, since only `popgen2.html`
-  sets it and that page saves no project, so the value changes no
-  fingerprint of a file's settings. Saving it would have added a field
+  sets it and that page saves no project; a file that holds it is
+  compared all the same, since an opened file keeps a fingerprint for
+  each answer of `keepsPassed` and the comparison takes the one of the
+  file given again once it is read. Saving it would have added a field
   to every project file of `popgen.html`, which a version of the
   application from before it would refuse; the piece that makes
   `popgen2.html` save projects decides how its files hold it (below,

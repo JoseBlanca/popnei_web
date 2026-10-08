@@ -80,7 +80,13 @@ write takes the filters that apply to the file, `filtersApplied` of
 the FILTER column for a file whose variants do not record their FILTER,
 a `.nei` file written before popnei's vars format 1.2 (revised again
 that day, for the owner's decision that the filter applies to a `.nei`
-file with that record, where it said "for a `.nei` file"). The store is the one object of core that
+file with that record, where it said "for a `.nei` file"). Revised on
+8 October 2026 after the review of that work: the comparison with the
+check numbers takes, of the two fingerprints an opened project file keeps
+for each check, the one of the file given again once its read comes
+back, and compares nothing before (`keys.md`, "The fingerprint of the
+settings"); a `keyInputs` reads `p.variants` only through
+`filtersApplied`. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -176,8 +182,9 @@ tests in the tests.
   given as `null`.
 - `numCheckNumbers` gives how many numbers `checkNumbers` gives for a
   result of the project it is given, whose variants file is read, or
-  `null` when the project does not fix it. Unlike `keyInputs`, it reads
-  `p.variants`. `projectFile.ts` refuses, when a project file is opened,
+  `null` when the project does not fix it. Unlike `keyInputs`, which
+  reads of `p.variants` only `keepsPassed`, through `filtersApplied`, it
+  reads `p.variants` whole. `projectFile.ts` refuses, when a project file is opened,
   a check whose count is not this one, with the file's variants file in
   the project, as the owner decided on 25 September 2026
   (`docs/specs/core/projectFile.md`, "Opening"); the store does not call
@@ -721,9 +728,15 @@ How the store does it, decided here, not by the owner, on 24 September
 arrives, with the result of that same definition, and keeps the numbers
 with it in the cache, whether or not the project has a reference, so
 that the comparison costs nothing when the state is made again. The
-fingerprint of the settings now is made when the keys are, with the read
-options of the current variants file, and compared with the one the
-reference kept for the analysis.
+fingerprint of the settings now is made when the keys are, for the
+current variants file once its read has come back, and compared with the
+one the reference kept for the analysis for the same answer of
+`keepsPassed` of that file, `settingsAsSaved` of
+`docs/specs/core/keys.md`; while the read is pending nothing is
+compared, the analysis being locked. So a `.nei` file whose variants
+record their FILTER, saved with the filter of the FILTER column on and
+given again with it turned off, gives no comparison: the numbers saved
+left out the variants that failed, and those now do not.
 
 ### The individuals kept
 
@@ -989,7 +1002,7 @@ export interface AnalysisDef<J, R> {
   readonly keyVersion: number;
   readonly filtersRead: { readonly variants: boolean; readonly individuals: boolean };
   parseOptions(options: unknown, formatVersion: number): Result<JsonObject, string>;
-  keyInputs(p: Project): JsonValue;       // must not read p.variants; answers for any project
+  keyInputs(p: Project): JsonValue;       // reads p.variants only through filtersApplied; answers for any project
   needs(p: Project): string | null;
   /** The reason it cannot run for the individuals kept, a known list that
       keeps some individual, or null; absent for an analysis with none.
@@ -1522,7 +1535,11 @@ whose file is a text.
   `app` names both versions of the application, "0.0.9" of the check and
   the one the store was made with; a list one number
   shorter differs; a setting changed: `check` is null; set back: the
-  comparison is there again.
+  comparison is there again. A project saved with the filter of the
+  FILTER column on and a `.nei` file, given again and read with
+  `keepsPassed` true: with the filter turned off since, `check` is null;
+  with it on, the comparison is there; read with `keepsPassed` false and
+  the filter turned off, it is there too (`SF2 D3`).
 - **The individuals kept and a Run that waits**, on the variants file
   of the five individuals of the worked case of `individualsKept`
   (`docs/specs/core/individualsKept.md`). With no filter of individuals, a Run

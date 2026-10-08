@@ -217,6 +217,13 @@ the store does not ask `variantFilterNeeds` of the LD decay
 }
 ```
 
+`filtersApplied` reads of `p.variants` only `keepsPassed`, and only
+when the filter of the FILTER column is on: the one reading of the file
+a `keyInputs` may make (`docs/specs/core/keys.md`, "What it does"), so
+its key changes when the read of a `.nei` file whose variants record
+their FILTER comes back with that filter on, while the analysis is
+locked anyway.
+
 The key version is 1. The smallest distance and the number of bins are
 constants the job carries, and a release that changes one raises it.
 

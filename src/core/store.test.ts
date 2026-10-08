@@ -4,7 +4,7 @@ import {
   createKeyMemo,
   intermediateKeyOf,
   keyOf,
-  settingsFingerprint,
+  checkSettings,
   writeKeyOf,
 } from "./keys.ts";
 import type { JsonValue } from "./keys.ts";
@@ -2604,7 +2604,7 @@ function openedAndRun(options: {
           keyVersion: 1,
           popneiVersion: options.savedPopnei ?? "0.1.0",
           appVersion: options.savedApp ?? "0.0.9",
-          settings: settingsFingerprint(vars, settings, SAVED_VARIANTS, null),
+          settings: checkSettings(vars, settings, SAVED_VARIANTS, null),
         },
       ],
     },
@@ -6990,5 +6990,115 @@ describe("live-stats 2 the result so far of a run", () => {
       kind: "running",
       soFar: fiveStats(),
     });
+  });
+});
+
+describe("SF2 D3 the comparison with the check numbers takes the fingerprint of the file read", () => {
+  /** A .nei file of the reference, kept with keepsPassed false as an
+      opened project file keeps every .nei file. */
+  const SAVED_NEI: VariantSource = {
+    fileId: "11111111111111111111111111111111",
+    name: "low_qual.nei",
+    size: 2048,
+    format: "nei",
+    readOptions: null,
+    read: { ...VARIANTS_READ, numVars: 1200, keepsPassed: false },
+  };
+
+  /** The comparison of the analysis of the variants, run with other
+      numbers than those a project file saved with the filters of the
+      FILTER column and of the MAF on, after the file is given again and
+      read with `keepsPassed`, and `command` applied. */
+  function comparedAfter(
+    keepsPassed: boolean,
+    command: (p: Project) => Project,
+  ): unknown {
+    const { analyses } = fakeAnalyses();
+    const vars = analyses[1];
+    if (vars === undefined) {
+      throw new Error("popnei_web defect: no fake analysis of the variants");
+    }
+    const settings = setVariantFilter(maf(0.9)(emptyProject("popgen")), {
+      kind: "passed",
+    });
+    const { send, sent } = fakeSend();
+    const store = createStore({
+      first: emptyProject("popgen"),
+      analyses,
+      send,
+      countsOf: () => ({ numVarsRead: null, counts: null }),
+      counts: null,
+      statistics: null,
+      write: null,
+      appVersion: "0.1.0",
+      cacheMaxBytes: 1024 * 1024,
+      maxUndoSteps: 200,
+    });
+    store.open({
+      ...settings,
+      reference: {
+        variants: SAVED_NEI,
+        checks: [
+          {
+            analysis: "vars",
+            numbers: [0.5, 0.75],
+            keyVersion: 1,
+            popneiVersion: "0.1.0",
+            appVersion: "0.1.0",
+            settings: checkSettings(vars, settings, SAVED_NEI, null),
+          },
+        ],
+      },
+    });
+    store.popneiReady("0.1.0");
+    store.apply("a variants file was loaded", (p) =>
+      loadVariants(p, {
+        fileId: VARIANTS_ID,
+        name: "low_qual.nei",
+        size: 2048,
+        format: "nei",
+        readOptions: null,
+      }),
+    );
+    store.variantsRead(VARIANTS_ID, {
+      kind: "read",
+      individuals: ["i1", "i2"],
+      ploidy: 2,
+      numVars: 1200,
+      keepsPassed,
+    });
+    store.apply("a filter changed", command);
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.runEnded(request.run.id, {
+      kind: "done",
+      key: request.key,
+      result: {
+        kind: "vars",
+        numVars: null,
+        values: new Float64Array(NUMBERS),
+      },
+    });
+    return checkOf(store);
+  }
+
+  test("a .nei file whose variants record their FILTER, with the FILTER filter turned off since: no comparison, since the numbers saved left out the variants that failed", () => {
+    expect(comparedAfter(true, (p) => turnOffVariantFilter(p, "passed"))).toBe(
+      null,
+    );
+  });
+
+  test("the same file with the FILTER filter still on: the numbers are compared", () => {
+    expect(comparedAfter(true, (p) => p)).toStrictEqual({
+      kind: "differs",
+      popnei: null,
+      app: null,
+    });
+  });
+
+  test("a .nei file whose variants do not record their FILTER, with the filter turned off since: compared, since it applied to neither", () => {
+    expect(
+      comparedAfter(false, (p) => turnOffVariantFilter(p, "passed")),
+    ).toStrictEqual({ kind: "differs", popnei: null, app: null });
   });
 });

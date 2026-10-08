@@ -1313,7 +1313,13 @@ export const wholeProject: fc.Arbitrary<Project> = fc
                     keyVersion: fc.nat(),
                     popneiVersion: fc.string(),
                     appVersion: fc.string(),
-                    settings: fc.stringMatching(/^[0-9a-f]{64}$/),
+                    settings: fc.record(
+                      {
+                        passedKept: fc.stringMatching(/^[0-9a-f]{64}$/),
+                        passedNotKept: fc.stringMatching(/^[0-9a-f]{64}$/),
+                      },
+                      PLAIN,
+                    ),
                   },
                   PLAIN,
                 ),

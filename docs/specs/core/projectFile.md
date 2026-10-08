@@ -56,7 +56,10 @@ the read of the variants file gained `keepsPassed`, whether its variants
 record their FILTER (`docs/specs/core/project.md`, "The filters of
 popgen2.html"): the file does not write it, the reading gives it from
 the format, the identity does not compare it, and the fingerprints are
-made with it.
+made with it. Revised on 8 October 2026 after the review of that work:
+each check of an opened file keeps two fingerprints, for a file whose
+variants record their FILTER and for one whose do not, and a comparison
+takes the one of the variants file it is made for; the file is the same.
 There was no
 code yet; it will be `src/core/projectFile.ts`, the row `projectFile.ts`
 of section 9 of `docs/architecture.md`. The project file is the file
@@ -411,8 +414,10 @@ browser makes of a second download, differs in its identity, so a save
 before a run drops the reference's numbers; the name is kept in the
 comparison, since section 9 of `docs/functionality.md` names it.
 
-The fingerprint now is made with the read options of the variants file
-loaded, or with the reference's when none is.
+The fingerprint now is made for the variants file loaded, or for the
+reference's when none is: its read options, and its `keepsPassed`, which
+also picks the fingerprint of the reference it is compared with,
+`settingsAsSaved` of `docs/specs/core/keys.md`.
 
 **Never written**: the `File` of either file, which is not JSON and stays
 in the page; the results and their warnings, of which only the check
@@ -601,10 +606,15 @@ that the reason given is the one the user can act on:
    on, and not sent to a page that would refuse it too. No file holds
    it on 7 October 2026: `popgen2.html` saves no project yet.
 11. **The fingerprints** of the settings of each check are made, with
-   `settingsFingerprint` of `docs/specs/core/keys.md`, from the opened
-   project and the file's variants file, its read options and its
-   `keepsPassed` as the reading gives it, and put in place of the
-   placeholders.
+   `checkSettings` of `docs/specs/core/keys.md`, from the opened project
+   and the read options of the file's variants file: one for a file
+   whose variants record whether they passed their FILTER, and one for a
+   file whose variants do not, since the project file does not say which
+   its file is; they are put in place of the placeholders. The
+   comparison takes the one of the file given again once its read says
+   `keepsPassed`, as the store does (`docs/specs/core/store.md`, "The
+   comparison with the check numbers"), so that both of its sides are
+   made for the same file.
 
 The project given has `variants` null, since the user gives the variants
 file again; `individuals`, the filters, the grouping and the options of
@@ -1158,8 +1168,12 @@ the analyses `done`, `ready` or `removed`.
   count is refused as `header`, not as `newPageFilter`; a fixture of before, `v1-every-filter.popnei.json`,
   opens with `passedFilter: false` as before.
 - **The fingerprints**: each check of an opened file holds
-  `settingsFingerprint` of its definition, of the opened project and of
-  the file's variants file.
+  `checkSettings` of its definition, of the opened project and of the
+  file's variants file. Under `SF2 D3`, for each analysis of the two
+  pages of population genetics, with the filter of the FILTER column on
+  and off, and for `low_qual.nei`, `panel.nei` and a VCF given again and
+  read, the settings are those saved and a Save carries the check
+  (`docs/specs/core/keys.md`, "How it is verified").
 - **The count with the diversity's own definition**:
   `v1-nei-diversity.popnei.json` opens with the definitions of
   `src/core/apps.ts`, and is refused with one of its 7 numbers removed.
@@ -1183,7 +1197,7 @@ the analyses `done`, `ready` or `removed`.
   project, its reference among them, and random results among its
   analyses. The checks `wholeProject` draws have random fingerprints,
   which never match; so a second generator, beside it, makes the
-  fingerprint of half of them with `settingsFingerprint` of the project
+  fingerprint of half of them with `checkSettings` of the project
   drawn, so that rule 2 is met:
   - `readProjectFile(writeProjectFile(s, …))` is ok, and its project is
     the one the table of "What is written" gives: equal to `s.project` in

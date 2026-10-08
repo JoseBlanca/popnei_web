@@ -950,7 +950,10 @@ describe("WS9 D1 the announcements made from the state", () => {
             keyVersion: 1,
             popneiVersion: "0.1.0",
             appVersion: "0.1.0",
-            settings: "0".repeat(64),
+            settings: {
+              passedKept: "0".repeat(64),
+              passedNotKept: "0".repeat(64),
+            },
           },
         ],
       },
