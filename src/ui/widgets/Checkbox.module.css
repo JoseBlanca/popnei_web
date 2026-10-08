@@ -1,5 +1,12 @@
 /* The tokens are those of src/ui/tokens.css. */
 
+/* The box over its sentence, when it has one. */
+.field {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+}
+
 .checkbox {
   display: inline-flex;
   align-items: center;
@@ -41,4 +48,12 @@
 .checkbox[data-focus-visible] .box {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
+}
+
+/* The sentence under the box, set in line with its words: the width of
+   the box and the gap after it. */
+.description {
+  padding-inline-start: calc(var(--space-4) + var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
