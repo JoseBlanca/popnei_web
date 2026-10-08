@@ -7,8 +7,12 @@
  * the first file back with its plots; the keys of Undo and Redo; the
  * focus handed from a button that becomes disabled to the other; the
  * order of the Tab key from Undo; F6 to the notice and Escape back; axe
- * with the notice up; and, at 320 pixels, the last control of the page
- * never under the notice (WCAG 2.4.11).
+ * with the notice up; at 320 pixels, the last control of the page
+ * never under the notice (WCAG 2.4.11), and the page not scrolled back to
+ * it when it grows while the user reads elsewhere; the keys of Undo and
+ * Redo kept by the line and the box of a threshold; and an undo and a
+ * redo while a file is read, which start its pass again and show no
+ * Stop the user did not press.
  *
  * No threshold changes the project yet (work package 9), so the notice
  * met here is that of a second file opened. The store takes the
@@ -359,6 +363,33 @@ test("SF6 D2 Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z on the line or in the box of a thre
     "Undo: panel.vcf.gz opened",
   );
   await expect(redoButton(page)).toBeDisabled();
+});
+
+test("SF6 D2 an undo and a redo while the file is read start each pass again, and the page never says it was stopped", async ({
+  page,
+}) => {
+  await holdSummary(page);
+  await openPage(page);
+  const stop = info(page).getByRole("button", { name: "Stop" });
+  const stopped = stats(page).getByText(/^Stopped\./u);
+  await pick(page, "panel.vcf.gz");
+  await expect(stop).toBeVisible();
+  // panel.vcf.gz is still read when panel.nei is opened over it.
+  await pick(page, "panel.nei");
+  await expect(info(page).getByText("panel.nei")).toBeVisible();
+  await expect(stop).toBeVisible();
+
+  await undoButton(page).click();
+  await expect(info(page).getByText("panel.vcf.gz")).toBeVisible();
+  await expect(stop).toBeVisible();
+  await expect(stopped).toHaveCount(0);
+
+  await redoButton(page).click();
+  await expect(info(page).getByText("panel.nei")).toBeVisible();
+  await expect(stop).toBeVisible();
+  await expect(stopped).toHaveCount(0);
+  await release(page, "result");
+  await expectDone(page, "panel.nei");
 });
 
 test("SF6 D2 at 320 pixels, with the notice up, the page that grows while the user reads its top does not scroll back to the focused control", async ({
