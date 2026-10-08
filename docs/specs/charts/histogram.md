@@ -63,31 +63,22 @@ threshold:
 
 From 7 October 2026 a threshold may come with no legend, for the
 thresholds of `popgen2.html`, which are no filters and which the screen
-says in words over the plot, the number in a box after the short title,
-"Obs. het. max: 0.04", and under it "Keeps 1,050 of 1,200 variants"
-(`docs/plans/thresholds.md`): the line and the bars as
-above, no legend, and the top margin of a plot without one. The screen
+shows in a box after the short title, "Obs. het. max: 0.04"
+(`docs/plans/thresholds.md`): the line and the bars as above, no
+legend, and the top margin of a plot without one. From 8 October 2026
+such a threshold may say that it keeps every value, `keepsAll` of
+`HistogramThreshold`, which the screen knows from what it counted and
+the bars drawn may not tell, a bar holding values on both sides of the
+line: the line is then dotted, where the red one is dashed, and drawn in
+a bluish grey, the class `chart-threshold-keeps-all`, a threshold that
+removes nothing, which the screen says in words to a screen reader
+(`docs/plans/popnei-0.2.2.md`, "The owner's first round"). The pattern
+tells the two lines apart without their colour: a review that simulated
+deuteranopia found the grey of the first round and the red at a contrast
+of 1.10. The screen
 lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
 `HistogramEvents.onFrame`.
-
-Such a threshold may also say that the values on its line may be kept
-or removed, `undecided`: on `popgen2.html` the bins hold their left
-edge, so the variants exactly on a line at 0.05 are somewhere in the
-bin that starts at it, and those of a fine bin that a line at 0.07 lies
-inside are on either side of it; the screen gives a range of what the
-line keeps. The bar that starts at the line, the part right of the line of a
-bin it splits, or the bin that starts at the double just above it, as
-popnei's 0.30000000000000004 above 0.3, is then hatched, thin stripes of
-`--chart-bar` on the background in an outline, and not outlined as
-removed: a stripe of 2 pixels every 6 at 45 degrees, drawn down the
-middle of its tile so that each shows whole, 3:1 or more on the
-background in both themes, as a filled bar is. The stripes leave the background on both sides of the dashed
-line where it crosses the bar, as an outlined bar does (below,
-"Colours and the two themes"). The screen says what the hatch means in
-the description of the plot, and gives the same words as the title of
-the hatched bar, `undecidedTitle`, which the browser shows as its
-tooltip when the pointer rests on the bar.
 
 Every filter of `docs/functionality.md` section 3 that has a histogram
 keeps what is at most its threshold, as popnei's filters do, so the kept
@@ -119,55 +110,59 @@ Rust; the architecture corrected that on 26 September 2026 for the
 statistics of each individual, a few thousand numbers, and `charts.md` is
 to be corrected so (below, "What this spec asks of other documents").
 
-A value falls in the bin whose left edge is at most it and whose right
-edge is above it, and the last bin takes its right edge too, as
-`numpy.histogram` does (`calcPerVarDistribs`, its doc comment). So a bin
-holds the values from its lower edge, included, up to its upper edge, not
-included, except the last, which includes it.
+A value falls in the bin whose left edge is below it and whose right
+edge is at least it, and the first bin takes its left edge too, as
+popnei's bins asked with `closed: "right"` do from popnei 0.2.2
+(`HistKwargs` of popnei's `stats.d.ts`), which both pages ask for since
+7 October 2026 (`docs/plans/popnei-0.2.2.md`). So a bin holds the values
+above its lower edge up to its upper edge, included, except the first,
+which includes its lower edge too; the bars up to a threshold on an edge
+hold the values at most it, what the filters keep.
 
 ### Which bins the threshold keeps
 
 For a threshold t and a bin from l to r:
 
-- **removed** when l > t: every value of the bin is at least l, above t;
-- **kept** when no number lies above t and below r, for a bin that is not
-  the last, since every value of it is below r; for the last bin, which
-  takes r too, when r ≤ t;
+- **kept** when r ≤ t: every value of the bin is at most r;
+- **removed** when l ≥ t, for a bin that is not the first, since every
+  value of it is above l; for the first bin, which takes l too, when
+  l > t;
 - **partly kept** otherwise: the bin may hold values at most t and values
   above it.
 
-"No number above t and below r" is `r <= nextUp(t)`, where `nextUp(t)` is
-the smallest double above t, and not `r <= t`, because the edges popnei
-gives are the start of the range plus i times the width of a bin, which
-in floating point puts some of them one step above the round number.
-Seen in node on 26 September 2026 with popnei's release
-`js-v0.1.0-dev.2`: of the 41 edges of the default 40 bins over [0, 1],
-the fourth is 0.07500000000000001, the 25th 0.6000000000000001 and the
-39th 0.9500000000000001, each `nextUp` of the number a user types, while
-the fifth and the 21st are 0.1 and 0.5 exactly. With `r <= t`, a
-threshold of 0.95 would mark the bin below 0.95 as partly kept, although
-no value can lie between 0.95 and its upper edge. The edges are compared
-as popnei gives them, and the threshold as the project holds it, which is
-the number the user typed (`docs/functionality.md`, section 3).
+A data that sets `firstBinOnLowerEdge` has its first bin **kept** when
+l ≤ t as well, as if its values were all on l: the bin of 0 to 0.001 of
+the missing rate on popgen2.html, which holds the variants with no
+missing genotype alone below 1,000 individuals, and those with a missing
+rate up to 0.001 with them from 1,000 on (8 October 2026). Without it, a
+threshold of 0 would keep a part of it of width 0, and the bar would be
+drawn removed.
+
+The edges are compared as popnei gives them, the decimals i / n of the
+range 0 to 1 since popnei 0.2.2, so that 0.95 is the edge 38 of 40 bins
+and not the double above it, and the threshold as the project holds it,
+which is the number the user typed (`docs/functionality.md`, section 3).
 
 What that gives on `e2e/fixtures/panel.nei`, 1,200 variants of 200
 individuals, with `calcPerVarDistribs` of every variant and individual,
-`minNumIndividuals` 0 and the default bins, and popnei's filters alone on
-the same file, in node on 26 September 2026, the bins numbered from 0 at the left:
+`minNumIndividuals` 0 and 40 bins over 0 to 1 that hold their right
+edge, and popnei's filters alone on the same file, in node on 7 October
+2026 with popnei 0.2.2, the bins numbered from 0 at the left:
 
 | statistic, threshold | bins kept | partly kept | removed | what popnei's filter keeps |
 |---|---|---|---|---|
 | MAF, 0.95 | 0 to 37, 1,175 variants | none | 38 and 39, 25 variants | 1,175 |
 | observed heterozygosity, 0.6 | 0 to 23, 1,198 variants | none | 24 to 39, 2 variants | 1,198 |
-| observed heterozygosity, 0.5 | 0 to 19, 1,090 variants | 20, from 0.5, 62 variants | 21 to 39, 48 variants | 1,098 |
+| observed heterozygosity, 0.5 | 0 to 19, 1,098 variants | none | 20 to 39, 102 variants | 1,098 |
+| observed heterozygosity, 0.51 | 0 to 19, 1,098 variants | 20, from 0.5, 54 variants | 21 to 39, 48 variants | 1,116 |
 
-At 0.5 the line falls on the lower edge of bin 20, and 8 of its 62
-variants have a heterozygosity of 0.5 exactly, which the filter keeps: the
-bin is partly kept, it is drawn outlined, since the line is at its left
-edge, and the table of the bins says it is partly kept (below, "The
-numbers without the picture"). The legend has no row for a bar partly
-kept, and the outlined bar reads as removed, so that the plot would say
-1,090 variants kept where the filter keeps 1,098: the screen names the
+At 0.51 the line falls inside bin 20, and 18 of its 54 variants have a
+heterozygosity of at most 0.51, which the filter keeps: the bin is
+partly kept, its part right of the line drawn outlined, and the table of
+the bins says it is partly kept (below, "The numbers without the
+picture"). The legend has no row for a bar partly kept, and the outlined
+part reads as removed, so that the plot would say 1,098 variants kept
+where the filter keeps 1,116: the screen names the
 bin a threshold splits in a line under the plot, as the owner decided on
 27 September 2026 at stop A of `docs/plans/variants-step.md`; a fourth row of the
 legend, the other way, would take room from the plot at 320 pixels
@@ -231,6 +226,10 @@ export interface HistogramData extends PlotText {
   readonly yMax?: number;
   /** From stage 5: ticks at whole numbers on the horizontal axis. */
   readonly xWholeNumbers?: boolean;
+  /** From 8 October 2026: the first bin drawn as if its values were
+      all on its lower edge, kept whole by a threshold on that edge; the
+      zeros of the missing rate on popgen2.html. False when absent. */
+  readonly firstBinOnLowerEdge?: boolean;
 }
 
 /** A threshold that keeps what is at most `value`, with the legend of
@@ -238,8 +237,6 @@ export interface HistogramData extends PlotText {
 export interface HistogramThreshold {
   readonly value: number;
   readonly legend: ThresholdLegend | null;
-  /** The bar that starts at the line hatched; false when absent. */
-  readonly undecided?: boolean;
 }
 
 /** The rows of the legend: "Maximum 0.95", "Kept by this filter",
@@ -281,8 +278,8 @@ export type BinState = "kept" | "partlyKept" | "removed";
 
 export interface HistogramRow {
   readonly from: number;           // the lower edge, as given
-  readonly to: number;             // the upper edge, as given
-  readonly toIncluded: boolean;    // true for the last bin alone
+  readonly fromIncluded: boolean;  // true for the first bin alone
+  readonly to: number;             // the upper edge, as given, included
   readonly count: number;           // a whole number, or from stage 5 a share
   readonly state: BinState | null; // null when there is no threshold
 }
@@ -371,7 +368,21 @@ The plot writes classes and no colour (`charts.md`):
 .chart-bar          { fill: var(--chart-bar); stroke: var(--chart-axis); stroke-width: 1px; }
 .chart-bar-removed  { fill: none; }
 .chart-threshold    { stroke: var(--chart-threshold); stroke-width: 2px; stroke-dasharray: 4 3; }
+.chart-threshold-keeps-all { stroke: var(--chart-threshold-keeps-all); stroke-dasharray: 1 3; }
 ```
+
+The colour of a threshold that keeps every value,
+`--chart-threshold-keeps-all`, is a grey with some of the blue of the
+bars, so that it reads as a threshold still to be moved, and not as the
+grey of a disabled control, which it was until the owner asked so on 8
+October 2026: #54758c in the light theme, 4.88:1 on the background, and
+#6387a1 in the dark, 4.67:1, above the 3:1 of a line (1.4.11) and the
+4.5:1 of the number in the box of popgen2.html, which takes the same
+colour; it is 3.46:1 and 3.16:1 from the text, so that such a number is
+told from a black one at a glance. `src/ui/tokens.test.ts` checks the
+four ratios. The handle of such a threshold over the plot is hollow, an
+outline of that colour over the background, where the red one is
+filled.
 
 The bars need a colour that the tokens do not have yet, `--chart-bar`,
 since the seven colours of Okabe and Ito name populations and a bar is
@@ -382,9 +393,7 @@ plot need (WCAG 2.2, 1.4.11), so a filled bar is told from an outlined
 one in both themes, and the outline in `--chart-axis` carries the edge of
 both. The threshold line on a filled bar would be 1.26:1 in the light
 theme, red on blue; it always has the background on its right, since a
-bar the line crosses is split there and is outlined on its right. A hatched bar, undecided, is
-stripes 2 pixels wide every 6 on the background, so the line has the
-background beside it there too.
+bar the line crosses is split there and is outlined on its right.
 
 A change of theme changes the tokens, and the plot on the screen follows
 with no redraw; the exported file is in the light theme (`plot2d.md`,
@@ -405,9 +414,9 @@ the histogram adds:
   "The major allele frequency of 1,200 variants, in 40 bins from 0 to 1.
   The threshold 0.95 keeps the 38 bins up to it, 1,175 variants, and
   removes the 2 bins above it, 25 variants." With a bin split, the
-  observed heterozygosity at 0.5 of the table above: "… The threshold
-  0.5 keeps the 20 bins up to it, 1,090 variants, splits the bin from 0.5
-  to 0.525, 62 variants, and removes the 19 bins above it, 48 variants."
+  observed heterozygosity at 0.51 of the table above: "… The threshold
+  0.51 keeps the 20 bins up to it, 1,098 variants, splits the bin from 0.5
+  to 0.525, 54 variants, and removes the 19 bins above it, 48 variants."
   A split bin is named with its edges, since the plot cannot say how
   many of its values the threshold keeps. The edges and the threshold
   are written to four decimals at most, with no zero at the end, as the
@@ -421,8 +430,8 @@ the histogram adds:
   a colour or a mark. The edges are shown with `tableNumber` of
   the base, to 12 significant digits, so that 0.07500000000000001 reads
   0.075; the rows hold them as popnei gave them. A line above the table
-  says that each bin runs from its lower edge up to its upper edge, not
-  included, and that the last includes its upper edge. The table is
+  says that each bin runs from above its lower edge up to its upper edge,
+  included, and that the first includes its lower edge too. The table is
   reachable by the keyboard and by a screen reader; the bars are not
   focusable.
 - **The threshold and what it keeps are in the table and in the
@@ -492,24 +501,25 @@ verified in `plot2d.md`, the export on this histogram.
 **Without a DOM, in the project `charts` of Vitest** (`testing.md`):
 
 - `histogramRows` on the bins of `panel.nei` written as literals, the
-  edges of 40 bins over [0, 1] as popnei gives them, 0.07500000000000001
-  and 0.9500000000000001 among them, and the counts `calcPerVarDistribs`
-  gave in node on 26 September 2026 with popnei's release
-  `js-v0.1.0-dev.2`, `openVars` of `e2e/fixtures/panel.nei` and
-  `calcPerVarDistribs(v, { minNumIndividuals: 0, stats: ["maf", "obs_het", "unbiased_exp_het"] })`:
-  - MAF, `0` for bins 0 to 19, then `69,75,62,71,60,74,72,83,70,68,64,83,64,63,67,57,48,25,22,3`;
+  edges of 40 bins over [0, 1] as popnei gives them, the decimals i / 40,
+  and the counts `calcPerVarDistribs` gave in node on 7 October 2026 with
+  popnei's release `js-v0.2.2`, `openVars` of `e2e/fixtures/panel.nei` and
+  `calcPerVarDistribs(v, { minNumIndividuals: 0, stats: ["maf", "obs_het", "unbiased_exp_het"], histKwargs: { numBins: 40, range: [0, 1], closed: "right" } })`:
+  - MAF, `0` for bins 0 to 18, then `3,66,75,62,71,63,71,72,83,70,70,62,85,62,63,69,55,48,25,22,3`;
   - observed heterozygosity,
-    `0,4,9,18,20,25,30,34,50,61,53,69,62,84,89,101,113,102,108,58,62,27,14,5,2`,
+    `0,4,9,18,21,24,30,37,47,61,53,69,62,84,90,105,108,102,108,66,54,27,14,5,2`,
     then `0` for bins 25 to 39;
 
-  and the three thresholds of the table of "Which bins the threshold
+  and the four thresholds of the table of "Which bins the threshold
   keeps", each giving the bins kept, partly kept and removed there, the
   sum of the counts of the kept bins equal to what popnei's filter kept,
-  1,175 at 0.95 of the MAF and 1,198 at 0.6 of the heterozygosity, and at
-  0.5 the kept bins' 1,090 below popnei's 1,098 and the kept and partly
-  kept bins' 1,152 above it. The last bin: kept at a threshold equal to
-  its upper edge, partly kept just below it. No threshold: every state
-  `null`.
+  1,175 at 0.95 of the MAF and 1,198 at 0.6 and 1,098 at 0.5 of the
+  heterozygosity, and at 0.51 the kept bins' 1,098 below popnei's 1,116
+  and the kept and partly kept bins' 1,152 above it. A bin holds its upper
+  edge: kept at a threshold equal to it, partly kept just below it; the
+  first bin holds its lower edge, partly kept at a threshold on it, and
+  kept, drawn filled, with `firstBinOnLowerEdge`. No threshold: every
+  state `null`.
 - Each defect of "The TypeScript interface" throws.
 - The domains of the two scales: the widened horizontal one for a
   threshold of 1.2, and the vertical one of 0 to 1 when every count is 0;
@@ -593,10 +603,11 @@ Of `docs/specs/analyses/individualChecks.md`:
 
 - `src/core/histogram.ts`, which that spec specifies, `binValues`, gives
   the two statistics of each individual as a `Float64Array` of edges and
-  a `Uint32Array` of counts, 20 bins over the range of the values, as
-  `numpy.histogram` makes them, with the edges made as popnei makes its
-  own, the start plus i times the width, so that the rule of the
-  threshold treats both kinds alike, and the number of NaN values apart;
+  a `Uint32Array` of counts, 20 bins over the range of the values, over
+  the edges `numpy.histogram` makes, the start plus i times the width,
+  each bin holding its upper edge as popnei's bins of the variants do, so
+  that the rule of the threshold treats both kinds alike, and the number
+  of NaN values apart;
 - the screen gives each histogram the threshold of its filter of
   individuals when it is on, and says how many individuals have no
   heterozygosity and that the filter by heterozygosity removes them

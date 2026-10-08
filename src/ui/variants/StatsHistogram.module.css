@@ -1,7 +1,7 @@
 /* The tokens are those of src/ui/tokens.css. */
 
-/* A histogram: the row of its title and the box of its threshold, the
-   line of what the threshold keeps, its plot. */
+/* A histogram: the row of its title and the box of its threshold, and
+   its plot. */
 .block {
   display: grid;
   gap: var(--space-2);
@@ -16,29 +16,16 @@
   min-inline-size: 0;
 }
 
-/* What the threshold keeps, over the plot, in the room of its longest
-   form, "Keeps 200,000 to 200,000 of 200,000 variants so far", which the
-   screen gives in data-longest: drawn hidden in the same cell of a grid,
-   it holds the cell at the height that form takes at the width of the
-   column, one row or two, so that the plot does not move as the words
-   change while the line is dragged, nor stand at another height than
-   the plot beside it, of the same count. Generated content, it is no
-   text of the page, and hidden, no text a screen reader reads. */
-.keepsRoom {
-  display: grid;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.keepsRoom::after {
-  grid-area: 1 / 1;
-  visibility: hidden;
-  content: attr(data-longest);
-}
-
-.keeps {
-  grid-area: 1 / 1;
+/* The description of the box of a threshold that removes nothing, read
+   by a screen reader alone: the grey of the number says it to the eye. */
+.hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
   margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* The plot and the line of its threshold laid over it. */

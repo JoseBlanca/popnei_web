@@ -622,10 +622,20 @@ export interface VariantsSummaryJob {
     Python script of the summary writes it. */
 export const ONE_WINDOW_PER_CHROM = Number.MAX_SAFE_INTEGER;
 
+/** The edge each bin of the histograms of the variants holds, popnei's
+    `closed` of `histKwargs`: the right one, the first bin holding its
+    left edge too, so that the bins below an edge t count the variants
+    whose value is at most t, what a threshold and popnei's filters keep
+    (docs/plans/popnei-0.2.2.md, "The design"). The one place it is
+    written: the runner gives it to popnei, and the Python scripts of the
+    histograms of the variants and of the summary write it. */
+export const VARIANT_BINS_CLOSED = "right";
+
 /** The summary of the variants file: its chromosomes, in popnei's order,
     those with variants in the order of their first variant, and the
-    variants of each; the histograms of the variants; and the statistics
-    of each individual, all of the one pass. */
+    variants of each; the histograms of the variants; the statistics of
+    each individual; and the variants that failed their FILTER, when the
+    source recorded it, all of the one pass. */
 export interface VariantsSummaryResult {
   /** The analysis the result is of. */
   readonly analysis: "variantsSummary";
@@ -641,6 +651,22 @@ export interface VariantsSummaryResult {
   readonly perIndividual: IndividualStatsPart;
   /** The counts of the pass; `numVars` is the variants of the file. */
   readonly passStats: PassStats;
+  /** Of the variants of the file, how many passed their FILTER, a
+      `PASS` or a dot in that column of the VCF, and how many failed,
+      popnei's `filterColumn` of `VariantsSummary`, the two adding up to
+      `passStats.numVars`; `null` when the source did not record the
+      FILTER of its variants, a `.nei` file written before format 1.2,
+      which `keepsPassed` of popnei's `Variants` says, and the runner then
+      does not ask for them. */
+  readonly filterColumn: FilterColumn | null;
+}
+
+/** How many variants passed their FILTER and how many failed. */
+export interface FilterColumn {
+  /** The variants whose FILTER was `PASS` or a dot. */
+  readonly passed: number;
+  /** The others. */
+  readonly failed: number;
 }
 
 /** The method of the principal components: a PCA of the genotypes, or a

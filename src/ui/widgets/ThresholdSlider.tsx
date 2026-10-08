@@ -18,9 +18,10 @@
  * and so do Shift and an arrow key, where React Aria would move it a
  * tenth of its range, and Home and End to the ends of the axis. Its name is not drawn, since the number field
  * beside it has the same name in its visible label; its value, for a
- * screen reader, is what the screen says it keeps, "0.1, keeps 1,050 of
- * 1,200 variants", where React Aria would say the number alone. Nothing is announced at each step: the
- * value is read as the thumb moves, as of any slider.
+ * screen reader, is the screen's, "0.05", or "1, keeps every variant"
+ * for a threshold that removes nothing, whose handle and line are then
+ * grey, `muted`, as the plot draws its dashed line. Nothing is announced
+ * at each step: the value is read as the thumb moves, as of any slider.
  */
 import { useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
@@ -61,6 +62,9 @@ export interface ThresholdSliderProps {
   readonly value: number;
   /** What a screen reader says as its value. */
   readonly valueText: string;
+  /** Whether its handle and its line are drawn in grey, a threshold that
+      removes nothing, which `valueText` says. */
+  readonly muted: boolean;
   /** Called with each value it is moved to, as it is dragged too. */
   readonly onChange: (value: number) => void;
 }
@@ -73,6 +77,7 @@ export function ThresholdSlider({
   step,
   value,
   valueText,
+  muted,
   onChange,
 }: ThresholdSliderProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +105,7 @@ export function ThresholdSlider({
     // The keys of the thumb reach it first; the element is no widget.
     <div
       className={classOf(styles, "overlay")}
+      {...(muted && { "data-muted": "" })}
       onKeyDownCapture={onKeyDownCapture}
     >
       <Slider

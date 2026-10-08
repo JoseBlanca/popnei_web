@@ -1,12 +1,14 @@
 /**
  * The bins of the statistics of each individual, which popnei gives as
  * one value each and does not bin (docs/specs/analyses/individualChecks.md,
- * "The bins of its histograms"). They are the bins of `numpy.histogram`
- * with a number of bins, every edge the same double, so that the Python
- * script gives the same counts as the histograms of the page. And the
- * range of an axis rounded out to round numbers, over which popgen2.html
- * draws its histograms (docs/plans/file-stats.md, "Round 1 with the
- * owner").
+ * "The bins of its histograms"). Their edges are those of
+ * `numpy.histogram` with a number of bins, and each bin holds its right
+ * edge, as popnei's bins of the variants do on both pages
+ * (docs/plans/popnei-0.2.2.md, "The design"): a value on an edge is in
+ * the bin that ends there, so that a bar ends at what a threshold keeps,
+ * the values at most it. And the range of an axis rounded out to round
+ * numbers, over which popgen2.html draws its histograms
+ * (docs/plans/file-stats.md, "Round 1 with the owner").
  */
 
 /** The number of bins of each histogram of the statistics of each
@@ -26,14 +28,15 @@ export interface Bins {
 }
 
 /**
- * The bins of `values` as `numpy.histogram(values, bins=numBins)` makes
- * them, NaN left out and counted in `numNaN`. The bins span the range of
- * the values, or that value minus 0.5 to it plus 0.5 when every value is
- * the same; edge i is `i * ((max - min) / numBins) + min`, and the last
- * is `max` itself, as numpy's `linspace` computes them. A value falls in
- * the bin whose left edge is at most it and whose right edge is above
- * it, the last bin taking its right edge too. Gives `null` when there is
- * no value or every value is NaN. A `numBins` below 1 or not whole, and
+ * The bins of `values` over the edges `numpy.histogram(values,
+ * bins=numBins)` makes, NaN left out and counted in `numNaN`. The bins
+ * span the range of the values, or that value minus 0.5 to it plus 0.5
+ * when every value is the same; edge i is `i * ((max - min) / numBins) +
+ * min`, and the last is `max` itself, as numpy's `linspace` computes
+ * them. A value falls in the bin whose left edge is below it and whose
+ * right edge is at least it, the first bin taking its left edge too,
+ * where numpy puts a value on an inner edge in the bin to its right.
+ * Gives `null` when there is no value or every value is NaN. A `numBins` below 1 or not whole, and
  * an infinite value, which no statistic of popnei gives, are defects,
  * thrown.
  *
@@ -106,9 +109,10 @@ export function binValues(
 
 /**
  * The index of the bin of `value`, between `first` and `last`, the
- * outer `edges`: guessed from the arithmetic, as numpy does, and moved to
- * the bin whose edges hold it, since the guess can be one bin off within
- * a rounding of an edge.
+ * outer `edges`, each bin holding its right edge and the first its left
+ * one too: guessed from the arithmetic, and moved to the bin whose edges
+ * hold it, since the guess can be one bin off within a rounding of an
+ * edge.
  */
 function binOf(
   value: number,
@@ -117,12 +121,12 @@ function binOf(
   last: number,
 ): number {
   const numBins = edges.length - 1;
-  const guess = Math.floor(((value - first) / (last - first)) * numBins);
+  const guess = Math.ceil(((value - first) / (last - first)) * numBins) - 1;
   let index = Math.min(Math.max(guess, 0), numBins - 1);
-  while (index > 0 && value < at(edges, index)) {
+  while (index > 0 && value <= at(edges, index)) {
     index -= 1;
   }
-  while (index < numBins - 1 && value >= at(edges, index + 1)) {
+  while (index < numBins - 1 && value > at(edges, index + 1)) {
     index += 1;
   }
   return index;

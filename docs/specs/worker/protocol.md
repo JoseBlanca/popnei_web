@@ -72,12 +72,18 @@ popgen2.html reads each file once (`docs/plans/one-pass.md`): the two
 types and `PassFilterKind` are removed, `PassStats.filtering` is typed by
 `VariantFilterKind` again, and `PROTOCOL_VERSION` is 11. The count waits
 for popnei's summary to give it, popnei issue #12 (JoseBlanca/popnei).
+Revised on 7 October 2026 for popnei 0.2.2, whose summary gives it
+(`docs/plans/popnei-0.2.2.md`, "The FILTER failures"):
+`VariantsSummaryResult` gains `filterColumn`, a `FilterColumn` of the
+variants that `passed` and `failed` their FILTER, or `null` when the
+source did not record it; `PROTOCOL_VERSION` 12.
 Revised on 7 October 2026 for the thresholds of popgen2.html as filters
 of the project, `docs/designs/stats-filters.md`, approved by the owner
 that day: the filter of the FILTER column, `{ kind: "passed" }`, popnei's
 `filterPassed`, joins `VariantFilter`, first in the fixed order, and the
 runner puts it before the list of the individuals kept; its checks and
-`PROTOCOL_VERSION` 12 are in `messages.md`. Revised again on 7 October
+`PROTOCOL_VERSION` 13, from the merge of the two revisions, are in
+`messages.md`. Revised again on 7 October
 2026 for the owner's decision that the filter applies to a `.nei` file
 whose variants record whether they passed their FILTER
 (`docs/designs/stats-filters.md`, "What the owner decided"): `Opened`,
@@ -680,7 +686,7 @@ export interface VariantsSummaryJob {
   fileId: string;
   filters: readonly [];
   minNumIndividuals: number;               // 0
-  numBins: number;                         // 1,280
+  numBins: number;                         // 1,000, holding their right edge
   range: readonly [number, number];        // [0, 1]
 }
 
@@ -691,6 +697,14 @@ export interface VariantsSummaryResult {
   perVar: VariantStatsPart;                // popnei's names of the parts of VariantsSummary
   perIndividual: IndividualStatsPart;
   passStats: PassStats;
+  filterColumn: FilterColumn | null;       // popnei's filterColumn, null when keepsPassed is false
+}
+
+// The variants of the pass that passed their FILTER, PASS or a dot in the
+// VCF, and those that failed; the two add up to passStats.numVars.
+export interface FilterColumn {
+  passed: number;
+  failed: number;
 }
 
 // The principal components, stage 4: a PCA of the genotypes or a PCoA of

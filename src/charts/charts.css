@@ -57,19 +57,20 @@
   fill: none;
 }
 
-/* A bar the threshold may keep or remove, the values on its line being
-   somewhere in it: hatched in --chart-bar on the background, outlined as
-   the others, its fill the pattern its style names. */
-.chart-hatch-stripe {
-  stroke: var(--chart-bar);
-  stroke-width: 2px;
-}
-
 .chart-threshold,
 .chart-legend-threshold {
   stroke: var(--chart-threshold);
   stroke-width: 2px;
   stroke-dasharray: 4 3;
+}
+
+/* The line of a threshold that keeps every value, a threshold that
+   removes nothing: dotted, and in a bluish grey, so that it is told from
+   the dashed red line by its pattern too, by a reader who does not tell
+   the two colours apart (docs/specs/charts/histogram.md). */
+.chart-threshold-keeps-all {
+  stroke: var(--chart-threshold-keeps-all);
+  stroke-dasharray: 1 3;
 }
 
 .chart-legend-text {

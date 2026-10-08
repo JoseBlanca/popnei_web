@@ -66,6 +66,25 @@
   background: var(--chart-threshold);
 }
 
+/* A threshold that keeps every value, which removes nothing: the handle
+   hollow, an outline in the colour of such a threshold over the
+   background, and the line dotted in that colour, as the plot draws its
+   own, so that they are told from a red one by their shape too. */
+.overlay[data-muted] .thumb::before {
+  border: 2px solid var(--chart-threshold-keeps-all);
+  background: var(--color-background);
+}
+
+.overlay[data-muted] .thumb[data-hovered]::after,
+.overlay[data-muted] .thumb[data-dragging]::after,
+.overlay[data-muted] .thumb[data-focus-visible]::after {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--chart-threshold-keeps-all) 0 1px,
+    transparent 1px 4px
+  );
+}
+
 .thumb[data-focus-visible] {
   border-radius: var(--radius-sm);
   outline: var(--focus-ring);

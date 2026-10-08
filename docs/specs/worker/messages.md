@@ -61,20 +61,24 @@ reads each file once (`docs/plans/one-pass.md`): the job and its result
 are removed, `passed` in the counts of any result is `extraFields`, and
 `PROTOCOL_VERSION` is 11; the count waits for popnei's summary to give
 it, popnei issue #12 (JoseBlanca/popnei). Revised on 7 October 2026 for
-the thresholds of popgen2.html as filters of the project
+popnei 0.2.2, whose summary gives it (`docs/plans/popnei-0.2.2.md`, "The
+FILTER failures"): the result of `variantsSummary` has the field
+`filterColumn`, `null` or an object of exactly `passed` and `failed`,
+two whole numbers, and `PROTOCOL_VERSION` is 12. Revised on 7 October
+2026 for the thresholds of popgen2.html as filters of the project
 (`docs/designs/stats-filters.md`, approved by the owner that day): a
 filter of the variants of the kind `passed`, of exactly the field
 `kind`, is accepted in the `filters` of a write and of every job whose
 filters may be other than empty, `passed` is a kind of the counts of any
-result, and
-`PROTOCOL_VERSION` is 12. Revised again on 7 October 2026 for the
-owner's decision that the filter of the FILTER column applies to a
-`.nei` file whose variants record whether they passed their FILTER
-(`docs/designs/stats-filters.md`, "What the owner decided"): `opened`
-carries `keepsPassed`, popnei 0.2.2's answer to that, a boolean, and
-`PROTOCOL_VERSION` is 14, one above the 13 that the merge of the branch
-`popnei-0.2.2` into the branch of the filters gives it, since that
-branch also raised it, to 12, for another change.
+result, and `PROTOCOL_VERSION` is 13 from the merge of the branch
+`popnei-0.2.2` into the branch of the filters on 8 October 2026, since
+each branch had raised it from 11 to 12 for its own change. Revised
+again on 7 October 2026 for the owner's decision that the filter of the
+FILTER column applies to a `.nei` file whose variants record whether
+they passed their FILTER (`docs/designs/stats-filters.md`, "What the
+owner decided"): `opened` carries `keepsPassed`, popnei 0.2.2's answer
+to that, a boolean, and `PROTOCOL_VERSION` is 14, one above the 13 of
+that merge.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest

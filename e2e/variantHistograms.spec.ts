@@ -226,7 +226,7 @@ test("VS6 D2 the histograms calculated: the button, the caption, the versions, t
   await expect(
     histogram(page, OBS_HET_TITLE).getByRole("img"),
   ).toHaveAccessibleName(
-    `${OBS_HET_TITLE} The observed heterozygosity of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.5 keeps the 20 bins up to it, 1,090 variants, splits the bin from 0.5 to 0.525, 62 variants, and removes the 19 bins above it, 48 variants.`,
+    `${OBS_HET_TITLE} The observed heterozygosity of 1,200 variants, in 40 bins from 0 to 1. The threshold 0.5 keeps the 20 bins up to it, 1,098 variants, and removes the 20 bins above it, 102 variants.`,
   );
   await expect(
     histogram(page, EXP_HET_TITLE).locator("line.chart-threshold"),
@@ -600,7 +600,7 @@ for (const keys of ["0,", "0,1", "0,0", "0.,5"] as const) {
   });
 }
 
-test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.5, which a line under its plot names; at 0.6 it splits none", async ({
+test("VS6 D2 the filter by observed heterozygosity at 0.5, an edge, splits no bin, the bins holding their upper edge; at 0.51 it splits the bin from 0.5, which a line under its plot names; at 0.65, inside an empty bin, it splits none; at 0 it splits the first bin, of no variant, and no line names it", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -611,19 +611,39 @@ test("VS6 D2 the filter by observed heterozygosity at 0.5 splits the bin from 0.
   const line = group.getByText(/^The threshold .* splits the bin/);
   await expect(line).toHaveCount(0);
   await flip(page, OBS_HET_SWITCH);
+  await expect(
+    group.getByText(
+      "Threshold of the filter of the variants by observed heterozygosity: 0.5, drawn over every variant of the file",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(line).toHaveCount(0);
+  const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
+  await obsHet.fill("0.51");
+  await obsHet.press("Enter");
   await expect(line).toHaveText(
-    "The threshold 0.5 splits the bin from 0.5 to 0.525, 62 variants: the filter keeps those of its variants at most 0.5 and removes the others.",
+    "The threshold 0.51 splits the bin from 0.5 to 0.525, 54 variants: the filter keeps those of its variants at most 0.51 and removes the others.",
   );
   await expectNoViolations(makeAxeBuilder);
-  const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
-  await obsHet.fill("0.6");
+  await obsHet.fill("0.65");
   await obsHet.press("Enter");
   await expect(
     group.getByText(
-      "Threshold of the filter of the variants by observed heterozygosity: 0.6, drawn over every variant of the file",
+      "Threshold of the filter of the variants by observed heterozygosity: 0.65, drawn over every variant of the file",
       {
         exact: true,
       },
+    ),
+  ).toBeVisible();
+  await expect(line).toHaveCount(0);
+  // At 0 the first bin, which holds its lower edge, is split, but on
+  // panel.nei it holds no variant, every one above 0.025: no line.
+  await obsHet.fill("0");
+  await obsHet.press("Enter");
+  await expect(
+    group.getByText(
+      "Threshold of the filter of the variants by observed heterozygosity: 0, drawn over every variant of the file",
+      { exact: true },
     ),
   ).toBeVisible();
   await expect(line).toHaveCount(0);
@@ -661,7 +681,7 @@ test("VS6 D2 the table of the bins reached with the keyboard: the tabs one stop,
   await expect(table).toBeVisible();
   await expect(
     panel.getByText(
-      "Each bin runs from its lower edge up to its upper edge, not included; the last bin includes its upper edge.",
+      "Each bin runs from above its lower edge up to its upper edge, included; the first bin includes its lower edge too.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -727,10 +747,10 @@ test("VS6 D2 the CSV of the bins of the MAF: panel.variant_maf_bins.csv, its hea
   const download = await downloading;
   expect(download.suggestedFilename()).toBe("panel.variant_maf_bins.csv");
   const lines = (await readFile(await download.path(), "utf8")).split("\n");
-  expect(lines[0]).toBe("from,to,count,state");
+  expect(lines[0]).toBe("from,to_included,count,state");
   expect(lines).toHaveLength(42);
   expect(lines.at(-1)).toBe("");
-  expect(lines[39]).toBe("0.9500000000000001,0.9750000000000001,22,");
+  expect(lines[39]).toBe("0.95,0.975,22,");
 
   // The other two, by their names, and the states with a threshold.
   await flip(page, OBS_HET_SWITCH);
@@ -746,7 +766,8 @@ test("VS6 D2 the CSV of the bins of the MAF: panel.variant_maf_bins.csv, its hea
     expect(file.suggestedFilename()).toBe(name);
     const text = await readFile(await file.path(), "utf8");
     if (title === OBS_HET_TITLE) {
-      expect(text.split("\n")[21]).toBe("0.5,0.525,62,partly_kept");
+      expect(text.split("\n")[20]).toBe("0.475,0.5,66,kept");
+      expect(text.split("\n")[21]).toBe("0.5,0.525,54,removed");
     } else {
       expect(text.split("\n")[1]).toBe("0,0.025,0,");
     }
@@ -835,6 +856,10 @@ test("VS6 D2 at 320 pixels wide the table of the bins of a filter that is on fit
   await pick(page, "panel.nei");
   await calculate(page);
   await flip(page, OBS_HET_SWITCH);
+  // At 0.51 the filter splits the bin from 0.5: the longest of the states.
+  const obsHet = field(page, "Maximum observed heterozygosity, from 0 to 1");
+  await obsHet.fill("0.51");
+  await obsHet.press("Enter");
   const group = histogram(page, OBS_HET_TITLE);
   await group.getByRole("tab", { name: "Table of the bins" }).click();
   const table = group.getByRole("table");

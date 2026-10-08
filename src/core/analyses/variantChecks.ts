@@ -14,14 +14,16 @@
  *
  * The bins and the means are popnei's, from one call of
  * `calcPerVarDistribs` in the calculation worker; this module computes
- * none of them. popnei is asked for 1,280 bins over 0 to 1, and the bins
- * drawn are made of them by addition alone: popgen.html draws them 32 at
- * a time, popnei's 40 bins over 0 to 1; popgen2.html draws about 40 over
- * the range of the bins with a count, rounded out to round numbers
- * (docs/plans/file-stats.md, "Round 1 with the owner"). The Python script
- * asks popnei for the 40 bins, which are those sums.
+ * none of them. popnei is asked for 1,000 bins over 0 to 1 that hold
+ * their right edge, and the bins drawn are made of them by addition
+ * alone: popgen.html draws them 25 at a time, popnei's 40 bins over 0 to
+ * 1; popgen2.html draws about 40 over the range of the bins with a count,
+ * rounded out to round numbers (docs/plans/file-stats.md, "Round 1 with
+ * the owner"; docs/plans/popnei-0.2.2.md). The Python script asks popnei
+ * for the 40 bins, which are those sums.
  */
 
+import { VARIANT_BINS_CLOSED } from "../../worker/protocol.ts";
 import { variantsStem } from "../fileNames.ts";
 import { roundedRange } from "../histogram.ts";
 import { counted, escaped, grouped } from "../project.ts";
@@ -60,26 +62,24 @@ const ID = "variantChecks";
 export const VARIANT_BINS = 40;
 
 /**
- * The bins popnei is asked for over 0 to 1, 1,280: 32 in each of the 40
- * of popgen.html, so that 32 of them added up are popnei's bin of 40 to
- * the last count. popnei's edges are i × (1 / numBins), and 1 / 1,280 is
- * 1 / 40 halved five times, which a double holds exactly; so the edge
- * 32 × k of the 1,280 is the double of the edge k of the 40, and a value
- * on an edge falls on the same side of both. With 1,000 bins, 8 of the
- * 41 edges differ in their last place, 0.075 against the
- * 0.07500000000000001 of the 40, and a missing rate of 15 / 200 would
- * move to the next bin. The bins of 0.05 hold 64 of them, so that every
- * range of popgen2.html, rounded to steps of 0.05 at least, starts and
- * ends on an edge of popnei. Each of the four counts is 5,120 bytes and
- * the edges 10,248 bytes, 30,728 bytes in a result where the 40 bins took
- * 968.
+ * The bins popnei is asked for over 0 to 1, 1,000, each holding its right
+ * edge (`VARIANT_BINS_CLOSED`): 25 in each of the 40 of popgen.html, so
+ * that 25 of them added up are popnei's bin of 40 to the last count.
+ * popnei's edges are the decimals i / numBins, so the edge 25 × k of the
+ * 1,000 is the edge k of the 40, and every number of up to three decimals
+ * from 0 to 1 is an edge: the variants a threshold of such a number keeps,
+ * those at most it, are the bins below it added up, the count popnei's
+ * filter keeps. The bins of 0.05 hold 50 of them, so that every range of
+ * popgen2.html, rounded to steps of 0.05 at least, starts and ends on an
+ * edge of popnei. Each of the four counts is 4,000 bytes and the edges
+ * 8,008 bytes, 24,008 bytes in a result where the 40 bins took 968.
  *
  * The summary of the variants file of popgen2.html asks popnei for the
  * same bins, as do `VARIANT_RANGE` and `VARIANT_MIN_NUM_INDIVIDUALS`, so
  * a change of any of the three changes the result of both analyses and
  * raises the `keyVersion` of both, this one and variantsSummary.ts.
  */
-export const VARIANT_FINE_BINS = VARIANT_BINS * 32;
+export const VARIANT_FINE_BINS = VARIANT_BINS * 25;
 
 /** The lowest and the highest edge of the bins, popnei's default range;
     the summary of popgen2.html asks for it too, so a change raises the
@@ -206,8 +206,9 @@ export const variantChecks: AnalysisDef<Job, JobResult> = Object.freeze({
   app: Object.freeze(["popgen", "gwas"] as const),
   defaults: Object.freeze({}),
   // 3 since the result holds the missing rate, 4 since its bins are
-  // 1,280 (docs/plans/file-stats.md).
-  keyVersion: 4,
+  // 1,280 (docs/plans/file-stats.md), 5 since they are 1,000 that hold
+  // their right edge (docs/plans/popnei-0.2.2.md).
+  keyVersion: 5,
   filtersRead: Object.freeze({ variants: false, individuals: true }),
   parseOptions: parseNoOptions,
   keyInputs,
@@ -316,8 +317,8 @@ function numCheckNumbers(): number {
  * `individuals_kept`, which src/core/script.ts makes before any filter,
  * when the project has a filter of individuals. It asks popnei for
  * `VARIANT_BINS` bins, 40, as many as the rows of the CSV of the bins and
- * the bars of popgen.html, and not for the 1,280 of the job, which the page
- * sums. Throws a defect on a project with no variants file, since it is
+ * the bars of popgen.html, and not for the 1,000 of the job, which the page
+ * sums, holding their right edge as those of the job do. Throws a defect on a project with no variants file, since it is
  * asked only of an analysis that has run.
  */
 function script(p: Project): string {
@@ -337,7 +338,7 @@ function script(p: Project): string {
     "    variants_as_read,",
     "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],",
     `    min_num_individuals=${String(VARIANT_MIN_NUM_INDIVIDUALS)},`,
-    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}},`,
+    `    hist_kwargs={"range": (${String(low)}, ${String(high)}), "num_bins": ${String(VARIANT_BINS)}, "closed": "${VARIANT_BINS_CLOSED}"},`,
     ")",
   ]
     .map((line) => `${line}\n`)
@@ -365,7 +366,7 @@ export interface VariantBins {
 
 /**
  * The 40 bins over 0 to 1 that popgen.html draws of `statistic`: popnei's
- * bins added up 32 at a time, with popnei's edges at every 32nd, which
+ * bins added up 25 at a time, with popnei's edges at every 25th, which
  * are those of popnei's 40 bins (`VARIANT_FINE_BINS`). Throws a defect
  * for a result whose bins are not 40 times a whole number.
  */
@@ -383,7 +384,7 @@ export function variantBins(
 }
 
 /** The steps the range of a histogram of popgen2.html is rounded to: 0.05
-    at least, 64 of popnei's bins, so that its two ends are edges of
+    at least, 50 of popnei's bins, so that its two ends are edges of
     popnei's. */
 const SMALLEST_STEP = 0.05;
 
@@ -391,23 +392,81 @@ const SMALLEST_STEP = 0.05;
     range. */
 const ROUNDED_BINS = 40;
 
+/** The fewest bars after the first that the missing rate is drawn in
+    with bars that each can hold as many values; with fewer, its bars are
+    those of the other statistics (`variantBinsRounded`). */
+const LEAST_EVEN_BARS = 5;
+
+/** The individuals the statistics of the variants are calculated over,
+    every individual of the file, and their ploidy, which set the values
+    the missing rate and the MAF can take, and so the narrowest bar of
+    their histograms on popgen2.html. */
+export interface PassIndividuals {
+  readonly numIndividuals: number;
+  readonly ploidy: number;
+}
+
 /**
- * The bins of `statistic` that popgen2.html draws: over the range from
- * the first bin of popnei with a count to the last, from 0 for the
- * missing rate, the ends taken as i / 1,280 and not as popnei's edges,
- * rounded out to steps of 0.05 at least (`roundedRange` of
- * histogram.ts), the number of popnei's bins in each that makes the bins
- * nearest 40, the fewer of two as near, every bin the same number of
- * popnei's. Each count is popnei's counts added up; the inner edges are
- * popnei's, and the two ends the round numbers, which popnei's edges
- * equal or exceed by one in their last place, 0.30000000000000004 for
- * 0.3. On panel.nei the missing rate is 0 to 0.1 in 32 bins of 4. With no
- * variant in a bin, the 40 bins over 0 to 1. Throws a defect for a result
- * whose ends of a range are not edges of its bins.
+ * The least distance between two values of `statistic` that popnei can
+ * give over `numIndividuals` individuals of ploidy `ploidy`, which no bar
+ * of popgen2.html is narrower than (docs/plans/popnei-0.2.2.md, "The
+ * owner's first round"): 1 / n for the missing rate, the missing
+ * genotypes of a variant over the n individuals of the pass, so that on
+ * panel.nei, of 200 individuals, a missing rate is a multiple of 0.005;
+ * 1 / (ploidy · n) for the MAF, a count of alleles over the alleles of
+ * the n individuals, a few fewer where genotypes are missing. `null` for
+ * the two heterozygosities, whose values have no such step, and for no
+ * individual.
+ */
+export function variantValueSpacing(
+  statistic: VariantStatistic,
+  numIndividuals: number,
+  ploidy: number,
+): number | null {
+  if (numIndividuals === 0) return null;
+  switch (statistic) {
+    case "missingRate":
+      return 1 / numIndividuals;
+    case "maf":
+      return 1 / (ploidy * numIndividuals);
+    case "obsHet":
+    case "unbiasedExpHet":
+      return null;
+  }
+}
+
+/**
+ * The bins of `statistic` that popgen2.html draws over the variants of
+ * the pass, of `individuals`, `null` when they are not known.
+ *
+ * The MAF and the two heterozygosities: over the range from the first bin
+ * of popnei with a count to the last, rounded out to steps of 0.05 at
+ * least (`roundedRange` of histogram.ts), the number of popnei's bins in
+ * each that makes the bins nearest 40, the fewer of two as near, every
+ * bin the same number of popnei's. No bin of the MAF is narrower than the
+ * least distance between two of its values (`variantValueSpacing`),
+ * rounded up to a whole number of popnei's bins, so that no bar stands
+ * empty between two values. Its values are not on an even grid where
+ * genotypes are missing, so a bar may hold more values than its
+ * neighbours.
+ * Where a range of steps of 0.05 would hold too few such bins, it is
+ * rounded to a larger step, at least that bin.
+ *
+ * The missing rate: from 0, its first bin is popnei's first, 0 to 0.001,
+ * which holds the variants with no missing genotype alone when the
+ * individuals are fewer than 1,000, their missing rates multiples of
+ * 1 / n wider than it; and its next bins start at 0.001 (`missingRateBins`).
+ *
+ * Each count is popnei's counts added up, and the edges are popnei's. A
+ * bin of popnei holds its right edge, so a MAF of 0.5 is in the bin that
+ * ends at 0.5, and an axis whose least value is 0.5 starts at 0.45. With
+ * no variant in a bin, the 40 bins over 0 to 1. Throws a defect for a
+ * result whose ends of a range are not edges of its bins.
  */
 export function variantBinsRounded(
   result: VariantStatsPart,
   statistic: VariantStatistic,
+  individuals: PassIndividuals | null,
 ): VariantBins {
   const counts = result[statistic].counts;
   const numFine = counts.length;
@@ -416,29 +475,153 @@ export function variantBinsRounded(
     return variantBins(result, statistic);
   }
   const last = counts.findLastIndex((count) => count > 0) + 1;
-  // The nominal edges, i / numFine, and not popnei's i × (1 / numFine),
-  // which at 0.3 or 0.6 is one last place above the round number and
-  // would be rounded up to the next step.
+  if (statistic === "missingRate") {
+    return missingRateBins(
+      result,
+      last,
+      individuals === null || individuals.numIndividuals === 0
+        ? null
+        : individuals.numIndividuals,
+    );
+  }
+  const spacing =
+    individuals === null
+      ? null
+      : variantValueSpacing(
+          statistic,
+          individuals.numIndividuals,
+          individuals.ploidy,
+        );
+  const leastPerBin =
+    spacing === null ? 1 : Math.max(1, Math.ceil(spacing * numFine));
   const [low, high] = roundedRange(
-    statistic === "missingRate" ? 0 : first / numFine,
+    first / numFine,
     last / numFine,
-    SMALLEST_STEP,
+    Math.max(SMALLEST_STEP, leastPerBin / numFine),
   );
   const from = fineIndexOf(low, numFine);
   const to = fineIndexOf(high, numFine);
-  const bins = summed(result, statistic, from, to, perBinOf(to - from));
-  const edges = bins.edges.slice();
-  edges[0] = low;
-  edges[edges.length - 1] = high;
-  return { edges, counts: bins.counts };
+  return summed(result, statistic, from, to, perBinOf(to - from, leastPerBin));
+}
+
+/**
+ * The bins of the missing rate that popgen2.html draws, whose last
+ * variant is in the bin of popnei that ends at the index `last`, over
+ * `numIndividuals` individuals, `null` when not known; the owner, 8
+ * October 2026, docs/plans/popnei-0.2.2.md.
+ *
+ * The first bin is popnei's first, from 0 to 0.001: with fewer than
+ * 1,000 individuals, whose missing rates are multiples of 1 / n wider
+ * than it, it holds the variants with no missing genotype alone, and a
+ * threshold of 0 keeps it whole; with more, it holds them and those with
+ * a missing rate up to 0.001.
+ *
+ * The next start at 0.001 and run to the end of the range, rounded out to
+ * steps of 0.05 at least, in bins that each can hold as many values: a
+ * whole number of popnei's bins that is a multiple of 1 / n, the smallest
+ * being 1 / g of g the greatest common divisor of n and 1,000, 0.005 for
+ * 200 individuals, 0.01 for 300, and the end of the range a multiple of
+ * it. Such a bin holds the same number of values wherever it starts, and
+ * the last, which ends at the end of the range and not 0.001 after it,
+ * loses no value, since none is between the two. Of the multiples of it
+ * that divide the range, the one that makes the bins nearest 40, the
+ * fewer of two as near.
+ *
+ * Where such bins would be fewer than `LEAST_EVEN_BARS` over the range,
+ * of 12 individuals, whose smallest such bin is 0.25, or of 201, whose
+ * smallest is 1, they are the bins of the other statistics, no narrower
+ * than 1 / n rounded up to a whole number of popnei's bins, the range
+ * rounded to a larger step where it holds too few, and their number of
+ * popnei's bins a divisor of the range; the last is one bin of popnei
+ * narrower than the others, and a bin may hold one value more than its
+ * neighbours.
+ */
+function missingRateBins(
+  result: VariantStatsPart,
+  last: number,
+  numIndividuals: number | null,
+): VariantBins {
+  const numFine = result.missingRate.counts.length;
+  const smallestStep = fineIndexOf(SMALLEST_STEP, numFine);
+  const evenWidth =
+    numIndividuals === null
+      ? 1
+      : numFine / greatestCommonDivisor(numIndividuals, numFine);
+  const evenStep = leastCommonMultiple(evenWidth, smallestStep);
+  const roundedEnd = fineIndexOf(
+    roundedRange(0, last / numFine, SMALLEST_STEP)[1],
+    numFine,
+  );
+  const evenEnd = Math.ceil(roundedEnd / evenStep) * evenStep;
+  if (evenEnd / evenWidth >= LEAST_EVEN_BARS) {
+    return summedAt(result, "missingRate", [
+      0,
+      ...missingRateEdges(evenEnd, evenWidth, true),
+    ]);
+  }
+  const leastWidth =
+    numIndividuals === null ? 1 : Math.ceil(numFine / numIndividuals);
+  const end = fineIndexOf(
+    roundedRange(
+      0,
+      last / numFine,
+      Math.max(SMALLEST_STEP, leastWidth / numFine),
+    )[1],
+    numFine,
+  );
+  return summedAt(result, "missingRate", [
+    0,
+    ...missingRateEdges(end, leastWidth, false),
+  ]);
+}
+
+/** The indices of popnei's edges of the bins of the missing rate from
+    the edge 1, 0.001, to `end`, in bins of a number of popnei's bins
+    that divides `end` and is a multiple of `width`, when `multiples`, or
+    at least `width` otherwise: the one that makes the bins nearest 40,
+    the fewer of two as near. The last is one bin of popnei narrower than
+    the others, as it ends at `end` and not one after. */
+function missingRateEdges(
+  end: number,
+  width: number,
+  multiples: boolean,
+): number[] {
+  let best = end;
+  const binsOf = (perBin: number): number => Math.ceil((end - 1) / perBin);
+  for (let perBin = end; perBin >= width; perBin -= 1) {
+    if (end % perBin !== 0 || (multiples && perBin % width !== 0)) continue;
+    if (
+      Math.abs(binsOf(perBin) - ROUNDED_BINS) <
+      Math.abs(binsOf(best) - ROUNDED_BINS)
+    ) {
+      best = perBin;
+    }
+  }
+  const edges: number[] = [];
+  for (let edge = 1; edge < end; edge += best) edges.push(edge);
+  edges.push(end);
+  return edges;
+}
+
+/** The greatest common divisor of two whole numbers above 0. */
+function greatestCommonDivisor(first: number, second: number): number {
+  let [a, b] = [first, second];
+  while (b !== 0) [a, b] = [b, a % b];
+  return a;
+}
+
+/** The least common multiple of two whole numbers above 0. */
+function leastCommonMultiple(first: number, second: number): number {
+  return (first / greatestCommonDivisor(first, second)) * second;
 }
 
 /** The number of popnei's bins in each of those over `numFine` of them
-    that makes them nearest `ROUNDED_BINS`, a divisor of `numFine`, the
-    larger of two as near. */
-function perBinOf(numFine: number): number {
+    that makes them nearest `ROUNDED_BINS`, a divisor of `numFine` of at
+    least `leastPerBin`, the larger of two as near; `numFine` when it is
+    below `leastPerBin`. */
+function perBinOf(numFine: number, leastPerBin: number): number {
   let best = numFine;
-  for (let perBin = numFine; perBin >= 1; perBin -= 1) {
+  for (let perBin = numFine; perBin >= leastPerBin; perBin -= 1) {
     if (numFine % perBin !== 0) continue;
     const distance = Math.abs(numFine / perBin - ROUNDED_BINS);
     if (distance < Math.abs(numFine / best - ROUNDED_BINS)) best = perBin;
@@ -473,22 +656,41 @@ export function summed(
   to: number,
   perBin: number,
 ): VariantBins {
-  const fine = result[statistic].counts;
   const numBins = (to - from) / perBin;
-  const edges = new Float64Array(numBins + 1);
-  const counts = new Uint32Array(numBins);
-  for (let bin = 0; bin <= numBins; bin += 1) {
-    edges[bin] = edgeAt(result.binEdges, from + bin * perBin);
-  }
+  return summedAt(
+    result,
+    statistic,
+    Array.from({ length: numBins + 1 }, (_, bin) => from + bin * perBin),
+  );
+}
+
+/**
+ * popnei's bins of `statistic` added up between the indices `at` of its
+ * edges, increasing, with popnei's edges at them. Throws a defect when a
+ * variant is in a bin of popnei outside them.
+ */
+function summedAt(
+  result: VariantStatsPart,
+  statistic: VariantStatistic,
+  at: readonly number[],
+): VariantBins {
+  const fine = result[statistic].counts;
+  const from = at[0] ?? 0;
+  const to = at.at(-1) ?? 0;
+  const edges = Float64Array.from(at, (index) =>
+    edgeAt(result.binEdges, index),
+  );
+  const counts = new Uint32Array(at.length - 1);
   let total = 0;
   let inBins = 0;
+  let bin = 0;
   for (const [index, count] of fine.entries()) {
     total += count;
     if (index < from || index >= to) continue;
-    const bin = Math.floor((index - from) / perBin);
+    while ((at[bin + 1] ?? to) <= index) bin += 1;
     const before = counts[bin];
     if (before === undefined) {
-      throw defect(`no bin at ${String(bin)} of ${String(numBins)}.`);
+      throw defect(`no bin at ${String(bin)} of ${String(counts.length)}.`);
     }
     counts[bin] = before + count;
     inBins += count;

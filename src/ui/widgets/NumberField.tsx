@@ -163,6 +163,11 @@ export interface NumberFieldProps {
   /** A line under the field, which a screen reader reads with it, after
       the line of a refusal and the elements of `describedBy`. */
   readonly description?: string;
+  /** Whether the number is drawn in grey, for a number that does
+      nothing as it is, a threshold that removes nothing on popgen2.html;
+      the field is not disabled, and the screen says it in words to a
+      screen reader, in `describedBy`. False when absent. */
+  readonly muted?: boolean;
   /** The line under the field for a number it refused, or a character it
       threw away, from the reason and the value it keeps, the one it shows
       again: "10 is more than 1; the threshold stays 0.1." */
@@ -219,6 +224,7 @@ export function NumberField({
   decimals,
   describedBy,
   description,
+  muted = false,
   refusedText,
   onRefused,
   onCommitReady,
@@ -424,6 +430,7 @@ export function NumberField({
         }}
         onCommitReady={onCommitReady}
         inputMode={takesDecimals ? "text" : "numeric"}
+        muted={muted}
         // An empty field, given NaN, holds no text: "NaN" is no number
         // of the field to put back.
         committedText={Number.isNaN(value) ? "" : numberText(value)}
@@ -514,6 +521,8 @@ interface FieldInputProps {
   readonly onPasted: (text: string) => void;
   /** As the field's. */
   readonly onSteps?: (steps: number) => void;
+  /** As the field's. */
+  readonly muted: boolean;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -536,6 +545,7 @@ function FieldInput({
   onRevert,
   onPasted,
   onSteps,
+  muted,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -612,6 +622,7 @@ function FieldInput({
       ref={inputRef}
       className={classOf(styles, "input")}
       inputMode={inputMode}
+      {...(muted && { "data-muted": "" })}
       {...{ [NUMBER_FIELD_ATTRIBUTE]: "" }}
       onChange={(event) => {
         // A change React Aria took, of the text it showed; one that took

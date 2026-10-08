@@ -32,7 +32,10 @@ import type {
   AnalysisStatus,
   AppState,
 } from "../../core/store.ts";
-import { numChroms } from "../../core/analyses/variantsSummary.ts";
+import {
+  numChroms,
+  numFilterFailures,
+} from "../../core/analyses/variantsSummary.ts";
 import { sizeText } from "../../core/writeEstimate.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { chainStatuses, hasChainButton } from "./chain.ts";
@@ -138,6 +141,61 @@ export function chromosomesLine(numChroms: number): string {
     failure of their count. */
 export const VARIANTS_NOT_COUNTED = "Variants: not counted";
 export const CHROMOSOMES_NOT_COUNTED = "Chromosomes: not counted";
+
+/** The line of the variants of the file that failed their FILTER, once
+    counted: "FILTER failures: 300", 0 when every variant passed. */
+export function failuresLine(numFailures: number): string {
+  return `FILTER failures: ${grouped(numFailures)}`;
+}
+
+/** The same line once the pass gave a result so far, those that failed
+    among the variants read: "FILTER failures: 75 so far". */
+export function failuresSoFarLine(numFailures: number): string {
+  return `FILTER failures: ${grouped(numFailures)} so far`;
+}
+
+/** The same line of a VCF while the file is read, while the variants
+    are counted before the first result so far, and after a Stop or a
+    failure of their count. */
+export const FAILURES_READING = "FILTER failures: reading…";
+export const FAILURES_COUNTING = "FILTER failures: counting…";
+export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
+
+/**
+ * The line of the FILTER failures in the box, from the status of the
+ * summary, whose pass counts them (docs/plans/popnei-0.2.2.md, "The
+ * FILTER failures"): the number once counted, or among the variants read
+ * so far; for a VCF, which always records the FILTER, "counting…" before
+ * the first result so far and while the count is about to start, and
+ * "not counted" after a Stop, `stopped`, or a failure of the count;
+ * `null`, no line, when the result says the file did not record the
+ * FILTER, a `.nei` file written before format 1.2, and for a `.nei`
+ * file until a result says it did.
+ */
+export function failuresLineOf(
+  status: AnalysisStatus<JobResult>,
+  stopped: boolean,
+  isVcf: boolean,
+): string | null {
+  switch (status.kind) {
+    case "done": {
+      const numFailures = numFilterFailures(status.result);
+      return numFailures === null ? null : failuresLine(numFailures);
+    }
+    case "running": {
+      if (status.soFar === null) return isVcf ? FAILURES_COUNTING : null;
+      const numFailures = numFilterFailures(status.soFar);
+      return numFailures === null ? null : failuresSoFarLine(numFailures);
+    }
+    case "ready":
+    case "removed":
+      if (!isVcf) return null;
+      return stopped ? FAILURES_NOT_COUNTED : FAILURES_COUNTING;
+    case "locked":
+    case "error":
+      return isVcf ? FAILURES_NOT_COUNTED : null;
+  }
+}
 
 /** The line of the ploidy of a file read: "Ploidy: 2". Every ploidy on
     this page is the file's: a `.nei` file holds it, and popnei reads that

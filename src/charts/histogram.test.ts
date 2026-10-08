@@ -19,30 +19,24 @@ import {
 import { wholeNumberTicks } from "./plot2d.ts";
 
 /**
- * The edges of the default 40 bins over [0, 1] as popnei gives them,
- * `histBinEdges` of calcPerVarDistribs with the release js-v0.1.0-dev.2,
- * on 26 September 2026.
+ * The edges of 40 bins over [0, 1] as popnei gives them, `histBinEdges`
+ * of calcPerVarDistribs with the release js-v0.2.2, the decimals i / 40,
+ * on 7 October 2026.
  */
-const EDGES_40 = Float64Array.from([
-  0, 0.025, 0.05, 0.07500000000000001, 0.1, 0.125, 0.15000000000000002,
-  0.17500000000000002, 0.2, 0.225, 0.25, 0.275, 0.30000000000000004, 0.325,
-  0.35000000000000003, 0.375, 0.4, 0.42500000000000004, 0.45,
-  0.47500000000000003, 0.5, 0.525, 0.55, 0.5750000000000001, 0.6000000000000001,
-  0.625, 0.65, 0.675, 0.7000000000000001, 0.7250000000000001, 0.75, 0.775, 0.8,
-  0.8250000000000001, 0.8500000000000001, 0.875, 0.9, 0.925, 0.9500000000000001,
-  0.9750000000000001, 1,
-]);
+const EDGES_40 = Float64Array.from({ length: 41 }, (_each, i) => i / 40);
 
-/** The counts of the MAF of panel.nei, every variant and individual. */
+/** The counts of the MAF of panel.nei, every variant and individual, in
+    those bins holding their right edge, `closed: "right"`. */
 const MAF_COUNTS = Uint32Array.from([
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 75, 62, 71,
-  60, 74, 72, 83, 70, 68, 64, 83, 64, 63, 67, 57, 48, 25, 22, 3,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 66, 75, 62, 71,
+  63, 71, 72, 83, 70, 70, 62, 85, 62, 63, 69, 55, 48, 25, 22, 3,
 ]);
 
-/** The counts of the observed heterozygosity of panel.nei. */
+/** The counts of the observed heterozygosity of panel.nei, in the same
+    bins. */
 const OBS_HET_COUNTS = Uint32Array.from([
-  0, 4, 9, 18, 20, 25, 30, 34, 50, 61, 53, 69, 62, 84, 89, 101, 113, 102, 108,
-  58, 62, 27, 14, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 4, 9, 18, 21, 24, 30, 37, 47, 61, 53, 69, 62, 84, 90, 105, 108, 102, 108,
+  66, 54, 27, 14, 5, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ]);
 
 function maximum(value: number): HistogramThreshold {
@@ -92,10 +86,10 @@ function range(from: number, to: number): number[] {
 }
 
 describe("VS4 D2 the histogram, its rows on the bins of panel.nei", () => {
-  test("the edges are popnei's, a step above the round number at 0.075, 0.6 and 0.95", () => {
-    expect(EDGES_40[3]).toBe(0.07500000000000001);
-    expect(EDGES_40[24]).toBe(0.6000000000000001);
-    expect(EDGES_40[38]).toBe(0.9500000000000001);
+  test("the edges are popnei's, the round numbers 0.075, 0.6 and 0.95", () => {
+    expect(EDGES_40[3]).toBe(0.075);
+    expect(EDGES_40[24]).toBe(0.6);
+    expect(EDGES_40[38]).toBe(0.95);
     expect(EDGES_40[20]).toBe(0.5);
   });
 
@@ -113,39 +107,45 @@ describe("VS4 D2 the histogram, its rows on the bins of panel.nei", () => {
     expect(binsIn(data, "removed")).toEqual({ bins: range(24, 39), count: 2 });
   });
 
-  test("the observed heterozygosity at 0.5 keeps bins 0 to 19, splits bin 20 and removes 21 to 39, around popnei's 1,098", () => {
+  test("the observed heterozygosity at 0.5, the lower edge of bin 20, keeps bins 0 to 19, 1,098 variants as popnei's filter, and removes 20 to 39", () => {
     const data = histogramOf(OBS_HET_COUNTS, 0.5);
+    expect(binsIn(data, "kept")).toEqual({ bins: range(0, 19), count: 1098 });
+    expect(binsIn(data, "partlyKept")).toEqual({ bins: [], count: 0 });
+    expect(binsIn(data, "removed")).toEqual({
+      bins: range(20, 39),
+      count: 102,
+    });
+  });
+
+  test("the observed heterozygosity at 0.51 keeps bins 0 to 19, splits bin 20 and removes 21 to 39, around popnei's 1,116", () => {
+    const data = histogramOf(OBS_HET_COUNTS, 0.51);
     const kept = binsIn(data, "kept");
     const partly = binsIn(data, "partlyKept");
-    expect(kept).toEqual({ bins: range(0, 19), count: 1090 });
-    expect(partly).toEqual({ bins: [20], count: 62 });
+    expect(kept).toEqual({ bins: range(0, 19), count: 1098 });
+    expect(partly).toEqual({ bins: [20], count: 54 });
     expect(binsIn(data, "removed")).toEqual({ bins: range(21, 39), count: 48 });
-    expect(kept.count).toBeLessThan(1098);
-    expect(kept.count + partly.count).toBeGreaterThan(1098);
+    expect(kept.count).toBeLessThan(1116);
+    expect(kept.count + partly.count).toBeGreaterThan(1116);
   });
 
-  test("the last bin holds its upper edge: kept at a threshold equal to it, partly kept just below it", () => {
+  test("each bin holds its upper edge: kept at a threshold equal to it, partly kept just below it, removed from it up", () => {
     const rowsAt = (threshold: number): ReturnType<typeof histogramRows> =>
       histogramRows(histogramOf(MAF_COUNTS, threshold));
-    const last = rowsAt(1).at(-1);
-    expect(last).toEqual({
-      from: 0.9750000000000001,
-      to: 1,
-      toIncluded: true,
-      count: 3,
+    expect(rowsAt(0.975)[38]).toEqual({
+      from: 0.95,
+      fromIncluded: false,
+      to: 0.975,
+      count: 22,
       state: "kept",
     });
-    // The largest double below 1: no value lies between it and 1, but the
-    // last bin holds 1 itself.
+    expect(rowsAt(0.975)[39]?.state).toBe("removed");
+    // The largest double below 0.975: a value on 0.975 is above it.
+    expect(rowsAt(0.9749999999999999)[38]?.state).toBe("partlyKept");
+    expect(rowsAt(1).at(-1)?.state).toBe("kept");
     expect(rowsAt(0.9999999999999999).at(-1)?.state).toBe("partlyKept");
-    expect(
-      rowsAt(1)
-        .slice(0, -1)
-        .every((row) => !row.toIncluded),
-    ).toBe(true);
   });
 
-  test("a bin whose upper edge is the double just above a threshold is kept, at 0 and below it too", () => {
+  test("the first bin holds its lower edge too: a threshold on it splits the first bin and removes the others", () => {
     const statesOf = (
       edges: number[],
       threshold: number,
@@ -157,25 +157,20 @@ describe("VS4 D2 the histogram, its rows on the bins of panel.nei", () => {
           Float64Array.from(edges),
         ),
       ).map((row) => row.state);
-    // -0.49999999999999994 is the double just above -0.5, and
-    // Number.MIN_VALUE the one just above 0.
-    expect(statesOf([-1, -0.49999999999999994, 0], -0.5)).toEqual([
-      "kept",
-      "removed",
-    ]);
-    expect(statesOf([-1, Number.MIN_VALUE, 1], 0)).toEqual(["kept", "removed"]);
-    expect(statesOf([-1, -0.4999999999999999, 0], -0.5)).toEqual([
-      "partlyKept",
-      "removed",
-    ]);
+    expect(statesOf([0, 0.5, 1], 0)).toEqual(["partlyKept", "removed"]);
+    expect(statesOf([0, 0.5, 1], -0.1)).toEqual(["removed", "removed"]);
+    expect(statesOf([0, 0.5, 1], 0.5)).toEqual(["kept", "removed"]);
+    const rows = histogramRows(histogramOf(MAF_COUNTS, 0.95));
+    expect(rows[0]?.fromIncluded).toBe(true);
+    expect(rows.slice(1).every((row) => !row.fromIncluded)).toBe(true);
   });
 
   test("with no threshold every state is null, and the edges are as given", () => {
     const rows = histogramRows(histogramOf(MAF_COUNTS, null));
     expect(rows).toHaveLength(40);
     expect(rows.every((row) => row.state === null)).toBe(true);
-    expect(rows[3]?.from).toBe(0.07500000000000001);
-    expect(rows[37]?.to).toBe(0.9500000000000001);
+    expect(rows[3]?.from).toBe(0.075);
+    expect(rows[37]?.to).toBe(0.95);
     expect(rows.map((row) => row.count)).toEqual([...MAF_COUNTS]);
   });
 });
@@ -192,7 +187,7 @@ function expectRefused(data: HistogramData, message: string): void {
   expect(() => {
     handle.update(data);
   }).toThrow(message);
-  expect(element.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+  expect(element.querySelectorAll("rect.chart-bar")).toHaveLength(21);
   handle.destroy();
 }
 
@@ -377,33 +372,34 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     }
   });
 
-  test("the MAF at 0.95 draws 18 kept bars, 2 removed, and no rect for the 20 empty bins", () => {
+  test("the MAF at 0.95 draws 19 kept bars, 2 removed, and no rect for the 19 empty bins", () => {
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
     const marks = svgOf(element).querySelector("g.chart-marks");
-    expect(marks?.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    expect(marks?.querySelectorAll("rect.chart-bar")).toHaveLength(21);
     expect(
       marks?.querySelectorAll("rect.chart-bar.chart-bar-kept"),
-    ).toHaveLength(18);
+    ).toHaveLength(19);
     expect(
       marks?.querySelectorAll("rect.chart-bar.chart-bar-removed"),
     ).toHaveLength(2);
-    // The first bar is bin 20, at 0.5, on the frame of 600 less 76 pixels.
+    // The first bar is bin 19, at 0.475, on the frame of 600 less 76
+    // pixels.
     const first = marks?.querySelector("rect.chart-bar") ?? undefined;
-    expect(numberOf(first, "x")).toBeCloseTo(262, 9);
+    expect(numberOf(first, "x")).toBeCloseTo(248.9, 9);
     expect(numberOf(first, "width")).toBeCloseTo(13.1, 9);
   });
 
-  test("bin 20, of 69 variants, is a bar that stands on the bottom of the frame and rises to 69 on the axis of 0 to 90", () => {
-    // The frame is 375 less the margins of 56 and 44, 275 high; 69 of 90
-    // is 275 * 21 / 90 below its top, 64.1666..., and 275 * 69 / 90 high,
-    // 210.8333....
+  test("bin 19, of 3 variants, is a bar that stands on the bottom of the frame and rises to 3 on the axis of 0 to 90", () => {
+    // The frame is 375 less the margins of 56 and 44, 275 high; 3 of 90
+    // is 275 * 87 / 90 below its top, 265.8333..., and 275 * 3 / 90 high,
+    // 9.1666....
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(MAF_COUNTS, 0.95));
     const first =
       svgOf(element).querySelector("g.chart-marks rect.chart-bar") ?? undefined;
-    expect(numberOf(first, "y")).toBeCloseTo(64.16666666666667, 9);
-    expect(numberOf(first, "height")).toBeCloseTo(210.83333333333334, 9);
+    expect(numberOf(first, "y")).toBeCloseTo(265.8333333333333, 9);
+    expect(numberOf(first, "height")).toBeCloseTo(9.166666666666666, 9);
   });
 
   test("the observed heterozygosity at 0.5 draws bin 20 as one outlined rect at the line", () => {
@@ -422,6 +418,55 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     );
     expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(19);
     expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(5);
+  });
+
+  test("a threshold that keeps every value draws its line in grey, with the class chart-threshold-keeps-all, and one that may not, without", () => {
+    const element = sizedElement(600, 375);
+    const data = histogramOf(OBS_HET_COUNTS, 0.5);
+    const lineClass = (): string | null =>
+      svgOf(element)
+        .querySelector("g.chart-annotations line.chart-threshold")
+        ?.getAttribute("class") ?? null;
+    const plot = createHistogram(element, data);
+    expect(lineClass()).toBe("chart-threshold");
+    const threshold = { value: 1, legend: null, keepsAll: true };
+    plot.update({ ...data, threshold });
+    expect(lineClass()).toBe("chart-threshold chart-threshold-keeps-all");
+    plot.update({ ...data, threshold: { ...threshold, keepsAll: false } });
+    expect(lineClass()).toBe("chart-threshold");
+  });
+
+  test("a threshold of 0 on a first bin of 0 to 0.001 drawn as holding its values on 0, the zeros of the missing rate, keeps that bin whole, and removes it without", () => {
+    const edges = Float64Array.from([0, 0.001, 0.006, 0.011]);
+    const counts = Uint32Array.from([2, 20, 59]);
+    const firstBar = (element: HTMLElement): Element | undefined =>
+      [...svgOf(element).querySelectorAll("rect.chart-bar")].find(
+        (bar) => numberOf(bar, "x") === 0,
+      );
+    const onZero = sizedElement(600, 375);
+    createHistogram(onZero, {
+      ...histogramOf(counts, 0, edges),
+      firstBinOnLowerEdge: true,
+    });
+    expect(firstBar(onZero)?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-kept",
+    );
+    expect(numberOf(firstBar(onZero), "width")).toBeGreaterThan(0);
+    expect(
+      histogramRows({
+        ...histogramOf(counts, 0, edges),
+        firstBinOnLowerEdge: true,
+      }).map((row) => row.state),
+    ).toEqual(["kept", "removed", "removed"]);
+
+    const spread = sizedElement(600, 375);
+    createHistogram(spread, histogramOf(counts, 0, edges));
+    expect(firstBar(spread)?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-removed",
+    );
+    expect(
+      histogramRows(histogramOf(counts, 0, edges)).map((row) => row.state),
+    ).toEqual(["partlyKept", "removed", "removed"]);
   });
 
   test("a threshold of 0.51, inside bin 20, splits it into two rects that meet at the line", () => {
@@ -464,10 +509,10 @@ describe("VS4 D2 the histogram, under jsdom", () => {
       );
     };
     const kept = classesAt(keptAll);
-    expect(kept).toHaveLength(20);
+    expect(kept).toHaveLength(21);
     for (const name of kept) expect(name).toBe("chart-bar chart-bar-kept");
     const removed = classesAt(removedAll);
-    expect(removed).toHaveLength(20);
+    expect(removed).toHaveLength(21);
     for (const name of removed) {
       expect(name).toBe("chart-bar chart-bar-removed");
     }
@@ -520,7 +565,7 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(svg.querySelector("line.chart-threshold")).toBeNull();
     expect(svg.querySelector("g.chart-legend")?.childNodes).toHaveLength(0);
     const bars = [...svg.querySelectorAll("rect.chart-bar")];
-    expect(bars).toHaveLength(20);
+    expect(bars).toHaveLength(21);
     for (const bar of bars) expect(bar.getAttribute("class")).toBe("chart-bar");
   });
 
@@ -528,7 +573,7 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     const element = sizedElement(600, 80);
     const handle = createHistogram(element, histogramOf(MAF_COUNTS, null));
     const svg = svgOf(element);
-    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(21);
     expect(
       svg.querySelectorAll("g.chart-axis-x g.tick").length,
     ).toBeGreaterThan(0);
@@ -545,7 +590,7 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(svg.getAttribute("height")).toBe("0");
     expect(() => handle.toSVG()).toThrow("frame has no area");
     handle.update(histogramOf(MAF_COUNTS, null));
-    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(20);
+    expect(svg.querySelectorAll("rect.chart-bar")).toHaveLength(21);
     expect(svg.getAttribute("width")).toBe("600");
   });
 
@@ -717,8 +762,8 @@ describe("PA4 D6 the histogram of the spectrum, its scales and ticks", () => {
     expect(rows.map((row) => row.count)).toEqual([...P0_SHARES]);
     expect(rows[0]).toEqual({
       from: 0.5,
+      fromIncluded: true,
       to: 1.5,
-      toIncluded: false,
       count: 0.03296202862168288,
       state: null,
     });
@@ -859,131 +904,6 @@ describe("PA4 D6 the histogram of the spectrum, its defects", () => {
     expectRefused(
       spectrumOf(P0_SHARES, { yMax: Number.POSITIVE_INFINITY }),
       "not a finite number",
-    );
-  });
-});
-
-describe("thresholds 2 a threshold whose bin at the line is undecided", () => {
-  /** The histogram of the observed heterozygosity of panel.nei with a
-      threshold at `value` whose bin at the line is undecided. */
-  function undecidedAt(value: number, counts = OBS_HET_COUNTS): HistogramData {
-    return {
-      ...histogramOf(counts, null),
-      threshold: { value, legend: null, undecided: true },
-    };
-  }
-
-  /** The bars of the plot in `element`, from the left. */
-  function barsIn(element: HTMLElement): Element[] {
-    return [...svgOf(element).querySelectorAll("g.chart-marks rect.chart-bar")];
-  }
-
-  test("at 0.5, an edge of the bins, the bar that starts at the line is hatched, neither filled nor an outline, and its pattern is in the SVG", () => {
-    const element = sizedElement(600, 375);
-    createHistogram(element, undecidedAt(0.5));
-    const svg = svgOf(element);
-    const lineX = numberOf(
-      svg.querySelector("line.chart-threshold") ?? undefined,
-      "x1",
-    );
-    const atLine = barsIn(element).filter(
-      (bar) => numberOf(bar, "x") === lineX,
-    );
-    expect(atLine.map((bar) => bar.getAttribute("class"))).toEqual([
-      "chart-bar chart-bar-undecided",
-    ]);
-    const fill = /^fill: url\(#([^)]+)\);?$/u.exec(
-      atLine[0]?.getAttribute("style") ?? "",
-    );
-    expect(fill).not.toBeNull();
-    const pattern = svg.querySelector(`pattern#${fill?.[1] ?? ""}`);
-    expect(pattern).not.toBeNull();
-    // th3 fix 3: the stripe runs down the middle of its tile, so that its
-    // stroke of 2 pixels shows whole and is not cut by the tile's edge.
-    const tile = numberOf(pattern ?? undefined, "width");
-    const stripe = pattern?.querySelector("line.chart-hatch-stripe");
-    expect(numberOf(stripe ?? undefined, "x1")).toBe(tile / 2);
-    expect(numberOf(stripe ?? undefined, "x2")).toBe(tile / 2);
-    expect(numberOf(stripe ?? undefined, "y1")).toBe(0);
-    expect(numberOf(stripe ?? undefined, "y2")).toBe(
-      numberOf(pattern ?? undefined, "height"),
-    );
-    // Bins 21 to 24 are removed, 1 to 19 kept, as without the hatch.
-    expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(4);
-    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(19);
-  });
-
-  test("at 0.51, inside bin 20, the part of the bin right of the line is hatched and the part left of it filled", () => {
-    const element = sizedElement(600, 375);
-    createHistogram(element, undecidedAt(0.51));
-    const classes = barsIn(element).map((bar) => bar.getAttribute("class"));
-    expect(
-      classes.filter((name) => name?.includes("undecided") === true),
-    ).toEqual(["chart-bar chart-bar-undecided"]);
-    expect(
-      classes.filter((name) => name?.includes("kept") === true),
-    ).toHaveLength(20);
-  });
-
-  test("at 0.3, on the edge popnei gives as 0.30000000000000004, the double above it, the bin that starts there is hatched", () => {
-    const element = sizedElement(600, 375);
-    createHistogram(element, undecidedAt(0.3));
-    const svg = svgOf(element);
-    expect(svg.querySelectorAll("rect.chart-bar-undecided")).toHaveLength(1);
-    expect(svg.querySelectorAll("rect.chart-bar-kept")).toHaveLength(11);
-    // Without the hatch the same bin is removed.
-    const plain = sizedElement(600, 375);
-    createHistogram(plain, {
-      ...histogramOf(OBS_HET_COUNTS, null),
-      threshold: { value: 0.3, legend: null },
-    });
-    expect(
-      svgOf(plain).querySelectorAll("rect.chart-bar-undecided"),
-    ).toHaveLength(0);
-  });
-
-  test("th4 fix 4: the hatched bar has the words of the threshold as its title, its tooltip, and no other bar has one; an update with no words takes it away", () => {
-    const element = sizedElement(600, 375);
-    const words =
-      "The bins cannot tell how many of its variants the line keeps.";
-    const handle = createHistogram(element, {
-      ...histogramOf(OBS_HET_COUNTS, null),
-      threshold: {
-        value: 0.5,
-        legend: null,
-        undecided: true,
-        undecidedTitle: words,
-      },
-    });
-    const svg = svgOf(element);
-    const titled = [...svg.querySelectorAll("g.chart-marks rect > title")];
-    expect(titled.map((title) => title.textContent)).toEqual([words]);
-    expect(titled[0]?.parentElement?.getAttribute("class")).toBe(
-      "chart-bar chart-bar-undecided",
-    );
-    handle.update(undecidedAt(0.5));
-    expect(svg.querySelectorAll("g.chart-marks rect > title")).toHaveLength(0);
-  });
-
-  test("two plots on a page each have a pattern of their own, and an update to a threshold that can tell takes the hatch away", () => {
-    const one = sizedElement(600, 375);
-    const two = sizedElement(600, 375);
-    const handle = createHistogram(one, undecidedAt(0.5));
-    createHistogram(two, undecidedAt(0.5));
-    const ids = [one, two].map(
-      (element) => element.querySelector("pattern")?.id,
-    );
-    expect(ids[0]).toBeTruthy();
-    expect(ids[0]).not.toBe(ids[1]);
-    handle.update({
-      ...histogramOf(OBS_HET_COUNTS, null),
-      threshold: { value: 0.5, legend: null },
-    });
-    expect(
-      svgOf(one).querySelectorAll("rect.chart-bar-undecided"),
-    ).toHaveLength(0);
-    expect(svgOf(one).querySelectorAll("rect.chart-bar-removed")).toHaveLength(
-      5,
     );
   });
 });

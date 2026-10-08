@@ -221,14 +221,14 @@ test("IP2 D3, VS7 D1 the thresholds at 0.03 and 0.38: Kept 116 of the 200, then 
   ).toBeVisible();
   await expect(
     histogram(page, MISSING_TITLE).getByText(
-      "The threshold 0.03 splits the bin from 0.0295 to 0.0308, 12 individuals: the filter keeps those of its individuals at most 0.03 and removes the others.",
+      "The threshold 0.03 splits the bin from 0.0295 to 0.0308, 25 individuals: the filter keeps those of its individuals at most 0.03 and removes the others.",
       { exact: true },
     ),
   ).toBeVisible();
   await expect(
     histogram(page, MISSING_TITLE).locator("svg.chart"),
   ).toHaveAccessibleName(
-    /The threshold 0\.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0\.0295 to 0\.0308, 12 individuals, and removes the 10 bins above it, 84 individuals\./,
+    /The threshold 0\.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0\.0295 to 0\.0308, 25 individuals, and removes the 10 bins above it, 71 individuals\./,
   );
   await expectNoViolations(makeAxeBuilder);
 

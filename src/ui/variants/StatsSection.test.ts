@@ -276,10 +276,22 @@ describe("the section of the statistics of the open file", () => {
     // as the section draws its plots.
     const request = page.requests.at(-1);
     if (request === undefined) throw new Error("no request was sent");
+    const empty = summaryResult(["1"], [0], ["i1", "i2"]);
+    const twoBins = { mean: NaN, counts: Uint32Array.of(0, 0) };
     request.end({
       kind: "done",
       key: request.key,
-      result: summaryResult(["1"], [0], ["i1", "i2"]),
+      result: {
+        ...empty,
+        perVar: {
+          ...empty.perVar,
+          binEdges: Float64Array.of(0, 0.5, 1),
+          missingRate: twoBins,
+          maf: twoBins,
+          obsHet: twoBins,
+          unbiasedExpHet: twoBins,
+        },
+      },
     });
     await settled();
     expect(caught).toHaveLength(1);
@@ -345,14 +357,15 @@ describe("the section of the statistics of the open file", () => {
     });
     await settled();
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
-    // The line of each threshold, over the variants or the individuals
-    // so far.
-    expect(partsText().match(/Keeps [^.]*523 variants so far/gu)).toHaveLength(
-      4,
-    );
-    expect(partsText().match(/Keeps [^.]*2 individuals so far/gu)).toHaveLength(
-      2,
-    );
+    // No line of what a threshold keeps: each, at the top of its axis,
+    // removes nothing, which the description of its box says, so far.
+    expect(partsText()).not.toMatch(/Keeps /u);
+    expect(
+      partsText().match(/This threshold removes no variant so far\./gu),
+    ).toHaveLength(4);
+    expect(
+      partsText().match(/This threshold removes no individual so far\./gu),
+    ).toHaveLength(2);
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );
@@ -365,7 +378,7 @@ describe("the section of the statistics of the open file", () => {
     });
     await settled();
     expect(
-      partsText().match(/Keeps [^.]*1,000 variants so far/gu),
+      partsText().match(/This threshold removes no variant so far\./gu),
     ).toHaveLength(4);
     expect([...container.querySelectorAll("svg.chart")]).toEqual(before);
 
@@ -380,7 +393,9 @@ describe("the section of the statistics of the open file", () => {
       "true",
       "true",
     ]);
-    expect(partsText().match(/Keeps [^.]*1,200 variants/gu)).toHaveLength(4);
+    expect(
+      partsText().match(/This threshold removes no variant\./gu),
+    ).toHaveLength(4);
     expect(
       [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
         (element) => element.textContent,

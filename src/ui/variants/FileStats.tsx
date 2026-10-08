@@ -9,13 +9,13 @@
  * statistics"):
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
- *   and the expected heterozygosity (unbiased), each with its threshold
- *   and what it keeps of the variants in their bins;
+ *   and the expected heterozygosity (unbiased), each with its threshold,
+ *   grey when it keeps every variant in their bins;
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   each with its threshold and what it keeps; and the download of
- *   their table as CSV, which is not drawn, since there may be thousands
- *   of individuals.
+ *   each with its threshold, grey when it keeps every one; and the
+ *   download of their table as CSV, which is not drawn, since there may
+ *   be thousands of individuals.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
  * the bins, and no bar nor button of its own: the bar of the pass, its
@@ -28,8 +28,8 @@
  * The plots fill in while the pass runs (docs/plans/live-stats.md, "The
  * plots so far"): from the first result so far of the pass, about two
  * seconds after its start, they are drawn from the last one, the words of
- * each threshold saying their counts are so far, and at the end from
- * the result, where they were: the line of the pass keeps its room,
+ * each plot saying they are so far, and at the end from the result,
+ * where they were: the line of the pass keeps its room,
  * hidden, once it ended. Nothing keeps their room before: the open button under the
  * section moves down as they arrive, which the owner chose over empty
  * space. The download of the table of the individuals comes with the
@@ -81,6 +81,7 @@ import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
+import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
 import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
@@ -114,6 +115,7 @@ export function FileStats({
       onShown={onShown}
       fileId={variants.fileId}
       variantsName={variants.name}
+      ploidy={variants.read.ploidy}
     />
   );
 }
@@ -125,6 +127,9 @@ interface StatsProps extends FileStatsProps {
   /** The name of the variants file, which the downloads are named
       after. */
   readonly variantsName: string;
+  /** The ploidy popnei read the file with, which, with the individuals,
+      sets the narrowest bar of the histogram of the MAF. */
+  readonly ploidy: number;
 }
 
 /** The section of one load of the file. */
@@ -134,6 +139,7 @@ function Stats({
   onShown,
   fileId,
   variantsName,
+  ploidy,
 }: StatsProps): React.JSX.Element {
   const sectionRef = useRef<HTMLElement>(null);
   const status = useAppState(summaryStatus);
@@ -203,6 +209,8 @@ function Stats({
             {shown !== null && (
               <VariantPlots
                 result={shown.result.perVar}
+                numIndividuals={shown.result.perIndividual.individuals.length}
+                ploidy={ploidy}
                 soFar={soFar}
                 thresholds={thresholds.variants}
                 onThreshold={(statistic, value) => {
@@ -314,7 +322,7 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
 
 /** The thresholds of the six histograms, as the user set them: a
     number, rounded to the step of its axis when it was committed and
-    drawn and counted as it is, or `null` for the top of the axis, which
+    drawn as it is, or `null` for the top of the axis, which
     keeps everything and follows the axis as a result so far widens it. */
 interface Thresholds {
   readonly variants: Readonly<Record<VariantStatistic, number | null>>;
@@ -342,6 +350,10 @@ const START_THRESHOLDS: Thresholds = Object.freeze({
 interface VariantPlotsProps {
   /** The part of the variants of the result, or of a result so far. */
   readonly result: VariantStatsPart;
+  /** The individuals it is calculated over, every one of the file. */
+  readonly numIndividuals: number;
+  /** Their ploidy. */
+  readonly ploidy: number;
   /** Whether it is of a result so far. */
   readonly soFar: boolean;
   /** The thresholds of the four, as the user set them. */
@@ -356,10 +368,18 @@ interface VariantPlotsProps {
     far to the next, and is updated in it. */
 function VariantPlots({
   result,
+  numIndividuals,
+  ploidy,
   soFar,
   thresholds,
   onThreshold,
 }: VariantPlotsProps): React.JSX.Element {
+  // The same object until the file changes, so that the plots are not
+  // made again on renders that changed nothing.
+  const individuals = useMemo(
+    () => ({ numIndividuals, ploidy }),
+    [numIndividuals, ploidy],
+  );
   return (
     <Plots>
       {VARIANT_STATISTICS.map((statistic) => (
@@ -367,6 +387,7 @@ function VariantPlots({
           key={statistic}
           statistic={statistic}
           result={result}
+          individuals={individuals}
           soFar={soFar}
           threshold={thresholds[statistic]}
           onThreshold={onThreshold}
@@ -380,6 +401,7 @@ function VariantPlots({
 interface VariantHistogramProps {
   readonly statistic: VariantStatistic;
   readonly result: VariantStatsPart;
+  readonly individuals: PassIndividuals;
   readonly soFar: boolean;
   /** Its threshold as the user set it. */
   readonly threshold: number | null;
@@ -391,6 +413,7 @@ interface VariantHistogramProps {
 function VariantHistogram({
   statistic,
   result,
+  individuals,
   soFar,
   threshold,
   onThreshold,
@@ -400,15 +423,15 @@ function VariantHistogram({
   // drawn again on renders that changed nothing (react.md, "Mounting a
   // plot").
   const set = useMemo(
-    () => variantPlot(statistic, result, soFar, threshold),
-    [statistic, result, soFar, threshold],
+    () => variantPlot(statistic, result, individuals, soFar, threshold),
+    [statistic, result, individuals, soFar, threshold],
   );
   const drawn = useMemo(
     () =>
       typed === null
         ? set
-        : variantPlot(statistic, result, soFar, threshold, typed),
-    [set, statistic, result, soFar, threshold, typed],
+        : variantPlot(statistic, result, individuals, soFar, threshold, typed),
+    [set, statistic, result, individuals, soFar, threshold, typed],
   );
   return (
     <StatsHistogram

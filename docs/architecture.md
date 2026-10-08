@@ -1402,10 +1402,13 @@ The page and each worker talk through typed messages
   2026 a count of the variants of a VCF that failed their FILTER
   followed it in the group, a second pass over the file under popnei's
   step `filterPassed`, and the owner took it out the same day
-  (`docs/plans/one-pass.md`). That count waits for popnei's
-  `calcVariantsSummary` to give it from its own pass, popnei issue #12
-  (JoseBlanca/popnei), when it comes in the summary's result and needs
-  no analysis of its own. The summary keeps every variant, whatever its
+  (`docs/plans/one-pass.md`). From popnei 0.2.2 the count comes in the
+  summary's result, from its own pass, popnei issue #12, and needs no
+  analysis of its own: the runner asks `calcVariantsSummary` for
+  `filterColumn` whenever the open variants recorded their FILTER,
+  `keepsPassed`, and the result carries `filterColumn`, the variants
+  that passed and failed, or `null` (`docs/plans/popnei-0.2.2.md`, "The
+  FILTER failures"). The summary keeps every variant, whatever its
   FILTER column. A member of a group can be `locked`, its project
   lacking what it needs: a locked member neither starts nor holds back
   the group, and the box offers no Start again for it; the group of
@@ -2249,13 +2252,22 @@ for the smallest part of it.
   know nothing of React or of the project.
 - **A plot draws the bins it is given.** popnei bins the statistics of the
   variants, which can be millions of values, and gives the histograms
-  (`calcPerVarDistribs`). The statistics of each individual come as one
-  value per individual, and core bins them, a pure function of plain
-  arithmetic over a few thousand numbers, with the rule of popnei's bins,
-  a value in the bin whose left edge is at most it and whose right edge is
-  above it, the last bin taking its right edge too, as `numpy.histogram`
-  does, which the Python script uses for the same bins; an individual with
-  no heterozygosity, NaN, is counted apart and said by the screen. That
+  (`calcPerVarDistribs`), asked since 7 October 2026, popnei 0.2.2, for
+  1,000 bins over 0 to 1 that hold their right edge, `closed: "right"`: a
+  value on an edge is in the bin that ends there, the first bin holding
+  its left edge too, so that the bins below an edge t count the variants
+  whose value is at most t, what a threshold and popnei's filters keep,
+  and every number of up to three decimals is an edge, the decimal k /
+  1,000 (`docs/plans/popnei-0.2.2.md`). The plots add those bins up into
+  the bins they draw, and the Python scripts ask popnei for the same bins.
+  The statistics of each individual come as one value per individual,
+  and core bins them, a pure function of plain arithmetic over a few
+  thousand numbers, over the edges `numpy.histogram` makes and with the
+  same rule as the variants', a value in the bin whose left edge is below
+  it and whose right edge is at least it, the first bin taking its left
+  edge too; an individual with no heterozygosity, NaN, is counted apart
+  and said by the screen. The table of the bins of each plot says the
+  rule in words. That
   is the rule of `docs/build-order.md`, section 4, for arithmetic on
   popnei's results, and the table of the individuals needs the values
   anyway. `.claude/skills/coding/charts.md`, which gives every binning to
@@ -2294,9 +2306,10 @@ for the smallest part of it.
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the
   plot keeps no pointer handling of its own. Whether it keeps every
-  value of its plot is worked out by `src/core/thresholds.ts` from
-  popnei's fine bins of the variants and from popnei's value of each
-  individual.
+  variant or individual, drawn in a bluish grey from 8 October 2026, is
+  told by `src/core/thresholds.ts` from popnei's fine bins of the
+  variants and from popnei's value of each individual; no count of what
+  it keeps is shown.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2477,9 +2490,9 @@ src/core/
                     imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
   thresholds.ts     from 7 October 2026, the thresholds on the
-                    histograms of popgen2.html: the fine edge a number
-                    snaps to, and from 8 October 2026 whether a
-                    threshold keeps every value of its plot
+                    histograms of popgen2.html: the step and the fine
+                    edge a number snaps to, and whether one keeps every
+                    variant or individual, which the screen draws grey
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
