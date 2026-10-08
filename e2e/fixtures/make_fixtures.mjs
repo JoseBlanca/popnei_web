@@ -94,6 +94,19 @@
 // verified"). It writes no other file, since a run without it writes ld.nei
 // again, which popnei 0.2.2 writes with that record, and the tests pin
 // `keepsPassed` false for the committed ld.nei.
+//
+// `--summary` writes e2e/fixtures/variants_summary.json and nothing else:
+// for panel.vcf.gz and low_qual.vcf.gz, each opened as popgen2.html opens
+// a VCF, with every variant and ploidy 2, the one pass of
+// calcVariantsSummary as the calculation worker asks for it, one window
+// per chromosome, the four histograms of the variants in 1,000 bins over
+// 0 to 1 that hold their right edge with minNumIndividuals 0, the
+// statistics of each individual and the counts of the FILTER column, a
+// NaN written as null; with popnei's version, which the tests check
+// against the one installed. The tests of core read it as the result of
+// the one pass, which they may not ask of popnei
+// (docs/specs/analyses/writeVariants.md, "How it is verified", bullet
+// noVariantForCertain).
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -145,11 +158,80 @@ function writeFixture(vcf, options, outputs) {
   }
 }
 
+/** Writes the one pass of panel.vcf.gz and low_qual.vcf.gz to
+    variants_summary.json, as the comment at the top says. */
+function writeSummaryFixture() {
+  const stats = ["missing_rate", "maf", "obs_het", "unbiased_exp_het"];
+  const of = {};
+  for (const name of ["panel.vcf.gz", "low_qual.vcf.gz"]) {
+    const variants = openVcf(readFileSync(join(fixtures, name)), {
+      ploidy: 2,
+      onlyPassed: false,
+    });
+    let summary;
+    try {
+      summary = calcVariantsSummary(variants, {
+        density: { windowSize: Number.MAX_SAFE_INTEGER, chromLengths: {} },
+        perVar: {
+          stats,
+          minNumIndividuals: 0,
+          histKwargs: { numBins: 1000, range: [0, 1], closed: "right" },
+        },
+        perIndividual: {},
+        filterColumn: {},
+      });
+    } finally {
+      variants.free();
+    }
+    const { density, perVar, perIndividual, passStats, filterColumn } = summary;
+    const distrib = (statistic) => ({
+      mean: perVar[statistic].mean[0],
+      counts: [...perVar[statistic].histCounts],
+    });
+    of[name] = {
+      chroms: density.chroms,
+      numVarsPerChrom: [...density.numVars],
+      binEdges: [...perVar.maf.histBinEdges],
+      missingRate: distrib("missingRate"),
+      maf: distrib("maf"),
+      obsHet: distrib("obsHet"),
+      unbiasedExpHet: distrib("unbiasedExpHet"),
+      numVars: passStats.numVars,
+      individuals: perIndividual.individuals,
+      missingGtRate: [...perIndividual.missingGtRate],
+      obsHetRate: [...perIndividual.obsHetRate],
+      filterColumn: {
+        passed: filterColumn.passed,
+        failed: filterColumn.failed,
+      },
+    };
+    console.log(
+      `${name}: ${String(passStats.numVars)} variants, ` +
+        `${String(filterColumn.passed)} passed their FILTER`,
+    );
+  }
+  // Each list on one line, as in threshold_counts.json.
+  const text = JSON.stringify({ popnei: version(), ...of }, null, 2).replace(
+    /\[\n\s*([^[\]{}]*?)\n\s*\]/g,
+    (_, items) => `[${items.split(/,\n\s*/).join(",")}]`,
+  );
+  const path = join(fixtures, "variants_summary.json");
+  writeFileSync(path, `${text}\n`);
+  console.log(`${path}: panel.vcf.gz and low_qual.vcf.gz`);
+}
+
 // eslint-disable-next-line no-undef -- a script of node, as above
 if (process.argv.includes("--low-qual-nei")) {
   writeFixture("low_qual.vcf.gz", { ploidy: 2, onlyPassed: false }, [
     join(fixtures, "low_qual.nei"),
   ]);
+  // eslint-disable-next-line no-undef -- a script of node, as above
+  process.exit(0);
+}
+
+// eslint-disable-next-line no-undef -- a script of node, as above
+if (process.argv.includes("--summary")) {
+  writeSummaryFixture();
   // eslint-disable-next-line no-undef -- a script of node, as above
   process.exit(0);
 }

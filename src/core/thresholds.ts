@@ -50,13 +50,7 @@ export function variantsAllKept(
   spacing: number | null,
 ): boolean {
   const edges = part.binEdges;
-  checkEdges(edges);
-  const counts = part[statistic].counts;
-  if (counts.length !== edges.length - 1) {
-    throw defect(
-      `${String(counts.length)} bins of ${statistic} over ${String(edges.length)} edges.`,
-    );
-  }
+  const counts = checkedCounts(part, statistic);
   const last = counts.findLastIndex((count) => count > 0);
   if (last === -1) return true;
   if (value >= at(edges, last + 1)) return true;
@@ -67,6 +61,53 @@ export function variantsAllKept(
     spacing !== null &&
     spacing > at(edges, 1) - first
   );
+}
+
+/**
+ * Whether the threshold `value`, which keeps the values at most it, keeps
+ * no variant of `part` with a value of `statistic`, read from popnei's
+ * fine bins, each of which holds its right edge, the first holding its
+ * left edge, 0, too: true when the bins whose right edge is at most
+ * `value` hold no variant; at 0, the first edge, when the first bin holds
+ * none, since it holds 0 and the values above it up to the next edge, so
+ * a variant in it may be at 0 and kept (docs/specs/analyses/writeVariants.md,
+ * "The functions of core", `noVariantForCertain`). A variant with no value
+ * of `statistic` is in no bin, and is not kept at any threshold.
+ *
+ * A `value` that is no edge of the bins is a defect, thrown, since the
+ * bin around it holds values on both sides of it: `variantThresholdOnStep`
+ * makes every threshold an edge. So are edges that are fewer than two or
+ * do not go up, and counts that are not one fewer than the edges.
+ */
+export function variantsNoneKept(
+  part: VariantStatsPart,
+  statistic: VariantStatistic,
+  value: number,
+): boolean {
+  const edges = part.binEdges;
+  const counts = checkedCounts(part, statistic);
+  // The bins below the edge at `index` hold the values at most it; at 0,
+  // the first bin, which holds 0, decides.
+  const index = Math.max(1, edgeIndexOf(edges, value));
+  return counts.subarray(0, index).every((count) => count === 0);
+}
+
+/** The counts of `statistic` in `part`; a defect, thrown, when its
+    edges are fewer than two or do not go up, or the counts are not one
+    fewer than the edges. */
+function checkedCounts(
+  part: VariantStatsPart,
+  statistic: VariantStatistic,
+): Uint32Array {
+  const edges = part.binEdges;
+  checkEdges(edges);
+  const counts = part[statistic].counts;
+  if (counts.length !== edges.length - 1) {
+    throw defect(
+      `${String(counts.length)} bins of ${statistic} over ${String(edges.length)} edges.`,
+    );
+  }
+  return counts;
 }
 
 /** The index of `value` among `edges`, evenly spaced as popnei's are;

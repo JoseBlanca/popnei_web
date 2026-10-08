@@ -19,3 +19,7 @@ e2e/fixtures/variant_fine_bins.json
 # The numbers of the thresholds on panel.vcf.gz, panel.nei and
 # tetraploid.vcf.gz, the same, each list on one line.
 e2e/fixtures/threshold_counts.json
+
+# The one pass of panel.vcf.gz and low_qual.vcf.gz, the same, each list on
+# one line.
+e2e/fixtures/variants_summary.json
