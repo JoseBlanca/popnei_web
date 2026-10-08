@@ -832,3 +832,34 @@ Medians with and without: Chromium 153 3,083 and 3,088 ms (spread
 without 63 ms); WebKit 26.6 3,035 and 2,986 ms (spread without 143 ms).
 Both differences within the allowance, so the dialog's bar shows
 popnei's share of the write, as the screen spec has it.
+
+### Work package 6, 9 October 2026
+
+98da5cb (the store of `popgen2.html` gives the words of no individual
+kept without a step, "Loosen them."; the store's setting
+`keptNoneStep`), a48b009 (`Dialog.tsx` can be kept open on Escape),
+cade009 (the words), 95c8f0b (the button, the dialog, the write with
+its bar and Stop, the file downloaded by itself, the text after it with
+"Save it again"; a write's crash or defect to the error bar), d0f07f6
+(`e2e/popgen2Download.spec.ts`; a write held or crashed), 3fd68e6 (the
+screens), 1f7b408 (two flows of the statistics count the new button).
+Vitest 4,428; the flows of the download 14 in Chromium and WebKit, the
+files' bytes those of the spec (75,577, 113,594, 41,972, 261,570), each
+opened again by popnei in node; the old page's flows of the write 288;
+the other flows of `popgen2.html` 188; screens of popgen2 164. Seen by
+the session: the dialog (light), the write at 21% (dark), the text
+after the download at 320 px (light), "low_qual.filtered.vcf.gz
+downloaded, 42 KB: 772 variants of 111 individuals" with the counts of
+each filter.
+
+Review, seven categories (react, api, architecture, accessibility, ux,
+browser, bundle), no defect a user meets with a mouse. Taken, with work
+package 7: a screen reader heard only "Stop, button" once the write
+started, so the page says "Writing <file>." once; the words of no
+individual kept shown from the store's reason, not worked out again in
+the screen; the first load of `popgen2.html` 13.4 KB gzipped larger
+(200.37 to 213.73 KB, React Aria's dialog and radio group most of it)
+recorded in `docs/technology.md`, with loading the dialog on its first
+press left to the owner. Not taken: no ring on the text after a click
+of the mouse, which `:focus-visible` gives the keyboard alone, as
+everywhere on the page. Firefox not run (it does not start here).
