@@ -60,6 +60,16 @@ function stop(message: WorkerStop): void {
   close();
 }
 
+/** Reads the last byte of a written file with `FileReaderSync`, which
+    throws when the browser cannot read it: a `Blob` that Chromium's
+    storage could not take is made with its size and fails only when it is
+    read (docs/specs/worker/runner.md, "The written file", step 3). */
+function readLastByte(file: Blob): void {
+  if (file.size > 0) {
+    new FileReaderSync().readAsArrayBuffer(file.slice(file.size - 1));
+  }
+}
+
 /** popnei loading, which starts with the worker, so that the wasm
     downloads while the user picks a file; every request awaits it. */
 const loading = loadPopnei();
@@ -192,7 +202,7 @@ async function handle(data: unknown): Promise<void> {
       // load, and the client fails every request with that.
       return;
     }
-    runner ??= createRunner();
+    runner ??= createRunner({ readLastByte });
     switch (request.value.kind) {
       case "open":
         answerOpen(runner, request.value);

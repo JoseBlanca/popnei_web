@@ -8,27 +8,37 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { Runner } from "./runner.ts";
+import type { Runner, RunnerOptions } from "./runner.ts";
 
-/** What the fake runner's `open` and `run` do; each test sets them. */
-const calls: { open: Runner["open"]; run: Runner["run"] } = {
+/** What the fake runner's `open` and `run` do, which each test sets, and
+    the options the script made its runner with, `null` before it made
+    one. */
+const calls: {
+  open: Runner["open"];
+  run: Runner["run"];
+  options: RunnerOptions | null;
+} = {
   open: () => {
     throw new Error("the test set no open");
   },
   run: () => {
     throw new Error("the test runs no job");
   },
+  options: null,
 };
 
 vi.mock("./runner.ts", () => ({
   loadPopnei: () => Promise.resolve({ ok: true, value: "0.1.0" }),
-  createRunner: (): Runner => ({
-    open: (load, file) => calls.open(load, file),
-    run: (job, told, toldSoFar) => calls.run(job, told, toldSoFar),
-    write: () => {
-      throw new Error("the test writes no file");
-    },
-  }),
+  createRunner: (options: RunnerOptions = {}): Runner => {
+    calls.options = options;
+    return {
+      open: (load, file) => calls.open(load, file),
+      run: (job, told, toldSoFar) => calls.run(job, told, toldSoFar),
+      write: () => {
+        throw new Error("the test writes no file");
+      },
+    };
+  },
   transferablesOf: () => [],
 }));
 
@@ -256,5 +266,69 @@ describe("live-stats 3 the script of the calculation worker: a final result it c
       message:
         "popnei_web defect: the result could not be posted: The object can not be cloned.",
     });
+  });
+});
+
+describe("DL2 D3 the script of the calculation worker makes its runner with readLastByte", () => {
+  /** The ranges the fake FileReaderSync read, and whether it throws. */
+  let read: Blob[] = [];
+  let reading: "read" | "notReadable" = "read";
+
+  class FakeFileReaderSync {
+    readAsArrayBuffer(blob: Blob): ArrayBuffer {
+      read.push(blob);
+      if (reading === "notReadable") {
+        throw new DOMException("the blob is gone", "NotReadableError");
+      }
+      return new ArrayBuffer(blob.size);
+    }
+  }
+
+  beforeEach(() => {
+    read = [];
+    reading = "read";
+    calls.options = null;
+  });
+
+  /** The readLastByte the script gave its runner, after its first
+      request. */
+  async function readLastByteOfScript(): Promise<(file: Blob) => void> {
+    calls.open = () => ({
+      kind: "ok",
+      value: { individuals: ["s000"], ploidy: 2, keepsPassed: false },
+    });
+    await started();
+    fire("message", { data: OPEN });
+    await vi.waitFor(() => {
+      expect(calls.options).not.toBeNull();
+    });
+    const readLastByte = calls.options?.readLastByte;
+    if (readLastByte === undefined) {
+      throw new Error("the script made its runner with no readLastByte");
+    }
+    return readLastByte;
+  }
+
+  test("the read is FileReaderSync's of the last byte of the file", async () => {
+    vi.stubGlobal("FileReaderSync", FakeFileReaderSync);
+    const readLastByte = await readLastByteOfScript();
+    readLastByte(new Blob([new Uint8Array([1, 2, 3, 4, 5])]));
+    expect(read).toHaveLength(1);
+    expect(read[0]?.size).toBe(1);
+    expect(new Uint8Array((await read[0]?.arrayBuffer()) ?? [])).toEqual(
+      new Uint8Array([5]),
+    );
+  });
+
+  test("a file the reader cannot read throws what the reader threw, and an empty file reads nothing", async () => {
+    vi.stubGlobal("FileReaderSync", FakeFileReaderSync);
+    const readLastByte = await readLastByteOfScript();
+    reading = "notReadable";
+    expect(() => {
+      readLastByte(new Blob([new Uint8Array(3)]));
+    }).toThrow("the blob is gone");
+    read = [];
+    readLastByte(new Blob([]));
+    expect(read).toEqual([]);
   });
 });

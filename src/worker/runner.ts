@@ -10,8 +10,9 @@
  * each population, and the summary of the variants file, its chromosomes
  * and the variants on each, the histograms of the variants and the
  * statistics of each individual from one pass, writes the filtered
- * variants as a `.nei` file, and says what to answer when popnei refuses
- * or something breaks (docs/specs/worker/runner.md).
+ * variants as a `.nei` file or a VCF compressed with bgzip, gathering the
+ * pieces popnei gives into a `Blob`, and says what to answer when popnei
+ * refuses or something breaks (docs/specs/worker/runner.md).
  *
  * It is the one file of the application that calls popnei, and it calls
  * nothing of the worker's globals: the worker's script, runnerWorker.ts,
@@ -35,6 +36,7 @@ import {
   openVcf,
   version,
   writeVars,
+  writeVcf,
 } from "popnei";
 import type {
   LdAndDistPerPop,
@@ -410,13 +412,29 @@ interface Steps {
   readonly filters: readonly Exclude<VariantFilter, { kind: "passed" }>[];
 }
 
-/** What a runner is made with, for the tests. */
+/** What a runner is made with: the read of a written file, which the
+    worker's script gives, and values the tests change. */
 export interface RunnerOptions {
   /** The seconds between two results so far, popnei's `soFarEvery`;
       popnei's 2 when not given. A test gives 0, a result so far after
       every block, to have one from a small file. */
   readonly soFarEvery?: number;
+  /** The bytes of the pieces of a written file gathered into one part,
+      `WRITE_PART_BYTES` when not given. A test gives the size of one
+      piece, a part of each. */
+  readonly writePartBytes?: number;
+  /** Reads the last byte of a written file and throws when the browser
+      cannot read it, a `Blob` its storage could not take; the worker's
+      script gives the read of `FileReaderSync`. Nothing is read when it is
+      not given, as in the tests in node, whose `Blob` is in memory. */
+  readonly readLastByte?: (file: Blob) => void;
 }
+
+/** The bytes of the pieces of a written file that make one part, a `Blob`,
+    64 MiB, 64 of popnei's pieces: the worker holds at most this many bytes
+    of pieces beside the parts, and not the file twice
+    (docs/specs/worker/runner.md, "The written file"). */
+export const WRITE_PART_BYTES = 67_108_864;
 
 /** A runner holding nothing; `loadPopnei` has to have given `ok`. */
 export function createRunner(options: RunnerOptions = {}): Runner {
@@ -598,7 +616,14 @@ export function createRunner(options: RunnerOptions = {}): Runner {
     if (withSteps.kind !== "ok") {
       return withSteps;
     }
-    return writeFile({ variants: withSteps.value, name: file.name, told }, job);
+    return writeFile(
+      { variants: withSteps.value, name: file.name, told },
+      job,
+      {
+        partBytes: options.writePartBytes ?? WRITE_PART_BYTES,
+        readLastByte: options.readLastByte ?? null,
+      },
+    );
   }
 
   return { open, run, write };
@@ -1590,32 +1615,83 @@ function pcaResultOf(
   };
 }
 
+/** How a write gathers its file: the bytes of pieces that make a part,
+    and the read of the last byte of the file, `null` for none. */
+interface WriteOptions {
+  readonly partBytes: number;
+  readonly readLastByte: ((file: Blob) => void) | null;
+}
+
 /**
  * Writes the variants of the pass with `writeVars`, with popnei's own size
- * of batch, and makes a `Blob` of the bytes, keeping no reference to them,
- * so that the heap of the worker can give them back once the `Blob` holds
- * the file. A file of no variant is written like any other. Throws a
- * defect when the bytes are over a buffer that is not an `ArrayBuffer`,
- * which a `Blob` does not take: popnei copies them into one of its own, and
- * a copy of ours would hold the file twice.
+ * of batch, for a `.nei` file, or with `writeVcf`, bgzipped, for a VCF,
+ * either giving its pieces of 1 MiB to `onBytes`. The pieces are kept in a
+ * list until they hold `partBytes`, which becomes one `Blob`, a part, and
+ * the file is one `Blob` of the parts; so the worker holds at most
+ * `partBytes` of pieces beside the parts. A file of no variant is written
+ * like any other. When popnei's pass fails after it gave some pieces, they
+ * are the start of a file with no end, and go with the refusal.
+ *
+ * The last byte of the file is read with `readLastByte`, when given: a
+ * `Blob` that the browser's storage could not take is made with its size
+ * and fails only when it is read, so a file that cannot be read is
+ * answered `crashed`, the worker failed, whose words on the page say the
+ * file did not fit in the memory of the tab. Throws a defect when a piece
+ * is over a buffer that is not an `ArrayBuffer`, which a `Blob` does not
+ * take.
  */
-function writeFile(pass: Pass, job: WriteJob): Answer<Written<Blob>> {
-  const answer = passOf(pass, (variants) => writeVars(variants));
+function writeFile(
+  pass: Pass,
+  job: WriteJob,
+  options: WriteOptions,
+): Answer<Written<Blob>> {
+  const parts: Blob[] = [];
+  let pieces: Uint8Array<ArrayBuffer>[] = [];
+  let piecesBytes = 0;
+  const answer = passOf(pass, (variants, ours) => {
+    const onBytes = ours((piece: Uint8Array) => {
+      if (!isOverArrayBuffer(piece)) {
+        throw new Error(
+          "popnei_web defect: a piece of the written file is over a buffer that is not an ArrayBuffer",
+        );
+      }
+      pieces.push(piece);
+      piecesBytes += piece.length;
+      if (piecesBytes >= options.partBytes) {
+        parts.push(new Blob(pieces));
+        pieces = [];
+        piecesBytes = 0;
+      }
+    });
+    switch (job.format) {
+      case "nei":
+        return writeVars(variants, { onBytes });
+      case "vcf":
+        return writeVcf(variants, { bgzip: true, onBytes });
+    }
+  });
   if (answer.kind !== "ok") {
     return answer;
   }
-  const { bytes, passStats } = answer.value;
-  if (!isOverArrayBuffer(bytes)) {
-    throw new Error(
-      "popnei_web defect: the bytes of the written file are over a buffer that is not an ArrayBuffer",
-    );
+  if (pieces.length > 0) {
+    parts.push(new Blob(pieces));
   }
-  const file = new Blob([bytes]);
+  const file = new Blob(parts);
+  if (options.readLastByte !== null) {
+    try {
+      options.readLastByte(file);
+    } catch (thrown: unknown) {
+      return {
+        kind: "crashed",
+        message: `the browser could not keep the written file of ${String(file.size)} bytes: ${messageOf(thrown)}`,
+      };
+    }
+  }
   const result: Written<Blob> = {
     format: job.format,
     file,
     numBytes: file.size,
-    passStats: passStatsOf(passStats, job.filters),
+    passStats: passStatsOf(answer.value.passStats, job.filters),
   };
   return { kind: "ok", value: result };
 }
