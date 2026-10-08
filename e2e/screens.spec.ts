@@ -4643,28 +4643,27 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-filter-box${at}-${theme}`);
       });
 
-      test("the FILTER box of low_qual.vcf.gz, turned off, with its notice", async ({
+      test("the FILTER box of low_qual.vcf.gz, turned off", async ({
         page,
       }) => {
         await pickOnNewPage(page, "low_qual.vcf.gz");
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
           timeout: 20_000,
         });
-        const label = page.getByText(
-          "Leave out the variants that failed their FILTER",
-          { exact: true },
-        );
-        await label.click();
-        await expect(
-          page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
-        ).toHaveAccessibleName(
-          "The variants that failed their FILTER are kept",
-        );
-        await label.scrollIntoViewIfNeeded();
-        await page.mouse.click(1, 1);
-        await save(page, `popgen2-filter-box-off${at}-${theme}`, {
-          fullPage: false,
+        const box = page.getByRole("checkbox", {
+          name: "Leave out the variants that failed their FILTER",
         });
+        await page
+          .getByText("Leave out the variants that failed their FILTER", {
+            exact: true,
+          })
+          .click();
+        await expect(box).not.toBeChecked();
+        await expect(
+          page.getByRole("button", { name: "Undo", exact: true }),
+        ).toBeEnabled();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-filter-box-off${at}-${theme}`);
       });
 
       test("the FILTER box of low_qual.nei, which records the FILTER of its variants", async ({
@@ -4887,77 +4886,37 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-undo-row${at}-${theme}`);
       });
 
-      test("the row of Undo and Redo, both enabled, after a second file and an Undo", async ({
+      test("the row of Undo and Redo, both enabled, after the FILTER box turned off, on and an Undo", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
-        await expect(
-          newPageCount(page).getByText("Variants: 1,200"),
-        ).toBeVisible();
-        await pickOnNewPage(page, "panel.nei");
-        await expect(newPageCount(page).getByText("panel.nei")).toBeVisible();
-        await expect(
-          newPageCount(page).getByText("Variants: 1,200"),
-        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        const label = page.getByText(
+          "Leave out the variants that failed their FILTER",
+          { exact: true },
+        );
+        await label.click();
+        await label.click();
         await page
           .getByRole("main")
           .getByRole("button", { name: "Undo", exact: true })
           .click();
         await expect(
-          newPageCount(page).getByText("panel.vcf.gz"),
-        ).toBeVisible();
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+          page.getByRole("checkbox", {
+            name: "Leave out the variants that failed their FILTER",
+          }),
+        ).not.toBeChecked();
         await expect(
           page.getByRole("button", { name: "Redo", exact: true }),
+        ).toBeEnabled();
+        await expect(
+          page
+            .getByRole("main")
+            .getByRole("button", { name: "Undo", exact: true }),
         ).toBeEnabled();
         await page.mouse.click(1, 1);
         await save(page, `popgen2-undo-row-enabled${at}-${theme}`);
       });
-
-      /** Opens panel.vcf.gz and lets its pass end, then opens panel.nei,
-          whose pass is held, so that the notice of the statistics of
-          panel.vcf.gz removed stays up. */
-      const noticeUp = async (page: Page): Promise<void> => {
-        await holdSummary(page);
-        await page.reload();
-        await pickOnNewPage(page, "panel.vcf.gz");
-        await release(page, "oneResult");
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        await pickOnNewPage(page, "panel.nei");
-        await expect(
-          newPageCount(page).getByRole("button", { name: "Stop" }),
-        ).toBeVisible();
-        await expect(
-          page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
-        ).toHaveAccessibleName(
-          "Statistics of the file removed because panel.nei opened",
-        );
-      };
-
-      test("the notice of a second file", async ({ page }) => {
-        await noticeUp(page);
-        await page.mouse.click(1, 1);
-        await save(page, `popgen2-notice${at}-${theme}`, { fullPage: false });
-      });
-
-      if (width === 320) {
-        test("the notice with the focus on the open button, not under it", async ({
-          page,
-        }) => {
-          await noticeUp(page);
-          // Reached with the Tab key, so that its ring shows.
-          await page
-            .getByRole("button", { name: "Paste a variants file" })
-            .focus();
-          await page.keyboard.press("Tab");
-          await expect(
-            page.getByRole("button", { name: "Open another variants file…" }),
-          ).toBeFocused();
-          await save(page, `popgen2-notice-focus${at}-${theme}`, {
-            fullPage: false,
-          });
-        });
-      }
 
       test("a VCF whose ploidy could not be read", async ({ page }) => {
         await pickOnNewPage(page, "no_ploidy.vcf.gz");
