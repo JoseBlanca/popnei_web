@@ -182,19 +182,42 @@ describe("SF8 D1 the options of the number box", () => {
 
   test("an emptied box with onEmptied calls it once at Tab, and once when it loses the focus", () => {
     const calls = newCalls();
-    const input = draw(
-      thresholdProps(0.1, calls, {
+    // As popgen2.html does, the page gives 1 once the box is emptied, so
+    // that the blur that follows the Tab key would commit again a number
+    // that changed.
+    const props = (value: number): NumberFieldProps =>
+      thresholdProps(value, calls, {
         onEmptied: () => {
           calls.emptied += 1;
+          root.render(
+            createElement(
+              StrictMode,
+              null,
+              createElement(NumberField, props(1)),
+            ),
+          );
         },
-      }),
-    );
+      });
+    const input = draw(props(0.1));
     focus(input);
     empty(input);
-    press(input, "Tab");
-    blur(input);
+    // The Tab key and the loss of the focus it gives in one turn, before
+    // React draws what the first changed, as in a browser.
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Tab",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      input.blur();
+    });
+    expect(input.value).toBe("1");
     expect(calls.emptied).toBe(1);
+    expect(calls.changes).toEqual([]);
 
+    draw(props(0.1));
     focus(input);
     empty(input);
     blur(input);
@@ -317,26 +340,29 @@ describe("SF8 D1 the options of the number box", () => {
     const hidden = document.getElementById(
       input.getAttribute("aria-describedby") ?? "",
     );
-    // Drawn with the class that keeps it off the screen, as the rest of
-    // a label shown in part.
-    expect(hidden?.className).toMatch(/visuallyHidden/);
+    // Hidden, so that a screen reader going line by line does not read it
+    // a second time; aria-describedby reads it all the same.
+    expect(hidden?.hidden).toBe(true);
 
     // After the line under the box and the elements of describedBy.
     const elsewhere = document.createElement("p");
     elsewhere.id = "elsewhere";
     elsewhere.textContent = "A count elsewhere.";
     document.body.append(elsewhere);
-    draw(
-      thresholdProps(1, calls, {
-        describedBy: "elsewhere",
-        description: "A line under the box.",
-        hiddenDescription: "This filter removes nothing.",
-      }),
-    );
-    expect(describedWords(input)).toBe(
-      "A count elsewhere. A line under the box. This filter removes nothing.",
-    );
-    elsewhere.remove();
+    try {
+      draw(
+        thresholdProps(1, calls, {
+          describedBy: "elsewhere",
+          description: "A line under the box.",
+          hiddenDescription: "This filter removes nothing.",
+        }),
+      );
+      expect(describedWords(input)).toBe(
+        "A count elsewhere. A line under the box. This filter removes nothing.",
+      );
+    } finally {
+      elsewhere.remove();
+    }
   });
 
   test("without hiddenDescription nor muted the box is described by nothing and drawn in the colour of the text", () => {

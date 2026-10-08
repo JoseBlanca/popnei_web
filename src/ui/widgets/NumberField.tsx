@@ -233,7 +233,9 @@ export interface NumberFieldProps {
       then shows the number the screen gives it, the one it held when the
       screen gives the same. For a field whose empty box means something,
       a threshold turned off on popgen2.html. Without it an emptied field
-      gives nothing and shows its number again. */
+      gives nothing and shows its number again. Not called for a field
+      whose `value` is NaN, already empty: React Aria sends no change when
+      NaN is already its value. */
   readonly onEmptied?: () => void;
 }
 
@@ -411,8 +413,6 @@ export function NumberField({
         // the number it was given, which the screen may now change.
         if (!Number.isFinite(committed)) {
           if (Number.isNaN(committed) && onEmptied !== undefined) {
-            answered.current = true;
-            setRefused(null);
             onEmptied();
           }
           return;
@@ -498,11 +498,12 @@ export function NumberField({
           {description}
         </p>
       )}
+      {/* Hidden from every reader but through aria-describedby, which
+          reads a hidden element it names: drawn off the screen instead,
+          it was read a second time as loose text by a screen reader
+          going line by line. */}
       {hiddenDescription !== undefined && (
-        <p
-          id={hiddenDescriptionId}
-          className={classOf(styles, "visuallyHidden")}
-        >
+        <p id={hiddenDescriptionId} hidden>
           {hiddenDescription}
         </p>
       )}
