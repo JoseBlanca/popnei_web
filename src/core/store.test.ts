@@ -2603,12 +2603,7 @@ function openedAndRun(options: {
           keyVersion: 1,
           popneiVersion: options.savedPopnei ?? "0.1.0",
           appVersion: options.savedApp ?? "0.0.9",
-          settings: settingsFingerprint(
-            vars,
-            settings,
-            SAVED_READ_OPTIONS,
-            null,
-          ),
+          settings: settingsFingerprint(vars, settings, SAVED_VARIANTS, null),
         },
       ],
     },

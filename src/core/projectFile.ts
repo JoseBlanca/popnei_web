@@ -207,8 +207,8 @@ function checksWritten<J, R>(
     if (kept === undefined) {
       continue;
     }
-    const readOptions = (p.variants ?? reference.variants).readOptions;
-    if (settingsFingerprint(def, p, readOptions, null) === kept.settings) {
+    const source = p.variants ?? reference.variants;
+    if (settingsFingerprint(def, p, source, null) === kept.settings) {
       checks.push({
         analysis: kept.analysis,
         numbers: finiteNumbers(def.id, kept.numbers),
@@ -759,7 +759,6 @@ export function readProjectFile<J, R>(
       );
     }
   }
-  const readOptions = reference.variants.readOptions;
   return {
     ok: true,
     value: {
@@ -771,7 +770,7 @@ export function readProjectFile<J, R>(
           settings: settingsFingerprint(
             definitionOf(analyses, check.analysis),
             project,
-            readOptions,
+            reference.variants,
             null,
           ),
         })),

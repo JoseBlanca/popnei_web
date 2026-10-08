@@ -7,6 +7,7 @@
  */
 
 import type { WriteJob } from "../worker/protocol.ts";
+import { filtersApplied, filtersAppliedTo, keepsPassed } from "./project.ts";
 import type { Project, VariantSource } from "./project.ts";
 import type { AnalysisDef } from "./store.ts";
 
@@ -382,8 +383,9 @@ export type KeyedDef = Pick<
  * The key of an analysis for a project: the hash of the canonical form of
  * the id of the analysis, its key version, the version of popnei, the load
  * of the variants file, its load id and read options, the two lists of
- * filters, each empty when the analysis does not read it, and what its
- * `keyInputs` gives.
+ * filters, each empty when the analysis does not read it, those of the
+ * variants as `filtersApplied` gives them, and what its `keyInputs`
+ * gives.
  *
  * Throws a defect when the project has no variants file, since the store
  * makes a key only for an analysis that can run.
@@ -400,7 +402,7 @@ export function keyOf(
       keyVersion: def.keyVersion,
       popneiVersion,
       load: loadOf(p, "keyOf"),
-      ...filtersReadBy(def, p),
+      ...filtersReadBy(def, filtersApplied(p), p),
       inputs: def.keyInputs(p),
     },
     memo,
@@ -431,7 +433,7 @@ export function intermediateKeyOf(
       intermediate: name,
       inputs,
       load: loadOf(p, "intermediateKeyOf"),
-      ...filtersReadBy(def, p),
+      ...filtersReadBy(def, filtersApplied(p), p),
       popneiVersion,
     },
     memo,
@@ -449,7 +451,8 @@ export type WriteFormat = WriteJob["format"];
  * the store tracks the write, so that a change of the filters while it is
  * written leaves it behind and an undo gives it back: the hash of the
  * canonical form of the format, the load of the variants file, both lists
- * of filters whole, and the version of popnei, which writes the file. The
+ * of filters whole, that of the variants as `filtersApplied` gives it, and
+ * the version of popnei, which writes the file. The
  * file holds the variants and the individuals the filters keep, so a key
  * that missed a filter would let a file of other variants be saved as the
  * one the step shows. It has no field `analysis` and none `intermediate`,
@@ -468,7 +471,7 @@ export function writeKeyOf(
     {
       write: format,
       load: loadOf(p, "writeKeyOf"),
-      filters: p.filters,
+      filters: filtersApplied(p),
       individualFilters: p.individualFilters,
       popneiVersion,
     },
@@ -482,24 +485,31 @@ export function writeKeyOf(
  * The fingerprint of the settings of an analysis, which an opened project
  * file keeps for each analysis: the hash of the canonical form of the key
  * without the version of popnei, the key version and the load id, and
- * with `readOptions` in place of the load. It names only what the user
- * chose, and never coincides with a key, whose object has other fields.
+ * with the read options of `source` in place of the load. It names only
+ * what the user chose, and never coincides with a key, whose object has
+ * other fields. Its filters of the variants are those that apply to
+ * `source`, `filtersAppliedTo(p.filters, keepsPassed(source))`.
  *
- * Reads nothing of `p.variants`, so it is made also when no variants file
- * is loaded, as when a project file is opened.
+ * It is given the variants file it is made for, and reads nothing of
+ * `p.variants`, so it is made also when no variants file is loaded, as
+ * when a project file is opened, for the reference's file.
  */
 export function settingsFingerprint(
   def: KeyedDef,
   p: Project,
-  readOptions: VariantSource["readOptions"],
+  source: VariantSource,
   memo: KeyMemo | null,
 ): string {
   const text = canonicalOf(
     {
       analysis: def.id,
-      ...filtersReadBy(def, p),
+      ...filtersReadBy(
+        def,
+        filtersAppliedTo(p.filters, keepsPassed(source)),
+        p,
+      ),
       inputs: def.keyInputs(p),
-      readOptions,
+      readOptions: source.readOptions,
     },
     memo,
     `the fingerprint of the analysis ${JSON.stringify(def.id)}`,
@@ -549,14 +559,16 @@ function loadOf(
   return { fileId: p.variants.fileId, readOptions: p.variants.readOptions };
 }
 
-/** The two lists of filters of the project, each empty when `def` does
-    not read it. */
+/** The filters of the variants given, those that apply to the file, and
+    the filters of the individuals of the project, each empty when `def`
+    does not read it. */
 function filtersReadBy(
   def: KeyedDef,
+  applied: Project["filters"],
   p: Project,
 ): Pick<Project, "filters" | "individualFilters"> {
   return {
-    filters: def.filtersRead.variants ? p.filters : [],
+    filters: def.filtersRead.variants ? applied : [],
     individualFilters: def.filtersRead.individuals ? p.individualFilters : [],
   };
 }

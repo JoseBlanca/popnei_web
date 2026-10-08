@@ -832,8 +832,7 @@ export function createStore<J, R, F = never>(
       const check =
         saved !== null &&
         p.variants !== null &&
-        settingsFingerprint(def, p, p.variants.readOptions, memo) ===
-          saved.settings
+        settingsFingerprint(def, p, p.variants, memo) === saved.settings
           ? saved
           : null;
       return {

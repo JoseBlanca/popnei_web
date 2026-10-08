@@ -23,6 +23,9 @@ import {
   individualsNeeds,
   jobFilters,
   loadIndividuals,
+  filtersApplied,
+  filtersAppliedTo,
+  keepsPassed,
   loadVariants,
   namesOf,
   ordinal,
@@ -75,6 +78,7 @@ import type {
   ProjectError,
   SourceError,
   SourceRead,
+  VariantLoad,
 } from "./project.ts";
 import type { Result } from "./result.ts";
 import { MAX_UNDO_STEPS, commit, startHistory, undo } from "./history.ts";
@@ -7199,5 +7203,188 @@ describe("SF2 D2 the read of a project file gives keepsPassed by the format", ()
         ),
       ),
     ).toMatchObject({ kind: "unknownField", path: ["variants", "read"] });
+  });
+});
+
+describe("SF2 D2 the filters that apply to the file", () => {
+  const PASSED = { kind: "passed" } as const;
+  const MISSING_DATA = {
+    kind: "missing_data",
+    maxAllowedMissingRate: 0.1,
+  } as const;
+  const NEI_LOAD: VariantLoad = {
+    fileId: "11111111111111111111111111111111",
+    name: "old.nei",
+    size: 261_490,
+    format: "nei",
+    readOptions: null,
+  };
+  const VCF_LOAD: VariantLoad = {
+    fileId: "22222222222222222222222222222222",
+    name: "panel.vcf.gz",
+    size: 87_304,
+    format: "vcf",
+    readOptions: { ploidy: null, onlyPassed: false },
+  };
+
+  function readSaying(keeps: boolean): SourceRead {
+    return {
+      kind: "read",
+      individuals: ["i1", "i2", "i3", "i4"],
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: keeps,
+    };
+  }
+
+  /** The sample project with the FILTER box on, `load` given, and its
+      read `read`. */
+  function withPassed(load: VariantLoad, read: SourceRead): Project {
+    return deepFreeze<Project>({
+      ...sampleProject(),
+      filters: [PASSED, MISSING_DATA],
+      variants: { ...load, read },
+    });
+  }
+
+  test.each([
+    ["not read yet", { kind: "pending" } as const],
+    ["read with keepsPassed false", readSaying(false)],
+    [
+      "whose read failed",
+      { kind: "failed", error: { kind: "popnei", message: "no" } } as const,
+    ],
+  ])("passed on and a .nei file %s: without passed", (_name, read) => {
+    expect(filtersApplied(withPassed(NEI_LOAD, read))).toEqual([MISSING_DATA]);
+  });
+
+  test.each([
+    [".nei file read with keepsPassed true", NEI_LOAD, readSaying(true)],
+    ["VCF not read yet", VCF_LOAD, { kind: "pending" } as const],
+    ["VCF read", VCF_LOAD, readSaying(true)],
+  ])("passed on and a %s: p.filters itself", (_name, load, read) => {
+    const p = withPassed(load, read);
+    expect(filtersApplied(p)).toBe(p.filters);
+  });
+
+  test("passed on and no variants file: p.filters itself", () => {
+    const p = deepFreeze<Project>({
+      ...sampleProject(),
+      filters: [PASSED, MISSING_DATA],
+      variants: null,
+    });
+    expect(filtersApplied(p)).toBe(p.filters);
+  });
+
+  test("a .nei file whose read says keepsPassed false and no passed: p.filters itself", () => {
+    const p = deepFreeze<Project>({
+      ...sampleProject(),
+      variants: { ...NEI_LOAD, read: readSaying(false) },
+    });
+    expect(filtersApplied(p)).toBe(p.filters);
+  });
+
+  test("filtersAppliedTo of [passed, missing_data] with true gives the same array, with false [missing_data]", () => {
+    const filters = [PASSED, MISSING_DATA];
+    expect(filtersAppliedTo(filters, true)).toBe(filters);
+    expect(filtersAppliedTo(filters, false)).toEqual([MISSING_DATA]);
+  });
+
+  test.each([
+    ["a VCF pending", VCF_LOAD, { kind: "pending" } as const, true],
+    ["a VCF read", VCF_LOAD, readSaying(true), true],
+    [
+      "a VCF failed",
+      VCF_LOAD,
+      { kind: "failed", error: { kind: "popnei", message: "no" } } as const,
+      true,
+    ],
+    ["a .nei file pending", NEI_LOAD, { kind: "pending" } as const, false],
+    ["a .nei file read with true", NEI_LOAD, readSaying(true), true],
+    ["a .nei file read with false", NEI_LOAD, readSaying(false), false],
+    [
+      "a .nei file failed",
+      NEI_LOAD,
+      { kind: "failed", error: { kind: "popnei", message: "no" } } as const,
+      false,
+    ],
+  ])("keepsPassed of %s is %s", (_name, load, read, expected) => {
+    expect(keepsPassed({ ...load, read })).toBe(expected);
+  });
+
+  test("the FILTER box on, then a .nei file without the record opened: passed stays in filters, and is applied neither from the pick nor after the read", () => {
+    const vcf = deepFreeze(
+      recordVariantsRead(
+        loadVariants(setVariantFilter(sampleProject(), PASSED), VCF_LOAD),
+        VCF_LOAD.fileId,
+        readSaying(true),
+      ),
+    );
+    expect(filtersApplied(vcf)[0]).toEqual(PASSED);
+    const picked = deepFreeze(loadVariants(vcf, NEI_LOAD));
+    expect(picked.filters).toBe(vcf.filters);
+    expect(filtersApplied(picked)).toEqual(vcf.filters.slice(1));
+    const read = deepFreeze(
+      recordVariantsRead(picked, NEI_LOAD.fileId, readSaying(false)),
+    );
+    expect(read.filters).toBe(vcf.filters);
+    expect(filtersApplied(read)).toEqual(vcf.filters.slice(1));
+    const back = recordVariantsRead(
+      loadVariants(read, {
+        ...VCF_LOAD,
+        fileId: "33333333333333333333333333333333",
+      }),
+      "33333333333333333333333333333333",
+      readSaying(true),
+    );
+    expect(filtersApplied(back)).toBe(back.filters);
+    expect(back.filters).toBe(vcf.filters);
+  });
+
+  test("the FILTER box on, then a .nei file with the record opened: passed is left out until the read, and applied after it", () => {
+    const p = deepFreeze(
+      loadVariants(setVariantFilter(sampleProject(), PASSED), NEI_LOAD),
+    );
+    expect(projectNeeds(p)).not.toBeNull();
+    expect(filtersApplied(p)).toEqual(p.filters.slice(1));
+    const read = recordVariantsRead(p, NEI_LOAD.fileId, readSaying(true));
+    expect(projectNeeds(read)).toBeNull();
+    expect(filtersApplied(read)).toBe(read.filters);
+    expect(read.filters[0]).toEqual(PASSED);
+  });
+
+  test("for every project drawn, filtersApplied holds the filters on in their order, all but passed when keepsPassed of its file is false", () => {
+    fc.assert(
+      fc.property(wholeProject, (p) => {
+        const applied = filtersApplied(p);
+        const keeps = p.variants === null || keepsPassed(p.variants);
+        expect(applied).toEqual(
+          keeps ? p.filters : p.filters.filter((f) => f.kind !== "passed"),
+        );
+        if (keeps) {
+          expect(applied).toBe(p.filters);
+        }
+      }),
+    );
+  });
+
+  test("the reads drawn give keepsPassed both values for a .nei file and true for a VCF", () => {
+    const seen = { neiTrue: false, neiFalse: false, vcfFalse: false };
+    fc.assert(
+      fc.property(wholeProject, (p) => {
+        const read = p.variants?.read;
+        if (p.variants === null || read?.kind !== "read") {
+          return;
+        }
+        if (p.variants.format === "nei") {
+          seen.neiTrue ||= read.keepsPassed;
+          seen.neiFalse ||= !read.keepsPassed;
+        } else {
+          seen.vcfFalse ||= !read.keepsPassed;
+        }
+      }),
+      { numRuns: 500 },
+    );
+    expect(seen).toEqual({ neiTrue: true, neiFalse: true, vcfFalse: false });
   });
 });

@@ -190,12 +190,7 @@ function referenceFor(settingsOf: Project): Reference {
         keyVersion: 1,
         popneiVersion: "0.1.0",
         appVersion: "0.1.0",
-        settings: settingsFingerprint(
-          DIVERSITY,
-          settingsOf,
-          PANEL_SAVED.readOptions,
-          null,
-        ),
+        settings: settingsFingerprint(DIVERSITY, settingsOf, PANEL_SAVED, null),
       },
     ],
   };
@@ -274,12 +269,7 @@ describe("WS6 D1 what is written", () => {
       checks: [
         {
           ...CARRIED_CHECK,
-          settings: settingsFingerprint(
-            DIVERSITY,
-            p,
-            savedVcf.readOptions,
-            null,
-          ),
+          settings: settingsFingerprint(DIVERSITY, p, savedVcf, null),
         },
       ],
     };
@@ -532,12 +522,7 @@ describe("WS6 D1 what is written", () => {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(
-            DIVERSITY,
-            p,
-            savedVcf.readOptions,
-            null,
-          ),
+          settings: settingsFingerprint(DIVERSITY, p, savedVcf, null),
         },
       ],
     };
@@ -816,12 +801,7 @@ function forwardProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(
-            defOf("pca"),
-            p,
-            PANEL_VCF.readOptions,
-            null,
-          ),
+          settings: settingsFingerprint(defOf("pca"), p, PANEL_VCF, null),
         },
       ],
     },
@@ -891,12 +871,7 @@ function reversedProject(): Project {
     reference: {
       checks: [
         {
-          settings: settingsFingerprint(
-            defOf("pca"),
-            p,
-            PANEL_VCF.readOptions,
-            null,
-          ),
+          settings: settingsFingerprint(defOf("pca"), p, PANEL_VCF, null),
           appVersion: "0.1.0",
           popneiVersion: "0.1.0",
           keyVersion: 1,
@@ -1064,7 +1039,7 @@ function opened(p: Project): Project {
         settings: settingsFingerprint(
           defOf(check.analysis),
           p,
-          reference.variants.readOptions,
+          reference.variants,
           null,
         ),
       })),
@@ -1519,8 +1494,15 @@ describe("WS6 D2 the opening", () => {
       throw new Error("the fixture opens");
     }
     const p = opening.value;
-    expect(p.reference?.checks.map((check) => check.settings)).toEqual([
-      settingsFingerprint(DIVERSITY, p, { ploidy: 4, onlyPassed: true }, null),
+    if (p.reference === null) {
+      throw new Error("the fixture has a reference");
+    }
+    expect(p.reference.variants.readOptions).toEqual({
+      ploidy: 4,
+      onlyPassed: true,
+    });
+    expect(p.reference.checks.map((check) => check.settings)).toEqual([
+      settingsFingerprint(DIVERSITY, p, p.reference.variants, null),
     ]);
   });
 });
@@ -2201,7 +2183,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
                       settings: settingsFingerprint(
                         defOf(check.analysis),
                         p,
-                        (p.variants ?? reference.variants).readOptions,
+                        p.variants ?? reference.variants,
                         null,
                       ),
                     }
@@ -2379,8 +2361,8 @@ function expectedChecks(
     ) {
       continue;
     }
-    const readOptions = (p.variants ?? reference.variants).readOptions;
-    if (settingsFingerprint(def, p, readOptions, null) === kept.settings) {
+    const source = p.variants ?? reference.variants;
+    if (settingsFingerprint(def, p, source, null) === kept.settings) {
       checks.push({
         analysis: kept.analysis,
         numbers: kept.numbers,
@@ -2907,12 +2889,7 @@ function openedInPopgen(p: Project): Project {
         }
         return {
           ...check,
-          settings: settingsFingerprint(
-            def,
-            p,
-            reference.variants.readOptions,
-            null,
-          ),
+          settings: settingsFingerprint(def, p, reference.variants, null),
         };
       }),
     },
@@ -3541,7 +3518,7 @@ function stage5OptionsProject(): Project {
           keyVersion: 1,
           popneiVersion: "0.1.0",
           appVersion: "0.1.0",
-          settings: settingsFingerprint(popDists, p, null, null),
+          settings: settingsFingerprint(popDists, p, variants, null),
         },
       ],
     },

@@ -17,6 +17,9 @@ import { POPGEN_ANALYSES } from "./apps.ts";
 import {
   VARIANT_FILTER_ORDER,
   emptyProject,
+  filtersApplied,
+  filtersAppliedTo,
+  keepsPassed,
   turnOffVariantFilter,
 } from "./project.ts";
 import type { Project, VariantSource } from "./project.ts";
@@ -422,7 +425,7 @@ describe("WP2 D2 the key", () => {
     const fingerprint = settingsFingerprint(
       DIVERSITY,
       literalProject(),
-      null,
+      variantsOf(literalProject()),
       null,
     );
     expect(fingerprint).toBe(LITERAL_FINGERPRINT);
@@ -435,9 +438,14 @@ describe("WP2 D2 the key", () => {
 
   test("gives the literal fingerprint with no variants file loaded, as when a project file is opened", () => {
     const opened = { ...literalProject(), variants: null };
-    expect(settingsFingerprint(DIVERSITY, opened, null, createKeyMemo())).toBe(
-      LITERAL_FINGERPRINT,
-    );
+    expect(
+      settingsFingerprint(
+        DIVERSITY,
+        opened,
+        variantsOf(literalProject()),
+        createKeyMemo(),
+      ),
+    ).toBe(LITERAL_FINGERPRINT);
   });
 
   test("writes the key of an intermediate result from the six fields of the keys spec", () => {
@@ -499,8 +507,8 @@ describe("WP2 D2 the key", () => {
       const pruned = (r: Project): string =>
         intermediateKeyOf(def, r, "0.1.0", "the pruned variants", 0.2, memo);
       expect(pruned(q)).toBe(pruned(p));
-      expect(settingsFingerprint(def, q, null, memo)).toBe(
-        settingsFingerprint(def, p, null, memo),
+      expect(settingsFingerprint(def, q, variantsOf(q), memo)).toBe(
+        settingsFingerprint(def, p, variantsOf(p), memo),
       );
     },
   );
@@ -543,7 +551,7 @@ describe("WP2 D2 the key", () => {
     ],
     [
       "the fingerprint of the analysis",
-      (def, p) => settingsFingerprint(def, p, null, null),
+      (def, p) => settingsFingerprint(def, p, variantsOf(p), null),
     ],
   ])(
     "names the analysis whose inputs held a value that is not JSON, in %s",
@@ -761,7 +769,14 @@ function changeOf(
       ];
     }
     case "filters": {
-      if (sameJson(other.filters, s.p.filters)) {
+      // The filters that apply to the file: the filter of the FILTER
+      // column is in no key of a file whose variants do not record it.
+      if (
+        sameJson(
+          filtersAppliedTo(other.filters, keepsPassed(variants)),
+          filtersApplied(s.p),
+        )
+      ) {
         return null;
       }
       const reading: Setting = {
@@ -774,7 +789,7 @@ function changeOf(
       return [reading, { ...reading, p: { ...s.p, filters: other.filters } }];
     }
     case "filterOrder": {
-      if (s.p.filters.length < 2) {
+      if (filtersApplied(s.p).length < 2) {
         return null;
       }
       const reading: Setting = {
@@ -841,7 +856,7 @@ function intermediateKeyWith(s: Setting, memo: KeyMemo): string {
 }
 
 function fingerprintOf(s: Setting, memo: KeyMemo | null): string {
-  return settingsFingerprint(s.def, s.p, variantsOf(s.p).readOptions, memo);
+  return settingsFingerprint(s.def, s.p, variantsOf(s.p), memo);
 }
 
 describe("WP2 D3 the properties of the keys", () => {
@@ -869,7 +884,7 @@ describe("WP2 D3 the properties of the keys", () => {
     );
   });
 
-  test("a change of the name, the size or the read of the variants file keeps the key", () => {
+  test("a change of the name, the size or the read of the variants file keeps the key, while the read says the same of the FILTER", () => {
     fc.assert(
       fc.property(setting, variantSource, (s, source) => {
         const variants = variantsOf(s.p);
@@ -885,6 +900,7 @@ describe("WP2 D3 the properties of the keys", () => {
             },
           },
         };
+        fc.pre(keepsPassed(variantsOf(renamed.p)) === keepsPassed(variants));
         const memo = createKeyMemo();
         expect(keyWith(renamed, memo)).toBe(keyWith(s, memo));
       }),
@@ -901,12 +917,11 @@ describe("WP2 D3 the properties of the keys", () => {
             expect(fingerprintOf(change[1], createKeyMemo())).toBe(expected);
           }
         }
-        const readOptions = variantsOf(s.p).readOptions;
         expect(
           settingsFingerprint(
             s.def,
             { ...s.p, variants: null },
-            readOptions,
+            variantsOf(s.p),
             null,
           ),
         ).toBe(expected);
@@ -1100,7 +1115,7 @@ describe("VS2 D3 the key of a write", () => {
     expect(neiKeyOf(q)).toBe(WRITE_LITERAL_KEY);
   });
 
-  test("keeps the key with the name, the size and the read of the variants file", () => {
+  test("keeps the key with the name, the size and the read of the variants file, while the read says the same of the FILTER", () => {
     fc.assert(
       fc.property(projectWithVariants, variantSource, (p, source) => {
         const renamed: Project = {
@@ -1112,6 +1127,7 @@ describe("VS2 D3 the key of a write", () => {
             read: source.read,
           },
         };
+        fc.pre(keepsPassed(variantsOf(renamed)) === keepsPassed(variantsOf(p)));
         const memo = createKeyMemo();
         expect(neiKeyOf(renamed, memo)).toBe(neiKeyOf(p, memo));
       }),
@@ -1228,4 +1244,137 @@ describe("IP10 D3 every analysis gives the inputs of its key", () => {
       }
     },
   );
+});
+
+describe("SF2 D3 the filters that apply, in the keys", () => {
+  const PASSED = { kind: "passed" } as const;
+
+  /** The literal project of this file with the FILTER box on, and the
+      variants file `source`, that of the literal project unless given. */
+  function withPassed(
+    source: VariantSource = variantsOf(literalProject()),
+  ): Project {
+    return deepFreeze<Project>({
+      ...literalProject(),
+      filters: [PASSED, ...literalProject().filters],
+      variants: source,
+    });
+  }
+
+  /** The variants file of the literal project read with `keeps`. */
+  function neiRead(keeps: boolean): VariantSource {
+    const source = variantsOf(literalProject());
+    return source.read.kind === "read"
+      ? { ...source, read: { ...source.read, keepsPassed: keeps } }
+      : source;
+  }
+
+  const PENDING_NEI: VariantSource = {
+    ...variantsOf(literalProject()),
+    read: { kind: "pending" },
+  };
+  const VCF: VariantSource = {
+    ...variantsOf(literalProject()),
+    format: "vcf",
+    readOptions: { ploidy: 2, onlyPassed: false },
+  };
+
+  test("the filter of the FILTER column is the first kind the property of the filters turned off draws", () => {
+    expect(VARIANT_FILTER_ORDER[0]).toBe("passed");
+  });
+
+  test("passed turned off gives the key, the fingerprint and the key of a write of the project without it", () => {
+    const on = withPassed(neiRead(true));
+    const off = deepFreeze(turnOffVariantFilter(on, "passed"));
+    const without = deepFreeze<Project>({
+      ...on,
+      filters: on.filters.slice(1),
+    });
+    const memo = createKeyMemo();
+    expect(keyOf(DIVERSITY, off, "0.1.0", memo)).toBe(
+      keyOf(DIVERSITY, without, "0.1.0", memo),
+    );
+    expect(settingsFingerprint(DIVERSITY, off, neiRead(true), memo)).toBe(
+      settingsFingerprint(DIVERSITY, without, neiRead(true), memo),
+    );
+    expect(neiKeyOf(off, memo)).toBe(neiKeyOf(without, memo));
+  });
+
+  test("passed on over a .nei file whose read says keepsPassed false gives the literal key, the literal fingerprint and the key of a write without it", () => {
+    const p = withPassed(neiRead(false));
+    const memo = createKeyMemo();
+    expect(keyOf(DIVERSITY, p, "0.1.0", memo)).toBe(LITERAL_KEY);
+    expect(settingsFingerprint(DIVERSITY, p, neiRead(false), memo)).toBe(
+      LITERAL_FINGERPRINT,
+    );
+    expect(neiKeyOf(p, memo)).toBe(neiKeyOf(literalProject(), memo));
+  });
+
+  test.each([
+    ["a .nei file not read", PENDING_NEI],
+    ["a .nei file read with keepsPassed false", neiRead(false)],
+  ])(
+    "the fingerprint of passed on made for %s is the literal one, that of the project without passed",
+    (_name, source) => {
+      expect(settingsFingerprint(DIVERSITY, withPassed(), source, null)).toBe(
+        LITERAL_FINGERPRINT,
+      );
+      expect(
+        settingsFingerprint(
+          DIVERSITY,
+          { ...withPassed(), variants: null },
+          source,
+          null,
+        ),
+      ).toBe(LITERAL_FINGERPRINT);
+    },
+  );
+
+  test.each([
+    ["a VCF not read", { ...VCF, read: { kind: "pending" } } as const],
+    ["a VCF read", { ...VCF, read: neiRead(true).read }],
+    ["a .nei file read with keepsPassed true", neiRead(true)],
+  ])(
+    "the fingerprint of passed on made for %s is not that of the project without passed",
+    (_name, source: VariantSource) => {
+      expect(
+        settingsFingerprint(DIVERSITY, withPassed(), source, null),
+      ).not.toBe(
+        settingsFingerprint(DIVERSITY, literalProject(), source, null),
+      );
+    },
+  );
+
+  test("passed on over a .nei file whose read says keepsPassed true: the key differs from the literal, and its canonical form holds passed before missing_data", () => {
+    const key = keyOf(
+      DIVERSITY,
+      withPassed(neiRead(true)),
+      "0.1.0",
+      createKeyMemo(),
+    );
+    expect(key).not.toBe(LITERAL_KEY);
+    expect(key).toBe(
+      sha256Hex(
+        '{"analysis":"diversity","filters":[{"kind":"passed"},{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[],"inputs":{"pops":[["P1",["i1","i2"]]]},"keyVersion":1,"load":{"fileId":"00112233445566778899aabbccddeeff","readOptions":null},"popneiVersion":"0.1.0"}',
+      ),
+    );
+  });
+
+  test("passed on over a VCF: the key differs from that of the VCF without passed, and its canonical form holds passed before missing_data", () => {
+    const vcf: VariantSource = { ...VCF, read: { kind: "pending" } };
+    const withVcf = withPassed(vcf);
+    const withoutPassed = deepFreeze<Project>({
+      ...literalProject(),
+      variants: vcf,
+    });
+    const memo = createKeyMemo();
+    const key = keyOf(DIVERSITY, withVcf, "0.1.0", memo);
+    expect(key).not.toBe(keyOf(DIVERSITY, withoutPassed, "0.1.0", memo));
+    expect(key).toBe(
+      sha256Hex(
+        '{"analysis":"diversity","filters":[{"kind":"passed"},{"kind":"missing_data","maxAllowedMissingRate":0.1}],"individualFilters":[],"inputs":{"pops":[["P1",["i1","i2"]]]},"keyVersion":1,"load":{"fileId":"00112233445566778899aabbccddeeff","readOptions":{"onlyPassed":false,"ploidy":2}},"popneiVersion":"0.1.0"}',
+      ),
+    );
+    expect(neiKeyOf(withVcf, memo)).not.toBe(neiKeyOf(withoutPassed, memo));
+  });
 });
