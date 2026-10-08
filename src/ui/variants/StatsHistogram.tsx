@@ -1,19 +1,16 @@
 /**
  * One histogram of the statistics of the open file on popgen2.html, in a
  * group named by its full title: one row, its short title, "max:" and the
- * box of its threshold, "Obs. het. max: [0.04]"; under it one line, what
- * the threshold keeps, "Keeps 1,050 of 1,200 variants"; and the plot,
+ * box of its threshold, "Obs. het. max: [0.04]"; and under it the plot,
  * with the line of the threshold the user drags over it
- * (docs/plans/thresholds.md, "Round 1 with the owner"). The line of what
- * it keeps is kept at the height of its longest form for the number with
- * a value, "Keeps 200,000 of 200,000 variants so far", at the width of
- * its column, so that the plot does not move as the words change while
- * the line is dragged or as the pass ends. Under it, for the variants,
- * the room of the line said when a number committed lands below 0.001
- * and is raised to 0.001, "Counted as 0.001, the smallest threshold.",
- * one line at 1280 pixels and two at 320, which is also announced; it shows
- * while the threshold is the one raised, and its room is always kept, so
- * that the plot does not move when it comes or goes. No table of its bins and no download, which the owner wants
+ * (docs/plans/thresholds.md, "Round 1 with the owner"). No words say what
+ * the threshold keeps (the owner, 8 October 2026, docs/plans/popnei-0.2.2.md):
+ * a threshold that keeps every variant or individual with a value is
+ * drawn in grey, its line and the number in its box, and a screen reader
+ * hears it in the value of the line, "1, keeps every variant", and in the
+ * description of the box, "This threshold removes no variant.", a text
+ * of the page that is not drawn (WCAG 1.4.1, colour is never the only
+ * sign). No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads
  * (docs/plans/file-stats.md, "Where it goes"). Drawn from the result, or
  * from a result so far while the pass runs, whose words say so.
@@ -23,8 +20,7 @@
  * line follows the number as it is typed, and the box the line as it is
  * dragged or moved with the keys. A number typed is rounded to the step
  * of the axis, which the box then shows, with no words: it shows the
- * decimals of the step. The line of what it keeps describes the box, so
- * that a screen reader reads it as the box takes the focus.
+ * decimals of the step.
  *
  * The arrow keys in the box move the threshold as they move the line, one
  * step of the axis, Page Up and Page Down ten, from where the line is,
@@ -53,7 +49,7 @@ import styles from "./StatsHistogram.module.css";
 
 /** What one histogram is drawn with. */
 export interface StatsHistogramProps {
-  /** The histogram with the threshold drawn and counted, the one typed
+  /** The histogram with its threshold, the one typed
       while a number is typed in the box; the same object until its
       result or its threshold changes, so that the plot is not drawn
       again on renders that changed nothing. */
@@ -94,8 +90,7 @@ export function StatsHistogram({
   onThreshold,
   onTyped,
 }: StatsHistogramProps): React.JSX.Element {
-  const wordsId = useId();
-  const raisedId = useId();
+  const removesNothingId = useId();
   const announcer = useAnnouncer();
   // The element of the plot and the line, on which the frame of the plot
   // is written as the plot draws it, the frame last drawn, and whether it
@@ -119,15 +114,7 @@ export function StatsHistogram({
   // The number the box keeps from the first change of its text to its
   // first commit or its blur; null when it shows `boxValue`.
   const [held, setHeld] = useState<number | null>(null);
-  // The threshold a number committed was raised to, whose line shows
-  // while the threshold is that one; null when the last number set was
-  // not raised.
-  const [raisedTo, setRaisedTo] = useState<number | null>(null);
   const { threshold } = plot;
-  const raisedShown =
-    threshold.raisedLine !== null &&
-    raisedTo !== null &&
-    raisedTo === threshold.shown;
   return (
     <div
       role="group"
@@ -151,7 +138,10 @@ export function StatsHistogram({
           maxValue={threshold.box.maxValue}
           step={threshold.box.step}
           decimals={threshold.box.decimals}
-          describedBy={raisedShown ? `${wordsId} ${raisedId}` : wordsId}
+          muted={threshold.keepsAll}
+          {...(threshold.removesNothing !== null && {
+            describedBy: removesNothingId,
+          })}
           refusedText={thresholdRefusedText}
           onRefused={(text) => {
             announcer.announce(text);
@@ -159,14 +149,7 @@ export function StatsHistogram({
           onTyped={onTyped}
           onChange={(value) => {
             setHeld(null);
-            const set = threshold.onStep(value);
-            if (threshold.raisedLine !== null && threshold.raises(value)) {
-              setRaisedTo(set);
-              announcer.announce(threshold.raisedLine);
-            } else {
-              setRaisedTo(null);
-            }
-            onThreshold(set);
+            onThreshold(threshold.onStep(value));
           }}
           // From where the line is, at the number typed when one is, which
           // the field puts back and tells the screen it is typed no more.
@@ -177,33 +160,18 @@ export function StatsHistogram({
               Math.min(maxValue, Math.max(minValue, value + steps * step)),
             );
             setHeld(null);
-            setRaisedTo(null);
             // Set even when it is the number set: a number typed at the
             // bound of the box, stepped past it, is then set.
             onThreshold(moved);
           }}
         />
-      </div>
-      {/* The room of the longest form of the line, drawn hidden in the
-          same cell, so that the line holds that height at any width. */}
-      <div
-        className={classOf(styles, "keepsRoom")}
-        data-longest={
-          threshold.raisedLine === null
-            ? threshold.longestLine
-            : `${threshold.longestLine}\n${threshold.raisedLine}`
-        }
-      >
-        <div className={classOf(styles, "keepsShown")}>
-          <p id={wordsId} className={classOf(styles, "keeps")}>
-            {threshold.line}
+        {threshold.removesNothing !== null && (
+          // Read as the description of the box, and not drawn: the grey
+          // of the number says it to the eye.
+          <p id={removesNothingId} className={classOf(styles, "hidden")}>
+            {threshold.removesNothing}
           </p>
-          {raisedShown && (
-            <p id={raisedId} className={classOf(styles, "keeps")}>
-              {threshold.raisedLine}
-            </p>
-          )}
-        </div>
+        )}
       </div>
       <div ref={plotRef} className={classOf(styles, "plot")}>
         <HistogramPlot data={plot.data} onFrame={onFrame} />
@@ -215,8 +183,8 @@ export function StatsHistogram({
             step={threshold.slider.step}
             value={threshold.slider.value}
             valueText={threshold.valueText}
+            muted={threshold.keepsAll}
             onChange={(value) => {
-              setRaisedTo(null);
               onThreshold(threshold.onStep(value));
             }}
           />

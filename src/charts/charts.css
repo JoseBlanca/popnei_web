@@ -64,6 +64,12 @@
   stroke-dasharray: 4 3;
 }
 
+/* The line of a threshold that keeps every value, in grey: a threshold
+   that removes nothing (docs/specs/charts/histogram.md). */
+.chart-threshold-idle {
+  stroke: var(--chart-threshold-idle);
+}
+
 .chart-legend-text {
   text-anchor: end;
 }
@@ -269,7 +275,13 @@
 
 /* The texts of the legend of the heatmap start right of its bar, and the
    name of the value above it. */
-.chart-heatmap .chart-legend-text {
+.chart-heatmap /* The line of a threshold that keeps every value, in grey: a threshold
+   that removes nothing (docs/specs/charts/histogram.md). */
+.chart-threshold-idle {
+  stroke: var(--chart-threshold-idle);
+}
+
+.chart-legend-text {
   text-anchor: start;
 }
 
@@ -343,6 +355,12 @@
 
 /* The texts of the legend of the line plot start after the piece of line
    of their row. */
-.chart.chart-line .chart-legend-text {
+.chart.chart-line /* The line of a threshold that keeps every value, in grey: a threshold
+   that removes nothing (docs/specs/charts/histogram.md). */
+.chart-threshold-idle {
+  stroke: var(--chart-threshold-idle);
+}
+
+.chart-legend-text {
   text-anchor: start;
 }

@@ -4632,10 +4632,9 @@ for (const theme of ["light", "dark"] as const) {
           timeout: 60_000,
         });
         await release(page, "oneSoFar");
-        await expect(
-          newPageStats(page).getByText(/^Keeps .* variants so far$/u),
-        ).toHaveCount(4, { timeout: 60_000 });
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 60_000,
+        });
         await save(page, `popgen2-stats-so-far${at}-${theme}`);
       });
 
@@ -4650,7 +4649,54 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-done${at}-${theme}`);
       });
 
-      test("the thresholds moved: a line dragged into the middle, and the six at numbers whose count of the variants was a range before popnei 0.2.2", async ({
+      test("the statistics of panel.nei, its missing genotypes of the variants in bars of 1 / 200", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(
+          newPageStats(page).getByRole("button", {
+            name: /^Download the missing genotypes/u,
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(
+          newPageStats(page).locator("svg.chart desc").first(),
+        ).toHaveText(
+          "The proportion of missing genotypes of 1,200 variants, in 20 bins from 0 to 0.1.",
+        );
+        await save(page, `popgen2-stats-nei${at}-${theme}`);
+      });
+
+      test("the thresholds, three that keep every variant or individual, in grey, and three that do not", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageStats(page).locator("line.chart-threshold-idle"),
+        ).toHaveCount(6, { timeout: 20_000 });
+        for (const [name, value] of [
+          ["Proportion of missing genotypes", "0.05"],
+          ["Observed heterozygosity", "0.3"],
+          ["Proportion of missing genotypes of each individual", "0.03"],
+        ] as const) {
+          const group = newPageStats(page).getByRole("group", {
+            name,
+            exact: true,
+          });
+          await group.getByRole("textbox").fill(value);
+          await group.getByRole("textbox").press("Enter");
+          await expect(group.getByRole("slider")).toHaveAttribute(
+            "aria-valuetext",
+            value,
+          );
+        }
+        await expect(
+          newPageStats(page).locator("line.chart-threshold-idle"),
+        ).toHaveCount(3);
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-thresholds-grey${at}-${theme}`);
+      });
+
+      test("the thresholds moved: a line dragged into the middle, and the six at numbers that remove some", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4658,9 +4704,11 @@ for (const theme of ["light", "dark"] as const) {
           name: "Observed heterozygosity",
           exact: true,
         });
-        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
-          timeout: 20_000,
-        });
+        await expect(het.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.7, keeps every variant",
+          { timeout: 20_000 },
+        );
         // The thumb, around the hidden input of the slider.
         const thumb = het.getByRole("slider").locator("xpath=../..");
         await thumb.scrollIntoViewIfNeeded();
@@ -4674,32 +4722,14 @@ for (const theme of ["light", "dark"] as const) {
         await page.mouse.move(frame.x + frame.width * 0.55, y, { steps: 8 });
         await page.mouse.up();
         await page.mouse.move(0, 0);
-        // Each count one number, what popnei's filter keeps; under popnei
-        // 0.2.1 the four of the variants were ranges, "Keeps 1,113 to
-        // 1,152 of 1,200 variants" at 0.05 of the missing rate.
-        for (const [name, value, words] of [
-          [
-            "Proportion of missing genotypes",
-            "0.05",
-            "Keeps 1,152 of 1,200 variants",
-          ],
-          ["Major allele frequency", "0.52", "Keeps 49 of 1,200 variants"],
-          ["Observed heterozygosity", "0.3", "Keeps 373 of 1,200 variants"],
-          [
-            "Expected heterozygosity (unbiased)",
-            "0.3",
-            "Keeps 311 of 1,200 variants",
-          ],
-          [
-            "Proportion of missing genotypes of each individual",
-            "0.03",
-            "Keeps 116 of 200 individuals",
-          ],
-          [
-            "Observed heterozygosity of each individual",
-            "0.35",
-            "Keeps 73 of 200 individuals",
-          ],
+        // Each removes some, so each line is red.
+        for (const [name, value] of [
+          ["Proportion of missing genotypes", "0.05"],
+          ["Major allele frequency", "0.52"],
+          ["Observed heterozygosity", "0.3"],
+          ["Expected heterozygosity (unbiased)", "0.3"],
+          ["Proportion of missing genotypes of each individual", "0.03"],
+          ["Observed heterozygosity of each individual", "0.35"],
         ] as const) {
           const group = newPageStats(page).getByRole("group", {
             name,
@@ -4707,29 +4737,37 @@ for (const theme of ["light", "dark"] as const) {
           });
           await group.getByRole("textbox").fill(value);
           await group.getByRole("textbox").press("Enter");
-          await expect(group.getByText(words, { exact: true })).toBeVisible();
+          await expect(group.getByRole("slider")).toHaveAttribute(
+            "aria-valuetext",
+            value,
+          );
         }
+        await expect(
+          newPageStats(page).locator("line.chart-threshold-idle"),
+        ).toHaveCount(0);
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);
       });
 
-      test("a threshold of the variants typed at 0 and raised to 0.001", async ({
-        page,
-      }) => {
+      test("a threshold of the variants typed at 0", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         const missing = newPageStats(page).getByRole("group", {
           name: "Proportion of missing genotypes",
           exact: true,
         });
-        await expect(missing.getByText(/^Keeps .* variants$/u)).toBeVisible({
-          timeout: 20_000,
-        });
+        await expect(missing.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.1, keeps every variant",
+          { timeout: 20_000 },
+        );
         await missing.getByRole("textbox").fill("0");
         await missing.getByRole("textbox").press("Enter");
-        await expect(
-          missing.getByText("Counted as 0.001, the smallest threshold."),
-        ).toBeVisible();
-        await save(page, `popgen2-threshold-raised${at}-${theme}`);
+        await expect(missing.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0",
+        );
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-threshold-zero${at}-${theme}`);
       });
 
       test("the focus on the line of a threshold", async ({ page }) => {
@@ -4738,9 +4776,11 @@ for (const theme of ["light", "dark"] as const) {
           name: "Observed heterozygosity",
           exact: true,
         });
-        await expect(het.getByText("Keeps all 1,200 variants")).toBeVisible({
-          timeout: 20_000,
-        });
+        await expect(het.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.7, keeps every variant",
+          { timeout: 20_000 },
+        );
         // Reached with the Tab key from its box, over the plot, so that
         // the ring shows.
         await het.getByRole("textbox").focus();

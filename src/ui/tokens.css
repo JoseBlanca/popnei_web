@@ -44,6 +44,11 @@
   --chart-bar: #0072b2;
   --chart-axis: #555d68;
   --chart-threshold: #b3261e;
+  /* a threshold that removes nothing on popgen2.html: its line, and its
+     number in its box, in grey; 4.5:1 on the background, as text, and
+     3:1 from the text, so that the number is told from one that removes
+     something at a glance */
+  --chart-threshold-idle: #6b7078;
   /* the text over the colours of viridis in the cells of the heatmap,
      the same in both themes, as the colours under it are */
   --chart-text-on-light: #000000;
@@ -97,6 +102,7 @@
     --chart-bar: #56b4e9;
     --chart-axis: #a3abb5;
     --chart-threshold: #ff8a80;
+    --chart-threshold-idle: #7c8188;
   }
 }
 
@@ -118,6 +124,7 @@
   --chart-bar: #56b4e9;
   --chart-axis: #a3abb5;
   --chart-threshold: #ff8a80;
+  --chart-threshold-idle: #7c8188;
 }
 
 :root[data-theme="light"] {

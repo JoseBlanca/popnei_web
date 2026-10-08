@@ -66,6 +66,15 @@
   background: var(--chart-threshold);
 }
 
+/* A threshold that removes nothing: the handle and the line in grey, as
+   the plot draws its dashed line. */
+.overlay[data-muted] .thumb::before,
+.overlay[data-muted] .thumb[data-hovered]::after,
+.overlay[data-muted] .thumb[data-dragging]::after,
+.overlay[data-muted] .thumb[data-focus-visible]::after {
+  background: var(--chart-threshold-idle);
+}
+
 .thumb[data-focus-visible] {
   border-radius: var(--radius-sm);
   outline: var(--focus-ring);

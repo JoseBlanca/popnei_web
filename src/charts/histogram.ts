@@ -60,6 +60,12 @@ export interface HistogramThreshold {
   readonly value: number;
   /** The three rows of the legend at the top right, or null for none. */
   readonly legend: ThresholdLegend | null;
+  /** Whether the threshold keeps every value, which the screen knows
+      from what it counted and the bars drawn may not tell, a bar holding
+      values on both sides of it: its line is then drawn in grey, a
+      threshold that removes nothing, which the screen says in words to a
+      screen reader. False when absent. */
+  readonly keepsAll?: boolean;
 }
 
 /**
@@ -462,7 +468,12 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
     .selectAll<SVGLineElement, number>("line.chart-threshold")
     .data(threshold === null ? [] : [threshold])
     .join("line")
-    .attr("class", "chart-threshold")
+    .attr(
+      "class",
+      data.threshold?.keepsAll === true
+        ? "chart-threshold chart-threshold-idle"
+        : "chart-threshold",
+    )
     .attr("x1", (value) => x(value))
     .attr("x2", (value) => x(value))
     .attr("y1", frame.innerHeight)

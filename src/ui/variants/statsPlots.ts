@@ -4,47 +4,53 @@
  * and its description, and the row of its threshold. Each axis spans the
  * range of the values, rounded out to round numbers, the missing rates
  * from 0 (the owner, 6 October 2026): the variants' bins are popnei's
- * added up, `variantBinsRounded`, those of the individuals made from
- * popnei's values over that range, `binValuesRounded`. The axes are
+ * added up, `variantBinsRounded`, in bars no narrower than the distance
+ * between two values of the missing rate and of the MAF (the owner, 8
+ * October 2026), those of the individuals made from popnei's values over
+ * that range, `binValuesRounded`. The axes are
  * fitted to what is drawn, so those of a result so far widen as the pass
  * reads values outside them. Pure, so that a test in node checks the
- * counts, a value of NaN among them; the section draws them.
+ * bins and the grey of the thresholds, a value of NaN among them; the
+ * section draws them.
  *
  * Each histogram has a threshold that keeps the values at most it
  * (docs/plans/thresholds.md, "The design" and "Round 1 with the owner"):
  * drawn on the plot with no legend, since it is no filter, set in a box
- * after the short title, "Obs. het. max:", with the line of what it keeps
- * under that row, and moved by a slider laid over the plot, whose range
- * is the horizontal axis of the plot, `histogramScales`, widened as the
- * plot widens it to take a threshold outside the bins. The threshold the
- * user set is `null` until they move it, at the top of the axis, where it
- * keeps everything and follows the axis as a result so far widens it. It
- * moves by the step of its axis, `thresholdStep`, 0.01 on an axis of 0 to
- * 1: a number typed is shown and counted rounded to that step, and is
- * committed so, and a number the user set is shown and counted as set,
- * never rounded again when a result so far widens the axis and its step
- * grows. A threshold of the variants has three decimals at most, and is
- * 0.001 at least, `variantThresholdOnStep`, which a line under the box
- * says when a number typed is raised, `raisedLine`. So the number shown is the
- * number counted, exactly: those of the variants from popnei's fine
- * bins, `variantsAtMost`, those of the individuals from popnei's value
- * of each, `individualsAtMost`.
+ * after the short title, "Obs. het. max:", and moved by a slider laid
+ * over the plot, whose range is the horizontal axis of the plot,
+ * `histogramScales`, widened as the plot widens it to take a threshold
+ * outside the bins. No words say what it keeps (the owner, 8 October
+ * 2026, docs/plans/popnei-0.2.2.md): a threshold that keeps every
+ * variant or individual with a value, a filter that would do nothing, is
+ * drawn in grey, its line and the number in its box, and a screen reader
+ * hears it as the value of the slider and the description of the box.
+ * The threshold the user set is `null` until they move it, at the top of
+ * the axis, where it keeps everything and follows the axis as a result so
+ * far widens it. It moves by the step of its axis, `thresholdStep`, 0.01
+ * on an axis of 0 to 1: a number typed is shown rounded to that step,
+ * and is committed so, and a number the user set is shown as set, never
+ * rounded again when a result so far widens the axis and its step grows.
+ * A threshold of the variants has three decimals at most,
+ * `variantThresholdOnStep`, so that it is an edge of popnei's fine bins,
+ * which tell whether it keeps every variant, `variantsAllKept`; those of
+ * the individuals are told from popnei's value of each,
+ * `individualsAllKept`.
  */
 import {
   variantBinsRounded,
   variantHistogramDescription,
+  variantValueSpacing,
 } from "../../core/analyses/variantChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 import { individualHistogramDescription } from "../../core/analyses/individualChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
 import {
-  individualsAtMost,
+  individualsAllKept,
   thresholdOnStep,
   thresholdStep,
   variantThresholdOnStep,
-  variantThresholdRaised,
-  variantsAtMost,
+  variantsAllKept,
 } from "../../core/thresholds.ts";
 import { histogramRows, histogramScales } from "../../charts/histogram.ts";
 import type {
@@ -65,18 +71,16 @@ import {
   individualFullTitle,
   individualThresholdName,
   individualTitle,
-  keepsLine,
-  longestKeepsLine,
   noValueThresholdLine,
+  removesNothingText,
   SO_FAR_DESCRIPTION,
-  THRESHOLD_RAISED_LINE,
   thresholdShownLabel,
   thresholdValueText,
   variantFullTitle,
   variantThresholdName,
   variantTitle,
 } from "./statsWords.ts";
-import type { Counted, ThresholdCounts } from "./statsWords.ts";
+import type { Counted } from "./statsWords.ts";
 
 /** The most decimals a number typed in the box of a threshold may have;
     it is then rounded to the step of the axis. More are refused, as no
@@ -93,8 +97,8 @@ export interface StatsPlot {
   readonly threshold: PlotThreshold;
 }
 
-/** The threshold of a histogram, as its slider, its box and its words
-    show it. */
+/** The threshold of a histogram, as its slider and its box show it,
+    and the words a screen reader hears of it. */
 export interface PlotThreshold {
   /** What is drawn before the box, the short title and "max:", "Obs.
       het. max:". */
@@ -102,36 +106,27 @@ export interface PlotThreshold {
   /** The name of the slider and of the box, which starts with
       `shownLabel`: "Obs. het. max: maximum observed heterozygosity". */
   readonly name: string;
-  /** The number of the threshold as the box and the words show it, the
-      number counted: the number set, the number typed rounded to the
-      step of the axis, or the top of the axis. */
+  /** The number of the threshold as the box and the line show it: the
+      number set, the number typed rounded to the step of the axis, or the
+      top of the axis. */
   readonly shown: number;
   /** The range of the slider, the horizontal axis of the plot, its step
       and where it is. */
   readonly slider: SliderRange;
   /** The bounds and the step of the box. */
   readonly box: BoxRange;
-  /** The line under the row of the box: "Keeps 1,050 of 1,200
-      variants". */
-  readonly line: string;
-  /** The longest that line can be for the variants or the individuals
-      with a value, whose room it is kept in. */
-  readonly longestLine: string;
-  /** What a screen reader says as the value of the slider: "0.1, keeps
-      1,050 of 1,200 variants". */
+  /** Whether the threshold keeps every variant or individual with a
+      value, a filter that would remove nothing, drawn in grey. */
+  readonly keepsAll: boolean;
+  /** What a screen reader says as the value of the slider: "0.05", and
+      "1, keeps every variant" when `keepsAll`. */
   readonly valueText: string;
+  /** The description of the box when `keepsAll`, "This threshold removes
+      no variant.", which the grey says to the eye; `null` otherwise. */
+  readonly removesNothing: string | null;
   /** The threshold for `value`, a number typed or a place of the slider:
       `value` rounded to the step of the axis, as it is committed. */
   readonly onStep: (value: number) => number;
-  /** The line said under the box when a number typed and committed is
-      raised by `onStep` to the least threshold, `raises`, and kept room
-      for under the line of what it keeps, so that the plot does not move
-      when it appears: `THRESHOLD_RAISED_LINE` for the variants, `null`
-      for the individuals, whose threshold is never raised. */
-  readonly raisedLine: string | null;
-  /** Whether `onStep` raises `value`, a number committed, to the least
-      threshold of the variants, 0.001; never for the individuals. */
-  readonly raises: (value: number) => boolean;
 }
 
 /** The range of a slider and where its thumb is. */
@@ -168,36 +163,53 @@ export interface IndividualPlot {
   readonly noValueLine: string | null;
 }
 
+/** The individuals the statistics of the variants are calculated over,
+    every individual of the file, and their ploidy, which set the least
+    distance between two values of the missing rate and of the MAF, and
+    so the narrowest bar of their histograms. */
+export interface PassIndividuals {
+  readonly numIndividuals: number;
+  readonly ploidy: number;
+}
+
 /** The histogram of the variants of `statistic`, popnei's bins added up
-    over the range of those with a count, rounded out, over the variants
-    in them, which leaves out a variant with no value; its description and
-    the words of its threshold say "so far" for a result so far, `soFar`.
-    `threshold` is the number the user set, drawn and counted as it is, or
-    `null` for the top of the axis; `typed`, a number the user is typing,
-    drawn and counted in its place rounded to the step of the axis. */
+    over the range of those with a count, rounded out, in bars no
+    narrower than the distance between two values the statistic can take
+    over `individuals`, over the variants in them, which leaves out a
+    variant with no value; its description and the words of its
+    threshold say "so far" for a result so far, `soFar`. `threshold` is
+    the number the user set, drawn as it is, or `null` for the top of the
+    axis; `typed`, a number the user is typing, drawn in its place
+    rounded to the step of the axis. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
+  individuals: PassIndividuals,
   soFar: boolean,
   threshold: number | null,
   typed: number | null = null,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
-  const bins = variantBinsRounded(result, statistic);
+  const spacing = variantValueSpacing(
+    statistic,
+    individuals.numIndividuals,
+    individuals.ploidy,
+  );
+  const bins = variantBinsRounded(result, statistic, spacing);
   const axisLow = at(bins.edges, 0);
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number =>
     variantThresholdOnStep(value, decimals);
   const shown = shownOf(threshold, typed, axisHigh, onStep);
-  const counts = variantsAtMost(result, statistic, shown);
+  const keepsAll = variantsAllKept(result, statistic, shown, spacing);
   const plotted = {
     title: variantFullTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown),
+    threshold: noLegend(shown, keepsAll),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
@@ -215,13 +227,11 @@ export function variantPlot(
       name: variantThresholdName(statistic),
       shown,
       slider: { min: low, max: high, step, value: shown },
-      // From 0, which the box takes and `onStep` raises to 0.001: React
-      // Aria would put a number typed on the steps from its least value.
+      // From 0: React Aria would put a number typed on the steps from
+      // its least value.
       box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
-      ...wordsOf(shown, counts, "variant", soFar),
+      ...wordsOf(shown, keepsAll, "variant", soFar),
       onStep,
-      raisedLine: THRESHOLD_RAISED_LINE,
-      raises: (value) => variantThresholdRaised(value, decimals),
     },
   };
 }
@@ -259,13 +269,14 @@ export function individualPlot(
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number => thresholdOnStep(value, decimals);
   const shown = shownOf(threshold, typed, axisHigh, onStep);
+  const keepsAll = individualsAllKept(values, shown);
   const plotted = {
     title: individualFullTitle(statistic),
     xLabel: words.xLabel,
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown),
+    threshold: noLegend(shown, keepsAll),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
@@ -275,8 +286,6 @@ export function individualPlot(
       soFar,
     ),
   };
-  const { kept, removed } = individualsAtMost(values, shown);
-  const counts = { kept, withValue: kept + removed };
   const [low, high] = axisOf(data);
   return {
     plot: {
@@ -287,17 +296,15 @@ export function individualPlot(
         shown,
         slider: { min: low, max: high, step, value: shown },
         box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
-        ...wordsOf(shown, counts, "individual", soFar),
+        ...wordsOf(shown, keepsAll, "individual", soFar),
         onStep,
-        raisedLine: null,
-        raises: () => false,
       },
     },
     noValueLine: noValueThresholdLine(bins.numNaN, soFar),
   };
 }
 
-/** The number a threshold is shown and counted at: `typed`, a number
+/** The number a threshold is shown at: `typed`, a number
     being typed, rounded to the step of the axis by `onStep`; else
     `threshold`, the number the user set, as it is, since it was rounded
     to the step of its axis when committed and a result so far that
@@ -313,10 +320,10 @@ function shownOf(
   return threshold ?? onStep(axisHigh);
 }
 
-/** A threshold at `value` drawn with no legend: it is no filter, and the
-    line over the plot says what it keeps. */
-function noLegend(value: number): HistogramThreshold {
-  return { value, legend: null };
+/** A threshold at `value` drawn with no legend, since it is no filter,
+    in grey when it keeps every value, `keepsAll`. */
+function noLegend(value: number, keepsAll: boolean): HistogramThreshold {
+  return { value, legend: null, keepsAll };
 }
 
 /** The two ends of the horizontal axis the plot draws `data` with, the
@@ -329,22 +336,23 @@ function axisOf(data: HistogramData): readonly [number, number] {
   return [low, high];
 }
 
-/** The line under the row of the box, its longest form, and the value
-    text of the slider. */
+/** What a screen reader hears of a threshold, which keeps every one
+    with a value when `keepsAll`: the value text of the slider and the
+    description of the box. */
 function wordsOf(
   shown: number,
-  counts: ThresholdCounts,
+  keepsAll: boolean,
   noun: Counted,
   soFar: boolean,
 ): {
-  readonly line: string;
-  readonly longestLine: string;
+  readonly keepsAll: boolean;
   readonly valueText: string;
+  readonly removesNothing: string | null;
 } {
   return {
-    line: keepsLine(counts, noun, soFar),
-    longestLine: longestKeepsLine(counts.withValue, noun),
-    valueText: thresholdValueText(shown, counts, noun, soFar),
+    keepsAll,
+    valueText: thresholdValueText(shown, keepsAll, noun, soFar),
+    removesNothing: keepsAll ? removesNothingText(noun, soFar) : null,
   };
 }
 

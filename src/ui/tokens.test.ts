@@ -115,6 +115,11 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--chart-bar", "--color-background", 3],
   ["--chart-axis", "--color-background", 3],
   ["--chart-threshold", "--color-background", 3],
+  // A threshold that removes nothing on popgen2.html: its grey line on
+  // the plot, and its grey number in its box, whose background is the
+  // page's, told from the number of one that removes something.
+  ["--chart-threshold-idle", "--color-background", 4.5],
+  ["--color-text", "--chart-threshold-idle", 3],
   // The fill of a mark with no outline carries the 3:1 of a mark itself
   // (docs/specs/charts/scatter.md, "The marks of the groups", stop C 2).
   ...[0, 1, 2, 3, 4, 5, 6]

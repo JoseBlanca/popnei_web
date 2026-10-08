@@ -62,6 +62,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A number that does nothing as it is, a threshold that removes nothing:
+   grey, 4.5:1 on the background and 3:1 from the text. */
+.input[data-muted] {
+  color: var(--chart-threshold-idle);
+}
+
 .input[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);

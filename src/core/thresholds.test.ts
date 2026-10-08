@@ -1,6 +1,8 @@
 /**
- * The counts of the thresholds (docs/plans/thresholds.md, "The phases",
- * 1; docs/plans/popnei-0.2.2.md, phase 2). The numbers of popnei are
+ * Whether a threshold keeps every variant or individual, and the steps
+ * of the thresholds (docs/plans/thresholds.md, "The phases", 1;
+ * docs/plans/popnei-0.2.2.md, phase 2 and "The owner's first round").
+ * The numbers of popnei are
  * those of e2e/fixtures/threshold_counts.json, which make_fixtures.mjs
  * wrote with popnei 0.2.2 under node on 7 October 2026, since the tests of
  * core may not call popnei: the edges and the counts of the 1,000 fine
@@ -16,14 +18,12 @@ import { VARIANT_FINE_BINS, VARIANT_RANGE } from "./analyses/variantChecks.ts";
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import { deepFreeze } from "./testSupport.ts";
 import {
-  LEAST_VARIANT_THRESHOLD,
   VARIANT_THRESHOLD_DECIMALS,
-  individualsAtMost,
+  individualsAllKept,
   thresholdOnStep,
   thresholdStep,
   variantThresholdOnStep,
-  variantThresholdRaised,
-  variantsAtMost,
+  variantsAllKept,
 } from "./thresholds.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 import { INSTALLED_POPNEI_VERSION } from "../worker/testSupport.ts";
@@ -241,51 +241,41 @@ describe("popnei's edges", () => {
   });
 });
 
-describe("variantsAtMost", () => {
+describe("variantsAllKept", () => {
   test.each([
-    [1, 1],
-    [2, 3],
-    [3, 6],
-    [4, 10],
-  ])("on the edge %i of SMALL, the bins below it, %i of 10", (index, kept) => {
-    expect(variantsAtMost(SMALL, "maf", index / 4)).toEqual({
-      kept,
-      withValue: 10,
-    });
+    [0.25, false],
+    [0.5, false],
+    [0.75, false],
+    [1, true],
+    [1.5, true],
+  ])(
+    "on SMALL, whose last bin with a count ends at 1, at %s: %s",
+    (value, kept) => {
+      expect(variantsAllKept(SMALL, "maf", value, null)).toBe(kept);
+    },
+  );
+
+  test("of the statistic asked for: the observed heterozygosity of SMALL, all in the first bin, is kept whole from its right edge, 0.25", () => {
+    expect(variantsAllKept(SMALL, "obsHet", 0.25, null)).toBe(true);
+    expect(variantsAllKept(SMALL, "obsHet", 0.2, null)).toBe(false);
   });
 
-  test("above the last edge, every variant with a value", () => {
-    for (const value of [1, 1.5]) {
-      expect(variantsAtMost(SMALL, "maf", value)).toEqual({
-        kept: 10,
-        withValue: 10,
-      });
-    }
+  test("with no variant in a bin, any threshold keeps them all", () => {
+    expect(variantsAllKept(SMALL, "unbiasedExpHet", 0, null)).toBe(true);
   });
 
-  test("of the statistic asked for", () => {
-    expect(variantsAtMost(SMALL, "obsHet", 0.25)).toEqual({
-      kept: 4,
-      withValue: 4,
-    });
-    expect(variantsAtMost(SMALL, "unbiasedExpHet", 0.5)).toEqual({
-      kept: 0,
-      withValue: 0,
-    });
-  });
-
-  test("the first edge, 0, which the first bin holds with the values above it, a number between two edges, below the first, NaN or infinite, are defects", () => {
-    for (const value of [0, -0.1, 0.1, 0.3, 0.99, NaN, -Infinity]) {
-      expect(() => variantsAtMost(SMALL, "maf", value)).toThrow(
-        /popnei_web defect/,
-      );
-    }
+  test("at 0, every variant in the first bin, which holds 0 and the values up to 0.25: kept whole only when the values are spaced wider than the bin, and it holds 0 alone", () => {
+    expect(variantsAllKept(SMALL, "obsHet", 0, null)).toBe(false);
+    expect(variantsAllKept(SMALL, "obsHet", 0, 0.25)).toBe(false);
+    expect(variantsAllKept(SMALL, "obsHet", 0, 0.3)).toBe(true);
+    // Not below 0, the first edge.
+    expect(variantsAllKept(SMALL, "obsHet", -0.1, 0.3)).toBe(false);
   });
 
   test("edges fewer than two, or that do not go up, are a defect", () => {
     for (const edges of [[0], [0, 0.5, 0.5, 0.75, 1]]) {
       const part = { ...SMALL, binEdges: Float64Array.from(edges) };
-      expect(() => variantsAtMost(part, "maf", 0.75)).toThrow(
+      expect(() => variantsAllKept(part, "maf", 0.75, null)).toThrow(
         /popnei_web defect/,
       );
     }
@@ -296,52 +286,41 @@ describe("variantsAtMost", () => {
       ...SMALL,
       maf: { mean: 0.5, counts: Uint32Array.from([1, 2, 3]) },
     };
-    expect(() => variantsAtMost(part, "maf", 0.25)).toThrow(
+    expect(() => variantsAllKept(part, "maf", 0.25, null)).toThrow(
       /popnei_web defect/,
     );
   });
 
-  test.each(["panel.vcf.gz", "low_qual.vcf.gz"] as const)(
-    "%s: at 0.05, 0.1, 0.123 and 0.95 the count equals the variants popnei's filter of the statistic keeps",
-    (name) => {
-      const { part, filterKept } = fixture(name);
-      const counted = Object.fromEntries(
-        (["missingRate", "maf", "obsHet"] as const).map((statistic) => [
-          statistic,
-          THRESHOLDS.map(
-            (threshold) => variantsAtMost(part, statistic, threshold).kept,
-          ),
-        ]),
-      );
-      expect(counted).toEqual(filterKept);
-      // popnei's numbers under node, written out.
-      expect(counted).toEqual({
-        missingRate: [1152, 1200, 1200, 1200],
-        maf: [0, 0, 0, 1175],
-        obsHet: [4, 31, 48, 1200],
-      });
-    },
-  );
-
   test.each(FIXTURE_NAMES)(
-    "%s: at every edge from 0.001 to 1 the count equals the variants popnei's filter keeps, and popnei's count of the values at most it for the four statistics",
+    "%s: at every edge from 0.001 to 1, true exactly where popnei counts every variant with a value at most it, and where popnei's filter of the statistic keeps every variant",
     (name) => {
       const { part, filterKeptAtEdges, histKeptAtEdges } = fixture(name);
       for (const statistic of STATISTICS) {
-        const counted = Array.from(
-          { length: 1000 },
-          (_, k) => variantsAtMost(part, statistic, (k + 1) / 1000).kept,
+        const all = histKeptAtEdges[statistic].at(-1);
+        const told = Array.from({ length: 1000 }, (_, k) =>
+          variantsAllKept(part, statistic, (k + 1) / 1000, null),
         );
-        expect(counted).toEqual(histKeptAtEdges[statistic]);
+        expect(told).toEqual(
+          histKeptAtEdges[statistic].map((kept) => kept === all),
+        );
         if (statistic !== "unbiasedExpHet") {
-          expect(counted).toEqual(filterKeptAtEdges[statistic]);
+          expect(told).toEqual(
+            filterKeptAtEdges[statistic].map(
+              (kept) => kept === filterKeptAtEdges[statistic].at(-1),
+            ),
+          );
         }
-        expect(variantsAtMost(part, statistic, 1).withValue).toBe(
-          part.passStats.numVars,
-        );
       }
     },
   );
+
+  test("panel.vcf.gz: the missing rate is kept whole from 0.08, the right edge of its last bin with a count, which holds the one variant with 16 of 200 genotypes missing", () => {
+    const { part } = fixture("panel.vcf.gz");
+    expect(variantsAllKept(part, "missingRate", 0.079, 0.005)).toBe(false);
+    expect(variantsAllKept(part, "missingRate", 0.08, 0.005)).toBe(true);
+    // Two variants have no missing genotype: 0 keeps those two alone.
+    expect(variantsAllKept(part, "missingRate", 0, 0.005)).toBe(false);
+  });
 });
 
 describe("variantThresholdOnStep", () => {
@@ -351,24 +330,18 @@ describe("variantThresholdOnStep", () => {
     [0.1235, 3, 0.124],
     [0.12345, 4, 0.123],
     [0.12345, 2, 0.12],
-    [0.0004, 3, 0.001],
-    [0, 2, 0.001],
-    [-0.5, 2, 0.001],
+    [0.0004, 3, 0],
+    [0.0005, 3, 0.001],
+    [0, 2, 0],
+    [0.004, 2, 0],
     [0.95, 2, 0.95],
     [1, 2, 1],
   ])(
-    "%s at %i decimals is %s: three decimals at most, 0.001 at least",
+    "%s at %i decimals is %s: three decimals at most, and 0 is a threshold",
     (value, decimals, shown) => {
       expect(variantThresholdOnStep(value, decimals)).toBe(shown);
     },
   );
-
-  test("the least threshold is the first edge above 0", () => {
-    expect(LEAST_VARIANT_THRESHOLD).toBe(0.001);
-    expect(LEAST_VARIANT_THRESHOLD).toBe(
-      fixture("panel.vcf.gz").part.binEdges[1],
-    );
-  });
 
   test("a value that is NaN or infinite is a defect", () => {
     expect(() => variantThresholdOnStep(NaN, 2)).toThrow(/popnei_web defect/);
@@ -377,106 +350,45 @@ describe("variantThresholdOnStep", () => {
     );
   });
 
-  test("every number it gives on panel.vcf.gz, every 0.0001 from 0 to 1, has a count", () => {
-    const { part } = fixture("panel.vcf.gz");
+  test("every number it gives, every 0.0001 from 0 to 1, is an edge of popnei's bins", () => {
+    const { binEdges } = fixture("panel.vcf.gz").part;
     for (let units = 0; units <= 10000; units += 1) {
       const shown = variantThresholdOnStep(units / 10000, 3);
-      expect(() => variantsAtMost(part, "maf", shown)).not.toThrow();
+      expect(binEdges).toContain(shown);
     }
   });
 });
 
-describe("variantThresholdRaised", () => {
-  test.each([
-    [0, 2, true],
-    [0.0004, 3, true],
-    [0.0004, 10, true],
-    [0.004, 2, true],
-    [0.0005, 3, false],
-    [0.001, 3, false],
-    [0.05, 2, false],
-    [1, 2, false],
-  ])("%s at %i decimals is raised to 0.001: %s", (value, decimals, raised) => {
-    expect(variantThresholdRaised(value, decimals)).toBe(raised);
-    if (raised) {
-      expect(variantThresholdOnStep(value, decimals)).toBe(
-        LEAST_VARIANT_THRESHOLD,
-      );
-    }
-  });
-
-  test("a value that is NaN is a defect", () => {
-    expect(() => variantThresholdRaised(NaN, 2)).toThrow(/popnei_web defect/);
-  });
-});
-
-describe("individualsAtMost", () => {
+describe("individualsAllKept", () => {
   const values = Float64Array.from([0, 0.1, 0.2, NaN, 0.1]);
 
   test.each([
-    [0.1, 3, 1],
-    [0, 1, 3],
-    [0.15, 3, 1],
-    [1, 4, 0],
-    [-1, 0, 4],
-    [5, 4, 0],
-  ])(
-    "at %s, %i kept and %i removed, the NaN with no value",
-    (threshold, kept, removed) => {
-      expect(individualsAtMost(values, threshold)).toEqual({
-        kept,
-        removed,
-        noValue: 1,
-      });
-    },
-  );
+    [0, false],
+    [0.1, false],
+    [0.19, false],
+    [0.2, true],
+    [5, true],
+  ])("at %s: %s, the NaN in neither count", (threshold, kept) => {
+    expect(individualsAllKept(values, threshold)).toBe(kept);
+  });
 
-  test("every value NaN: none kept and none removed, both with no value", () => {
-    expect(individualsAtMost(Float64Array.from([NaN, NaN]), 0.5)).toEqual({
-      kept: 0,
-      removed: 0,
-      noValue: 2,
-    });
+  test("every value NaN: true, since it removes none", () => {
+    expect(individualsAllKept(Float64Array.from([NaN, NaN]), 0)).toBe(true);
   });
 
   test("a threshold that is NaN is a defect", () => {
-    expect(() => individualsAtMost(values, NaN)).toThrow(/popnei_web defect/);
+    expect(() => individualsAllKept(values, NaN)).toThrow(/popnei_web defect/);
   });
 
   test.each(["panel.vcf.gz", "panel.nei"] as const)(
-    "%s: popnei's values, a threshold on a value keeps it",
+    "%s: popnei's values, a threshold on the largest keeps every one, and one just below does not",
     (name) => {
       const { missingGtRate, obsHetRate } = fixture(name);
-      // The missing rate of s000, which 12 individuals have.
-      expect(individualsAtMost(missingGtRate, 0.028333333333333332)).toEqual({
-        kept: 89,
-        removed: 111,
-        noValue: 0,
-      });
-      expect(individualsAtMost(missingGtRate, 0.03)).toEqual({
-        kept: 116,
-        removed: 84,
-        noValue: 0,
-      });
-      expect(individualsAtMost(obsHetRate, 0.35)).toEqual({
-        kept: 73,
-        removed: 127,
-        noValue: 0,
-      });
+      for (const values of [missingGtRate, obsHetRate]) {
+        const largest = Math.max(...values);
+        expect(individualsAllKept(values, largest)).toBe(true);
+        expect(individualsAllKept(values, largest - 1e-9)).toBe(false);
+      }
     },
   );
-
-  test("tetraploid.vcf.gz: the missing rate at 0.05 keeps the 3 at 0.05, 8 of 12", () => {
-    const { missingGtRate, obsHetRate } = fixture("tetraploid.vcf.gz");
-    expect(individualsAtMost(missingGtRate, 0.05)).toEqual({
-      kept: 8,
-      removed: 4,
-      noValue: 0,
-    });
-    expect(individualsAtMost(obsHetRate, 0.5)).toEqual({
-      kept: 0,
-      removed: 12,
-      noValue: 0,
-    });
-  });
 });

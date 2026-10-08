@@ -12,8 +12,7 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import { LEAST_VARIANT_THRESHOLD } from "../../core/thresholds.ts";
-import { counted, escaped, grouped } from "../../core/project.ts";
+import { counted, escaped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
@@ -120,7 +119,7 @@ export const PART_STOPPED =
     words the box of the file says. */
 export const PART_FAILED = "Not calculated.";
 
-/** What a line of a plot drawn from a result so far ends with. */
+/** What the words of a threshold drawn from a result so far end with. */
 const SO_FAR = " so far";
 
 /** What the description of a histogram drawn from a result so far ends
@@ -250,78 +249,32 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
   observedHeterozygosity: "maximum observed heterozygosity of an individual",
 });
 
-/** The line under the box of a threshold of the variants after a number
-    is set that lands below 0.001, typed so or rounded to 0 on the step of
-    its axis, which the box raises to 0.001, as it shows: the first of
-    popnei's fine bins holds 0 and the values above it up to 0.001, so the
-    count of the variants at most 0 cannot be told from it. Said, since a
-    box never turns a number typed into another without a word
-    (docs/specs/steps/variants.md, "A number the fields do not take"); in
-    words true of both ways, one line of the plot's column at 1280
-    pixels and two at 320. */
-export const THRESHOLD_RAISED_LINE = `Counted as ${numberText(LEAST_VARIANT_THRESHOLD)}, the smallest threshold.`;
-
-/** What a threshold keeps of the variants or the individuals of one
-    histogram, those with a value: `kept` of `withValue`. */
-export interface ThresholdCounts {
-  /** Those it keeps, whose value is at most it. */
-  readonly kept: number;
-  /** Those with a value, which it keeps or removes. */
-  readonly withValue: number;
-}
-
-/** The kind of what a histogram counts, in the words under it. */
+/** The kind of what a histogram counts, in the words of its threshold. */
 export type Counted = "variant" | "individual";
 
-/** The line under the row of a threshold, over its plot: what it keeps
-    of those with a value, "Keeps 1,050 of 1,200 variants", or "Keeps all
-    1,200 variants"; ending "so far" while the pass runs, `soFar`. */
-export function keepsLine(
-  counts: ThresholdCounts,
-  noun: Counted,
-  soFar = false,
-): string {
-  const keeps = keepsWords(counts, noun);
-  return `${keeps.charAt(0).toUpperCase()}${keeps.slice(1)}${soFar ? SO_FAR : ""}`;
-}
-
-/** The longest the line of a threshold can be over `withValue`
-    variants or individuals with a value, "so far": a number of the digits
-    of `withValue`, "Keeps 200,000 of 200,000 variants so far", or the
-    words of all, of the only one or of none when they are longer, "No
-    variant has a value so far". The screen keeps the room of it under the
-    line, so that the plot does not move as the words change, while the
-    line is dragged and at the end of the pass. */
-export function longestKeepsLine(withValue: number, noun: Counted): string {
-  const number = `Keeps ${grouped(withValue)} of ${counted(withValue, noun)}${SO_FAR}`;
-  const all = keepsLine({ kept: withValue, withValue }, noun, true);
-  return all.length > number.length ? all : number;
-}
-
-/** What the line of a threshold says to a screen reader as its value:
-    the number, `shown` as the box shows it, and what it keeps of those
-    with a value, "0.1, keeps 1,050 of 1,200 variants", "0.3, keeps all
-    1,200 variants"; ending "so far" while the pass runs, `soFar`. */
+/** What a screen reader says as the value of the line of a threshold:
+    the number, `shown` as the box shows it, "0.05"; and for a threshold
+    that keeps every variant or individual with a value, `keepsAll`,
+    which the screen draws in grey, what that grey says, "1, keeps every
+    variant", ending "so far" while the pass runs, `soFar`. */
 export function thresholdValueText(
   shown: number,
-  counts: ThresholdCounts,
+  keepsAll: boolean,
   noun: Counted,
   soFar = false,
 ): string {
-  return `${numberText(shown)}, ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+  const number = numberText(shown);
+  return keepsAll
+    ? `${number}, keeps every ${noun}${soFar ? SO_FAR : ""}`
+    : number;
 }
 
-/** What a threshold keeps, in lower case: "keeps 1,152 of 1,200
-    variants", "keeps all 1,200 variants", "no variant has a value". */
-function keepsWords(counts: ThresholdCounts, noun: Counted): string {
-  const { kept, withValue } = counts;
-  if (withValue === 0) return `no ${noun} has a value`;
-  if (kept === withValue) {
-    return withValue === 1
-      ? `keeps the only ${noun}`
-      : `keeps all ${counted(withValue, noun)}`;
-  }
-  return `keeps ${grouped(kept)} of ${counted(withValue, noun)}`;
+/** What a screen reader says of the box of a threshold that keeps every
+    variant or individual with a value, which the screen draws in grey,
+    as its description: "This threshold removes no variant."; ending "so
+    far" while the pass runs, `soFar`. */
+export function removesNothingText(noun: Counted, soFar = false): string {
+  return `This threshold removes no ${noun}${soFar ? SO_FAR : ""}.`;
 }
 
 /** The line under a histogram of the individuals of those with no value,

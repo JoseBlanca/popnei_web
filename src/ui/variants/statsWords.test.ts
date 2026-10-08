@@ -6,8 +6,7 @@ import {
   individualFullTitle,
   individualThresholdName,
   individualTitle,
-  keepsLine,
-  longestKeepsLine,
+  removesNothingText,
   statsFirstText,
   statsRunningLine,
   thresholdShownLabel,
@@ -73,83 +72,31 @@ describe("the words of the statistics of the open file", () => {
   });
 });
 
-describe("thresholds round 1 the line of what a threshold keeps", () => {
-  test("one number, all when it keeps every one; no explanation", () => {
-    expect(keepsLine({ kept: 1050, withValue: 1200 }, "variant")).toBe(
-      "Keeps 1,050 of 1,200 variants",
+describe("the owner's first round: what a screen reader hears of a threshold, with no line of what it keeps", () => {
+  test("the value of the line is the number alone, and with what the grey says when it keeps every one", () => {
+    expect(thresholdValueText(0.05, false, "variant")).toBe("0.05");
+    expect(thresholdValueText(0, false, "variant")).toBe("0");
+    expect(thresholdValueText(1, true, "variant")).toBe(
+      "1, keeps every variant",
     );
-    expect(keepsLine({ kept: 1200, withValue: 1200 }, "variant")).toBe(
-      "Keeps all 1,200 variants",
-    );
-  });
-
-  test("while the pass runs it ends so far", () => {
-    expect(keepsLine({ kept: 1152, withValue: 1200 }, "variant", true)).toBe(
-      "Keeps 1,152 of 1,200 variants so far",
-    );
-    expect(keepsLine({ kept: 180, withValue: 200 }, "individual", true)).toBe(
-      "Keeps 180 of 200 individuals so far",
+    expect(thresholdValueText(0.15, true, "individual")).toBe(
+      "0.15, keeps every individual",
     );
   });
 
-  test("one, none, and no value at all", () => {
-    expect(keepsLine({ kept: 1, withValue: 3 }, "individual")).toBe(
-      "Keeps 1 of 3 individuals",
+  test("while the pass runs the words of the grey end so far, and the number alone stays alone", () => {
+    expect(thresholdValueText(0.6, true, "variant", true)).toBe(
+      "0.6, keeps every variant so far",
     );
-    expect(keepsLine({ kept: 0, withValue: 3 }, "individual")).toBe(
-      "Keeps 0 of 3 individuals",
-    );
-    expect(keepsLine({ kept: 1, withValue: 1 }, "variant")).toBe(
-      "Keeps the only variant",
-    );
-    expect(keepsLine({ kept: 0, withValue: 0 }, "variant")).toBe(
-      "No variant has a value",
-    );
+    expect(thresholdValueText(0.004, false, "variant", true)).toBe("0.004");
   });
 
-  test("the value text of the line says the number and what it keeps", () => {
-    expect(
-      thresholdValueText(0.1, { kept: 1050, withValue: 1200 }, "variant"),
-    ).toBe("0.1, keeps 1,050 of 1,200 variants");
-    expect(
-      thresholdValueText(0.05, { kept: 1152, withValue: 1200 }, "variant"),
-    ).toBe("0.05, keeps 1,152 of 1,200 variants");
-    expect(
-      thresholdValueText(0.3, { kept: 1200, withValue: 1200 }, "variant"),
-    ).toBe("0.3, keeps all 1,200 variants");
-    expect(
-      thresholdValueText(0.004, { kept: 2, withValue: 1200 }, "variant", true),
-    ).toBe("0.004, keeps 2 of 1,200 variants so far");
-  });
-});
-
-describe("th4 fix 1 the room of the line of what a threshold keeps", () => {
-  test("the longest the line can be for the number with a value: a number of its digits, so far, or the words of all, the only one or none when longer", () => {
-    expect(longestKeepsLine(200_000, "variant")).toBe(
-      "Keeps 200,000 of 200,000 variants so far",
+  test("the description of the box of a threshold that removes nothing", () => {
+    expect(removesNothingText("variant")).toBe(
+      "This threshold removes no variant.",
     );
-    expect(longestKeepsLine(1200, "variant")).toBe(
-      "Keeps 1,200 of 1,200 variants so far",
+    expect(removesNothingText("individual", true)).toBe(
+      "This threshold removes no individual so far.",
     );
-    expect(longestKeepsLine(12, "individual")).toBe(
-      "Keeps 12 of 12 individuals so far",
-    );
-    expect(longestKeepsLine(1, "individual")).toBe(
-      "Keeps the only individual so far",
-    );
-    expect(longestKeepsLine(0, "variant")).toBe(
-      "No variant has a value so far",
-    );
-    // Every line of a count is at most as long, in characters.
-    for (const withValue of [0, 1, 2, 12, 200_000]) {
-      for (const kept of [0, 1, Math.floor(withValue / 2), withValue]) {
-        if (kept > withValue) continue;
-        for (const noun of ["variant", "individual"] as const) {
-          expect(
-            keepsLine({ kept, withValue }, noun, true).length,
-          ).toBeLessThanOrEqual(longestKeepsLine(withValue, noun).length);
-        }
-      }
-    }
   });
 });

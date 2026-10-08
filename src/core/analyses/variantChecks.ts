@@ -393,20 +393,63 @@ const SMALLEST_STEP = 0.05;
 const ROUNDED_BINS = 40;
 
 /**
+ * The least distance between two values of `statistic` that popnei can
+ * give over `numIndividuals` individuals of ploidy `ploidy`, which no bar
+ * of popgen2.html is narrower than (docs/plans/popnei-0.2.2.md, "The
+ * owner's first round"): 1 / n for the missing rate, the missing
+ * genotypes of a variant over the n individuals of the pass, so that on
+ * panel.nei, of 200 individuals, a missing rate is a multiple of 0.005;
+ * 1 / (ploidy · n) for the MAF, a count of alleles over the alleles of
+ * the n individuals, a few fewer where genotypes are missing. `null` for
+ * the two heterozygosities, whose values have no such step, and for no
+ * individual.
+ */
+export function variantValueSpacing(
+  statistic: VariantStatistic,
+  numIndividuals: number,
+  ploidy: number,
+): number | null {
+  if (numIndividuals === 0) return null;
+  switch (statistic) {
+    case "missingRate":
+      return 1 / numIndividuals;
+    case "maf":
+      return 1 / (ploidy * numIndividuals);
+    case "obsHet":
+    case "unbiasedExpHet":
+      return null;
+  }
+}
+
+/** How far below a whole number of popnei's bins a spacing may be and
+    still take that number: the error of a division of two doubles. */
+const SPACING_TOLERANCE = 1e-9;
+
+/**
  * The bins of `statistic` that popgen2.html draws: over the range from
  * the first bin of popnei with a count to the last, from 0 for the
  * missing rate, rounded out to steps of 0.05 at least (`roundedRange` of
  * histogram.ts), the number of popnei's bins in each that makes the bins
  * nearest 40, the fewer of two as near, every bin the same number of
- * popnei's. Each count is popnei's counts added up, and the edges are
- * popnei's. A bin of popnei holds its right edge, so a MAF of 0.5 is in
- * the bin that ends at 0.5, and an axis whose least value is 0.5 starts
- * at 0.45. With no variant in a bin, the 40 bins over 0 to 1. Throws a
- * defect for a result whose ends of a range are not edges of its bins.
+ * popnei's. No bin is narrower than `spacing`, the least distance
+ * between two values of the statistic (`variantValueSpacing`), rounded up
+ * to a whole number of popnei's bins, so that no bar stands empty
+ * between two values: on panel.nei the missing rate, multiples of 1 /
+ * 200, is drawn in 20 bins of 0.005 from 0 to 0.1, where it was 50 of
+ * 0.002, more than half of them empty. Where a range of steps of 0.05
+ * would hold too few such bins, it is rounded to a larger step, at least
+ * that bin: the missing rate of 12 individuals, multiples of 1 / 12, from
+ * 0 to 0.25 is drawn from 0 to 0.3 in 3 bins of 0.1. Each count is
+ * popnei's counts added up, and the edges are popnei's. A bin of popnei
+ * holds its right edge, so a MAF of 0.5 is in the bin that ends at 0.5,
+ * and an axis whose least value is 0.5 starts at 0.45. With no variant in
+ * a bin, the 40 bins over 0 to 1. Throws a defect for a result whose ends
+ * of a range are not edges of its bins.
  */
 export function variantBinsRounded(
   result: VariantStatsPart,
   statistic: VariantStatistic,
+  spacing: number | null,
 ): VariantBins {
   const counts = result[statistic].counts;
   const numFine = counts.length;
@@ -415,22 +458,27 @@ export function variantBinsRounded(
     return variantBins(result, statistic);
   }
   const last = counts.findLastIndex((count) => count > 0) + 1;
+  const leastPerBin =
+    spacing === null
+      ? 1
+      : Math.max(1, Math.ceil(spacing * numFine - SPACING_TOLERANCE));
   const [low, high] = roundedRange(
     statistic === "missingRate" ? 0 : first / numFine,
     last / numFine,
-    SMALLEST_STEP,
+    Math.max(SMALLEST_STEP, leastPerBin / numFine),
   );
   const from = fineIndexOf(low, numFine);
   const to = fineIndexOf(high, numFine);
-  return summed(result, statistic, from, to, perBinOf(to - from));
+  return summed(result, statistic, from, to, perBinOf(to - from, leastPerBin));
 }
 
 /** The number of popnei's bins in each of those over `numFine` of them
-    that makes them nearest `ROUNDED_BINS`, a divisor of `numFine`, the
-    larger of two as near. */
-function perBinOf(numFine: number): number {
+    that makes them nearest `ROUNDED_BINS`, a divisor of `numFine` of at
+    least `leastPerBin`, the larger of two as near; `numFine` when it is
+    below `leastPerBin`. */
+function perBinOf(numFine: number, leastPerBin: number): number {
   let best = numFine;
-  for (let perBin = numFine; perBin >= 1; perBin -= 1) {
+  for (let perBin = numFine; perBin >= leastPerBin; perBin -= 1) {
     if (numFine % perBin !== 0) continue;
     const distance = Math.abs(numFine / perBin - ROUNDED_BINS);
     if (distance < Math.abs(numFine / best - ROUNDED_BINS)) best = perBin;

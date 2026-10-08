@@ -21,6 +21,7 @@ import {
   variantBinsRounded,
   variantChecks,
   variantHistogramDescription,
+  variantValueSpacing,
 } from "./variantChecks.ts";
 import type { VariantStatistic } from "./variantChecks.ts";
 import { binsCsv, splitBinText } from "./words.ts";
@@ -763,7 +764,7 @@ describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the 
     result: VariantChecksResult,
     statistic: VariantStatistic,
   ): readonly [number, number, number] {
-    const bins = variantBinsRounded(result, statistic);
+    const bins = variantBinsRounded(result, statistic, null);
     return [
       bins.edges[0] ?? NaN,
       bins.edges[bins.edges.length - 1] ?? NaN,
@@ -791,7 +792,7 @@ describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the 
     const result = fineResult("panel.nei");
     for (const statistic of STATISTICS) {
       const fine = result[statistic].counts;
-      const bins = variantBinsRounded(result, statistic);
+      const bins = variantBinsRounded(result, statistic, null);
       expect(sumOf(bins.counts)).toBe(sumOf(fine));
       // The fine bins each bin adds up: whole ones, as many in each.
       const first = Math.round((bins.edges[0] ?? NaN) * VARIANT_FINE_BINS);
@@ -811,18 +812,86 @@ describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the 
     }
   });
 
-  test("the missing rate of panel.nei: its first bins", () => {
-    const bins = variantBinsRounded(fineResult("panel.nei"), "missingRate");
+  test("the missing rate of panel.nei, with no spacing: bins of 0.002, more than half of them empty", () => {
+    const bins = variantBinsRounded(
+      fineResult("panel.nei"),
+      "missingRate",
+      null,
+    );
     // 0.002 wide, 2 of popnei's bins each, whose counts at the indices
-    // 0, 5, 10 and 15 are 2, 20, 59 and 104: the missing rates 0, 1 / 200,
+    // 0, 4, 9 and 14 are 2, 20, 59 and 104: the missing rates 0, 1 / 200,
     // 2 / 200 and 3 / 200, each in the bin that ends at it.
     expect(Array.from(bins.counts.subarray(0, 8))).toEqual([
       2, 0, 20, 0, 59, 0, 0, 104,
     ]);
+    expect(bins.counts.filter((count) => count === 0)).toHaveLength(34);
+  });
+
+  test("the missing rate of panel.nei, multiples of 1 / 200: 20 bins of 0.005 from 0 to 0.1, each holding one value, the first 0 and 0.005", () => {
+    const bins = variantBinsRounded(
+      fineResult("panel.nei"),
+      "missingRate",
+      variantValueSpacing("missingRate", 200, 2),
+    );
+    expect(bins.counts).toHaveLength(20);
+    expect([bins.edges[0], bins.edges[1], bins.edges.at(-1)]).toEqual([
+      0, 0.005, 0.1,
+    ]);
+    expect(Array.from(bins.counts.subarray(0, 8))).toEqual([
+      22, 59, 104, 160, 195, 206, 162, 110,
+    ]);
+    // The 4 bins from 0.08 to 0.1, and the one that ends at 0.075.
+    expect(bins.counts.filter((count) => count === 0)).toHaveLength(5);
+  });
+
+  test("the missing rate of tetraploid.nei, multiples of 1 / 12 up to 0.25: 3 bins of 0.1 from 0 to 0.3, the range rounded to that step", () => {
+    const bins = variantBinsRounded(
+      fineResult("tetraploid.nei"),
+      "missingRate",
+      variantValueSpacing("missingRate", 12, 4),
+    );
+    expect(Array.from(bins.edges)).toEqual([0, 0.1, 0.2, 0.3]);
+    expect(Array.from(bins.counts)).toEqual([175, 20, 5]);
+  });
+
+  test("the MAF of tetraploid.nei, multiples of 1 / 48: 12 bins of 0.025, the nearest 40 of those at least 0.021 wide, where with no spacing they were 30 of 0.01", () => {
+    const result = fineResult("tetraploid.nei");
+    const spaced = variantBinsRounded(
+      result,
+      "maf",
+      variantValueSpacing("maf", 12, 4),
+    );
+    expect([spaced.edges[0], spaced.edges.at(-1)]).toEqual([0.3, 0.6]);
+    expect(spaced.counts).toHaveLength(12);
+    expect(variantBinsRounded(result, "maf", null).counts).toHaveLength(30);
+  });
+
+  test("the MAF of panel.nei, multiples of 1 / 400: the 50 bins of 0.011 it had, wider than 0.0025", () => {
+    const result = fineResult("panel.nei");
+    const spaced = variantBinsRounded(
+      result,
+      "maf",
+      variantValueSpacing("maf", 200, 2),
+    );
+    expect(spaced).toEqual(variantBinsRounded(result, "maf", null));
+    expect(spaced.counts).toHaveLength(50);
+  });
+
+  test("a spacing of a whole number of popnei's bins within a rounding takes that number: 1 / 200 is 5 bins, not 6", () => {
+    const counts = new Uint32Array(VARIANT_FINE_BINS);
+    counts[4] = 1;
+    counts[99] = 1;
+    const result = {
+      ...fineResult("panel.nei"),
+      missingRate: { mean: 0.05, counts },
+    };
+    expect(
+      variantBinsRounded(result, "missingRate", 1 / 200).counts,
+    ).toHaveLength(20);
   });
 
   test("the ends are the round numbers 0.3 and 0.6, popnei's edges", () => {
-    const bins = variantBinsRounded(fineResult("tetraploid.nei"), "maf");
+    const bins = variantBinsRounded(fineResult("tetraploid.nei"), "maf", null);
     expect(bins.edges[0]).toBe(0.3);
     expect(bins.edges.at(-1)).toBe(0.6);
     expect(fineResult("tetraploid.nei").binEdges[300]).toBe(0.3);
@@ -868,7 +937,7 @@ describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the 
       binEdges: Float64Array.from({ length: 31 }, (_, i) => i / 30),
       maf: { mean: 0.1, counts },
     };
-    expect(() => variantBinsRounded(result, "maf")).toThrow(
+    expect(() => variantBinsRounded(result, "maf", null)).toThrow(
       "popnei_web defect: 0.05 is no edge of 30 bins over 0 to 1.",
     );
   });
@@ -887,5 +956,16 @@ describe("the bins of popgen2.html, popnei's 1,000 summed over the range of the 
       maf: { mean: NaN, counts: new Uint32Array(VARIANT_FINE_BINS) },
     };
     expect(rangeOf(empty, "maf")).toEqual([0, 1, 40]);
+  });
+});
+
+describe("the least distance between two values of a statistic", () => {
+  test("1 / n for the missing rate, 1 / (ploidy · n) for the MAF, none for the heterozygosities nor for no individual", () => {
+    expect(variantValueSpacing("missingRate", 200, 2)).toBe(1 / 200);
+    expect(variantValueSpacing("maf", 200, 2)).toBe(1 / 400);
+    expect(variantValueSpacing("maf", 12, 4)).toBe(1 / 48);
+    expect(variantValueSpacing("obsHet", 200, 2)).toBeNull();
+    expect(variantValueSpacing("unbiasedExpHet", 200, 2)).toBeNull();
+    expect(variantValueSpacing("missingRate", 0, 2)).toBeNull();
   });
 });
