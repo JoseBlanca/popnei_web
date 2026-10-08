@@ -34,12 +34,15 @@ export type VariantFilter =
       readonly maxAllowedR2: number;
       readonly maxDist: number;
     }
-  /** `filterPassed`: keeps the variants of a VCF whose FILTER is `PASS` or
-      a dot. Only for a VCF opened with every variant: over a `.nei` file
-      written before popnei's format 1.2 popnei refuses it at the first
-      block, and over a VCF opened with only the passed variants it keeps
-      them all. The runner puts it first, before the list of the
-      individuals kept. */
+  /** `filterPassed`: keeps the variants whose FILTER is `PASS` or a dot.
+      For a VCF opened with every variant, as popgen2.html opens each,
+      and for a `.nei` file whose variants record whether they passed
+      their FILTER, which popnei writes from its vars format 1.2; the
+      open of the file says which, `Opened.keepsPassed`. Over a `.nei`
+      file without the record popnei refuses it at the first block, and
+      over a VCF opened with only the passed variants it keeps them all.
+      The runner puts it first, before the list of the individuals
+      kept. */
   | { readonly kind: "passed" };
 
 /** The kind of a filter of the variants; a project holds one of each. */
