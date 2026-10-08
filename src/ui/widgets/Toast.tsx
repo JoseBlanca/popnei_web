@@ -214,78 +214,36 @@ const ROOM_PROPERTY = "--toast-room";
  * Keeps room at the end of the page for the region `region` while it is
  * drawn, from the top of the region to the bottom of the window, and
  * gives the room back when the region goes. When the region appears or
- * changes its size over the element that has the focus, or the page
- * grows and pushes under the region that element, which was clear of it,
- * the page scrolls it clear, since the toast appears where the user did
- * not act, and would otherwise hide the field they have just changed: on
- * popgen2.html at 320 pixels, the box of a file opened grows as the file
- * is read, after its notice is up, and pushes the open button, which has
- * the focus, under it. An element that was already under the region, or
- * below the window, the user having scrolled away from it to read, is
- * left there when the page grows, so that the page does not jump back to
- * it.
+ * grows over the element that has the focus, the page scrolls it clear,
+ * since the toast appears where the user did not act, and would
+ * otherwise hide the field they have just changed.
  */
 function keepRoom(region: HTMLDivElement): () => void {
   const page = document.documentElement;
-  /** The element with the focus, when it is on the page and under the
-      region, whose top is at `top` in the window; `null` otherwise. */
-  const focusedUnder = (top: number): HTMLElement | null => {
-    const focused = document.activeElement;
-    return focused instanceof HTMLElement &&
-      !region.contains(focused) &&
-      focused.getBoundingClientRect().bottom > top
-      ? focused
-      : null;
-  };
-  /** What was last seen: the height of the region, the element with the
-      focus, and whether it was clear of the region, at the last measure
-      or at the last scroll since; `null` before the first measure. */
-  let last: {
-    readonly height: number;
-    readonly focused: Element | null;
-    readonly clear: boolean;
-  } | null = null;
   const measure = (): void => {
-    const { top, height } = region.getBoundingClientRect();
+    const top = region.getBoundingClientRect().top;
     page.style.setProperty(
       ROOM_PROPERTY,
       `${String(Math.ceil(window.innerHeight - top))}px`,
     );
     const focused = document.activeElement;
-    const under = focusedUnder(top);
-    // The first measure, as the region appears, is a change of its size.
-    const pushed =
-      last?.height !== height || (last.focused === focused && last.clear);
-    if (under !== null && pushed) {
+    if (
+      focused instanceof HTMLElement &&
+      !region.contains(focused) &&
+      focused.getBoundingClientRect().bottom > top
+    ) {
       // "nearest" scrolls it just above the room, which the
       // scroll-padding of base.css keeps.
-      under.scrollIntoView({ block: "nearest" });
+      focused.scrollIntoView({ block: "nearest" });
     }
-    // Scrolled, it is clear now.
-    last = { height, focused, clear: under === null || pushed };
-  };
-  // The user's scroll moves the element in and out from under the region
-  // with no change of size: seen, so that the next growth of the page
-  // knows where the user left it.
-  const onScroll = (): void => {
-    if (last === null) return;
-    const { top } = region.getBoundingClientRect();
-    last = {
-      ...last,
-      focused: document.activeElement,
-      clear: focusedUnder(top) === null,
-    };
   };
   const observer = new ResizeObserver(measure);
   observer.observe(region);
-  observer.observe(document.body);
   window.addEventListener("resize", measure);
-  window.addEventListener("scroll", onScroll, { passive: true });
   measure();
   return () => {
     observer.disconnect();
     window.removeEventListener("resize", measure);
-    window.removeEventListener("scroll", onScroll);
     page.style.removeProperty(ROOM_PROPERTY);
   };
 }

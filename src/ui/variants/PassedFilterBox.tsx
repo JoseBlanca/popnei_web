@@ -6,9 +6,11 @@
  * click changes no plot. Shown once the opening of the file has answered
  * that its variants record their FILTER, in every state of the
  * statistics, since it is a filter of the project and no part of the
- * plots. Each click is one change of the project, with its notice and
- * its step of Undo; the page sends nothing to the worker for it, since
- * the key of the one pass holds no filter.
+ * plots. Each click is one change of the project, with its step of
+ * Undo and no notice, as the owner asked on 8 October 2026: the check
+ * box's own change of state is what a screen reader hears. The page sends
+ * nothing to the worker for it, since the key of the one pass holds no
+ * filter.
  *
  * Drawn by FileStats.tsx from the read of the file, whether the code of
  * the plots is there or not, so that it is one element across the

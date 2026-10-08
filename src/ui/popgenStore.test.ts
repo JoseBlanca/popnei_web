@@ -128,7 +128,7 @@ describe("VS5 D1 the store of the page", () => {
 });
 
 describe("SF5 D5 the store of popgen.html", () => {
-  test('starts from firstProject("popgen"), and a change of a filter that removes nothing gives no notice: filterNotices is false', () => {
+  test('starts from firstProject("popgen"), and a change of a filter that removes nothing gives no notice', () => {
     const { store } = setUp();
     expect(store.getState().project).toStrictEqual(firstProject("popgen"));
     store.open(fiveIndividualsProject([]));

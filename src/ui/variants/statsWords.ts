@@ -12,14 +12,11 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import { variantsSummary } from "../../core/analyses/variantsSummary.ts";
-import type { AnalysisId } from "../../core/project.ts";
 import { counted, escaped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import { INDIVIDUAL_HISTOGRAMS } from "../steps/variants/individualStats.ts";
-import type { NoticeWords } from "../shell/words.ts";
 import { numberText } from "../widgets/committedNumber.ts";
 import { summaryStatus } from "./words.ts";
 
@@ -31,22 +28,6 @@ export type StatsPart = "variants" | "individuals";
     screen reader calls it, and the heading drawn in its place when it
     fails. */
 export const STATS_NAME = "Statistics of the file";
-
-/** What the notice of the page needs, the title of its one analysis, the
-    summary of the variants file, which is the name of the section:
-    "Statistics of the file removed because a new variants file was
-    loaded" (docs/specs/steps/popgen2-filters.md, "The notice"). A defect
-    for another analysis, which the store of the page does not hold. */
-export const NOTICE_WORDS: NoticeWords = Object.freeze({
-  title: (id: AnalysisId): string => {
-    if (id !== variantsSummary.id) {
-      throw new Error(
-        `popnei_web defect: popgen2.html has no analysis ${id} to name.`,
-      );
-    }
-    return STATS_NAME;
-  },
-});
 
 /** The headings of the two parts of the section. */
 export const VARIANTS_HEADING = "Variants";

@@ -2,8 +2,9 @@
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
  * the page's one heading, "Popnei"; the row of Undo and Redo, the
- * shell's buttons, there before any file, since an Undo of the first
- * opening leaves the page with no file and Redo brings it back
+ * shell's buttons, which undo and redo the changes of the filters and not
+ * the opening of a file, there before any file, disabled, so that the
+ * page does not move down when the first file is opened
  * (docs/specs/steps/popgen2-filters.md, "The order of the page"); the box
  * of the file open, with what
  * went wrong with it; under it the statistics of the open file

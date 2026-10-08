@@ -32,7 +32,6 @@ import { createPopgenStore } from "./popgenStore.ts";
 import { SavingProvider, createSaving } from "./saving.ts";
 import type { Saving } from "./saving.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
-import { NoticeWordsProvider } from "./shell/noticeWords.tsx";
 import { Shell } from "./shell/Shell.tsx";
 import { ShellWordsProvider } from "./shell/shellWords.tsx";
 import { createAnnouncer } from "./shell/status.ts";
@@ -83,9 +82,7 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
         <FilesProvider value={files}>
           <SavingProvider value={saving}>
             <ShellWordsProvider value={SHELL_WORDS}>
-              <NoticeWordsProvider value={SHELL_WORDS}>
-                <Shell />
-              </NoticeWordsProvider>
+              <Shell />
             </ShellWordsProvider>
           </SavingProvider>
         </FilesProvider>

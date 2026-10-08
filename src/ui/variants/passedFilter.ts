@@ -3,7 +3,7 @@
  * (docs/specs/steps/popgen2-filters.md, "The FILTER box" and "What it
  * sends and reads"): whether it is shown, whether it is ticked, and the
  * change of the project a click makes, with the description that names
- * its step of Undo and ends its notice. Pure, so that a test in node
+ * its step of Undo. Pure, so that a test in node
  * checks them over the real store of the page.
  */
 import { setVariantFilter, turnOffVariantFilter } from "../../core/project.ts";
@@ -27,8 +27,8 @@ export function passedFilterOn(p: Project): boolean {
 }
 
 /** The description of a click that ticks the box, in the box's own
-    words, so that the notice and the hints of Undo and Redo say what the
-    box says (decided by the session on 8 October 2026). */
+    words, so that the hints of Undo and Redo and the words of an undo say
+    what the box says (decided by the session on 8 October 2026). */
 const PASSED_FILTER_ON = "the variants that failed their FILTER are left out";
 
 /** The description of a click that unticks it. */
@@ -36,8 +36,7 @@ const PASSED_FILTER_OFF = "the variants that failed their FILTER are kept";
 
 /** A change of the project and the description of its step of Undo. */
 export interface PassedFilterChange {
-  /** The words that name the step of Undo and make its notice, the
-      words of the box: "the variants that failed their FILTER are
+  /** The words that name the step of Undo, the words of the box: "the variants that failed their FILTER are
       kept". */
   readonly description: string;
   /** The command of the project. */

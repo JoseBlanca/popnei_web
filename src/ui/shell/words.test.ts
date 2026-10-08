@@ -45,7 +45,6 @@ import {
   writtenDiscarded,
 } from "./words.ts";
 import type { ShellWords, StepState } from "./words.ts";
-import { NOTICE_WORDS } from "../variants/statsWords.ts";
 
 // The two analyses of population genetics of TEST_DEFS.
 const DIVERSITY = "diversity";
@@ -2906,32 +2905,5 @@ describe("IP5 D1 the end of a read of the metadata file", () => {
       "Warning: sc\\u202eore may hold codes and is taken as a measurement.",
     );
     expect(said[0]).toContain("st\\u202eatus does not have the type you set.");
-  });
-});
-
-describe("SF6 D1 the words of the notice apart from the words of the shell", () => {
-  test("popgen2.html names its one analysis by the name of its section", () => {
-    expect(
-      noticeText(
-        notice({ cause: NEW_LOAD, removed: ["variantsSummary"] }),
-        NOTICE_WORDS.title,
-      ).text,
-    ).toBe(
-      "Statistics of the file removed because a new variants file was loaded",
-    );
-    expect(
-      noticeText(
-        notice({ cause: NEW_LOAD, stopped: ["variantsSummary"] }),
-        NOTICE_WORDS.title,
-      ).text,
-    ).toBe(
-      "The calculation of Statistics of the file stopped because a new variants file was loaded",
-    );
-  });
-
-  test("an analysis popgen2.html does not hold is a defect", () => {
-    expect(() => NOTICE_WORDS.title("diversity")).toThrow(
-      "popnei_web defect: popgen2.html has no analysis diversity to name.",
-    );
   });
 });
