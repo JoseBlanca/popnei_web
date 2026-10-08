@@ -863,3 +863,35 @@ recorded in `docs/technology.md`, with loading the dialog on its first
 press left to the owner. Not taken: no ring on the text after a click
 of the mouse, which `:focus-visible` gives the keyboard alone, as
 everywhere on the page. Firefox not run (it does not start here).
+
+### Work package 7, and the review of 6 and 7, 9 October 2026
+
+The fixes of package 6's review: 361b9a3 (the words of no individual
+kept are the store's reason), 1ce5e71 ("Writing <file>." said once as a
+write starts), 24509fa (the first load of `popgen2.html` 13.39 KB
+gzipped larger, 200.37 to 213.76 KB, recorded in `docs/technology.md`;
+loading the dialog on its first press, about 34 KB less in the first
+load, left to the owner). Work package 7: 097f56c (the sentence of no
+variant said once on a change of the filters; the gate before the
+dialog), 687811f (the screens of no individual kept, of no variant
+before and after a write, and of a file written and not handed over).
+Seen by the session: no individual kept (dark), no variant after a write
+(light), each with the spec's words.
+
+Review of 7 and the fixes, six categories (react, api, architecture,
+tests, accessibility, ux, browser). Taken: a write shorter than 100 ms
+left "Writing <file>." to be said after the words of the download, as
+if a second write began (56594a4, the start's words dropped when the
+write ends); a click of the mouse within the quiet second after a
+threshold's change took the button away under the pointer and left the
+focus on nothing, so the focus now goes to what takes its place, and
+the gate before the dialog, which a blur makes useless, is kept as a
+defence with a unit test that reaches it (1ac75c6); the sentence of no
+variant said again on a change that left it on the screen (2a9ca70);
+two lines no test guarded (bf403b8). Not taken: a bare "0" said in the
+status region when a threshold goes back to removing some, which the
+spec of the filters asks for and `main` has; a sentence that takes the
+button's place under the focus may be heard twice, once from the status
+region and once from the focus, left to the owner's VoiceOver. Vitest
+4,444; the flows of the download 32, the other flows of `popgen2.html`
+178, the old page's write 130, in Chromium and WebKit; screens 180.
