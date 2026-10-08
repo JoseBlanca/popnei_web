@@ -381,7 +381,7 @@ words that say it was made by the new page.
 
 Deliverables:
 
-1. The fixture `src/core/fixtures/v1-passed.popnei.json` opens with
+1. The fixture `src/core/fixtures/projectFile/v1-passed.popnei.json` opens with
    `passedFilter: true` into the literal project and is written back byte
    for byte; with `passedFilter: false` it, and the same file with
    `passed` in `filtersOff`, are refused as `newPageFilter` with the
@@ -924,3 +924,27 @@ pairs of threshold and kind of value; `setThreshold` drawn more often,
 every transition reached in 10 or more of 20 seeds. Noted: fast-check
 draws arrays of at most 10 commands whatever `maxLength` says, unless
 its size is set. Vitest 4,231, twice.
+
+### Work package 4, 8 October 2026
+
+Commits 41b15f3 (`readProjectFile` takes the page; the refusal
+`newPageFilter` after the checks of a damaged file; the fixture
+`src/core/fixtures/projectFile/v1-passed.popnei.json`; `createSaving`
+passes `{ passedFilter: false }`), 08a4aaf (the test of the old page,
+an e2e flow and its screens, beyond the plan), ec9f719 (the sequences of
+30 drawn commands reach 30, `size: "max"`, 70 ms and 11 ms). Vitest
+4,242; Playwright 220 in Chromium and 220 in WebKit.
+
+Review: spec, tests and errors; ux and accessibility. The refusal is
+where the spec puts it and four mutations are caught. The words misled:
+they said the page "cannot show" the FILTER choice while a FILTER box,
+a reading option, stands behind the dialog. Fixed in 2a0673c with the
+session's words of 8 October 2026 (Open 4 of projectFile.md closed):
+"pops.popnei.json was saved by popgen2.html, the new page of population
+genetics. Its filter of the FILTER column works differently from the
+box on this page, so it was not opened. The file is unchanged: open it
+in popgen2.html.", "popgen2.html" a link that opens a new tab and says
+so (core exports the address, the ui makes the link). Fixed in f0d9133:
+the fake counts of a store property had four counts for five kinds of
+filter, a failure 2 times in 13. Vitest 4,244, twice; e2e saving 33 and
+33; screens of the shell 40.
