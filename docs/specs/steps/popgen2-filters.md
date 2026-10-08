@@ -10,7 +10,13 @@ Revised the same day for two things that came after the approval: the
 owner's decision that the FILTER box is shown, and its filter applied,
 for a `.nei` file that records the FILTER of its variants, as for a VCF
 (the design, "What the owner decided"); and the exact count under each
-threshold that popnei 0.2.2 gives, in place of a range. No
+threshold that popnei 0.2.2 gives, in place of a range. Revised on 8
+October 2026 for the owner's decisions after trying the page (the
+design, "What the owner decided"): no line under the plots of what a
+threshold keeps, and a threshold that keeps every value of its plot,
+off among them, shown by its line and the number in its box in grey,
+not by the words "No filter"; and, decided by the session from them,
+no raise of a threshold below 0.001. No
 code of it exists yet. What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
@@ -60,10 +66,13 @@ them and does not repeat them.
 - **The line** of a threshold is the marker on its histogram, a vertical
   line with a handle, dragged with the pointer or moved with the arrow
   keys when it has the focus. **The box** is the number box beside the
-  histogram, which shows the same value and takes a typed one. **The
-  count under the heading** is the sentence under each histogram's
-  heading that says how many variants or individuals the threshold
-  keeps.
+  histogram, which shows the same value and takes a typed one.
+- **Grey**: a threshold whose line and number are drawn in grey keeps
+  every value of its plot: no bin of the variants, and no value of an
+  individual, lies above it. It is grey when it is off, at 1, and when
+  it is on at a value that keeps every value of the plot. It is not the
+  grey of a control that cannot be used: the line and the box take the
+  pointer and the keys as ever.
 - **A run** is a sequence of presses of the arrow keys, Page Up or Page
   Down on one threshold, or of Home or End on its line, with less than
   one second between two presses.
@@ -79,7 +88,11 @@ them and does not repeat them.
 - Each threshold on a histogram is a filter of the project. Moving it,
   typing its number or turning it off is a change of the project, with
   Undo and Redo and a notice, "The MAF filter changed · Undo".
-- A threshold is on or off, and off is said in words: "No filter".
+- A threshold is on or off. Off, its box shows 1 and its line stands
+  at the top of the axis, both in grey, with no shading.
+- No line under a plot says how many variants or individuals its
+  threshold keeps; a threshold that keeps every value of its plot is
+  drawn in grey.
 - Only the missing rate of the variants starts on, at 0.1.
 - A check box "Leave out the variants that failed their FILTER", on by
   default, for a VCF and for a `.nei` file that records the FILTER of
@@ -165,30 +178,62 @@ show the project's value, so Undo and Redo move them. The only value
 they hold of their own is the number being dragged, typed or moved with
 the arrow keys and not yet made a change.
 
-| | on, at 0.1 | off |
-|---|---|---|
-| the box | "0.1" | empty, with "No filter" in grey in it |
-| the line | at 0.1 | at the top of the axis, with "No filter" beside its handle |
-| the shading | the bins beyond the line | none |
-| the count under the heading | "Keeps 1,050 of 1,200 variants" | "No filter: keeps every variant" |
-| what a screen reader says as the line's value | "0.1, keeps 1,050 of 1,200 variants" | "No filter, keeps every variant" |
+A threshold is in one of three looks. The examples are the missing
+rate of the variants of `panel.nei`, whose axis runs from 0 to 0.1, so
+that a filter at 0.1 keeps every variant of the plot; for the
+individuals the words say "individual".
 
-The design gives the count under the heading of a threshold that is off
-as "Keeps every variant". A screen reader reads that sentence as the
-description of the box, and may not read the grey words inside an empty
-box; starting the sentence with "No filter:" tells its user that the
-empty box means no filter in either case. For the individuals the
-sentence says "every individual".
+| | on, some values beyond it, at 0.05 | on, no value beyond it, at 0.1 | off |
+|---|---|---|---|
+| the box | "0.05" | "0.1", in grey | "1", in grey |
+| the line | at 0.05 | at 0.1, the top of the axis, in grey | at the top of the axis, in grey |
+| the shading | the bins beyond the line | none, since no bin beyond it holds a variant | none |
+| what a screen reader says as the line's value | "0.05" | "0.1, keeps every variant of the plot" | "1, keeps every variant" |
+| the description of the box, for a screen reader alone | none | "This filter removes no variant of the plot." | "This filter removes nothing." |
 
-The counts of a threshold that is on are those of today: each threshold
-alone, over every variant or individual of the file. Each is one exact
-number, the variants or individuals whose value is at most the
-threshold, which is what popnei's filter at that threshold keeps: from
-popnei 0.2.2 the one pass gives 10,000 bins over 0 to 1 that hold
-their right edge, with edges at k/10,000, and a threshold of the
-variants, of four decimals at most, falls on an edge (the design, "The counts of each threshold";
-`docs/plans/popnei-0.2.2.md`). Until then a threshold inside a bin gave
-a range, "Keeps 1,113 to 1,152 of 1,200 variants".
+No line under the plot says what a threshold keeps, as the owner
+decided on 8 October 2026: "In general we don't need to show the user
+how many variants are we going to keep." Until that day each plot had
+one, "Keeps 1,050 of 1,200 variants", and a threshold off had "No
+filter" in its box, beside its line and in that line; those words go,
+and the grey tells what they told. The description of the box is
+words a screen reader reads after the box's name and value and the
+screen does not show, tied to the box as the description of the FILTER
+box is (`aria-describedby`, below, "The FILTER box"); the line's value
+is the text a screen reader reads for the slider's number
+(`aria-valuetext`). They are there because the grey alone does not
+reach a user who cannot see it or tell it apart (WCAG 2.2, 1.4.1 "Use
+of color"); a user who sees the plot has, besides the grey, the
+absence of any bar drawn as removed. The middle column says "of the
+plot" because such a filter still removes what is in no histogram:
+the filters of the MAF and of the observed heterozygosity of the
+variants drop a variant with no called genotype, and that of the
+observed heterozygosity of the individuals an individual with no value
+(the sentence of "The individuals with no value", below, says it for
+the individuals).
+
+Whether a threshold is grey is worked out on the page, with no pass. A
+threshold of the variants is grey when no fine bin of popnei's above it
+holds a variant: the fine bins hold their right edge, and the box
+rounds a threshold to the step of its axis, which falls on an edge, so
+the test is exact (the design, "What a threshold shows on its plot";
+the number of bins is the piece `popnei-0.2.2`'s,
+`docs/plans/popnei-0.2.2.md`). A threshold of the individuals is grey
+when no individual's value of popnei's lies above it. While the file is
+read the grey follows the result so far: the missing rate at 0.1 on a
+file whose first variants all lie below it is grey, and loses its grey
+when a variant above it is read. Nothing is said when the grey comes or
+goes; the line's value and the box's description change with it, and a
+screen reader reads them when the user next reaches the line or the
+box.
+
+The line has two parts, and both are grey together: the dashed line
+drawn by the histogram of `src/charts/`, which gains a grey look of its
+threshold that the screen asks for, and the handle the user drags, the
+slider of `src/ui` laid over the plot. A histogram whose filter is off
+today draws no line (`docs/specs/charts/histogram.md`); on this page it
+draws it at the top of the axis, in the grey. That spec says so once
+the piece `popnei-0.2.2`, which revises it, is merged into this branch.
 
 **Turning a threshold off.** Two ways, as the owner chose on 7 October
 2026: emptying the box and then pressing Enter or Tab or clicking
@@ -197,40 +242,48 @@ everything. 1 is off however it is reached: typed; a number typed that
 the step of the axis rounds to 1; the line dragged to the top of an axis
 that ends at 1, as the MAF's does on most files; or the End key on such
 a line. 1 is off and not a filter at 1, so a variant with no called
-genotype is kept, as with no filter, and the box never shows 1. Each of
-these ways, from a threshold that was on, gives the notice "The MAF
-filter was turned off · Undo", with the name of that threshold's filter.
+genotype is kept, as with no filter. Off, the box shows 1 in grey, an
+emptied box too once committed. Each of these ways, from a threshold
+that was on, gives the notice "The MAF filter was turned off · Undo",
+with the name of that threshold's filter.
 
 **Turning it on.** Dragging the line, or typing a number other than 1,
 turns it on at that value, with the notice "The MAF filter was turned on
 · Undo". From off, the arrow keys on the line turn it on one step below
 the top of the axis, Page Down ten steps below, Home at the bottom; Up,
-Right, Page Up and End leave it off. In the empty box the arrow keys do
-nothing, as today.
+Right, Page Up and End leave it off. In the box, which shows 1, Down and
+Page Down do the same as on the line, one and ten steps below the top
+of the axis, and Up and Page Up leave it off: the page gives those
+values in place of the box's own step below 1, which on an axis of 0 to
+0.1 would be 0.999 and widen the axis to 1.
 
 **The top of the axis.** A line dragged to the top of an axis that
 ends below 1 is a filter at that value, since the axis ends where the
 file's values end: on `panel.nei` the axis of the missing rate runs from
-0 to 0.1, and the line at its top is a filter at 0.1. A line dragged to
-the top of an axis that ends at 1 is off, as said above. A number typed
-above the top of the axis, below 1, is kept as typed, and the axis
-widens to show it, as today. While a threshold is off its line stands at
-the top of the axis; when a result so far brings a higher value and the
-axis grows to show it, the line moves to the new top and the filter
-stays off.
+0 to 0.1, and the line at its top is a filter at 0.1, grey, with 0.1 in
+its box. A line dragged to the top of an axis that ends at 1 is off, as
+said above. A number typed above the top of the axis, below 1, is kept
+as typed, and the axis widens to show it, as today. While a threshold is
+off its line stands at the top of the axis; when a result so far brings
+a higher value and the axis grows to show it, the line moves to the new
+top and the filter stays off.
 
 **A number with many decimals** is not refused: the box rounds it to
-the step of the axis, as today, and to four decimals at most, the
-nearest half up, and shows it so, 0.0035 for 0.00345 on an axis of 0 to
-0.005; the filter is at that number, and the count under the heading is
-of it, exact, since it falls on an edge of popnei's bins (the design,
-"The counts of each threshold"; the session's decision of 7 October
-2026, in `docs/plans/popnei-0.2.2.md`).
+the step of the axis, as today, the nearest half up, and shows it so,
+0.0035 for 0.00345 on an axis of 0 to 0.005; the filter is at that
+number, and the shading and the grey are of it.
+
+**A threshold of 0** is a filter at 0, given to popnei as 0, with no
+words under the box. The piece `popnei-0.2.2` raised a threshold of the
+variants below 0.001 to 0.001, with "Counted as 0.001, the smallest
+threshold.", so that the count under the plot was exact; with the count
+gone the raise and its words go, as the session decided on 8 October
+2026 from the owner's decision.
 
 **A number the box refuses**, above 1, below 0, or with a character it
 does not take, gives the sentence under the box of
 today, "1.5 is more than 1; the threshold stays 0.1.", and, while the
-threshold is off, "1.5 is more than 1; there is still no filter."
+threshold is off, "1.5 is more than 1; the threshold stays 1."
 
 **The individuals with no value.** Under a histogram of the individuals,
 the sentence on the individuals with no called genotype changes, since a
@@ -251,12 +304,12 @@ One change, with its notice and its step of Undo, is made:
   focus, with a number typed or an empty box;
 - for a run of presses, on the line or in the box: once, one second
   after the last press, or when the focus leaves the line or the box,
-  whichever comes first. The line, the box, the shading and the count
+  whichever comes first. The line, the box, the shading and the grey
   follow each press at once.
 
 While the line is dragged, a number is typed or a run of presses waits,
-the shading and the count of that threshold follow it from the bins, and
-nothing else on the page changes. A change that gives the value the
+the shading of that threshold, and whether it is grey, follow it from
+the bins, and nothing else on the page changes. A change that gives the value the
 project already has is no change and leaves no step of Undo. So a run
 or a drag that ends where it started makes no change, no step of Undo
 and no notice: from off, where the line stands at the top of the axis,
@@ -319,7 +372,7 @@ page in some browsers and from the end in others.
 
 How the box is used, on this page:
 
-- **Typing** changes only the box, the shading and the count of its
+- **Typing** changes only the box, the shading and the grey of its
   threshold; the project does not change yet.
 - **Enter or Tab**, or clicking elsewhere, makes what is typed a change
   of the project: a number turns the filter on at it, 1 or an empty box
@@ -329,17 +382,21 @@ How the box is used, on this page:
   nothing typed, Ctrl+Z is the page's Undo.
 - **The Up and Down arrow keys** move the number one step of the axis,
   **Page Up and Page Down** ten steps, as on the line; the presses make a
-  run, which becomes one change. In an empty box, a threshold that is
-  off, they do nothing. Home and End move the cursor in the text, as in
-  any box of text.
+  run, which becomes one change. In the box of a threshold that is off,
+  which shows 1, Down and Page Down turn it on one and ten steps below
+  the top of the axis, as on the line, and Up and Page Up do nothing.
+  Home and End move the cursor in the text, as in any box of text.
 
 The number box shared by both pages, `src/ui/widgets/NumberField.tsx`,
-gains an option that `popgen2.html` alone uses: with it, Enter, Tab or
-leaving a box that was emptied gives the page "off", through a call of
-its own, and an empty box shows the words given with the option, "No
-filter". Without the option the box is as today: an emptied box gives
-nothing and shows its number again. A typed 1 is an ordinary number to
-the box; the page turns it into off.
+gains three things that `popgen2.html` alone uses. An option under
+which Enter, Tab or leaving a box that was emptied gives the page "off",
+through a call of its own; the page then gives the box 1, which it
+shows. A look in which its number is drawn in the grey, and a
+description read by a screen reader alone, both set by the page. And a
+call through which the page chooses the number an arrow key gives,
+which the page uses from off. Without them the box is as today: an
+emptied box gives nothing and shows its number again. A typed 1 is an
+ordinary number to the box; the page turns it into off.
 
 ### The starting values and another file
 
@@ -356,8 +413,7 @@ typed above the axis.
 ### The expected heterozygosity
 
 Its plot stays, with its title and the count of its variants, and has
-no line, no box and no count under its heading of what a threshold
-keeps: popnei has no filter on it.
+no line and no box: popnei has no filter on it.
 
 ### The FILTER box
 
@@ -417,15 +473,10 @@ any other.
 
 The plots read before a Stop stay on the page, from the store's last
 result so far, which it keeps beside the state ready
-(`docs/specs/core/store.md`). Each part says so over its plots, and
-each count under a heading ends with it, in place of "so far":
+(`docs/specs/core/store.md`). Each part says so over its plots:
 
 - over each part: "Stopped. The plots are of the variants read before
   the Stop. Start again reads the file from the start.";
-- the count of a threshold of the variants: "Keeps 1,050 of 1,200
-  variants read before the Stop";
-- of the individuals: "Keeps 40 of 48 individuals, over the variants
-  read before the Stop";
 - the sentence on the individuals with no called genotype: "3
   individuals with no called genotype before the Stop are not in the
   histogram, and this filter removes them.";
@@ -433,9 +484,11 @@ each count under a heading ends with it, in place of "so far":
   variants read before the Stop." in place of "Drawn from the variants
   read so far."
 
-The room kept for the longest count under a heading holds this ending,
-so that the plots do not move at a Stop. The thresholds can be moved
-over these plots, and change the project as at any time. A Stop before
+The room kept under each plot of the individuals for the sentence on
+the individuals with no called genotype holds its words of a Stop, so
+that the plots do not move at a Stop. The thresholds can be moved
+over these plots, and change the project as at any time; their shading
+and their grey are of the variants read before the Stop. A Stop before
 the first result so far, 2 seconds after the start, leaves no plots, and
 each part says "Stopped. Start again reads the file from the start." as
 today. Start again and opening another file drop the plots of the Stop.
@@ -452,9 +505,9 @@ Undo and Redo and the notice are there in all of them.
 |---|---|---|
 | empty | no file open: the heading, the row of Undo and Redo, "Open variants file…"; no plot, no threshold, no FILTER box | open a file; Undo or Redo when the history has a step, after an opening undone |
 | locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box when the opening of the file said that it records the FILTER of its variants, no threshold | tick the FILTER box; open another file |
-| ready | about to start, for a moment: nothing in the parts. After a Stop: the plots read before it with their counts, or "Stopped. Start again reads the file from the start." with no plot | move the thresholds over the plots of a Stop; tick the FILTER box; Start again |
-| running | the share done over each part, the plots so far from the first result so far, 2 seconds after the start, the counts ending "so far" | move the thresholds; tick the FILTER box; Stop |
-| done | the six plots, five thresholds, the FILTER box when the opening of the file said that it records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
+| ready | about to start, for a moment: nothing in the parts. After a Stop: the plots read before it, or "Stopped. Start again reads the file from the start." with no plot | move the thresholds over the plots of a Stop; tick the FILTER box; Start again |
+| running | the share done over each part, the plots so far from the first result so far, 2 seconds after the start, the thresholds grey or not by the result so far | move the thresholds; tick the FILTER box; Stop |
+| done | the six plots, five thresholds, each grey when it keeps every value of its plot, the FILTER box when the opening of the file said that it records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
 | results removed | the store removed the statistics because what they were calculated from changed. No filter brings this state, since the one pass's key holds the file and no filter. Opening another file does: the page draws the section of the new file, and the notice says the statistics of the file before were removed | Undo, which brings back the file before and its statistics |
 | error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box when the opening of the file said that it records the FILTER of its variants, and none after an opening that failed | tick the FILTER box, when it is there, which does not clear the failure; Start again |
 
@@ -500,18 +553,17 @@ number being dragged, typed or moved by a run of keys.
 
 | where | the words |
 |---|---|
-| the box of a threshold that is off | "No filter", in grey with a contrast of at least 4.5:1 against the box |
-| beside the line at the top of the axis, off | "No filter" |
-| the count under the heading, off | "No filter: keeps every variant", "No filter: keeps every individual" |
-| the line's value for a screen reader, off | "No filter, keeps every variant" |
-| a number refused while off | "1.5 is more than 1; there is still no filter." |
+| the box of a threshold that is off | "1", in grey with a contrast of at least 4.5:1 against the box |
+| the box of a threshold on that keeps every value of its plot | its number, "0.1", in the same grey |
+| the line's value for a screen reader | on: its number, "0.05"; on and grey: "0.1, keeps every variant of the plot", "… every individual of the plot"; off: "1, keeps every variant", "1, keeps every individual" |
+| the description of the box, for a screen reader alone | on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; off: "This filter removes nothing."; none otherwise |
+| a number refused while off | "1.5 is more than 1; the threshold stays 1." |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant, these among them." |
 | the notice of a change of a filter | "The MAF filter changed · Undo"; "The MAF filter was turned on · Undo"; "The MAF filter was turned off · Undo"; "The filter of the FILTER column was turned off · Undo" |
 | after an undo, by the notice or the status region | "Undone: the MAF filter changed" |
 | the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start." |
-| a count under a heading, after a Stop | "Keeps 1,050 of 1,200 variants read before the Stop"; "Keeps 40 of 48 individuals, over the variants read before the Stop" |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
 ## Accessibility
@@ -535,14 +587,19 @@ each press. An undo or a redo that gives no notice, in the status
 region. A number refused, as today. Nothing at each press of an arrow
 key: the line's value is read as it moves, as of any slider.
 
-**Off in words** (1.4.1, "Use of color"). A threshold that is off is
-told by the words "No filter" in the box, beside the line and in the
-count under the heading, and by the line's value; not by the line's
-place at the top of the axis alone, nor by the absence of shading. The
-grey of "No filter" in the empty box has a contrast of at least 4.5:1
-against the box, in light and in dark (1.4.3, "Contrast (minimum)"):
-the browser's own grey for such words is often fainter, and these words
-are what tells the user the filter is off.
+**The grey in words** (1.4.1, "Use of color"). A threshold that keeps
+every value of its plot, off or on, is shown on the screen by its grey,
+as the owner decided on 8 October 2026, and by the absence of any bar
+drawn as removed; off, the box shows 1 besides. A screen reader is told
+it in words: the line's value, "1, keeps every variant" off and "0.1,
+keeps every variant of the plot" on, and the description of the box,
+"This filter removes nothing." off and "This filter removes no variant
+of the plot." on (above, "A threshold, on and off"). The grey number in
+the box has a contrast of at least 4.5:1 against the box (1.4.3,
+"Contrast (minimum)"), and the grey line at least 3:1 against the plot
+(1.4.11, "Non-text contrast"), in light and in dark: the browser's own
+grey is often fainter, and a number too faint to read would hide the
+threshold's value.
 
 **The notice over the focus** (2.4.11, "Focus not obscured
 (minimum)"). The notice is fixed at the bottom of the window and stays
@@ -558,8 +615,9 @@ keyboard never undoes the change before the run while meaning the run.
 
 **To be heard before the plan is settled**, as the design asks: in
 VoiceOver on macOS with Safari, a run of ten presses on a line gives one
-notice; the empty box is announced with "No filter: keeps every
-variant"; the FILTER box with its sentence.
+notice; a box that is off is announced with its value 1 and "This
+filter removes nothing.", and the line with "1, keeps every variant";
+the FILTER box with its sentence.
 
 ## How it is checked
 
@@ -576,9 +634,21 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
 - a run of ten arrow presses gives one step of Undo and one notice, and
   Ctrl+Z pressed within the second after it undoes that run;
 - emptying the box, typing 1, and dragging the line of the MAF to the
-  top of its axis at 1, each turn the filter off, with "No filter" in
-  the box and beside the line, no shading and the notice "The MAF filter
-  was turned off · Undo"; Undo turns it on again at its value;
+  top of its axis at 1, each turn the filter off, with 1 in the box, the
+  line at the top of the axis, both drawn in the grey, no shading, the
+  line's value "1, keeps every variant", the box's description "This
+  filter removes nothing." and the notice "The MAF filter was turned off
+  · Undo"; Undo turns it on again at its value, out of the grey;
+- on `panel.nei`, the missing rate of the variants at 0.1, the top of
+  its axis, is on and drawn in the grey, with "0.1, keeps every variant
+  of the plot" and "This filter removes no variant of the plot."; moved
+  to 0.05 it leaves the grey and both texts lose those words;
+- the line in the grey has a contrast of at least 3:1 against the plot
+  and the number in the grey at least 4.5:1 against the box, read from
+  the computed colours, in light and in dark;
+- a threshold typed 0 is a filter at 0, with no sentence under its box;
+- from off, Down in the box turns the filter on one step below the top
+  of the axis, not at 1 less a step, and the axis keeps its range;
 - a run of Down then Up on a line that is off leaves no step of Undo
   and no notice;
 - a crash of the worker while a run waits keeps the run, as a step of
@@ -595,13 +665,16 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   a threshold moved over them changes the project;
 - no plot changes with a threshold or the box.
 
-The screens: a threshold off, on, and after a Stop; the notice up; the
+The screens: a threshold off, on with some values beyond it, on and
+grey at the top of an axis below 1, and after a Stop; the notice up; the
 FILTER box; light and dark; 1280 and 320 pixels wide; and at 320 pixels
 the notice up with the focus on the last control of the page, the
 notice not over it.
 
-In Vitest, beside those: a run that ends where it started sends no
-command; a press of a key on the line never makes a change by itself,
+In Vitest, beside those: whether a threshold is grey, at an edge of
+the fine bins with a variant just above it and with none, and for the
+individuals at the largest value and just below it; a run that ends
+where it started sends no command; a press of a key on the line never makes a change by itself,
 only the end of its run does; the line's prop of the end of a drag is
 called at the release of a pointer and not at a key.
 
@@ -609,17 +682,21 @@ called at the release of a pointer and not at a key.
 
 - The title of the page's one analysis in the notice, "Statistics of
   the file", the name the section already has for a screen reader.
-- "No filter:" at the start of the count under the heading of a
-  threshold that is off, where the design has "Keeps every variant".
-- "1.5 is more than 1; there is still no filter." for a number refused
-  while the threshold is off, after the old page's distance of the LD
-  pruning, which says it "is still to be typed".
+- The words a screen reader alone hears for a grey threshold: the
+  line's value, "1, keeps every variant" and "0.1, keeps every variant
+  of the plot", and the box's description, "This filter removes
+  nothing." and "This filter removes no variant of the plot."
+- "1.5 is more than 1; the threshold stays 1." for a number refused
+  while the threshold is off, the words of a threshold on with 1, the
+  number the box shows.
+- Down and Page Down in the box of a threshold that is off giving the
+  line's values, one and ten steps below the top of the axis, rather
+  than the box's own step below 1.
 - The sentence under the FILTER box, "The plots show every variant,
   these among them."
 - How the row of Undo and Redo looks and where in the row the buttons
-  stand; where "No filter" goes beside the handle of the line; the grey
-  of the words in the empty box; the spacing of the FILTER box and its
-  sentence.
+  stand; the two greys, of the number and of the line; the spacing of
+  the FILTER box and its sentence.
 
 ## Open points
 
