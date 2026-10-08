@@ -65,7 +65,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -887,6 +887,7 @@ const FROM_FILES_RUNNER_KINDS: Readonly<Record<FromFilesRunner["kind"], true>> =
 const FORMATS: Readonly<Record<Format, true>> = { vcf: true, nei: true };
 const WRITE_FORMATS: Readonly<Record<WriteJob["format"], true>> = {
   nei: true,
+  vcf: true,
 };
 const JOB_ANALYSES: Readonly<Record<Job["analysis"], true>> = {
   diversity: true,

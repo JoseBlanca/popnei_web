@@ -938,9 +938,11 @@ export type JobResult =
  * analysis, and its answer never goes into the cache.
  */
 export interface WriteJob {
-  /** The format of the file, popnei's `.nei` until popnei has a writer of
-      the VCF. */
-  readonly format: "nei";
+  /** The format of the file: popnei's `.nei` file, written by its
+      `writeVars`, or a VCF always compressed with bgzip, by its
+      `writeVcf`; a plain VCF is not offered, as the owner decided on 8
+      October 2026. */
+  readonly format: "nei" | "vcf";
   /** The load id of the variants file it reads. */
   readonly fileId: string;
   /** The filters of the variants, in their order. */
@@ -956,8 +958,8 @@ export interface WriteJob {
  * holds the file as a value it does not read.
  */
 export interface Written<F> {
-  /** The format of the file. */
-  readonly format: "nei";
+  /** The format of the file, that of its `WriteJob`. */
+  readonly format: "nei" | "vcf";
   /** The file, a `Blob` on the page. */
   readonly file: F;
   /** Its size in bytes, which core reads without naming a `Blob`. */

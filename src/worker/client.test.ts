@@ -128,8 +128,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 14, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 14 };
+const READY = { kind: "ready", protocol: 15, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 15 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",

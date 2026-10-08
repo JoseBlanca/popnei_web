@@ -162,7 +162,7 @@ describe("WS2 D1 the messages accepted", () => {
   test.each([
     [
       "the ready of the calculation worker",
-      { kind: "ready", protocol: 14, popneiVersion: "0.1.0" },
+      { kind: "ready", protocol: 15, popneiVersion: "0.1.0" },
     ],
     [
       "opened",
@@ -209,7 +209,7 @@ describe("WS2 D1 the messages accepted", () => {
   });
 
   test.each([
-    ["the ready of the light worker", { kind: "ready", protocol: 14 }],
+    ["the ready of the light worker", { kind: "ready", protocol: 15 }],
     ["an individuals file read", INDIVIDUALS_READ],
     [
       "an individuals file refused",
@@ -532,7 +532,7 @@ describe("WS2 D2 the messages refused", () => {
     expect(
       parseFromFilesRunner({
         kind: "ready",
-        protocol: 14,
+        protocol: 15,
         popneiVersion: "0.1.0",
       }),
     ).toEqual({
@@ -547,7 +547,7 @@ describe("WS2 D2 the messages refused", () => {
   });
 
   test("a ready of the calculation worker without a popnei version", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 14 })).toEqual({
+    expect(parseFromRunner({ kind: "ready", protocol: 15 })).toEqual({
       ok: false,
       error: {
         kind: "missingFields",
@@ -605,17 +605,17 @@ describe("WS2 D2 the messages refused", () => {
 });
 
 describe("WS2 D2 the messages refused: the version", () => {
-  test("a ready of protocol 15 with no other field, from the calculation worker", () => {
-    expect(parseFromRunner({ kind: "ready", protocol: 15 })).toEqual({
+  test("a ready of protocol 16 with no other field, from the calculation worker", () => {
+    expect(parseFromRunner({ kind: "ready", protocol: 16 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 15 },
+      error: { kind: "otherProtocol", found: 16 },
     });
   });
 
-  test("a ready of protocol 15 with no other field, from the light worker", () => {
-    expect(parseFromFilesRunner({ kind: "ready", protocol: 15 })).toEqual({
+  test("a ready of protocol 16 with no other field, from the light worker", () => {
+    expect(parseFromFilesRunner({ kind: "ready", protocol: 16 })).toEqual({
       ok: false,
-      error: { kind: "otherProtocol", found: 15 },
+      error: { kind: "otherProtocol", found: 16 },
     });
   });
 
@@ -623,18 +623,18 @@ describe("WS2 D2 the messages refused: the version", () => {
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
   ])(
-    "a ready of protocol 15 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
+    "a ready of protocol 16 with fields of its own, from the %s worker, is otherProtocol and not a refusal of its fields",
     (_name, parse) => {
       expect(
         parse({
           kind: "ready",
-          protocol: 15,
+          protocol: 16,
           popneiVersion: 3,
           features: ["pca"],
         }),
       ).toEqual({
         ok: false,
-        error: { kind: "otherProtocol", found: 15 },
+        error: { kind: "otherProtocol", found: 16 },
       });
     },
   );
@@ -1071,21 +1071,6 @@ describe("VS1 D2 the messages of stage 3 refused", () => {
     });
   });
 
-  test("a write of the format vcf, which popnei cannot write yet", () => {
-    const job = { ...WRITE_JOB, format: "vcf" };
-    expect(
-      parseToRunner({ kind: "write", id: 5, key: "k2", job }),
-    ).toMatchObject({
-      ok: false,
-      error: {
-        kind: "unknownValue",
-        messageKind: "write",
-        path: "job.format",
-        found: "vcf",
-      },
-    });
-  });
-
   test("a variantChecks job with a filter", () => {
     const job = { ...VARIANT_CHECKS_JOB, filters: FILTERS_AT_0_05 };
     expect(parseToRunner({ ...RUN, job })).toEqual({
@@ -1485,7 +1470,7 @@ const jobResult = fc.oneof(
 );
 const written = fc.nat({ max: 64 }).chain((numBytes) =>
   fc.record({
-    format: fc.constant("nei" as const),
+    format: fc.constantFrom("nei" as const, "vcf" as const),
     file: fc.constant(new Blob([new Uint8Array(numBytes)])),
     numBytes: fc.constant(numBytes),
     passStats,
@@ -1500,7 +1485,7 @@ const workerStop = fc.oneof(
 const fromRunnerMessage = fc.oneof(
   fc.record({
     kind: fc.constant("ready" as const),
-    protocol: fc.constant(14),
+    protocol: fc.constant(PROTOCOL_VERSION),
     popneiVersion: text,
   }),
   fc.record({
@@ -1652,7 +1637,10 @@ const fileRead = fc.oneof(
 );
 
 const fromFilesRunnerMessage = fc.oneof(
-  fc.record({ kind: fc.constant("ready" as const), protocol: fc.constant(14) }),
+  fc.record({
+    kind: fc.constant("ready" as const),
+    protocol: fc.constant(PROTOCOL_VERSION),
+  }),
   fc.record({
     kind: fc.constant("individuals" as const),
     id: whole,
@@ -1760,7 +1748,7 @@ const ldDecayJob = fc.record({
   maxAllowedMaf: number,
 });
 const writeJob = fc.record({
-  format: fc.constant("nei" as const),
+  format: fc.constantFrom("nei" as const, "vcf" as const),
   fileId: text,
   filters,
   individuals: individualsKept,
@@ -3798,10 +3786,6 @@ describe("SF2 D1 whether the variants record their FILTER, in the messages", () 
     });
   });
 
-  test("the version of the messages is 14", () => {
-    expect(PROTOCOL_VERSION).toBe(14);
-  });
-
   test.each([
     ["calculation", parseFromRunner],
     ["light", parseFromFilesRunner],
@@ -3811,6 +3795,82 @@ describe("SF2 D1 whether the variants record their FILTER, in the messages", () 
       expect(parse({ kind: "ready", protocol: 13 })).toEqual({
         ok: false,
         error: { kind: "otherProtocol", found: 13 },
+      });
+    },
+  );
+});
+
+describe("DL2 D2 the messages of a write of a VCF", () => {
+  const WRITE = { kind: "write", id: 5, key: "k2", job: WRITE_JOB };
+
+  test("parseToRunner accepts a write of the format vcf", () => {
+    const write = { ...WRITE, job: { ...WRITE_JOB, format: "vcf" } };
+    expect(parseToRunner(write)).toEqual({ ok: true, value: write });
+  });
+
+  test("parseFromRunner accepts a written of the format vcf, and keeps its Blob", () => {
+    const vcf = { ...WRITTEN, result: { ...WRITTEN.result, format: "vcf" } };
+    const checked = parseFromRunner(vcf);
+    expect(checked).toEqual({ ok: true, value: vcf });
+    expect(
+      checked.ok &&
+        checked.value.kind === "written" &&
+        checked.value.result.file,
+    ).toBe(WRITTEN.result.file);
+  });
+
+  test.each(["bcf", "vcf.gz"])(
+    "a write of the format %s is unknownValue at job.format, which expects nei and vcf",
+    (format) => {
+      expect(
+        parseToRunner({ ...WRITE, job: { ...WRITE_JOB, format } }),
+      ).toEqual({
+        ok: false,
+        error: {
+          kind: "unknownValue",
+          messageKind: "write",
+          path: "job.format",
+          found: format,
+          expected: ["nei", "vcf"],
+        },
+      });
+    },
+  );
+
+  test.each(["bcf", "vcf.gz"])(
+    "a written of the format %s is unknownValue at result.format, which expects nei and vcf",
+    (format) => {
+      expect(
+        parseFromRunner({
+          ...WRITTEN,
+          result: { ...WRITTEN.result, format },
+        }),
+      ).toEqual({
+        ok: false,
+        error: {
+          kind: "unknownValue",
+          messageKind: "written",
+          path: "result.format",
+          found: format,
+          expected: ["nei", "vcf"],
+        },
+      });
+    },
+  );
+
+  test("the version of the messages is 15", () => {
+    expect(PROTOCOL_VERSION).toBe(15);
+  });
+
+  test.each([
+    ["calculation", parseFromRunner],
+    ["light", parseFromFilesRunner],
+  ])(
+    "a ready of protocol 14, before a write could be of a VCF, with no other field, from the %s worker, is otherProtocol",
+    (_name, parse) => {
+      expect(parse({ kind: "ready", protocol: 14 })).toEqual({
+        ok: false,
+        error: { kind: "otherProtocol", found: 14 },
       });
     },
   );
