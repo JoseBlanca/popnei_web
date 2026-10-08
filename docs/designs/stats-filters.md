@@ -614,9 +614,13 @@ open file, which the owner judged unacceptable on 7 October 2026.
 3. Download sends the write to the calculation worker. While the file
    is written the dialog shows the bar of the write in place of the
    choice, from popnei's `onProgress`, one pass over the open file, and
-   Stop; Stop, Escape and closing the dialog all stop the write, which
-   ends the worker and starts another, as any Stop does (`docs/architecture.md`,
-   section 5). This is the session's reading of "only the choice of the
+   Stop. Stop ends the write, which ends the worker and starts another,
+   as any Stop does (`docs/architecture.md`, section 5). Escape does
+   nothing while the file is written, so that a key pressed by habit
+   does not throw away minutes of writing; Stop is reached with the Tab
+   key, so the keyboard can still end it (WCAG 2.2, 2.1.1). The page's
+   `Dialog.tsx` closes on Escape today, and gains that option. This is
+   the session's reading of "only the choice of the
    format": a write of a large file takes minutes, and without a bar and
    a Stop the user could neither tell it was going on nor end it (below,
    "Open points").
@@ -629,7 +633,15 @@ open file, which the owner judged unacceptable on 7 October 2026.
    blocked or asked about by the browser, as Chrome does for a page that
    starts several downloads, as the old page found
    (`docs/specs/analyses/writeVariants.md`, "Saving the file"). The
-   dialog closes after Save, and the page drops the file.
+   dialog closes after Save. A file written and not saved, the dialog
+   closed by Escape or Cancel, is kept until a filter or the file
+   changes, so that the button opens the dialog again on its Save, as
+   the store's state `done` keeps it on the old page; it costs the file's
+   size in memory while it is kept. The address `downloadFile` gives the
+   browser is released a minute after Save (`src/ui/download.ts`), so a
+   user whose browser asks where to save, and who answers after more
+   than a minute, may get a failed download; the plan tries it in
+   Chromium and WebKit and lengthens the minute if so.
 
 Since the dialog is modal, no filter changes while a file is written:
 the case of the old page, a change of a filter that leaves a write
@@ -690,7 +702,7 @@ file.
 |---|---|---|---|
 | what holds the file at the end | one `Blob`, F, held by the browser (below) | one `Blob`, F | a file on the disk |
 | peak beyond the `Blob` | one batch of pieces in the worker, 64 MiB at the most (below) | the pieces in the page until they are made a `Blob`: F more at its making, unless the page batches them as the worker would | none |
-| work on the page's thread, which freezes the page while it runs | none: one message at the end | one message for each MiB, 1,024 for a file of 1 GiB, and the making of the `Blob` | none |
+| work on the page's thread | none: one message at the end | one small message for each MiB, 1,024 for a file of 1 GiB, which would not freeze the page, and the making of the `Blob` | none |
 | a Stop | ends the worker; what it held goes with it | ends the worker; the pieces already on the page must be dropped by the page | ends the worker; the file stays on the disk until the page deletes it |
 | changes to the messages of the worker | none: the answer stays `Written<Blob>` | a new message, a piece, with its checks in the client and the store | none to the answer; a file to delete after each download and after a crash |
 | the browsers of the floor, Chrome 111, Firefox 115, Safari 16.4 | all | all | `createSyncAccessHandle` in Chrome 102, Firefox 111, Safari 15.2 (MDN, read on 26 September 2026), but a quota that differs by browser, and none in a private window of Firefox |
@@ -734,13 +746,18 @@ Where the browser keeps a `Blob`, from the sources:
   https://chromium.googlesource.com/chromium/src/+/HEAD/storage/browser/blob/README.md,
   read on 8 October 2026. The old page measured the copy of a file of
   220 MB into the browser's process on 27 September 2026, 13 ms.
-- **Firefox** moves a `Blob` to a temporary file on the disk only when
-  it comes from the network, a response of `fetch` or of
-  `XMLHttpRequest`, from Firefox 52 (bug 1202006,
-  https://bugzilla.mozilla.org/show_bug.cgi?id=1202006); nothing found
-  says it does so for a `Blob` a page makes, so the file is taken to be
-  held in the memory of the tab's process. Not measured: Playwright
-  cannot launch Firefox on the owner's Mac.
+- **Firefox** moves a `Blob` to a temporary file on the disk from
+  Firefox 52, past about 1 MB (bug 1202006,
+  https://bugzilla.mozilla.org/show_bug.cgi?id=1202006, read on 8
+  October 2026). Whether that covers a `Blob` a page makes is read both
+  ways in the bug: its comment 17 says the patches work "also for
+  normal blobs", `new Blob([a])`, and the patches that landed are titled
+  "MutableBlobStorage for XHR" and "BlobSet just for MultipartBlobImpl",
+  the second being the kind of `Blob` made of parts that this design
+  makes. So where Firefox keeps the file is not settled by the sources;
+  it is measured by hand in the plan, a write of 2 GB with
+  `about:memory`, since Playwright cannot launch Firefox on the owner's
+  Mac.
 - **WebKit**, in the old page's measurement of 27 September 2026, grew
   its network process by the size of the file within 1.5 s in some
   writes, and in others no process grew
@@ -764,24 +781,30 @@ the `Blob`, and up to 64 MiB of pieces, where it was 4.4F to 6.1F. What
 is left, by engine:
 
 - Chromium: the `Blob` on the disk past 2 GB, up to a tenth of the
-  disk, 50 GB on a disk of 500 GB. A user meets it only with a file that
-  large, and the download then fails.
-- Firefox: the memory of the machine, if the `Blob` stays in the tab's
-  process as the sources suggest; a file larger than the free memory may
-  end the worker or close the tab.
+  disk, 50 GB on a disk of 500 GB, and never into the last 4 GB of free
+  disk, which the description of its storage keeps back
+  (`min_disk_availability`, twice the 2 GB in memory). A user meets it
+  only with a file that large. `new Blob` gives its size at once, and a
+  `Blob` the storage could not take fails only when it is read, so the
+  page would offer "Save …, 60 GB" and the download would fail in the
+  browser's list of downloads. So the worker reads the last byte of the
+  finished `Blob`, with `FileReaderSync`, before it posts it, and a
+  `Blob` that cannot be read becomes the dialog's error.
+- Firefox: the disk or the memory of the machine, by which reading of
+  its source holds (above); measured by hand.
 - WebKit: not known; the old measurement does not separate the `Blob`
   from wasm.
 
 The recommendation, which the owner's decision of no refusal before
 writing follows: no limit before the write. A write the browser cannot
 hold ends in an error that says so, the worker's crash, "workerFailed"
-of the client, in words that say the file was too large for the
+of the client, or a `Blob` that cannot be read (above), in words that say the file was too large for the
 memory of this tab and that popnei in Python writes any size; only a tab
 the browser closes says nothing, which the plan measures. The plan
 measures the largest file written and saved in Chromium and WebKit on
 the built site, files of 2, 4 and 8 GB from `e2e/bigVcf.ts` as the old
-page's `VS5 D5` did, with the memory of each process, and Firefox by
-hand if it can be run. If a tab closes below a size a user of a
+page's `VS5 D5` did, with the memory of each process, a file past
+Chromium's quota on a small disk, and Firefox by hand. If a tab closes below a size a user of a
 computer would write, a warning before the write comes back as a
 question for the owner; a refusal would need the size before the
 write, which `popgen2.html` does not have, since it counts no variant
@@ -798,6 +821,13 @@ if it gives back nothing.
 - `WriteJob.format` and `Written.format` of `src/worker/protocol.ts`
   gain `"vcf"`, always bgzipped, and the key of a write holds the
   format, as it holds `"nei"` today.
+- The store files the state of a write under the one format of the old
+  page, `STATE_FORMAT` of `src/core/store.ts`, and `startWrite` throws a
+  defect for any other; a file whose key is not the current one, made
+  with that format, is dropped. So the store's write state gains the
+  format chosen, the one write in flight or kept, and the current key of
+  the write is made with it; the old page asks for `"nei"` alone, as
+  today. Without it, a user who picks VCF sees a defect or no file.
 - The runner's `writeFile` gives `onBytes` to `writeVars` or to
   `writeVcf` and gathers the pieces as above, in place of making a
   `Blob` of one array.
@@ -859,8 +889,9 @@ page shows can reach the user.
   same; a file over several batches of 64 MiB is made of its parts in
   order. In Playwright, in Chromium and WebKit: the dialog downloads a
   `.nei` file and a `.vcf.gz` that popnei and pyarrow read back with the
-  variants and individuals of the filters; Stop and Escape end the write
-  and offer no file; the filters that keep no variant give the error of
+  variants and individuals of the filters; Stop ends the write and
+  offers no file, and Escape while it writes does nothing; the filters
+  that keep no variant give the error of
   each case. Measured in the plan, on the built site: the largest file
   written and saved in Chromium and WebKit, 2, 4 and 8 GB, with the
   memory of each process, and whether WebKit and Firefox copy the bytes
@@ -933,7 +964,8 @@ Made on this branch once the owner approves, each with its paragraph
   measured in the plan (above, "How the pieces reach the user's
   download"). No limit is set; a write the browser cannot hold ends in
   an error, except a tab the browser closes, which the plan measures.
-  The page drops the file once it is saved or the dialog is closed.
+  The page drops the file once it is saved, or when a filter or the
+  file changes.
 - **The keyboard and a screen reader:** the line is a React Aria slider,
   moved by the arrow keys, as today; a run of presses is one change and
   one step of Undo; a grey threshold is told in the line's value and the
@@ -983,6 +1015,8 @@ Made on this branch once the owner approves, each with its paragraph
   1 MiB: a message for each MiB on the page's thread, a new kind of
   message, the pieces to drop on the page after a Stop, and the file held
   twice while the page makes it one `Blob`, for nothing the user sees.
+  The messages alone, 1,024 small ones for each GiB spread over minutes,
+  would not freeze the page.
 - **The origin private file system,** each piece written to a file on
   the disk from the worker: the file out of memory in every engine, at
   the cost of a quota that differs by browser, none in a private window
