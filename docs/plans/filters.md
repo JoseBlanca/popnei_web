@@ -1001,3 +1001,29 @@ times over, 100 passed. Left for the owner: at 1280 by 720 the notice
 covers the bottom edge of the box of "Open another variants file…",
 not its button; the notice of a second file goes when its statistics
 are done, under a second for panel.nei.
+
+### Work package 7, 8 October 2026
+
+Commits 7f7992e (7.1: the check box's `description`), acf012b (7.2: the
+box, `PassedFilterBox.tsx`, `passedFilter.ts`), 6d9f0d8 (flows), 2783213
+(screens), 615c452 (the helper of flow FS2 read the box's label as a
+seventh title). Vitest 4,290; Playwright 640 in Chromium and 640 in
+WebKit.
+
+Review: ux and accessibility; react, tests and spec. The rules of the
+box hold (shown only after a read with `keepsPassed`, Undo and Redo
+across files right, every mutation of its rules caught). Fixed in
+2212ac0, b89d9e7, 2e8229d: the words, chosen by the session: under the
+box "The plots show every variant. The ones that failed are left out of
+what is downloaded or analysed.", the notice and the hints in the box's
+own words, "The variants that failed their FILTER are left out" / "…are
+kept"; the room of the plots kept from the start, so that the box, the
+individuals' part and the open button do not move when the plots
+arrive (this reverses the choice of `docs/plans/live-stats.md`, "the
+open widget moves with the plots", for the owner to judge); the box one
+element across the download of the plots' code, so the focus stays on
+it; a failed download of that code tied to its file (WebKit retried at
+once). Not taken: the count in the box's label ("Leave out the 300
+variants…"), since the owner asked for fewer counts and the count is in
+the file's box. Vitest 4,291, twice; Playwright 641 in Chromium and 641
+in WebKit; screens 136. VoiceOver not heard.
