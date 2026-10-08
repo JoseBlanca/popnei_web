@@ -112,17 +112,33 @@ such a file a sentence of its own, "panel.nei holds no variants, so
 there is nothing to download."; with popnei 0.2.2 the page never reaches
 it, and it is not built.
 
-When the filters of the individuals keep none, the button gives way to
-the words of the store's lock, `keptNoneReason` of
-`docs/specs/core/individualsKept.md`, without their end "in the Variants
-step", which names a step of the old page: "The filters of individuals
-keep none of the 200 individuals of panel.nei. Loosen them." Nothing can
-be written, since popnei refuses an empty list of individuals.
+When the filters of the individuals keep none, the store's write is
+`locked`, and the button gives way to the words of `keptNoneReason` of
+`docs/specs/core/individualsKept.md` without a step to name, which the
+page asks of it with its new third argument, `null`: "The filters of
+individuals keep none of the 200 individuals of panel.nei. Loosen
+them." The reason the store's lock carries ends "in the Variants step",
+a step of the old page, and is not shown here. Nothing can be written,
+since popnei refuses an empty list of individuals. The store's other
+reasons of a lock, `projectNeeds`, `individualListNeeds` and
+`variantFilterNeeds`, cannot hold once the one pass is finished on this
+page, which has no lists of individuals and no LD filter; a lock for
+another reason than an empty list is a defect, thrown.
 
 When it is certain that the filters keep no variant, the button gives
 way to the sentence of "When the filters keep no variant", below.
 
 ### The dialog
+
+Before the dialog opens, the button makes every change of a threshold
+still waiting a change of the project: a run of the arrow keys within
+its quiet second, and a number typed and not yet committed
+(`gate.endAll()` of `src/ui/variants/thresholdRun.ts`, and the commit of
+the number box, as an opening of a file does,
+`docs/specs/steps/popgen2-filters.md`, "A run waiting is made a change
+before any other command"). The press on the button takes the focus from
+the threshold, which already does it; the button does it as well, so
+that the write never starts from filters about to change.
 
 Its heading is "Download filtered variants". It holds:
 
@@ -161,7 +177,9 @@ read, not of the file written, so its speed varies along the file; for a
 `.nei` variants file it stops below full, since popnei does not read the
 head of the file again; and after popnei's pass the worker joins the
 pieces and checks the file, a moment the bar does not show. The answer
-of the write closes the dialog, so the page never draws the bar full.
+of the write closes the dialog, so the page never draws the bar full,
+where the design has the page set it full at the answer: with the
+dialog closing at that moment, a full bar would not be seen.
 popnei reports every 4 MiB of the variants file read, and at the end, so
 a file under 4 MiB, every fixture of the tests, goes from busy to its
 end in one report or two.
@@ -192,8 +210,17 @@ that awaited `startWriting`, finds the store's write `done` and:
 3. closes the dialog, draws the text after the download in place of the
    button, and puts the focus on that text, which a screen reader then
    reads. The text is not a control, and takes the focus only from the
-   code (`tabIndex={-1}`); React Aria would give the focus back to the
-   button, which is gone.
+   code (`tabIndex={-1}`). React Aria would give the focus back to the
+   button, which is gone, and while the dialog closes it keeps the
+   modal drawn and the page out of reach, pulling back into the dialog
+   any focus put outside it; so the focus is moved once the overlay is
+   off the page, when React Aria has finished closing it, and the flows
+   check where it lands in both engines.
+
+If the browser's download throws, a defect of ours, `writeSaved` is
+not called and the store stays `done` with the file; the defect reaches
+the error bar, and the page shows the state `done` as it shows it after
+a Cancel of a Save click (below, "The trial that comes first").
 
 The text, on `low_qual.vcf.gz` with the FILTER box ticked, the missing
 rate of the variants at 0.05, the MAF at 0.9, and the thresholds of the
@@ -228,8 +255,9 @@ the individuals of the file less those kept (the design, "What the page
 says after the download"). The words of each filter are in "Its words",
 below.
 
-**Save it again** is a button drawn as a link, `src/ui/widgets/Link.tsx`
-as a button, that calls `downloadFile` again with the file the store
+**Save it again** is a button with the look of a link, the button of
+the widgets with `look: "link"` (`src/ui/widgets/Button.tsx`), so that a
+screen reader calls it a button, which it is; it calls `downloadFile` again with the file the store
 keeps in its state `saved`, under the same name. It is for a download
 the browser blocked, or that the user cancelled in the browser's own
 question: the page is not told of either (the design, "The download
@@ -251,9 +279,13 @@ the end of the write but shows "low_qual.filtered.vcf.gz is written, 42
 KB." and a button "Save low_qual.filtered.vcf.gz", which downloads it,
 calls `writeSaved()`, closes the dialog and draws the text after the
 download, whose first words are then "low_qual.filtered.vcf.gz saved,
-42 KB: …"; Escape and a Cancel beside Save close it with nothing
-downloaded, and the button comes back. The rest of this spec is written
-for the download started by itself.
+42 KB: …". Escape and a Cancel beside Save close it with nothing
+downloaded; the store stays `done` and keeps the file, since `startWrite`
+does nothing in `done`, so the page shows that state in place of the
+button as the text after the download with "written" and a Save in
+place of "Save it again": "low_qual.filtered.vcf.gz written, 42 KB: … Save
+it", whose Save downloads the file and calls `writeSaved()`. The rest of
+this spec is written for the download started by itself.
 
 ### The text stays until a filter or the file changes
 
@@ -350,7 +382,7 @@ state `write`, the first that holds:
 | locked | the button disabled, with "The download waits for the statistics of the file to be read to the end." while the file is opened, while the one pass runs, and after its Stop; with "The download needs the statistics of the file, which could not be calculated." after a failure; or, in place of the button, the words of `keptNoneReason`, or the sentence of no variant when it is certain | Start again in the box of the file, after a Stop or a crash; change the thresholds |
 | ready | the button | open the dialog; choose the format; Download or Cancel |
 | running | the dialog with the words of the write, the bar and Stop; the rest of the page out of reach | Stop |
-| done | the text after the download, with the focus on it, in place of the button; or, after a write of no variant, the sentence of no variant in its place | Save it again; change a filter or open another file, which brings the button back |
+| done | the text after the download, with the focus on it, in place of the button, the store's `saved`; or, after a write of no variant, the sentence of no variant in its place, `noVariant`; or, the store's `done` when the file was not handed to the browser, a defect of the download or a Cancel of a Save click, the same text with "written" and Save | Save it again, or Save; change a filter or open another file, which brings the button back |
 | results removed | never on this page: a change that gives the write another key brings the button back with no notice, as the owner decided for every change of a filter on this page on 8 October 2026; a file already downloaded is not lost, and one not yet downloaded cannot meet a change, since the dialog is modal | |
 | error | the dialog with the words of the failure and Close | Close; Download again after a failure that is not popnei's refusal |
 
@@ -406,7 +438,8 @@ store works out the individuals kept from the finished one pass
 | the status region, after Stop | "The writing of low_qual.filtered.vcf.gz was stopped. Nothing was downloaded." |
 | the text after the download | "low_qual.filtered.vcf.gz downloaded, 42 KB: 772 variants of 111 individuals. Variants removed: 300 by their FILTER, 58 by the missing rate, 70 by the MAF. Individuals removed: 84 by the missing rate, 5 by the observed heterozygosity."; one variant or individual in the singular, "1 variant of 1 individual" |
 | the words of each filter in it | the variants: "by their FILTER", "by the missing rate", "by the MAF", "by the observed heterozygosity"; the individuals: "by the missing rate", "by the observed heterozygosity" |
-| its link | "Save it again" |
+| its button, with the look of a link | "Save it again" |
+| the store's `done`, a file not handed to the browser | "low_qual.filtered.vcf.gz written, 42 KB: 772 variants of 111 individuals. …", the same lines, and the button "Save it" |
 | the failures, in the dialog | as `writeVariants.md`, "Its words on popgen2.html", gives them |
 
 With a Save click, should the trial ask for it: "low_qual.filtered.vcf.gz
@@ -434,9 +467,10 @@ dialog while it is open (React Aria).
 **Where the focus goes.** The dialog takes it when it opens, on the
 format chosen. At Download the format and its buttons go, so the focus
 is put on Stop, which would otherwise be on nothing. When the dialog
-closes: after Cancel, Escape, Stop or Close, on the button; after a
-download, on the text after it; after a write of no variant, on the
-sentence of no variant.
+closes: after Cancel, Escape, Stop or Close, on the button, which React
+Aria does; after a download, on the text after it; after a write of no
+variant, on the sentence of no variant; these two are moved by the page
+once the overlay is off the page (above, "When the write ends").
 
 **What is said without moving the focus** (4.1.3, "Status messages").
 The Stop of a write, in the status region. The sentence of no variant
@@ -485,7 +519,10 @@ column, as the old page's flow of the write does:
   back with 900 variants and 200 individuals; the text says
   "low_qual.filtered.vcf.gz downloaded, 76 KB: 900 variants of 200
   individuals. Variants removed: 300 by their FILTER." and has the
-  focus;
+  focus, read from `document.activeElement` once the dialog is gone, and
+  so the sentence of no variant after a write;
+- a run of the arrow keys on a threshold, then Enter on the button
+  within its quiet second: the write has the threshold the run moved to;
 - the same file with the thresholds of the example above, as a `.nei`
   file: `low_qual.filtered.nei`, 113,594 bytes, 772 variants and 111
   individuals read back by popnei, and the text of the example with
@@ -555,7 +592,7 @@ changed without changing anything else:
 - The sentence of no variant that comes before any write is said once in
   the status region.
 - The page does not draw the bar full at the end, since the dialog
-  closes at the answer.
+  closes at the answer; the design had it set full then.
 - The labels of the two formats, and no line of description under them,
   as the owner asked for a dialog of the format and its buttons alone.
 

@@ -22,7 +22,11 @@ of section 9 of the architecture. It depends on
 `docs/specs/core/project.md`, for the project, its filters of
 individuals, `projectNeeds`, `individualListNeeds` and the rules by which a text names a value
 of a file, and on `docs/specs/analyses/individualChecks.md`, whose
-result gives the statistics.
+result gives the statistics. Revised on 8 October 2026 for the download of popgen2.html
+(`docs/specs/steps/popgen2-download.md`): `keptNoneReason` takes the
+step its words send the user to, "the Variants step" by default, and
+`null` for a page with no steps, whose words end "Loosen them."; the
+store keeps calling it with the default.
 
 ## What it does
 
@@ -176,7 +180,10 @@ export interface IndividualsKept {
 export function individualsKept(p: Project, stats: IndividualStats | null): IndividualsKept | null;
 
 /** The reason of the lock when the list is known and empty, or null. */
-export function keptNoneReason(p: Project, kept: IndividualsKept | null): string | null;
+export function keptNoneReason(
+  p: Project, kept: IndividualsKept | null,
+  step: string | null = "the Variants step",  // null on popgen2.html, which has no steps: "… Loosen them."
+): string | null;
 ```
 
 Statistics whose `individuals` are not those of the variants file of
