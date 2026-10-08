@@ -1065,3 +1065,34 @@ to popgen2.html, which task 9.2 does. The grey (`muted`) and the page's
 choice of what an arrow key gives (`onSteps`) already existed. Vitest
 4,285; Playwright on popgen2's thresholds, fileStats, Undo and Filter
 flows 41 and 41, the old page's VS and IP flows 310 and 310.
+
+### Work package 9, 8 October 2026
+
+Commits a991aa1 (the thresholds as filters, the runs of the arrow keys,
+the gate before other commands, the end of a drag on the pointer's
+release only), faf55bb (flows), 8f5e578 (screens), 5238017 (the settled
+words of a threshold that removes nothing). Vitest 4,303; Playwright 651
+in Chromium and 651 in WebKit.
+
+Review: ux and accessibility; react and tests; spec and architecture.
+A defect, found by two reviewers: a file dropped or pasted while a run
+of arrow presses waited opened with the threshold as it was before the
+run, and Undo could not bring it back (the new project was built before
+the gate made the run a change). Fixed in 8296607 and after (8478f59,
+d085b87, 1fa6553, 07deb9a, f693ff6, c115d2c, dd9f818, f98920c): the
+store's `open` takes a function of the current project, run by the gate
+after the run and the typed numbers are made changes; Undo enabled
+while a run waits, named by the change it will become (Redo disabled
+then, the session's choice); a screen reader hears, once, when a
+committed number or a run makes a threshold start or stop removing
+anything ("This filter removes nothing.", "This filter removes no
+variant of the plot.", or the number alone, a decision of the session:
+a sighted user sees the colour change); the longer line under the
+individuals' plots keeps its room; tests of the run's end and of a drag
+when a plot leaves the page, of Ctrl+Z in the box, of the grey of the
+line; `docs/functionality.md` and project.md brought to the settled
+words. The fixes of work package 8's review were made with them; its
+item 1 did not hold (React Aria puts the number back at every commit,
+so the guard after Tab is a safeguard nothing reaches; left with a
+comment). Vitest 4,309, twice; Playwright 656 in Chromium and 656 in
+WebKit; screens 144.
