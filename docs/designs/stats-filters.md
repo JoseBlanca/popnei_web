@@ -2,8 +2,11 @@
 
 A design of 6 and 7 October 2026, approved by the owner on 7 October
 2026, and revised the same day with the owner's decision on the FILTER
-box of a `.nei` file and with the exact counts of popnei 0.2.2 (below,
-"What the owner decided"). It
+box of a `.nei` file and with the exact counts of popnei 0.2.2, and
+revised again on 8 October 2026 with the owner's decisions after trying
+the page: no line of what a threshold keeps, and a threshold that keeps
+every value of its plot drawn in grey (below, "What the owner
+decided"). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -54,14 +57,15 @@ ticking the FILTER box or pressing Undo changes the project and the
 shading of the plots, and reads nothing. The plots never change with a
 threshold.
 
-**What a threshold says.** Each line keeps its count of that threshold
-alone, over every variant or individual of the file, as today: "Keeps
-1,050 of 1,200 variants", one exact number since popnei 0.2.2 and the
-piece `popnei-0.2.2`. How many variants all the filters keep
-together, which depends on their order, the individuals taken out and
-the FILTER column, is not on the page while the thresholds move. It
-comes with the reading that carries the filtering out, the download or
-an analysis, which gives what each filter kept.
+**What a threshold shows.** Its line on the plot, its number in its
+box, and the bars beyond it shaded as left out. No line under the plot
+says how many variants or individuals it keeps, as the owner decided on
+8 October 2026: "In general we don't need to show the user how many
+variants are we going to keep." A threshold that keeps every value of
+its plot, off or on, has its line and the number in its box drawn in
+grey. How many variants all the filters keep together comes with the
+reading that carries the filtering out, the download or an analysis,
+which gives what each filter kept.
 
 **The FILTER box.** At the end of the part of the variants, on by
 default, for a VCF and for a `.nei` file that records whether each of
@@ -99,22 +103,28 @@ loses anything today: the new page saves no project file yet.
 **Undo and Redo on the new page.** `popgen2.html` has neither today,
 nor the notice that says what a change did. It gains a row with Undo
 and Redo, their keys, and the notice, "The MAF filter changed · Undo".
-A threshold is on or off, said in words: off, its box reads "No
-filter" and nothing is shaded. Only the missing rate of the variants
-starts on, at 0.1. Off is not the same as a line at the top of the
-axis, since popnei's filters of the MAF and of the observed
-heterozygosity drop a variant with no called genotype at any value.
+A threshold is on or off. Off, its box shows 1 in grey, the value at
+which it keeps everything, its line stands at the top of the axis in
+grey, and nothing is shaded. Only the missing rate of the variants
+starts on, at 0.1. A threshold that is on and keeps every value of its
+plot, a line dragged to the top of an axis that ends below 1, is drawn
+in grey too and stays a filter, since popnei's filters of the MAF and
+of the observed heterozygosity drop a variant with no called genotype
+at any value.
 
-**The owner's choices of 7 October 2026.** The design approved; a
+**The owner's choices.** On 7 October 2026: the design approved; a
 threshold turned off by emptying its box or typing 1; and, after the
 approval, the FILTER box for a `.nei` file that records the FILTER of
-its variants.
+its variants. On 8 October 2026, after trying the page: no line of what
+a threshold keeps; a threshold that keeps every value of its plot shown
+by its line and its number in grey, not by words; and the FILTER box
+built soon, right after Undo and Redo.
 
 ## What the user can do once it is built
 
 Cases 1 and 2 of `docs/use-cases.md`: the user reads the distributions
-of the open file, sets on them the thresholds of the filters, sees what
-each one keeps, and changes them, with Undo and Redo, until the
+of the open file, sets on them the thresholds of the filters, sees on
+each plot what its threshold would leave out, and changes them, with Undo and Redo, until the
 thresholds are the ones they want to work with. Carrying the filters
 out, the download and the analyses, comes with the tools.
 
@@ -193,12 +203,12 @@ store works out the individuals kept, and why a request would keep none
 finished result only, so that a tool started after a Stop waits for a
 whole pass rather than judging the individuals over part of the file.
 
-The price of this choice is that the counts the page shows, each
-threshold alone over the whole file, can differ from what the filters
-keep once carried out: a variant's missing rate over the individuals
-kept is not its missing rate over every individual, and the variants
-that failed their FILTER are among those counted. The owner chose it
-so that the page reads each file once.
+The price of this choice is that what a plot shades, each threshold
+alone over the whole file, can differ from what the filters leave out
+once carried out: a variant's missing rate over the individuals kept is
+not its missing rate over every individual, and the variants that
+failed their FILTER are among those drawn. The owner chose it so that
+the page reads each file once.
 
 ## The FILTER filter
 
@@ -294,44 +304,54 @@ press or when the focus leaves: an axis has about 100 positions and a
 held key repeats, so a change at each press would fill the 200 steps of
 the history (`MAX_UNDO_STEPS` of `src/core/history.ts`) with two sweeps
 of an axis and drop the opening of the file from it. While the line is
-dragged or a number is typed, the shading and the count of that
-threshold follow it from the bins, with no change of the project. The
+dragged or a number is typed, the shading of that threshold, and
+whether it is grey, follow it from the bins, with no change of the
+project. The
 check box changes the project at each click.
 
 The line and the box show the project's value, so Undo moves them back.
 
-A threshold is on or off, and the two are told apart in words, not by
-where the line stands. The top of an axis is no stand-in for off: the
-axis is the range of the file's values, rounded out, 0 to 0.1 for the
-missing rate of `panel.nei`, and it widens while the pass reads; and a
-filter at any value is not the same as no filter, since popnei's
-filters of the MAF and of the observed heterozygosity drop a variant
-with no called genotype at every threshold, and `individualsKept` drops
-an individual whose heterozygosity has no value. Under popnei 0.2.1, on
-a VCF of three variants of which one has no called genotype, a MAF
-filter at 1 keeps two variants, and no filter keeps three.
+A threshold is on or off, and where the line stands does not tell the
+two apart. The top of an axis is no stand-in for off: the axis is the
+range of the file's values, rounded out, 0 to 0.1 for the missing rate
+of `panel.nei`, and it widens while the pass reads; and a filter at any
+value is not the same as no filter, since popnei's filters of the MAF
+and of the observed heterozygosity drop a variant with no called
+genotype at every threshold, and `individualsKept` drops an individual
+whose heterozygosity has no value. Under popnei 0.2.1, on a VCF of
+three variants of which one has no called genotype, a MAF filter at 1
+keeps two variants, and no filter keeps three.
 
 So, on `popgen2.html`: the filter of the missing rate of the variants
 starts on at 0.1, the default of `docs/functionality.md`, and the
-others start off. A threshold that is off has its box empty, with
-"No filter" in it, and its line at the top of the axis, labelled "No
-filter", with no shading and the line "Keeps every variant". Dragging
-the line or typing a number turns the filter on at that value. Two
-things turn it off, as the owner chose on 7 October 2026: emptying the
-box, and typing the value at which the filter would keep everything, 1
-for a maximum and 0 for a minimum. Every threshold of this page is a
-maximum, so typing 1 turns it off. That value is taken as off, not as a
+others start off. A threshold that is off shows 1 in its box, the value
+at which a maximum keeps everything, and its line at the top of the
+axis, both in grey, with no shading. Until 8 October 2026 this design
+had the box empty with the words "No filter" in it and beside the line,
+and a line "Keeps every variant" under the plot; the owner chose on 8
+October 2026, after trying the page, to show it by the grey alone, with
+no words on the screen (below, "What a threshold shows on its plot").
+Dragging the line or typing a number turns the filter on at that value.
+Two things turn it off, as the owner chose on 7 October 2026: emptying
+the box, and typing the value at which the filter would keep
+everything, 1 for a maximum and 0 for a minimum. Every threshold of
+this page is a maximum, so typing 1 turns it off, and an emptied box,
+once committed, shows 1 in grey. That value is taken as off, not as a
 filter at 1, so a variant with no called genotype is kept, as with no
 filter. The value 1 is off however it is reached, typed or dragged, as
 the session settled on 7 October 2026 after the approval. A line dragged
 to the top of an axis that ends below 1 is a filter at that value, since
-the axis ends where the file's values end. The number box shared by both pages,
-`src/ui/widgets/NumberField.tsx`, gives nothing today for an empty box
-and shows its value again; it gains an option, used by `popgen2.html`
-only, under which Enter or leaving an empty box commits "off"; a typed 1 is
-an ordinary number to the box, and the page turns it into off. From off,
-the arrow keys in the empty box do nothing, as today; on the line they
-turn the filter on, one step below the top of the axis. Off, the project keeps it aside with its last
+the axis ends where the file's values end; it keeps every value of the
+plot, so it is drawn in grey too, and its box shows that value, not 1.
+The number box shared by both pages, `src/ui/widgets/NumberField.tsx`,
+gives nothing today for an empty box and shows its value again; it
+gains an option, used by `popgen2.html` only, under which Enter or
+leaving an empty box commits "off"; a typed 1 is an ordinary number to
+the box, and the page turns it into off. From off, the Down arrow key,
+on the line or in the box, turns the filter on one step below the top
+of the axis, and Up does nothing; in the box the page gives that value
+rather than the box's own step below 1, which would lie far above an
+axis that ends below 1 and widen it. Off, the project keeps it aside with its last
 value, in `filtersOff` for the variants and `individualFiltersOff` for
 the individuals, as it keeps a filter the user turns off on the old
 page. A number typed above the axis is kept as typed, and the axis
@@ -380,8 +400,9 @@ inputs the change altered, which a change of a filter does not do for
 the one pass: a click on the FILTER box after a crash does not wipe the
 message of the crash; Start again tries again.
 
-The thresholds can be moved over the plots of a Stop, and their counts
-are then of the variants read; the line of each plot says so.
+The thresholds can be moved over the plots of a Stop, and their
+shading and their grey are then of the variants read, as each part
+says over its plots.
 
 ## Undo, Redo and the notice of a change on `popgen2.html`
 
@@ -432,32 +453,53 @@ The limit that `docs/architecture.md` section 5 records for the piece of
 the filters, that every change of a threshold would stop the
 calculation running, moves to that later piece.
 
-## The counts of each threshold
+## What a threshold shows on its plot
 
-The count under each plot of the variants is popnei's bins added up,
-without a pass. From popnei 0.2.2, whose release closed popnei's issue
-#11, the one pass asks for 10,000 bins over 0 to 1 that hold their
-right edge, whose edges are k/10,000, as the piece `popnei-0.2.2` builds
-it (`docs/plans/popnei-0.2.2.md`, "The design"). Ten thousand and not a
-thousand because the step of a threshold follows its axis, and is
-0.0001 on an axis narrower than 0.01 (`thresholdStep` of
-`src/core/thresholds.ts`), as the session decided on 7 October 2026. A
-threshold of the variants has four decimals at most, since the box
-rounds a number typed with more to four, so it falls on an edge, and the
-count is one exact number, the count of
-the variants whose value is at most the threshold, which is what
-popnei's filter at that threshold keeps over every variant: "Keeps 1,050
-of 1,200 variants". With popnei 0.2.1 it was a range where the bins
-could not tell, "Keeps 1,113 to 1,152 of 1,200 variants". A filter
-carried out is given the number on the screen. The counts of the
-individuals come from popnei's value of each individual, and were
-exact before.
+No count, as the owner decided on 8 October 2026: the line, the number
+in the box, and the bars beyond the line shaded as left out, from
+popnei's bins of the variants and from popnei's value of each
+individual, with no pass. Until that day each plot had a line under it,
+"Keeps 1,050 of 1,200 variants", made exact by popnei 0.2.2's bins.
+
+A threshold that keeps every value of its plot is drawn in grey, its
+line and the number in its box: off, at 1; and on, at a value no
+variant or individual of the plot lies above, as a line dragged to the
+top of an axis that ends below 1. A threshold of the variants keeps
+every value of its plot when no bin above it holds a variant. popnei
+0.2.2's fine bins hold their right edge, at k/n of 0 to 1, and the box
+rounds a threshold to the step of its axis, so a threshold falls on an
+edge and that test is exact; the number of bins is the piece
+`popnei-0.2.2`'s (`docs/plans/popnei-0.2.2.md`), 1,000 as built on 7
+October 2026, where this design had asked for 10,000. A threshold of the
+individuals keeps every value of its plot when no individual's value
+lies above it. While the file is read the grey follows the result so
+far, so a threshold grey at first can lose its grey when a higher value
+arrives.
+
+A threshold that is on and grey is still a filter: the filters of the
+MAF and of the observed heterozygosity drop a variant with no called
+genotype, which is in no histogram, and that of the observed
+heterozygosity of the individuals drops an individual with no value. So
+a screen reader is told what the grey means in words, since the grey
+alone would not reach its user (WCAG 2.2, 1.4.1 "Use of color"): the
+line's value says it keeps every variant of the plot, and the box's
+description says that the filter removes nothing, or nothing of the
+plot when it is on (the screen spec gives the words). The grey of the
+number has a contrast of at least 4.5:1 against the box, and the grey
+line at least 3:1 against the plot, in both themes.
+
+A threshold of 0 is a filter at 0, given to popnei as 0. The piece
+`popnei-0.2.2` had raised a threshold of the variants below 0.001 to
+0.001, with the words "Counted as 0.001, the smallest threshold.",
+because its first bin holds 0 and the values up to 0.001 and the count
+under the plot had to be exact; with no count, the raise and its words
+go, as the session decided on 8 October 2026 from the owner's decision.
 
 ## The expected heterozygosity
 
 popnei has no filter on the expected heterozygosity, so its plot keeps
 no line, as the owner chose: the plot stays, with its title and the
-count of its variants, and no box and no "Keeps" line.
+count of its variants, and no line and no box.
 
 ## The tools section and the download of the filtered file
 
@@ -509,7 +551,9 @@ calculation.
 - In `src/core`: each command of a threshold and of the box gives one
   change of the project, with its notice, and Undo gives the value
   back; emptying a box or typing 1 turns its filter off and keeps its
-  value aside;
+  value aside; a threshold is grey exactly when no bin, or no
+  individual's value, of its plot lies above it, and 0 is given to
+  popnei as 0;
   a failure of the one pass survives a change of a filter; `filtersApplied` leaves `passed`
   out for a file whose variants do not record their FILTER and keeps it
   for a VCF and for a `.nei` file that records it; a project file holding
@@ -519,7 +563,9 @@ calculation.
   dragged, typed, moved with the arrow keys, undone, or the box turned;
   a run of ten arrow presses is one step of Undo, and Ctrl+Z pressed
   within the quiet second undoes that run; after a Stop the
-  plots read so far stay, with their line; the FILTER box is shown for
+  plots read so far stay, with the words of a Stop; a threshold off shows 1 and
+  its line in grey, as does one dragged to the top of an axis that ends
+  below 1; the FILTER box is shown for
   `panel.vcf.gz` and for a `.nei` file written by popnei 0.2.2 from
   `low_qual.vcf.gz`, and not for `panel.nei`.
 - Wrong if any change of a filter sends a request to the worker, or a
@@ -565,14 +611,15 @@ Made on this branch once the owner approves, each with its paragraph
 
 ## The costs of the web
 
-- **A frozen page:** none new. The counts from the bins add at most
-  1,000 numbers at each move of a line, and the individuals kept sort the
-  values of the individuals, a few thousand.
+- **A frozen page:** none new. Whether a threshold is grey reads at
+  most 1,000 bins at each move of a line, and the individuals kept sort
+  the values of the individuals, a few thousand.
 - **Memory:** none new; the download, which would add the file written,
   waits for popnei's issue #13.
 - **The keyboard and a screen reader:** the line is a React Aria slider,
   moved by the arrow keys, as today; a run of presses is one change and
-  one notice. To be heard in VoiceOver, the screen reader of macOS,
+  one notice; a grey threshold is told in the line's value and the
+  box's description. To be heard in VoiceOver, the screen reader of macOS,
   before the plan is settled.
 - **Downloads and browsers:** nothing new to download, and nothing past
   the floor of `docs/technology.md`.
@@ -611,6 +658,12 @@ Made on this branch once the owner approves, each with its paragraph
 - **The thresholds kept as state of the page,** as the piece
   `thresholds` built them: no Undo, lost on another file, and nothing to
   carry out later.
+- **A line under each plot of what its threshold keeps,** "Keeps 1,050
+  of 1,200 variants", and the words "No filter" in the box and beside
+  the line of a threshold that is off, the versions of this design of 7
+  October 2026: the owner chose on 8 October 2026, after trying the
+  page, to show no count, and to show a threshold that keeps every value
+  of its plot by its line and its number in grey.
 
 ## What the owner decided
 
@@ -629,6 +682,29 @@ open, whether its variants hold the record (`keepsPassed`), where under
 popnei 0.2.1 the page could not tell, so the approved version left the
 filter out for every `.nei` file, and a `.nei` file the page writes from
 a VCF would have kept its failed variants with nothing saying so. The
-design stays approved with this revision, which also gives the exact
-counts of popnei 0.2.2 in place of the range of its bins (above, "The
-counts of each threshold").
+design stays approved with this revision, which also gave the exact
+counts of popnei 0.2.2 in place of the range of its bins, until the
+owner's decisions of 8 October 2026 below took the count out.
+
+On 8 October 2026 the owner tried `popgen2.html` on the branch
+`popnei-0.2.2` and decided three things that change this design, which
+stays approved with them:
+
+1. No line under the plots of what a threshold keeps: "In general we
+   don't need to show the user how many variants are we going to keep."
+   A threshold that keeps every variant or individual of its plot is
+   shown by its line and the number in its box drawn in grey, not by
+   words; the words "No filter" in the box and beside the line, and
+   the line "Keeps every variant", go. Off is 1 in grey in the box and
+   the line in grey at the top of the axis, with no shading; an emptied
+   box shows 1 in grey. A screen reader alone is told it in words (above,
+   "What a threshold shows on its plot"). From this the session decided
+   the same day that the raise of a threshold of the variants below
+   0.001 to 0.001, and its words, go, since they served only the exact
+   count of the line: popnei applies 0 exactly.
+2. Fewer bars on the histograms whose values lie on a grid: a bar is
+   never narrower than 1/n for the missing rate of n individuals, nor
+   1/(ploidy · n) for the MAF. That is the piece `popnei-0.2.2`'s, and
+   changes nothing here.
+3. The FILTER box is wanted soon: the plan `docs/plans/filters.md`
+   builds it right after Undo, Redo and the notice.
