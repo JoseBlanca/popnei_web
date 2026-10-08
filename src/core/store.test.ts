@@ -487,7 +487,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(calls).toStrictEqual(at(0, 0));
     // A new history whose project is the present one: the same project,
     // so the same keys.
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     expect(store.getState().undo).toBeNull();
     expect(calls).toStrictEqual(at(0, 0));
     store.apply("the MAF filter changed", (p) =>
@@ -666,7 +666,7 @@ describe("WP4 D1 the state with no calculation", () => {
       setVariantFilter(p, { kind: "maf", maxAllowedMaf: 0.8 }),
     );
     expect(store.getState().historyMoves).toBe(2);
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     expect(store.getState().historyMoves).toBe(3);
     store.undo();
     expect(store.getState().historyMoves).toBe(3);
@@ -685,7 +685,7 @@ describe("WP4 D1 the state with no calculation", () => {
     );
     const { listener, count } = counter();
     store.subscribe(listener);
-    store.open(opened);
+    store.open(() => opened);
     const state = store.getState();
     expect(state.project).toBe(opened);
     expect(state.undo).toBeNull();
@@ -749,7 +749,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(store.getState().project.variants?.read).toBe(read);
     expect(frozenDeeply(store.getState().project)).toBe(true);
     const opened = loadPanel(OTHER_VARIANTS_ID)(emptyProject("popgen"));
-    store.open(opened);
+    store.open(() => opened);
     expect(store.getState().project).toBe(opened);
     expect(frozenDeeply(opened)).toBe(true);
   });
@@ -858,7 +858,7 @@ describe("WP4 D1 the state with no calculation", () => {
   });
   test("an undo past the first project, and a redo with nothing to redo, change nothing and tell no screen", () => {
     const { store } = storeWithVariantsRead();
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     const before = store.getState();
     const { listener, count } = counter();
     store.subscribe(listener);
@@ -1991,7 +1991,7 @@ describe("WP4 D3 the notice", () => {
     });
     const { listener, count } = counter();
     store.subscribe(listener);
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     expect(current.cancels()).toBe(1);
     expect(store.getState().notice).toBeNull();
     expect(kinds(store)).toStrictEqual(["ready", "ready"]);
@@ -2310,7 +2310,7 @@ describe("WP4 D3 the notice", () => {
       kind: "failed",
       error: { kind: "popnei", message: "no variant left" },
     });
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     const [pops, done] = statuses(store);
     expect(pops).toMatchObject({
       kind: "error",
@@ -2325,7 +2325,7 @@ describe("WP4 D3 the notice", () => {
     const error = { kind: "workerFailed", message: "a trap" } as const;
     store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error });
     expect(statuses(store)[1]?.kind).toBe("error");
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
     expect(statuses(store)[1]?.kind).toBe("ready");
   });
 
@@ -2661,7 +2661,7 @@ function openedAndRun(options: {
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
   });
-  store.open(opened);
+  store.open(() => opened);
   store.popneiReady(options.popnei ?? "0.1.0");
   store.apply("a variants file was loaded", (p) =>
     loadVariants(p, {
@@ -3102,7 +3102,7 @@ function modelledStore(): {
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(sampleProject());
+  store.open(() => sampleProject());
   const model: ModelRequest[] = [];
   const results = new Map<string, TestResult>();
   const inFlight = (): ModelRequest[] => model.filter((r) => !r.ended);
@@ -3193,7 +3193,7 @@ function modelledStore(): {
         break;
       case "open":
         stopEverything();
-        store.open(s.empty ? emptyProject("popgen") : sampleProject());
+        store.open(() => (s.empty ? emptyProject("popgen") : sampleProject()));
         break;
       case "popneiReady":
         if (s.version !== before.popneiVersion) {
@@ -3624,7 +3624,7 @@ function storeOfFive(
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(fiveIndividualsProject(filters));
+  store.open(() => fiveIndividualsProject(filters));
   return { store, analyses, sent, lists };
 }
 
@@ -4354,7 +4354,7 @@ describe("VS3 D4 a Run that waits, stopped as a calculation", () => {
   test("an opening and another version of popnei end every wait", () => {
     const opened = storeOfFive([MISSING_AT_02]);
     opened.store.startRun("pops");
-    opened.store.open(opened.store.getState().project);
+    opened.store.open(() => opened.store.getState().project);
     expect(statusIn(opened.store, "pops").kind).toBe("ready");
     expect(sentAt(opened.sent, 0).cancels()).toBe(1);
 
@@ -4560,7 +4560,7 @@ function storeOfFiveWithCounts(
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(fiveIndividualsProject(filters));
+  store.open(() => fiveIndividualsProject(filters));
   return { store, analyses, sent, lists };
 }
 
@@ -4858,7 +4858,7 @@ describe("VS3 D4 the failure of the statistics, and a read that leaves a wait be
     });
     store.popneiReady("0.1.0");
     const five = fiveIndividualsProject([MISSING_AT_02]);
-    store.open(five);
+    store.open(() => five);
     store.apply("an individuals file was loaded", loadPops);
     expect(store.startRun("pops")).toHaveLength(1);
     const read = five.individuals?.read;
@@ -4899,7 +4899,7 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       maxUndoSteps: 200,
     });
     store.popneiReady("0.1.0");
-    store.open(fiveIndividualsProject([MISSING_AT_02]));
+    store.open(() => fiveIndividualsProject([MISSING_AT_02]));
     store.startRun("pops");
     const statsRequest = sentAt(sent, 0);
     expect(store.startRun("other")).toStrictEqual([]);
@@ -4951,7 +4951,7 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       maxUndoSteps: 200,
     });
     store.popneiReady("0.1.0");
-    store.open(fiveIndividualsProject([MISSING_AT_02]));
+    store.open(() => fiveIndividualsProject([MISSING_AT_02]));
     store.startRun("pops");
     const statsRequest = sentAt(sent, 0);
     store.startRun("other");
@@ -5305,10 +5305,10 @@ function storeThatWrites(filters: readonly IndividualFilter[] = []): {
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open({
+  store.open(() => ({
     ...fiveIndividualsProject(filters),
     filters: [{ kind: "maf", maxAllowedMaf: 0.9 }],
-  });
+  }));
   return { store, analyses, sent, writes, lists };
 }
 
@@ -5867,7 +5867,7 @@ describe("VS3 D6 the write in the store, its other rules", () => {
 
   test("an opening and another version of popnei forget the file, with no notice, and the command after them discards none", () => {
     const opened = written();
-    opened.store.open(opened.store.getState().project);
+    opened.store.open(() => opened.store.getState().project);
     expect(writeIn(opened.store)).toMatchObject({ kind: "ready" });
     expect(opened.store.getState().notice).toBeNull();
     opened.store.apply("the MAF filter changed", maf(0.8));
@@ -6612,7 +6612,7 @@ function ldStore(
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(first);
+  store.open(() => first);
   return { store, analyses, sent, writes, carried };
 }
 
@@ -6667,7 +6667,7 @@ function runLdStep(
       store.redo();
       return;
     case "open":
-      store.open(s.empty ? emptyProject("popgen") : sampleProject());
+      store.open(() => (s.empty ? emptyProject("popgen") : sampleProject()));
       return;
     case "read": {
       const variants = before.variants;
@@ -7124,7 +7124,7 @@ describe("SF2 D3 the comparison with the check numbers takes the fingerprint of 
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
     });
-    store.open({
+    store.open(() => ({
       ...settings,
       reference: {
         variants: SAVED_NEI,
@@ -7139,7 +7139,7 @@ describe("SF2 D3 the comparison with the check numbers takes the fingerprint of 
           },
         ],
       },
-    });
+    }));
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", (p) =>
       loadVariants(p, {
@@ -7359,7 +7359,7 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
     expect(statuses(store)[1]?.kind).toBe("error");
     const key = keyAt(store, 1);
 
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
 
     expect(statuses(store)[1]).toStrictEqual({
       kind: "ready",
@@ -7474,7 +7474,7 @@ describe("SF5 D3 the last result so far kept after a Stop", () => {
     const { store, request } = stoppedSummary();
     store.runEnded(request.run.id, { kind: "cancelled" });
 
-    store.open(store.getState().project);
+    store.open(() => store.getState().project);
 
     expect(statuses(store)[1]).toStrictEqual({
       kind: "ready",

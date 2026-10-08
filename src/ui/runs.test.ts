@@ -101,7 +101,7 @@ function setUp(project: Project | null): {
   });
   real.popneiReady("0.1.0");
   if (project !== null) {
-    real.open(project);
+    real.open(() => project);
   }
   const ended: [number, Outcome<JobResult | Written<never>>][] = [];
   const store: Store<JobResult> = {
@@ -195,7 +195,7 @@ function setUpWithThreshold(): {
     maxUndoSteps: MAX_UNDO_STEPS,
   });
   real.popneiReady("0.1.0");
-  real.open(
+  real.open(() =>
     fiveIndividualsProject([
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
     ]),
@@ -383,7 +383,7 @@ function setUpWriting(throwsFor: (runId: number) => boolean): {
     maxUndoSteps: MAX_UNDO_STEPS,
   });
   real.popneiReady("0.1.0");
-  real.open(
+  real.open(() =>
     fiveIndividualsProject([
       { kind: "missing_data", maxAllowedMissingRate: 0.2 },
     ]),
@@ -475,7 +475,7 @@ describe("VS3 D6 startWriting", () => {
       maxUndoSteps: MAX_UNDO_STEPS,
     });
     real.popneiReady("0.1.0");
-    real.open(
+    real.open(() =>
       fiveIndividualsProject([
         { kind: "missing_data", maxAllowedMissingRate: 0.2 },
       ]),

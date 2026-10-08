@@ -612,7 +612,7 @@ function storeOf(first: Project): {
     maxUndoSteps: 100,
   });
   store.popneiReady("0.1.0");
-  store.open(first);
+  store.open(() => first);
   return {
     status: (id) =>
       store.getState().analyses.find((view) => view.id === id)?.status,
@@ -1895,7 +1895,7 @@ function pcaStore(first: Project): {
     maxUndoSteps: 100,
   });
   store.popneiReady("0.1.0");
-  store.open(first);
+  store.open(() => first);
   const status = (): AnalysisView<JobResult>["status"] => {
     const view = store.getState().analyses.find((one) => one.id === "pca");
     if (view === undefined) {

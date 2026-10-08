@@ -545,7 +545,7 @@ It sends, each with its description, which names its step of Undo:
 | any of the five thresholds changed, turned on or turned off, by a drag, a run of keys or the box | `setThreshold(p, threshold, value)`, with the number, or `null` for an emptied box; 1 turns it off there | "the MAF filter changed", "the MAF filter was turned on", "the MAF filter was turned off"; "the filter of the variants by missing data changed", "the filter of individuals by missing data was turned off", and so for each |
 | the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the variants that failed their FILTER are left out", "the variants that failed their FILTER are kept" |
 | Undo, Redo | `store.undo()`, `store.redo()` | |
-| a file opened, by the button, a drop or a paste | `store.open(loadVariants(p, load))`, through `openVariantsFile` | none: no step of Undo |
+| a file opened, by the button, a drop or a paste | `store.open((p) => loadVariants(p, load))`, through `openVariantsFile` | none: no step of Undo |
 
 The page chooses the words of a threshold's description by comparing its
 value in the project before the command with its value in the project

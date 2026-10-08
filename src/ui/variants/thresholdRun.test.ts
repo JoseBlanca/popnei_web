@@ -6,9 +6,9 @@
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { setThreshold } from "../../core/project.ts";
+import { setThreshold, thresholdValue } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
-import { createPopgen2Store } from "../popgen2Store.ts";
+import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import {
   RUN_QUIET_MS,
   createRunGate,
@@ -170,12 +170,51 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
       opened.push("typed");
     });
     run.press(0.5, 0.4);
-    store.open(store.getState().project);
+    store.open((p) => p);
     expect(opened).toEqual(["run", "typed", "open"]);
     // A box gone commits nothing more.
     letGo();
-    store.open(store.getState().project);
+    store.open((p) => p);
     expect(opened).toEqual(["run", "typed", "open", "open"]);
+  });
+
+  test("a file opened while a run waits, or while a number typed in a box waits, opens with the threshold the run or the number gave", () => {
+    const gate = createRunGate();
+    const store = gatedStore(
+      createPopgen2Store({ send: () => unsent(), appVersion: "0.1.0" }),
+      gate,
+    );
+    const maf = { of: "variants", kind: "maf" } as const;
+    const missing = { of: "variants", kind: "missing_data" } as const;
+    const run = createThresholdRun({
+      gate,
+      change: (to) => {
+        store.apply("the MAF filter was turned on", (p) =>
+          setThreshold(p, maf, to),
+        );
+      },
+      ended: () => undefined,
+    });
+    gate.typing(() => {
+      store.apply("the missing data filter changed", (p) =>
+        setThreshold(p, missing, 0.25),
+      );
+    });
+
+    run.press(1, 0.05);
+    openVariantsFile(store, {
+      fileId: "c".repeat(32),
+      name: "c.vcf.gz",
+      size: 1000,
+      format: "vcf",
+      readOptions: { ploidy: null, onlyPassed: false },
+    });
+
+    const project = store.getState().project;
+    expect(project.variants?.fileId).toBe("c".repeat(32));
+    expect(thresholdValue(project, maf)).toBe(0.05);
+    expect(thresholdValue(project, missing)).toBe(0.25);
+    expect(store.getState().undo).toBeNull();
   });
 });
 

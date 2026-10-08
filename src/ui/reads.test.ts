@@ -317,7 +317,7 @@ describe("WS10 the cases of the entry", () => {
       throw new Error("the fixture of version 1 does not open");
     }
 
-    store.open(opened.value);
+    store.open(() => opened.value);
 
     expect(store.getState().project.variants).toBeNull();
     expect(individualsRead(store)).toMatchObject({ kind: "read" });
@@ -345,7 +345,7 @@ describe("WS10 the cases of the entry", () => {
       throw new Error("the fixture of the metadata not read does not open");
     }
 
-    store.open(opened.value);
+    store.open(() => opened.value);
 
     expect(store.getState().project.variants).toBeNull();
     expect(individualsRead(store)).toEqual({ kind: "notGiven" });
@@ -420,7 +420,7 @@ describe("WS7 D1 the reads cancelled", () => {
       ...present,
       individuals: { ...individuals, csv: { ...csv } },
     };
-    store.open(reopened);
+    store.open(() => reopened);
 
     expect(store.getState().project.individuals?.csv).not.toBe(csv);
     expect(readsOf(fake, A)).toHaveLength(2);

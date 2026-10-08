@@ -477,9 +477,13 @@ export interface Store<R, F = never> {
   undo(): void;
   /** Goes forward one step; nothing changes when there is none. */
   redo(): void;
-  /** Starts a new history with the opened project `p`, with nothing to
-      undo. */
-  open(p: Project): void;
+  /** Starts a new history, with nothing to undo, with the project that
+      `make` gives from the current one: a project file read, which does
+      not look at it, or the current project with a new variants file.
+      A function and not a project, so that a page that makes a change
+      waiting before the opening (src/ui/variants/thresholdRun.ts) opens
+      from the project with that change. */
+  open(make: (current: Project) => Project): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -2359,8 +2363,11 @@ export function createStore<J, R, F = never>(
         description: after.present.description,
       }));
     },
-    open: (p) => {
-      const opened = startHistory(freezeProject(p), history.maxSteps);
+    open: (make) => {
+      const opened = startHistory(
+        freezeProject(make(history.present.project)),
+        history.maxSteps,
+      );
       keysFor(opened.present.project, popneiVersion);
       stopEverything();
       failures.clear();

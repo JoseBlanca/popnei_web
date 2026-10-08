@@ -132,7 +132,7 @@ describe("WS9 an undo and the status region", () => {
   test("an undo that brings the warning of a reopened project back says what it undid before the warning", () => {
     const store = makeStore();
     store.popneiReady("0.1.0");
-    store.open(opened());
+    store.open(() => opened());
     loadAndRead(store, OTHER_ID, "other.nei", 87_304);
     const warning = identityWarning(store.getState().project);
     expect(warning).not.toBeNull();

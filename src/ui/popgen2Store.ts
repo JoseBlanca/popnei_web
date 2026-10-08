@@ -79,8 +79,8 @@ export function createPopgen2Store(
  * stopped, and no notice is made.
  */
 export function openVariantsFile(
-  store: Pick<Store<unknown, unknown>, "getState" | "open">,
+  store: Pick<Store<unknown, unknown>, "open">,
   load: VariantLoad,
 ): void {
-  store.open(loadVariants(store.getState().project, load));
+  store.open((p) => loadVariants(p, load));
 }

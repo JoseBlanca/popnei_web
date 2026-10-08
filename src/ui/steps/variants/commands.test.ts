@@ -276,7 +276,7 @@ describe("the options of a VCF the Variants step shows", () => {
     const options = createVcfOptions(store);
     options.edit({ ploidy: 4, onlyPassed: false });
     const made = store.getState().project;
-    store.open({
+    store.open(() => ({
       ...made,
       reference: {
         variants: {
@@ -285,7 +285,7 @@ describe("the options of a VCF the Variants step shows", () => {
         },
         checks: [],
       },
-    });
+    }));
 
     expect(options.shown()).toEqual({ ploidy: 2, onlyPassed: true });
   });

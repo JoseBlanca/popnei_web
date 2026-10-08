@@ -169,8 +169,9 @@ is what the core layer adds to them.
   command is `(project) => Project` and the description the words that
   finish the notice of removed results, "the MAF filter changed", which
   makes a step of undo, and makes none when the command returns the
-  project it was given; `undo()`, `redo()`, and `open(project)`, which
-  starts a new history; `startRun(analysis)`; and the events, the version
+  project it was given; `undo()`, `redo()`, and `open(make)`, which
+  starts a new history with the project that `make` gives from the
+  current one; `startRun(analysis)`; and the events, the version
   of popnei, the reads of the files and `runEnded`, which change what the
   screens show and make no step of undo. `docs/specs/core/store.md` has
   them whole, and `react.md` how the screens read it.

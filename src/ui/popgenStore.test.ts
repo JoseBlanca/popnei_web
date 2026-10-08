@@ -60,7 +60,7 @@ function setUp(): {
 describe("VS5 D1 the store of the page", () => {
   test("a Run of the diversity with a threshold on the individuals and no statistics sends the statistics of each individual and waits for them", () => {
     const { store, jobs } = setUp();
-    store.open(
+    store.open(() =>
       fiveIndividualsProject([
         { kind: "missing_data", maxAllowedMissingRate: 0.2 },
       ]),
@@ -81,7 +81,7 @@ describe("VS5 D1 the store of the page", () => {
 
   test("the end of a diversity fills the counts of the filters", () => {
     const { store } = setUp();
-    store.open(fiveIndividualsProject([]));
+    store.open(() => fiveIndividualsProject([]));
     const runs = store.startRun("diversity") ?? [];
     const run = runs[0];
     if (run === undefined) throw new Error("no request was sent");
@@ -117,7 +117,7 @@ describe("VS5 D1 the store of the page", () => {
 
   test("Write sends the write of the filtered variants to the worker client's write", () => {
     const { store, jobs, writes } = setUp();
-    store.open(fiveIndividualsProject([]));
+    store.open(() => fiveIndividualsProject([]));
 
     const runs = store.startWrite("nei");
 
@@ -131,7 +131,7 @@ describe("SF5 D5 the store of popgen.html", () => {
   test('starts from firstProject("popgen"), and a change of a filter that removes nothing gives no notice', () => {
     const { store } = setUp();
     expect(store.getState().project).toStrictEqual(firstProject("popgen"));
-    store.open(fiveIndividualsProject([]));
+    store.open(() => fiveIndividualsProject([]));
 
     store.apply("the MAF filter changed", (p) =>
       setThreshold(p, { of: "variants", kind: "maf" }, 0.3),

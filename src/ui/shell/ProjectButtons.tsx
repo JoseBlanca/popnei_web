@@ -252,7 +252,7 @@ export function OpenProject(): React.JSX.Element {
       the opening said in the status region; `asked` when the question
       before an opening is open, and closed by it. */
   const open = (name: string, project: Project, asked: boolean): void => {
-    store.open(project);
+    store.open(() => project);
     saving.opened(project);
     const onVariants = stepOfHash(window.location.hash) === "variants";
     window.location.hash = hashOfStep("variants");

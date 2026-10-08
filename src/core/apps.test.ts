@@ -445,7 +445,7 @@ describe("IP2 D3 the histograms of the variants after an undo to a load whose st
     const bound =
       2 * resultBytes(HISTOGRAMS) + Math.floor(1.5 * resultBytes(FIVE_STATS));
     const { store, sent } = popgenStoreOf(bound);
-    store.open(
+    store.open(() =>
       fiveIndividualsProject([
         { kind: "missing_data", maxAllowedMissingRate: 0.2 },
       ]),
@@ -522,7 +522,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
       maxUndoSteps: 100,
     });
     store.popneiReady("0.1.0");
-    store.open({ ...fiveIndividualsProject([]), individuals: null });
+    store.open(() => ({ ...fiveIndividualsProject([]), individuals: null }));
     store.startRun("variantsSummary");
     expect(sent.map((request) => request.job)).toEqual([
       {

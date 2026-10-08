@@ -80,8 +80,10 @@ export function createRunGate(): RunGate {
 
 /** `store` with every command of a screen passing `gate` first: `apply`,
     `undo` and `redo` after every run held is made a change, and `open`
-    after that and after what is typed in a box is committed. The rest
-    is the store's own. */
+    after that and after what is typed in a box is committed. Each takes
+    a function of the project and not a project, or nothing, so that none
+    is given a project made before the gate changed it. The rest is the
+    store's own. */
 export function gatedStore<R, F>(
   store: Store<R, F>,
   gate: RunGate,
@@ -100,10 +102,10 @@ export function gatedStore<R, F>(
       gate.endAll();
       store.redo();
     },
-    open: (p) => {
+    open: (make) => {
       gate.endAll();
       gate.commitTyped();
-      store.open(p);
+      store.open(make);
     },
   };
 }

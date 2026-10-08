@@ -1204,7 +1204,10 @@ export interface Store<R, F = never> {
   apply(description: string, command: (p: Project) => Project): void;
   undo(): void;
   redo(): void;
-  open(p: Project): void;
+  /** Starts a new history with the project `make` gives from the
+      current one, so that a page that commits a change before an opening
+      opens from it (popgen2.html's runs of the arrow keys). */
+  open(make: (current: Project) => Project): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 

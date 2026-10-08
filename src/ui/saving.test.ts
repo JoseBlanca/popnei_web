@@ -151,7 +151,7 @@ describe("WS9 D2 the saving", () => {
     const { store, saving } = setup();
     setThreshold(store, 0.05);
     const opened = store.getState().project;
-    store.open(opened);
+    store.open(() => opened);
 
     saving.opened(opened);
     expect(saving.changed()).toBe(false);
@@ -391,7 +391,7 @@ function setUpWriting(): {
     appVersion: "0.1.0",
   });
   store.popneiReady("0.1.0");
-  store.open(fiveIndividualsProject([]));
+  store.open(() => fiveIndividualsProject([]));
   const files: { name: string; file: Blob }[] = [];
   const saving = createSaving({
     store,

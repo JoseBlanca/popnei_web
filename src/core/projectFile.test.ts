@@ -2596,7 +2596,7 @@ function diversityVerdictOf(
     maxUndoSteps: 200,
   });
   store.popneiReady("0.1.0");
-  store.open(opened.value);
+  store.open(() => opened.value);
   const reference = opened.value.reference;
   if (reference === null) {
     throw new Error("the fixture has no reference");
