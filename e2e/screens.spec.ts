@@ -4386,6 +4386,23 @@ function downloadButton(page: Page): Locator {
   });
 }
 
+/** The sentence of no variant of panel.vcf.gz on popgen2.html. */
+const PANEL_NO_VARIANT =
+  "None of the 1,200 variants of panel.vcf.gz pass the filters, so there is nothing to download.";
+
+/** Types `value` in the box of the threshold named `name` on
+    popgen2.html, and commits it with Enter. */
+async function typeThreshold(
+  page: Page,
+  name: string | RegExp,
+  value: string,
+): Promise<void> {
+  const box = newPageStats(page).getByRole("textbox", { name });
+  await box.fill(value);
+  await box.press("Enter");
+  await expect(box).toHaveValue(value);
+}
+
 /** The dialog of the download on popgen2.html. */
 function downloadDialog(page: Page): Locator {
   return page.getByRole("dialog", { name: "Download filtered variants" });
@@ -4661,6 +4678,93 @@ for (const theme of ["light", "dark"] as const) {
         ).toBeVisible();
         await expect(downloadDialog(page)).toHaveCount(0);
         await save(page, `popgen2-downloaded${at}-${theme}`);
+      });
+
+      test("the words of no individual kept in place of the button", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await typeThreshold(
+          page,
+          "Missing GTs max: maximum proportion of missing genotypes of an individual",
+          "0.01",
+        );
+        await expect(
+          newPageStats(page).getByText(
+            "The filters of individuals keep none of the 200 individuals of panel.vcf.gz. Loosen them.",
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-download-kept-none${at}-${theme}`);
+      });
+
+      test("the sentence of no variant before any write", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await typeThreshold(
+          page,
+          /^Obs\. het\. max: maximum observed heterozygosity$/u,
+          "0",
+        );
+        await expect(
+          newPageStats(page).getByText(PANEL_NO_VARIANT),
+        ).toBeVisible();
+        await save(page, `popgen2-download-no-variant${at}-${theme}`);
+      });
+
+      test("the sentence of no variant after a write", async ({ page }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await typeThreshold(
+          page,
+          "Missing genotypes max: maximum proportion of missing genotypes",
+          "0",
+        );
+        await typeThreshold(
+          page,
+          "Major allele frequency max: maximum major allele frequency",
+          "0.6",
+        );
+        await downloadButton(page).click();
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await expect(downloadDialog(page)).toHaveCount(0);
+        const sentence = newPageStats(page).getByText(PANEL_NO_VARIANT);
+        await expect(sentence).toBeFocused();
+        await save(page, `popgen2-download-no-variant-after${at}-${theme}`);
+      });
+
+      test("a file written and not handed to the browser, with Save it", async ({
+        page,
+      }) => {
+        // The browser's download throws, a defect of ours, for the file
+        // of the filtered variants alone.
+        await page.addInitScript(() => {
+          // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its link, by call
+          const click = HTMLAnchorElement.prototype.click;
+          HTMLAnchorElement.prototype.click = function (
+            this: HTMLAnchorElement,
+          ) {
+            if (this.download.includes(".filtered.")) {
+              throw new Error("the link could not be clicked");
+            }
+            click.call(this);
+          };
+        });
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await downloadButton(page).click();
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await expect(
+          newPageStats(page).getByRole("button", { name: "Save it" }),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await expect(page.getByRole("alert")).toBeVisible();
+        await save(page, `popgen2-download-written${at}-${theme}`);
       });
 
       test("the FILTER failures of low_qual.vcf.gz while the file is read", async ({
