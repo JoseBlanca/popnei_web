@@ -166,10 +166,10 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   expect(await titles(page)).toEqual(TITLES);
   // Each axis over the range of its values rounded out, the missing rates
   // from 0; the variants' bins popnei's 1,000 added up, about 40, and no
-  // narrower than the distance between two values: 0.005 for the missing
-  // rate of 200 individuals.
+  // narrower than the distance between two values: for the missing rate
+  // of 200 individuals, a bin of 0 to 0.001, its zeros, and 20 of 0.005.
   await expect(descriptions(page)).toHaveText([
-    "The proportion of missing genotypes of 1,200 variants, in 20 bins from 0 to 0.1.",
+    "The proportion of missing genotypes of 1,200 variants, in 21 bins from 0 to 0.1.",
     "The major allele frequency of 1,200 variants, in 50 bins from 0.45 to 1.",
     "The observed heterozygosity of 1,200 variants, in 35 bins from 0 to 0.7.",
     "The unbiased expected heterozygosity of 1,200 variants, in 50 bins from 0 to 0.55.",

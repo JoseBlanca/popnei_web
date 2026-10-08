@@ -89,11 +89,20 @@ removed. Over each plot is one row, its short title, "max:" and the box,
 "Obs. het. max: 0.04", and no line of what the threshold keeps, which
 the owner took out on 8 October 2026. A threshold that keeps every
 variant or individual with a value, a filter that would remove nothing,
-is drawn in grey, its dashed line and the number in its box; one that
-removes some is red. A screen reader hears the grey in words: the value
-of the line, "1, keeps every variant", with "so far" while the file is
-read, and the description of the box, "This threshold removes no
-variant."; otherwise the value is the number alone. The short titles are the owner's of 7
+is drawn in a bluish grey, its line, its handle and the number in its
+box, a colour of its own and not the grey of a control that cannot be
+changed, as the owner asked on 8 October 2026; one that removes some is
+red. The two differ by their shape too, for a reader who does not tell
+the colours apart: the grey line is dotted and its handle hollow, the
+red line dashed and its handle filled. With no individual with a value,
+none is grey, since a filter would remove them all. A screen reader
+hears the grey in words: the value of the line, "1, keeps every
+variant", with "so far" while the file is read, and the description of
+the box, "This threshold removes no variant."; otherwise the value is
+the number alone. A number committed in the box that turns the
+threshold grey or back is announced once, "This threshold removes no
+variant." or "This threshold removes variants.", since a screen reader
+reads the description of the box only as the box takes the focus. The short titles are the owner's of 7
 October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
 and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
 het." for the individuals; the axes and what a screen reader reads keep
@@ -117,17 +126,27 @@ values above it up to 0.001, so at 0 the threshold is grey only when the
 values are spaced wider than 0.001 and that bin holds 0 alone, the
 missing rate of fewer than 1,000 individuals. A threshold of the
 individuals is told exactly from popnei's value of each, at any number.
+At a threshold of 0 the first bar of the missing rate, below, is drawn
+kept.
 
 The bars of the variants are about 40 over the axis, and never narrower
 than the distance between two values the statistic can take, from 8
 October 2026: 1/n for the missing rate of n individuals, 1/(ploidy · n)
 for the major allele frequency, rounded up to a whole number of
-popnei's bins. On panel.nei, 200 individuals, the missing rate is drawn
-in 20 bars of 0.005 from 0 to 0.1, where 50 of 0.002 left more than
-half of them empty. Where the axis cannot hold such bars it is rounded
-to a larger step: the missing rate of 12 individuals in 3 bars of 0.1
-from 0 to 0.3. The heterozygosities, whose values have no such step,
-keep about 40 bars. The histograms of popgen.html are popnei's 40 bins
+popnei's bins. The missing rate's first bar is popnei's first bin, 0 to
+0.001, which over fewer than 1,000 individuals holds the variants with
+no missing genotype alone, so that a threshold of 0 keeps it whole. Its
+next bars start at 0.001, each a multiple of 1/n that is a whole number
+of popnei's bins, so that every bar can hold as many values: on
+panel.nei, 200 individuals, a bar of 0 to 0.001 and 20 bars of 0.005 to
+0.1, where 50 of 0.002 left more than half of them empty; over 300
+individuals bars of 0.01. Where such bars would be fewer than 5, the
+bars are no narrower than 1/n and the axis may be rounded to a larger
+step: the missing rate of 12 individuals in a bar of 0 to 0.001 and 3
+bars of 0.1 to 0.3. The values of the major allele frequency are not on
+an even grid where genotypes are missing, so its bars may hold more
+values than their neighbours. The heterozygosities, whose values have no
+such step, keep about 40 bars. The histograms of popgen.html are popnei's 40 bins
 and do not change. On both kinds of plot a value on
 the edge between two bars is in the bar to its left, so a bar ends at
 what a threshold keeps, and the table of the bins of popgen.html says

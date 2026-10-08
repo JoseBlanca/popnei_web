@@ -69,10 +69,13 @@ legend, and the top margin of a plot without one. From 8 October 2026
 such a threshold may say that it keeps every value, `keepsAll` of
 `HistogramThreshold`, which the screen knows from what it counted and
 the bars drawn may not tell, a bar holding values on both sides of the
-line: the line is then drawn in grey, the class `chart-threshold-keeps-all`,
-a threshold that removes nothing, which the screen says in words to a
-screen reader (`docs/plans/popnei-0.2.2.md`, "The owner's first
-round"). The screen
+line: the line is then dotted, where the red one is dashed, and drawn in
+a bluish grey, the class `chart-threshold-keeps-all`, a threshold that
+removes nothing, which the screen says in words to a screen reader
+(`docs/plans/popnei-0.2.2.md`, "The owner's first round"). The pattern
+tells the two lines apart without their colour: a review that simulated
+deuteranopia found the grey of the first round and the red at a contrast
+of 1.10. The screen
 lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
 `HistogramEvents.onFrame`.
@@ -126,6 +129,14 @@ For a threshold t and a bin from l to r:
   l > t;
 - **partly kept** otherwise: the bin may hold values at most t and values
   above it.
+
+A data that sets `firstBinOnLowerEdge` has its first bin **kept** when
+l ≤ t as well, as if its values were all on l: the bin of 0 to 0.001 of
+the missing rate on popgen2.html, which holds the variants with no
+missing genotype alone below 1,000 individuals, and those with a missing
+rate up to 0.001 with them from 1,000 on (8 October 2026). Without it, a
+threshold of 0 would keep a part of it of width 0, and the bar would be
+drawn removed.
 
 The edges are compared as popnei gives them, the decimals i / n of the
 range 0 to 1 since popnei 0.2.2, so that 0.95 is the edge 38 of 40 bins
@@ -215,6 +226,10 @@ export interface HistogramData extends PlotText {
   readonly yMax?: number;
   /** From stage 5: ticks at whole numbers on the horizontal axis. */
   readonly xWholeNumbers?: boolean;
+  /** From 8 October 2026: the first bin drawn as if its values were
+      all on its lower edge, kept whole by a threshold on that edge; the
+      zeros of the missing rate on popgen2.html. False when absent. */
+  readonly firstBinOnLowerEdge?: boolean;
 }
 
 /** A threshold that keeps what is at most `value`, with the legend of
@@ -353,15 +368,21 @@ The plot writes classes and no colour (`charts.md`):
 .chart-bar          { fill: var(--chart-bar); stroke: var(--chart-axis); stroke-width: 1px; }
 .chart-bar-removed  { fill: none; }
 .chart-threshold    { stroke: var(--chart-threshold); stroke-width: 2px; stroke-dasharray: 4 3; }
-.chart-threshold-keeps-all { stroke: var(--chart-threshold-keeps-all); }
+.chart-threshold-keeps-all { stroke: var(--chart-threshold-keeps-all); stroke-dasharray: 1 3; }
 ```
 
-The grey of a threshold that keeps every value, `--chart-threshold-keeps-all`,
-is #6b7078 in the light theme, 4.98:1 on the background, and #7c8188 in
-the dark, 4.53:1, above the 3:1 of a line (1.4.11) and the 4.5:1 of the
-number in the box of popgen2.html, which takes the same grey; it is
-3.39:1 and 3.26:1 from the text, so that a grey number is told from a
-black one at a glance.
+The colour of a threshold that keeps every value,
+`--chart-threshold-keeps-all`, is a grey with some of the blue of the
+bars, so that it reads as a threshold still to be moved, and not as the
+grey of a disabled control, which it was until the owner asked so on 8
+October 2026: #54758c in the light theme, 4.88:1 on the background, and
+#6387a1 in the dark, 4.67:1, above the 3:1 of a line (1.4.11) and the
+4.5:1 of the number in the box of popgen2.html, which takes the same
+colour; it is 3.46:1 and 3.16:1 from the text, so that such a number is
+told from a black one at a glance. `src/ui/tokens.test.ts` checks the
+four ratios. The handle of such a threshold over the plot is hollow, an
+outline of that colour over the background, where the red one is
+filled.
 
 The bars need a colour that the tokens do not have yet, `--chart-bar`,
 since the seven colours of Okabe and Ito name populations and a bar is
@@ -496,8 +517,9 @@ verified in `plot2d.md`, the export on this histogram.
   heterozygosity, and at 0.51 the kept bins' 1,098 below popnei's 1,116
   and the kept and partly kept bins' 1,152 above it. A bin holds its upper
   edge: kept at a threshold equal to it, partly kept just below it; the
-  first bin holds its lower edge, partly kept at a threshold on it. No
-  threshold: every state `null`.
+  first bin holds its lower edge, partly kept at a threshold on it, and
+  kept, drawn filled, with `firstBinOnLowerEdge`. No threshold: every
+  state `null`.
 - Each defect of "The TypeScript interface" throws.
 - The domains of the two scales: the widened horizontal one for a
   threshold of 1.2, and the vertical one of 0 to 1 when every count is 0;

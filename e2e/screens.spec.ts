@@ -4649,7 +4649,7 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-done${at}-${theme}`);
       });
 
-      test("the statistics of panel.nei, its missing genotypes of the variants in bars of 1 / 200", async ({
+      test("the statistics of panel.nei, its missing genotypes of the variants in a bar of 0 to 0.001 and bars of 1 / 200", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.nei");
@@ -4661,7 +4661,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           newPageStats(page).locator("svg.chart desc").first(),
         ).toHaveText(
-          "The proportion of missing genotypes of 1,200 variants, in 20 bins from 0 to 0.1.",
+          "The proportion of missing genotypes of 1,200 variants, in 21 bins from 0 to 0.1.",
         );
         await save(page, `popgen2-stats-nei${at}-${theme}`);
       });
@@ -4766,6 +4766,12 @@ for (const theme of ["light", "dark"] as const) {
           "aria-valuetext",
           "0",
         );
+        // The first bar, 0 to 0.001, the variants with no missing
+        // genotype, kept; the others removed.
+        await expect(missing.locator("rect.chart-bar").first()).toHaveClass(
+          /\bchart-bar-kept\b/u,
+        );
+        await expect(missing.locator("rect.chart-bar-kept")).toHaveCount(1);
         await page.mouse.click(1, 1);
         await save(page, `popgen2-threshold-zero${at}-${theme}`);
       });

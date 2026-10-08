@@ -136,38 +136,76 @@ popgen.html draws, popnei's bins added up 25 at a time, with popnei's
 edges at every 25th. A result whose bins are not 40 times a whole number
 is a defect.
 
-`variantBinsRounded(r, statistic, spacing)` gives the bins popgen2.html
-draws, over the range of the values rounded out to round numbers, none
-narrower than `spacing`, the least distance between two values of the
-statistic, `variantValueSpacing(statistic, n, ploidy)`: 1/n for the
-missing rate over n individuals, 1/(ploidy · n) for the MAF, `null` for
-the two heterozygosities (the owner, 8 October 2026,
-`docs/plans/popnei-0.2.2.md`). `spacing` rounded up to whole fine bins,
-within 10^-9, is the least bin, `leastPerBin`:
+`variantBinsRounded(r, statistic, individuals)` gives the bins
+popgen2.html draws over the variants of the pass, of `individuals`, their
+number n and their ploidy, or `null` when not known. The MAF and the two
+heterozygosities are drawn over the range of the values rounded out to
+round numbers, the MAF in bins none narrower than the least distance
+between two of its values, `variantValueSpacing(statistic, n, ploidy)`,
+1/(ploidy · n), `null` for the two heterozygosities (the owner, 8 October
+2026, `docs/plans/popnei-0.2.2.md`). That distance rounded up to whole
+fine bins is the least bin, `leastPerBin`:
 
 1. The range runs from the start of the first fine bin with a count to
    the end of the last. A fine bin holds its right edge, so a MAF of 0.5
    is in the bin that ends at 0.5, and the MAF of panel.nei, whose least
-   value is 0.5, starts at 0.499 before it is rounded. The missing rate
-   starts at 0 whatever its values, as the round of 6 October 2026
-   decided (`docs/plans/file-stats.md`, "Round 1 with the owner").
+   value is 0.5, starts at 0.499 before it is rounded.
 2. The range is rounded out to a step of 1, 2 or 5 × 10^k, of at least
    0.05 and at least the least bin, the smallest that the range spans
    at most 10 of, its start
    rounded down to a multiple of the step and its end up
-   (`roundedRange` of `src/core/histogram.ts`). On panel.nei the
-   missing rate, whose largest value is 0.0805, gives 0 to 0.1, and the
-   MAF 0.45 to 1.
+   (`roundedRange` of `src/core/histogram.ts`). On panel.nei the MAF
+   gives 0.45 to 1.
 3. The fine bins of that range are added up in bins of the same number
    of fine bins each, at least the least bin, the number of bins nearest
-   40, the fewer of two as near: with no spacing, 100 fine bins from 0
-   to 0.1 make 50 bins of 2, and 300 from 0.3 to 0.6 30 bins of 10. The
-   missing rate of panel.nei, 200 individuals, a least bin of 5, makes
-   20 bins of 0.005 from 0 to 0.1, 5 of them empty where 34 of the 50
-   were; that of tetraploid.nei, 12 individuals, a least bin of 84,
-   takes a step of 0.1 and makes 3 bins from 0 to 0.3; its MAF, a least
-   bin of 21, 12 bins of 0.025 from 0.3 to 0.6.
+   40, the fewer of two as near: with no spacing, 300 fine bins from 0.3
+   to 0.6 make 30 bins of 10. The MAF of tetraploid.nei, 12 tetraploid
+   individuals, a least bin of 21, makes 12 bins of 0.025 from 0.3 to
+   0.6.
 4. The edges are popnei's, the two ends the round numbers.
+
+The values of the MAF are not on an even grid where genotypes are
+missing, a count of alleles over fewer alleles than ploidy · n, so a bar
+of the MAF may hold more of them than its neighbours: a review of 8
+October 2026 found 2 of 25 bars of the MAF of tetraploid.nei holding
+twice the values of the bars beside them. The bars of the MAF may so
+ripple, and are left so.
+
+The missing rate starts at 0 whatever its values, as the round of 6
+October 2026 decided (`docs/plans/file-stats.md`, "Round 1 with the
+owner"), and has bins of its own from 8 October 2026, so that a
+threshold of 0 keeps its first bar and its bars do not ripple:
+
+1. Its first bin is popnei's first, from 0 to 0.001. Over fewer than
+   1,000 individuals, whose missing rates are multiples of 1/n wider than
+   it, it holds the variants with no missing genotype alone; over 1,000
+   or more, those and the ones with a missing rate up to 0.001. The
+   histogram draws it kept at a threshold of 0 in both cases
+   (`firstBinOnLowerEdge` of `docs/specs/charts/histogram.md`).
+2. Its next bins start at 0.001 and run to the end of the range, the end
+   of the last fine bin with a count rounded up to a multiple of 0.05, as
+   above. Each is a whole number of fine bins that is a multiple of 1/n,
+   so that every bin can hold the same number of values wherever it
+   starts: the smallest is 1/g, of g the greatest common divisor of n
+   and 1,000, 0.005 for 200 individuals and 0.01 for 300, and the end of
+   the range is rounded up to a multiple of it. The last bin ends at the
+   end of the range and not 0.001 after it, which loses no value, since
+   none is between the two. Of the multiples of that bin that divide the
+   range, the one that makes the bins nearest 40, the fewer of two as
+   near. The missing rate of panel.nei, 200 individuals, is drawn in a
+   bin of 0 to 0.001 and 20 bins of 0.005 from 0.001 to 0.1, the first
+   of them, 0.001 to 0.006, holding the missing rate 0.005.
+3. Where such bins would be fewer than 5 over the range, they are the
+   bins of the MAF above, with 1/n as the least distance: no narrower
+   than 1/n rounded up to whole fine bins, the range rounded to a larger
+   step where it holds too few, and their number of fine bins a divisor
+   of the range, the last one fine bin narrower; a bin may then hold one
+   value more than its neighbours. Over 12 individuals, whose smallest
+   even bin is 0.25, the missing rate of tetraploid.nei is drawn in a bin
+   of 0 to 0.001 and 3 bins of 0.1 from 0.001 to 0.3, each holding one
+   value, 1/12, 2/12 and 3/12; over 201 individuals, whose smallest even
+   bin is 1, in bins of 0.005. With n not known, the least bin is one
+   fine bin.
 
 With no count in any bin, it gives the 40 bins of `variantBins`. A
 count outside the bins added up, and an end of the range that is no edge
