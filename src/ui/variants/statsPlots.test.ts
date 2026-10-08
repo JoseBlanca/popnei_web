@@ -168,18 +168,17 @@ describe("the histograms of the statistics of the open file", () => {
       "result",
       0.5,
     );
-    const longer =
-      "1 individual with no called genotype is not in the histogram, and this filter removes it.";
-    expect(off.noValueRoom).toBe(longer);
-    expect(on.noValueRoom).toBe(longer);
-    // While the pass runs, the room of its words after a Stop, the
-    // longest, so that nothing moves at a Stop (SF10 D1).
+    // The room is always that of the longest words, those of a Stop with
+    // the filter on, so that nothing moves at a Stop or when the pass
+    // ends (SF10 D1).
+    const longest =
+      "1 individual with no called genotype before the Stop is not in the histogram, and this filter removes it.";
+    expect(off.noValueRoom).toBe(longest);
+    expect(on.noValueRoom).toBe(longest);
     expect(
       individualPlot("observedHeterozygosity", INDIVIDUALS, "soFar", null)
         .noValueRoom,
-    ).toBe(
-      "1 individual with no called genotype before the Stop is not in the histogram, and this filter removes it.",
-    );
+    ).toBe(longest);
     // Every individual with a value: no line, and no room.
     expect(
       individualPlot("missingGenotypes", INDIVIDUALS, "result", null)

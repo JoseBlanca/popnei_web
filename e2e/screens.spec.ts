@@ -4738,7 +4738,7 @@ for (const theme of ["light", "dark"] as const) {
         await newPageCount(page).getByRole("button", { name: "Stop" }).click();
         await expect(
           newPageStats(page).getByText(
-            "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.",
+            "Stopped. The plots are of the variants read before the Stop.",
           ),
         ).toHaveCount(2);
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);

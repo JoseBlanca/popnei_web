@@ -32,7 +32,7 @@ const NUM_VARIANTS = 30_000;
 
 /** What each part says over the plots read before a Stop. */
 const STOPPED_WITH_PLOTS =
-  "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.";
+  "Stopped. The plots are of the variants read before the Stop.";
 
 /** What each part says after a Stop with no plots. */
 const STOPPED = "Stopped. Start again reads the file from the start.";

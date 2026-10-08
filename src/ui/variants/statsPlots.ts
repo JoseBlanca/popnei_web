@@ -172,11 +172,11 @@ export interface IndividualPlot {
   /** The line under it of the individuals with no called genotype, or
       `null` when every one has a value. */
   readonly noValueLine: string | null;
-  /** The words of that line with the filter on, the longer, whose room
-      the line keeps whether the filter is on or off, so that what is
-      under it does not move as the filter turns on or off; while the
-      pass runs, its words after a Stop, longer still, so that nothing
-      moves at a Stop; `null` when there is no line of a filter. */
+  /** The longest words that line can show, those with the filter on
+      after a Stop, whose room the line keeps always, so that what is
+      under it, and the other plot of its row, do not move as the filter
+      turns on or off, at a Stop or when the pass ends; `null` when
+      there is no line of a filter. */
   readonly noValueRoom: string | null;
 }
 
@@ -323,11 +323,7 @@ export function individualPlot(
       },
     },
     noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", from),
-    noValueRoom: noValueThresholdLine(
-      bins.numNaN,
-      true,
-      from === "soFar" ? "stopped" : from,
-    ),
+    noValueRoom: noValueThresholdLine(bins.numNaN, true, "stopped"),
   };
 }
 

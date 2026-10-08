@@ -506,7 +506,7 @@ describe("SF10 D2 the plots after a Stop, in the section", () => {
     await stoppedAfterSoFar({ kind: "cancelled" });
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
     const stopped =
-      "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.";
+      "Stopped. The plots are of the variants read before the Stop.";
     expect(shownLines().filter((line) => line === stopped)).toHaveLength(2);
     expect(shownLines()).not.toContain(
       "Stopped. Start again reads the file from the start.",

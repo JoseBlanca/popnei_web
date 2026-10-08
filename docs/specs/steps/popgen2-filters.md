@@ -521,7 +521,8 @@ result so far, which it keeps beside the state ready
 (`docs/specs/core/store.md`). Each part says so over its plots:
 
 - over each part: "Stopped. The plots are of the variants read before
-  the Stop. Start again reads the file from the start.";
+  the Stop.", which leaves Start again to the box of the file, so that
+  the room kept for it is two lines at 320 px;
 - the sentence on the individuals with no called genotype: "3
   individuals with no called genotype before the Stop are not in the
   histogram, and this filter removes them.";
@@ -530,8 +531,9 @@ result so far, which it keeps beside the state ready
   read so far."
 
 The room kept under each plot of the individuals for the sentence on
-the individuals with no called genotype holds its words of a Stop, so
-that the plots do not move at a Stop. The thresholds can be moved
+the individuals with no called genotype holds its longest words, those
+of a Stop with the filter on, always, so that the plots do not move at
+a Stop or when the pass ends. The thresholds can be moved
 over these plots, and change the project as at any time; their shading
 and their grey are of the variants read before the Stop. A Stop before
 the first result so far, 2 seconds after the start, leaves no plots, and
@@ -608,7 +610,7 @@ number being dragged, typed or moved by a run of keys.
 | under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
 | after an undo, in the status region | "Undone: the MAF filter changed."; "Undone: the variants that failed their FILTER are kept." |
 | the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed", "Undo: the MAF filter was turned off"; of the FILTER box, "Undo: the variants that failed their FILTER are kept" |
-| over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start." |
+| over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop." |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
 ## Accessibility

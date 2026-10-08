@@ -166,7 +166,7 @@ describe("SF7 D2 the words of the FILTER box", () => {
 describe("SF10 D1 the words of the plots after a Stop", () => {
   test("over each part with the plots read before the Stop, and with none", () => {
     expect(PART_STOPPED_WITH_PLOTS).toBe(
-      "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.",
+      "Stopped. The plots are of the variants read before the Stop.",
     );
     expect(PART_STOPPED).toBe(
       "Stopped. Start again reads the file from the start.",

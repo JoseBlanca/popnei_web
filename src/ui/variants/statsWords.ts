@@ -134,7 +134,7 @@ export const PART_STOPPED =
     the last result so far of the pass the user stopped
     (docs/specs/steps/popgen2-filters.md, "The plots after a Stop"). */
 export const PART_STOPPED_WITH_PLOTS =
-  "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.";
+  "Stopped. The plots are of the variants read before the Stop.";
 
 /** What a part says in place of its plots once the pass failed, whose
     words the box of the file says. */
