@@ -585,6 +585,13 @@ Tasks:
 
 ## Work package 9: the thresholds as filters
 
+Since the merge of main on 8 October 2026 (fbeab4b): the screen reader's
+words of a threshold that removes nothing differ between this plan's
+screen spec ("0.1, keeps every variant of the plot", "This filter
+removes …") and what main built ("1, keeps every variant", "This
+threshold removes no variant."). This package settles one set, in the
+spec and the code.
+
 What it gives: each of the five thresholds shows the project's value,
 on or off, in grey when it keeps every value of its plot, and changes
 the project once per drag, per number committed and per run of arrow
