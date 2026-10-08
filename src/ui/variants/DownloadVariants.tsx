@@ -40,6 +40,7 @@ import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
 import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
+import { useRunGate } from "./runGate.tsx";
 import type { WriteEnd } from "./downloadState.ts";
 import {
   DIALOG_HEADING,
@@ -86,6 +87,7 @@ interface LastRunning {
 export function DownloadVariants(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
+  const gate = useRunGate();
   const summary = useAppState(summaryStatus);
   const write = useAppState((s) => s.write);
   const project = useAppState((s) => s.project);
@@ -161,6 +163,25 @@ export function DownloadVariants(): React.JSX.Element {
         place={place}
         placeRef={placeRef}
         onOpen={() => {
+          // A run of the arrow keys waiting on a threshold, or a number
+          // typed and not committed, is made a change first, so that the
+          // write never starts from filters about to change.
+          gate.endAll();
+          gate.commitTyped();
+          const now = store.getState();
+          // The change may leave nothing to download: its sentence then
+          // takes the place of the button, and the dialog does not open.
+          if (
+            downloadPlace(
+              summaryStatus(now),
+              now.write,
+              now.project,
+              now.individualsKept,
+            ).kind !== "enabled"
+          ) {
+            void focusPlace();
+            return;
+          }
           setPhase({ kind: "choose", format: formatChosen });
         }}
         onSave={() => {

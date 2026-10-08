@@ -11,13 +11,19 @@ import { writtenName } from "../../core/fileNames.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { noVariantForCertain } from "../../core/noVariantKept.ts";
 import type { Project } from "../../core/project.ts";
-import type { AnalysisStatus, Store, WriteStatus } from "../../core/store.ts";
+import type {
+  AnalysisStatus,
+  AppState,
+  Store,
+  WriteStatus,
+} from "../../core/store.ts";
 import type {
   JobResult,
   VariantsSummaryResult,
   Written,
 } from "../../worker/protocol.ts";
 import type { FileHanded } from "./downloadWords.ts";
+import { summaryStatus } from "./words.ts";
 import {
   DOWNLOAD_NEEDS,
   DOWNLOAD_WAITS,
@@ -99,10 +105,12 @@ export function downloadPlace(
       };
     case "noVariant":
       return { kind: "sentence", text: noVariantSentence(p, result) };
-    case "ready":
-      return noVariantForCertain(p, result, kept)
-        ? { kind: "sentence", text: noVariantSentence(p, result) }
-        : { kind: "enabled" };
+    case "ready": {
+      const certain = certainSentence(p, result, kept);
+      return certain === null
+        ? { kind: "enabled" }
+        : { kind: "sentence", text: certain };
+    }
     case "running":
     case "error":
       return { kind: "enabled" };
@@ -113,6 +121,56 @@ export function downloadPlace(
     write once the one pass is finished on this page. */
 function keepsNone(kept: IndividualsKept | null): boolean {
   return kept?.list.kind === "known" && kept.list.individuals?.length === 0;
+}
+
+/** The sentence of no variant when the finished one pass `result` makes
+    it certain that the filters of `p` keep none, `null` otherwise. */
+function certainSentence(
+  p: Project,
+  result: VariantsSummaryResult,
+  kept: IndividualsKept | null,
+): string | null {
+  return noVariantForCertain(p, result, kept)
+    ? noVariantSentence(p, result)
+    : null;
+}
+
+/** The sentence of no variant that takes the place of the button before
+    any write in `s`, the store's write ready and the finished one pass
+    making it certain; `null` otherwise. */
+function certainBeforeWrite(s: AppState<JobResult, Blob>): string | null {
+  const summary = summaryStatus(s);
+  if (summary.kind !== "done" || s.write?.kind !== "ready") return null;
+  return certainSentence(
+    s.project,
+    summaryOf(summary.result),
+    s.individualsKept,
+  );
+}
+
+/**
+ * What the status region says of the download as the store goes from
+ * `before` to `after`: the sentence of no variant, once, when a change of
+ * the filters of the same file, its one pass finished in both, makes it
+ * take the place of the button before any write, since a user of a screen
+ * reader would not hear the button go (docs/specs/steps/popgen2-download.md,
+ * "When the filters keep no variant"). Nothing when the one pass ends
+ * with it, when the file changes, when it stays, and when the button
+ * comes back.
+ */
+export function noVariantAnnouncement(
+  before: AppState<JobResult, Blob>,
+  after: AppState<JobResult, Blob>,
+): string | null {
+  const now = certainBeforeWrite(after);
+  if (
+    now === null ||
+    after.project.variants?.fileId !== before.project.variants?.fileId ||
+    summaryStatus(before).kind !== "done"
+  ) {
+    return null;
+  }
+  return certainBeforeWrite(before) === null ? now : null;
 }
 
 /** The result of the one pass, a defect for another. */

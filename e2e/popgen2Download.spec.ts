@@ -9,11 +9,17 @@
  * after its Stop; Stop of a write held after its first report, and
  * Escape while it writes; a crash of the worker during a write; and axe
  * on the button with its reason, the dialog and the text, light and
- * dark. The sizes and the counts are those of popnei 0.2.2 under node,
+ * dark (work package 6). And when there is nothing to download (work
+ * package 7): the sentence of no variant before any write, said once in
+ * the status region, and after a write; the words of no individual kept;
+ * the text that stays until a filter or the file changes; a run of the
+ * arrow keys made a change before the dialog opens; and a drop or a paste
+ * while the dialog is open, which opens nothing. The sizes and the counts are those of popnei 0.2.2 under node,
  * 8 October 2026, as the screen spec gives them.
  */
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 import type { Download, Locator, Page } from "@playwright/test";
 import { calcVariantsSummary, init, openVars, openVcf } from "popnei";
@@ -43,6 +49,8 @@ const BOXES = {
     "Missing GTs max: maximum proportion of missing genotypes of an individual",
   individualsObsHet:
     "Obs. het. max: maximum observed heterozygosity of an individual",
+  // Anchored: the name is the start of that of the individuals' box.
+  obsHet: /^Obs\. het\. max: maximum observed heterozygosity$/u,
 } as const;
 
 /** The two formats, by the words of their radio buttons. */
@@ -388,4 +396,331 @@ test("DL6 D4 axe on the dialog and on the text after the download, light and dar
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
     await expectNoViolations(makeAxeBuilder);
   }
+});
+
+/** The name of the zone of the opening's hidden button that takes a
+    pasted file. */
+const PASTE = "Paste a variants file";
+
+/** The sentence of no variant of panel.vcf.gz. */
+const PANEL_NONE =
+  "None of the 1,200 variants of panel.vcf.gz pass the filters, so there is nothing to download.";
+
+/** The sentence in place of the button, by its words. */
+function sentence(page: Page, words: string): Locator {
+  return stats(page).locator("p", { hasText: words });
+}
+
+/** Records the kind of every message the page posts to a worker, in
+    `window.__e2eKinds`, before the page loads. */
+async function recordKinds(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const kinds: string[] = [];
+    Object.defineProperty(window, "__e2eKinds", { value: kinds });
+    const prototype = window.Worker.prototype;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its worker, by apply
+    const post = prototype.postMessage;
+    prototype.postMessage = function (
+      this: Worker,
+      ...args: [message: unknown, options?: StructuredSerializeOptions]
+    ) {
+      const data = args[0];
+      if (typeof data === "object" && data !== null && "kind" in data) {
+        kinds.push(String(data.kind));
+      }
+      post.apply(this, args);
+    } as typeof prototype.postMessage;
+  });
+}
+
+/** The writes posted to a worker so far. */
+async function writesSent(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      (window as unknown as { __e2eKinds: string[] }).__e2eKinds.filter(
+        (kind) => kind === "write",
+      ).length,
+  );
+}
+
+/** Opens the dialog, chooses `format`, and presses Download, for a write
+    that downloads nothing. */
+async function writeNothing(page: Page, format: FormatWords): Promise<void> {
+  await button(page).click();
+  await dialog(page).locator("label").filter({ hasText: format }).click();
+  await dialog(page).getByRole("button", { name: "Download" }).click();
+}
+
+/** A VCF of panel.vcf.gz's variants with LowQual in every FILTER column,
+    written under the output of the test. */
+async function noPassVcf(path: string): Promise<string> {
+  const text = gunzipSync(await readFile(join(FIXTURES, "panel.vcf.gz")))
+    .toString("utf8")
+    .replaceAll("\tPASS\t", "\tLowQual\t");
+  await writeFile(path, text);
+  return path;
+}
+
+async function expectAxeBothSchemes(
+  page: Page,
+  makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
+): Promise<void> {
+  for (const scheme of ["light", "dark"] as const) {
+    // No transition of the colours, which axe would read halfway.
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+    await expectNoViolations(makeAxeBuilder);
+  }
+}
+
+test("DL7 D2 a run of the arrow keys, then Enter on the button within its quiet second: the file is written with the threshold the run moved to", async ({
+  page,
+}, testInfo) => {
+  await openDone(page, "panel.vcf.gz");
+  const slider = stats(page)
+    .getByRole("group", {
+      name: "Proportion of missing genotypes",
+      exact: true,
+    })
+    .getByRole("slider");
+  await slider.focus();
+  await page.keyboard.press("Home");
+  await expect(slider).toHaveValue("0");
+  // Within the quiet second of the run.
+  await button(page).focus();
+  const coming = page.waitForEvent("download", { timeout: 60_000 });
+  await page.keyboard.press("Enter");
+  await expect(dialog(page)).toBeVisible();
+  await dialog(page).getByRole("button", { name: "Download" }).click();
+  const got = await coming;
+
+  const path = testInfo.outputPath("panel.filtered.vcf.gz");
+  expect(await savedSize(got, path)).toBe(756);
+  expect(await readBack(path)).toEqual({ numVars: 2, numIndividuals: 200 });
+  await expect(textAfter(page, "panel")).toHaveText(
+    "panel.filtered.vcf.gz downloaded, 756 bytes: 2 variants of 200 individuals. Variants removed: 1,198 by the missing rate. Save it again",
+  );
+});
+
+test("DL7 D2 the text after the download stays through a click elsewhere and Escape, and goes at a change of a threshold, a click on the FILTER box and another file", async ({
+  page,
+}) => {
+  await openDone(page, "low_qual.vcf.gz");
+  await download(page, "VCF compressed with bgzip (.vcf.gz)");
+  const text = textAfter(page, "low_qual");
+  await expect(text).toBeVisible();
+
+  await page.getByRole("heading", { level: 1 }).click();
+  await page.keyboard.press("Escape");
+  await expect(text).toBeVisible();
+  await expect(button(page)).toHaveCount(0);
+
+  await threshold(page, "missing", "0.2");
+  await expect(text).toHaveCount(0);
+  await expect(button(page)).toBeEnabled();
+
+  await download(page, "VCF compressed with bgzip (.vcf.gz)");
+  await expect(text).toBeVisible();
+  // The words of the box, as a user clicks it: the input is hidden under
+  // the box drawn.
+  await page
+    .getByText("Leave out the variants that failed their FILTER", {
+      exact: true,
+    })
+    .click();
+  await expect(text).toHaveCount(0);
+  await expect(button(page)).toBeEnabled();
+
+  await download(page, "VCF compressed with bgzip (.vcf.gz)");
+  await expect(text).toBeVisible();
+  await pick(page, "panel.nei");
+  await expect(text).toHaveCount(0);
+  await expect(button(page)).toBeEnabled({ timeout: 60_000 });
+});
+
+test("DL7 D2 the sentence of no variant before any write, with no dialog and no write sent, said once by the status region; the button with the missing rate at 0; axe, light and dark", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await recordKinds(page);
+  await openDone(page, "panel.vcf.gz");
+  // The words of the one pass said, so that the sentence is heard alone.
+  await expect(status(page)).toContainText(
+    "The statistics of panel.vcf.gz are calculated.",
+  );
+
+  await threshold(page, "obsHet", "0");
+  await expect(sentence(page, PANEL_NONE)).toHaveText(PANEL_NONE);
+  await expect(button(page)).toHaveCount(0);
+  await expect(status(page)).toContainText(PANEL_NONE);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  // Back to the button, which nothing says.
+  await threshold(page, "obsHet", "1");
+  await expect(button(page)).toBeEnabled();
+  await expect(status(page)).not.toContainText(PANEL_NONE);
+
+  await threshold(page, "maf", "0.45");
+  await expect(sentence(page, PANEL_NONE)).toBeVisible();
+  await expect(button(page)).toHaveCount(0);
+  await threshold(page, "maf", "1");
+
+  await threshold(page, "missing", "0");
+  await expect(button(page)).toBeEnabled();
+  await expect(sentence(page, PANEL_NONE)).toHaveCount(0);
+
+  await expect(dialog(page)).toHaveCount(0);
+  expect(await writesSent(page)).toBe(0);
+});
+
+test("DL7 D2 the sentence before any write on a VCF none of whose variants passed its FILTER, with the box ticked", async ({
+  page,
+}, testInfo) => {
+  await recordKinds(page);
+  await page.goto("popgen2.html");
+  await pick(page, await noPassVcf(testInfo.outputPath("nopass.vcf")));
+  // The box is ticked when the file opens: the sentence comes in place of
+  // the button as the one pass ends.
+  await expect(
+    sentence(
+      page,
+      "None of the 1,200 variants of nopass.vcf pass the filters, so there is nothing to download.",
+    ),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(button(page)).toHaveCount(0);
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Leave out the variants that failed their FILTER",
+    }),
+  ).toBeChecked();
+  expect(await writesSent(page)).toBe(0);
+});
+
+test("DL7 D2 the sentence after a write that keeps no variant, with no download and the focus on it; and the file of one variant where the plot alone would have said none; axe, light and dark", async ({
+  page,
+  makeAxeBuilder,
+}, testInfo) => {
+  let downloads = 0;
+  page.on("download", () => {
+    downloads += 1;
+  });
+  await openDone(page, "panel.vcf.gz");
+  await threshold(page, "missing", "0");
+  await threshold(page, "maf", "0.6");
+  await expect(button(page)).toBeEnabled();
+  await writeNothing(page, "VCF compressed with bgzip (.vcf.gz)");
+  await expect(dialog(page)).toHaveCount(0, { timeout: 60_000 });
+  await expect(sentence(page, PANEL_NONE)).toHaveText(PANEL_NONE);
+  await expect.poll(() => focused(page)).toBe(`P ${PANEL_NONE}`);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  // A change brings the button back.
+  await threshold(page, "missing", "0.1");
+  await threshold(page, "maf", "1");
+  await threshold(page, "individualsMissing", "0.03");
+  await threshold(page, "obsHet", "0.01");
+  await expect(button(page)).toBeEnabled();
+  await writeNothing(page, "VCF compressed with bgzip (.vcf.gz)");
+  await expect(dialog(page)).toHaveCount(0, { timeout: 60_000 });
+  await expect(sentence(page, PANEL_NONE)).toBeVisible();
+  await expect.poll(() => focused(page)).toBe(`P ${PANEL_NONE}`);
+  expect(downloads).toBe(0);
+
+  await threshold(page, "obsHet", "0.02");
+  const got = await download(page, "VCF compressed with bgzip (.vcf.gz)");
+  const path = testInfo.outputPath("one.vcf.gz");
+  await got.saveAs(path);
+  expect(await readBack(path)).toEqual({ numVars: 1, numIndividuals: 116 });
+  await expect(textAfter(page, "panel")).toContainText(
+    "1 variant of 116 individuals.",
+  );
+});
+
+test("DL7 D2 the missing rate of the individuals at 0.01 keeps none of the 200, and their words take the place of the button; axe, light and dark", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  await threshold(page, "individualsMissing", "0.01");
+  const words =
+    "The filters of individuals keep none of the 200 individuals of panel.vcf.gz. Loosen them.";
+  await expect(sentence(page, words)).toHaveText(words);
+  await expect(button(page)).toHaveCount(0);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("DL7 D2 a file dropped on the page or pasted while the dialog is open opens nothing", async ({
+  page,
+}) => {
+  await openDone(page, "low_qual.vcf.gz");
+  const zone = page.getByRole("button", {
+    name: /^Open another variants file…$/u,
+  });
+  await zone.scrollIntoViewIfNeeded();
+  const where = await zone.boundingBox();
+  if (where === null) throw new Error("no open button");
+  const bytes = [...(await readFile(join(FIXTURES, "panel.nei")))];
+  await button(page).click();
+  await expect(dialog(page)).toBeVisible();
+
+  // A drop lands on what is drawn at that point: the dialog's overlay.
+  const target = await page.evaluate(
+    ({ x, y, given }) => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+      const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+      DataTransferItem.prototype.webkitGetAsEntry = function (
+        this: DataTransferItem,
+      ) {
+        return (
+          entryOf.call(this) ??
+          ({ isFile: true, isDirectory: false } as FileSystemEntry)
+        );
+      };
+      const element = document.elementFromPoint(x, y);
+      if (element === null) return "nothing";
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([new Uint8Array(given)], "panel.nei"));
+      for (const type of ["dragenter", "dragover", "drop"]) {
+        element.dispatchEvent(
+          new DragEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            dataTransfer: transfer,
+          }),
+        );
+      }
+      return element.closest("[data-live-announcer], main") === null
+        ? "outside the page"
+        : "on the page";
+    },
+    {
+      x: where.x + where.width / 2,
+      y: where.y + where.height / 2,
+      given: bytes,
+    },
+  );
+  expect(target).toBe("outside the page");
+
+  // A paste goes to the focus, in the dialog.
+  await page.evaluate((given) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(given)], "panel.nei"));
+    (document.activeElement ?? document.body).dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }, bytes);
+
+  await page.waitForTimeout(500);
+  await expect(dialog(page)).toBeVisible();
+  await dialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(info(page).getByText("panel.nei")).toHaveCount(0);
+  await expect(
+    info(page)
+      .getByText(/^low_qual\.vcf\.gz/u)
+      .first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: PASTE })).toHaveCount(1);
 });

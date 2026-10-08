@@ -8,7 +8,11 @@
 import { describe, expect, test, vi } from "vitest";
 
 import * as noVariantKept from "../../core/noVariantKept.ts";
-import { setThreshold } from "../../core/project.ts";
+import {
+  setThreshold,
+  setVariantFilter,
+  turnOffVariantFilter,
+} from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type {
@@ -21,7 +25,12 @@ import type {
   Written,
 } from "../../worker/protocol.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
-import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
+import {
+  downloadPlace,
+  endOfWrite,
+  noVariantAnnouncement,
+  saveAgain,
+} from "./downloadState.ts";
 import type { DownloadPlace } from "./downloadState.ts";
 import { summaryStatus } from "./words.ts";
 
@@ -205,23 +214,6 @@ describe("DL6 D3 what takes the place of the button", () => {
     expect(noVariantKept.noVariantForCertain).not.toHaveBeenCalled();
   });
 
-  test("the same pass finished gives the sentence of no variant, asked over the finished result", () => {
-    vi.mocked(noVariantKept.noVariantForCertain).mockClear();
-    const { store, jobs } = storeOfPanel();
-    const result = pass(true);
-    finishPass(store, jobs, result);
-
-    expect(placeOf(store)).toStrictEqual({
-      kind: "sentence",
-      text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
-    });
-    expect(noVariantKept.noVariantForCertain).toHaveBeenCalledWith(
-      store.getState().project,
-      result,
-      store.getState().individualsKept,
-    );
-  });
-
   test("after a failure of the one pass the button needs its statistics", () => {
     const { store, jobs } = storeOfPanel();
     store.startRun("variantsSummary");
@@ -256,6 +248,118 @@ describe("DL6 D3 what takes the place of the button", () => {
     });
     expect(store.getState().write?.kind).toBe("error");
     expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+  });
+});
+
+describe("DL6 D3 the end of a write, and Save it again", () => {
+  test("the end of a write with a file hands it to the browser once, under its name, and then tells the store", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    const written = vcfWritten();
+    writeEnded(store, writes, written);
+    const kinds: (string | undefined)[] = [];
+    const download = vi.fn((...args: [string, Blob]) => {
+      expect(args).toHaveLength(2);
+      kinds.push(store.getState().write?.kind);
+    });
+
+    expect(endOfWrite(store, download)).toBe("downloaded");
+
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(download).toHaveBeenCalledWith(
+      "panel.filtered.vcf.gz",
+      written.file,
+    );
+    // Handed to the browser while the store still held it as done.
+    expect(kinds).toStrictEqual(["done"]);
+    expect(store.getState().write?.kind).toBe("saved");
+  });
+
+  test("a download that throws leaves the write done, its file not handed, and the throw goes on", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    writeEnded(store, writes, vcfWritten());
+
+    expect(() =>
+      endOfWrite(store, () => {
+        throw new Error("popnei_web defect: the link could not be made");
+      }),
+    ).toThrow("the link could not be made");
+
+    expect(store.getState().write?.kind).toBe("done");
+  });
+
+  test("a failed write and a stopped one download nothing", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    store.startWrite("vcf");
+    const write = sentAt(writes, 0);
+    store.cancelWrite();
+    store.runEnded(write.run.id, { kind: "cancelled" });
+    const download = vi.fn();
+    expect(endOfWrite(store, download)).toBe("other");
+
+    store.startWrite("vcf");
+    const again = sentAt(writes, 1);
+    store.runEnded(again.run.id, {
+      kind: "failed",
+      error: { kind: "workerFailed", message: "a crash" },
+    });
+    expect(endOfWrite(store, download)).toBe("failed");
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  test("Save it again hands the file of saved to the browser again, under the same name", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    const written = vcfWritten();
+    writeEnded(store, writes, written);
+    endOfWrite(store, () => undefined);
+    const download = vi.fn();
+
+    saveAgain(store, download);
+
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(download).toHaveBeenCalledWith(
+      "panel.filtered.vcf.gz",
+      written.file,
+    );
+    expect(store.getState().write?.kind).toBe("saved");
+  });
+
+  test("Save it, of a file written and not handed, hands it and then tells the store", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    const written = vcfWritten();
+    writeEnded(store, writes, written);
+    const download = vi.fn();
+
+    saveAgain(store, download);
+
+    expect(download).toHaveBeenCalledWith(
+      "panel.filtered.vcf.gz",
+      written.file,
+    );
+    expect(store.getState().write?.kind).toBe("saved");
+  });
+});
+
+describe("DL7 D1 when there is nothing to download, and a file written and not handed", () => {
+  test("the same pass finished gives the sentence of no variant, asked over the finished result", () => {
+    vi.mocked(noVariantKept.noVariantForCertain).mockClear();
+    const { store, jobs } = storeOfPanel();
+    const result = pass(true);
+    finishPass(store, jobs, result);
+
+    expect(placeOf(store)).toStrictEqual({
+      kind: "sentence",
+      text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
+    });
+    expect(noVariantKept.noVariantForCertain).toHaveBeenCalledWith(
+      store.getState().project,
+      result,
+      store.getState().individualsKept,
+    );
   });
 
   test("a file saved gives the text after the download, and one done the same text with written", () => {
@@ -338,31 +442,6 @@ describe("DL6 D3 what takes the place of the button", () => {
       "popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: Open a project first.",
     );
   });
-});
-
-describe("DL6 D3 the end of a write, and Save it again", () => {
-  test("the end of a write with a file hands it to the browser once, under its name, and then tells the store", () => {
-    const { store, jobs, writes } = storeOfPanel();
-    finishPass(store, jobs, pass(false));
-    const written = vcfWritten();
-    writeEnded(store, writes, written);
-    const kinds: (string | undefined)[] = [];
-    const download = vi.fn((...args: [string, Blob]) => {
-      expect(args).toHaveLength(2);
-      kinds.push(store.getState().write?.kind);
-    });
-
-    expect(endOfWrite(store, download)).toBe("downloaded");
-
-    expect(download).toHaveBeenCalledTimes(1);
-    expect(download).toHaveBeenCalledWith(
-      "panel.filtered.vcf.gz",
-      written.file,
-    );
-    // Handed to the browser while the store still held it as done.
-    expect(kinds).toStrictEqual(["done"]);
-    expect(store.getState().write?.kind).toBe("saved");
-  });
 
   test("a write of no variant calls neither the download nor writeSaved", () => {
     const { store, jobs, writes } = storeOfPanel();
@@ -381,71 +460,101 @@ describe("DL6 D3 the end of a write, and Save it again", () => {
     });
   });
 
-  test("a download that throws leaves the write done, its file not handed, and the throw goes on", () => {
-    const { store, jobs, writes } = storeOfPanel();
-    finishPass(store, jobs, pass(false));
-    writeEnded(store, writes, vcfWritten());
+  test("the sentence goes, and the button is back, when a change makes it uncertain, and comes again when the change is undone", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(true));
+    expect(placeOf(store).kind).toBe("sentence");
 
-    expect(() =>
-      endOfWrite(store, () => {
-        throw new Error("popnei_web defect: the link could not be made");
-      }),
-    ).toThrow("the link could not be made");
+    store.apply("the FILTER box changed", (p) =>
+      turnOffVariantFilter(p, "passed"),
+    );
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
 
-    expect(store.getState().write?.kind).toBe("done");
-  });
-
-  test("a failed write and a stopped one download nothing", () => {
-    const { store, jobs, writes } = storeOfPanel();
-    finishPass(store, jobs, pass(false));
-    store.startWrite("vcf");
-    const write = sentAt(writes, 0);
-    store.cancelWrite();
-    store.runEnded(write.run.id, { kind: "cancelled" });
-    const download = vi.fn();
-    expect(endOfWrite(store, download)).toBe("other");
-
-    store.startWrite("vcf");
-    const again = sentAt(writes, 1);
-    store.runEnded(again.run.id, {
-      kind: "failed",
-      error: { kind: "workerFailed", message: "a crash" },
+    store.undo();
+    expect(placeOf(store)).toStrictEqual({
+      kind: "sentence",
+      text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
     });
-    expect(endOfWrite(store, download)).toBe("failed");
-    expect(download).not.toHaveBeenCalled();
+  });
+});
+
+describe("DL7 D1 the status region says the sentence of no variant once", () => {
+  test("a change of the filters that makes it certain says it, once", () => {
+    const { store, jobs } = storeOfPanel();
+    store.apply("the FILTER box changed", (p) =>
+      turnOffVariantFilter(p, "passed"),
+    );
+    finishPass(store, jobs, pass(true));
+    const enabled = store.getState();
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+
+    store.apply("the FILTER box changed", (p) =>
+      setVariantFilter(p, { kind: "passed" }),
+    );
+    const certain = store.getState();
+    expect(noVariantAnnouncement(enabled, certain)).toBe(
+      "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
+    );
+
+    // A second change that keeps it certain says nothing again.
+    store.apply("the missing data filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
+    );
+    expect(placeOf(store).kind).toBe("sentence");
+    expect(noVariantAnnouncement(certain, store.getState())).toBeNull();
   });
 
-  test("Save it again hands the file of saved to the browser again, under the same name", () => {
-    const { store, jobs, writes } = storeOfPanel();
-    finishPass(store, jobs, pass(false));
-    const written = vcfWritten();
-    writeEnded(store, writes, written);
-    endOfWrite(store, () => undefined);
-    const download = vi.fn();
-
-    saveAgain(store, download);
-
-    expect(download).toHaveBeenCalledTimes(1);
-    expect(download).toHaveBeenCalledWith(
-      "panel.filtered.vcf.gz",
-      written.file,
+  test("nothing is said when the button comes back", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(true));
+    const certain = store.getState();
+    store.apply("the FILTER box changed", (p) =>
+      turnOffVariantFilter(p, "passed"),
     );
-    expect(store.getState().write?.kind).toBe("saved");
+    expect(noVariantAnnouncement(certain, store.getState())).toBeNull();
   });
 
-  test("Save it, of a file written and not handed, hands it and then tells the store", () => {
+  test("nothing is said when the one pass ends with it, nor when the file changes", () => {
+    const { store, jobs } = storeOfPanel();
+    store.startRun("variantsSummary");
+    const running = store.getState();
+    const one = sentAt(jobs, 0);
+    store.runEnded(one.run.id, {
+      kind: "done",
+      key: one.key,
+      result: pass(true),
+    });
+    expect(placeOf(store).kind).toBe("sentence");
+    expect(noVariantAnnouncement(running, store.getState())).toBeNull();
+
+    // Another file, read and its pass finished, as certain as the first.
+    const first = store.getState();
+    const fileId = "d".repeat(32);
+    openVariantsFile(store, {
+      fileId,
+      name: "other.vcf.gz",
+      size: 87_000,
+      format: "vcf",
+      readOptions: { ploidy: null, onlyPassed: false },
+    });
+    store.variantsRead(fileId, {
+      kind: "read",
+      individuals: ["s000", "s001"],
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: true,
+    });
+    finishPass(store, jobs, pass(true));
+    expect(placeOf(store).kind).toBe("sentence");
+    expect(noVariantAnnouncement(first, store.getState())).toBeNull();
+  });
+
+  test("a write of no variant is not said here: its sentence takes the focus", () => {
     const { store, jobs, writes } = storeOfPanel();
     finishPass(store, jobs, pass(false));
-    const written = vcfWritten();
-    writeEnded(store, writes, written);
-    const download = vi.fn();
-
-    saveAgain(store, download);
-
-    expect(download).toHaveBeenCalledWith(
-      "panel.filtered.vcf.gz",
-      written.file,
-    );
-    expect(store.getState().write?.kind).toBe("saved");
+    const ready = store.getState();
+    writeEnded(store, writes, vcfWritten(0));
+    expect(placeOf(store).kind).toBe("sentence");
+    expect(noVariantAnnouncement(ready, store.getState())).toBeNull();
   });
 });

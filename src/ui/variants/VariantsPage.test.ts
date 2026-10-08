@@ -23,6 +23,8 @@ import { startAnalysis } from "../runs.ts";
 import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
+import { RunGateProvider } from "./runGate.tsx";
+import { createRunGate } from "./thresholdRun.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
 import type * as WordsModule from "./words.ts";
 
@@ -131,13 +133,17 @@ async function drawPage(): Promise<{
         AnnouncerProvider,
         { value: createAnnouncer() },
         createElement(
-          FilesProvider,
-          { value: files },
-          createElement(VariantsPage, {
-            autoRuns,
-            onCountButton: () => undefined,
-            onStatsShown: () => () => undefined,
-          }),
+          RunGateProvider,
+          { value: createRunGate() },
+          createElement(
+            FilesProvider,
+            { value: files },
+            createElement(VariantsPage, {
+              autoRuns,
+              onCountButton: () => undefined,
+              onStatsShown: () => () => undefined,
+            }),
+          ),
         ),
       ),
     ),
