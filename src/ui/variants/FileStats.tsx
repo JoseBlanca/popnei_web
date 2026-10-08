@@ -81,7 +81,7 @@ import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
-import type { PassIndividuals } from "./statsPlots.ts";
+import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
 import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
@@ -322,7 +322,7 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
 
 /** The thresholds of the six histograms, as the user set them: a
     number, rounded to the step of its axis when it was committed and
-    drawn and counted as it is, or `null` for the top of the axis, which
+    drawn as it is, or `null` for the top of the axis, which
     keeps everything and follows the axis as a result so far widens it. */
 interface Thresholds {
   readonly variants: Readonly<Record<VariantStatistic, number | null>>;

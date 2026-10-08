@@ -5,8 +5,8 @@
  * (docs/plans/popnei-0.2.2.md, "The owner's first round"): of the
  * variants from popnei's 1,000 fine bins over 0 to 1, of the individuals
  * from popnei's value of each. And the step a threshold moves by and the
- * number it is shown and counted at. They change no statistic and are
- * no filter of the project (docs/plans/thresholds.md, "The design").
+ * number it is shown at. They change no statistic and are no filter of
+ * the project (docs/plans/thresholds.md, "The design").
  */
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
@@ -33,9 +33,13 @@ export const VARIANT_THRESHOLD_DECIMALS = 3;
  * the threshold keeps them all only if the values are spaced wider than
  * the bin, `spacing`, and the bin then holds 0 alone: the missing rate of
  * fewer than 1,000 individuals. Otherwise the answer is false, a line in
- * red for a threshold that might remove nothing. Edges that are fewer
- * than two or do not go up, and counts that are not one fewer than the
- * edges, are a defect, thrown.
+ * red for a threshold that might remove nothing.
+ *
+ * A `value` below the right edge of the last bin with a count that is no
+ * edge of the bins is a defect, thrown, since the bin around it holds
+ * values on both sides of it: `variantThresholdOnStep` makes every
+ * threshold an edge. So are edges that are fewer than two or do not go
+ * up, and counts that are not one fewer than the edges.
  */
 export function variantsAllKept(
   part: VariantStatsPart,
@@ -56,11 +60,27 @@ export function variantsAllKept(
   if (value >= at(edges, last + 1)) return true;
   const first = at(edges, 0);
   return (
+    edgeIndexOf(edges, value) === 0 &&
     last === 0 &&
-    value >= first &&
     spacing !== null &&
     spacing > at(edges, 1) - first
   );
+}
+
+/** The index of `value` among `edges`, evenly spaced as popnei's are;
+    a defect, thrown, when `value` is none of them. */
+function edgeIndexOf(edges: Float64Array, value: number): number {
+  const numBins = edges.length - 1;
+  const first = at(edges, 0);
+  const index = Math.round(
+    ((value - first) / (at(edges, numBins) - first)) * numBins,
+  );
+  if (!(index >= 0 && index <= numBins && at(edges, index) === value)) {
+    throw defect(
+      `a threshold of ${String(value)} for the variants, which is no edge of the bins.`,
+    );
+  }
+  return index;
 }
 
 /**
@@ -78,7 +98,7 @@ export function variantThresholdOnStep(
 }
 
 /** The step a threshold moves by over an axis, and the decimals it is
-    shown and counted with. */
+    shown with. */
 export interface ThresholdStep {
   /** A power of ten: 0.01 on an axis of 0 to 1. */
   readonly step: number;
@@ -115,7 +135,7 @@ const AXIS_POSITIONS = 100;
 const SPAN_TOLERANCE = 1e-9;
 
 /** `value` rounded to `decimals` decimals, the nearest half up, the
-    number a threshold is shown and counted at: 0.07 for 0.0734 and 0.15
+    number a threshold is shown at: 0.07 for 0.0734 and 0.15
     for 0.145 with 2. The point is shifted in the text, where 0.145 × 100
     is 14.499999999999998 and `toFixed` gives 0.14. A `value` that is not
     finite is a defect, thrown. */
@@ -132,14 +152,16 @@ export function thresholdOnStep(value: number, decimals: number): number {
 /**
  * Whether the threshold `threshold`, which keeps the values at most it,
  * keeps every individual with a value of `values`, popnei's
- * `missingGtRate` or `obsHetRate` of each: true when no value but NaN is
- * above it, and when every value is NaN. The individuals whose value is
+ * `missingGtRate` or `obsHetRate` of each: true when some value is not
+ * NaN and no value but NaN is above it. The individuals whose value is
  * NaN, with no called genotype for the observed heterozygosity, are in
  * neither count: the threshold alone neither keeps nor removes them,
  * though `individualsKept` (individualsKept.ts), which applies the
  * filters of the project, removes them, since NaN is at most no
- * threshold. Exact for any threshold. A `threshold` that is NaN is a
- * defect, thrown.
+ * threshold. So when every value is NaN, or there is none, the answer is
+ * false: there is no individual with a value to keep, and a filter would
+ * remove them all. Exact for any threshold. A `threshold` that is NaN is
+ * a defect, thrown.
  */
 export function individualsAllKept(
   values: Float64Array,
@@ -148,7 +170,10 @@ export function individualsAllKept(
   if (Number.isNaN(threshold)) {
     throw defect("a threshold of NaN for the individuals.");
   }
-  return values.every((value) => Number.isNaN(value) || value <= threshold);
+  return (
+    values.some((value) => !Number.isNaN(value)) &&
+    values.every((value) => Number.isNaN(value) || value <= threshold)
+  );
 }
 
 /** Throws a defect when `binEdges` are fewer than two or do not go up. */

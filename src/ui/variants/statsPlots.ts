@@ -5,8 +5,10 @@
  * range of the values, rounded out to round numbers, the missing rates
  * from 0 (the owner, 6 October 2026): the variants' bins are popnei's
  * added up, `variantBinsRounded`, in bars no narrower than the distance
- * between two values of the missing rate and of the MAF (the owner, 8
- * October 2026), those of the individuals made from popnei's values over
+ * between two values of the missing rate and of the MAF, the missing
+ * rate's first bar from 0 to 0.001, its variants with no missing genotype,
+ * which a threshold of 0 keeps (the owner, 8 October 2026), those of the
+ * individuals made from popnei's values over
  * that range, `binValuesRounded`. The axes are
  * fitted to what is drawn, so those of a result so far widen as the pass
  * reads values outside them. Pure, so that a test in node checks the
@@ -41,7 +43,10 @@ import {
   variantHistogramDescription,
   variantValueSpacing,
 } from "../../core/analyses/variantChecks.ts";
-import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
+import type {
+  PassIndividuals,
+  VariantStatistic,
+} from "../../core/analyses/variantChecks.ts";
 import { individualHistogramDescription } from "../../core/analyses/individualChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
@@ -163,15 +168,6 @@ export interface IndividualPlot {
   readonly noValueLine: string | null;
 }
 
-/** The individuals the statistics of the variants are calculated over,
-    every individual of the file, and their ploidy, which set the least
-    distance between two values of the missing rate and of the MAF, and
-    so the narrowest bar of their histograms. */
-export interface PassIndividuals {
-  readonly numIndividuals: number;
-  readonly ploidy: number;
-}
-
 /** The histogram of the variants of `statistic`, popnei's bins added up
     over the range of those with a count, rounded out, in bars no
     narrower than the distance between two values the statistic can take
@@ -195,7 +191,7 @@ export function variantPlot(
     individuals.numIndividuals,
     individuals.ploidy,
   );
-  const bins = variantBinsRounded(result, statistic, spacing);
+  const bins = variantBinsRounded(result, statistic, individuals);
   const axisLow = at(bins.edges, 0);
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
@@ -210,6 +206,10 @@ export function variantPlot(
     edges: bins.edges,
     counts: bins.counts,
     threshold: noLegend(shown, keepsAll),
+    // The first bar of the missing rate, 0 to 0.001, holds the variants
+    // with no missing genotype, alone below 1,000 individuals: a
+    // threshold of 0 keeps it.
+    firstBinOnLowerEdge: statistic === "missingRate",
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {

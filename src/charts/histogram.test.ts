@@ -436,6 +436,39 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(lineClass()).toBe("chart-threshold");
   });
 
+  test("a threshold of 0 on a first bin of 0 to 0.001 drawn as holding its values on 0, the zeros of the missing rate, keeps that bin whole, and removes it without", () => {
+    const edges = Float64Array.from([0, 0.001, 0.006, 0.011]);
+    const counts = Uint32Array.from([2, 20, 59]);
+    const firstBar = (element: HTMLElement): Element | undefined =>
+      [...svgOf(element).querySelectorAll("rect.chart-bar")].find(
+        (bar) => numberOf(bar, "x") === 0,
+      );
+    const onZero = sizedElement(600, 375);
+    createHistogram(onZero, {
+      ...histogramOf(counts, 0, edges),
+      firstBinOnLowerEdge: true,
+    });
+    expect(firstBar(onZero)?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-kept",
+    );
+    expect(numberOf(firstBar(onZero), "width")).toBeGreaterThan(0);
+    expect(
+      histogramRows({
+        ...histogramOf(counts, 0, edges),
+        firstBinOnLowerEdge: true,
+      }).map((row) => row.state),
+    ).toEqual(["kept", "removed", "removed"]);
+
+    const spread = sizedElement(600, 375);
+    createHistogram(spread, histogramOf(counts, 0, edges));
+    expect(firstBar(spread)?.getAttribute("class")).toBe(
+      "chart-bar chart-bar-removed",
+    );
+    expect(
+      histogramRows(histogramOf(counts, 0, edges)).map((row) => row.state),
+    ).toEqual(["partlyKept", "removed", "removed"]);
+  });
+
   test("a threshold of 0.51, inside bin 20, splits it into two rects that meet at the line", () => {
     const element = sizedElement(600, 375);
     createHistogram(element, histogramOf(OBS_HET_COUNTS, 0.51));

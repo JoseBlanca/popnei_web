@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
-import { histogramScales } from "../../charts/histogram.ts";
+import { histogramRows, histogramScales } from "../../charts/histogram.ts";
 
 import type {
   IndividualChecksResult,
@@ -9,7 +9,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
-import type { PassIndividuals } from "./statsPlots.ts";
+import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../../worker/protocol.ts";
 
 /** Three individuals, one with no called genotype: its missing rate is 1,
@@ -304,7 +304,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     });
   });
 
-  test("the owner's first round: the missing rate of panel.vcf.gz, multiples of 1 / 200, in 20 bars of 0.005 from 0 to 0.1, with the threshold's step still 0.001", () => {
+  test("the owner's first round: the missing rate of panel.vcf.gz, multiples of 1 / 200, in a bar of 0 to 0.001 and 20 bars of 0.005 from 0.001 to 0.1, with the threshold's step still 0.001", () => {
     const plot = variantPlot(
       "missingRate",
       PANEL.variants,
@@ -312,9 +312,30 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       false,
       0.05,
     );
-    expect(plot.data.counts).toHaveLength(20);
-    expect(plot.data.edges[1]).toBe(0.005);
+    expect(plot.data.counts).toHaveLength(21);
+    expect(Array.from(plot.data.edges.subarray(0, 3))).toEqual([
+      0, 0.001, 0.006,
+    ]);
+    expect(plot.data.edges.at(-1)).toBe(0.1);
     expect(plot.threshold.slider.step).toBe(0.001);
+  });
+
+  test("a threshold of 0 keeps the first bar of the missing rate, the variants with no missing genotype, and removes the others; the first bar of the MAF is not drawn so", () => {
+    const plot = variantPlot(
+      "missingRate",
+      PANEL.variants,
+      PANEL_INDIVIDUALS,
+      false,
+      0,
+    );
+    expect(plot.data.firstBinOnLowerEdge).toBe(true);
+    const states = histogramRows(plot.data).map((row) => row.state);
+    expect(states[0]).toBe("kept");
+    expect(new Set(states.slice(1))).toEqual(new Set(["removed"]));
+    expect(
+      variantPlot("maf", PANEL.variants, PANEL_INDIVIDUALS, false, 0).data
+        .firstBinOnLowerEdge,
+    ).toBe(false);
   });
 
   test("a threshold that removes some is drawn in red and its words are the number alone", () => {

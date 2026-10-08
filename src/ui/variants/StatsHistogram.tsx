@@ -33,7 +33,7 @@
  * the box keeps the number it showed at that change: a threshold never
  * set follows the top of the axis, which a result so far can widen, and
  * React Aria would put the new number over what the user is typing. Until
- * the user types, the box shows the number counted, as the line does.
+ * the user types, the box shows the number of the line.
  */
 import { useId, useLayoutEffect, useRef, useState } from "react";
 

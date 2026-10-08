@@ -257,7 +257,21 @@ describe("variantsAllKept", () => {
 
   test("of the statistic asked for: the observed heterozygosity of SMALL, all in the first bin, is kept whole from its right edge, 0.25", () => {
     expect(variantsAllKept(SMALL, "obsHet", 0.25, null)).toBe(true);
-    expect(variantsAllKept(SMALL, "obsHet", 0.2, null)).toBe(false);
+    expect(variantsAllKept(SMALL, "obsHet", 0, null)).toBe(false);
+  });
+
+  test("a value below the right edge of the last bin with a count that is no edge of the bins is a defect, since a bin holds values on both sides of it; above that edge any value keeps them all", () => {
+    for (const [statistic, value] of [
+      ["obsHet", 0.2],
+      ["obsHet", -0.1],
+      ["maf", 0.6],
+      ["maf", 0.999],
+    ] as const) {
+      expect(() => variantsAllKept(SMALL, statistic, value, 0.3)).toThrow(
+        `popnei_web defect: a threshold of ${String(value)} for the variants, which is no edge of the bins.`,
+      );
+    }
+    expect(variantsAllKept(SMALL, "obsHet", 0.3, null)).toBe(true);
   });
 
   test("with no variant in a bin, any threshold keeps them all", () => {
@@ -268,8 +282,6 @@ describe("variantsAllKept", () => {
     expect(variantsAllKept(SMALL, "obsHet", 0, null)).toBe(false);
     expect(variantsAllKept(SMALL, "obsHet", 0, 0.25)).toBe(false);
     expect(variantsAllKept(SMALL, "obsHet", 0, 0.3)).toBe(true);
-    // Not below 0, the first edge.
-    expect(variantsAllKept(SMALL, "obsHet", -0.1, 0.3)).toBe(false);
   });
 
   test("edges fewer than two, or that do not go up, are a defect", () => {
@@ -372,8 +384,10 @@ describe("individualsAllKept", () => {
     expect(individualsAllKept(values, threshold)).toBe(kept);
   });
 
-  test("every value NaN: true, since it removes none", () => {
-    expect(individualsAllKept(Float64Array.from([NaN, NaN]), 0)).toBe(true);
+  test("every value NaN, or no value: false, since a filter at any threshold removes the individuals with no value, and there is none with a value to keep", () => {
+    expect(individualsAllKept(Float64Array.from([NaN, NaN]), 0)).toBe(false);
+    expect(individualsAllKept(Float64Array.from([NaN, NaN]), 1)).toBe(false);
+    expect(individualsAllKept(new Float64Array(0), 1)).toBe(false);
   });
 
   test("a threshold that is NaN is a defect", () => {

@@ -46,6 +46,14 @@ export interface HistogramData extends PlotText {
    * allele under bars centred on them from edges at the halves.
    */
   readonly xWholeNumbers?: boolean;
+  /**
+   * The first bin drawn as if its values were all on its lower edge, the
+   * zeros of the missing rate on popgen2.html, whose first bin, 0 to
+   * 0.001, holds them alone or with few others: a threshold on that edge
+   * keeps it whole, where it would keep a part of it of width 0 and draw
+   * the rest as removed. False when absent.
+   */
+  readonly firstBinOnLowerEdge?: boolean;
 }
 
 /**
@@ -259,16 +267,20 @@ function edgeAt(edges: Readonly<Float64Array>, index: number): number {
 /**
  * What a threshold that keeps what is at most `threshold` does to the bin
  * from `from` to `to`, which holds `to`, and `from` only when
- * `fromIncluded`: it keeps the bin when `to` is at most the threshold,
- * and removes it when every value it may hold is above the threshold.
+ * `fromIncluded`: it keeps the bin when `to` is at most the threshold, or
+ * `from` when the bin is drawn as holding its values on `from`,
+ * `onFrom`; and removes it when every value it may hold is above the
+ * threshold.
  */
 function binState(
   from: number,
   fromIncluded: boolean,
   to: number,
   threshold: number,
+  onFrom: boolean,
 ): BinState {
   if (to <= threshold) return "kept";
+  if (onFrom && fromIncluded && from <= threshold) return "kept";
   const removed = fromIncluded ? from > threshold : from >= threshold;
   return removed ? "removed" : "partlyKept";
 }
@@ -296,7 +308,13 @@ export function histogramRows(data: HistogramData): HistogramRow[] {
       state:
         data.threshold === null
           ? null
-          : binState(from, fromIncluded, to, data.threshold.value),
+          : binState(
+              from,
+              fromIncluded,
+              to,
+              data.threshold.value,
+              data.firstBinOnLowerEdge === true,
+            ),
     };
   });
 }
