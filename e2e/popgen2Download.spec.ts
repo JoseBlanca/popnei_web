@@ -301,7 +301,7 @@ test("DL6 D4 Stop during a write of the VCF of 200,000 variants downloads nothin
   const bar = dialog(page).getByRole("progressbar", {
     name: "Writing big.filtered.vcf.gz",
   });
-  await expect(bar).toHaveAttribute("aria-valuenow", /^\d+$/u, {
+  await expect(bar).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, {
     timeout: 60_000,
   });
   await expect(

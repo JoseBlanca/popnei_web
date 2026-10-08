@@ -18,8 +18,9 @@
  * page makes is served so, a worker made after a Stop with nothing held.
  *
  * Asked to, it holds a write of the filtered variants as well, for the
- * dialog of popgen2.html's download: the first report of popnei's
- * progress of each write goes through, so that the bar shows a share,
+ * dialog of popgen2.html's download: popnei's reports of the progress
+ * of each write go through up to the first with bytes read, so that the
+ * bar shows a share above 0,
  * and the reports after it and the written file are kept back until a
  * release of "write", which lets them through and holds no write after
  * it.
@@ -116,7 +117,7 @@ const front = (holdWrite: boolean): string => `{
   self.postMessage = (m, t) => {
     if (holding.write && m !== null && typeof m === "object" && writes.has(m.id)) {
       if (m.kind === "progress" && !reported.has(m.id)) {
-        reported.add(m.id);
+        if (m.bytesRead > 0) reported.add(m.id);
         realPost(m, t);
         return;
       }

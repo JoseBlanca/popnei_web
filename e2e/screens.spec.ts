@@ -4378,6 +4378,19 @@ function newPageStats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
 }
 
+/** The button of the download of the filtered variants on popgen2.html. */
+function downloadButton(page: Page): Locator {
+  return newPageStats(page).getByRole("button", {
+    name: "Download filtered variants…",
+    exact: true,
+  });
+}
+
+/** The dialog of the download on popgen2.html. */
+function downloadDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Download filtered variants" });
+}
+
 for (const theme of ["light", "dark"] as const) {
   for (const width of [null, 320] as const) {
     const at = width === null ? "" : `-${String(width)}`;
@@ -4541,6 +4554,113 @@ for (const theme of ["light", "dark"] as const) {
           newPageStats(page).getByText("Not calculated."),
         ).toHaveCount(2);
         await save(page, `popgen2-crash-count${at}-${theme}`);
+      });
+
+      test("the download waits for the one pass", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("held.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await expect(downloadButton(page)).toBeDisabled({ timeout: 60_000 });
+        await expect(
+          newPageStats(page).getByText(
+            "The download waits for the statistics of the file to be read to the end.",
+          ),
+        ).toBeVisible();
+        await downloadButton(page).scrollIntoViewIfNeeded();
+        await save(page, `popgen2-download-waits${at}-${theme}`);
+      });
+
+      test("the dialog of the download", async ({ page }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await downloadButton(page).click();
+        await expect(downloadDialog(page)).toBeVisible();
+        await save(page, `popgen2-download-dialog${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the dialog of the download writing, its bar at a share", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("write.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        await holdSummary(page, { holdWrite: true });
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 60_000,
+        });
+        await downloadButton(page).click();
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await expect(
+          downloadDialog(page).getByRole("progressbar"),
+        ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, { timeout: 60_000 });
+        await save(page, `popgen2-download-writing${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the dialog of the download after a failure", async ({ page }) => {
+        await crashWorkerOn(page, "write");
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await downloadButton(page).click();
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await expect(
+          downloadDialog(page).getByRole("button", { name: "Close" }),
+        ).toBeFocused();
+        await save(page, `popgen2-download-failed${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the text after the download", async ({ page }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        for (const [name, value] of [
+          [
+            "Missing genotypes max: maximum proportion of missing genotypes",
+            "0.05",
+          ],
+          ["Major allele frequency max: maximum major allele frequency", "0.9"],
+          [
+            "Missing GTs max: maximum proportion of missing genotypes of an individual",
+            "0.03",
+          ],
+          [
+            "Obs. het. max: maximum observed heterozygosity of an individual",
+            "0.38",
+          ],
+        ] as const) {
+          const box = newPageStats(page).getByRole("textbox", { name });
+          await box.fill(value);
+          await box.press("Enter");
+        }
+        await downloadButton(page).click();
+        const download = page.waitForEvent("download");
+        await downloadDialog(page)
+          .getByRole("button", { name: "Download" })
+          .click();
+        await download;
+        await expect(
+          newPageStats(page).getByRole("button", { name: "Save it again" }),
+        ).toBeVisible();
+        await expect(downloadDialog(page)).toHaveCount(0);
+        await save(page, `popgen2-downloaded${at}-${theme}`);
       });
 
       test("the FILTER failures of low_qual.vcf.gz while the file is read", async ({
