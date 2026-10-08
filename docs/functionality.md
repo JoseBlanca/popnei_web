@@ -131,7 +131,8 @@ heterozygosity drop a variant with no called genotype at any threshold.
 Off, its box shows 1 and its line stands at the top of the axis, both
 drawn in grey, and nothing is shaded. A threshold that is on and keeps
 every value of its plot, as a line at the top of an axis that ends
-below 1, is drawn in grey too, and stays a filter. The grey replaces
+below 1, is drawn in grey too, and stays a filter. The grey is the
+bluish grey above, its line dotted and its handle hollow. It replaces
 the words "No filter" and "keeps every variant" the page had until 8
 October 2026, as the owner decided that day; a screen reader alone is
 told it in words (docs/specs/steps/popgen2-filters.md).

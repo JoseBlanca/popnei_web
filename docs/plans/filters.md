@@ -8,7 +8,13 @@ line under a plot of what its threshold keeps, a threshold that keeps
 every value of its plot drawn in grey, and the FILTER box built soon,
 so it is now work package 7, right after Undo, Redo and the notice; it
 was work package 9, and the number box and the thresholds, 7 and 8,
-are now 8 and 9. It builds the design `docs/designs/stats-filters.md`, approved by
+are now 8 and 9. Revised again on 8 October 2026 after the merge of
+`main`, which brought the piece `popnei-0.2.2`: popnei 0.2.2 is
+installed, `PROTOCOL_VERSION` is 13, and the grey of a threshold that
+keeps every value of its plot is the one that piece built, a bluish
+grey of its own, the token `--chart-threshold-keeps-all` of
+`src/ui/tokens.css`, with the line dotted and the handle hollow, which
+work packages 8 and 9 reuse. It builds the design `docs/designs/stats-filters.md`, approved by
 the owner on 7 October 2026: the thresholds the user drags or types on
 the histograms of `popgen2.html` become filters of the project, with
 Undo, Redo and a notice that says what each change did; a check box
@@ -195,7 +201,8 @@ Deliverables:
    column", on `low_qual.vcf.gz`, `panel.vcf.gz` and `panel.nei`, under
    the tag `SF1 D1` in `src/worker/runner.test.ts` or a file of its own
    beside it; at least six tests, one for each run that bullet names.
-2. The messages accept it and `PROTOCOL_VERSION` is 12: the cases of
+2. The messages accept it and `PROTOCOL_VERSION` is 12, 13 since the
+   merge of `main` on 8 October 2026: the cases of
    `messages.md`, "How it is verified", that name `passed`, under `SF1
    D2` in `src/worker/messages.test.ts`.
 3. The project holds it, first in the fixed order: the cases of
@@ -242,8 +249,16 @@ into `main` and then into `filters`, as the owner ordered on 7 October
 have, and the merge raises `PROTOCOL_VERSION` to 13, from which this
 package raises it to 14. The literals of the work packages from here on
 are taken under node from popnei 0.2.2, the release that merge installs.
+Both are done: `main` was merged into `filters` on 8 October 2026
+(fbeab4b), `package.json` names `js-v0.2.2/popnei-0.2.2.tgz` and
+`node_modules/popnei` is 0.2.2, `PROTOCOL_VERSION` is 13, and the tests
+of work package 1 pass under 0.2.2 with their literals unchanged.
 
 ## Work package 2: the filters that apply to the file
+
+popnei 0.2.2 is installed in the worktree since the merge of 8 October
+2026, so `keepsPassed` and the `.nei` files that record their FILTER
+are there to build on; `PROTOCOL_VERSION` goes from 13 to 14.
 
 What it gives: the page learns, when it opens a variants file, whether
 its variants record whether they passed their FILTER, and a project that
@@ -546,21 +561,25 @@ Deliverables:
 1. `NumberField` with its options for `popgen2.html`: Enter, Tab and
    leaving an emptied box call the call of "off", and the box then
    shows the number the page gives it; Escape and Ctrl+Z put back the
-   number; the grey look of its number; a description read by a screen
+   number; the grey look of its number, which the piece `popnei-0.2.2`
+   built as the option `muted`, in the token
+   `--chart-threshold-keeps-all`, and which is kept; a description read by a screen
    reader alone, tied by `aria-describedby`; the call through which the
    page chooses the number an arrow key gives; without the options, an
    emptied box gives nothing and shows its number again, as today.
    Under `SF8 D1`, in jsdom.
-2. The two greys are tokens of `src/ui/tokens.css`: the number's with a
-   contrast of at least 4.5:1 against the box, and the line's with at
-   least 3:1 against the plot, in both themes, checked by
-   `src/ui/tokens.test.ts` under `SF8 D2`.
+2. The grey is the one token of `src/ui/tokens.css` that the piece
+   `popnei-0.2.2` added, `--chart-threshold-keeps-all`, for the number,
+   the line and the handle, with a contrast of at least 4.5:1 against
+   the background, and so at least 3:1 for the line against the plot, in
+   both themes, already checked by `src/ui/tokens.test.ts`; no token is
+   added, and that test passes untouched.
 3. The old page's flows that use the number box, `-g "VS|IP"` of the
    browser check, pass untouched.
 
 Tasks:
 
-- [ ] 8.1 `src/ui/widgets/NumberField.tsx` and the two tokens (the
+- [ ] 8.1 `src/ui/widgets/NumberField.tsx`, with the token of the grey as it is (the
   screen spec, "The number box"; "Accessibility", "The grey in words").
   All deliverables.
 
@@ -606,8 +625,9 @@ Deliverables:
    each turn the filter off, with 1 in the box and the line at the top
    of the axis, both grey, no shading, and the screen reader's words of
    off, and Undo turns it on at its value; the missing rate at 0.1 on
-   `panel.nei` grey, and out of the grey at 0.05; the two greys'
-   contrasts read from the computed colours; 0 typed is a filter at 0
+   `panel.nei` grey, and out of the grey at 0.05; the grey's line
+   dotted and its handle hollow, and its contrasts read from the
+   computed colours; 0 typed is a filter at 0
    with no sentence; Down in the box from off gives one step below the
    top of the axis; Down then Up from off leaves no step and no notice;
    a crash of the worker while a run waits keeps the run as a step of
@@ -633,9 +653,12 @@ Tasks:
   `setThreshold` with its description, through the run of 9.1; the
   state of the page's own thresholds, `START_THRESHOLDS`, goes; the
   grey, worked out in `src/core/thresholds.ts` and drawn on the line of
-  the histogram of `src/charts/` and on its handle, with a grey look of
-  the chart unless the piece `popnei-0.2.2` brought one, and
-  `docs/specs/charts/histogram.md` saying it; a threshold off, 1 as
+  the histogram of `src/charts/` and on its handle with what the piece
+  `popnei-0.2.2` brought, the dotted line of the class
+  `chart-threshold-keeps-all` of `src/charts/charts.css`, the hollow
+  handle of `ThresholdSlider`, both in the token
+  `--chart-threshold-keeps-all`, which `docs/specs/charts/histogram.md`
+  already says; a threshold off, 1 as
   off, Down from off in the box, the top of the axis, 0 as a filter at
   0, the number refused while off, the individuals with no value, the
   expected heterozygosity, the thresholds through another file (the
@@ -676,10 +699,12 @@ What could go wrong:
   own handler and lets the event go on; if a browser delivers the
   window's listener first, the flow of deliverable 5 fails in that
   engine.
-- The grey of `popnei-0.2.2`. That piece draws in grey a threshold of
-  its page-state thresholds, which have no off, that keeps every value
-  of its plot; what it built is read before 9.2 and kept where it fits,
-  so that the grey is drawn one way.
+- The grey of `popnei-0.2.2`. That piece, merged here on 8 October
+  2026, draws a threshold of its page-state thresholds, which have no
+  off, that keeps every value of its plot in the bluish grey of the
+  token `--chart-threshold-keeps-all`, its line dotted and its handle
+  hollow; 9.2 draws a threshold that is off the same way, so that the
+  grey is drawn one way.
 
 ## Work package 10: the plots after a Stop
 

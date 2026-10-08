@@ -2287,7 +2287,9 @@ for the smallest part of it.
   or types, and each is a filter of the project, on or off: off, its
   box shows 1 and its line stands at the top of the axis, both in grey,
   and nothing is shaded; on, a threshold that keeps every value of its
-  plot is drawn in grey too; no line says what a threshold keeps; the
+  plot is drawn in grey too, the bluish grey of the token
+  `--chart-threshold-keeps-all` with the line dotted and the handle
+  hollow; no line says what a threshold keeps; the
   expected heterozygosity has none, since popnei has no filter on it.
   The line and the box show the project's value, so Undo moves them
   back, and hold of their own only the value being dragged or typed,
@@ -2331,8 +2333,10 @@ What was revised on 8 October 2026, from the owner's decisions after
 trying `popgen2.html` (`docs/designs/stats-filters.md`, "What the owner
 decided"): no line under a plot says how many variants or individuals
 its threshold keeps, and a threshold that keeps every value of its
-plot, off at 1 or on, is drawn in grey, its line and the number in its
-box, in place of the words "No filter"; a screen reader is told it in
+plot, off at 1 or on, is drawn in grey, its line, its handle and the
+number in its box, in place of the words "No filter", the bluish grey
+of the token `--chart-threshold-keeps-all` that the piece
+`popnei-0.2.2` built, with the line dotted and the handle hollow; a screen reader is told it in
 the slider's value and the box's description. With the count gone, a
 threshold of the variants is no longer raised from below 0.001 to
 0.001, and 0 is given to popnei as 0.

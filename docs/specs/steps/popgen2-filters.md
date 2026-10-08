@@ -16,7 +16,11 @@ design, "What the owner decided"): no line under the plots of what a
 threshold keeps, and a threshold that keeps every value of its plot,
 off among them, shown by its line and the number in its box in grey,
 not by the words "No filter"; and, decided by the session from them,
-no raise of a threshold below 0.001. No
+no raise of a threshold below 0.001. Revised again on 8 October 2026
+for the grey that the piece `popnei-0.2.2` built that day and that this
+spec takes as it is: a bluish grey of its own, the token
+`--chart-threshold-keeps-all`, with the line dotted and the handle
+hollow (below, "The terms"). No
 code of it exists yet. What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
@@ -67,12 +71,19 @@ them and does not repeat them.
   line with a handle, dragged with the pointer or moved with the arrow
   keys when it has the focus. **The box** is the number box beside the
   histogram, which shows the same value and takes a typed one.
-- **Grey**: a threshold whose line and number are drawn in grey keeps
-  every value of its plot: no bin of the variants, and no value of an
-  individual, lies above it. It is grey when it is off, at 1, and when
-  it is on at a value that keeps every value of the plot. It is not the
-  grey of a control that cannot be used: the line and the box take the
-  pointer and the keys as ever.
+- **Grey**: a threshold whose line, handle and number are drawn in grey
+  keeps every value of its plot: no bin of the variants, and no value of
+  an individual, lies above it. It is grey when it is off, at 1, and
+  when it is on at a value that keeps every value of the plot. The grey
+  is the bluish grey of the token `--chart-threshold-keeps-all` of
+  `src/ui/tokens.css`, a grey with some of the blue of the bars, #54758c
+  in the light theme and #6387a1 in the dark, as the piece
+  `popnei-0.2.2` drew it on 8 October 2026; the line is dotted and the
+  handle hollow, an outline over the background, where a threshold that
+  removes something has a red dashed line and a filled handle, so that
+  the two differ by their shape for a reader who does not tell the
+  colours apart. It is not the grey of a control that cannot be used:
+  the line and the box take the pointer and the keys as ever.
 - **A run** is a sequence of presses of the arrow keys, Page Up or Page
   Down on one threshold, or of Home or End on its line, with less than
   one second between two presses.
@@ -227,13 +238,14 @@ goes; the line's value and the box's description change with it, and a
 screen reader reads them when the user next reaches the line or the
 box.
 
-The line has two parts, and both are grey together: the dashed line
-drawn by the histogram of `src/charts/`, which gains a grey look of its
-threshold that the screen asks for, and the handle the user drags, the
-slider of `src/ui` laid over the plot. A histogram whose filter is off
-today draws no line (`docs/specs/charts/histogram.md`); on this page it
-draws it at the top of the axis, in the grey. That spec says so once
-the piece `popnei-0.2.2`, which revises it, is merged into this branch.
+The line has two parts, and both are grey together: the line drawn by
+the histogram of `src/charts/`, dotted in the grey when the screen asks
+for the look of a threshold that keeps everything, as the piece
+`popnei-0.2.2` built it (`docs/specs/charts/histogram.md`), and the
+handle the user drags, the slider of `src/ui` laid over the plot,
+hollow in the grey. A histogram whose filter is off today draws no line
+(`docs/specs/charts/histogram.md`); on this page it draws it at the top
+of the axis, in the grey.
 
 **Turning a threshold off.** Two ways, as the owner chose on 7 October
 2026: emptying the box and then pressing Enter or Tab or clicking
@@ -553,7 +565,7 @@ number being dragged, typed or moved by a run of keys.
 
 | where | the words |
 |---|---|
-| the box of a threshold that is off | "1", in grey with a contrast of at least 4.5:1 against the box |
+| the box of a threshold that is off | "1", in the bluish grey of `--chart-threshold-keeps-all`, with a contrast of at least 4.5:1 against the background |
 | the box of a threshold on that keeps every value of its plot | its number, "0.1", in the same grey |
 | the line's value for a screen reader | on: its number, "0.05"; on and grey: "0.1, keeps every variant of the plot", "… every individual of the plot"; off: "1, keeps every variant", "1, keeps every individual" |
 | the description of the box, for a screen reader alone | on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; off: "This filter removes nothing."; none otherwise |
@@ -588,15 +600,17 @@ region. A number refused, as today. Nothing at each press of an arrow
 key: the line's value is read as it moves, as of any slider.
 
 **The grey in words** (1.4.1, "Use of color"). A threshold that keeps
-every value of its plot, off or on, is shown on the screen by its grey,
-as the owner decided on 8 October 2026, and by the absence of any bar
+every value of its plot, off or on, is shown on the screen by its grey
+and by its dotted line and hollow handle, as the owner decided on 8
+October 2026, and by the absence of any bar
 drawn as removed; off, the box shows 1 besides. A screen reader is told
 it in words: the line's value, "1, keeps every variant" off and "0.1,
 keeps every variant of the plot" on, and the description of the box,
 "This filter removes nothing." off and "This filter removes no variant
-of the plot." on (above, "A threshold, on and off"). The grey number in
-the box has a contrast of at least 4.5:1 against the box (1.4.3,
-"Contrast (minimum)"), and the grey line at least 3:1 against the plot
+of the plot." on (above, "A threshold, on and off"). The token
+`--chart-threshold-keeps-all` has a contrast of at least 4.5:1 against
+the background, so the grey number in the box meets 1.4.3, "Contrast
+(minimum)", and the grey line and handle at least 3:1 against the plot
 (1.4.11, "Non-text contrast"), in light and in dark: the browser's own
 grey is often fainter, and a number too faint to read would hide the
 threshold's value.
@@ -643,7 +657,9 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   its axis, is on and drawn in the grey, with "0.1, keeps every variant
   of the plot" and "This filter removes no variant of the plot."; moved
   to 0.05 it leaves the grey and both texts lose those words;
-- the line in the grey has a contrast of at least 3:1 against the plot
+- the line in the grey is dotted and the handle hollow, the line of a
+  threshold that removes something dashed and its handle filled; the
+  line in the grey has a contrast of at least 3:1 against the plot
   and the number in the grey at least 4.5:1 against the box, read from
   the computed colours, in light and in dark;
 - a threshold typed 0 is a filter at 0, with no sentence under its box;
@@ -695,7 +711,7 @@ called at the release of a pointer and not at a key.
 - The sentence under the FILTER box, "The plots show every variant,
   these among them."
 - How the row of Undo and Redo looks and where in the row the buttons
-  stand; the two greys, of the number and of the line; the spacing of
+  stand; the spacing of
   the FILTER box and its sentence.
 
 ## Open points

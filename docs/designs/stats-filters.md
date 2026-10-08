@@ -6,7 +6,10 @@ box of a `.nei` file and with the exact counts of popnei 0.2.2, and
 revised again on 8 October 2026 with the owner's decisions after trying
 the page: no line of what a threshold keeps, and a threshold that keeps
 every value of its plot drawn in grey (below, "What the owner
-decided"). It
+decided"); that grey is the bluish grey that the piece `popnei-0.2.2`
+built the same day, the token `--chart-threshold-keeps-all`, with the
+line dotted and the handle hollow (below, "What a threshold shows on its
+plot"). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -462,7 +465,7 @@ individual, with no pass. Until that day each plot had a line under it,
 "Keeps 1,050 of 1,200 variants", made exact by popnei 0.2.2's bins.
 
 A threshold that keeps every value of its plot is drawn in grey, its
-line and the number in its box: off, at 1; and on, at a value no
+line, its handle and the number in its box: off, at 1; and on, at a value no
 variant or individual of the plot lies above, as a line dragged to the
 top of an axis that ends below 1. A threshold of the variants keeps
 every value of its plot when no bin above it holds a variant. popnei
@@ -476,6 +479,18 @@ lies above it. While the file is read the grey follows the result so
 far, so a threshold grey at first can lose its grey when a higher value
 arrives.
 
+The grey is the one that the piece `popnei-0.2.2` drew on 8 October
+2026, which this design takes as it is: a bluish grey of its own, the
+token `--chart-threshold-keeps-all` of `src/ui/tokens.css`, a grey with
+some of the blue of the bars, #54758c in the light theme and #6387a1 in
+the dark, and not the grey of a control that cannot be used, since the
+threshold can still be moved, as the owner asked that day. The line,
+the handle and the number take that one token. The grey differs from
+the red of a threshold that removes something by its shape as well, for
+a reader who does not tell the colours apart: its line is dotted and its
+handle hollow, an outline over the background, where the red line is
+dashed and its handle filled.
+
 A threshold that is on and grey is still a filter: the filters of the
 MAF and of the observed heterozygosity drop a variant with no called
 genotype, which is in no histogram, and that of the observed
@@ -484,9 +499,10 @@ a screen reader is told what the grey means in words, since the grey
 alone would not reach its user (WCAG 2.2, 1.4.1 "Use of color"): the
 line's value says it keeps every variant of the plot, and the box's
 description says that the filter removes nothing, or nothing of the
-plot when it is on (the screen spec gives the words). The grey of the
-number has a contrast of at least 4.5:1 against the box, and the grey
-line at least 3:1 against the plot, in both themes.
+plot when it is on (the screen spec gives the words). The token has a
+contrast of at least 4.5:1 against the background, as the number is
+text, and so at least 3:1 for the line against the plot, in both
+themes.
 
 A threshold of 0 is a filter at 0, given to popnei as 0. The piece
 `popnei-0.2.2` had raised a threshold of the variants below 0.001 to
@@ -694,7 +710,8 @@ stays approved with them:
    don't need to show the user how many variants are we going to keep."
    A threshold that keeps every variant or individual of its plot is
    shown by its line and the number in its box drawn in grey, not by
-   words; the words "No filter" in the box and beside the line, and
+   words, the bluish grey of `--chart-threshold-keeps-all` with the line
+   dotted and the handle hollow, as the piece `popnei-0.2.2` built it; the words "No filter" in the box and beside the line, and
    the line "Keeps every variant", go. Off is 1 in grey in the box and
    the line in grey at the top of the axis, with no shading; an emptied
    box shows 1 in grey. A screen reader alone is told it in words (above,
