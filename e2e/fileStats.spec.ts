@@ -179,7 +179,9 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   // No line of what each threshold keeps: each keeps every variant or
   // individual, the missing rate's 0.1 too, and is grey.
   await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
-  await expect(stats(page).locator("line.chart-threshold-keeps-all")).toHaveCount(6);
+  await expect(
+    stats(page).locator("line.chart-threshold-keeps-all"),
+  ).toHaveCount(6);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
@@ -234,7 +236,9 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   // 2 / 12 and 3 / 12: red; the five others at the top of their axis,
   // grey.
   await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
-  await expect(stats(page).locator("line.chart-threshold-keeps-all")).toHaveCount(5);
+  await expect(
+    stats(page).locator("line.chart-threshold-keeps-all"),
+  ).toHaveCount(5);
   const csv = await downloadCsv(page);
   expect(csv.name).toBe("tetraploid.individual_stats.csv");
   expect(csv.text.split("\n")).toHaveLength(14);
