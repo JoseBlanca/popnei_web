@@ -76,8 +76,8 @@ this branch on 8 October 2026 (`git log --oneline c5c724e..1e4c7ef`):
   Vitest count is read from the summary line of `npx vitest run <path>
   -t "<tag>"`, "Tests N passed", since a tag that selects nothing exits
   0; a Playwright count from the summary of the browser check, half in
-  each engine. Every tag of this plan selects nothing on 1e4c7ef, so every
-  check below fails there.
+  each engine. No test name of 1e4c7ef starts with a tag of this plan,
+  so on that commit every check below runs no test, and fails.
 - **A command in the foreground** lasts at most 600,000 ms, the limit of
   the session's shell, and nothing runs in the background (the standing
   rules of the subagents). A browser run that would last longer is split
@@ -251,9 +251,11 @@ Deliverables:
      releases the address of an earlier file;
    - a second download 10 s after a second click, in the same page,
      which is the second write of a session;
-   - a second download 10 s after the first with no click between, which
-     no flow of the page makes and which shows Chromium's limiter of
-     several downloads, if Playwright lets it act.
+   - a second download 10 s after the first with no click between. No
+     flow of the page makes it; it is there to see whether Chromium's
+     limiter, which asks before a page downloads several files, acts at
+     all under Playwright, which may switch it off. Its outcome decides
+     nothing.
 2. The results in "What was done": for each engine and case, the event
    or its absence, with the versions of the engines and the date; and
    the decision, the automatic download or the Save click.
@@ -315,9 +317,10 @@ Tasks:
 
 What could go wrong: `onBytes` must keep the piece and return, with no
 promise, or popnei ends the pass with an error (`runner.md`, "The
-written file", step 1). A pass that fails after some pieces leaves the
-start of a file; the runner drops it with the answer, and a test that
-asserts no `Blob` reaches the page after a refusal guards it.
+written file", step 1). When popnei's pass fails after it has given some
+pieces, the pieces kept are the first part of a file with no end; the
+runner drops them with its answer, and a test that asserts that no
+`Blob` reaches the page after a refusal guards it.
 
 ## Work package 3: the name, the words of no individual kept, and the check of no variant for certain
 
@@ -399,6 +402,11 @@ Deliverables:
    them; the old page's flows of the write pass, and its screens of the
    write are taken again and are the same.
 
+The work package is done when the `DL4` tags give at least one test for
+each case its deliverables name, all passing, with every other test of
+Vitest and the flows of deliverable 4 passing, and its review is
+handled.
+
 Tasks, in order, since all are in `src/core/store.ts`:
 
 - [ ] 4.1 The format of the write: `STATE_FORMAT` goes, the store holds
@@ -440,10 +448,12 @@ Deliverables:
    served with a few lines in front of it that drop its messages of
    progress before they are posted, as `e2e/holdWorker.ts` serves it, so
    that no code of the application changes.
-2. The medians and the spread of each in "What was done", with the
-   engines' versions, and the decision: the bar shows its share when its
-   median is at most 2% longer than without it, or within the spread of
-   the five writes without it; otherwise it is drawn busy, with no
+2. The medians, and the spread of each, the longest of its five writes
+   less the shortest, in "What was done", with the engines' versions,
+   and the decision, taken in each engine and holding for both: the bar
+   shows its share when, in both engines, the median with it is longer
+   than the median without it by at most the larger of 2% and the spread
+   of the five writes without it; otherwise it is drawn busy, with no
    share, and the line of the write gives the time alone. In that case
    the session revises the screen spec's "While the file is written" and
    `runner.md`, "Progress", so that a write sends no progress, before
@@ -620,8 +630,10 @@ smallest, and stops before a size when the free disk would fall below
 `Blob` on the disk, or when the summed footprint of the engine's
 processes passes 32 GB, half the memory of the Mac, which the test
 watches and ends by closing the page; or after a size that failed,
-which is tried once more in a new page. Each size in each engine is one
-command in the foreground.
+which is tried once more in a new page. A size of 4 or 8 GB that fails
+or closes the tab is recorded with its outcome and is not a stop: only
+a failure under 2 GB is (above, "The stops"); the report gives it. Each
+size in each engine is one command in the foreground.
 
 Deliverables:
 
@@ -632,8 +644,9 @@ Deliverables:
    processes summed above the tab before, and what they hold 3 s after;
    the file read back whole as `VS5 D5` reads it.
 2. Under `DL8 D2`, the copy of a `Blob` made of `Blob`s: at the 2 GB
-   file, the peak above the tab before in each engine. Above 1.5 times
-   the file in an engine, the bytes are taken as copied: task 8.2 makes
+   file, the peak of the engine's processes summed during the write less
+   what they held before Download, in each engine. Above 1.5 times the
+   file in an engine, the bytes are taken as copied: task 8.2 makes
    the runner keep the parts as a list and make the `Blob` once, its
    tests first, and the size is measured again.
 3. Under `DL8 D3`, what a write leaves: the page's process 3 s after a
