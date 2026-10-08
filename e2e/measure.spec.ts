@@ -137,6 +137,7 @@ import {
   expect,
   test,
   type Browser,
+  type Download,
   type Locator,
   type Page,
   type Worker as PlaywrightWorker,
@@ -4448,4 +4449,406 @@ test("DL1 D1 the trial of the automatic download: a file the page's code downloa
   );
   // Measured whatever came: every planned download had its code's click.
   expect(rows).toHaveLength(7);
+});
+
+// ---------------------------------------------------------------------
+// DL8, the largest file, and what a write leaves in the tab (the plan of
+// the download, docs/plans/download.md, work package 8): the `.nei` file
+// of the filtered variants downloaded from popgen2.html, with the first
+// project of the page, the FILTER box on and the missing rate of the
+// variants at 0.1, which keep every variant of the VCFs of bigVcf.ts.
+// Each size is one command in the foreground, chosen by DL8_VARIANTS, and
+// its VCF is made by a test of its own; the VCFs and the files saved are
+// in DL8_DIR, outside the repository.
+
+/** Where the VCFs of DL8 and the files saved go. */
+const DL8_DIR = process.env["DL8_DIR"] ?? MEASURE_DIR;
+
+/** The variants of the VCF of one size: 1,820,000 when not given, a
+    `.nei` file of about 2 GB at the 1,101 bytes per variant the old page
+    wrote. */
+const DL8_VARIANTS = Number(process.env["DL8_VARIANTS"] ?? "1820000");
+
+/** Whether the file saved is read back with pyarrow; "0" leaves it out,
+    for the writes of DL8 D4, which time the parts alone. */
+const DL8_READ_BACK = process.env["DL8_READ_BACK"] !== "0";
+
+/** Above it, in bytes, the summed footprint of the engine's processes,
+    half the memory of the Mac, the page is closed. */
+const ENGINE_LIMIT_BYTES = 32e9;
+
+/** The gzipped VCF of DL8 of `numVars` variants. */
+function dl8Vcf(numVars: number): string {
+  return join(DL8_DIR, `dl8_${String(numVars)}.vcf.gz`);
+}
+
+/** Put in the page: the size of every `Blob` given an address, which is
+    the file of the download. */
+function recordBlobSizes(): void {
+  const sizes: number[] = [];
+  Object.assign(globalThis, { measureBlobSizes: sizes });
+  const original = URL.createObjectURL.bind(URL);
+  URL.createObjectURL = (object: Blob | MediaSource): string => {
+    if (object instanceof Blob) sizes.push(object.size);
+    return original(object);
+  };
+}
+
+/** Put in the page: the calculation worker is never ended, so that the
+    client's restart after a large write starts a new worker beside the
+    old one, which keeps what the write left in it. */
+function keepWorkers(): void {
+  const Before = globalThis.Worker;
+  class Kept extends Before {
+    constructor(url: string | URL, options?: WorkerOptions) {
+      super(url, options);
+      if (String(url).includes("runnerWorker")) {
+        this.terminate = (): void => {
+          // Kept, with its memory.
+        };
+      }
+    }
+  }
+  globalThis.Worker = Kept;
+}
+
+/** What one download of popgen2.html gave. */
+interface DownloadRun {
+  /** Saved whole, the words of a failure in the dialog, the tab closed,
+      or the page closed by the test above ENGINE_LIMIT_BYTES. */
+  readonly outcome: "saved" | "failed" | "closed" | "overLimit";
+  readonly words: string;
+  readonly blobBytes: number | null;
+  readonly savedBytes: number | null;
+  /** From the click on Download in the dialog to the download event. */
+  readonly ms: number | null;
+  readonly before: Sample | null;
+  readonly peak: Sample | null;
+  /** The last sample before the download event. */
+  readonly atDownload: Sample | null;
+  /** 3 s after the download event. */
+  readonly after: Sample | null;
+  readonly whole: string;
+}
+
+/** Opens popgen2.html on a new page, picks `file`, waits for the one
+    pass, and downloads the filtered variants as a `.nei` file, taking the
+    memory of the engine throughout; the file saved into DL8_DIR is read
+    back when `readBack`, and deleted. With `kept`, the calculation worker
+    is never ended. */
+async function downloadOnce(
+  browser: Browser,
+  browserName: string,
+  file: string,
+  options: { readonly readBack: boolean; readonly kept: boolean },
+): Promise<DownloadRun> {
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  const state = { crashed: false, over: false, endedAt: 0 };
+  page.on("crash", () => {
+    state.crashed = true;
+    state.endedAt = Date.now();
+  });
+  const sampler = sampleMemory(browser, browserName);
+  const watch = setInterval(() => {
+    const last = sampler.samples.at(-1);
+    if (!state.over && last !== undefined && last.total > ENGINE_LIMIT_BYTES) {
+      state.over = true;
+      state.endedAt = Date.now();
+      void page.close().catch(() => undefined);
+    }
+  }, 250);
+  const empty = {
+    blobBytes: null,
+    savedBytes: null,
+    ms: null,
+    atDownload: null,
+    after: null,
+    whole: "",
+  };
+  try {
+    await page.addInitScript(recordBlobSizes);
+    if (options.kept) await page.addInitScript(keepWorkers);
+    await page.goto("popgen2.html");
+    const chooser = page.waitForEvent("filechooser");
+    await page
+      .getByRole("button", { name: /^Open (another )?variants file…$/u })
+      .click();
+    await (await chooser).setFiles(file);
+    const stats = page.getByRole("region", { name: "Statistics of the file" });
+    const button = stats.getByRole("button", {
+      name: "Download filtered variants…",
+      exact: true,
+    });
+    await expect(button).toBeEnabled({ timeout: 400_000 });
+    // The memory settles after the one pass before it is taken.
+    await page.waitForTimeout(2000);
+    await button.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Download filtered variants",
+    });
+    await dialog
+      .locator("label")
+      .filter({ hasText: "popnei's .nei file" })
+      .click();
+    const got: { download: Download | null; at: number } = {
+      download: null,
+      at: 0,
+    };
+    page.on("download", (d) => {
+      got.download = d;
+      got.at = Date.now();
+    });
+    const clicked = Date.now();
+    await dialog.getByRole("button", { name: "Download" }).click();
+    let words = "";
+    try {
+      await expect
+        .poll(
+          async () => {
+            if (got.download !== null || state.crashed || state.over) {
+              return true;
+            }
+            const failed = dialog.filter({ hasText: "could not be written" });
+            if ((await failed.count()) > 0) {
+              words = (await failed.innerText()).replace(/\s+/g, " ").trim();
+              return true;
+            }
+            return false;
+          },
+          { timeout: 500_000, intervals: [250] },
+        )
+        .toBe(true);
+    } catch (error) {
+      if (!state.crashed && !state.over && !/crash|closed/i.test(String(error)))
+        throw error;
+      if (!state.over) state.crashed = true;
+      state.endedAt = state.endedAt === 0 ? Date.now() : state.endedAt;
+    }
+    const before = settled(sampler.samples, clicked - 1200, clicked);
+    const download = got.download;
+    if (download === null) {
+      const end = state.endedAt === 0 ? Date.now() : state.endedAt;
+      return {
+        ...empty,
+        outcome: state.over ? "overLimit" : state.crashed ? "closed" : "failed",
+        words: state.over
+          ? `closed by the test above ${gb(ENGINE_LIMIT_BYTES)}`
+          : state.crashed
+            ? "the tab closed"
+            : words,
+        ms: end - clicked,
+        before,
+        peak: largest(sampler.samples, clicked, end),
+      };
+    }
+    await page.waitForTimeout(4000);
+    const after = settled(sampler.samples, got.at + 3000, got.at + 4000);
+    const atDownload =
+      sampler.samples.filter((s) => s.t <= got.at).at(-1) ?? null;
+    const peak = largest(sampler.samples, clicked, got.at);
+    const blobBytes = await page.evaluate(
+      () =>
+        (
+          globalThis as unknown as { measureBlobSizes: number[] }
+        ).measureBlobSizes.at(-1) ?? null,
+    );
+    const failure = await download.failure();
+    let savedBytes: number | null = null;
+    let whole = `the download failed: ${String(failure)}`;
+    if (failure === null) {
+      await mkdir(DL8_DIR, { recursive: true });
+      const path = join(
+        DL8_DIR,
+        `${test.info().project.name}-${download.suggestedFilename()}`,
+      );
+      await download.saveAs(path);
+      await download.delete();
+      savedBytes = statSync(path).size;
+      whole = "";
+      if (options.readBack) {
+        try {
+          whole = readBack(path);
+        } catch (error) {
+          whole = `not read back: ${String(error)}`;
+        }
+      }
+      await rm(path);
+    }
+    return {
+      outcome:
+        failure === null && savedBytes === blobBytes ? "saved" : "failed",
+      words:
+        (await stats.innerText().catch(() => ""))
+          .split("\n")
+          .find((line) => line.includes(" downloaded, ")) ?? "",
+      blobBytes,
+      savedBytes,
+      ms: got.at - clicked,
+      before,
+      peak,
+      atDownload,
+      after,
+      whole,
+    };
+  } finally {
+    clearInterval(watch);
+    await sampler.stop();
+    await context.close().catch(() => undefined);
+  }
+}
+
+/** What a sample holds above `base`, in GB, and its largest kinds. */
+function above(s: Sample | null, base: Sample | null): string {
+  if (s === null || base === null) return "";
+  return gb(s.total - base.total);
+}
+
+/** The total and each kind of process of a sample, in GB. */
+function byKinds(s: Sample | null, browserName: string): string {
+  if (s === null) return "";
+  const kinds = (KINDS[browserName] ?? []).map(
+    (kind) => `${kind} ${gb(s.byKind.get(kind) ?? 0)}`,
+  );
+  return `${gb(s.total)} (${kinds.join(", ")})`;
+}
+
+test(`DL8 VCF made: the gzipped VCF of ${String(DL8_VARIANTS)} variants of 1,000 individuals, 1,000 bp apart`, async ({
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "made once, for both engines");
+  test.setTimeout(590_000);
+  await mkdir(DL8_DIR, { recursive: true });
+  const path = dl8Vcf(DL8_VARIANTS);
+  if (!existsSync(path)) {
+    const part = join(DL8_DIR, `dl8_${String(DL8_VARIANTS)}.part.vcf.gz`);
+    await writeBigVcf(part, DL8_VARIANTS);
+    await rename(part, path);
+  }
+  process.stdout.write(
+    `${path}: ${statSync(path).size.toLocaleString("en-US")} bytes\n`,
+  );
+});
+
+test(`DL8 D1 the .nei file of the VCF of ${String(DL8_VARIANTS)} variants downloaded from popgen2.html: the outcome, the bytes, the time, the peak above the tab before (DL8 D2 at 2 GB), and what the engine holds 3 s after; tried once more in a new page when it fails`, async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(595_000);
+  const vcf = dl8Vcf(DL8_VARIANTS);
+  expect(existsSync(vcf), `${vcf} is made by "DL8 VCF made"`).toBe(true);
+  const runs: DownloadRun[] = [];
+  const first = await downloadOnce(browser, browserName, vcf, {
+    readBack: DL8_READ_BACK,
+    kept: false,
+  });
+  runs.push(first);
+  if (first.outcome === "failed" || first.outcome === "closed") {
+    runs.push(
+      await downloadOnce(browser, browserName, vcf, {
+        readBack: DL8_READ_BACK,
+        kept: false,
+      }),
+    );
+  }
+  const n = (x: number | null): string =>
+    x === null ? "" : x.toLocaleString("en-US");
+  report(
+    `DL8 D1 the .nei file of ${n(DL8_VARIANTS)} variants of 1,000 individuals downloaded from popgen2.html`,
+    `${machine(browser, browserName)}, macOS ${macOs()}; ${new Date().toISOString()}; the VCF ${n(statSync(vcf).size)} bytes; load ${(loadavg()[0] ?? 0).toFixed(1)}; the memory is the footprints of the engine's processes summed`,
+    [
+      "try",
+      "outcome",
+      "Blob, bytes",
+      "saved, bytes",
+      "Download to the download event",
+      "before",
+      "peak",
+      "peak above before",
+      "peak above before / file",
+      "3 s after",
+      "3 s after, above before",
+      "read back",
+      "words",
+    ],
+    runs.map((r, i) => [
+      String(i + 1),
+      r.outcome,
+      n(r.blobBytes),
+      n(r.savedBytes),
+      r.ms === null ? "" : ms(r.ms),
+      byKinds(r.before, browserName),
+      byKinds(r.peak, browserName),
+      above(r.peak, r.before),
+      r.peak === null || r.before === null || r.blobBytes === null
+        ? ""
+        : ((r.peak.total - r.before.total) / r.blobBytes).toFixed(2),
+      byKinds(r.after, browserName),
+      above(r.after, r.before),
+      r.whole,
+      r.words === "" ? r.outcome : r.words,
+    ]),
+  );
+});
+
+test("DL8 D3 what a write leaves: the page's process 3 s after a write of the .nei file of 19,161,178 bytes, and of 200,000 variants, 220 MB, with the restart and with the old worker kept", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(595_000);
+  const { nei } = await bigFiles();
+  const vcf = await writeVcfOf(TEN_TIMES_VARIANTS);
+  const page = browserName === "chromium" ? "renderer" : "WebContent";
+  const cases = [
+    { what: "the .nei file of 19,161,178 bytes", file: nei, kept: false },
+    { what: "200,000 variants, the restart", file: vcf, kept: false },
+    { what: "200,000 variants, the old worker kept", file: vcf, kept: true },
+  ];
+  const rows: string[][] = [];
+  for (const c of cases) {
+    const runs: DownloadRun[] = [];
+    for (let k = 0; k < 3; k++) {
+      const run = await downloadOnce(browser, browserName, c.file, {
+        readBack: false,
+        kept: c.kept,
+      });
+      expect(run.outcome, run.words).toBe("saved");
+      runs.push(run);
+    }
+    const ofPage = (s: Sample | null, b: Sample | null): number =>
+      (s?.byKind.get(page) ?? 0) - (b?.byKind.get(page) ?? 0);
+    const total = (s: Sample | null, b: Sample | null): number =>
+      (s?.total ?? 0) - (b?.total ?? 0);
+    rows.push([
+      c.what,
+      (runs[0]?.blobBytes ?? 0).toLocaleString("en-US"),
+      ...stats(
+        runs.map((r) => ofPage(r.atDownload, r.before)),
+        mb,
+      ),
+      ...stats(
+        runs.map((r) => ofPage(r.after, r.before)),
+        mb,
+      ),
+      ...stats(
+        runs.map((r) => total(r.after, r.before)),
+        mb,
+      ),
+    ]);
+  }
+  report(
+    "DL8 D3 what a write leaves in the tab, popgen2.html",
+    `${machine(browser, browserName)}, macOS ${macOs()}; ${new Date().toISOString()}; 3 writes of each, each on a new page; the median, and the range; the page's process is the ${page}, where the worker runs`,
+    [
+      "write",
+      "file, bytes",
+      "page's process at the download, above before",
+      "range",
+      "page's process 3 s after, above before",
+      "range",
+      "all the processes 3 s after, above before",
+      "range",
+    ],
+    rows,
+  );
 });
