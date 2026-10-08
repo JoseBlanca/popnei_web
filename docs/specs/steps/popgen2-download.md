@@ -210,17 +210,25 @@ that awaited `startWriting`, finds the store's write `done` and:
 3. closes the dialog, draws the text after the download in place of the
    button, and puts the focus on that text, which a screen reader then
    reads. The text is not a control, and takes the focus only from the
-   code (`tabIndex={-1}`). React Aria would give the focus back to the
-   button, which is gone, and while the dialog closes it keeps the
-   modal drawn and the page out of reach, pulling back into the dialog
-   any focus put outside it; so the focus is moved once the overlay is
-   off the page, when React Aria has finished closing it, and the flows
-   check where it lands in both engines.
+   code (`tabIndex={-1}`, which lets the code focus an element the Tab
+   key passes over). The timing matters. React Aria takes a moment to
+   close the dialog, and during it the page stays out of reach: a focus
+   put on the page then is pulled back into the closing dialog, and when
+   the dialog is gone React Aria gives the focus to the button that
+   opened it, which is no longer there. A user of a screen reader would
+   then hear nothing. So the page moves the focus to the text only once
+   the dialog has gone from the page, and the flows check where the
+   focus lands in both engines.
 
 If the browser's download throws, a defect of ours, `writeSaved` is
-not called and the store stays `done` with the file; the defect reaches
-the error bar, and the page shows the state `done` as it shows it after
-a Cancel of a Save click (below, "The trial that comes first").
+not called, and the store's write stays `done`: written, its file kept,
+and not yet handed to the browser. The defect reaches the error bar, and
+in place of the button the page shows the text after the download with
+"written" for "downloaded" and a button "Save it" for "Save it again":
+"low_qual.filtered.vcf.gz written, 42 KB: … Save it". Save it downloads
+the file and calls `writeSaved()`, and the text becomes the usual one.
+The store's `saved` is a file handed to the browser, which it keeps for
+"Save it again"; its `done` is a file not yet handed over.
 
 The text, on `low_qual.vcf.gz` with the FILTER box ticked, the missing
 rate of the variants at 0.05, the MAF at 0.9, and the thresholds of the
@@ -272,20 +280,21 @@ was started, not where the browser put the file.
 page hands it minutes after the click that asked for it is tried first,
 before the rest of the screen is built, in Chromium and WebKit with
 Playwright and in Firefox by hand (the design, "The download started by
-itself"). If one browser of the floor blocks it or asks every time,
+itself"). The browsers are those of the floor of `docs/technology.md`,
+the oldest versions the applications support: Chrome 111, Firefox 115
+and Safari 16.4. If one of them blocks it or asks every time,
 every browser gets a Save click, as the owner decided on 8 October 2026
 (the design, "What the owner decided", 12): the dialog does not close at
 the end of the write but shows "low_qual.filtered.vcf.gz is written, 42
 KB." and a button "Save low_qual.filtered.vcf.gz", which downloads it,
 calls `writeSaved()`, closes the dialog and draws the text after the
 download, whose first words are then "low_qual.filtered.vcf.gz saved,
-42 KB: …". Escape and a Cancel beside Save close it with nothing
-downloaded; the store stays `done` and keeps the file, since `startWrite`
-does nothing in `done`, so the page shows that state in place of the
-button as the text after the download with "written" and a Save in
-place of "Save it again": "low_qual.filtered.vcf.gz written, 42 KB: … Save
-it", whose Save downloads the file and calls `writeSaved()`. The rest of
-this spec is written for the download started by itself.
+42 KB: …". Escape, or a Cancel beside Save, closes it with nothing
+downloaded. The store's write then stays `done`, with the file, and the
+page shows the text with "written" and "Save it", as above; the button
+does not come back, since a write in `done` cannot be started again
+(`startWrite` does nothing in it). The rest of this spec is written for
+the download started by itself.
 
 ### The text stays until a filter or the file changes
 
@@ -519,8 +528,9 @@ column, as the old page's flow of the write does:
   back with 900 variants and 200 individuals; the text says
   "low_qual.filtered.vcf.gz downloaded, 76 KB: 900 variants of 200
   individuals. Variants removed: 300 by their FILTER." and has the
-  focus, read from `document.activeElement` once the dialog is gone, and
-  so the sentence of no variant after a write;
+  focus, the element `document.activeElement` names once the dialog is
+  gone; the focus is checked so on the sentence of no variant after a
+  write, below, too;
 - a run of the arrow keys on a threshold, then Enter on the button
   within its quiet second: the write has the threshold the run moved to;
 - the same file with the thresholds of the example above, as a `.nei`
@@ -551,8 +561,9 @@ column, as the old page's flow of the write does:
 - the sentence after the write, with no download event: on
   `panel.vcf.gz` with the missing rate at 0 and the MAF at 0.6; and with
   the missing rate of the individuals at 0.03 and the observed
-  heterozygosity of the variants at 0.01; and a file of one variant, not
-  the sentence, at 0.02;
+  heterozygosity of the variants at 0.01; and, with the same individuals
+  and the observed heterozygosity of the variants at 0.02, a file of one
+  variant downloaded, where the plot alone would have said none;
 - the missing rate of the individuals at 0.01, which keeps none of the
   200, gives the words of `keptNoneReason` in place of the button;
 - a crash of the worker during a write, `e2e/crashWorker.ts`, gives the
@@ -580,8 +591,9 @@ above.
 
 ## Choices made by the session
 
-The design left these open; the spec decides them, and each can be
-changed without changing anything else:
+The design left these open; the spec decides them, and the owner may
+change any of them after trying the screen, without changing anything
+else. Nothing is left for the owner to decide before the plan:
 
 - The VCF is the format chosen when the dialog first opens, and the
   dialog then opens on the last format chosen, while the page is open.
