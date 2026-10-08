@@ -115,11 +115,13 @@ const PAIRS: readonly (readonly [string, string, number])[] = [
   ["--chart-bar", "--color-background", 3],
   ["--chart-axis", "--color-background", 3],
   ["--chart-threshold", "--color-background", 3],
-  // A threshold that removes nothing on popgen2.html: its grey line on
-  // the plot, and its grey number in its box, whose background is the
-  // page's, told from the number of one that removes something.
-  ["--chart-threshold-idle", "--color-background", 4.5],
-  ["--color-text", "--chart-threshold-idle", 3],
+  // A threshold that keeps every value on popgen2.html: its number in
+  // its box, whose background is the page's, 4.88:1 in the light theme
+  // and 4.67:1 in the dark; its line and its handle on the plot, 3:1 at
+  // least, which the 4.5 covers; and the number told from the number of
+  // one that removes something, 3.46:1 and 3.16:1 from the text.
+  ["--chart-threshold-keeps-all", "--color-background", 4.5],
+  ["--color-text", "--chart-threshold-keeps-all", 3],
   // The fill of a mark with no outline carries the 3:1 of a mark itself
   // (docs/specs/charts/scatter.md, "The marks of the groups", stop C 2).
   ...[0, 1, 2, 3, 4, 5, 6]
@@ -148,6 +150,30 @@ describe("the tokens", () => {
       });
     }
   }
+});
+
+describe("the colour of a threshold that keeps every value", () => {
+  test("its ratios on the background and from the text are those tokens.css and the spec record, in both themes", () => {
+    const ratios = THEMES.map(([, colours]) => {
+      const ofIt = colours.get("--chart-threshold-keeps-all") ?? "";
+      return [
+        contrast(ofIt, colours.get("--color-background") ?? ""),
+        contrast(ofIt, colours.get("--color-text") ?? ""),
+      ].map((ratio) => Math.round(ratio * 100) / 100);
+    });
+    expect(ratios).toEqual([
+      [4.88, 3.46],
+      [4.67, 3.16],
+    ]);
+  });
+
+  test("it is not the grey of the text of a disabled control, in either theme", () => {
+    for (const [, colours] of THEMES) {
+      expect(colours.get("--chart-threshold-keeps-all")).not.toBe(
+        colours.get("--color-text-disabled"),
+      );
+    }
+  });
 });
 
 describe("stop C 2 the outline of the marks in charts.css", () => {

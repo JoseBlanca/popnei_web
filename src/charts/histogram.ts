@@ -471,7 +471,7 @@ function drawHistogram(frame: Frame, data: HistogramData): void {
     .attr(
       "class",
       data.threshold?.keepsAll === true
-        ? "chart-threshold chart-threshold-idle"
+        ? "chart-threshold chart-threshold-keeps-all"
         : "chart-threshold",
     )
     .attr("x1", (value) => x(value))

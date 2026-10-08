@@ -4671,7 +4671,7 @@ for (const theme of ["light", "dark"] as const) {
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
-          newPageStats(page).locator("line.chart-threshold-idle"),
+          newPageStats(page).locator("line.chart-threshold-keeps-all"),
         ).toHaveCount(6, { timeout: 20_000 });
         for (const [name, value] of [
           ["Proportion of missing genotypes", "0.05"],
@@ -4690,7 +4690,7 @@ for (const theme of ["light", "dark"] as const) {
           );
         }
         await expect(
-          newPageStats(page).locator("line.chart-threshold-idle"),
+          newPageStats(page).locator("line.chart-threshold-keeps-all"),
         ).toHaveCount(3);
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-grey${at}-${theme}`);
@@ -4743,7 +4743,7 @@ for (const theme of ["light", "dark"] as const) {
           );
         }
         await expect(
-          newPageStats(page).locator("line.chart-threshold-idle"),
+          newPageStats(page).locator("line.chart-threshold-keeps-all"),
         ).toHaveCount(0);
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-moved${at}-${theme}`);

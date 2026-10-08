@@ -130,19 +130,44 @@ async function middleX(locator: Locator): Promise<number> {
   return box.x + box.width / 2;
 }
 
-/** Expects the threshold of `histogram` drawn in grey, its dashed line
-    and the number in its box, when `grey`, and not otherwise. */
+/** The dashes of the line `dashed` as the browser computes them, in
+    pixels: [4, 3] dashed, [1, 3] dotted. */
+async function dashesOf(dashed: Locator): Promise<number[]> {
+  const text = await dashed.evaluate(
+    (element) => getComputedStyle(element).strokeDasharray,
+  );
+  return text
+    .split(/[\s,]+/u)
+    .filter((part) => part !== "")
+    .map((part) => Number.parseFloat(part));
+}
+
+/** Expects the threshold of `histogram` drawn as one that keeps every
+    value when `grey`, and as one that removes some otherwise: its line
+    on the plot in the colour of such a threshold and dotted, the number
+    in its box in that colour, and the handle and the line of its slider
+    hollow and dotted, all of which come from the attribute data-muted of
+    the box and of the element around the slider. */
 async function expectGrey(
-  shown: { readonly box: Locator; readonly dashed: Locator },
+  shown: {
+    readonly box: Locator;
+    readonly dashed: Locator;
+    readonly slider: Locator;
+  },
   grey: boolean,
 ): Promise<void> {
-  const idle = /\bchart-threshold-idle\b/u;
+  const keepsAll = /\bchart-threshold-keeps-all\b/u;
+  const mutedAround = shown.slider.locator("xpath=ancestor::*[@data-muted]");
   if (grey) {
-    await expect(shown.dashed).toHaveClass(idle);
+    await expect(shown.dashed).toHaveClass(keepsAll);
     await expect(shown.box).toHaveAttribute("data-muted", "");
+    await expect(mutedAround).toHaveCount(1);
+    expect(await dashesOf(shown.dashed)).toEqual([1, 3]);
   } else {
-    await expect(shown.dashed).not.toHaveClass(idle);
+    await expect(shown.dashed).not.toHaveClass(keepsAll);
     await expect(shown.box).not.toHaveAttribute("data-muted");
+    await expect(mutedAround).toHaveCount(0);
+    expect(await dashesOf(shown.dashed)).toEqual([4, 3]);
   }
 }
 

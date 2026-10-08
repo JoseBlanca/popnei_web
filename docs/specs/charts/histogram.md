@@ -69,7 +69,7 @@ legend, and the top margin of a plot without one. From 8 October 2026
 such a threshold may say that it keeps every value, `keepsAll` of
 `HistogramThreshold`, which the screen knows from what it counted and
 the bars drawn may not tell, a bar holding values on both sides of the
-line: the line is then drawn in grey, the class `chart-threshold-idle`,
+line: the line is then drawn in grey, the class `chart-threshold-keeps-all`,
 a threshold that removes nothing, which the screen says in words to a
 screen reader (`docs/plans/popnei-0.2.2.md`, "The owner's first
 round"). The screen
@@ -353,10 +353,10 @@ The plot writes classes and no colour (`charts.md`):
 .chart-bar          { fill: var(--chart-bar); stroke: var(--chart-axis); stroke-width: 1px; }
 .chart-bar-removed  { fill: none; }
 .chart-threshold    { stroke: var(--chart-threshold); stroke-width: 2px; stroke-dasharray: 4 3; }
-.chart-threshold-idle { stroke: var(--chart-threshold-idle); }
+.chart-threshold-keeps-all { stroke: var(--chart-threshold-keeps-all); }
 ```
 
-The grey of a threshold that keeps every value, `--chart-threshold-idle`,
+The grey of a threshold that keeps every value, `--chart-threshold-keeps-all`,
 is #6b7078 in the light theme, 4.98:1 on the background, and #7c8188 in
 the dark, 4.53:1, above the 3:1 of a line (1.4.11) and the 4.5:1 of the
 number in the box of popgen2.html, which takes the same grey; it is

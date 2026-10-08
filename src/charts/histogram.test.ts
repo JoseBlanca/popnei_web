@@ -420,7 +420,7 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(svg.querySelectorAll("rect.chart-bar-removed")).toHaveLength(5);
   });
 
-  test("a threshold that keeps every value draws its line in grey, with the class chart-threshold-idle, and one that may not, without", () => {
+  test("a threshold that keeps every value draws its line in grey, with the class chart-threshold-keeps-all, and one that may not, without", () => {
     const element = sizedElement(600, 375);
     const data = histogramOf(OBS_HET_COUNTS, 0.5);
     const lineClass = (): string | null =>
@@ -431,7 +431,7 @@ describe("VS4 D2 the histogram, under jsdom", () => {
     expect(lineClass()).toBe("chart-threshold");
     const threshold = { value: 1, legend: null, keepsAll: true };
     plot.update({ ...data, threshold });
-    expect(lineClass()).toBe("chart-threshold chart-threshold-idle");
+    expect(lineClass()).toBe("chart-threshold chart-threshold-keeps-all");
     plot.update({ ...data, threshold: { ...threshold, keepsAll: false } });
     expect(lineClass()).toBe("chart-threshold");
   });

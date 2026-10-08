@@ -64,10 +64,13 @@
   stroke-dasharray: 4 3;
 }
 
-/* The line of a threshold that keeps every value, in grey: a threshold
-   that removes nothing (docs/specs/charts/histogram.md). */
-.chart-threshold-idle {
-  stroke: var(--chart-threshold-idle);
+/* The line of a threshold that keeps every value, a threshold that
+   removes nothing: dotted, and in a bluish grey, so that it is told from
+   the dashed red line by its pattern too, by a reader who does not tell
+   the two colours apart (docs/specs/charts/histogram.md). */
+.chart-threshold-keeps-all {
+  stroke: var(--chart-threshold-keeps-all);
+  stroke-dasharray: 1 3;
 }
 
 .chart-legend-text {
