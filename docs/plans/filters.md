@@ -971,3 +971,33 @@ everything and drops a notice of a filter change; a failure of a request
 the user stopped, ending after a new Run under the same key, is kept
 (pre-existing, needs the worker to answer `failed` after a cancel).
 Vitest 4,273, twice.
+
+### Work package 6, 8 October 2026
+
+Commits 7f7e21e (6.1: Undo and Redo and their keys in
+`src/ui/shell/UndoRedoButtons.tsx`, drawn by both pages; the notice's own
+words, `NoticeWords`), 080d7ae (6.2: the row and the notice on
+popgen2.html; `Toast.tsx` watches the page's height so the notice never
+covers the focused control at 320 px), 005baa8 (6.3: screens). Vitest
+4,277; Playwright 630 in Chromium and 630 in WebKit.
+
+Review: ux and accessibility; react and tests. Fixed in 9ca92a9,
+ba77c99, 55493d3, d3408b7, 035b467, e528ba5: Ctrl+Z on a threshold
+undid the opening of the file (the thresholds are the section's own
+state until work package 9), so the line and the box keep the keys of
+Undo and Redo until then; an opening is described by the file's name,
+"Undo: panel.nei opened", and the notice reads "Statistics of the file
+removed because panel.nei opened"; a pass the store stopped because a
+change left its key behind starts again when Undo or Redo brings the
+key back (the owner's decision of 6 October 2026, built here for the
+chain of popgen2.html, since an undone and redone opening showed
+"Stopped" though the user never pressed Stop); the notice scrolled the
+page back to the focused control while the user read (reproduced: 0 to
+169 px), now only when the notice appears or grows or the page pushes a
+clear control under it; a check at 320 px polled; a release of the
+held worker waits until the worker listens. Vitest 4,282, twice;
+Playwright 633 in Chromium and 633 in WebKit; e2e/popgen2Undo five
+times over, 100 passed. Left for the owner: at 1280 by 720 the notice
+covers the bottom edge of the box of "Open another variants file…",
+not its button; the notice of a second file goes when its statistics
+are done, under a second for panel.nei.
