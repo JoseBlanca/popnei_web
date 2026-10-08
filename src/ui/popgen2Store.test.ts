@@ -7,7 +7,9 @@ import { summaryResult } from "../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
-import { summaryStatus } from "./variants/words.ts";
+import type { Announcer } from "./shell/status.ts";
+import { undoOrRedo } from "./shell/undoRedo.ts";
+import { openedDescription, summaryStatus } from "./variants/words.ts";
 
 // The store of popgen2.html as its entry makes it, with a fake `send`
 // that records the jobs and never ends them.
@@ -181,5 +183,46 @@ describe("SF5 D5 the store of popgen2.html", () => {
       removed: [],
       filtersChanged: true,
     });
+  });
+});
+
+describe("SF6 Undo and Redo of an opening on popgen2.html name the file", () => {
+  test("the hints and what a screen reader hears after an undo and a redo with no notice", () => {
+    const store = createPopgen2Store({
+      send: (): Run<JobResult> => ({
+        id: 1,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => undefined,
+      }),
+      appVersion: "0.1.0",
+    });
+    store.popneiReady("0.1.0");
+    const said: string[] = [];
+    const announcer: Announcer = {
+      announce: (text) => {
+        said.push(text);
+      },
+      announceChange: (change) => {
+        const text = change();
+        if (text !== null) said.push(text);
+      },
+      clear: () => undefined,
+      getState: () => "",
+      subscribe: () => () => undefined,
+    };
+    const load = vcfLoad("a".repeat(32), "panel.nei");
+    store.apply(openedDescription(load.name), (p) =>
+      loadVariants(p, { ...load, format: "nei", readOptions: null }),
+    );
+    expect(store.getState().undo).toBe("panel.nei opened");
+
+    undoOrRedo(store, announcer, "undo");
+    expect(store.getState().redo).toBe("panel.nei opened");
+    undoOrRedo(store, announcer, "redo");
+
+    expect(said).toEqual([
+      "Undone: panel.nei opened.",
+      "Redone: panel.nei opened.",
+    ]);
   });
 });

@@ -31,6 +31,7 @@ import {
   SEVERAL_DROPPED,
   TEXT_DROPPED,
   notOpenedText,
+  openedDescription,
 } from "./words.ts";
 
 /** How the page reads a VCF: with the ploidy popnei reads from the file,
@@ -106,8 +107,7 @@ export function OpenVariants({
       format,
       readOptions: format === "vcf" ? READ_OPTIONS : null,
     };
-    const step = pickCommand(load);
-    store.apply(step.description, step.command);
+    store.apply(openedDescription(file.name), pickCommand(load).command);
   };
 
   return (

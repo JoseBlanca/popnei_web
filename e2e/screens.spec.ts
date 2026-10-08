@@ -4877,7 +4877,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
         ).toHaveAccessibleName(
-          "Statistics of the file removed because a new variants file was loaded",
+          "Statistics of the file removed because panel.nei opened",
         );
       };
 

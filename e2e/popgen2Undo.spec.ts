@@ -29,8 +29,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The words of the notice after panel.nei is opened over panel.vcf.gz
     once the statistics of panel.vcf.gz are done. */
-const REMOVED =
-  "Statistics of the file removed because a new variants file was loaded";
+const REMOVED = "Statistics of the file removed because panel.nei opened";
 
 async function openPage(page: Page): Promise<void> {
   await page.goto("popgen2.html");
@@ -152,7 +151,7 @@ test("SF6 D2 the row of Undo and Redo is above the box of the file before any fi
   await expectDone(page, "panel.vcf.gz");
   await expect(undoButton(page)).toBeEnabled();
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: a new variants file was loaded",
+    "Undo: panel.vcf.gz opened",
   );
   await expect(redoButton(page)).toBeDisabled();
   await expect(notice(page)).toHaveCount(0);
@@ -185,7 +184,7 @@ test("SF6 D2 a second file gives the notice of the statistics removed, whose Und
   await expectDone(page, "panel.vcf.gz");
   await expect(info(page).getByText("panel.nei")).toHaveCount(0);
   await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: a new variants file was loaded",
+    "Redo: panel.nei opened",
   );
 
   await redoButton(page).click();

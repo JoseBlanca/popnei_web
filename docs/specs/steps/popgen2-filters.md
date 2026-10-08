@@ -174,9 +174,13 @@ the calculations it stops"). On this page such a change removes and
 stops nothing, so the notice tells the change alone: "The MAF filter
 changed · Undo". Opening another file follows the store's ordinary
 rule. With the statistics of the file before done, the notice says
-"Statistics of the file removed because a new variants file was loaded ·
-Undo"; with them running, "The calculation of Statistics of the file
-stopped because a new variants file was loaded · Undo". The first file
+"Statistics of the file removed because panel.nei opened · Undo"; with
+them running, "The calculation of Statistics of the file stopped because
+panel.nei opened · Undo". The description of an opening names the file,
+"panel.nei opened" (`openedDescription` of `src/ui/variants/words.ts`),
+so the hints are "Undo: panel.nei opened" and "Redo: panel.nei opened",
+and a screen reader hears "Undone: panel.nei opened." after an undo with
+no notice; the old page keeps "a new variants file was loaded". The first file
 opened removes nothing and gives no notice.
 
 ### A threshold, on and off
@@ -574,7 +578,7 @@ number being dragged, typed or moved by a run of keys.
 | under it | "The plots show every variant, these among them." |
 | the notice of a change of a filter | "The MAF filter changed · Undo"; "The MAF filter was turned on · Undo"; "The MAF filter was turned off · Undo"; "The filter of the FILTER column was turned off · Undo" |
 | after an undo, by the notice or the status region | "Undone: the MAF filter changed" |
-| the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed" |
+| the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed"; of an opening, "Undo: panel.nei opened", "Redo: low_qual.vcf.gz opened" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start." |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
