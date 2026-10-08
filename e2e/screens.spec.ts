@@ -4745,13 +4745,13 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-nei${at}-${theme}`);
       });
 
-      test("the thresholds, three that keep every variant or individual, in grey, and three that do not", async ({
+      test("the thresholds, two off in grey, and three that remove some", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
           newPageStats(page).locator("line.chart-threshold-keeps-all"),
-        ).toHaveCount(6, { timeout: 20_000 });
+        ).toHaveCount(5, { timeout: 20_000 });
         for (const [name, value] of [
           ["Proportion of missing genotypes", "0.05"],
           ["Observed heterozygosity", "0.3"],
@@ -4770,12 +4770,12 @@ for (const theme of ["light", "dark"] as const) {
         }
         await expect(
           newPageStats(page).locator("line.chart-threshold-keeps-all"),
-        ).toHaveCount(3);
+        ).toHaveCount(2);
         await page.mouse.click(1, 1);
         await save(page, `popgen2-thresholds-grey${at}-${theme}`);
       });
 
-      test("the thresholds moved: a line dragged into the middle, and the six at numbers that remove some", async ({
+      test("the thresholds moved: a line dragged into the middle, and the five at numbers that remove some", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4785,7 +4785,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         await expect(het.getByRole("slider")).toHaveAttribute(
           "aria-valuetext",
-          "0.7, keeps every variant",
+          "1, keeps every variant",
           { timeout: 20_000 },
         );
         // The thumb, around the hidden input of the slider.
@@ -4806,7 +4806,6 @@ for (const theme of ["light", "dark"] as const) {
           ["Proportion of missing genotypes", "0.05"],
           ["Major allele frequency", "0.52"],
           ["Observed heterozygosity", "0.3"],
-          ["Expected heterozygosity (unbiased)", "0.3"],
           ["Proportion of missing genotypes of each individual", "0.03"],
           ["Observed heterozygosity of each individual", "0.35"],
         ] as const) {
@@ -4836,7 +4835,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         await expect(missing.getByRole("slider")).toHaveAttribute(
           "aria-valuetext",
-          "0.1, keeps every variant",
+          "0.1, keeps every variant of the plot",
           { timeout: 20_000 },
         );
         await missing.getByRole("textbox").fill("0");
@@ -4863,7 +4862,7 @@ for (const theme of ["light", "dark"] as const) {
         });
         await expect(het.getByRole("slider")).toHaveAttribute(
           "aria-valuetext",
-          "0.7, keeps every variant",
+          "1, keeps every variant",
           { timeout: 20_000 },
         );
         // Reached with the Tab key from its box, over the plot, so that
@@ -4875,6 +4874,106 @@ for (const theme of ["light", "dark"] as const) {
           await page.keyboard.press("PageDown");
         }
         await save(page, `popgen2-thresholds-focus${at}-${theme}`);
+      });
+
+      test("a threshold on: the MAF typed at 0.9, which removes some, its step of Undo in the hint of Undo", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const maf = newPageStats(page).getByRole("group", {
+          name: "Major allele frequency",
+          exact: true,
+        });
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "1, keeps every variant",
+          { timeout: 20_000 },
+        );
+        await maf.getByRole("textbox").fill("0.9");
+        await maf.getByRole("textbox").press("Enter");
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.9",
+        );
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-threshold-on${at}-${theme}`);
+      });
+
+      test("a threshold turned off: the MAF on at 0.9, then its box emptied, 1 in grey and its line at the top of the axis", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const maf = newPageStats(page).getByRole("group", {
+          name: "Major allele frequency",
+          exact: true,
+        });
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "1, keeps every variant",
+          { timeout: 20_000 },
+        );
+        const box = maf.getByRole("textbox");
+        await box.fill("0.9");
+        await box.press("Enter");
+        await box.fill("");
+        await box.press("Enter");
+        await expect(box).toHaveValue("1");
+        await expect(
+          page
+            .getByRole("main")
+            .getByRole("button", { name: "Undo", exact: true }),
+        ).toHaveAccessibleDescription("Undo: the MAF filter was turned off");
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-threshold-off${at}-${theme}`);
+      });
+
+      test("a threshold undone: the MAF on at 0.9, turned off, and back on by Undo", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const maf = newPageStats(page).getByRole("group", {
+          name: "Major allele frequency",
+          exact: true,
+        });
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "1, keeps every variant",
+          { timeout: 20_000 },
+        );
+        const box = maf.getByRole("textbox");
+        await box.fill("0.9");
+        await box.press("Enter");
+        await box.fill("");
+        await box.press("Enter");
+        await expect(box).toHaveValue("1");
+        await page
+          .getByRole("main")
+          .getByRole("button", { name: "Undo", exact: true })
+          .click();
+        await expect(box).toHaveValue("0.9");
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-threshold-undone${at}-${theme}`);
+      });
+
+      test("a threshold on and grey: the missing rate of panel.nei at 0.1, the top of its axis", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        const missing = newPageStats(page).getByRole("group", {
+          name: "Proportion of missing genotypes",
+          exact: true,
+        });
+        await expect(missing.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.1, keeps every variant of the plot",
+          { timeout: 20_000 },
+        );
+        await expect(
+          newPageStats(page).getByRole("button", {
+            name: /^Download the missing genotypes/u,
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await save(page, `popgen2-threshold-grey${at}-${theme}`);
       });
 
       test("the row of Undo and Redo, both disabled, before any file", async ({
