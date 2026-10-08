@@ -748,3 +748,49 @@ The `code-review` skill's four that always run, `spec`, `tests`,
   dialog and its widgets join the code of `popgen2.html`.
 
 ## What was done
+
+### Work packages 1, 2 and 3, 8 October 2026
+
+Run side by side, each by its own subagent.
+
+**1, the trial of the automatic download** (dbaf1c6, `DL1 D1` in
+`e2e/measure.spec.ts`; Apple M5 Pro, 64 GB, Playwright 1.63.0). Every
+download came, within 1 to 4 ms of the code's click, with its name and
+its 1,048,576 bytes, in Chromium 153.0.8010.12 headless and headed and
+in WebKit 26.6: at once, 10 s and 70 s after the click, the first and
+second downloads after a second click, and two downloads with no click
+between. The user's activation had ended from 10 s on. Decision, by the
+plan's rule: the automatic download, no Save click. Safari, Firefox and
+Chrome's question for several downloads are the owner's, in work
+package 10.
+
+**2, the worker writes a VCF and the file by pieces** (eacf06c,
+85bd24e). `WriteJob` and `Written` take `"nei" | "vcf"`,
+`PROTOCOL_VERSION` 15; the runner gives `onBytes` to `writeVars` or to
+`writeVcf` with `bgzip: true`, gathers the pieces into parts of 64 MiB
+and one `Blob`, and reads its last byte with `FileReaderSync` before it
+answers. Each `Blob` holds the same bytes as popnei's whole file. The
+old page's flows of the write, run by the session at dbaf1c6: 288
+passed, 144 in Chromium and 144 in WebKit.
+
+**3, the core functions** (a816b4f, d73e546, aa6d8fc). `writtenName(p,
+format)`, a VCF always `.filtered.vcf.gz`; `keptNoneReason` with a step
+of `null`, "Loosen them."; `noVariantForCertain` with
+`variantsNoneKept`, tested against popnei's filters at every edge in
+steps of 0.001 on `panel.vcf.gz` (the MAF keeps none up to 0.499, the
+observed heterozygosity none up to 0.026, the missing rate 2 at 0); the
+fixture `e2e/fixtures/variants_summary.json`.
+
+**Review of 2 and 3**, four categories (spec, architecture, tests,
+errors), no defect in the code. Taken, in 0866d48: what `onBytes`
+throws tested to stay a defect of ours (no test failed without the
+wrapper); the refusal after pieces checked with popnei's message;
+`noVariantForCertain` given only the finished result of the one pass,
+written into its comment and the specs, since a result so far or that
+of a Stop could make it say "nothing to download" for a file with
+variants (work package 6 tests that a result so far and a stopped one
+give no sentence); the runner spec's opening names the VCF. Not taken:
+the surviving mutant that drops `bgzip: true`, popnei's default; the
+grouping of pieces into parts, which no spec fixes. Left to work
+package 8: whether `FileReaderSync` throws on a `Blob` a browser could
+not keep. Vitest 4,390.
