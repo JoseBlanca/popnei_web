@@ -726,11 +726,13 @@ download; "Save it again" makes another address.
 
 The bar is popnei's `onProgress`, as for every calculation: one pass
 over the open file, told at each read of 4 MiB of it, so a file of 1 GB
-gives about 250 messages over the write. The old page's write had it
-on, and wrote a file of 220 MB in 3.73 s in Chromium and 3.70 s in
-WebKit (27 September 2026); a message every 4 MiB is nothing beside
-the compression of the file, so the bar costs the write no time that
-was measurable then. It is approximate in two ways:
+gives about 250 small messages to the page over the write. The old
+page's write had the bar on, and wrote a file of 220 MB in 3.73 s in
+Chromium and 3.70 s in WebKit on the owner's Mac, an Apple M5 Pro (27
+September 2026), about 15 ms for each 4 MiB of file; a message takes a
+small fraction of that, so the bar should cost the write no time that
+can be seen. That is argued, not measured with the bar off and on; the
+plan times one write both ways. It is approximate in two ways:
 
 - it counts the bytes of the open file read, not of the file written,
   and the variants are not spread evenly over the file, so its speed
@@ -850,7 +852,8 @@ Python API.
   agrees with the owner's reading. The statistic, each individual's
   missing rate and heterozygosity, stays popnei's.
 
-So popnei gives everything the text needs, and nothing is asked of it.
+No issue for popnei is drafted for these counts, since both kinds
+come from what popnei 0.2.2 gives.
 
 The store keeps these counts with the file in its state `saved`
 (`WriteStatus` of `src/core/store.ts`), which today keeps the counts and
