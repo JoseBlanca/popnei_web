@@ -216,11 +216,15 @@ functions of core"), is the stem of the variants file, `variantsStem` of
 the same module, with `.filtered.nei`, or `.filtered.vcf.gz` for a VCF:
 `panel.vcf.gz` gives `panel.filtered.nei`. With no filter of the
 variants that applies to the file, `filtersApplied(p)` empty, and no
-filter of individuals the name is the stem with `.nei`, `panel.nei`, or
-with `.vcf.gz`, since the
+filter of individuals the name of a `.nei` file is the stem with `.nei`,
+`panel.nei`, since the
 file is then the variants file converted, which is what the application
-suggests doing once with a VCF (`docs/functionality.md`, section 3); a VCF written from a VCF
-with no filter has the name of the file it came from. The
+suggests doing once with a VCF (`docs/functionality.md`, section 3). A
+VCF keeps `.filtered.vcf.gz` with no filter too, decided on 8 October
+2026 after the review of this spec: from `panel.vcf.gz` the name
+`panel.vcf.gz` would be that of the file it came from, which a browser
+that asks where to save offers to overwrite, and the bytes differ, since
+popnei compresses it again with bgzip. The
 size is `numBytes` as `sizeText` writes it, below: "251 KB", "19.2 MB",
 "1.2 GB".
 
@@ -400,10 +404,11 @@ rows of section 9 of `docs/architecture.md`.
 // src/core/fileNames.ts
 /** The name of the written file of the filtered variants in `format`:
     "panel.filtered.nei" or "panel.filtered.vcf.gz" from panel.vcf.gz with
-    a filter, "panel.nei" or "panel.vcf.gz" with no filter of the variants
-    that applies to the file and none of individuals; "project.nei" or
-    "project.vcf.gz" for a project with no variants file, which no page
-    asks. */
+    a filter; with no filter of the variants that applies to the file and
+    none of individuals, "panel.nei" for a .nei file and still
+    "panel.filtered.vcf.gz" for a VCF; "project.nei" or
+    "project.filtered.vcf.gz" for a project with no variants file, which
+    no page asks. */
 export function writtenName(p: Project, format: WriteFormat): string;
 
 // src/core/noVariantKept.ts
@@ -795,8 +800,8 @@ and "Whether a limit of size is needed"), on the built site:
   piece; on a VCF of 3,000 variants of 1,000 individuals made by
   `e2e/bigVcf.ts`, 1,917,582 bytes, the `.nei` file is 3,320,026 bytes
   in four pieces and the VCF 1,297,166 bytes in two, and with parts of
-  one piece each, a value of the runner's test, the `Blob` is those
-  parts in their order; a file of no variant, `panel.nei` at 0.05 with
+  one piece each, a value of the runner's test, the `Blob` holds the
+  same bytes, those of the pieces in their order; a file of no variant, `panel.nei` at 0.05 with
   a MAF filter at 0.4, is 3,682 bytes as a `.nei` file and 528 as a VCF,
   with `numVars` 0; a `Blob` whose last byte cannot be read is answered
   as a crash; a `told` that throws makes `write` throw that value (`docs/specs/worker/runner.md`, "How it is verified").
@@ -840,8 +845,7 @@ and "Whether a limit of size is needed"), on the built site:
 - **`writtenName`**: `panel.vcf.gz` with a filter gives
   `panel.filtered.nei`, with a threshold on the individuals alone too,
   with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`;
-  in `"vcf"`, `panel.filtered.vcf.gz` and, with no filter,
-  `panel.vcf.gz`.
+  in `"vcf"`, `panel.filtered.vcf.gz`, with no filter too.
 - **`noVariantForCertain`, with Vitest**, over the one pass's result
   that popnei 0.2.2 gives under node, kept as a fixture as
   `e2e/fixtures/variant_fine_bins.json` is, and checked against what

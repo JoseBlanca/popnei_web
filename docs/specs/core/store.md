@@ -951,7 +951,17 @@ the write is made with, `writeKeyOf(p, format, …)`, and which the state
 format first, and then does what it does in the state of the write
 under that format's key; so a `startWrite` that starts nothing, in
 `running` or in `error` after a refusal of popnei, still leaves the
-state `write` of that format, whose error the page then shows. A file
+state `write` of that format, whose error the page then shows. A change
+of the format is a change of the state: the listeners are called and
+`getState` gives a new object, even when nothing starts. A `startWrite`
+while a write of the other format is in flight is a defect, thrown, and
+changes nothing: no page asks it, the old page writing one format and
+popgen2.html's dialog being modal, and the write in flight would end
+`dropped` with no change of its filters. The state `error` with
+`ofStatistics`, on popgen2.html, comes only with a failure of the one
+pass and a threshold of the individuals, before any write, and the page
+shows the button locked by the failure of the one pass
+(`docs/specs/steps/popgen2-download.md`, "The button"). A file
 whose key is not the current one is dropped as before, so a write of one
 format ending while the store holds the other keeps nothing. The old
 page asks for `"nei"` alone. Until 8 October 2026 the store held the one
@@ -1463,8 +1473,10 @@ not lock, and the key of the write; after those and after every change
 of the cache that puts or drops the statistics under the key the project
 gives them, it makes the individuals kept, and the states of the
 analyses and of the write from them. It
-keeps the keys of the last project and version, so that a progress
-message, which changes neither, makes no key; and a memo, a table of the
+keeps the keys of the last project, version and format of the write,
+so that a progress message, which changes none, makes no key, and a
+`startWrite` of another format makes the key of the write again, from 8
+October 2026; and a memo, a table of the
 text already written for each object of the project, so that the
 individuals table is not written again for a command that changed a
 threshold (`docs/specs/core/keys.md`, `KeyMemo`). Then it uses in the
@@ -1692,8 +1704,10 @@ whose file is a text.
   its result `done`, `writeSaved()`, then `startWrite("nei")`: `write`
   holds no file and is `running` with `"nei"`. A refusal of popnei of
   the `"vcf"` write, then `startWrite("nei")` and its file `done`, then
-  `startWrite("vcf")`: it returns `null`, sends nothing, and `write` is
-  `error` with `"vcf"` and the refusal. A write's result whose
+  `startWrite("vcf")`: it returns `null`, sends nothing, the listeners
+  are called, and `write` is `error` with `"vcf"` and the refusal, in a
+  new state object. A `startWrite("nei")` while a `"vcf"` write is in
+  flight is a defect and changes nothing. A write's result whose
   `format` is not that of its request is a defect. No `startWrite` of
   either format is a defect.
 - **The statistics of popgen2.html**: a store made with

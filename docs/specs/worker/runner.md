@@ -1332,7 +1332,8 @@ export interface RunnerOptions {
   readonly soFarEvery?: number; // popnei's 2 seconds when not given; tests give 0
   readonly writePartBytes?: number;          // WRITE_PART_BYTES, 64 MiB, when not given; a test gives 1 MiB
   readonly readLastByte?: (file: Blob) => void; // throws when the Blob cannot be read; the worker's script
-                                                 // gives FileReaderSync's read, and nothing is read when absent
+                                                 // gives FileReaderSync's read, which runnerWorker.test.ts checks;
+                                                 // nothing is read when absent, as in the runner's tests in node
 }
 
 export function createRunner(options?: RunnerOptions): Runner; // after loadPopnei has given ok
@@ -1963,8 +1964,10 @@ as core would. Each test at `run` or `write` of a runner made by
   `openVars`. On the VCF of 3,000 variants of 1,000 individuals that
   `e2e/bigVcf.ts` writes into the test's folder, the `.nei` file is
   3,320,026 bytes and the VCF 1,297,166, and with `writePartBytes`
-  1,048,576 the `Blob` is four parts and two, the same bytes in their
-  order. With the MAF filter at 0.4 after the missing data filter at
+  1,048,576, a part of each piece, the `Blob` holds the same bytes in
+  their order; a `Blob` exposes no parts, so their number is not
+  checked. The worker's script makes its runner with `readLastByte`,
+  checked in `runnerWorker.test.ts`. With the MAF filter at 0.4 after the missing data filter at
   0.05 on `panel.nei`, 3,682 bytes and 528, `numVars` 0, answered and not
   refused. A `readLastByte` that throws gives `crashed` with the words
   above; a `told` that throws makes `write` throw that value. Before, with the writer of
