@@ -4,15 +4,15 @@
  * docs/specs/steps/popgen2-filters.md, "A threshold, on and off", "When a
  * threshold changes the project", "The number box", "How it is
  * checked"): nothing sent to the worker after the one pass while a
- * threshold changes; a drag one step of Undo; a run of the keys one step,
- * undone by Ctrl+Z within its second; a run made a step before a click of
- * the FILTER box; off by an emptied box, by 1 typed and by the line
- * dragged to 1, in grey with the words of off; on and grey at the top of
- * an axis below 1; the grey's pattern and its contrasts; 0 a filter at 0;
- * Down from off; a run that ends where it began; a crash while a run
- * waits; Undo while a run waits; the expected heterozygosity with no
- * threshold; the thresholds through another file, also one dropped while
- * a run waits; no plot changed by any of it; axe in each look.
+ * threshold changes; a drag made a change at the release; off by an
+ * emptied box, by 1 typed and by the line dragged to 1, in grey with the
+ * words of off; on and grey at the top of an axis below 1; the grey's
+ * pattern and its contrasts; 0 a filter at 0; Down from off; a run that
+ * ends where it began; a crash while a run waits and during a drag; the
+ * expected heterozygosity with no threshold; the thresholds through another file, also one dropped while
+ * a run waits; no plot changed by any of it; axe in each look. The page
+ * has no Undo since the owner's decision of 8 October 2026, and its keys
+ * are in popgen2Undo.spec.ts.
  *
  * panel.vcf.gz and panel.nei hold the same 1,200 variants of 200 diploid
  * individuals, counted by popnei; panel.vcf.gz records the FILTER of its
@@ -32,8 +32,6 @@ import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
-
-const FILTER_LABEL = "Leave out the variants that failed their FILTER";
 
 /** What the page records, on `window`, of the messages it sends to its
     workers. */
@@ -70,18 +68,6 @@ async function sentOf(page: Page): Promise<number> {
 
 function stats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
-}
-
-function undoButton(page: Page): Locator {
-  return page
-    .getByRole("main")
-    .getByRole("button", { name: "Undo", exact: true });
-}
-
-function redoButton(page: Page): Locator {
-  return page
-    .getByRole("main")
-    .getByRole("button", { name: "Redo", exact: true });
 }
 
 /** Picks the fixture `name` with the open button. */
@@ -208,7 +194,7 @@ async function expectNoViolations(
   expect((await makeAxeBuilder().analyze()).violations).toEqual([]);
 }
 
-test("SF9 D5 nothing is sent to the worker after the one pass while a threshold is dragged, typed, moved with the keys, turned off or undone, and no plot changes", async ({
+test("SF9 D5 nothing is sent to the worker after the one pass while a threshold is dragged, typed, moved with the keys or turned off, and no plot changes", async ({
   page,
 }) => {
   await countSent(page);
@@ -219,7 +205,7 @@ test("SF9 D5 nothing is sent to the worker after the one pass while a threshold 
 
   const het = histogram(page, OBS_HET);
   await drag(page, het, -140);
-  await expect(undoButton(page)).toBeEnabled();
+  await expect(het.box).not.toHaveValue("1");
   await het.box.fill("0.3");
   await het.box.press("Enter");
   const missing = histogram(page, MISSING);
@@ -228,27 +214,22 @@ test("SF9 D5 nothing is sent to the worker after the one pass while a threshold 
     await page.keyboard.press("ArrowLeft");
   }
   await page.keyboard.press("Tab");
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
+  await expect(missing.box).toHaveValue("0.095");
   await het.box.fill("");
   await het.box.press("Tab");
   await expect(het.box).toHaveValue("1");
-  await undoButton(page).click();
-  await expect(het.box).toHaveValue("0.3");
 
   expect(await sentOf(page)).toBe(sent);
   expect(await plotDescriptions(page)).toEqual(plots);
 });
 
-test("SF9 D5 a drag is one step of Undo, made at the release, and Undo moves the line and the box back", async ({
+test("SF9 D5 a drag changes the threshold at the release: the box follows the line, which turns red and shades what it removes", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openDone(page, "panel.vcf.gz");
   const het = histogram(page, OBS_HET);
   await expectOff(het, "0.7", "variant");
-  await expect(undoButton(page)).toBeDisabled();
 
   await het.thumb.scrollIntoViewIfNeeded();
   const box = await het.thumb.boundingBox();
@@ -258,189 +239,20 @@ test("SF9 D5 a drag is one step of Undo, made at the release, and Undo moves the
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x - 140, y, { steps: 8 });
-  // Dragged, not yet let go: the box follows the line, and the project
-  // has not changed.
+  // Dragged, not yet let go: the box follows the line.
   const dragged = await het.slider.inputValue();
   expect(Number(dragged)).toBeLessThan(0.7);
   await expect(het.box).toHaveValue(dragged);
-  await expect(undoButton(page)).toBeDisabled();
   await page.mouse.up();
 
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by observed heterozygosity was turned on",
-  );
   await expect(het.box).toHaveValue(dragged);
+  await expect(het.slider).toHaveValue(dragged);
   await expectGrey(het, false);
   await expect(het.removed).not.toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
-
-  await undoButton(page).click();
-  await expectOff(het, "0.7", "variant");
-  await expect(undoButton(page)).toBeDisabled();
-  await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: the filter of the variants by observed heterozygosity was turned on",
-  );
-  await redoButton(page).click();
-  await expect(het.box).toHaveValue(dragged);
-  await expect(het.slider).toHaveValue(dragged);
 });
 
-test("SF9 D5 a run of ten presses is one step of Undo and no notice; Ctrl+Z within its second undoes the run, and Ctrl+Y brings it back", async ({
-  page,
-}) => {
-  await openDone(page, "panel.vcf.gz");
-  const missing = histogram(page, MISSING);
-  await expect(missing.box).toHaveValue("0.1");
-  await missing.slider.focus();
-  for (let press = 0; press < 10; press += 1) {
-    await page.keyboard.press("ArrowLeft");
-  }
-  await expect(missing.slider).toHaveValue("0.09");
-  await expect(missing.box).toHaveValue("0.09");
-  // Within the second: the line makes its run a change and lets the
-  // keys go on to the page's Undo, which undoes the run.
-  await page.keyboard.press("ControlOrMeta+z");
-  await expect(missing.slider).toHaveValue("0.1");
-  await expect(missing.box).toHaveValue("0.1");
-  await expect(missing.slider).toBeFocused();
-  await expect(undoButton(page)).toBeDisabled();
-  await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: the filter of the variants by missing data changed",
-  );
-  await page.keyboard.press("Control+y");
-  await expect(missing.slider).toHaveValue("0.09");
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
-  await expect(redoButton(page)).toBeDisabled();
-  await expect(page.getByRole("region", { name: "Notice" })).toHaveCount(0);
-
-  // A run left alone is made a change a second after its last press:
-  // one step for ten presses, the one before it under it.
-  for (let press = 0; press < 10; press += 1) {
-    await page.keyboard.press("ArrowLeft");
-  }
-  await expect(missing.box).toHaveValue("0.08");
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
-  await undoButton(page).click();
-  await expect(missing.box).toHaveValue("0.09");
-  await undoButton(page).click();
-  await expect(missing.box).toHaveValue("0.1");
-  await expect(undoButton(page)).toBeDisabled();
-});
-
-test("SF9 D5 while a run waits, Undo is enabled and names the change it will become, Redo is disabled, and a click of Undo with the mouse makes the run a change and undoes it", async ({
-  page,
-}) => {
-  await openDone(page, "panel.vcf.gz");
-  const missing = histogram(page, MISSING);
-  await expect(missing.box).toHaveValue("0.1");
-  // The page's timers stand still from here, so that the run waits until
-  // the click whatever the speed of the machine.
-  await page.clock.install();
-  await page.clock.pauseAt(Date.now() + 1000);
-  await missing.slider.focus();
-  for (let press = 0; press < 3; press += 1) {
-    await page.keyboard.press("ArrowLeft");
-  }
-  await expect(missing.box).toHaveValue("0.097");
-  await expect(undoButton(page)).toBeEnabled();
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
-  await expect(redoButton(page)).toBeDisabled();
-  await undoButton(page).click();
-  await expect(missing.box).toHaveValue("0.1");
-  await expect(missing.slider).toHaveValue("0.1");
-  await expect(undoButton(page)).toBeDisabled();
-  await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: the filter of the variants by missing data changed",
-  );
-  await redoButton(page).click();
-  await expect(missing.box).toHaveValue("0.097");
-});
-
-test("SF9 D5 Ctrl+Z in the box within a run of arrow presses in it undoes the run and Ctrl+Shift+Z brings it back, as on the line, and Cmd+Z and Cmd+Shift+Z in WebKit", async ({
-  page,
-  browserName,
-}) => {
-  await openDone(page, "panel.vcf.gz");
-  const missing = histogram(page, MISSING);
-  await expect(missing.box).toHaveValue("0.1");
-  // The page's timers stand still: every key below meets its run still
-  // waiting.
-  await page.clock.install();
-  await page.clock.pauseAt(Date.now() + 1000);
-  await missing.box.focus();
-  for (let press = 0; press < 3; press += 1) {
-    await page.keyboard.press("ArrowDown");
-  }
-  await expect(missing.box).toHaveValue("0.097");
-  await page.keyboard.press("Control+z");
-  await expect(missing.box).toHaveValue("0.1");
-  await expect(missing.box).toBeFocused();
-  await expect(undoButton(page)).toBeDisabled();
-  await expect(redoButton(page)).toHaveAccessibleDescription(
-    "Redo: the filter of the variants by missing data changed",
-  );
-  await page.keyboard.press("Control+Shift+z");
-  await expect(missing.box).toHaveValue("0.097");
-  await expect(redoButton(page)).toBeDisabled();
-
-  // On the line, the same keys.
-  await missing.slider.focus();
-  await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("ArrowLeft");
-  await expect(missing.slider).toHaveValue("0.095");
-  await page.keyboard.press("Control+z");
-  await expect(missing.slider).toHaveValue("0.097");
-  await page.keyboard.press("Control+Shift+z");
-  await expect(missing.slider).toHaveValue("0.095");
-
-  if (browserName === "webkit") {
-    await missing.box.focus();
-    await page.keyboard.press("ArrowDown");
-    await expect(missing.box).toHaveValue("0.094");
-    await page.keyboard.press("Meta+z");
-    await expect(missing.box).toHaveValue("0.095");
-    await page.keyboard.press("Meta+Shift+z");
-    await expect(missing.box).toHaveValue("0.094");
-  }
-});
-
-test("SF9 D5 a run waiting, then a click of the FILTER box: two steps of Undo, the run's first", async ({
-  page,
-}) => {
-  await openDone(page, "panel.vcf.gz");
-  const maf = histogram(page, MAF);
-  await expectOff(maf, "1", "variant");
-  await maf.slider.focus();
-  for (let press = 0; press < 3; press += 1) {
-    await page.keyboard.press("ArrowLeft");
-  }
-  await expect(maf.box).toHaveValue("0.97");
-  await page.getByText(FILTER_LABEL, { exact: true }).click();
-  await expect(
-    page.getByRole("checkbox", { name: FILTER_LABEL }),
-  ).not.toBeChecked();
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the variants that failed their FILTER are kept",
-  );
-  await undoButton(page).click();
-  await expect(
-    page.getByRole("checkbox", { name: FILTER_LABEL }),
-  ).toBeChecked();
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the MAF filter was turned on",
-  );
-  await expect(maf.box).toHaveValue("0.97");
-  await undoButton(page).click();
-  await expectOff(maf, "1", "variant");
-});
-
-test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each turn the filter off, 1 in the box and the line at the top, grey, no shading, with the words of off; Undo turns it on at its value", async ({
+test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each turn the filter off, 1 in the box and the line at the top, grey, no shading, with the words of off; 0.9 typed turns it on again", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -455,22 +267,18 @@ test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each tu
   await expect(maf.removed).not.toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
-  const turnedOff = "Undo: the MAF filter was turned off";
   const backOn = async (): Promise<void> => {
-    await undoButton(page).click();
+    await maf.box.fill("0.9");
+    await maf.box.press("Enter");
     await expect(maf.box).toHaveValue("0.9");
     await expect(maf.slider).toHaveValue("0.9");
     await expectGrey(maf, false);
-    await expect(undoButton(page)).toHaveAccessibleDescription(
-      "Undo: the MAF filter was turned on",
-    );
   };
 
   // The box emptied, and Tab.
   await maf.box.fill("");
   await maf.box.press("Tab");
   await expectOff(maf, "1", "variant");
-  await expect(undoButton(page)).toHaveAccessibleDescription(turnedOff);
   await expectNoViolations(makeAxeBuilder);
   await backOn();
 
@@ -478,13 +286,17 @@ test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each tu
   await maf.box.fill("1");
   await maf.box.press("Enter");
   await expectOff(maf, "1", "variant");
-  await expect(undoButton(page)).toHaveAccessibleDescription(turnedOff);
   await backOn();
 
-  // The line dragged to the top of its axis, which ends at 1.
+  // The line dragged to the top of its axis, which ends at 1, from a
+  // value it was dragged to. From 0.9 typed in the box the box keeps
+  // showing 0.9 after that drag, with the line at the top, seen in
+  // Chromium and WebKit on 8 October 2026: a defect of its own, reported,
+  // which the Undo this test clicked before the drag used to hide.
+  await drag(page, maf, -100);
+  await expect(maf.box).not.toHaveValue("0.9");
   await drag(page, maf, 400);
   await expectOff(maf, "1", "variant");
-  await expect(undoButton(page)).toHaveAccessibleDescription(turnedOff);
   await backOn();
 
   // A number refused while off names 1, the number its box shows.
@@ -613,9 +425,6 @@ test("SF9 D5 0 typed is a filter at 0, with no words under its box", async ({
   await expect(missing.box).toHaveAccessibleDescription("");
   await expect(missing.group.locator("p")).toHaveCount(0);
   await expectGrey(missing, false);
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
 });
 
 test("SF9 D5 from off, Down in the box turns the filter on one step below the top of the axis, not at 1 less a step, and the axis keeps its range; Up leaves it off", async ({
@@ -633,17 +442,14 @@ test("SF9 D5 from off, Down in the box turns the filter on one step below the to
   await expect(het.slider).toHaveAttribute("max", "0.7");
   await het.box.press("PageDown");
   await expect(het.box).toHaveValue("0.59");
-  // One step for the run, once the focus leaves.
+  // The run made a change as the focus leaves.
   await het.box.press("Tab");
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by observed heterozygosity was turned on",
-  );
-  await undoButton(page).click();
-  await expectOff(het, "0.7", "variant");
-  await expect(undoButton(page)).toBeDisabled();
+  await expect(het.box).toHaveValue("0.59");
+  await expect(het.slider).toHaveValue("0.59");
+  await expectGrey(het, false);
 });
 
-test("SF9 D5 a run of Down then Up on a line that is off leaves no step of Undo, and the filter off", async ({
+test("SF9 D5 a run of Down then Up on a line that is off leaves the filter off", async ({
   page,
 }) => {
   await openDone(page, "panel.vcf.gz");
@@ -656,10 +462,9 @@ test("SF9 D5 a run of Down then Up on a line that is off leaves no step of Undo,
   // The run ends as the focus leaves.
   await page.keyboard.press("Tab");
   await expectOff(het, "0.7", "variant");
-  await expect(undoButton(page)).toBeDisabled();
 });
 
-test("SF9 D5 a crash of the worker while a run waits keeps the run as a step of Undo, and puts the focus on the heading", async ({
+test("SF9 D5 a crash of the worker while a run waits puts the focus on the heading", async ({
   page,
 }, testInfo) => {
   test.setTimeout(120_000);
@@ -686,12 +491,9 @@ test("SF9 D5 a crash of the worker while a run waits keeps the run as a step of 
     stats(page).getByText("Not calculated.", { exact: true }).first(),
   ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
 });
 
-test("SF9 D5 a crash of the worker during a drag of a line makes the drag a step of Undo as the line leaves, before the mouse is released", async ({
+test("SF9 D5 a crash of the worker during a drag of a line takes the line away before the mouse is released, and the release after it changes nothing", async ({
   page,
 }, testInfo) => {
   test.setTimeout(120_000);
@@ -708,7 +510,6 @@ test("SF9 D5 a crash of the worker during a drag of a line makes the drag a step
   await release(page, "oneSoFar");
   const missing = histogram(page, MISSING);
   await expect(missing.box).toHaveValue("0.1", { timeout: 60_000 });
-  await expect(undoButton(page)).toBeDisabled();
   // The drag under way: the pointer down and moved, not released.
   await missing.thumb.scrollIntoViewIfNeeded();
   const box = await missing.thumb.boundingBox();
@@ -724,15 +525,9 @@ test("SF9 D5 a crash of the worker during a drag of a line makes the drag a step
     stats(page).getByText("Not calculated.", { exact: true }).first(),
   ).toBeVisible({ timeout: 20_000 });
   await expect(missing.slider).toHaveCount(0);
-  // No run waits for a drag: Undo is enabled only if the threshold made
-  // the drag a change as it left.
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
   await page.mouse.up();
-  await expect(undoButton(page)).toHaveAccessibleDescription(
-    "Undo: the filter of the variants by missing data changed",
-  );
+  await expect(missing.slider).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("SF9 D5 the expected heterozygosity has its plot and title, and no line and no box", async ({
@@ -749,7 +544,7 @@ test("SF9 D5 the expected heterozygosity has its plot and title, and no line and
   await expect(expected.line).toHaveCount(0);
 });
 
-test("SF9 D5 the thresholds stay through the opening of another file, with Undo disabled after it", async ({
+test("SF9 D5 the thresholds stay through the opening of another file", async ({
   page,
 }) => {
   await openDone(page, "panel.vcf.gz");
@@ -762,7 +557,7 @@ test("SF9 D5 the thresholds stay through the opening of another file, with Undo 
   await maf.box.press("Enter");
   await individuals.box.fill("0.03");
   await individuals.box.press("Enter");
-  await expect(undoButton(page)).toBeEnabled();
+  await expect(individuals.box).toHaveValue("0.03");
 
   await pick(page, "panel.nei");
   await expect(
@@ -774,7 +569,6 @@ test("SF9 D5 the thresholds stay through the opening of another file, with Undo 
   await expect(maf.box).toHaveValue("0.9");
   await expect(individuals.box).toHaveValue("0.03");
   await expectOff(histogram(page, OBS_HET), "0.7", "variant");
-  await expect(undoButton(page)).toBeDisabled();
 });
 
 test("SF9 D5 a file dropped while a run of the keys waits opens with the threshold the run moved", async ({
@@ -811,7 +605,6 @@ test("SF9 D5 a file dropped while a run of the keys waits opens with the thresho
   ).toBeVisible({ timeout: 20_000 });
   await expect(maf.box).toHaveValue("0.95");
   await expect(maf.slider).toHaveValue("0.95");
-  await expect(undoButton(page)).toBeDisabled();
 });
 
 /** Three individuals and four variants, i3 with no called genotype: the

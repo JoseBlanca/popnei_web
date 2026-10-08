@@ -52,12 +52,6 @@ function part(page: Page, name: "Variants" | "Individuals"): Locator {
     .locator("xpath=..");
 }
 
-function undoButton(page: Page): Locator {
-  return page
-    .getByRole("main")
-    .getByRole("button", { name: "Undo", exact: true });
-}
-
 function downloadButton(page: Page): Locator {
   return stats(page).getByRole("button", {
     name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
@@ -194,7 +188,7 @@ for (const width of [null, 320] as const) {
   });
 }
 
-test("SF10 D2 a threshold moved over the plots of a Stop changes the project, with its step of Undo, and its grey is of the variants read", async ({
+test("SF10 D2 a threshold moved over the plots of a Stop changes the project, and its grey is of the variants read", async ({
   page,
   makeAxeBuilder,
 }, testInfo) => {
@@ -202,7 +196,6 @@ test("SF10 D2 a threshold moved over the plots of a Stop changes the project, wi
   await openHeld(page, testInfo.outputPath("stop.vcf.gz"));
   await firstPlots(page);
   await stop(page);
-  await expect(undoButton(page)).toBeDisabled();
 
   const maf = stats(page).getByRole("group", {
     name: "Major allele frequency",
@@ -219,7 +212,6 @@ test("SF10 D2 a threshold moved over the plots of a Stop changes the project, wi
   expect(Number(top)).toBeLessThan(1);
   await box.fill(top);
   await box.press("Enter");
-  await expect(undoButton(page)).toBeEnabled();
   await expect(slider).toHaveAttribute(
     "aria-valuetext",
     `${top}, keeps every variant of the plot`,
@@ -238,7 +230,8 @@ test("SF10 D2 a threshold moved over the plots of a Stop changes the project, wi
     part(page, "Variants").getByText(STOPPED_WITH_PLOTS, { exact: true }),
   ).toBeVisible();
 
-  await undoButton(page).click();
+  await box.fill(top);
+  await box.press("Enter");
   await expect(slider).toHaveAttribute(
     "aria-valuetext",
     `${top}, keeps every variant of the plot`,

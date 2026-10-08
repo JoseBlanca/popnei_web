@@ -1,12 +1,7 @@
 /**
  * The body of popgen2.html, the first of the new screens
  * (docs/plans/open-variants.md; the owner's layouts of 6 October 2026):
- * the page's one heading, "Popnei"; the row of Undo and Redo, the
- * shell's buttons, which undo and redo the changes of the filters and not
- * the opening of a file, there before any file, disabled, so that the
- * page does not move down when the first file is opened
- * (docs/specs/steps/popgen2-filters.md, "The order of the page"); the box
- * of the file open, with what
+ * the page's one heading, "Popnei"; the box of the file open, with what
  * went wrong with it; under it the statistics of the open file
  * (docs/plans/file-stats.md); and at the bottom the opening of the
  * variants file, which the owner put after the statistics on 6 October
@@ -23,7 +18,6 @@ import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
-import { UndoRedoButtons } from "../shell/UndoRedoButtons.tsx";
 import { useAppState } from "../store.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
@@ -63,9 +57,15 @@ export function VariantsPage({
         <h1 tabIndex={-1} className={classOf(styles, "title")}>
           Popnei
         </h1>
-        <div className={classOf(styles, "history")}>
-          <UndoRedoButtons />
-        </div>
+        {/* The row of Undo and Redo, the shell's UndoRedoButtons, which
+            stood here with their keys, Ctrl+Z, Ctrl+Y and Cmd+Shift+Z, is
+            hidden by the owner's decision of 8 October 2026, until a later
+            feature needs it (docs/specs/steps/popgen2-filters.md, "Undo,
+            Redo and their keys"). Kept ready to draw it again in a
+            <div> of its own: the store's history, the thresholds and
+            the FILTER box as commands with their descriptions, a run of
+            the keys made a change before any other command (runGate.tsx,
+            thresholdRun.ts), and the words of an undo (undoRedo.ts). */}
         {/* Another load is another boundary, which has caught nothing, so
             that a throw while the box of one file is drawn leaves the
             next file its box, its Stop and its Start again. */}

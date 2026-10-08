@@ -1,9 +1,11 @@
 /**
- * Undo and Redo, the two buttons and their keys, which both pages draw:
- * popgen.html in the header of its shell, beside Open project… and Save
- * project (docs/specs/shell.md, "The header"), and popgen2.html in a row
- * of their own above the box of the file
- * (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys").
+ * Undo and Redo, the two buttons and their keys, which popgen.html draws
+ * in the header of its shell, beside Open project… and Save project
+ * (docs/specs/shell.md, "The header"). popgen2.html drew them in a row of
+ * their own above the box of the file, hidden since the owner's decision
+ * of 8 October 2026 (docs/specs/steps/popgen2-filters.md, "Undo, Redo and
+ * their keys"); what is said of popgen2.html below holds when it draws
+ * them again.
  *
  * Undo and Redo are described by what they would take back or bring
  * again, "Undo: the filter of the variants by missing data changed", and

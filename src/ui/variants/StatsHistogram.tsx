@@ -268,8 +268,10 @@ export function StatsHistogram({
       className={classOf(styles, "block")}
       onKeyDown={(event) => {
         // Undo or Redo with a run waiting: the run made a change first,
-        // and the keys go on to the page's Undo or Redo. With something
-        // typed in the box, its own handler has put its number back.
+        // and the keys go on to the page's Undo or Redo, which the page
+        // does not draw since the owner's decision of 8 October 2026
+        // (VariantsPage.tsx). With something typed in the box, its own
+        // handler has put its number back.
         if (
           !event.defaultPrevented &&
           shortcutOf(event) !== null &&

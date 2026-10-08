@@ -4659,9 +4659,6 @@ for (const theme of ["light", "dark"] as const) {
           })
           .click();
         await expect(box).not.toBeChecked();
-        await expect(
-          page.getByRole("button", { name: "Undo", exact: true }),
-        ).toBeEnabled();
         await page.mouse.click(1, 1);
         await save(page, `popgen2-filter-box-off${at}-${theme}`);
       });
@@ -4882,7 +4879,7 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-threshold-zero${at}-${theme}`);
       });
 
-      test("the focus on the line of a threshold, while its run of the keys waits: Undo enabled with the change it will become", async ({
+      test("the focus on the line of a threshold, while its run of the keys waits", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4907,17 +4904,11 @@ for (const theme of ["light", "dark"] as const) {
         for (let step = 0; step < 3; step += 1) {
           await page.keyboard.press("PageDown");
         }
-        await expect(
-          page
-            .getByRole("main")
-            .getByRole("button", { name: "Undo", exact: true }),
-        ).toHaveAccessibleDescription(
-          "Undo: the filter of the variants by observed heterozygosity was turned on",
-        );
+        await expect(het.getByRole("textbox")).not.toHaveValue("1");
         await save(page, `popgen2-thresholds-focus${at}-${theme}`);
       });
 
-      test("a threshold on: the MAF typed at 0.9, which removes some, its step of Undo in the hint of Undo", async ({
+      test("a threshold on: the MAF typed at 0.9, which removes some", async ({
         page,
       }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
@@ -4959,41 +4950,8 @@ for (const theme of ["light", "dark"] as const) {
         await box.fill("");
         await box.press("Enter");
         await expect(box).toHaveValue("1");
-        await expect(
-          page
-            .getByRole("main")
-            .getByRole("button", { name: "Undo", exact: true }),
-        ).toHaveAccessibleDescription("Undo: the MAF filter was turned off");
         await page.mouse.click(1, 1);
         await save(page, `popgen2-threshold-off${at}-${theme}`);
-      });
-
-      test("a threshold undone: the MAF on at 0.9, turned off, and back on by Undo", async ({
-        page,
-      }) => {
-        await pickOnNewPage(page, "panel.vcf.gz");
-        const maf = newPageStats(page).getByRole("group", {
-          name: "Major allele frequency",
-          exact: true,
-        });
-        await expect(maf.getByRole("slider")).toHaveAttribute(
-          "aria-valuetext",
-          "1, keeps every variant",
-          { timeout: 20_000 },
-        );
-        const box = maf.getByRole("textbox");
-        await box.fill("0.9");
-        await box.press("Enter");
-        await box.fill("");
-        await box.press("Enter");
-        await expect(box).toHaveValue("1");
-        await page
-          .getByRole("main")
-          .getByRole("button", { name: "Undo", exact: true })
-          .click();
-        await expect(box).toHaveValue("0.9");
-        await page.mouse.click(1, 1);
-        await save(page, `popgen2-threshold-undone${at}-${theme}`);
       });
 
       test("a threshold on and grey: the missing rate of panel.nei at 0.1, the top of its axis", async ({
@@ -5015,47 +4973,6 @@ for (const theme of ["light", "dark"] as const) {
           }),
         ).toBeVisible({ timeout: 20_000 });
         await save(page, `popgen2-threshold-grey${at}-${theme}`);
-      });
-
-      test("the row of Undo and Redo, both disabled, before any file", async ({
-        page,
-      }) => {
-        await expect(
-          page.getByRole("button", { name: "Undo", exact: true }),
-        ).toBeDisabled();
-        await save(page, `popgen2-undo-row${at}-${theme}`);
-      });
-
-      test("the row of Undo and Redo, both enabled, after the FILTER box turned off, on and an Undo", async ({
-        page,
-      }) => {
-        await pickOnNewPage(page, "panel.vcf.gz");
-        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
-        const label = page.getByText(
-          "Leave out the variants that failed their FILTER",
-          { exact: true },
-        );
-        await label.click();
-        await label.click();
-        await page
-          .getByRole("main")
-          .getByRole("button", { name: "Undo", exact: true })
-          .click();
-        await expect(
-          page.getByRole("checkbox", {
-            name: "Leave out the variants that failed their FILTER",
-          }),
-        ).not.toBeChecked();
-        await expect(
-          page.getByRole("button", { name: "Redo", exact: true }),
-        ).toBeEnabled();
-        await expect(
-          page
-            .getByRole("main")
-            .getByRole("button", { name: "Undo", exact: true }),
-        ).toBeEnabled();
-        await page.mouse.click(1, 1);
-        await save(page, `popgen2-undo-row-enabled${at}-${theme}`);
       });
 
       test("a VCF whose ploidy could not be read", async ({ page }) => {
