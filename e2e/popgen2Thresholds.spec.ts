@@ -328,6 +328,37 @@ test("SF9 D5 a run of ten presses is one step of Undo and no notice; Ctrl+Z with
   await expect(undoButton(page)).toBeDisabled();
 });
 
+test("SF9 D5 while a run waits, Undo is enabled and names the change it will become, Redo is disabled, and a click of Undo with the mouse makes the run a change and undoes it", async ({
+  page,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  const missing = histogram(page, MISSING);
+  await expect(missing.box).toHaveValue("0.1");
+  // The page's timers stand still from here, so that the run waits until
+  // the click whatever the speed of the machine.
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
+  await missing.slider.focus();
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await expect(missing.box).toHaveValue("0.097");
+  await expect(undoButton(page)).toBeEnabled();
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: the filter of the variants by missing data changed",
+  );
+  await expect(redoButton(page)).toBeDisabled();
+  await undoButton(page).click();
+  await expect(missing.box).toHaveValue("0.1");
+  await expect(missing.slider).toHaveValue("0.1");
+  await expect(undoButton(page)).toBeDisabled();
+  await expect(redoButton(page)).toHaveAccessibleDescription(
+    "Redo: the filter of the variants by missing data changed",
+  );
+  await redoButton(page).click();
+  await expect(missing.box).toHaveValue("0.097");
+});
+
 test("SF9 D5 a run waiting, then a click of the FILTER box: two steps of Undo, the run's first", async ({
   page,
 }) => {

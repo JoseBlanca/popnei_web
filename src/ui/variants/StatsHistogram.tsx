@@ -71,6 +71,10 @@ export interface StatsHistogramProps {
   /** Sets the threshold of the project to `value`, on the step of its
       axis, 1 for off, or `null` for an emptied box. */
   readonly onSet: (value: number | null) => void;
+  /** The description of the step of Undo that `onSet(value)` would make
+      now, "the MAF filter changed", or `null` when it would make none;
+      Undo names it while a run of the keys waits. */
+  readonly describeSet: (value: number) => string | null;
 }
 
 /** Writes `frame`, where the plot drew its frame, on `element`, around
@@ -98,6 +102,7 @@ export function StatsHistogram({
   onMoving,
   onTyped,
   onSet,
+  describeSet,
 }: StatsHistogramProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const gate = useRunGate();
@@ -126,9 +131,11 @@ export function StatsHistogram({
   // render that made it, and for the cleanup.
   const onSetRef = useRef(onSet);
   const onMovingRef = useRef(onMoving);
+  const describeSetRef = useRef(describeSet);
   useLayoutEffect(() => {
     onSetRef.current = onSet;
     onMovingRef.current = onMoving;
+    describeSetRef.current = describeSet;
   });
   // The run of the keys of this threshold, made at its first press; read
   // in the handlers alone.
@@ -136,6 +143,7 @@ export function StatsHistogram({
   const runOf = (): ThresholdRun => {
     runRef.current ??= createThresholdRun({
       gate,
+      describe: (to) => describeSetRef.current(to),
       change: (to) => {
         onSetRef.current(to);
       },

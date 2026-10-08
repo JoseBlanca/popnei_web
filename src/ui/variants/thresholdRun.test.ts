@@ -34,6 +34,7 @@ function runOf(gate = createRunGate()): {
   const ends = { count: 0 };
   const run = createThresholdRun({
     gate,
+    describe: (to) => `the MAF filter changed to ${String(to)}`,
     change: (to) => {
       changes.push(to);
     },
@@ -94,6 +95,33 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     expect(ends.count).toBe(1);
   });
 
+  test("while a run waits the gate gives the description of the change it will become, and tells its listeners at each press and at its end; nothing for a run back where it started", () => {
+    const gate = createRunGate();
+    const { run } = runOf(gate);
+    let told = 0;
+    const stop = gate.subscribe(() => {
+      told += 1;
+    });
+    expect(gate.pending()).toBeNull();
+    run.press(0.5, 0.49);
+    expect(told).toBe(1);
+    expect(gate.pending()).toBe("the MAF filter changed to 0.49");
+    run.press(0.49, 0.48);
+    expect(told).toBe(2);
+    expect(gate.pending()).toBe("the MAF filter changed to 0.48");
+    // Back where it started: it will be no change.
+    run.press(0.48, 0.49);
+    run.press(0.49, 0.5);
+    expect(gate.pending()).toBeNull();
+    run.press(0.5, 0.49);
+    vi.advanceTimersByTime(RUN_QUIET_MS);
+    expect(told).toBe(6);
+    expect(gate.pending()).toBeNull();
+    stop();
+    run.press(0.49, 0.48);
+    expect(told).toBe(6);
+  });
+
   test("a run waiting is made a change before any other command reaches the project, Undo and an opening among them, and the gate lets it go once ended", () => {
     const gate = createRunGate();
     const store = gatedStore(
@@ -108,6 +136,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
           setThreshold(p, maf, to),
         );
       },
+      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     const filtersOf = (p: Project): string =>
@@ -164,6 +193,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
       change: () => {
         opened.push("run");
       },
+      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     const letGo = gate.typing(() => {
@@ -193,6 +223,7 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
           setThreshold(p, maf, to),
         );
       },
+      describe: () => "the MAF filter was turned on",
       ended: () => undefined,
     });
     gate.typing(() => {

@@ -4854,7 +4854,9 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-threshold-zero${at}-${theme}`);
       });
 
-      test("the focus on the line of a threshold", async ({ page }) => {
+      test("the focus on the line of a threshold, while its run of the keys waits: Undo enabled with the change it will become", async ({
+        page,
+      }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         const het = newPageStats(page).getByRole("group", {
           name: "Observed heterozygosity",
@@ -4870,9 +4872,20 @@ for (const theme of ["light", "dark"] as const) {
         await het.getByRole("textbox").focus();
         await page.keyboard.press("Tab");
         await expect(het.getByRole("slider")).toBeFocused();
+        // The run of the keys waits while the picture is taken: the
+        // page's timers stand still.
+        await page.clock.install();
+        await page.clock.pauseAt(Date.now() + 1000);
         for (let step = 0; step < 3; step += 1) {
           await page.keyboard.press("PageDown");
         }
+        await expect(
+          page
+            .getByRole("main")
+            .getByRole("button", { name: "Undo", exact: true }),
+        ).toHaveAccessibleDescription(
+          "Undo: the filter of the variants by observed heterozygosity was turned on",
+        );
         await save(page, `popgen2-thresholds-focus${at}-${theme}`);
       });
 

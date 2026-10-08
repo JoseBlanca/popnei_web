@@ -374,6 +374,15 @@ the run waiting a change first, and also commits a number typed and not
 yet committed, as the old page does before an opening (`onCommitReady`
 of the number box).
 
+**Undo while a run waits.** For the second a run waits, Undo is enabled
+and named by the change the run will become, "Undo: the filter of the
+variants by missing data changed", and Redo is disabled, since that
+change will leave nothing to redo. A click on Undo, which in WebKit
+does not move the focus, makes the run a change and then undoes it, as
+Ctrl+Z does. Before 8 October 2026 Undo was drawn disabled, or named
+the change before the run, for that second, although Ctrl+Z undid the
+run.
+
 **A threshold that leaves the page.** The statistics leave the state
 ready, running or done in two cases: when the worker crashes, which
 turns them to the state error, a calculation that failed, shown with
@@ -648,6 +657,9 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   Undo;
 - a run of ten arrow presses gives one step of Undo, and Ctrl+Z pressed
   within the second after it undoes that run;
+- while a run waits, the page's clock stopped, Undo is enabled and
+  named by the run's change, Redo is disabled, and a click of Undo with
+  the mouse undoes the run;
 - emptying the box, typing 1, and dragging the line of the MAF to the
   top of its axis at 1, each turn the filter off, with 1 in the box, the
   line at the top of the axis, both drawn in the grey, no shading, the

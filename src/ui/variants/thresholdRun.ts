@@ -26,11 +26,20 @@ export const RUN_QUIET_MS = 1000;
 
 /** The gate of the page. */
 export interface RunGate {
-  /** Holds the run waiting of one threshold, which `end` makes a change;
-      gives the function that lets it go, once it ended. */
-  readonly hold: (end: () => void) => () => void;
+  /** Holds a run waiting of one threshold: `end` makes it a change, and
+      `pending` gives the description of the change it would make now,
+      `null` when it would make none. Gives the functions that tell the
+      gate the run moved, and that let it go once it ended. */
+  readonly hold: (end: () => void, pending: () => string | null) => HeldRun;
   /** Ends every run held, each made a change if it moved. */
   readonly endAll: () => void;
+  /** The description of the change of the project that the run held last
+      would make now, "the MAF filter changed", which Undo names while the
+      run waits; `null` when no run is held or it would make none. */
+  readonly pending: () => string | null;
+  /** Calls `listener` when a run is held, moves or is let go; returns the
+      function that stops it. A property made once, so React keeps it. */
+  readonly subscribe: (listener: () => void) => () => void;
   /** Holds the commit of the box of a threshold, which commits a number
       typed in it as Enter would; gives the function that lets it go,
       when the box goes. */
@@ -39,29 +48,56 @@ export interface RunGate {
   readonly commitTyped: () => void;
 }
 
+/** A run held by the gate. */
+export interface HeldRun {
+  /** Tells the gate the run moved, so that what Undo names follows it. */
+  readonly moved: () => void;
+  /** Lets the run go, once it ended. */
+  readonly release: () => void;
+}
+
 /** Makes the gate of a page, with nothing held. */
 export function createRunGate(): RunGate {
-  const runs = new Set<() => void>();
+  // In the order they were held: the last is the one Undo names.
+  const runs = new Map<() => void, () => string | null>();
   const boxes = new Set<() => void>();
+  const listeners = new Set<() => void>();
+  const tell = (): void => {
+    for (const listener of [...listeners]) listener();
+  };
   return {
-    hold: (end) => {
+    hold: (end, pending) => {
       // A function of its own, so that the same `end` held twice is held
       // as two.
       const held = (): void => {
         end();
       };
-      runs.add(held);
-      return () => {
-        runs.delete(held);
+      runs.set(held, pending);
+      tell();
+      return {
+        moved: tell,
+        release: () => {
+          if (runs.delete(held)) tell();
+        },
       };
     },
     endAll: () => {
       // Each end lets its run go, and its change passes the gate again,
       // which then holds nothing of it.
-      for (const end of [...runs]) {
+      for (const end of [...runs.keys()]) {
         runs.delete(end);
         end();
       }
+    },
+    pending: () => {
+      const last = [...runs.values()].at(-1);
+      return last === undefined ? null : last();
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
     typing: (commit) => {
       const held = (): void => {
@@ -114,6 +150,9 @@ export function gatedStore<R, F>(
 export interface ThresholdRunDeps {
   /** The gate of the page, which holds the run while it waits. */
   readonly gate: RunGate;
+  /** The description of the change a run that ended at `to` would make,
+      as Undo would name it; `null` when it would make none. */
+  readonly describe: (to: number) => string | null;
   /** Makes the change of a run that ended at `to`, elsewhere than it
       started. */
   readonly change: (to: number) => void;
@@ -140,23 +179,29 @@ export interface ThresholdRun {
     is the browser's `setTimeout`. */
 export function createThresholdRun(deps: ThresholdRunDeps): ThresholdRun {
   /** The run waiting: where it started, where it is, its timer and the
-      function that lets the gate go of it. */
+      gate's hold of it. */
   let waiting: {
     readonly from: number;
     to: number;
     timer: ReturnType<typeof setTimeout>;
-    readonly release: () => void;
+    held: HeldRun | null;
   } | null = null;
 
   const end = (): void => {
     if (waiting === null) return;
-    const { from, to, timer, release } = waiting;
+    const { from, to, timer, held } = waiting;
     waiting = null;
     clearTimeout(timer);
-    release();
+    held?.release();
     if (to !== from) deps.change(to);
     deps.ended();
   };
+
+  // What the run would make now, which the gate reads while it holds it.
+  const pending = (): string | null =>
+    waiting === null || waiting.to === waiting.from
+      ? null
+      : deps.describe(waiting.to);
 
   return {
     press: (from, to) => {
@@ -165,13 +210,15 @@ export function createThresholdRun(deps: ThresholdRunDeps): ThresholdRun {
           from,
           to,
           timer: setTimeout(end, RUN_QUIET_MS),
-          release: deps.gate.hold(end),
+          held: null,
         };
+        waiting.held = deps.gate.hold(end, pending);
         return;
       }
       clearTimeout(waiting.timer);
       waiting.to = to;
       waiting.timer = setTimeout(end, RUN_QUIET_MS);
+      waiting.held?.moved();
     },
     end,
     waiting: () => waiting !== null,

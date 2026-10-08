@@ -7,7 +7,11 @@
  *
  * Undo and Redo are described by what they would take back or bring
  * again, "Undo: the filter of the variants by missing data changed", and
- * are disabled when there is none. When the one that has the focus
+ * are disabled when there is none. On popgen2.html, while a run of the
+ * arrow keys on a threshold waits to become a change (thresholdRun.ts),
+ * Undo is enabled and names that change, which a click makes before it
+ * undoes it, as Ctrl+Z does; and Redo is disabled, since that change
+ * leaves nothing to redo. When the one that has the focus
  * becomes disabled, after the last step was undone or redone, the focus
  * moves to the other, which that change has just enabled, since a
  * disabled button cannot hold the focus, which the browser would drop to
@@ -26,6 +30,7 @@ import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 
 import { useAppState, useStore } from "../store.tsx";
+import { usePendingChange } from "../variants/runGate.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import { keepingFocus } from "./focusKept.ts";
@@ -37,8 +42,13 @@ import { undoOrRedo } from "./undoRedo.ts";
 export function UndoRedoButtons(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
+  const pending = usePendingChange();
   const undoText = useAppState((s) => s.undo);
-  const redoText = useAppState((s) => s.redo);
+  const storeRedo = useAppState((s) => s.redo);
+  // A run waiting will be the step Undo takes back, and will leave nothing
+  // to redo; the gated store makes it before an undo or a redo.
+  const shownUndo = pending ?? undoText;
+  const redoText = pending === null ? storeRedo : null;
   const undoRef = useRef<HTMLButtonElement>(null);
   const redoRef = useRef<HTMLButtonElement>(null);
 
@@ -99,8 +109,8 @@ export function UndoRedoButtons(): React.JSX.Element {
       <Button
         label="Undo"
         ref={undoRef}
-        isDisabled={undoText === null}
-        hint={undoText === null ? null : `Undo: ${undoText}`}
+        isDisabled={shownUndo === null}
+        hint={shownUndo === null ? null : `Undo: ${shownUndo}`}
         onPress={() => {
           change("undo");
         }}
