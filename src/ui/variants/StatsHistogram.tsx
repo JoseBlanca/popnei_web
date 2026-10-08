@@ -44,6 +44,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
+import { shortcutOf } from "../shell/shortcuts.ts";
 import { thresholdRefusedText } from "../steps/variants/words.ts";
 import { HistogramPlot } from "../widgets/HistogramPlot.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
@@ -135,10 +136,20 @@ export function StatsHistogram({
     announcer.announce(threshold.turnedText);
   });
   return (
+    // The keys of Undo and Redo pressed on the line or in the box are kept
+    // here, and do nothing: the thresholds are still state of the section,
+    // which no step of Undo holds, and the shell would take them for the
+    // project and undo the opening of the file. With something typed in
+    // the box, its own handler has put its number back before. To be
+    // removed by work package 9 of docs/plans/filters.md, which makes a
+    // threshold a command of the project.
     <div
       role="group"
       aria-label={plot.data.title}
       className={classOf(styles, "block")}
+      onKeyDown={(event) => {
+        if (shortcutOf(event) !== null) event.preventDefault();
+      }}
     >
       <div
         className={classOf(styles, "head")}

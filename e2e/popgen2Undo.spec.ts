@@ -314,3 +314,49 @@ test("SF6 D2 at 320 pixels, with the notice up and the focus on the open button,
   await expectAboveTheNotice();
   await expectNoViolations(makeAxeBuilder);
 });
+
+/** The histogram of the major allele frequency: its line and its box. */
+function mafThreshold(page: Page): {
+  readonly slider: Locator;
+  readonly box: Locator;
+} {
+  const group = stats(page).getByRole("group", {
+    name: "Major allele frequency",
+    exact: true,
+  });
+  return { slider: group.getByRole("slider"), box: group.getByRole("textbox") };
+}
+
+test("SF6 D2 Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z on the line or in the box of a threshold leave the file open, and Cmd+Z in WebKit", async ({
+  page,
+  browserName,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const { slider, box } = mafThreshold(page);
+  const keys = [
+    "Control+z",
+    "Control+y",
+    "Control+Shift+z",
+    ...(browserName === "webkit" ? ["Meta+z", "Meta+Shift+z"] : []),
+  ];
+
+  await slider.focus();
+  await page.keyboard.press("ArrowLeft");
+  for (const key of keys) {
+    await page.keyboard.press(key);
+    await expect(slider).toBeFocused();
+  }
+  await box.focus();
+  for (const key of keys) {
+    await page.keyboard.press(key);
+    await expect(box).toBeFocused();
+  }
+
+  await expectDone(page, "panel.vcf.gz");
+  await expect(undoButton(page)).toHaveAccessibleDescription(
+    "Undo: panel.vcf.gz opened",
+  );
+  await expect(redoButton(page)).toBeDisabled();
+});
