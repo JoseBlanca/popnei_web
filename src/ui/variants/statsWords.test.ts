@@ -8,10 +8,10 @@ import {
   individualFullTitle,
   individualThresholdName,
   individualTitle,
-  removesNothingText,
-  removesSomeText,
+  noValueThresholdLine,
   statsFirstText,
   statsRunningLine,
+  thresholdHiddenDescription,
   thresholdShownLabel,
   thresholdValueText,
   variantFullTitle,
@@ -75,39 +75,55 @@ describe("the words of the statistics of the open file", () => {
   });
 });
 
-describe("the owner's first round: what a screen reader hears of a threshold, with no line of what it keeps", () => {
-  test("the value of the line is the number alone, and with what the grey says when it keeps every one", () => {
-    expect(thresholdValueText(0.05, false, "variant")).toBe("0.05");
-    expect(thresholdValueText(0, false, "variant")).toBe("0");
-    expect(thresholdValueText(1, true, "variant")).toBe(
+describe("SF9 D4 what a screen reader hears of a threshold in its three looks", () => {
+  test("the value of the line: on, its number alone; on and grey, what the grey says of the plot; off, 1 and that it keeps every one", () => {
+    expect(thresholdValueText(0.05, "on", "variant")).toBe("0.05");
+    expect(thresholdValueText(0, "on", "variant")).toBe("0");
+    expect(thresholdValueText(0.1, "grey", "variant")).toBe(
+      "0.1, keeps every variant of the plot",
+    );
+    expect(thresholdValueText(0.15, "grey", "individual")).toBe(
+      "0.15, keeps every individual of the plot",
+    );
+    // Off: 1, the number the box shows, wherever the line stands.
+    expect(thresholdValueText(0.7, "off", "variant")).toBe(
       "1, keeps every variant",
     );
-    expect(thresholdValueText(0.15, true, "individual")).toBe(
-      "0.15, keeps every individual",
+    expect(thresholdValueText(0.045, "off", "individual")).toBe(
+      "1, keeps every individual",
     );
   });
 
-  test("while the pass runs the words of the grey end so far, and the number alone stays alone", () => {
-    expect(thresholdValueText(0.6, true, "variant", true)).toBe(
-      "0.6, keeps every variant so far",
+  test("the description of the box, for a screen reader alone: none while on, the plot's while grey, nothing while off", () => {
+    expect(thresholdHiddenDescription("on", "variant")).toBeNull();
+    expect(thresholdHiddenDescription("grey", "variant")).toBe(
+      "This filter removes no variant of the plot.",
     );
-    expect(thresholdValueText(0.004, false, "variant", true)).toBe("0.004");
+    expect(thresholdHiddenDescription("grey", "individual")).toBe(
+      "This filter removes no individual of the plot.",
+    );
+    expect(thresholdHiddenDescription("off", "variant")).toBe(
+      "This filter removes nothing.",
+    );
+    expect(thresholdHiddenDescription("off", "individual")).toBe(
+      "This filter removes nothing.",
+    );
   });
 
-  test("the description of the box of a threshold that removes nothing", () => {
-    expect(removesNothingText("variant")).toBe(
-      "This threshold removes no variant.",
+  test("the individuals with no value: removed by a filter on, said apart only while off; one, three, and so far", () => {
+    expect(noValueThresholdLine(3, true)).toBe(
+      "3 individuals with no called genotype are not in the histogram, and this filter removes them.",
     );
-    expect(removesNothingText("individual", true)).toBe(
-      "This threshold removes no individual so far.",
+    expect(noValueThresholdLine(3, false)).toBe(
+      "3 individuals with no called genotype are not in the histogram.",
     );
-  });
-
-  test("what is announced when a number committed in the box turns a threshold that removed nothing into one that removes some", () => {
-    expect(removesSomeText("variant")).toBe("This threshold removes variants.");
-    expect(removesSomeText("individual", true)).toBe(
-      "This threshold removes individuals so far.",
+    expect(noValueThresholdLine(1, true)).toBe(
+      "1 individual with no called genotype is not in the histogram, and this filter removes it.",
     );
+    expect(noValueThresholdLine(1, false, true)).toBe(
+      "1 individual with no called genotype so far is not in the histogram.",
+    );
+    expect(noValueThresholdLine(0, true)).toBeNull();
   });
 });
 

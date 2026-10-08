@@ -42,7 +42,9 @@ import { AnnouncerProvider } from "../shell/announcer.tsx";
 import { createAnnouncer } from "../shell/status.ts";
 import { StoreProvider } from "../store.tsx";
 import { announceChanges } from "./announceChanges.ts";
+import { RunGateProvider } from "./runGate.tsx";
 import { StatsSection } from "./StatsSection.tsx";
+import { createRunGate, gatedStore } from "./thresholdRun.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -155,6 +157,7 @@ async function drawPage(announced = true): Promise<Page> {
   });
   const openButton = createRef<HTMLButtonElement>();
   const announcer = createAnnouncer();
+  const gate = createRunGate();
   const announceShown = announced
     ? announceChanges(store, announcer, () => null)
     : () => () => undefined;
@@ -168,12 +171,16 @@ async function drawPage(announced = true): Promise<Page> {
     null,
     createElement(
       StoreProvider,
-      { value: store },
+      { value: gatedStore(store, gate) },
       createElement(
-        AnnouncerProvider,
-        { value: announcer },
-        createElement("button", { ref: openButton }, "Open variants file…"),
-        createElement(StatsSection, { autoRuns, openButton, onShown }),
+        RunGateProvider,
+        { value: gate },
+        createElement(
+          AnnouncerProvider,
+          { value: announcer },
+          createElement("button", { ref: openButton }, "Open variants file…"),
+          createElement(StatsSection, { autoRuns, openButton, onShown }),
+        ),
       ),
     ),
   );
@@ -368,15 +375,19 @@ describe("the section of the statistics of the open file", () => {
     });
     await settled();
     expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
-    // No line of what a threshold keeps: each, at the top of its axis,
-    // removes nothing, which the description of its box says, so far.
+    // No line of what a threshold keeps: the four that start off, the
+    // MAF's, the observed heterozygosity's and the individuals' two,
+    // remove nothing, which the description of their box says; the
+    // expected heterozygosity has no threshold.
     expect(partsText()).not.toMatch(/Keeps /u);
+    expect(partsText().match(/This filter removes nothing\./gu)).toHaveLength(
+      4,
+    );
+    // A box for each threshold, five: the line comes once the plot is
+    // laid out, which jsdom does not do.
     expect(
-      partsText().match(/This threshold removes no variant so far\./gu),
-    ).toHaveLength(4);
-    expect(
-      partsText().match(/This threshold removes no individual so far\./gu),
-    ).toHaveLength(2);
+      sectionOf()?.querySelectorAll('[role="group"] input[data-number-field]'),
+    ).toHaveLength(5);
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );
@@ -388,9 +399,9 @@ describe("the section of the statistics of the open file", () => {
       await Promise.resolve();
     });
     await settled();
-    expect(
-      partsText().match(/This threshold removes no variant so far\./gu),
-    ).toHaveLength(4);
+    expect(partsText().match(/This filter removes nothing\./gu)).toHaveLength(
+      4,
+    );
     expect([...container.querySelectorAll("svg.chart")]).toEqual(before);
 
     await endDone(page);
@@ -404,9 +415,9 @@ describe("the section of the statistics of the open file", () => {
       "true",
       "true",
     ]);
-    expect(
-      partsText().match(/This threshold removes no variant\./gu),
-    ).toHaveLength(4);
+    expect(partsText().match(/This filter removes nothing\./gu)).toHaveLength(
+      4,
+    );
     expect(
       [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
         (element) => element.textContent,

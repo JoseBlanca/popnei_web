@@ -160,6 +160,9 @@ async function drawPage(): Promise<Page> {
   const { StoreProvider } = await import("../store.tsx");
   const { announceChanges } = await import("./announceChanges.ts");
   const { StatsSection } = await import("./StatsSection.tsx");
+  const { RunGateProvider } = await import("./runGate.tsx");
+  const { createRunGate, gatedStore } = await import("./thresholdRun.ts");
+  const gate = createRunGate();
 
   const requests: Request[] = [];
   let lastId = 0;
@@ -202,12 +205,16 @@ async function drawPage(): Promise<Page> {
     null,
     createElement(
       StoreProvider,
-      { value: store },
+      { value: gatedStore(store, gate) },
       createElement(
-        AnnouncerProvider,
-        { value: announcer },
-        createElement("button", { ref: openButton }, "Open variants file…"),
-        createElement(StatsSection, { autoRuns, openButton, onShown }),
+        RunGateProvider,
+        { value: gate },
+        createElement(
+          AnnouncerProvider,
+          { value: announcer },
+          createElement("button", { ref: openButton }, "Open variants file…"),
+          createElement(StatsSection, { autoRuns, openButton, onShown }),
+        ),
       ),
     ),
   );

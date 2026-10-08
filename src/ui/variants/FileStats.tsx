@@ -9,15 +9,16 @@
  * statistics"):
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
- *   and the expected heterozygosity (unbiased), each with its threshold,
- *   grey when it keeps every variant in their bins; and, for a file whose
- *   variants record their FILTER, the FILTER box, in every state of the
- *   pass (PassedFilterBox.tsx);
+ *   and the expected heterozygosity (unbiased), the first three with
+ *   their threshold, a filter of the project, grey when it keeps every
+ *   variant in their bins or is off (SectionPlots.tsx); and, for a file
+ *   whose variants record their FILTER, the FILTER box, in every state
+ *   of the pass (PassedFilterBox.tsx);
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   each with its threshold, grey when it keeps every one; and the
- *   download of their table as CSV, which is not drawn, since there may
- *   be thousands of individuals.
+ *   each with its threshold, grey when it keeps every one or is off; and
+ *   the download of their table as CSV, which is not drawn, since there
+ *   may be thousands of individuals.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
  * the bins, and no bar nor button of its own: the bar of the pass, its
@@ -60,11 +61,8 @@ import {
   lazy,
   useLayoutEffect,
   useRef,
-  useState,
   useSyncExternalStore,
 } from "react";
-
-import { DEFAULT_MAX_MISSING_RATE } from "../../core/apps.ts";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
@@ -100,10 +98,6 @@ import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { PassedFilterBox } from "./PassedFilterBox.tsx";
 import type * as PlotsModule from "./SectionPlots.tsx";
-import type {
-  IndividualThresholds,
-  VariantThresholds,
-} from "./SectionPlots.tsx";
 import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
@@ -248,10 +242,6 @@ function Stats({
 }: StatsProps): React.JSX.Element {
   const sectionRef = useRef<HTMLElement>(null);
   const status = useAppState(summaryStatus);
-  // The thresholds on the plots, state of this load alone: another file
-  // is another section, which starts them again. They are shown only,
-  // and change no statistic and no project (docs/plans/thresholds.md).
-  const [thresholds, setThresholds] = useState(START_THRESHOLDS);
   // Selected for what autoRuns knows, which tells a pass stopped from one
   // about to start, and which a Stop with no pass running changes and the
   // store does not.
@@ -336,13 +326,6 @@ function Stats({
               numIndividuals={shown.result.perIndividual.individuals.length}
               ploidy={ploidy}
               soFar={soFar}
-              thresholds={thresholds.variants}
-              onThreshold={(statistic, value) => {
-                setThresholds((before) => ({
-                  ...before,
-                  variants: { ...before.variants, [statistic]: value },
-                }));
-              }}
             />
           </Suspense>
         )}
@@ -366,13 +349,6 @@ function Stats({
             <IndividualPlots
               result={shown.result.perIndividual}
               soFar={soFar}
-              thresholds={thresholds.individuals}
-              onThreshold={(statistic, value) => {
-                setThresholds((before) => ({
-                  ...before,
-                  individuals: { ...before.individuals, [statistic]: value },
-                }));
-              }}
             />
             {done !== undefined && (
               <IndividualsDownload
@@ -461,29 +437,3 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
   }
   return { result, soFar };
 }
-
-/** The thresholds of the six histograms, as the user set them: a
-    number, rounded to the step of its axis when it was committed and
-    drawn as it is, or `null` for the top of the axis, which
-    keeps everything and follows the axis as a result so far widens it. */
-interface Thresholds {
-  readonly variants: VariantThresholds;
-  readonly individuals: IndividualThresholds;
-}
-
-/** The thresholds of a file just open: the missing rate of the variants
-    at 0.1, the default of its filter in docs/functionality.md, and the
-    five others at the top of their axis (docs/plans/thresholds.md, "The
-    starting values"). */
-const START_THRESHOLDS: Thresholds = Object.freeze({
-  variants: Object.freeze({
-    missingRate: DEFAULT_MAX_MISSING_RATE,
-    maf: null,
-    obsHet: null,
-    unbiasedExpHet: null,
-  }),
-  individuals: Object.freeze({
-    missingGenotypes: null,
-    observedHeterozygosity: null,
-  }),
-});

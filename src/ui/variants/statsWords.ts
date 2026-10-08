@@ -12,8 +12,9 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import { counted, escaped } from "../../core/project.ts";
+import { THRESHOLD_OFF_AT, counted, escaped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
+import type { ThresholdLook } from "../../core/thresholds.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import { INDIVIDUAL_HISTOGRAMS } from "../steps/variants/individualStats.ts";
@@ -131,9 +132,6 @@ export const PART_STOPPED =
 /** What a part says in place of its plots once the pass failed, whose
     words the box of the file says. */
 export const PART_FAILED = "Not calculated.";
-
-/** What the words of a threshold drawn from a result so far end with. */
-const SO_FAR = " so far";
 
 /** What the description of a histogram drawn from a result so far ends
     with, for a screen reader. */
@@ -265,53 +263,68 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
 /** The kind of what a histogram counts, in the words of its threshold. */
 export type Counted = "variant" | "individual";
 
-/** What a screen reader says as the value of the line of a threshold:
-    the number, `shown` as the box shows it, "0.05"; and for a threshold
-    that keeps every variant or individual with a value, `keepsAll`,
-    which the screen draws in grey, what that grey says, "1, keeps every
-    variant", ending "so far" while the pass runs, `soFar`. */
+/** What a screen reader says as the value of the line of a threshold in
+    the look `look` (docs/specs/steps/popgen2-filters.md, "Its words"):
+    on, its number alone, `shown` as the box shows it, "0.05"; on and
+    grey, keeping every variant or individual of its plot, what that grey
+    says, "0.1, keeps every variant of the plot"; off, "1, keeps every
+    variant", 1 being the number its box shows. The grey's words say "of
+    the plot", since a filter on still removes what is in no histogram, a
+    variant with no called genotype or an individual with no value. */
 export function thresholdValueText(
   shown: number,
-  keepsAll: boolean,
+  look: ThresholdLook,
   noun: Counted,
-  soFar = false,
 ): string {
-  const number = numberText(shown);
-  return keepsAll
-    ? `${number}, keeps every ${noun}${soFar ? SO_FAR : ""}`
-    : number;
+  switch (look) {
+    case "on":
+      return numberText(shown);
+    case "grey":
+      return `${numberText(shown)}, keeps every ${noun} of the plot`;
+    case "off":
+      return `${numberText(THRESHOLD_OFF_AT)}, keeps every ${noun}`;
+  }
 }
 
-/** What a screen reader says of the box of a threshold that keeps every
-    variant or individual with a value, which the screen draws in grey,
-    as its description: "This threshold removes no variant."; ending "so
-    far" while the pass runs, `soFar`. */
-export function removesNothingText(noun: Counted, soFar = false): string {
-  return `This threshold removes no ${noun}${soFar ? SO_FAR : ""}.`;
-}
-
-/** What is announced when a number committed in the box of a threshold
-    that kept every variant or individual with a value makes it remove
-    some, and the grey goes: "This threshold removes variants."; ending
-    "so far" while the pass runs, `soFar`. */
-export function removesSomeText(noun: Counted, soFar = false): string {
-  return `This threshold removes ${noun}s${soFar ? SO_FAR : ""}.`;
+/** The description of the box of a threshold in the look `look`, which a
+    screen reader alone reads after its name and its number, and the
+    screen says by the grey: on and grey, "This filter removes no variant
+    of the plot."; off, "This filter removes nothing."; `null` while it
+    removes some value of its plot. */
+export function thresholdHiddenDescription(
+  look: ThresholdLook,
+  noun: Counted,
+): string | null {
+  switch (look) {
+    case "on":
+      return null;
+    case "grey":
+      return `This filter removes no ${noun} of the plot.`;
+    case "off":
+      return "This filter removes nothing.";
+  }
 }
 
 /** The line under a histogram of the individuals of those with no value,
-    with a threshold on it, which neither keeps nor removes them: "3
-    individuals with no called genotype are not in the histogram, and the
-    threshold neither keeps nor removes them."; `null` when every one has
-    a value. */
+    `numNaN`, which a filter on removes, since no value is at most any
+    threshold (individualsKept.ts), and a filter off keeps: on, "3
+    individuals with no called genotype are not in the histogram, and
+    this filter removes them."; off, "3 individuals with no called
+    genotype are not in the histogram."; "so far" after "genotype" for a
+    result so far, `soFar`; `null` when every one has a value. */
 export function noValueThresholdLine(
   numNaN: number,
+  on: boolean,
   soFar = false,
 ): string | null {
   if (numNaN === 0) return null;
   const which = soFar
     ? "with no called genotype so far"
     : "with no called genotype";
-  return numNaN === 1
-    ? `1 individual ${which} is not in the histogram, and the threshold neither keeps nor removes it.`
-    : `${counted(numNaN, "individual")} ${which} are not in the histogram, and the threshold neither keeps nor removes them.`;
+  if (numNaN === 1) {
+    const removes = on ? ", and this filter removes it" : "";
+    return `1 individual ${which} is not in the histogram${removes}.`;
+  }
+  const removes = on ? ", and this filter removes them" : "";
+  return `${counted(numNaN, "individual")} ${which} are not in the histogram${removes}.`;
 }

@@ -3,43 +3,38 @@
  * group named by its full title: one row, its short title, "max:" and the
  * box of its threshold, "Obs. het. max: [0.04]"; and under it the plot,
  * with the line of the threshold the user drags over it
- * (docs/plans/thresholds.md, "Round 1 with the owner"). No words say what
- * the threshold keeps (the owner, 8 October 2026, docs/plans/popnei-0.2.2.md):
- * a threshold that keeps every variant or individual with a value is
- * drawn in grey, its line and the number in its box, and a screen reader
- * hears it in the value of the line, "1, keeps every variant", and in the
- * description of the box, "This threshold removes no variant.", a text
- * of the page that is not drawn (WCAG 1.4.1, colour is never the only
- * sign). A screen reader reads that description only when the box takes
- * the focus, so a number committed in the box, by Enter, by leaving it or
- * by an arrow key, that turns the threshold grey or back is announced,
- * once, "This threshold removes no variant." or "This threshold removes
- * variants.". No table of its bins and no download, which the owner wants
- * out of this page until the piece of the downloads
- * (docs/plans/file-stats.md, "Where it goes"). Drawn from the result, or
- * from a result so far while the pass runs, whose words say so.
+ * (docs/plans/thresholds.md, "Round 1 with the owner"). The expected
+ * heterozygosity, on which popnei has no filter, has its short title
+ * alone, and no box and no line. No table of its bins and no download,
+ * which the owner wants out of this page until the piece of the
+ * downloads (docs/plans/file-stats.md, "Where it goes"). Drawn from the
+ * result, or from a result so far while the pass runs, whose words say
+ * so.
  *
- * The threshold is shown only (docs/plans/thresholds.md): it changes no
- * statistic and no project. The box and the line follow each other: the
- * line follows the number as it is typed, and the box the line as it is
- * dragged or moved with the keys. A number typed is rounded to the step
- * of the axis, which the box then shows, with no words: it shows the
- * decimals of the step.
+ * The threshold is a filter of the project
+ * (docs/specs/steps/popgen2-filters.md, "A threshold, on and off", "When
+ * a threshold changes the project"): the box and the line show the
+ * project's value, so that Undo and Redo move them, and change it once
+ * per drag, at the release of the pointer, once per number committed in
+ * the box, by Enter, Tab or leaving it, and once per run of the keys, a
+ * second after the last press or when the focus leaves; meanwhile only
+ * this histogram follows the number dragged, typed or moved. An emptied
+ * box, or 1, turns the filter off. From off, Down and Page Down in the
+ * box turn it on one and ten steps below the top of the axis, as on the
+ * line, and Up and Page Up do nothing. No words on the screen say what a
+ * threshold keeps: one that keeps every variant or individual of its
+ * plot, or is off, is drawn in grey, its line and the number in its box,
+ * and a screen reader hears it in the value of the line and in a
+ * description of the box that the screen does not draw. Nothing is
+ * announced as the grey comes or goes.
  *
- * The arrow keys in the box move the threshold as they move the line, one
- * step of the axis, Page Up and Page Down ten, from where the line is,
- * at the number typed when one is, which the box puts back first: React
- * Aria would step from the number the box holds. They are bounded by the range of the box, 0 to 1, and
- * not by the axis, which ends at a threshold beyond the bins: from 0.11
- * on an axis of bins to 0.1, Down gives 0.109 and Up 0.11 again.
- *
- * From the first change of its text to the first commit or to its blur,
- * the box keeps the number it showed at that change: a threshold never
- * set follows the top of the axis, which a result so far can widen, and
- * React Aria would put the new number over what the user is typing. Until
- * the user types, the box shows the number of the line.
+ * Ctrl+Z and Ctrl+Y on the line or in the box while a run waits make the
+ * run a change, and then go on to the page's Undo or Redo, so that Undo
+ * undoes the run. A threshold that leaves the page, the worker crashed,
+ * makes its run, its drag or its number typed a change first, and the
+ * focus it held goes to the heading of the page.
  */
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
@@ -49,25 +44,33 @@ import { thresholdRefusedText } from "../steps/variants/words.ts";
 import { HistogramPlot } from "../widgets/HistogramPlot.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
 import { ThresholdSlider } from "../widgets/ThresholdSlider.tsx";
-import type { StatsPlot } from "./statsPlots.ts";
+import { useRunGate } from "./runGate.tsx";
+import type { PlotThreshold, StatsPlot } from "./statsPlots.ts";
 import styles from "./StatsHistogram.module.css";
+import { createThresholdRun } from "./thresholdRun.ts";
+import type { ThresholdRun } from "./thresholdRun.ts";
 
 /** What one histogram is drawn with. */
 export interface StatsHistogramProps {
-  /** The histogram with its threshold, the one typed
-      while a number is typed in the box; the same object until its
-      result or its threshold changes, so that the plot is not drawn
-      again on renders that changed nothing. */
+  /** The histogram with its threshold as it is drawn, the number typed
+      while one is typed in the box; the same object until its result or
+      its threshold changes, so that the plot is not drawn again on
+      renders that changed nothing. */
   readonly plot: StatsPlot;
-  /** The number the box shows, the threshold set, which a number typed
-      and not yet committed does not change. */
-  readonly boxValue: number;
-  /** Called with the threshold the user set, typed in the box and
-      committed, or moved on the line. */
-  readonly onThreshold: (threshold: number) => void;
+  /** Its threshold with no number typed: the project's, or the one
+      dragged or moved with the keys and not yet a change; `null` for the
+      expected heterozygosity, which has none. */
+  readonly set: PlotThreshold | null;
+  /** Called with the threshold dragged or moved with the keys and not
+      yet a change of the project, on the step of its axis, or `null`
+      when the threshold shows the project's again. */
+  readonly onMoving: (value: number | null) => void;
   /** Called at each key typed in the box with the number it holds, or
       `null` while it holds none the box would take, and at each commit. */
   readonly onTyped: (typed: number | null) => void;
+  /** Sets the threshold of the project to `value`, on the step of its
+      axis, 1 for off, or `null` for an emptied box. */
+  readonly onSet: (value: number | null) => void;
 }
 
 /** Writes `frame`, where the plot drew its frame, on `element`, around
@@ -91,12 +94,14 @@ function writeFrame(
 /** A histogram of the section, with its threshold. */
 export function StatsHistogram({
   plot,
-  boxValue,
-  onThreshold,
+  set,
+  onMoving,
   onTyped,
+  onSet,
 }: StatsHistogramProps): React.JSX.Element {
-  const removesNothingId = useId();
   const announcer = useAnnouncer();
+  const gate = useRunGate();
+  const blockRef = useRef<HTMLDivElement>(null);
   // The element of the plot and the line, on which the frame of the plot
   // is written as the plot draws it, the frame last drawn, and whether it
   // was drawn once, before which the line has nowhere to go.
@@ -116,98 +121,165 @@ export function StatsHistogram({
   useLayoutEffect(() => {
     writeFrame(plotRef.current, frameRef.current);
   }, []);
-  // The number the box keeps from the first change of its text to its
-  // first commit or its blur; null when it shows `boxValue`.
-  const [held, setHeld] = useState<number | null>(null);
-  const { threshold } = plot;
-  // Whether a screen reader last heard that the threshold keeps every
-  // variant or individual, from the description of the box as it took
-  // the focus or from an announcement since; and whether the box
-  // committed a number since the last draw.
-  const heardKeepsAll = useRef(threshold.keepsAll);
-  const committed = useRef(false);
-  // After the draw of a number committed in the box: what it turned the
-  // threshold into, when that is not what was heard.
-  useEffect(() => {
-    if (!committed.current) return;
-    committed.current = false;
-    if (threshold.keepsAll === heardKeepsAll.current) return;
-    heardKeepsAll.current = threshold.keepsAll;
-    announcer.announce(threshold.turnedText);
+
+  // The latest callbacks, for the run, whose timer ends it after the
+  // render that made it, and for the cleanup.
+  const onSetRef = useRef(onSet);
+  const onMovingRef = useRef(onMoving);
+  useLayoutEffect(() => {
+    onSetRef.current = onSet;
+    onMovingRef.current = onMoving;
   });
+  // The run of the keys of this threshold, made at its first press; read
+  // in the handlers alone.
+  const runRef = useRef<ThresholdRun | null>(null);
+  const runOf = (): ThresholdRun => {
+    runRef.current ??= createThresholdRun({
+      gate,
+      change: (to) => {
+        onSetRef.current(to);
+      },
+      ended: () => {
+        onMovingRef.current(null);
+      },
+    });
+    return runRef.current;
+  };
+  // The drag under way: where the line stood before it, and where it was
+  // last dragged to.
+  const drag = useRef<{ readonly from: number; to: number } | null>(null);
+  // The commit of the box, as Enter would, while it is drawn; held by the
+  // gate for an opening by a drop or a paste, which leave the focus in it.
+  const commitRef = useRef<(() => void) | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(
+    () =>
+      gate.typing(() => {
+        if (boxRef.current?.contains(document.activeElement) === true) {
+          commitRef.current?.();
+        }
+      }),
+    [gate],
+  );
+
+  // The threshold leaving the page, the worker crashed: what the user did
+  // and has not made a change is made one, and the focus it held goes to
+  // the heading of the page once it is gone, not to nothing. Before the
+  // elements go: the cleanup of a layout effect runs while they are in
+  // the page.
+  useLayoutEffect(
+    () => () => {
+      const block = blockRef.current;
+      const hadFocus = block?.contains(document.activeElement) === true;
+      if (boxRef.current?.contains(document.activeElement) === true) {
+        commitRef.current?.();
+      }
+      runRef.current?.end();
+      const dragged = drag.current;
+      drag.current = null;
+      if (dragged !== null && dragged.to !== dragged.from) {
+        onSetRef.current(dragged.to);
+      }
+      if (!hadFocus) return;
+      queueMicrotask(() => {
+        const now = document.activeElement;
+        if (now !== null && now !== document.body && now.isConnected) return;
+        const heading = document.querySelector("main h1");
+        if (heading instanceof HTMLElement) heading.focus();
+      });
+    },
+    [],
+  );
+
+  const { threshold } = plot;
+  if (threshold === null || set === null) {
+    return (
+      <div
+        role="group"
+        aria-label={plot.data.title}
+        className={classOf(styles, "block")}
+      >
+        <p className={classOf(styles, "title")}>{plot.shortTitle}</p>
+        <div className={classOf(styles, "plot")}>
+          <HistogramPlot data={plot.data} />
+        </div>
+      </div>
+    );
+  }
+
+  /** A press of a key moved the threshold to `value`, on its step. */
+  const pressed = (value: number): void => {
+    runOf().press(set.slider.value, value);
+    onMoving(value);
+  };
+
   return (
-    // The keys of Undo and Redo pressed on the line or in the box are kept
-    // here, and do nothing: the thresholds are still state of the section,
-    // which no step of Undo holds, and the shell would take them for the
-    // project and undo the change before them, a click of the FILTER box.
-    // With something typed in
-    // the box, its own handler has put its number back before. To be
-    // removed by work package 9 of docs/plans/filters.md, which makes a
-    // threshold a command of the project.
     <div
+      ref={blockRef}
       role="group"
       aria-label={plot.data.title}
       className={classOf(styles, "block")}
       onKeyDown={(event) => {
-        if (shortcutOf(event) !== null) event.preventDefault();
+        // Undo or Redo with a run waiting: the run made a change first,
+        // and the keys go on to the page's Undo or Redo. With something
+        // typed in the box, its own handler has put its number back.
+        if (
+          !event.defaultPrevented &&
+          shortcutOf(event) !== null &&
+          runRef.current?.waiting() === true
+        ) {
+          runRef.current.end();
+        }
+      }}
+      onBlur={() => {
+        runRef.current?.end();
       }}
     >
-      <div
-        className={classOf(styles, "head")}
-        onInput={() => {
-          if (held === null) setHeld(boxValue);
-        }}
-        onBlur={() => {
-          setHeld(null);
-        }}
-        onFocus={() => {
-          heardKeepsAll.current = threshold.keepsAll;
-        }}
-      >
+      <div ref={boxRef} className={classOf(styles, "head")}>
         <NumberField
           label={threshold.name}
           shownLabel={threshold.shownLabel}
-          value={held ?? boxValue}
+          value={set.box.value}
           minValue={threshold.box.minValue}
           maxValue={threshold.box.maxValue}
           step={threshold.box.step}
           decimals={threshold.box.decimals}
-          muted={threshold.keepsAll}
-          {...(threshold.removesNothing !== null && {
-            describedBy: removesNothingId,
+          muted={threshold.look !== "on"}
+          {...(threshold.hiddenDescription !== null && {
+            hiddenDescription: threshold.hiddenDescription,
           })}
           refusedText={thresholdRefusedText}
           onRefused={(text) => {
             announcer.announce(text);
           }}
+          onCommitReady={(commit) => {
+            commitRef.current = commit;
+          }}
           onTyped={onTyped}
           onChange={(value) => {
-            setHeld(null);
-            committed.current = true;
-            onThreshold(threshold.onStep(value));
+            runRef.current?.end();
+            onSet(threshold.onStep(value));
+          }}
+          onEmptied={() => {
+            runRef.current?.end();
+            onSet(null);
           }}
           // From where the line is, at the number typed when one is, which
           // the field puts back and tells the screen it is typed no more.
+          // From off, at the top of the axis, Down goes below it, and Up
+          // leaves the threshold off, where React Aria would go a step
+          // below 1 and widen the axis.
           onSteps={(steps) => {
+            if (set.look === "off" && steps > 0) return;
             const { step, value } = threshold.slider;
             const { minValue, maxValue } = threshold.box;
-            const moved = threshold.onStep(
-              Math.min(maxValue, Math.max(minValue, value + steps * step)),
+            pressed(
+              threshold.onStep(
+                Math.min(maxValue, Math.max(minValue, value + steps * step)),
+              ),
             );
-            setHeld(null);
-            committed.current = true;
-            // Set even when it is the number set: a number typed at the
-            // bound of the box, stepped past it, is then set.
-            onThreshold(moved);
           }}
         />
-        {threshold.removesNothing !== null && (
-          // Read as the description of the box, and not drawn: the grey
-          // of the number says it to the eye.
-          <p id={removesNothingId} className={classOf(styles, "hidden")}>
-            {threshold.removesNothing}
-          </p>
-        )}
       </div>
       <div ref={plotRef} className={classOf(styles, "plot")}>
         <HistogramPlot data={plot.data} onFrame={onFrame} />
@@ -219,9 +291,28 @@ export function StatsHistogram({
             step={threshold.slider.step}
             value={threshold.slider.value}
             valueText={threshold.valueText}
-            muted={threshold.keepsAll}
-            onChange={(value) => {
-              onThreshold(threshold.onStep(value));
+            muted={threshold.look !== "on"}
+            onChange={(value, by) => {
+              const moved = threshold.onStep(value);
+              if (by === "key") {
+                pressed(moved);
+                return;
+              }
+              if (drag.current === null) {
+                // A run waiting is a change of its own, before the drag.
+                runRef.current?.end();
+                drag.current = { from: set.slider.value, to: moved };
+              } else {
+                drag.current.to = moved;
+              }
+              onMoving(moved);
+            }}
+            onDragEnd={(value) => {
+              const moved = threshold.onStep(value);
+              const dragged = drag.current;
+              drag.current = null;
+              if (dragged !== null && moved !== dragged.from) onSet(moved);
+              onMoving(null);
             }}
           />
         )}

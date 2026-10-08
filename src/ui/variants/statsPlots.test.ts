@@ -9,8 +9,24 @@ import type {
 } from "../../worker/protocol.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
+import type { PlotThreshold, StatsPlot } from "./statsPlots.ts";
 import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../../worker/protocol.ts";
+
+/** The threshold of `plot`, which a histogram with no threshold, or no
+    histogram, fails the test for. */
+function th(plot: StatsPlot | null | undefined): PlotThreshold {
+  if (plot?.threshold === null || plot?.threshold === undefined) {
+    throw new Error("no threshold");
+  }
+  return plot.threshold;
+}
+
+/** Whether the threshold of `plot` is drawn in grey: on and keeping
+    every value of its plot, or off. */
+function grey(plot: StatsPlot | null | undefined): boolean {
+  return th(plot).look !== "on";
+}
 
 /** Three individuals, one with no called genotype: its missing rate is 1,
     and it has no heterozygosity, NaN, as popnei gives it. */
@@ -57,11 +73,11 @@ describe("the histograms of the statistics of the open file", () => {
       null,
     );
     expect(missing.data.title).toBe("Proportion of missing genotypes");
-    expect(missing.threshold.shownLabel).toBe("Missing genotypes\u00a0max:");
+    expect(th(missing).shownLabel).toBe("Missing genotypes\u00a0max:");
     const maf = variantPlot("maf", VARIANTS, NO_SPACING, false, null);
     expect(maf.data.title).toBe("Major allele frequency");
     expect(maf.data.xLabel).toBe("Major allele frequency");
-    expect(maf.threshold.shownLabel).toBe("Major allele frequency\u00a0max:");
+    expect(th(maf).shownLabel).toBe("Major allele frequency\u00a0max:");
     expect(
       variantPlot("obsHet", VARIANTS, NO_SPACING, false, null).data.xLabel,
     ).toBe("Observed heterozygosity");
@@ -74,11 +90,14 @@ describe("the histograms of the statistics of the open file", () => {
     });
   });
 
-  test("live-stats 2 a histogram of a result so far says so in the words of a threshold that removes nothing, and draws the same bins", () => {
+  test("SF9 D4 a histogram of a result so far draws the same bins, and the words of its threshold are those of the plot drawn, with no so far", () => {
     const soFar = variantPlot("maf", VARIANTS, NO_SPACING, true, null);
-    expect(soFar.threshold.valueText).toBe("0.8, keeps every variant so far");
-    expect(soFar.threshold.removesNothing).toBe(
-      "This threshold removes no variant so far.",
+    expect(th(soFar).valueText).toBe("1, keeps every variant");
+    expect(th(soFar).hiddenDescription).toBe("This filter removes nothing.");
+    const greyOn = variantPlot("maf", VARIANTS, NO_SPACING, true, 0.8);
+    expect(th(greyOn).valueText).toBe("0.8, keeps every variant of the plot");
+    expect(th(greyOn).hiddenDescription).toBe(
+      "This filter removes no variant of the plot.",
     );
     const done = variantPlot("maf", VARIANTS, NO_SPACING, false, null).data;
     expect({ ...soFar.data, description: "" }).toEqual({
@@ -89,36 +108,51 @@ describe("the histograms of the statistics of the open file", () => {
       "observedHeterozygosity",
       INDIVIDUALS,
       true,
-      null,
+      0.4,
     );
-    expect(het.plot?.threshold.valueText).toBe(
-      "0.4, keeps every individual so far",
+    expect(th(het.plot).valueText).toBe(
+      "0.4, keeps every individual of the plot",
     );
   });
 
-  test("live-stats 2 the individuals with no called genotype in a result so far are said to have none so far", () => {
+  test("SF9 D4 the individuals with no called genotype, in a result so far said to have none so far, are removed by a filter on and kept by one off", () => {
+    expect(
+      individualPlot("observedHeterozygosity", INDIVIDUALS, true, 0.5)
+        .noValueLine,
+    ).toBe(
+      "1 individual with no called genotype so far is not in the histogram, and this filter removes it.",
+    );
     expect(
       individualPlot("observedHeterozygosity", INDIVIDUALS, true, null)
         .noValueLine,
     ).toBe(
-      "1 individual with no called genotype so far is not in the histogram, and the threshold neither keeps nor removes it.",
+      "1 individual with no called genotype so far is not in the histogram.",
     );
     const twoOfThree = {
       ...INDIVIDUALS,
       obsHetRate: Float64Array.from([0.3, NaN, NaN]),
     };
     expect(
-      individualPlot("observedHeterozygosity", twoOfThree, true, null)
+      individualPlot("observedHeterozygosity", twoOfThree, true, 0.5)
         .noValueLine,
     ).toBe(
-      "2 individuals with no called genotype so far are not in the histogram, and the threshold neither keeps nor removes them.",
+      "2 individuals with no called genotype so far are not in the histogram, and this filter removes them.",
+    );
+    expect(
+      individualPlot("observedHeterozygosity", twoOfThree, false, 0.5)
+        .noValueLine,
+    ).toBe(
+      "2 individuals with no called genotype are not in the histogram, and this filter removes them.",
     );
     expect(
       individualPlot("observedHeterozygosity", twoOfThree, false, null)
         .noValueLine,
-    ).toBe(
-      "2 individuals with no called genotype are not in the histogram, and the threshold neither keeps nor removes them.",
-    );
+    ).toBe("2 individuals with no called genotype are not in the histogram.");
+    // 1 is off, as null.
+    expect(
+      individualPlot("observedHeterozygosity", twoOfThree, false, 1)
+        .noValueLine,
+    ).toBe("2 individuals with no called genotype are not in the histogram.");
   });
 
   test("live-stats 2 the description of a plot of a result so far, which a screen reader reads, says it is drawn from the variants read so far", () => {
@@ -164,8 +198,8 @@ describe("the histograms of the statistics of the open file", () => {
       false,
       null,
     );
-    expect(missing.plot?.threshold.keepsAll).toBe(true);
-    expect(missing.plot?.threshold.shownLabel).toBe("Missing GTs\u00a0max:");
+    expect(grey(missing.plot)).toBe(true);
+    expect(th(missing.plot).shownLabel).toBe("Missing GTs\u00a0max:");
     expect(missing.noValueLine).toBeNull();
     expect(missing.plot?.data.edges[0]).toBe(0);
     expect(missing.plot?.data.edges.at(-1)).toBe(1);
@@ -176,10 +210,10 @@ describe("the histograms of the statistics of the open file", () => {
       false,
       null,
     );
-    expect(het.plot?.threshold.keepsAll).toBe(true);
-    expect(het.plot?.threshold.shownLabel).toBe("Obs. het.\u00a0max:");
+    expect(grey(het.plot)).toBe(true);
+    expect(th(het.plot).shownLabel).toBe("Obs. het.\u00a0max:");
     expect(het.noValueLine).toBe(
-      "1 individual with no called genotype is not in the histogram, and the threshold neither keeps nor removes it.",
+      "1 individual with no called genotype is not in the histogram.",
     );
     expect(het.plot?.data.edges[0]).toBe(0.3);
     expect(het.plot?.data.edges.at(-1)).toBe(0.4);
@@ -265,7 +299,7 @@ function numbersOf(value: unknown): number[] {
 }
 
 describe("thresholds round 1 the threshold on each histogram", () => {
-  test("at the top of the axis, until the user moves it, it keeps every variant and is grey; it moves by the step of its axis, 0.001 on 0 to 0.1", () => {
+  test("SF9 D4 off, its line at the top of the axis and 1 in its box, grey, with the words of off; it moves by the step of its axis, 0.001 on 0 to 0.1", () => {
     // The missing rate of panel.vcf.gz runs to 0.08, its axis to 0.1.
     const plot = variantPlot(
       "missingRate",
@@ -279,27 +313,37 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       legend: null,
       keepsAll: true,
     });
-    expect(plot.threshold.shown).toBe(0.1);
-    expect(plot.threshold.slider).toEqual({
+    expect(th(plot).slider.value).toBe(0.1);
+    expect(th(plot).slider).toEqual({
       min: 0,
       max: 0.1,
       step: 0.001,
       value: 0.1,
     });
-    expect(plot.threshold.keepsAll).toBe(true);
-    expect(plot.threshold.valueText).toBe("0.1, keeps every variant");
-    expect(plot.threshold.removesNothing).toBe(
-      "This threshold removes no variant.",
+    expect(th(plot).look).toBe("off");
+    expect(th(plot).valueText).toBe("1, keeps every variant");
+    expect(th(plot).hiddenDescription).toBe("This filter removes nothing.");
+    // On at 0.1, the top of the axis: grey, with the words of the plot.
+    const on = variantPlot(
+      "missingRate",
+      PANEL.variants,
+      PANEL_INDIVIDUALS,
+      false,
+      0.1,
     );
-    expect(plot.threshold.turnedText).toBe(
-      "This threshold removes no variant.",
+    expect(th(on).look).toBe("grey");
+    expect(th(on).box.value).toBe(0.1);
+    expect(th(on).valueText).toBe("0.1, keeps every variant of the plot");
+    expect(th(on).hiddenDescription).toBe(
+      "This filter removes no variant of the plot.",
     );
-    expect(plot.threshold.name).toBe(
+    expect(th(plot).name).toBe(
       "Missing genotypes\u00a0max: maximum proportion of missing genotypes",
     );
     // The box: from 0 to 1, the arrow keys by the step, a number typed
     // of up to ten decimals, rounded to the step.
-    expect(plot.threshold.box).toEqual({
+    expect(th(plot).box).toEqual({
+      value: 1,
       minValue: 0,
       maxValue: 1,
       step: 0.001,
@@ -320,7 +364,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       0, 0.001, 0.006,
     ]);
     expect(plot.data.edges.at(-1)).toBe(0.1);
-    expect(plot.threshold.slider.step).toBe(0.001);
+    expect(th(plot).slider.step).toBe(0.001);
   });
 
   test("a threshold of 0 keeps the first bar of the missing rate, the variants with no missing genotype, and removes the others; the first bar of the MAF is not drawn so", () => {
@@ -354,10 +398,9 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       legend: null,
       keepsAll: false,
     });
-    expect(plot.threshold.keepsAll).toBe(false);
-    expect(plot.threshold.valueText).toBe("0.05");
-    expect(plot.threshold.removesNothing).toBeNull();
-    expect(plot.threshold.turnedText).toBe("This threshold removes variants.");
+    expect(grey(plot)).toBe(false);
+    expect(th(plot).valueText).toBe("0.05");
+    expect(th(plot).hiddenDescription).toBeNull();
     const individuals = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
@@ -369,8 +412,8 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       legend: null,
       keepsAll: false,
     });
-    expect(individuals?.threshold.valueText).toBe("0.03");
-    expect(individuals?.threshold.removesNothing).toBeNull();
+    expect(th(individuals).valueText).toBe("0.03");
+    expect(th(individuals).hiddenDescription).toBeNull();
   });
 
   test("the missing rate of panel.vcf.gz goes grey at 0.08, the right edge of the fine bin of its largest value, 16 of 200, and not at 0.079", () => {
@@ -381,7 +424,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
         PANEL_INDIVIDUALS,
         false,
         threshold,
-      ).threshold.keepsAll;
+      ).threshold?.look !== "on";
     expect(at(0.079)).toBe(false);
     expect(at(0.08)).toBe(true);
     expect(at(0.5)).toBe(true);
@@ -397,7 +440,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     );
     const { data } = het;
     expect([data.edges[0], data.edges.at(-1)]).toEqual([0, 0.7]);
-    expect(het.threshold.slider.step).toBe(0.01);
+    expect(th(het).slider.step).toBe(0.01);
     const maf = variantPlot(
       "maf",
       PANEL.variants,
@@ -406,7 +449,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       null,
     );
     expect([maf.data.edges[0], maf.data.edges.at(-1)]).toEqual([0.45, 1]);
-    expect(maf.threshold.slider.step).toBe(0.01);
+    expect(th(maf).slider.step).toBe(0.01);
   });
 
   test("a number typed is rounded to the step of its axis, and shown there", () => {
@@ -418,12 +461,12 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       null,
       0.0734,
     );
-    expect(plot.threshold.shown).toBe(0.073);
+    expect(th(plot).slider.value).toBe(0.073);
     expect(plot.data.threshold?.value).toBe(0.073);
-    expect(plot.threshold.slider.value).toBe(0.073);
-    expect(plot.threshold.valueText).toBe("0.073");
-    expect(plot.threshold.onStep(0.0734)).toBe(0.073);
-    expect(plot.threshold.onStep(0.07300000000000001)).toBe(0.073);
+    expect(th(plot).slider.value).toBe(0.073);
+    expect(th(plot).valueText).toBe("0.073");
+    expect(th(plot).onStep(0.0734)).toBe(0.073);
+    expect(th(plot).onStep(0.07300000000000001)).toBe(0.073);
     const het = variantPlot(
       "obsHet",
       PANEL.variants,
@@ -432,7 +475,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       null,
       0.3349,
     );
-    expect(het.threshold.shown).toBe(0.33);
+    expect(th(het).slider.value).toBe(0.33);
   });
 
   test("the owner's first round: 0 is a threshold of the variants, typed, or below 0.0005, as of the individuals; on panel.vcf.gz it keeps the 2 variants with no missing genotype, so it is not grey", () => {
@@ -445,12 +488,12 @@ describe("thresholds round 1 the threshold on each histogram", () => {
         null,
         typed,
       );
-      expect(plot.threshold.shown).toBe(0);
+      expect(th(plot).slider.value).toBe(0);
       expect(plot.data.threshold?.value).toBe(0);
-      expect(plot.threshold.slider.value).toBe(0);
-      expect(plot.threshold.onStep(typed)).toBe(0);
-      expect(plot.threshold.keepsAll).toBe(false);
-      expect(plot.threshold.valueText).toBe("0");
+      expect(th(plot).slider.value).toBe(0);
+      expect(th(plot).onStep(typed)).toBe(0);
+      expect(grey(plot)).toBe(false);
+      expect(th(plot).valueText).toBe("0");
     }
     const individuals = individualPlot(
       "missingGenotypes",
@@ -459,8 +502,8 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       null,
       0,
     ).plot;
-    expect(individuals?.threshold.shown).toBe(0);
-    expect(individuals?.threshold.box.minValue).toBe(0);
+    expect(th(individuals).slider.value).toBe(0);
+    expect(th(individuals).box.minValue).toBe(0);
   });
 
   test("th4 fix 12: a number set is shown as set, never rounded again when a result so far widens the axis", () => {
@@ -472,18 +515,18 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       true,
       0.035,
     );
-    expect(plot.threshold.slider.step).toBe(0.01);
-    expect(plot.threshold.shown).toBe(0.035);
+    expect(th(plot).slider.step).toBe(0.01);
+    expect(th(plot).slider.value).toBe(0.035);
     expect(plot.data.threshold?.value).toBe(0.035);
-    expect(plot.threshold.slider.value).toBe(0.035);
-    expect(plot.threshold.valueText).toBe("0.035");
+    expect(th(plot).slider.value).toBe(0.035);
+    expect(th(plot).valueText).toBe("0.035");
     const individual = individualPlot(
       "observedHeterozygosity",
       PANEL.individuals,
       true,
       0.035,
     ).plot;
-    expect(individual?.threshold.shown).toBe(0.035);
+    expect(th(individual).slider.value).toBe(0.035);
   });
 
   test("the slider spans the horizontal axis of the plot, widened as the plot widens it to take a threshold beyond the bins", () => {
@@ -497,7 +540,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       0.5,
     );
     expect(histogramScales(plot.data, 1, 1).x.domain()).toEqual([0, 0.5]);
-    expect(plot.threshold.slider).toEqual({
+    expect(th(plot).slider).toEqual({
       min: 0,
       max: 0.5,
       step: 0.001,
@@ -513,10 +556,10 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       0.25,
     );
     const [low, high] = histogramScales(maf.data, 1, 1).x.domain();
-    expect(maf.threshold.slider.min).toBe(0.25);
+    expect(th(maf).slider.min).toBe(0.25);
     expect(low).toBe(0.25);
-    expect(maf.threshold.slider.max).toBe(high);
-    expect(maf.threshold.keepsAll).toBe(false);
+    expect(th(maf).slider.max).toBe(high);
+    expect(grey(maf)).toBe(false);
   });
 
   test("the individuals: grey at the top of their axis and from their largest value, by the step of their axis, from popnei's value of each", () => {
@@ -528,18 +571,29 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     ).plot;
     // The missing rates run from 0.0175 to 0.0442, the axis from 0 to
     // 0.045, by 0.001.
-    expect(top?.threshold.slider).toEqual({
+    expect(th(top).slider).toEqual({
       min: 0,
       max: 0.045,
       step: 0.001,
       value: 0.045,
     });
-    expect(top?.threshold.keepsAll).toBe(true);
-    expect(top?.threshold.valueText).toBe("0.045, keeps every individual");
-    expect(top?.threshold.removesNothing).toBe(
-      "This threshold removes no individual.",
+    expect(th(top).look).toBe("off");
+    expect(th(top).valueText).toBe("1, keeps every individual");
+    expect(th(top).hiddenDescription).toBe("This filter removes nothing.");
+    const atTop = individualPlot(
+      "missingGenotypes",
+      PANEL.individuals,
+      false,
+      0.045,
+    ).plot;
+    expect(th(atTop).valueText).toBe(
+      "0.045, keeps every individual of the plot",
     );
-    expect(top?.threshold.box).toEqual({
+    expect(th(atTop).hiddenDescription).toBe(
+      "This filter removes no individual of the plot.",
+    );
+    expect(th(top).box).toEqual({
+      value: 1,
       minValue: 0,
       maxValue: 1,
       step: 0.001,
@@ -548,7 +602,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const largest = Math.max(...PANEL.individuals.missingGtRate);
     const at = (threshold: number) =>
       individualPlot("missingGenotypes", PANEL.individuals, false, threshold)
-        .plot?.threshold.keepsAll;
+        .plot?.threshold?.look !== "on";
     expect(at(0.044)).toBe(largest <= 0.044);
     expect(at(0.045)).toBe(true);
     const set = individualPlot(
@@ -557,9 +611,9 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       false,
       0.03,
     ).plot;
-    expect(set?.threshold.onStep(0.030000000000000002)).toBe(0.03);
-    expect(set?.threshold.onStep(0.0304)).toBe(0.03);
-    expect(set?.threshold.name).toBe(
+    expect(th(set).onStep(0.030000000000000002)).toBe(0.03);
+    expect(th(set).onStep(0.0304)).toBe(0.03);
+    expect(th(set).name).toBe(
       "Missing GTs\u00a0max: maximum proportion of missing genotypes of an individual",
     );
     // A number of four decimals typed is shown at three.
@@ -570,13 +624,13 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       null,
       0.0304,
     ).plot;
-    expect(typed?.threshold.shown).toBe(0.03);
+    expect(th(typed).slider.value).toBe(0.03);
   });
 
   test("an individual with no value is in neither count: grey once the threshold keeps every one with a value", () => {
     const at = (threshold: number) =>
       individualPlot("observedHeterozygosity", INDIVIDUALS, false, threshold)
-        .plot?.threshold.keepsAll;
+        .plot?.threshold?.look !== "on";
     expect(at(0.35)).toBe(false);
     expect(at(0.4)).toBe(true);
   });
@@ -616,8 +670,15 @@ describe("the owner's first round: a threshold of the variants set at an edge is
             false,
             threshold,
           );
-          expect(plot.threshold.shown).toBe(threshold);
-          expect(plot.threshold.keepsAll).toBe(kept === all);
+          // 1 is off, its line at the top of the axis, and grey.
+          if (threshold === 1) {
+            expect(th(plot).look).toBe("off");
+            expect(th(plot).box.value).toBe(1);
+          } else {
+            expect(th(plot).slider.value).toBe(threshold);
+            expect(th(plot).box.value).toBe(threshold);
+            expect(grey(plot)).toBe(kept === all);
+          }
           checked += 1;
         };
         for (const [k, kept] of atEdges.entries()) {
@@ -638,12 +699,7 @@ describe("the owner's first round: a threshold of the variants set at an edge is
 describe("the step of a threshold of the variants is never finer than the fine bins", () => {
   test("a file with no missing genotype, every variant in the first fine bin: the axis runs from 0 to 0.05 by 0.001, every place of the line and number of the box is an edge, and each keeps every variant, at 0 only where the values are spaced wider than that bin", () => {
     const clean = summaryResult(["1"], [1200]).perVar;
-    for (const statistic of [
-      "missingRate",
-      "maf",
-      "obsHet",
-      "unbiasedExpHet",
-    ] as const) {
+    for (const statistic of ["missingRate", "maf", "obsHet"] as const) {
       const plot = variantPlot(
         statistic,
         clean,
@@ -651,7 +707,7 @@ describe("the step of a threshold of the variants is never finer than the fine b
         false,
         null,
       );
-      expect(plot.threshold.slider).toEqual({
+      expect(th(plot).slider).toEqual({
         min: 0,
         max: 0.05,
         step: 0.001,
@@ -666,15 +722,32 @@ describe("the step of a threshold of the variants is never finer than the fine b
         null,
         0.0123,
       );
-      expect(typed.threshold.shown).toBe(0.012);
-      expect(typed.threshold.keepsAll).toBe(true);
+      expect(th(typed).slider.value).toBe(0.012);
+      expect(grey(typed)).toBe(true);
       for (let place = 0; place <= 50; place += 1) {
-        const shown = plot.threshold.onStep(place / 1000);
+        const shown = th(plot).onStep(place / 1000);
         expect(clean.binEdges).toContain(shown);
       }
-      const atZero = variantPlot(statistic, clean, PANEL_INDIVIDUALS, false, 0)
-        .threshold.keepsAll;
+      const atZero = grey(
+        variantPlot(statistic, clean, PANEL_INDIVIDUALS, false, 0),
+      );
       expect(atZero).toBe(statistic === "missingRate" || statistic === "maf");
     }
+  });
+});
+
+describe("SF9 D4 the expected heterozygosity", () => {
+  test("has its plot and its short title, and no threshold, no line on its plot", () => {
+    const plot = variantPlot(
+      "unbiasedExpHet",
+      VARIANTS,
+      NO_SPACING,
+      false,
+      null,
+    );
+    expect(plot.threshold).toBeNull();
+    expect(plot.data.threshold).toBeNull();
+    expect(plot.shortTitle).toBe("Exp. het. (unbiased)");
+    expect(plot.data.title).toBe("Expected heterozygosity (unbiased)");
   });
 });

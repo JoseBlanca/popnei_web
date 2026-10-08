@@ -19,11 +19,20 @@
  * tenth of its range, and Home and End to the ends of the axis. Its name is not drawn, since the number field
  * beside it has the same name in its visible label; its value, for a
  * screen reader, is the screen's, "0.05", or "1, keeps every variant"
- * for a threshold that removes nothing, whose handle and line are then
- * grey, `muted`, as the plot draws its dashed line. Nothing is announced
- * at each step: the value is read as the thumb moves, as of any slider.
+ * for a threshold that is off, whose handle and line are then grey,
+ * `muted`, as the plot draws its line. Nothing is announced at each
+ * step: the value is read as the thumb moves, as of any slider.
+ *
+ * Each move is given with what made it, the pointer or a key, and the
+ * end of a drag apart, when the pointer that moved the thumb is
+ * released, never after a key. React Aria's own end of a change,
+ * `onChangeEnd`, is not used: it comes after every press of a key as
+ * well, since React Aria takes a press for a short drag
+ * (docs/specs/steps/popgen2-filters.md, "The end of a drag, and the
+ * keys"), and a screen that made a change of its project there would
+ * make one at each press.
  */
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
@@ -65,9 +74,17 @@ export interface ThresholdSliderProps {
   /** Whether its handle and its line are drawn in grey, a threshold that
       removes nothing, which `valueText` says. */
   readonly muted: boolean;
-  /** Called with each value it is moved to, as it is dragged too. */
-  readonly onChange: (value: number) => void;
+  /** Called with each value it is moved to, and with what moved it: the
+      pointer, as it is dragged, or a key. */
+  readonly onChange: (value: number, by: MovedBy) => void;
+  /** Called with the value it was dragged to when the pointer that moved
+      it is released; not for a press of the thumb that moved nothing,
+      and never after a key. */
+  readonly onDragEnd: (value: number) => void;
 }
+
+/** What moved the thumb: the pointer or a key. */
+export type MovedBy = "pointer" | "key";
 
 /** The line of a threshold, over the frame of its plot. */
 export function ThresholdSlider({
@@ -79,8 +96,30 @@ export function ThresholdSlider({
   valueText,
   muted,
   onChange,
+  onDragEnd,
 }: ThresholdSliderProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
+  // While a pointer is down on the thumb: the value it last moved it to,
+  // or `null` before it moved it; and the function that stops listening
+  // for its release.
+  const drag = useRef<{
+    moved: number | null;
+    readonly stop: () => void;
+  } | null>(null);
+  // The latest onDragEnd, for the listener of the release, made at the
+  // press.
+  const dragEndRef = useRef(onDragEnd);
+  useLayoutEffect(() => {
+    dragEndRef.current = onDragEnd;
+  });
+  // A slider gone while dragged listens no more.
+  useEffect(
+    () => () => {
+      drag.current?.stop();
+      drag.current = null;
+    },
+    [],
+  );
   // React Aria writes its own value text, the number in the units of the
   // slider, and takes none from its props: written over it after each
   // draw, before the browser paints, and before a screen reader reads it,
@@ -98,15 +137,41 @@ export function ThresholdSlider({
     event.stopPropagation();
     const moved = value + direction * PAGE_STEPS * step;
     const bounded = Math.min(maxValue, Math.max(minValue, moved));
-    if (bounded !== value) onChange(bounded);
+    if (bounded !== value) onChange(bounded, "key");
+  };
+
+  /** A pointer pressed on the thumb, before React Aria's handler: its
+      release, on the window wherever it is, ends the drag. */
+  const onPointerDownCapture = (event: React.PointerEvent): void => {
+    if (!event.isPrimary || drag.current !== null) return;
+    const ownerWindow = event.currentTarget.ownerDocument.defaultView;
+    if (ownerWindow === null) return;
+    const release = (up: PointerEvent): void => {
+      if (up.pointerId !== event.pointerId) return;
+      const ended = drag.current;
+      drag.current = null;
+      stop();
+      if (ended?.moved !== null && ended?.moved !== undefined) {
+        dragEndRef.current(ended.moved);
+      }
+    };
+    const stop = (): void => {
+      ownerWindow.removeEventListener("pointerup", release);
+      ownerWindow.removeEventListener("pointercancel", release);
+    };
+    ownerWindow.addEventListener("pointerup", release);
+    ownerWindow.addEventListener("pointercancel", release);
+    drag.current = { moved: null, stop };
   };
 
   return (
-    // The keys of the thumb reach it first; the element is no widget.
+    // The keys and the pointer of the thumb reach it first; the element
+    // is no widget.
     <div
       className={classOf(styles, "overlay")}
       {...(muted && { "data-muted": "" })}
       onKeyDownCapture={onKeyDownCapture}
+      onPointerDownCapture={onPointerDownCapture}
     >
       <Slider
         aria-label={label}
@@ -115,7 +180,15 @@ export function ThresholdSlider({
         minValue={minValue}
         maxValue={maxValue}
         step={step}
-        onChange={onChange}
+        onChange={(moved) => {
+          const dragged = drag.current;
+          if (dragged === null) {
+            onChange(moved, "key");
+            return;
+          }
+          dragged.moved = moved;
+          onChange(moved, "pointer");
+        }}
       >
         <SliderTrack className={classOf(styles, "track")}>
           <SliderThumb

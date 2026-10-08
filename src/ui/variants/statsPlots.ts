@@ -15,28 +15,29 @@
  * bins and the grey of the thresholds, a value of NaN among them; the
  * section draws them.
  *
- * Each histogram has a threshold that keeps the values at most it
- * (docs/plans/thresholds.md, "The design" and "Round 1 with the owner"):
- * drawn on the plot with no legend, since it is no filter, set in a box
- * after the short title, "Obs. het. max:", and moved by a slider laid
- * over the plot, whose range is the horizontal axis of the plot,
+ * Each histogram but that of the expected heterozygosity, on which popnei
+ * has no filter, has a threshold, a filter of the project that keeps the
+ * values at most it (docs/specs/steps/popgen2-filters.md, "A threshold,
+ * on and off"): drawn on the plot with no legend, set in a box after the
+ * short title, "Obs. het. max:", and moved by a slider laid over the
+ * plot, whose range is the horizontal axis of the plot,
  * `histogramScales`, widened as the plot widens it to take a threshold
- * outside the bins. No words say what it keeps (the owner, 8 October
- * 2026, docs/plans/popnei-0.2.2.md): a threshold that keeps every
- * variant or individual with a value, a filter that would do nothing, is
- * drawn in grey, its line and the number in its box, and a screen reader
- * hears it as the value of the slider and the description of the box.
- * The threshold the user set is `null` until they move it, at the top of
- * the axis, where it keeps everything and follows the axis as a result so
- * far widens it. It moves by the step of its axis, `thresholdStep`, 0.01
- * on an axis of 0 to 1: a number typed is shown rounded to that step,
- * and is committed so, and a number the user set is shown as set, never
- * rounded again when a result so far widens the axis and its step grows.
- * A threshold of the variants has three decimals at most,
+ * outside the bins. No words on the screen say what it keeps (the
+ * owner, 8 October 2026): one that keeps every variant or individual of
+ * its plot is drawn in grey, its line and the number in its box, and so
+ * is one that is off, with 1 in its box and its line at the top of the
+ * axis; a screen reader hears it as the value of the slider and the
+ * description of the box. The threshold drawn is the project's, or the
+ * one being dragged, typed or moved with the keys and not yet a change
+ * of the project. It moves by the step of its axis, `thresholdStep`,
+ * 0.01 on an axis of 0 to 1: a number typed is shown rounded to that
+ * step, and is committed so, and a number of the project is shown as it
+ * is, never rounded again when a result so far widens the axis and its
+ * step grows. A threshold of the variants has three decimals at most,
  * `variantThresholdOnStep`, so that it is an edge of popnei's fine bins,
- * which tell whether it keeps every variant, `variantsAllKept`; those of
- * the individuals are told from popnei's value of each,
- * `individualsAllKept`.
+ * which tell whether it keeps every variant, `variantThresholdLook`;
+ * those of the individuals are told from popnei's value of each,
+ * `individualThresholdLook`.
  */
 import {
   variantBinsRounded,
@@ -51,12 +52,13 @@ import { individualHistogramDescription } from "../../core/analyses/individualCh
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
 import {
-  individualsAllKept,
+  individualThresholdLook,
   thresholdOnStep,
   thresholdStep,
+  variantThresholdLook,
   variantThresholdOnStep,
-  variantsAllKept,
 } from "../../core/thresholds.ts";
+import type { ThresholdLook } from "../../core/thresholds.ts";
 import { histogramRows, histogramScales } from "../../charts/histogram.ts";
 import type {
   HistogramData,
@@ -77,9 +79,8 @@ import {
   individualThresholdName,
   individualTitle,
   noValueThresholdLine,
-  removesNothingText,
-  removesSomeText,
   SO_FAR_DESCRIPTION,
+  thresholdHiddenDescription,
   thresholdShownLabel,
   thresholdValueText,
   variantFullTitle,
@@ -99,8 +100,12 @@ export interface StatsPlot {
       name, "Observed heterozygosity", which names the plot and its group
       for a screen reader. */
   readonly data: HistogramData;
-  /** Its threshold: its slider, its box and its words. */
-  readonly threshold: PlotThreshold;
+  /** The short title drawn over the plot, "Exp. het. (unbiased)", for a
+      plot with no threshold. */
+  readonly shortTitle: string;
+  /** Its threshold: its slider, its box and its words; `null` for the
+      expected heterozygosity, which has none. */
+  readonly threshold: PlotThreshold | null;
 }
 
 /** The threshold of a histogram, as its slider and its box show it,
@@ -112,30 +117,21 @@ export interface PlotThreshold {
   /** The name of the slider and of the box, which starts with
       `shownLabel`: "Obs. het. max: maximum observed heterozygosity". */
   readonly name: string;
-  /** The number of the threshold as the box and the line show it: the
-      number set, the number typed rounded to the step of the axis, or the
-      top of the axis. */
-  readonly shown: number;
+  /** How it is drawn: on, on and grey, or off, the last two in grey. */
+  readonly look: ThresholdLook;
   /** The range of the slider, the horizontal axis of the plot, its step
-      and where it is. */
+      and where it is: the threshold, or the top of the axis when it is
+      off. */
   readonly slider: SliderRange;
-  /** The bounds and the step of the box. */
+  /** The number of the box, its bounds and its step. */
   readonly box: BoxRange;
-  /** Whether the threshold keeps every variant or individual with a
-      value, a filter that would remove nothing, drawn in grey. */
-  readonly keepsAll: boolean;
-  /** What a screen reader says as the value of the slider: "0.05", and
-      "1, keeps every variant" when `keepsAll`. */
+  /** What a screen reader says as the value of the slider: "0.05", "0.1,
+      keeps every variant of the plot", "1, keeps every variant". */
   readonly valueText: string;
-  /** The description of the box when `keepsAll`, "This threshold removes
-      no variant.", which the grey says to the eye; `null` otherwise. */
-  readonly removesNothing: string | null;
-  /** What is announced when a number committed in the box turns the
-      threshold into one that keeps every variant or individual with a
-      value, `removesNothing`, or back, "This threshold removes
-      variants.": a screen reader reads the description of the box only
-      when the box takes the focus. */
-  readonly turnedText: string;
+  /** The description of the box that a screen reader alone reads, which
+      the grey says to the eye: "This filter removes nothing." when it is
+      off; `null` when it removes some value of its plot. */
+  readonly hiddenDescription: string | null;
   /** The threshold for `value`, a number typed or a place of the slider:
       `value` rounded to the step of the axis, as it is committed. */
   readonly onStep: (value: number) => number;
@@ -153,8 +149,10 @@ export interface SliderRange {
   readonly value: number;
 }
 
-/** The bounds and the step of the box of a threshold. */
+/** The number, the bounds and the step of the box of a threshold. */
 export interface BoxRange {
+  /** The number it shows: the threshold, or 1 when it is off. */
+  readonly value: number;
   readonly minValue: number;
   readonly maxValue: number;
   /** The step of the axis, which the arrow keys of the box move the
@@ -179,18 +177,19 @@ export interface IndividualPlot {
     over the range of those with a count, rounded out, in bars no
     narrower than the distance between two values the statistic can take
     over `individuals`, over the variants in them, which leaves out a
-    variant with no value; its description and the words of its
-    threshold say "so far" for a result so far, `soFar`. `threshold` is
-    the number the user set, drawn as it is, or `null` for the top of the
-    axis; `typed`, a number the user is typing, drawn in its place
-    rounded to the step of the axis. */
+    variant with no value; its description says "so far" for a result so
+    far, `soFar`. `threshold` is the value of its filter in the project,
+    `null` while it is off; `moving`, a number the user is dragging,
+    typing or moving with the keys, drawn in its place rounded to the
+    step of the axis. The expected heterozygosity has no threshold, and
+    both are passed over for it. */
 export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
   individuals: PassIndividuals,
   soFar: boolean,
   threshold: number | null,
-  typed: number | null = null,
+  moving: number | null = null,
 ): StatsPlot {
   const words = VARIANT_HISTOGRAMS[statistic];
   const spacing = variantValueSpacing(
@@ -204,15 +203,17 @@ export function variantPlot(
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number =>
     variantThresholdOnStep(value, decimals);
-  const shown = shownOf(threshold, typed, axisHigh, onStep);
-  const keepsAll = variantsAllKept(result, statistic, shown, spacing);
+  const filtered = statistic !== "unbiasedExpHet";
+  const set = filtered ? setOf(threshold, moving, onStep) : null;
+  const look = variantThresholdLook(result, statistic, set, spacing);
+  const shown = lineOf(set, look, axisHigh, onStep);
   const plotted = {
     title: variantFullTitle(statistic),
     xLabel: words.name,
     yLabel: words.countLabel,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown, keepsAll),
+    threshold: filtered ? noLegend(shown, look) : null,
     // The first bar of the missing rate, 0 to 0.001, holds the variants
     // with no missing genotype, alone below 1,000 individuals: a
     // threshold of 0 keeps it.
@@ -226,18 +227,19 @@ export function variantPlot(
       soFar,
     ),
   };
+  const shortTitle = variantTitle(statistic);
+  if (!filtered) return { data, shortTitle, threshold: null };
   const [low, high] = axisOf(data);
   return {
     data,
+    shortTitle,
     threshold: {
-      shownLabel: thresholdShownLabel(variantTitle(statistic)),
+      shownLabel: thresholdShownLabel(shortTitle),
       name: variantThresholdName(statistic),
-      shown,
+      look,
       slider: { min: low, max: high, step, value: shown },
-      // From 0: React Aria would put a number typed on the steps from
-      // its least value.
-      box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
-      ...wordsOf(shown, keepsAll, "variant", soFar),
+      box: boxOf(shown, look, step),
+      ...wordsOf(shown, look, "variant"),
       onStep,
     },
   };
@@ -245,16 +247,15 @@ export function variantPlot(
 
 /** The histogram of the individuals of `statistic`, its values binned
     over their range rounded out, the missing rate from 0, over the
-    individuals with a value; its description, the words of its threshold
-    and the line of the individuals with no value say "so far" for a
-    result so far, `soFar`. `threshold` and `typed` are as for
-    `variantPlot`. */
+    individuals with a value; its description and the line of the
+    individuals with no value say "so far" for a result so far,
+    `soFar`. `threshold` and `moving` are as for `variantPlot`. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualStatsPart,
   soFar: boolean,
   threshold: number | null,
-  typed: number | null = null,
+  moving: number | null = null,
 ): IndividualPlot {
   const words = INDIVIDUAL_HISTOGRAMS[statistic];
   const values =
@@ -275,15 +276,16 @@ export function individualPlot(
   const axisHigh = at(bins.edges, bins.edges.length - 1);
   const { step, decimals } = thresholdStep(axisLow, axisHigh);
   const onStep = (value: number): number => thresholdOnStep(value, decimals);
-  const shown = shownOf(threshold, typed, axisHigh, onStep);
-  const keepsAll = individualsAllKept(values, shown);
+  const set = setOf(threshold, moving, onStep);
+  const look = individualThresholdLook(values, set);
+  const shown = lineOf(set, look, axisHigh, onStep);
   const plotted = {
     title: individualFullTitle(statistic),
     xLabel: words.xLabel,
     yLabel: INDIVIDUALS_LABEL,
     edges: bins.edges,
     counts: bins.counts,
-    threshold: noLegend(shown, keepsAll),
+    threshold: noLegend(shown, look),
   };
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
@@ -294,43 +296,69 @@ export function individualPlot(
     ),
   };
   const [low, high] = axisOf(data);
+  const shortTitle = individualTitle(statistic);
   return {
     plot: {
       data,
+      shortTitle,
       threshold: {
-        shownLabel: thresholdShownLabel(individualTitle(statistic)),
+        shownLabel: thresholdShownLabel(shortTitle),
         name: individualThresholdName(statistic),
-        shown,
+        look,
         slider: { min: low, max: high, step, value: shown },
-        box: { minValue: 0, maxValue: 1, step, decimals: TYPED_DECIMALS },
-        ...wordsOf(shown, keepsAll, "individual", soFar),
+        box: boxOf(shown, look, step),
+        ...wordsOf(shown, look, "individual"),
         onStep,
       },
     },
-    noValueLine: noValueThresholdLine(bins.numNaN, soFar),
+    noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", soFar),
   };
 }
 
-/** The number a threshold is shown at: `typed`, a number
-    being typed, rounded to the step of the axis by `onStep`; else
-    `threshold`, the number the user set, as it is, since it was rounded
-    to the step of its axis when committed and a result so far that
-    widens the axis must not move it; else the top of the axis,
-    `axisHigh`. */
-function shownOf(
+/** The threshold drawn: `moving`, a number being dragged, typed or moved
+    with the keys, rounded to the step of the axis by `onStep`; else
+    `threshold`, the project's, as it is, since it was rounded to the
+    step of its axis when it was set and a result so far that widens the
+    axis must not move it; `null` while it is off. */
+function setOf(
   threshold: number | null,
-  typed: number | null,
+  moving: number | null,
+  onStep: (value: number) => number,
+): number | null {
+  return moving === null ? threshold : onStep(moving);
+}
+
+/** Where the line of the threshold `set` in the look `look` stands: at
+    `set`, or at the top of the axis, `axisHigh`, when it is off, where
+    it follows the axis as a result so far widens it. */
+function lineOf(
+  set: number | null,
+  look: ThresholdLook,
   axisHigh: number,
   onStep: (value: number) => number,
 ): number {
-  if (typed !== null) return onStep(typed);
-  return threshold ?? onStep(axisHigh);
+  return look === "off" || set === null ? onStep(axisHigh) : set;
 }
 
-/** A threshold at `value` drawn with no legend, since it is no filter,
-    in grey when it keeps every value, `keepsAll`. */
-function noLegend(value: number, keepsAll: boolean): HistogramThreshold {
-  return { value, legend: null, keepsAll };
+/** The box of a threshold whose line stands at `shown`: its number, 1
+    when it is off, which `setThreshold` takes as off. */
+function boxOf(shown: number, look: ThresholdLook, step: number): BoxRange {
+  return {
+    value: look === "off" ? 1 : shown,
+    // From 0: React Aria would put a number typed on the steps from
+    // its least value.
+    minValue: 0,
+    maxValue: 1,
+    step,
+    decimals: TYPED_DECIMALS,
+  };
+}
+
+/** A threshold at `value` drawn with no legend, as the plots of the
+    page have none, in grey, dotted, when it keeps every value or is off,
+    `look`. */
+function noLegend(value: number, look: ThresholdLook): HistogramThreshold {
+  return { value, legend: null, keepsAll: look !== "on" };
 }
 
 /** The two ends of the horizontal axis the plot draws `data` with, the
@@ -343,27 +371,20 @@ function axisOf(data: HistogramData): readonly [number, number] {
   return [low, high];
 }
 
-/** What a screen reader hears of a threshold, which keeps every one
-    with a value when `keepsAll`: the value text of the slider and the
-    description of the box. */
+/** What a screen reader hears of a threshold at `shown` in the look
+    `look`: the value text of the slider and the description of the
+    box. */
 function wordsOf(
   shown: number,
-  keepsAll: boolean,
+  look: ThresholdLook,
   noun: Counted,
-  soFar: boolean,
 ): {
-  readonly keepsAll: boolean;
   readonly valueText: string;
-  readonly removesNothing: string | null;
-  readonly turnedText: string;
+  readonly hiddenDescription: string | null;
 } {
   return {
-    keepsAll,
-    valueText: thresholdValueText(shown, keepsAll, noun, soFar),
-    removesNothing: keepsAll ? removesNothingText(noun, soFar) : null,
-    turnedText: keepsAll
-      ? removesNothingText(noun, soFar)
-      : removesSomeText(noun, soFar),
+    valueText: thresholdValueText(shown, look, noun),
+    hiddenDescription: thresholdHiddenDescription(look, noun),
   };
 }
 

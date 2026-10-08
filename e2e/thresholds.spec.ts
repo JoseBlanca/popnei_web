@@ -22,7 +22,10 @@ import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
-import { variantsAllKept } from "../src/core/thresholds.ts";
+import {
+  variantThresholdLook,
+  variantsAllKept,
+} from "../src/core/thresholds.ts";
 import type { VariantStatistic } from "../src/core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../src/worker/protocol.ts";
 import { thresholdValueText } from "../src/ui/variants/statsWords.ts";
@@ -74,12 +77,13 @@ function numbersOf(value: unknown): number[] {
 }
 
 /** What a screen reader hears as the value of the line of the threshold
-    of `statistic` of the variants of panel.vcf.gz at `value`: the
-    number, and that it keeps every variant when the core says so. */
+    of `statistic` of the variants of panel.vcf.gz on at `value`: the
+    number, and that it keeps every variant of the plot when the core
+    says so. */
 function variantValueText(statistic: VariantStatistic, value: number): string {
   return thresholdValueText(
     value,
-    variantsAllKept(PANEL, statistic, value, null),
+    variantThresholdLook(PANEL, statistic, value, null),
     "variant",
   );
 }

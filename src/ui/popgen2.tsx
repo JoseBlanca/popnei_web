@@ -2,8 +2,9 @@
  * The entry of the new page of population genetics, `popgen2.html`
  * (docs/plans/open-variants.md, "A new page, beside the old one"): the
  * opening of popgen.html, with the functions of pageStart.tsx, without
- * the stepper, the saving and the shell. It makes the store of the page
- * and the worker client, the announcer of the status region, the reads
+ * the stepper, the saving and the shell. It makes the store of the page,
+ * wrapped for the screens by the gate of the thresholds' runs, and the
+ * worker client, the announcer of the status region, the reads
  * the project waits for and the analyses that start by themselves, and
  * draws the error bar and the page in two roots, all in one run of this
  * code.
@@ -31,6 +32,8 @@ import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
 import { announceChanges } from "./variants/announceChanges.ts";
+import { RunGateProvider } from "./variants/runGate.tsx";
+import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
@@ -51,21 +54,26 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   reportDefects(store, defects);
   syncReads(store, client);
   const autoRuns = startByThemselves(store);
+  // The screens' commands pass the gate of the thresholds, which makes a
+  // run of the keys waiting a change before any other.
+  const gate = createRunGate();
 
   renderApplication(
     defects,
-    <StoreProvider value={store}>
-      <AnnouncerProvider value={announcer}>
-        <FilesProvider value={files}>
-          <VariantsPage
-            autoRuns={autoRuns}
-            onCountButton={(node) => {
-              countButton = node;
-            }}
-            onStatsShown={statsShown}
-          />
-        </FilesProvider>
-      </AnnouncerProvider>
+    <StoreProvider value={gatedStore(store, gate)}>
+      <RunGateProvider value={gate}>
+        <AnnouncerProvider value={announcer}>
+          <FilesProvider value={files}>
+            <VariantsPage
+              autoRuns={autoRuns}
+              onCountButton={(node) => {
+                countButton = node;
+              }}
+              onStatsShown={statsShown}
+            />
+          </FilesProvider>
+        </AnnouncerProvider>
+      </RunGateProvider>
     </StoreProvider>,
   );
 }

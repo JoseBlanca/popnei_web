@@ -1426,7 +1426,14 @@ export type Threshold =
     variant with no called genotype at every threshold, so a filter at 1
     is not the same as no filter, as the owner decided on 7 October 2026
     (docs/specs/core/project.md, "A threshold, on or off"). */
-const THRESHOLD_OFF_AT = 1;
+export const THRESHOLD_OFF_AT = 1;
+
+/** Whether `value`, a threshold as the page gives it to `setThreshold`,
+    on the step of its axis, is off: `null`, its box emptied, or
+    `THRESHOLD_OFF_AT`. */
+export function thresholdIsOff(value: number | null): value is null | 1 {
+  return value === null || value === THRESHOLD_OFF_AT;
+}
 
 /** The filter of a threshold of the variants on at `value`. */
 function variantThresholdFilter(
@@ -1481,7 +1488,7 @@ export function setThreshold(
   }
   // -0 === 0, so a -0 is stored as 0.
   const value = given === 0 ? 0 : given;
-  const off = value === null || value === THRESHOLD_OFF_AT;
+  const off = thresholdIsOff(value);
   if (threshold.of === "variants") {
     return off
       ? turnOffVariantFilter(p, threshold.kind)

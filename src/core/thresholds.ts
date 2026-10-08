@@ -1,14 +1,16 @@
 /**
  * Whether a threshold that popgen2.html draws on its histograms of the
  * open file keeps every variant or individual with a value, so that the
- * screen draws it in grey, a threshold that removes nothing
- * (docs/plans/popnei-0.2.2.md, "The owner's first round"): of the
- * variants from popnei's 1,000 fine bins over 0 to 1, of the individuals
- * from popnei's value of each. And the step a threshold moves by and the
- * number it is shown at. They change no statistic and are no filter of
- * the project (docs/plans/thresholds.md, "The design").
+ * screen draws it in grey, a threshold that removes nothing of its plot
+ * (docs/specs/steps/popgen2-filters.md, "A threshold, on and off"): of
+ * the variants from popnei's 1,000 fine bins over 0 to 1, of the
+ * individuals from popnei's value of each; and its look, on, on and
+ * grey, or off, which is grey too. And the step a threshold moves by and
+ * the number it is shown at. Each threshold is a filter of the project,
+ * `setThreshold` of project.ts; these tell only how it is drawn.
  */
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
+import { thresholdIsOff } from "./project.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 
 /** The most decimals of a threshold of the variants, 3: every number of
@@ -195,6 +197,41 @@ function at(array: Float64Array, index: number): number {
     throw defect(`no edge at the index ${String(index)}.`);
   }
   return value;
+}
+
+/** How a threshold is drawn: `on`, a filter that removes some value of
+    its plot, its line red and dashed; `grey`, a filter on that keeps
+    every value of its plot; `off`, no filter, its line at the top of the
+    axis and 1 in its box. `grey` and `off` are both drawn in the grey of
+    `--chart-threshold-keeps-all`, the line dotted and the handle hollow. */
+export type ThresholdLook = "on" | "grey" | "off";
+
+/** The look of the threshold `value` of the variants of `statistic`
+    over `part`, as `variantsAllKept` tells it with `spacing`: `off` for
+    `null` and for 1, which `setThreshold` takes as off; `grey` when it
+    keeps every variant of the plot; `on` otherwise. A `value` that is
+    not an edge of the bins below their last count is a defect, thrown,
+    as there. */
+export function variantThresholdLook(
+  part: VariantStatsPart,
+  statistic: VariantStatistic,
+  value: number | null,
+  spacing: number | null,
+): ThresholdLook {
+  if (thresholdIsOff(value)) return "off";
+  return variantsAllKept(part, statistic, value, spacing) ? "grey" : "on";
+}
+
+/** The look of the threshold `value` of the individuals with the values
+    `values`, as `individualsAllKept` tells it: `off` for `null` and for
+    1, `grey` when it keeps every individual with a value, `on`
+    otherwise, every value NaN among it. */
+export function individualThresholdLook(
+  values: Float64Array,
+  value: number | null,
+): ThresholdLook {
+  if (thresholdIsOff(value)) return "off";
+  return individualsAllKept(values, value) ? "grey" : "on";
 }
 
 /** An error for a state the code makes impossible. */

@@ -19,9 +19,11 @@ import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import { deepFreeze } from "./testSupport.ts";
 import {
   VARIANT_THRESHOLD_DECIMALS,
+  individualThresholdLook,
   individualsAllKept,
   thresholdOnStep,
   thresholdStep,
+  variantThresholdLook,
   variantThresholdOnStep,
   variantsAllKept,
 } from "./thresholds.ts";
@@ -405,4 +407,73 @@ describe("individualsAllKept", () => {
       }
     },
   );
+});
+
+describe("SF9 D3 whether a threshold is grey, and off", () => {
+  test("panel.vcf.gz: the missing rate at 0.079, an edge of the fine bins with a variant just above it, in the bin up to 0.08, is on; at 0.08, with none above it, grey; 0 on", () => {
+    const { part } = fixture("panel.vcf.gz");
+    expect(variantThresholdLook(part, "missingRate", 0.079, 0.005)).toBe("on");
+    expect(variantThresholdLook(part, "missingRate", 0.08, 0.005)).toBe("grey");
+    expect(variantThresholdLook(part, "missingRate", 0.1, 0.005)).toBe("grey");
+    expect(variantThresholdLook(part, "missingRate", 0, 0.005)).toBe("on");
+  });
+
+  test.each(["panel.vcf.gz", "panel.nei"] as const)(
+    "%s: for each statistic of the variants, grey at the right edge of its last bin with a count and on at the edge before it",
+    (name) => {
+      const { part } = fixture(name);
+      for (const statistic of ["missingRate", "maf", "obsHet"] as const) {
+        const last = part[statistic].counts.findLastIndex((n) => n > 0);
+        const edge = part.binEdges[last + 1];
+        const before = part.binEdges[last];
+        if (edge === undefined || before === undefined) {
+          throw new Error(`${name} has no count of ${statistic}`);
+        }
+        expect(variantThresholdLook(part, statistic, edge, null)).toBe("grey");
+        // The edge before is 0 only if the last count is in the first
+        // bin, where 0 needs the spacing to tell.
+        if (before > 0) {
+          expect(variantThresholdLook(part, statistic, before, null)).toBe(
+            "on",
+          );
+        }
+      }
+    },
+  );
+
+  test.each(["panel.vcf.gz", "panel.nei"] as const)(
+    "%s: the individuals grey at the largest value of each statistic, and on just below it",
+    (name) => {
+      const { missingGtRate, obsHetRate } = fixture(name);
+      for (const values of [missingGtRate, obsHetRate]) {
+        const largest = Math.max(...values.filter((v) => !Number.isNaN(v)));
+        expect(individualThresholdLook(values, largest)).toBe("grey");
+        expect(individualThresholdLook(values, largest - 1e-9)).toBe("on");
+      }
+    },
+  );
+
+  test("off, null or 1, is off whatever the values, which the screen draws in grey: no variant in a bin, every individual NaN", () => {
+    const { part } = fixture("panel.vcf.gz");
+    for (const value of [null, 1] as const) {
+      expect(variantThresholdLook(part, "maf", value, null)).toBe("off");
+      expect(variantThresholdLook(SMALL, "unbiasedExpHet", value, null)).toBe(
+        "off",
+      );
+      expect(
+        individualThresholdLook(Float64Array.from([NaN, NaN]), value),
+      ).toBe("off");
+      expect(individualThresholdLook(Float64Array.from([0.2]), value)).toBe(
+        "off",
+      );
+    }
+    // Just below 1, on its step, a filter on.
+    expect(variantThresholdLook(part, "maf", 0.999, null)).toBe("grey");
+  });
+
+  test("every individual NaN, at a threshold on: on, a filter that removes them all", () => {
+    expect(individualThresholdLook(Float64Array.from([NaN, NaN]), 0.5)).toBe(
+      "on",
+    );
+  });
 });
