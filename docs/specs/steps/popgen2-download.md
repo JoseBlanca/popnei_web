@@ -304,7 +304,7 @@ one of two moments:
 Why some cases are known only after the write. The plots are of every
 variant and every individual, one statistic each. Two thresholds that
 each keep some variants may keep none together: on `panel.vcf.gz` the
-missing rate at 0 keeps 2 variants and the MAF at 0.6 keeps 1,197 of
+missing rate at 0 keeps 2 variants and the MAF at 0.6 keeps 277 of
 the 1,200, and the two together none. And when a threshold of the
 individuals leaves some out, a variant's values over the individuals
 kept are not those of its plot: on `panel.vcf.gz`, with the missing rate

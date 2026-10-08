@@ -71,7 +71,16 @@ and the ploidy (below, "Opening the load"), with its tests on a `.nei`
 file written from `low_qual.vcf.gz`. Built on the branch `filters`, work
 packages 1 and 2 of `docs/plans/filters.md`, on 7 and 8 October 2026,
 with that file, `e2e/fixtures/low_qual.nei`, written by
-`make_fixtures.mjs --low-qual-nei`. The
+`make_fixtures.mjs --low-qual-nei`. Revised on 8 October 2026 for the
+download of the filtered variants on popgen2.html
+(`docs/designs/stats-filters.md`, "The download of the filtered
+variants", approved by the owner that day), with popnei 0.2.2: the
+write gives popnei's `onBytes` to `writeVars` for a `.nei` file and to
+`writeVcf` for a VCF compressed with bgzip, gathers the pieces into one
+`Blob` in parts of 64 MiB, and reads the last byte of the `Blob` before
+it answers, where it made the `Blob` of the one array of the whole file
+(below, "The written file", "What a write holds" and "How it is
+verified"). No code of it yet. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers
@@ -959,57 +968,90 @@ of wasm larger by 16 bytes × `maxDist` × the populations and more
 
 A `write` request holds a key and a `WriteJob`: its pass, the filters of
 the variants and the list of the individuals kept of the project, and
-the format, `nei` (`docs/specs/worker/protocol.md`). After the steps are
-on the `Variants` (above), the runner:
+the format, `"nei"` or `"vcf"` (`docs/specs/worker/protocol.md`). After
+the steps are on the `Variants` (above), the runner, from 8 October 2026
+with popnei 0.2.2:
 
-1. Calls `writeVars(variants)` of `js/popnei/src/io_vars.ts`, with
-   popnei's own size of batch. popnei builds the whole file in the memory
-   of wasm and copies it out, piece by piece, into one `Uint8Array` of
-   the heap of JavaScript, `bytes` of its result, with `passStats`. The
-   file holds the variants the steps keep, and only the individuals of
-   the list: on `panel.nei` with the missing data filter at 0.05, 250,994
-   bytes, which `openVars` opened again with 200 individuals and 1,152
-   variants; with the list of 116 individuals of "How it is verified"
-   before that filter, 160,162 bytes, 116 individuals and 1,103
-   variants; with no filter, 261,490
-   bytes, the size of `panel.nei` itself; seen in node on 26 September
-   2026 with `js-v0.1.0-dev.2`, and the file with the list on 28
-   September 2026. `js-v0.1.0-dev.3` writes version 1.1 of
-   popnei's vars file, whose key holds the lengths of the chromosomes
-   (popnei's commit `343bc4f`, one of the changes of its writer since
-   `js-v0.1.0-dev.2`), and its files are larger: 251,074,
-   160,186 and 261,570 bytes for the three, with the same variants and
-   individuals read back (node, 28 September 2026). It reads the files of
-   `js-v0.1.0-dev.2`, and `e2e/fixtures/panel.nei`, 261,490 bytes, is not
-   written again: every number the tests read from it, the progress
-   among them, is the same with both releases.
-2. Makes a `Blob` of the bytes, `new Blob([bytes])`, and keeps no
-   reference to the array, so that the heap of the worker can give it
-   back; whether the engine copies the array into the `Blob` is measured
-   in the three engines (`docs/architecture.md`, section 11).
-3. Gives back `Written<Blob>`: the format, `"nei"`, the `Blob`,
+1. Calls `writeVars(variants, { onBytes })` of popnei's `io_vars.ts`
+   for `"nei"`, with popnei's own size of batch, or `writeVcf(variants,
+   { bgzip: true, onBytes })` of its `io_vcf.ts` for `"vcf"`; `bgzip` is
+   popnei's default, and given so that the file is bgzipped whatever
+   that default becomes. popnei writes the file as its pass reads,
+   holding one block of it in the memory of wasm, and calls `onBytes`
+   with each piece, a new `Uint8Array` of 1,048,576 bytes, 1 MiB, the
+   last one from 1 byte to that, the pieces in their order being the
+   bytes of the file; the call then returns the counts of its pass
+   alone, `passStats`. `onBytes` is synchronous: it keeps the piece and
+   returns, since popnei ends the pass with an `Error` if it returns a
+   promise. It is a function of ours given to popnei, wrapped by `ours`
+   of `passOf`, so that what it throws is a defect of ours and not
+   popnei's refusal.
+2. Gathers the pieces: they are kept in a list until they hold
+   `WRITE_PART_BYTES`, 64 MiB, 67,108,864 bytes, 64 pieces, which become
+   one `Blob`, a part, and the list is emptied; at the end of the pass
+   the pieces left become the last part, and the file is one `Blob` of
+   the parts, `new Blob(parts)`. So the worker holds at most 64 MiB of
+   pieces beside the parts, and not the file twice. Chromium refers to
+   the bytes of the parts and does not copy them, by the description of
+   its storage of `Blob`s; whether WebKit and Firefox copy them is
+   measured in the plan of the download, and if one does, the parts are
+   kept as a list and the `Blob` made once of them all
+   (`docs/specs/analyses/writeVariants.md`, "What is measured in the
+   plan"). The value of the parts is a `RunnerOptions`, so that a test
+   makes a part of each piece.
+3. Reads the last byte of the `Blob`, with `FileReaderSync`, which a
+   worker of the browser has, before it answers. A `Blob` that
+   Chromium's storage could not take is made at once, with its `size`,
+   and fails only when it is read; so a `Blob` whose last byte cannot be
+   read is answered `crashed`, with "the browser could not keep the
+   written file of ‹n› bytes: ‹the message of the read›", which the
+   client gives as `workerFailed` and whose words say the file did not
+   fit in the memory of the tab
+   (`docs/specs/analyses/writeVariants.md`, "Its words on
+   popgen2.html"). Node has no `FileReaderSync`, and its `Blob` is in
+   memory, so the read is a `RunnerOptions` that the worker's script
+   gives and a test gives as a function that throws.
+4. Gives back `Written<Blob>`: the format of the job, the `Blob`,
    `numBytes`, its `size`, and `passStats`. The worker's script posts it
    as `written`, under the key of the request, with no list of
    transfers: the `Blob` crosses as a handle
    (`docs/specs/worker/messages.md`).
 
-A file of no variant is written, not refused, since popnei's `writeVars`
-writes one, 3,594 bytes for the filters above with a MAF filter at 0,
-3,682 with `js-v0.1.0-dev.3`, and
-the runner passes popnei's answer on; the step does not offer it
-(`docs/specs/analyses/writeVariants.md`). popnei refuses the write with a plain
-`Error` when the memory of the tab does not take the file, answered
-`refused`, and a memory that cannot grow can end in a `RangeError` or a
-trap, answered `crashed` (below, "What it answers when something goes
-wrong"); the words of both, which say the file may be too large for the
-tab, are those of `writeVariants.md`.
+On `panel.nei` with the missing data filter at 0.05 the `.nei` file is
+251,074 bytes and the VCF 95,879, each one piece, 1,152 variants of
+1,200; on a VCF of 3,000 variants of 1,000 individuals that
+`e2e/bigVcf.ts` writes, 1,917,582 bytes, the `.nei` file is 3,320,026
+bytes in four pieces, three of 1,048,576 and one of 174,298, and the VCF
+1,297,166 bytes in two, of 1,048,576 and 248,590; the pieces joined are
+the bytes the same call gives whole, without `onBytes`, with the same
+`passStats` (popnei 0.2.2 under node, 8 October 2026). popnei told the
+progress twice over that VCF, once for its 4 MiB of reading and once at
+the end (below, "Progress").
 
-The runner keeps nothing of a write. The memory of wasm keeps the room
-of the file, which never shrinks, and the client starts the worker again
-after a file larger than a bound, and after a write popnei refused, to
-give it back
-(`docs/specs/worker/client.md`, "A write, and the restart after a large
-one").
+A file of no variant is written, not refused, since popnei writes one,
+3,682 bytes as a `.nei` file and 528 as a VCF, its header alone, for
+`panel.nei` with the missing data filter at 0.05 and a MAF filter at
+0.4 (popnei 0.2.2), and the runner passes popnei's answer on; the
+pages do not offer it (`docs/specs/analyses/writeVariants.md`). popnei
+refuses the write with a plain `Error` when the memory of the tab does
+not take a block, answered `refused`, and a memory that cannot grow can
+end in a `RangeError` or a trap, answered `crashed` (below, "What it
+answers when something goes wrong"). A pass that fails after some
+pieces were given leaves the start of a file with no end, which the
+runner drops with the answer.
+
+The runner keeps nothing of a write: the parts and the pieces go with
+the call, and the `Blob` with its answer. The memory of wasm keeps the
+room of one block, which never shrinks, and the client starts the worker
+again after a file larger than a bound, and after a write popnei
+refused (`docs/specs/worker/client.md`, "A write, and the restart after
+a large one"), until the plan measures whether that gives anything back.
+
+Until 8 October 2026 the runner called `writeVars(variants)` with no
+`onBytes`: popnei built the whole file in the memory of wasm and copied
+it into one `Uint8Array`, of which the runner made the `Blob`; a file of
+no variant was 3,594 bytes with `js-v0.1.0-dev.2` and 3,682 with
+`js-v0.1.0-dev.3`.
 
 ### Progress
 
@@ -1283,11 +1325,14 @@ export interface Runner {
   open(load: LoadToOpen, file: LoadFile): Answer<Opened>; // individuals, ploidy, keepsPassed (docs/specs/worker/protocol.md)
   run(job: Job, told: (progress: Progress) => void,
       toldSoFar?: (result: JobResult) => void): Answer<JobResult>;
-  write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>;
+  write(job: WriteJob, told: (progress: Progress) => void): Answer<Written<Blob>>; // .nei or VCF bgzipped, by pieces
 }
 
 export interface RunnerOptions {
   readonly soFarEvery?: number; // popnei's 2 seconds when not given; tests give 0
+  readonly writePartBytes?: number;          // WRITE_PART_BYTES, 64 MiB, when not given; a test gives 1 MiB
+  readonly readLastByte?: (file: Blob) => void; // throws when the Blob cannot be read; the worker's script
+                                                 // gives FileReaderSync's read, and nothing is read when absent
 }
 
 export function createRunner(options?: RunnerOptions): Runner; // after loadPopnei has given ok
@@ -1509,7 +1554,15 @@ that `writeVars` makes of it in batches of 1,000.
 
 ### What a write holds
 
-A write of a file of F bytes holds at its peak, measured on 27 September
+From 8 October 2026, with the pieces, a write of a file of F bytes holds
+the `Blob`, F, where the browser keeps it, up to 64 MiB of pieces in
+the worker, and one block of the file in the memory of wasm, about 10
+MB of genotypes for 1,000 individuals; the plan of the download
+measures it (`docs/specs/analyses/writeVariants.md`, "What a write
+holds" and "What is measured in the plan"). What follows is the write
+before the pieces.
+
+A write of a file of F bytes held at its peak, measured on 27 September
 2026 in Chromium 153 and WebKit 26.6, about 4F more than the tab held
 before in Chromium and up to 6.1F in WebKit: in Chromium about 2.4F in the
 memory of wasm, where popnei builds the whole file, F in the array
@@ -1519,9 +1572,9 @@ engine copies the array into the `Blob`; once the array is dropped, the
 (`docs/architecture.md`, sections 6 and 11;
 `docs/specs/analyses/writeVariants.md`, "What was measured"). The
 largest file both engines wrote was 1,982,018,522 bytes. With popnei's
-writer by pieces, asked of popnei on 26 September 2026, the runner keeps
-the pieces as they come and makes one `Blob` of them at the end, and the
-peak loses what wasm holds of the file; stage 3 does not wait for it.
+writer by pieces, asked of popnei on 26 September 2026 and given by
+popnei 0.2.2, the runner gathers the pieces as they come (above, "The
+written file"), and the peak loses what wasm held of the file.
 
 ## How it is verified
 
@@ -1897,7 +1950,25 @@ as core would. Each test at `run` or `write` of a runner made by
   and the same list gives the same `passStats`; with the missing data
   filter at 0.05 and a MAF filter at 0, `numVars` 0 and the counts 1,200
   to 1,152 and 1,152 to 0, a result and not a refusal.
-- **The written file**: with no filter, a `Blob` of 261,490 bytes,
+- **The written file, by pieces**, from 8 October 2026 with popnei
+  0.2.2: for `"nei"` and for `"vcf"`, the bytes of the `Blob` are those
+  the same popnei call gives whole, without `onBytes`, with the same
+  `passStats`: on `panel.nei` with the missing data filter at 0.05,
+  251,074 and 95,879 bytes, 1,152 variants of 1,200; on `panel.vcf.gz`
+  with the filter of the FILTER column and the missing data filter at
+  0.1, 261,746 and 100,409 bytes, `passed` 1,200 to 1,200; on
+  `low_qual.vcf.gz` with the same two, 197,866 and 75,577 bytes,
+  `passed` 1,200 to 900; the VCF read back with popnei's `openVcf` has
+  those variants and 200 individuals, and the `.nei` file with
+  `openVars`. On the VCF of 3,000 variants of 1,000 individuals that
+  `e2e/bigVcf.ts` writes into the test's folder, the `.nei` file is
+  3,320,026 bytes and the VCF 1,297,166, and with `writePartBytes`
+  1,048,576 the `Blob` is four parts and two, the same bytes in their
+  order. With the MAF filter at 0.4 after the missing data filter at
+  0.05 on `panel.nei`, 3,682 bytes and 528, `numVars` 0, answered and not
+  refused. A `readLastByte` that throws gives `crashed` with the words
+  above; a `told` that throws makes `write` throw that value. Before, with the writer of
+  the whole file: with no filter, a `Blob` of 261,490 bytes,
   `numBytes` 261,490, whose bytes open again with `openVars` with 200
   individuals; at 0.05, 250,994 bytes and `passStats` 1,152 of 1,200;
   with the list of 116 before the filter at 0.05, 160,162 bytes and
@@ -2186,9 +2257,10 @@ that spec says otherwise.
 - How core makes the list of the individuals kept from the filters of
   individuals: `docs/specs/core/`, the module `individualsKept.ts` of
   section 9 of the architecture.
-- The filter of the regions of a BED file, the histogram of the missing
-  rate of each variant, and the writer of the VCF: with popnei's release
-  that has them.
+- The filter of the regions of a BED file, and the histogram of the
+  missing rate of each variant: with popnei's release that has them.
+  The writer of the VCF is above, "The written file", from 8 October
+  2026.
 - The filters of the PCA's job, the project's with the PCA's own
   filters of missing data, MAF and LD in their place:
   `pcaFilters` of `docs/specs/analyses/pca.md`. The intermediate results

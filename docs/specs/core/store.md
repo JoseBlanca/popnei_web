@@ -98,7 +98,19 @@ function of the current project, so that a run of the arrow keys
 waiting when a file is opened is made a change before the new history
 starts, a defect found by the review of that day. Built on the branch
 `filters`, work package 5 of `docs/plans/filters.md` and the rounds
-after it, on 8 October 2026. The store is the one object of core that
+after it, on 8 October 2026. Revised on 8 October 2026 for the download
+of the filtered variants on popgen2.html (`docs/designs/stats-filters.md`,
+"The download of the filtered variants", approved by the owner that day;
+`docs/specs/steps/popgen2-download.md`): the write takes the VCF,
+bgzipped, beside the `.nei` file, so the store holds the format of the
+write, which `startWrite` sets and the key of the write and its state
+are made with, where the store held the one format `"nei"` and refused
+another; the state `saved` keeps the file, for the "Save it again" of
+popgen2.html, until the write's key changes; and popgen2.html makes its
+store with a `write` and with its one pass, `variantsSummary`, as the
+`statistics`, so that the individuals kept are worked out from that
+pass finished (below, "The writing of the filtered variants" and "The
+individuals kept"). No code of it yet. The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -756,7 +768,15 @@ the owner decided on 28 September 2026: one pass per load gives them,
 and no change of a filter takes them off. Core makes the list of the individuals kept from them,
 `individualsKept` of `docs/specs/core/individualsKept.md`. The store is given which of its analyses that is, and a
 function that finds the statistics in its result (`statistics` of
-`createStore`, below).
+`createStore`, below). On popgen2.html, from 8 October 2026, that
+analysis is the one pass, `variantsSummary`
+(`docs/specs/analyses/writeVariants.md`, "On popgen2.html"), whose key
+holds the file and no filter too, and the function reads its
+`perIndividual`; that page has no analysis that reads the filters of
+individuals, so the list serves its write alone. The list is made from
+the result in the cache only: a result so far, and the one kept after a
+Stop, are never cached, so the individuals kept are never judged over
+part of the file.
 
 The store makes that list once for each project and each result of
 `individualChecks` under the key the project gives it, as it makes the
@@ -916,15 +936,28 @@ with a state of its own, `write`:
 | locked | `projectNeeds`, `individualListNeeds` or `variantFilterNeeds` gives a reason, asked in that order, or the list of the individuals kept is known and empty | the reason, the `reason` of `individualListNeeds` for the second, `keptNoneReason` for the fourth |
 | done | a write of its key ended done with at least one variant while the project gave that key, the file has not been handed to the browser, and no change has given the write another key since | what the worker gave, `Written` of `docs/specs/worker/protocol.md`: the file, its size and the counts of its pass |
 | noVariant | a write of its key ended done with no variant, `passStats.numVars` 0, and no change has given the write another key since | its key, and the size and the counts of the file, without the file, which nobody can save |
-| saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | its key, and the size and the counts of the file, without the file |
+| saved | the file of `done` was handed to the browser to save, `writeSaved`, and no change has given the write another key since | what the worker gave, the file among it, kept for a second download from a click of the user; until 8 October 2026 the file was forgotten here |
 | running | a write of its key is in flight and is not being stopped, or its Run waits for the statistics of each individual | its progress and the request's id, or those of the statistics |
 | error | popnei refused the write of its key, or it failed and no change has left its key behind since; or the statistics it waits for were refused, or failed and no change has left their key behind since, while the project has a threshold on the individuals, gives their key, and the cache has none under it, as for an analysis that reads the filters of individuals | popnei's message, or the failure, and `ofStatistics` |
 | ready | none of the above | its key, and whether the last write of the key before was dropped because it ended after a change of its filters, until the next change of the project |
 
-Stage 3 writes the `.nei` format alone; the VCF comes with popnei's
-writer of it, with a state of its own. Until then a `startWrite` of
-another format is a defect, since the store would file its key, and
-show its file, as those of the `.nei` file.
+**The format.** A file is written as a `.nei` file or as a VCF
+compressed with bgzip, `WriteFormat`, `"nei"` or `"vcf"`, from 8
+October 2026, when popnei 0.2.2 wrote both by pieces. The store holds
+one format, `"nei"` when it is made, which the key the project gives
+the write is made with, `writeKeyOf(p, format, …)`, and which the state
+`write` is of: every state with a key carries it, `format`, or
+`written.format`. `startWrite(format)` makes `format` the store's
+format first, and then does what it does in the state of the write
+under that format's key; so a `startWrite` that starts nothing, in
+`running` or in `error` after a refusal of popnei, still leaves the
+state `write` of that format, whose error the page then shows. A file
+whose key is not the current one is dropped as before, so a write of one
+format ending while the store holds the other keeps nothing. The old
+page asks for `"nei"` alone. Until 8 October 2026 the store held the one
+format of stage 3, `STATE_FORMAT`, and a `startWrite` of another was a
+defect, since the store would have filed its key, and shown its file,
+as those of the `.nei` file.
 
 - **`startWrite`** in `ready` or `saved`, or in `error` after a failure
   that is not popnei's, of the write or of the statistics it waited for,
@@ -942,14 +975,20 @@ show its file, as those of the `.nei` file.
   returns `null`: after a refusal of popnei of the statistics, too, which
   a new press would only start again to be refused again, as `startRun`
   does for an analysis.
-- **The file is kept until it is saved, or until the project gives
-  another key.** When a write ends `done` and the project still gives its
-  key, the store keeps what the worker gave, `Written` of the protocol,
-  the file with its size and the counts of its pass, and the state is
-  `done`. It forgets the file when the page has handed it to the
-  browser, `writeSaved`, and the state is `saved`; and when the project
-  gives the write another key, the load changes or a project is opened,
-  and the state is `ready`. An undo does not bring a file back once it is
+- **The file is kept until the project gives another key.** When a
+  write ends `done` and the project still gives its key, the store keeps
+  what the worker gave, `Written` of the protocol, the file with its
+  size and the counts of its pass, and the state is `done`. When the page
+  has handed it to the browser, `writeSaved`, the state is `saved`, and
+  the store still keeps the file, for a second download from a click of
+  the user on popgen2.html; until 8 October 2026 it forgot the file
+  there. It forgets the file when the project gives the write another
+  key, a change of the filters, of the format, of the load, or a project
+  opened, and the state is `ready`. A file forgotten in `saved` has been
+  handed to the browser and is not "discarded": the notice says so only
+  of a file in `done`. On the old page, which does not offer the file
+  again, the file now stays in memory after its Save until such a change,
+  as long as it stayed before its Save. An undo does not bring a file back once it is
   forgotten, and the notice of a command, an undo or a redo that forgets
   a file in `done` says so, `writeDiscarded`, as the owner decided on 26 September 2026
   (point G of `docs/specs/stage-3-open-points.md`); an
@@ -960,9 +999,11 @@ show its file, as those of the `.nei` file.
   change makes it another file than the step shows, as section 6 of the
   architecture has it (`docs/specs/entry.md`, "A file of the filtered
   variants saved"). The page is not told whether the browser kept the
-  download, so "saved" is the Save pressed: a user who cancels the
-  browser's own question writes the file again, as the owner decided on
-  26 September 2026 (point A of `docs/specs/stage-3-open-points.md`).
+  download, so "saved" is the file handed to the browser: on the old
+  page a user who cancels the browser's own question writes the file
+  again, as the owner decided on 26 September 2026 (point A of
+  `docs/specs/stage-3-open-points.md`); on popgen2.html they press "Save
+  it again".
 - **A write that ends after a change of its filters is dropped**, as the
   owner decided on 26 September 2026 (`docs/architecture.md`, section
   13, point 6): when it ends `done` and the project no longer gives its
@@ -1068,8 +1109,8 @@ export interface AppState<R, F = never> {  // F: the type of a written file, Blo
       when projectNeeds or individualListNeeds gives a reason
       (docs/specs/core/individualsKept.md). */
   readonly individualsKept: IndividualsKept | null;
-  /** The writing of the filtered variants as a .nei file; null when the
-      store was made with no `write`. */
+  /** The writing of the filtered variants in the store's format; null
+      when the store was made with no `write`. */
   readonly write: WriteStatus<F> | null;
 }
 
@@ -1097,13 +1138,15 @@ export type AnalysisStatus<R> =
 export type WriteStatus<F> =
   | { readonly kind: "locked"; readonly reason: string }
   | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
-  | { readonly kind: "saved"; readonly key: Key; readonly written: Omit<Written<F>, "file"> }
+  | { readonly kind: "saved"; readonly key: Key; readonly written: Written<F> }   // the file kept, from 8 October 2026
   | { readonly kind: "noVariant"; readonly key: Key; readonly written: Omit<Written<F>, "file"> }
-  | { readonly kind: "running"; readonly key: Key; readonly runId: number;
-      readonly progress: Progress | null; readonly waitsForStatistics: boolean }
-  | { readonly kind: "error"; readonly key: Key; readonly error: AnalysisError;
-      readonly ofStatistics: boolean }
-  | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
+  | { readonly kind: "running"; readonly key: Key; readonly format: WriteFormat;
+      readonly runId: number; readonly progress: Progress | null;
+      readonly waitsForStatistics: boolean }
+  | { readonly kind: "error"; readonly key: Key; readonly format: WriteFormat;
+      readonly error: AnalysisError; readonly ofStatistics: boolean }
+  | { readonly kind: "ready"; readonly key: Key; readonly format: WriteFormat;
+      readonly dropped: boolean };
 
 export type AnalysisError =
   | { readonly kind: "refused"; readonly message: string }  // popnei's; kept
@@ -1163,7 +1206,8 @@ export function createStore<J, R, F = never>(config: {
   readonly countsOf: (r: R) => PassFound<R>;
   /** The id of the analysis whose results countsOf makes, "filterCounts"; null in the tests that have none. */
   readonly counts: AnalysisId | null;
-  /** The analysis of the statistics of each individual, "individualChecks", and its numbers in its result. */
+  /** The analysis of the statistics of each individual, "individualChecks" on popgen.html and the one pass,
+      "variantsSummary", on popgen2.html, and its numbers in its result. */
   readonly statistics: { readonly analysis: AnalysisId; of(r: R): IndividualStats } | null;
   /** How a file of the filtered variants is written; null when the application writes none. */
   readonly write: {
@@ -1193,8 +1237,8 @@ individuals it keeps, would make its numbers depend on them, which the
 owner decided on 28 September 2026 they do not. The definition of the
 counts, which until then could not read the filters of individuals,
 reads them. `IndividualStats`
-and `IndividualsKept` are those of `docs/specs/core/individualsKept.md`, and `WriteFormat`, `"nei"` in stage 3, is
-`WriteJob["format"]`. The handles the store gives back are of either
+and `IndividualsKept` are those of `docs/specs/core/individualsKept.md`, and `WriteFormat`, `"nei"` or `"vcf"`
+from 8 October 2026, is `WriteJob["format"]`. The handles the store gives back are of either
 kind of request, `Run<R | Written<F>>`, and `runEnded` takes the outcome
 of either; the store knows which by the id of the request.
 
@@ -1227,14 +1271,15 @@ export interface Store<R, F = never> {
   /** Stops the calculation in flight of an analysis, or its wait for the
       statistics, if there is one. */
   cancelRun(id: AnalysisId): void;
-  /** Starts the writing of the filtered variants, in the states and with
-      the handles of startRun. */
+  /** Makes `format` the store's format of the write, then starts the
+      writing of the filtered variants in it, in the states and with the
+      handles of startRun, and in `saved`. */
   startWrite(format: WriteFormat): readonly Run<R | Written<F>>[] | null;
   /** Stops the writing in flight, or its wait, if there is one. */
   cancelWrite(): void;
   /** The page has handed the file of `write`, `done`, to the browser to
-      save: the store forgets the file, and `write` is `saved`. A defect
-      in any other state. */
+      save: `write` is `saved`, and the store keeps the file until the
+      write's key changes. A defect in any other state. */
   writeSaved(): void;
 
   popneiReady(version: string): void;
@@ -1619,9 +1664,10 @@ whose file is a text.
   id, the filters of the variants, `individuals` `null` and `"nei"`,
   under `writeKeyOf`, and `write` is `running`; `runEnded` done: `write` is
   `done` with what the worker gave, and the cache does not hold it;
-  `writeSaved()`: `write` is `saved`, holds no file, and its size and
-  counts are those of the file; `writeSaved()` again is a defect; a
-  command and its undo: `ready`. Again, then a
+  `writeSaved()`: `write` is `saved` and holds the same file, the same
+  object, with its size and counts; `writeSaved()` again is a defect; a
+  command and its undo: `ready`, with no file and no `writeDiscarded` in
+  the notice. Again, then a
   command that changes a filter: the notice has `writeLeftBehind` and
   `cancel()` was not called; an undo: it goes on. Again, then the result
   arrives after the command: `write` is `ready` with `dropped` true,
@@ -1639,6 +1685,23 @@ whose file is a text.
   Again, then `startRun` of an analysis: the write, whose key the project
   gives, is not cancelled. Again, then a new variants file loaded: the
   write is cancelled at once and the notice has `writeStopped`.
+- **The format of the write**, from 8 October 2026: a store made gives
+  `write` `ready` with `format` `"nei"`; `startWrite("vcf")` sends a
+  `WriteJob` with `"vcf"` under `writeKeyOf(p, "vcf", …)`, another key
+  than that of `"nei"`, and `write` is `running` with `format` `"vcf"`;
+  its result `done`, `writeSaved()`, then `startWrite("nei")`: `write`
+  holds no file and is `running` with `"nei"`. A refusal of popnei of
+  the `"vcf"` write, then `startWrite("nei")` and its file `done`, then
+  `startWrite("vcf")`: it returns `null`, sends nothing, and `write` is
+  `error` with `"vcf"` and the refusal. A write's result whose
+  `format` is not that of its request is a defect. No `startWrite` of
+  either format is a defect.
+- **The statistics of popgen2.html**: a store made with
+  `variantsSummary` as its `statistics` and a threshold of the
+  individuals gives `individualsKept` with its list `needsStatistics`
+  while the summary runs, with a result so far, and after its Stop with
+  the result so far kept; its list known once the summary is `done`; and
+  `write` `locked` with `keptNoneReason` when that list is empty.
 - **`popneiReady` twice** with the same version gives the same state
   object; **`dismissNotice`** with no notice gives the same state object.
 - **`getState`** returns the same object between two changes, and the

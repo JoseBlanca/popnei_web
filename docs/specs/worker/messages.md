@@ -79,7 +79,13 @@ they passed their FILTER (`docs/designs/stats-filters.md`, "What the
 owner decided"): `opened` carries `keepsPassed`, popnei 0.2.2's answer
 to that, a boolean, and `PROTOCOL_VERSION` is 14, one above the 13 of
 that merge. Built on the branch `filters`, work packages 1 and 2 of
-`docs/plans/filters.md`, on 7 and 8 October 2026.
+`docs/plans/filters.md`, on 7 and 8 October 2026. Revised on 8 October
+2026 for the download of the filtered variants on popgen2.html
+(`docs/designs/stats-filters.md`, "The download of the filtered
+variants", approved by the owner that day): the `format` of a `write`
+and of its `written` is `"nei"` or `"vcf"`, the VCF compressed with
+bgzip (`docs/specs/worker/protocol.md`), and `PROTOCOL_VERSION` is 15. No
+code of it yet.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -160,7 +166,7 @@ received it is ended (below):
   was made with, since the user may have changed a setting while it ran
   and the project may then give that analysis another key.
 - **`write` carries the key and a `WriteJob`**
-  (`docs/specs/worker/protocol.md`): the format, `nei`, the load, the
+  (`docs/specs/worker/protocol.md`): the format, `nei` or `vcf`, the load, the
   filters of the variants and the list of the individuals kept. Its
   key is the store's, made from the load, the filters and the format
   (`docs/architecture.md`, section 5), and it comes back in `written`, so
@@ -381,8 +387,9 @@ check, because they differ in `ready`:
   FILTER failures joined and left (phase 3, `docs/plans/one-pass.md`);
   12 on the branch of the filters, for the kind
   `passed`; 13 at the merge of the branch `popnei-0.2.2`, which gave 12
-  to the count of the FILTER failures of the summary; and 14 when
-  `opened` gains `keepsPassed`.
+  to the count of the FILTER failures of the summary; 14 when
+  `opened` gains `keepsPassed`; and 15 when the format of a `write` and
+  of its `written` gains `"vcf"`.
 
 The names of the built files carry a hash of what they hold
 (`.claude/skills/coding/worker.md`, "The wasm files on GitHub Pages"), so
@@ -513,7 +520,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 ```
 
 The requests of the calculation worker, and what it sends back.
@@ -642,6 +649,9 @@ would mislead whoever reads it there.
   the reader never gives one, and core records the read under the
   options it was asked with (`docs/specs/core/project.md`, "The
   records").
+- **A `written` whose format is not that of its `write`** passes the
+  check, which does not know the request; the store, which does, makes it
+  a defect (`docs/specs/core/store.md`).
 - **A `written` of no variant**, `passStats.numVars` 0, passes the check: popnei
   writes such a file (`docs/specs/worker/protocol.md`, "The cases"), and
   what the step does with it is its own.
@@ -676,7 +686,8 @@ File(["…"], "panel.nei")`.
   `individuals` `null` and with a list, its `progress`, `{ kind:
   "progress", id: 3, bytesRead: 259376, numBytes: 261490, pass: 1,
   numPasses: 1 }`, and its `result`, a `write` and its `written`, whose
-  file is `new Blob([new Uint8Array(3594)])`, a
+  file is `new Blob([new Uint8Array(3594)])`, and from 8 October 2026 a
+  `write` and its `written` of the format `"vcf"`, a
   `reopenFailed`, a `readIndividuals` with the options of a CSV and one
   with `csv` `null`, an `individuals` read with a `found` and one with
   `found` `null`, and one refused of each kind of the reader, the seven
@@ -727,7 +738,9 @@ File(["…"], "panel.nei")`.
   populations with two values of `fst`, `wrongLength`, an `order` of the
   kind `pcoa` of `[0, 0, 2]`, and a `notPlaced` without its `message`;
   a result of the LD decay of two populations and 50 bins with 99 values
-  of `meanR2`, `wrongLength`.
+  of `meanR2`, `wrongLength`; from 8 October 2026, a `write` and a
+  `written` of the format `"bcf"`, or `"vcf.gz"`, `unknownValue` at
+  `job.format` and `result.format`, with `expected` `["nei", "vcf"]`.
 - **The result so far**: a `soFar` of the summary of the variants file
   is accepted as it is; one whose `numVarsPerChrom` holds one count for
   two chromosomes gives `wrongLength` at `result.numVarsPerChrom`, with

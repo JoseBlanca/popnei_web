@@ -1,4 +1,4 @@
-# Writing the filtered variants as a .nei file
+# Writing the filtered variants as a file
 
 Written on 26 September 2026, for stage 3 of `docs/build-order.md`, the
 Variants step whole. There is no code of it yet. This spec gives how the
@@ -55,6 +55,26 @@ leaves it out for such a file, and gives `p.filters` itself otherwise. On
 `popgen.html`, whose projects never hold that filter, the two are the
 same array, so nothing a user sees changes.
 
+Revised on 8 October 2026 for the download of the filtered variants on
+popgen2.html (`docs/designs/stats-filters.md`, "The download of the
+filtered variants", approved by the owner that day with its decisions
+7 to 12; its screen is `docs/specs/steps/popgen2-download.md`), with
+popnei 0.2.2, installed that day, whose `writeVars` and `writeVcf` hand
+the file over in pieces of 1 MiB through `onBytes`. The write takes a
+format, `"nei"` or `"vcf"`, the VCF always compressed with bgzip; the
+runner gathers the pieces into one `Blob` in parts of 64 MiB, so that
+the memory of wasm no longer holds the file, and reads its last byte
+before it posts it; `writtenName` takes the format; a function of core,
+`noVariantForCertain`, tells from the one pass of popgen2.html when the
+filters keep no variant for certain; and the state `saved` of the store
+keeps the file until the write's key changes, for the "Save it again" of
+popgen2.html. The old page, popgen.html, writes the `.nei` file alone,
+through the same runner, and keeps its Save, its estimate, its warning
+and its limit of size, which the pieces leave cautious; popgen2.html has
+none of the three. What is new is in the section "On popgen2.html" and
+in the places it names; a sentence below that the pieces made untrue is
+corrected where it stands, with its date.
+
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
 no other place for it. It has no definition of that shape, no result in
@@ -94,7 +114,7 @@ analysis does:
 
 ```ts
 {
-  format: "nei",
+  format: "nei" | "vcf", // "nei" alone on popgen.html; the VCF bgzipped
   fileId: p.variants.fileId,
   filters: jobFilters(filtersApplied(p)),
   individuals: readonly string[] | null, // the individuals kept, as the store
@@ -109,16 +129,23 @@ This is `WriteJob` of `docs/specs/worker/protocol.md`, tagged by its
 The runner puts `filterIndividuals(individuals)` on the `Variants` when
 the list is not `null`, then the filters in their order, which count
 over the individuals kept, and calls
-`writeVars(variants)` with popnei's size of batch. popnei builds the
-whole file in the memory of wasm and copies it out, piece by piece, into
-one `Uint8Array`, with the counts of its pass. The worker makes of the
-array a `Blob`, the browser's object for a file made in the page, drops
-the array, and posts the `Blob`, which crosses to the page as a handle,
-with no copy:
+`writeVars(variants, { onBytes })` with popnei's size of batch for a
+`.nei` file, or `writeVcf(variants, { bgzip: true, onBytes })` for a
+VCF. popnei writes the file as its pass reads, holding one block of it
+in the memory of wasm, and gives `onBytes` each piece of 1 MiB, the last
+one shorter, then returns the counts of its pass alone. The worker
+gathers the pieces into a `Blob`, the browser's object for a file made
+in the page, in parts of 64 MiB (`docs/specs/worker/runner.md`, "The
+written file"), reads its last byte, and posts it; the `Blob` crosses to
+the page as a handle, with no copy:
 
 ```ts
-{ format: "nei", file: Blob, numBytes: number, passStats: PassStats }
+{ format: "nei" | "vcf", file: Blob, numBytes: number, passStats: PassStats }
 ```
+
+Until 8 October 2026 popnei built the whole file in the memory of wasm
+and copied it into one `Uint8Array`, of which the worker made the
+`Blob`; the measurements below, "What was measured", are of that write.
 
 This is `Written<Blob>` of the protocol; `numBytes` is the `size` of the
 `Blob`, which core reads without naming a type of the browser.
@@ -132,7 +159,7 @@ reads it, to save it.
 
 The store tracks a write as it tracks a calculation
 (`docs/architecture.md`, section 5), under a key of the load, both lists
-of filters and the format, `"nei"`, made by `docs/specs/core/keys.md`;
+of filters and the format, `"nei"` or `"vcf"`, made by `docs/specs/core/keys.md`;
 the list of the individuals kept is in no key, the thresholds are. So:
 
 - it has a progress, a Stop, and a cancel that restarts the worker, as a
@@ -161,19 +188,24 @@ the list of the individuals kept is in no key, the thresholds are. So:
 The step shows the Save button when the write ends, with the name and
 the size of the file. Pressing it starts the download through a link
 that names the file, a link with the `download` attribute, which every
-browser of the floor of `docs/technology.md` has; the save is a click of
-its own, since a download started by the code minutes after the click
+browser of the floor of `docs/technology.md` has; on the old page the
+save is a click of its own, since a download started by the code minutes after the click
 that asked for it may be blocked by the browser, or asked about, as
-Chrome does for a page that starts several downloads. The `Blob` and the
-address the link reads it from are released once the file is saved, and
-when a change of the filters, a new write or a new load makes the file
-other than the step shows, as section 6 of the architecture has it
-(`docs/specs/entry.md`, "A file of the filtered variants saved";
-`docs/specs/core/store.md`, `writeSaved`). The page is not told whether
-the browser kept the download, so the file is released when Save is
-pressed: a user who cancels the question of a browser that asks where to
-save writes the file again, as the owner decided on 26 September 2026
-(point A of `docs/specs/stage-3-open-points.md`). A file written and not saved that
+Chrome does for a page that starts several downloads. The address the
+link reads the file from is released a minute after the click
+(`src/ui/download.ts`), and the `Blob` when a change of the filters, a
+new write or a new load makes the file other than the step shows, as
+section 6 of the architecture has it (`docs/specs/entry.md`, "A file of
+the filtered variants saved"; `docs/specs/core/store.md`, `writeSaved`).
+Until 8 October 2026 the store forgot the `Blob` once Save was pressed
+too; it now keeps it in the state `saved` until such a change, for the
+"Save it again" of popgen2.html, and the old page holds it so as long as
+it held it before the Save. The old page is not told whether the
+browser kept the download and does not offer the file again: a user who
+cancels the question of a browser that asks where to save writes the
+file again, as the owner decided on 26 September 2026 (point A of
+`docs/specs/stage-3-open-points.md`), and its words stay "To save it
+again, write it again." A file written and not saved that
 a change of the filters, or a new load, releases is gone, and an Undo
 does not bring it back; the notice of that change says so, as the owner
 decided on 26 September 2026 (point G of
@@ -181,16 +213,26 @@ decided on 26 September 2026 (point G of
 
 The name, `writtenName` of `src/core/fileNames.ts` (below, "The
 functions of core"), is the stem of the variants file, `variantsStem` of
-the same module, with `.filtered.nei`: `panel.vcf.gz` gives
-`panel.filtered.nei`. With no filter of the variants that applies to
-the file, `filtersApplied(p)` empty, and no filter of individuals the
-name is the stem with `.nei`, `panel.nei`, since the
+the same module, with `.filtered.nei`, or `.filtered.vcf.gz` for a VCF:
+`panel.vcf.gz` gives `panel.filtered.nei`. With no filter of the
+variants that applies to the file, `filtersApplied(p)` empty, and no
+filter of individuals the name is the stem with `.nei`, `panel.nei`, or
+with `.vcf.gz`, since the
 file is then the variants file converted, which is what the application
-suggests doing once with a VCF (`docs/functionality.md`, section 3). The
+suggests doing once with a VCF (`docs/functionality.md`, section 3); a VCF written from a VCF
+with no filter has the name of the file it came from. The
 size is `numBytes` as `sizeText` writes it, below: "251 KB", "19.2 MB",
 "1.2 GB".
 
 ### The size, before the write
+
+This section is the old page's, `popgen.html`, which keeps it as it is.
+Its numbers were measured on 27 September 2026 with popnei building the
+whole file in the memory of wasm; with the pieces, from 8 October 2026,
+the tab holds about F and not 4F to 6.1F, and the limits below are
+cautious, as the design decided (`docs/designs/stats-filters.md`,
+"Whether a limit of size is needed"). popgen2.html has no estimate,
+warning or limit (below, "On popgen2.html").
 
 The tab holds, at the peak of a write of F bytes, 4.1F to 4.4F above
 what it held before in Chromium and 4.8F to 6.1F in WebKit (measured,
@@ -308,10 +350,15 @@ owner's Mac (`docs/plans/walking-skeleton.report.md`). The worker is
 started again, too, after a write that popnei refused, whatever the
 size of the file, since a refusal for memory leaves the memory of wasm
 grown by the part of the file it had built (`docs/specs/worker/client.md`).
+With the pieces, from 8 October 2026, wasm grows by one block of the
+file and not by the file, so the restart may give back little; it stays
+until the plan measures what a write leaves in the tab, and is dropped
+if it gives back nothing (below, "What is measured in the plan").
 
 ### What was measured
 
-On 27 September 2026, by `VS5 D5` of `e2e/measure.spec.ts`, on the built
+These are measurements of the write before the pieces, in which popnei
+built the whole file in the memory of wasm. On 27 September 2026, by `VS5 D5` of `e2e/measure.spec.ts`, on the built
 site, in Chromium 153.0.8010.12 (Playwright's headless shell) and WebKit
 26.6, with Playwright 1.63.0, on the owner's Mac, an Apple M5 Pro with 64
 GB of memory and macOS 27.0. The memory is the footprint that macOS
@@ -351,11 +398,23 @@ rows of section 9 of `docs/architecture.md`.
 
 ```ts
 // src/core/fileNames.ts
-/** The name of the written file of the filtered variants:
-    "panel.filtered.nei" from panel.vcf.gz with a filter, "panel.nei" with
-    no filter of the variants and none of individuals; "project.nei" for
-    a project with no variants file, which the step never asks. */
-export function writtenName(p: Project): string;
+/** The name of the written file of the filtered variants in `format`:
+    "panel.filtered.nei" or "panel.filtered.vcf.gz" from panel.vcf.gz with
+    a filter, "panel.nei" or "panel.vcf.gz" with no filter of the variants
+    that applies to the file and none of individuals; "project.nei" or
+    "project.vcf.gz" for a project with no variants file, which no page
+    asks. */
+export function writtenName(p: Project, format: WriteFormat): string;
+
+// src/core/noVariantKept.ts
+/** Whether the one pass of popgen2.html, `summary`, finished, shows for
+    certain that the filters of `p` that apply to its file keep no
+    variant, the individuals kept being `kept` (below). */
+export function noVariantForCertain(
+  p: Project,
+  summary: VariantsSummaryResult,
+  kept: IndividualsKept | null,
+): boolean;
 
 // src/core/writeEstimate.ts
 export const BYTES_PER_GENOTYPE = 1;
@@ -403,6 +462,45 @@ groups of three digits of the whole part, as `grouped` of
 of its unit is written in the next: 999,600 bytes is "1.0 MB". So
 250,994 bytes is "251 KB", 19,161,178 "19.2 MB", and 4,300,000,000 "4.3
 GB". It is the same function for the estimate and for the written file.
+
+`noVariantForCertain` is for popgen2.html, which writes with no count
+before: it says, from the one pass alone, when a write would give a file
+of no variant, so that the page says so in place of its button and
+writes nothing (`docs/specs/steps/popgen2-download.md`, "When the
+filters keep no variant"). Its `summary` is the result of the one pass
+finished, `variantsSummary` done, over every variant and every
+individual of the file, whose histograms of the variants are popnei's
+1,000 bins over 0 to 1 that hold their right edge, the first holding 0
+as well (`VARIANT_FINE_BINS`, `VARIANT_RANGE`, `VARIANT_BINS_CLOSED`).
+It answers true when one of these holds, and false otherwise:
+
+- the filters that apply to the file, `filtersApplied(p)`, hold the
+  filter of the FILTER column, and no variant of the file passed its
+  FILTER, `summary.filterColumn.passed` 0. That filter judges a variant
+  by its FILTER column alone, whatever the individuals;
+- the filters of the individuals keep every individual, `kept.list` known
+  with `null`, and one threshold of the variants among `filtersApplied(p)`,
+  the missing rate, the MAF or the observed heterozygosity, keeps no
+  variant of its histogram: at a threshold t above 0, the bins whose
+  right edge is at most t hold no variant; at 0, the first bin holds
+  none. The first bin holds 0 and the values up to 0.001, so at 0 only an
+  empty first bin says that no variant has the value 0: on
+  `panel.vcf.gz` two variants have a missing rate of 0, and popnei's
+  filter at 0 keeps them (node, popnei 0.2.2, 8 October 2026). A
+  variant with no called genotype is in no histogram of the MAF or of
+  the observed heterozygosity, and their filters drop it at any
+  threshold, so it changes nothing; the missing rate counts it, at 1.
+  A threshold that is no edge of the bins is a defect, thrown, as in
+  `variantsAllKept` of `src/core/thresholds.ts`: the page rounds every
+  threshold to an edge.
+
+It answers false in every other case, though the write may keep no
+variant: with an individual left out, since a variant's values over the
+individuals kept are not those of its histogram; and for two filters
+that each keep some variants and may keep none together, since each
+histogram is of one statistic. An LD filter, which popgen2.html does not
+have, makes no answer certain. It reads popnei's bins and counts and
+counts nothing else; it computes no statistic.
 
 ## The cases
 
@@ -471,6 +569,26 @@ GB". It is the same function for the estimate and for the written file.
   popnei, or the engine traps, `workerFailed` (`docs/specs/worker/runner.md`,
   "The written file"); the words of both, below, say what to do, and
   neither blames the variants file.
+
+- **On popgen2.html, the filters keep no variant.** The page says so
+  before the write when `noVariantForCertain` is true, and after it
+  otherwise, from the state `noVariant`; nothing is downloaded
+  (`docs/specs/steps/popgen2-download.md`).
+- **On popgen2.html, a variants file of no variant.** popnei refuses the
+  one pass of such a file, "the pass gave no variant and its source
+  holds none" (node, popnei 0.2.2, 8 October 2026, a `.nei` file of no
+  variant written from `panel.nei`), so the download waits for
+  statistics that never come, and the box of the file says "panel.nei
+  has no variants. Open another variants file." The design's sentence
+  for such a file is not reached.
+- **A file the browser cannot keep.** A `Blob` that the browser's storage
+  could not take is made at once and fails only when it is read, in
+  Chromium (the design, "Whether a limit of size is needed"); so the
+  worker reads the last byte of the finished `Blob` before it posts it,
+  and a `Blob` it cannot read ends the write as a crash of the worker,
+  `workerFailed`, whose words say that the file did not fit.
+- **A Stop during a write** ends the worker, and what it held of the
+  file goes with it; nothing is left on the disk or in the page.
 
 ## The step's part
 
@@ -582,9 +700,107 @@ status region"). The warning says "Warning:" in words (WCAG 2.2,
 Where the button and its estimate sit, and whether the estimate is shown
 before the user asks.
 
+## On popgen2.html
+
+The download of `docs/specs/steps/popgen2-download.md` is this write,
+with what the old page's step adds left out: no estimate, no warning,
+no limit of size, no Count, and no Save but the download started by
+itself and its "Save it again", as the owner decided on 8 October 2026
+(the design, "What the owner decided", 7 to 12).
+
+### What it asks of core
+
+- The store of popgen2.html is made with a `write`, `Client.write` and
+  `writeCountsOf`, as the old page's is, and with the one pass,
+  `variantsSummary`, as its `statistics`, the analysis whose result
+  gives each individual's missing rate and heterozygosity
+  (`perIndividual` of its result). The store then works out the
+  individuals kept, and `keptNoneReason`, from the one pass finished,
+  and from nothing before: a result so far, or the one kept after a Stop,
+  is never in the cache (`docs/specs/core/store.md`, "The individuals
+  kept"). Its `counts` stays `null`, so the counts of a write are put
+  nowhere but in its state.
+- The format is the user's choice in the dialog, `"vcf"` or `"nei"`,
+  given to `startWrite`; the key of the write holds it.
+- The name is `writtenName(p, format)`.
+
+### What a write holds
+
+A write of a file of F bytes holds, from 8 October 2026, the `Blob`, F,
+up to 64 MiB of pieces in the worker before they become a part of it,
+and one block of the file in the memory of wasm, about 10 MB of
+genotypes for 1,000 individuals at the size popnei writes (the design,
+"What popnei 0.2.2 gives"), where the write before held 4.1F to 6.1F
+(above, "What was measured"). Where each browser keeps the bytes of the
+`Blob` is in the design, "How the pieces reach the user's download":
+Chromium in its own process up to 2 GB of `Blob`s and on the disk past
+that, Firefox not settled by its sources, WebKit not documented. The
+store keeps the file after its download until the write's key changes,
+for "Save it again".
+
+No limit is set before the write, as the owner decided on 8 October
+2026. A write the browser cannot hold ends in an error, the worker's
+crash or a `Blob` it cannot read, both `workerFailed`, with the words
+below; a tab the browser closes says nothing, and the plan looks for the
+size at which that happens.
+
+### Its words on popgen2.html
+
+Shown in the dialog in place of the bar, with Close
+(`docs/specs/steps/popgen2-download.md`, "When the write fails"); the
+examples are of `low_qual.vcf.gz` written as a VCF. They leave out the
+size, which popgen2.html does not know before the write, and the
+project, which popgen2.html does not save.
+
+| when | the text |
+|---|---|
+| popnei refused the write, `refused` | "low_qual.filtered.vcf.gz could not be written: popnei stopped with "‹its message›". If the message speaks of memory, the file may be too large for this tab: leave out more variants or individuals with the filters, or write the file with popnei in Python, which writes files of any size. If it names a line of the VCF, correct the file, or fetch it again, and open it again." |
+| the worker stopped with no answer, or the `Blob` could not be read, `workerFailed` | "low_qual.filtered.vcf.gz could not be written: the writing stopped unexpectedly, perhaps because the file did not fit in the memory of this tab. Leave out more variants or individuals with the filters and download again, or write the file with popnei in Python, which writes files of any size." |
+| the browser can no longer read the variants file, `reopenFailed` | the words of the box of the file for it, `failedText` of `src/ui/variants/words.ts`: "low_qual.vcf.gz could not be read again; it may have changed on the disk since it was opened. Open it again." |
+| `couldNotStart` | "The application could not start its calculations. Reload the page and open low_qual.vcf.gz again." |
+| `protocolMismatch` | "The page is out of date. Reload the page and open low_qual.vcf.gz again." |
+| a defect of our own code, `defect` | "The page met an error of its own while writing low_qual.filtered.vcf.gz: ‹message›. Download again." |
+
+A failure of the statistics the write waited for, `ofStatistics`, does
+not reach the dialog: the button is enabled only once the one pass is
+finished, so the write never waits for it. The kind `files` is a defect,
+thrown, as in the box of the file: the calculation worker holds no files
+wasm.
+
+### What is measured in the plan
+
+As the design asks ("How it is tested, and what would prove it wrong",
+and "Whether a limit of size is needed"), on the built site:
+
+- the largest file written and saved in Chromium and WebKit, files of 2,
+  4 and 8 GB from `e2e/bigVcf.ts` as `VS5 D5` did, with the memory of
+  each process; a file past Chromium's quota of `Blob`s on the disk; and
+  a file of 2 GB in Firefox by hand, with `about:memory`;
+- whether WebKit and Firefox copy the bytes of a `Blob` made of
+  `Blob`s; if one does, the runner keeps the parts as a list and makes
+  the last `Blob` once;
+- one write timed with the bar and without it;
+- what a write leaves in the tab, with and without the restart after
+  `WRITE_RESTART_BYTES`, which is dropped if it gives back nothing;
+- the value of the parts, 64 MiB, `WRITE_PART_BYTES` of the runner.
+
 ## How it is verified
 
-- **The runner, in node** with popnei: the job with the missing data
+- **The runner, in node**, from 8 October 2026 with popnei 0.2.2: the
+  pieces gathered into the `Blob` are the bytes `writeVars` or
+  `writeVcf` gives whole, with the same counts, on `panel.nei` with the
+  missing data filter at 0.05, 251,074 bytes as a `.nei` file and 95,879
+  as a VCF, and on `panel.vcf.gz` with the filter of the FILTER column
+  and the missing data filter at 0.1, 261,746 and 100,409 bytes, each one
+  piece; on a VCF of 3,000 variants of 1,000 individuals made by
+  `e2e/bigVcf.ts`, 1,917,582 bytes, the `.nei` file is 3,320,026 bytes
+  in four pieces and the VCF 1,297,166 bytes in two, and with parts of
+  one piece each, a value of the runner's test, the `Blob` is those
+  parts in their order; a file of no variant, `panel.nei` at 0.05 with
+  a MAF filter at 0.4, is 3,682 bytes as a `.nei` file and 528 as a VCF,
+  with `numVars` 0; a `Blob` whose last byte cannot be read is answered
+  as a crash; a `told` that throws makes `write` throw that value (`docs/specs/worker/runner.md`, "How it is verified").
+  Before, with the writer of the whole file: the job with the missing data
   filter at 0.05 on `panel.nei` answers a `Blob` of 250,994 bytes and
   `passStats` of 1,152 of 1,200; with the 111 individuals the thresholds
   0.03 and 0.38 keep, put before the filter, 156,802 bytes and
@@ -623,8 +839,31 @@ before the user asks.
   bytes, as above.
 - **`writtenName`**: `panel.vcf.gz` with a filter gives
   `panel.filtered.nei`, with a threshold on the individuals alone too,
-  with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`.
-- **Playwright**, in Chromium, Firefox and WebKit: the flow writes
+  with none `panel.nei`; `PANEL.NEI` with a filter `PANEL.filtered.nei`;
+  in `"vcf"`, `panel.filtered.vcf.gz` and, with no filter,
+  `panel.vcf.gz`.
+- **`noVariantForCertain`, with Vitest**, over the one pass's result
+  that popnei 0.2.2 gives under node, kept as a fixture as
+  `e2e/fixtures/variant_fine_bins.json` is, and checked against what
+  popnei's filters keep: on `panel.vcf.gz`, whose first bin of the
+  missing rate holds 2 variants, whose MAF starts in the bin of 0.499 to
+  0.5 and whose observed heterozygosity in the bin of 0.026 to 0.027
+  (node, 8 October 2026): certain for the observed heterozygosity at 0
+  and at 0.026, and for the MAF at 0.45 and at 0.499, where popnei keeps
+  none; not certain for the missing rate at 0, where popnei keeps 2, for
+  the observed heterozygosity at 0.027, nor for the missing rate at 0
+  with the MAF at 0.6, which keep 2 and 277 alone and none together; not certain with the
+  missing rate of the individuals at 0.03, which keeps 116 of 200, and
+  the observed heterozygosity of the variants at 0.01 or at 0.02, where
+  popnei keeps none and one; certain with the filter of the FILTER
+  column over a result whose `filterColumn.passed` is 0, made in the
+  test, and not without that filter, nor with it on `low_qual.vcf.gz`,
+  900 of whose 1,200 variants passed. Never certain where popnei keeps a
+  variant: at 0.027 popnei keeps one variant, and at 0.5 the MAF keeps
+  three.
+- **Playwright**, on popgen2.html: the flows of
+  `docs/specs/steps/popgen2-download.md`, "How it is checked". On
+  popgen.html, in Chromium, Firefox and WebKit: the flow writes
   `panel.nei` with the missing data filter at 0.05, presses Save, and
   reads the download's name and size, 250,994 bytes, and 251,074 from
   stage 4; the variants of
@@ -654,7 +893,8 @@ before the user asks.
   many.
 - `docs/specs/entry.md`: the download through a link, and the release of
   the `Blob`.
-- `docs/specs/steps/variants.md`: where the button goes.
+- `docs/specs/steps/variants.md`: where the button goes on the old page;
+  `docs/specs/steps/popgen2-download.md`: the download of popgen2.html.
 
 ## Open points
 
@@ -683,12 +923,11 @@ at the cost of holding the file, about 960 MB for a million variants of
 
 ## Not in this spec
 
-- The VCF, bgzipped, and the writer by pieces, a writer of popnei that
-  gives the file one batch of variants at a time, so that the memory of
-  wasm holds one batch and not the whole file, with popnei's release
-  that has them (`docs/architecture.md`, section 6, "What this asks of
-  popnei"). With the writer by pieces, the memory of wasm no longer
-  holds the file, which is about 2.4F of the peak of 4.1F to 6.1F measured
-  above, and the warning and `WRITE_MAX_BYTES` are measured again.
+- The VCF on the old page, which writes the `.nei` file alone; and new
+  values of its warning and of `WRITE_MAX_BYTES` from a measurement with
+  the pieces, which the plan of the download may give but does not
+  change them for.
+- The screen of the download of popgen2.html, its states and its words
+  but those of a failure: `docs/specs/steps/popgen2-download.md`.
 - The filtered variants in the report, which leaves them out by default
   (`docs/functionality.md`, section 9): stage 6.

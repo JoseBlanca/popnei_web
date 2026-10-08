@@ -93,6 +93,14 @@ carries the filter for a file whose variants do not record their FILTER;
 the check of the message and its `PROTOCOL_VERSION` are in
 `messages.md`. Built on the branch `filters`, work packages 1 and 2 of
 `docs/plans/filters.md`, on 7 and 8 October 2026.
+Revised on 8 October 2026 for the download of the filtered variants on
+popgen2.html (`docs/designs/stats-filters.md`, "The download of the
+filtered variants", approved by the owner that day): popnei 0.2.2
+writes a VCF as well as a `.nei` file, both by pieces, so `WriteJob` and
+`Written` take the format `"vcf"`, always compressed with bgzip, beside
+`"nei"`; the check of the messages and `PROTOCOL_VERSION` 15 are in
+`messages.md`, how the runner writes each in `runner.md`. No code of it
+yet.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: what an opened variants file says, the filters of the variants and of the individuals, the table of
@@ -812,8 +820,11 @@ export type JobResult =
 
 The request of a written file is not a `Job`, since it is not an
 analysis and its answer never goes into the cache (`docs/architecture.md`,
-section 5; `docs/specs/analyses/writeVariants.md`). It names its format,
-`"nei"` until popnei has a writer of the VCF, which joins it then. Its
+section 5; `docs/specs/analyses/writeVariants.md`). It names its format:
+`"nei"`, popnei's vars file, or `"vcf"`, a VCF compressed with bgzip,
+popnei's `writeVcf` with its default `bgzip: true`, from 8 October 2026;
+a plain VCF is not offered, as the owner decided that day. The answer
+names the same format. Its
 answer holds the file, a `Blob` of the browser, which `protocol.ts`
 cannot name, so the answer is generic in the type of the file: the
 client gives `Written<Blob>` (`docs/specs/worker/client.md`), and core
@@ -822,14 +833,14 @@ counts beside it.
 
 ```ts
 export interface WriteJob {
-  format: "nei";
+  format: "nei" | "vcf";                   // the VCF always bgzipped
   fileId: string;
   filters: readonly VariantFilter[];
   individuals: readonly string[] | null;
 }
 
 export interface Written<F> {
-  format: "nei";
+  format: "nei" | "vcf";                   // that of its WriteJob
   file: F;                                 // a Blob on the page
   numBytes: number;                        // its size, which core reads without naming a Blob
   passStats: PassStats;                    // the variants written, and the counts of the filters
@@ -893,7 +904,9 @@ beside the messages it versions, and not here: core has no use for it.
   `writeVars` writes a file of no variant, 3,594 bytes for `panel.nei`
   with the missing data filter at 0.05 and a MAF filter at 0, seen in
   node on 26 September 2026 with `js-v0.1.0-dev.2`, and 3,682 with
-  `js-v0.1.0-dev.3` on 28 September 2026; its `passStats.numVars`
+  `js-v0.1.0-dev.3` on 28 September 2026 and popnei 0.2.2 on 8 October
+  2026, and `writeVcf` a VCF of 528 bytes of the same filters, its
+  header alone (popnei 0.2.2); its `passStats.numVars`
   is 0, and what the step does with such a file is the spec of the write's
   (`docs/specs/analyses/writeVariants.md`).
 - **A variant with no called genotype** has no value of any statistic,
@@ -933,6 +946,8 @@ None.
 - The reader of the individuals file, the words of its refusals, and how
   a text cell becomes a number with the decimal mark found:
   `docs/specs/worker/individuals.md`.
-- The filter of the regions of a BED file, and the writer of the VCF:
-  with popnei's release that has them, `js-v0.1.0-dev.3` of 28 September
-  2026, which stage 4 builds on for its PCoA and does not use them for.
+- The filter of the regions of a BED file: with popnei's release that
+  has it, `js-v0.1.0-dev.3` of 28 September 2026, which stage 4 builds on
+  for its PCoA and does not use it for. The writer of the VCF, of the
+  same release, is used from 8 October 2026, by pieces with popnei
+  0.2.2 (above).
