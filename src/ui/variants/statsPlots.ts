@@ -78,6 +78,7 @@ import {
   individualTitle,
   noValueThresholdLine,
   removesNothingText,
+  removesSomeText,
   SO_FAR_DESCRIPTION,
   thresholdShownLabel,
   thresholdValueText,
@@ -129,6 +130,12 @@ export interface PlotThreshold {
   /** The description of the box when `keepsAll`, "This threshold removes
       no variant.", which the grey says to the eye; `null` otherwise. */
   readonly removesNothing: string | null;
+  /** What is announced when a number committed in the box turns the
+      threshold into one that keeps every variant or individual with a
+      value, `removesNothing`, or back, "This threshold removes
+      variants.": a screen reader reads the description of the box only
+      when the box takes the focus. */
+  readonly turnedText: string;
   /** The threshold for `value`, a number typed or a place of the slider:
       `value` rounded to the step of the axis, as it is committed. */
   readonly onStep: (value: number) => number;
@@ -348,11 +355,15 @@ function wordsOf(
   readonly keepsAll: boolean;
   readonly valueText: string;
   readonly removesNothing: string | null;
+  readonly turnedText: string;
 } {
   return {
     keepsAll,
     valueText: thresholdValueText(shown, keepsAll, noun, soFar),
     removesNothing: keepsAll ? removesNothingText(noun, soFar) : null,
+    turnedText: keepsAll
+      ? removesNothingText(noun, soFar)
+      : removesSomeText(noun, soFar),
   };
 }
 

@@ -277,6 +277,14 @@ export function removesNothingText(noun: Counted, soFar = false): string {
   return `This threshold removes no ${noun}${soFar ? SO_FAR : ""}.`;
 }
 
+/** What is announced when a number committed in the box of a threshold
+    that kept every variant or individual with a value makes it remove
+    some, and the grey goes: "This threshold removes variants."; ending
+    "so far" while the pass runs, `soFar`. */
+export function removesSomeText(noun: Counted, soFar = false): string {
+  return `This threshold removes ${noun}s${soFar ? SO_FAR : ""}.`;
+}
+
 /** The line under a histogram of the individuals of those with no value,
     with a threshold on it, which neither keeps nor removes them: "3
     individuals with no called genotype are not in the histogram, and the

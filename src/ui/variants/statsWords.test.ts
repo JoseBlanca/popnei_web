@@ -7,6 +7,7 @@ import {
   individualThresholdName,
   individualTitle,
   removesNothingText,
+  removesSomeText,
   statsFirstText,
   statsRunningLine,
   thresholdShownLabel,
@@ -97,6 +98,13 @@ describe("the owner's first round: what a screen reader hears of a threshold, wi
     );
     expect(removesNothingText("individual", true)).toBe(
       "This threshold removes no individual so far.",
+    );
+  });
+
+  test("what is announced when a number committed in the box turns a threshold that removed nothing into one that removes some", () => {
+    expect(removesSomeText("variant")).toBe("This threshold removes variants.");
+    expect(removesSomeText("individual", true)).toBe(
+      "This threshold removes individuals so far.",
     );
   });
 });

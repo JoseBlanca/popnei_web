@@ -10,7 +10,11 @@
  * hears it in the value of the line, "1, keeps every variant", and in the
  * description of the box, "This threshold removes no variant.", a text
  * of the page that is not drawn (WCAG 1.4.1, colour is never the only
- * sign). No table of its bins and no download, which the owner wants
+ * sign). A screen reader reads that description only when the box takes
+ * the focus, so a number committed in the box, by Enter, by leaving it or
+ * by an arrow key, that turns the threshold grey or back is announced,
+ * once, "This threshold removes no variant." or "This threshold removes
+ * variants.". No table of its bins and no download, which the owner wants
  * out of this page until the piece of the downloads
  * (docs/plans/file-stats.md, "Where it goes"). Drawn from the result, or
  * from a result so far while the pass runs, whose words say so.
@@ -35,7 +39,7 @@
  * React Aria would put the new number over what the user is typing. Until
  * the user types, the box shows the number of the line.
  */
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { HistogramFrame } from "../../charts/histogram.ts";
 import { classOf } from "../classOf.ts";
@@ -115,6 +119,21 @@ export function StatsHistogram({
   // first commit or its blur; null when it shows `boxValue`.
   const [held, setHeld] = useState<number | null>(null);
   const { threshold } = plot;
+  // Whether a screen reader last heard that the threshold keeps every
+  // variant or individual, from the description of the box as it took
+  // the focus or from an announcement since; and whether the box
+  // committed a number since the last draw.
+  const heardKeepsAll = useRef(threshold.keepsAll);
+  const committed = useRef(false);
+  // After the draw of a number committed in the box: what it turned the
+  // threshold into, when that is not what was heard.
+  useEffect(() => {
+    if (!committed.current) return;
+    committed.current = false;
+    if (threshold.keepsAll === heardKeepsAll.current) return;
+    heardKeepsAll.current = threshold.keepsAll;
+    announcer.announce(threshold.turnedText);
+  });
   return (
     <div
       role="group"
@@ -128,6 +147,9 @@ export function StatsHistogram({
         }}
         onBlur={() => {
           setHeld(null);
+        }}
+        onFocus={() => {
+          heardKeepsAll.current = threshold.keepsAll;
         }}
       >
         <NumberField
@@ -149,6 +171,7 @@ export function StatsHistogram({
           onTyped={onTyped}
           onChange={(value) => {
             setHeld(null);
+            committed.current = true;
             onThreshold(threshold.onStep(value));
           }}
           // From where the line is, at the number typed when one is, which
@@ -160,6 +183,7 @@ export function StatsHistogram({
               Math.min(maxValue, Math.max(minValue, value + steps * step)),
             );
             setHeld(null);
+            committed.current = true;
             // Set even when it is the number set: a number typed at the
             // bound of the box, stepped past it, is then set.
             onThreshold(moved);

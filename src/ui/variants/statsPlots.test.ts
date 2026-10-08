@@ -291,6 +291,9 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(plot.threshold.removesNothing).toBe(
       "This threshold removes no variant.",
     );
+    expect(plot.threshold.turnedText).toBe(
+      "This threshold removes no variant.",
+    );
     expect(plot.threshold.name).toBe(
       "Missing genotypes\u00a0max: maximum proportion of missing genotypes",
     );
@@ -354,6 +357,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(plot.threshold.keepsAll).toBe(false);
     expect(plot.threshold.valueText).toBe("0.05");
     expect(plot.threshold.removesNothing).toBeNull();
+    expect(plot.threshold.turnedText).toBe("This threshold removes variants.");
     const individuals = individualPlot(
       "missingGenotypes",
       PANEL.individuals,

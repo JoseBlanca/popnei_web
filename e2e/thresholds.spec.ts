@@ -26,6 +26,7 @@ import { variantsAllKept } from "../src/core/thresholds.ts";
 import type { VariantStatistic } from "../src/core/analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../src/worker/protocol.ts";
 import { thresholdValueText } from "../src/ui/variants/statsWords.ts";
+import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
 import { writeBigVcf } from "./bigVcf.ts";
 import { holdSummary, release } from "./holdWorker.ts";
@@ -476,6 +477,54 @@ test("TH2 a number typed: the line follows it as it is typed, and at Enter it is
     "0.5, keeps every variant",
   );
   await expectGrey(missing, true);
+});
+
+test("TH5 the owner's first round: a number committed in the box that turns the threshold grey or back is announced once, and one that does not, nothing", async ({
+  page,
+}) => {
+  await recordAnnouncements(page);
+  await openPanel(page);
+  const missing = histogram(page, "Proportion of missing genotypes");
+  await expect(missing.slider).toHaveAttribute(
+    "aria-valuetext",
+    "0.1, keeps every variant",
+    { timeout: 20_000 },
+  );
+  // The end of the pass is announced too, and a text announced within
+  // 100 ms of another is joined to it: its result waited for, and the
+  // words of the thresholds taken out of the texts.
+  await expect(downloadOf(page)).toBeVisible({ timeout: 20_000 });
+  const said = async (): Promise<readonly string[]> =>
+    (await announced(page)).flatMap(
+      (text) => text.match(/This threshold removes [^.]*\./gu) ?? [],
+    );
+  // Grey to red by Enter.
+  await missing.box.fill("0.05");
+  await missing.box.press("Enter");
+  await expectGrey(missing, false);
+  await expect.poll(said).toEqual(["This threshold removes variants."]);
+  // Red to red: nothing.
+  await missing.box.fill("0.04");
+  await missing.box.press("Enter");
+  await expect(missing.slider).toHaveValue("0.04");
+  // Red to grey by leaving the box.
+  await missing.box.fill("0.09");
+  await missing.box.press("Tab");
+  await expectGrey(missing, true);
+  await expect
+    .poll(said)
+    .toEqual([
+      "This threshold removes variants.",
+      "This threshold removes no variant.",
+    ]);
+  // Grey to red by the line: its value says it, and nothing is announced.
+  await missing.slider.focus();
+  // 0.08 keeps the variant with 16 of 200 genotypes missing; 0.07 not.
+  await page.keyboard.press("PageDown");
+  await page.keyboard.press("PageDown");
+  await expectGrey(missing, false);
+  await expect(missing.slider).toHaveAttribute("aria-valuetext", "0.07");
+  expect(await said()).toHaveLength(2);
 });
 
 test("TH5 the owner's first round: 0 typed for the variants is a threshold of 0, with nothing said, red where some variant has a value above it; the plot does not move", async ({
