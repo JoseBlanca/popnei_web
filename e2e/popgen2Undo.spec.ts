@@ -270,7 +270,11 @@ test("SF7 round a file opened while the pass of the file before it runs starts i
   await holdSummary(page);
   await openPage(page);
   const stop = info(page).getByRole("button", { name: "Stop" });
-  const stopped = stats(page).getByText(/^Stopped\./u);
+  // Seen: the line of each part keeps the room of its words of a Stop,
+  // hidden, while plots are drawn or coming.
+  const stopped = stats(page)
+    .getByText(/^Stopped\./u)
+    .filter({ visible: true });
   await pick(page, "panel.vcf.gz");
   await expect(stop).toBeVisible();
   await clickBox(page);
