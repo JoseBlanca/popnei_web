@@ -27,10 +27,13 @@ import type { DrawBar } from "./pageStart.tsx";
 import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import { AnnouncerProvider } from "./shell/announcer.tsx";
+import { Notice } from "./shell/Notice.tsx";
+import { NoticeWordsProvider } from "./shell/noticeWords.tsx";
 import { createAnnouncer } from "./shell/status.ts";
 import { StoreProvider } from "./store.tsx";
 import { VariantsPage } from "./variants/VariantsPage.tsx";
 import { announceChanges } from "./variants/announceChanges.ts";
+import { NOTICE_WORDS } from "./variants/statsWords.ts";
 import { reportDefects } from "./variants/workerDefects.ts";
 
 /** The opening after the guard, the listeners and the bar: the store and
@@ -57,13 +60,16 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
     <StoreProvider value={store}>
       <AnnouncerProvider value={announcer}>
         <FilesProvider value={files}>
-          <VariantsPage
-            autoRuns={autoRuns}
-            onCountButton={(node) => {
-              countButton = node;
-            }}
-            onStatsShown={statsShown}
-          />
+          <NoticeWordsProvider value={NOTICE_WORDS}>
+            <VariantsPage
+              autoRuns={autoRuns}
+              onCountButton={(node) => {
+                countButton = node;
+              }}
+              onStatsShown={statsShown}
+            />
+            <Notice />
+          </NoticeWordsProvider>
         </FilesProvider>
       </AnnouncerProvider>
     </StoreProvider>,

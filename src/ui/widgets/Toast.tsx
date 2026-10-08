@@ -214,9 +214,13 @@ const ROOM_PROPERTY = "--toast-room";
  * Keeps room at the end of the page for the region `region` while it is
  * drawn, from the top of the region to the bottom of the window, and
  * gives the room back when the region goes. When the region appears or
- * grows over the element that has the focus, the page scrolls it clear,
+ * grows over the element that has the focus, or the page grows under it
+ * and pushes that element under the region, the page scrolls it clear,
  * since the toast appears where the user did not act, and would
- * otherwise hide the field they have just changed.
+ * otherwise hide the field they have just changed: on popgen2.html at
+ * 320 pixels, the box of a file opened grows as the file is read, after
+ * its notice is up, and pushes the open button, which has the focus,
+ * under it.
  */
 function keepRoom(region: HTMLDivElement): () => void {
   const page = document.documentElement;
@@ -239,6 +243,7 @@ function keepRoom(region: HTMLDivElement): () => void {
   };
   const observer = new ResizeObserver(measure);
   observer.observe(region);
+  observer.observe(document.body);
   window.addEventListener("resize", measure);
   measure();
   return () => {

@@ -22,8 +22,10 @@ import type { Page } from "@playwright/test";
 const CHANNEL = "e2e-hold";
 
 /** What a release lets through: the results so far held, one or all, and
-    those after them for `all`; or the final result. */
-export type Release = "oneSoFar" | "allSoFar" | "result";
+    those after them for `all`; the final results, all and those after
+    them; or the next final result alone, the one held or else the next
+    to come, after which the others are held again. */
+export type Release = "oneSoFar" | "allSoFar" | "result" | "oneResult";
 
 const FRONT = `{
   const realNow = performance.now.bind(performance);
@@ -31,6 +33,7 @@ const FRONT = `{
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
   const holding = { soFar: true, result: true };
+  let resultsToPass = 0;
   const ofSummary = (m) =>
     m !== null && typeof m === "object" && m.result !== null &&
     typeof m.result === "object" && m.result.analysis === "variantsSummary";
@@ -41,11 +44,22 @@ const FRONT = `{
       if (first !== undefined) realPost(first[0], first[1]);
       return;
     }
+    if (release === "oneResult") {
+      const first = held.result.shift();
+      if (first !== undefined) realPost(first[0], first[1]);
+      else resultsToPass += 1;
+      return;
+    }
     const kind = release === "allSoFar" ? "soFar" : "result";
     holding[kind] = false;
     for (const [m, t] of held[kind].splice(0)) realPost(m, t);
   };
   self.postMessage = (m, t) => {
+    if (ofSummary(m) && m.kind === "result" && holding.result && resultsToPass > 0) {
+      resultsToPass -= 1;
+      realPost(m, t);
+      return;
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
