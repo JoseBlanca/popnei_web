@@ -13,7 +13,10 @@
  * package 7): the sentence of no variant before any write, said once in
  * the status region, and after a write; the words of no individual kept;
  * the text that stays until a filter or the file changes; a run of the
- * arrow keys made a change before the dialog opens; and a drop or a paste
+ * arrow keys made a change as the slider loses the focus to the button;
+ * a press of the pointer on the button whose change leaves nothing to
+ * download, which puts the focus on the sentence; the status region after
+ * a quick write; and a drop or a paste
  * while the dialog is open, which opens nothing. The sizes and the counts are those of popnei 0.2.2 under node,
  * 8 October 2026, as the screen spec gives them.
  */
@@ -472,7 +475,7 @@ async function expectAxeBothSchemes(
   }
 }
 
-test("DL7 D2 a run of the arrow keys, then Enter on the button within its quiet second: the file is written with the threshold the run moved to", async ({
+test("DL7 D2 a run of the arrow keys is made a change as the slider loses the focus to the button, within its quiet second: Enter then writes the file with the threshold the run moved to", async ({
   page,
 }, testInfo) => {
   await openDone(page, "panel.vcf.gz");
@@ -485,7 +488,10 @@ test("DL7 D2 a run of the arrow keys, then Enter on the button within its quiet 
   await slider.focus();
   await page.keyboard.press("Home");
   await expect(slider).toHaveValue("0");
-  // Within the quiet second of the run.
+  // Within the quiet second of the run: the slider, losing the focus,
+  // makes the run a change, before the button is pressed. The gate of
+  // the button, which would make it one too, is reached only in Vitest
+  // (DownloadVariants.test.ts).
   await button(page).focus();
   const coming = page.waitForEvent("download", { timeout: 60_000 });
   await page.keyboard.press("Enter");
@@ -500,6 +506,50 @@ test("DL7 D2 a run of the arrow keys, then Enter on the button within its quiet 
     "panel.filtered.vcf.gz downloaded, 756 bytes: 2 variants of 200 individuals. Variants removed: 1,198 by the missing rate. Save it again",
   );
 });
+
+test("DL7 D2 a press of the pointer on the button within the quiet second of a run, or with a number typed, that leaves nothing to download: no dialog, and the sentence takes the focus", async ({
+  page,
+}) => {
+  await recordKinds(page);
+  await openDone(page, "panel.vcf.gz");
+  const group = stats(page).getByRole("group", {
+    name: "Observed heterozygosity",
+    exact: true,
+  });
+  const slider = group.getByRole("slider");
+  await slider.focus();
+  await page.keyboard.press("Home");
+  await expect(slider).toHaveValue("0");
+
+  // Within the quiet second of the run.
+  await pressDownloadWithMouse(page);
+  await expect(dialog(page)).toHaveCount(0);
+  expect(await writesSent(page)).toBe(0);
+
+  // A number typed and not committed, then a press of the pointer.
+  await threshold(page, "obsHet", "1");
+  await expect(button(page)).toBeEnabled();
+  await stats(page).getByRole("textbox", { name: BOXES.obsHet }).fill("0");
+  await pressDownloadWithMouse(page);
+  await expect(dialog(page)).toHaveCount(0);
+  expect(await writesSent(page)).toBe(0);
+});
+
+/** Presses the pointer on the button, checks that the sentence of no
+    variant takes its place and the focus while the pointer is down, and
+    lets the pointer go. */
+async function pressDownloadWithMouse(page: Page): Promise<void> {
+  await button(page).scrollIntoViewIfNeeded();
+  const where = await button(page).boundingBox();
+  if (where === null) throw new Error("no button of the download");
+  await page.mouse.move(where.x + where.width / 2, where.y + where.height / 2);
+  await page.mouse.down();
+  await expect(sentence(page, PANEL_NONE)).toBeVisible();
+  await expect(button(page)).toHaveCount(0);
+  await expect.poll(() => focused(page)).toBe(`P ${PANEL_NONE}`);
+  await page.mouse.up();
+  await expect.poll(() => focused(page)).toBe(`P ${PANEL_NONE}`);
+}
 
 test("DL7 D2 a write shorter than the pause of the status region: the region does not end on the words of its start", async ({
   page,

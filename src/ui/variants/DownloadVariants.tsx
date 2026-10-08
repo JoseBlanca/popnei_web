@@ -18,9 +18,15 @@
  * button; after a download, or a write of no variant, the button is gone,
  * and the page moves the focus to what took its place once the dialog
  * has gone from the page, since a focus put on the page while it closes
- * is pulled back into it.
+ * is pulled back into it. A change of a filter that takes the button, or
+ * the text after a download, away while it has the focus, while the
+ * focus is on its way to it, or under a press of the pointer, puts the
+ * focus on what takes its place, which would otherwise be on nothing: a
+ * click on the button within the quiet second of a threshold makes the
+ * threshold's change as the threshold loses the focus, and that change
+ * can leave nothing to download.
  */
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { writtenName } from "../../core/fileNames.ts";
 import type { WriteFormat } from "../../core/keys.ts";
@@ -41,7 +47,7 @@ import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
 import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
 import { useRunGate } from "./runGate.tsx";
-import type { WriteEnd } from "./downloadState.ts";
+import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
 import {
   DIALOG_HEADING,
   DOWNLOAD_LABEL,
@@ -96,11 +102,87 @@ export function DownloadVariants(): React.JSX.Element {
   // The text or the sentence that takes the place of the button, which
   // takes the focus after a write.
   const placeRef = useRef<HTMLParagraphElement>(null);
+  // The element around the place, and whether a press of the pointer
+  // started in it and has not ended, and whether the focus is leaving
+  // another element for one in it.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const pressed = useRef(false);
+  const focusComing = useRef(false);
+  // The kind of the place that lost the focus, or the press, as it went;
+  // the place drawn next takes the focus once React has drawn it. A kind,
+  // so that the cleanup <StrictMode> runs on a place as it is drawn, and
+  // the place drawn again at once, moves nothing.
+  const focusFrom = useRef<DownloadPlace["kind"] | null>(null);
   // Each Download is a new attempt, and a Stop ends it, so that the end
   // of a write stopped does nothing.
   const attempt = useRef(0);
 
   const place = downloadPlace(summary, write, project, kept);
+
+  // Listened to on the element itself, not through React, whose events
+  // come up from the dialog drawn elsewhere in the page.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (box === null) return;
+    const down = (): void => {
+      pressed.current = true;
+    };
+    const up = (): void => {
+      pressed.current = false;
+    };
+    const leaving = (event: FocusEvent): void => {
+      focusComing.current =
+        event.relatedTarget instanceof Node &&
+        box.contains(event.relatedTarget);
+    };
+    const arrived = (): void => {
+      focusComing.current = false;
+    };
+    box.addEventListener("pointerdown", down);
+    document.addEventListener("pointerup", up, true);
+    document.addEventListener("pointercancel", up, true);
+    // Before the handlers of React, at the root, where the threshold
+    // that loses the focus makes its change.
+    document.addEventListener("focusout", leaving, true);
+    document.addEventListener("focusin", arrived, true);
+    return () => {
+      box.removeEventListener("pointerdown", down);
+      document.removeEventListener("pointerup", up, true);
+      document.removeEventListener("pointercancel", up, true);
+      document.removeEventListener("focusout", leaving, true);
+      document.removeEventListener("focusin", arrived, true);
+    };
+  }, []);
+
+  /** Called as what was drawn in the place goes, while it is still on
+      the page. */
+  const placeGoing = (kind: DownloadPlace["kind"]): void => {
+    const box = boxRef.current;
+    if (
+      pressed.current ||
+      focusComing.current ||
+      (box?.contains(document.activeElement) ?? false)
+    ) {
+      focusFrom.current = kind;
+    }
+  };
+
+  /** Called as a place is drawn: one of the kind that went has not gone. */
+  const placeDrawn = (kind: DownloadPlace["kind"]): void => {
+    if (focusFrom.current === kind) focusFrom.current = null;
+  };
+
+  // After the place is drawn again: the text or the sentence takes the
+  // focus, or the button when it is back.
+  useLayoutEffect(() => {
+    const from = focusFrom.current;
+    focusFrom.current = null;
+    if (from === null || from === place.kind) return;
+    const target =
+      placeRef.current ??
+      boxRef.current?.querySelector<HTMLElement>("button:not(:disabled)");
+    target?.focus();
+  });
 
   const close = (): void => {
     setPhase(null);
@@ -162,19 +244,26 @@ export function DownloadVariants(): React.JSX.Element {
   const writingNow = phase?.kind === "writing" && write?.kind === "running";
 
   return (
-    <div className={classOf(styles, "download")}>
+    <div ref={boxRef} className={classOf(styles, "download")}>
       <Place
+        key={place.kind}
         place={place}
         placeRef={placeRef}
+        onDrawn={placeDrawn}
+        onGoing={placeGoing}
         onOpen={() => {
           // A run of the arrow keys waiting on a threshold, or a number
           // typed and not committed, is made a change first, so that the
-          // write never starts from filters about to change.
+          // write never starts from filters about to change. A defence:
+          // the threshold makes that change as it loses the focus, which
+          // comes before the press ends, and the button is then already
+          // gone when it took the place away.
           gate.endAll();
           gate.commitTyped();
           const now = store.getState();
           // The change may leave nothing to download: its sentence then
-          // takes the place of the button, and the dialog does not open.
+          // takes the place of the button, and the focus once drawn, and
+          // the dialog does not open.
           if (
             downloadPlace(
               summaryStatus(now),
@@ -183,7 +272,7 @@ export function DownloadVariants(): React.JSX.Element {
               now.individualsKept,
             ).kind !== "enabled"
           ) {
-            void focusPlace();
+            focusFrom.current = "enabled";
             return;
           }
           setPhase({ kind: "choose", format: formatChosen });
@@ -228,10 +317,15 @@ export function DownloadVariants(): React.JSX.Element {
 
 /** What the place of the button is drawn with. */
 interface PlaceProps {
-  readonly place: ReturnType<typeof downloadPlace>;
+  readonly place: DownloadPlace;
   /** The element of the text or the sentence, which takes the focus
       after a write. */
   readonly placeRef: React.RefObject<HTMLParagraphElement | null>;
+  /** Called with the kind of what is drawn once it is drawn. */
+  readonly onDrawn: (kind: DownloadPlace["kind"]) => void;
+  /** Called with the kind of what is drawn as it goes, while it is still
+      on the page. */
+  readonly onGoing: (kind: DownloadPlace["kind"]) => void;
   /** Opens the dialog. */
   readonly onOpen: () => void;
   /** Save it again, or Save it. */
@@ -242,9 +336,24 @@ interface PlaceProps {
 function Place({
   place,
   placeRef,
+  onDrawn,
+  onGoing,
   onOpen,
   onSave,
 }: PlaceProps): React.JSX.Element {
+  // The cleanup of a layout effect runs while the elements are still on
+  // the page; drawn under the key of its kind, it goes when that changes.
+  const calls = useRef({ onDrawn, onGoing });
+  useLayoutEffect(() => {
+    calls.current = { onDrawn, onGoing };
+  });
+  const { kind } = place;
+  useLayoutEffect(() => {
+    calls.current.onDrawn(kind);
+    return () => {
+      calls.current.onGoing(kind);
+    };
+  }, [kind]);
   switch (place.kind) {
     case "disabled":
       return (

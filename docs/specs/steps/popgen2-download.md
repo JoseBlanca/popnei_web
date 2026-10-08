@@ -137,9 +137,16 @@ its quiet second, and a number typed and not yet committed
 (`gate.endAll()` of `src/ui/variants/thresholdRun.ts`, and the commit of
 the number box, as an opening of a file does,
 `docs/specs/steps/popgen2-filters.md`, "A run waiting is made a change
-before any other command"). The press on the button takes the focus from
-the threshold, which already does it; the button does it as well, so
-that the write never starts from filters about to change.
+before any other command"). The threshold makes that change itself as
+it loses the focus, which comes before the press of the button ends:
+with the pointer, at its press; with the keyboard, as the focus reaches
+the button. So the change is made before the button can open anything,
+and when it leaves nothing to download, the button is already gone: its
+sentence takes its place and the focus, and no dialog opens. The button
+makes the change as well, as a defence, so that the write never starts
+from filters about to change; if that change leaves nothing to
+download, the dialog does not open and the focus goes to the
+sentence.
 
 Its heading is "Download filtered variants". It holds:
 
@@ -482,7 +489,11 @@ is put on Stop, which would otherwise be on nothing. When the dialog
 closes: after Cancel, Escape, Stop or Close, on the button, which React
 Aria does; after a download, on the text after it; after a write of no
 variant, on the sentence of no variant; these two are moved by the page
-once the overlay is off the page (above, "When the write ends").
+once the overlay is off the page (above, "When the write ends"). A
+change of the filters that takes the button, or the text after a
+download, away while it has the focus, while the focus is on its way to
+it, or under a press of the pointer, puts the focus on what takes its
+place: the sentence, or the button back.
 
 **What is said without moving the focus** (4.1.3, "Status messages").
 The start of a write, once, in the status region, "Writing
@@ -538,8 +549,17 @@ column, as the old page's flow of the write does:
   focus, the element `document.activeElement` names once the dialog is
   gone; the focus is checked so on the sentence of no variant after a
   write, below, too;
-- a run of the arrow keys on a threshold, then Enter on the button
-  within its quiet second: the write has the threshold the run moved to;
+- a run of the arrow keys on a threshold, then the focus moved to the
+  button within its quiet second: the slider, losing the focus, makes
+  the run a change, and Enter then writes with the threshold the run
+  moved to; and a press of the pointer on the button within the quiet
+  second, or with a number typed and not committed, that leaves nothing
+  to download: no dialog, and the sentence has the focus while the
+  pointer is still down and after; the button's own gate, which these
+  never reach, is called in Vitest with a run held;
+- a write shorter than the pause of the status region: once the text
+  after the download has the focus, the region does not say "Writing
+  <file>.";
 - the same file with the thresholds of the example above, as a `.nei`
   file: `low_qual.filtered.nei`, 113,594 bytes, 772 variants and 111
   individuals read back by popnei, and the text of the example with
