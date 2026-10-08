@@ -399,6 +399,7 @@ function popgenStoreOf(cacheMaxBytes: number): {
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 100,
+    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   return { store, sent };
@@ -517,6 +518,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1_000_000,
       maxUndoSteps: 100,
+      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.open({ ...fiveIndividualsProject([]), individuals: null });

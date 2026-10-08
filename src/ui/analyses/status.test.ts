@@ -32,6 +32,7 @@ function stopping(stopped: Notice["stopped"]): Notice {
     writeLeftBehind: false,
     writeStopped: false,
     writeDiscarded: false,
+    filtersChanged: false,
   };
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { firstProject } from "../core/apps.ts";
+import { setThreshold } from "../core/project.ts";
 import { fiveIndividualsProject, noPopDiversity } from "../core/testSupport.ts";
 import type {
   Job,
@@ -122,5 +124,19 @@ describe("VS5 D1 the store of the page", () => {
     expect(runs).toHaveLength(1);
     expect(jobs).toEqual([]);
     expect(writes.map((job) => job.format)).toEqual(["nei"]);
+  });
+});
+
+describe("SF5 D5 the store of popgen.html", () => {
+  test('starts from firstProject("popgen"), and a change of a filter that removes nothing gives no notice: filterNotices is false', () => {
+    const { store } = setUp();
+    expect(store.getState().project).toStrictEqual(firstProject("popgen"));
+    store.open(fiveIndividualsProject([]));
+
+    store.apply("the MAF filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
+    );
+
+    expect(store.getState().notice).toBeNull();
   });
 });

@@ -1,16 +1,23 @@
 /**
  * The store of the new page of population genetics, popgen2.html
- * (docs/plans/open-variants.md, "A new page, beside the old one"): the
- * first project of the old page, with the missing data filter on at 0.1
- * as docs/functionality.md has it, which the summary of the open file
- * does not read, the analyses of `POPGEN2_ANALYSES`, and no counts of the
- * filters, no statistics of each individual for a Run to wait for, and no
- * writing, which the page does not have yet (docs/plans/live-stats.md).
+ * (docs/plans/open-variants.md, "A new page, beside the old one"): its own
+ * first project, `popgen2FirstProject`, with the filter of the FILTER
+ * column on and the missing data filter on at 0.1, which the summary of
+ * the open file does not read; a notice at every change of a filter,
+ * `filterNotices`, since no change of a filter removes or stops anything
+ * on this page (docs/specs/core/store.md); the analyses of
+ * `POPGEN2_ANALYSES`, and no counts of the filters, no statistics of each
+ * individual for a Run to wait for, and no writing, which the page does
+ * not have yet (docs/plans/live-stats.md).
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
-import { POPGEN2_ANALYSES, countsOf, firstProject } from "../core/apps.ts";
+import {
+  POPGEN2_ANALYSES,
+  countsOf,
+  popgen2FirstProject,
+} from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
 import type { AnalysisId } from "../core/project.ts";
@@ -47,7 +54,7 @@ export function createPopgen2Store(
   deps: Popgen2StoreDeps,
 ): Store<JobResult, Blob> {
   return createStore<Job, JobResult, Blob>({
-    first: firstProject("popgen"),
+    first: popgen2FirstProject(),
     analyses: POPGEN2_ANALYSES,
     send: deps.send,
     countsOf,
@@ -60,5 +67,6 @@ export function createPopgen2Store(
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    filterNotices: true,
   });
 }

@@ -98,6 +98,7 @@ function setUp(project: Project | null): {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    filterNotices: false,
   });
   real.popneiReady("0.1.0");
   if (project !== null) {
@@ -193,6 +194,7 @@ function setUpWithThreshold(): {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    filterNotices: false,
   });
   real.popneiReady("0.1.0");
   real.open(
@@ -381,6 +383,7 @@ function setUpWriting(throwsFor: (runId: number) => boolean): {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    filterNotices: false,
   });
   real.popneiReady("0.1.0");
   real.open(
@@ -473,6 +476,7 @@ describe("VS3 D6 startWriting", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: CACHE_MAX_BYTES,
       maxUndoSteps: MAX_UNDO_STEPS,
+      filterNotices: false,
     });
     real.popneiReady("0.1.0");
     real.open(

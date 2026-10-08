@@ -2589,6 +2589,7 @@ function diversityVerdictOf(
     appVersion,
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
+    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(opened.value);

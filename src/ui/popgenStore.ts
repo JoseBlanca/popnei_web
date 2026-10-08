@@ -52,5 +52,8 @@ export function createPopgenStore(
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    // Its number boxes change the project at every press of an arrow
+    // key, and a screen reader would read a notice at each.
+    filterNotices: false,
   });
 }

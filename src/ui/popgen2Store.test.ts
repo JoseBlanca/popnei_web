@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { loadVariants } from "../core/project.ts";
+import { firstProject, popgen2FirstProject } from "../core/apps.ts";
+import { loadVariants, setThreshold } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
 import { summaryResult } from "../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
@@ -156,6 +157,29 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
       kind: "running",
       runId: 2,
       soFar: null,
+    });
+  });
+});
+
+describe("SF5 D5 the store of popgen2.html", () => {
+  test("starts from popgen2FirstProject(), not the old page's first project, and a change of a filter gives a notice: filterNotices is true", () => {
+    const store = createPopgen2Store({
+      send: (): Run<JobResult> => {
+        throw new Error("popnei_web defect: nothing is sent here");
+      },
+      appVersion: "0.1.0",
+    });
+    expect(store.getState().project).toStrictEqual(popgen2FirstProject());
+    expect(store.getState().project).not.toStrictEqual(firstProject("popgen"));
+
+    store.apply("the MAF filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
+    );
+
+    expect(store.getState().notice).toMatchObject({
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: [],
+      filtersChanged: true,
     });
   });
 });

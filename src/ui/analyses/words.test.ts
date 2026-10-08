@@ -27,6 +27,7 @@ function notice(
     writeLeftBehind: false,
     writeStopped: false,
     writeDiscarded: false,
+    filtersChanged: false,
   };
 }
 

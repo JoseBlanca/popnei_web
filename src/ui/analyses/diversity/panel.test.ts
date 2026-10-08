@@ -1080,6 +1080,7 @@ describe("PA7 D2 the block of the spectrum, the review of work package 7", () =>
         writeLeftBehind: false,
         writeStopped: false,
         writeDiscarded: false,
+        filtersChanged: false,
       });
     });
     act(() => {

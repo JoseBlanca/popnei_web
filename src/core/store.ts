@@ -13,6 +13,7 @@ import type { Cache } from "./cache.ts";
 import { commit, mapProjects, redo, startHistory, undo } from "./history.ts";
 import type { History } from "./history.ts";
 import {
+  canonical,
   createKeyMemo,
   intermediateKeyOf,
   keyFromWire,
@@ -376,6 +377,10 @@ export interface Notice {
   /** A file written and not saved was forgotten by the change, and no
       undo brings it back; kept and cleared as `removed` is. */
   readonly writeDiscarded: boolean;
+  /** Under `filterNotices`, the change changed a filter: the notice
+      stays for it until it is closed or replaced, whatever else leaves
+      it. */
+  readonly filtersChanged: boolean;
 }
 
 /** What the entry of the page makes the store with. `F` is the type of a
@@ -432,6 +437,13 @@ export interface StoreConfig<J, R, F = never> {
   readonly cacheMaxBytes: number;
   /** The steps of undo kept, `MAX_UNDO_STEPS`. */
   readonly maxUndoSteps: number;
+  /** Whether every change of a filter gives a notice: true for
+      popgen2.html alone, whose one calculation reads no filter, so that
+      the user has a notice to undo from; false for popgen.html, whose
+      number boxes change the project at every press of an arrow key
+      (docs/specs/core/store.md, "The notice, and the calculations it
+      stops"). Required, so that a third page chooses. */
+  readonly filterNotices: boolean;
 }
 
 /** What the store takes from the pass of a result. */
@@ -561,6 +573,8 @@ interface NoticeKept {
   readonly writeStopped: boolean;
   /** Whether it forgot a file written and not saved. */
   readonly writeDiscarded: boolean;
+  /** Whether, under `filterNotices`, the change changed a filter. */
+  readonly filtersChanged: boolean;
 }
 
 /** The writing of the filtered variants that cannot run, with its
@@ -1288,7 +1302,8 @@ export function createStore<J, R, F = never>(
   /** Takes out of the notice an analysis done again, a file written
       again, and a request or a wait that ended, is being stopped, or
       whose key the project gives again; drops the notice when nothing is
-      left in it. */
+      left in it and it does not tell of a change of a filter, which
+      stays true until the next change. */
   const settle = (): void => {
     if (notice === null) {
       return;
@@ -1314,7 +1329,8 @@ export function createStore<J, R, F = never>(
       waitIds.size === 0 &&
       notice.stopped.length === 0 &&
       !notice.writeStopped &&
-      !writeDiscarded
+      !writeDiscarded &&
+      !notice.filtersChanged
     ) {
       notice = null;
     } else if (
@@ -1356,7 +1372,8 @@ export function createStore<J, R, F = never>(
       sameIds(previous.stopped, notice.stopped) &&
       previous.writeLeftBehind === writeLeftBehind &&
       previous.writeStopped === notice.writeStopped &&
-      previous.writeDiscarded === notice.writeDiscarded
+      previous.writeDiscarded === notice.writeDiscarded &&
+      previous.filtersChanged === notice.filtersChanged
       ? previous
       : {
           cause: notice.cause,
@@ -1366,6 +1383,7 @@ export function createStore<J, R, F = never>(
           writeLeftBehind,
           writeStopped: notice.writeStopped,
           writeDiscarded: notice.writeDiscarded,
+          filtersChanged: notice.filtersChanged,
         };
   };
 
@@ -1597,13 +1615,17 @@ export function createStore<J, R, F = never>(
       .map((def) => def.id);
     const runs = leftBehindNow(keys);
     const waitIds = waitsBehindNow(keys);
+    const filtersChanged =
+      config.filterNotices &&
+      !sameFilters(before.present.project, next.present.project);
     notice =
       removed.length === 0 &&
       runs.size === 0 &&
       waitIds.size === 0 &&
       stopped.length === 0 &&
       !writeStopped &&
-      !writeDiscarded
+      !writeDiscarded &&
+      !filtersChanged
         ? null
         : {
             cause: cause(before, next),
@@ -1613,6 +1635,7 @@ export function createStore<J, R, F = never>(
             stopped,
             writeStopped,
             writeDiscarded,
+            filtersChanged,
           };
     changed();
   };
@@ -2552,6 +2575,26 @@ function recordShared<S extends object>(
     }
     made.set(old, source);
     return next === p ? p : freezeProject(next);
+  });
+}
+
+/** Whether `a` and `b` hold the same filters, compared by value: the four
+    lists of the filters of the variants and of the individuals, on and
+    off, each of the same length with the same kinds and the same values
+    at each place. A command that makes new arrays and leaves every
+    filter as it was, as loading another variants file may, changes no
+    filter. */
+function sameFilters(a: Project, b: Project): boolean {
+  const lists = (p: Project): readonly unknown[] => [
+    p.filters,
+    p.filtersOff,
+    p.individualFilters,
+    p.individualFiltersOff,
+  ];
+  const listsOfB = lists(b);
+  return lists(a).every((list, index) => {
+    const other = listsOfB[index];
+    return list === other || canonical(list, null) === canonical(other, null);
   });
 }
 

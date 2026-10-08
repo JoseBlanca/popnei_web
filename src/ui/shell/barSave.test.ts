@@ -49,6 +49,7 @@ function storeWithDiversity(numbers: readonly number[]): Store<TestDefResult> {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.apply("a new variants file was loaded", (p) =>

@@ -80,6 +80,7 @@ function setUp(groups: readonly (readonly string[])[] = POPGEN2_AUTO_GROUPS): {
     write: null,
     cacheMaxBytes: 100_000_000,
     maxUndoSteps: 100,
+    filterNotices: false,
     send: (key, job): Run<JobResult> => {
       lastId += 1;
       let request: Request | null = null;

@@ -327,6 +327,7 @@ function notice(parts: Partial<Notice>): Notice {
     writeLeftBehind: false,
     writeStopped: false,
     writeDiscarded: false,
+    filtersChanged: false,
     ...parts,
   };
 }
@@ -1918,6 +1919,7 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
           cause: MAF_CHANGED,
           removed: [STATISTICS],
           writeDiscarded: true,
+          filtersChanged: false,
         }),
         title,
       ).text,
@@ -1933,6 +1935,7 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
           cause: MAF_CHANGED,
           leftBehind: [DIVERSITY],
           writeDiscarded: true,
+          filtersChanged: false,
         }),
         title,
       ).text,
@@ -1947,6 +1950,7 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
         notice({
           cause: { ...MAF_CHANGED, kind: "undo" },
           writeDiscarded: true,
+          filtersChanged: false,
         }),
         title,
       ),
