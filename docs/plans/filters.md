@@ -1120,3 +1120,22 @@ genotype always that of its longest wording; the screenshots at 320 px
 retaken (the old ones were stale: the plots do not move at a Stop, y of
 the first plot 559 before and after in Chromium and WebKit). Vitest
 4,319; popgen2 flows 144; screens 148.
+
+### Work package 11, the owner's try, 8 October 2026
+
+The owner tried the page and found it right, but for the row of Undo
+and Redo, which they had asked not to see ("We don't need to undo the
+opening of a file, the user could reload the page"; Undo and Redo may
+come back with a later feature). Hidden in 34b3ff0 (code and tests) and
+0ad5b56 (docs): no buttons and no keys of Undo and Redo on
+popgen2.html; kept ready: the store's history, the thresholds and the
+FILTER box as commands with their descriptions, the gate that makes a
+waiting run a change before an opening, `UndoRedoButtons` for the old
+page. Vitest 4,319; the seven flows of popgen2 84 in Chromium and 84 in
+WebKit; screens 136.
+
+A defect found then, not fixed (seen in Chromium and WebKit, also
+before that change): after 0.9 is typed in the MAF box and Enter
+pressed, dragging the line to the top of its axis leaves the box at 0.9
+while the line sits at 1. The flow that met it now starts the drag from
+a dragged value, with a comment. To fix before the merge.
