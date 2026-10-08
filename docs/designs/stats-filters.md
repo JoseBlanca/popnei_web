@@ -685,8 +685,12 @@ tried in the plan:
   "transient activation"), long gone after a write of minutes.
 - Chrome lets a page download one file with no activation, and asks the
   user ("This site is trying to download multiple files") before a
-  further one without a click; so the second download of a session may
-  be asked about.
+  further one; a click or a key pressed by the user lets it download
+  one again (`DownloadRequestLimiter`,
+  https://chromium.googlesource.com/chromium/src/+/main/chrome/browser/download/download_request_limiter.h,
+  read on 8 October 2026), and pressing Download is such a press, so
+  the second download of a session is probably not asked about. A site
+  whose automatic downloads the user once set to Block is blocked.
 - Safari has a setting for each site, "Allow downloads", set by default
   to ask the first time; whether it asks for a download with no
   activation is to be tried.
@@ -707,7 +711,8 @@ the download was started, and not where the browser put it.
 
 The plan tries the download started by itself in Chromium and WebKit
 and in Firefox by hand, the first and the second of a session, with
-the browser asking and not. If one blocks it or asks every time, the
+the browser asking and not, and in Chrome a site set to Block. If one
+blocks it or asks every time, the
 session brings the choice to the owner: a Save click in every browser,
 or in that browser alone, told by its name in the user agent string,
 which a browser may change.
@@ -733,8 +738,10 @@ was measurable then. It is approximate in two ways:
   region makes that stretch faster;
 - for a VCF compressed with gzip it counts compressed bytes, which
   follow the variants read closely; for a `.nei` file it ends below
-  full, since popnei does not read the head of the file again, and the
-  call at the end of the pass fills it.
+  full, since popnei does not read the head of the file again, and its
+  call at the end of the pass carries the bytes read, still short of
+  the size; so the page sets the bar full when the answer of the write
+  arrives.
 
 After the bar is full the worker makes one `Blob` of its parts and reads
 its last byte (below), which takes a moment the bar does not show.
@@ -744,7 +751,10 @@ its last byte (below), which takes a moment the bar does not show.
 Whatever the cause, the page says one sentence, as the owner decided
 on 8 October 2026: "None of the 1,200 variants of low_qual.vcf.gz pass
 the filters, so there is nothing to download." The number is that of
-the variants of the file. It is said in one of two places:
+the variants of the file. A file of no variant at all has its own,
+since "None of the 0 variants" reads wrong: "panel.nei holds no
+variants, so there is nothing to download." It is said in one of two
+places:
 
 - **In place of the button, before any write**, when the one pass shows
   for certain that the filters keep no variant. Nothing is written, and
@@ -768,12 +778,20 @@ are counted exactly; the count of the variants that failed their FILTER;
 and each individual's values. The filters of the individuals act before
 those of the variants (section 2). So:
 
-- **Certain:** the file holds no variant; the FILTER box ticked, and
-  every variant of the file failed its FILTER, since that filter judges
-  each variant by its FILTER column alone, whoever the individuals; and,
-  while the filters of the individuals keep every individual, one
-  threshold of the variants whose histogram holds no variant at or
-  below it. A variant with no called genotype is in no histogram of the
+- **Certain:** the file holds no variant; the filter of the FILTER
+  column among the filters that apply to the file (`filtersApplied`,
+  which leaves it out for a `.nei` file without the record), and the one
+  pass's count of the variants that passed their FILTER, `filterColumn`,
+  0, since that filter judges each variant by its FILTER column alone,
+  whoever the individuals; and, while the filters of the individuals
+  keep every individual, one threshold of the variants above 0 whose
+  bins with a right edge at or below it hold no variant, or a threshold
+  of 0 whose first bin is empty. The first bin holds both its edges, 0
+  to 0.001, so at 0 no bin lies wholly at or below the threshold, and
+  only an empty first bin says that no variant has the value 0; on
+  `panel.vcf.gz` two variants have a missing rate of 0, which popnei
+  keeps at a threshold of 0 (node, popnei 0.2.2, 8 October 2026), as
+  `variantsAllKept` of `src/core/thresholds.ts` already treats 0 apart. A variant with no called genotype is in no histogram of the
   MAF or of the observed heterozygosity, and those filters drop it, so
   it changes nothing; the missing rate counts it, at 1.
 - **Not certain, so told after the write:** a threshold of the variants
@@ -1053,8 +1071,8 @@ page shows can reach the user.
   the others, such as a MAF threshold that keeps none only over the
   individuals kept. In Vitest, the check of a certain empty filtering
   against popnei's filters under node, over `panel.vcf.gz` and
-  `low_qual.vcf.gz`, never saying certain where popnei keeps a
-  variant. Measured in the plan, on the built site: the largest file
+  `low_qual.vcf.gz`, thresholds of 0 among them, never saying certain
+  where popnei keeps a variant. Measured in the plan, on the built site: the largest file
   written and saved in Chromium and WebKit, 2, 4 and 8 GB, with the
   memory of each process, and whether WebKit and Firefox copy the bytes
   of a `Blob` made of `Blob`s.
@@ -1343,3 +1361,11 @@ revision:
   browser alone, told by its name in the user agent string, at the
   cost of a rule a browser's update can break. Recommended: a Save
   click in every browser, if any browser of the floor blocks it.
+- **The other format after a download.** With the button gone until a
+  filter or the file changes, a user who downloaded the `.vcf.gz` and
+  wants the `.nei` file too must change a filter and change it back. The
+  options: leave it so, as decided; or a link in the text after the
+  download, "Download as .nei" or "as VCF", which writes the file again
+  in the other format, a pass more, at the cost of one more line in the
+  text. Recommended: the link, since the user asked for nothing new and
+  the filters are the same.
