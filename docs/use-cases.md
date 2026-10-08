@@ -69,8 +69,10 @@ While the thresholds are set, the owner decided on 8 October 2026, no
 count stands under them: each plot shades what its threshold would
 leave out, and draws in grey a threshold that removes none of its
 values. How many variants each filter removed, and how many are left,
-come with the reading that carries the filters out, the download of the
-filtered file of step 5 (`docs/designs/stats-filters.md`).
+are counted by the reading that carries the filters out, the download
+of the filtered file of step 5, whose dialog shows no count, as the
+owner decided on 8 October 2026; where the page will give them is an
+open point of `docs/designs/stats-filters.md`.
 
 **Where they could go wrong:** a threshold of the major allele frequency
 read as one of the minor allele frequency. The two differ for a variant
@@ -268,7 +270,8 @@ So the screens are built in this order:
    filters are chosen from the distributions. By 8 October 2026 they
    are built up to the setting of the filters (`docs/plans/filters.md`).
    Not built yet: the writing of the filtered file, step 5 of case 1,
-   which waits for a tools section and popnei's issue #13; and, of case
+   one button, "Download filtered variants…", after the Variants and
+   Individuals sections (`docs/designs/stats-filters.md`); and, of case
    2, the site frequency spectrum and the download of the plots.
 2. Case 3.
 3. Case 4.

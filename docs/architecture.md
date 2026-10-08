@@ -1474,9 +1474,12 @@ The page and each worker talk through typed messages
   calculation of the page, reads none; a run of presses of the arrow
   keys on a line or in its box is one change, made at a quiet second after the last
   press or when the focus leaves, so that a held key does not fill the
-  200 steps of the history. What the filters keep together comes with
-  the reading that carries them out, the download or an analysis, which
-  waits for popnei's issue #13. A limit the first tool that starts by
+  200 steps of the history. The filters are carried out by the
+  download of the filtered variants, which popnei 0.2.2's writers in
+  pieces allow, or by a later analysis; how the download is made is in
+  the revision of 8 October 2026 of `docs/designs/stats-filters.md`,
+  which waits for the owner's approval. A limit the first analysis that
+  starts by
   itself and reads a filter must settle: such an analysis gets a new key
   at every change of a threshold, and its start, as any new calculation
   does, stops the calculation left behind, which restarts the worker; so
@@ -2323,9 +2326,12 @@ for the smallest part of it.
   commands and the run of the keys made a change before any other
   command stay ready for it; its
   first project has the filter of the FILTER column on and the missing
-  rate of the variants at 0.1, the rest off. A tools section after the
-  plots, whose first tool is the download of the filtered file, comes
-  with popnei's issue #13. The plot draws the threshold, with no legend; the
+  rate of the variants at 0.1, the rest off. The download of the
+  filtered variants is one button, "Download filtered variants…", after
+  the Variants and Individuals sections, part of the variants and not of
+  a tools section, as the owner decided on 8 October 2026; its design is
+  in `docs/designs/stats-filters.md`, "The download of the filtered
+  variants". The plot draws the threshold, with no legend; the
   line the user drags is a React Aria slider of `src/ui` laid over the
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the

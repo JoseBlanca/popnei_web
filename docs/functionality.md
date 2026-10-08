@@ -173,11 +173,11 @@ and a VCF of which no variant passed is shown as any other.
 Nothing is read from the file while the filters change: no plot
 changes with a threshold or the box, each plot describes every
 variant and every individual of the file, and its threshold shades
-what it would leave out. What all the filters keep together comes with
-the reading that carries them out, the download of the filtered file or
-an analysis, in a tools section that waits for popnei issue #13, the
-writers handing the file over in pieces; until then the filters are
-set and kept, and nothing carries them out. After a Stop,
+what it would leave out. The filters are carried out by the download
+of the filtered variants, as a `.nei` file or a VCF compressed with
+bgzip, from one button, "Download filtered variants…", after the Variants and
+Individuals sections, as the owner decided on 8 October 2026; until it
+is built the filters are set and kept, and nothing carries them out. After a Stop,
 the plots read so far stay, each said to be of the variants read
 before the Stop.
 
