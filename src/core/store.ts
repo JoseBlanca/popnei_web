@@ -264,9 +264,10 @@ export type AnalysisStatus<R> =
       readonly stopped: { readonly soFar: R } | null;
     };
 
-/** The writing of the filtered variants, the first of these whose
-    condition holds (the store spec, "The writing of the filtered
-    variants"). */
+/** The writing of the filtered variants in the store's format, the
+    first of these whose condition holds (the store spec, "The writing of
+    the filtered variants"). Every state with a key carries the format
+    its key was made with, `format` or `written.format`. */
 export type WriteStatus<F> =
   /** It cannot run: `projectNeeds` or `individualListNeeds` gave
       `reason`, or the filters keep no individual, `keptNoneReason`. */
@@ -294,6 +295,7 @@ export type WriteStatus<F> =
   | {
       readonly kind: "running";
       readonly key: Key;
+      readonly format: WriteFormat;
       readonly runId: number;
       readonly progress: Progress | null;
       readonly waitsForStatistics: boolean;
@@ -305,13 +307,19 @@ export type WriteStatus<F> =
   | {
       readonly kind: "error";
       readonly key: Key;
+      readonly format: WriteFormat;
       readonly error: AnalysisError;
       readonly ofStatistics: boolean;
     }
   /** None of the above: it can be written; `dropped` when the last write
       before ended after a change of its filters and its file was not
       kept, until the next change of the project. */
-  | { readonly kind: "ready"; readonly key: Key; readonly dropped: boolean };
+  | {
+      readonly kind: "ready";
+      readonly key: Key;
+      readonly format: WriteFormat;
+      readonly dropped: boolean;
+    };
 
 /** Why the calculation of an analysis gave no result; `WriteStatus`
     gives the same for the writing of the filtered variants. */
@@ -501,12 +509,16 @@ export interface Store<R, F = never> {
       calculation stays, as `stopped` of the state `ready` of its key,
       and one that arrives after the Stop is passed over. */
   cancelRun(id: AnalysisId): void;
-  /** Starts the writing of the filtered variants in `format`, in the
-      states and with the handles of `startRun`: in `ready` or `saved`, or
-      in `error` after a failure that is not popnei's nor a variants file
-      that could not be read again, of the write or of the statistics it
-      waited for; null, and nothing done, in any other state, and in all
-      of them when the store was made with no `write`. */
+  /** Makes `format` the store's format of the write, which its key and
+      its state are of, and then starts the writing of the filtered
+      variants in it, in the states and with the handles of `startRun`:
+      in `ready` or `saved`, or in `error` after a failure that is not
+      popnei's nor a variants file that could not be read again, of the
+      write or of the statistics it waited for; null, and nothing sent,
+      in any other state, and in all of them when the store was made with
+      no `write`. A change of the format tells the screens even when
+      nothing is sent. A defect, with nothing changed, while a write of
+      the other format is in flight or waits for the statistics. */
   startWrite(format: WriteFormat): readonly Run<R | Written<F>>[] | null;
   /** Stops the writing in flight of the key the project gives, or its
       wait for the statistics, if there is one. */
@@ -589,11 +601,12 @@ type WriteKey =
   | { readonly kind: "keyed"; readonly key: Key }
   | null;
 
-/** The keys of the analyses and of the writing, and the project and
-    version they were made for. */
+/** The keys of the analyses and of the writing, and the project, the
+    version and the format of the writing they were made for. */
 interface Keyed {
   readonly project: Project;
   readonly popneiVersion: string | null;
+  readonly writeFormat: WriteFormat;
   readonly keys: readonly AnalysisKey[];
   readonly write: WriteKey;
 }
@@ -606,6 +619,7 @@ type Target<J, R> =
       readonly def: AnalysisDef<J, R>;
       readonly index: number;
     }
+  /** The writing, in the format of its request. */
   | { readonly kind: "write"; readonly format: WriteFormat };
 
 /** A request in flight, as the store keeps it: of an analysis, whose
@@ -663,11 +677,6 @@ type WrittenKept<F> = Extract<
   WriteStatus<F>,
   { readonly kind: "done" | "saved" | "noVariant" }
 >;
-
-/** The format of the file whose state `write` of the state gives: the one
-    format of stage 3, which `WriteFormat` is. The VCF comes with a state
-    of its own (the store spec). */
-const STATE_FORMAT: WriteFormat = "nei";
 
 /**
  * The store of a page, made once by its entry, with the first project,
@@ -792,6 +801,10 @@ export function createStore<J, R, F = never>(
   /** Whether the last write ended done after a change of its filters and
       its file was dropped, until the next change of the project. */
   let dropped = false;
+  /** The format of the writing, which its key and its state are of: the
+      `.nei` file until a `startWrite` asks for another (the store spec,
+      "The format"). */
+  let writeFormat: WriteFormat = "nei";
 
   let locks: {
     readonly project: Project;
@@ -886,7 +899,7 @@ export function createStore<J, R, F = never>(
       } else {
         write = {
           kind: "keyed",
-          key: writeKeyOf(p, STATE_FORMAT, version, memo),
+          key: writeKeyOf(p, writeFormat, version, memo),
         };
       }
     }
@@ -898,16 +911,22 @@ export function createStore<J, R, F = never>(
       keys are used in the cache, so that those on screen are the last
       dropped. A change makes the keys of its new project and version
       with this before it changes anything, so that a defect while they
-      are made leaves the store as it was. */
+      are made leaves the store as it was. The format of the writing is
+      the store's, `writeFormat`, and a change of it makes the keys again
+      too. */
   const keysFor = (
     project: Project,
     version: string | null,
   ): readonly AnalysisKey[] => {
-    if (keyed?.project === project && keyed.popneiVersion === version) {
+    if (
+      keyed?.project === project &&
+      keyed.popneiVersion === version &&
+      keyed.writeFormat === writeFormat
+    ) {
       return keyed.keys;
     }
     const made = keysOf(project, version);
-    keyed = { project, popneiVersion: version, ...made };
+    keyed = { project, popneiVersion: version, writeFormat, ...made };
     cache = use(
       cache,
       made.keys.flatMap((k) => (k.kind === "keyed" ? [k.key] : [])),
@@ -1220,6 +1239,7 @@ export function createStore<J, R, F = never>(
       return {
         kind: "running",
         key,
+        format: writeFormat,
         runId: running.runId,
         progress: running.progress,
         waitsForStatistics: false,
@@ -1227,17 +1247,29 @@ export function createStore<J, R, F = never>(
     }
     const waiting = waitingFor(null, key, keys);
     if (waiting !== null) {
-      return waiting;
+      return { ...waiting, format: writeFormat };
     }
     const error = errorOf(key);
     if (error !== undefined) {
-      return { kind: "error", key, error, ofStatistics: false };
+      return {
+        kind: "error",
+        key,
+        format: writeFormat,
+        error,
+        ofStatistics: false,
+      };
     }
     const statsError = statsErrorOf(keptNow, keys);
     if (statsError !== undefined) {
-      return { kind: "error", key, error: statsError, ofStatistics: true };
+      return {
+        kind: "error",
+        key,
+        format: writeFormat,
+        error: statsError,
+        ofStatistics: true,
+      };
     }
-    return { kind: "ready", key, dropped };
+    return { kind: "ready", key, format: writeFormat, dropped };
   };
 
   /** Whether the current project gives the request its key. */
@@ -2087,6 +2119,11 @@ export function createStore<J, R, F = never>(
               `the request ${String(request.runId)} of the writing ended with no file written.`,
             );
           }
+          if (result.format !== target.format) {
+            throw defect(
+              `the request ${String(request.runId)} of the writing asked for a ${JSON.stringify(target.format)} file and was given a ${JSON.stringify(result.format)} file.`,
+            );
+          }
           tookWritten(request, key, result);
           return;
         }
@@ -2420,13 +2457,30 @@ export function createStore<J, R, F = never>(
       cancelOf(index);
     },
     startWrite: (format) => {
-      // The key and the state of the writing are those of STATE_FORMAT
-      // alone, so another format would be filed and shown as its file.
-      const stateFormat: string = STATE_FORMAT;
-      if (format !== stateFormat) {
+      // A write of the other format would end dropped, with no change of
+      // its filters; no page asks for it.
+      const other = [
+        ...[...requests.values()]
+          .filter((request) => !request.stopping)
+          .map((request) => request.target),
+        ...[...waits.values()].map((wait) => wait.target),
+      ].find((target) => target.kind === "write" && target.format !== format);
+      if (other?.kind === "write") {
         throw defect(
-          `startWrite was asked for the format ${JSON.stringify(format)}, and the state of the writing holds ${JSON.stringify(STATE_FORMAT)} alone.`,
+          `startWrite was asked for the format ${JSON.stringify(format)} while a write of ${JSON.stringify(other.format)} is in flight.`,
         );
+      }
+      const formatBefore = writeFormat;
+      if (format !== formatBefore) {
+        writeFormat = format;
+        try {
+          // The keys of the new format are made before anything else
+          // changes, so that a defect leaves the store as it was.
+          currentKeys();
+        } catch (error) {
+          writeFormat = formatBefore;
+          throw error;
+        }
       }
       const keys = currentKeys();
       const keptNow = keptFor(history.present.project, keys);
@@ -2437,9 +2491,12 @@ export function createStore<J, R, F = never>(
         status.kind === "locked" ||
         !(status.kind === "saved" || canStart(status))
       ) {
+        if (format !== formatBefore) {
+          // The state is now that of the other format, its error, say.
+          changed();
+        }
         return null;
       }
-      // The key of the state is that of the one format, STATE_FORMAT.
       return startTarget(
         { kind: "write", format },
         status.key,
@@ -2685,6 +2742,7 @@ function sameWrite<F>(a: WriteStatus<F>, b: WriteStatus<F>): boolean {
       return (
         b.kind === "running" &&
         a.key === b.key &&
+        a.format === b.format &&
         a.runId === b.runId &&
         a.progress === b.progress &&
         a.waitsForStatistics === b.waitsForStatistics
@@ -2693,11 +2751,17 @@ function sameWrite<F>(a: WriteStatus<F>, b: WriteStatus<F>): boolean {
       return (
         b.kind === "error" &&
         a.key === b.key &&
+        a.format === b.format &&
         a.error === b.error &&
         a.ofStatistics === b.ofStatistics
       );
     case "ready":
-      return b.kind === "ready" && a.key === b.key && a.dropped === b.dropped;
+      return (
+        b.kind === "ready" &&
+        a.key === b.key &&
+        a.format === b.format &&
+        a.dropped === b.dropped
+      );
   }
 }
 

@@ -1400,6 +1400,7 @@ const PANEL = project({
 const WRITE_READY: WriteStatus<unknown> = {
   kind: "ready",
   key: KEY_W,
+  format: "nei",
   dropped: false,
 };
 
@@ -1479,6 +1480,7 @@ function writeRunning(runId: number): WriteStatus<unknown> {
   return {
     kind: "running",
     key: KEY_W,
+    format: "nei",
     runId,
     progress: null,
     waitsForStatistics: false,
@@ -1488,6 +1490,7 @@ function writeRunning(runId: number): WriteStatus<unknown> {
 const WRITE_FAILED: WriteStatus<unknown> = {
   kind: "error",
   key: KEY_W,
+  format: "nei",
   error: { kind: "refused", message: "memory" },
   ofStatistics: false,
 };
@@ -2224,7 +2227,7 @@ describe("VS5 D2 the announcements of stage 3", () => {
     });
     const after = checksState({
       project: FIVE_FILTERS,
-      write: { kind: "ready", key: KEY_B, dropped: true },
+      write: { kind: "ready", key: KEY_B, format: "nei", dropped: true },
     });
     expect(announcementsOf(before, after, WORDS)).toEqual([]);
     // Nor a write left behind that Close stopped.
@@ -2315,6 +2318,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
       write: {
         kind: "running",
         key: KEY_W,
+        format: "nei",
         runId: 1,
         progress: { bytesRead: 10, numBytes: 20, pass: 1, numPasses: 1 },
         waitsForStatistics: false,
@@ -2354,6 +2358,7 @@ describe("VS5 D2 the announcements of the writing, more", () => {
       write: {
         kind: "running",
         key: KEY_W,
+        format: "nei",
         runId: 1,
         progress: null,
         waitsForStatistics: true,

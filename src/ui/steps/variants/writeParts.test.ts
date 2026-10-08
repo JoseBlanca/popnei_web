@@ -47,7 +47,12 @@ function estimateOf(
 }
 
 const SMALL = estimateOf(1152, 200);
-const READY: WriteStatus<Blob> = { kind: "ready", key: KEY, dropped: false };
+const READY: WriteStatus<Blob> = {
+  kind: "ready",
+  key: KEY,
+  format: "nei",
+  dropped: false,
+};
 
 describe("VS5 D3 the parts of the section of the writing in each state", () => {
   test("ready: Write, described by the size expected, and nothing above it", () => {
@@ -153,6 +158,7 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
   test("running, and waiting for the statistics: Stop", () => {
     const running = {
       kind: "running",
+      format: "nei",
       key: KEY,
       runId: 3,
       progress: null,
@@ -289,6 +295,7 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
     const failed = {
       kind: "error",
       key: KEY,
+      format: "nei",
       error: {
         kind: "failed",
         error: { kind: "workerFailed", message: "a trap" },
@@ -615,7 +622,13 @@ describe("the saved line with Write disabled, and no text of the section that na
             for (const ofStatistics of [false, true]) {
               add(
                 writeParts(
-                  { kind: "error", key: KEY, error, ofStatistics },
+                  {
+                    kind: "error",
+                    key: KEY,
+                    format: "nei",
+                    error,
+                    ofStatistics,
+                  },
                   estimate,
                   p,
                   count,

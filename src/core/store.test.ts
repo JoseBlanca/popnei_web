@@ -5377,6 +5377,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "ready",
       key: writeKeyNow(store),
+      format: "nei",
       dropped: false,
     });
 
@@ -5395,6 +5396,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "running",
       key: write.key,
+      format: "nei",
       runId: write.run.id,
       progress: null,
       waitsForStatistics: false,
@@ -5468,6 +5470,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "ready",
       key: write.key,
+      format: "nei",
       dropped: false,
     });
   });
@@ -5521,6 +5524,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "ready",
       key: writeKeyNow(store),
+      format: "nei",
       dropped: true,
     });
     expect(store.getState().notice).toBeNull();
@@ -5536,6 +5540,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "ready",
       key: write.key,
+      format: "nei",
       dropped: false,
     });
   });
@@ -5559,6 +5564,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "ready",
       key: write.key,
+      format: "nei",
       dropped: false,
     });
     expect(store.getState().notice).toBeNull();
@@ -5606,6 +5612,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "running",
       key: writeKeyNow(store),
+      format: "nei",
       runId: stats.run.id,
       progress: null,
       waitsForStatistics: true,
@@ -5617,6 +5624,7 @@ describe("VS3 D6 the write in the store", () => {
     expect(writeIn(store)).toStrictEqual({
       kind: "error",
       key: writeKeyNow(store),
+      format: "nei",
       error: { kind: "refused", message: "the pass gave no variant" },
       ofStatistics: true,
     });
@@ -5677,16 +5685,6 @@ describe("VS3 D6 the write in the store", () => {
 });
 
 describe("VS3 D6 the write in the store, its other rules", () => {
-  test("startWrite of a format other than the .nei of the state is a defect, and sends nothing", () => {
-    const { store, writes } = storeThatWrites();
-
-    expect(() => store.startWrite("vcf")).toThrow(
-      /^popnei_web defect: startWrite was asked for the format "vcf"/,
-    );
-    expect(writes).toHaveLength(0);
-    expect(writeIn(store).kind).toBe("ready");
-  });
-
   test("a write that waits for statistics already in flight stops the calculations left behind", () => {
     const { store, sent, writes } = storeThatWrites();
     store.startRun("pops");
@@ -5818,6 +5816,7 @@ describe("VS3 D6 the write in the store, its other rules", () => {
     expect(writeIn(refused.store)).toStrictEqual({
       kind: "error",
       key: refused.write.key,
+      format: "nei",
       error: { kind: "refused", message: "no space" },
       ofStatistics: false,
     });
@@ -5948,6 +5947,191 @@ describe("VS3 D6 the write in the store, its other rules", () => {
     store.startWrite("nei");
 
     expect(store.getState().notice).toBeNull();
+  });
+});
+
+/** The key `writeKeyOf` gives the writing of a file of `format` of the
+    current project, with a memo of its own. */
+function writeKeyIn(
+  store: Store<TestResult, string>,
+  format: "nei" | "vcf",
+): string {
+  return writeKeyOf(store.getState().project, format, "0.1.0", createKeyMemo());
+}
+
+/** A file written by the fake `write.send` as a VCF, of `numVars`
+    variants kept of `numVarsRead`. */
+function vcfFile(numVars: number, numVarsRead: number): Written<string> {
+  return {
+    ...writtenFile(numVars, numVarsRead),
+    format: "vcf",
+    file: `the VCF of ${String(numVars)} variants`,
+  };
+}
+
+describe("DL4 D1 the format of the write", () => {
+  test("a store made gives the write ready in the .nei format, under the key of that format", () => {
+    const { store } = storeThatWrites();
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: writeKeyIn(store, "nei"),
+      format: "nei",
+      dropped: false,
+    });
+  });
+
+  test("startWrite of the VCF sends a WriteJob of the VCF under its own key, and the write is running in that format", () => {
+    const { store, writes } = storeThatWrites();
+
+    const handles = store.startWrite("vcf");
+
+    const write = writeAt(writes, 0);
+    expect(handles).toStrictEqual([write.run]);
+    expect(write.job).toStrictEqual({
+      format: "vcf",
+      fileId: SAMPLE_VARIANTS_ID,
+      filters: [{ kind: "maf", maxAllowedMaf: 0.9 }],
+      individuals: null,
+    });
+    expect(write.key).toBe(writeKeyIn(store, "vcf"));
+    expect(write.key).not.toBe(writeKeyIn(store, "nei"));
+    expect(writeIn(store)).toStrictEqual({
+      kind: "running",
+      key: write.key,
+      format: "vcf",
+      runId: write.run.id,
+      progress: null,
+      waitsForStatistics: false,
+    });
+  });
+
+  test("a VCF done and saved, then startWrite of the .nei file: the write holds no file and runs in the .nei format", () => {
+    const { store, writes } = storeThatWrites();
+    store.startWrite("vcf");
+    const vcf = writeAt(writes, 0);
+    const file = vcfFile(1150, 1200);
+    store.runEnded(vcf.run.id, { kind: "done", key: vcf.key, result: file });
+    expect(writeIn(store)).toStrictEqual({
+      kind: "done",
+      key: vcf.key,
+      written: file,
+    });
+    store.writeSaved();
+
+    store.startWrite("nei");
+
+    const nei = writeAt(writes, 1);
+    expect(nei.job.format).toBe("nei");
+    expect(nei.key).toBe(writeKeyIn(store, "nei"));
+    expect(writeIn(store)).toStrictEqual({
+      kind: "running",
+      key: nei.key,
+      format: "nei",
+      runId: nei.run.id,
+      progress: null,
+      waitsForStatistics: false,
+    });
+  });
+
+  test("a refusal of the VCF, a .nei file written, then startWrite of the VCF: null, nothing sent, the screens told, and the refusal of the VCF in a new state", () => {
+    const { store, writes } = storeThatWrites();
+    store.startWrite("vcf");
+    const vcf = writeAt(writes, 0);
+    store.runEnded(vcf.run.id, {
+      kind: "failed",
+      error: { kind: "popnei", message: "no space" },
+    });
+    store.startWrite("nei");
+    const nei = writeAt(writes, 1);
+    store.runEnded(nei.run.id, {
+      kind: "done",
+      key: nei.key,
+      result: writtenFile(1150, 1200),
+    });
+    expect(writeIn(store).kind).toBe("done");
+    const before = store.getState();
+    const { listener, count } = counter();
+    store.subscribe(listener);
+
+    expect(store.startWrite("vcf")).toBeNull();
+
+    expect(writes).toHaveLength(2);
+    expect(count()).toBe(1);
+    expect(store.getState()).not.toBe(before);
+    expect(writeIn(store)).toStrictEqual({
+      kind: "error",
+      key: vcf.key,
+      format: "vcf",
+      error: { kind: "refused", message: "no space" },
+      ofStatistics: false,
+    });
+  });
+
+  test("startWrite in the format it holds that starts nothing tells no screen", () => {
+    const { store } = writing();
+    const before = store.getState();
+    const { listener, count } = counter();
+    store.subscribe(listener);
+
+    expect(store.startWrite("nei")).toBeNull();
+
+    expect(count()).toBe(0);
+    expect(store.getState()).toBe(before);
+  });
+
+  test("startWrite of the .nei file while a VCF is written is a defect, and changes nothing", () => {
+    const { store, writes } = storeThatWrites();
+    store.startWrite("vcf");
+    const before = store.getState();
+
+    expect(() => store.startWrite("nei")).toThrow(
+      /^popnei_web defect: startWrite was asked for the format "nei" while a write of "vcf" is in flight/,
+    );
+
+    expect(writes).toHaveLength(1);
+    expect(store.getState()).toBe(before);
+    expect(writeAt(writes, 0).cancels()).toBe(0);
+  });
+
+  test("startWrite of the .nei file while a VCF waits for the statistics is a defect, and changes nothing", () => {
+    const { store, writes, sent } = storeThatWrites([MISSING_AT_02]);
+    store.startWrite("vcf");
+    expect(writeIn(store)).toMatchObject({
+      kind: "running",
+      format: "vcf",
+      waitsForStatistics: true,
+    });
+    const before = store.getState();
+
+    expect(() => store.startWrite("nei")).toThrow(
+      /^popnei_web defect: startWrite was asked for the format "nei" while a write of "vcf" is in flight/,
+    );
+
+    expect(writes).toHaveLength(0);
+    expect(sent).toHaveLength(1);
+    expect(store.getState()).toBe(before);
+  });
+
+  test("a write whose file is of another format than its request is a defect", () => {
+    const { store, write } = writing();
+
+    expect(() =>
+      store.runEnded(write.run.id, {
+        kind: "done",
+        key: write.key,
+        result: vcfFile(1150, 1200),
+      }),
+    ).toThrow(
+      /^popnei_web defect: the request \d+ of the writing asked for a "nei" file and was given a "vcf" file/,
+    );
+  });
+
+  test("no startWrite of either format is a defect", () => {
+    for (const format of ["nei", "vcf"] as const) {
+      const { store, writes } = storeThatWrites();
+      expect(store.startWrite(format)).toStrictEqual([writeAt(writes, 0).run]);
+    }
   });
 });
 
