@@ -1139,3 +1139,37 @@ before that change): after 0.9 is typed in the MAF box and Enter
 pressed, dragging the line to the top of its axis leaves the box at 0.9
 while the line sits at 1. The flow that met it now starts the drag from
 a dragged value, with a comment. To fix before the merge.
+
+### The defect of the drag, fixed, 8 October 2026
+
+The cause was in React Aria's number field (react-stately 3.50.0), not
+in the thresholds: the press on the line takes the focus from the box,
+and React Aria's commit at the loss of the focus sets again the text it
+holds, an update React keeps unapplied; the drag's first move gives the
+new number in a render of lower priority, and the kept update is then
+applied over it. It showed only when that first move already reached
+the end of the axis, and for every threshold, the missing rate at both
+ends too. The fix, in `src/ui/widgets/NumberField.tsx`, puts the text
+back to the number the field holds after every render in which nothing
+is typed and the text shows another number. It holds for both pages,
+since they share the field.
+
+Commits: 3f2a341 (the fix, three Vitest cases that failed before, the
+workaround of the MAF flow removed, a flow of the missing rate dragged
+to both ends), 44346ec (a screen: the MAF dragged off after 0.9 typed),
+ea55db5 (the review's fixes).
+
+Review, three categories (react, tests, browser), no defect in the fix.
+Taken: the drags of these flows and of the screen made in one pointer
+move, since in 8 steps the first step reached the top of the axis by
+2 px only and a wider plot would have let the flows pass without the
+fix; a flow of a threshold kept across files (0.9 on panel.vcf.gz,
+panel.nei opened, the line dragged to the top); a comment on why the
+check runs after every render. Not taken: no test pins the check's
+comparison of the numbers, which matters only when one number has two
+spellings. With the fix switched off, the three Vitest cases and the
+three flows fail in Chromium and WebKit. Not run in Firefox, which does
+not start on this Mac. Vitest 4,322; the eight files of flows that open
+popgen2.html, 119 in Chromium and 119 in WebKit; screens of popgen2
+140. The screen of the MAF dragged off seen: 1 in grey, the line dotted
+at the top.
