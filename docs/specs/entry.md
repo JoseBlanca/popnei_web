@@ -320,8 +320,8 @@ population genetics application alone until stage 7:
   a first project of its own, `popgen2FirstProject()`: the filter of
   the FILTER column on and the missing data filter on at 0.1, and no
   other (`docs/specs/core/project.md`, "The filters of popgen2.html"),
-  which `createPopgen2Store` passes with `filterNotices: true`
-  (`docs/specs/core/store.md`); the old page keeps
+  which `createPopgen2Store` passes (`docs/specs/core/store.md`); the
+  old page keeps
   `firstProject("popgen")`;
 - **`countsOf`**, which replaces `numVarsOf` of stage 2: the store's
   function that gives, of the result of any analysis, what its pass

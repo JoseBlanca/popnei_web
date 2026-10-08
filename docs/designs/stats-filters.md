@@ -83,8 +83,7 @@ filtering is carried out, after the individuals are judged: an
 individual's missing rate and heterozygosity are those of the plots,
 over every variant, and the variants that failed are left out after.
 So a VCF of which no variant passed is shown as any other. Ticking the
-box changes no plot and no count on the page, only the project and the
-notice; what it does is seen in what a tool reports. The box counts
+box changes no plot and no count on the page, only the project; what it does is seen in what a tool reports. The box counts
 nothing: the count of the failures is in the box of the file, "FILTER
 failures: 300" for `low_qual.vcf.gz`, from the one reading, as the piece
 `popnei-0.2.2` builds it.
@@ -103,9 +102,11 @@ cannot be opened by an older version of the application, and the old
 page, `popgen.html`, refuses it, since it has no box to show it. Nobody
 loses anything today: the new page saves no project file yet.
 
-**Undo and Redo on the new page.** `popgen2.html` has neither today,
-nor the notice that says what a change did. It gains a row with Undo
-and Redo, their keys, and the notice, "The MAF filter changed · Undo".
+**Undo and Redo on the new page.** `popgen2.html` has neither today. It
+gains a row with Undo and Redo and their keys, which undo and redo the
+changes of the filters; opening a file starts the page's history
+afresh, and no change gives a notice, as the owner decided on 8 October
+2026.
 A threshold is on or off. Off, its box shows 1 in grey, the value at
 which it keeps everything, its line stands at the top of the axis in
 grey, and nothing is shaded. Only the missing rate of the variants
@@ -121,7 +122,9 @@ approval, the FILTER box for a `.nei` file that records the FILTER of
 its variants. On 8 October 2026, after trying the page: no line of what
 a threshold keeps; a threshold that keeps every value of its plot shown
 by its line and its number in grey, not by words; and the FILTER box
-built soon, right after Undo and Redo.
+built soon, right after Undo and Redo. Later that day, after trying the
+FILTER box: no notice for a change of a filter, and no Undo of the
+opening of a file.
 
 ## What the user can do once it is built
 
@@ -140,7 +143,8 @@ out, the download and the analyses, comes with the tools.
   variants that failed their FILTER", on by default, for a VCF and for
   a `.nei` file that records the FILTER of its variants.
 - Every change of a threshold or of the box is a change of the project,
-  with Undo and Redo, and a notice that says what changed.
+  with Undo and Redo, and no notice. Opening a file is not a step of
+  Undo.
 - No plot changes with a threshold or the box: each plot shows the
   whole file, and its threshold shades what it would leave out.
 
@@ -407,32 +411,40 @@ The thresholds can be moved over the plots of a Stop, and their
 shading and their grey are then of the variants read, as each part
 says over its plots.
 
-## Undo, Redo and the notice of a change on `popgen2.html`
+## Undo and Redo on `popgen2.html`
 
-`popgen2.html` has none of the three today: its page has no shell
+`popgen2.html` has neither today: its page has no shell
 (`src/ui/popgen2.tsx`, "without the stepper, the saving and the
-shell"), and the buttons of Undo and Redo, their keys (Ctrl+Z, Ctrl+Y
-and Cmd+Shift+Z, caught in the shell's header through
-`src/ui/shell/shortcuts.ts`) and the notice (`src/ui/shell/Notice.tsx`)
-are the shell's. The page gains a header row above the box of the file
-with the two buttons, the keys caught as the shell catches them, and
-the notice under it, reused from the shell rather than copied. The
-notice takes its words from the shell's words (`ShellWords` of
-`src/ui/shell/words.ts`), which ask for the old page's steps and counts
-that `popgen2.html` does not have; so the words the notice needs are
-split out of them into a set of their own, which both pages give.
+shell"), and the buttons of Undo and Redo and their keys (Ctrl+Z,
+Ctrl+Y and Cmd+Shift+Z, caught in the shell's header through
+`src/ui/shell/shortcuts.ts`) are the shell's. The page gains a row
+above the box of the file with the two buttons, the keys caught as the
+shell catches them, reused from the shell rather than copied.
 
-The store gives no notice today for a change that removes, leaves
-behind or stops no result (`changedByUser` of `src/core/store.ts` sets
-the notice to `null`), which is every change of a threshold on this
-page. So the store gains a setting, on for `popgen2.html` only, under
-which a change of a filter always gives a notice, which says what
-changed, "The MAF filter changed · Undo". The old page does not turn it
-on: its number boxes make a change at every press of an arrow key, and
-a screen reader would read a notice at every press of a held key. On `popgen2.html` no calculation is left behind by such a
-change, so the notice says nothing of calculations stopped. With the presses of one
-run of arrow keys made one change, a screen reader says the notice once
-per run, not at every press.
+They undo and redo the changes of the filters alone. Opening a file,
+the first or another, starts the page's history afresh, with nothing to
+undo, and keeps the filters as the user left them; the owner decided on
+8 October 2026 that an Undo of an opening is "not necessary". The page
+opens a file with the store's `open`, which starts a new history and
+stops the pass of the file before, and not with a command.
+
+No change gives a notice, the panel of the old page that says what a
+change did, with its Undo: the owner decided on 8 October 2026, after
+trying the FILTER box, "Let's assume that the user knows what he's
+doing". The store gives a notice only for a change that removes, leaves
+behind or stops a result, and on this page no change of a filter does,
+since the one pass reads no filter, and no opening does, since an
+opening starts a new history. So the page draws no notice. What a user
+of a screen reader hears of a change is the change of the control
+itself, the check box ticked or the slider's value, and of an undo or a
+redo the status region, "Undone: the variants that failed their FILTER
+are kept."
+
+Until that day this design had the notice on this page too, with a
+setting of the store under which every change of a filter gave one,
+"The MAF filter changed · Undo", and an opening as a step of Undo,
+"Statistics of the file removed because panel.nei opened · Undo". Both
+were built on 8 October 2026 and taken out the same day.
 
 ## When a calculation that reads a filter starts by itself
 
@@ -449,10 +461,10 @@ October 2026 apply, and are built with it:
 - **Keys left behind start again when the project comes back to them.**
   When the store stops a calculation because a change left its key
   behind, `autoRuns.ts` forgets that key, so that an Undo starts it
-  again, unless its result is in the cache. Built on 8 October 2026,
-  before any such tool, for the pass of the file on `popgen2.html`: a
-  file opened while the pass of the file before it ran, then undone,
-  showed that pass as stopped though the user had pressed no Stop.
+  again, unless its result is in the cache. Built on 8 October 2026
+  for the pass of the file on `popgen2.html`, while an opening could be
+  undone, and taken out the same day when it no longer could: nothing
+  reached it, since only an Undo across files came back to such a key.
 
 The limit that `docs/architecture.md` section 5 records for the piece of
 the filters, that every change of a threshold would stop the
@@ -567,7 +579,7 @@ calculation.
 ## How it is tested, and what would prove it wrong
 
 - In `src/core`: each command of a threshold and of the box gives one
-  change of the project, with its notice, and Undo gives the value
+  change of the project, with no notice, and Undo gives the value
   back; emptying a box or typing 1 turns its filter off and keeps its
   value aside; a threshold is grey exactly when no bin, or no
   individual's value, of its plot lies above it, and 0 is given to
@@ -608,8 +620,7 @@ Made on this branch once the owner approves, each with its paragraph
   individuals are judged; `filtersApplied`, the filters that apply to the project's
   file; the read of a variants file holding whether its variants record
   their FILTER.
-- Section 3: the store's setting of a notice for every change of a
-  filter; the failures cleared by a change only when their key is left
+- Section 3: the failures cleared by a change only when their key is left
   behind. The spec of the store, `docs/specs/core/store.md`, which says
   a failure lasts "until the next change of the project", changes with
   it.
@@ -619,7 +630,8 @@ Made on this branch once the owner approves, each with its paragraph
   the keys that start again recorded for the first tool that starts by
   itself, where the limit of the piece of the filters moves.
 - Section 7: the thresholds of `popgen2.html` show the project's
-  filters, on or off; Undo, Redo and the notice on that page; the first project of that page; the tools section, with its
+  filters, on or off; Undo and Redo on that page, which do not undo an
+  opening; the first project of that page; the tools section, with its
   first tool, once popnei's issue #13 is done.
 - Section 6: the answer to the opening of a variants file carries
   whether its variants record their FILTER, with the individuals and the
@@ -636,7 +648,7 @@ Made on this branch once the owner approves, each with its paragraph
   waits for popnei's issue #13.
 - **The keyboard and a screen reader:** the line is a React Aria slider,
   moved by the arrow keys, as today; a run of presses is one change and
-  one notice; a grey threshold is told in the line's value and the
+  one step of Undo; a grey threshold is told in the line's value and the
   box's description. To be heard in VoiceOver, the screen reader of macOS,
   before the plan is settled.
 - **Downloads and browsers:** nothing new to download, and nothing past
@@ -727,3 +739,16 @@ stays approved with them:
    changes nothing here.
 3. The FILTER box is wanted soon: the plan `docs/plans/filters.md`
    builds it right after Undo, Redo and the notice.
+
+Later on 8 October 2026 the owner tried the FILTER box and decided two
+more things, with which the design stays approved:
+
+4. No notice when the box is unticked: "Let's assume that the user
+   knows what he's doing." The session read it as no notice for any
+   change of a filter on `popgen2.html`, the thresholds' too, and so no
+   notice on that page at all; the store's setting that gave a notice
+   for every change of a filter went with it.
+5. No Undo of the opening of a file: "not necessary". Opening a file
+   starts the page's history afresh, and Undo and Redo serve the
+   changes of the filters, which the owner decided on 7 October 2026
+   are undone.

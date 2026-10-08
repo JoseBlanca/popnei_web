@@ -70,7 +70,8 @@ variants; its key, the hash of everything a result is calculated from
 under which the store files it, holds the file and no filter, and the page's button
 Start again sends `startRun` of it. Four things change: a setting of
 `createStore`, `filterNotices`, true for popgen2.html alone, under
-which every change of a filter gives a notice; a failure that is not
+which every change of a filter gave a notice, taken out on 8 October
+2026 (below); a failure that is not
 popnei's, which every change of the user forgot, is forgotten only by a
 change after which the project no longer gives its key, on both pages;
 the last result so far of a calculation the user stopped is kept beside
@@ -86,7 +87,13 @@ check numbers takes, of the two fingerprints an opened project file keeps
 for each check, the one of the file given again once its read comes
 back, and compares nothing before (`keys.md`, "The fingerprint of the
 settings"); a `keyInputs` reads `p.variants` only through
-`filtersApplied`. The store is the one object of core that
+`filtersApplied`. Revised again on 8 October 2026 for the owner's
+round on the FILTER box of popgen2.html: no change of a filter gives a
+notice there, and opening a file there is not a step of Undo. The
+setting `filterNotices` and the field `filtersChanged` of the notice
+are gone, since no page turned them on any more; the page opens a file
+with `open`, which starts a new history (below, "The notice, and the
+calculations it stops", and "Commands and events"). The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.
@@ -319,6 +326,10 @@ are under keys, and a key names the load it was made from, so nothing of
 them is shown for the new project unless its keys give it. The
 calculations in flight are stopped at once, since the screen asked before
 opening; an opening makes no notice, and clears the one there was.
+`popgen2.html` opens a variants file so too, from 8 October 2026: the
+project with the new load and the filters as they were, given to
+`open`, so that an opening there is not a step of Undo (below, "The
+notice, and the calculations it stops").
 
 The store counts its moves of the history, `historyMoves`, one more at
 each undo, redo and opening, and none at a command or an event. A
@@ -423,8 +434,7 @@ calculation that will be stopped unless the change is undone: its
 until the notice is closed or replaced, since what it tells has
 happened, and a notice with nothing else in it stays until then, but
 for one thing: a `startRun` of an analysis in `stopped` takes it out,
-and a notice left with nothing goes, unless it tells of a change of a
-filter, `filtersChanged` (below). The user has run that analysis
+and a notice left with nothing goes. The user has run that analysis
 again, and the line that says its calculation was stopped by the new
 file would otherwise stay beside the new run, and after a Stop of the
 user's own would tell of that Stop as if the file had caused it.
@@ -505,11 +515,10 @@ any other.
 
 The notice goes when it is closed or replaced; a change that removes
 nothing, leaves nothing behind, stops nothing, discards no written file
-and, under `filterNotices`, changes no filter, replaces it with none. A
+replaces it with none. A
 notice is left with nothing when its results removed, its calculations
 left behind and stopped, its Runs that wait and its writing left behind,
-stopped or discarded are all gone, and it does not tell of a change of a
-filter, `filtersChanged` false; such a notice goes, in the cases this
+stopped or discarded are all gone; such a notice goes, in the cases this
 section names. An analysis is
 `removed` while the current notice lists it, or `locked` if it cannot
 run; when the notice is closed or replaced without it, the analysis is
@@ -588,42 +597,30 @@ learns that the Undo of the notice brings the filters back and not the
 file; it is kept and cleared as `removed` is, and a notice with it alone
 is made, as one with a result removed.
 
-A change of a filter gives a notice of its own on `popgen2.html`,
-where none of the above would: its one calculation, the summary of the
-variants file, reads no filter, so no change of a threshold or of the
-box of the FILTER column removes, leaves behind or stops anything, and
-the user would have no notice to undo from, as the old page has. So
-`createStore` takes a setting, `filterNotices`, true for `popgen2.html`
-alone, as `docs/designs/stats-filters.md` decided on 7 October 2026.
-Under it, a command, an undo or a redo after which the filters differ
-from those before gives a notice, with its cause, "the MAF filter
-changed", and `filtersChanged` true, whatever else it holds. The
-filters are compared by value: the four lists, `filters`, `filtersOff`,
-`individualFilters` and `individualFiltersOff`, each the same length
-before and after, with the same kinds and the same numbers at each
-place. A command that makes new arrays and leaves every filter as it
-was, as loading another variants file may, gives no notice of a filter,
-since none changed; a comparison of the arrays themselves would have
-told the user that a filter changed when they opened a file. `settle`,
-which takes out of a notice what is no longer true and drops a notice
-left with nothing, keeps a notice with `filtersChanged` true, since the
-change of the filter it tells of stays true until the next change: such
-a notice goes only when it is closed or replaced. The screen writes it
-"The MAF filter changed · Undo". The old page keeps the setting false:
-its number boxes make a change at every press of an arrow key, and a
-screen reader would read a notice at every press of a held key. On
-`popgen2.html` the page makes one change of a run of presses
-(`docs/specs/steps/popgen2-filters.md`, "When a threshold changes the
-project"), so a screen reader says the notice once per run.
+On `popgen2.html` the store gives no notice. Its one calculation, the
+summary of the variants file, reads no filter, so no change of a
+threshold or of the box of the FILTER column removes, leaves behind or
+stops anything; and the page opens a file with `open`
+(`openVariantsFile` of `src/ui/popgen2Store.ts`), the project with the
+new load and the filters as the user left them, which starts a new
+history, stops the pass of the file before and makes no notice. So the
+page's Undo and Redo serve the changes of the filters alone, as the
+owner decided on 8 October 2026: "Let's assume that the user knows
+what he's doing" of the notice, "not necessary" of an Undo of an
+opening (`docs/designs/stats-filters.md`, "What the owner decided").
+From 7 October 2026 until then `createStore` took a setting,
+`filterNotices`, true for `popgen2.html` alone, under which every
+change of a filter gave a notice, "The MAF filter changed · Undo", with
+a field `filtersChanged` that kept it up until it was closed or
+replaced; both are gone, since no page turned them on any more. The
+old page never turned it on: its number boxes make a change at every
+press of an arrow key, and a screen reader would read a notice at each.
 
-The store of each page passes the setting: `createPopgen2Store` of
-`src/ui/popgen2Store.ts` passes `filterNotices: true` and the first
-project of that page, `popgen2FirstProject()` of `src/core/apps.ts`
-(`docs/specs/core/project.md`, "The filters of popgen2.html"), where it
-passes `firstProject("popgen")` until then; the store of `popgen.html`,
-`src/ui/popgenStore.ts`, passes `filterNotices: false` and
-`firstProject("popgen")` as before. The field is required, so that a
-third page chooses.
+The store of each page passes its first project: `createPopgen2Store`
+of `src/ui/popgen2Store.ts` passes `popgen2FirstProject()` of
+`src/core/apps.ts` (`docs/specs/core/project.md`, "The filters of
+popgen2.html"); the store of `popgen.html`, `src/ui/popgenStore.ts`,
+passes `firstProject("popgen")`.
 
 ### A calculation that failed
 
@@ -668,8 +665,7 @@ summary of the variants file as it is, and forgetting its failure at
 every change would wipe the words of a crash of the worker when the
 user ticks the box of the FILTER column, while Start again is what
 tries again. That the rule holds on `popgen.html` too, so that the
-store has one rule of failure and not one under `filterNotices` and
-another without it, is the session's decision of 7 October 2026, not
+store has one rule of failure and not one for each page, is the session's decision of 7 October 2026, not
 the design's, and the owner is told of it with these specs. On
 `popgen.html` it changes one thing a user sees: the words of a crash of
 an analysis stay after a change of a setting that the analysis does not
@@ -1132,7 +1128,6 @@ export interface Notice {
   readonly writeLeftBehind: boolean;           // the writing of the file will be stopped unless undone
   readonly writeStopped: boolean;              // it was stopped at once by a change of the load
   readonly writeDiscarded: boolean;            // a file written and not saved was forgotten by the change
-  readonly filtersChanged: boolean;            // under filterNotices, the change changed a filter; the notice stays for it
 }
 ```
 
@@ -1172,8 +1167,6 @@ export function createStore<J, R, F = never>(config: {
   readonly appVersion: string;
   readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
   readonly maxUndoSteps: number;           // MAX_UNDO_STEPS
-  /** Whether every change of a filter gives a notice: true for popgen2.html alone. */
-  readonly filterNotices: boolean;
 }): Store<R, F>;
 
 /** What the store takes from the pass of a result. */
@@ -1315,13 +1308,11 @@ the owner, on 24 September 2026:
   shown until a change leaves its key behind.
 - **A Stop, then a change of a filter, on `popgen2.html`.** The key of
   the summary does not change, so its plots of the variants read before
-  the Stop stay, `stopped` of its state `ready`, and the notice says the
-  filter changed. Start again forgets them and runs; a new file forgets
+  the Stop stay, `stopped` of its state `ready`, with no notice. Start again forgets them and runs; a new file forgets
   them, and an undo back to the old file does not bring them back.
 - **A crash of the worker, then a click on the box of the FILTER
   column, on `popgen2.html`.** The failure of the summary stays, since
-  its key did not change, and the notice says the filter changed; Start
-  again tries again.
+  its key did not change, with no notice; Start again tries again.
 - **A progress after the end of its request**, a message the worker had
   sent before the end reached the page: the store no longer has the
   request, and passes it over.
@@ -1485,25 +1476,19 @@ whose file is a text.
   and with a redo that change the load. Again, then the new file read,
   `startRun` of the analysis and `cancelRun` of it: the notice no longer
   lists it in `stopped`, and a notice with nothing else in it is `null`.
-  In a store made with `filterNotices` true, the same with one command
-  given to `apply` that loads another variants file and changes a
-  filter: after `startRun`
-  and `cancelRun` the notice no longer lists the analysis in `stopped`,
-  and stays, with `filtersChanged` true. No test waits for a time: the
+  No test waits for a time: the
   store has no clock.
 - **The filters of popgen2.html**, from 7 October 2026, with a fake
   analysis that reads no filter and gives results so far, as the summary
-  of the variants file does, in a store made with `filterNotices` true:
-  a `setThreshold` of the MAF gives a notice with that cause,
-  `filtersChanged` true and every list empty, and `send` was not called;
-  the notice is still there after the store's next change of state, a
-  result so far of the analysis among them, and goes at
-  `dismissNotice` or at the next command; an undo gives one with the
-  cause of the undo; a command that changes no filter, a new variants
-  file loaded among them, whose project has the same filters in new
-  arrays, gives no notice of a filter, `filtersChanged` false or no
-  notice, and every command in a store made with `filterNotices`
-  false gives the notices it gives today. The analysis running with a
+  of the variants file does: a `setThreshold` of the MAF while it runs,
+  its undo and its redo, and a threshold of the individuals, give no
+  notice, and `send` was not called and nothing cancelled; a change of
+  a filter that removes a result of the analysis that reads the filters
+  gives the notice of the results removed alone. In the store of
+  `popgen2.html`, `openVariantsFile` of the first file and of another
+  leaves `undo` and `redo` `null`, counts one move of the history, keeps
+  the filters, cancels the pass of the file before and gives no notice
+  (`src/ui/popgen2Store.test.ts`). The analysis running with a
   result so far, `cancelRun`: its state is `ready` with that result in
   `stopped`, the same object; a result so far given for the request
   after `cancelRun` and before its outcome `cancelled` leaves `stopped`

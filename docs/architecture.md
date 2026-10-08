@@ -940,16 +940,17 @@ a key that held it, in place of the thresholds, would let two thresholds
 that keep the same individuals share their results, at the cost of a key
 made from a result in the cache rather than from the project alone.
 
-**The notice of a change of a filter on `popgen2.html`.** The one
+**No notice on `popgen2.html`, and no Undo of an opening.** The one
 calculation of that page, the one pass, reads no filter, so a change of
-a threshold or of the FILTER box removes and stops nothing, and would
-give no notice, while the user needs one to undo from. The store takes
-a setting, on for that page alone, under which every change of a filter
-gives a notice, "The MAF filter changed · Undo"
+a threshold or of the FILTER box removes and stops nothing, and gives
+no notice, as on the old page; the owner decided on 8 October 2026 that
+none is needed. Opening a file there, the first or another, is the
+store's `open`, which starts a new history with nothing to undo, stops
+the pass of the file before and gives no notice; the filters are kept
+as the user left them. So the page's Undo and Redo serve the changes of
+the filters alone, and the store never gives that page a notice
 (`docs/specs/core/store.md`, "The notice, and the calculations it
-stops"); the old page leaves it off, since its number boxes make a
-change at every press of an arrow key, and a screen reader would read a
-notice at each.
+stops").
 
 **A failure is forgotten when its key is left behind.** A failure that
 is not popnei's, a crash of the worker, is kept under its key until a
@@ -973,11 +974,17 @@ longer the project's list as it is: the filter of the FILTER column,
 which a project keeps through a new file, is in no job for a file whose
 variants do not record their FILTER, and in its key it would give every analysis of that file a new key
 at a click that changes no calculation. The two paragraphs above are
-new: the setting of the notice of a filter, and the failures forgotten
-only when their key is left behind, where the spec of the store said
-"until the next change of the project". The option not taken for the
-notice was a notice at every change on both pages, which the old page's
-boxes would have made a notice per press of a held arrow key.
+new: the notice of a filter, and the failures forgotten only when their
+key is left behind, where the spec of the store said "until the next
+change of the project".
+
+What was revised on 8 October 2026, from the owner's round on the
+FILTER box: the store's setting `filterNotices`, under which every
+change of a filter gave a notice on `popgen2.html`, "The MAF filter
+changed · Undo", is gone, and an opening on that page is no longer a
+step of Undo, "Statistics of the file removed because panel.nei opened
+· Undo"; the paragraph "No notice on `popgen2.html`" replaces the one
+that described the setting.
 
 ## 4. An analysis is a module
 
@@ -1424,13 +1431,9 @@ The page and each worker talk through typed messages
   way after minutes. Each starts once for each key: when the file is
   read, again after a read with other options, which is a new load and a
   new key, and at the user's Start again; not again after a failure or a
-  Stop under the same key. From 8 October 2026 a key that a change of
-  the project left behind while its pass ran, which the store then
-  stopped, is forgotten, so that an Undo or a Redo back to it starts the
-  pass again, unless its result is in the cache, the owner's choice of 6
-  October 2026: before, undoing a file opened while the pass of the file
-  before it ran showed that pass as "Stopped" though the user had pressed
-  no Stop. A pass the user stopped is still not started again. The page has one Stop, in the box of the file
+  Stop under the same key. A file opened while the pass of the file
+  before it runs stops that pass, and no Undo comes back to it, since an
+  opening starts a new history (section 3). The page has one Stop, in the box of the file
   beside the one bar of the pass, shown while a pass runs or is about to
   start by itself, which stops the page's one group, `POPGEN2_CHAIN` of
   `src/ui/popgen2Store.ts` (`stop` of `autoRuns.ts`): the pass running,
@@ -1470,11 +1473,10 @@ The page and each worker talk through typed messages
   does, stops the calculation left behind, which restarts the worker; so
   moving a threshold would stop and start the pass at each step. The owner
   chose on 6 October 2026 how that tool settles it: it starts under a
-  new key only once the filters have had no change for one second. A
-  key the analysis comes back to, by an undo or by the old threshold
-  typed again, starts it again, since `autoRuns.ts` forgets a key the
-  store left behind, the owner's other choice of that day, built on 8
-  October 2026 for the opening of a file. For an
+  new key only once the filters have had no change for one second; and
+  a key the analysis comes back to, by an undo or by the old threshold
+  typed again, starts it again, as `autoRuns.ts` will forget a key the
+  store left behind, the owner's other choice of that day. For an
   analysis the user starts, an undo while the notice is up gives the
   keys back, and the requests go on; for one that starts by itself it
   does not. A change of the load of the variant file is the exception,
@@ -1648,9 +1650,11 @@ so far of the one pass stays on the screen, where until then the plots
 went with the request. The limit of the piece of the filters, that every
 change of a threshold would stop and start a calculation that starts by
 itself, moves to the first tool that starts by itself and reads a
-filter, with the owner's choice of 6 October 2026 that settles it, the quiet
-second; the other choice of that day, the keys left behind started
-again, was built on 8 October 2026 for the opening of a file. Not taken: the
+filter, with the owner's two choices of 6 October 2026 that settle it,
+the quiet second and the keys left behind started again. The second was
+built on 8 October 2026 for the opening of a file on `popgen2.html`,
+while an opening could be undone, and taken out the same day when it no
+longer could, since nothing reached it. Not taken: the
 histograms of the variants read again over the individuals kept after a
 quiet second, the owner's decision of 6 October 2026, replaced on 7
 October 2026 by plots that describe every individual and a page that
@@ -2302,9 +2306,10 @@ for the smallest part of it.
   change of a threshold or of the FILTER box is a command; an empty box,
   or 1 however it is reached, typed or by the line dragged to the top of
   an axis that ends at 1, turns a threshold off (`setThreshold` of
-  `docs/specs/core/project.md`). The page has a row with Undo and Redo,
-  their keys, and the notice of a change, reused from the shell of the
-  old page, "The filter of the FILTER column was turned off · Undo"; its
+  `docs/specs/core/project.md`). The page has a row with Undo and Redo
+  and their keys, reused from the shell of the old page, which undo and
+  redo the changes of the filters and not the opening of a file, and no
+  notice, as the owner decided on 8 October 2026; its
   first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. A tools section after the
   plots, whose first tool is the download of the filtered file, comes
@@ -2325,7 +2330,8 @@ approved by the owner that day. The threshold on a plot of
 `popgen2.html` was state of the screen, from the piece `thresholds`
 (`docs/plans/thresholds.md`), lost with another file or a reload, with
 no Undo; it is now the project's filter, on or off, and the page gains
-Undo, Redo and the notice, and its own first project. Not taken: a check
+Undo and Redo, and its own first project; the notice it gained with
+them was taken off on 8 October 2026, the owner's decision. Not taken: a check
 box beside each threshold to turn it on and off, in place of the empty
 box or 1, the owner's choice of 7 October 2026; and the top of the axis
 as off whatever its number, since the axis ends where the file's values
@@ -2584,16 +2590,17 @@ src/ui/
                     page: with pageStart.tsx, its store, the announcements,
                     the analyses that start by themselves, and the page,
                     with no stepper and no saving; from 7 October 2026
-                    with the row of Undo and Redo, their keys and the
-                    notice, reused from shell/, though not the rest of
-                    the shell
+                    with the row of Undo and Redo and their keys, reused
+                    from shell/, though not the rest of the shell, and,
+                    from 8 October 2026, no notice
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the
                     groups of the analyses the page starts by itself;
-                    from 7 October 2026 made with filterNotices true and
-                    popgen2FirstProject; apart from the entry, so that a
-                    test in node makes it
+                    from 7 October 2026 made with popgen2FirstProject;
+                    from 8 October 2026 openVariantsFile, which opens a
+                    file as a new history; apart from the entry, so that
+                    a test in node makes it
   autoRuns.ts       the analyses popgen2.html starts by itself, in order,
                     each once for each key once those before it let it,
                     which keys were started, from which the page tells a
@@ -2635,10 +2642,7 @@ src/ui/
                     shell what those words need of the application. From
                     7 October 2026 the buttons of Undo and Redo with
                     their keys are a part of their own, which the header
-                    of popgen.html and the row of popgen2.html draw, and
-                    the words of the notice, the title of each analysis,
-                    are a set of their own, which both pages give and
-                    the shell's words take in
+                    of popgen.html and the row of popgen2.html draw
   runs.ts           awaits the outcome of each run core starts, at a Run
                     or, on popgen2.html, by autoRuns.ts, and hands it to
                     the store, which cancels the runs no longer asked for
@@ -2711,10 +2715,11 @@ What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day, and its specs: the rows of `project.ts`,
 `apps.ts`, `popgen2.tsx`, `popgen2Store.ts`, `variants/`, `shell/` and
 `widgets/`, for the thresholds of `popgen2.html` as filters of the
-project, its Undo, Redo and notice, and its plots kept after a Stop. No
+project, its Undo and Redo, and its plots kept after a Stop. No
 module is added and no rule of the imports changes: `popgen2.tsx` takes
-the part of the shell with Undo and Redo, and the notice, and not the
-shell itself, whose stepper and summary line that page does not have.
+the part of the shell with Undo and Redo, and not the shell itself,
+whose stepper, summary line and notice that page does not have (the
+notice since 8 October 2026).
 
 ## 10. The walking skeleton
 

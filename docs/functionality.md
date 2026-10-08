@@ -121,8 +121,11 @@ the axis and its step grows.
 Each threshold is a filter of the project, as the owner decided on 7
 October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
 the arrow keys or the box, is a change of the project, with Undo and
-Redo and a notice, "The MAF filter changed · Undo", and a run of
-presses of the arrow keys is one change. A threshold is on or off. It is
+Redo, and a run of presses of the arrow keys is one change. No change
+of a filter gives a notice, and opening a file, the first or another,
+is not a step of Undo: it starts the page's history afresh, so that
+Undo and Redo serve the changes of the filters alone (the owner, 8
+October 2026). A threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
 dragged to the top of an axis that ends at 1; 1 is off and not a filter
@@ -146,7 +149,8 @@ variants that failed their FILTER", on by default, for a VCF and for
 a .nei file that records whether each variant passed its FILTER, which
 popnei writes from its vars format 1.2; it is not shown for a .nei file
 written before that format, to which it does not apply (the owner, 7
-October 2026). Its filter acts
+October 2026). A click on it is a change of the project, with Undo and
+Redo and no notice. Its filter acts
 when the filters are carried out, after the individuals are judged, so
 an individual's missing rate and heterozygosity are over every variant,
 and a VCF of which no variant passed is shown as any other.
