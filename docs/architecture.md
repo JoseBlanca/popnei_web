@@ -2154,9 +2154,11 @@ for the smallest part of it.
   line the user drags is a React Aria slider of `src/ui` laid over the
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the
-  plot keeps no pointer handling of its own. What it keeps is counted by
+  plot keeps no pointer handling of its own. Whether it keeps every
+  variant or individual, drawn in grey from 8 October 2026, is told by
   `src/core/thresholds.ts` from popnei's fine bins of the variants and
-  from popnei's value of each individual. When the thresholds become
+  from popnei's value of each individual; no count of what it keeps is
+  shown. When the thresholds become
   filters, `docs/designs/stats-filters.md`, they move into the project.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
@@ -2290,9 +2292,10 @@ src/core/
                     imports project.ts and individualsKept.ts, and neither
                     imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
-  thresholds.ts     from 7 October 2026, the counts of a threshold on the
-                    histograms of popgen2.html: the fine edge a number
-                    snaps to, the variants kept, the individuals kept
+  thresholds.ts     from 7 October 2026, the thresholds on the
+                    histograms of popgen2.html: the step and the fine
+                    edge a number snaps to, and whether one keeps every
+                    variant or individual, which the screen draws grey
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass

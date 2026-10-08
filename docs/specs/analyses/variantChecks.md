@@ -136,8 +136,14 @@ popgen.html draws, popnei's bins added up 25 at a time, with popnei's
 edges at every 25th. A result whose bins are not 40 times a whole number
 is a defect.
 
-`variantBinsRounded(r, statistic)` gives the bins popgen2.html draws,
-over the range of the values rounded out to round numbers:
+`variantBinsRounded(r, statistic, spacing)` gives the bins popgen2.html
+draws, over the range of the values rounded out to round numbers, none
+narrower than `spacing`, the least distance between two values of the
+statistic, `variantValueSpacing(statistic, n, ploidy)`: 1/n for the
+missing rate over n individuals, 1/(ploidy · n) for the MAF, `null` for
+the two heterozygosities (the owner, 8 October 2026,
+`docs/plans/popnei-0.2.2.md`). `spacing` rounded up to whole fine bins,
+within 10^-9, is the least bin, `leastPerBin`:
 
 1. The range runs from the start of the first fine bin with a count to
    the end of the last. A fine bin holds its right edge, so a MAF of 0.5
@@ -146,15 +152,21 @@ over the range of the values rounded out to round numbers:
    starts at 0 whatever its values, as the round of 6 October 2026
    decided (`docs/plans/file-stats.md`, "Round 1 with the owner").
 2. The range is rounded out to a step of 1, 2 or 5 × 10^k, of at least
-   0.05, the smallest that the range spans at most 10 of, its start
+   0.05 and at least the least bin, the smallest that the range spans
+   at most 10 of, its start
    rounded down to a multiple of the step and its end up
    (`roundedRange` of `src/core/histogram.ts`). On panel.nei the
    missing rate, whose largest value is 0.0805, gives 0 to 0.1, and the
    MAF 0.45 to 1.
 3. The fine bins of that range are added up in bins of the same number
-   of fine bins each, the number of bins nearest 40, the fewer of two
-   as near: 100 fine bins from 0 to 0.1 make 50 bins of 2, and 300 from
-   0.3 to 0.6 30 bins of 10.
+   of fine bins each, at least the least bin, the number of bins nearest
+   40, the fewer of two as near: with no spacing, 100 fine bins from 0
+   to 0.1 make 50 bins of 2, and 300 from 0.3 to 0.6 30 bins of 10. The
+   missing rate of panel.nei, 200 individuals, a least bin of 5, makes
+   20 bins of 0.005 from 0 to 0.1, 5 of them empty where 34 of the 50
+   were; that of tetraploid.nei, 12 individuals, a least bin of 84,
+   takes a step of 0.1 and makes 3 bins from 0 to 0.3; its MAF, a least
+   bin of 21, 12 bins of 0.025 from 0.3 to 0.6.
 4. The edges are popnei's, the two ends the round numbers.
 
 With no count in any bin, it gives the 40 bins of `variantBins`. A

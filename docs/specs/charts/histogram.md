@@ -63,10 +63,16 @@ threshold:
 
 From 7 October 2026 a threshold may come with no legend, for the
 thresholds of `popgen2.html`, which are no filters and which the screen
-says in words over the plot, the number in a box after the short title,
-"Obs. het. max: 0.04", and under it "Keeps 1,050 of 1,200 variants"
-(`docs/plans/thresholds.md`): the line and the bars as
-above, no legend, and the top margin of a plot without one. The screen
+shows in a box after the short title, "Obs. het. max: 0.04"
+(`docs/plans/thresholds.md`): the line and the bars as above, no
+legend, and the top margin of a plot without one. From 8 October 2026
+such a threshold may say that it keeps every value, `keepsAll` of
+`HistogramThreshold`, which the screen knows from what it counted and
+the bars drawn may not tell, a bar holding values on both sides of the
+line: the line is then drawn in grey, the class `chart-threshold-idle`,
+a threshold that removes nothing, which the screen says in words to a
+screen reader (`docs/plans/popnei-0.2.2.md`, "The owner's first
+round"). The screen
 lays the line the user drags over the plot, aligned with its frame,
 which the histogram tells it after each draw that moves it,
 `HistogramEvents.onFrame`.
@@ -347,7 +353,15 @@ The plot writes classes and no colour (`charts.md`):
 .chart-bar          { fill: var(--chart-bar); stroke: var(--chart-axis); stroke-width: 1px; }
 .chart-bar-removed  { fill: none; }
 .chart-threshold    { stroke: var(--chart-threshold); stroke-width: 2px; stroke-dasharray: 4 3; }
+.chart-threshold-idle { stroke: var(--chart-threshold-idle); }
 ```
+
+The grey of a threshold that keeps every value, `--chart-threshold-idle`,
+is #6b7078 in the light theme, 4.98:1 on the background, and #7c8188 in
+the dark, 4.53:1, above the 3:1 of a line (1.4.11) and the 4.5:1 of the
+number in the box of popgen2.html, which takes the same grey; it is
+3.39:1 and 3.26:1 from the text, so that a grey number is told from a
+black one at a glance.
 
 The bars need a colour that the tokens do not have yet, `--chart-bar`,
 since the seven colours of Okabe and Ito name populations and a bar is
