@@ -17,7 +17,11 @@ that popnei 0.2.2 hands a written file over in pieces: one button,
 "Download filtered variants…", after the Variants and Individuals
 sections, with no "Tools" section, as the owner decided that day, and
 how the pieces reach the user's download (below, "The download of the
-filtered variants", and "What the owner decided", 7). It
+filtered variants", and "What the owner decided", 7), and the same day
+with the owner's answers to its points: the bar, the download started
+by itself, the text with the counts of each filter after it, and one
+sentence when the filters keep no variant ("What the owner decided", 8
+to 11). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -102,8 +106,11 @@ failures: 300" for `low_qual.vcf.gz`, from the one reading, as the piece
 **The download.** One button, "Download filtered variants…", after the
 Variants and Individuals sections, opens a dialog that holds the choice
 of the format, a `.nei` file or a VCF compressed with bgzip, `.vcf.gz`,
-and its buttons; while the file is written it shows a bar and Stop, and
-then a Save button with the name and the size of the file. There is no
+and its buttons; while the file is written it shows a bar and Stop.
+When the write ends the dialog closes, the download starts by itself,
+and the button gives way, until a filter or the file changes, to a text
+with the file, its size, the variants and individuals it holds, and
+what each filter removed. There is no
 "Tools" section, as the owner decided on 8 October 2026. popnei 0.2.2
 hands the file over in pieces of 1 MiB. The worker gathers them into
 one `Blob`, the browser's object for a file made in the page, which it
@@ -111,9 +118,12 @@ hands to the page with no copy; so the tab holds the file about once,
 where the old page's write held 4.4 times its size in Chromium and up to
 6.1 times in WebKit (measured on 27 September 2026, files up to 1.98
 GB). That once is argued from Chromium's sources and is still to be
-measured in each browser, in the plan. When the filters keep no variant the download ends in an error;
-nothing else is refused or warned of before the write, and no limit of
-size is set: the plan measures the largest file each browser writes.
+measured in each browser, in the plan. When the filters keep no
+variant the page says so, "None of the 1,200 variants of
+low_qual.vcf.gz pass the filters, so there is nothing to download.",
+before any write when the plots make it certain and after the write
+otherwise; nothing else is refused or warned of before the write, and
+no limit of size is set: the plan measures the largest file each browser writes.
 A file too large for the browser ends in an error, except where the
 browser closes the tab, which the measurement looks for.
 
@@ -268,10 +278,10 @@ order of the filters.
 
 A VCF of which no variant passed is shown as any other, since the one
 pass reads every variant. Carried out with the box on, its filters keep
-no variant, and the download ends in an error that says that no variant
-of the file passed its FILTER and that unticking the box keeps them
-(below, "When the filters keep no variant or no individual"). The count of the failures in the box of the file,
-from the one pass, says it before.
+no variant, and the page says so in place of the download's button,
+before any write, since the one pass's count of the failures makes it
+certain (below, "When the filters keep no variant"). The count of the
+failures in the box of the file says it too.
 
 It is on by default on `popgen2.html`: that page gets a first project of
 its own (`firstProject("popgen")` is shared today by both pages'
@@ -609,7 +619,9 @@ open file, which the owner judged unacceptable on 7 October 2026.
    button waits while the pass runs and after a Stop, with the reason
    beside it in words, "The download waits for the statistics of the
    file to be read to the end." (the plan's screen spec gives the words
-   of each state).
+   of each state). When the page knows for certain that the filters keep
+   no variant, the button gives way to the sentence that says so (below,
+   "When the filters keep no variant").
 2. It opens a dialog, the page's `src/ui/widgets/Dialog.tsx`, React
    Aria's modal dialog, which keeps the focus inside it and hides the
    rest of the page from a screen reader while it is open. The dialog
@@ -617,38 +629,28 @@ open file, which the owner judged unacceptable on 7 October 2026.
    Download and Cancel, and no count, as the owner decided on 8 October
    2026.
 3. Download sends the write to the calculation worker. While the file
-   is written the dialog shows the bar of the write in place of the
-   choice, from popnei's `onProgress`, one pass over the open file, and
-   Stop. Stop ends the write, which ends the worker and starts another,
-   as any Stop does (`docs/architecture.md`, section 5). The Escape key
-   does nothing while the file is written, so that a key pressed by
-   habit does not throw away minutes of writing; a user without a mouse
-   still reaches Stop by moving to it with the Tab key and pressing it,
-   as WCAG 2.2, the standard of accessibility the applications follow,
-   asks of every action (its criterion 2.1.1). The page's
-   `Dialog.tsx` closes on Escape today, and gains that option. This is
-   the session's reading of "only the choice of the
-   format": a write of a large file takes minutes, and without a bar and
-   a Stop the user could neither tell it was going on nor end it (below,
-   "Open points").
-4. When the write ends, the dialog shows a Save button with the name and
-   the size of the file, "Save panel.filtered.vcf.gz, 19.2 MB", and the
-   browser's download starts at its click, through `downloadFile` of
+   is written the dialog shows a bar in place of the choice, and Stop,
+   as the owner decided on 8 October 2026 (below, "The bar of the
+   write"). Stop ends the write, which ends the worker and starts
+   another, as any Stop does (`docs/architecture.md`, section 5). The
+   Escape key does nothing while the file is written, so that a key
+   pressed by habit does not throw away minutes of writing; a user
+   without a mouse still reaches Stop by moving to it with the Tab key
+   and pressing it, as WCAG 2.2, the standard of accessibility the
+   applications follow, asks of every action (its criterion 2.1.1). The
+   page's `Dialog.tsx` closes on Escape today, and gains that option.
+4. When the write ends, the dialog closes, the browser's download of
+   the file starts by itself, through `downloadFile` of
    `src/ui/download.ts`, a link to the file with the `download`
-   attribute. The save is a click of its own because a download started
-   by the code minutes after the click that asked for the write may be
-   blocked or asked about by the browser, as Chrome does for a page that
-   starts several downloads, as the old page found
-   (`docs/specs/analyses/writeVariants.md`, "Saving the file"). The
-   dialog closes after Save. A file written and not saved, the dialog
-   closed by Escape or Cancel, is kept until a filter or the file
-   changes, so that the button opens the dialog again on its Save, as
-   the store's state `done` keeps it on the old page; it costs the file's
-   size in memory while it is kept. The address `downloadFile` gives the
-   browser is released a minute after Save (`src/ui/download.ts`), so a
-   user whose browser asks where to save, and who answers after more
-   than a minute, may get a failed download; the plan tries it in
-   Chromium and WebKit and lengthens the minute if so.
+   attribute clicked by the code, and the button gives way to a text
+   that says what was downloaded (below, "What the page says after the
+   download"). The focus goes to that text, so that a screen reader
+   reads it.
+5. The text stays, and the button does not come back, until the user
+   changes a filter, a threshold or the FILTER box, or opens another
+   file, as the owner decided on 8 October 2026: a change may mean they
+   want another file. With the change the text goes and the button is
+   back.
 
 Since the dialog is modal, no filter changes while a file is written:
 the case of the old page, a change of a filter that leaves a write
@@ -667,37 +669,175 @@ are taken out of INFO when individuals were left out; from a `.nei`
 file, popnei writes a header and lines of what the file holds, FILTER
 `FAIL` for a variant that failed its FILTER in the VCF it came from.
 
-### When the filters keep no variant or no individual
+### The download started by itself
 
-When the filters keep no variant, the write ends in an error, and no
-file is offered, as the owner decided on 8 October 2026. `writeVars`
-and `writeVcf` do not refuse a pass that keeps no variant; the old page
-found that `writeVars` gives a file of a few KB and no variant
-(`docs/specs/analyses/writeVariants.md`, "The cases"), so the page
-tells the case from `passStats.numVars`, 0, and drops the pieces. The
-error is said in the dialog in place of Save, and names the first
-filter that kept none, from the counts of the pass:
+The owner asked on 8 October 2026 for the text "saved" once the file is
+written, with no second click, if the browsers allow a download started
+by the code that long after the click that asked for it, without
+blocking it or asking the user. The old page has a Save click of its
+own for that reason (`docs/specs/analyses/writeVariants.md`, "Saving
+the file"), and no browser of the floor was tried. What is known, to be
+tried in the plan:
 
-- when it is the filter of the FILTER column: "None of the 1,200
-  variants of low_qual.vcf.gz passed its FILTER, so there is nothing to
-  download. Untick "Leave out the variants that failed their FILTER" to
-  download them.";
-- otherwise: "The MAF filter kept none of the 1,050 variants it was
-  given, so there is nothing to download. Raise its threshold, or that
-  of a filter before it.";
-- when the file holds no variant: "panel.nei has no variants, so there
-  is nothing to download."
+- A link clicked by the code downloads in every browser of the floor;
+  what differs is the user's activation, the browser's record that the
+  user just clicked, which lasts a few seconds (the HTML standard's
+  "transient activation"), long gone after a write of minutes.
+- Chrome lets a page download one file with no activation, and asks the
+  user ("This site is trying to download multiple files") before a
+  further one without a click; so the second download of a session may
+  be asked about.
+- Safari has a setting for each site, "Allow downloads", set by default
+  to ask the first time; whether it asks for a download with no
+  activation is to be tried.
+- Firefox shows its panel of downloads, or asks where to save when the
+  user set it to.
 
-The words of the old page's `filterKeptNone`
-(`src/core/analyses/filterCounts.ts`), "Loosen it", fit a threshold and
-not the FILTER box, which has no number; those words are the old
-page's, and this download has its own. When the filters of the
-individuals keep none, the page knows it without a pass, from
-`keptNoneReason`, and the dialog says so when Download is pressed,
-with the words of that reason, and sends nothing to the worker: popnei
-refuses an empty list of individuals. In no other case is a write
-refused or warned of before it is made: no estimate of the size and no
-warning of the memory, as the owner decided on 8 October 2026.
+The page cannot tell whether a download was blocked, or whether the
+user cancelled the browser's question: clicking the link gives the page
+no answer, and the list of downloads is the browser's. So the text after
+the download always holds a link, "Save it again", which starts the
+download of the same file from a click of the user, which no browser
+blocks; that is the Save of the old page, kept for when it is needed
+rather than asked of everyone. The page keeps the file for it until a
+filter or the file changes, its size in memory while it is kept (below,
+"How the pieces reach the user's download", for where each browser
+keeps it). The text says "downloaded" and not "saved": the page knows
+the download was started, and not where the browser put it.
+
+The plan tries the download started by itself in Chromium and WebKit
+and in Firefox by hand, the first and the second of a session, with
+the browser asking and not. If one blocks it or asks every time, the
+session brings the choice to the owner: a Save click in every browser,
+or in that browser alone, told by its name in the user agent string,
+which a browser may change.
+
+The address `downloadFile` gives the browser is released a minute after
+the click (`src/ui/download.ts`), so a user whose browser asks where to
+save, and who answers after more than a minute, may get a failed
+download; "Save it again" makes another address.
+
+### The bar of the write
+
+The bar is popnei's `onProgress`, as for every calculation: one pass
+over the open file, told at each read of 4 MiB of it, so a file of 1 GB
+gives about 250 messages over the write. The old page's write had it
+on, and wrote a file of 220 MB in 3.73 s in Chromium and 3.70 s in
+WebKit (27 September 2026); a message every 4 MiB is nothing beside
+the compression of the file, so the bar costs the write no time that
+was measurable then. It is approximate in two ways:
+
+- it counts the bytes of the open file read, not of the file written,
+  and the variants are not spread evenly over the file, so its speed
+  varies along the write; a filter that leaves out many variants of a
+  region makes that stretch faster;
+- for a VCF compressed with gzip it counts compressed bytes, which
+  follow the variants read closely; for a `.nei` file it ends below
+  full, since popnei does not read the head of the file again, and the
+  call at the end of the pass fills it.
+
+After the bar is full the worker makes one `Blob` of its parts and reads
+its last byte (below), which takes a moment the bar does not show.
+
+### When the filters keep no variant
+
+Whatever the cause, the page says one sentence, as the owner decided
+on 8 October 2026: "None of the 1,200 variants of low_qual.vcf.gz pass
+the filters, so there is nothing to download." The number is that of
+the variants of the file. It is said in one of two places:
+
+- **In place of the button, before any write**, when the one pass shows
+  for certain that the filters keep no variant. Nothing is written, and
+  the dialog does not open. The button comes back with a change of a
+  filter that makes the outcome uncertain. The text replaces the button
+  rather than the dialog's Download so that the user sees it beside the
+  plots whose thresholds they set, and does not open a dialog that can
+  do nothing.
+- **In place of the button, after the write**, otherwise: popnei's
+  `writeVars` and `writeVcf` do not refuse a pass that keeps no variant
+  (the old page found a file of a few KB and no variant,
+  `docs/specs/analyses/writeVariants.md`, "The cases"), so the page
+  tells the case from the counts of the pass, `passStats.numVars` 0, and
+  drops the file. The dialog closes, and the sentence stays as the text
+  after a download does, until a filter or the file changes.
+
+What the one pass makes certain. It gives the histograms of the
+variants over every variant and every individual of the file, in fine
+bins that hold their right edge, so the variants at most a threshold
+are counted exactly; the count of the variants that failed their FILTER;
+and each individual's values. The filters of the individuals act before
+those of the variants (section 2). So:
+
+- **Certain:** the file holds no variant; the FILTER box ticked, and
+  every variant of the file failed its FILTER, since that filter judges
+  each variant by its FILTER column alone, whoever the individuals; and,
+  while the filters of the individuals keep every individual, one
+  threshold of the variants whose histogram holds no variant at or
+  below it. A variant with no called genotype is in no histogram of the
+  MAF or of the observed heterozygosity, and those filters drop it, so
+  it changes nothing; the missing rate counts it, at 1.
+- **Not certain, so told after the write:** a threshold of the variants
+  while some individual is left out, since a variant's missing rate,
+  MAF and heterozygosity over the individuals kept are not those of the
+  histogram; and two thresholds, or a threshold and the FILTER box, that
+  each keep some variants and together may keep none, since the
+  histograms are of one statistic each and do not say which variants
+  hold both values.
+
+The check is a function of `src/core` over the one pass's result and
+the project, plain counting over popnei's bins and counts.
+
+When the filters of the individuals keep none, the page knows it with
+no pass, from `keptNoneReason`, and the button gives way to that
+reason's words, "The filters of individuals keep none of the 200
+individuals of panel.nei. Loosen them."; nothing is sent to the worker,
+since popnei refuses an empty list of individuals. The sentence of no
+variant would be untrue there. In no other case is a write refused or
+warned of before it is made: no estimate of the size and no warning of
+the memory, as the owner decided on 8 October 2026.
+
+### What the page says after the download
+
+The text that takes the place of the button says the file, its size,
+what it holds, and what each filter removed, as the owner asked on 8
+October 2026, for example on `low_qual.vcf.gz`:
+
+> low_qual.filtered.vcf.gz downloaded, 19.2 MB: 850 variants of 180
+> individuals. Variants removed: 300 by their FILTER, 38 by the missing
+> rate, 12 by the MAF. Individuals removed: 15 by the missing rate, 5 by
+> the observed heterozygosity. Save it again
+
+(the numbers are made up for the example). A filter that removed none,
+or is off, is left out; a line with no filter left is left out whole.
+
+Each count is of what that filter was given, which is what the filters
+before it in the order of section 2 kept, so the counts add up to the
+variants or individuals of the file less those kept, and a variant
+that two filters would remove is counted by the first. That is the
+order the methods of a paper write them in, and the counts of popnei's
+Python API.
+
+- **The variants** removed by each filter are popnei's: `passStats` of
+  the write gives, for each filter of the pass, under its kind, the
+  variants it was given, `varsProcessed`, and kept, `varsKept`
+  (`FilteringStats` of `node_modules/popnei/dist/filters.d.ts`), and
+  `numVars`, those written. Removed is given less kept.
+- **The individuals** removed by each threshold are the page's own
+  filter: popnei filters individuals only by a list, so the page works
+  out the list from popnei's value of each individual in the one pass,
+  `individualsKept` of `src/core/individualsKept.ts`, which already
+  counts, for each filter of the individuals in its order, those given
+  and kept. Counting them is applying the page's filter to popnei's
+  values, as the list itself is, and computes no statistic; the session
+  agrees with the owner's reading. The statistic, each individual's
+  missing rate and heterozygosity, stays popnei's.
+
+So popnei gives everything the text needs, and nothing is asked of it.
+
+The store keeps these counts with the file in its state `saved`
+(`WriteStatus` of `src/core/store.ts`), which today keeps the counts and
+drops the file; it now keeps the file too, for "Save it again", until a
+change gives the write another key.
 
 ### How the pieces reach the user's download
 
@@ -796,7 +936,7 @@ is left, by engine:
   page would offer "Save …, 60 GB" and the download would fail in the
   browser's list of downloads. So the worker reads the last byte of the
   finished `Blob`, with `FileReaderSync`, before it posts it, and a
-  `Blob` that cannot be read becomes the dialog's error.
+  `Blob` that cannot be read becomes the error of the write.
 - Firefox: the disk or the memory of the machine, by which reading of
   its source holds (above); measured by hand.
 - WebKit: not known; the old measurement does not separate the `Blob`
@@ -845,8 +985,13 @@ if it gives back nothing.
   without today (`src/ui/popgen2Store.ts`), and works out the
   individuals kept from the finished one pass (above, "What is read, and
   when").
-- The page gains the button and its dialog, with the error of no
-  variant. The old page, `popgen.html`, keeps its step of the write, its
+- The page gains the button, its dialog, the text after the download
+  and the sentence of no variant; `src/core` gains the check of a
+  filtering that keeps no variant for certain, over the one pass.
+- The store's state `saved` keeps the file, for "Save it again", where
+  today it drops it once handed to the browser; the file goes with a
+  change of the key, as the other states do. This changes what
+  `docs/specs/core/store.md` says of `writeSaved`. The old page, `popgen.html`, keeps its step of the write, its
   estimate and its limits, which the pieces make cautious and leave
   harmless, and offers the `.nei` file alone, as today.
 
@@ -899,9 +1044,17 @@ page shows can reach the user.
   order. In Playwright, in Chromium and WebKit: the dialog downloads a
   `.nei` file and a `.vcf.gz` that popnei and pyarrow read back with the
   variants and individuals of the filters; Stop ends the write and
-  offers no file, and Escape while it writes does nothing; the filters
-  that keep no variant give the error of
-  each case. Measured in the plan, on the built site: the largest file
+  offers no file, and Escape while it writes does nothing; the download
+  starts by itself and the text after it holds the counts of the pass
+  and of `individualsKept`; the text and its absent button stay through
+  everything but a change of a filter or of the file; the filters
+  that keep no variant give the sentence before the write for each
+  certain case of "When the filters keep no variant", and after it for
+  the others, such as a MAF threshold that keeps none only over the
+  individuals kept. In Vitest, the check of a certain empty filtering
+  against popnei's filters under node, over `panel.vcf.gz` and
+  `low_qual.vcf.gz`, never saying certain where popnei keeps a
+  variant. Measured in the plan, on the built site: the largest file
   written and saved in Chromium and WebKit, 2, 4 and 8 GB, with the
   memory of each process, and whether WebKit and Firefox copy the bytes
   of a `Blob` made of `Blob`s.
@@ -973,8 +1126,8 @@ Made on this branch once the owner approves, each with its paragraph
   measured in the plan (above, "How the pieces reach the user's
   download"). No limit is set; a write the browser cannot hold ends in
   an error, except a tab the browser closes, which the plan measures.
-  The page drops the file once it is saved, or when a filter or the
-  file changes.
+  The page keeps the file after its download, for "Save it again", and
+  drops it when a filter or the file changes.
 - **The keyboard and a screen reader:** the line is a React Aria slider,
   moved by the arrow keys, as today; a run of presses is one change and
   one step of Undo; a grey threshold is told in the line's value and the
@@ -1035,9 +1188,11 @@ Made on this branch once the owner approves, each with its paragraph
 - **A file picker for saving,** `showSaveFilePicker`, writing the pieces
   where the user chose: in Chrome and Edge only (`docs/architecture.md`,
   section 6).
-- **The download started by itself at the end of the write,** with no
-  Save: a download started minutes after the click that asked for it
-  may be blocked or asked about by the browser.
+- **A Save click at the end of the write,** the old page's way and the
+  previous version of this revision: no browser blocks a download the
+  user clicks, at the cost of a second click every time. The owner
+  chose on 8 October 2026 the download started by itself, with "Save it
+  again" for when a browser blocked it.
 - **A choice of a plain VCF in the dialog,** `.vcf`: the owner chose on
   8 October 2026 the VCF bgzipped alone, which tabix indexes and
   bcftools reads, and which is several times smaller than plain text at
@@ -1047,9 +1202,12 @@ Made on this branch once the owner approves, each with its paragraph
   came from wasm holding the file, which the pieces end, and
   `popgen2.html` has no count of the variants kept to estimate a size
   from.
-- **The counts of what each filter kept, in the dialog after the
-  write:** the owner chose on 8 October 2026 a dialog with the choice of
-  the format and its buttons alone.
+- **The counts of what each filter kept, in the dialog:** the owner
+  chose on 8 October 2026 a dialog with the choice of the format and its
+  buttons alone, and the counts in the text after the download.
+- **A sentence naming the filter that kept no variant,** with what to
+  do about it, "Untick ..." or "Raise its threshold": the owner chose on
+  8 October 2026 one sentence for every cause.
 - **The FILTER box left out for every `.nei` file,** the version of
   this design approved under popnei 0.2.1, which could not tell a `.nei`
   file with the record from one without: a `.nei` file written from a
@@ -1157,25 +1315,31 @@ owner's approval:
    browser cannot hold the file, and the largest file measured in the
    plan (above, "Whether a limit of size is needed").
 
+Later on 8 October 2026 the owner answered the points of that
+revision:
+
+8. A bar while the file is written, if it does not slow the write, and
+   approximate where the position is not known exactly; Stop stays.
+9. Once the file is written, a text in place of the button, with the
+   file, its size and the variants and individuals it holds, which
+   stays, with no button, until the user changes a filter or opens
+   another file, since a change may mean they want another file. The
+   session settled the second click from the word "saved": the download
+   starts by itself, with "Save it again" in the text, since the page
+   cannot tell whether a browser blocked it.
+10. One sentence for every cause of a filtering that keeps no variant,
+    "None of the 1,200 variants of low_qual.vcf.gz pass the filters, so
+    there is nothing to download.", shown before any write when the
+    page knows it for certain, and after the write otherwise.
+11. The text after the download says how many variants and individuals
+    each filter removed, from popnei's counts of the pass and the page's
+    filter of the individuals over popnei's values.
+
 ## Open points
 
-- **The bar, Stop and Save in the dialog.** The owner's dialog holds the
-  choice of the format and its buttons. This design reads the bar and
-  Stop of the write, and the Save button at its end, as the buttons the
-  dialog needs: without them a write of minutes gives no sign of
-  running and cannot be stopped, and the download started by itself at
-  its end may be blocked. The other place for them is the box of the
-  file, which has the page's one bar and Stop, at the cost of a second
-  meaning of that Stop, and of a page the user can change while the
-  file is written, which brings back the old page's write left behind
-  by a change of a filter. Recommended: in the dialog.
-- **The counts of what each filter removed.** Case 1 of
-  `docs/use-cases.md` wants "the number of variants each filter
-  removed, to write in their methods". popnei gives them with every
-  write, `passStats`, at no cost, and the dialog shows none, as the
-  owner decided on 8 October 2026; so after this piece the page gives
-  them nowhere. The options: leave case 1 without them for now, at no
-  cost; or show them in a later piece, a line or a table after the
-  write in the dialog or beside the button, a few lines of screen and
-  no pass. Recommended: a later piece, decided when the owner tries the
-  download, so that the dialog is first tried as decided.
+- **When a browser blocks the download started by itself, or asks
+  every time.** Found in the plan's trial. The options: a Save click in
+  every browser, one rule for all at the cost of a click; or in that
+  browser alone, told by its name in the user agent string, at the
+  cost of a rule a browser's update can break. Recommended: a Save
+  click in every browser, if any browser of the floor blocks it.

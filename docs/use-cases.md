@@ -70,9 +70,9 @@ count stands under them: each plot shades what its threshold would
 leave out, and draws in grey a threshold that removes none of its
 values. How many variants each filter removed, and how many are left,
 are counted by the reading that carries the filters out, the download
-of the filtered file of step 5, whose dialog shows no count, as the
-owner decided on 8 October 2026; where the page will give them is an
-open point of `docs/designs/stats-filters.md`.
+of the filtered file of step 5, and said in the text that takes the
+place of its button once the file is downloaded, as the owner decided
+on 8 October 2026 (`docs/designs/stats-filters.md`).
 
 **Where they could go wrong:** a threshold of the major allele frequency
 read as one of the minor allele frequency. The two differ for a variant
