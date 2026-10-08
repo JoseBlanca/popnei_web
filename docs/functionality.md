@@ -83,9 +83,10 @@ drags on the plot or a number typed in a box over it, the bars beyond
 it drawn as removed. The expected heterozygosity has none, since popnei
 has no filter on it; its plot stays, with its title and its count. Over
 each plot with a threshold is one row, its short title, "max:" and the box,
-"Obs. het. max: 0.04", and under that row one line of what the threshold
-keeps, "Keeps 1,050 of 1,200 variants", "Keeps all 1,200 variants", with
-"so far" while the file is read. The short titles are the owner's of 7
+"Obs. het. max: 0.04". No line says how many variants or individuals a
+threshold keeps, as the owner decided on 8 October 2026: "In general we
+don't need to show the user how many variants are we going to keep."
+The short titles are the owner's of 7
 October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
 and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
 het." for the individuals; the axes and what a screen reader reads keep
@@ -100,14 +101,19 @@ Each threshold is a filter of the project, as the owner decided on 7
 October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
 the arrow keys or the box, is a change of the project, with Undo and
 Redo and a notice, "The MAF filter changed · Undo", and a run of
-presses of the arrow keys is one change. A threshold is on or off, and
-off is said in words: its box reads "No filter", nothing is shaded, and
-the line under its title reads "No filter: keeps every variant". It is
+presses of the arrow keys is one change. A threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
 dragged to the top of an axis that ends at 1; 1 is off and not a filter
 at 1, since popnei's filters of the MAF and of the observed
 heterozygosity drop a variant with no called genotype at any threshold.
+Off, its box shows 1 and its line stands at the top of the axis, both
+drawn in grey, and nothing is shaded. A threshold that is on and keeps
+every value of its plot, as a line at the top of an axis that ends
+below 1, is drawn in grey too, and stays a filter. The grey replaces
+the words "No filter" and "keeps every variant" the page had until 8
+October 2026, as the owner decided that day; a screen reader alone is
+told it in words (docs/specs/steps/popgen2-filters.md).
 Only the missing rate of the variants starts on, at 0.1, the default of
 section 3; the others start off. The thresholds stay where the user
 left them when another file is opened, and last until the tab is
@@ -123,8 +129,8 @@ when the filters are carried out, after the individuals are judged, so
 an individual's missing rate and heterozygosity are over every variant,
 and a VCF of which no variant passed is shown as any other.
 
-Nothing is read from the file while the filters change: no plot and no
-count changes with a threshold or the box, each plot describes every
+Nothing is read from the file while the filters change: no plot
+changes with a threshold or the box, each plot describes every
 variant and every individual of the file, and its threshold shades
 what it would leave out. What all the filters keep together comes with
 the reading that carries them out, the download of the filtered file or
@@ -134,17 +140,12 @@ set and kept, with Undo, and nothing carries them out. After a Stop,
 the plots read so far stay, each said to be of the variants read
 before the Stop.
 
-The number a threshold of the variants shows is the number it is
-counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
-cannot tell whether some variants are kept, the line gives the range
-they allow, "Keeps 1,113 to 1,152 of 1,200 variants" at a missing rate of
-0.05 on panel.vcf.gz, and the bar where the bins cannot tell is hatched:
-the variants of the bin that starts at the threshold, when the threshold
-is on the edge of a bin, since popnei's bins hold their left edge, and
-those of the bin the threshold lies inside otherwise, 1,197 to 1,199 at
-0.07. The range holds until popnei counts it exactly
-(docs/plans/thresholds.md). A threshold of the individuals is counted
-exactly from popnei's value of each.
+Whether a threshold keeps every value of its plot, and so is grey, is
+worked out from popnei's fine bins of the variants, which hold their
+right edge, and from popnei's value of each individual, with no pass
+(docs/plans/popnei-0.2.2.md). A threshold of 0 is a filter at 0: no
+threshold is raised to a smallest value, since there is no count under
+the plot for it to make exact.
 
 ### The filters of variants
 

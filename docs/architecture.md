@@ -2272,8 +2272,10 @@ for the smallest part of it.
   and the line plot draw the order and the points they are given.
 - **A threshold on a plot shows a filter of the project.** Five of the
   six histograms of `popgen2.html` have a threshold that the user drags
-  or types, and each is a filter of the project, on or off, said in
-  words: off, its box reads "No filter" and nothing is shaded; the
+  or types, and each is a filter of the project, on or off: off, its
+  box shows 1 and its line stands at the top of the axis, both in grey,
+  and nothing is shaded; on, a threshold that keeps every value of its
+  plot is drawn in grey too; no line says what a threshold keeps; the
   expected heterozygosity has none, since popnei has no filter on it.
   The line and the box show the project's value, so Undo moves them
   back, and hold of their own only the value being dragged or typed,
@@ -2291,9 +2293,10 @@ for the smallest part of it.
   line the user drags is a React Aria slider of `src/ui` laid over the
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the
-  plot keeps no pointer handling of its own. What it keeps is counted by
-  `src/core/thresholds.ts` from popnei's fine bins of the variants and
-  from popnei's value of each individual.
+  plot keeps no pointer handling of its own. Whether it keeps every
+  value of its plot is worked out by `src/core/thresholds.ts` from
+  popnei's fine bins of the variants and from popnei's value of each
+  individual.
 - **The step of an application is in the URL hash**, so that the back
   button moves between steps (`docs/technology.md`).
 
@@ -2310,6 +2313,16 @@ end, and a filter of the MAF or of the observed heterozygosity at any
 value drops a variant with no called genotype, which no filter keeps.
 The top of an axis that ends at 1 is off, as 1 is however it is
 reached, the owner's decision of 7 October 2026.
+
+What was revised on 8 October 2026, from the owner's decisions after
+trying `popgen2.html` (`docs/designs/stats-filters.md`, "What the owner
+decided"): no line under a plot says how many variants or individuals
+its threshold keeps, and a threshold that keeps every value of its
+plot, off at 1 or on, is drawn in grey, its line and the number in its
+box, in place of the words "No filter"; a screen reader is told it in
+the slider's value and the box's description. With the count gone, a
+threshold of the variants is no longer raised from below 0.001 to
+0.001, and 0 is given to popnei as 0.
 
 ## 8. The project file, the report and the script
 
@@ -2463,9 +2476,10 @@ src/core/
                     imports project.ts and individualsKept.ts, and neither
                     imports it
   histogram.ts      the bins of the statistics of each individual (section 7)
-  thresholds.ts     from 7 October 2026, the counts of a threshold on the
+  thresholds.ts     from 7 October 2026, the thresholds on the
                     histograms of popgen2.html: the fine edge a number
-                    snaps to, the variants kept, the individuals kept
+                    snaps to, and from 8 October 2026 whether a
+                    threshold keeps every value of its plot
   apps.ts           the steps and the analyses of each application, the
                     step each analysis is shown in, and what the store
                     and the shell read of a result: what its pass
