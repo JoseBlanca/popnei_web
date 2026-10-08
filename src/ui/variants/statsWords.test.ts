@@ -3,11 +3,13 @@ import { describe, expect, test } from "vitest";
 import {
   PART_FAILED,
   PART_STOPPED,
+  PART_STOPPED_WITH_PLOTS,
   PASSED_FILTER_DESCRIPTION,
   PASSED_FILTER_LABEL,
   individualFullTitle,
   individualThresholdName,
   individualTitle,
+  drawnFromDescription,
   noValueThresholdLine,
   statsFirstText,
   statsRunningLine,
@@ -143,7 +145,7 @@ describe("SF9 D4 what a screen reader hears of a threshold in its three looks", 
     expect(noValueThresholdLine(1, true)).toBe(
       "1 individual with no called genotype is not in the histogram, and this filter removes it.",
     );
-    expect(noValueThresholdLine(1, false, true)).toBe(
+    expect(noValueThresholdLine(1, false, "soFar")).toBe(
       "1 individual with no called genotype so far is not in the histogram.",
     );
     expect(noValueThresholdLine(0, true)).toBeNull();
@@ -158,5 +160,39 @@ describe("SF7 D2 the words of the FILTER box", () => {
     expect(PASSED_FILTER_DESCRIPTION).toBe(
       "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
     );
+  });
+});
+
+describe("SF10 D1 the words of the plots after a Stop", () => {
+  test("over each part with the plots read before the Stop, and with none", () => {
+    expect(PART_STOPPED_WITH_PLOTS).toBe(
+      "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.",
+    );
+    expect(PART_STOPPED).toBe(
+      "Stopped. Start again reads the file from the start.",
+    );
+  });
+
+  test("the individuals with no called genotype before the Stop, three and one, with the filter on and off", () => {
+    expect(noValueThresholdLine(3, true, "stopped")).toBe(
+      "3 individuals with no called genotype before the Stop are not in the histogram, and this filter removes them.",
+    );
+    expect(noValueThresholdLine(3, false, "stopped")).toBe(
+      "3 individuals with no called genotype before the Stop are not in the histogram.",
+    );
+    expect(noValueThresholdLine(1, true, "stopped")).toBe(
+      "1 individual with no called genotype before the Stop is not in the histogram, and this filter removes it.",
+    );
+    expect(noValueThresholdLine(0, true, "stopped")).toBeNull();
+  });
+
+  test("the end of the description of a plot for a screen reader, by what it is drawn from", () => {
+    expect(drawnFromDescription("stopped")).toBe(
+      "Drawn from the variants read before the Stop.",
+    );
+    expect(drawnFromDescription("soFar")).toBe(
+      "Drawn from the variants read so far.",
+    );
+    expect(drawnFromDescription("result")).toBeNull();
   });
 });

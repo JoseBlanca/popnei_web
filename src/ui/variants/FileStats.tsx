@@ -33,7 +33,15 @@
  * seconds after its start, they are drawn from the last one, the words of
  * each plot saying they are so far, and at the end from the result,
  * where they were: the line of the pass keeps its room, hidden, once it
- * ended. While the pass runs, or is about to, and before the first
+ * ended. After a Stop they stay, drawn from the last result so far the
+ * store kept, `stopped` of the state ready, each part saying over them
+ * that they are of the variants read before the Stop, until Start again,
+ * another file or a failure (docs/specs/steps/popgen2-filters.md, "The
+ * plots after a Stop"); a Stop before the first result so far leaves no
+ * plots. The line over the plots keeps, hidden, the room of those words
+ * of a Stop, and the line of the individuals with no value under a plot
+ * the room of its own words of a Stop, so that nothing moves at a
+ * Stop. While the pass runs, or is about to, and before the first
  * result so far, the room of the plots is kept, hidden, so that the
  * FILTER box at the end of the variants and the part of the individuals
  * do not move down by 574 pixels at 1280 as the plots arrive, where a
@@ -79,6 +87,7 @@ import {
   IndividualsDownload,
   Part,
   PartLine,
+  PartLines,
   PlotsRoom,
   StatsFrame,
 } from "./StatsLayout.tsx";
@@ -87,6 +96,7 @@ import {
   INDIVIDUAL_STATISTICS,
   PART_FAILED,
   PART_STOPPED,
+  PART_STOPPED_WITH_PLOTS,
   VARIANTS_HEADING,
   VARIANT_STATISTICS,
   individualTitle,
@@ -94,7 +104,7 @@ import {
   thresholdShownLabel,
   variantTitle,
 } from "./statsWords.ts";
-import type { StatsPart } from "./statsWords.ts";
+import type { DrawnFrom, StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { PassedFilterBox } from "./PassedFilterBox.tsx";
 import type * as PlotsModule from "./SectionPlots.tsx";
@@ -263,8 +273,10 @@ function Stats({
     };
   }, [openButton]);
 
-  /** Whether the pass about to start or running has given no result so
-      far yet: the plots will come, and their room is kept. */
+  const shown = shownOf(status);
+  /** Whether the pass was stopped by the user under the current key;
+      `coming`, whether the pass about to start or running has given no
+      result so far yet: the plots will come, and their room is kept. */
   const stopped =
     (status.kind === "ready" || status.kind === "removed") &&
     autoRuns.startedUnder(status.key);
@@ -273,8 +285,9 @@ function Stats({
     ((status.kind === "ready" || status.kind === "removed") && !stopped);
 
   /** What a part says over its plots: the share done while the pass
-      runs, that it was stopped, why it cannot run, or nothing once done,
-      failed or about to start. */
+      runs, that it was stopped, over the plots read before the Stop or
+      with none, why it cannot run, or nothing once done, failed or about
+      to start. */
   const lineOf = (part: StatsPart): string | null => {
     switch (status.kind) {
       case "done":
@@ -289,14 +302,13 @@ function Stats({
       case "removed":
         // Not started under its key, the pass starts by itself in a
         // moment.
-        return stopped ? PART_STOPPED : null;
+        if (!stopped) return null;
+        return shown === null ? PART_STOPPED : PART_STOPPED_WITH_PLOTS;
       case "locked":
         return status.reason;
     }
   };
 
-  const shown = shownOf(status);
-  const soFar = shown?.soFar ?? false;
   const done = status.kind === "done" ? shown?.result : undefined;
   return (
     <StatsFrame sectionRef={sectionRef}>
@@ -325,7 +337,7 @@ function Stats({
               result={shown.result.perVar}
               numIndividuals={shown.result.perIndividual.individuals.length}
               ploidy={ploidy}
-              soFar={soFar}
+              from={shown.from}
             />
           </Suspense>
         )}
@@ -348,7 +360,7 @@ function Stats({
             <LineOrRoom line={lineOf("individuals")} part="individuals" room />
             <IndividualPlots
               result={shown.result.perIndividual}
-              soFar={soFar}
+              from={shown.from}
             />
             {done !== undefined && (
               <IndividualsDownload
@@ -374,7 +386,7 @@ function Stats({
 function Waiting({ part }: { readonly part: StatsPart }): React.JSX.Element {
   return (
     <>
-      <PartLine>{statsRunningLine(part, null)}</PartLine>
+      <LineOrRoom line={statsRunningLine(part, null)} part={part} room />
       <PlotsRoom
         titles={part === "variants" ? VARIANT_ROOM : INDIVIDUAL_ROOM}
       />
@@ -392,41 +404,51 @@ interface LineOrRoomProps {
   readonly room: boolean;
 }
 
-/** The line over the plots of a part; with nothing to say over plots
-    drawn or coming, the room of its last line, "Calculating the
-    statistics of the variants… 100%", hidden, so that the plots, drawn
-    under that line from the results so far, do not move up as the result
-    comes, by 40 pixels at 1280 (the review of round 1, ux F2), nor down
-    as the pass about to start says its share; nothing otherwise. */
+/** The line over the plots of a part. Over plots drawn or coming, it
+    keeps, hidden, the room of its longest lines: the last of the pass,
+    "Calculating the statistics of the variants… 100%", so that the
+    plots, drawn under that line from the results so far, do not move up
+    as the result comes, by 40 pixels at 1280 (the review of round 1, ux
+    F2), nor down as the pass about to start says its share; and the line
+    of a Stop over the plots read before it, which wraps on more lines at
+    320 pixels, so that they do not move down at a Stop. With neither, the
+    line alone, or nothing. */
 function LineOrRoom({
   line,
   part,
   room,
 }: LineOrRoomProps): React.JSX.Element | null {
-  if (line !== null) return <PartLine>{line}</PartLine>;
-  if (!room) return null;
-  return <PartLine room>{statsRunningLine(part, 100)}</PartLine>;
+  if (!room) return line === null ? null : <PartLine>{line}</PartLine>;
+  const rooms = [statsRunningLine(part, 100), PART_STOPPED_WITH_PLOTS].filter(
+    (words) => words !== line,
+  );
+  return <PartLines line={line} rooms={rooms} />;
 }
 
 /** What the plots are drawn from: the result of the summary once done,
-    or its last result so far while it runs, `soFar`. */
+    its last result so far while it runs, or the last one of a pass the
+    user stopped, `from`. */
 interface Shown {
   readonly result: VariantsSummaryResult;
-  readonly soFar: boolean;
+  readonly from: DrawnFrom;
 }
 
 /** What the plots are drawn from in `status`; `null` before the first
-    result so far, and in any state but running and done. A defect for a
-    result of another analysis, which the store never gives it. */
+    result so far, after a Stop before it, and in any state but running,
+    done and ready after a Stop. A defect for a result of another
+    analysis, which the store never gives it. */
 function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
   let result: JobResult;
-  let soFar: boolean;
+  let from: DrawnFrom;
   if (status.kind === "done") {
     result = status.result;
-    soFar = false;
+    from = "result";
   } else if (status.kind === "running" && status.soFar !== null) {
     result = status.soFar;
-    soFar = true;
+    from = "soFar";
+  } else if (status.kind === "ready" && status.stopped !== null) {
+    result = status.stopped.soFar;
+    from = "stopped";
   } else {
     return null;
   }
@@ -435,5 +457,5 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
       `popnei_web defect: the summary of the variants file has a result of ${result.analysis}.`,
     );
   }
-  return { result, soFar };
+  return { result, from };
 }

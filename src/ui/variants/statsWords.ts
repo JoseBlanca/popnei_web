@@ -124,18 +124,49 @@ export function statsRunningLine(
   return share === null ? start : `${start} ${String(share)}%`;
 }
 
-/** What a part says once the pass is stopped: Start again does not go on
-    from where the Stop left it. */
+/** What a part says once the pass is stopped before its first result so
+    far, with no plots: Start again does not go on from where the Stop
+    left it. */
 export const PART_STOPPED =
   "Stopped. Start again reads the file from the start.";
+
+/** What a part says over the plots of the variants read before a Stop,
+    the last result so far of the pass the user stopped
+    (docs/specs/steps/popgen2-filters.md, "The plots after a Stop"). */
+export const PART_STOPPED_WITH_PLOTS =
+  "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.";
 
 /** What a part says in place of its plots once the pass failed, whose
     words the box of the file says. */
 export const PART_FAILED = "Not calculated.";
 
+/** What the plots of the section are drawn from: the result of the
+    pass, `"result"`; its last result so far while it runs, `"soFar"`; or
+    the last result so far of a pass the user stopped, `"stopped"`, which
+    stays until Start again, another file or a failure. */
+export type DrawnFrom = "result" | "soFar" | "stopped";
+
 /** What the description of a histogram drawn from a result so far ends
     with, for a screen reader. */
 export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
+
+/** What the description of a histogram drawn from the variants read
+    before a Stop ends with, for a screen reader. */
+export const STOPPED_DESCRIPTION =
+  "Drawn from the variants read before the Stop.";
+
+/** What the description of a histogram drawn from `from` ends with, for
+    a screen reader: nothing for the result of the pass. */
+export function drawnFromDescription(from: DrawnFrom): string | null {
+  switch (from) {
+    case "result":
+      return null;
+    case "soFar":
+      return SO_FAR_DESCRIPTION;
+    case "stopped":
+      return STOPPED_DESCRIPTION;
+  }
+}
 
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
@@ -329,16 +360,15 @@ export function thresholdLookChangeText(
     individuals with no called genotype are not in the histogram, and
     this filter removes them."; off, "3 individuals with no called
     genotype are not in the histogram."; "so far" after "genotype" for a
-    result so far, `soFar`; `null` when every one has a value. */
+    result so far, and "before the Stop" for the variants read before a
+    Stop, `from`; `null` when every one has a value. */
 export function noValueThresholdLine(
   numNaN: number,
   on: boolean,
-  soFar = false,
+  from: DrawnFrom = "result",
 ): string | null {
   if (numNaN === 0) return null;
-  const which = soFar
-    ? "with no called genotype so far"
-    : "with no called genotype";
+  const which = `with no called genotype${NO_VALUE_WHEN[from]}`;
   if (numNaN === 1) {
     const removes = on ? ", and this filter removes it" : "";
     return `1 individual ${which} is not in the histogram${removes}.`;
@@ -346,3 +376,11 @@ export function noValueThresholdLine(
   const removes = on ? ", and this filter removes them" : "";
   return `${counted(numNaN, "individual")} ${which} are not in the histogram${removes}.`;
 }
+
+/** What follows "with no called genotype" in the line of the
+    individuals with no value, by what the plots are drawn from. */
+const NO_VALUE_WHEN: Readonly<Record<DrawnFrom, string>> = Object.freeze({
+  result: "",
+  soFar: " so far",
+  stopped: " before the Stop",
+});

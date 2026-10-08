@@ -72,14 +72,13 @@ import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import {
   INDIVIDUALS_LABEL,
   INDIVIDUAL_HISTOGRAMS,
-  noHeterozygosityText,
 } from "../steps/variants/individualStats.ts";
 import {
+  drawnFromDescription,
   individualFullTitle,
   individualThresholdName,
   individualTitle,
   noValueThresholdLine,
-  SO_FAR_DESCRIPTION,
   thresholdHiddenDescription,
   thresholdShownLabel,
   thresholdValueText,
@@ -87,7 +86,7 @@ import {
   variantThresholdName,
   variantTitle,
 } from "./statsWords.ts";
-import type { Counted } from "./statsWords.ts";
+import type { Counted, DrawnFrom } from "./statsWords.ts";
 
 /** The most decimals a number typed in the box of a threshold may have;
     it is then rounded to the step of the axis. More are refused, as no
@@ -175,8 +174,9 @@ export interface IndividualPlot {
   readonly noValueLine: string | null;
   /** The words of that line with the filter on, the longer, whose room
       the line keeps whether the filter is on or off, so that what is
-      under it does not move as the filter turns on or off; `null` when
-      there is no line of a filter. */
+      under it does not move as the filter turns on or off; while the
+      pass runs, its words after a Stop, longer still, so that nothing
+      moves at a Stop; `null` when there is no line of a filter. */
   readonly noValueRoom: string | null;
 }
 
@@ -184,8 +184,9 @@ export interface IndividualPlot {
     over the range of those with a count, rounded out, in bars no
     narrower than the distance between two values the statistic can take
     over `individuals`, over the variants in them, which leaves out a
-    variant with no value; its description says "so far" for a result so
-    far, `soFar`. `threshold` is the value of its filter in the project,
+    variant with no value; its description says what it is drawn from,
+    `from`: the variants read so far, or those read before a Stop.
+    `threshold` is the value of its filter in the project,
     `null` while it is off; `moving`, a number the user is dragging,
     typing or moving with the keys, drawn in its place rounded to the
     step of the axis. The expected heterozygosity has no threshold, and
@@ -194,7 +195,7 @@ export function variantPlot(
   statistic: VariantStatistic,
   result: VariantStatsPart,
   individuals: PassIndividuals,
-  soFar: boolean,
+  from: DrawnFrom,
   threshold: number | null,
   moving: number | null = null,
 ): StatsPlot {
@@ -229,9 +230,9 @@ export function variantPlot(
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
     ...plotted,
-    description: describedSoFar(
+    description: describedFrom(
       variantHistogramDescription(statistic, rows, null),
-      soFar,
+      from,
     ),
   };
   const shortTitle = variantTitle(statistic);
@@ -256,12 +257,12 @@ export function variantPlot(
 /** The histogram of the individuals of `statistic`, its values binned
     over their range rounded out, the missing rate from 0, over the
     individuals with a value; its description and the line of the
-    individuals with no value say "so far" for a result so far,
-    `soFar`. `threshold` and `moving` are as for `variantPlot`. */
+    individuals with no value say what it is drawn from, `from`.
+    `threshold` and `moving` are as for `variantPlot`. */
 export function individualPlot(
   statistic: IndividualStatistic,
   result: IndividualStatsPart,
-  soFar: boolean,
+  from: DrawnFrom,
   threshold: number | null,
   moving: number | null = null,
 ): IndividualPlot {
@@ -277,7 +278,7 @@ export function individualPlot(
   if (bins === null) {
     return {
       plot: null,
-      noValueLine: noHeterozygosityText(values.length, soFar),
+      noValueLine: noValueThresholdLine(values.length, false, from),
       noValueRoom: null,
     };
   }
@@ -299,9 +300,9 @@ export function individualPlot(
   const rows = histogramRows({ ...plotted, threshold: null, description: "" });
   const data = {
     ...plotted,
-    description: describedSoFar(
+    description: describedFrom(
       individualHistogramDescription(statistic, rows, null),
-      soFar,
+      from,
     ),
   };
   const [low, high] = axisOf(data);
@@ -321,8 +322,12 @@ export function individualPlot(
         onStep,
       },
     },
-    noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", soFar),
-    noValueRoom: noValueThresholdLine(bins.numNaN, true, soFar),
+    noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", from),
+    noValueRoom: noValueThresholdLine(
+      bins.numNaN,
+      true,
+      from === "soFar" ? "stopped" : from,
+    ),
   };
 }
 
@@ -409,7 +414,9 @@ function at(edges: Float64Array, index: number): number {
 }
 
 /** The description of a histogram, which says, for one drawn from a
-    result so far, `soFar`, that it is of the variants read so far. */
-function describedSoFar(description: string, soFar: boolean): string {
-  return soFar ? `${description} ${SO_FAR_DESCRIPTION}` : description;
+    result so far or from the variants read before a Stop, `from`, which
+    variants it is of. */
+function describedFrom(description: string, from: DrawnFrom): string {
+  const end = drawnFromDescription(from);
+  return end === null ? description : `${description} ${end}`;
 }

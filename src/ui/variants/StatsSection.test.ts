@@ -471,3 +471,86 @@ describe("the section of the statistics of the open file", () => {
     ]);
   });
 });
+
+describe("SF10 D2 the plots after a Stop, in the section", () => {
+  /** Opens the first file, gives the store a result so far of 523
+      variants, and stops the pass as the Stop of the box does; the
+      request is ended by `ending`, as the worker would end it. */
+  async function stoppedAfterSoFar(ending: Outcome<JobResult>): Promise<Page> {
+    const page = await drawPage();
+    await open(page, FIRST);
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    await act(async () => {
+      request.soFar(summaryResult(["1"], [523], ["i1", "i2"]));
+      await Promise.resolve();
+    });
+    await settled();
+    await act(async () => {
+      page.autoRuns.stop(POPGEN2_CHAIN);
+      request.end(ending);
+      await Promise.resolve();
+    });
+    await settled();
+    return page;
+  }
+
+  /** The lines of the section a screen reader reads, not the rooms. */
+  function shownLines(): readonly string[] {
+    return [...(sectionOf()?.querySelectorAll("p") ?? [])]
+      .filter((line) => line.getAttribute("aria-hidden") !== "true")
+      .map((line) => line.textContent);
+  }
+
+  test("the plots read before the Stop stay, each part and each description saying so, with no download", async () => {
+    await stoppedAfterSoFar({ kind: "cancelled" });
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(6);
+    const stopped =
+      "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.";
+    expect(shownLines().filter((line) => line === stopped)).toHaveLength(2);
+    expect(shownLines()).not.toContain(
+      "Stopped. Start again reads the file from the start.",
+    );
+    const descriptions = [...container.querySelectorAll("svg.chart desc")];
+    expect(descriptions).toHaveLength(6);
+    for (const description of descriptions) {
+      expect(description.textContent).toMatch(
+        / Drawn from the variants read before the Stop\.$/u,
+      );
+    }
+    expect(partsText()).not.toContain("so far");
+    expect(sectionOf()?.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  test("Start again drops them and reads the file again", async () => {
+    const page = await stoppedAfterSoFar({ kind: "cancelled" });
+    await act(async () => {
+      page.autoRuns.resume(POPGEN2_CHAIN);
+      await Promise.resolve();
+    });
+    await settled();
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+    expect(shownLines().join(" ")).not.toContain("before the Stop");
+    expect(page.requests.map((r) => r.job.analysis)).toEqual([
+      "variantsSummary",
+      "variantsSummary",
+    ]);
+  });
+
+  test("a failure of the pass being stopped drops them, since what was read may be what popnei refused", async () => {
+    await stoppedAfterSoFar({
+      kind: "failed",
+      error: { kind: "popnei", message: "a genotype of 3 alleles" },
+    });
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+    expect(partsText().match(/Not calculated\./gu)).toHaveLength(2);
+    expect(shownLines().join(" ")).not.toContain("before the Stop");
+  });
+
+  test("another file drops them", async () => {
+    const page = await stoppedAfterSoFar({ kind: "cancelled" });
+    await open(page, SECOND);
+    expect(container.querySelectorAll("svg.chart")).toHaveLength(0);
+    expect(shownLines().join(" ")).not.toContain("before the Stop");
+  });
+});

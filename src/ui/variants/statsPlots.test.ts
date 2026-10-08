@@ -69,17 +69,17 @@ describe("the histograms of the statistics of the open file", () => {
       "missingRate",
       VARIANTS,
       NO_SPACING,
-      false,
+      "result",
       null,
     );
     expect(missing.data.title).toBe("Proportion of missing genotypes");
     expect(th(missing).shownLabel).toBe("Missing genotypes\u00a0max:");
-    const maf = variantPlot("maf", VARIANTS, NO_SPACING, false, null);
+    const maf = variantPlot("maf", VARIANTS, NO_SPACING, "result", null);
     expect(maf.data.title).toBe("Major allele frequency");
     expect(maf.data.xLabel).toBe("Major allele frequency");
     expect(th(maf).shownLabel).toBe("Major allele frequency\u00a0max:");
     expect(
-      variantPlot("obsHet", VARIANTS, NO_SPACING, false, null).data.xLabel,
+      variantPlot("obsHet", VARIANTS, NO_SPACING, "result", null).data.xLabel,
     ).toBe("Observed heterozygosity");
     // Its threshold, no filter, has no legend, at the top of the axis,
     // where it keeps every variant, and is drawn in grey.
@@ -91,15 +91,15 @@ describe("the histograms of the statistics of the open file", () => {
   });
 
   test("SF9 D4 a histogram of a result so far draws the same bins, and the words of its threshold are those of the plot drawn, with no so far", () => {
-    const soFar = variantPlot("maf", VARIANTS, NO_SPACING, true, null);
+    const soFar = variantPlot("maf", VARIANTS, NO_SPACING, "soFar", null);
     expect(th(soFar).valueText).toBe("1, keeps every variant");
     expect(th(soFar).hiddenDescription).toBe("This filter removes nothing.");
-    const greyOn = variantPlot("maf", VARIANTS, NO_SPACING, true, 0.8);
+    const greyOn = variantPlot("maf", VARIANTS, NO_SPACING, "soFar", 0.8);
     expect(th(greyOn).valueText).toBe("0.8, keeps every variant of the plot");
     expect(th(greyOn).hiddenDescription).toBe(
       "This filter removes no variant of the plot.",
     );
-    const done = variantPlot("maf", VARIANTS, NO_SPACING, false, null).data;
+    const done = variantPlot("maf", VARIANTS, NO_SPACING, "result", null).data;
     expect({ ...soFar.data, description: "" }).toEqual({
       ...done,
       description: "",
@@ -107,7 +107,7 @@ describe("the histograms of the statistics of the open file", () => {
     const het = individualPlot(
       "observedHeterozygosity",
       INDIVIDUALS,
-      true,
+      "soFar",
       0.4,
     );
     expect(th(het.plot).valueText).toBe(
@@ -117,13 +117,13 @@ describe("the histograms of the statistics of the open file", () => {
 
   test("SF9 D4 the individuals with no called genotype, in a result so far said to have none so far, are removed by a filter on and kept by one off", () => {
     expect(
-      individualPlot("observedHeterozygosity", INDIVIDUALS, true, 0.5)
+      individualPlot("observedHeterozygosity", INDIVIDUALS, "soFar", 0.5)
         .noValueLine,
     ).toBe(
       "1 individual with no called genotype so far is not in the histogram, and this filter removes it.",
     );
     expect(
-      individualPlot("observedHeterozygosity", INDIVIDUALS, true, null)
+      individualPlot("observedHeterozygosity", INDIVIDUALS, "soFar", null)
         .noValueLine,
     ).toBe(
       "1 individual with no called genotype so far is not in the histogram.",
@@ -133,24 +133,24 @@ describe("the histograms of the statistics of the open file", () => {
       obsHetRate: Float64Array.from([0.3, NaN, NaN]),
     };
     expect(
-      individualPlot("observedHeterozygosity", twoOfThree, true, 0.5)
+      individualPlot("observedHeterozygosity", twoOfThree, "soFar", 0.5)
         .noValueLine,
     ).toBe(
       "2 individuals with no called genotype so far are not in the histogram, and this filter removes them.",
     );
     expect(
-      individualPlot("observedHeterozygosity", twoOfThree, false, 0.5)
+      individualPlot("observedHeterozygosity", twoOfThree, "result", 0.5)
         .noValueLine,
     ).toBe(
       "2 individuals with no called genotype are not in the histogram, and this filter removes them.",
     );
     expect(
-      individualPlot("observedHeterozygosity", twoOfThree, false, null)
+      individualPlot("observedHeterozygosity", twoOfThree, "result", null)
         .noValueLine,
     ).toBe("2 individuals with no called genotype are not in the histogram.");
     // 1 is off, as null.
     expect(
-      individualPlot("observedHeterozygosity", twoOfThree, false, 1)
+      individualPlot("observedHeterozygosity", twoOfThree, "result", 1)
         .noValueLine,
     ).toBe("2 individuals with no called genotype are not in the histogram.");
   });
@@ -159,46 +159,59 @@ describe("the histograms of the statistics of the open file", () => {
     const off = individualPlot(
       "observedHeterozygosity",
       INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     const on = individualPlot(
       "observedHeterozygosity",
       INDIVIDUALS,
-      false,
+      "result",
       0.5,
     );
     const longer =
       "1 individual with no called genotype is not in the histogram, and this filter removes it.";
     expect(off.noValueRoom).toBe(longer);
     expect(on.noValueRoom).toBe(longer);
+    // While the pass runs, the room of its words after a Stop, the
+    // longest, so that nothing moves at a Stop (SF10 D1).
     expect(
-      individualPlot("observedHeterozygosity", INDIVIDUALS, true, null)
+      individualPlot("observedHeterozygosity", INDIVIDUALS, "soFar", null)
         .noValueRoom,
     ).toBe(
-      "1 individual with no called genotype so far is not in the histogram, and this filter removes it.",
+      "1 individual with no called genotype before the Stop is not in the histogram, and this filter removes it.",
     );
     // Every individual with a value: no line, and no room.
     expect(
-      individualPlot("missingGenotypes", INDIVIDUALS, false, null).noValueRoom,
+      individualPlot("missingGenotypes", INDIVIDUALS, "result", null)
+        .noValueRoom,
     ).toBeNull();
   });
 
   test("live-stats 2 the description of a plot of a result so far, which a screen reader reads, says it is drawn from the variants read so far", () => {
-    const done = variantPlot("missingRate", VARIANTS, NO_SPACING, false, null)
-      .data.description;
+    const done = variantPlot(
+      "missingRate",
+      VARIANTS,
+      NO_SPACING,
+      "result",
+      null,
+    ).data.description;
     expect(done).not.toContain("so far");
     expect(
-      variantPlot("missingRate", VARIANTS, NO_SPACING, true, null).data
+      variantPlot("missingRate", VARIANTS, NO_SPACING, "soFar", null).data
         .description,
     ).toBe(`${done} Drawn from the variants read so far.`);
     const individuals = individualPlot(
       "missingGenotypes",
       INDIVIDUALS,
-      false,
+      "result",
       null,
     );
-    const soFar = individualPlot("missingGenotypes", INDIVIDUALS, true, null);
+    const soFar = individualPlot(
+      "missingGenotypes",
+      INDIVIDUALS,
+      "soFar",
+      null,
+    );
     expect(soFar.plot?.data.description).toBe(
       `${individuals.plot?.data.description ?? ""} Drawn from the variants read so far.`,
     );
@@ -209,14 +222,20 @@ describe("the histograms of the statistics of the open file", () => {
       "missingRate",
       VARIANTS,
       NO_SPACING,
-      false,
+      "result",
       null,
     ).data;
     expect([missing.edges[0], missing.edges.at(-1)]).toEqual([0, 1]);
-    const maf = variantPlot("maf", VARIANTS, NO_SPACING, false, null).data;
+    const maf = variantPlot("maf", VARIANTS, NO_SPACING, "result", null).data;
     expect(Array.from(maf.edges)).toEqual([0.75, 0.775, 0.8]);
     expect(Array.from(maf.counts)).toEqual([3, 0]);
-    const het = variantPlot("obsHet", VARIANTS, NO_SPACING, false, null).data;
+    const het = variantPlot(
+      "obsHet",
+      VARIANTS,
+      NO_SPACING,
+      "result",
+      null,
+    ).data;
     expect([het.edges[0], het.edges.at(-1)]).toEqual([0.25, 0.3]);
   });
 
@@ -224,7 +243,7 @@ describe("the histograms of the statistics of the open file", () => {
     const missing = individualPlot(
       "missingGenotypes",
       INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     expect(grey(missing.plot)).toBe(true);
@@ -236,7 +255,7 @@ describe("the histograms of the statistics of the open file", () => {
     const het = individualPlot(
       "observedHeterozygosity",
       INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     expect(grey(het.plot)).toBe(true);
@@ -255,7 +274,7 @@ describe("the histograms of the statistics of the open file", () => {
     const het = individualPlot(
       "observedHeterozygosity",
       { ...INDIVIDUALS, obsHetRate: Float64Array.from([NaN, NaN, NaN]) },
-      false,
+      "result",
       null,
     );
     expect(het.plot).toBeNull();
@@ -334,7 +353,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     expect(plot.data.threshold).toEqual({
@@ -357,7 +376,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0.1,
     );
     expect(th(on).look).toBe("grey");
@@ -385,7 +404,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0.05,
     );
     expect(plot.data.counts).toHaveLength(21);
@@ -401,7 +420,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0,
     );
     expect(plot.data.firstBinOnLowerEdge).toBe(true);
@@ -409,7 +428,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     expect(states[0]).toBe("kept");
     expect(new Set(states.slice(1))).toEqual(new Set(["removed"]));
     expect(
-      variantPlot("maf", PANEL.variants, PANEL_INDIVIDUALS, false, 0).data
+      variantPlot("maf", PANEL.variants, PANEL_INDIVIDUALS, "result", 0).data
         .firstBinOnLowerEdge,
     ).toBe(false);
   });
@@ -419,7 +438,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0.05,
     );
     expect(plot.data.threshold).toEqual({
@@ -433,7 +452,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const individuals = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       0.03,
     ).plot;
     expect(individuals?.data.threshold).toEqual({
@@ -451,7 +470,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
         "missingRate",
         PANEL.variants,
         PANEL_INDIVIDUALS,
-        false,
+        "result",
         threshold,
       ).threshold?.look !== "on";
     expect(at(0.079)).toBe(false);
@@ -464,7 +483,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "obsHet",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     const { data } = het;
@@ -474,7 +493,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "maf",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       null,
     );
     expect([maf.data.edges[0], maf.data.edges.at(-1)]).toEqual([0.45, 1]);
@@ -486,7 +505,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       null,
       0.0734,
     );
@@ -500,7 +519,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "obsHet",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       null,
       0.3349,
     );
@@ -513,7 +532,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
         "missingRate",
         PANEL.variants,
         PANEL_INDIVIDUALS,
-        false,
+        "result",
         null,
         typed,
       );
@@ -527,7 +546,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const individuals = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       null,
       0,
     ).plot;
@@ -541,7 +560,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "obsHet",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      true,
+      "soFar",
       0.035,
     );
     expect(th(plot).slider.step).toBe(0.01);
@@ -552,7 +571,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const individual = individualPlot(
       "observedHeterozygosity",
       PANEL.individuals,
-      true,
+      "soFar",
       0.035,
     ).plot;
     expect(th(individual).slider.value).toBe(0.035);
@@ -565,7 +584,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "missingRate",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0.5,
     );
     expect(histogramScales(plot.data, 1, 1).x.domain()).toEqual([0, 0.5]);
@@ -581,7 +600,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
       "maf",
       PANEL.variants,
       PANEL_INDIVIDUALS,
-      false,
+      "result",
       0.25,
     );
     const [low, high] = histogramScales(maf.data, 1, 1).x.domain();
@@ -595,7 +614,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const top = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       null,
     ).plot;
     // The missing rates run from 0.0175 to 0.0442, the axis from 0 to
@@ -612,7 +631,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const atTop = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       0.045,
     ).plot;
     expect(th(atTop).valueText).toBe(
@@ -630,14 +649,14 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     });
     const largest = Math.max(...PANEL.individuals.missingGtRate);
     const at = (threshold: number) =>
-      individualPlot("missingGenotypes", PANEL.individuals, false, threshold)
+      individualPlot("missingGenotypes", PANEL.individuals, "result", threshold)
         .plot?.threshold?.look !== "on";
     expect(at(0.044)).toBe(largest <= 0.044);
     expect(at(0.045)).toBe(true);
     const set = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       0.03,
     ).plot;
     expect(th(set).onStep(0.030000000000000002)).toBe(0.03);
@@ -649,7 +668,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
     const typed = individualPlot(
       "missingGenotypes",
       PANEL.individuals,
-      false,
+      "result",
       null,
       0.0304,
     ).plot;
@@ -658,7 +677,7 @@ describe("thresholds round 1 the threshold on each histogram", () => {
 
   test("an individual with no value is in neither count: grey once the threshold keeps every one with a value", () => {
     const at = (threshold: number) =>
-      individualPlot("observedHeterozygosity", INDIVIDUALS, false, threshold)
+      individualPlot("observedHeterozygosity", INDIVIDUALS, "result", threshold)
         .plot?.threshold?.look !== "on";
     expect(at(0.35)).toBe(false);
     expect(at(0.4)).toBe(true);
@@ -696,7 +715,7 @@ describe("the owner's first round: a threshold of the variants set at an edge is
             statistic,
             variants,
             passIndividuals,
-            false,
+            "result",
             threshold,
           );
           // 1 is off, its line at the top of the axis, and grey.
@@ -733,7 +752,7 @@ describe("the step of a threshold of the variants is never finer than the fine b
         statistic,
         clean,
         PANEL_INDIVIDUALS,
-        false,
+        "result",
         null,
       );
       expect(th(plot).slider).toEqual({
@@ -747,7 +766,7 @@ describe("the step of a threshold of the variants is never finer than the fine b
         statistic,
         clean,
         PANEL_INDIVIDUALS,
-        false,
+        "result",
         null,
         0.0123,
       );
@@ -758,7 +777,7 @@ describe("the step of a threshold of the variants is never finer than the fine b
         expect(clean.binEdges).toContain(shown);
       }
       const atZero = grey(
-        variantPlot(statistic, clean, PANEL_INDIVIDUALS, false, 0),
+        variantPlot(statistic, clean, PANEL_INDIVIDUALS, "result", 0),
       );
       expect(atZero).toBe(statistic === "missingRate" || statistic === "maf");
     }
@@ -771,12 +790,84 @@ describe("SF9 D4 the expected heterozygosity", () => {
       "unbiasedExpHet",
       VARIANTS,
       NO_SPACING,
-      false,
+      "result",
       null,
     );
     expect(plot.threshold).toBeNull();
     expect(plot.data.threshold).toBeNull();
     expect(plot.shortTitle).toBe("Exp. het. (unbiased)");
     expect(plot.data.title).toBe("Expected heterozygosity (unbiased)");
+  });
+});
+
+describe("SF10 D1 the plots after a Stop", () => {
+  test("their descriptions end with the variants read before the Stop, their bins those of the same result so far", () => {
+    const soFar = variantPlot("maf", VARIANTS, NO_SPACING, "soFar", 0.8).data;
+    const stopped = variantPlot(
+      "maf",
+      VARIANTS,
+      NO_SPACING,
+      "stopped",
+      0.8,
+    ).data;
+    const done = variantPlot("maf", VARIANTS, NO_SPACING, "result", 0.8).data
+      .description;
+    expect(stopped.description).toBe(
+      `${done} Drawn from the variants read before the Stop.`,
+    );
+    expect({ ...stopped, description: "" }).toEqual({
+      ...soFar,
+      description: "",
+    });
+    const individuals = individualPlot(
+      "missingGenotypes",
+      INDIVIDUALS,
+      "stopped",
+      null,
+    );
+    expect(individuals.plot?.data.description).toMatch(
+      / Drawn from the variants read before the Stop\.$/u,
+    );
+  });
+
+  test("the line of the individuals with no called genotype says before the Stop, and its room is that of the filter on", () => {
+    const off = individualPlot(
+      "observedHeterozygosity",
+      INDIVIDUALS,
+      "stopped",
+      null,
+    );
+    const on = individualPlot(
+      "observedHeterozygosity",
+      INDIVIDUALS,
+      "stopped",
+      0.5,
+    );
+    const longer =
+      "1 individual with no called genotype before the Stop is not in the histogram, and this filter removes it.";
+    expect(on.noValueLine).toBe(longer);
+    expect(off.noValueLine).toBe(
+      "1 individual with no called genotype before the Stop is not in the histogram.",
+    );
+    expect(off.noValueRoom).toBe(longer);
+    // The room while the pass runs is the same, so that it does not move
+    // at the Stop.
+    expect(
+      individualPlot("observedHeterozygosity", INDIVIDUALS, "soFar", 0.5)
+        .noValueRoom,
+    ).toBe(longer);
+  });
+
+  test("with no individual of a value, the line says before the Stop", () => {
+    expect(
+      individualPlot(
+        "observedHeterozygosity",
+        { ...INDIVIDUALS, obsHetRate: Float64Array.from([NaN, NaN, NaN]) },
+        "stopped",
+        null,
+      ).noValueLine,
+    ).toBe(
+      "3 individuals with no called genotype before the Stop are not in the histogram.",
+    );
   });
 });

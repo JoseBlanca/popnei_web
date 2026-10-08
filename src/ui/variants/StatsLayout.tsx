@@ -66,28 +66,40 @@ export function Part({ heading, children }: PartProps): React.JSX.Element {
 interface PartLineProps {
   /** Its words. */
   readonly children: string;
-  /** Whether it only keeps its room, hidden, its words those it had: the
-      line of the pass once it ended, so that the plots under it stay
-      where they were. False when absent. */
-  readonly room?: boolean;
 }
 
-/** A line of a part, over its plots: the share calculated, that it was
-    stopped, or that it was not calculated; or, hidden, the room of the
-    line of the pass once it ended. */
-export function PartLine({
-  children,
-  room = false,
-}: PartLineProps): React.JSX.Element {
-  return room ? (
-    <p
-      className={`${classOf(styles, "line")} ${classOf(styles, "room")}`}
-      aria-hidden="true"
-    >
-      {children}
-    </p>
-  ) : (
-    <p className={classOf(styles, "line")}>{children}</p>
+/** A line of a part, over its plots or in their place: the share
+    calculated, that it was stopped, or that it was not calculated. */
+export function PartLine({ children }: PartLineProps): React.JSX.Element {
+  return <p className={classOf(styles, "line")}>{children}</p>;
+}
+
+/** What the line of a part with the room of others is drawn with. */
+interface PartLinesProps {
+  /** Its words, or `null` for none shown. */
+  readonly line: string | null;
+  /** The words of the other lines it can take, whose room it keeps,
+      hidden, in the same place. */
+  readonly rooms: readonly string[];
+}
+
+/** A line of a part, over its plots, as high as the longest of its words
+    and of `rooms`, kept hidden in the same place, so that the plots under
+    it do not move when it changes to one of them. */
+export function PartLines({ line, rooms }: PartLinesProps): React.JSX.Element {
+  return (
+    <div className={classOf(styles, "lineStack")}>
+      {line !== null && <p className={classOf(styles, "line")}>{line}</p>}
+      {rooms.map((words) => (
+        <p
+          key={words}
+          className={`${classOf(styles, "line")} ${classOf(styles, "room")}`}
+          aria-hidden="true"
+        >
+          {words}
+        </p>
+      ))}
+    </div>
   );
 }
 

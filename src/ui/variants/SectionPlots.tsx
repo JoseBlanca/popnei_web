@@ -25,6 +25,7 @@ import { IndividualPlace, Plots } from "./StatsLayout.tsx";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { INDIVIDUAL_STATISTICS, VARIANT_STATISTICS } from "./statsWords.ts";
+import type { DrawnFrom } from "./statsWords.ts";
 import {
   individualThreshold,
   thresholdChange,
@@ -59,8 +60,9 @@ export interface VariantPlotsProps {
   readonly numIndividuals: number;
   /** Their ploidy. */
   readonly ploidy: number;
-  /** Whether it is of a result so far. */
-  readonly soFar: boolean;
+  /** What it is drawn from: the result, a result so far, or the last
+      result so far of a pass the user stopped. */
+  readonly from: DrawnFrom;
 }
 
 /** The four histograms of the variants, each over the variants in its
@@ -71,7 +73,7 @@ export function VariantPlots({
   result,
   numIndividuals,
   ploidy,
-  soFar,
+  from,
 }: VariantPlotsProps): React.JSX.Element {
   // The same object until the file changes, so that the plots are not
   // made again on renders that changed nothing.
@@ -87,7 +89,7 @@ export function VariantPlots({
           statistic={statistic}
           result={result}
           individuals={individuals}
-          soFar={soFar}
+          from={from}
         />
       ))}
     </Plots>
@@ -99,7 +101,7 @@ interface VariantHistogramProps {
   readonly statistic: VariantStatistic;
   readonly result: VariantStatsPart;
   readonly individuals: PassIndividuals;
-  readonly soFar: boolean;
+  readonly from: DrawnFrom;
 }
 
 /** A histogram of the variants and its threshold, the project's, which
@@ -109,7 +111,7 @@ function VariantHistogram({
   statistic,
   result,
   individuals,
-  soFar,
+  from,
 }: VariantHistogramProps): React.JSX.Element {
   const filter = variantThreshold(statistic);
   const threshold = useAppState((s) =>
@@ -122,15 +124,15 @@ function VariantHistogram({
   // drawn again on renders that changed nothing (react.md, "Mounting a
   // plot").
   const set = useMemo(
-    () => variantPlot(statistic, result, individuals, soFar, threshold, moving),
-    [statistic, result, individuals, soFar, threshold, moving],
+    () => variantPlot(statistic, result, individuals, from, threshold, moving),
+    [statistic, result, individuals, from, threshold, moving],
   );
   const drawn = useMemo(
     () =>
       typed === null
         ? set
-        : variantPlot(statistic, result, individuals, soFar, threshold, typed),
-    [set, statistic, result, individuals, soFar, threshold, typed],
+        : variantPlot(statistic, result, individuals, from, threshold, typed),
+    [set, statistic, result, individuals, from, threshold, typed],
   );
   return (
     <StatsHistogram
@@ -148,8 +150,9 @@ function VariantHistogram({
 export interface IndividualPlotsProps {
   /** The part of the individuals of the result, or of a result so far. */
   readonly result: IndividualStatsPart;
-  /** Whether it is of a result so far. */
-  readonly soFar: boolean;
+  /** What it is drawn from: the result, a result so far, or the last
+      result so far of a pass the user stopped. */
+  readonly from: DrawnFrom;
 }
 
 /** The two histograms of the individuals, each over the individuals
@@ -158,7 +161,7 @@ export interface IndividualPlotsProps {
     has a value. */
 export function IndividualPlots({
   result,
-  soFar,
+  from,
 }: IndividualPlotsProps): React.JSX.Element {
   return (
     <Plots>
@@ -167,7 +170,7 @@ export function IndividualPlots({
           key={statistic}
           statistic={statistic}
           result={result}
-          soFar={soFar}
+          from={from}
         />
       ))}
     </Plots>
@@ -178,7 +181,7 @@ export function IndividualPlots({
 interface IndividualHistogramProps {
   readonly statistic: IndividualStatistic;
   readonly result: IndividualStatsPart;
-  readonly soFar: boolean;
+  readonly from: DrawnFrom;
 }
 
 /** A histogram of the individuals and its threshold, as that of the
@@ -186,7 +189,7 @@ interface IndividualHistogramProps {
 function IndividualHistogram({
   statistic,
   result,
-  soFar,
+  from,
 }: IndividualHistogramProps): React.JSX.Element {
   const filter = individualThreshold(statistic);
   const threshold = useAppState((s) => thresholdValue(s.project, filter));
@@ -194,15 +197,15 @@ function IndividualHistogram({
   const [moving, setMoving] = useState<number | null>(null);
   const [typed, setTyped] = useState<number | null>(null);
   const set = useMemo(
-    () => individualPlot(statistic, result, soFar, threshold, moving),
-    [statistic, result, soFar, threshold, moving],
+    () => individualPlot(statistic, result, from, threshold, moving),
+    [statistic, result, from, threshold, moving],
   );
   const drawn = useMemo(
     () =>
       typed === null
         ? set
-        : individualPlot(statistic, result, soFar, threshold, typed),
-    [set, statistic, result, soFar, threshold, typed],
+        : individualPlot(statistic, result, from, threshold, typed),
+    [set, statistic, result, from, threshold, typed],
   );
   return (
     <IndividualPlace
