@@ -905,3 +905,22 @@ read (the project file's format unchanged); the three functions in
 `src/core/filtersApplied.ts`; the specs keys.md, store.md, projectFile.md,
 project.md, pca.md, ldDecay.md say the rule. Vitest 4,197, twice;
 Playwright 622 and 622.
+
+### Work package 3, 8 October 2026
+
+Commit 963cde6: `setThreshold`, `thresholdValue`, `popgen2FirstProject`,
+in one commit (the package is one task). Checks: Vitest 4,221; the
+flows of popgen2 and of the old Variants step in Chromium and WebKit.
+A second look at the fix of work package 2 found that a save before the
+variants file is read again could carry a saved check beside settings
+whose FILTER filter had been switched since the opening; fixed in
+951098e (a check is carried then only when both its fingerprints
+match), latent today. Review of the package, spec and tests; api and
+errors: no defect a user can reach. Fixed in be99c43: the value given to
+`setThreshold` is already on the step of its axis, so only an exact 1 is
+off (doc comment, spec, tests at 1 ± 1 ulp), and -0 is stored as 0; one
+predicate for the range; the test of the drawn commands checks the 15
+pairs of threshold and kind of value; `setThreshold` drawn more often,
+every transition reached in 10 or more of 20 seeds. Noted: fast-check
+draws arrays of at most 10 commands whatever `maxLength` says, unless
+its size is set. Vitest 4,231, twice.
