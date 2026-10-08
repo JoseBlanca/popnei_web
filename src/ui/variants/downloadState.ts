@@ -155,22 +155,30 @@ function certainBeforeWrite(s: AppState<JobResult, Blob>): string | null {
  * take the place of the button before any write, since a user of a screen
  * reader would not hear the button go (docs/specs/steps/popgen2-download.md,
  * "When the filters keep no variant"). Nothing when the one pass ends
- * with it, when the file changes, when it stays, and when the button
- * comes back.
+ * with it, when the file changes, when the button comes back, and when
+ * the same sentence was already in its place: kept certain by the
+ * change, or left by a write of no variant.
  */
 export function noVariantAnnouncement(
   before: AppState<JobResult, Blob>,
   after: AppState<JobResult, Blob>,
 ): string | null {
   const now = certainBeforeWrite(after);
+  const summaryBefore = summaryStatus(before);
   if (
     now === null ||
     after.project.variants?.fileId !== before.project.variants?.fileId ||
-    summaryStatus(before).kind !== "done"
+    summaryBefore.kind !== "done"
   ) {
     return null;
   }
-  return certainBeforeWrite(before) === null ? now : null;
+  const was = downloadPlace(
+    summaryBefore,
+    before.write,
+    before.project,
+    before.individualsKept,
+  );
+  return was.kind === "sentence" && was.text === now ? null : now;
 }
 
 /** The result of the one pass, a defect for another. */

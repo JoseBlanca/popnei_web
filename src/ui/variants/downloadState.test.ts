@@ -549,6 +549,29 @@ describe("DL7 D1 the status region says the sentence of no variant once", () => 
     expect(noVariantAnnouncement(first, store.getState())).toBeNull();
   });
 
+  test("after a write of no variant, a change that keeps the same sentence on the screen says nothing", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    store.apply("the FILTER box changed", (p) =>
+      turnOffVariantFilter(p, "passed"),
+    );
+    // None passed its FILTER, which the box, off, keeps.
+    finishPass(store, jobs, pass(true));
+    expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
+    writeEnded(store, writes, vcfWritten(0));
+    const written = store.getState();
+    expect(written.write?.kind).toBe("noVariant");
+
+    store.apply("the FILTER box changed", (p) =>
+      setVariantFilter(p, { kind: "passed" }),
+    );
+    expect(store.getState().write?.kind).toBe("ready");
+    expect(placeOf(store)).toStrictEqual({
+      kind: "sentence",
+      text: "None of the 100 variants of panel.vcf.gz pass the filters, so there is nothing to download.",
+    });
+    expect(noVariantAnnouncement(written, store.getState())).toBeNull();
+  });
+
   test("a write of no variant is not said here: its sentence takes the focus", () => {
     const { store, jobs, writes } = storeOfPanel();
     finishPass(store, jobs, pass(false));
