@@ -9,7 +9,9 @@ every value of its plot drawn in grey (below, "What the owner
 decided"); that grey is the bluish grey that the piece `popnei-0.2.2`
 built the same day, the token `--chart-threshold-keeps-all`, with the
 line dotted and the handle hollow (below, "What a threshold shows on its
-plot"). It
+plot"); and, the same day, with the owner's decision to hide Undo and
+Redo on `popgen2.html` until a later feature needs them (below, "What
+the owner decided", 6). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -102,11 +104,13 @@ cannot be opened by an older version of the application, and the old
 page, `popgen.html`, refuses it, since it has no box to show it. Nobody
 loses anything today: the new page saves no project file yet.
 
-**Undo and Redo on the new page.** `popgen2.html` has neither today. It
-gains a row with Undo and Redo and their keys, which undo and redo the
-changes of the filters; opening a file starts the page's history
-afresh, and no change gives a notice, as the owner decided on 8 October
-2026.
+**Undo and Redo on the new page.** `popgen2.html` has neither, and
+keeps it so for now: the row with Undo and Redo and their keys, which
+undid and redid the changes of the filters, was built and then hidden
+by the owner on 8 October 2026, until a later feature needs it; the
+store keeps the history it would use. Opening a file starts the page's
+history afresh, and no change gives a notice, as the owner decided the
+same day.
 A threshold is on or off. Off, its box shows 1 in grey, the value at
 which it keeps everything, its line stands at the top of the axis in
 grey, and nothing is shaded. Only the missing rate of the variants
@@ -124,7 +128,8 @@ a threshold keeps; a threshold that keeps every value of its plot shown
 by its line and its number in grey, not by words; and the FILTER box
 built soon, right after Undo and Redo. Later that day, after trying the
 FILTER box: no notice for a change of a filter, and no Undo of the
-opening of a file.
+opening of a file; and after trying the thresholds, no Undo and no Redo
+on the page for now.
 
 ## What the user can do once it is built
 
@@ -413,7 +418,15 @@ says over its plots.
 
 ## Undo and Redo on `popgen2.html`
 
-`popgen2.html` has neither today: its page has no shell
+The page draws neither, as the owner decided on 8 October 2026 after
+trying the thresholds (below, "What the owner decided", 6): the row
+described here was built, and then hidden with its keys, until a later
+feature needs it. What follows is how it works when the page draws it
+again; the store's history, the commands with their descriptions and
+the gate that makes a run of the keys a change before any other command
+stay built for it.
+
+Before the row was built, `popgen2.html` had neither: its page has no shell
 (`src/ui/popgen2.tsx`, "without the stepper, the saving and the
 shell"), and the buttons of Undo and Redo and their keys (Ctrl+Z,
 Ctrl+Y and Cmd+Shift+Z, caught in the shell's header through
@@ -752,3 +765,19 @@ more things, with which the design stays approved:
    starts the page's history afresh, and Undo and Redo serve the
    changes of the filters, which the owner decided on 7 October 2026
    are undone.
+
+Later still on 8 October 2026 the owner tried the thresholds as filters
+and decided one more thing, with which the design stays approved:
+
+6. No Undo and no Redo on `popgen2.html` for now: "we might want them
+   for other features, we'll see". The page draws no row of Undo and
+   Redo and catches none of their keys, so Ctrl+Z changes neither a
+   threshold nor the FILTER box. The smallest change that hides them
+   was made, and the rest kept ready to draw the row again: the
+   store's history, with an opening as a new history; the thresholds
+   and the FILTER box as commands with the descriptions that name their
+   steps; a run of the keys made a change before any other command,
+   an opening among them; and the shell's buttons, which `popgen.html`
+   draws unchanged. The announcement when a number committed makes a
+   threshold start or stop removing anything stays, since it does not
+   depend on Undo.

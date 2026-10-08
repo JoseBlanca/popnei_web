@@ -128,12 +128,13 @@ the axis and its step grows.
 
 Each threshold is a filter of the project, as the owner decided on 7
 October 2026 (docs/designs/stats-filters.md): a change of it, by a drag,
-the arrow keys or the box, is a change of the project, with Undo and
-Redo, and a run of presses of the arrow keys is one change. No change
-of a filter gives a notice, and opening a file, the first or another,
-is not a step of Undo: it starts the page's history afresh, so that
-Undo and Redo serve the changes of the filters alone (the owner, 8
-October 2026). A threshold is on or off. It is
+the arrow keys or the box, is a change of the project, and a run of
+presses of the arrow keys is one change. No change of a filter gives a
+notice, and opening a file, the first or another, starts the page's
+history afresh (the owner, 8 October 2026). The page has no Undo and no
+Redo, and Ctrl+Z changes nothing on it: the owner hid them on 8 October
+2026 until a later feature needs them, and the history they would use
+is kept. A threshold is on or off. It is
 turned off by emptying its box, or by giving it 1, the value at which a
 maximum keeps everything, however 1 is reached, typed or by the line
 dragged to the top of an axis that ends at 1; 1 is off and not a filter

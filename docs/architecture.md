@@ -947,8 +947,9 @@ no notice, as on the old page; the owner decided on 8 October 2026 that
 none is needed. Opening a file there, the first or another, is the
 store's `open`, which starts a new history with nothing to undo, stops
 the pass of the file before and gives no notice; the filters are kept
-as the user left them. So the page's Undo and Redo serve the changes of
-the filters alone, and the store never gives that page a notice
+as the user left them. So the page's Undo and Redo, when the page
+draws them, serve the changes of the filters alone, and the store never
+gives that page a notice
 (`docs/specs/core/store.md`, "The notice, and the calculations it
 stops").
 
@@ -984,7 +985,10 @@ change of a filter gave a notice on `popgen2.html`, "The MAF filter
 changed · Undo", is gone, and an opening on that page is no longer a
 step of Undo, "Statistics of the file removed because panel.nei opened
 · Undo"; the paragraph "No notice on `popgen2.html`" replaces the one
-that described the setting.
+that described the setting. Later that day the owner hid Undo and Redo
+on `popgen2.html`, with their keys, until a later feature needs them;
+the history and the commands with their descriptions stay in the store
+as they are, ready for them (section 7).
 
 ## 4. An analysis is a module
 
@@ -2300,16 +2304,19 @@ for the smallest part of it.
   `--chart-threshold-keeps-all` with the line dotted and the handle
   hollow; no line says what a threshold keeps; the
   expected heterozygosity has none, since popnei has no filter on it.
-  The line and the box show the project's value, so Undo moves them
-  back, and hold of their own only the value being dragged or typed,
+  The line and the box show the project's value, so an Undo would move
+  them back, and hold of their own only the value being dragged or typed,
   which is no part of the project (`docs/designs/stats-filters.md`). A
   change of a threshold or of the FILTER box is a command; an empty box,
   or 1 however it is reached, typed or by the line dragged to the top of
   an axis that ends at 1, turns a threshold off (`setThreshold` of
-  `docs/specs/core/project.md`). The page has a row with Undo and Redo
-  and their keys, reused from the shell of the old page, which undo and
-  redo the changes of the filters and not the opening of a file, and no
-  notice, as the owner decided on 8 October 2026; its
+  `docs/specs/core/project.md`). The page has no Undo and no Redo and
+  catches none of their keys, and no notice, as the owner decided on 8
+  October 2026: the row of the shell's Undo and Redo, which undid and
+  redid the changes of the filters and not the opening of a file, is
+  hidden until a later feature needs it, and the store's history, the
+  commands and the run of the keys made a change before any other
+  command stay ready for it; its
   first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. A tools section after the
   plots, whose first tool is the download of the filtered file, comes
@@ -2591,8 +2598,9 @@ src/ui/
                     the analyses that start by themselves, and the page,
                     with no stepper and no saving; from 7 October 2026
                     with the row of Undo and Redo and their keys, reused
-                    from shell/, though not the rest of the shell, and,
-                    from 8 October 2026, no notice
+                    from shell/, though not the rest of the shell, which
+                    the owner hid on 8 October 2026, and, from that
+                    day, no notice
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the

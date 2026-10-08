@@ -1,4 +1,4 @@
-# popgen2.html: the thresholds as filters, with Undo
+# popgen2.html: the thresholds as filters
 
 The screen spec of what `popgen2.html` gains with the design
 `docs/designs/stats-filters.md`, approved by the owner on 7 October
@@ -29,7 +29,12 @@ opened". The FILTER box and Undo and Redo are built (`docs/plans/filters.md`,
 work packages 6 and 7), and so are the thresholds as filters (work
 package 9), which settled the words a screen reader hears of a grey
 threshold in the set of this spec (below, "Words and layout chosen by
-the session"). What it builds on is the page as the pieces `thresholds` and
+the session"). Revised again on 8 October 2026 for the owner's decision
+after trying the thresholds: the page draws no Undo and no Redo, and
+catches none of their keys, until a later feature needs them ("we might
+want them for other features, we'll see"); what is kept ready for them
+is in "Undo, Redo and their keys" below, and what this spec says of
+Undo holds when the page draws it again. What it builds on is the page as the pieces `thresholds` and
 `one-pass` left it (`docs/plans/thresholds.md`, `docs/plans/one-pass.md`),
 where a threshold is state of the page, changes nothing in the project
 and is lost when another file is opened. It covers cases 1 and 2 of
@@ -106,7 +111,9 @@ them and does not repeat them.
 
 - Each threshold on a histogram is a filter of the project. Moving it,
   typing its number or turning it off is a change of the project, with
-  Undo and Redo and no notice.
+  no notice.
+- The page has no Undo and no Redo, and Ctrl+Z changes nothing on it,
+  as the owner decided on 8 October 2026.
 - A threshold is on or off. Off, its box shows 1 and its line stands
   at the top of the axis, both in grey, with no shading.
 - No line under a plot says how many variants or individuals its
@@ -117,7 +124,8 @@ them and does not repeat them.
   default, for a VCF and for a `.nei` file that records the FILTER of
   its variants.
 - The thresholds stay where they are when another file is opened.
-- Opening a file is not a step of Undo: Undo is disabled after it.
+- Opening a file starts the history of the project afresh, so that an
+  Undo, when the page draws it again, never takes an opening back.
 - After a Stop, the plots read so far stay, marked as made from the
   variants read before the Stop.
 - The expected heterozygosity keeps its plot and loses its line and its
@@ -131,16 +139,34 @@ when").
 
 ### The order of the page
 
-From the top: the heading "Popnei"; the row of Undo and Redo; the box of
-the file; the part "Variants", its four histograms and, once the opening of
+From the top: the heading "Popnei"; the box of the file; the part "Variants", its four histograms and, once the opening of
 the file has said that it records the FILTER of its variants, the check box of the FILTER column; the part "Individuals", its two
 histograms and the download of their table; "Open another variants
-file…". The row of Undo and Redo is above the box of the file, as the
-design places it, and is there before any file is opened, both
-disabled, so that the page does not move down when the first file is
-opened.
+file…". Until 8 October 2026 a row of Undo and Redo stood between the
+heading and the box of the file, there before any file was opened, both
+disabled, so that the page did not move down when the first file was
+opened; it goes back there when the page draws it again.
 
 ### Undo, Redo and their keys
+
+The page draws no Undo and no Redo, as the owner decided on 8 October
+2026 after trying the thresholds, until a later feature needs them. So
+it has no button Undo nor Redo, and no handler of the page catches
+Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Cmd+Z or Cmd+Shift+Z: on the heading, on
+a line or in a box with nothing typed, they change neither a threshold
+nor the FILTER box. Only the change the session needs to stop drawing
+the row was made (`src/ui/variants/VariantsPage.tsx`, where a comment
+stands in its place). The rest is kept, ready to draw the row again:
+the store's history, with the opening of a file as a new history; the
+thresholds and the FILTER box as commands of the store, each with the
+description that names its step of Undo; a run of the keys made a
+change before any other command, and before an opening; Ctrl+Z and
+Ctrl+Y caught by a threshold while its run waits, which now only make
+the run a change a little before its second is up; Undo enabled while
+a run waits, and the words of an undo; and the shell's buttons
+themselves, `src/ui/shell/UndoRedoButtons.tsx`, which the old page
+draws unchanged. The rest of this section says what the row does when
+the page draws it again.
 
 The row holds the shell's Undo and Redo buttons (`docs/specs/shell.md`,
 "The header"), reused and not copied. Each is named, on hover and for a
@@ -193,7 +219,8 @@ Five thresholds, each on its histogram: the missing rate, the MAF and
 the observed heterozygosity of the variants, and the missing rate and
 the observed heterozygosity of the individuals. Each keeps the variants
 or individuals whose value is at most its number. The line and the box
-show the project's value, so Undo and Redo move them. The only value
+show the project's value, so Undo and Redo, when the page draws them,
+move them. The only value
 they hold of their own is the number being dragged, typed or moved with
 the arrow keys and not yet made a change.
 
@@ -386,7 +413,7 @@ the run waiting a change first, and also commits a number typed and not
 yet committed, as the old page does before an opening (`onCommitReady`
 of the number box).
 
-**Undo while a run waits.** For the second a run waits, Undo is enabled
+**Undo while a run waits**, when the page draws Undo. For the second a run waits, Undo is enabled
 and named by the change the run will become, "Undo: the filter of the
 variants by missing data changed", and Redo is disabled, since that
 change will leave nothing to redo. A click on Undo, which in WebKit
@@ -419,7 +446,8 @@ How the box is used, on this page:
   turns it off. Tab then moves the focus to the next control.
 - **Escape** puts back the box's number, the project's value, and so
   does **Ctrl+Z** while something typed is not yet committed. With
-  nothing typed, Ctrl+Z is the page's Undo.
+  nothing typed, Ctrl+Z changes nothing on this page; it would be the
+  page's Undo if the page drew it again.
 - **The Up and Down arrow keys** move the number one step of the axis,
   **Page Up and Page Down** ten steps, as on the line; the presses make a
   run, which becomes one change. In the box of a threshold that is off,
@@ -545,17 +573,16 @@ file may be what the refusal is about.
 ## The states
 
 The states are those of the summary of the variants file, the one
-calculation of the page, with what the filters show in each. The row of
-Undo and Redo is there in all of them; Undo is disabled after an
-opening, until a change of a filter.
+calculation of the page, with what the filters show in each. The page
+has no Undo and no Redo in any of them.
 
 | state | what the user sees | what they can do |
 |---|---|---|
-| empty | no file open: the heading, the row of Undo and Redo, both disabled, "Open variants file…"; no plot, no threshold, no FILTER box | open a file |
+| empty | no file open: the heading, "Open variants file…"; no plot, no threshold, no FILTER box | open a file |
 | locked | the box of the file says why the statistics cannot be calculated, and each part says it over where its plots go; the FILTER box when the opening of the file said that it records the FILTER of its variants, no threshold | tick the FILTER box; open another file |
 | ready | about to start, for a moment: nothing in the parts. After a Stop: the plots read before it, or "Stopped. Start again reads the file from the start." with no plot | move the thresholds over the plots of a Stop; tick the FILTER box; Start again |
 | running | the share done over each part, the plots so far from the first result so far, 2 seconds after the start, the thresholds grey or not by the result so far | move the thresholds; tick the FILTER box; Stop |
-| done | the six plots, five thresholds, each grey when it keeps every value of its plot, the FILTER box when the opening of the file said that it records the FILTER of its variants | move, type and turn off the thresholds; tick the box; Undo and Redo |
+| done | the six plots, five thresholds, each grey when it keeps every value of its plot, the FILTER box when the opening of the file said that it records the FILTER of its variants | move, type and turn off the thresholds; tick the box |
 | results removed | never on this page: no filter brings this state, since the one pass's key holds the file and no filter, and opening another file starts a new history, with no notice | |
 | error | the box of the file says what failed; each part says "Not calculated." in place of its plots; the FILTER box when the opening of the file said that it records the FILTER of its variants, and none after an opening that failed | tick the FILTER box, when it is there, which does not clear the failure; Start again |
 
@@ -567,7 +594,7 @@ It sends, each with its description, which names its step of Undo:
 |---|---|---|
 | any of the five thresholds changed, turned on or turned off, by a drag, a run of keys or the box | `setThreshold(p, threshold, value)`, with the number, or `null` for an emptied box; 1 turns it off there | "the MAF filter changed", "the MAF filter was turned on", "the MAF filter was turned off"; "the filter of the variants by missing data changed", "the filter of individuals by missing data was turned off", and so for each |
 | the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the variants that failed their FILTER are left out", "the variants that failed their FILTER are kept" |
-| Undo, Redo | `store.undo()`, `store.redo()` | |
+| Undo, Redo, when the page draws them again | `store.undo()`, `store.redo()` | |
 | a file opened, by the button, a drop or a paste | `store.open((p) => loadVariants(p, load))`, through `openVariantsFile` | none: no step of Undo |
 
 The page chooses the words of a threshold's description by comparing its
@@ -592,7 +619,8 @@ file said that its variants record their FILTER, for whether the box is
 shown (`keepsPassed` of the read of the file, `project.variants.read`
 of kind `read`, and not `keepsPassed(project.variants)`, which answers
 by the format before the read); what Undo
-and Redo would do (`undo` and `redo` of the store); and the status of the summary, with its result so far while it
+and Redo would do (`undo` and `redo` of the store), when the page
+draws them; and the status of the summary, with its result so far while it
 runs and after a Stop. It holds no value of a filter of its own but the
 number being dragged, typed or moved by a run of keys.
 
@@ -608,8 +636,8 @@ number being dragged, typed or moved by a run of keys.
 | announced when a number committed in the box, or a run of the keys made a change, changes the look | into on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; into off: "This filter removes nothing."; back to removing some: the number alone, as the line reads it, "0.05"; nothing when the look stays |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
 | under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
-| after an undo, in the status region | "Undone: the MAF filter changed."; "Undone: the variants that failed their FILTER are kept." |
-| the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed", "Undo: the MAF filter was turned off"; of the FILTER box, "Undo: the variants that failed their FILTER are kept" |
+| after an undo, in the status region, when the page draws Undo | "Undone: the MAF filter changed."; "Undone: the variants that failed their FILTER are kept." |
+| the hint of Undo and Redo, when the page draws them | "Undo: the MAF filter changed", "Redo: the MAF filter changed", "Undo: the MAF filter was turned off"; of the FILTER box, "Undo: the variants that failed their FILTER are kept" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop." |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
@@ -618,7 +646,7 @@ number being dragged, typed or moved by a run of keys.
 The criteria named here are those of WCAG 2.2, the standard of
 accessibility the applications follow at level AA.
 
-**The order of the Tab key** (2.4.3, "Focus order"): Undo, Redo; Stop or
+**The order of the Tab key** (2.4.3, "Focus order"): Stop or
 Start again in the box of the file; then, for each histogram of the
 variants with a threshold, its box and its line; the FILTER box, after
 the four histograms of the variants and before the part of the
@@ -627,14 +655,16 @@ box and its line; the download of the table of the individuals; "Open
 another variants file…".
 
 **What is said without moving the focus** (4.1.3, "Status messages").
-An undo or a redo, in the status region. A number refused, as today. A
+A number refused, as today; an undo or a redo, when the page draws
+them again. A
 change of a filter itself is heard as the change of the control the
 user acted on, and nothing more is said, except when it turns the
 threshold on, grey or off from another of the three: then the words of
 the new look are said once (above, "Its words"). Nothing at each press
 of an arrow key: the line's value is read as it moves, as of any
 slider; a run that changes the look is said once it is made a change,
-and an Undo straight after drops what it would have said.
+and an Undo straight after, when the page draws it, drops what it would
+have said.
 
 **The grey in words** (1.4.1, "Use of color"). A threshold that keeps
 every value of its plot, off or on, is shown on the screen by its grey
@@ -652,9 +682,10 @@ the background, so the grey number in the box meets 1.4.3, "Contrast
 grey is often fainter, and a number too faint to read would hide the
 threshold's value.
 
-**The keys that would be lost.** Ctrl+Z and Ctrl+Y on a line holding a
-run are caught by the threshold, as said above, so that a user of the
-keyboard never undoes the change before the run while meaning the run.
+**The keys that would be lost**, when the page draws Undo. Ctrl+Z and
+Ctrl+Y on a line holding a run are caught by the threshold, as said
+above, so that a user of the keyboard never undoes the change before the
+run while meaning the run.
 
 **To be heard before the plan is settled**, as the design asks: in
 VoiceOver on macOS with Safari, a run of ten presses on a line gives one
@@ -670,21 +701,21 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
 `docs/specs/core/` for the commands:
 
 - the worker receives one request for a file, and none while a threshold
-  is dragged, typed, moved with the arrow keys, turned off, undone, or
-  the FILTER box ticked;
-- a drag gives one step of Undo, and the line and the box go back with
-  Undo;
-- a run of ten arrow presses gives one step of Undo, and Ctrl+Z pressed
-  within the second after it undoes that run;
-- while a run waits, the page's clock stopped, Undo is enabled and
-  named by the run's change, Redo is disabled, and a click of Undo with
-  the mouse undoes the run;
+  is dragged, typed, moved with the arrow keys or turned off, or the
+  FILTER box ticked;
+- the page has no button Undo nor Redo, before a file and after one;
+- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z in WebKit,
+  pressed on the heading, on a line while its run waits, the page's
+  clock stopped, and after, and in a box, change neither a threshold
+  nor the FILTER box;
+- a drag changes the threshold when the line is let go: the box follows
+  the line, which then removes some values and is out of the grey;
 - emptying the box, typing 1, and dragging the line of the MAF to the
   top of its axis at 1, each turn the filter off, with 1 in the box, the
   line at the top of the axis, both drawn in the grey, no shading, the
   line's value "1, keeps every variant", the box's description "This
-  filter removes nothing." and the hint "Undo: the MAF filter was
-  turned off"; Undo turns it on again at its value, out of the grey;
+  filter removes nothing."; a number typed turns it on again, out of
+  the grey;
 - on `panel.nei`, the missing rate of the variants at 0.1, the top of
   its axis, is on and drawn in the grey, with "0.1, keeps every variant
   of the plot" and "This filter removes no variant of the plot."; moved
@@ -697,28 +728,25 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
 - a threshold typed 0 is a filter at 0, with no sentence under its box;
 - from off, Down in the box turns the filter on one step below the top
   of the axis, not at 1 less a step, and the axis keeps its range;
-- a run of Down then Up on a line that is off leaves no step of Undo;
-- a crash of the worker while a run waits keeps the run, as a step of
-  Undo, and puts the focus on the heading;
+- a run of Down then Up on a line that is off leaves the filter off;
+- a crash of the worker while a run waits puts the focus on the
+  heading;
 - the expected heterozygosity has no line and no box;
 - the FILTER box is there for `panel.vcf.gz` and for `low_qual.nei`,
   on, once each is opened, and not for `panel.nei`, nor while
   `panel.vcf.gz` is being opened, nor after `no_ploidy.vcf.gz`, whose
   opening fails; turned off for `panel.vcf.gz`, it is
   still off when `low_qual.nei` is opened; a click gives no notice and
-  changes no plot, and Undo ticks it again;
+  changes no plot, and a second click ticks it again;
 - no change gives a notice: the page has no element of the notice's role;
-- Undo is disabled after the first file is opened, after a second and a
-  third, also when changes of the filters came before; a change of a
-  filter after an opening enables it;
 - the thresholds stay through the opening of another file;
 - after a Stop the plots read so far stay with the words of a Stop, and
   a threshold moved over them changes the project;
 - no plot changes with a threshold or the box.
 
 The screens: a threshold off, on with some values beyond it, on and
-grey at the top of an axis below 1, and after a Stop; the row of Undo
-and Redo, disabled and enabled; the FILTER box, ticked and unticked;
+grey at the top of an axis below 1, and after a Stop; the FILTER box,
+ticked and unticked;
 light and dark; 1280 and 320 pixels wide.
 
 In Vitest, beside those: whether a threshold is grey, at an edge of
@@ -726,7 +754,9 @@ the fine bins with a variant just above it and with none, and for the
 individuals at the largest value and just below it; a run that ends
 where it started sends no command; a press of a key on the line never makes a change by itself,
 only the end of its run does; the line's prop of the end of a drag is
-called at the release of a pointer and not at a key.
+called at the release of a pointer and not at a key; the store's
+history, a run of the keys as one step of Undo and an opening as a new
+history, kept for the row that the page no longer draws.
 
 ## Words and layout chosen by the session, to be changed when the owner tries the screen
 
@@ -758,9 +788,7 @@ called at the release of a pointer and not at a key.
   ones that failed are left out of what is downloaded or analysed.", and
   its steps of Undo in the box's own words, "the variants that failed
   their FILTER are kept" and "… are left out" (8 October 2026).
-- How the row of Undo and Redo looks and where in the row the buttons
-  stand; the spacing of
-  the FILTER box and its sentence.
+- The spacing of the FILTER box and its sentence.
 
 ## Open points
 
