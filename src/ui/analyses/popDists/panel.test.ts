@@ -141,7 +141,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", QuietObserver);
   applied = [];
-  status = { kind: "ready", key: KEY };
+  status = { kind: "ready", key: KEY, stopped: null };
   announced = [];
   listeners = new Set();
   project = sampleProject();
@@ -287,7 +287,7 @@ describe("PA5 the options of the distances, drawn by React", () => {
   test("PA5 D1 with no heatmap on the page, the measure changed is announced by nothing: locked, ready, running, removed, in error and above 200 populations", () => {
     const states: readonly AnalysisStatus<JobResult>[] = [
       { kind: "locked", reason: "The distances need two populations." },
-      { kind: "ready", key: KEY },
+      { kind: "ready", key: KEY, stopped: null },
       {
         kind: "running",
         key: KEY,

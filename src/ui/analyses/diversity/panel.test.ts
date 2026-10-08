@@ -154,7 +154,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", QuietObserver);
   applied = [];
-  status = { kind: "ready", key: KEY };
+  status = { kind: "ready", key: KEY, stopped: null };
   announced = [];
   listeners = new Set();
   // The sample project with no options of any analysis: its own options

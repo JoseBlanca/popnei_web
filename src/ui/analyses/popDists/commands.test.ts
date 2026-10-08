@@ -90,7 +90,7 @@ describe("PA5 D1 a change of the measure is announced only over a heatmap", () =
     expect(measureAnnouncement(done(201), "dest")).toBeNull();
     const states: readonly AnalysisStatus<JobResult>[] = [
       { kind: "locked", reason: "no" },
-      { kind: "ready", key: KEY },
+      { kind: "ready", key: KEY, stopped: null },
       { kind: "removed", key: KEY },
       {
         kind: "running",

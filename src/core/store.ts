@@ -252,8 +252,18 @@ export type AnalysisStatus<R> =
   /** The current notice lists it among the results removed; it can run
       again. */
   | { readonly kind: "removed"; readonly key: Key }
-  /** None of the above: it can run. */
-  | { readonly kind: "ready"; readonly key: Key };
+  /** None of the above: it can run. `stopped` holds the last result so
+      far of a calculation the user stopped under this key, which the
+      screen shows as what was read before the Stop, until a Run of the
+      analysis, a change of the load of the variants file, an opening or
+      a failure under the key forgets it; `null` when there is none, or
+      the calculation stopped had given none. Like a result so far, it is
+      never cached and has no warnings and no check numbers. */
+  | {
+      readonly kind: "ready";
+      readonly key: Key;
+      readonly stopped: { readonly soFar: R } | null;
+    };
 
 /** The writing of the filtered variants, the first of these whose
     condition holds (the store spec, "The writing of the filtered
@@ -495,7 +505,9 @@ export interface Store<R, F = never> {
       already in flight. */
   startRun(id: AnalysisId): readonly Run<R | Written<F>>[] | null;
   /** Stops the calculation in flight of an analysis, or its wait for the
-      statistics, if there is one. */
+      statistics, if there is one; the last result so far of the
+      calculation stays, as `stopped` of the state `ready` of its key,
+      and one that arrives after the Stop is passed over. */
   cancelRun(id: AnalysisId): void;
   /** Starts the writing of the filtered variants in `format`, in the
       states and with the handles of `startRun`: in `ready` or `saved`, or
@@ -754,6 +766,13 @@ export function createStore<J, R, F = never>(
   } | null = null;
   /** popnei's refusals, kept for the session. */
   const refusals = new Map<Key, AnalysisError>();
+  /** The last result so far of the calculation the user stopped of each
+      analysis, by its place, under the key it was stopped under, as the
+      state `ready` of that key gives it, the same object. */
+  const stoppedSoFar = new Map<
+    number,
+    { readonly key: Key; readonly stopped: { readonly soFar: R } }
+  >();
   /** The other failures, kept until a change of the user after which the
       project gives their key neither to an analysis nor to the writing,
       or an opening. */
@@ -1172,9 +1191,15 @@ export function createStore<J, R, F = never>(
         return { kind: "locked", reason };
       }
     }
-    return notice?.removed.includes(id) === true
-      ? { kind: "removed", key }
-      : { kind: "ready", key };
+    if (notice?.removed.includes(id) === true) {
+      return { kind: "removed", key };
+    }
+    const kept = stoppedSoFar.get(index);
+    return {
+      kind: "ready",
+      key,
+      stopped: kept?.key === key ? kept.stopped : null,
+    };
   };
 
   /** The state of the writing, from the key the current project gives
@@ -1604,6 +1629,7 @@ export function createStore<J, R, F = never>(
     ) {
       reopening = next.present.project.variants?.fileId ?? null;
       unreadable = null;
+      stoppedSoFar.clear();
       // The calculation worker is started again for the new load, so no
       // calculation of the old one can wait for an undo.
       const inFlight = [...requests.values()].filter((r) => !r.stopping);
@@ -1698,13 +1724,24 @@ export function createStore<J, R, F = never>(
   };
 
   /** The result so far of the request `runId`, passed over when the
-      request is no longer in flight; kept in the request alone, which
-      its outcome or its Stop drops, so that it is never cached. */
+      request is no longer in flight or is being stopped, so that the
+      plots do not move after the user pressed Stop; kept in the request
+      alone, which its outcome drops, so that it is never cached. */
   const soFarred = (runId: number, soFar: R): void => {
     const request = requests.get(runId);
-    if (request !== undefined) {
+    if (request !== undefined && !request.stopping) {
       requests.set(runId, { ...request, soFar });
       changed();
+    }
+  };
+
+  /** Forgets the result so far kept after a Stop under `key`: a failure
+      is kept under it. */
+  const forgetStoppedUnder = (key: Key): void => {
+    for (const [index, kept] of [...stoppedSoFar]) {
+      if (kept.key === key) {
+        stoppedSoFar.delete(index);
+      }
     }
   };
 
@@ -2081,6 +2118,9 @@ export function createStore<J, R, F = never>(
         return;
       }
       case "failed":
+        // What was read before a refusal of the file may be what the
+        // refusal is about.
+        forgetStoppedUnder(request.key);
         if (outcome.error.kind === "popnei") {
           refusals.set(request.key, {
             kind: "refused",
@@ -2285,6 +2325,18 @@ export function createStore<J, R, F = never>(
         isCurrent(request, keys) &&
         !request.stopping
       ) {
+        // The user's Stop keeps the last result so far, which the screen
+        // goes on showing; none when the request had given none.
+        if (index !== null) {
+          if (request.soFar === null) {
+            stoppedSoFar.delete(index);
+          } else {
+            stoppedSoFar.set(index, {
+              key: request.key,
+              stopped: { soFar: request.soFar },
+            });
+          }
+        }
         stop(request);
         changed();
         return;
@@ -2332,6 +2384,7 @@ export function createStore<J, R, F = never>(
       keysFor(opened.present.project, popneiVersion);
       stopEverything();
       failures.clear();
+      stoppedSoFar.clear();
       unreadable = null;
       written = null;
       dropped = false;
@@ -2371,6 +2424,7 @@ export function createStore<J, R, F = never>(
         keys,
         () => {
           runAgain(id);
+          stoppedSoFar.delete(index);
         },
       );
     },
@@ -2522,6 +2576,7 @@ export function createStore<J, R, F = never>(
         // A defect of our code, which the analysis shows until the next
         // change, rather than ready with nothing said.
         keepWaited();
+        forgetStoppedUnder(request.key);
         failures.set(request.key, {
           kind: "failed",
           error: {
@@ -2726,7 +2781,7 @@ function sameStatus<R>(a: AnalysisStatus<R>, b: AnalysisStatus<R>): boolean {
     case "removed":
       return b.kind === "removed" && a.key === b.key;
     case "ready":
-      return b.kind === "ready" && a.key === b.key;
+      return b.kind === "ready" && a.key === b.key && a.stopped === b.stopped;
   }
 }
 

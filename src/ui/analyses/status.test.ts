@@ -21,7 +21,11 @@ function done(result: JobResult): AnalysisStatus<JobResult> {
   return { kind: "done", key: KEY, result, warnings: [], check: null };
 }
 
-const READY: AnalysisStatus<JobResult> = { kind: "ready", key: KEY };
+const READY: AnalysisStatus<JobResult> = {
+  kind: "ready",
+  key: KEY,
+  stopped: null,
+};
 
 function stopping(stopped: Notice["stopped"]): Notice {
   return {

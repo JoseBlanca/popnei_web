@@ -247,7 +247,7 @@ function running(key: Key, runId: number): AnalysisStatus<TestDefResult> {
 }
 
 function ready(key: Key): AnalysisStatus<TestDefResult> {
-  return { kind: "ready", key };
+  return { kind: "ready", key, stopped: null };
 }
 
 function removed(key: Key): AnalysisStatus<TestDefResult> {

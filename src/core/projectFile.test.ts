@@ -94,7 +94,7 @@ function stateOf(
     popneiVersion,
     analyses: POPGEN_DEFS.map((def) => ({
       id: def.id,
-      status: statuses[def.id] ?? { kind: "ready", key: A_KEY },
+      status: statuses[def.id] ?? { kind: "ready", key: A_KEY, stopped: null },
     })),
     runs: [],
     notice: null,
@@ -1374,7 +1374,10 @@ describe("WS6 D2 the opening", () => {
       popneiVersion: "0.1.0",
       analyses: POPGEN_ANALYSES.map((def) => ({
         id: def.id,
-        status: def.id === "diversity" ? status : { kind: "ready", key: A_KEY },
+        status:
+          def.id === "diversity"
+            ? status
+            : { kind: "ready", key: A_KEY, stopped: null },
       })),
       runs: [],
       notice: null,
@@ -1388,7 +1391,7 @@ describe("WS6 D2 the opening", () => {
       warnings: [],
       check: null,
     });
-    const kept = stateWith({ kind: "ready", key: A_KEY });
+    const kept = stateWith({ kind: "ready", key: A_KEY, stopped: null });
     for (const state of [done, kept]) {
       const text = writeProjectFile(
         state,
@@ -2236,7 +2239,9 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
         typeof drawnOne === "string"
           ? drawnOne === "locked"
             ? { kind: "locked", reason: "Load a variants file." }
-            : { kind: drawnOne, key: A_KEY }
+            : drawnOne === "ready"
+              ? { kind: "ready", key: A_KEY, stopped: null }
+              : { kind: drawnOne, key: A_KEY }
           : canRun
             ? {
                 kind: "done",
@@ -2245,7 +2250,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
                 warnings: [],
                 check: null,
               }
-            : { kind: "ready", key: A_KEY };
+            : { kind: "ready", key: A_KEY, stopped: null };
       return { id: def.id, status };
     });
     const anyDone = views.some((view) => view.status.kind === "done");
@@ -2484,7 +2489,7 @@ describe("WS6 D4 the properties of the project file", () => {
           project: opening.value,
           analyses: TEST_DEFS.map((def) => ({
             id: def.id,
-            status: { kind: "ready", key: A_KEY },
+            status: { kind: "ready", key: A_KEY, stopped: null },
           })),
         });
         expect(savedText(again)).toBe(text);
@@ -3854,7 +3859,7 @@ describe("SF2 D3 an opened project and the variants file given again give the sa
       popneiVersion: "0.2.2",
       analyses: DEFS.map((def) => ({
         id: def.id,
-        status: { kind: "ready", key: A_KEY },
+        status: { kind: "ready", key: A_KEY, stopped: null },
       })),
       runs: [],
       notice: null,

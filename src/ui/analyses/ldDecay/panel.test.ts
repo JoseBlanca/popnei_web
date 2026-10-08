@@ -142,7 +142,7 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(375);
   applied = [];
-  status = { kind: "ready", key: KEY };
+  status = { kind: "ready", key: KEY, stopped: null };
   announced = [];
   listeners = new Set();
   project = sampleProject();

@@ -188,7 +188,10 @@ describe("VS5 D1 apps.ts", () => {
     expect(
       variantsKept(
         stateWith([
-          { id: "filterCounts", status: { kind: "ready", key: KEY } },
+          {
+            id: "filterCounts",
+            status: { kind: "ready", key: KEY, stopped: null },
+          },
         ]),
       ),
     ).toBeNull();

@@ -100,7 +100,7 @@ describe("PA5 D1 the words of the shell for the distances between populations", 
     };
     expect(
       announcementsOf(
-        distancesState({ kind: "ready", key: KEY_D }, []),
+        distancesState({ kind: "ready", key: KEY_D, stopped: null }, []),
         distancesState(
           {
             kind: "running",
@@ -165,7 +165,11 @@ describe("PA8 D1 the words of the shell for the LD decay", () => {
     };
     expect(
       announcementsOf(
-        distancesState({ kind: "ready", key: KEY_L }, [], "ldDecay"),
+        distancesState(
+          { kind: "ready", key: KEY_L, stopped: null },
+          [],
+          "ldDecay",
+        ),
         distancesState(
           {
             kind: "running",

@@ -328,7 +328,7 @@ describe("WP4 D1 the state with no calculation", () => {
         kind: "locked",
         reason: "Load a metadata file in the Individuals step.",
       },
-      { kind: "ready", key: expectedKey(store, vars, "0.1.0") },
+      { kind: "ready", key: expectedKey(store, vars, "0.1.0"), stopped: null },
     ]);
     expect(store.getState().popneiVersion).toBe("0.1.0");
     expect(sent).toHaveLength(0);
@@ -356,6 +356,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(statuses(store)[0]).toStrictEqual({
       kind: "ready",
       key: expectedKey(store, pops, "0.1.0"),
+      stopped: null,
     });
   });
 
@@ -380,8 +381,8 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(store.getState().popneiVersion).toBe("0.2.0");
     const after = statuses(store);
     expect(after).toStrictEqual([
-      { kind: "ready", key: expectedKey(store, pops, "0.2.0") },
-      { kind: "ready", key: expectedKey(store, vars, "0.2.0") },
+      { kind: "ready", key: expectedKey(store, pops, "0.2.0"), stopped: null },
+      { kind: "ready", key: expectedKey(store, vars, "0.2.0"), stopped: null },
     ]);
     expect(after[0]).not.toStrictEqual(before[0]);
     expect(after[1]).not.toStrictEqual(before[1]);
@@ -592,6 +593,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(statuses(store)[1]).toStrictEqual({
       kind: "ready",
       key: expectedKey(store, vars, "0.1.0"),
+      stopped: null,
     });
     expect(store.getState().undo).toBe("a variants file was loaded");
     store.undo();
@@ -709,6 +711,7 @@ describe("WP4 D1 the state with no calculation", () => {
     expect(statuses(store)[1]).toStrictEqual({
       kind: "ready",
       key: expectedKey(store, vars, "0.1.0"),
+      stopped: null,
     });
     expect(store.getState().undo).toBeNull();
   });
@@ -1125,14 +1128,22 @@ describe("WP4 D2 the calculations", () => {
     expect(statuses(store)[1]?.kind).toBe("running");
     store.cancelRun("vars");
     store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     // A third, failed, then a command and its undo.
     store.startRun("vars");
     store.runEnded(sentAt(sent, 2).run.id, { kind: "failed", error });
     expect(statuses(store)[1]?.kind).toBe("error");
     store.apply("the MAF filter changed", maf(0.9));
     store.undo();
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
   });
 
   test("a variants file that could not be read again is kept under its load: every analysis that can run shows it, after a command and its undo too, and none can start until the load changes", () => {
@@ -1231,19 +1242,31 @@ describe("WP4 D2 the calculations", () => {
     const request = sentAt(sent, 0);
     store.cancelRun("vars");
     expect(request.cancels()).toBe(1);
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     expect(store.getState().runs).toMatchObject([
       { runId: request.run.id, stopping: true, current: true },
     ]);
     store.cancelRun("vars");
     expect(request.cancels()).toBe(1);
     store.runEnded(request.run.id, { kind: "cancelled" });
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     expect(store.getState().runs).toStrictEqual([]);
     // A restart of the worker ends a request cancelled with no cancelRun.
     store.startRun("vars");
     store.runEnded(sentAt(sent, 1).run.id, { kind: "cancelled" });
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
   });
 
   test("a crash of the worker shows the failure, and the analysis can run again", () => {
@@ -1587,7 +1610,11 @@ describe("WP4 D2 the calculations", () => {
       faulty.part = "none";
       store.apply("the MAF filter changed", maf(0.9));
       store.undo();
-      expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+      expect(statuses(store)[1]).toStrictEqual({
+        kind: "ready",
+        key,
+        stopped: null,
+      });
     },
   );
 
@@ -1702,7 +1729,11 @@ describe("WP4 D2 the calculations", () => {
     const key = keyAt(store, 0);
     expect(statuses(store)[0]).toStrictEqual({ kind: "removed", key });
     store.dismissNotice();
-    expect(statuses(store)[0]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[0]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     const again = store.startRun("pops");
     expect(again).toStrictEqual([sentAt(sent, 2).run]);
     expect(sentAt(sent, 2).key).toBe(key);
@@ -1755,7 +1786,11 @@ describe("WP4 D3 the notice", () => {
       reason: "Load a metadata file in the Individuals step.",
     });
     const key = keyAt(store, 1);
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     store.startRun("vars");
     const request = sentAt(sent, 0);
     expect(statuses(store)[1]?.kind).toBe("running");
@@ -2852,7 +2887,12 @@ type Step =
       readonly numVars: number | null;
     }
   | { readonly kind: "progress"; readonly which: number }
-  | { readonly kind: "dismissNotice" };
+  | { readonly kind: "dismissNotice" }
+  | {
+      readonly kind: "soFar";
+      readonly which: number;
+      readonly numVars: number;
+    };
 
 /** How a drawn request ends: done, cancelled, or failed of a kind. */
 type OutcomeKind = "done" | "cancelled" | RunError["kind"];
@@ -3286,6 +3326,15 @@ function modelledStore(): {
         stopNamed();
         store.dismissNotice();
         break;
+      case "soFar": {
+        // A result so far of a request not ended, one being stopped among
+        // them, which the store passes over.
+        const open = inFlight();
+        open[s.which % Math.max(open.length, 1)]?.sent.soFar(
+          varsResult(s.numVars),
+        );
+        break;
+      }
     }
     const after = store.getState();
     if (
@@ -3699,7 +3748,11 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
   test("with a threshold of 0.2, the Run calculates the statistics first, waits for them, and then sends its request with a, b and d", () => {
     const { store, analyses, sent, lists } = storeOfFive([MISSING_AT_02]);
     const key = keyOfNow(store, analyses[0]);
-    expect(statusIn(store, "pops")).toStrictEqual({ kind: "ready", key });
+    expect(statusIn(store, "pops")).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
     expect(store.getState().individualsKept?.list).toStrictEqual({
       kind: "needsStatistics",
     });
@@ -3763,6 +3816,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(statusIn(store, "pops")).toStrictEqual({
       kind: "ready",
       key: keyOfNow(store, analyses[0]),
+      stopped: null,
     });
     expect(store.runEnded(stats.run.id, { kind: "cancelled" })).toStrictEqual(
       [],
@@ -3814,6 +3868,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(statusIn(store, "vars")).toStrictEqual({
       kind: "ready",
       key: keyOfNow(store, analyses[1]),
+      stopped: null,
     });
     expect(store.startRun("pops")).toBeNull();
   });
@@ -3876,6 +3931,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(statusIn(store, "vars")).toStrictEqual({
       kind: "ready",
       key: keyOfNow(store, analyses[1]),
+      stopped: null,
     });
     expect(store.startRun("pops")).toBeNull();
     expect(sent).toHaveLength(1);
@@ -3907,6 +3963,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
     expect(statusIn(store, "pops")).toStrictEqual({
       kind: "ready",
       key: keyOfNow(store, analyses[0]),
+      stopped: null,
     });
     expect(statusIn(store, "stats").kind).toBe("ready");
     const handles = store.startRun("pops");
@@ -4669,7 +4726,11 @@ describe("IP2 D2 the store with the individuals first", () => {
       { variants: true, individuals: false },
     );
     const key = keyOfNow(store, analyses[3]);
-    expect(statusIn(store, "counts")).toStrictEqual({ kind: "ready", key });
+    expect(statusIn(store, "counts")).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
 
     const handles = store.startRun("counts");
     const stats = sentAt(sent, 0);
@@ -6929,22 +6990,28 @@ describe("live-stats 2 the result so far of a run", () => {
     expect(done?.kind === "done" && done.result).toBe(result);
   });
 
-  test("a Stop drops the result so far, and the run after it starts with none", () => {
+  test("a Stop keeps the last result so far in ready, not done, and the run after it starts with none", () => {
     const { store, sent } = storeWithVariantsRead();
     store.startRun("vars");
     const request = sentAt(sent, 0);
-    request.soFar(varsResult(500));
+    const last = varsResult(500);
+    request.soFar(last);
     store.cancelRun("vars");
     // ready under the key, not done: the result so far went to no cache,
     // since a key whose result is cached is done.
-    const stopped = { kind: "ready", key: request.key };
-    expect(statuses(store)[1]).toStrictEqual(stopped);
+    const stopped = statuses(store)[1];
+    expect(stopped).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: { soFar: last },
+    });
+    expect(stopped?.kind === "ready" && stopped.stopped?.soFar).toBe(last);
     // The worker client gives nothing of a request cancelled; a result so
-    // far that came anyway before its outcome is not shown.
+    // far that came anyway before its outcome is passed over.
     request.soFar(varsResult(600));
-    expect(statuses(store)[1]).toStrictEqual(stopped);
+    expect(statuses(store)[1]).toBe(stopped);
     store.runEnded(request.run.id, { kind: "cancelled" });
-    expect(statuses(store)[1]).toStrictEqual(stopped);
+    expect(statuses(store)[1]).toBe(stopped);
     store.startRun("vars");
     expect(statuses(store)[1]).toMatchObject({ kind: "running", soFar: null });
     expect(sentAt(sent, 1).run.id).not.toBe(request.run.id);
@@ -7446,7 +7513,11 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
     store.apply("the MAF filter changed", maf(0.9));
     expect(statuses(store)[1]).toMatchObject({ kind: "ready" });
     store.undo();
-    expect(statuses(store)[1]).toMatchObject({ kind: "ready", key });
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
 
     store.startRun("vars");
     store.runEnded(sentAt(sent, 1).run.id, { kind: "failed", error: CRASH });
@@ -7483,7 +7554,11 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
 
     store.open(store.getState().project);
 
-    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key,
+      stopped: null,
+    });
   });
 
   test("a failure of the writing stays after a change that leaves the key of the writing as it was, and goes after one that changes it", () => {
@@ -7503,5 +7578,453 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
     expect(writeIn(store)).toMatchObject({ kind: "ready" });
     store.undo();
     expect(writeIn(store)).toMatchObject({ kind: "ready" });
+  });
+});
+
+describe("SF5 D3 the last result so far kept after a Stop", () => {
+  /** The summary of `storeWithSummary` running with a result so far,
+      then stopped by the user; `last` is that result so far. */
+  function stoppedSummary(): ReturnType<typeof storeWithSummary> & {
+    readonly request: SentRequest;
+    readonly last: TestResult;
+  } {
+    const made = storeWithSummary(true);
+    made.store.startRun("summary");
+    const request = sentAt(made.sent, 0);
+    request.soFar(varsResult(400));
+    const last = varsResult(500);
+    request.soFar(last);
+    made.store.cancelRun("summary");
+    return { ...made, request, last };
+  }
+
+  test("cancelRun keeps the last result so far, the same object, in ready; one given after it and before the outcome cancelled leaves it as it was", () => {
+    const { store, request, last } = stoppedSummary();
+    const stopped = statuses(store)[1];
+    expect(stopped).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: { soFar: last },
+    });
+    expect(stopped?.kind === "ready" && stopped.stopped?.soFar).toBe(last);
+    expect(request.cancels()).toBe(1);
+
+    request.soFar(varsResult(600));
+    expect(statuses(store)[1]).toBe(stopped);
+    store.runEnded(request.run.id, { kind: "cancelled" });
+    expect(statuses(store)[1]).toBe(stopped);
+  });
+
+  test("a request that had given no result so far keeps nothing", () => {
+    const { store, sent } = storeWithSummary(true);
+    store.startRun("summary");
+    store.cancelRun("summary");
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: sentAt(sent, 0).key,
+      stopped: null,
+    });
+  });
+
+  test("a change of a filter keeps it, with the notice of the filter; startRun forgets it", () => {
+    const { store, sent, request } = stoppedSummary();
+    const stopped = statuses(store)[1];
+    store.runEnded(request.run.id, { kind: "cancelled" });
+
+    store.apply("the MAF filter changed", mafThreshold(0.3));
+    expect(statuses(store)[1]).toBe(stopped);
+    expect(store.getState().notice?.filtersChanged).toBe(true);
+    store.undo();
+    expect(statuses(store)[1]).toBe(stopped);
+
+    store.startRun("summary");
+    const again = sentAt(sent, 1);
+    store.cancelRun("summary");
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: again.key,
+      stopped: null,
+    });
+  });
+
+  test("a new variants file forgets it, and an undo back to the old file does not bring it back", () => {
+    const { store, request } = stoppedSummary();
+    store.runEnded(request.run.id, { kind: "cancelled" });
+
+    store.apply("a variants file was loaded", loadPanel(OTHER_VARIANTS_ID));
+    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
+    expect(statuses(store)[1]).toMatchObject({ kind: "ready", stopped: null });
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: null,
+    });
+  });
+
+  test("an opening forgets it, its key the same", () => {
+    const { store, request } = stoppedSummary();
+    store.runEnded(request.run.id, { kind: "cancelled" });
+
+    store.open(store.getState().project);
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: null,
+    });
+  });
+
+  test("a request being stopped that ends failed forgets it, and the state is error", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    request.soFar(varsResult(500));
+    store.cancelRun("vars");
+    const error = { kind: "workerFailed", message: "out of memory" } as const;
+
+    store.runEnded(request.run.id, { kind: "failed", error });
+
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error },
+    });
+    // Forgotten, not hidden: once a change has left the failure behind,
+    // its undo shows the key ready with nothing kept.
+    store.apply("the MAF filter changed", maf(0.8));
+    store.undo();
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: null,
+    });
+  });
+
+  test("Start again forgets it, whatever becomes of the new run: one left behind and stopped by the store, then undone, keeps nothing", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const first = sentAt(sent, 0);
+    first.soFar(varsResult(500));
+    store.cancelRun("vars");
+    store.runEnded(first.run.id, { kind: "cancelled" });
+
+    store.startRun("vars");
+    const second = sentAt(sent, 1);
+    store.apply("the MAF filter changed", maf(0.8));
+    store.dismissNotice();
+    store.runEnded(second.run.id, { kind: "cancelled" });
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: first.key,
+      stopped: null,
+    });
+  });
+
+  test("a request being stopped that ends done shows its result, done, never the result so far", () => {
+    const { store, request } = stoppedSummary();
+    const result = varsResult(1000);
+
+    store.runEnded(request.run.id, doneWith(request, result));
+
+    const done = statuses(store)[1];
+    expect(done?.kind === "done" && done.result).toBe(result);
+  });
+
+  test("it is shown only while the project gives its key: a change of the key hides it, and its undo shows it again", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    const last = varsResult(500);
+    request.soFar(last);
+    store.cancelRun("vars");
+    store.runEnded(request.run.id, { kind: "cancelled" });
+
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(statuses(store)[1]).toMatchObject({ kind: "ready", stopped: null });
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: { soFar: last },
+    });
+  });
+
+  test("a calculation the store stopped, one a change left behind, keeps nothing", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    request.soFar(varsResult(500));
+    store.apply("the MAF filter changed", maf(0.8));
+    store.dismissNotice();
+    expect(request.cancels()).toBe(1);
+    request.soFar(varsResult(600));
+    store.runEnded(request.run.id, { kind: "cancelled" });
+
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: null,
+    });
+  });
+});
+
+/** The steps of the properties of SF5 D4: those of the store, a result
+    so far of a request in flight; a group that starts a calculation,
+    gives two results so far, stops it and gives one more, so that a
+    Stop with a result so far is drawn often; a group that stops one
+    with a result so far, then starts it again and has the new run left
+    behind and stopped, or loads another variants file, and undoes the
+    change; and a group that starts a
+    calculation, ends one in flight with a failure that is not popnei's,
+    and makes a command and its undo, so that a change after such a
+    failure is drawn often. */
+const stepsWithSoFar: fc.Arbitrary<readonly Step[]> = fc
+  .array(
+    fc.oneof(
+      { arbitrary: step.map((s): readonly Step[] => [s]), weight: 10 },
+      {
+        arbitrary: fc
+          .record({ which: fc.nat(), numVars: fc.nat({ max: 5000 }) })
+          .map(({ which, numVars }): readonly Step[] => [
+            { kind: "soFar", which, numVars },
+          ]),
+        weight: 3,
+      },
+      {
+        arbitrary: fc
+          .record({
+            analysis: fc.constantFrom<ModelAnalysis>("pops", "vars", "stats"),
+            which: fc.nat(),
+          })
+          .map(({ analysis, which }): readonly Step[] => [
+            { kind: "startRun", analysis },
+            { kind: "soFar", which, numVars: 100 },
+            { kind: "soFar", which: which + 1, numVars: 200 },
+            { kind: "cancelRun", analysis },
+            { kind: "soFar", which, numVars: 300 },
+          ]),
+        weight: 2,
+      },
+      {
+        arbitrary: fc
+          .record({
+            analysis: fc.constantFrom<ModelAnalysis>("pops", "vars", "stats"),
+            which: fc.nat(),
+            command: drawnCommand,
+            again: fc.boolean(),
+          })
+          .map(({ analysis, which, command, again }): readonly Step[] => [
+            { kind: "startRun", analysis },
+            { kind: "soFar", which, numVars: 100 },
+            { kind: "cancelRun", analysis },
+            ...(again
+              ? // Start again, its run left behind and stopped by the
+                // store, and the change undone.
+                [
+                  { kind: "startRun", analysis } as const,
+                  { kind: "command", command } as const,
+                  { kind: "dismissNotice" } as const,
+                ]
+              : // Another variants file, and its undo.
+                [
+                  {
+                    kind: "command",
+                    command: {
+                      name: "loadVariants",
+                      bind: () => loadPanel(OTHER_VARIANTS_ID),
+                    },
+                  } as const,
+                  { kind: "read", ok: true } as const,
+                ]),
+            { kind: "undo" },
+          ]),
+        weight: 2,
+      },
+      {
+        arbitrary: fc
+          .record({
+            analysis: fc.constantFrom<ModelAnalysis>("pops", "vars", "stats"),
+            which: fc.nat(),
+            outcome: fc.constantFrom<OutcomeKind>(
+              "workerFailed",
+              "couldNotStart",
+              "defect",
+            ),
+            command: drawnCommand,
+          })
+          .map(({ analysis, which, outcome, command }): readonly Step[] => [
+            { kind: "startRun", analysis },
+            { kind: "end", which, outcome, numVars: null },
+            { kind: "command", command },
+            { kind: "undo" },
+          ]),
+        weight: 2,
+      },
+      { arbitrary: twoUndos, weight: 1 },
+      { arbitrary: undoToNoFile, weight: 1 },
+    ),
+    { maxLength: 30, size: "max" },
+  )
+  .map((groups) => groups.flat());
+
+/** The analyses of the modelled store, in the order of its definitions. */
+const MODEL_ANALYSES: readonly ModelAnalysis[] = ["pops", "vars", "stats"];
+
+describe("SF5 D4 the properties of the failures and of the results so far kept after a Stop", () => {
+  test("a failure that is not popnei's is in a state error only under a key no change has left behind since it came, and a change that leaves its key as it was keeps it", () => {
+    // The steps where a change left the key of a failure as it was and
+    // the failure stayed, so that the second clause was reached.
+    let keptThrough = 0;
+    fc.assert(
+      fc.property(stepsWithSoFar, (drawn) => {
+        const made = modelledStore();
+        const { store, analyses, model } = made;
+        // The keys of the failures that are not popnei's, as the rule
+        // keeps them; a startRun may forget one sooner.
+        const failed = new Set<string>();
+        for (const s of drawn) {
+          const before = store.getState();
+          const ended = new Set(model.filter((r) => r.ended));
+          made.run(s);
+          const after = store.getState();
+          if (s.kind === "open") {
+            failed.clear();
+          }
+          if (s.kind === "end") {
+            const r = model.find((one) => one.ended && !ended.has(one));
+            if (
+              r !== undefined &&
+              s.outcome !== "done" &&
+              s.outcome !== "cancelled" &&
+              s.outcome !== "popnei"
+            ) {
+              failed.add(r.sent.key);
+            }
+          }
+          const changed =
+            (s.kind === "command" || s.kind === "undo" || s.kind === "redo") &&
+            after.project !== before.project;
+          if (changed) {
+            const given = new Set(
+              MODEL_ANALYSES.map((a) => keyGiven(store, analyses, a)),
+            );
+            for (const key of [...failed]) {
+              if (!given.has(key)) failed.delete(key);
+            }
+          }
+          for (const [index, view] of after.analyses.entries()) {
+            const status = view.status;
+            if (
+              status.kind === "error" &&
+              status.error.kind === "failed" &&
+              !status.ofStatistics
+            ) {
+              expect(failed.has(status.key)).toBe(true);
+            }
+            const was = before.analyses[index]?.status;
+            if (
+              changed &&
+              was?.kind === "error" &&
+              was.error.kind === "failed" &&
+              !was.ofStatistics &&
+              MODEL_ANALYSES[index] !== undefined &&
+              keyGiven(store, analyses, MODEL_ANALYSES[index]) === was.key
+            ) {
+              expect(status).toBe(was);
+              keptThrough += 1;
+            }
+          }
+        }
+      }),
+    );
+    expect(keptThrough).toBeGreaterThan(20);
+  });
+
+  test("a result so far is in stopped only under the key the project gives, the last one its request gave before the cancelRun of the analysis, until its next startRun, a change of the load, an opening or a failure under its key", () => {
+    // The states ready with a result so far kept, so that the rule was
+    // reached.
+    let shown = 0;
+    fc.assert(
+      fc.property(stepsWithSoFar, (drawn) => {
+        const made = modelledStore();
+        const { store, model } = made;
+        const kept = new Map<
+          ModelAnalysis,
+          { readonly key: string; readonly soFar: TestResult }
+        >();
+        for (const s of drawn) {
+          const before = store.getState();
+          const ended = new Set(model.filter((r) => r.ended));
+          const handles = model.length;
+          made.run(s);
+          const after = store.getState();
+          switch (s.kind) {
+            case "cancelRun": {
+              const was = before.analyses[MODEL_INDEX[s.analysis]]?.status;
+              if (was?.kind === "running" && !was.waitsForStatistics) {
+                if (was.soFar === null) {
+                  kept.delete(s.analysis);
+                } else {
+                  kept.set(s.analysis, { key: was.key, soFar: was.soFar });
+                }
+              }
+              break;
+            }
+            case "startRun": {
+              const was = before.analyses[MODEL_INDEX[s.analysis]]?.status;
+              const started =
+                model.length > handles ||
+                (after.analyses[MODEL_INDEX[s.analysis]]?.status.kind ===
+                  "running" &&
+                  was?.kind !== "running");
+              if (started) kept.delete(s.analysis);
+              break;
+            }
+            case "open":
+              kept.clear();
+              break;
+            case "command":
+            case "undo":
+            case "redo":
+              if (!sameLoadOf(before.project, after.project)) kept.clear();
+              break;
+            case "end": {
+              const r = model.find((one) => one.ended && !ended.has(one));
+              if (
+                r !== undefined &&
+                s.outcome !== "done" &&
+                s.outcome !== "cancelled"
+              ) {
+                for (const [analysis, one] of [...kept]) {
+                  if (one.key === r.sent.key) kept.delete(analysis);
+                }
+              }
+              break;
+            }
+            case "popneiReady":
+            case "read":
+            case "progress":
+            case "dismissNotice":
+            case "soFar":
+              break;
+          }
+          for (const analysis of MODEL_ANALYSES) {
+            const status = after.analyses[MODEL_INDEX[analysis]]?.status;
+            if (status?.kind !== "ready") continue;
+            const one = kept.get(analysis);
+            const expected = one?.key === status.key ? one.soFar : null;
+            expect(status.stopped?.soFar ?? null).toBe(expected);
+            if (expected !== null) shown += 1;
+          }
+        }
+      }),
+    );
+    expect(shown).toBeGreaterThan(50);
   });
 });

@@ -361,7 +361,7 @@ describe("live-stats 3 the button of the chain", () => {
           check: null,
         },
         { kind: "locked", reason: "a .nei file" },
-        { kind: "ready", key: KEY },
+        { kind: "ready", key: KEY, stopped: null },
       ] satisfies readonly AnalysisStatus<JobResult>[]),
     ).toBe(true);
   });
@@ -441,7 +441,11 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
   });
 
   test("stopped, about to start, failed or locked: the words of a VCF, nothing for a .nei file", () => {
-    const ready: AnalysisStatus<JobResult> = { kind: "ready", key: KEY };
+    const ready: AnalysisStatus<JobResult> = {
+      kind: "ready",
+      key: KEY,
+      stopped: null,
+    };
     const error: AnalysisStatus<JobResult> = {
       kind: "error",
       key: KEY,
