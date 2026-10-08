@@ -9,7 +9,6 @@
 
 import { writtenName } from "../../core/fileNames.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
-import { keptNoneReason } from "../../core/individualsKept.ts";
 import { noVariantForCertain } from "../../core/noVariantKept.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisStatus, Store, WriteStatus } from "../../core/store.ts";
@@ -83,15 +82,14 @@ export function downloadPlace(
     );
   }
   switch (write.kind) {
-    case "locked": {
-      const reason = keptNoneReason(p, kept, null);
-      if (reason === null) {
+    case "locked":
+      // The store's words, made with the step of popgen2.html, none.
+      if (!keepsNone(kept)) {
         throw new Error(
           `popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: ${write.reason}`,
         );
       }
-      return { kind: "sentence", text: reason };
-    }
+      return { kind: "sentence", text: write.reason };
     case "saved":
     case "done":
       return {
@@ -109,6 +107,12 @@ export function downloadPlace(
     case "error":
       return { kind: "enabled" };
   }
+}
+
+/** Whether the filters of the individuals keep none, the one lock of the
+    write once the one pass is finished on this page. */
+function keepsNone(kept: IndividualsKept | null): boolean {
+  return kept?.list.kind === "known" && kept.list.individuals?.length === 0;
 }
 
 /** The result of the one pass, a defect for another. */

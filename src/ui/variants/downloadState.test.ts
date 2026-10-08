@@ -296,6 +296,48 @@ describe("DL6 D3 what takes the place of the button", () => {
       text: "The filters of individuals keep none of the 2 individuals of panel.vcf.gz. Loosen them.",
     });
   });
+
+  test("the words of a lock are the store's reason, not worked out again", () => {
+    const { store, jobs } = storeOfPanel();
+    store.apply("the missing data filter of the individuals changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.05),
+    );
+    const result = pass(false);
+    finishPass(store, jobs, {
+      ...result,
+      perIndividual: {
+        ...result.perIndividual,
+        missingGtRate: Float64Array.of(0.1, 0.9),
+      },
+    });
+    const state = store.getState();
+
+    expect(
+      downloadPlace(
+        summaryStatus(state),
+        { kind: "locked", reason: "The store's words." },
+        state.project,
+        state.individualsKept,
+      ),
+    ).toStrictEqual({ kind: "sentence", text: "The store's words." });
+  });
+
+  test("a lock while the filters of individuals keep some is a defect", () => {
+    const { store, jobs } = storeOfPanel();
+    finishPass(store, jobs, pass(false));
+    const state = store.getState();
+
+    expect(() =>
+      downloadPlace(
+        summaryStatus(state),
+        { kind: "locked", reason: "Open a project first." },
+        state.project,
+        state.individualsKept,
+      ),
+    ).toThrow(
+      "popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: Open a project first.",
+    );
+  });
 });
 
 describe("DL6 D3 the end of a write, and Save it again", () => {
