@@ -44,7 +44,7 @@ interface Calls {
 
 /** Draws a line over 0 to 1 by 0.01 at `value`, as the screen does: the
     value given back on each move. */
-function draw(calls: Calls, value = 0.5): void {
+function draw(calls: Calls, value = 0.5, muted = false): void {
   const render = (shown: number): void => {
     root.render(
       createElement(
@@ -57,7 +57,7 @@ function draw(calls: Calls, value = 0.5): void {
           step: 0.01,
           value: shown,
           valueText: String(shown),
-          muted: false,
+          muted,
           onChange: (moved, by) => {
             calls.moves.push([moved, by]);
             render(moved);
@@ -186,5 +186,19 @@ describe("SF9 D2 the line's end of a drag", () => {
       0.51, 0.5, 0.51, 0.5, 0.6, 0.5, 0, 1,
     ]);
     expect(calls.dragEnds).toEqual([]);
+  });
+});
+
+describe("SF9 D4 the grey of the line", () => {
+  test("muted marks the line and its handle with data-muted, which its styles draw in the grey, dotted and hollow; not muted, no mark", () => {
+    const calls: Calls = { moves: [], dragEnds: [] };
+    draw(calls, 0.5, true);
+    expect(inputOf().closest("[data-muted]")?.contains(thumbOf())).toBe(true);
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    draw(calls, 0.5, false);
+    expect(inputOf().closest("[data-muted]")).toBeNull();
   });
 });

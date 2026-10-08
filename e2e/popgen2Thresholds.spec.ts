@@ -362,6 +362,54 @@ test("SF9 D5 while a run waits, Undo is enabled and names the change it will bec
   await expect(missing.box).toHaveValue("0.097");
 });
 
+test("SF9 D5 Ctrl+Z in the box within a run of arrow presses in it undoes the run and Ctrl+Shift+Z brings it back, as on the line, and Cmd+Z and Cmd+Shift+Z in WebKit", async ({
+  page,
+  browserName,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  const missing = histogram(page, MISSING);
+  await expect(missing.box).toHaveValue("0.1");
+  // The page's timers stand still: every key below meets its run still
+  // waiting.
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
+  await missing.box.focus();
+  for (let press = 0; press < 3; press += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+  await expect(missing.box).toHaveValue("0.097");
+  await page.keyboard.press("Control+z");
+  await expect(missing.box).toHaveValue("0.1");
+  await expect(missing.box).toBeFocused();
+  await expect(undoButton(page)).toBeDisabled();
+  await expect(redoButton(page)).toHaveAccessibleDescription(
+    "Redo: the filter of the variants by missing data changed",
+  );
+  await page.keyboard.press("Control+Shift+z");
+  await expect(missing.box).toHaveValue("0.097");
+  await expect(redoButton(page)).toBeDisabled();
+
+  // On the line, the same keys.
+  await missing.slider.focus();
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  await expect(missing.slider).toHaveValue("0.095");
+  await page.keyboard.press("Control+z");
+  await expect(missing.slider).toHaveValue("0.097");
+  await page.keyboard.press("Control+Shift+z");
+  await expect(missing.slider).toHaveValue("0.095");
+
+  if (browserName === "webkit") {
+    await missing.box.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(missing.box).toHaveValue("0.094");
+    await page.keyboard.press("Meta+z");
+    await expect(missing.box).toHaveValue("0.095");
+    await page.keyboard.press("Meta+Shift+z");
+    await expect(missing.box).toHaveValue("0.094");
+  }
+});
+
 test("SF9 D5 a run waiting, then a click of the FILTER box: two steps of Undo, the run's first", async ({
   page,
 }) => {
