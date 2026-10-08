@@ -31,6 +31,9 @@ function setUp(): {
       });
       return { id: lastId, outcome, cancel: () => undefined };
     },
+    sendWrite: () => {
+      throw new Error("popnei_web defect: no write is sent here");
+    },
     appVersion: "0.1.0",
   });
   store.popneiReady("0.1.0");
@@ -69,12 +72,18 @@ async function settled(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** The 200 individuals of the VCF, which its one pass gives too. */
+const TWO_HUNDRED: readonly string[] = Array.from(
+  { length: 200 },
+  (_, i) => `s${String(i)}`,
+);
+
 /** Opens the VCF and records its read of 200 individuals. */
 function openRead(store: Store<JobResult, Blob>): void {
   store.apply("a new variants file was loaded", (p) => loadVariants(p, VCF));
   store.variantsRead(FILE_ID, {
     kind: "read",
-    individuals: Array.from({ length: 200 }, (_, i) => `s${String(i)}`),
+    individuals: TWO_HUNDRED,
     ploidy: 4,
     numVars: null,
     keepsPassed: true,
@@ -174,7 +183,7 @@ describe("what the status region of the new page says", () => {
     sent[0]?.({
       kind: "done",
       key: running.key,
-      result: summaryResult(["chr1", "chr2"], [250, 250]),
+      result: summaryResult(["chr1", "chr2"], [250, 250], TWO_HUNDRED),
     });
     await settled();
     expect(announcementsOf(before, store.getState())).toEqual([
@@ -228,7 +237,7 @@ describe("what the status region of the new page says", () => {
     sent[0]?.({
       kind: "done",
       key: running.key,
-      result: summaryResult(["chr1"], [500]),
+      result: summaryResult(["chr1"], [500], ["s1", "s2"]),
     });
     await settled();
     expect(
@@ -246,7 +255,7 @@ describe("what the status region of the new page says", () => {
     sent[0]?.({
       kind: "done",
       key: running.key,
-      result: summaryResult(["chr1"], [1200]),
+      result: summaryResult(["chr1"], [1200], TWO_HUNDRED),
     });
     await settled();
     expect(
@@ -332,7 +341,7 @@ describe("what the status region of the new page says of the statistics of the o
     page.sent[0]?.({
       kind: "done",
       key: status.key,
-      result: summaryResult(["chr1"], [500]),
+      result: summaryResult(["chr1"], [500], TWO_HUNDRED),
     });
     await settled();
     expect(statsAnnouncementsOf(doneBefore, page.store.getState())).toEqual([
@@ -368,14 +377,14 @@ describe("what the status region of the new page says of the statistics of the o
     const page = running();
     expect(
       await statsSaid(page.store, () => {
-        page.soFar[0]?.(summaryResult(["chr1"], [100]));
+        page.soFar[0]?.(summaryResult(["chr1"], [100], TWO_HUNDRED));
       }),
     ).toEqual([
       "Plots of panel.vcf.gz are drawn from the variants read so far, and change as the file is read.",
     ]);
     expect(
       await statsSaid(page.store, () => {
-        page.soFar[0]?.(summaryResult(["chr1"], [300]));
+        page.soFar[0]?.(summaryResult(["chr1"], [300], TWO_HUNDRED));
       }),
     ).toEqual([]);
     expect(
@@ -383,7 +392,7 @@ describe("what the status region of the new page says of the statistics of the o
         page.sent[0]?.({
           kind: "done",
           key: page.key,
-          result: summaryResult(["chr1"], [500]),
+          result: summaryResult(["chr1"], [500], TWO_HUNDRED),
         });
       }),
     ).toEqual(["The statistics of panel.vcf.gz are calculated."]);

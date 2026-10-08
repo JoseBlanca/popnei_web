@@ -99,6 +99,9 @@ async function drawPage(): Promise<{
       });
       return { id: requests.length, outcome, cancel: () => undefined };
     },
+    sendWrite: () => {
+      throw new Error("popnei_web defect: no write is sent here");
+    },
     appVersion: "0.1.0",
   });
   store.popneiReady("0.1.0");

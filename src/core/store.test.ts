@@ -6164,6 +6164,61 @@ describe("DL4 D2 the file kept after its download", () => {
   });
 });
 
+describe("DL4 D3 the statistics of the one pass, as on popgen2.html", () => {
+  // The fake statistics stand for the one pass, variantsSummary: they
+  // read no filter and give results so far, as the summary does.
+  test("with a threshold of the individuals, the list needs the statistics while they run with a result so far and after their Stop, and is known once they are done", () => {
+    const { store, sent } = storeThatWrites([MISSING_AT_02]);
+    store.startRun("stats");
+    const first = sentAt(sent, 0);
+    first.soFar(fiveStats());
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.cancelRun("stats");
+    store.runEnded(first.run.id, { kind: "cancelled" });
+    expect(analysisIn(store, "stats")).toMatchObject({
+      kind: "ready",
+      stopped: { soFar: { kind: "stats" } },
+    });
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.startRun("stats");
+    const second = sentAt(sent, 1);
+    store.runEnded(second.run.id, doneWith(second, fiveStats()));
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["a", "b", "d"],
+    });
+    expect(writeIn(store)).toMatchObject({ kind: "ready" });
+  });
+
+  test("the write is locked with keptNoneReason once the one pass done keeps no individual", () => {
+    const { store, sent, writes } = storeThatWrites([
+      { kind: "missing_data", maxAllowedMissingRate: 0.01 },
+    ]);
+    store.startRun("stats");
+    const stats = sentAt(sent, 0);
+    stats.soFar(fiveStats());
+    expect(writeIn(store)).toMatchObject({ kind: "ready" });
+
+    store.runEnded(stats.run.id, doneWith(stats, fiveStats()));
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "locked",
+      reason: keptNoneReason(
+        store.getState().project,
+        store.getState().individualsKept,
+      ),
+    });
+    expect(store.startWrite("vcf")).toBeNull();
+    expect(writes).toHaveLength(0);
+  });
+});
+
 describe("VS3 D7 the properties of the write", () => {
   /** A step of the property of the write. */
   type WriteStep =

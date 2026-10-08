@@ -125,7 +125,13 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
   test("a run waiting is made a change before any other command reaches the project, Undo and an opening among them, and the gate lets it go once ended", () => {
     const gate = createRunGate();
     const store = gatedStore(
-      createPopgen2Store({ send: () => unsent(), appVersion: "0.1.0" }),
+      createPopgen2Store({
+        send: () => unsent(),
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
       gate,
     );
     const maf = { of: "variants", kind: "maf" } as const;
@@ -181,7 +187,13 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
     const opened: string[] = [];
     const store = gatedStore(
       {
-        ...createPopgen2Store({ send: () => unsent(), appVersion: "0.1.0" }),
+        ...createPopgen2Store({
+          send: () => unsent(),
+          sendWrite: () => {
+            throw new Error("popnei_web defect: no write is sent here");
+          },
+          appVersion: "0.1.0",
+        }),
         open: () => {
           opened.push("open");
         },
@@ -211,7 +223,13 @@ describe("SF9 D1 a run of the keys on a threshold", () => {
   test("a file opened while a run waits, or while a number typed in a box waits, opens with the threshold the run or the number gave", () => {
     const gate = createRunGate();
     const store = gatedStore(
-      createPopgen2Store({ send: () => unsent(), appVersion: "0.1.0" }),
+      createPopgen2Store({
+        send: () => unsent(),
+        sendWrite: () => {
+          throw new Error("popnei_web defect: no write is sent here");
+        },
+        appVersion: "0.1.0",
+      }),
       gate,
     );
     const maf = { of: "variants", kind: "maf" } as const;

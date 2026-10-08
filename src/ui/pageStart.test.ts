@@ -72,7 +72,7 @@ function lastIdOf(worker: FakeWorker, kind: string): number {
 
 test("live-stats 2 a result so far the worker posts reaches the summary's running status through the page's send", async () => {
   const { store, client } = connectStore((senders) =>
-    createPopgen2Store({ send: senders.send, appVersion: "0.1.0" }),
+    createPopgen2Store({ ...senders, appVersion: "0.1.0" }),
   );
   const worker = calculationWorker();
   const fileId = "0123456789abcdef0123456789abcdef";

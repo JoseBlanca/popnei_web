@@ -1,18 +1,33 @@
 import { describe, expect, test } from "vitest";
 
 import { firstProject, popgen2FirstProject } from "../core/apps.ts";
+import { keptNoneReason } from "../core/individualsKept.ts";
+import { keyFromWire, writeKeyOf, createKeyMemo } from "../core/keys.ts";
+import { filtersApplied } from "../core/filtersApplied.ts";
 import {
+  jobFilters,
   loadVariants,
   setThreshold,
   turnOffVariantFilter,
 } from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
+import type { Store } from "../core/store.ts";
 import { summaryResult } from "../core/testSupport.ts";
-import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
+import type {
+  Job,
+  JobResult,
+  Outcome,
+  Progress,
+  Run,
+  VariantsSummaryResult,
+  WriteJob,
+  Written,
+} from "../worker/protocol.ts";
 import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   openVariantsFile,
+  summaryStatsOf,
 } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import { summaryStatus } from "./variants/words.ts";
@@ -35,6 +50,9 @@ describe("the store of popgen2.html", () => {
           outcome: new Promise<Outcome<JobResult>>(() => undefined),
           cancel: () => undefined,
         };
+      },
+      sendWrite: () => {
+        throw new Error("popnei_web defect: no write is sent here");
       },
       appVersion: "0.1.0",
     });
@@ -98,6 +116,9 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
           outcomes.push(resolve);
         });
         return { id, outcome, cancel: () => undefined };
+      },
+      sendWrite: () => {
+        throw new Error("popnei_web defect: no write is sent here");
       },
       appVersion: "0.1.0",
     });
@@ -171,6 +192,9 @@ describe("SF5 D5 the store of popgen2.html", () => {
       send: (): Run<JobResult> => {
         throw new Error("popnei_web defect: nothing is sent here");
       },
+      sendWrite: () => {
+        throw new Error("popnei_web defect: no write is sent here");
+      },
       appVersion: "0.1.0",
     });
     expect(store.getState().project).toStrictEqual(popgen2FirstProject());
@@ -200,6 +224,9 @@ describe("SF7 round an opening on popgen2.html starts the history afresh", () =>
             cancelled.push(id);
           },
         };
+      },
+      sendWrite: () => {
+        throw new Error("popnei_web defect: no write is sent here");
       },
       appVersion: "0.1.0",
     });
@@ -253,5 +280,272 @@ describe("SF7 round an opening on popgen2.html starts the history afresh", () =>
     expect(summaryStatus(opened).kind).toBe("locked");
     store.undo();
     expect(store.getState()).toBe(opened);
+  });
+});
+
+/** A request the fake `send` or `sendWrite` was given. */
+interface Sent<J> {
+  readonly run: Run<never>;
+  readonly key: string;
+  readonly job: J;
+  readonly soFar: ((r: JobResult) => void) | null;
+}
+
+/** The store of popgen2.html with fakes of `send` and `sendWrite` that
+    record what they were given and never end it; popnei 0.1.0, and
+    `panel.vcf.gz` of the individuals s000 and s001 opened and read, with
+    the filters of the page's first project. */
+function storeOfPanel(): {
+  readonly store: Store<JobResult, Blob>;
+  readonly jobs: Sent<Job>[];
+  readonly writes: Sent<WriteJob>[];
+} {
+  const jobs: Sent<Job>[] = [];
+  const writes: Sent<WriteJob>[] = [];
+  let lastId = 0;
+  const runOf = (): Run<never> => {
+    lastId += 1;
+    return {
+      id: lastId,
+      outcome: new Promise(() => undefined),
+      cancel: () => undefined,
+    };
+  };
+  const store = createPopgen2Store({
+    send: (key, job, _onProgress: (p: Progress) => void, onSoFar) => {
+      const run = runOf();
+      jobs.push({ run, key, job, soFar: onSoFar });
+      return run;
+    },
+    sendWrite: (key, job) => {
+      const run = runOf();
+      writes.push({ run, key, job, soFar: null });
+      return run;
+    },
+    appVersion: "0.1.0",
+  });
+  store.popneiReady("0.1.0");
+  const load = vcfLoad("c".repeat(32), "panel.vcf.gz");
+  openVariantsFile(store, load);
+  store.variantsRead(load.fileId, {
+    kind: "read",
+    individuals: ["s000", "s001"],
+    ploidy: 2,
+    numVars: null,
+    keepsPassed: true,
+  });
+  return { store, jobs, writes };
+}
+
+/** The one pass of s000 and s001, whose missing rates are 0.1 and 0.9. */
+function passOfTwo(): VariantsSummaryResult {
+  const result = summaryResult(["chr1"], [100]);
+  return {
+    ...result,
+    perIndividual: {
+      ...result.perIndividual,
+      missingGtRate: Float64Array.of(0.1, 0.9),
+    },
+  };
+}
+
+/** The request `index` of `sent`, or a defect. */
+function sentAt<J>(sent: readonly Sent<J>[], index: number): Sent<J> {
+  const one = sent[index];
+  if (one === undefined) {
+    throw new Error(`popnei_web defect: no request ${String(index)} sent`);
+  }
+  return one;
+}
+
+/** The missing data filter of the individuals at `value`. */
+function missingOfIndividuals(
+  value: number,
+): (p: Parameters<typeof setThreshold>[0]) => ReturnType<typeof setThreshold> {
+  return (p) =>
+    setThreshold(p, { of: "individuals", kind: "missing_data" }, value);
+}
+
+describe("DL4 D3 the store of popgen2.html writes, and works out the individuals kept from the one pass", () => {
+  test("the write is ready as a .nei file, and startWrite of the VCF sends its WriteJob through sendWrite, under the key of the VCF", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    const project = store.getState().project;
+    expect(store.getState().write).toStrictEqual({
+      kind: "ready",
+      key: writeKeyOf(project, "nei", "0.1.0", createKeyMemo()),
+      format: "nei",
+      dropped: false,
+    });
+
+    const handles = store.startWrite("vcf");
+
+    const write = sentAt(writes, 0);
+    expect(handles).toStrictEqual([write.run]);
+    expect(jobs).toHaveLength(0);
+    expect(write.key).toBe(
+      writeKeyOf(project, "vcf", "0.1.0", createKeyMemo()),
+    );
+    expect(write.job).toStrictEqual({
+      format: "vcf",
+      fileId: "c".repeat(32),
+      filters: jobFilters(filtersApplied(project)),
+      individuals: null,
+    });
+  });
+
+  test("a file written leaves its counts in its state alone, and is kept after its download", () => {
+    const { store, writes } = storeOfPanel();
+    store.startWrite("vcf");
+    const write = sentAt(writes, 0);
+    const file: Written<Blob> = {
+      format: "vcf",
+      file: new Blob(["##fileformat=VCFv4.3"]),
+      numBytes: 95_879,
+      passStats: {
+        numVars: 1152,
+        filtering: {
+          missing_data: { varsProcessed: 1200, varsKept: 1152 },
+        },
+      },
+    };
+    store.runEnded(write.run.id, {
+      kind: "done",
+      key: write.key,
+      result: file,
+    });
+    expect(store.getState().write).toStrictEqual({
+      kind: "done",
+      key: keyFromWire(write.key),
+      written: file,
+    });
+
+    store.writeSaved();
+
+    expect(store.getState().write).toStrictEqual({
+      kind: "saved",
+      key: keyFromWire(write.key),
+      written: file,
+    });
+    expect(
+      store.getState().analyses.map((view) => [view.id, view.status.kind]),
+    ).toStrictEqual([["variantsSummary", "ready"]]);
+  });
+
+  test("with a threshold of the individuals, the list needs the one pass while it runs with a result so far, and is known from its perIndividual once it is done", () => {
+    const { store, jobs } = storeOfPanel();
+    store.apply(
+      "the missing data filter of the individuals changed",
+      missingOfIndividuals(0.5),
+    );
+    store.startRun("variantsSummary");
+    const pass = sentAt(jobs, 0);
+    pass.soFar?.(passOfTwo());
+    expect(summaryStatus(store.getState()).kind).toBe("running");
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+
+    store.runEnded(pass.run.id, {
+      kind: "done",
+      key: pass.key,
+      result: passOfTwo(),
+    });
+
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "known",
+      individuals: ["s000"],
+    });
+    expect(store.getState().write).toMatchObject({ kind: "ready" });
+  });
+
+  test("the list stays unknown after a Stop of the one pass, with its result so far kept", () => {
+    const { store, jobs } = storeOfPanel();
+    store.apply(
+      "the missing data filter of the individuals changed",
+      missingOfIndividuals(0.5),
+    );
+    store.startRun("variantsSummary");
+    const pass = sentAt(jobs, 0);
+    pass.soFar?.(passOfTwo());
+
+    store.cancelRun("variantsSummary");
+    store.runEnded(pass.run.id, { kind: "cancelled" });
+
+    expect(summaryStatus(store.getState())).toMatchObject({
+      kind: "ready",
+      stopped: { soFar: { analysis: "variantsSummary" } },
+    });
+    expect(store.getState().individualsKept?.list).toStrictEqual({
+      kind: "needsStatistics",
+    });
+  });
+
+  test("the write is locked with keptNoneReason when the one pass done keeps no individual", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    store.apply(
+      "the missing data filter of the individuals changed",
+      missingOfIndividuals(0.05),
+    );
+    store.startRun("variantsSummary");
+    const pass = sentAt(jobs, 0);
+
+    store.runEnded(pass.run.id, {
+      kind: "done",
+      key: pass.key,
+      result: passOfTwo(),
+    });
+
+    const state = store.getState();
+    const reason = keptNoneReason(state.project, state.individualsKept);
+    expect(reason).not.toBeNull();
+    expect(state.write).toStrictEqual({ kind: "locked", reason });
+    expect(store.startWrite("vcf")).toBeNull();
+    expect(writes).toHaveLength(0);
+  });
+
+  test("a write asked while the one pass runs waits for it, and sends no second pass: the file is read once", () => {
+    const { store, jobs, writes } = storeOfPanel();
+    store.apply(
+      "the missing data filter of the individuals changed",
+      missingOfIndividuals(0.5),
+    );
+    store.startRun("variantsSummary");
+    const pass = sentAt(jobs, 0);
+
+    expect(store.startWrite("vcf")).toStrictEqual([]);
+    expect(store.getState().write).toMatchObject({
+      kind: "running",
+      format: "vcf",
+      waitsForStatistics: true,
+    });
+
+    const sent = store.runEnded(pass.run.id, {
+      kind: "done",
+      key: pass.key,
+      result: passOfTwo(),
+    });
+
+    expect(jobs).toHaveLength(1);
+    const write = sentAt(writes, 0);
+    expect(sent).toStrictEqual([write.run]);
+    expect(write.job.individuals).toStrictEqual(["s000"]);
+  });
+
+  test("summaryStatsOf gives the statistics of perIndividual, the same arrays, and is a defect for another result", () => {
+    const result = passOfTwo();
+
+    const stats = summaryStatsOf(result);
+
+    expect(stats).toStrictEqual({
+      individuals: ["s000", "s001"],
+      missingGtRate: result.perIndividual.missingGtRate,
+      obsHetRate: result.perIndividual.obsHetRate,
+    });
+    expect(stats.missingGtRate).toBe(result.perIndividual.missingGtRate);
+    expect(() =>
+      summaryStatsOf({ analysis: "filterCounts", passStats: result.passStats }),
+    ).toThrow(
+      /^popnei_web defect: the statistics of each individual were asked of a result of filterCounts/,
+    );
   });
 });

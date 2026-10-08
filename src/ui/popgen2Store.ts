@@ -4,9 +4,11 @@
  * first project, `popgen2FirstProject`, with the filter of the FILTER
  * column on and the missing data filter on at 0.1, which the summary of
  * the open file does not read; the analyses of
- * `POPGEN2_ANALYSES`, and no counts of the filters, no statistics of each
- * individual for a Run to wait for, and no writing, which the page does
- * not have yet (docs/plans/live-stats.md).
+ * `POPGEN2_ANALYSES`; no counts of the filters; the one pass,
+ * `variantsSummary`, as the statistics of each individual, so that the
+ * individuals kept are worked out from that pass finished; and the
+ * writing of the filtered variants, as a VCF or a `.nei` file
+ * (docs/specs/analyses/writeVariants.md, "On popgen2.html").
  * Apart from the entry, so that a test in node makes the store with what
  * the page gives it.
  */
@@ -15,9 +17,11 @@ import {
   POPGEN2_ANALYSES,
   countsOf,
   popgen2FirstProject,
+  writeCountsOf,
 } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
+import type { IndividualStats } from "../core/individualsKept.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
@@ -44,6 +48,11 @@ export interface Popgen2StoreDeps {
   /** Sends a calculation under its key, `Client.run` of the worker
       client. */
   readonly send: StoreConfig<Job, JobResult, Blob>["send"];
+  /** Sends a write of the filtered variants under its key,
+      `Client.write` of the worker client. */
+  readonly sendWrite: NonNullable<
+    StoreConfig<Job, JobResult, Blob>["write"]
+  >["send"];
   /** The version of the application, `APP_VERSION`. */
   readonly appVersion: string;
 }
@@ -57,16 +66,29 @@ export function createPopgen2Store(
     analyses: POPGEN2_ANALYSES,
     send: deps.send,
     countsOf,
+    // The counts of a write are put nowhere but in its state.
     counts: null,
-    // The piece that adds the filters of individuals to the page chooses
-    // what a Run under such a filter waits for (docs/plans/live-stats.md,
-    // "What is left out").
-    statistics: null,
-    write: null,
+    // The one pass, which the page starts by itself: a second request of
+    // the statistics would read the file twice.
+    statistics: { analysis: variantsSummary.id, of: summaryStatsOf },
+    write: { send: deps.sendWrite, countsOf: writeCountsOf },
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
   });
+}
+
+/** The statistics of each individual in a result of the one pass,
+    `variantsSummary`, its `perIndividual`, as the store's
+    `statistics.of`. Throws a defect for a result of another analysis. */
+export function summaryStatsOf(r: JobResult): IndividualStats {
+  if (r.analysis !== "variantsSummary") {
+    throw new Error(
+      `popnei_web defect: the statistics of each individual were asked of a result of ${r.analysis}.`,
+    );
+  }
+  const { individuals, missingGtRate, obsHetRate } = r.perIndividual;
+  return { individuals, missingGtRate, obsHetRate };
 }
 
 /**

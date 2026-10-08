@@ -42,7 +42,7 @@ import { reportDefects } from "./variants/workerDefects.ts";
     page. */
 function startApplication(defects: Defects, drawBar: DrawBar): void {
   const { store, client, files } = connectStore((senders) =>
-    createPopgen2Store({ send: senders.send, appVersion: APP_VERSION }),
+    createPopgen2Store({ ...senders, appVersion: APP_VERSION }),
   );
   // No project is saved on this page yet, so the bar offers no Save.
   drawBar(store, null);
