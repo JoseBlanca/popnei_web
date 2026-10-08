@@ -170,11 +170,15 @@ export function individualsKept(
  * in the Variants step.", with the count of the individuals of the
  * variants file and its name escaped, and of one, "The filters of
  * individuals do not keep the one individual of one.vcf. …"; or `null`,
- * for a list not known, not empty, or no `kept`.
+ * for a list not known, not empty, or no `kept`. `step` is the step the
+ * words send the user to, the Variants step by default; `null` on a page
+ * with no steps, popgen2.html, whose words end "Loosen them."
+ * (docs/specs/steps/popgen2-download.md, "Its words").
  */
 export function keptNoneReason(
   p: Project,
   kept: IndividualsKept | null,
+  step: string | null = "the Variants step",
 ): string | null {
   // A list of none removed, null, is not empty.
   const keptList = kept?.list;
@@ -185,10 +189,11 @@ export function keptNoneReason(
   }
   const numIndividuals = fileIndividuals(p).length;
   const name = escaped(p.variants.name);
+  const loosen = step === null ? "Loosen them." : `Loosen them in ${step}.`;
   // One individual in the singular, as the owner decided at stop B.
   return numIndividuals === 1
-    ? `The filters of individuals do not keep the one individual of ${name}. Loosen them in the Variants step.`
-    : `The filters of individuals keep none of the ${grouped(numIndividuals)} individuals of ${name}. Loosen them in the Variants step.`;
+    ? `The filters of individuals do not keep the one individual of ${name}. ${loosen}`
+    : `The filters of individuals keep none of the ${grouped(numIndividuals)} individuals of ${name}. ${loosen}`;
 }
 
 /** The individuals of the variants file of `p`, which `projectNeeds`

@@ -507,3 +507,59 @@ describe("VS2 D2 the property of the individuals kept", () => {
     );
   });
 });
+
+/** The 200 individuals of panel.nei, s000 to s199. */
+const PANEL_NAMES = Array.from(
+  { length: 200 },
+  (_, index) => `s${String(index).padStart(3, "0")}`,
+);
+
+describe("DL3 D2 the words of no individual kept, with the step or none", () => {
+  test("with the default step the words send the user to the Variants step, as before", () => {
+    const p = projectOf(PANEL_NAMES, [
+      { kind: "remove", individuals: PANEL_NAMES },
+    ]);
+    expect(keptNoneReason(p, individualsKept(p, null))).toBe(
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Variants step.",
+    );
+  });
+
+  test("another step is named in its place", () => {
+    const p = projectOf(PANEL_NAMES, [
+      { kind: "remove", individuals: PANEL_NAMES },
+    ]);
+    expect(
+      keptNoneReason(p, individualsKept(p, null), "the Filters step"),
+    ).toBe(
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them in the Filters step.",
+    );
+  });
+
+  test("with no step, on a page with no steps, the words end at Loosen them", () => {
+    const p = projectOf(PANEL_NAMES, [
+      { kind: "remove", individuals: PANEL_NAMES },
+    ]);
+    expect(keptNoneReason(p, individualsKept(p, null), null)).toBe(
+      "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them.",
+    );
+  });
+
+  test("with no step, one individual is named in the singular", () => {
+    const base = projectOf(["a"], [{ kind: "remove", individuals: ["a"] }]);
+    const p = deepFreeze<Project>({
+      ...base,
+      variants:
+        base.variants === null ? null : { ...base.variants, name: "one.vcf" },
+    });
+    expect(keptNoneReason(p, individualsKept(p, null), null)).toBe(
+      "The filters of individuals do not keep the one individual of one.vcf. Loosen them.",
+    );
+  });
+
+  test("with no step, a list not empty gives no words", () => {
+    const p = projectOf(PANEL_NAMES, [
+      { kind: "remove", individuals: ["s000"] },
+    ]);
+    expect(keptNoneReason(p, individualsKept(p, null), null)).toBeNull();
+  });
+});
