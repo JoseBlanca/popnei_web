@@ -794,3 +794,41 @@ the surviving mutant that drops `bgzip: true`, popnei's default; the
 grouping of pieces into parts, which no spec fixes. Left to work
 package 8: whether `FileReaderSync` throws on a `Blob` a browser could
 not keep. Vitest 4,390.
+
+### Work package 4, 8 October 2026
+
+1b98830 (the store holds `writeFormat`; `startWrite(format)`; the key
+and every state with a key carry the format), 9c8de23 (`saved` keeps the
+file, for "Save it again", until the write's key changes), f794faa (the
+store of `popgen2.html` writes, from the one pass once finished). Vitest
+4,401; the flows of `popgen2.html` 146 in Chromium and WebKit; the old
+page's flows of the write 288; the old page's 40 screens of the write
+the same bytes before and after.
+
+Review, four categories (spec, architecture, tests, errors). Taken, in
+23a13fc: a write of the other format that was being stopped and
+answered `done` after its cancel marked the current write `dropped`
+with no change of filters (no screen reads it yet); now only a file of
+the current format does; the place of the format check tested by the
+state it leaves; the file forgotten on a change of format tested; the
+expected filters and words of `popgen2Store.test.ts` written as
+literals; seven passages of the specs, the architecture (section 6) and
+a comment that said the saved file is let go, now kept until the key
+changes, and the design's list for section 6; two sentences of
+`store.md`. Not taken: two surviving mutants, one close to unreachable,
+one covered by the key that holds the format. Found by the session
+after the literals: the store of `popgen2.html` gives the words of no
+individual kept with "Loosen them in the Variants step.", where the
+screen spec has "Loosen them."; left to work package 6, which shows
+them. Vitest 4,402.
+
+### Work package 5, 8 October 2026
+
+66be52f, `DL5 D1` in `e2e/measure.spec.ts`: ten writes of the VCF of
+200,000 variants to a `.nei` file of 220.2 MB on `popgen.html`, five
+with the bar's progress (32 messages each) and five with the messages
+dropped, alternating, on an Apple M5 Pro, 64 GB, load 3.2 to 4.3.
+Medians with and without: Chromium 153 3,083 and 3,088 ms (spread
+without 63 ms); WebKit 26.6 3,035 and 2,986 ms (spread without 143 ms).
+Both differences within the allowance, so the dialog's bar shows
+popnei's share of the write, as the screen spec has it.
