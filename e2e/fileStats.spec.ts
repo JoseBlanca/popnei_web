@@ -71,12 +71,13 @@ function info(page: Page): Locator {
 
 /** The titles of the histograms, in their order: the short words drawn
     before the box of each threshold, and the full name of its group,
-    which a screen reader reads. */
+    which a screen reader reads; the labels of the histograms' groups
+    alone, not that of the FILTER box. */
 async function titles(
   page: Page,
 ): Promise<readonly (readonly [string, string])[]> {
   return stats(page)
-    .locator("label")
+    .locator("[role=group] label")
     .evaluateAll((labels) =>
       labels.map(
         (label) =>
