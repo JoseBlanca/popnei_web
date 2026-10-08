@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 import {
   PART_FAILED,
   PART_STOPPED,
+  PASSED_FILTER_DESCRIPTION,
+  PASSED_FILTER_LABEL,
   individualFullTitle,
   individualThresholdName,
   individualTitle,
@@ -105,6 +107,17 @@ describe("the owner's first round: what a screen reader hears of a threshold, wi
     expect(removesSomeText("variant")).toBe("This threshold removes variants.");
     expect(removesSomeText("individual", true)).toBe(
       "This threshold removes individuals so far.",
+    );
+  });
+});
+
+describe("SF7 D2 the words of the FILTER box", () => {
+  test("its label and the sentence under it, as the screen spec has them", () => {
+    expect(PASSED_FILTER_LABEL).toBe(
+      "Leave out the variants that failed their FILTER",
+    );
+    expect(PASSED_FILTER_DESCRIPTION).toBe(
+      "The plots show every variant, these among them.",
     );
   });
 });

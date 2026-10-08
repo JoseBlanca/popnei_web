@@ -113,6 +113,18 @@ export function individualFullTitle(statistic: IndividualStatistic): string {
 export const INDIVIDUALS_CSV_LABEL =
   "Download the missing genotypes and heterozygosity of each individual (CSV)";
 
+/** The FILTER box at the end of the part of the variants, which turns
+    the filter of the FILTER column on and off
+    (docs/specs/steps/popgen2-filters.md, "The FILTER box"). */
+export const PASSED_FILTER_LABEL =
+  "Leave out the variants that failed their FILTER";
+
+/** The sentence under the FILTER box, which says why a click changes no
+    plot: the filter is carried out later, and the plots are of the one
+    pass, which reads every variant. */
+export const PASSED_FILTER_DESCRIPTION =
+  "The plots show every variant, these among them.";
+
 /** Each part in the middle of a sentence. */
 const SUBJECTS: Readonly<Record<StatsPart, string>> = Object.freeze({
   variants: "the statistics of the variants",

@@ -27,6 +27,7 @@ import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAppState } from "../store.tsx";
 import type { FileStatsProps } from "./FileStats.tsx";
+import { PassedFilterBox } from "./PassedFilterBox.tsx";
 import { Part, PartLine, StatsFrame } from "./StatsLayout.tsx";
 import {
   INDIVIDUALS_HEADING,
@@ -103,7 +104,8 @@ function LoadedStats(props: StatsSectionProps): React.JSX.Element {
 
 /** The section while its code downloads: nothing before the file is
     read, as the section itself, then the headings of the two parts, each
-    saying that it is calculated. */
+    saying that it is calculated, and the FILTER box, which is there from
+    the read of the file. */
 function StatsWaiting(): React.JSX.Element | null {
   const read = useAppState((s) => s.project.variants?.read.kind === "read");
   if (!read) return null;
@@ -111,6 +113,7 @@ function StatsWaiting(): React.JSX.Element | null {
     <StatsFrame>
       <Part heading={VARIANTS_HEADING}>
         <PartLine>{statsRunningLine("variants", null)}</PartLine>
+        <PassedFilterBox />
       </Part>
       <Part heading={INDIVIDUALS_HEADING}>
         <PartLine>{statsRunningLine("individuals", null)}</PartLine>

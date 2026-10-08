@@ -10,7 +10,9 @@
  *
  * - Variants: the histograms of the missing rate, the MAF, the observed
  *   and the expected heterozygosity (unbiased), each with its threshold,
- *   grey when it keeps every variant in their bins;
+ *   grey when it keeps every variant in their bins; and, for a file whose
+ *   variants record their FILTER, the FILTER box, in every state of the
+ *   pass (PassedFilterBox.tsx);
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
  *   each with its threshold, grey when it keeps every one; and the
@@ -79,6 +81,7 @@ import {
 } from "./statsWords.ts";
 import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
+import { PassedFilterBox } from "./PassedFilterBox.tsx";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
 import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
@@ -223,6 +226,7 @@ function Stats({
             )}
           </>
         )}
+        <PassedFilterBox />
       </Part>
       <Part heading={INDIVIDUALS_HEADING}>
         {status.kind === "error" ? (
