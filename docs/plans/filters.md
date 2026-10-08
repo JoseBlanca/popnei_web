@@ -1040,3 +1040,18 @@ decided on 7 October 2026 are undone; and since no notice is left on
 that page, the notice comes off popgen2.html (the old page keeps its
 own). The store's setting `filterNotices` then serves nothing and goes,
 with its spec. Work package 9 follows: no notice for the thresholds.
+
+Built in d0a5cdc, 8d6924d, 956b5a3, dbd5557, d5e6bf6: the store's
+`filterNotices`, `filtersChanged` and `sameFilters` removed; the notice
+off popgen2.html; popgen2.html opens a variants file through the store's
+`open` (`openVariantsFile` of `src/ui/popgen2Store.ts`), which starts a
+new history, stops the previous pass and keeps the filters; the
+forgetting of keys left behind in `autoRuns.ts` reverted, since no Undo
+crosses files now; the old page unchanged. Vitest 4,275 (tests of the
+removed features gone with them); Playwright 638 in Chromium and 637 in
+WebKit (one old-page flow, IP5 D2, passed 3 of 3 when run again).
+Review, architecture and react: `open` brings nothing of a project file
+to popgen2.html, and no result of a previous file can be shown under the
+new one; the store spec's reason for stopping at an opening said for
+popgen2.html too. Noted for later: the cache entries and the `File`
+handles of the files opened before stay until evicted, unreachable.

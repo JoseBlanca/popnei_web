@@ -324,8 +324,10 @@ undo it, as the owner decided on 24 September 2026
 (`docs/specs/core/history.md`). The cache and the refusals are kept: they
 are under keys, and a key names the load it was made from, so nothing of
 them is shown for the new project unless its keys give it. The
-calculations in flight are stopped at once, since the screen asked before
-opening; an opening makes no notice, and clears the one there was.
+calculations in flight are stopped at once, since the user chose to
+open: on popgen.html the screen asked before opening, and on popgen2.html,
+which opens a variants file through `open`, the opening itself is that
+choice; an opening makes no notice, and clears the one there was.
 `popgen2.html` opens a variants file so too, from 8 October 2026: the
 project with the new load and the filters as they were, given to
 `open`, so that an opening there is not a step of Undo (below, "The
