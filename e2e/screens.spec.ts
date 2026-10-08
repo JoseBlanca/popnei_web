@@ -4983,7 +4983,10 @@ for (const theme of ["light", "dark"] as const) {
         const y = handle.y + handle.height / 2;
         await page.mouse.move(x, y);
         await page.mouse.down();
-        await page.mouse.move(x + 400, y, { steps: 8 });
+        // In one move, so that the first number of the drag is already 1
+        // whatever the width of the plot: the box failed to follow only
+        // then (commit 3f2a341).
+        await page.mouse.move(x + 400, y, { steps: 1 });
         await page.mouse.up();
         await expect(maf.getByRole("slider")).toHaveAttribute(
           "aria-valuetext",

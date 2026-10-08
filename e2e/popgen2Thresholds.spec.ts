@@ -124,11 +124,13 @@ const OBS_HET = "Observed heterozygosity";
 const EXP_HET = "Expected heterozygosity (unbiased)";
 const INDIVIDUAL_MISSING = "Proportion of missing genotypes of each individual";
 
-/** Drags the thumb of `shown` by `dx` pixels across, with the mouse. */
+/** Drags the thumb of `shown` by `dx` pixels across, with the mouse, in
+    `steps` moves. */
 async function drag(
   page: Page,
   shown: { readonly thumb: Locator },
   dx: number,
+  steps = 8,
 ): Promise<void> {
   await shown.thumb.scrollIntoViewIfNeeded();
   const box = await shown.thumb.boundingBox();
@@ -137,8 +139,20 @@ async function drag(
   const x = box.x + box.width / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x + dx, y, { steps: 8 });
+  await page.mouse.move(x + dx, y, { steps });
   await page.mouse.up();
+}
+
+/** Drags the thumb of `shown` by `dx` pixels across in a single move of
+    the mouse, so that the first number the drag gives is already the
+    end of the axis whatever the width of the plot: the box failed to
+    follow a drag only then (commit 3f2a341). */
+async function dragInOneMove(
+  page: Page,
+  shown: { readonly thumb: Locator },
+  dx: number,
+): Promise<void> {
+  await drag(page, shown, dx, 1);
 }
 
 /** Expects `shown` off: 1 in its box, its line at `top`, the top of its
@@ -290,7 +304,7 @@ test("SF9 D5 emptying the box, typing 1 and dragging the MAF's line to 1 each tu
 
   // The line dragged to the top of its axis, which ends at 1, straight
   // from 0.9 typed in the box, with the focus still in the box.
-  await drag(page, maf, 400);
+  await dragInOneMove(page, maf, 400);
   await expectOff(maf, "1", "variant");
   await backOn();
 
@@ -311,13 +325,13 @@ test("SF9 D5 a number typed in the missing rate's box, then its line dragged to 
   const missing = histogram(page, MISSING);
   await missing.box.fill("0.09");
   await missing.box.press("Enter");
-  await drag(page, missing, 400);
+  await dragInOneMove(page, missing, 400);
   await expect(missing.slider).toHaveValue("0.1");
   await expect(missing.box).toHaveValue("0.1");
 
   await missing.box.fill("0.01");
   await missing.box.press("Enter");
-  await drag(page, missing, -400);
+  await dragInOneMove(page, missing, -400);
   await expect(missing.slider).toHaveValue("0");
   await expect(missing.box).toHaveValue("0");
 });
@@ -582,6 +596,27 @@ test("SF9 D5 the thresholds stay through the opening of another file", async ({
   await expect(maf.box).toHaveValue("0.9");
   await expect(individuals.box).toHaveValue("0.03");
   await expectOff(histogram(page, OBS_HET), "0.7", "variant");
+});
+
+test("SF9 D5 the MAF at 0.9 typed, kept through the opening of another file, then its line dragged in one move to the top of its axis with the focus in its box: the box shows 1, off", async ({
+  page,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  const maf = histogram(page, MAF);
+  await maf.box.fill("0.9");
+  await maf.box.press("Enter");
+  await expect(maf.slider).toHaveValue("0.9");
+
+  await pick(page, "panel.nei");
+  await expect(
+    page.getByRole("button", {
+      name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(maf.box).toHaveValue("0.9");
+  await maf.box.focus();
+  await dragInOneMove(page, maf, 400);
+  await expectOff(maf, "1", "variant");
 });
 
 test("SF9 D5 a file dropped while a run of the keys waits opens with the threshold the run moved", async ({

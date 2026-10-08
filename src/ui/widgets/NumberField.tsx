@@ -656,7 +656,10 @@ function FieldInput({
   // of a threshold's line, is put in the text, and then that update is
   // applied over it, so the box showed 0.9 typed with its line dragged to
   // 1. Checked after every render, which is when React Aria's state
-  // changes.
+  // changes. It runs after every render because `isTyped`, an arrow made
+  // in the field's render, and React Aria's `state`, an object made in
+  // its, are new at each render: the list of dependencies does not decide
+  // when it runs.
   useLayoutEffect(() => {
     if (
       state === null ||
