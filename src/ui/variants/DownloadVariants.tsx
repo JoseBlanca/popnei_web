@@ -124,6 +124,10 @@ export function DownloadVariants(): React.JSX.Element {
       // file is written, and the text in place of the button says so.
       if (end === null || end === "downloaded" || end === "noVariant") {
         close();
+        // "Writing <file>." still waiting, a write shorter than the
+        // region's pause, would be heard after the words that take the
+        // focus, as if a second write had begun.
+        announcer.clear();
         void focusPlace();
       }
     }

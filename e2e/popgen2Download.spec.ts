@@ -501,6 +501,20 @@ test("DL7 D2 a run of the arrow keys, then Enter on the button within its quiet 
   );
 });
 
+test("DL7 D2 a write shorter than the pause of the status region: the region does not end on the words of its start", async ({
+  page,
+}) => {
+  await openDone(page, "low_qual.vcf.gz");
+  await download(page, "VCF compressed with bgzip (.vcf.gz)");
+  const text =
+    "low_qual.filtered.vcf.gz downloaded, 76 KB: 900 variants of 200 individuals. Variants removed: 300 by their FILTER. Save it again";
+  await expect.poll(() => focused(page)).toBe(`P ${text}`);
+  // Past the region's pause of 100 ms, after which a text still waiting
+  // would be written.
+  await page.waitForTimeout(400);
+  await expect(status(page)).not.toContainText("Writing");
+});
+
 test("DL7 D2 the text after the download stays through a click elsewhere and Escape, and goes at a change of a threshold, a click on the FILTER box and another file", async ({
   page,
 }) => {
