@@ -372,7 +372,7 @@ describe("WP3 D1 the history", () => {
             fc.constant("undo" as const),
             fc.constant("redo" as const),
           ),
-          { maxLength: 30 },
+          { maxLength: 30, size: "max" },
         ),
         (maxSteps, actions) => {
           let h = deepFreeze(startHistory(sampleProject(), maxSteps));

@@ -4819,66 +4819,74 @@ describe("IP3 D1 the filters turned off", () => {
       let turnedBack = 0;
       let keptOff = 0;
       fc.assert(
-        fc.property(fc.array(drawnCommand, { maxLength: 30 }), (commands) => {
-          let p = sampleProject();
-          for (const command of commands) {
-            const bound = command.bind(p);
-            if (bound === null) {
-              continue;
-            }
-            const before = p;
-            p = deepFreeze(bound(p));
-            for (const list of [p.filters, p.filtersOff]) {
-              expect(strictlyRising(variantRanks(list))).toBe(true);
-            }
-            for (const list of [p.individualFilters, p.individualFiltersOff]) {
-              expect(strictlyRising(individualRanks(list))).toBe(true);
-            }
-            expect(
-              p.filtersOff.filter((f) =>
-                p.filters.some((g) => g.kind === f.kind),
-              ),
-            ).toStrictEqual([]);
-            expect(
-              p.individualFiltersOff.filter((f) =>
-                p.individualFilters.some((g) => g.kind === f.kind),
-              ),
-            ).toStrictEqual([]);
-            keptOff +=
-              p.filtersOff.length + p.individualFiltersOff.length > 0 ? 1 : 0;
-
-            // Turned off, then on again by the value kept: the filters on
-            // of before.
-            for (const filter of before.filters) {
-              const off = deepFreeze(turnOffVariantFilter(before, filter.kind));
-              const kept = off.filtersOff.find((f) => f.kind === filter.kind);
-              if (kept === undefined) {
-                throw new Error("the filter turned off is kept");
-              }
-              expect(setVariantFilter(off, kept).filters).toStrictEqual(
-                before.filters,
-              );
-              turnedBack += 1;
-            }
-            for (const filter of before.individualFilters) {
-              if (filter.kind === "keep" || filter.kind === "remove") {
+        fc.property(
+          fc.array(drawnCommand, { maxLength: 30, size: "max" }),
+          (commands) => {
+            let p = sampleProject();
+            for (const command of commands) {
+              const bound = command.bind(p);
+              if (bound === null) {
                 continue;
               }
-              const off = deepFreeze(
-                turnOffIndividualFilter(before, filter.kind),
-              );
-              const kept = off.individualFiltersOff.find(
-                (f) => f.kind === filter.kind,
-              );
-              if (kept === undefined) {
-                throw new Error("the threshold turned off is kept");
+              const before = p;
+              p = deepFreeze(bound(p));
+              for (const list of [p.filters, p.filtersOff]) {
+                expect(strictlyRising(variantRanks(list))).toBe(true);
+              }
+              for (const list of [
+                p.individualFilters,
+                p.individualFiltersOff,
+              ]) {
+                expect(strictlyRising(individualRanks(list))).toBe(true);
               }
               expect(
-                setIndividualFilter(off, kept).individualFilters,
-              ).toStrictEqual(before.individualFilters);
+                p.filtersOff.filter((f) =>
+                  p.filters.some((g) => g.kind === f.kind),
+                ),
+              ).toStrictEqual([]);
+              expect(
+                p.individualFiltersOff.filter((f) =>
+                  p.individualFilters.some((g) => g.kind === f.kind),
+                ),
+              ).toStrictEqual([]);
+              keptOff +=
+                p.filtersOff.length + p.individualFiltersOff.length > 0 ? 1 : 0;
+
+              // Turned off, then on again by the value kept: the filters on
+              // of before.
+              for (const filter of before.filters) {
+                const off = deepFreeze(
+                  turnOffVariantFilter(before, filter.kind),
+                );
+                const kept = off.filtersOff.find((f) => f.kind === filter.kind);
+                if (kept === undefined) {
+                  throw new Error("the filter turned off is kept");
+                }
+                expect(setVariantFilter(off, kept).filters).toStrictEqual(
+                  before.filters,
+                );
+                turnedBack += 1;
+              }
+              for (const filter of before.individualFilters) {
+                if (filter.kind === "keep" || filter.kind === "remove") {
+                  continue;
+                }
+                const off = deepFreeze(
+                  turnOffIndividualFilter(before, filter.kind),
+                );
+                const kept = off.individualFiltersOff.find(
+                  (f) => f.kind === filter.kind,
+                );
+                if (kept === undefined) {
+                  throw new Error("the threshold turned off is kept");
+                }
+                expect(
+                  setIndividualFilter(off, kept).individualFilters,
+                ).toStrictEqual(before.individualFilters);
+              }
             }
-          }
-        }),
+          },
+        ),
         { numRuns: 200 },
       );
       expect(keptOff).toBeGreaterThan(100);
