@@ -89,7 +89,8 @@ user picked, puts on it the filters of the variants and the list of the
 individuals kept that each request gives, and runs the diversity, the
 three analyses of the Variants step, the statistics of each individual,
 the histograms of the variants and the counts of what each filter kept,
-and the write of the filtered variants as a `.nei` file. This spec gives
+and the write of the filtered variants as a `.nei` file or as a
+bgzipped VCF. This spec gives
 what the runner does with each request, what it answers when popnei
 refuses or something breaks, what it holds in memory, and the numbers
 popnei gives on the fixtures, which its tests assert. It develops the

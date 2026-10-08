@@ -419,8 +419,9 @@ with its `format`, its progress while it runs, its file, size and counts
 when done or saved, its failure; `individualsKept` of the state, for the
 individuals and their counts; the project, for `writtenName`,
 `filtersApplied` and the variants file's name and individuals; and
-`noVariantForCertain` over the project, the one pass's result and the
-individuals kept. The format chosen in the dialog is the page's own,
+`noVariantForCertain` over the project, the one pass's finished
+result, `done`, never a result so far nor that of a stopped pass, and
+the individuals kept. The format chosen in the dialog is the page's own,
 for as long as the page is open, and the one value the screen holds;
 everything else is the store's.
 

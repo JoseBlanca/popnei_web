@@ -412,7 +412,8 @@ rows of section 9 of `docs/architecture.md`.
 export function writtenName(p: Project, format: WriteFormat): string;
 
 // src/core/noVariantKept.ts
-/** Whether the one pass of popgen2.html, `summary`, finished, shows for
+/** Whether the one pass of popgen2.html, `summary`, finished (`done`;
+    never a result so far nor that of a stopped pass), shows for
     certain that the filters of `p` that apply to its file keep no
     variant, the individuals kept being `kept` (below). */
 export function noVariantForCertain(
@@ -474,7 +475,10 @@ of no variant, so that the page says so in place of its button and
 writes nothing (`docs/specs/steps/popgen2-download.md`, "When the
 filters keep no variant"). Its `summary` is the result of the one pass
 finished, `variantsSummary` done, over every variant and every
-individual of the file, whose histograms of the variants are popnei's
+individual of the file, and never a result so far nor that of a
+stopped pass: over the variants read so far, every one may have failed
+its FILTER or a low bin may be empty though popnei keeps variants
+further on. Its histograms of the variants are popnei's
 1,000 bins over 0 to 1 that hold their right edge, the first holding 0
 as well (`VARIANT_FINE_BINS`, `VARIANT_RANGE`, `VARIANT_BINS_CLOSED`).
 It answers true when one of these holds, and false otherwise:

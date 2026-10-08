@@ -362,6 +362,32 @@ describe("DL2 D1 the written file, by pieces: what goes wrong", () => {
     expect(caught).toBe(thrown);
   });
 
+  test("what throws in keeping a piece is thrown by a write of the VCF of 3,000 variants, that very value, and not answered refused", () => {
+    // The runner makes a Blob of each piece here, inside the onBytes that
+    // popnei calls, so a Blob that throws is a defect of ours there.
+    const thrown = new Error("no Blob");
+    const runner = opened(VCF, bigVcf, { writePartBytes: ONE_PIECE });
+    const NodeBlob = Blob;
+    vi.stubGlobal(
+      "Blob",
+      class extends NodeBlob {
+        constructor() {
+          super();
+          throw thrown;
+        }
+      },
+    );
+    let caught: unknown = null;
+    try {
+      runner.write(writeJob("vcf", []), ignore);
+    } catch (error: unknown) {
+      caught = error;
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(caught).toBe(thrown);
+  });
+
   test.each(["nei", "vcf"] as const)(
     "a %s write whose pass popnei refuses after it gave pieces is answered refused, with popnei's message and no file",
     async (format) => {
@@ -401,8 +427,11 @@ describe("DL2 D1 the written file, by pieces: what goes wrong", () => {
         vi.unstubAllGlobals();
       }
       expect(numParts).toBeGreaterThan(0);
-      expect(answer.kind).toBe("refused");
-      expect(Object.keys(answer)).toEqual(["kind", "message"]);
+      expect(answer).toEqual({
+        kind: "refused",
+        message:
+          "line 12005 of the VCF, the column POS: `notAPosition` is not a position",
+      });
     },
   );
 });

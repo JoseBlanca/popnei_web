@@ -26,7 +26,11 @@ import type { VariantsSummaryResult } from "../worker/protocol.ts";
  * variant: with an individual left out, whose variants' values are not
  * those of the histograms, and for two filters that keep none together
  * but some each. A threshold that is no edge of the bins is a defect,
- * thrown.
+ * thrown. `summary` is the result of the pass `done`, never a result so
+ * far nor that of a stopped pass: over the variants read so far, every
+ * one may have failed its FILTER, or a low bin may be empty, though
+ * popnei keeps variants further on, and the answer would be a wrong
+ * "certain".
  */
 export function noVariantForCertain(
   p: Project,
