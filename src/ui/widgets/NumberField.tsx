@@ -406,7 +406,12 @@ export function NumberField({
         // What the field showed was not what was typed: nothing is sent,
         // and the line of the character stays. React Aria then shows the
         // value it was given again. After the Tab key, the blur commits
-        // again what that key committed.
+        // again what that key committed. That guard of the Tab key is a
+        // safeguard no test reaches: React Aria Components 1.21.1 puts back the
+        // formatted value at each commit, so the commit at the blur after
+        // Tab is of the number the field holds and sends nothing, guard
+        // or not (the review of work package 8 of docs/plans/filters.md,
+        // 8 October 2026). It stays for a React Aria that would not.
         if (refusing.current || tabbed.current) return;
         // An empty field gives NaN, which sends nothing, or the call of an
         // emptied field when the screen gives one. React Aria has put back
