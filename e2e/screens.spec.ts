@@ -4954,6 +4954,46 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-threshold-off${at}-${theme}`);
       });
 
+      test("a threshold dragged to the top of its axis after a typed value: the MAF at 0.9 typed, then its line dragged to 1, off, 1 in grey", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        const maf = newPageStats(page).getByRole("group", {
+          name: "Major allele frequency",
+          exact: true,
+        });
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "1, keeps every variant",
+          { timeout: 20_000 },
+        );
+        const box = maf.getByRole("textbox");
+        await box.fill("0.9");
+        await box.press("Enter");
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "0.9",
+        );
+        // The input of the slider is in a hidden box inside the thumb.
+        const thumb = maf.getByRole("slider").locator("xpath=../..");
+        await thumb.scrollIntoViewIfNeeded();
+        const handle = await thumb.boundingBox();
+        if (handle === null) throw new Error("no thumb");
+        const x = handle.x + handle.width / 2;
+        const y = handle.y + handle.height / 2;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        await page.mouse.move(x + 400, y, { steps: 8 });
+        await page.mouse.up();
+        await expect(maf.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          "1, keeps every variant",
+        );
+        await expect(box).toHaveValue("1");
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-threshold-dragged-off${at}-${theme}`);
+      });
+
       test("a threshold on and grey: the missing rate of panel.nei at 0.1, the top of its axis", async ({
         page,
       }) => {
