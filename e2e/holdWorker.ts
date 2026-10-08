@@ -17,6 +17,13 @@
  * also crash the worker on demand. Each worker the
  * page makes is served so, a worker made after a Stop with nothing held.
  *
+ * Asked to, it holds a write of the filtered variants as well, for the
+ * dialog of popgen2.html's download: the first report of popnei's
+ * progress of each write goes through, so that the bar shows a share,
+ * and the reports after it and the written file are kept back until a
+ * release of "write", which lets them through and holds no write after
+ * it.
+ *
  * A release sent before the worker's script has made its channel would
  * be lost, as right after a file is picked, while the page makes the
  * worker again: so the worker says "listening" on the channel once it
@@ -35,7 +42,7 @@ const CHANNEL = "e2e-hold";
     would, with what it holds, at the moment the flow chooses, after a
     result so far, where crashWorker.ts crashes it at a message of the
     page. */
-export type Release = "oneSoFar" | "allSoFar" | "result" | "crash";
+export type Release = "oneSoFar" | "allSoFar" | "result" | "crash" | "write";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -66,12 +73,21 @@ function countWorkers([channelName, listening, counts]: readonly [
   };
 }
 
-const FRONT = `{
+/** The lines in front of the worker's script; `holdWrite`, whether a
+    write is held after its first report of progress. */
+const front = (holdWrite: boolean): string => `{
   const realNow = performance.now.bind(performance);
   performance.now = () => realNow() * 1e6;
   const realPost = self.postMessage.bind(self);
   const held = { soFar: [], result: [] };
-  const holding = { soFar: true, result: true };
+  const holding = { soFar: true, result: true, write: ${JSON.stringify(holdWrite)} };
+  const writes = new Set();
+  const heldWrite = [];
+  const reported = new Set();
+  self.addEventListener("message", (event) => {
+    const m = event.data;
+    if (m !== null && typeof m === "object" && m.kind === "write") writes.add(m.id);
+  });
   const ofSummary = (m) =>
     m !== null && typeof m === "object" && m.result !== null &&
     typeof m.result === "object" && m.result.analysis === "variantsSummary";
@@ -80,6 +96,11 @@ const FRONT = `{
     const release = event.data;
     if (release === "crash") {
       setTimeout(() => { throw new Error("a crash of the test"); }, 0);
+      return;
+    }
+    if (release === "write") {
+      holding.write = false;
+      for (const [m, t] of heldWrite.splice(0)) realPost(m, t);
       return;
     }
     if (release === "oneSoFar") {
@@ -93,6 +114,17 @@ const FRONT = `{
   };
   channel.postMessage(${JSON.stringify(LISTENING)});
   self.postMessage = (m, t) => {
+    if (holding.write && m !== null && typeof m === "object" && writes.has(m.id)) {
+      if (m.kind === "progress" && !reported.has(m.id)) {
+        reported.add(m.id);
+        realPost(m, t);
+        return;
+      }
+      if (m.kind === "progress" || m.kind === "written") {
+        heldWrite.push([m, t]);
+        return;
+      }
+    }
     if (ofSummary(m) && (m.kind === "soFar" || m.kind === "result") && holding[m.kind]) {
       held[m.kind].push([m, t]);
       return;
@@ -103,13 +135,17 @@ const FRONT = `{
 `;
 
 /** Serves every calculation worker of the page with the results of the
-    summary held; to call before the page is opened. */
-export async function holdSummary(page: Page): Promise<void> {
+    summary held, and, with `holdWrite`, each write held after its first
+    report of progress; to call before the page is opened. */
+export async function holdSummary(
+  page: Page,
+  { holdWrite }: { readonly holdWrite: boolean } = { holdWrite: false },
+): Promise<void> {
   await page.addInitScript(countWorkers, [CHANNEL, LISTENING, COUNTS] as const);
   await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
     const response = await route.fetch();
     const script = await response.text();
-    await route.fulfill({ response, body: FRONT + script });
+    await route.fulfill({ response, body: front(holdWrite) + script });
   });
 }
 

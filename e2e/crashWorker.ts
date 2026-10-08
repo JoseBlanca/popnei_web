@@ -6,7 +6,7 @@
 import type { Page } from "@playwright/test";
 
 /** Makes the calculation worker stop on the message of the kind `kind`,
-    "open" or "run", and for a run only that of the analysis `analysis`
+    "open", "run" or "write", and for a run only that of the analysis `analysis`
     when it is given, as a crash of the wasm would: its script is served
     with a listener in front of the runner's, which keeps that message
     from the runner and throws outside any handler of it. With `once`,
@@ -14,7 +14,7 @@ import type { Page } from "@playwright/test";
     page makes after the crash is the real one. */
 export async function crashWorkerOn(
   page: Page,
-  kind: "open" | "run",
+  kind: "open" | "run" | "write",
   analysis: string | null = null,
   once = false,
 ): Promise<void> {
