@@ -223,3 +223,26 @@ negative count, as `isWhole` does everywhere.
 Checks on 743282f: Vitest 4,060 in 118 files, the rest clean;
 Playwright on popgen2 and the old steps, 190 in Chromium and 190 in
 WebKit; screens of popgen2 100.
+
+### The owner's first round, 8 October 2026
+
+The owner tried the page and asked:
+
+1. No line of what a threshold keeps under the plots: "In general we
+   don't need to show the user how many variants are we going to keep."
+   A threshold that keeps every variant or individual is a filter that
+   does nothing, and is shown so by drawing its line on the plot and the
+   number in its box in grey, not by words. Decided by the session from
+   it: the raise of a variants' threshold below 0.001 to 0.001, and its
+   words, go, since the raise served only the exact count of the line;
+   popnei's filter applies 0 exactly. The bins below the threshold keep
+   their shading, from the fine bins, as before.
+2. On `panel.nei` the histogram of the missing genotypes of the variants
+   has many empty bars: with 200 individuals a variant's missing rate is
+   a multiple of 1/200 = 0.005, and the bars are 0.002 wide. Fewer bars:
+   a bar is never narrower than the spacing of the values the statistic
+   can take, 1/n for the missing rate of n individuals, 1/(ploidy · n)
+   for the MAF, rounded up to a whole number of fine bins.
+3. A check box to leave out the variants that failed their FILTER: the
+   FILTER box of the filters (`docs/plans/filters.md`, work package 9),
+   moved there to come right after Undo and Redo.
