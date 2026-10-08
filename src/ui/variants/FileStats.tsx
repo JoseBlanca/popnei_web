@@ -405,10 +405,10 @@ interface LineOrRoomProps {
 }
 
 /** The line over the plots of a part. Over plots drawn or coming, it
-    keeps, hidden, the room of its longest lines: the last of the pass,
-    "Calculating the statistics of the variants… 100%", so that the
-    plots, drawn under that line from the results so far, do not move up
-    as the result comes, by 40 pixels at 1280 (the review of round 1, ux
+    keeps, hidden, the room of its longest lines: with nothing to say, the
+    last of the pass, "Calculating the statistics of the variants…
+    100%", so that the plots, drawn under that line from the results so
+    far, do not move up as the result comes, by 40 pixels at 1280 (the review of round 1, ux
     F2), nor down as the pass about to start says its share; and the line
     of a Stop over the plots read before it, which wraps on more lines at
     320 pixels, so that they do not move down at a Stop. With neither, the
@@ -419,9 +419,13 @@ function LineOrRoom({
   room,
 }: LineOrRoomProps): React.JSX.Element | null {
   if (!room) return line === null ? null : <PartLine>{line}</PartLine>;
-  const rooms = [statsRunningLine(part, 100), PART_STOPPED_WITH_PLOTS].filter(
-    (words) => words !== line,
-  );
+  // While the pass says its share, its own line takes the room of its
+  // last; once it ended, or before it starts, that room is kept.
+  const rooms = (
+    line === null
+      ? [statsRunningLine(part, 100), PART_STOPPED_WITH_PLOTS]
+      : [PART_STOPPED_WITH_PLOTS]
+  ).filter((words) => words !== line);
   return <PartLines line={line} rooms={rooms} />;
 }
 
