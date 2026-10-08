@@ -28,8 +28,8 @@
   overflow-wrap: anywhere;
 }
 
-/* The line of the pass once it ended: its room kept, its words hidden,
-   so that the plots under it do not move up. */
+/* The line of the pass once it ended, and the plots before they come:
+   their room kept, hidden, so that what is under them does not move. */
 .room {
   visibility: hidden;
 }
@@ -57,4 +57,20 @@
   display: grid;
   gap: var(--space-2);
   min-inline-size: 0;
+}
+
+/* The room of a histogram before it is drawn, as StatsHistogram.module.css
+   lays one out: the row of its title and box, and its plot under it. */
+.plotRoom {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The room of the plot of a histogram: the shape of the element of
+   HistogramPlot.tsx for the histograms of popgen2.html, "wide", 16 by
+   10, as wide as its column. */
+.plotShape {
+  inline-size: 100%;
+  aspect-ratio: 16 / 10;
 }

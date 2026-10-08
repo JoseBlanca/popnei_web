@@ -3,7 +3,7 @@
  * The section of the statistics of the open file on popgen2.html while its
  * code is slow to download, or fails to: what the status region says of
  * the statistics, and that the next file picked downloads it again. The
- * download is the import() of FileStats.tsx, held back or failed by a mock;
+ * download is the import() of SectionPlots.tsx, held back or failed by a mock;
  * each test takes the modules of the page afresh, so that the section has
  * not downloaded its code yet.
  */
@@ -36,7 +36,7 @@ const download = {
     mocked module across vi.resetModules(), and the section of the test
     after would get one bound to the store of the test before. */
 function mockDownload(): void {
-  vi.doMock("./FileStats.tsx", async (importOriginal) => {
+  vi.doMock("./SectionPlots.tsx", async (importOriginal) => {
     download.calls += 1;
     if (download.gate !== null) await download.gate;
     if (download.fail) {
@@ -70,7 +70,9 @@ interface Page {
   readonly requests: Request[];
   readonly said: string[];
   readonly shown: string[];
-  readonly open: (fileId: string) => Promise<void>;
+  /** Opens panel.nei under `fileId`, read as recording the FILTER of its
+      variants when `keepsPassed`. */
+  readonly open: (fileId: string, keepsPassed?: boolean) => Promise<void>;
 }
 
 let container: HTMLElement;
@@ -94,7 +96,7 @@ beforeAll(async () => {
   await import("../store.tsx");
   await import("./announceChanges.ts");
   await import("./StatsSection.tsx");
-  await import("./FileStats.tsx");
+  await import("./SectionPlots.tsx");
 });
 
 beforeEach(() => {
@@ -213,7 +215,7 @@ async function drawPage(): Promise<Page> {
     root.render(tree);
     await Promise.resolve();
   });
-  const open = async (fileId: string): Promise<void> => {
+  const open = async (fileId: string, keepsPassed = false): Promise<void> => {
     await act(async () => {
       store.apply("a new variants file was loaded", (p) =>
         loadVariants(p, {
@@ -229,7 +231,7 @@ async function drawPage(): Promise<Page> {
         individuals: ["i1", "i2"],
         ploidy: 2,
         numVars: null,
-        keepsPassed: false,
+        keepsPassed,
       });
       await Promise.resolve();
     });
@@ -242,6 +244,17 @@ function sectionOf(): Element | null {
   return container.querySelector(
     'section[aria-label="Statistics of the file"]',
   );
+}
+
+/** The text of `node` that is shown, without what is hidden from a
+    screen reader: the room of the plots, whose boxes have words. */
+function shownText(node: Node | null): string {
+  if (node === null) return "";
+  if (node instanceof Element && node.getAttribute("aria-hidden") === "true") {
+    return "";
+  }
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  return [...node.childNodes].map(shownText).join("");
 }
 
 /** Ends the last request sent with the result of its analysis. */
@@ -292,10 +305,11 @@ describe("the section of the statistics while its code downloads", () => {
       "variantsSummary",
     ]);
     await after(REGION_PAUSE_MS);
-    // While its code downloads, the section has its two headings, and
-    // says of each part that it is calculated, never a count done with
-    // no word of the statistics; nothing is said of them yet.
-    expect(sectionOf()?.textContent).toBe(
+    // While the code of its plots downloads, the section has its two
+    // headings, and says of each part that it is calculated, over the
+    // room of its plots, never a count done with no word of the
+    // statistics; nothing is said of them yet.
+    expect(shownText(sectionOf())).toBe(
       "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…",
     );
     expect(page.shown).toEqual([]);
@@ -338,5 +352,27 @@ describe("the section of the statistics while its code downloads", () => {
       "The statistics of panel.nei are calculated.",
     );
     expect(saidOfStats(page)[0]).not.toContain("Calculating");
+  });
+
+  test("the FILTER box drawn while the code of the plots downloads is the same element once it arrives, and keeps the focus", async () => {
+    let release = (): void => undefined;
+    download.gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    const page = await drawPage();
+    await page.open(FIRST, true);
+    await endDone(page);
+    const box = container.querySelector('input[type="checkbox"]');
+    if (!(box instanceof HTMLInputElement)) throw new Error("no FILTER box");
+    act(() => {
+      box.focus();
+    });
+    expect(page.shown).toEqual([]);
+
+    release();
+    await sectionDrawn(page, FIRST);
+    expect(sectionOf()?.querySelectorAll("svg.chart")).toHaveLength(6);
+    expect(container.querySelector('input[type="checkbox"]')).toBe(box);
+    expect(document.activeElement).toBe(box);
   });
 });

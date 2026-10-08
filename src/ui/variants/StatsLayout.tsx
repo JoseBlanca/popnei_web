@@ -1,19 +1,22 @@
 /**
  * The layout of the statistics of the open file on popgen2.html
  * (docs/plans/file-stats.md, "Round 1 with the owner"): the section, its
- * two parts, the grid of their plots, the place of a histogram of the
- * individuals with the line under it, and the download of the
- * individuals. No room is kept for what is not drawn yet: the open
- * button under the section moves down as the plots arrive, which the
- * owner chose over empty space (docs/plans/live-stats.md, "The open
- * widget moves with the plots").
+ * two parts, the grid of their plots, the room of the plots before they
+ * are drawn, the place of a histogram of the individuals with the line
+ * under it, and the download of the individuals. The room of the plots
+ * is kept while the pass has given none yet, so that what is under them
+ * does not move down as they arrive (FileStats.tsx); the download is
+ * given no room, and the open button under the section moves down as it
+ * arrives, which the owner chose over empty space
+ * (docs/plans/live-stats.md, "The open widget moves with the plots").
  *
- * Apart from FileStats.tsx, and with no D3, since StatsSection.tsx draws
- * the section with it while the code of FileStats.tsx downloads: the
- * page's first download carries it, and not the plots.
+ * Apart from SectionPlots.tsx, and with no D3, since FileStats.tsx draws
+ * the section with it while the code of the plots downloads: the page's
+ * first download carries it, and not the plots.
  */
 import { classOf } from "../classOf.ts";
 import { Button } from "../widgets/Button.tsx";
+import { NumberField } from "../widgets/NumberField.tsx";
 import styles from "./StatsLayout.module.css";
 import { INDIVIDUALS_CSV_LABEL, STATS_NAME } from "./statsWords.ts";
 
@@ -97,6 +100,55 @@ interface PlotsProps {
 /** The plots of a part, two side by side when each has 20rem. */
 export function Plots({ children }: PlotsProps): React.JSX.Element {
   return <div className={classOf(styles, "plots")}>{children}</div>;
+}
+
+/** What the room of the plots of a part is drawn with. */
+interface PlotsRoomProps {
+  /** The short title of each plot, as the box of its threshold shows
+      it, "Obs. het. max:". */
+  readonly titles: readonly string[];
+}
+
+/** The room of the plots of a part before they are drawn, hidden, and
+    out of reach of the keyboard and of a screen reader: for each plot
+    the row of its short title and the box of its threshold, a box of the
+    same field, which takes the same height and wraps its title at the
+    same width, and under it the room of the plot, of its shape. */
+export function PlotsRoom({ titles }: PlotsRoomProps): React.JSX.Element {
+  return (
+    <div
+      className={`${classOf(styles, "plots")} ${classOf(styles, "room")}`}
+      aria-hidden="true"
+      inert
+    >
+      {titles.map((title) => (
+        <div key={title} className={classOf(styles, "plotRoom")}>
+          <NumberField
+            label={title}
+            shownLabel={title}
+            value={0}
+            minValue={0}
+            maxValue={1}
+            step={1}
+            refusedText={nothingRefused}
+            onRefused={nothing}
+            onChange={nothing}
+          />
+          <div className={classOf(styles, "plotShape")} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The words of a refusal of a box of the room, which takes no key. */
+function nothingRefused(): string {
+  return "";
+}
+
+/** What a box of the room does when changed, which it cannot be. */
+function nothing(): void {
+  // The room is inert.
 }
 
 /** What the place of a histogram of the individuals is drawn with. */

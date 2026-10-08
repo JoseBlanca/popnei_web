@@ -31,29 +31,45 @@
  * plots so far"): from the first result so far of the pass, about two
  * seconds after its start, they are drawn from the last one, the words of
  * each plot saying they are so far, and at the end from the result,
- * where they were: the line of the pass keeps its room,
- * hidden, once it ended. Nothing keeps their room before: the open button under the
- * section moves down as they arrive, which the owner chose over empty
- * space. The download of the table of the individuals comes with the
- * result alone.
+ * where they were: the line of the pass keeps its room, hidden, once it
+ * ended. While the pass runs, or is about to, and before the first
+ * result so far, the room of the plots is kept, hidden, so that the
+ * FILTER box at the end of the variants and the part of the individuals
+ * do not move down by 574 pixels at 1280 as the plots arrive, where a
+ * user may be about to click or have the focus (the review of work
+ * package 7 of docs/plans/filters.md, 8 October 2026). The download of
+ * the table of the individuals comes with the result alone, and moves the
+ * open button down by its height.
+ *
+ * The code of the plots, with D3, SectionPlots.tsx, is downloaded apart
+ * from the page's, from the moment a file is picked, so that the page's
+ * first download does not carry it. The section itself, its parts, its
+ * lines and the FILTER box, is the page's, and is drawn from the read of
+ * the file, the code of the plots there or not: so the FILTER box is one
+ * element from the read on, and a keyboard user's focus on it stays when
+ * that code arrives. While it downloads, a part whose plots would be
+ * drawn says that it is calculated, over the room of its plots, and the
+ * status region says nothing of the statistics. A download that fails is
+ * caught by the boundary of StatsSection.tsx, which gives it to the error
+ * bar, whose words say to reload the page; the next file picked asks for
+ * it again, which WebKit 26.6 downloads, and Chromium 153 does not,
+ * keeping the failure until the page is reloaded.
  */
 import {
+  Suspense,
+  lazy,
+  useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 
 import { DEFAULT_MAX_MISSING_RATE } from "../../core/apps.ts";
-import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
-import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
 
 import type { AnalysisStatus } from "../../core/store.ts";
 import type {
-  IndividualStatsPart,
   JobResult,
-  VariantStatsPart,
   VariantsSummaryResult,
 } from "../../worker/protocol.ts";
 import { progressShare } from "../analyses/words.ts";
@@ -63,11 +79,10 @@ import { downloadText } from "../download.ts";
 import { statsCsvName } from "../steps/variants/individualStats.ts";
 import { useAppState } from "../store.tsx";
 import {
-  IndividualPlace,
   IndividualsDownload,
   Part,
   PartLine,
-  Plots,
+  PlotsRoom,
   StatsFrame,
 } from "./StatsLayout.tsx";
 import {
@@ -77,14 +92,19 @@ import {
   PART_STOPPED,
   VARIANTS_HEADING,
   VARIANT_STATISTICS,
+  individualTitle,
   statsRunningLine,
+  thresholdShownLabel,
+  variantTitle,
 } from "./statsWords.ts";
 import type { StatsPart } from "./statsWords.ts";
 import type { StatsShown } from "./announceChanges.ts";
 import { PassedFilterBox } from "./PassedFilterBox.tsx";
-import { StatsHistogram } from "./StatsHistogram.tsx";
-import { individualPlot, variantPlot } from "./statsPlots.ts";
-import type { PassIndividuals } from "../../core/analyses/variantChecks.ts";
+import type * as PlotsModule from "./SectionPlots.tsx";
+import type {
+  IndividualThresholds,
+  VariantThresholds,
+} from "./SectionPlots.tsx";
 import { summaryStatus } from "./words.ts";
 
 /** What the section is drawn with. */
@@ -95,18 +115,25 @@ export interface FileStatsProps {
   /** The open button of the page, which takes the focus when the section
       goes with it, another file opened. */
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
-  /** Told when the section of a load is drawn, and when it goes, so that
-      the status region says nothing of the statistics before. */
+  /** Told when the section of a load is drawn with the code of its
+      plots, and when it goes, so that the status region says nothing of
+      the statistics before. */
   readonly onShown: StatsShown;
 }
 
-/** The statistics of the open file; nothing before a file is read. */
+/** The statistics of the open file; nothing before a file is read. The
+    code of the plots is asked for from the moment a file is picked. */
 export function FileStats({
   autoRuns,
   openButton,
   onShown,
 }: FileStatsProps): React.JSX.Element | null {
   const variants = useAppState((s) => s.project.variants);
+  // Asked for here, before the read, so that it is there when the pass
+  // starts; a download that fails is said by the plots that wait for it.
+  useEffect(() => {
+    loadPlotsCode().catch(() => undefined);
+  }, []);
   if (variants?.read.kind !== "read") return null;
   return (
     // Another load is another section, so that the one before goes, with
@@ -123,6 +150,53 @@ export function FileStats({
   );
 }
 
+/** The module of the code of the plots. */
+type PlotsCode = typeof PlotsModule;
+
+/** The download of the code of the plots, once asked for; `null` before,
+    and again after a download that failed, so that the next file picked
+    asks for it again. */
+let plotsCode: Promise<PlotsCode> | null = null;
+
+/** Downloads the code of the plots, or gives the download already asked
+    for, done or not. */
+function loadPlotsCode(): Promise<PlotsCode> {
+  plotsCode ??= import("./SectionPlots.tsx").catch((error: unknown) => {
+    plotsCode = null;
+    lazyPlots = lazyPlotsOf();
+    throw error;
+  });
+  return plotsCode;
+}
+
+/** The components of the code of the plots, each drawn once it is
+    there. Made once, and drawn for every file after: a lazy component
+    made for each file would wait for its code each time, even once
+    downloaded, and React then holds what it draws back 300 ms (React
+    19.3). Made again after a download that failed, which they would
+    otherwise keep. */
+function lazyPlotsOf(): {
+  readonly CodeMark: React.LazyExoticComponent<PlotsCode["PlotsCodeMark"]>;
+  readonly VariantPlots: React.LazyExoticComponent<PlotsCode["VariantPlots"]>;
+  readonly IndividualPlots: React.LazyExoticComponent<
+    PlotsCode["IndividualPlots"]
+  >;
+} {
+  return {
+    CodeMark: lazy(async () => ({
+      default: (await loadPlotsCode()).PlotsCodeMark,
+    })),
+    VariantPlots: lazy(async () => ({
+      default: (await loadPlotsCode()).VariantPlots,
+    })),
+    IndividualPlots: lazy(async () => ({
+      default: (await loadPlotsCode()).IndividualPlots,
+    })),
+  };
+}
+
+let lazyPlots = lazyPlotsOf();
+
 /** What the section of one load is drawn with. */
 interface StatsProps extends FileStatsProps {
   /** The id of the load. */
@@ -134,6 +208,17 @@ interface StatsProps extends FileStatsProps {
       sets the narrowest bar of the histogram of the MAF. */
   readonly ploidy: number;
 }
+
+/** The short titles of the histograms of the variants, as their boxes
+    show them, for the room of their plots. */
+const VARIANT_ROOM = VARIANT_STATISTICS.map((statistic) =>
+  thresholdShownLabel(variantTitle(statistic)),
+);
+
+/** The same of the histograms of the individuals. */
+const INDIVIDUAL_ROOM = INDIVIDUAL_STATISTICS.map((statistic) =>
+  thresholdShownLabel(individualTitle(statistic)),
+);
 
 /** The section of one load of the file. */
 function Stats({
@@ -154,6 +239,8 @@ function Stats({
   // about to start, and which a Stop with no pass running changes and the
   // store does not.
   useSyncExternalStore(autoRuns.subscribe, autoRuns.getVersion);
+  // Read as it is drawn, since a failed download replaces them.
+  const { CodeMark, VariantPlots, IndividualPlots } = lazyPlots;
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -170,8 +257,14 @@ function Stats({
     };
   }, [openButton]);
 
-  // Drawn: the status region may say the statistics of this load.
-  useLayoutEffect(() => onShown(fileId), [onShown, fileId]);
+  /** Whether the pass about to start or running has given no result so
+      far yet: the plots will come, and their room is kept. */
+  const stopped =
+    (status.kind === "ready" || status.kind === "removed") &&
+    autoRuns.startedUnder(status.key);
+  const coming =
+    (status.kind === "running" && status.soFar === null) ||
+    ((status.kind === "ready" || status.kind === "removed") && !stopped);
 
   /** What a part says over its plots: the share done while the pass
       runs, that it was stopped, why it cannot run, or nothing once done,
@@ -190,7 +283,7 @@ function Stats({
       case "removed":
         // Not started under its key, the pass starts by itself in a
         // moment.
-        return autoRuns.startedUnder(status.key) ? PART_STOPPED : null;
+        return stopped ? PART_STOPPED : null;
       case "locked":
         return status.reason;
     }
@@ -199,58 +292,72 @@ function Stats({
   const shown = shownOf(status);
   const soFar = shown?.soFar ?? false;
   const done = status.kind === "done" ? shown?.result : undefined;
-  const variantsLine = lineOf("variants");
-  const individualsLine = lineOf("individuals");
   return (
     <StatsFrame sectionRef={sectionRef}>
+      {/* Tells the status region, once the code of the plots is there,
+          that the section is drawn; nothing before, nothing after a
+          download that failed. */}
+      <Suspense fallback={null}>
+        <CodeMark fileId={fileId} onShown={onShown} />
+      </Suspense>
       <Part heading={VARIANTS_HEADING}>
         {status.kind === "error" ? (
           <PartLine>{PART_FAILED}</PartLine>
-        ) : (
+        ) : shown === null ? (
           <>
-            <LineOrRoom line={variantsLine} part="variants" plots={shown} />
-            {shown !== null && (
-              <VariantPlots
-                result={shown.result.perVar}
-                numIndividuals={shown.result.perIndividual.individuals.length}
-                ploidy={ploidy}
-                soFar={soFar}
-                thresholds={thresholds.variants}
-                onThreshold={(statistic, value) => {
-                  setThresholds((before) => ({
-                    ...before,
-                    variants: { ...before.variants, [statistic]: value },
-                  }));
-                }}
-              />
-            )}
+            <LineOrRoom
+              line={lineOf("variants")}
+              part="variants"
+              room={coming}
+            />
+            {coming && <PlotsRoom titles={VARIANT_ROOM} />}
           </>
+        ) : (
+          <Suspense fallback={<Waiting part="variants" />}>
+            <LineOrRoom line={lineOf("variants")} part="variants" room />
+            <VariantPlots
+              result={shown.result.perVar}
+              numIndividuals={shown.result.perIndividual.individuals.length}
+              ploidy={ploidy}
+              soFar={soFar}
+              thresholds={thresholds.variants}
+              onThreshold={(statistic, value) => {
+                setThresholds((before) => ({
+                  ...before,
+                  variants: { ...before.variants, [statistic]: value },
+                }));
+              }}
+            />
+          </Suspense>
         )}
         <PassedFilterBox />
       </Part>
       <Part heading={INDIVIDUALS_HEADING}>
         {status.kind === "error" ? (
           <PartLine>{PART_FAILED}</PartLine>
-        ) : (
+        ) : shown === null ? (
           <>
             <LineOrRoom
-              line={individualsLine}
+              line={lineOf("individuals")}
               part="individuals"
-              plots={shown}
+              room={coming}
             />
-            {shown !== null && (
-              <IndividualPlots
-                result={shown.result.perIndividual}
-                soFar={soFar}
-                thresholds={thresholds.individuals}
-                onThreshold={(statistic, value) => {
-                  setThresholds((before) => ({
-                    ...before,
-                    individuals: { ...before.individuals, [statistic]: value },
-                  }));
-                }}
-              />
-            )}
+            {coming && <PlotsRoom titles={INDIVIDUAL_ROOM} />}
+          </>
+        ) : (
+          <Suspense fallback={<Waiting part="individuals" />}>
+            <LineOrRoom line={lineOf("individuals")} part="individuals" room />
+            <IndividualPlots
+              result={shown.result.perIndividual}
+              soFar={soFar}
+              thresholds={thresholds.individuals}
+              onThreshold={(statistic, value) => {
+                setThresholds((before) => ({
+                  ...before,
+                  individuals: { ...before.individuals, [statistic]: value },
+                }));
+              }}
+            />
             {done !== undefined && (
               <IndividualsDownload
                 onPress={() => {
@@ -262,10 +369,24 @@ function Stats({
                 }}
               />
             )}
-          </>
+          </Suspense>
         )}
       </Part>
     </StatsFrame>
+  );
+}
+
+/** A part whose plots wait for their code: it says that it is
+    calculated, never a count done with no word of the statistics, over
+    the room of its plots. */
+function Waiting({ part }: { readonly part: StatsPart }): React.JSX.Element {
+  return (
+    <>
+      <PartLine>{statsRunningLine(part, null)}</PartLine>
+      <PlotsRoom
+        titles={part === "variants" ? VARIANT_ROOM : INDIVIDUAL_ROOM}
+      />
+    </>
   );
 }
 
@@ -274,23 +395,24 @@ interface LineOrRoomProps {
   /** What the part says over its plots, or `null` for nothing. */
   readonly line: string | null;
   readonly part: StatsPart;
-  /** What its plots are drawn from, `null` when there are none. */
-  readonly plots: Shown | null;
+  /** Whether its room is kept when it says nothing: with plots drawn
+      under it, or coming. */
+  readonly room: boolean;
 }
 
-/** The line over the plots of a part; once the pass ended, with its
-    plots drawn, the room of its last line, "Calculating the statistics of
-    the variants… 100%", hidden, so that the plots, drawn under that line
-    from the results so far, do not move up as the result comes, by 40
-    pixels at 1280 (the review of round 1, ux F2); nothing with no plots
-    and no line. */
+/** The line over the plots of a part; with nothing to say over plots
+    drawn or coming, the room of its last line, "Calculating the
+    statistics of the variants… 100%", hidden, so that the plots, drawn
+    under that line from the results so far, do not move up as the result
+    comes, by 40 pixels at 1280 (the review of round 1, ux F2), nor down
+    as the pass about to start says its share; nothing otherwise. */
 function LineOrRoom({
   line,
   part,
-  plots,
+  room,
 }: LineOrRoomProps): React.JSX.Element | null {
   if (line !== null) return <PartLine>{line}</PartLine>;
-  if (plots === null) return null;
+  if (!room) return null;
   return <PartLine room>{statsRunningLine(part, 100)}</PartLine>;
 }
 
@@ -329,8 +451,8 @@ function shownOf(status: AnalysisStatus<JobResult>): Shown | null {
     drawn as it is, or `null` for the top of the axis, which
     keeps everything and follows the axis as a result so far widens it. */
 interface Thresholds {
-  readonly variants: Readonly<Record<VariantStatistic, number | null>>;
-  readonly individuals: Readonly<Record<IndividualStatistic, number | null>>;
+  readonly variants: VariantThresholds;
+  readonly individuals: IndividualThresholds;
 }
 
 /** The thresholds of a file just open: the missing rate of the variants
@@ -349,188 +471,3 @@ const START_THRESHOLDS: Thresholds = Object.freeze({
     observedHeterozygosity: null,
   }),
 });
-
-/** What the plots of the variants are drawn with. */
-interface VariantPlotsProps {
-  /** The part of the variants of the result, or of a result so far. */
-  readonly result: VariantStatsPart;
-  /** The individuals it is calculated over, every one of the file. */
-  readonly numIndividuals: number;
-  /** Their ploidy. */
-  readonly ploidy: number;
-  /** Whether it is of a result so far. */
-  readonly soFar: boolean;
-  /** The thresholds of the four, as the user set them. */
-  readonly thresholds: Thresholds["variants"];
-  /** Called with the threshold the user set on the histogram of
-      `statistic`. */
-  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
-}
-
-/** The four histograms of the variants, each over the variants in its
-    bins, with its threshold. Each keeps its element from one result so
-    far to the next, and is updated in it. */
-function VariantPlots({
-  result,
-  numIndividuals,
-  ploidy,
-  soFar,
-  thresholds,
-  onThreshold,
-}: VariantPlotsProps): React.JSX.Element {
-  // The same object until the file changes, so that the plots are not
-  // made again on renders that changed nothing.
-  const individuals = useMemo(
-    () => ({ numIndividuals, ploidy }),
-    [numIndividuals, ploidy],
-  );
-  return (
-    <Plots>
-      {VARIANT_STATISTICS.map((statistic) => (
-        <VariantHistogram
-          key={statistic}
-          statistic={statistic}
-          result={result}
-          individuals={individuals}
-          soFar={soFar}
-          threshold={thresholds[statistic]}
-          onThreshold={onThreshold}
-        />
-      ))}
-    </Plots>
-  );
-}
-
-/** What one histogram of the variants is drawn with. */
-interface VariantHistogramProps {
-  readonly statistic: VariantStatistic;
-  readonly result: VariantStatsPart;
-  readonly individuals: PassIndividuals;
-  readonly soFar: boolean;
-  /** Its threshold as the user set it. */
-  readonly threshold: number | null;
-  readonly onThreshold: (statistic: VariantStatistic, value: number) => void;
-}
-
-/** A histogram of the variants and its threshold, which follows the
-    number typed in its box before it is committed. */
-function VariantHistogram({
-  statistic,
-  result,
-  individuals,
-  soFar,
-  threshold,
-  onThreshold,
-}: VariantHistogramProps): React.JSX.Element {
-  const [typed, setTyped] = useState<number | null>(null);
-  // Made again only when what it shows changes, so that the plot is not
-  // drawn again on renders that changed nothing (react.md, "Mounting a
-  // plot").
-  const set = useMemo(
-    () => variantPlot(statistic, result, individuals, soFar, threshold),
-    [statistic, result, individuals, soFar, threshold],
-  );
-  const drawn = useMemo(
-    () =>
-      typed === null
-        ? set
-        : variantPlot(statistic, result, individuals, soFar, threshold, typed),
-    [set, statistic, result, individuals, soFar, threshold, typed],
-  );
-  return (
-    <StatsHistogram
-      plot={drawn}
-      boxValue={set.threshold.shown}
-      onThreshold={(value) => {
-        onThreshold(statistic, value);
-      }}
-      onTyped={setTyped}
-    />
-  );
-}
-
-/** What the plots of the individuals are drawn with. */
-interface IndividualPlotsProps {
-  /** The part of the individuals of the result, or of a result so far. */
-  readonly result: IndividualStatsPart;
-  /** Whether it is of a result so far. */
-  readonly soFar: boolean;
-  /** The thresholds of the two, as the user set them. */
-  readonly thresholds: Thresholds["individuals"];
-  /** Called with the threshold the user set on the histogram of
-      `statistic`. */
-  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
-}
-
-/** The two histograms of the individuals, each over the individuals
-    with a value, with its threshold, and under each the line of those
-    with none; a line alone where no individual has a value. */
-function IndividualPlots({
-  result,
-  soFar,
-  thresholds,
-  onThreshold,
-}: IndividualPlotsProps): React.JSX.Element {
-  return (
-    <Plots>
-      {INDIVIDUAL_STATISTICS.map((statistic) => (
-        <IndividualHistogram
-          key={statistic}
-          statistic={statistic}
-          result={result}
-          soFar={soFar}
-          threshold={thresholds[statistic]}
-          onThreshold={onThreshold}
-        />
-      ))}
-    </Plots>
-  );
-}
-
-/** What one histogram of the individuals is drawn with. */
-interface IndividualHistogramProps {
-  readonly statistic: IndividualStatistic;
-  readonly result: IndividualStatsPart;
-  readonly soFar: boolean;
-  /** Its threshold as the user set it. */
-  readonly threshold: number | null;
-  readonly onThreshold: (statistic: IndividualStatistic, value: number) => void;
-}
-
-/** A histogram of the individuals and its threshold, which follows the
-    number typed in its box, and the line under it of those with no
-    value. */
-function IndividualHistogram({
-  statistic,
-  result,
-  soFar,
-  threshold,
-  onThreshold,
-}: IndividualHistogramProps): React.JSX.Element {
-  const [typed, setTyped] = useState<number | null>(null);
-  const set = useMemo(
-    () => individualPlot(statistic, result, soFar, threshold),
-    [statistic, result, soFar, threshold],
-  );
-  const drawn = useMemo(
-    () =>
-      typed === null
-        ? set
-        : individualPlot(statistic, result, soFar, threshold, typed),
-    [set, statistic, result, soFar, threshold, typed],
-  );
-  return (
-    <IndividualPlace noValueLine={drawn.noValueLine}>
-      {drawn.plot !== null && set.plot !== null && (
-        <StatsHistogram
-          plot={drawn.plot}
-          boxValue={set.plot.threshold.shown}
-          onThreshold={(value) => {
-            onThreshold(statistic, value);
-          }}
-          onTyped={setTyped}
-        />
-      )}
-    </IndividualPlace>
-  );
-}

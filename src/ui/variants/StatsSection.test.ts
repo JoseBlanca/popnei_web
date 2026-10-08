@@ -74,6 +74,8 @@ interface Page {
   readonly autoRuns: AutoRuns;
   readonly requests: Request[];
   readonly openButton: React.RefObject<HTMLButtonElement | null>;
+  /** The loads whose section was drawn with the code of its plots. */
+  readonly shown: string[];
 }
 
 let container: HTMLElement;
@@ -81,10 +83,10 @@ let root: Root;
 let caught: unknown[];
 
 beforeAll(async () => {
-  // The code of the statistics, which the section loads by import() once
-  // a file is picked, made ready once, so that each test waits for it a
-  // few turns and not for its first transform.
-  await import("./FileStats.tsx");
+  // The code of the plots, which the section loads by import() once a
+  // file is picked, made ready once, so that each test waits for it a few
+  // turns and not for its first transform.
+  await import("./SectionPlots.tsx");
 });
 
 beforeEach(() => {
@@ -153,9 +155,14 @@ async function drawPage(announced = true): Promise<Page> {
   });
   const openButton = createRef<HTMLButtonElement>();
   const announcer = createAnnouncer();
-  const onShown = announced
+  const announceShown = announced
     ? announceChanges(store, announcer, () => null)
     : () => () => undefined;
+  const shown: string[] = [];
+  const onShown = (fileId: string): (() => void) => {
+    shown.push(fileId);
+    return announceShown(fileId);
+  };
   const tree = createElement(
     StrictMode,
     null,
@@ -174,18 +181,21 @@ async function drawPage(announced = true): Promise<Page> {
     root.render(tree);
     await Promise.resolve();
   });
-  return { store, autoRuns, requests, openButton };
+  return { store, autoRuns, requests, openButton, shown };
 }
 
 /** Opens `panel.nei` under `fileId`, records its read, and lets the
-    section draw it, the count of its variants sent. */
+    section draw it with the code of its plots, the count of its variants
+    sent. */
 async function open(page: Page, fileId: string): Promise<void> {
   await read(page, fileId);
-  // The code of the statistics comes by import(), a few turns later.
-  for (let turn = 0; turn < 50 && sectionOf() === null; turn += 1) {
+  // The code of the plots comes by import(), a few turns later.
+  for (let turn = 0; turn < 50 && !page.shown.includes(fileId); turn += 1) {
     await settled();
   }
-  if (sectionOf() === null) throw new Error("the section was not drawn");
+  if (!page.shown.includes(fileId)) {
+    throw new Error("the section was not drawn with its plots' code");
+  }
 }
 
 /** Opens `panel.nei` under `fileId` and records its read, in one act. */

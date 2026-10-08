@@ -344,3 +344,33 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   await page.keyboard.press("Space");
   await expect(filterBox(page)).toBeChecked();
 });
+
+test("SF7 D2 the box shown while the code of the plots downloads keeps the focus when that code arrives", async ({
+  page,
+}) => {
+  // The code of the plots held back until the box has the focus.
+  let releaseCode = (): void => undefined;
+  const held = new Promise<void>((resolve) => {
+    releaseCode = resolve;
+  });
+  await page.route(/\/assets\/SectionPlots-[^/]*\.js$/u, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await openPage(page);
+  await pick(page, "low_qual.vcf.gz");
+  await expect(filterBox(page)).toBeChecked();
+  await expect(
+    part(page, "Variants").getByText(
+      /^Calculating the statistics of the variants…/u,
+    ),
+  ).toBeVisible();
+  await expect(stats(page).locator("svg.chart")).toHaveCount(0);
+  await filterBox(page).focus();
+  await expect(filterBox(page)).toBeFocused();
+
+  releaseCode();
+  await expectDone(page, "low_qual.vcf.gz");
+  await expect(filterBox(page)).toBeFocused();
+  await expect(filterBox(page)).toBeChecked();
+});

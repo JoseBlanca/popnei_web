@@ -521,7 +521,7 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
   // network down; the next ones are served, though Chromium 153 keeps the
   // failure of an import() until the page is reloaded and asks no more.
   let refused = 0;
-  await page.route(/\/assets\/FileStats-[^/]*\.js$/u, async (route) => {
+  await page.route(/\/assets\/SectionPlots-[^/]*\.js$/u, async (route) => {
     if (refused === 0) {
       refused += 1;
       await route.fulfill({ status: 404, body: "" });
@@ -530,7 +530,9 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
     }
   });
   await openPage(page);
-  expect(fetched.filter((url) => /FileStats|d3|plots/u.test(url))).toEqual([]);
+  expect(fetched.filter((url) => /SectionPlots|d3|plots/u.test(url))).toEqual(
+    [],
+  );
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
   await expect(
@@ -552,7 +554,7 @@ test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps t
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
-  await page.route(/\/assets\/FileStats-[^/]*\.js$/u, async (route) => {
+  await page.route(/\/assets\/SectionPlots-[^/]*\.js$/u, async (route) => {
     await route.fulfill({ status: 404, body: "" });
   });
   await openPage(page);

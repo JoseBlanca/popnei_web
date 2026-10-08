@@ -10,8 +10,9 @@
  * its step of Undo; the page sends nothing to the worker for it, since
  * the key of the one pass holds no filter.
  *
- * Apart from FileStats.tsx, since StatsSection.tsx draws it too while
- * the code of the plots downloads.
+ * Drawn by FileStats.tsx from the read of the file, whether the code of
+ * the plots is there or not, so that it is one element across the
+ * arrival of that code and keeps a keyboard user's focus.
  */
 import { useAppState, useStore } from "../store.tsx";
 import { Checkbox } from "../widgets/Checkbox.tsx";
