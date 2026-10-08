@@ -3,9 +3,10 @@
  * given to the components of the shell (docs/specs/shell.md, "What it
  * sends and reads"). The entry gives the population genetics
  * application's, `SHELL_WORDS` of src/ui/analyses/titles.ts, through
- * `ShellWordsProvider`, as it gives the store; the stepper, the summary
- * line and the notice read it with `useShellWords`, so that the shell
- * imports nothing of one application.
+ * `ShellWordsProvider`, as it gives the store; the stepper and the
+ * summary line read it with `useShellWords`, so that the shell imports
+ * nothing of one application. The notice reads the part of them it
+ * needs, the titles, from noticeWords.tsx.
  */
 import { createContext, useContext } from "react";
 

@@ -95,16 +95,30 @@ export interface StepState {
 }
 
 /**
- * What the words of the shell need of the application, beyond the state:
- * the title of an analysis, from `src/ui/analyses/titles.ts`; the step it
- * is shown in, from `src/core/apps.ts`; and the variants the filters
- * keep, from the result of the Counts of the filters when it is done.
- * The name and the size of the written file are core's, `writtenName` and
- * `sizeText`, which these words call themselves.
+ * What the words of the notice need of the page, beyond the notice: the
+ * title of each analysis its store holds, by which the notice names a
+ * result removed or a calculation stopped. Each page gives its own, so
+ * that the notice is drawn on a page with no steps and no counts of the
+ * filters (docs/specs/steps/popgen2-filters.md, "The notice"): popgen.html
+ * its `ShellWords`, which take these in, and popgen2.html the title of
+ * its one analysis.
  */
-export interface ShellWords<R> {
-  /** The title of the analysis `id`, "Diversity". */
-  title(id: AnalysisId): string;
+export interface NoticeWords {
+  /** The title of the analysis `id`, "Diversity"; a function of no
+      `this`, so that it is passed on as it is. */
+  readonly title: (id: AnalysisId) => string;
+}
+
+/**
+ * What the words of the shell need of the application, beyond the state:
+ * the title of an analysis, from `src/ui/analyses/titles.ts`, which the
+ * notice reads too; the step it is shown in, from `src/core/apps.ts`; and
+ * the variants the filters keep, from the result of the Counts of the
+ * filters when it is done. The name and the size of the written file are
+ * core's, `writtenName` and `sizeText`, which these words call
+ * themselves.
+ */
+export interface ShellWords<R> extends NoticeWords {
   /** Whether the title of the analysis `id` names several things,
       "Histograms of the variants", after which the verb is plural:
       "Histograms of the variants were not run." */

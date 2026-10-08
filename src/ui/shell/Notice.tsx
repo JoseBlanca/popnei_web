@@ -5,7 +5,8 @@
  * Undo after a command or a redo and Redo after an undo, and Close, which
  * closes it and stops the calculations it left behind. It is the toast of
  * the page, in a region labelled "Notice" that F6 reaches, while the store
- * gives a notice, with no timer.
+ * gives a notice, with no timer. Both pages draw it, each naming its
+ * analyses by the words it gives, `useNoticeWords`.
  *
  * A notice stays the same toast while its change is the same, `cause` of
  * the store's notice, which the store keeps as the same object until the
@@ -17,7 +18,7 @@ import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Toast } from "../widgets/Toast.tsx";
 import { useAnnouncer } from "./announcer.tsx";
-import { useShellWords } from "./shellWords.tsx";
+import { useNoticeWords } from "./noticeWords.tsx";
 import { undoOrRedo } from "./undoRedo.ts";
 import { noticeText } from "./words.ts";
 
@@ -25,14 +26,14 @@ import { noticeText } from "./words.ts";
 export function Notice(): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
-  const shellWords = useShellWords();
+  const words = useNoticeWords();
   const notice = useAppState((s) => s.notice);
   const content =
     notice === null
       ? null
       : {
           identity: notice.cause,
-          ...noticeText(notice, (id) => shellWords.title(id)),
+          ...noticeText(notice, words.title),
         };
   return (
     <Toast label="Notice" content={content}>
