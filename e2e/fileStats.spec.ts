@@ -224,8 +224,10 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
 
   await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   expect(await titles(page)).toEqual(TITLES);
+  // The missing rate, multiples of 1 / 12: a bin of 0 to 0.001, its
+  // zeros, and 3 of 0.1 from 0.001 to 0.3.
   await expect(descriptions(page)).toHaveText([
-    "The proportion of missing genotypes of 200 variants, in 3 bins from 0 to 0.3.",
+    "The proportion of missing genotypes of 200 variants, in 4 bins from 0 to 0.3.",
     "The major allele frequency of 200 variants, in 12 bins from 0.3 to 0.6.",
     "The observed heterozygosity of 200 variants, in 30 bins from 0.7 to 1.",
     "The unbiased expected heterozygosity of 200 variants, in 50 bins from 0.9 to 1.",
