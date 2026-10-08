@@ -227,12 +227,9 @@ test("TH2 at the start: the missing rate of the variants on at 0.1, grey, the fo
   await expect(missing.box).toHaveAccessibleName(name);
   await expect(missing.slider).toHaveAccessibleName(name);
   await expect(missing.box).toHaveAccessibleDescription(REMOVES_NO_VARIANT);
-  // Said to a screen reader alone: no words of what it keeps are drawn.
-  const hidden = await missing.group
-    .getByText(REMOVES_NO_VARIANT)
-    .boundingBox();
-  expect(hidden?.width).toBeLessThanOrEqual(1);
-  expect(hidden?.height).toBeLessThanOrEqual(1);
+  // Said to a screen reader alone, through the box's description: the
+  // words are hidden, neither drawn nor read again as loose text.
+  await expect(missing.group.getByText(REMOVES_NO_VARIANT)).toBeHidden();
   await expect(page.getByText(/^Keeps /u)).toHaveCount(0);
   // The four others off: 1 in their box, their line at the top of their
   // axis, the MAF's at 1, the observed heterozygosity's at 0.7; the
