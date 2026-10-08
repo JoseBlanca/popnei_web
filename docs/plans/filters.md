@@ -948,3 +948,26 @@ so (core exports the address, the ui makes the link). Fixed in f0d9133:
 the fake counts of a store property had four counts for five kinds of
 filter, a failure 2 times in 13. Vitest 4,244, twice; e2e saving 33 and
 33; screens of the shell 40.
+
+### Work package 5, 8 October 2026
+
+Commits 15e19c3 (5.1: `filterNotices`, `filtersChanged`, the two
+stores; popgen2.html's starts from `popgen2FirstProject()`, which
+changes nothing on its screen yet, since no part of it reads the
+project's filters), 33becc4 (5.2: a failure that is not popnei's is
+forgotten only by a change that leaves its key behind; on popgen.html a
+crash's words now stay after a change of a setting that analysis does
+not read, with Run beside them), ad2ab23 (5.3: `stopped: { soFar }`;
+a late result so far passed over). Vitest 4,270; Playwright 623 in
+Chromium and 623 in WebKit.
+
+Review: architecture and spec; tests and react. No result shown under
+a key that is not current. Fixed in 0f6db4c: a failure that ends after
+a change left its request behind is dropped, so Undo gives `ready`
+(store.md says so); a test of the defect path that forgets `stopped`;
+a test of the notice for a change of a filter of the individuals alone.
+Noted, not fixed: a change of popnei's version mid-session stops
+everything and drops a notice of a filter change; a failure of a request
+the user stopped, ending after a new Run under the same key, is kept
+(pre-existing, needs the worker to answer `failed` after a cancel).
+Vitest 4,273, twice.
