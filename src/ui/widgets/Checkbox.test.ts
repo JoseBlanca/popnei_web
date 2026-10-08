@@ -62,20 +62,21 @@ describe("SF7 D1 the description of the check box", () => {
   test("is drawn under the box and named by the input's aria-describedby", () => {
     const input = draw({
       label: "Leave out the variants that failed their FILTER",
-      description: "The plots show every variant, these among them.",
+      description:
+        "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
       isSelected: true,
       onChange: () => undefined,
     });
 
     expect(describedWords(input)).toBe(
-      "The plots show every variant, these among them.",
+      "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
     );
     // The sentence is shown, after the box and its words.
     const sentence = [...container.querySelectorAll("*")].find(
       (element) =>
         element.children.length === 0 &&
         element.textContent ===
-          "The plots show every variant, these among them.",
+          "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
     );
     expect(sentence).toBeDefined();
     const label = input.closest("label");
@@ -109,7 +110,8 @@ describe("SF7 D1 the description of the check box", () => {
     const changes: boolean[] = [];
     const input = draw({
       label: "Leave out the variants that failed their FILTER",
-      description: "The plots show every variant, these among them.",
+      description:
+        "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
       isSelected: true,
       onChange: (isSelected) => {
         changes.push(isSelected);

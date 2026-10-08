@@ -75,7 +75,7 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
     const off = passedFilterChange(false);
     const turnedOff = off.command(first);
     expect(off.description).toBe(
-      "the filter of the FILTER column was turned off",
+      "the variants that failed their FILTER are kept",
     );
     expect(passedFilterOn(turnedOff)).toBe(false);
     expect(turnedOff.filtersOff).toEqual([{ kind: "passed" }]);
@@ -84,7 +84,7 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
     const on = passedFilterChange(true);
     const turnedOn = on.command(deepFreeze(turnedOff));
     expect(on.description).toBe(
-      "the filter of the FILTER column was turned on",
+      "the variants that failed their FILTER are left out",
     );
     expect(passedFilterOn(turnedOn)).toBe(true);
     expect(turnedOn.filters).toEqual(first.filters);
@@ -127,12 +127,12 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
     if (notice === null) throw new Error("no notice");
     expect(notice).toMatchObject({ removed: [], stopped: [] });
     expect(noticeText(notice, NOTICE_WORDS.title)).toEqual({
-      text: "The filter of the FILTER column was turned off",
+      text: "The variants that failed their FILTER are kept",
       action: "Undo",
       reverse: "undo",
     });
     expect(store.getState().undo).toBe(
-      "the filter of the FILTER column was turned off",
+      "the variants that failed their FILTER are kept",
     );
 
     store.undo();

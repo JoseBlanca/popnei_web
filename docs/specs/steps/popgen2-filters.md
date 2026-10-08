@@ -435,9 +435,9 @@ no line and no box: popnei has no filter on it.
 
 A check box, "Leave out the variants that failed their FILTER", at the
 end of the part "Variants", after its four histograms, with one sentence
-under it: "The plots show every variant, these among them." Ticking the
-box changes nothing on the page but the notice, and the sentence says
-why. On by default. It is a check box and not a switch because it takes
+under it: "The plots show every variant. The ones that failed are left
+out of what is downloaded or analysed." Ticking the box changes nothing
+on the page but the notice, and the sentence says why. On by default. It is a check box and not a switch because it takes
 effect later, when the filters are carried out. The check box of the
 widgets, `src/ui/widgets/Checkbox.tsx`, takes no sentence under it
 today; it gains a prop, `description`, a sentence drawn under the box
@@ -477,9 +477,12 @@ decided on 7 October 2026 to show it for a `.nei` file with the record,
 since a `.nei` file written from a VCF would otherwise keep its failed
 variants with nothing on the page saying so.
 
-Each click is one change, with its notice: "The filter of the FILTER
-column was turned off · Undo", "The filter of the FILTER column was
-turned on · Undo". It changes no plot and no count. The count of the
+Each click is one change, with its notice in the box's own words:
+"The variants that failed their FILTER are kept · Undo" when the box is
+unticked, "The variants that failed their FILTER are left out · Undo"
+when it is ticked; the hints of Undo and Redo and the words of an undo
+are the same, "Undo: the variants that failed their FILTER are kept",
+"Undone: the variants that failed their FILTER are kept". It changes no plot and no count. The count of the
 variants that failed their FILTER is in the box of the file, "FILTER
 failures: 300" for `low_qual.vcf.gz`, from the one pass, as the piece
 `popnei-0.2.2` builds it; a file of which no variant passed is shown as
@@ -535,7 +538,7 @@ ends its notice:
 | what the user does | the command | the description |
 |---|---|---|
 | any of the five thresholds changed, turned on or turned off, by a drag, a run of keys or the box | `setThreshold(p, threshold, value)`, with the number, or `null` for an emptied box; 1 turns it off there | "the MAF filter changed", "the MAF filter was turned on", "the MAF filter was turned off"; "the filter of the variants by missing data changed", "the filter of individuals by missing data was turned off", and so for each |
-| the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the filter of the FILTER column was turned on", "… was turned off" |
+| the FILTER box | `setVariantFilter(p, { kind: "passed" })`, `turnOffVariantFilter(p, "passed")` | "the variants that failed their FILTER are left out", "the variants that failed their FILTER are kept" |
 | Undo, Redo, Close of the notice | `store.undo()`, `store.redo()`, `store.dismissNotice()` | |
 
 The page chooses the words of a threshold's description by comparing its
@@ -575,10 +578,10 @@ number being dragged, typed or moved by a run of keys.
 | the description of the box, for a screen reader alone | on and grey: "This filter removes no variant of the plot.", "… no individual of the plot."; off: "This filter removes nothing."; none otherwise |
 | a number refused while off | "1.5 is more than 1; the threshold stays 1." |
 | the FILTER box | "Leave out the variants that failed their FILTER" |
-| under it | "The plots show every variant, these among them." |
-| the notice of a change of a filter | "The MAF filter changed · Undo"; "The MAF filter was turned on · Undo"; "The MAF filter was turned off · Undo"; "The filter of the FILTER column was turned off · Undo" |
-| after an undo, by the notice or the status region | "Undone: the MAF filter changed" |
-| the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed"; of an opening, "Undo: panel.nei opened", "Redo: low_qual.vcf.gz opened" |
+| under it | "The plots show every variant. The ones that failed are left out of what is downloaded or analysed." |
+| the notice of a change of a filter | "The MAF filter changed · Undo"; "The MAF filter was turned on · Undo"; "The MAF filter was turned off · Undo"; of the FILTER box, "The variants that failed their FILTER are kept · Undo", "The variants that failed their FILTER are left out · Undo" |
+| after an undo, by the notice or the status region | "Undone: the MAF filter changed"; "Undone: the variants that failed their FILTER are kept" |
+| the hint of Undo and Redo | "Undo: the MAF filter changed", "Redo: the MAF filter changed"; of an opening, "Undo: panel.nei opened", "Redo: low_qual.vcf.gz opened"; of the FILTER box, "Undo: the variants that failed their FILTER are kept" |
 | over a part, after a Stop with plots | "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start." |
 | the individuals with no value, on and off | "3 individuals with no called genotype are not in the histogram, and this filter removes them."; "3 individuals with no called genotype are not in the histogram." |
 
@@ -712,8 +715,10 @@ called at the release of a pointer and not at a key.
 - Down and Page Down in the box of a threshold that is off giving the
   line's values, one and ten steps below the top of the axis, rather
   than the box's own step below 1.
-- The sentence under the FILTER box, "The plots show every variant,
-  these among them."
+- The sentence under the FILTER box, "The plots show every variant. The
+  ones that failed are left out of what is downloaded or analysed.", and
+  its notice in the box's own words, "The variants that failed their
+  FILTER are kept · Undo" and "… are left out · Undo" (8 October 2026).
 - How the row of Undo and Redo looks and where in the row the buttons
   stand; the spacing of
   the FILTER box and its sentence.

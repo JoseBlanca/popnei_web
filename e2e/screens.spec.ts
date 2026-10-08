@@ -4658,7 +4658,7 @@ for (const theme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
         ).toHaveAccessibleName(
-          "The filter of the FILTER column was turned off",
+          "The variants that failed their FILTER are kept",
         );
         await label.scrollIntoViewIfNeeded();
         await page.mouse.click(1, 1);

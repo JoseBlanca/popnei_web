@@ -120,10 +120,11 @@ export const PASSED_FILTER_LABEL =
   "Leave out the variants that failed their FILTER";
 
 /** The sentence under the FILTER box, which says why a click changes no
-    plot: the filter is carried out later, and the plots are of the one
-    pass, which reads every variant. */
+    plot, and what it changes: the plots are of the one pass, which reads
+    every variant, and the filter is carried out later, on what is
+    downloaded or analysed (decided by the session on 8 October 2026). */
 export const PASSED_FILTER_DESCRIPTION =
-  "The plots show every variant, these among them.";
+  "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.";
 
 /** Each part in the middle of a sentence. */
 const SUBJECTS: Readonly<Record<StatsPart, string>> = Object.freeze({

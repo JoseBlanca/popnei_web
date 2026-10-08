@@ -117,7 +117,7 @@ describe("SF7 D2 the words of the FILTER box", () => {
       "Leave out the variants that failed their FILTER",
     );
     expect(PASSED_FILTER_DESCRIPTION).toBe(
-      "The plots show every variant, these among them.",
+      "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.",
     );
   });
 });

@@ -28,9 +28,10 @@ import { holdSummary, release } from "./holdWorker.ts";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
 const LABEL = "Leave out the variants that failed their FILTER";
-const SENTENCE = "The plots show every variant, these among them.";
-const TURNED_OFF = "The filter of the FILTER column was turned off";
-const TURNED_ON = "The filter of the FILTER column was turned on";
+const SENTENCE =
+  "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.";
+const TURNED_OFF = "The variants that failed their FILTER are kept";
+const TURNED_ON = "The variants that failed their FILTER are left out";
 
 /** What the page records, on `window`, of the messages it sends to its
     workers. */
