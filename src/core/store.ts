@@ -234,9 +234,10 @@ export type AnalysisStatus<R> =
       readonly soFar: R | null;
     }
   /** popnei refused the calculation of its key, or the calculation
-      failed since the last change; or, `ofStatistics`, it reads the
-      filters of individuals and the statistics of each individual its
-      Run would wait for were refused, or failed since the last change,
+      failed and no change has left its key behind since; or,
+      `ofStatistics`, it reads the filters of individuals and the
+      statistics of each individual its Run would wait for were refused,
+      or failed and no change has left their key behind since,
       and `waited` when a Run of it under its key waited for them when
       they failed, false when its Run was not pressed (stop C 4 of
       docs/specs/stage-4-open-points.md); `waited` is false without
@@ -288,9 +289,10 @@ export type WriteStatus<F> =
       readonly progress: Progress | null;
       readonly waitsForStatistics: boolean;
     }
-  /** popnei refused the write of its key, or it failed since the last
-      change; or, `ofStatistics`, the statistics it would wait for were
-      refused, or failed since the last change. */
+  /** popnei refused the write of its key, or it failed and no change
+      has left its key behind since; or, `ofStatistics`, the statistics
+      it would wait for were refused, or failed and no change has left
+      their key behind since. */
   | {
       readonly kind: "error";
       readonly key: Key;
@@ -308,7 +310,8 @@ export type AnalysisError =
   /** popnei refused it, with its message; kept for the session. */
   | { readonly kind: "refused"; readonly message: string }
   /** It failed otherwise, never popnei's refusal, which is `refused`;
-      kept until the next change of the project, but for `reopenFailed`,
+      kept until a change after which the project no longer gives its
+      key, or an opening, but for `reopenFailed`,
       the variants file the browser could not read again, which lasts
       until the load of the variants file changes. */
   | {
@@ -751,7 +754,9 @@ export function createStore<J, R, F = never>(
   } | null = null;
   /** popnei's refusals, kept for the session. */
   const refusals = new Map<Key, AnalysisError>();
-  /** The other failures, kept until the next change of the user. */
+  /** The other failures, kept until a change of the user after which the
+      project gives their key neither to an analysis nor to the writing,
+      or an opening. */
   const failures = new Map<Key, AnalysisError>();
   /** What the last change removed and left behind, or `null`. */
   let notice: NoticeKept | null = null;
@@ -1023,7 +1028,7 @@ export function createStore<J, R, F = never>(
 
   /** The failure kept under `key`: popnei's refusal, a variants file of
       the current load that could not be read again, or another failure
-      since the last change. */
+      that no change has left behind since. */
   const errorOf = (key: Key): AnalysisError | undefined =>
     refusals.get(key) ??
     (unreadable !== null &&
@@ -1299,6 +1304,25 @@ export function createStore<J, R, F = never>(
     return discarded;
   };
 
+  /** Forgets each failure that is not popnei's whose key the keys `keys`
+      of the project after a change of the user give neither to an
+      analysis nor to the writing; one whose key the change left as it
+      was stays, so that a change of a filter that an analysis does not
+      read does not wipe the words of its crash (the store spec, "A
+      calculation that failed"). */
+  const forgetLeftBehind = (keys: readonly AnalysisKey[]): void => {
+    const given = keyedIn(keys);
+    const writeKey = currentWriteKey();
+    if (writeKey !== null) {
+      given.add(writeKey);
+    }
+    for (const key of [...failures.keys()]) {
+      if (!given.has(key)) {
+        failures.delete(key);
+      }
+    }
+  };
+
   /** Takes out of the notice an analysis done again, a file written
       again, and a request or a wait that ended, is being stopped, or
       whose key the project gives again; drops the notice when nothing is
@@ -1544,8 +1568,8 @@ export function createStore<J, R, F = never>(
 
   /**
    * Takes `next`, the history after a command, an undo or a redo, when it
-   * is not the one there was: forgets the failures that are not popnei's,
-   * the mark of a write dropped, and a file written whose key the new
+   * is not the one there was: forgets the failures that are not popnei's
+   * whose key the new project does not give, the mark of a write dropped, and a file written whose key the new
    * project does not give; when the change changed the load of the
    * variants file, forgets the file that could not be read again, and
    * stops every calculation in flight and every Run that waits, and
@@ -1569,9 +1593,9 @@ export function createStore<J, R, F = never>(
         .filter((view) => view.status.kind === "done")
         .map((view) => view.id),
     );
-    failures.clear();
     dropped = false;
     history = next;
+    forgetLeftBehind(keys);
     const writeDiscarded = forgetStale();
     let stopped: readonly AnalysisId[] = [];
     let writeStopped = false;

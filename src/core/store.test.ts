@@ -4468,9 +4468,16 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
       kind: "needsStatistics",
     });
     expect(sent).toHaveLength(1);
-    // A change and its undo forget the defect: the statistics are ready,
-    // not done, so the cache holds nothing of them.
+    // A change that leaves their key as it was keeps the defect, since
+    // the statistics read no filter; a change that leaves it behind, a
+    // new load, forgets it, and its undo gives the statistics ready, not
+    // done, so the cache holds nothing of them.
     store.apply("the MAF filter changed", maf(0.9));
+    expect(statusIn(store, "stats")).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
+    loadFiveAgain(store, OTHER_VARIANTS_ID);
     store.undo();
     expect(statusIn(store, "stats").kind).toBe("ready");
   });
@@ -4553,8 +4560,14 @@ describe("stop C 4: waited, whether the analysis's own Run waited for the statis
       waited: false,
     });
 
+    // The statistics read no filter, so their failure stays after a
+    // change of the MAF; the Run of vars tries them again.
     store.apply("the MAF filter changed", maf(0.9));
-    expect(statusIn(store, "vars").kind).toBe("ready");
+    expect(statusIn(store, "vars")).toMatchObject({
+      kind: "error",
+      ofStatistics: true,
+      waited: false,
+    });
     store.startRun("vars");
     const again = sentAt(sent, 1);
     expect(again.job.analysis).toBe("stats");
@@ -7398,5 +7411,97 @@ describe("SF5 D1 the notice of a filter and the calculations stopped", () => {
     store.cancelRun("summary");
 
     expect(store.getState().notice).toBeNull();
+  });
+});
+
+describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its key behind", () => {
+  const CRASH = { kind: "workerFailed", message: "out of memory" } as const;
+
+  test("a crash, then a command that leaves the key as it was and its undo: still error; a command that changes the key, and its undo: ready; startRun from error sends", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const key = keyAt(store, 1);
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error: CRASH });
+    const crashed = {
+      kind: "error",
+      key,
+      error: { kind: "failed", error: CRASH },
+      ofStatistics: false,
+      waited: false,
+    };
+
+    // The fake of the variants reads neither the populations nor the
+    // filters of individuals.
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "onePopulation" }),
+    );
+    expect(statuses(store)[1]).toStrictEqual(crashed);
+    store.undo();
+    expect(statuses(store)[1]).toStrictEqual(crashed);
+    store.apply("a filter of individuals changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.2),
+    );
+    expect(statuses(store)[1]).toStrictEqual(crashed);
+
+    store.apply("the MAF filter changed", maf(0.9));
+    expect(statuses(store)[1]).toMatchObject({ kind: "ready" });
+    store.undo();
+    expect(statuses(store)[1]).toMatchObject({ kind: "ready", key });
+
+    store.startRun("vars");
+    store.runEnded(sentAt(sent, 1).run.id, { kind: "failed", error: CRASH });
+    expect(statuses(store)[1]).toStrictEqual(crashed);
+    expect(store.startRun("vars")).toStrictEqual([sentAt(sent, 2).run]);
+  });
+
+  test("on popgen2.html, a crash of the summary, then a threshold of the MAF: still error, the notice says the filter changed, and Start again sends", () => {
+    const { store, sent } = storeWithSummary(true);
+    store.startRun("summary");
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error: CRASH });
+
+    store.apply("the MAF filter changed", mafThreshold(0.3));
+
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: CRASH },
+    });
+    expect(store.getState().notice).toStrictEqual(
+      filterNotice("command", "the MAF filter changed"),
+    );
+    expect(store.startRun("summary")).toStrictEqual([sentAt(sent, 1).run]);
+    expect(statuses(store)[1]?.kind).toBe("running");
+  });
+
+  test("a read recorded forgets no failure, and an opening forgets every one, its key the same", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error: CRASH });
+    store.apply("an individuals file was loaded", loadPops);
+    store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    expect(statuses(store)[1]?.kind).toBe("error");
+    const key = keyAt(store, 1);
+
+    store.open(store.getState().project);
+
+    expect(statuses(store)[1]).toStrictEqual({ kind: "ready", key });
+  });
+
+  test("a failure of the writing stays after a change that leaves the key of the writing as it was, and goes after one that changes it", () => {
+    const { store, write } = writing();
+    store.runEnded(write.run.id, { kind: "failed", error: CRASH });
+    expect(writeIn(store)).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: CRASH },
+    });
+
+    store.apply("the populations changed", (p) =>
+      setGrouping(p, { kind: "onePopulation" }),
+    );
+    expect(writeIn(store)).toMatchObject({ kind: "error" });
+
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(writeIn(store)).toMatchObject({ kind: "ready" });
+    store.undo();
+    expect(writeIn(store)).toMatchObject({ kind: "ready" });
   });
 });
