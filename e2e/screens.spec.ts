@@ -4717,6 +4717,34 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-stats-so-far${at}-${theme}`);
       });
 
+      test("the statistics stopped, with the plots read before the Stop", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        // As above, the plots of popnei's first block, 5,000 variants of
+        // 30,000, then the Stop of the box of the file.
+        const vcf = testInfo.outputPath("stopped.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await release(page, "oneSoFar");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 60_000,
+        });
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageStats(page).getByText(
+            "Stopped. The plots are of the variants read before the Stop. Start again reads the file from the start.",
+          ),
+        ).toHaveCount(2);
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-stats-stopped-plots${at}-${theme}`);
+      });
+
       test("the statistics done", async ({ page }) => {
         await pickOnNewPage(page, "panel.vcf.gz");
         await expect(
