@@ -11,8 +11,8 @@ built the same day, the token `--chart-threshold-keeps-all`, with the
 line dotted and the handle hollow (below, "What a threshold shows on its
 plot"); and, the same day, with the owner's decision to hide Undo and
 Redo on `popgen2.html` until a later feature needs them (below, "What
-the owner decided", 6); and again on 8 October 2026, a draft until
-the owner approves it, for the download of the filtered variants, now
+the owner decided", 6); and again on 8 October 2026, approved by
+the owner that day, for the download of the filtered variants, now
 that popnei 0.2.2 hands a written file over in pieces: one button,
 "Download filtered variants…", after the Variants and Individuals
 sections, with no "Tools" section, as the owner decided that day, and
@@ -21,7 +21,10 @@ filtered variants", and "What the owner decided", 7), and the same day
 with the owner's answers to its points: the bar, the download started
 by itself, the text with the counts of each filter after it, and one
 sentence when the filters keep no variant ("What the owner decided", 8
-to 11). It
+to 11), and the approval with two more answers: the same rule in every
+browser for a download started by itself that a browser blocks, and no
+link to the other format after a download ("What the owner decided",
+12). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -709,13 +712,16 @@ filter or the file changes, its size in memory while it is kept (below,
 keeps it). The text says "downloaded" and not "saved": the page knows
 the download was started, and not where the browser put it.
 
-The plan tries the download started by itself in Chromium and WebKit
-and in Firefox by hand, the first and the second of a session, with
-the browser asking and not, and in Chrome a site set to Block. If one
-blocks it or asks every time, the
-session brings the choice to the owner: a Save click in every browser,
-or in that browser alone, told by its name in the user agent string,
-which a browser may change.
+The plan tries the download started by itself first, before the rest
+of the screen is built, in Chromium and WebKit and in Firefox by hand,
+the first and the second of a session, with the browser asking and not,
+and in Chrome a site set to Block. If one browser of the floor blocks it
+or asks every time, every browser gets the Save click, as the owner
+decided on 8 October 2026 ("What the owner decided", 12): the dialog
+ends with a button that saves the file, and the text after it says
+"saved" once that button is pressed; one rule for every browser rather
+than one told by its name in the user agent string, which a browser may
+change.
 
 The address `downloadFile` gives the browser is released a minute after
 the click (`src/ui/download.ts`), so a user whose browser asks where to
@@ -1320,8 +1326,8 @@ and decided one more thing, with which the design stays approved:
    depend on Undo.
 
 On 8 October 2026 the owner decided the download of the filtered
-variants, which changes this design in a revision that waits for the
-owner's approval:
+variants, which changes this design in a revision approved by the owner
+the same day, with the answers of 12 below:
 
 7. No "Tools" section. The download is one button after the Variants
    and Individuals sections, "Download filtered variants…", which
@@ -1356,19 +1362,20 @@ revision:
     each filter removed, from popnei's counts of the pass and the page's
     filter of the individuals over popnei's values.
 
+12. With the approval of the revision of the download, the owner
+    answered its two open points. A browser that blocks the download
+    started by itself, or asks every time, is to be seen first in the
+    plan's trials, and the same behaviour in every browser is preferred:
+    if one browser needs a Save click, every browser gets it, rather than
+    that browser alone, told by its name in the user agent string. And no
+    link to download the other format after a download, where the
+    recommendation was "Download as .nei" or "as VCF" in the text after
+    it: a user who wants both opens the file downloaded and writes the
+    other format.
+
 ## Open points
 
-- **When a browser blocks the download started by itself, or asks
-  every time.** Found in the plan's trial. The options: a Save click in
-  every browser, one rule for all at the cost of a click; or in that
-  browser alone, told by its name in the user agent string, at the
-  cost of a rule a browser's update can break. Recommended: a Save
-  click in every browser, if any browser of the floor blocks it.
-- **The other format after a download.** With the button gone until a
-  filter or the file changes, a user who downloaded the `.vcf.gz` and
-  wants the `.nei` file too must change a filter and change it back. The
-  options: leave it so, as decided; or a link in the text after the
-  download, "Download as .nei" or "as VCF", which writes the file again
-  in the other format, a pass more, at the cost of one more line in the
-  text. Recommended: the link, since the user asked for nothing new and
-  the filters are the same.
+None. The two points of the revision of the download, a browser that
+blocks the download started by itself and a link to the other format
+after a download, were answered by the owner on 8 October 2026 ("What
+the owner decided", 12).
