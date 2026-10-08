@@ -116,7 +116,6 @@ function setUp(): {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
-    filterNotices: false,
   });
   const fake = fakeClient();
   const reads = createReads({ store, client: fake.client });

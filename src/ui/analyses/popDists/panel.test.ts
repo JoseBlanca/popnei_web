@@ -563,7 +563,6 @@ describe("PA5 the result of the distances, drawn by React", () => {
         writeLeftBehind: false,
         writeStopped: false,
         writeDiscarded: false,
-        filtersChanged: false,
       });
     });
     act(() => {

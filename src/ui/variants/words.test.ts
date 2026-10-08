@@ -16,7 +16,6 @@ import {
   nameAndSizeText,
   notOpenedText,
   openFailure,
-  openedDescription,
   ploidyLine,
   refusalText,
   variantsLine,
@@ -462,13 +461,5 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
     );
     expect(failuresLineOf(ready, true, false)).toBeNull();
     expect(failuresLineOf(error, false, false)).toBeNull();
-  });
-});
-
-describe("SF6 the description of an opening on popgen2.html", () => {
-  test("names the file opened, escaped as the box of the file shows it", () => {
-    expect(openedDescription("panel.nei")).toBe("panel.nei opened");
-    expect(openedDescription("low_qual.vcf.gz")).toBe("low_qual.vcf.gz opened");
-    expect(openedDescription("a\nb.vcf")).toBe("a\\nb.vcf opened");
   });
 });

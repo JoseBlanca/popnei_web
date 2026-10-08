@@ -24,12 +24,7 @@
  * Each starts once for each key: not again after a failure, nor after a
  * Stop, which leaves it ready under a key it was started under and holds
  * back those after it; but again for a new file, or a new read of it,
- * which gives a new key; again under a key a change of the project left
- * behind while it ran, which the store then stopped, when an undo or a
- * redo comes back to it and its result is not in the cache (the owner's
- * decision of 6 October 2026, docs/designs/stats-filters.md, "Keys left
- * behind start again when the project comes back to them"); and when
- * the user asks, with `resume`, after a
+ * which gives a new key, and when the user asks, with `resume`, after a
  * Stop or a crash of the worker, the one failure a new
  * calculation is offered for: popnei's refusal and a file that could not
  * be read again fail the same way again, and a page that could not start
@@ -106,11 +101,6 @@ function startableKey(status: AnalysisStatus<unknown>): Key | null {
   }
 }
 
-/** The key of `status`, `null` for a locked one, which has none. */
-function keyOf(status: AnalysisStatus<unknown>): Key | null {
-  return status.kind === "locked" ? null : status.key;
-}
-
 /** Whether `status` is passed over by its group: done, or locked, since
     a locked member starts nothing and holds back nothing
     (docs/architecture.md, section 5). */
@@ -179,9 +169,6 @@ export function createAutoRuns(deps: {
   /** The analyses `resume` gave back, each with the key it may start
       under once those before it let it. */
   const resumed = new Map<AnalysisId, Key>();
-  /** The analyses started here and not yet seen to end, each with the
-      key it was started under; a Stop of the user takes them out. */
-  const inFlight = new Map<AnalysisId, Key>();
   /** The page's listeners, told of every change of `started` and
       `resumed`, and the number that counts those changes. */
   const listeners = new Set<() => void>();
@@ -205,7 +192,6 @@ export function createAutoRuns(deps: {
   function startOne(id: AnalysisId, key: Key): boolean {
     started.add(key);
     resumed.delete(id);
-    inFlight.set(id, key);
     changed();
     const sent = start(id);
     return sent !== null;
@@ -272,7 +258,6 @@ export function createAutoRuns(deps: {
     const free = ids.slice(0, place).every((id) => isPassedOver(statusOf(id)));
     for (const id of group) {
       resumed.delete(id);
-      inFlight.delete(id);
       const status = statusOf(id);
       if (status.kind === "running") store.cancelRun(id);
       const key = startableKey(status);
@@ -281,27 +266,8 @@ export function createAutoRuns(deps: {
     changed();
   }
 
-  /** Forgets the key of each analysis started here whose status has
-      gone to another key, or to none, before it ended: a change of the
-      project left it behind and the store stopped it, or will at the
-      next start, so that an undo or a redo back to it starts it again.
-      One that ended, done, failed or stopped under its own key, is no
-      longer in flight, and its key stays started. */
-  function forgetLeftBehind(): void {
-    for (const [id, key] of [...inFlight]) {
-      const status = statusOf(id);
-      if (status.kind === "running" && status.key === key) continue;
-      inFlight.delete(id);
-      if (keyOf(status) !== key) {
-        started.delete(key);
-        changed();
-      }
-    }
-  }
-
   return {
     sync: () => {
-      forgetLeftBehind();
       // The calculation worker runs one request at a time, and the
       // store has no state for one that waits in the client's queue.
       if (anyRunning()) return;

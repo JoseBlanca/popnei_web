@@ -1988,7 +1988,6 @@ describe("IP10 D3 the cases of the one population", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     const status = (): AnalysisStatus<JobResult> | undefined =>
       store.getState().analyses.find((view) => view.id === "diversity")?.status;

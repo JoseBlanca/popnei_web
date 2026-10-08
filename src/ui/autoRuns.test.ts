@@ -4,7 +4,6 @@ import { individualChecks } from "../core/analyses/individualChecks.ts";
 import { variantChecks } from "../core/analyses/variantChecks.ts";
 import { variantsSummary } from "../core/analyses/variantsSummary.ts";
 import { countsOf, firstProject } from "../core/apps.ts";
-import { keyFromWire } from "../core/keys.ts";
 import { loadVariants } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { AnalysisDef, AnalysisStatus, Store } from "../core/store.ts";
@@ -81,7 +80,6 @@ function setUp(groups: readonly (readonly string[])[] = POPGEN2_AUTO_GROUPS): {
     write: null,
     cacheMaxBytes: 100_000_000,
     maxUndoSteps: 100,
-    filterNotices: false,
     send: (key, job): Run<JobResult> => {
       lastId += 1;
       let request: Request | null = null;
@@ -261,69 +259,6 @@ describe("the analyses the new page starts by itself", () => {
     expect(running.kind).toBe("running");
     if (running.kind !== "running") return;
     expect(auto.startedUnder(running.key)).toBe(true);
-  });
-
-  test("a pass a new file left behind starts again when an undo comes back to it, and the new file's pass when a redo does", () => {
-    const { store, auto, requests, status } = setUp();
-    open(store, FIRST);
-    auto.sync();
-    open(store, SECOND);
-    auto.sync();
-    expect(requests).toHaveLength(2);
-    expect(requests[0]?.cancelled).toBe(true);
-    // Forgotten: back to it, it is about to start, not stopped.
-    expect(auto.startedUnder(keyFromWire(requests[0]?.key ?? ""))).toBe(false);
-
-    store.undo();
-    auto.sync();
-    expect(requests).toHaveLength(3);
-    expect(requests[2]?.key).toBe(requests[0]?.key);
-    expect(requests[1]?.cancelled).toBe(true);
-    expect(status().kind).toBe("running");
-
-    store.redo();
-    auto.sync();
-    expect(requests).toHaveLength(4);
-    expect(requests[3]?.key).toBe(requests[1]?.key);
-    expect(status().kind).toBe("running");
-  });
-
-  test("a pass done is not sent again when an undo comes back to it: its result is in the cache", async () => {
-    const { store, auto, requests, status } = setUp();
-    open(store, FIRST);
-    auto.sync();
-    endDone(requests[0]);
-    await settled();
-    open(store, SECOND);
-    auto.sync();
-    expect(requests).toHaveLength(2);
-
-    store.undo();
-    auto.sync();
-
-    expect(requests).toHaveLength(2);
-    expect(status().kind).toBe("done");
-  });
-
-  test("a pass the user stopped is not started again when an undo comes back to it", async () => {
-    const { store, auto, requests, sent, status } = setUp();
-    open(store, FIRST);
-    auto.sync();
-    auto.stop(POPGEN2_CHAIN);
-    sent[0]?.({ kind: "cancelled" });
-    await settled();
-    open(store, SECOND);
-    auto.sync();
-    expect(requests).toHaveLength(2);
-
-    store.undo();
-    auto.sync();
-
-    expect(requests).toHaveLength(2);
-    const stopped = status();
-    expect(stopped.kind).toBe("ready");
-    if (stopped.kind !== "ready") return;
-    expect(auto.startedUnder(stopped.key)).toBe(true);
   });
 
   test("resume does nothing while the summary is running or done", async () => {

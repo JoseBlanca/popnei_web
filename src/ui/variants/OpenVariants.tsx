@@ -9,15 +9,16 @@
  * did not open go to the page, which shows them in the box of the file
  * above the zone.
  *
- * It reads the project from the store and sends it the command of the
- * Variants step that loads a file.
+ * It reads the project from the store and opens the file as a new history,
+ * with nothing to undo (`openVariantsFile` of popgen2Store.ts), since the
+ * page's Undo serves the changes of the filters alone.
  */
 import type { VariantLoad } from "../../core/project.ts";
 import type { VcfReadOptions } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useFiles } from "../files.tsx";
+import { openVariantsFile } from "../popgen2Store.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
-import { pickCommand } from "../steps/variants/commands.ts";
 import { PICKER_ENDINGS, formatOfName } from "../steps/variants/words.ts";
 import { useAppState, useStore } from "../store.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
@@ -31,7 +32,6 @@ import {
   SEVERAL_DROPPED,
   TEXT_DROPPED,
   notOpenedText,
-  openedDescription,
 } from "./words.ts";
 
 /** How the page reads a VCF: with the ploidy popnei reads from the file,
@@ -107,7 +107,7 @@ export function OpenVariants({
       format,
       readOptions: format === "vcf" ? READ_OPTIONS : null,
     };
-    store.apply(openedDescription(file.name), pickCommand(load).command);
+    openVariantsFile(store, load);
   };
 
   return (

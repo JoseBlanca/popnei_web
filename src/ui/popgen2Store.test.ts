@@ -1,15 +1,21 @@
 import { describe, expect, test } from "vitest";
 
 import { firstProject, popgen2FirstProject } from "../core/apps.ts";
-import { loadVariants, setThreshold } from "../core/project.ts";
+import {
+  loadVariants,
+  setThreshold,
+  turnOffVariantFilter,
+} from "../core/project.ts";
 import type { VariantLoad } from "../core/project.ts";
 import { summaryResult } from "../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../worker/protocol.ts";
-import { POPGEN2_AUTO_GROUPS, createPopgen2Store } from "./popgen2Store.ts";
+import {
+  POPGEN2_AUTO_GROUPS,
+  createPopgen2Store,
+  openVariantsFile,
+} from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
-import type { Announcer } from "./shell/status.ts";
-import { undoOrRedo } from "./shell/undoRedo.ts";
-import { openedDescription, summaryStatus } from "./variants/words.ts";
+import { summaryStatus } from "./variants/words.ts";
 
 // The store of popgen2.html as its entry makes it, with a fake `send`
 // that records the jobs and never ends them.
@@ -105,9 +111,7 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
       numVars: null,
       keepsPassed: true,
     } as const;
-    store.apply("a new variants file was loaded", (p) =>
-      loadVariants(p, fileA),
-    );
+    openVariantsFile(store, fileA);
     store.variantsRead(fileA.fileId, read);
     void startAnalysis(store, "variantsSummary");
     const soFarOfA = soFars[0];
@@ -125,9 +129,7 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
       throw new Error(`the summary of a.vcf.gz is ${runningA.kind}`);
     }
 
-    store.apply("a new variants file was loaded", (p) =>
-      loadVariants(p, fileB),
-    );
+    openVariantsFile(store, fileB);
     expect(summaryStatus(store.getState()).kind).toBe("locked");
     soFarOfA(summaryResult(["chr1"], [200]));
     expect(summaryStatus(store.getState()).kind).toBe("locked");
@@ -164,7 +166,7 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
 });
 
 describe("SF5 D5 the store of popgen2.html", () => {
-  test("starts from popgen2FirstProject(), not the old page's first project, and a change of a filter gives a notice: filterNotices is true", () => {
+  test("starts from popgen2FirstProject(), not the old page's first project, and a change of a filter gives no notice", () => {
     const store = createPopgen2Store({
       send: (): Run<JobResult> => {
         throw new Error("popnei_web defect: nothing is sent here");
@@ -178,51 +180,78 @@ describe("SF5 D5 the store of popgen2.html", () => {
       setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
     );
 
-    expect(store.getState().notice).toMatchObject({
-      cause: { kind: "command", description: "the MAF filter changed" },
-      removed: [],
-      filtersChanged: true,
-    });
+    expect(store.getState().undo).toBe("the MAF filter changed");
+    expect(store.getState().notice).toBeNull();
   });
 });
 
-describe("SF6 Undo and Redo of an opening on popgen2.html name the file", () => {
-  test("the hints and what a screen reader hears after an undo and a redo with no notice", () => {
+describe("SF7 round an opening on popgen2.html starts the history afresh", () => {
+  test("the first file and another leave nothing to undo or redo, keep the filters as the user left them, stop the pass of the file before and give no notice", () => {
+    const cancelled: number[] = [];
+    let sent = 0;
     const store = createPopgen2Store({
-      send: (): Run<JobResult> => ({
-        id: 1,
-        outcome: new Promise<Outcome<JobResult>>(() => undefined),
-        cancel: () => undefined,
-      }),
+      send: (): Run<JobResult> => {
+        sent += 1;
+        const id = sent;
+        return {
+          id,
+          outcome: new Promise<Outcome<JobResult>>(() => undefined),
+          cancel: () => {
+            cancelled.push(id);
+          },
+        };
+      },
       appVersion: "0.1.0",
     });
     store.popneiReady("0.1.0");
-    const said: string[] = [];
-    const announcer: Announcer = {
-      announce: (text) => {
-        said.push(text);
-      },
-      announceChange: (change) => {
-        const text = change();
-        if (text !== null) said.push(text);
-      },
-      clear: () => undefined,
-      getState: () => "",
-      subscribe: () => () => undefined,
-    };
-    const load = vcfLoad("a".repeat(32), "panel.nei");
-    store.apply(openedDescription(load.name), (p) =>
-      loadVariants(p, { ...load, format: "nei", readOptions: null }),
+    const fileA = vcfLoad("a".repeat(32), "a.vcf.gz");
+    const fileB = vcfLoad("b".repeat(32), "b.vcf.gz");
+    const read = {
+      kind: "read",
+      individuals: ["s000", "s001"],
+      ploidy: 2,
+      numVars: null,
+      keepsPassed: true,
+    } as const;
+
+    openVariantsFile(store, fileA);
+    expect(store.getState().project.variants?.fileId).toBe(fileA.fileId);
+    expect(store.getState().undo).toBeNull();
+    expect(store.getState().redo).toBeNull();
+    store.variantsRead(fileA.fileId, read);
+    void startAnalysis(store, "variantsSummary");
+    expect(summaryStatus(store.getState()).kind).toBe("running");
+
+    store.apply("the variants that failed their FILTER are kept", (p) =>
+      turnOffVariantFilter(p, "passed"),
     );
-    expect(store.getState().undo).toBe("panel.nei opened");
+    store.apply("the MAF filter changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "maf" }, 0.3),
+    );
+    store.undo();
+    expect(store.getState().undo).toBe(
+      "the variants that failed their FILTER are kept",
+    );
+    expect(store.getState().redo).toBe("the MAF filter changed");
+    const filtered = store.getState().project;
+    const moves = store.getState().historyMoves;
 
-    undoOrRedo(store, announcer, "undo");
-    expect(store.getState().redo).toBe("panel.nei opened");
-    undoOrRedo(store, announcer, "redo");
+    openVariantsFile(store, fileB);
 
-    expect(said).toEqual([
-      "Undone: panel.nei opened.",
-      "Redone: panel.nei opened.",
-    ]);
+    const opened = store.getState();
+    expect(opened.project.variants?.fileId).toBe(fileB.fileId);
+    expect(opened.undo).toBeNull();
+    expect(opened.redo).toBeNull();
+    expect(opened.notice).toBeNull();
+    expect(opened.historyMoves).toBe(moves + 1);
+    expect(opened.project.filters).toStrictEqual(filtered.filters);
+    expect(opened.project.filtersOff).toStrictEqual(filtered.filtersOff);
+    expect(opened.project.individualFilters).toStrictEqual(
+      filtered.individualFilters,
+    );
+    expect(cancelled).toEqual([1]);
+    expect(summaryStatus(opened).kind).toBe("locked");
+    store.undo();
+    expect(store.getState()).toBe(opened);
   });
 });

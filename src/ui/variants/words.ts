@@ -56,15 +56,6 @@ export const PASTE_LABEL = "Paste a variants file";
     heading of its own. */
 export const OPENING_NAME = "Variants file";
 
-/** The description of the opening of the file `name`, which names its
-    step of Undo, "Undo: panel.nei opened", ends the notice of the
-    statistics it removed, and is said after an undo or a redo with no
-    notice, "Undone: panel.nei opened.". The old page keeps its own,
-    "a new variants file was loaded". */
-export function openedDescription(name: string): string {
-  return `${escaped(name)} opened`;
-}
-
 /** What the page says when several files are dropped or pasted at once. */
 export const SEVERAL_DROPPED = "Open one variants file at a time.";
 

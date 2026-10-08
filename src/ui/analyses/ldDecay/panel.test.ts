@@ -913,7 +913,6 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
         writeLeftBehind: false,
         writeStopped: false,
         writeDiscarded: false,
-        filtersChanged: false,
       });
     });
     act(() => {
@@ -940,7 +939,6 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
         writeLeftBehind: false,
         writeStopped: false,
         writeDiscarded: false,
-        filtersChanged: false,
       });
     });
     act(() => {

@@ -499,7 +499,6 @@ describe("PA2 D5 needs", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("the LD pruning was turned on", () =>

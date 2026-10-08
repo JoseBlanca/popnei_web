@@ -31,19 +31,11 @@ import { identityWarning } from "../../core/projectFile.ts";
 import { deepFreeze } from "../../core/testSupport.ts";
 import type { TestDefResult } from "../../core/testSupport.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
-import {
-  individualListNeeds,
-  loadVariants,
-  setThreshold,
-  variantFilterNeeds,
-} from "../../core/project.ts";
+import { individualListNeeds, variantFilterNeeds } from "../../core/project.ts";
 import type {
   ColumnType,
   CsvOptions,
   IndividualsTable,
-  JobResult,
-  Outcome,
-  Run,
 } from "../../worker/protocol.ts";
 import {
   announcementsOf,
@@ -53,7 +45,6 @@ import {
   writtenDiscarded,
 } from "./words.ts";
 import type { ShellWords, StepState } from "./words.ts";
-import { createPopgen2Store } from "../popgen2Store.ts";
 import { NOTICE_WORDS } from "../variants/statsWords.ts";
 
 // The two analyses of population genetics of TEST_DEFS.
@@ -337,7 +328,6 @@ function notice(parts: Partial<Notice>): Notice {
     writeLeftBehind: false,
     writeStopped: false,
     writeDiscarded: false,
-    filtersChanged: false,
     ...parts,
   };
 }
@@ -1929,7 +1919,6 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
           cause: MAF_CHANGED,
           removed: [STATISTICS],
           writeDiscarded: true,
-          filtersChanged: false,
         }),
         title,
       ).text,
@@ -1945,7 +1934,6 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
           cause: MAF_CHANGED,
           leftBehind: [DIVERSITY],
           writeDiscarded: true,
-          filtersChanged: false,
         }),
         title,
       ).text,
@@ -1960,7 +1948,6 @@ describe("VS5 D2 the words of the notice of stage 3", () => {
         notice({
           cause: { ...MAF_CHANGED, kind: "undo" },
           writeDiscarded: true,
-          filtersChanged: false,
         }),
         title,
       ),
@@ -2923,19 +2910,6 @@ describe("IP5 D1 the end of a read of the metadata file", () => {
 });
 
 describe("SF6 D1 the words of the notice apart from the words of the shell", () => {
-  test("a change of a filter alone, under filterNotices, is told by its description", () => {
-    expect(
-      noticeText(
-        notice({ cause: MAF_CHANGED, filtersChanged: true }),
-        NOTICE_WORDS.title,
-      ),
-    ).toEqual({
-      text: "The MAF filter changed",
-      action: "Undo",
-      reverse: "undo",
-    });
-  });
-
   test("popgen2.html names its one analysis by the name of its section", () => {
     expect(
       noticeText(
@@ -2959,38 +2933,5 @@ describe("SF6 D1 the words of the notice apart from the words of the shell", () 
     expect(() => NOTICE_WORDS.title("diversity")).toThrow(
       "popnei_web defect: popgen2.html has no analysis diversity to name.",
     );
-  });
-
-  test("the store of popgen2.html gives, for a threshold changed, the notice whose words are its description alone", () => {
-    const store = createPopgen2Store({
-      send: (): Run<JobResult> => ({
-        id: 1,
-        outcome: new Promise<Outcome<JobResult>>(() => undefined),
-        cancel: () => undefined,
-      }),
-      appVersion: "0.1.0",
-    });
-    store.popneiReady("0.1.0");
-    store.apply(NEW_LOAD.description, (p) =>
-      loadVariants(p, {
-        fileId: "0123456789abcdef0123456789abcdef",
-        name: "panel.nei",
-        size: 261_490,
-        format: "nei",
-        readOptions: null,
-      }),
-    );
-    store.apply(MAF_CHANGED.description, (p) =>
-      setThreshold(p, { of: "variants", kind: "maf" }, 0.05),
-    );
-
-    const n = store.getState().notice;
-    if (n === null) throw new Error("no notice after the change of the MAF");
-    expect(n.filtersChanged).toBe(true);
-    expect(noticeText(n, NOTICE_WORDS.title)).toEqual({
-      text: "The MAF filter changed",
-      action: "Undo",
-      reverse: "undo",
-    });
   });
 });

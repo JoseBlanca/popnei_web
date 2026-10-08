@@ -3,9 +3,7 @@
  * (docs/plans/open-variants.md, "A new page, beside the old one"): its own
  * first project, `popgen2FirstProject`, with the filter of the FILTER
  * column on and the missing data filter on at 0.1, which the summary of
- * the open file does not read; a notice at every change of a filter,
- * `filterNotices`, since no change of a filter removes or stops anything
- * on this page (docs/specs/core/store.md); the analyses of
+ * the open file does not read; the analyses of
  * `POPGEN2_ANALYSES`, and no counts of the filters, no statistics of each
  * individual for a Run to wait for, and no writing, which the page does
  * not have yet (docs/plans/live-stats.md).
@@ -20,7 +18,8 @@ import {
 } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
-import type { AnalysisId } from "../core/project.ts";
+import { loadVariants } from "../core/project.ts";
+import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
 import type { Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
@@ -67,6 +66,21 @@ export function createPopgen2Store(
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
-    filterNotices: true,
   });
+}
+
+/**
+ * Opens on popgen2.html the variants file of `load`, the first or
+ * another: the project with that file and every filter as the user left
+ * it, as a new history with nothing to undo or redo, so that the page's
+ * Undo and Redo serve the changes of the filters alone, as the owner
+ * asked on 8 October 2026 (docs/specs/steps/popgen2-filters.md, "Undo,
+ * Redo and their keys"). The pass of the file before, if it runs, is
+ * stopped, and no notice is made.
+ */
+export function openVariantsFile(
+  store: Pick<Store<unknown, unknown>, "getState" | "open">,
+  load: VariantLoad,
+): void {
+  store.open(loadVariants(store.getState().project, load));
 }

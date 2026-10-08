@@ -632,7 +632,6 @@ function exampleStore(): {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   loadExample(store, VARIANTS_ID);

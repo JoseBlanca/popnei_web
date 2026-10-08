@@ -39,7 +39,6 @@ function makeStore(): Store<JobResult> {
     appVersion: "0.1.0",
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
-    filterNotices: false,
   });
 }
 
@@ -260,7 +259,6 @@ describe("WS9 the saving counts a result that ended as a change", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: CACHE_MAX_BYTES,
       maxUndoSteps: MAX_UNDO_STEPS,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a new variants file was loaded", (p) =>

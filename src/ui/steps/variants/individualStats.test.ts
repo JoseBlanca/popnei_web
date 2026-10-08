@@ -56,7 +56,6 @@ function notice(kind: Notice["cause"]["kind"]): Notice {
     writeLeftBehind: false,
     writeStopped: false,
     writeDiscarded: false,
-    filtersChanged: false,
   };
 }
 

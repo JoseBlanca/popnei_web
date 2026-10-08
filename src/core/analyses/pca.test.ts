@@ -610,7 +610,6 @@ function storeOf(first: Project): {
     appVersion: "0.1.0",
     cacheMaxBytes: 256_000_000,
     maxUndoSteps: 100,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(first);
@@ -1894,7 +1893,6 @@ function pcaStore(first: Project): {
     appVersion: "0.1.0",
     cacheMaxBytes: 256_000_000,
     maxUndoSteps: 100,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(first);

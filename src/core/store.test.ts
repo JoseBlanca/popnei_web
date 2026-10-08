@@ -43,7 +43,6 @@ import type {
   AnalysisError,
   AnalysisStatus,
   AppState,
-  Notice,
   Store,
   WriteStatus,
 } from "./store.ts";
@@ -176,7 +175,6 @@ function newStore(cacheMaxBytes: number = 1024 * 1024): {
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   return { store, analyses, calls, sent, log };
 }
@@ -281,7 +279,6 @@ function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -556,7 +553,6 @@ describe("WP4 D1 the state with no calculation", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -732,7 +728,6 @@ describe("WP4 D1 the state with no calculation", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     expect(frozenDeeply(store.getState().project)).toBe(true);
     store.popneiReady("0.1.0");
@@ -778,7 +773,6 @@ describe("WP4 D1 the state with no calculation", () => {
         appVersion: "0.1.0",
         cacheMaxBytes: 1024,
         maxUndoSteps: 200,
-        filterNotices: false,
       }),
     ).toThrow(
       /^popnei_web defect: createStore was given two definitions of the analysis "pops"/,
@@ -966,7 +960,6 @@ function storeWithFaultyIntake(): ReturnType<typeof newStore> & {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -1303,7 +1296,6 @@ describe("WP4 D2 the calculations", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -1426,7 +1418,6 @@ describe("WP4 D2 the calculations", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -1666,7 +1657,6 @@ describe("WP4 D2 the calculations", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -1825,7 +1815,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     store.undo();
     const again = statuses(store)[1];
@@ -1846,7 +1835,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     expect(request.cancels()).toBe(0);
     expect(kinds(store)).toStrictEqual(["locked", "ready"]);
@@ -1916,7 +1904,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     store.startRun("vars");
     expect(sentAt(sent, 1).cancels()).toBe(1);
@@ -1929,7 +1916,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     expect(kinds(store)).toStrictEqual(["removed", "running"]);
   });
@@ -2002,7 +1988,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     const { listener, count } = counter();
     store.subscribe(listener);
@@ -2045,7 +2030,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     store.startRun("pops");
     const pops = sentAt(sent, 3);
@@ -2172,7 +2156,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     // Another sequence: the redo goes to settings never calculated.
     const other = storeWithVariantsRead();
@@ -2190,7 +2173,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
   });
 
@@ -2213,7 +2195,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     const notice = store.getState().notice;
     request.progress({ bytesRead: 5, numBytes: 10, pass: 1, numPasses: 1 });
@@ -2251,7 +2232,6 @@ describe("WP4 D3 the notice", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -2302,7 +2282,6 @@ describe("WP4 D3 the notice", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -2379,7 +2358,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     expect(store.getState().runs).toMatchObject([
       { runId: vars.run.id, stopping: true },
@@ -2406,7 +2384,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
   });
 
@@ -2426,7 +2403,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     store.startRun("vars");
     const onOld = sentAt(sent, 1);
@@ -2441,7 +2417,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     // Undo of the first pick: no variants file at all.
     const first = storeWithVarsRunning();
@@ -2526,7 +2501,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
   });
 
@@ -2550,7 +2524,6 @@ describe("WP4 D3 the notice", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
   });
 
@@ -2687,7 +2660,6 @@ function openedAndRun(options: {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.open(opened);
   store.popneiReady(options.popnei ?? "0.1.0");
@@ -3128,7 +3100,6 @@ function modelledStore(): {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(sampleProject());
@@ -3651,7 +3622,6 @@ function storeOfFive(
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(fiveIndividualsProject(filters));
@@ -4444,7 +4414,6 @@ describe("VS3 D4 the statistics of each individual given to the store", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     };
     expect(() =>
       createStore({ ...config, analyses, statistics: FAKE_STATISTICS }),
@@ -4589,7 +4558,6 @@ function storeOfFiveWithCounts(
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(fiveIndividualsProject(filters));
@@ -4683,7 +4651,6 @@ describe("IP2 D2 the store with the individuals first", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     };
     const withStats = (
       filtersRead: AnalysisDef<TestJob, TestResult>["filtersRead"],
@@ -4888,7 +4855,6 @@ describe("VS3 D4 the failure of the statistics, and a read that leaves a wait be
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     const five = fiveIndividualsProject([MISSING_AT_02]);
@@ -4931,7 +4897,6 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.open(fiveIndividualsProject([MISSING_AT_02]));
@@ -4984,7 +4949,6 @@ describe("VS3 D4 two Runs that wait for the same statistics", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.open(fiveIndividualsProject([MISSING_AT_02]));
@@ -5091,7 +5055,6 @@ function storeWithCounts(cacheMaxBytes: number = 1024 * 1024): {
     appVersion: "0.1.0",
     cacheMaxBytes,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -5250,7 +5213,6 @@ describe("VS3 D5 the counts filled", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     without.popneiReady("0.1.0");
     without.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -5276,7 +5238,6 @@ describe("VS3 D5 the counts filled", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     };
     expect(() =>
       createStore({ ...config, analyses, counts: "counts" }),
@@ -5342,7 +5303,6 @@ function storeThatWrites(filters: readonly IndividualFilter[] = []): {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open({
@@ -5525,7 +5485,6 @@ describe("VS3 D6 the write in the store", () => {
       writeLeftBehind: true,
       writeStopped: false,
       writeDiscarded: false,
-      filtersChanged: false,
     });
     expect(write.cancels()).toBe(0);
     expect(writeIn(store)).toMatchObject({ kind: "ready", dropped: false });
@@ -5595,7 +5554,6 @@ describe("VS3 D6 the write in the store", () => {
       writeLeftBehind: false,
       writeStopped: false,
       writeDiscarded: true,
-      filtersChanged: false,
     });
     store.undo();
     expect(writeIn(store)).toStrictEqual({
@@ -5714,7 +5672,6 @@ describe("VS3 D6 the write in the store", () => {
       writeLeftBehind: false,
       writeStopped: true,
       writeDiscarded: false,
-      filtersChanged: false,
     });
   });
 });
@@ -6653,7 +6610,6 @@ function ldStore(
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices: false,
   });
   store.popneiReady("0.1.0");
   store.open(first);
@@ -6912,7 +6868,6 @@ describe("IP4 D1 a result given back by a read, with the diversity of the applic
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     const diversity = (): AnalysisStatus<JobResult> | undefined =>
       store.getState().analyses.find((view) => view.id === "diversity")?.status;
@@ -7101,7 +7056,6 @@ describe("live-stats 2 the result so far of a run", () => {
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.popneiReady("0.1.0");
     store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -7169,7 +7123,6 @@ describe("SF2 D3 the comparison with the check numbers takes the fingerprint of 
       appVersion: "0.1.0",
       cacheMaxBytes: 1024 * 1024,
       maxUndoSteps: 200,
-      filterNotices: false,
     });
     store.open({
       ...settings,
@@ -7246,9 +7199,9 @@ describe("SF2 D3 the comparison with the check numbers takes the fingerprint of 
 // analysis of the variants, which reads them.
 
 /** A store whose analyses are the fake of the variants and a fake of the
-    summary of the variants file, `summary`, made with `filterNotices`,
+    summary of the variants file, `summary`,
     popnei 0.1.0 and `panel.vcf` loaded and read. */
-function storeWithSummary(filterNotices: boolean): {
+function storeWithSummary(): {
   readonly store: Store<TestResult>;
   readonly sent: SentRequest[];
 } {
@@ -7274,7 +7227,6 @@ function storeWithSummary(filterNotices: boolean): {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    filterNotices,
   });
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -7287,209 +7239,38 @@ function mafThreshold(value: number | null): (p: Project) => Project {
   return (p) => setThreshold(p, { of: "variants", kind: "maf" }, value);
 }
 
-/** A notice of a change of a filter alone, with `cause`. */
-function filterNotice(
-  kind: "command" | "undo" | "redo",
-  description: string,
-): Notice {
-  return {
-    cause: { kind, description },
-    removed: [],
-    leftBehind: [],
-    stopped: [],
-    writeLeftBehind: false,
-    writeStopped: false,
-    writeDiscarded: false,
-    filtersChanged: true,
-  };
-}
-
-describe("SF5 D1 a notice at every change of a filter, under filterNotices", () => {
-  test("a threshold of the MAF gives a notice of its own, with every list empty, and sends nothing; it stays through a result so far, and goes at dismissNotice", () => {
-    const { store, sent } = storeWithSummary(true);
+describe("SF7 round no notice for a change of a filter that removes nothing", () => {
+  test("a threshold, an undo and a redo give no notice and send nothing while the summary runs; a change that removes a result gives the notice of the results removed alone", () => {
+    const { store, sent } = storeWithSummary();
     store.startRun("summary");
     const request = sentAt(sent, 0);
-    request.soFar(varsResult(500));
 
     store.apply("the MAF filter changed", mafThreshold(0.3));
-
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "the MAF filter changed"),
-    );
-    expect(sent).toHaveLength(1);
-    expect(request.cancels()).toBe(0);
-    const shown = store.getState().notice;
-    request.soFar(varsResult(900));
-    expect(statuses(store)[1]).toMatchObject({
-      kind: "running",
-      soFar: { numVars: 900 },
-    });
-    expect(store.getState().notice).toBe(shown);
-    request.progress({ bytesRead: 5, numBytes: 10, pass: 1, numPasses: 1 });
-    expect(store.getState().notice).toBe(shown);
-
-    store.dismissNotice();
-
     expect(store.getState().notice).toBeNull();
-    expect(request.cancels()).toBe(0);
-  });
-
-  test("a threshold of a filter of the individuals alone gives the notice of a filter", () => {
-    const { store } = storeWithSummary(true);
-
+    store.undo();
+    expect(store.getState().notice).toBeNull();
+    store.redo();
+    expect(store.getState().notice).toBeNull();
     store.apply("a filter of individuals changed", (p) =>
       setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.2),
     );
-
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "a filter of individuals changed"),
-    );
-  });
-
-  test("the next command replaces it, an undo gives one with the cause of the undo, and a redo one with its own", () => {
-    const { store } = storeWithSummary(true);
-    store.apply("the MAF filter changed", mafThreshold(0.3));
-    store.apply("the missing data filter changed", (p) =>
-      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
-    );
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "the missing data filter changed"),
-    );
-
-    store.undo();
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("undo", "the missing data filter changed"),
-    );
-
-    store.redo();
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("redo", "the missing data filter changed"),
-    );
-  });
-
-  test("a threshold turned off, and one typed 1 while on, change a filter; one typed 1 while off changes nothing and keeps the notice there was", () => {
-    const { store } = storeWithSummary(true);
-    store.apply("the MAF filter changed", mafThreshold(0.3));
-    store.apply("the MAF filter was turned off", mafThreshold(1));
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "the MAF filter was turned off"),
-    );
-    const shown = store.getState().notice;
-    store.apply("the MAF filter was turned off", mafThreshold(null));
-    expect(store.getState().notice).toBe(shown);
-  });
-
-  test("a command that changes no filter gives no notice of a filter, a new variants file whose project holds the same filters in new arrays among them", () => {
-    const { store } = storeWithSummary(true);
-    store.apply("the MAF filter changed", mafThreshold(0.3));
-    const before = store.getState().project;
-
-    store.apply("a variants file was loaded", (p) => {
-      const loaded = loadPanel(OTHER_VARIANTS_ID)(p);
-      return {
-        ...loaded,
-        filters: [...p.filters],
-        filtersOff: [...p.filtersOff],
-        individualFilters: [...p.individualFilters],
-        individualFiltersOff: [...p.individualFiltersOff],
-      };
-    });
-
-    const after = store.getState().project;
-    expect(after.filters).not.toBe(before.filters);
-    expect(after.filters).toStrictEqual(before.filters);
     expect(store.getState().notice).toBeNull();
+    expect(sent).toHaveLength(1);
+    expect(request.cancels()).toBe(0);
 
-    store.apply("the populations changed", (p) =>
-      setGrouping(p, { kind: "populations", column: "pop" }),
-    );
-    expect(store.getState().project).not.toBe(after);
-    expect(store.getState().notice).toBeNull();
-  });
-
-  test("a change of a filter that removes a result tells of both; with filterNotices false the same command gives the notice of the results removed alone, and a threshold that removes nothing gives none", () => {
-    for (const filterNotices of [true, false]) {
-      const { store, sent } = storeWithSummary(filterNotices);
-      store.startRun("vars");
-      const request = sentAt(sent, 0);
-      store.runEnded(request.run.id, doneWith(request, varsResult(10)));
-
-      store.apply("the MAF filter changed", mafThreshold(0.3));
-
-      expect(store.getState().notice).toStrictEqual({
-        ...filterNotice("command", "the MAF filter changed"),
-        removed: ["vars"],
-        filtersChanged: filterNotices,
-      });
-      store.dismissNotice();
-      store.apply("the missing data filter changed", (p) =>
-        setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
-      );
-      expect(store.getState().notice).toStrictEqual(
-        filterNotices
-          ? filterNotice("command", "the missing data filter changed")
-          : null,
-      );
-    }
-  });
-
-  test("a result done again under the new key takes the analysis out of the results removed, and the notice stays for the filter", () => {
-    const { store, sent } = storeWithSummary(true);
     store.startRun("vars");
-    const first = sentAt(sent, 0);
-    store.runEnded(first.run.id, doneWith(first, varsResult(10)));
-    store.apply("the MAF filter changed", mafThreshold(0.3));
-    store.startRun("vars");
-    const second = sentAt(sent, 1);
-
-    store.runEnded(second.run.id, doneWith(second, varsResult(20)));
-
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "the MAF filter changed"),
-    );
-  });
-});
-
-describe("SF5 D1 the notice of a filter and the calculations stopped", () => {
-  test("one command that loads another variants file and changes a filter: after startRun and cancelRun the notice no longer lists the analysis in stopped, and stays, with filtersChanged true", () => {
-    const { store, sent } = storeWithSummary(true);
-    store.startRun("summary");
-    const old = sentAt(sent, 0);
-
-    store.apply("a variants file was loaded", (p) =>
-      mafThreshold(0.3)(loadPanel(OTHER_VARIANTS_ID)(p)),
-    );
-
-    expect(old.cancels()).toBe(1);
+    const vars = sentAt(sent, 1);
+    store.runEnded(vars.run.id, doneWith(vars, varsResult(10)));
+    store.apply("the MAF filter changed", mafThreshold(0.5));
     expect(store.getState().notice).toStrictEqual({
-      ...filterNotice("command", "a variants file was loaded"),
-      stopped: ["summary"],
+      cause: { kind: "command", description: "the MAF filter changed" },
+      removed: ["vars"],
+      leftBehind: [],
+      stopped: [],
+      writeLeftBehind: false,
+      writeStopped: false,
+      writeDiscarded: false,
     });
-    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
-    store.startRun("summary");
-    store.cancelRun("summary");
-
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "a variants file was loaded"),
-    );
-  });
-
-  test("the same in a store with filterNotices false: the notice goes", () => {
-    const { store, sent } = storeWithSummary(false);
-    store.startRun("summary");
-    store.apply("a variants file was loaded", (p) =>
-      mafThreshold(0.3)(loadPanel(OTHER_VARIANTS_ID)(p)),
-    );
-    expect(sentAt(sent, 0).cancels()).toBe(1);
-    expect(store.getState().notice).toMatchObject({
-      stopped: ["summary"],
-      filtersChanged: false,
-    });
-    store.variantsRead(OTHER_VARIANTS_ID, VARIANTS_READ);
-    store.startRun("summary");
-    store.cancelRun("summary");
-
-    expect(store.getState().notice).toBeNull();
   });
 });
 
@@ -7553,8 +7334,8 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
     });
   });
 
-  test("on popgen2.html, a crash of the summary, then a threshold of the MAF: still error, the notice says the filter changed, and Start again sends", () => {
-    const { store, sent } = storeWithSummary(true);
+  test("on popgen2.html, a crash of the summary, then a threshold of the MAF: still error, no notice, and Start again sends", () => {
+    const { store, sent } = storeWithSummary();
     store.startRun("summary");
     store.runEnded(sentAt(sent, 0).run.id, { kind: "failed", error: CRASH });
 
@@ -7564,9 +7345,7 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
       kind: "error",
       error: { kind: "failed", error: CRASH },
     });
-    expect(store.getState().notice).toStrictEqual(
-      filterNotice("command", "the MAF filter changed"),
-    );
+    expect(store.getState().notice).toBeNull();
     expect(store.startRun("summary")).toStrictEqual([sentAt(sent, 1).run]);
     expect(statuses(store)[1]?.kind).toBe("running");
   });
@@ -7616,7 +7395,7 @@ describe("SF5 D3 the last result so far kept after a Stop", () => {
     readonly request: SentRequest;
     readonly last: TestResult;
   } {
-    const made = storeWithSummary(true);
+    const made = storeWithSummary();
     made.store.startRun("summary");
     const request = sentAt(made.sent, 0);
     request.soFar(varsResult(400));
@@ -7644,7 +7423,7 @@ describe("SF5 D3 the last result so far kept after a Stop", () => {
   });
 
   test("a request that had given no result so far keeps nothing", () => {
-    const { store, sent } = storeWithSummary(true);
+    const { store, sent } = storeWithSummary();
     store.startRun("summary");
     store.cancelRun("summary");
     expect(statuses(store)[1]).toStrictEqual({
@@ -7654,14 +7433,14 @@ describe("SF5 D3 the last result so far kept after a Stop", () => {
     });
   });
 
-  test("a change of a filter keeps it, with the notice of the filter; startRun forgets it", () => {
+  test("a change of a filter keeps it, with no notice; startRun forgets it", () => {
     const { store, sent, request } = stoppedSummary();
     const stopped = statuses(store)[1];
     store.runEnded(request.run.id, { kind: "cancelled" });
 
     store.apply("the MAF filter changed", mafThreshold(0.3));
     expect(statuses(store)[1]).toBe(stopped);
-    expect(store.getState().notice?.filtersChanged).toBe(true);
+    expect(store.getState().notice).toBeNull();
     store.undo();
     expect(statuses(store)[1]).toBe(stopped);
 

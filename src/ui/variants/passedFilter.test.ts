@@ -7,13 +7,11 @@ import { deepFreeze } from "../../core/testSupport.ts";
 import type { Job, JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { startAnalysis } from "../runs.ts";
-import { noticeText } from "../shell/words.ts";
 import {
   passedFilterChange,
   passedFilterOn,
   passedFilterShown,
 } from "./passedFilter.ts";
-import { NOTICE_WORDS } from "./statsWords.ts";
 import { summaryStatus } from "./words.ts";
 
 const FILE_ID = "0123456789abcdef0123456789abcdef";
@@ -94,7 +92,7 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
     expect(off.command(turnedOff)).toBe(turnedOff);
   });
 
-  test("a click while the pass runs sends nothing, stops nothing, and gives the notice of its description; Undo ticks it again", () => {
+  test("a click while the pass runs sends nothing, stops nothing, gives no notice, and names its step of Undo by its description; Undo ticks it again", () => {
     const jobs: Job[] = [];
     const store = createPopgen2Store({
       send: (_key, job): Run<JobResult> => {
@@ -123,14 +121,7 @@ describe("SF7 D2 the FILTER box of popgen2.html", () => {
     expect(jobs).toHaveLength(1);
     expect(summaryStatus(store.getState())).toBe(running);
     expect(passedFilterOn(store.getState().project)).toBe(false);
-    const notice = store.getState().notice;
-    if (notice === null) throw new Error("no notice");
-    expect(notice).toMatchObject({ removed: [], stopped: [] });
-    expect(noticeText(notice, NOTICE_WORDS.title)).toEqual({
-      text: "The variants that failed their FILTER are kept",
-      action: "Undo",
-      reverse: "undo",
-    });
+    expect(store.getState().notice).toBeNull();
     expect(store.getState().undo).toBe(
       "the variants that failed their FILTER are kept",
     );
