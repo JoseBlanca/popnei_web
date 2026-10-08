@@ -1027,3 +1027,16 @@ once). Not taken: the count in the box's label ("Leave out the 300
 variants…"), since the owner asked for fewer counts and the count is in
 the file's box. Vitest 4,291, twice; Playwright 641 in Chromium and 641
 in WebKit; screens 136. VoiceOver not heard.
+
+### The owner's round on work package 7, 8 October 2026
+
+The owner tried the FILTER box and asked: no notice when the box is
+unticked ("Let's assume that the user knows what he's doing"), and no
+Undo of the opening of a file ("not necessary"). The session reads it
+as: on popgen2.html no change of a filter gives a notice, the box's and
+the thresholds' alike; opening a file starts the page's history afresh,
+so Undo and Redo stay for the changes of the filters, which the owner
+decided on 7 October 2026 are undone; and since no notice is left on
+that page, the notice comes off popgen2.html (the old page keeps its
+own). The store's setting `filterNotices` then serves nothing and goes,
+with its spec. Work package 9 follows: no notice for the thresholds.
