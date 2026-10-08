@@ -591,19 +591,20 @@ the state of the store, `write` in `done`, whose `written.file` is the
    an address of it, `URL.createObjectURL`, with the `download` attribute
    naming the file, which it clicks and removes, as the project file is
    downloaded.
-2. It calls `store.writeSaved()`, so that the store forgets the file and
-   the step shows it handed to the browser.
+2. It calls `store.writeSaved()`, so that the step shows the file
+   handed to the browser; the store keeps the file, `write` in `saved`,
+   until the write's key changes.
 3. It releases the address a minute after the click, as the download of
    a text does in `src/ui/download.ts`: Safari on iOS asks the user
    whether to download before it reads the address, and an address
    released before the answer gives a failed download. The `Blob` is
-   then held by nothing of the page, and its memory is the browser's to
-   give back.
+   then held by the store alone.
 
-So the page releases the file once it is saved, and the store forgets it
-when a change of the filters, a new load or an opened project makes it
-another file than the step shows, as section 6 of the architecture has
-it; the page holds nothing more of it. A file forgotten so before it was
+So the store forgets the file, saved or not, when a change of the
+filters, of the format, a new load or an opened project gives the write
+another key, as section 6 of the architecture has it; then nothing of
+the page holds it, and its memory is the browser's to give back. Until
+8 October 2026 the store forgot it once it was saved. A file forgotten so before it was
 saved is gone, and the notice of the change says that its Undo does not
 bring it back (`docs/specs/core/store.md`, `writeDiscarded`; point G of
 `docs/specs/stage-3-open-points.md`). The page is not told whether the

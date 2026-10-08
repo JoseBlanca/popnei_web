@@ -88,8 +88,9 @@ export interface Saving {
   changed(): boolean;
   /** Hands the file of the filtered variants the store holds, `write` in
       `done`, to the browser to download under `name`, "panel.filtered.nei",
-      then tells the store, which forgets the file and is `saved`. Throws a
-      defect when `write` is not `done`: Save is shown only then. */
+      then tells the store, which is `saved` and keeps the file until the
+      write's key changes. Throws a defect when `write` is not `done`:
+      Save is shown only then. */
   saveWritten(name: string): void;
 }
 

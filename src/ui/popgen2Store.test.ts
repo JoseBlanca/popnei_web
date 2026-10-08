@@ -1,11 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { firstProject, popgen2FirstProject } from "../core/apps.ts";
-import { keptNoneReason } from "../core/individualsKept.ts";
 import { keyFromWire, writeKeyOf, createKeyMemo } from "../core/keys.ts";
-import { filtersApplied } from "../core/filtersApplied.ts";
 import {
-  jobFilters,
   loadVariants,
   setThreshold,
   turnOffVariantFilter,
@@ -388,7 +385,12 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
     expect(write.job).toStrictEqual({
       format: "vcf",
       fileId: "c".repeat(32),
-      filters: jobFilters(filtersApplied(project)),
+      // The filters of popgen2FirstProject: FILTER, and the missing rate
+      // of the variants at 0.1.
+      filters: [
+        { kind: "passed" },
+        { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      ],
       individuals: null,
     });
   });
@@ -495,10 +497,11 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
       result: passOfTwo(),
     });
 
-    const state = store.getState();
-    const reason = keptNoneReason(state.project, state.individualsKept);
-    expect(reason).not.toBeNull();
-    expect(state.write).toStrictEqual({ kind: "locked", reason });
+    expect(store.getState().write).toStrictEqual({
+      kind: "locked",
+      reason:
+        "The filters of individuals keep none of the 2 individuals of panel.vcf.gz. Loosen them in the Variants step.",
+    });
     expect(store.startWrite("vcf")).toBeNull();
     expect(writes).toHaveLength(0);
   });

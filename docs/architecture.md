@@ -2127,10 +2127,12 @@ new URL in `package.json` and a new line in `filesRunner.ts`.
   of a link, which every browser of the floor has. A download started by the code
   minutes after the click that asked for the write, with no click of its
   own, may be blocked by the browser or asked about, as Chrome does for a
-  page that starts several downloads. The page releases the `Blob`, and
-  the address the link read it from, once it is saved, and when a change
-  of the filters, a new write or a new load makes it another file than
-  the step shows.
+  page that starts several downloads. The page releases the address the
+  link read the `Blob` from a minute after the click, and the store keeps
+  the `Blob` itself, saved or not, until a change of the filters, of the
+  format, a new write or a new load gives the write another key, so that
+  `popgen2.html` can offer it again; until 8 October 2026 it was released
+  once saved.
 - **What a file of F bytes holds in the tab**, at its peak, measured on
   27 September 2026 in Chromium 153 and WebKit 26.6 on the owner's Mac
   (`docs/specs/analyses/writeVariants.md`, "What was measured"): about 4F

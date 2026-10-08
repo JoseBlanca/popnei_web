@@ -951,9 +951,11 @@ the write is made with, `writeKeyOf(p, format, …)`, and which the state
 format first, and then does what it does in the state of the write
 under that format's key; so a `startWrite` that starts nothing, in
 `running` or in `error` after a refusal of popnei, still leaves the
-state `write` of that format, whose error the page then shows. A change
-of the format is a change of the state: the listeners are called and
-`getState` gives a new object, even when nothing starts. A `startWrite`
+state `write` of that format, whose error the page then shows. In
+every state with a key, a change of the format is a change of the
+state: the listeners are called and `getState` gives a new object, even
+when nothing starts; `locked` carries no format, so there nothing is
+told. A `startWrite`
 while a write of the other format is in flight is a defect, thrown, and
 changes nothing: no page asks it, the old page writing one format and
 popgen2.html's dialog being modal, and the write in flight would end
@@ -963,7 +965,8 @@ pass and a threshold of the individuals, before any write, and the page
 shows the button locked by the failure of the one pass
 (`docs/specs/steps/popgen2-download.md`, "The button"). A file
 whose key is not the current one is dropped as before, so a write of one
-format ending while the store holds the other keeps nothing. The old
+format ending while the store holds the other keeps nothing, and leaves
+`dropped` as it was: no filter of it changed. The old
 page asks for `"nei"` alone. Until 8 October 2026 the store held the one
 format of stage 3, `STATE_FORMAT`, and a `startWrite` of another was a
 defect, since the store would have filed its key, and shown its file,
@@ -994,7 +997,9 @@ as those of the `.nei` file.
   the user on popgen2.html; until 8 October 2026 it forgot the file
   there. It forgets the file when the project gives the write another
   key, a change of the filters, of the format, of the load, or a project
-  opened, and the state is `ready`. A file forgotten in `saved` has been
+  opened, and the state is `ready`. A change of the format forgets a
+  file in `done`, not yet saved, too, with no notice: it comes from a
+  `startWrite`, a press of the user, not from a command. A file forgotten in `saved` has been
   handed to the browser and is not "discarded": the notice says so only
   of a file in `done`. On the old page, which does not offer the file
   again, the file now stays in memory after its Save until such a change,
@@ -1005,9 +1010,9 @@ as those of the `.nei` file.
   opening makes no notice, and the question the shell asks before it
   names the file (`docs/specs/shell.md`, "Opening"). A write that ends
   with no variant keeps no file: the state is `noVariant`, and the step
-  says why there is nothing to save. So the page releases the file once it is saved, and when a
-  change makes it another file than the step shows, as section 6 of the
-  architecture has it (`docs/specs/entry.md`, "A file of the filtered
+  says why there is nothing to save. So the file is released when a
+  change makes it another file than the step shows, and not when it is
+  saved, as section 6 of the architecture has it (`docs/specs/entry.md`, "A file of the filtered
   variants saved"). The page is not told whether the browser kept the
   download, so "saved" is the file handed to the browser: on the old
   page a user who cancels the browser's own question writes the file
@@ -1323,8 +1328,8 @@ those in flight:
   warnings, made from the request's project; if the cache is then above
   its bound, it drops results the current project does not show, never
   one it shows (`docs/specs/core/cache.md`). The result of a write goes
-  into no cache: it is kept as the file of the state `write` until it is
-  saved, or dropped (above), and not kept at all when it holds no
+  into no cache: it is kept as the file of the state `write`, in `done`
+  and then in `saved`, until the write's key changes, or dropped (above), and not kept at all when it holds no
   variant, `noVariant`. Then, for any result: the counts that `countsOf` gives go
   into the cache under the key of the counts for the request's project,
   keeping the result just put; the number of variants, when `countsOf`

@@ -6050,6 +6050,43 @@ describe("DL4 D1 the format of the write", () => {
       error: { kind: "refused", message: "no space" },
       ofStatistics: false,
     });
+
+    // The .nei file was forgotten on the change of format: a new write.
+    store.startWrite("nei");
+    const again = writeAt(writes, 2);
+    expect(writeIn(store)).toStrictEqual({
+      kind: "running",
+      key: again.key,
+      format: "nei",
+      runId: again.run.id,
+      progress: null,
+      waitsForStatistics: false,
+    });
+  });
+
+  test("a VCF stopped that answers done after a .nei write started is not marked dropped: no filter changed", () => {
+    const { store, writes } = storeThatWrites();
+    store.startWrite("vcf");
+    const vcf = writeAt(writes, 0);
+    store.cancelWrite();
+    store.startWrite("nei");
+    const nei = writeAt(writes, 1);
+    store.runEnded(vcf.run.id, {
+      kind: "done",
+      key: vcf.key,
+      result: vcfFile(1150, 1200),
+    });
+    expect(writeIn(store)).toMatchObject({ kind: "running", format: "nei" });
+
+    store.cancelWrite();
+    store.runEnded(nei.run.id, { kind: "cancelled" });
+
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: nei.key,
+      format: "nei",
+      dropped: false,
+    });
   });
 
   test("startWrite in the format it holds that starts nothing tells no screen", () => {
@@ -6109,6 +6146,13 @@ describe("DL4 D1 the format of the write", () => {
     ).toThrow(
       /^popnei_web defect: the request \d+ of the writing asked for a "nei" file and was given a "vcf" file/,
     );
+    // Checked before anything is kept: no file, a defect of the .nei write.
+    expect(writeIn(store)).toMatchObject({
+      kind: "error",
+      key: write.key,
+      format: "nei",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
   });
 
   test("no startWrite of either format is a defect", () => {

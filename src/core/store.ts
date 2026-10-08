@@ -2038,8 +2038,8 @@ export function createStore<J, R, F = never>(
   /** What a file written leaves in the store: the counts of its pass in
       the cache and its number of variants recorded, as those of any pass,
       and the file kept when the project still gives its key and it holds
-      a variant; dropped, and so marked, when the project no longer gives
-      its key. */
+      a variant; dropped when the project no longer gives its key, and so
+      marked when it is of the format of the write. */
   const tookWritten = (
     request: InFlight<J, R, F>,
     key: Key,
@@ -2063,8 +2063,12 @@ export function createStore<J, R, F = never>(
       stopOrphans();
     }
     if (key !== currentWriteKey()) {
-      // Its file holds other variants than the step shows.
-      dropped = true;
+      // Its file holds other variants than the step shows; one of the
+      // other format, stopped before the change of format, ended after no
+      // change of its filters, and is not marked.
+      if (file.format === writeFormat) {
+        dropped = true;
+      }
       return;
     }
     const { format, numBytes, passStats } = file;

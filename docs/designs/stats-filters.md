@@ -1135,7 +1135,8 @@ Made on this branch once the owner approves, each with its paragraph
   ploidy. With the download, "The files written": popnei's writers give
   the file in pieces, which the worker gathers into one `Blob` in parts
   of 64 MiB; what a file of F bytes holds in the tab becomes about F;
-  the VCF is written; and `popgen2.html` has no estimate, warning or
+  the file kept until the write's key changes, and not let go once
+  saved; the VCF is written; and `popgen2.html` has no estimate, warning or
   refusal of size, where the old page keeps its own.
 - Section 8: the project file with the kind `passed`, and the old page
   refusing it.
