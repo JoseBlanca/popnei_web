@@ -915,6 +915,11 @@ const HEADER_WORDS: Readonly<Record<HeaderField, string>> = {
   individuals: "what was read of the individuals file",
 };
 
+/** The address of the new page of population genetics, relative to the
+    old one, which the text of `newPageFilter` names twice and ends with,
+    so that a screen can make a link of its last one. */
+export const NEW_PAGE = "popgen2.html";
+
 /** The size of a project file too large to open, in MB, as the text
     says it. */
 const MAX_PROJECT_FILE_MB = MAX_PROJECT_FILE_BYTES / (1024 * 1024);
@@ -953,7 +958,7 @@ export function projectFileErrorText(
     case "project":
       return projectErrorText(error.error);
     case "newPageFilter":
-      return `${name} was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.`;
+      return `${name} was saved by ${NEW_PAGE}, the new page of population genetics. Its filter of the FILTER column works differently from the box on this page, so it was not opened. The file is unchanged: open it in ${NEW_PAGE}.`;
   }
 }
 

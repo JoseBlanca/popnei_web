@@ -28,8 +28,9 @@ export interface DialogContent {
   /** Its heading, which is also its name for a screen reader. */
   readonly title: string;
   /** The words under its heading, which describe it for a screen reader,
-      read after its name as it opens; `null` for none. */
-  readonly text: string | null;
+      read after its name as it opens; words with a link among them, drawn
+      by the screen; `null` for none. */
+  readonly text: string | React.JSX.Element | null;
 }
 
 /** What a dialog is drawn with, whose content is of the type `C`. */

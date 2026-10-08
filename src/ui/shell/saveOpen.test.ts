@@ -14,6 +14,7 @@ import type { ProjectFileError } from "../../core/projectFile.ts";
 import type { Project } from "../../core/project.ts";
 import type { Result } from "../../core/result.ts";
 import {
+  aroundLink,
   handedText,
   notOpenedTitle,
   openQuestion,
@@ -161,6 +162,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       kind: "refused",
       title: "notes.vcf was not opened",
       text: "notes.vcf cannot be opened as a project: it is larger than 64 MB, and a project file, which holds settings and no genotypes, is much smaller. Open the .popnei.json file the application saved.",
+      link: null,
     });
   });
 
@@ -175,6 +177,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       kind: "refused",
       title: "panel.popnei.json was not opened",
       text: "panel.popnei.json could not be read: It moved. Choose it again.",
+      link: null,
     });
   });
 
@@ -183,6 +186,7 @@ describe("the words and the reading of Save project and Open project…", () => 
       kind: "refused",
       title: "notes.txt was not opened",
       text: "notes.txt cannot be opened as a project: it is not a project file, or it was cut short or changed outside the application. Open the .popnei.json file the application saved, or a copy of it.",
+      link: null,
     });
   });
 
@@ -209,6 +213,32 @@ describe("the words and the reading of Save project and Open project…", () => 
     expect(openedText("pops.popnei.json", picked.project)).toBe(
       "Opened pops.popnei.json. This project was made with panel.nei, of 4 individuals and 1,200 variants. Load it to run its analyses again. pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
     );
+  });
+
+  test("SF4 D1 a project file of the new page is refused with a link to that page, made of the last mention of it", async () => {
+    const text = await readFile(
+      join(FIXTURES, "v1-passed.popnei.json"),
+      "utf8",
+    );
+    // A name that holds the address too, which is not the link.
+    const picked = await readPicked(
+      fileOf("popgen2.html.popnei.json", text),
+      read,
+    );
+    if (picked.kind !== "refused") throw new Error("the file opened");
+    expect(picked.link).toBe("popgen2.html");
+    expect(aroundLink(picked)).toEqual({
+      before:
+        "popgen2.html.popnei.json was saved by popgen2.html, the new page of population genetics. Its filter of the FILTER column works differently from the box on this page, so it was not opened. The file is unchanged: open it in ",
+      link: "popgen2.html",
+      after: ".",
+    });
+  });
+
+  test("the words of a refusal that names no page have no link", () => {
+    expect(
+      aroundLink({ title: "t", text: "notes.txt was not read.", link: null }),
+    ).toBeNull();
   });
 
   test("an opened project with no variants file is only said opened", async () => {

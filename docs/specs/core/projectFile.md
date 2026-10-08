@@ -958,7 +958,7 @@ file at all, and the others in the pattern of `projectErrorText` of
 | `newerFormat` | "This project file was saved by a newer version of the application, 0.4.0, in a format this version cannot read. Reload the page to get the newest version, and open the file again." Without ", 0.4.0" when the file's `appVersion` is not a text; the version is a value of the file, so it is shown escaped and cut after 40 characters, as `docs/specs/core/project.md` shows one. These words replace those that spec quoted for this case, which it left to this one. |
 | `header` | "The project file cannot be opened: the version of its format should be a whole number, 1 or more. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again." The fields in words: the version of its format, the application, the version of the application that saved it, the version of popnei it was saved with, the date it was saved, the check numbers, what was read of the variants file, what was read of the individuals file. |
 | `unknownField`, `missingField` | "The project file cannot be opened: it has a field "notes", which the application does not write." and "The project file cannot be opened: its field "checks" is missing.", each followed by the same last two sentences; the name shown escaped and cut. |
-| `newPageFilter` | "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page." (**Open 4**) |
+| `newPageFilter` | "pops.popnei.json was saved by popgen2.html, the new page of population genetics. Its filter of the FILTER column works differently from the box on this page, so it was not opened. The file is unchanged: open it in popgen2.html." The address, `NEW_PAGE` of the module, is the last words but the stop, and the dialog of the page makes a link of that last mention, which opens in a new tab and says so; core gives words only (**Open 4**, closed). |
 
 The comparison of the identity, and its warning. `saved` is the
 reference's variants file and `now` the one loaded; what neither read
@@ -1273,15 +1273,21 @@ check with its own (point E there).
    difference the comparison would blame on the file.
 
 4. **The words of a file of the new page opened in the old one**,
-   `newPageFilter`. The design asks for words that say the file was
-   made by the new page, and the users have no name for that page yet:
-   the old one is "population genetics", and the new one is
-   `popgen2.html` in its address. Meanwhile, "pops.popnei.json was saved
-   by the new page of population genetics, which can leave out the
-   variants that failed their FILTER, and this page cannot show that
-   choice. Open it in the new page.", to be judged when the new page
-   saves projects, since no file can meet them before. Another answer
-   changes that text and its test.
+   `newPageFilter`. Closed by the session on 8 October 2026. The design
+   asks for words that say the file was made by the new page, and the
+   users have no name for that page but its address, `popgen2.html`. The
+   first words, "… which can leave out the variants that failed their
+   FILTER, and this page cannot show that choice. Open it in the new
+   page.", misled: the old page has a box of its own for the FILTER
+   column, a reading option, right behind the dialog, and the words named
+   neither the new page nor whether the file was kept. The words decided:
+   "pops.popnei.json was saved by popgen2.html, the new page of population
+   genetics. Its filter of the FILTER column works differently from the
+   box on this page, so it was not opened. The file is unchanged: open it
+   in popgen2.html.", with the name of the file picked. In the dialog the
+   last "popgen2.html" is a link that opens in a new tab, and says so in
+   its words, "(opens in a new tab)", so that following it does not lose
+   the project on the old page.
 
 ## What this spec relies on in the specs written beside it
 

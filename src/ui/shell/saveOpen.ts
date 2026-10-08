@@ -9,6 +9,7 @@ import { escaped, individualsNeeds } from "../../core/project.ts";
 import type { Project } from "../../core/project.ts";
 import {
   MAX_PROJECT_FILE_BYTES,
+  NEW_PAGE,
   askedFileText,
   projectFileErrorText,
 } from "../../core/projectFile.ts";
@@ -106,11 +107,40 @@ export function unreadableText(name: string, message: string): string {
   return `${escaped(name)} could not be read: ${said}. Choose it again.`;
 }
 
-/** What the first three steps of an opening gave: the project, or the
-    words of why the file does not open, under its heading. */
+/** Why a project file does not open, in words under a heading; `link`
+    is the address of a page of the site that the words name last, which
+    the dialog makes a link of, or `null` when they name none. */
+export interface Refusal {
+  readonly title: string;
+  readonly text: string;
+  readonly link: string | null;
+}
+
+/** What the first three steps of an opening gave: the project, or why the
+    file does not open. */
 export type Picked =
   | { readonly kind: "project"; readonly project: Project }
-  | { readonly kind: "refused"; readonly title: string; readonly text: string };
+  | ({ readonly kind: "refused" } & Refusal);
+
+/** The words of `refusal` around the last mention of its page, `link`,
+    which the dialog draws as a link between them; `null` when it names no
+    page. The last, since the name of the file comes first and may hold
+    the address too. */
+export function aroundLink(refusal: Refusal): {
+  readonly before: string;
+  readonly link: string;
+  readonly after: string;
+} | null {
+  const { text, link } = refusal;
+  if (link === null) return null;
+  const at = text.lastIndexOf(link);
+  if (at === -1) return null;
+  return {
+    before: text.slice(0, at),
+    link,
+    after: text.slice(at + link.length),
+  };
+}
 
 /** The parts of a `File` an opening reads. */
 export type PickedFile = Pick<File, "name" | "size" | "text">;
@@ -125,10 +155,11 @@ export async function readPicked(
   file: PickedFile,
   read: (text: string) => Result<Project, ProjectFileError>,
 ): Promise<Picked> {
-  const refused = (text: string): Picked => ({
+  const refused = (text: string, link: string | null = null): Picked => ({
     kind: "refused",
     title: notOpenedTitle(file.name),
     text,
+    link,
   });
   if (file.size > MAX_PROJECT_FILE_BYTES) {
     return refused(
@@ -145,5 +176,9 @@ export async function readPicked(
   const opened = read(text);
   return opened.ok
     ? { kind: "project", project: opened.value }
-    : refused(projectFileErrorText(opened.error, file.name));
+    : refused(
+        projectFileErrorText(opened.error, file.name),
+        // A file of the new page is opened there, and its words say so.
+        opened.error.kind === "newPageFilter" ? NEW_PAGE : null,
+      );
 }

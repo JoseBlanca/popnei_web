@@ -4075,7 +4075,7 @@ describe("SF4 D1 the project file of the filter of the FILTER column", () => {
       error: expected,
     });
     expect(projectFileErrorText(expected, "pops.popnei.json")).toBe(
-      "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.",
+      "pops.popnei.json was saved by popgen2.html, the new page of population genetics. Its filter of the FILTER column works differently from the box on this page, so it was not opened. The file is unchanged: open it in popgen2.html.",
     );
   });
 

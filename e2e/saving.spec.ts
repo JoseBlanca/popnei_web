@@ -629,7 +629,7 @@ test("WS9 D3 a project file refused whose read ends while the dialog of Save is 
   await expect(openButton(page)).toBeFocused();
 });
 
-test("SF4 D2 Open project… with a project file that holds the filter of the FILTER column shows the text of newPageFilter, leaves the project as it was, and axe", async ({
+test("SF4 D2 Open project… with a project file that holds the filter of the FILTER column shows the text of newPageFilter with a link to popgen2.html that opens in a new tab, leaves the project as it was, and axe", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -653,10 +653,23 @@ test("SF4 D2 Open project… with a project file that holds the filter of the FI
     name: "pops.popnei.json was not opened",
   });
   await expect(dialog).toHaveAccessibleDescription(
-    "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.",
+    "pops.popnei.json was saved by popgen2.html, the new page of population genetics. Its filter of the FILTER column works differently from the box on this page, so it was not opened. The file is unchanged: open it in popgen2.html (opens in a new tab).",
   );
+  // The last mention of the page is the link, and its words say where it
+  // opens, as its name does.
+  const link = dialog.getByRole("link");
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAccessibleName("popgen2.html (opens in a new tab)");
+  await expect(link).toHaveText("popgen2.html (opens in a new tab)");
+  await expect(link).toHaveAttribute("href", "popgen2.html");
+  await expect(link).toHaveAttribute("target", "_blank");
   await expect(dialog.getByRole("button", { name: "OK" })).toBeFocused();
   await expectNoViolations(makeAxeBuilder);
+  // The keyboard reaches the link, and goes back to OK.
+  await page.keyboard.press("Shift+Tab");
+  await expect(link).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "OK" })).toBeFocused();
 
   await page.keyboard.press("Enter");
 
@@ -665,6 +678,18 @@ test("SF4 D2 Open project… with a project file that holds the filter of the FI
   // Nothing of the file was opened: the page still asks for a variants
   // file, and not for the file the project was made with.
   await expect(page.getByText(/^This project was made with/)).toHaveCount(0);
+
+  // The link opens the new page in a new tab, and this page stays as it
+  // was, its dialog open.
+  await openProject(page, { name: "pops.popnei.json", text });
+  const popup = page.waitForEvent("popup");
+  await dialog.getByRole("link").click();
+  const newPage = await popup;
+  await newPage.waitForLoadState("domcontentloaded");
+  expect(new URL(newPage.url()).pathname).toMatch(/\/popgen2\.html$/);
+  await newPage.close();
+  await expect(dialog).toBeVisible();
+  expect(new URL(page.url()).pathname).toMatch(/\/popgen\.html$/);
 });
 
 test("WS9 D3 Open project… with a file above 64 MB shows the text of tooLarge", async ({

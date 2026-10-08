@@ -11,7 +11,9 @@
  * Open project… opens the file picker of the system. The file is read and
  * checked before anything is asked, so that the user is not asked to give
  * up their project for a file that does not open; a file refused is told
- * in a dialog with OK. When the project has changed since it was opened
+ * in a dialog with OK, and a file of the new page of population genetics
+ * with a link to that page, which opens in a new tab so that the project
+ * on this one stays. When the project has changed since it was opened
  * or saved, calculations are in flight, or a file of the filtered
  * variants is written and not saved, a dialog asks first, since an
  * opening cannot be undone. After the opening the Variants step is on
@@ -43,6 +45,7 @@ import { useAppState, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Dialog } from "../widgets/Dialog.tsx";
 import { isDialogOnPage, whenNoDialog } from "../widgets/dialogMark.ts";
+import { Link } from "../widgets/Link.tsx";
 import { TextField } from "../widgets/TextField.tsx";
 import { useAnnouncer } from "./announcer.tsx";
 import styles from "./ProjectButtons.module.css";
@@ -50,12 +53,14 @@ import {
   KEEP_PROJECT,
   NAME_NEEDED,
   SAVE_BEFORE_LEAVING,
+  aroundLink,
   handedText,
   openButtonText,
   openQuestion,
   openedText,
   readPicked,
 } from "./saveOpen.ts";
+import type { Refusal } from "./saveOpen.ts";
 import { hashOfStep, stepOfHash } from "./steps.ts";
 
 /** A function that asks for the focus to move to the element `target`
@@ -200,7 +205,7 @@ function calculating(s: AppState<unknown, unknown>): boolean {
 /** What Open project… is showing, besides its button. */
 type Opening =
   | { readonly kind: "none" }
-  | { readonly kind: "refused"; readonly title: string; readonly text: string }
+  | ({ readonly kind: "refused" } & Refusal)
   | {
       readonly kind: "asking";
       readonly name: string;
@@ -208,6 +213,20 @@ type Opening =
     };
 
 const NONE: Opening = { kind: "none" };
+
+/** The words of `refusal` under the heading of its dialog, with the page
+    they name last as a link that opens in a new tab. */
+function refusalText(refusal: Refusal): string | React.JSX.Element {
+  const around = aroundLink(refusal);
+  if (around === null) return refusal.text;
+  return (
+    <>
+      {around.before}
+      <Link href={around.link} newTab label={around.link} />
+      {around.after}
+    </>
+  );
+}
 
 /** Open project…, the dialog of a file refused, and the question before
     an opening. */
@@ -308,7 +327,11 @@ export function OpenProject(): React.JSX.Element {
         <Button label="Open project…" ref={button} />
       </FileTrigger>
       <Dialog
-        content={opening.kind === "refused" ? opening : null}
+        content={
+          opening.kind === "refused"
+            ? { title: opening.title, text: refusalText(opening) }
+            : null
+        }
         role="alertdialog"
         onClose={back}
       >
