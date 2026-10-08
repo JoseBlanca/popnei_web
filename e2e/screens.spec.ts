@@ -4629,6 +4629,59 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-filter-failed${at}-${theme}`);
       });
 
+      test("the FILTER box of low_qual.vcf.gz, ticked", async ({ page }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await expect(
+          page.getByRole("checkbox", {
+            name: "Leave out the variants that failed their FILTER",
+          }),
+        ).toBeChecked();
+        await save(page, `popgen2-filter-box${at}-${theme}`);
+      });
+
+      test("the FILTER box of low_qual.vcf.gz, turned off, with its notice", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "low_qual.vcf.gz");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        const label = page.getByText(
+          "Leave out the variants that failed their FILTER",
+          { exact: true },
+        );
+        await label.click();
+        await expect(
+          page.getByRole("region", { name: "Notice" }).getByRole("alertdialog"),
+        ).toHaveAccessibleName(
+          "The filter of the FILTER column was turned off",
+        );
+        await label.scrollIntoViewIfNeeded();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-filter-box-off${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the FILTER box of low_qual.nei, which records the FILTER of its variants", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "low_qual.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await expect(
+          page.getByRole("checkbox", {
+            name: "Leave out the variants that failed their FILTER",
+          }),
+        ).toBeChecked();
+        await save(page, `popgen2-filter-box-nei${at}-${theme}`);
+      });
+
       test("the statistics running", async ({ page }, testInfo) => {
         test.setTimeout(120_000);
         const vcf = testInfo.outputPath("running.vcf.gz");
