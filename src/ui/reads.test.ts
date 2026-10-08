@@ -202,6 +202,7 @@ const OPENED: VariantsOpened = {
   kind: "opened",
   individuals: ["s000", "s001"],
   ploidy: 2,
+  keepsPassed: false,
 };
 
 const TABLE_READ: IndividualsAnswer = {
@@ -243,7 +244,7 @@ describe("WS7 D1 the rule of the reads", () => {
     expect(fake.variants).toHaveLength(1);
   });
 
-  test("the outcome opened makes the source read, with the individuals and the ploidy", async () => {
+  test("the outcome opened makes the source read, with the individuals, the ploidy and keepsPassed", async () => {
     const { store, fake } = setUp();
     ready(store);
     pickNei(store, PANEL_ID);
@@ -256,6 +257,7 @@ describe("WS7 D1 the rule of the reads", () => {
       individuals: ["s000", "s001"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     expect(fake.variants).toHaveLength(1);
   });
@@ -519,6 +521,7 @@ describe("WS7 D1 the reads cancelled", () => {
       individuals: ["s000", "s001"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
   });
 
@@ -766,4 +769,26 @@ describe("IP9 the reads of an xlsx", () => {
       error: { kind: "xlsxReaderNotLoaded", message: "Failed to fetch" },
     });
   });
+});
+
+describe("SF2 D2 the read of the variants file records keepsPassed", () => {
+  test.each([true, false])(
+    "the outcome opened of a .nei file with keepsPassed %s records it in the read",
+    async (keepsPassed) => {
+      const { store, fake } = setUp();
+      ready(store);
+      pickNei(store, PANEL_ID);
+
+      fake.variants[0]?.end({ ...OPENED, keepsPassed });
+      await settle();
+
+      expect(variantsRead(store)).toEqual({
+        kind: "read",
+        individuals: ["s000", "s001"],
+        ploidy: 2,
+        numVars: null,
+        keepsPassed,
+      });
+    },
+  );
 });

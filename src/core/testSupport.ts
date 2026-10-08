@@ -107,6 +107,74 @@ export function noPopDiversity(
 }
 
 /**
+ * A value as a project file holds it: the read of its variants file, and
+ * of its reference's, without `keepsPassed`, which no file holds and the
+ * validation gives from the format (docs/specs/core/project.md, "The
+ * validation"). Anything else is left as it is, a value that is not a
+ * project among them.
+ */
+export function asProjectFile(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+  const out: Record<string, unknown> = { ...value };
+  if ("variants" in value) {
+    out["variants"] = sourceAsFile(value["variants"]);
+  }
+  const reference = value["reference"];
+  if (isRecord(reference) && "variants" in reference) {
+    out["reference"] = {
+      ...reference,
+      variants: sourceAsFile(reference["variants"]),
+    };
+  }
+  return out;
+}
+
+function sourceAsFile(source: unknown): unknown {
+  if (!isRecord(source) || !isRecord(source["read"])) {
+    return source;
+  }
+  const read: Record<string, unknown> = { ...source["read"] };
+  delete read["keepsPassed"];
+  return { ...source, read };
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A value through JSON, as a project file holds it (`asProjectFile`). */
+export function projectJson(value: unknown): unknown {
+  return asProjectFile(JSON.parse(JSON.stringify(value)));
+}
+
+/**
+ * The project as the validation gives it back from its file: the read of
+ * each variants file, the reference's among them, with `keepsPassed` true
+ * for a VCF and false for a `.nei` file, whatever it was.
+ */
+export function readBack(p: Project): Project {
+  return {
+    ...p,
+    variants: p.variants === null ? null : sourceReadBack(p.variants),
+    reference:
+      p.reference === null
+        ? null
+        : { ...p.reference, variants: sourceReadBack(p.reference.variants) },
+  };
+}
+
+function sourceReadBack(source: VariantSource): VariantSource {
+  return source.read.kind === "read"
+    ? {
+        ...source,
+        read: { ...source.read, keepsPassed: source.format === "vcf" },
+      }
+    : source;
+}
+
+/**
  * Freezes a value and everything it holds, so that a function that writes
  * into it throws in a test, since ES modules run in strict mode. Gives the
  * value itself.
@@ -149,6 +217,7 @@ export function sampleProject(): Project {
         individuals: ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: [
@@ -606,12 +675,14 @@ const sourceRead: fc.Arbitrary<SourceRead> = fc.oneof(
     .record({
       ploidy: fc.integer({ min: 1, max: 255 }),
       numVars: fc.option(fc.nat()),
+      keepsPassed: fc.boolean(),
     })
-    .map(({ ploidy, numVars }): SourceRead => ({
+    .map(({ ploidy, numVars, keepsPassed }): SourceRead => ({
       kind: "read",
       individuals: ["i1", "i2", "i3", "i4"],
       ploidy,
       numVars,
+      keepsPassed,
     })),
   fc.string().map((message): SourceRead => ({
     kind: "failed",
@@ -636,10 +707,19 @@ export const variantSource: fc.Arbitrary<VariantSource> = fc
     ),
     read: sourceRead,
   })
-  .map((source): VariantSource => ({
-    ...source,
-    format: source.readOptions === null ? "nei" : "vcf",
-  }));
+  .map(({ read, ...source }): VariantSource => {
+    const format = source.readOptions === null ? "nei" : "vcf";
+    // The variants of a VCF always record their FILTER; those of a `.nei`
+    // file may or may not.
+    return {
+      ...source,
+      format,
+      read:
+        read.kind === "read" && format === "vcf"
+          ? { ...read, keepsPassed: true }
+          : read,
+    };
+  });
 
 /**
  * A project of population genetics with any variants file and any
@@ -1870,6 +1950,7 @@ export function fiveIndividualsProject(
         individuals: FIVE_INDIVIDUALS,
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: [],

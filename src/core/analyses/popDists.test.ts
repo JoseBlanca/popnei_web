@@ -146,6 +146,7 @@ function project(
               individuals,
               ploidy: options.ploidy ?? 2,
               numVars: null,
+              keepsPassed: false,
             },
     },
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],

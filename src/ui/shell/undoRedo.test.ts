@@ -46,6 +46,7 @@ function opened(): Project {
           individuals: ["i1", "i2"],
           ploidy: 2,
           numVars: null,
+          keepsPassed: false,
         },
       },
       checks: [],
@@ -115,6 +116,7 @@ function loadAndRead(
     individuals: ["i1", "i2"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
 }
 

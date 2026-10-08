@@ -1,10 +1,14 @@
 /**
  * The filter of the FILTER column in the runner, in node, over the
  * fixtures of e2e/fixtures/ given as bytes (docs/specs/worker/runner.md,
- * "How it is verified", bullet "The filter of the FILTER column"). The
- * numbers are popnei's of the release js-v0.2.1, taken under node on 7
- * October 2026 and compared exactly: low_qual.vcf.gz is the panel with
- * LowQual in the FILTER column of every fourth variant, 300 of its 1,200.
+ * "How it is verified", bullets "The open" and "The filter of the FILTER
+ * column"). The numbers are popnei's of the release js-v0.2.1, taken under
+ * node on 7 October 2026, and those of `keepsPassed` and of low_qual.nei
+ * of js-v0.2.2, taken under node on 8 October 2026, compared exactly:
+ * low_qual.vcf.gz is the panel with LowQual in the FILTER column of every
+ * fourth variant, 300 of its 1,200, and low_qual.nei that VCF read with
+ * every variant and written by popnei 0.2.2, so that it records which
+ * passed.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,6 +21,7 @@ import type {
   DiversityJob,
   DiversityResult,
   JobResult,
+  Opened,
   Pops,
   VariantFilter,
 } from "./protocol.ts";
@@ -34,6 +39,8 @@ const VCF_EVERY_VARIANT: LoadToOpen = {
   readOptions: { ploidy: 2, onlyPassed: false },
 };
 const NEI: LoadToOpen = { fileId: FILE_ID, format: "nei", readOptions: null };
+/** The read options of a VCF opened with only the variants that passed. */
+const VCF_ONLY_PASSED = { ploidy: 2, onlyPassed: true } as const;
 
 const PASSED: VariantFilter = { kind: "passed" };
 const MISSING_DATA: VariantFilter = {
@@ -235,5 +242,55 @@ describe("SF1 D1 the filter of the FILTER column in the runner", () => {
     expect(answer.kind === "refused" ? answer.message : "").toMatch(
       /^the variants hold no record of whether they passed their FILTER/u,
     );
+  });
+});
+
+/** What the open of the fixture `name` as `load` answers. */
+function openOf(name: string, load: LoadToOpen): Answer<Opened> {
+  return createRunner().open(load, { name, source: bytesOf(name) });
+}
+
+describe("SF2 D1 whether the variants record their FILTER, at the open", () => {
+  test.each([
+    ["panel.vcf.gz", { ...VCF_EVERY_VARIANT, readOptions: VCF_ONLY_PASSED }],
+    ["panel.vcf.gz", VCF_EVERY_VARIANT],
+    ["low_qual.vcf.gz", { ...VCF_EVERY_VARIANT, readOptions: VCF_ONLY_PASSED }],
+    ["low_qual.vcf.gz", VCF_EVERY_VARIANT],
+    ["low_qual.nei", NEI],
+  ])("%s, read options %j, keepsPassed true", (name, load) => {
+    const answer = openOf(name, load);
+    expect(answer.kind === "ok" ? answer.value.keepsPassed : answer).toBe(true);
+  });
+
+  test.each(["panel.nei", "ld.nei", "tetraploid.nei"])(
+    "%s, written before popnei's vars format 1.2, keepsPassed false",
+    (name) => {
+      const answer = openOf(name, NEI);
+      expect(answer.kind === "ok" ? answer.value.keepsPassed : answer).toBe(
+        false,
+      );
+    },
+  );
+
+  test("low_qual.nei holds the 1,200 variants of low_qual.vcf.gz, 200 individuals of ploidy 2", () => {
+    const answer = openOf("low_qual.nei", NEI);
+    expect(
+      answer.kind === "ok" ? answer.value.individuals.length : answer,
+    ).toBe(200);
+    expect(answer.kind === "ok" ? answer.value.ploidy : answer).toBe(2);
+    const result = diversityOf(
+      opened("low_qual.nei", NEI).run(diversityJob([]), ignore),
+    );
+    expect(result.passStats).toEqual({ numVars: 1200, filtering: {} });
+  });
+
+  test("on low_qual.nei, passed alone keeps 900 of 1,200, as on the VCF it was written from", () => {
+    const result = diversityOf(
+      opened("low_qual.nei", NEI).run(diversityJob([PASSED]), ignore),
+    );
+    expect(result.passStats).toEqual({
+      numVars: 900,
+      filtering: { passed: { varsProcessed: 1200, varsKept: 900 } },
+    });
   });
 });

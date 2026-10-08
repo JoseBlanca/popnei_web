@@ -107,7 +107,7 @@ function readOf(
   individuals: readonly string[],
   numVars: number | null = null,
 ): SourceRead {
-  return { kind: "read", individuals, ploidy: 2, numVars };
+  return { kind: "read", individuals, ploidy: 2, numVars, keepsPassed: false };
 }
 
 const READ = readOf(["i1", "i2", "i3"]);

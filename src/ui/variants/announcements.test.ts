@@ -77,6 +77,7 @@ function openRead(store: Store<JobResult, Blob>): void {
     individuals: Array.from({ length: 200 }, (_, i) => `s${String(i)}`),
     ploidy: 4,
     numVars: null,
+    keepsPassed: false,
   });
 }
 
@@ -104,6 +105,7 @@ describe("what the status region of the new page says", () => {
           individuals: ["s1", "s2"],
           ploidy: 4,
           numVars: null,
+          keepsPassed: false,
         });
       }),
     ).toEqual(["panel.vcf.gz is open: 2 individuals."]);
@@ -217,6 +219,7 @@ describe("what the status region of the new page says", () => {
       individuals: ["s1", "s2"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     void startAnalysis(store, "variantsSummary");
     const running = summaryStatus(store.getState());

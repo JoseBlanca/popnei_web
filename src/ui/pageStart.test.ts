@@ -96,6 +96,7 @@ test("live-stats 2 a result so far the worker posts reaches the summary's runnin
       id: lastIdOf(worker, "open"),
       individuals: ["s000", "s001"],
       ploidy: 2,
+      keepsPassed: false,
     },
   });
   // The read's answer reaches the store once its promise settles.

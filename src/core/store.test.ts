@@ -97,6 +97,7 @@ const VARIANTS_READ: SourceRead = {
   individuals: ["i1", "i2"],
   ploidy: 2,
   numVars: null,
+  keepsPassed: false,
 };
 
 const CSV: CsvOptions = {
@@ -732,6 +733,7 @@ describe("WP4 D1 the state with no calculation", () => {
       individuals: ["i1", "i2"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     };
     store.variantsRead(VARIANTS_ID, read);
     expect(frozenDeeply(store.getState().project)).toBe(true);
@@ -3171,6 +3173,7 @@ function modelledStore(): {
                   individuals: ["i1", "i2", "i3", "i4"],
                   ploidy: variants.readOptions?.ploidy ?? 2,
                   numVars: null,
+                  keepsPassed: false,
                 }
               : {
                   kind: "failed",
@@ -3619,6 +3622,7 @@ function loadFiveAgain(store: Store<TestResult>, fileId: string): void {
     individuals: FIVE_INDIVIDUALS,
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
 }
 
@@ -3991,6 +3995,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       individuals: FIVE_INDIVIDUALS,
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     expect(store.getState().notice).toMatchObject({
       stopped: ["pops", "stats"],
@@ -5863,6 +5868,7 @@ describe("VS3 D6 the write in the store, its other rules", () => {
       individuals: FIVE_INDIVIDUALS,
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     expect(store.getState().notice?.writeStopped).toBe(true);
 
@@ -6500,6 +6506,7 @@ function runLdStep(
           individuals: [...MODEL_INDIVIDUALS],
           ploidy: variants.readOptions?.ploidy ?? 2,
           numVars: null,
+          keepsPassed: false,
         });
       }
       return;

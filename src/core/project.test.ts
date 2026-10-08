@@ -95,7 +95,10 @@ import {
   SAMPLE_INDIVIDUALS_ID,
   SAMPLE_VARIANTS_ID,
   TEST_ANALYSES,
+  asProjectFile,
   deepFreeze,
+  projectJson,
+  readBack,
   testAnalysis,
   drawnCommand,
   jsonObjectOf,
@@ -1107,6 +1110,7 @@ const VARIANTS_READ: SourceRead = {
   individuals: ["i1", "i2"],
   ploidy: 2,
   numVars: null,
+  keepsPassed: true,
 };
 
 const INDIVIDUALS_READ: IndividualsRead = {
@@ -1146,6 +1150,7 @@ function withVariantIndividuals(individuals: readonly string[]): Project {
     individuals,
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
 }
 
@@ -2120,7 +2125,7 @@ describe("WP1 D4 the records and the needs", () => {
 /** The sample project with some of its parts replaced, as the data a
     project file would give. */
 function fileWith(parts: Readonly<Record<string, unknown>>): unknown {
-  return { ...sampleProject(), ...parts };
+  return asProjectFile({ ...sampleProject(), ...parts });
 }
 
 /** The sample project's variants file with some of its fields replaced. */
@@ -2175,8 +2180,10 @@ function checkWith(fields: Readonly<Record<string, unknown>>): unknown {
   return referenceWith({ checks: [{ ...REFERENCE.checks[0], ...fields }] });
 }
 
+/** The validation of `data` as a project file holds it, without
+    `keepsPassed` in the read of a variants file, which no file holds. */
 function parse(data: unknown): Result<Project, ProjectError> {
-  return parseProject(data, "popgen", 1, TEST_ANALYSES);
+  return parseProject(asProjectFile(data), "popgen", 1, TEST_ANALYSES);
 }
 
 function wrong(path: FieldPath, expected: string): unknown {
@@ -2234,7 +2241,7 @@ function expectWords(text: string): void {
 describe("WP1 D5 the validation", () => {
   test("reads the sample project back equal to itself", () => {
     const p = sampleProject();
-    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+    expect(parse(projectJson(p))).toStrictEqual({
       ok: true,
       value: p,
     });
@@ -2549,7 +2556,7 @@ describe("WP1 D5 the validation", () => {
     });
 
     test("a reference with its checks is accepted", () => {
-      const data: unknown = JSON.parse(JSON.stringify(referenceWith({})));
+      const data: unknown = projectJson(referenceWith({}));
       expect(parse(data).ok).toBe(true);
     });
 
@@ -2655,7 +2662,7 @@ describe("WP1 D5 the validation", () => {
 
   test("an opened project file with a read pending is accepted", () => {
     const p = pendingProject();
-    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+    expect(parse(projectJson(p))).toStrictEqual({
       ok: true,
       value: p,
     });
@@ -2666,13 +2673,8 @@ describe("WP1 D5 the validation", () => {
     () => {
       fc.assert(
         fc.property(wholeProject, (p) => {
-          const read = parseProject(
-            JSON.parse(JSON.stringify(p)),
-            p.app,
-            1,
-            TEST_ANALYSES,
-          );
-          expect(read).toStrictEqual({ ok: true, value: p });
+          const read = parseProject(projectJson(p), p.app, 1, TEST_ANALYSES);
+          expect(read).toStrictEqual({ ok: true, value: readBack(p) });
         }),
       );
     },
@@ -3165,7 +3167,7 @@ describe("WP1 D5 the validation", () => {
       () => {
         fc.assert(
           fc.property(wholeProject, (p) => {
-            for (const path of pathsOf(JSON.parse(JSON.stringify(p)), [])) {
+            for (const path of pathsOf(projectJson(p), [])) {
               expectWords(projectErrorText({ kind: "missingField", path }));
             }
           }),
@@ -3229,7 +3231,7 @@ function refusedWith(error: IndividualsFileError): Project {
 /** The sample project with its individuals file refused as `error`,
     parsed back from its JSON. */
 function parsedRefusal(error: IndividualsFileError): unknown {
-  return parse(JSON.parse(JSON.stringify(refusedWith(error))));
+  return parse(projectJson(refusedWith(error)));
 }
 
 /** The eight kinds of refusal of the reader that stage 2 adds, the last
@@ -3317,6 +3319,7 @@ describe("WS1 D3 the additions to project.ts", () => {
                   individuals: ["i6", "i1"],
                   ploidy: 2,
                   numVars: null,
+                  keepsPassed: false,
                 },
               },
       });
@@ -3903,7 +3906,7 @@ describe("WS1 D3 the additions to project.ts", () => {
         error: { kind: "reopenFailed", name: "panel.nei", message: "a range" },
       },
     });
-    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+    expect(parse(projectJson(p))).toStrictEqual({
       ok: true,
       value: p,
     });
@@ -3952,7 +3955,7 @@ describe("WS1 D3 the additions to project.ts", () => {
 
 describe("WS1 D4 the versions of a check", () => {
   test("a check is read with its version of popnei and of the application", () => {
-    const data: unknown = JSON.parse(JSON.stringify(referenceWith({})));
+    const data: unknown = projectJson(referenceWith({}));
     expect(parse(data)).toMatchObject({
       ok: true,
       value: {
@@ -3991,7 +3994,7 @@ describe("WS1 D4 the versions of a check", () => {
   });
 
   test("a reference is read without versions of its own, and one with a version of popnei is refused", () => {
-    const parsed = parse(JSON.parse(JSON.stringify(referenceWith({}))));
+    const parsed = parse(projectJson(referenceWith({})));
     if (!parsed.ok) {
       throw new Error("popnei_web defect: the test expected a project.");
     }
@@ -4017,6 +4020,7 @@ function withListsOfPanel(
     individuals: ["ind_031", "ind_044"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   },
 ): Project {
   const p = sampleProject();
@@ -4411,13 +4415,8 @@ describe("IP3 D1 the LD filter with no distance", () => {
             expect(jobFilters(p.filters)).toBe(p.filters);
           }
           expect(
-            parseProject(
-              JSON.parse(JSON.stringify(p)),
-              p.app,
-              1,
-              TEST_ANALYSES,
-            ),
-          ).toStrictEqual({ ok: true, value: p });
+            parseProject(projectJson(p), p.app, 1, TEST_ANALYSES),
+          ).toStrictEqual({ ok: true, value: readBack(p) });
         }),
         { numRuns: 200 },
       );
@@ -4599,7 +4598,7 @@ describe("IP3 D1 the filters turned off", () => {
         ([name]) => name !== "filtersOff" && name !== "individualFiltersOff",
       ),
     );
-    expect(parse(JSON.parse(JSON.stringify(rest)))).toStrictEqual({
+    expect(parse(projectJson(rest))).toStrictEqual({
       ok: true,
       value: { ...sampleProject(), filtersOff: [], individualFiltersOff: [] },
     });
@@ -4775,13 +4774,8 @@ describe("IP3 D1 the filters turned off", () => {
             onNone ? LD_NO_DISTANCE_REASON : null,
           );
           expect(
-            parseProject(
-              JSON.parse(JSON.stringify(p)),
-              p.app,
-              1,
-              TEST_ANALYSES,
-            ),
-          ).toStrictEqual({ ok: true, value: p });
+            parseProject(projectJson(p), p.app, 1, TEST_ANALYSES),
+          ).toStrictEqual({ ok: true, value: readBack(p) });
         }),
         { numRuns: 300 },
       );
@@ -4926,6 +4920,7 @@ function popsProject(
         individuals: options.individuals ?? ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     individuals:
@@ -5154,6 +5149,7 @@ describe("IP4 D1 the populations", () => {
           individuals: ["i2", "i1"],
           ploidy: 2,
           numVars: null,
+          keepsPassed: false,
         },
       },
     });
@@ -5309,11 +5305,11 @@ describe("IP4 D1 the grouping onePopulation", () => {
 
   test("parseProject opens the grouping onePopulation in population genetics and refuses it in association", () => {
     const p = popsProject({ grouping: { kind: "onePopulation" } });
-    const data: unknown = JSON.parse(JSON.stringify(p));
+    const data: unknown = projectJson(p);
     expect(
       parseProject(data, "popgen", FORMAT_VERSION, TEST_ANALYSES),
-    ).toStrictEqual({ ok: true, value: p });
-    const gwas: unknown = JSON.parse(JSON.stringify({ ...p, app: "gwas" }));
+    ).toStrictEqual({ ok: true, value: readBack(p) });
+    const gwas: unknown = projectJson({ ...p, app: "gwas" });
     expect(
       parseProject(gwas, "gwas", FORMAT_VERSION, TEST_ANALYSES),
     ).toMatchObject({
@@ -5355,7 +5351,13 @@ describe("WS5 D3 the populations, moved from the module of the diversity", () =>
       ...base,
       variants: {
         ...base.variants,
-        read: { kind: "read", individuals, ploidy: 2, numVars: null },
+        read: {
+          kind: "read",
+          individuals,
+          ploidy: 2,
+          numVars: null,
+          keepsPassed: false,
+        },
       },
     };
     expect(populationsToRun(p)).toEqual([
@@ -6466,7 +6468,7 @@ describe("IP4 D3 a metadata file not given", () => {
 
   test("parseProject opens a source notGiven, and refuses one with another field in its read", () => {
     const p = notGivenProject();
-    expect(parse(JSON.parse(JSON.stringify(p)))).toStrictEqual({
+    expect(parse(projectJson(p))).toStrictEqual({
       ok: true,
       value: p,
     });
@@ -6589,13 +6591,8 @@ describe("IP4 D4 the projects drawn with the fields of stage 4", () => {
             }
           }
           expect(
-            parseProject(
-              JSON.parse(JSON.stringify(p)),
-              p.app,
-              1,
-              TEST_ANALYSES,
-            ),
-          ).toStrictEqual({ ok: true, value: p });
+            parseProject(projectJson(p), p.app, 1, TEST_ANALYSES),
+          ).toStrictEqual({ ok: true, value: readBack(p) });
         }),
         { numRuns: 400 },
       );
@@ -7046,12 +7043,12 @@ describe("PA6 D7 the options of the three analyses of the populations in a proje
             count(`a check of ${check.analysis}`);
           }
           expect(
-            parseProject(JSON.parse(JSON.stringify(p)), "popgen", 1, [
+            parseProject(projectJson(p), "popgen", 1, [
               diversity,
               popDists,
               ldDecay,
             ]),
-          ).toStrictEqual({ ok: true, value: p });
+          ).toStrictEqual({ ok: true, value: readBack(p) });
         }),
         { numRuns: 200 },
       );
@@ -7153,5 +7150,54 @@ describe("SF1 D3 the filter of the FILTER column in the project", () => {
     expect(projectErrorText(errorOf(result))).toContain(
       "it has two filters of the variants by the FILTER column, and a project has at most one of each kind",
     );
+  });
+});
+
+describe("SF2 D2 the read of a project file gives keepsPassed by the format", () => {
+  test("a .nei file read is read back with keepsPassed false, whatever it was", () => {
+    const read = { ...VARIANTS_READ, keepsPassed: true };
+    const parsed = parse(variantsWith({ read }));
+    expect(parsed.ok && parsed.value.variants?.read).toEqual({
+      ...read,
+      keepsPassed: false,
+    });
+  });
+
+  test("a VCF read is read back with keepsPassed true, in the variants and in the reference", () => {
+    const vcf = {
+      ...sampleProject().variants,
+      name: "panel.vcf.gz",
+      format: "vcf",
+      readOptions: { ploidy: 2, onlyPassed: false },
+      read: { ...VARIANTS_READ, keepsPassed: false },
+    };
+    const parsed = parse(
+      fileWith({ variants: vcf, reference: { ...REFERENCE, variants: vcf } }),
+    );
+    expect(parsed.ok && parsed.value.variants?.read).toEqual({
+      ...VARIANTS_READ,
+      keepsPassed: true,
+    });
+    expect(parsed.ok && parsed.value.reference?.variants.read).toEqual({
+      ...VARIANTS_READ,
+      keepsPassed: true,
+    });
+  });
+
+  test("a read that holds keepsPassed is refused: no project file holds it", () => {
+    const read = { ...VARIANTS_READ, keepsPassed: true };
+    expect(
+      errorOf(
+        parseProject(
+          {
+            ...sampleProject(),
+            variants: { ...sampleProject().variants, read },
+          },
+          "popgen",
+          1,
+          TEST_ANALYSES,
+        ),
+      ),
+    ).toMatchObject({ kind: "unknownField", path: ["variants", "read"] });
   });
 });

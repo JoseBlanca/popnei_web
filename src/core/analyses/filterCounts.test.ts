@@ -55,6 +55,7 @@ function project(
         individuals: ["s000", "s001"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters,

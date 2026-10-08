@@ -173,6 +173,7 @@ async function drawPage(
         individuals: ["i1", "i2"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: true,
       });
     }
     await Promise.resolve();
@@ -459,6 +460,7 @@ async function openOther(page: Page): Promise<void> {
       individuals: ["i1", "i2"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: true,
     });
     await Promise.resolve();
   });

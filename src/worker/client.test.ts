@@ -128,8 +128,8 @@ const CSV_FILE = new File(["id,pop\ni1,p0\n"], "individuals.csv");
 const NEI = { format: "nei", readOptions: null } as const;
 const CSV = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
 
-const READY = { kind: "ready", protocol: 13, popneiVersion: "0.1.0" };
-const LIGHT_READY = { kind: "ready", protocol: 13 };
+const READY = { kind: "ready", protocol: 14, popneiVersion: "0.1.0" };
+const LIGHT_READY = { kind: "ready", protocol: 14 };
 const INDIVIDUALS = Array.from({ length: 200 }, (_, i) => `i${String(i + 1)}`);
 const RESULT: DiversityResult = {
   analysis: "diversity",
@@ -213,7 +213,13 @@ function writtenOf(id: number, key: string, file: Blob): unknown {
 }
 
 function opened(id: number): unknown {
-  return { kind: "opened", id, individuals: INDIVIDUALS, ploidy: 2 };
+  return {
+    kind: "opened",
+    id,
+    individuals: INDIVIDUALS,
+    ploidy: 2,
+    keepsPassed: false,
+  };
 }
 
 function resultOf(id: number, key: string): unknown {
@@ -358,6 +364,7 @@ describe("WS2 D3 the client: the worked sequence", () => {
       kind: "opened",
       individuals: INDIVIDUALS,
       ploidy: 2,
+      keepsPassed: false,
     });
     expect(lastSent(first)).toEqual({
       kind: "run",
@@ -481,6 +488,7 @@ describe("WS2 D3 the client: the load", () => {
       kind: "opened",
       individuals: INDIVIDUALS,
       ploidy: 2,
+      keepsPassed: false,
     });
     expect(env.first.posted).toHaveLength(1);
   });
@@ -1483,7 +1491,13 @@ type Asked =
 
 /** An opened whose first individual is the load of its open. */
 function stampedOpened(id: number, fileId: string): unknown {
-  return { kind: "opened", id, individuals: [fileId], ploidy: 2 };
+  return {
+    kind: "opened",
+    id,
+    individuals: [fileId],
+    ploidy: 2,
+    keepsPassed: false,
+  };
 }
 
 /** A result whose numVars is `stamp`, the id of its run: of an LD decay
@@ -2857,6 +2871,7 @@ function pcaAndRun(
     id: lastSent(first).id,
     individuals: names(numInFile),
     ploidy: 2,
+    keepsPassed: false,
   });
   const k1 = env.client.run("k1", pca, noProgress, noSoFar);
   const k6 = env.client.run("k6", job("A"), noProgress, noSoFar);
@@ -3274,6 +3289,7 @@ describe("PA2 D4 the restart after an LD decay", () => {
         id: lastSent(first).id,
         individuals: names(2),
         ploidy: 2,
+        keepsPassed: false,
       });
       const k1 = client.run("k1", ldDecayJob(), noProgress, noSoFar);
       const k6 = client.run("k6", job("A"), noProgress, noSoFar);
@@ -3311,6 +3327,7 @@ describe("PA2 D4 the restart after an LD decay", () => {
       id: lastSent(first).id,
       individuals: names(2),
       ploidy: 2,
+      keepsPassed: false,
     });
     const k1 = client.run("k1", job("A"), noProgress, noSoFar);
     const k6 = client.run("k6", job("A"), noProgress, noSoFar);
@@ -3353,6 +3370,7 @@ describe("PA2 D4 the restart after an LD decay", () => {
       id: lastSent(first).id,
       individuals: names(2),
       ploidy: 2,
+      keepsPassed: false,
     });
     const k1 = client.run("k1", job("A"), noProgress, noSoFar);
     const k6 = client.run("k6", job("A"), noProgress, noSoFar);

@@ -92,6 +92,7 @@ function answerOpen(held: Runner, request: OpenRequest): void {
         id,
         individuals: answer.value.individuals,
         ploidy: answer.value.ploidy,
+        keepsPassed: answer.value.keepsPassed,
       });
       return;
     case "refused":

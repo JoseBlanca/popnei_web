@@ -129,6 +129,7 @@ function project(setting: Setting = {}): Project {
         individuals,
         ploidy: 2,
         numVars: setting.numVars ?? null,
+        keepsPassed: false,
       },
     },
     filters: setting.filters ?? [MISSING_01],

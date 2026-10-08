@@ -65,6 +65,7 @@ function storeWithDiversity(numbers: readonly number[]): Store<TestDefResult> {
     individuals: ["i1", "i2"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
   store.startRun("diversity");
   const [request] = sent;

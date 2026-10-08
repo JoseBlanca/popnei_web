@@ -193,7 +193,7 @@ describe("live-stats 2 the script of the calculation worker: a message it cannot
     async (_name, kind, message) => {
       calls.open = () => ({
         kind: "ok",
-        value: { individuals: ["s0"], ploidy: 2 },
+        value: { individuals: ["s0"], ploidy: 2, keepsPassed: false },
       });
       calls.run = (_job, told, toldSoFar) => {
         told({ bytesRead: 1, numBytes: 2, pass: 1, numPasses: 1 });
@@ -227,7 +227,7 @@ describe("live-stats 3 the script of the calculation worker: a final result it c
   test("a result the browser cannot post is crashed as a defect of ours, and the worker closes", async () => {
     calls.open = () => ({
       kind: "ok",
-      value: { individuals: ["s0"], ploidy: 2 },
+      value: { individuals: ["s0"], ploidy: 2, keepsPassed: false },
     });
     calls.run = () => ({
       kind: "ok",

@@ -157,6 +157,7 @@ const PANEL: VariantSource = {
     individuals: ["i1", "i2", "i3", "i4"],
     ploidy: 2,
     numVars: 1200,
+    keepsPassed: false,
   },
 };
 
@@ -258,6 +259,7 @@ describe("WS6 D1 what is written", () => {
         individuals: ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: 7,
+        keepsPassed: true,
       },
     };
     const loaded: VariantSource = {
@@ -506,7 +508,13 @@ describe("WS6 D1 what is written", () => {
       size: 2048,
       format: "vcf",
       readOptions: { ploidy: 2, onlyPassed: true },
-      read: { kind: "read", individuals: ["i1", "i2"], ploidy: 2, numVars: 7 },
+      read: {
+        kind: "read",
+        individuals: ["i1", "i2"],
+        ploidy: 2,
+        numVars: 7,
+        keepsPassed: true,
+      },
     };
     const loaded: VariantSource = {
       ...savedVcf,
@@ -546,6 +554,7 @@ describe("WS6 D1 what is written", () => {
           individuals: ["i1", "i2", "i3", "i5"],
           ploidy: 2,
           numVars: 1200,
+          keepsPassed: false,
         },
       },
       null,
@@ -741,7 +750,13 @@ const PANEL_VCF: VariantSource = {
   size: 2048,
   format: "vcf",
   readOptions: { ploidy: 2, onlyPassed: true },
-  read: { kind: "read", individuals: ["i1", "i2"], ploidy: 2, numVars: 7 },
+  read: {
+    kind: "read",
+    individuals: ["i1", "i2"],
+    ploidy: 2,
+    numVars: 7,
+    keepsPassed: true,
+  },
 };
 
 /** A project with a part of every kind, its fields in the order of their
@@ -857,7 +872,13 @@ function reversedProject(): Project {
       { maxDist: 1000, maxAllowedR2: 0.5, kind: "ld" },
     ],
     variants: {
-      read: { numVars: 7, ploidy: 2, individuals: ["i1", "i2"], kind: "read" },
+      read: {
+        keepsPassed: true,
+        numVars: 7,
+        ploidy: 2,
+        individuals: ["i1", "i2"],
+        kind: "read",
+      },
       readOptions: { onlyPassed: true, ploidy: 2 },
       format: "vcf",
       size: 2048,
@@ -885,6 +906,7 @@ function reversedProject(): Project {
       ],
       variants: {
         read: {
+          keepsPassed: true,
           numVars: 7,
           ploidy: 2,
           individuals: ["i1", "i2"],
@@ -967,6 +989,7 @@ function neiDiversityProject(): Project {
           ],
           ploidy: 2,
           numVars: 1203554,
+          keepsPassed: false,
         },
       },
       checks: [
@@ -1523,6 +1546,7 @@ const PANEL_2026: VariantSource = {
     individuals: individualsNamed(342),
     ploidy: 2,
     numVars: 1203554,
+    keepsPassed: false,
   },
 };
 
@@ -1562,6 +1586,7 @@ const VCF_2026_READ = {
   individuals: ["i1", "i2", "i3", "i4"],
   ploidy: 2,
   numVars: 100,
+  keepsPassed: false,
 } as const;
 
 /** The VCF a project was made with, read with ploidy 2 and only the
@@ -1674,7 +1699,13 @@ function everyFilterProject(): Project {
         size: 18350120,
         format: "vcf",
         readOptions: { ploidy: 2, onlyPassed: false },
-        read: { kind: "read", individuals, ploidy: 2, numVars: 25000 },
+        read: {
+          kind: "read",
+          individuals,
+          ploidy: 2,
+          numVars: 25000,
+          keepsPassed: true,
+        },
       },
       checks: [
         {
@@ -2151,6 +2182,7 @@ const savedState: fc.Arbitrary<AppState<TestDefResult>> = fc
                       individuals: ["i1"],
                       ploidy: 2,
                       numVars: null,
+                      keepsPassed: reference.variants.format === "vcf",
                     },
             },
           }
@@ -2393,7 +2425,12 @@ describe("WS6 D4 the properties of the project file", () => {
         const candidates = [p.variants, p.reference?.variants ?? null]
           .filter((v): v is VariantSource => v !== null)
           .map((v): VariantSource =>
-            v.read.kind === "read" ? v : { ...v, read: { kind: "pending" } },
+            v.read.kind === "read"
+              ? {
+                  ...v,
+                  read: { ...v.read, keepsPassed: v.format === "vcf" },
+                }
+              : { ...v, read: { kind: "pending" } },
           );
         if (candidates.length === 0) {
           expect(got.reference).toBeNull();
@@ -2614,6 +2651,7 @@ function ldNoDistanceProject(): Project {
           individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
           ploidy: 2,
           numVars: 1200,
+          keepsPassed: false,
         },
       },
       checks: [],
@@ -2683,6 +2721,7 @@ function filtersOffProject(): Project {
           individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
           ploidy: 2,
           numVars: 1200,
+          keepsPassed: false,
         },
       },
       checks: [],
@@ -2985,6 +3024,7 @@ function metadataNotReadProject(): Project {
           individuals: ["ind_001", "ind_002", "ind_003", "ind_004"],
           ploidy: 2,
           numVars: 1200,
+          keepsPassed: false,
         },
       },
       checks: [],
@@ -3034,6 +3074,7 @@ function onePopulationProject(): Project {
           individuals: PANEL_INDIVIDUALS,
           ploidy: 2,
           numVars: 1200,
+          keepsPassed: false,
         },
       },
       checks: [
@@ -3264,6 +3305,7 @@ describe("IP10 D3 the cases of the project file", () => {
         individuals: ["i1", "i2", "i3"],
         ploidy: 4,
         numVars: 99,
+        keepsPassed: false,
       },
     };
     const withGiven = (variants: VariantSource): Project =>
@@ -3440,6 +3482,7 @@ function stage5OptionsProject(): Project {
       individuals: PANEL_INDIVIDUALS,
       ploidy: 2,
       numVars: 1200,
+      keepsPassed: false,
     },
   };
   const p: Project = {
@@ -3611,4 +3654,28 @@ describe("PA6 D5 the check numbers of a project file of stage 4", () => {
       "Not the same numbers as in the project file. The variants file may not be the one the project was saved with, or it was changed since. The numbers were calculated by version 0.1.0 of the application, which calculated this analysis in another way than this version, 0.2.0.",
     );
   });
+});
+
+describe("SF2 D2 a project file read gives keepsPassed by the format", () => {
+  test.each([
+    ["a .nei file", PANEL, true, false],
+    ["a VCF", PANEL_VCF, false, true],
+  ])(
+    "%s read with keepsPassed %s is opened as the reference's with keepsPassed %s",
+    (_name, source, saved, opened) => {
+      const read = source.read.kind === "read" ? source.read : null;
+      if (read === null) {
+        throw new Error("the source of the test is read");
+      }
+      const p = withFiles(
+        { ...source, read: { ...read, keepsPassed: saved } },
+        null,
+      );
+      const opening = readProjectFile(savedText(stateOf(p)), p.app, TEST_DEFS);
+      expect(opening.ok && opening.value.reference?.variants.read).toEqual({
+        ...read,
+        keepsPassed: opened,
+      });
+    },
+  );
 });

@@ -84,6 +84,16 @@
 // 2026), so a run for the other files leaves the vars files as they are.
 // `--nei` is for a change of the format, with the sizes in the tests and
 // the specs changed in the same commit.
+//
+// `--low-qual-nei` writes e2e/fixtures/low_qual.nei and nothing else: the
+// committed low_qual.vcf.gz opened with every variant, `onlyPassed: false`,
+// and written as a vars file, its 1,200 variants with the record of whether
+// each passed its FILTER, which popnei writes from its vars format 1.2, so
+// that the open of the file says `keepsPassed` true and the filter of the
+// FILTER column keeps 900 of them (docs/specs/worker/runner.md, "How it is
+// verified"). It writes no other file, since a run without it writes ld.nei
+// again, which popnei 0.2.2 writes with that record, and the tests pin
+// `keepsPassed` false for the committed ld.nei.
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,6 +143,15 @@ function writeFixture(vcf, options, outputs) {
   } finally {
     reread.free();
   }
+}
+
+// eslint-disable-next-line no-undef -- a script of node, as above
+if (process.argv.includes("--low-qual-nei")) {
+  writeFixture("low_qual.vcf.gz", { ploidy: 2, onlyPassed: false }, [
+    join(fixtures, "low_qual.nei"),
+  ]);
+  // eslint-disable-next-line no-undef -- a script of node, as above
+  process.exit(0);
 }
 
 // eslint-disable-next-line no-undef -- a script of node, as above

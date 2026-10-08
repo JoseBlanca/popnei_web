@@ -63,6 +63,7 @@ function project(
         individuals: ["s000", "s001"],
         ploidy: options.ploidy ?? 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: options.filters ?? [],

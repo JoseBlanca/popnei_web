@@ -27,6 +27,7 @@ const READ: SourceRead = {
   individuals: ["i1", "i2", "i3", "i4"],
   ploidy: 2,
   numVars: null,
+  keepsPassed: false,
 };
 
 /** The sample project with the MAF filter at `maf`, a new project for

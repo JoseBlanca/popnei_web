@@ -95,6 +95,7 @@ function project(setting: Setting): Project {
         individuals: [...setting.individuals],
         ploidy: 2,
         numVars: 1200,
+        keepsPassed: false,
       },
     },
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],

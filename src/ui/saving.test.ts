@@ -269,6 +269,7 @@ describe("WS9 the saving counts a result that ended as a change", () => {
       individuals: ["i1", "i2"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     const saving = createSaving({
       store,

@@ -212,6 +212,7 @@ function readUnwrapped(page: Page, fileId: string): void {
     individuals: ["i1", "i2"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
 }
 

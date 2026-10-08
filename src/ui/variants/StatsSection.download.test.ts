@@ -199,6 +199,7 @@ async function drawPage(): Promise<Page> {
         individuals: ["i1", "i2"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       });
       await Promise.resolve();
     });

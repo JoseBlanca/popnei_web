@@ -671,6 +671,7 @@ export function createClient(config: {
           kind: "opened",
           individuals: message.individuals,
           ploidy: message.ploidy,
+          keepsPassed: message.keepsPassed,
         };
         openedLoads.add(load);
         if (calc.held !== null) {

@@ -635,7 +635,13 @@ function projectOf(pops: readonly string[]): Project {
       ...sample,
       variants: {
         ...sample.variants,
-        read: { kind: "read", individuals: names, ploidy: 2, numVars: null },
+        read: {
+          kind: "read",
+          individuals: names,
+          ploidy: 2,
+          numVars: null,
+          keepsPassed: false,
+        },
       },
       individualFilters: [],
       individuals: {

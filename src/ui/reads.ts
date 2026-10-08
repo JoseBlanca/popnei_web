@@ -135,6 +135,7 @@ export function createReads(deps: {
           individuals: outcome.individuals,
           ploidy: outcome.ploidy,
           numVars: null,
+          keepsPassed: outcome.keepsPassed,
         });
         return;
       case "failed": {

@@ -65,7 +65,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -537,6 +537,7 @@ export function parseFromRunner(
         "id",
         "individuals",
         "ploidy",
+        "keepsPassed",
       ]);
       if (wrong !== null) {
         return wrong;
@@ -553,11 +554,16 @@ export function parseFromRunner(
       if (!ploidy.ok) {
         return ploidy;
       }
+      const keepsPassed = field(record, "keepsPassed", place, isBoolean);
+      if (!keepsPassed.ok) {
+        return keepsPassed;
+      }
       return accepted({
         kind,
         id: id.value,
         individuals: individuals.value,
         ploidy: ploidy.value,
+        keepsPassed: keepsPassed.value,
       });
     }
     case "result":

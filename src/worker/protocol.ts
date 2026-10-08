@@ -323,6 +323,11 @@ export interface Opened {
   readonly individuals: readonly string[];
   /** The ploidy popnei opened the file with. */
   readonly ploidy: number;
+  /** Whether the variants record whether each passed its FILTER, popnei's
+      `Variants.keepsPassed`: true for a VCF, and for a `.nei` file written
+      from popnei's vars format 1.2 from a source with the record; false for
+      one written before, over which popnei refuses the filter `passed`. */
+  readonly keepsPassed: boolean;
 }
 
 /** The populations, as pairs `[population, individuals]` in the order of

@@ -44,6 +44,7 @@ function setUp(): {
     individuals: ["s1", "s2"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
   return { store, sent };
 }

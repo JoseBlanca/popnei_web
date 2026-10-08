@@ -66,6 +66,7 @@ function project(
         individuals: ["i1", "i2", "i3"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],

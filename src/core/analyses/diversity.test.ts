@@ -101,6 +101,7 @@ function project(
         individuals: options.individuals ?? ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
@@ -817,6 +818,7 @@ describe("WS5 D2 the key", () => {
         individuals: ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: 1200,
+        keepsPassed: false,
       },
     });
     expect(keyOfDiversity(renamed)).toBe(baseKey);
@@ -2004,6 +2006,7 @@ describe("IP10 D3 the cases of the one population", () => {
       individuals: ["i1", "i2", "i3", "i4"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
     store.startRun("diversity");
     const request = sent.at(-1);

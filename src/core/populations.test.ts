@@ -78,6 +78,7 @@ function project(
         individuals: ["i1", "i2", "i3", "i4"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: [],

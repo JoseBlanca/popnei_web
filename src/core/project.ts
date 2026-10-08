@@ -131,13 +131,16 @@ export interface VariantSource {
 export type SourceRead =
   /** Not read yet. */
   | { readonly kind: "pending" }
-  /** Read: its individuals in the order of the file, its ploidy, and its
-      number of variants, `null` until a first pass has counted them. */
+  /** Read: its individuals in the order of the file, its ploidy, its
+      number of variants, `null` until a first pass has counted them, and
+      whether its variants record whether each passed its FILTER, popnei's
+      `Variants.keepsPassed`, which no project file holds. */
   | {
       readonly kind: "read";
       readonly individuals: readonly string[];
       readonly ploidy: number;
       readonly numVars: number | null;
+      readonly keepsPassed: boolean;
     }
   /** Could not be read. */
   | { readonly kind: "failed"; readonly error: SourceError };
@@ -3698,7 +3701,7 @@ function parseVariantSource(
   if (loadWrong !== null) {
     return failure(loadWrong);
   }
-  const read = parseSourceRead(f["read"], [...path, "read"]);
+  const read = parseSourceRead(f["read"], [...path, "read"], format.value);
   if (!read.ok) {
     return read;
   }
@@ -3727,7 +3730,17 @@ function parseReadOptions(
   return success({ ploidy: ploidy.value, onlyPassed: onlyPassed.value });
 }
 
-function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
+/**
+ * The read of the variants file as a project file holds it. No file holds
+ * `keepsPassed`, so the read gives what `keepsPassed` of a source gives a
+ * file not yet read: true for a VCF, false for a `.nei` file
+ * (docs/specs/core/project.md, "The validation").
+ */
+function parseSourceRead(
+  value: unknown,
+  path: FieldPath,
+  format: VariantLoad["format"],
+): Parsed<SourceRead> {
   // A read failed is the page's, and a project file never holds one.
   const read = readKind(value, path, SOURCE_READ_KINDS, ["pending", "read"]);
   if (!read.ok) {
@@ -3770,6 +3783,7 @@ function parseSourceRead(value: unknown, path: FieldPath): Parsed<SourceRead> {
         individuals: individuals.value,
         ploidy: ploidy.value,
         numVars: numVars.value,
+        keepsPassed: format === "vcf",
       });
     }
     case "failed": {

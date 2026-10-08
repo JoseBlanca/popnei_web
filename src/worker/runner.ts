@@ -443,7 +443,11 @@ export function createRunner(options: RunnerOptions = {}): Runner {
     variants = opened;
     return {
       kind: "ok",
-      value: { individuals: opened.individuals, ploidy: opened.ploidy },
+      value: {
+        individuals: opened.individuals,
+        ploidy: opened.ploidy,
+        keepsPassed: opened.keepsPassed,
+      },
     };
   }
 

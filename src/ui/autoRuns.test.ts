@@ -144,6 +144,7 @@ function open(
     individuals: ["i1", "i2"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: true,
   });
 }
 

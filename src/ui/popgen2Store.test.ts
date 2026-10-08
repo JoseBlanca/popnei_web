@@ -45,6 +45,7 @@ describe("the store of popgen2.html", () => {
       individuals: ["i1", "i2"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: false,
     });
 
     store.startRun("variantsSummary");
@@ -99,6 +100,7 @@ describe("live-stats 2 the results so far of popgen2.html across a new file", ()
       individuals: ["s000", "s001"],
       ploidy: 2,
       numVars: null,
+      keepsPassed: true,
     } as const;
     store.apply("a new variants file was loaded", (p) =>
       loadVariants(p, fileA),

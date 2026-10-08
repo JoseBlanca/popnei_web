@@ -126,6 +126,7 @@ function project(
         individuals: options.individuals ?? LD_INDIVIDUALS,
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: options.filters ?? [MISSING_DATA, LD_PRUNING],

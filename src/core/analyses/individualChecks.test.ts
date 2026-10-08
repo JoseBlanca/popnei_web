@@ -66,6 +66,7 @@ function project(
         individuals: options.individuals ?? ["i1", "i2", "i3"],
         ploidy: 2,
         numVars: null,
+        keepsPassed: false,
       },
     },
     filters: options.filters ?? [],
@@ -660,6 +661,7 @@ function loadExample(store: Store<JobResult>, fileId: string): void {
     individuals: ["i1", "i2", "i3"],
     ploidy: 2,
     numVars: null,
+    keepsPassed: false,
   });
 }
 
