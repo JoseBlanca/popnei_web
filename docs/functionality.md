@@ -75,14 +75,17 @@ failures: 300" for low_qual.vcf.gz, 0 for panel.vcf.gz, counted by the
 same one pass from popnei 0.2.2 (docs/plans/popnei-0.2.2.md; popnei
 issue #12), and of the variants read so far while the pass runs. It is
 of every variant of the file. A `.nei` file has the line when it
-recorded its FILTER, as one written by popnei 0.2.2 from a VCF does,
-from the first variants read; after a Stop or a failure before the end,
-its box loses it, since the box learns whether the file recorded its
-FILTER only from a result. The opening of the file has told it since 8
-October 2026 (`keepsPassed`, docs/plans/filters.md, work package 2),
-and the FILTER box below reads that answer, but the box of the file
-does not read it yet. A `.nei` file that did not record it has
-no line, as panel.nei, written before format 1.2 of the vars file.
+recorded its FILTER, as one written by popnei 0.2.2 from a VCF does, as
+a VCF has it: "counting…" until the first variants are read, and "not
+counted" after a Stop or a failure before the end. The box of the file
+learns whether the file recorded its FILTER from the opening of the
+file (`keepsPassed`, docs/plans/filters.md, work package 2), the same
+answer the FILTER box below reads, since 8 October 2026; until then it
+learned it only from a result, and lost the line after a Stop. While a
+`.nei` file is read the box does not know yet, and shows no line of
+the FILTER failures before the opening ends. A `.nei` file that did not
+record it has no line, as panel.nei, written before format 1.2 of the
+vars file.
 
 On popgen2.html the distributions of the open file are four of the
 variants and two of the individuals, and five of them carry a threshold

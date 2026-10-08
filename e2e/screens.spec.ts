@@ -4613,6 +4613,31 @@ for (const theme of ["light", "dark"] as const) {
         ).toBeVisible({ timeout: 20_000 });
       });
 
+      test("the FILTER failures of low_qual.nei after a Stop", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, "low_qual.nei");
+        await expect(newPageCount(page).getByRole("progressbar")).toBeVisible({
+          timeout: 60_000,
+        });
+        await newPageCount(page).getByRole("button", { name: "Stop" }).click();
+        await expect(
+          newPageCount(page).getByText("FILTER failures: not counted"),
+        ).toBeVisible();
+        await save(page, `popgen2-filter-nei-stopped${at}-${theme}`);
+        // The worker made at the Stop served before the test ends.
+        await newPageCount(page)
+          .getByRole("button", { name: "Start again" })
+          .click();
+        await release(page, "allSoFar");
+        await release(page, "result");
+        await expect(
+          newPageCount(page).getByText("FILTER failures: 300", { exact: true }),
+        ).toBeVisible({ timeout: 20_000 });
+      });
+
       test("the FILTER failures of low_qual.vcf.gz after a crash of the count", async ({
         page,
       }) => {

@@ -211,7 +211,7 @@ function Load({
             onCountButton={onCountButton}
             ploidy={ploidyLine(read.ploidy)}
             refused={refused}
-            isVcf={variants.format === "vcf"}
+            recordsFilter={read.keepsPassed}
           />
         </>
       )}
@@ -228,9 +228,10 @@ interface CountProps {
   readonly ploidy: string;
   /** Whether the words of a file not opened follow the lines. */
   readonly refused: boolean;
-  /** Whether the file is a VCF, which always records the FILTER of its
-      variants. */
-  readonly isVcf: boolean;
+  /** Whether the file records the FILTER of its variants, as its opening
+      answered: a VCF always, and a `.nei` file written from a VCF by
+      popnei 0.2.2. */
+  readonly recordsFilter: boolean;
 }
 
 /** The lines of the variants and of the chromosomes, in each state of
@@ -241,7 +242,7 @@ function Count({
   onCountButton,
   ploidy,
   refused,
-  isVcf,
+  recordsFilter,
 }: CountProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const status = useAppState(summaryStatus);
@@ -290,7 +291,7 @@ function Count({
         <CountLines
           status={status}
           stopped={button?.kind === "run"}
-          isVcf={isVcf}
+          recordsFilter={recordsFilter}
         />
       </div>
       <p className={classOf(styles, "line")}>{ploidy}</p>
@@ -357,8 +358,8 @@ interface CountLinesProps {
   readonly status: AnalysisStatus<JobResult>;
   /** Whether the count was stopped: Start again is offered. */
   readonly stopped: boolean;
-  /** Whether the file is a VCF. */
-  readonly isVcf: boolean;
+  /** Whether the file records the FILTER of its variants. */
+  readonly recordsFilter: boolean;
 }
 
 /** The lines of the variants, of the FILTER failures and of the
@@ -368,9 +369,9 @@ interface CountLinesProps {
 function CountLines({
   status,
   stopped,
-  isVcf,
+  recordsFilter,
 }: CountLinesProps): React.JSX.Element {
-  const failures = failuresLineOf(status, stopped, isVcf);
+  const failures = failuresLineOf(status, stopped, recordsFilter);
   let lines: readonly [string, string];
   switch (status.kind) {
     case "running":

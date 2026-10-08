@@ -422,25 +422,23 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
       ),
     ).toBe("FILTER failures: 0");
     expect(failuresLineOf(done(NEI), false, false)).toBeNull();
-    // A .nei file that records its FILTER has the line from its result.
-    expect(failuresLineOf(done(LOW_QUAL), false, false)).toBe(
+    // A .nei file that records its FILTER, low_qual.nei, has the line
+    // from its result, as a VCF has it.
+    expect(failuresLineOf(done(LOW_QUAL), false, true)).toBe(
       "FILTER failures: 300",
     );
   });
 
-  test("running: counting… for a VCF before the first result so far, then the count so far", () => {
+  test("running: counting… for a file that records its FILTER, a VCF or low_qual.nei, before the first result so far, then the count so far; nothing for panel.nei", () => {
     expect(failuresLineOf(running(null), false, true)).toBe(FAILURES_COUNTING);
     expect(failuresLineOf(running(null), false, false)).toBeNull();
     expect(failuresLineOf(running(SO_FAR), false, true)).toBe(
       "FILTER failures: 75 so far",
     );
-    expect(failuresLineOf(running(SO_FAR), false, false)).toBe(
-      "FILTER failures: 75 so far",
-    );
     expect(failuresLineOf(running(NEI), false, false)).toBeNull();
   });
 
-  test("stopped, about to start, failed or locked: the words of a VCF, nothing for a .nei file", () => {
+  test("stopped, about to start, failed or locked: the same words for every file that records its FILTER, a VCF or low_qual.nei, and nothing for panel.nei, which does not", () => {
     const ready: AnalysisStatus<JobResult> = {
       kind: "ready",
       key: KEY,

@@ -79,10 +79,15 @@ async function settled(): Promise<void> {
 /** Draws the box in <StrictMode>, as the development server draws the
     page, with the open button before it, and `panel.nei` opened and
     read, or `low_qual.vcf.gz` as the page opens a VCF when `format` is
-    "vcf"; no pass is started until the test syncs. */
+    "vcf"; no pass is started until the test syncs. The opening answers
+    that the file records the FILTER of its variants for a VCF, and for a
+    `.nei` file when `keepsPassed`, which is then `low_qual.nei`. */
 async function drawPage(
   format: "nei" | "vcf" = "nei",
-  { read = true }: { readonly read?: boolean } = {},
+  {
+    read = true,
+    keepsPassed = format === "vcf",
+  }: { readonly read?: boolean; readonly keepsPassed?: boolean } = {},
 ): Promise<Page> {
   const requests: Request[] = [];
   let lastId = 0;
@@ -153,7 +158,7 @@ async function drawPage(
         format === "nei"
           ? {
               fileId: FILE_ID,
-              name: "panel.nei",
+              name: keepsPassed ? "low_qual.nei" : "panel.nei",
               size: 261_490,
               format: "nei",
               readOptions: null,
@@ -173,7 +178,7 @@ async function drawPage(
         individuals: ["i1", "i2"],
         ploidy: 2,
         numVars: null,
-        keepsPassed: true,
+        keepsPassed,
       });
     }
     await Promise.resolve();
@@ -404,6 +409,50 @@ describe("one-pass a VCF is read once", () => {
     expect(page.said).toEqual([
       "The count of the variants and the statistics were stopped. Start again calculates them from the start.",
     ]);
+  });
+
+  test("filters 2 a .nei file that records its FILTER, low_qual.nei, has the line as a VCF has it: counting… before the first result so far, and not counted after a Stop", async () => {
+    const page = await drawPage("nei", { keepsPassed: true });
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toContain("FILTER failures: counting…");
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    page.requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toEqual([
+      "low_qual.nei · 261 KB",
+      "Individuals: 2",
+      "Variants: not counted",
+      "FILTER failures: not counted",
+      "Chromosomes: not counted",
+      "Ploidy: 2",
+    ]);
+  });
+
+  test("filters 2 a .nei file that does not record its FILTER, panel.nei, has no line of it after a Stop", async () => {
+    const page = await drawPage("nei");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+    await act(async () => {
+      buttonNamed("Stop").click();
+      await Promise.resolve();
+    });
+    page.requests[0]?.end({ kind: "cancelled" });
+    await settled();
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toContain("Variants: not counted");
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
   });
 
   for (const kind of ["defect", "workerFailed"] as const) {

@@ -654,6 +654,72 @@ test("OV2 popnei-0.2.2 the FILTER failures of low_qual.vcf.gz while the pass run
   ]);
 });
 
+test("filters 2 low_qual.nei, which records the FILTER of its variants, has the line of the FILTER failures as low_qual.vcf.gz has it: counting…, those read so far, not counted after a Stop, and counted after Start again", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await holdSummary(page);
+  await openPage(page);
+  await pick(page, join(FIXTURES, "low_qual.nei"));
+  await expect(info(page).getByRole("progressbar")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.nei · /u,
+    "Individuals: 200",
+    /^Variants: counting…( \d+%)?$/u,
+    "FILTER failures: counting…",
+    "Chromosomes: counting…",
+    "Ploidy: 2",
+  ]);
+  await release(page, "oneSoFar");
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.nei · /u,
+    "Individuals: 200",
+    /^Variants: [\d,]+ so far$/u,
+    /^FILTER failures: [\d,]+ so far$/u,
+    "Chromosomes: 1 so far",
+    "Ploidy: 2",
+  ]);
+  await info(page).getByRole("button", { name: "Stop" }).click();
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.nei · /u,
+    "Individuals: 200",
+    "Variants: not counted",
+    "FILTER failures: not counted",
+    "Chromosomes: not counted",
+    "Ploidy: 2",
+  ]);
+  await expectNoViolations(makeAxeBuilder);
+  await info(page).getByRole("button", { name: "Start again" }).click();
+  await expect(info(page).getByRole("progressbar")).toBeVisible();
+  await release(page, "allSoFar");
+  await release(page, "result");
+  // popnei 0.2.2's numbers of low_qual.vcf.gz, which low_qual.nei holds.
+  await expect(lines(page)).toHaveText([
+    /^low_qual\.nei · /u,
+    "Individuals: 200",
+    "Variants: 1,200",
+    "FILTER failures: 300",
+    "Chromosomes: 1",
+    "Ploidy: 2",
+  ]);
+});
+
+test("filters 2 after a crash of the count of low_qual.nei the line of the FILTER failures says not counted, as for a VCF", async ({
+  page,
+}) => {
+  await crashWorkerOn(page, "run");
+  await openPage(page);
+  await pick(page, join(FIXTURES, "low_qual.nei"));
+  await expect(
+    info(page).getByText("FILTER failures: not counted", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    info(page).getByText("Variants: not counted", { exact: true }),
+  ).toBeVisible();
+});
+
 test("OV2 another file opened while a count runs ends on the numbers of that file, and the count is checked by axe while it runs", async ({
   page,
   makeAxeBuilder,

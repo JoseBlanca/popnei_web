@@ -154,9 +154,10 @@ export function failuresSoFarLine(numFailures: number): string {
   return `FILTER failures: ${grouped(numFailures)} so far`;
 }
 
-/** The same line of a VCF while the file is read, while the variants
-    are counted before the first result so far, and after a Stop or a
-    failure of their count. */
+/** The same line of a VCF while the file is read, which always records
+    the FILTER of its variants, and of every file that records it while
+    the variants are counted before the first result so far and after a
+    Stop or a failure of their count. */
 export const FAILURES_READING = "FILTER failures: reading…";
 export const FAILURES_COUNTING = "FILTER failures: counting…";
 export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
@@ -165,17 +166,18 @@ export const FAILURES_NOT_COUNTED = "FILTER failures: not counted";
  * The line of the FILTER failures in the box, from the status of the
  * summary, whose pass counts them (docs/plans/popnei-0.2.2.md, "The
  * FILTER failures"): the number once counted, or among the variants read
- * so far; for a VCF, which always records the FILTER, "counting…" before
- * the first result so far and while the count is about to start, and
- * "not counted" after a Stop, `stopped`, or a failure of the count;
- * `null`, no line, when the result says the file did not record the
- * FILTER, a `.nei` file written before format 1.2, and for a `.nei`
- * file until a result says it did.
+ * so far; for a file that records the FILTER of its variants,
+ * `recordsFilter`, as the opening of the file answered (a VCF always,
+ * and a `.nei` file written from a VCF by popnei 0.2.2), "counting…"
+ * before the first result so far and while the count is about to start,
+ * and "not counted" after a Stop, `stopped`, or a failure of the count;
+ * `null`, no line, for a file that does not record it, a `.nei` file
+ * written before format 1.2, and when a result says the file did not.
  */
 export function failuresLineOf(
   status: AnalysisStatus<JobResult>,
   stopped: boolean,
-  isVcf: boolean,
+  recordsFilter: boolean,
 ): string | null {
   switch (status.kind) {
     case "done": {
@@ -183,17 +185,19 @@ export function failuresLineOf(
       return numFailures === null ? null : failuresLine(numFailures);
     }
     case "running": {
-      if (status.soFar === null) return isVcf ? FAILURES_COUNTING : null;
+      if (status.soFar === null) {
+        return recordsFilter ? FAILURES_COUNTING : null;
+      }
       const numFailures = numFilterFailures(status.soFar);
       return numFailures === null ? null : failuresSoFarLine(numFailures);
     }
     case "ready":
     case "removed":
-      if (!isVcf) return null;
+      if (!recordsFilter) return null;
       return stopped ? FAILURES_NOT_COUNTED : FAILURES_COUNTING;
     case "locked":
     case "error":
-      return isVcf ? FAILURES_NOT_COUNTED : null;
+      return recordsFilter ? FAILURES_NOT_COUNTED : null;
   }
 }
 
