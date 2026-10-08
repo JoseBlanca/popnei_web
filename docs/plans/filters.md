@@ -828,14 +828,14 @@ checks the count against popnei's own on it.
 
 ## Work package 13: the end
 
-- [ ] 13.1 The checks of the `coding` skill on the last commit, the
+- [x] 13.1 The checks of the `coding` skill on the last commit, the
   browser check of the whole suite with `--global-timeout=1500000`, and
   the screens run of `popgen2`; their counts recorded below.
-- [ ] 13.2 The documents: `docs/specs/steps/popgen2-filters.md` says it
+- [x] 13.2 The documents: `docs/specs/steps/popgen2-filters.md` says it
   is built and accepted; `docs/architecture.md` and
   `docs/functionality.md` checked against what was built, and changed
   where a round changed what they say; "What was done" below complete.
-- [ ] 13.3 The report to the owner, as the `building` skill says, with
+- [x] 13.3 The report to the owner, as the `building` skill says, with
   the browsers the screens were seen in. The branch is merged into
   `main` when the owner says so.
 
@@ -1173,3 +1173,34 @@ not start on this Mac. Vitest 4,322; the eight files of flows that open
 popgen2.html, 119 in Chromium and 119 in WebKit; screens of popgen2
 140. The screen of the MAF dragged off seen: 1 in grey, the line dotted
 at the top.
+
+### Work package 13, the end, 8 October 2026
+
+The documents (f9e5396): popgen2-filters.md built and accepted on 8
+October, with the fix of the drag; the module specs' status lines;
+architecture.md, functionality.md, use-cases.md and the design without
+the Undo that the owner hid, and with what is not built yet.
+
+That pass found a promise of functionality.md (7 October) the code did
+not keep: a `.nei` file that recorded its FILTER lost the line "FILTER
+failures" of the box of the file after a Stop or a failure, since the
+box decided by VCF or not and never read the opening's `keepsPassed`.
+Fixed in c339cc7: the box reads `keepsPassed`, so low_qual.nei shows
+counting…, so far, not counted after a Stop or a crash, and the number,
+as a VCF does; panel.nei shows no line. While a file is being opened,
+"reading…" shows for a VCF only, since a `.nei` file has no answer yet.
+Review, two categories (spec, tests): no defect a user would see; the
+tests fail without the fix. Taken (14c6125): a result's count tested
+whatever the opening said, which c339cc7 had left untested; "counting…"
+said in functionality.md to last until the first count so far; a flow of
+panel.nei after a Stop, with a wait in `e2e/holdWorker.ts` for every
+worker the page started, without which it failed 4 runs in 20 (20 in 20
+after). Not taken: no flow checks low_qual.nei during the opening, seen
+by the reviewer's own flow; and the plan of popnei-0.2.2 still says the
+line of a `.nei` follows from the result, left as the record it is.
+
+The final checks on 14c6125: typecheck, lint and format clean; Vitest
+4,325; the whole browser suite 661 in Chromium and 661 in WebKit, all
+passed, none rerun (658 at 75f39c2, less 7 flows of Undo since package
+10 and more 5 since: the drags, low_qual.nei, panel.nei); screens of
+popgen2 144. Not run in Firefox, which does not start on this Mac.
