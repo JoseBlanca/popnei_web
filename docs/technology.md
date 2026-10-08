@@ -184,6 +184,26 @@ taken, as for the plots ("D3 for the 2D plots", below), for a second request and
 waiting before the table, against 26 KB, and it is measured again if
 the table grows.
 
+The download of the filtered variants on `popgen2.html`, its dialog
+with React Aria's modal and dialog, its group of radio buttons and the
+page's code of the download, made the scripts of the first load of
+`popgen2.html` 213.76 KB gzipped against 200.37 KB before it, 13.39 KB
+more, 6.7%, as `vite build` reported them with Vite 8.3.0 on the site
+built at commits d82ac3a and 1364ce3 on 9 October 2026. Of the 47,237
+bytes it added before compression, given to their sources with the
+source map of the build, 26,862 are of `react-aria`, 6,489 of
+`react-aria-components` and 655 of `react-stately`, the modal, the
+dialog and the radio group, and about 11,000 the page's own, the words,
+the component and the state of the download. The first load of
+`popgen.html`, which already held the modal for its own dialogs, went
+from 336.90 to 337.67 KB, code moved between the scripts the two pages
+share. Loading the dialog's content with `lazy()`, on the first press
+of "Download filtered variants…", would take about 34,000 of those
+bytes before compression out of the first load; not taken for now, as
+for the table above, for a second request and a moment of waiting
+before the dialog, against a first load 13.39 KB larger, and left to
+the owner.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
