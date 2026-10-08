@@ -1424,7 +1424,13 @@ The page and each worker talk through typed messages
   way after minutes. Each starts once for each key: when the file is
   read, again after a read with other options, which is a new load and a
   new key, and at the user's Start again; not again after a failure or a
-  Stop under the same key. The page has one Stop, in the box of the file
+  Stop under the same key. From 8 October 2026 a key that a change of
+  the project left behind while its pass ran, which the store then
+  stopped, is forgotten, so that an Undo or a Redo back to it starts the
+  pass again, unless its result is in the cache, the owner's choice of 6
+  October 2026: before, undoing a file opened while the pass of the file
+  before it ran showed that pass as "Stopped" though the user had pressed
+  no Stop. A pass the user stopped is still not started again. The page has one Stop, in the box of the file
   beside the one bar of the pass, shown while a pass runs or is about to
   start by itself, which stops the page's one group, `POPGEN2_CHAIN` of
   `src/ui/popgen2Store.ts` (`stop` of `autoRuns.ts`): the pass running,
@@ -1462,15 +1468,13 @@ The page and each worker talk through typed messages
   itself and reads a filter must settle: such an analysis gets a new key
   at every change of a threshold, and its start, as any new calculation
   does, stops the calculation left behind, which restarts the worker; so
-  moving a threshold would stop and start the pass at each step. And a
+  moving a threshold would stop and start the pass at each step. The owner
+  chose on 6 October 2026 how that tool settles it: it starts under a
+  new key only once the filters have had no change for one second. A
   key the analysis comes back to, by an undo or by the old threshold
-  typed again, shows it as stopped and does not start it again, since
-  `autoRuns.ts` remembers that key as started and the undo does not
-  give its request back, which the new start already stopped. The owner
-  chose on 6 October 2026 how that tool settles both: it starts under a
-  new key only once the filters have had no change for one second, and
-  `autoRuns.ts` forgets a key the store left behind, so that an undo
-  starts it again unless its result is in the cache. For an
+  typed again, starts it again, since `autoRuns.ts` forgets a key the
+  store left behind, the owner's other choice of that day, built on 8
+  October 2026 for the opening of a file. For an
   analysis the user starts, an undo while the notice is up gives the
   keys back, and the requests go on; for one that starts by itself it
   does not. A change of the load of the variant file is the exception,
@@ -1644,8 +1648,9 @@ so far of the one pass stays on the screen, where until then the plots
 went with the request. The limit of the piece of the filters, that every
 change of a threshold would stop and start a calculation that starts by
 itself, moves to the first tool that starts by itself and reads a
-filter, with the owner's two choices of 6 October 2026 that settle it,
-the quiet second and the keys left behind started again. Not taken: the
+filter, with the owner's choice of 6 October 2026 that settles it, the quiet
+second; the other choice of that day, the keys left behind started
+again, was built on 8 October 2026 for the opening of a file. Not taken: the
 histograms of the variants read again over the individuals kept after a
 quiet second, the owner's decision of 6 October 2026, replaced on 7
 October 2026 by plots that describe every individual and a page that

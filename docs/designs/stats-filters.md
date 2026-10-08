@@ -449,8 +449,10 @@ October 2026 apply, and are built with it:
 - **Keys left behind start again when the project comes back to them.**
   When the store stops a calculation because a change left its key
   behind, `autoRuns.ts` forgets that key, so that an Undo starts it
-  again, unless its result is in the cache. Today that key shows as
-  stopped and does not start.
+  again, unless its result is in the cache. Built on 8 October 2026,
+  before any such tool, for the pass of the file on `popgen2.html`: a
+  file opened while the pass of the file before it ran, then undone,
+  showed that pass as stopped though the user had pressed no Stop.
 
 The limit that `docs/architecture.md` section 5 records for the piece of
 the filters, that every change of a threshold would stop the
