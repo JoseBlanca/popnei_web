@@ -360,3 +360,28 @@ test("SF6 D2 Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z on the line or in the box of a thre
   );
   await expect(redoButton(page)).toBeDisabled();
 });
+
+test("SF6 D2 at 320 pixels, with the notice up, the page that grows while the user reads its top does not scroll back to the focused control", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await openTwoHeld(page);
+  await expect(openButton(page)).toBeFocused();
+
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  const scrolled = await page.evaluate(async () => {
+    const grown = document.createElement("div");
+    grown.style.height = "200px";
+    document.body.append(grown);
+    // The observer of the page's size answers before the next paint.
+    for (let frame = 0; frame < 3; frame += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return window.scrollY;
+  });
+
+  expect(scrolled).toBe(0);
+});
