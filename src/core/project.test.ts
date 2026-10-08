@@ -107,7 +107,6 @@ import {
   SAMPLE_VARIANTS_ID,
   TEST_ANALYSES,
   THRESHOLDS,
-  thresholdBoxValue,
   asProjectFile,
   deepFreeze,
   projectJson,
@@ -7545,6 +7544,33 @@ describe("SF3 D1 the commands of a threshold, and the first project of popgen2.h
     }
   });
 
+  test("1 is off only when it is exactly 1, the value on the step of its axis: one ulp below is a filter on, one ulp above a defect", () => {
+    const first = deepFreeze(popgen2FirstProject());
+    const below = 1 - Number.EPSILON / 2;
+    const above = 1 + Number.EPSILON;
+    expect(below).toBe(0.9999999999999999);
+    expect(above).toBe(1.0000000000000002);
+    for (const threshold of THRESHOLDS) {
+      expect(
+        thresholdValue(setThreshold(first, threshold, below), threshold),
+      ).toBe(below);
+      expect(() => setThreshold(first, threshold, above)).toThrow(
+        /^popnei_web defect: setThreshold was given 1.0000000000000002/,
+      );
+    }
+  });
+
+  test("a threshold at -0 is stored at 0, so that the page never shows -0", () => {
+    const first = deepFreeze(popgen2FirstProject());
+    for (const threshold of THRESHOLDS) {
+      const value = thresholdValue(
+        setThreshold(first, threshold, -0),
+        threshold,
+      );
+      expect(Object.is(value, 0)).toBe(true);
+    }
+  });
+
   test.each([1.5, -0.1, Number.NaN, Infinity, -Infinity])(
     "setThreshold at %d is a defect",
     (value) => {
@@ -7644,15 +7670,37 @@ describe("SF3 D1 the commands of a threshold, and the first project of popgen2.h
   );
 
   test("the property sequences draw setThreshold of each of the five thresholds, with numbers from 0 to below 1, with 1 and with null", () => {
-    const names = fc
-      .sample(drawnCommand, { numRuns: 2000, seed: 3 })
-      .map((drawn) => drawn.name);
-    expect(names).toContain("setThreshold");
-    const values = fc.sample(thresholdBoxValue, { numRuns: 200, seed: 3 });
-    expect(values).toContain(1);
-    expect(values).toContain(null);
-    expect(values.some((v) => v !== null && v >= 0 && v < 1)).toBe(true);
-    expect(values.every((v) => v === null || (v >= 0 && v <= 1))).toBe(true);
+    const p = deepFreeze(sampleProject());
+    const drawn = new Set<string>();
+    for (const command of fc.sample(drawnCommand, {
+      numRuns: 3000,
+      seed: 3,
+    })) {
+      if (command.name !== "setThreshold") {
+        continue;
+      }
+      const [threshold, value] = command.drawn ?? [];
+      const at = THRESHOLDS.find((t) => t === threshold);
+      if (at === undefined || !(value === null || typeof value === "number")) {
+        throw new Error("a drawn setThreshold carries its threshold and value");
+      }
+      // The arguments it carries are the ones it is bound with.
+      expect(command.bind(p)?.(p)).toEqual(setThreshold(p, at, value));
+      const kind =
+        value === null
+          ? "null"
+          : value === 1
+            ? "1"
+            : value >= 0 && value < 1
+              ? "below 1"
+              : "out of range";
+      drawn.add(`${at.of} ${at.kind}: ${kind}`);
+    }
+    expect([...drawn].sort()).toEqual(
+      THRESHOLDS.flatMap((t) =>
+        ["below 1", "1", "null"].map((kind) => `${t.of} ${t.kind}: ${kind}`),
+      ).sort(),
+    );
     expect(THRESHOLDS.map((t) => `${t.of} ${t.kind}`)).toEqual([
       "variants missing_data",
       "variants maf",

@@ -420,6 +420,14 @@ and no filter in the other; the owner decided on 7 October 2026 that 1
 is off however it is reached. The option not taken was a check box beside each threshold to turn it
 on and off.
 
+The page gives `setThreshold` a number already on the step of its
+axis, rounded by `thresholdOnStep` or `variantThresholdOnStep`, so a
+number the box shows as 1 is exactly 1. `setThreshold` compares with 1
+exactly and rounds nothing itself: 0.9999999999999999, the number just
+below 1, is a filter on at it, and 1.0000000000000002, the one just
+above, is a defect. A -0 is stored as 0, so that the page never shows
+"-0".
+
 `thresholdValue(p, threshold)` gives the number of the threshold while
 its filter is on, and `null` while it is off, kept in a list of the
 filters off or never turned on. The page reads it before and after a
@@ -1483,6 +1491,7 @@ What each does where a reader could doubt it:
 | `turnOffVariantFilter`, `removeIndividualFilter`, `turnOffIndividualFilter` | no filter of that kind on | `p` itself, whatever the list of the filters off holds |
 | `setThreshold` | a number from 0 to below 1 | what `setVariantFilter` or `setIndividualFilter` gives for the filter of that kind at that number |
 | `setThreshold` | `null` or 1 | what `turnOffVariantFilter` or `turnOffIndividualFilter` gives for that kind: the filter in its list of the filters off with the value it had, or `p` itself when it is off already |
+| `setThreshold` | -0 | the filter on at 0 |
 | `setThreshold` | a number below 0 or above 1, or not finite | a defect |
 | `setVariantFilter`, `setIndividualFilter` | a filter of a kind kept off, with the values kept or others | the filter on in its place, and the kind gone from the list of the filters off; the step sends the values kept, so that the filter comes back as it was |
 | `removeIndividuals` | no individuals file | `p` itself |

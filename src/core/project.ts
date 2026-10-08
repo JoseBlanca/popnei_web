@@ -525,10 +525,13 @@ function deeperThan(value: unknown, levels: number): boolean {
   return false;
 }
 
+/** Whether `value` is a threshold: a finite number from 0 to 1. */
+function isThreshold(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
 function thresholdError(value: number, path: FieldPath): ProjectError | null {
-  return Number.isFinite(value) && value >= 0 && value <= 1
-    ? null
-    : wrongValue(path, "a number from 0 to 1");
+  return isThreshold(value) ? null : wrongValue(path, "a number from 0 to 1");
 }
 
 function wholeNumberError(
@@ -1460,18 +1463,24 @@ function individualThresholdFilter(
     `turnOffIndividualFilter` would, kept with the value it had while on
     and not with 1, and `p` itself when it is off already. The one
     command of a threshold of popgen2.html, whether its number was typed,
-    dragged or moved with the keys. A number below 0 or above 1, or one
-    not finite, is a defect. */
+    dragged or moved with the keys. The value comes on the step of its
+    axis, rounded by `thresholdOnStep` or `variantThresholdOnStep`, so
+    that a number the page shows as 1 is exactly 1: 0.9999999999999999
+    is a filter on, and 1.0000000000000002 a defect. -0 is taken as 0,
+    so that the page never shows "-0". A number below 0 or above 1, or
+    one not finite, is a defect. */
 export function setThreshold(
   p: Project,
   threshold: Threshold,
-  value: number | null,
+  given: number | null,
 ): Project {
-  if (value !== null && !(Number.isFinite(value) && value >= 0 && value <= 1)) {
+  if (given !== null && !isThreshold(given)) {
     throw defect(
-      `setThreshold was given ${String(value)}, where a number from 0 to 1, or null, was expected.`,
+      `setThreshold was given ${String(given)}, where a number from 0 to 1, or null, was expected.`,
     );
   }
+  // -0 === 0, so a -0 is stored as 0.
+  const value = given === 0 ? 0 : given;
   const off = value === null || value === THRESHOLD_OFF_AT;
   if (threshold.of === "variants") {
     return off

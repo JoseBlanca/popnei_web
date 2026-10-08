@@ -367,6 +367,9 @@ export interface DrawnCommand {
   readonly name: string;
   /** The command with its arguments fixed for `p`, or `null`. */
   readonly bind: (p: Project) => ((p: Project) => Project) | null;
+  /** The arguments drawn before it is bound, when the test of the draws
+      needs them: the threshold and the value of a `setThreshold`. */
+  readonly drawn?: readonly unknown[];
 }
 
 /** Asks `fc.record` for objects of `Object.prototype`, as JSON.parse
@@ -462,7 +465,7 @@ export const THRESHOLDS: readonly Threshold[] = [
 /** A value of a threshold's box: a number from 0 to 1, 1 itself, which
     turns it off, or `null`, the box emptied, 1 and `null` each drawn
     about a sixth of the time. */
-export const thresholdBoxValue: fc.Arbitrary<number | null> = fc.oneof(
+const thresholdBoxValue: fc.Arbitrary<number | null> = fc.oneof(
   { arbitrary: threshold, weight: 4 },
   { arbitrary: fc.constant(1), weight: 1 },
   { arbitrary: fc.constant(null), weight: 1 },
@@ -478,20 +481,45 @@ const loadId = fc.constantFrom(
 function command(
   name: string,
   bind: (p: Project) => ((p: Project) => Project) | null,
+  drawn?: readonly unknown[],
 ): DrawnCommand {
-  return { name, bind };
+  return drawn === undefined ? { name, bind } : { name, bind, drawn };
 }
 
 /** A position drawn as a number, taken modulo the length of a list the
     project gives when the command is bound. */
 const seed = fc.nat();
 
+/** A number at which a threshold is on, from 0 to below 1. */
+const thresholdOn = fc.double({
+  min: 0,
+  max: 1,
+  maxExcluded: true,
+  noNaN: true,
+});
+
+/** The weights of `setThreshold` and of "setThreshold kept" among the
+    commands, each of the others 1. A threshold of the individuals' or of
+    the variants' observed heterozygosity starts never on in
+    `sampleProject`, so its off kept turned on again needs three commands
+    of it in a row, in arrays of drawn commands that fast-check makes 10
+    long at most, whatever their `maxLength`. With every command at 1,
+    over 20 seeds of 100 sequences, the variants' observed
+    heterozygosity off kept turned on again was reached in none, the
+    MAF's in 1, and the individuals' observed heterozygosity on turned
+    off in 1;
+    with these weights each of the 15 transitions was reached in 10 of
+    the 20 seeds or more. */
+const SET_THRESHOLD_WEIGHT = 14;
+const SET_THRESHOLD_KEPT_WEIGHT = 7;
+
 /**
  * Any of the commands of the project spec, with arguments valid on the
  * project it is bound to, starting from `sampleProject`, a project of
  * population genetics; and the switch of a filter kept off turned on
  * again, `setVariantFilter` or `setIndividualFilter` of the values kept;
- * and `setThreshold` of each of the five thresholds of popgen2.html.
+ * and `setThreshold` of each of the five thresholds of popgen2.html,
+ * and, as "setThreshold kept", of one that is off and kept, turned on.
  */
 export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
   fc
@@ -554,11 +582,31 @@ export const drawnCommand: fc.Arbitrary<DrawnCommand> = fc.oneof(
       return kept === undefined ? null : (q) => setIndividualFilter(q, kept);
     }),
   ),
-  fc
-    .tuple(fc.constantFrom(...THRESHOLDS), thresholdBoxValue)
-    .map(([which, value]) =>
-      command("setThreshold", () => (p) => setThreshold(p, which, value)),
+  {
+    arbitrary: fc
+      .tuple(fc.constantFrom(...THRESHOLDS), thresholdBoxValue)
+      .map(([which, value]) =>
+        command("setThreshold", () => (p) => setThreshold(p, which, value), [
+          which,
+          value,
+        ]),
+      ),
+    weight: SET_THRESHOLD_WEIGHT,
+  },
+  {
+    arbitrary: fc.tuple(seed, thresholdOn).map(([which, value]) =>
+      command("setThreshold kept", (p) => {
+        const kept = THRESHOLDS.filter((t) =>
+          (t.of === "variants" ? p.filtersOff : p.individualFiltersOff).some(
+            (f) => f.kind === t.kind,
+          ),
+        );
+        const off = kept[which % Math.max(kept.length, 1)];
+        return off === undefined ? null : (q) => setThreshold(q, off, value);
+      }),
     ),
+    weight: SET_THRESHOLD_KEPT_WEIGHT,
+  },
   fc
     .record({ fileId: loadId, csv: fc.option(csvOptions) })
     .map(({ fileId, csv }) =>
