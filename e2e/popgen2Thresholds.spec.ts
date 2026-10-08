@@ -10,8 +10,9 @@
  * dragged to 1, in grey with the words of off; on and grey at the top of
  * an axis below 1; the grey's pattern and its contrasts; 0 a filter at 0;
  * Down from off; a run that ends where it began; a crash while a run
- * waits; the expected heterozygosity with no threshold; the thresholds
- * through another file; no plot changed by any of it; axe in each look.
+ * waits; Undo while a run waits; the expected heterozygosity with no
+ * threshold; the thresholds through another file, also one dropped while
+ * a run waits; no plot changed by any of it; axe in each look.
  *
  * panel.vcf.gz and panel.nei hold the same 1,200 variants of 200 diploid
  * individuals, counted by popnei; panel.vcf.gz records the FILTER of its
@@ -20,12 +21,14 @@
  * whole, its largest value 0.08; the MAF from 0.45 to 1 by 0.01; the
  * observed heterozygosity from 0 to 0.7 by 0.01.
  */
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
 import { expect, test } from "./axe.ts";
 import { writeBigVcf } from "./bigVcf.ts";
+import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -679,5 +682,42 @@ test("SF9 D5 the thresholds stay through the opening of another file, with Undo 
   await expect(maf.box).toHaveValue("0.9");
   await expect(individuals.box).toHaveValue("0.03");
   await expectOff(histogram(page, OBS_HET), "0.7", "variant");
+  await expect(undoButton(page)).toBeDisabled();
+});
+
+test("SF9 D5 a file dropped while a run of the keys waits opens with the threshold the run moved", async ({
+  page,
+}) => {
+  await openDone(page, "panel.vcf.gz");
+  const maf = histogram(page, MAF);
+  await expectOff(maf, "1", "variant");
+  // The page's timers stand still, so that the run still waits at the
+  // drop, which does not move the focus.
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
+  await maf.slider.focus();
+  for (let press = 0; press < 5; press += 1) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  await expect(maf.box).toHaveValue("0.95");
+  const nei = await readFile(join(FIXTURES, "panel.nei"));
+  await dropFiles(
+    page,
+    page.getByRole("button", { name: "Open another variants file…" }),
+    [{ name: "panel.nei", bytes: [...nei] }],
+  );
+  await page.clock.resume();
+  await expect(
+    page
+      .getByRole("region", { name: "File information" })
+      .getByText("panel.nei · 261 KB"),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByRole("button", {
+      name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(maf.box).toHaveValue("0.95");
+  await expect(maf.slider).toHaveValue("0.95");
   await expect(undoButton(page)).toBeDisabled();
 });
