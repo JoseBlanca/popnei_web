@@ -139,17 +139,9 @@ function project(
 /** The project of `project()` with its variants file a VCF named `name`,
     read with ploidy 2 and `onlyPassed`. */
 function vcfProject(name: string, onlyPassed: boolean): Project {
-  const p = project({ variantsName: name });
-  if (p.variants === null) {
-    throw new Error("the project of project() has a variants file");
-  }
-  return deepFreeze<Project>({
-    ...p,
-    variants: {
-      ...p.variants,
-      format: "vcf",
-      readOptions: { ploidy: 2, onlyPassed },
-    },
+  return withVariants(project({ variantsName: name }), {
+    format: "vcf",
+    readOptions: { ploidy: 2, onlyPassed },
   });
 }
 
@@ -732,11 +724,16 @@ function variantsOf(p: Project): VariantSource {
   return p.variants;
 }
 
-/** `p` with its variants file changed by `change`. */
+/** `p` with its variants file changed by `change`; a VCF read records
+    the FILTER of its variants, `keepsPassed` true, as every VCF's does. */
 function withVariants(p: Project, change: Partial<VariantSource>): Project {
+  const variants = { ...variantsOf(p), ...change };
   return deepFreeze<Project>({
     ...p,
-    variants: { ...variantsOf(p), ...change },
+    variants:
+      variants.format === "vcf" && variants.read.kind === "read"
+        ? { ...variants, read: { ...variants.read, keepsPassed: true } }
+        : variants,
   });
 }
 

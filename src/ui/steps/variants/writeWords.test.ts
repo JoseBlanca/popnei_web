@@ -62,6 +62,11 @@ function vcfProject(onlyPassed: boolean): Project {
       name: "panel.vcf",
       format: "vcf",
       readOptions: { ploidy: 2, onlyPassed },
+      // The variants of a VCF always record their FILTER.
+      read:
+        variants.read.kind === "read"
+          ? { ...variants.read, keepsPassed: true }
+          : variants.read,
     },
   };
 }

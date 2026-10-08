@@ -115,11 +115,16 @@ function variantsOf(p: Project): VariantSource {
   return p.variants;
 }
 
-/** `p` with its variants file changed by `change`. */
+/** `p` with its variants file changed by `change`; a VCF read records
+    the FILTER of its variants, `keepsPassed` true, as every VCF's does. */
 function withVariants(p: Project, change: Partial<VariantSource>): Project {
+  const variants = { ...variantsOf(p), ...change };
   return deepFreeze<Project>({
     ...p,
-    variants: { ...variantsOf(p), ...change },
+    variants:
+      variants.format === "vcf" && variants.read.kind === "read"
+        ? { ...variants, read: { ...variants.read, keepsPassed: true } }
+        : variants,
   });
 }
 

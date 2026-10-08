@@ -93,12 +93,14 @@ const VARIANTS_ID = "0123456789abcdef0123456789abcdef";
 const OTHER_VARIANTS_ID = "fedcba9876543210fedcba9876543210";
 const INDIVIDUALS_ID = "00000000000000000000000000000001";
 
+/** The read of `panel.vcf`, which `loadPanel` loads; the variants of a
+    VCF always record their FILTER. */
 const VARIANTS_READ: SourceRead = {
   kind: "read",
   individuals: ["i1", "i2"],
   ploidy: 2,
   numVars: null,
-  keepsPassed: false,
+  keepsPassed: true,
 };
 
 const CSV: CsvOptions = {
@@ -734,7 +736,7 @@ describe("WP4 D1 the state with no calculation", () => {
       individuals: ["i1", "i2"],
       ploidy: 2,
       numVars: null,
-      keepsPassed: false,
+      keepsPassed: true,
     };
     store.variantsRead(VARIANTS_ID, read);
     expect(frozenDeeply(store.getState().project)).toBe(true);
@@ -3169,7 +3171,7 @@ function modelledStore(): {
                   individuals: ["i1", "i2", "i3", "i4"],
                   ploidy: variants.readOptions?.ploidy ?? 2,
                   numVars: null,
-                  keepsPassed: false,
+                  keepsPassed: variants.format === "vcf",
                 }
               : {
                   kind: "failed",
@@ -3991,7 +3993,7 @@ describe("VS3 D4 the individuals kept and a Run that waits", () => {
       individuals: FIVE_INDIVIDUALS,
       ploidy: 2,
       numVars: null,
-      keepsPassed: false,
+      keepsPassed: true,
     });
     expect(store.getState().notice).toMatchObject({
       stopped: ["pops", "stats"],
@@ -5864,7 +5866,7 @@ describe("VS3 D6 the write in the store, its other rules", () => {
       individuals: FIVE_INDIVIDUALS,
       ploidy: 2,
       numVars: null,
-      keepsPassed: false,
+      keepsPassed: true,
     });
     expect(store.getState().notice?.writeStopped).toBe(true);
 

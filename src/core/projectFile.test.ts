@@ -1581,7 +1581,7 @@ const VCF_2026_READ = {
   individuals: ["i1", "i2", "i3", "i4"],
   ploidy: 2,
   numVars: 100,
-  keepsPassed: false,
+  keepsPassed: true,
 } as const;
 
 /** The VCF a project was made with, read with ploidy 2 and only the
@@ -3295,7 +3295,7 @@ describe("IP10 D3 the cases of the project file", () => {
         individuals: ["i1", "i2", "i3"],
         ploidy: 4,
         numVars: 99,
-        keepsPassed: false,
+        keepsPassed: true,
       },
     };
     const withGiven = (variants: VariantSource): Project =>

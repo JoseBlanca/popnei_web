@@ -503,6 +503,11 @@ describe("the saved line with Write disabled, and no text of the section that na
         name: "panel.vcf",
         format: "vcf",
         readOptions: { ploidy: 2, onlyPassed },
+        // The variants of a VCF always record their FILTER.
+        read:
+          variants.read.kind === "read"
+            ? { ...variants.read, keepsPassed: true }
+            : variants.read,
       },
     };
   }

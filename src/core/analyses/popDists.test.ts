@@ -1438,11 +1438,17 @@ describe("PA3 D5 the key of the distances", () => {
   });
 
   test("the ploidy or onlyPassed of a VCF changes it", () => {
+    const neiFile = variantsOf(base);
     const vcf = changed(base, {
       variants: {
-        ...variantsOf(base),
+        ...neiFile,
         format: "vcf",
         readOptions: { ploidy: 2, onlyPassed: true },
+        // The variants of a VCF always record their FILTER.
+        read:
+          neiFile.read.kind === "read"
+            ? { ...neiFile.read, keepsPassed: true }
+            : neiFile.read,
       },
     });
     const vcfKey = keyOfDists(vcf);

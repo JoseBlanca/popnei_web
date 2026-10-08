@@ -24,7 +24,7 @@ import {
   filtersAppliedTo,
   keepsPassed,
 } from "./filtersApplied.ts";
-import type { Project, VariantSource } from "./project.ts";
+import type { Project, SourceRead, VariantSource } from "./project.ts";
 import {
   anyLoadId,
   deepFreeze,
@@ -636,6 +636,11 @@ describe("WP2 D2 the key", () => {
         ...variants,
         format: "vcf",
         readOptions: { ploidy, onlyPassed: true },
+        // The variants of a VCF always record their FILTER.
+        read:
+          variants.read.kind === "read"
+            ? { ...variants.read, keepsPassed: true }
+            : variants.read,
       },
     });
     const memo = createKeyMemo();
@@ -714,6 +719,17 @@ function variantsOf(p: Project): VariantSource {
   return p.variants;
 }
 
+/** `read` as the read of a file of `format`: a VCF's records the FILTER
+    of its variants, `keepsPassed` true, as every VCF's does. */
+function readOfFormat(
+  read: SourceRead,
+  format: VariantSource["format"],
+): SourceRead {
+  return format === "vcf" && read.kind === "read"
+    ? { ...read, keepsPassed: true }
+    : read;
+}
+
 function sameJson(a: unknown, b: unknown): boolean {
   return canonical(a, null) === canonical(b, null);
 }
@@ -729,10 +745,20 @@ function changeOf(
   other: Others,
 ): readonly [Setting, Setting] | null {
   const variants = variantsOf(s.p);
-  const withVariants = (change: Partial<VariantSource>): Setting => ({
-    ...s,
-    p: { ...s.p, variants: { ...variants, ...change } },
-  });
+  // A VCF read records the FILTER of its variants, as every VCF's does.
+  const withVariants = (change: Partial<VariantSource>): Setting => {
+    const changed = { ...variants, ...change };
+    return {
+      ...s,
+      p: {
+        ...s.p,
+        variants:
+          changed.format === "vcf" && changed.read.kind === "read"
+            ? { ...changed, read: { ...changed.read, keepsPassed: true } }
+            : changed,
+      },
+    };
+  };
   switch (part) {
     case "analysis":
       return other.text === s.def.id
@@ -898,7 +924,7 @@ describe("WP2 D3 the properties of the keys", () => {
               ...variants,
               name: source.name,
               size: source.size,
-              read: source.read,
+              read: readOfFormat(source.read, variants.format),
             },
           },
         };
@@ -1129,7 +1155,7 @@ describe("VS2 D3 the key of a write", () => {
             ...variantsOf(p),
             name: source.name,
             size: source.size,
-            read: source.read,
+            read: readOfFormat(source.read, variantsOf(p).format),
           },
         };
         fc.pre(sameJson(filtersApplied(renamed), filtersApplied(p)));

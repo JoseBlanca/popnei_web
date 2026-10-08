@@ -942,6 +942,14 @@ describe("WS9 D1 the announcements made from the state", () => {
           name: "panel.vcf.gz",
           format: "vcf",
           readOptions: { ploidy: 2, onlyPassed: true },
+          // The variants of a VCF always record their FILTER.
+          read: {
+            kind: "read",
+            individuals: ["i1", "i2", "i3"],
+            ploidy: 2,
+            numVars: null,
+            keepsPassed: true,
+          },
         },
         checks: [
           {
