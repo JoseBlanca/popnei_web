@@ -13,9 +13,9 @@
  *   grey when it keeps every variant in their bins;
  * - Individuals: the histograms of the missing rate and of the observed
  *   heterozygosity of each individual, binned here from popnei's values,
- *   each with its threshold, grey when it keeps every one; and the download of
- *   their table as CSV, which is not drawn, since there may be thousands
- *   of individuals.
+ *   each with its threshold, grey when it keeps every one; and the
+ *   download of their table as CSV, which is not drawn, since there may
+ *   be thousands of individuals.
  *
  * Plain, as the owner wants this page: no mean in the titles, no table of
  * the bins, and no bar nor button of its own: the bar of the pass, its
@@ -28,8 +28,8 @@
  * The plots fill in while the pass runs (docs/plans/live-stats.md, "The
  * plots so far"): from the first result so far of the pass, about two
  * seconds after its start, they are drawn from the last one, the words of
- * each plot saying they are so far, and at the end from
- * the result, where they were: the line of the pass keeps its room,
+ * each plot saying they are so far, and at the end from the result,
+ * where they were: the line of the pass keeps its room,
  * hidden, once it ended. Nothing keeps their room before: the open button under the
  * section moves down as they arrive, which the owner chose over empty
  * space. The download of the table of the individuals comes with the
