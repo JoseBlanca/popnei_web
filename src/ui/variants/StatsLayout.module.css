@@ -59,6 +59,16 @@
   min-inline-size: 0;
 }
 
+/* The line of the individuals with no value and, hidden in the same
+   place, its longer words, which give it their height. */
+.lineStack {
+  display: grid;
+}
+
+.lineStack > * {
+  grid-area: 1 / 1;
+}
+
 /* The room of a histogram before it is drawn, as StatsHistogram.module.css
    lays one out: the row of its title and box, and its plot under it. */
 .plotRoom {

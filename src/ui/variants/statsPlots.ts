@@ -173,6 +173,11 @@ export interface IndividualPlot {
   /** The line under it of the individuals with no called genotype, or
       `null` when every one has a value. */
   readonly noValueLine: string | null;
+  /** The words of that line with the filter on, the longer, whose room
+      the line keeps whether the filter is on or off, so that what is
+      under it does not move as the filter turns on or off; `null` when
+      there is no line of a filter. */
+  readonly noValueRoom: string | null;
 }
 
 /** The histogram of the variants of `statistic`, popnei's bins added up
@@ -273,6 +278,7 @@ export function individualPlot(
     return {
       plot: null,
       noValueLine: noHeterozygosityText(values.length, soFar),
+      noValueRoom: null,
     };
   }
   const axisLow = at(bins.edges, 0);
@@ -316,6 +322,7 @@ export function individualPlot(
       },
     },
     noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", soFar),
+    noValueRoom: noValueThresholdLine(bins.numNaN, true, soFar),
   };
 }
 

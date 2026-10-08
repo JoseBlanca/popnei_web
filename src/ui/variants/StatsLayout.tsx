@@ -157,19 +157,35 @@ interface IndividualPlaceProps {
   readonly children: React.ReactNode;
   /** The line under it of the individuals with no value, or `null`. */
   readonly noValueLine: string | null;
+  /** The longer words that line can take, whose room it keeps, hidden,
+      or `null`. */
+  readonly noValueRoom: string | null;
 }
 
 /** A histogram of the individuals and the line under it of those with
-    no value. */
+    no value, as high as its longer words, so that what is under it does
+    not move when the line gains or loses ", and this filter removes
+    them" and wraps on one line more or less. */
 export function IndividualPlace({
   children,
   noValueLine,
+  noValueRoom,
 }: IndividualPlaceProps): React.JSX.Element {
   return (
     <div className={classOf(styles, "plot")}>
       {children}
       {noValueLine !== null && (
-        <p className={classOf(styles, "line")}>{noValueLine}</p>
+        <div className={classOf(styles, "lineStack")}>
+          <p className={classOf(styles, "line")}>{noValueLine}</p>
+          {noValueRoom !== null && noValueRoom !== noValueLine && (
+            <p
+              className={`${classOf(styles, "line")} ${classOf(styles, "room")}`}
+              aria-hidden="true"
+            >
+              {noValueRoom}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

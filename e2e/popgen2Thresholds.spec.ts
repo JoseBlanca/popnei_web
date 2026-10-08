@@ -765,3 +765,68 @@ test("SF9 D5 a file dropped while a run of the keys waits opens with the thresho
   await expect(maf.slider).toHaveValue("0.95");
   await expect(undoButton(page)).toBeDisabled();
 });
+
+/** Three individuals and four variants, i3 with no called genotype: the
+    worked example of individualChecks.md, as e2e/individualStats.spec.ts
+    has it. */
+const CALLS_VCF = [
+  "##fileformat=VCFv4.2",
+  "##contig=<ID=1>",
+  '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\ti1\ti2\ti3",
+  "1\t10\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/0\t./.",
+  "1\t20\t.\tA\tG\t.\tPASS\t.\tGT\t1/1\t0/1\t./.",
+  "1\t30\t.\tA\tG\t.\tPASS\t.\tGT\t0/0\t./.\t./.",
+  "1\t40\t.\tA\tG\t.\tPASS\t.\tGT\t0/1\t0/.\t./.",
+  "",
+].join("\n");
+
+test("SF9 D5 at 320 px the line of the individuals with no called genotype keeps the room of its longer words, so that nothing under it moves as the filter turns on and off", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Open variants file…" }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "calls.vcf",
+    mimeType: "text/plain",
+    buffer: Buffer.from(CALLS_VCF),
+  });
+  const download = page.getByRole("button", {
+    name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+  });
+  await expect(download).toBeVisible({ timeout: 20_000 });
+  const het = histogram(page, "Observed heterozygosity of each individual");
+  const off = het.group
+    .locator("xpath=..")
+    .getByText(
+      "1 individual with no called genotype is not in the histogram.",
+      { exact: true },
+    );
+  await expect(off).toBeVisible();
+  const top = (): Promise<number> =>
+    download.evaluate(
+      (element) => element.getBoundingClientRect().top + window.scrollY,
+    );
+  const before = await top();
+
+  await het.box.fill("0.9");
+  await het.box.press("Enter");
+  await expect(
+    het.group
+      .locator("xpath=..")
+      .getByText(
+        "1 individual with no called genotype is not in the histogram, and this filter removes it.",
+        { exact: true },
+      ),
+  ).toBeVisible();
+  expect(await top()).toBe(before);
+
+  await het.box.fill("");
+  await het.box.press("Enter");
+  await expect(off).toBeVisible();
+  expect(await top()).toBe(before);
+});

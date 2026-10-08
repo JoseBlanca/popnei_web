@@ -155,6 +155,35 @@ describe("the histograms of the statistics of the open file", () => {
     ).toBe("2 individuals with no called genotype are not in the histogram.");
   });
 
+  test("SF9 D5 the line of the individuals with no called genotype keeps the room of its words with the filter on, the longer, whether the filter is on or off", () => {
+    const off = individualPlot(
+      "observedHeterozygosity",
+      INDIVIDUALS,
+      false,
+      null,
+    );
+    const on = individualPlot(
+      "observedHeterozygosity",
+      INDIVIDUALS,
+      false,
+      0.5,
+    );
+    const longer =
+      "1 individual with no called genotype is not in the histogram, and this filter removes it.";
+    expect(off.noValueRoom).toBe(longer);
+    expect(on.noValueRoom).toBe(longer);
+    expect(
+      individualPlot("observedHeterozygosity", INDIVIDUALS, true, null)
+        .noValueRoom,
+    ).toBe(
+      "1 individual with no called genotype so far is not in the histogram, and this filter removes it.",
+    );
+    // Every individual with a value: no line, and no room.
+    expect(
+      individualPlot("missingGenotypes", INDIVIDUALS, false, null).noValueRoom,
+    ).toBeNull();
+  });
+
   test("live-stats 2 the description of a plot of a result so far, which a screen reader reads, says it is drawn from the variants read so far", () => {
     const done = variantPlot("missingRate", VARIANTS, NO_SPACING, false, null)
       .data.description;

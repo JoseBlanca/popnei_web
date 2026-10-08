@@ -205,7 +205,10 @@ function IndividualHistogram({
     [set, statistic, result, soFar, threshold, typed],
   );
   return (
-    <IndividualPlace noValueLine={drawn.noValueLine}>
+    <IndividualPlace
+      noValueLine={drawn.noValueLine}
+      noValueRoom={drawn.noValueRoom}
+    >
       {drawn.plot !== null && set.plot !== null && (
         <StatsHistogram
           plot={drawn.plot}

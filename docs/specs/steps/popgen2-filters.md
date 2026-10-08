@@ -320,7 +320,12 @@ called genotype are not in the histogram, and this filter removes
 them."; off, "3 individuals with no called genotype are not in the
 histogram." With one individual, "1 individual … removes it." Today's
 words, "neither keeps nor removes them", were true of a threshold that
-was no filter.
+was no filter. The sentence keeps the height of its longer words, those
+of a filter on, whether the filter is on or off, so that what is under
+it does not move when it gains or loses its last clause and wraps on one
+line more or less: 24 pixels at 320 pixels wide in Chromium, with the
+one individual of the worked example of `individualChecks.md`, before
+8 October 2026.
 
 ### When a threshold changes the project
 
