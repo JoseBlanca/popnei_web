@@ -292,12 +292,17 @@ test("SF6 D2 at 320 pixels, with the notice up and the focus on the open button,
   await openTwoHeld(page);
 
   /** Expects the open button above the notice, to less than a pixel, as
-      the flows of the shell do, since WebKit scrolls by whole pixels. */
+      the flows of the shell do, since WebKit scrolls by whole pixels;
+      polled, since the notice keeps its room after a layout. */
   const expectAboveTheNotice = async (): Promise<void> => {
-    const button = await openButton(page).boundingBox();
-    const region = await notice(page).boundingBox();
-    if (button === null || region === null) throw new Error("not laid out");
-    expect(button.y + button.height).toBeLessThan(region.y + 1);
+    await expect
+      .poll(async () => {
+        const button = await openButton(page).boundingBox();
+        const region = await notice(page).boundingBox();
+        if (button === null || region === null) return Infinity;
+        return button.y + button.height - region.y;
+      })
+      .toBeLessThan(1);
   };
   // The open button, which picked the file, keeps the focus, and the
   // notice that appeared over it scrolled it clear.
