@@ -2245,15 +2245,7 @@ describe("VS5 D2 writtenDiscarded", () => {
       write: { kind: "done", key: KEY_W, written: WRITTEN },
     });
     const saved = checksState({
-      write: {
-        kind: "saved",
-        key: KEY_W,
-        written: {
-          format: WRITTEN.format,
-          numBytes: WRITTEN.numBytes,
-          passStats: WRITTEN.passStats,
-        },
-      },
+      write: { kind: "saved", key: KEY_W, written: WRITTEN },
     });
     const ready = checksState({ write: WRITE_READY });
     const locked = checksState({

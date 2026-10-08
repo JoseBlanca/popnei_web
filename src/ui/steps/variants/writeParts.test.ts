@@ -198,7 +198,12 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
       {
         kind: "saved",
         key: KEY,
-        written: { format: "nei", numBytes: 250_994, passStats: PASS },
+        written: {
+          format: "nei",
+          file: new Blob([]),
+          numBytes: 250_994,
+          passStats: PASS,
+        },
       },
       SMALL,
       PROJECT,
@@ -226,7 +231,12 @@ describe("VS5 D3 the parts of the section of the writing in each state", () => {
       {
         kind: "saved",
         key: KEY,
-        written: { format: "nei", numBytes: 250_994, passStats: PASS },
+        written: {
+          format: "nei",
+          file: new Blob([]),
+          numBytes: 250_994,
+          passStats: PASS,
+        },
       },
       large,
       PROJECT,
@@ -449,7 +459,12 @@ describe("the writing refused before it starts, as the owner decided at stop A o
         {
           kind: "saved",
           key: KEY,
-          written: { format: "nei", numBytes: 250_994, passStats: PASS },
+          written: {
+            format: "nei",
+            file: new Blob([]),
+            numBytes: 250_994,
+            passStats: PASS,
+          },
         },
         SMALL,
         PROJECT,
@@ -482,7 +497,12 @@ describe("the saved line with Write disabled, and no text of the section that na
   const SAVED: WriteStatus<Blob> = {
     kind: "saved",
     key: KEY,
-    written: { format: "nei", numBytes: 250_994, passStats: PASS },
+    written: {
+      format: "nei",
+      file: new Blob([]),
+      numBytes: 250_994,
+      passStats: PASS,
+    },
   };
 
   test("saved, with Write disabled by a Count refused after the save: the line ends at the save", () => {

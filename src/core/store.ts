@@ -2,7 +2,7 @@
  * The store, the one object of core that changes: it holds the history of
  * the projects, the cache of the results, the version of popnei, the
  * calculations in flight and the file of the filtered variants written
- * until it is saved, and gives the screens the state of each analysis and
+ * until the project gives the write another key, and gives the screens the state of each analysis and
  * of the writing (docs/specs/core/store.md). The screens change it with
  * commands, and `src/ui/runs.ts` and the entry of the page with the
  * events of the workers; it never waits.
@@ -275,13 +275,10 @@ export type WriteStatus<F> =
   /** A write of its key ended with at least one variant while the project
       gave that key, and the file has not been handed to the browser. */
   | { readonly kind: "done"; readonly key: Key; readonly written: Written<F> }
-  /** The file of `done` was handed to the browser to save; the store no
-      longer holds it. */
-  | {
-      readonly kind: "saved";
-      readonly key: Key;
-      readonly written: Omit<Written<F>, "file">;
-    }
+  /** The file of `done` was handed to the browser to save; the store
+      still holds it, for a second download from a click of the user,
+      until the project gives the write another key. */
+  | { readonly kind: "saved"; readonly key: Key; readonly written: Written<F> }
   /** A write of its key ended with no variant, and no file is kept, since
       nobody can save it. */
   | {
@@ -524,8 +521,8 @@ export interface Store<R, F = never> {
       wait for the statistics, if there is one. */
   cancelWrite(): void;
   /** The page has handed the file of `write`, `done`, to the browser to
-      save: the store forgets the file, and `write` is `saved`. A defect
-      in any other state. */
+      save: `write` is `saved`, with the same file, which the store keeps
+      until the write's key changes. A defect in any other state. */
   writeSaved(): void;
 
   /** The calculation worker has started, with popnei of `version`. */
@@ -670,9 +667,9 @@ interface Waiting<J, R> {
 }
 
 /** The last write that ended done under the key the project gives the
-    writing, and what is kept of it: the file until it is saved, or
-    nothing of the file after the save or when it holds no variant. No
-    change has given the writing another key since. */
+    writing, and what is kept of it: the file, before and after it is
+    saved, or nothing of the file when it holds no variant. No change has
+    given the writing another key since. */
 type WrittenKept<F> = Extract<
   WriteStatus<F>,
   { readonly kind: "done" | "saved" | "noVariant" }
@@ -2522,12 +2519,7 @@ export function createStore<J, R, F = never>(
           `writeSaved was called with the writing ${state.write?.kind ?? "absent"}, and not done.`,
         );
       }
-      const { format, numBytes, passStats } = written.written;
-      written = {
-        kind: "saved",
-        key: written.key,
-        written: { format, numBytes, passStats },
-      };
+      written = { kind: "saved", key: written.key, written: written.written };
       changed();
     },
     popneiReady: (version) => {

@@ -5431,22 +5431,6 @@ describe("VS3 D6 the write in the store", () => {
     expect(store.getState().runs).toStrictEqual([]);
   });
 
-  test("writeSaved: the write is saved, holds no file, and its size and counts are those of the file", () => {
-    const { store, write, file } = written();
-
-    store.writeSaved();
-
-    expect(writeIn(store)).toStrictEqual({
-      kind: "saved",
-      key: write.key,
-      written: {
-        format: "nei",
-        numBytes: file.numBytes,
-        passStats: file.passStats,
-      },
-    });
-  });
-
   test("writeSaved a second time is a defect", () => {
     const { store } = written();
     store.writeSaved();
@@ -6135,6 +6119,51 @@ describe("DL4 D1 the format of the write", () => {
   });
 });
 
+describe("DL4 D2 the file kept after its download", () => {
+  test("writeSaved: the write is saved and holds the same file, the same object, with its size and counts", () => {
+    const { store, write, file } = written();
+    const done = writeIn(store);
+
+    store.writeSaved();
+
+    const saved = writeIn(store);
+    expect(saved).toStrictEqual({
+      kind: "saved",
+      key: write.key,
+      written: file,
+    });
+    expect(saved.kind === "saved" && saved.written).toBe(
+      done.kind === "done" && done.written,
+    );
+  });
+
+  test("a command and its undo after the save give the write ready, with no file and no writeDiscarded", () => {
+    const { store, write } = written();
+    store.writeSaved();
+
+    store.apply("the MAF filter changed", maf(0.8));
+    expect(store.getState().notice).toBeNull();
+    store.undo();
+
+    expect(store.getState().notice).toBeNull();
+    expect(writeIn(store)).toStrictEqual({
+      kind: "ready",
+      key: write.key,
+      format: "nei",
+      dropped: false,
+    });
+  });
+
+  test("the file saved is forgotten when an opening gives the write another key", () => {
+    const { store } = written();
+    store.writeSaved();
+
+    store.open(() => fiveIndividualsProject([]));
+
+    expect(writeIn(store)).toMatchObject({ kind: "ready", format: "nei" });
+  });
+});
+
 describe("VS3 D7 the properties of the write", () => {
   /** A step of the property of the write. */
   type WriteStep =
@@ -6239,8 +6268,8 @@ describe("VS3 D7 the properties of the write", () => {
           }
           const write = writeIn(store);
           // What the state holds of a write is of one that arrived
-          // under the key the project gives now, and gave since; only
-          // `done` holds its file.
+          // under the key the project gives now, and gave since; `done`
+          // and `saved` hold its file.
           if (
             write.kind === "done" ||
             write.kind === "saved" ||
@@ -6248,7 +6277,7 @@ describe("VS3 D7 the properties of the write", () => {
           ) {
             expect(write.key).toBe(writeKeyNow(store));
             expect(kept.has(write.written.passStats)).toBe(true);
-            expect("file" in write.written).toBe(write.kind === "done");
+            expect("file" in write.written).toBe(write.kind !== "noVariant");
           }
         }
       }),

@@ -426,7 +426,7 @@ function setUpWriting(): {
 }
 
 describe("VS5 D1 saveWritten", () => {
-  test("with the file written, downloadFile is given the name and the very Blob of the state, and then the writing is saved, with no file", () => {
+  test("with the file written, downloadFile is given the name and the very Blob of the state, and then the writing is saved, still holding that file", () => {
     const { store, saving, files, write } = setUpWriting();
     const file = new Blob([new Uint8Array([1, 2, 3])]);
     write(file);
@@ -439,7 +439,7 @@ describe("VS5 D1 saveWritten", () => {
     expect(files[0]?.file).toBe(file);
     const status = store.getState().write;
     expect(status?.kind).toBe("saved");
-    expect(status?.kind === "saved" && "file" in status.written).toBe(false);
+    expect(status?.kind === "saved" && status.written.file).toBe(file);
   });
 
   test("with the writing ready, no file written, it is a defect and nothing is downloaded", () => {
