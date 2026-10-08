@@ -70,7 +70,9 @@ export interface Saving {
   save(name: string): string;
   /** The project of the text `text` of a picked project file, read by
       `readProjectFile` with the application and the analyses the saving
-      writes with, or why it does not open. */
+      writes with, or why it does not open. The page has no box of the
+      filter of the FILTER column, so a file that holds that filter, on or
+      off, is refused as `newPageFilter`. */
   read(text: string): Result<Project, ProjectFileError>;
   /** A project file was opened and `p` is its project: it is the base. */
   opened(p: Project): void;
@@ -165,7 +167,10 @@ export function createSaving<J, R, F>(deps: SavingDeps<J, R, F>): Saving {
         listeners.delete(listener);
       };
     },
-    read: (text) => readProjectFile(text, app, analyses),
+    // popgen.html, the one page that saves, has no box of the filter of
+    // the FILTER column (docs/specs/core/projectFile.md, "Opening").
+    read: (text) =>
+      readProjectFile(text, app, analyses, { passedFilter: false }),
     opened: (p) => {
       base = p;
       baseDone = doneKeys(store.getState());

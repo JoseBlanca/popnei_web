@@ -564,7 +564,10 @@ export type ProjectFileError =
       readonly field: HeaderField;
       readonly expected: string;
     }
-  | { readonly kind: "project"; readonly error: ProjectError };
+  | { readonly kind: "project"; readonly error: ProjectError }
+  /** The filter of the FILTER column, on or off, in a file opened on a
+      page that has no box for it, `popgen.html`. */
+  | { readonly kind: "newPageFilter" };
 
 /** A field of the top of the file whose value a `header` error names. */
 export type HeaderField =
@@ -615,6 +618,14 @@ function present(
   return Object.hasOwn(file, name) ? { [name]: file[name] } : {};
 }
 
+/** What `readProjectFile` needs to know of the page that opens the file. */
+export interface OpeningPage {
+  /** Whether the page has the box of the FILTER column: `false` on
+      `popgen.html`, which then refuses a file that holds that filter,
+      on or off, as `newPageFilter`. */
+  readonly passedFilter: boolean;
+}
+
 /** The placeholder of the fingerprint of a check while the project is
     validated, replaced by the real one once it is. */
 const NO_FINGERPRINT = "0".repeat(64);
@@ -635,7 +646,10 @@ const NO_FINGERPRINT = "0".repeat(64);
  * one of the individuals file pending or failed, which it writes as
  * `notGiven`; and a check whose count of numbers is
  * not the one `numCheckNumbers` of its analysis gives, when it gives one,
- * which it does not with a threshold on the individuals.
+ * which it does not with a threshold on the individuals; and, last, the
+ * filter of the FILTER column, on or off, when `page.passedFilter` says
+ * the page has no box for it, after every check of a damaged file, so
+ * that a file damaged and holding it is told it is damaged.
  *
  * The project has no variants file, and as its reference the file's
  * variants file and check numbers, each with the fingerprint of its
@@ -646,6 +660,7 @@ export function readProjectFile<J, R>(
   text: string,
   app: AppId,
   analyses: readonly AnalysisDef<J, R>[],
+  page: OpeningPage,
 ): Result<Project, ProjectFileError> {
   const data = parseJson(
     text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text,
@@ -771,22 +786,38 @@ export function readProjectFile<J, R>(
     );
   }
 
+  if (reference !== null) {
+    // The count of each check, as its analysis gives it for the project
+    // with the file's variants file, which it reads to know the
+    // populations run.
+    const withVariants: Project = { ...project, variants: reference.variants };
+    for (const check of reference.checks) {
+      const expected = definitionOf(analyses, check.analysis).numCheckNumbers(
+        withVariants,
+      );
+      if (expected !== null && check.numbers.length !== expected) {
+        return header(
+          "checks",
+          `${counted(expected, "number")} for the analysis ${shown(check.analysis)}, as many as the rest of the file gives it, and not ${grouped(check.numbers.length)}`,
+        );
+      }
+    }
+  }
+
+  // A page with no box of the FILTER column would apply the filter on, or
+  // let a later click turn on the filter off, with nothing on its screen
+  // saying so.
+  if (
+    !page.passedFilter &&
+    [...project.filters, ...project.filtersOff].some(
+      (filter) => filter.kind === "passed",
+    )
+  ) {
+    return refused({ kind: "newPageFilter" });
+  }
+
   if (reference === null) {
     return { ok: true, value: project };
-  }
-  // The count of each check, as its analysis gives it for the project with
-  // the file's variants file, which it reads to know the populations run.
-  const withVariants: Project = { ...project, variants: reference.variants };
-  for (const check of reference.checks) {
-    const expected = definitionOf(analyses, check.analysis).numCheckNumbers(
-      withVariants,
-    );
-    if (expected !== null && check.numbers.length !== expected) {
-      return header(
-        "checks",
-        `${counted(expected, "number")} for the analysis ${shown(check.analysis)}, as many as the rest of the file gives it, and not ${grouped(check.numbers.length)}`,
-      );
-    }
   }
   return {
     ok: true,
@@ -891,7 +922,8 @@ const MAX_PROJECT_FILE_MB = MAX_PROJECT_FILE_BYTES / (1024 * 1024);
 /**
  * The text the user reads of a file refused, `fileName` the name of the
  * file picked: the first three name the file, since it may not be a
- * project file at all, and the others are in the pattern of
+ * project file at all, and so does the last, `newPageFilter`, a file of
+ * the other page of population genetics; the others are in the pattern of
  * `projectErrorText`, which gives the text of the project itself (the
  * spec, Open 1).
  */
@@ -920,6 +952,8 @@ export function projectFileErrorText(
       return `The project file cannot be opened: ${HEADER_WORDS[error.field]} should be ${error.expected}. ${DAMAGED}`;
     case "project":
       return projectErrorText(error.error);
+    case "newPageFilter":
+      return `${name} was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.`;
   }
 }
 

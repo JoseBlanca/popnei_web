@@ -310,7 +310,9 @@ describe("WS10 the cases of the entry", () => {
       ),
       "utf8",
     );
-    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES, {
+      passedFilter: false,
+    });
     if (!opened.ok) {
       throw new Error("the fixture of version 1 does not open");
     }
@@ -336,7 +338,9 @@ describe("WS10 the cases of the entry", () => {
       ),
       "utf8",
     );
-    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    const opened = readProjectFile(text, "popgen", POPGEN_ANALYSES, {
+      passedFilter: false,
+    });
     if (!opened.ok) {
       throw new Error("the fixture of the metadata not read does not open");
     }

@@ -245,7 +245,9 @@ let text = "";
   for (let k = 0; k <= REPETITIONS; k++) {
     times.push(
       timed(() => {
-        const read = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+        const read = readProjectFile(text, "popgen", POPGEN_ANALYSES, {
+          passedFilter: false,
+        });
         if (!read.ok)
           throw new Error(
             `the file written was refused: ${JSON.stringify(read.error)}`,

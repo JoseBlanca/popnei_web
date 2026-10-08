@@ -59,6 +59,11 @@ import type {
     pca, in their order. */
 const POPGEN_DEFS = TEST_DEFS.filter((def) => def.app.includes("popgen"));
 
+/** The page that opens a file: `popgen.html`, with no box of the filter
+    of the FILTER column, and `popgen2.html`, with one. */
+const OLD_PAGE = { passedFilter: false } as const;
+const NEW_PAGE = { passedFilter: true } as const;
+
 /** The definition of the diversity among the test definitions. */
 const DIVERSITY = defOf("diversity");
 
@@ -291,7 +296,12 @@ describe("WS6 D1 what is written", () => {
     });
     expect(json["checks"]).toEqual([]);
 
-    const opened = readProjectFile(written(state), "popgen", POPGEN_DEFS);
+    const opened = readProjectFile(
+      written(state),
+      "popgen",
+      POPGEN_DEFS,
+      OLD_PAGE,
+    );
     if (!opened.ok) {
       throw new Error(`the file did not open: ${opened.error.kind}`);
     }
@@ -1090,7 +1100,9 @@ describe("WS6 D2 the opening", () => {
   // in "IP3 D2 the project file of the switches".
   for (const f of FIXTURES) {
     test(`${f.file} opens into its project`, () => {
-      expect(readProjectFile(fixture(f.file), "popgen", POPGEN_DEFS)).toEqual({
+      expect(
+        readProjectFile(fixture(f.file), "popgen", POPGEN_DEFS, OLD_PAGE),
+      ).toEqual({
         ok: true,
         value: opened(f.project()),
       });
@@ -1113,7 +1125,7 @@ describe("WS6 D2 the opening", () => {
 
   /** The error of opening the text `text` in population genetics. */
   function refusalOfText(text: string): ProjectFileError | null {
-    const opening = readProjectFile(text, "popgen", POPGEN_DEFS);
+    const opening = readProjectFile(text, "popgen", POPGEN_DEFS, OLD_PAGE);
     return opening.ok ? null : opening.error;
   }
 
@@ -1267,6 +1279,7 @@ describe("WS6 D2 the opening", () => {
       file([1, 2, 3, 4, 5, 6]),
       "popgen",
       counted,
+      OLD_PAGE,
     );
     const expected: ProjectFileError = {
       kind: "header",
@@ -1279,7 +1292,8 @@ describe("WS6 D2 the opening", () => {
       "The project file cannot be opened: the check numbers should be 7 numbers for the analysis diversity, as many as the rest of the file gives it, and not 6. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
     );
     expect(
-      readProjectFile(file([1, 2, 3, 4, 5, 6, 7]), "popgen", counted).ok,
+      readProjectFile(file([1, 2, 3, 4, 5, 6, 7]), "popgen", counted, OLD_PAGE)
+        .ok,
     ).toBe(true);
   });
 
@@ -1294,7 +1308,9 @@ describe("WS6 D2 the opening", () => {
 
   test("the count with the diversity's own definition: v1-nei-diversity.popnei.json opens, and is refused with one of its 7 numbers removed", () => {
     const text = fixture("v1-nei-diversity.popnei.json");
-    expect(readProjectFile(text, "popgen", POPGEN_ANALYSES).ok).toBe(true);
+    expect(readProjectFile(text, "popgen", POPGEN_ANALYSES, OLD_PAGE).ok).toBe(
+      true,
+    );
     const shortened = JSON.stringify({
       ...fixtureJson("v1-nei-diversity.popnei.json"),
       checks: [
@@ -1305,7 +1321,9 @@ describe("WS6 D2 the opening", () => {
         }),
       ],
     });
-    expect(readProjectFile(shortened, "popgen", POPGEN_ANALYSES)).toEqual({
+    expect(
+      readProjectFile(shortened, "popgen", POPGEN_ANALYSES, OLD_PAGE),
+    ).toEqual({
       ok: false,
       error: {
         kind: "header",
@@ -1321,6 +1339,7 @@ describe("WS6 D2 the opening", () => {
       fixture("v1-nei-diversity.popnei.json"),
       "popgen",
       POPGEN_ANALYSES,
+      OLD_PAGE,
     );
     if (!opening.ok || opening.value.reference === null) {
       throw new Error("the fixture opens, with its reference");
@@ -1377,7 +1396,7 @@ describe("WS6 D2 the opening", () => {
         "0.2.0",
         "2026-09-25T14:03:11.000Z",
       );
-      const again = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+      const again = readProjectFile(text, "popgen", POPGEN_ANALYSES, OLD_PAGE);
       if (!again.ok) {
         throw new Error(JSON.stringify(again.error));
       }
@@ -1493,6 +1512,7 @@ describe("WS6 D2 the opening", () => {
         `\uFEFF${fixture("v1-empty.popnei.json")}`,
         "popgen",
         POPGEN_DEFS,
+        OLD_PAGE,
       ),
     ).toEqual({ ok: true, value: emptyProject("popgen") });
   });
@@ -1502,6 +1522,7 @@ describe("WS6 D2 the opening", () => {
       fixture("v1-vcf-pending.popnei.json"),
       "popgen",
       POPGEN_DEFS,
+      OLD_PAGE,
     );
     if (!opening.ok) {
       throw new Error("the fixture opens");
@@ -1720,7 +1741,9 @@ describe("VS3 D8 the project file of stage 3", () => {
   const FILE = "v1-every-filter.popnei.json";
 
   test(`${FILE} opens into its project, every filter in its order`, () => {
-    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS, OLD_PAGE),
+    ).toEqual({
       ok: true,
       value: opened(everyFilterProject()),
     });
@@ -1738,7 +1761,7 @@ describe("VS3 D8 the project file of stage 3", () => {
       kind: "project",
       error: { kind: "filterOutOfOrder", path: ["filters", 1] },
     };
-    expect(readProjectFile(text, "popgen", POPGEN_DEFS)).toEqual({
+    expect(readProjectFile(text, "popgen", POPGEN_DEFS, OLD_PAGE)).toEqual({
       ok: false,
       error: expected,
     });
@@ -1750,9 +1773,9 @@ describe("VS3 D8 the project file of stage 3", () => {
   test("with the diversity's own definition, the count of the check numbers is not checked with a threshold on the individuals, and is with the lists alone", () => {
     // The file's 4 numbers, of the north alone, open: the thresholds keep
     // individuals by statistics not yet calculated for the new load.
-    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES).ok).toBe(
-      true,
-    );
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES, OLD_PAGE).ok,
+    ).toBe(true);
     // Without the thresholds, the lists keep both populations, which give
     // 7 numbers.
     const listsAlone = JSON.stringify({
@@ -1765,7 +1788,9 @@ describe("VS3 D8 the project file of stage 3", () => {
         { kind: "remove", individuals: ["ind_002"] },
       ],
     });
-    expect(readProjectFile(listsAlone, "popgen", POPGEN_ANALYSES)).toEqual({
+    expect(
+      readProjectFile(listsAlone, "popgen", POPGEN_ANALYSES, OLD_PAGE),
+    ).toEqual({
       ok: false,
       error: {
         kind: "header",
@@ -2393,7 +2418,12 @@ describe("WS6 D4 the properties of the project file", () => {
     fc.assert(
       fc.property(savedState, (state) => {
         const p = state.project;
-        const opening = readProjectFile(savedText(state), p.app, TEST_DEFS);
+        const opening = readProjectFile(
+          savedText(state),
+          p.app,
+          TEST_DEFS,
+          NEW_PAGE,
+        );
         if (!opening.ok) {
           throw new Error(JSON.stringify(opening.error));
         }
@@ -2440,7 +2470,12 @@ describe("WS6 D4 the properties of the project file", () => {
     fc.assert(
       fc.property(savedState, (state) => {
         const text = savedText(state);
-        const opening = readProjectFile(text, state.project.app, TEST_DEFS);
+        const opening = readProjectFile(
+          text,
+          state.project.app,
+          TEST_DEFS,
+          NEW_PAGE,
+        );
         if (!opening.ok) {
           throw new Error(JSON.stringify(opening.error));
         }
@@ -2525,7 +2560,12 @@ function diversityVerdictOf(
   result: DiversityResult,
   appVersion: string,
 ): CheckVerdict | null {
-  const opened = readProjectFile(fixture(file), "popgen", POPGEN_ANALYSES);
+  const opened = readProjectFile(
+    fixture(file),
+    "popgen",
+    POPGEN_ANALYSES,
+    OLD_PAGE,
+  );
   if (!opened.ok) {
     throw new Error("the fixture does not open");
   }
@@ -2658,7 +2698,12 @@ describe("IP3 D2 the project file of the switches", () => {
   const FILE = "v1-ld-no-distance.popnei.json";
 
   test(`${FILE} opens into its project, the LD filter with no distance and its lock`, () => {
-    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS);
+    const read = readProjectFile(
+      fixture(FILE),
+      "popgen",
+      POPGEN_DEFS,
+      OLD_PAGE,
+    );
     expect(read).toEqual({ ok: true, value: opened(ldNoDistanceProject()) });
     expect(read.ok && variantFilterNeeds(read.value)).toBe(
       "The LD pruning of the Variants step needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn off the LD pruning, in the Variants step.",
@@ -2771,7 +2816,9 @@ describe("IP3 D2 the project file of the filters turned off", () => {
   const FILE = "v1-filters-off.popnei.json";
 
   test(`${FILE} opens into its project, the filters off with their values`, () => {
-    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS, OLD_PAGE),
+    ).toEqual({
       ok: true,
       value: opened(filtersOffProject()),
     });
@@ -2793,7 +2840,12 @@ describe("IP3 D2 the project file of the filters turned off", () => {
   });
 
   test(`${FILE} opened, the LD filter turned on again with the values kept`, () => {
-    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS);
+    const read = readProjectFile(
+      fixture(FILE),
+      "popgen",
+      POPGEN_DEFS,
+      OLD_PAGE,
+    );
     if (!read.ok) {
       throw new Error("the fixture opens");
     }
@@ -2848,7 +2900,12 @@ describe("IP3 D2 the project file of the filters turned off", () => {
         ([name]) => name !== "individualFiltersOff",
       ),
     );
-    const read = readProjectFile(JSON.stringify(rest), "popgen", POPGEN_DEFS);
+    const read = readProjectFile(
+      JSON.stringify(rest),
+      "popgen",
+      POPGEN_DEFS,
+      OLD_PAGE,
+    );
     expect(read.ok && read.value.filtersOff).toStrictEqual(
       filtersOffProject().filtersOff,
     );
@@ -2868,7 +2925,7 @@ describe("IP3 D2 the project file of the filters turned off", () => {
         filter: "missing_data",
       },
     };
-    expect(readProjectFile(text, "popgen", POPGEN_DEFS)).toEqual({
+    expect(readProjectFile(text, "popgen", POPGEN_DEFS, OLD_PAGE)).toEqual({
       ok: false,
       error: expected,
     });
@@ -3084,7 +3141,9 @@ function onePopulationProject(): Project {
 describe("IP4 D4 the project file of stage 4", () => {
   test("v1-types.popnei.json opens into its project, the types set applied, and is written back byte for byte", () => {
     const FILE = "v1-types.popnei.json";
-    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS)).toEqual({
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS, OLD_PAGE),
+    ).toEqual({
       ok: true,
       value: opened(typesProject()),
     });
@@ -3104,7 +3163,12 @@ describe("IP4 D4 the project file of stage 4", () => {
 
   test("v1-metadata-not-read.popnei.json, pops.csv notGiven, opens into its project, locked until the file is loaded again, and is written back byte for byte", () => {
     const FILE = "v1-metadata-not-read.popnei.json";
-    const read = readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES);
+    const read = readProjectFile(
+      fixture(FILE),
+      "popgen",
+      POPGEN_ANALYSES,
+      OLD_PAGE,
+    );
     expect(read).toEqual({ ok: true, value: metadataNotReadProject() });
     expect(read.ok && individualsNeeds(read.value)).toBe(
       "pops.csv was not read when this project was saved, so the project file does not hold it. Load pops.csv again in the Individuals step.",
@@ -3147,7 +3211,9 @@ describe("IP4 D4 the project file of stage 4", () => {
   test("v1-one-population.popnei.json, no metadata file, opens with the 4 check numbers of one population, is written back byte for byte, and is refused with 7", () => {
     const FILE = "v1-one-population.popnei.json";
     const project = openedInPopgen(onePopulationProject());
-    expect(readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES)).toEqual({
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_ANALYSES, OLD_PAGE),
+    ).toEqual({
       ok: true,
       value: project,
     });
@@ -3166,7 +3232,9 @@ describe("IP4 D4 the project file of stage 4", () => {
       ...fixtureJson(FILE),
       grouping: { kind: "populations", column: null },
     });
-    expect(readProjectFile(noColumn, "popgen", POPGEN_ANALYSES).ok).toBe(true);
+    expect(
+      readProjectFile(noColumn, "popgen", POPGEN_ANALYSES, OLD_PAGE).ok,
+    ).toBe(true);
 
     const seven = JSON.stringify({
       ...fixtureJson(FILE),
@@ -3180,15 +3248,17 @@ describe("IP4 D4 the project file of stage 4", () => {
         },
       ],
     });
-    expect(readProjectFile(seven, "popgen", POPGEN_ANALYSES)).toEqual({
-      ok: false,
-      error: {
-        kind: "header",
-        field: "checks",
-        expected:
-          "4 numbers for the analysis diversity, as many as the rest of the file gives it, and not 7",
+    expect(readProjectFile(seven, "popgen", POPGEN_ANALYSES, OLD_PAGE)).toEqual(
+      {
+        ok: false,
+        error: {
+          kind: "header",
+          field: "checks",
+          expected:
+            "4 numbers for the analysis diversity, as many as the rest of the file gives it, and not 7",
+        },
       },
-    });
+    );
   });
 
   test("the diversity of a project with no metadata file, done over All individuals, is saved with its 4 check numbers, which open again", () => {
@@ -3196,6 +3266,7 @@ describe("IP4 D4 the project file of stage 4", () => {
       fixture("v1-one-population.popnei.json"),
       "popgen",
       POPGEN_ANALYSES,
+      OLD_PAGE,
     );
     if (!opening.ok || opening.value.reference === null) {
       throw new Error("the fixture opens, with its reference");
@@ -3232,7 +3303,7 @@ describe("IP4 D4 the project file of stage 4", () => {
       "0.2.0",
       "2026-09-28T18:00:00.000Z",
     );
-    const again = readProjectFile(text, "popgen", POPGEN_ANALYSES);
+    const again = readProjectFile(text, "popgen", POPGEN_ANALYSES, OLD_PAGE);
     if (!again.ok) {
       throw new Error(JSON.stringify(again.error));
     }
@@ -3261,7 +3332,9 @@ describe("IP4 D4 the project file of stage 4", () => {
       { kind: "pending" },
       { kind: "failed", error: { kind: "empty" } },
     ]) {
-      expect(readProjectFile(withRead(read), "popgen", POPGEN_DEFS)).toEqual({
+      expect(
+        readProjectFile(withRead(read), "popgen", POPGEN_DEFS, OLD_PAGE),
+      ).toEqual({
         ok: false,
         error: expected,
       });
@@ -3270,7 +3343,12 @@ describe("IP4 D4 the project file of stage 4", () => {
       "The project file cannot be opened: what was read of the individuals file should be the table read, or no table for a file not read, as the application saves it. The file was changed outside the application, or is damaged. Open a copy saved before the change, or make the project again.",
     );
     expect(
-      readProjectFile(withRead({ kind: "notGiven" }), "popgen", POPGEN_DEFS).ok,
+      readProjectFile(
+        withRead({ kind: "notGiven" }),
+        "popgen",
+        POPGEN_DEFS,
+        OLD_PAGE,
+      ).ok,
     ).toBe(true);
   });
 });
@@ -3281,6 +3359,7 @@ describe("IP10 D3 the cases of the project file", () => {
       fixture("v1-vcf-pending.popnei.json"),
       "popgen",
       POPGEN_DEFS,
+      OLD_PAGE,
     );
     if (!opening.ok || opening.value.reference === null) {
       throw new Error("the fixture opens, with its reference");
@@ -3340,7 +3419,12 @@ describe("IP10 D3 the cases of the project file", () => {
         },
       ],
     });
-    const opening = readProjectFile(withCheck, "popgen", POPGEN_ANALYSES);
+    const opening = readProjectFile(
+      withCheck,
+      "popgen",
+      POPGEN_ANALYSES,
+      OLD_PAGE,
+    );
     if (!opening.ok) {
       throw new Error(JSON.stringify(opening.error));
     }
@@ -3386,6 +3470,7 @@ describe("PA6 D3 the options of the three analyses of the populations in a proje
       }),
       "popgen",
       ANALYSES,
+      OLD_PAGE,
     );
     expect(opened.ok && opened.value.analyses).toEqual([
       {
@@ -3413,6 +3498,7 @@ describe("PA6 D3 the options of the three analyses of the populations in a proje
         withOptions({ minNumIndividuals: 20, polyThreshold: 0.95 }),
         "popgen",
         ANALYSES,
+        OLD_PAGE,
       ),
     ).toEqual({
       ok: false,
@@ -3543,7 +3629,9 @@ describe("PA6 D7 the project file of stage 5", () => {
 
   test("v1-stage5-options.popnei.json opens into its project, with the options of the three analyses and the 7 check numbers of the distances, and is written back byte for byte", () => {
     const project = stage5OptionsProject();
-    expect(readProjectFile(fixture(FILE), "popgen", STAGE_5_ANALYSES)).toEqual({
+    expect(
+      readProjectFile(fixture(FILE), "popgen", STAGE_5_ANALYSES, OLD_PAGE),
+    ).toEqual({
       ok: true,
       value: project,
     });
@@ -3581,7 +3669,9 @@ describe("PA6 D7 the project file of stage 5", () => {
           },
         ],
       });
-      expect(readProjectFile(file, "popgen", STAGE_5_ANALYSES)).toEqual({
+      expect(
+        readProjectFile(file, "popgen", STAGE_5_ANALYSES, OLD_PAGE),
+      ).toEqual({
         ok: false,
         error: {
           kind: "header",
@@ -3661,7 +3751,12 @@ describe("SF2 D2 a project file read gives keepsPassed by the format", () => {
         { ...source, read: { ...read, keepsPassed: saved } },
         null,
       );
-      const opening = readProjectFile(savedText(stateOf(p)), p.app, TEST_DEFS);
+      const opening = readProjectFile(
+        savedText(stateOf(p)),
+        p.app,
+        TEST_DEFS,
+        OLD_PAGE,
+      );
       expect(opening.ok && opening.value.reference?.variants.read).toEqual({
         ...read,
         keepsPassed: opened,
@@ -3886,3 +3981,184 @@ function defIn<T extends { readonly id: string }>(
   }
   return def;
 }
+
+/** The project of `v1-passed.popnei.json` once opened: panel.vcf.gz of
+    200 individuals and 1,200 variants, read with every variant at ploidy
+    2, as popgen2.html opens a VCF but for its ploidy; the filter of the
+    FILTER column and the missing data filter at 0.1 on, the MAF filter at
+    0.9 off; no individuals file and no check. */
+function passedProject(): Project {
+  return {
+    app: "popgen",
+    variants: null,
+    filters: [
+      { kind: "passed" },
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ],
+    filtersOff: [{ kind: "maf", maxAllowedMaf: 0.9 }],
+    individualFilters: [],
+    individualFiltersOff: [],
+    individuals: null,
+    grouping: { kind: "populations", column: null },
+    analyses: [],
+    reference: {
+      variants: {
+        fileId: "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+        name: "panel.vcf.gz",
+        size: 87304,
+        format: "vcf",
+        readOptions: { ploidy: 2, onlyPassed: false },
+        read: {
+          kind: "read",
+          individuals: Array.from(
+            { length: 200 },
+            (_, i) => `s${String(i).padStart(3, "0")}`,
+          ),
+          ploidy: 2,
+          numVars: 1200,
+          keepsPassed: true,
+        },
+      },
+      checks: [],
+    },
+  };
+}
+
+describe("SF4 D1 the project file of the filter of the FILTER column", () => {
+  const FILE = "v1-passed.popnei.json";
+
+  /** The fixture with its filter of the FILTER column turned off: kept in
+      `filtersOff`, first there as in `filters`, and not in `filters`. */
+  function passedOffJson(): Readonly<Record<string, unknown>> {
+    return {
+      ...fixtureJson(FILE),
+      filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+      filtersOff: [{ kind: "passed" }, { kind: "maf", maxAllowedMaf: 0.9 }],
+    };
+  }
+
+  function passedOff(): string {
+    return JSON.stringify(passedOffJson());
+  }
+
+  test(`${FILE} opens on the new page into its project`, () => {
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS, NEW_PAGE),
+    ).toEqual({
+      ok: true,
+      value: opened(passedProject()),
+    });
+  });
+
+  test(`${FILE} is written back byte for byte from its project`, () => {
+    const state = stateOf(
+      opened(passedProject()),
+      Object.fromEntries(
+        POPGEN_DEFS.map((def) => [
+          def.id,
+          { kind: "locked", reason: "Load a variants file." },
+        ]),
+      ),
+      "0.2.2",
+    );
+    expect(
+      writeProjectFile(state, POPGEN_DEFS, "0.1.0", "2026-10-08T11:20:41.000Z"),
+    ).toBe(fixture(FILE));
+  });
+
+  test(`${FILE} is refused on the old page as newPageFilter, with its text`, () => {
+    const expected: ProjectFileError = { kind: "newPageFilter" };
+    expect(
+      readProjectFile(fixture(FILE), "popgen", POPGEN_DEFS, OLD_PAGE),
+    ).toEqual({
+      ok: false,
+      error: expected,
+    });
+    expect(projectFileErrorText(expected, "pops.popnei.json")).toBe(
+      "pops.popnei.json was saved by the new page of population genetics, which can leave out the variants that failed their FILTER, and this page cannot show that choice. Open it in the new page.",
+    );
+  });
+
+  test("the file with the filter of the FILTER column turned off is refused on the old page as newPageFilter, and opens on the new page with the filter kept off", () => {
+    expect(
+      readProjectFile(passedOff(), "popgen", POPGEN_DEFS, OLD_PAGE),
+    ).toEqual({
+      ok: false,
+      error: { kind: "newPageFilter" },
+    });
+    const read = readProjectFile(passedOff(), "popgen", POPGEN_DEFS, NEW_PAGE);
+    expect(read.ok && read.value.filters).toStrictEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+    ]);
+    expect(read.ok && read.value.filtersOff).toStrictEqual([
+      { kind: "passed" },
+      { kind: "maf", maxAllowedMaf: 0.9 },
+    ]);
+  });
+
+  test("the file with also a check of the wrong count is refused as header on the old page, not as newPageFilter", () => {
+    const wrongCount = {
+      analysis: "diversity",
+      numbers: [1200, 0.3, 0.3],
+      keyVersion: 3,
+      popneiVersion: "0.2.2",
+      appVersion: "0.1.0",
+    };
+    const expected = {
+      ok: false,
+      error: {
+        kind: "header",
+        field: "checks",
+        expected:
+          "4 numbers for the analysis diversity, as many as the rest of the file gives it, and not 3",
+      },
+    };
+    for (const file of [fixtureJson(FILE), passedOffJson()]) {
+      const damaged = JSON.stringify({ ...file, checks: [wrongCount] });
+      expect(
+        readProjectFile(damaged, "popgen", POPGEN_ANALYSES, OLD_PAGE),
+      ).toEqual(expected);
+    }
+  });
+
+  test("the file with its filter of the FILTER column removed by hand opens on the old page", () => {
+    const removed = JSON.stringify({
+      ...fixtureJson(FILE),
+      filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.1 }],
+    });
+    expect(readProjectFile(removed, "popgen", POPGEN_DEFS, OLD_PAGE).ok).toBe(
+      true,
+    );
+  });
+
+  test("v1-every-filter.popnei.json, from before the filter of the FILTER column, opens on the old page as before", () => {
+    expect(
+      readProjectFile(
+        fixture("v1-every-filter.popnei.json"),
+        "popgen",
+        POPGEN_DEFS,
+        OLD_PAGE,
+      ),
+    ).toEqual({ ok: true, value: opened(everyFilterProject()) });
+  });
+
+  test("a file written opens on the old page as on the new one when its project holds no filter of the FILTER column, and is refused as newPageFilter when it holds one, on or off", () => {
+    let held = 0;
+    fc.assert(
+      fc.property(savedState, (state) => {
+        const p = state.project;
+        const text = savedText(state);
+        const holds = [...p.filters, ...p.filtersOff].some(
+          (f) => f.kind === "passed",
+        );
+        if (holds) held += 1;
+        expect(readProjectFile(text, p.app, TEST_DEFS, OLD_PAGE)).toEqual(
+          holds
+            ? { ok: false, error: { kind: "newPageFilter" } }
+            : readProjectFile(text, p.app, TEST_DEFS, NEW_PAGE),
+        );
+      }),
+    );
+    expect(held).toBeGreaterThan(0);
+  });
+});

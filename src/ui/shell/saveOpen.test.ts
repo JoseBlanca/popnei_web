@@ -35,7 +35,9 @@ const FIXTURES = join(
 /** `readProjectFile` with the population genetics application, as the
     saving of its page reads. */
 function read(text: string): Result<Project, ProjectFileError> {
-  return readProjectFile(text, "popgen", POPGEN_ANALYSES);
+  return readProjectFile(text, "popgen", POPGEN_ANALYSES, {
+    passedFilter: false,
+  });
 }
 
 function fileOf(name: string, text: string): PickedFile {
