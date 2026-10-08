@@ -5,11 +5,12 @@
  * their FILTER", ticked, at the end of the part of the variants, for a
  * VCF and for a .nei file that records the FILTER of its variants,
  * low_qual.nei, and not for panel.nei, which does not, nor while a file
- * is opened, nor after an opening that failed; a click gives its notice,
- * changes no plot and sends nothing to the worker, and Undo ticks it
- * again; the filter stays as the user left it across files; the box is
- * there while the pass runs, after a Stop and after a crash, where a click
- * leaves the words of the crash; its sentence is its description; the
+ * is opened, nor after an opening that failed; a click gives no notice,
+ * as the owner asked on 8 October 2026, changes no plot and sends nothing
+ * to the worker, and Undo ticks it again; the filter stays as the user
+ * left it across files; the box is there while the pass runs, after a
+ * Stop and after a crash, where a click leaves the words of the crash;
+ * its sentence is its description; the
  * Tab key reaches it after the four histograms of the variants and before
  * the part of the individuals.
  *
@@ -30,8 +31,9 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const LABEL = "Leave out the variants that failed their FILTER";
 const SENTENCE =
   "The plots show every variant. The ones that failed are left out of what is downloaded or analysed.";
-const TURNED_OFF = "The variants that failed their FILTER are kept";
-const TURNED_ON = "The variants that failed their FILTER are left out";
+/** The description of a click that unticks the box, which names its
+    step of Undo. */
+const TURNED_OFF = "the variants that failed their FILTER are kept";
 
 /** What the page records, on `window`, of the messages it sends to its
     workers. */
@@ -105,8 +107,9 @@ async function clickBox(page: Page): Promise<void> {
   await page.getByText(LABEL, { exact: true }).click();
 }
 
+/** The notice of the old page, which popgen2.html no longer has. */
 function notice(page: Page): Locator {
-  return page.getByRole("region", { name: "Notice" }).getByRole("alertdialog");
+  return page.getByRole("region", { name: "Notice" });
 }
 
 function undoButton(page: Page): Locator {
@@ -196,7 +199,7 @@ test("SF7 D2 the box is not there while panel.vcf.gz is opened, nor after no_plo
   await expect(filterBox(page)).toHaveCount(0);
 });
 
-test("SF7 D2 a click gives the notice, changes no plot and sends nothing to the worker, and Undo ticks the box again", async ({
+test("SF7 D2 a click gives no notice, changes no plot and sends nothing to the worker, and Undo ticks the box again", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -213,20 +216,21 @@ test("SF7 D2 a click gives the notice, changes no plot and sends nothing to the 
 
   await clickBox(page);
   await expect(filterBox(page)).not.toBeChecked();
-  await expect(notice(page)).toHaveAccessibleName(TURNED_OFF);
   await expect(undoButton(page)).toHaveAccessibleDescription(
-    `Undo: ${TURNED_OFF.charAt(0).toLowerCase()}${TURNED_OFF.slice(1)}`,
+    `Undo: ${TURNED_OFF}`,
   );
+  await expect(notice(page)).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 
-  await notice(page).getByRole("button", { name: "Undo", exact: true }).click();
+  await undoButton(page).click();
   await expect(filterBox(page)).toBeChecked();
+  await expect(notice(page)).toHaveCount(0);
 
   await clickBox(page);
   await expect(filterBox(page)).not.toBeChecked();
   await clickBox(page);
   await expect(filterBox(page)).toBeChecked();
-  await expect(notice(page)).toHaveAccessibleName(TURNED_ON);
+  await expect(notice(page)).toHaveCount(0);
 
   expect(await plotsDrawn(page)).toEqual(plots);
   await expect(
@@ -257,7 +261,7 @@ test("SF7 D2 the box turned off for a VCF stays off for low_qual.nei, after pane
   await expect(filterBox(page)).not.toBeChecked();
 });
 
-test("SF7 D2 the box is there while the pass runs and after a Stop, and a click there gives its notice and stops nothing", async ({
+test("SF7 D2 the box is there while the pass runs and after a Stop, and a click there stops nothing and gives no notice", async ({
   page,
 }) => {
   await holdSummary(page);
@@ -268,7 +272,8 @@ test("SF7 D2 the box is there while the pass runs and after a Stop, and a click 
   await expect(filterBox(page)).toBeChecked();
 
   await clickBox(page);
-  await expect(notice(page)).toHaveAccessibleName(TURNED_OFF);
+  await expect(filterBox(page)).not.toBeChecked();
+  await expect(notice(page)).toHaveCount(0);
   await expect(stop).toBeVisible();
 
   await stop.click();
@@ -277,7 +282,7 @@ test("SF7 D2 the box is there while the pass runs and after a Stop, and a click 
   await expect(filterBox(page)).not.toBeChecked();
   await clickBox(page);
   await expect(filterBox(page)).toBeChecked();
-  await expect(notice(page)).toHaveAccessibleName(TURNED_ON);
+  await expect(notice(page)).toHaveCount(0);
   await expect(again).toBeVisible();
 
   // The worker made at the Stop, which holds nothing, finishes the pass.
@@ -305,7 +310,7 @@ test("SF7 D2 after a crash of the pass the box is there, and a click leaves the 
 
   await clickBox(page);
   await expect(filterBox(page)).not.toBeChecked();
-  await expect(notice(page)).toHaveAccessibleName(TURNED_OFF);
+  await expect(notice(page)).toHaveCount(0);
   await expect(info(page).getByText(failed)).toBeVisible();
   await expect(
     part(page, "Variants").getByText("Not calculated.", { exact: true }),
