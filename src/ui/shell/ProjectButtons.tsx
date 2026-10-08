@@ -179,7 +179,7 @@ export function SaveProject(): React.JSX.Element {
     `write` in `done`, "panel.filtered.nei", or `null` when there is
     none. */
 function unsavedName(s: AppState<unknown, unknown>): string | null {
-  return s.write?.kind === "done" ? writtenName(s.project) : null;
+  return s.write?.kind === "done" ? writtenName(s.project, "nei") : null;
 }
 
 /** The name of the file of the filtered variants being written,
@@ -189,7 +189,7 @@ function unsavedName(s: AppState<unknown, unknown>): string | null {
 function writingName(s: AppState<unknown, unknown>): string | null {
   const writing =
     s.write?.kind === "running" || s.runs.some((r) => r.analysis === null);
-  return writing ? writtenName(s.project) : null;
+  return writing ? writtenName(s.project, "nei") : null;
 }
 
 /** Whether calculations of analyses are in flight, other than the

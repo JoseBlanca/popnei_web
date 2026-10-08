@@ -46,7 +46,7 @@ describe("VS2 D4 the name of the written file of the filtered variants", () => {
       filters: [{ kind: "maf", maxAllowedMaf: 0.95 }],
       individualFilters: [],
     });
-    expect(writtenName(p)).toBe("panel.filtered.nei");
+    expect(writtenName(p, "nei")).toBe("panel.filtered.nei");
   });
 
   test("panel.vcf.gz with a threshold on the individuals alone gives panel.filtered.nei", () => {
@@ -54,7 +54,7 @@ describe("VS2 D4 the name of the written file of the filtered variants", () => {
       filters: [],
       individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.38 }],
     });
-    expect(writtenName(p)).toBe("panel.filtered.nei");
+    expect(writtenName(p, "nei")).toBe("panel.filtered.nei");
   });
 
   test("panel.vcf.gz with no filter gives panel.nei, the file converted", () => {
@@ -62,7 +62,7 @@ describe("VS2 D4 the name of the written file of the filtered variants", () => {
       filters: [],
       individualFilters: [],
     });
-    expect(writtenName(p)).toBe("panel.nei");
+    expect(writtenName(p, "nei")).toBe("panel.nei");
   });
 
   test("PANEL.NEI with a filter gives PANEL.filtered.nei", () => {
@@ -70,19 +70,63 @@ describe("VS2 D4 the name of the written file of the filtered variants", () => {
       filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
       individualFilters: [],
     });
-    expect(writtenName(p)).toBe("PANEL.filtered.nei");
+    expect(writtenName(p, "nei")).toBe("PANEL.filtered.nei");
   });
 
   test("a project with no variants file gives project.nei", () => {
     const p = deepFreeze<Project>({ ...sampleProject(), variants: null });
-    expect(writtenName(p)).toBe("project.nei");
+    expect(writtenName(p, "nei")).toBe("project.nei");
   });
 });
 
 describe("SF2 D4 the name of the written file reads the filters that apply to the file", () => {
   test("panel.nei with passed alone on, its read saying keepsPassed false, gives panel.nei, the file converted", () => {
     const p = projectNamed("panel.nei", { filters: [], individualFilters: [] });
-    expect(writtenName(withPassedOn(p, false))).toBe("panel.nei");
-    expect(writtenName(withPassedOn(p, true))).toBe("panel.filtered.nei");
+    expect(writtenName(withPassedOn(p, false), "nei")).toBe("panel.nei");
+    expect(writtenName(withPassedOn(p, true), "nei")).toBe(
+      "panel.filtered.nei",
+    );
+  });
+});
+
+describe("DL3 D1 the name of the written file in either format", () => {
+  test("panel.vcf.gz with a filter gives panel.filtered.vcf.gz in the VCF", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [{ kind: "maf", maxAllowedMaf: 0.95 }],
+      individualFilters: [],
+    });
+    expect(writtenName(p, "vcf")).toBe("panel.filtered.vcf.gz");
+    expect(writtenName(p, "nei")).toBe("panel.filtered.nei");
+  });
+
+  test("with a threshold on the individuals alone the VCF is panel.filtered.vcf.gz", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [],
+      individualFilters: [{ kind: "obs_het", maxAllowedObsHet: 0.38 }],
+    });
+    expect(writtenName(p, "vcf")).toBe("panel.filtered.vcf.gz");
+  });
+
+  test("with no filter the VCF keeps .filtered.vcf.gz, not the name of the file it came from", () => {
+    const p = projectNamed("panel.vcf.gz", {
+      filters: [],
+      individualFilters: [],
+    });
+    expect(writtenName(p, "vcf")).toBe("panel.filtered.vcf.gz");
+    expect(writtenName(p, "nei")).toBe("panel.nei");
+  });
+
+  test("PANEL.NEI with a filter gives PANEL.filtered.vcf.gz", () => {
+    const p = projectNamed("PANEL.NEI", {
+      filters: [{ kind: "missing_data", maxAllowedMissingRate: 0.05 }],
+      individualFilters: [],
+    });
+    expect(writtenName(p, "vcf")).toBe("PANEL.filtered.vcf.gz");
+  });
+
+  test("a project with no variants file gives project.filtered.vcf.gz", () => {
+    const p = deepFreeze<Project>({ ...sampleProject(), variants: null });
+    expect(writtenName(p, "vcf")).toBe("project.filtered.vcf.gz");
+    expect(writtenName(p, "nei")).toBe("project.nei");
   });
 });

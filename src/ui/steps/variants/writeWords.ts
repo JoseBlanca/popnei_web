@@ -247,13 +247,13 @@ function errorWords(
   if (error.kind === "refused") {
     const ploidy = otherPloidyText(error.message, p);
     if (ploidy !== null) {
-      return `${escaped(writtenName(p))} could not be written. ${ploidy}`;
+      return `${escaped(writtenName(p, "nei"))} could not be written. ${ploidy}`;
     }
     const fit =
       estimate === null
         ? "The file may not fit"
         : `A file of ${aboutSize(estimate)} may not fit`;
-    return `${escaped(writtenName(p))} could not be written: popnei stopped with "${withoutStop(error.message)}". ${fit} in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.`;
+    return `${escaped(writtenName(p, "nei"))} could not be written: popnei stopped with "${withoutStop(error.message)}". ${fit} in the memory of this tab: remove variants or individuals with the filters and write it again, or write the file with popnei in Python. If the message names a line of the VCF, correct the file, or fetch it again, and load it again.`;
   }
   const failure = error.error;
   switch (failure.kind) {

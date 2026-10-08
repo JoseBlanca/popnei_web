@@ -8,6 +8,7 @@
  */
 
 import { filtersApplied } from "./filtersApplied.ts";
+import type { WriteFormat } from "./keys.ts";
 import type { Project } from "./project.ts";
 
 /** The stem of a name that is only an extension, `.nei`. */
@@ -27,19 +28,29 @@ export function variantsStem(name: string): string {
 }
 
 /**
- * The name of the written file of the filtered variants of `p`: the stem
- * of the variants file with `.filtered.nei`, `panel.filtered.nei` from
- * `panel.vcf.gz`, when the project has a filter of the variants or of the
- * individuals; with `.nei`, `panel.nei`, when it has none, since the file
- * is then the variants file converted; `project.nei` for a project with
- * no variants file, which the step never asks.
+ * The name of the written file of the filtered variants of `p` in
+ * `format`: the stem of the variants file with `.filtered.nei`, or
+ * `.filtered.vcf.gz` for a VCF, `panel.filtered.nei` from `panel.vcf.gz`,
+ * when the project has a filter of the variants that applies to the file
+ * or one of the individuals. With none, a `.nei` file is the stem with
+ * `.nei`, `panel.nei`, since the file is then the variants file
+ * converted; a VCF keeps `.filtered.vcf.gz`, since `panel.vcf.gz` would
+ * be the name of the file it came from, which a browser that asks where
+ * to save offers to overwrite, with other bytes
+ * (docs/specs/analyses/writeVariants.md, "Saving the file"). The stem is
+ * `project` for a project with no variants file, which no page asks.
  */
-export function writtenName(p: Project): string {
-  if (p.variants === null) {
-    return `${FALLBACK_STEM}.nei`;
+export function writtenName(p: Project, format: WriteFormat): string {
+  const stem =
+    p.variants === null ? FALLBACK_STEM : variantsStem(p.variants.name);
+  switch (format) {
+    case "vcf":
+      return `${stem}.filtered.vcf.gz`;
+    case "nei": {
+      const filtered =
+        p.variants !== null &&
+        (filtersApplied(p).length > 0 || p.individualFilters.length > 0);
+      return filtered ? `${stem}.filtered.nei` : `${stem}.nei`;
+    }
   }
-  const stem = variantsStem(p.variants.name);
-  const filtered =
-    filtersApplied(p).length > 0 || p.individualFilters.length > 0;
-  return filtered ? `${stem}.filtered.nei` : `${stem}.nei`;
 }

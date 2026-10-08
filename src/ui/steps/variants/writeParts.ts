@@ -171,7 +171,11 @@ export function writeParts(
       return {
         ...offered,
         message: line(
-          savedText(writtenName(p), write.written.numBytes, !button.disabled),
+          savedText(
+            writtenName(p, "nei"),
+            write.written.numBytes,
+            !button.disabled,
+          ),
         ),
         button: button.disabled ? button : { ...button, description: null },
       };
@@ -183,7 +187,7 @@ export function writeParts(
         warning: null,
         button: {
           kind: "save",
-          name: writtenName(p),
+          name: writtenName(p, "nei"),
           numBytes: write.written.numBytes,
         },
       };

@@ -642,7 +642,7 @@ function startedAnnouncements<R>(
     .filter(isNew)
     .map((run) => `${w.title(run.analysis)}: calculating.`);
   if (after.runs.some((run) => run.analysis === null && isNew(run))) {
-    started.push(`Writing ${escaped(writtenName(after.project))}.`);
+    started.push(`Writing ${escaped(writtenName(after.project, "nei"))}.`);
   }
   const now = byRunId(after.runs);
   const wentStopping = before.runs.filter(
@@ -832,7 +832,7 @@ function writeEndedAnnouncements(
     switch (write?.kind) {
       case "done":
         announcements.push(
-          `${escaped(writtenName(after.project))} is written, ${sizeText(write.written.numBytes)}; Save it in the Variants step.`,
+          `${escaped(writtenName(after.project, "nei"))} is written, ${sizeText(write.written.numBytes)}; Save it in the Variants step.`,
         );
         break;
       case "noVariant": {

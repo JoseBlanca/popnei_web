@@ -136,7 +136,7 @@ function WriteBody({
         // A new request is a new clock.
         <Writing
           key={write.runId}
-          name={writtenName(project)}
+          name={writtenName(project, "nei")}
           runId={write.runId}
           progress={write.progress}
           waitsForStatistics={write.waitsForStatistics}
