@@ -10,7 +10,15 @@
 import { StrictMode, act, createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
@@ -68,8 +76,29 @@ interface Page {
 let container: HTMLElement;
 let root: Root;
 let caught: unknown[];
+/** Aborted when the test ends, so that a wait of a test that failed or
+    ran out of time stops, and acts on nothing of the next test. */
+let testEnd: AbortController;
+
+// The modules of the page and of the section, compiled once before the
+// tests, so that each test takes them afresh at the cost of running them
+// and neither pays for their compilation, which is many times longer on a
+// loaded machine: the first test paid it alone, and the second ran only as
+// fast as it did after it.
+beforeAll(async () => {
+  await import("../popgen2Store.ts");
+  await import("../autoRuns.ts");
+  await import("../runs.ts");
+  await import("../shell/announcer.tsx");
+  await import("../shell/status.ts");
+  await import("../store.tsx");
+  await import("./announceChanges.ts");
+  await import("./StatsSection.tsx");
+  await import("./FileStats.tsx");
+});
 
 beforeEach(() => {
+  testEnd = new AbortController();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   // jsdom has no ResizeObserver, which the plots ask for their size.
   globalThis.ResizeObserver = class {
@@ -99,6 +128,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  testEnd.abort();
   act(() => {
     root.unmount();
   });
@@ -224,18 +254,23 @@ async function endDone(page: Page): Promise<void> {
   await after(0);
 }
 
+/** Waits, letting React draw every 10 ms, until `done` holds; stops when
+    the test ends, by its timeout too, so that no wait outlives its test. */
+async function until(done: () => boolean): Promise<void> {
+  while (!done()) {
+    if (testEnd.signal.aborted) {
+      throw new Error("the test ended before what it waited for");
+    }
+    await after(10);
+  }
+}
+
 /** Waits for the section of the load `fileId` to be drawn, its code
     imported afresh with the plots and D3, and then held back 300 ms by
     React, as the first download is, in place of the section drawn while
-    it downloads; fails after 5 s. */
+    it downloads. */
 async function sectionDrawn(page: Page, fileId: string): Promise<void> {
-  const start = performance.now();
-  while (!page.shown.includes(fileId) && performance.now() - start < 5000) {
-    await after(10);
-  }
-  if (!page.shown.includes(fileId)) {
-    throw new Error("the section was not drawn");
-  }
+  await until(() => page.shown.includes(fileId));
 }
 
 /** The texts said that speak of the statistics, each the whole text of
@@ -279,7 +314,10 @@ describe("the section of the statistics while its code downloads", () => {
     download.fail = true;
     const page = await drawPage();
     await page.open(FIRST);
-    await after(0);
+    // The failed download reaches the boundary of the section once the
+    // import of the mock has thrown, after as many turns as the machine
+    // takes.
+    await until(() => caught.length > 0);
     expect(caught).toHaveLength(1);
     expect(sectionOf()).toBeNull();
     await endDone(page);
