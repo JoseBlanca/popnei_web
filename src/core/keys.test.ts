@@ -886,7 +886,7 @@ describe("WP2 D3 the properties of the keys", () => {
     );
   });
 
-  test("a change of the name, the size or the read of the variants file keeps the key, while the read says the same of the FILTER", () => {
+  test("a change of the name, the size or the read of the variants file keeps the key, while the filters that apply are the same", () => {
     fc.assert(
       fc.property(setting, variantSource, (s, source) => {
         const variants = variantsOf(s.p);
@@ -902,7 +902,7 @@ describe("WP2 D3 the properties of the keys", () => {
             },
           },
         };
-        fc.pre(keepsPassed(variantsOf(renamed.p)) === keepsPassed(variants));
+        fc.pre(sameJson(filtersApplied(renamed.p), filtersApplied(s.p)));
         const memo = createKeyMemo();
         expect(keyWith(renamed, memo)).toBe(keyWith(s, memo));
       }),
@@ -1120,7 +1120,7 @@ describe("VS2 D3 the key of a write", () => {
     expect(neiKeyOf(q)).toBe(WRITE_LITERAL_KEY);
   });
 
-  test("keeps the key with the name, the size and the read of the variants file, while the read says the same of the FILTER", () => {
+  test("keeps the key with the name, the size and the read of the variants file, while the filters that apply are the same", () => {
     fc.assert(
       fc.property(projectWithVariants, variantSource, (p, source) => {
         const renamed: Project = {
@@ -1132,7 +1132,7 @@ describe("VS2 D3 the key of a write", () => {
             read: source.read,
           },
         };
-        fc.pre(keepsPassed(variantsOf(renamed)) === keepsPassed(variantsOf(p)));
+        fc.pre(sameJson(filtersApplied(renamed), filtersApplied(p)));
         const memo = createKeyMemo();
         expect(neiKeyOf(renamed, memo)).toBe(neiKeyOf(p, memo));
       }),
