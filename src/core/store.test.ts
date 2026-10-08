@@ -7334,6 +7334,18 @@ describe("SF5 D1 a notice at every change of a filter, under filterNotices", () 
     expect(request.cancels()).toBe(0);
   });
 
+  test("a threshold of a filter of the individuals alone gives the notice of a filter", () => {
+    const { store } = storeWithSummary(true);
+
+    store.apply("a filter of individuals changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.2),
+    );
+
+    expect(store.getState().notice).toStrictEqual(
+      filterNotice("command", "a filter of individuals changed"),
+    );
+  });
+
   test("the next command replaces it, an undo gives one with the cause of the undo, and a redo one with its own", () => {
     const { store } = storeWithSummary(true);
     store.apply("the MAF filter changed", mafThreshold(0.3));
@@ -7523,6 +7535,22 @@ describe("SF5 D2 a failure that is not popnei's lasts until a change leaves its 
     store.runEnded(sentAt(sent, 1).run.id, { kind: "failed", error: CRASH });
     expect(statuses(store)[1]).toStrictEqual(crashed);
     expect(store.startRun("vars")).toStrictEqual([sentAt(sent, 2).run]);
+  });
+
+  test("a crash that arrives after a change left its request behind is not kept: the undo that gives its key back shows it ready", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    store.apply("the MAF filter changed", maf(0.8));
+
+    store.runEnded(request.run.id, { kind: "failed", error: CRASH });
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
+      stopped: null,
+    });
   });
 
   test("on popgen2.html, a crash of the summary, then a threshold of the MAF: still error, the notice says the filter changed, and Start again sends", () => {
@@ -7719,6 +7747,34 @@ describe("SF5 D3 the last result so far kept after a Stop", () => {
     expect(statuses(store)[1]).toStrictEqual({
       kind: "ready",
       key: first.key,
+      stopped: null,
+    });
+  });
+
+  test("a request being stopped that ends done under a key not its own, a defect, forgets it: a change and its undo show the key ready with nothing kept", () => {
+    const { store, sent } = storeWithVariantsRead();
+    store.startRun("vars");
+    const request = sentAt(sent, 0);
+    request.soFar(varsResult(500));
+    store.cancelRun("vars");
+
+    expect(() => {
+      store.runEnded(request.run.id, {
+        kind: "done",
+        key: "f".repeat(64),
+        result: varsResult(1000),
+      });
+    }).toThrow(/^popnei_web defect: the request 1 of the analysis "vars"/);
+    expect(statuses(store)[1]).toMatchObject({
+      kind: "error",
+      error: { kind: "failed", error: { kind: "defect" } },
+    });
+    store.apply("the MAF filter changed", maf(0.8));
+    store.undo();
+
+    expect(statuses(store)[1]).toStrictEqual({
+      kind: "ready",
+      key: request.key,
       stopped: null,
     });
   });

@@ -2131,7 +2131,10 @@ export function createStore<J, R, F = never>(
             fileId: request.fileId,
             error: { kind: "failed", error: outcome.error },
           };
-        } else {
+        } else if (isCurrent(request, currentKeys())) {
+          // One that arrives after a change left its request behind is
+          // not kept, so that an undo giving its key back shows the
+          // analysis ready: a second try can succeed (the store spec).
           failures.set(request.key, { kind: "failed", error: outcome.error });
         }
         return;
