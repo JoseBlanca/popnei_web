@@ -446,6 +446,7 @@ store works out the individuals kept from the finished one pass
 | the buttons of the dialog | "Download", "Cancel"; while it writes, "Stop"; after a failure, "Close" |
 | the line of the write | "Writing low_qual.filtered.vcf.gz · 35% · 0:12"; before popnei's first report, "Writing low_qual.filtered.vcf.gz · 0:12" |
 | the name of the bar | "Writing low_qual.filtered.vcf.gz" |
+| the status region, as the write starts | "Writing low_qual.filtered.vcf.gz." |
 | the status region, after Stop | "The writing of low_qual.filtered.vcf.gz was stopped. Nothing was downloaded." |
 | the text after the download | "low_qual.filtered.vcf.gz downloaded, 42 KB: 772 variants of 111 individuals. Variants removed: 300 by their FILTER, 58 by the missing rate, 70 by the MAF. Individuals removed: 84 by the missing rate, 5 by the observed heterozygosity."; one variant or individual in the singular, "1 variant of 1 individual" |
 | the words of each filter in it | the variants: "by their FILTER", "by the missing rate", "by the MAF", "by the observed heterozygosity"; the individuals: "by the missing rate", "by the observed heterozygosity" |
@@ -484,7 +485,10 @@ variant, on the sentence of no variant; these two are moved by the page
 once the overlay is off the page (above, "When the write ends").
 
 **What is said without moving the focus** (4.1.3, "Status messages").
-The Stop of a write, in the status region. The sentence of no variant
+The start of a write, once, in the status region, "Writing
+low_qual.filtered.vcf.gz.": the focus moves to Stop, and Stop alone
+says nothing of what is written nor that a write runs. The Stop of a
+write, in the status region. The sentence of no variant
 when it takes the place of the button before any write, once. The bar is
 not a live region: its value is read when the user reaches it, so a
 screen reader is not made to read a percentage every few seconds. A
@@ -501,8 +505,9 @@ with Safari be heard before the plan is settled, which cannot be done
 before the screen exists, and the session cannot run VoiceOver. What is
 to be heard: the dialog announced with its heading as it opens, the
 group of the format and its choice, Stop announced as the focus moves
-to it, the text after the download read as the focus lands on it, and
-the words of a failure read as they appear.
+to it with the start of the write said beside it, the text after the
+download read as the focus lands on it, and the words of a failure read
+as they appear.
 
 ## How it is checked
 
@@ -551,7 +556,8 @@ column, as the old page's flow of the write does:
   runs, held by `e2e/holdWorker.ts`, and after its Stop, and is enabled
   at Start again's end;
 - Stop during a write of a VCF of 200,000 variants made by
-  `e2e/bigVcf.ts` gives no download event, closes the dialog, puts the
+  `e2e/bigVcf.ts`: the status region says "Writing big.filtered.vcf.gz."
+  once Download is pressed; Stop gives no download event, closes the dialog, puts the
   focus on the button, and the status region says the words of a Stop;
   Escape while it writes leaves the dialog open;
 - the sentence of no variant before any write, with no dialog and no

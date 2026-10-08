@@ -52,6 +52,7 @@ import {
   writeFailedText,
   writingBarLabel,
   writingLine,
+  writingStartedText,
 } from "./downloadWords.ts";
 import { summaryStatus } from "./words.ts";
 
@@ -134,6 +135,11 @@ export function DownloadVariants(): React.JSX.Element {
     // same filters and format, whose words the dialog shows at once.
     const writing = startWriting(store, format);
     if (writing === null) return;
+    // Said once: the focus moves to Stop, which alone would say nothing
+    // of what is written.
+    announcer.announce(
+      writingStartedText(writtenName(store.getState().project, format)),
+    );
     // A defect of ours rejects it, and reaches the error bar.
     void writing.then(() => {
       finish(mine);

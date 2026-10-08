@@ -83,6 +83,13 @@ export function writingBarLabel(name: string): string {
   return `Writing ${escaped(name)}`;
 }
 
+/** What the status region says once as the write starts, while the
+    focus moves to Stop: "Writing low_qual.filtered.vcf.gz." The bar is
+    not a live region, so its percentages are not said. */
+export function writingStartedText(name: string): string {
+  return `Writing ${escaped(name)}.`;
+}
+
 /** What the status region says after Stop: "The writing of
     low_qual.filtered.vcf.gz was stopped. Nothing was downloaded." */
 export function stoppedText(name: string): string {

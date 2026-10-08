@@ -28,6 +28,7 @@ import {
   writeFailedText,
   writingBarLabel,
   writingLine,
+  writingStartedText,
 } from "./downloadWords.ts";
 
 /** The individuals of low_qual.vcf.gz, 200. */
@@ -109,7 +110,7 @@ describe("DL6 D2 the words of the download", () => {
     expect(SAVE_IT_LABEL).toBe("Save it");
   });
 
-  test("the line of the write with and without popnei's report, the name of the bar, and the status region after Stop", () => {
+  test("the line of the write with and without popnei's report, the name of the bar, and the status region as the write starts and after Stop", () => {
     expect(writingLine("low_qual.filtered.vcf.gz", 35, 12)).toBe(
       "Writing low_qual.filtered.vcf.gz · 35% · 0:12",
     );
@@ -121,6 +122,9 @@ describe("DL6 D2 the words of the download", () => {
     );
     expect(writingBarLabel("low_qual.filtered.vcf.gz")).toBe(
       "Writing low_qual.filtered.vcf.gz",
+    );
+    expect(writingStartedText("low_qual.filtered.vcf.gz")).toBe(
+      "Writing low_qual.filtered.vcf.gz.",
     );
     expect(stoppedText("low_qual.filtered.vcf.gz")).toBe(
       "The writing of low_qual.filtered.vcf.gz was stopped. Nothing was downloaded.",

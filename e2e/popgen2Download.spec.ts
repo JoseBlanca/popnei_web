@@ -279,7 +279,7 @@ test("DL6 D4 the button waits, disabled with its reason, while the one pass runs
   await expect(stats(page).getByText(WAITS)).toHaveCount(0);
 });
 
-test("DL6 D4 Stop during a write of the VCF of 200,000 variants downloads nothing, gives the focus back to the button and says so; Escape while it writes leaves the dialog open", async ({
+test("DL6 D4 the status region says the file written as the write starts; Stop during a write of the VCF of 200,000 variants downloads nothing, gives the focus back to the button and says so; Escape while it writes leaves the dialog open", async ({
   page,
 }, testInfo) => {
   test.setTimeout(240_000);
@@ -295,9 +295,16 @@ test("DL6 D4 Stop during a write of the VCF of 200,000 variants downloads nothin
   page.on("download", () => {
     downloads += 1;
   });
+  // The words of the one pass said, so that the start of the write is
+  // said alone.
+  await expect(status(page)).toContainText(
+    "The statistics of big.vcf.gz are calculated.",
+  );
 
   await button(page).click();
   await dialog(page).getByRole("button", { name: "Download" }).click();
+  // Said once, as the focus moves to Stop.
+  await expect(status(page)).toHaveText("Writing big.filtered.vcf.gz.");
   const bar = dialog(page).getByRole("progressbar", {
     name: "Writing big.filtered.vcf.gz",
   });
