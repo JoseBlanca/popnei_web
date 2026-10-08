@@ -104,6 +104,12 @@
  * once, 10 s and 70 s after a real click, and a second file in the same
  * page, after a second click or with none.
  *
+ * And the cost of the bar (DL5 D1, the plan of the download, work package
+ * 5), in both engines: the write of the .nei file of 200,000 variants of
+ * 1,000 individuals on the old page, five times with popnei's progress
+ * drawn by the bar and five times with it dropped in the worker, timed
+ * from the press of Write to the answer of the write.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -2127,6 +2133,209 @@ test.describe("VS5 D5 the measurements of the write", () => {
       rows,
     );
   });
+});
+
+// ---------------------------------------------------------------------
+// DL5 D1, the cost of the bar (docs/plans/download.md, work package 5):
+// the write of the .nei file of 200,000 variants of 1,000 individuals on
+// the old page, with popnei's progress posted to the page and drawn by
+// its bar, and with it dropped in the worker before it is posted, so that
+// the bar is drawn busy. No code of the application changes: the
+// calculation worker's script is served with a few lines in front of it,
+// as e2e/holdWorker.ts serves it.
+
+/** Put in front of the calculation worker's script: the progress of a
+    write is dropped before it is posted. The worker's own listener is
+    added after this one, so the id of a write is known before the write
+    runs. */
+const NO_WRITE_PROGRESS = `{
+  const realPost = self.postMessage.bind(self);
+  let writeId = null;
+  self.addEventListener("message", (event) => {
+    const d = event.data;
+    if (d !== null && typeof d === "object" && d.kind === "write") writeId = d.id;
+  });
+  self.postMessage = (m, t) => {
+    if (m !== null && typeof m === "object" && m.kind === "progress" && m.id === writeId) return;
+    realPost(m, t);
+  };
+}
+`;
+
+/** The load above which a write waits before it is timed, the 1-minute
+    average of `uptime`. */
+const DL5_MAX_LOAD = 8;
+
+/** What one timed write gave. */
+interface BarRun {
+  readonly bar: boolean;
+  readonly order: number;
+  /** From the press of Write to the answer of the write, in ms. */
+  readonly pressMs: number;
+  /** From the write posted to the worker to its answer, in ms. */
+  readonly postMs: number;
+  /** The messages of progress of the write the page received. */
+  readonly progress: number;
+  readonly load: string;
+  readonly words: string;
+}
+
+/** Opens a new page of popgen.html, picks `file`, and times one write of
+    its variants with the filters of a new project, with the bar or with
+    the progress of the write dropped. */
+async function timeWrite(
+  browser: Browser,
+  file: string,
+  bar: boolean,
+  order: number,
+): Promise<BarRun> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.addInitScript(instrument);
+    if (!bar) {
+      await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+        const response = await route.fetch();
+        const script = await response.text();
+        await route.fulfill({ response, body: NO_WRITE_PROGRESS + script });
+      });
+    }
+    await page.goto("popgen.html#variants");
+    await pick(page, "Variants file", file);
+    await expect(page.getByText(/^[\d,]+ individuals$/)).toBeVisible({
+      timeout: 120_000,
+    });
+    // The pass of the opening ended, and the page settled.
+    await page.waitForTimeout(3000);
+    for (let waited = 0; (loadavg()[0] ?? 0) > DL5_MAX_LOAD; waited++) {
+      if (waited >= 40)
+        throw new Error(`the load stayed above ${String(DL5_MAX_LOAD)}`);
+      await page.waitForTimeout(30_000);
+    }
+    const load = machineLoad();
+    const logFrom = (await logOf(page)).length;
+    const clicked = Date.now();
+    await writingSection(page)
+      .getByRole("button", {
+        name: "Write the filtered variants as a .nei file",
+      })
+      .click();
+    let log: readonly Logged[] = [];
+    await expect
+      .poll(
+        async () => {
+          log = (await logOf(page)).slice(logFrom).filter(isCalc);
+          return log.some(
+            (l) =>
+              l.event === "in" &&
+              ["written", "refused", "crashed", "workerError"].includes(l.kind),
+          );
+        },
+        { timeout: 600_000, intervals: [100] },
+      )
+      .toBe(true);
+    const posted = log.find((l) => l.event === "out" && l.kind === "write");
+    const answered = log.find(
+      (l) =>
+        l.event === "in" &&
+        ["written", "refused", "crashed", "workerError"].includes(l.kind),
+    );
+    if (posted === undefined || answered === undefined) {
+      throw new Error("no write, or no answer to it, in the log of the worker");
+    }
+    expect(answered.kind).toBe("written");
+    await expect(
+      writingSection(page).getByRole("button", { name: /^Save / }),
+    ).toBeVisible({ timeout: 60_000 });
+    const words = (await writingSection(page).innerText())
+      .replace(/\s+/g, " ")
+      .trim();
+    return {
+      bar,
+      order,
+      pressMs: answered.wall - clicked,
+      postMs: answered.t - posted.t,
+      progress: log.filter((l) => l.event === "in" && l.kind === "progress")
+        .length,
+      load,
+      words,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+test("DL5 D1 the cost of the bar: the write of the .nei file of 200,000 variants of 1,000 individuals, five times with popnei's progress drawn by the bar and five times with it dropped in the worker", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(3_600_000);
+  const vcf = await writeVcfOf(TEN_TIMES_VARIANTS);
+  const runs: BarRun[] = [];
+  // Alternated, so that a drift of the machine falls on both.
+  for (let k = 0; k < 2 * REPEATS; k++) {
+    runs.push(await timeWrite(browser, vcf, k % 2 === 0, k + 1));
+  }
+  const of = (bar: boolean): number[] =>
+    runs.filter((r) => r.bar === bar).map((r) => r.pressMs);
+  const spread = (xs: readonly number[]): number =>
+    Math.max(...xs) - Math.min(...xs);
+  const withBar = of(true);
+  const without = of(false);
+  const allowed = Math.max(0.02 * median(without), spread(without));
+  const longer = median(withBar) - median(without);
+  report(
+    "The cost of the bar: each write",
+    `${machine(browser, browserName)}, macOS ${macOs()}; ${new Date().toISOString().slice(0, 10)}; each write on a new page of popgen.html, the gzipped VCF of ${statSync(vcf).size.toLocaleString("en-US")} bytes, the filters of a new project; in the order run`,
+    [
+      "write",
+      "bar",
+      "press of Write to the answer",
+      "write posted to the answer",
+      "progress received",
+      "load (1, 5, 15 min)",
+      "the words of the section",
+    ],
+    runs.map((r) => [
+      String(r.order),
+      r.bar ? "with" : "without",
+      ms(r.pressMs),
+      ms(r.postMs),
+      String(r.progress),
+      r.load,
+      r.words,
+    ]),
+  );
+  report(
+    "The cost of the bar: the medians",
+    `${machine(browser, browserName)}; the time from the press of Write to the answer of the write; the spread is the longest of the writes less the shortest`,
+    ["bar", "median", "spread", "writes"],
+    [
+      [
+        "with",
+        ms(median(withBar)),
+        ms(spread(withBar)),
+        withBar.map(ms).join(", "),
+      ],
+      [
+        "without",
+        ms(median(without)),
+        ms(spread(without)),
+        without.map(ms).join(", "),
+      ],
+      [
+        "with less without",
+        ms(longer),
+        `allowed ${ms(allowed)}`,
+        longer <= allowed
+          ? "the bar may show its share"
+          : "the bar slows the write",
+      ],
+    ],
+  );
+  // The bar received popnei's progress, and its absence received none.
+  expect(runs.filter((r) => r.bar).every((r) => r.progress > 0)).toBe(true);
+  expect(runs.filter((r) => !r.bar).every((r) => r.progress === 0)).toBe(true);
 });
 
 // ---------------------------------------------------------------------
