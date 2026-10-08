@@ -98,6 +98,12 @@
  * panel.nei and the .nei file of 19,161,194 bytes, with what popnei
  * issue #4, one pass, would save.
  *
+ * And the trial of the automatic download (DL1 D1, the plan of the
+ * download, docs/plans/download.md, work package 1), in both engines:
+ * whether the browser downloads a file that the page's code hands it at
+ * once, 10 s and 70 s after a real click, and a second file in the same
+ * page, after a second click or with none.
+ *
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
@@ -3995,4 +4001,242 @@ test("PA7 D3 the time of each of the two passes of a Run of the diversity, on pa
     ],
     rows,
   );
+});
+
+// ---------------------------------------------------------------------
+// DL1 D1, the trial of the automatic download (docs/plans/download.md,
+// work package 1). No code of the application: a button the test adds to
+// the built page, clicked by Playwright, which gives the page the user's
+// activation, and a download made as downloadFile of src/ui/download.ts
+// makes it, a link to a Blob with the download attribute, clicked by the
+// code, its address released a minute later.
+
+/** How long after the code's click a download still counts as come. */
+const DOWNLOAD_WAIT_MS = 5_000;
+
+/** The size of each file of the trial, 1 MiB. */
+const TRIAL_BYTES = 2 ** 20;
+
+/** A download the button's click makes, `delay` ms after it. */
+interface Planned {
+  readonly delay: number;
+  readonly name: string;
+}
+
+/** The code's click on the link of a planned download. */
+interface CodeClick {
+  readonly name: string;
+  /** `Date.now()` of the page at the code's click. */
+  readonly at: number;
+  /** Whether the page still had the user's activation then, or "unknown"
+      when the engine has no navigator.userActivation. */
+  readonly active: boolean | "unknown";
+}
+
+/** Put in the page: the button "Trial", whose click makes the downloads
+    of `trialPlan`, and the log of the code's clicks, `trialClicks`. */
+function addTrialButton(bytes: number): void {
+  const clicks: CodeClick[] = [];
+  const holder = globalThis as unknown as {
+    trialPlan: readonly Planned[];
+    trialClicks: CodeClick[];
+  };
+  holder.trialPlan = [];
+  holder.trialClicks = clicks;
+  const button = document.createElement("button");
+  button.textContent = "Trial";
+  button.id = "trial";
+  button.addEventListener("click", () => {
+    for (const { delay, name } of holder.trialPlan) {
+      setTimeout(() => {
+        clicks.push({
+          name,
+          at: Date.now(),
+          active:
+            "userActivation" in navigator
+              ? navigator.userActivation.isActive
+              : "unknown",
+        });
+        const url = URL.createObjectURL(
+          new Blob([new Uint8Array(bytes).fill(31)], {
+            type: "application/gzip",
+          }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.hidden = true;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 60_000);
+      }, delay);
+    }
+  });
+  document.body.prepend(button);
+}
+
+/** A download the page's context saw. */
+interface Seen {
+  readonly name: string;
+  /** `Date.now()` of the test when the event came. */
+  readonly at: number;
+  readonly bytes: Promise<number>;
+}
+
+/** One row of the table: a planned download and what came of it. */
+interface TrialRow {
+  readonly trialCase: string;
+  readonly name: string;
+  readonly delay: number;
+  readonly active: boolean | "unknown";
+  readonly came: boolean;
+  readonly after: string;
+  readonly seenName: string;
+  readonly bytes: string;
+}
+
+/** A new page of the built site with the trial's button, and the
+    downloads its context sees. */
+async function trialPage(
+  browser: Browser,
+): Promise<{ page: Page; seen: Seen[]; close: () => Promise<void> }> {
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  const seen: Seen[] = [];
+  page.on("download", (download) => {
+    seen.push({
+      name: download.suggestedFilename(),
+      at: Date.now(),
+      bytes: download
+        .path()
+        .then((path) => statSync(path).size)
+        .catch(() => -1),
+    });
+  });
+  await page.goto("popgen2.html");
+  await page.evaluate(addTrialButton, TRIAL_BYTES);
+  return { page, seen, close: () => context.close() };
+}
+
+/** Clicks the button with `plan` and waits for each planned download:
+    its code's click, then DOWNLOAD_WAIT_MS for the event. */
+async function clickAndWait(
+  page: Page,
+  seen: readonly Seen[],
+  trialCase: string,
+  plan: readonly Planned[],
+): Promise<TrialRow[]> {
+  await page.evaluate((p) => {
+    (globalThis as unknown as { trialPlan: readonly Planned[] }).trialPlan = p;
+  }, plan);
+  await page.getByRole("button", { name: "Trial" }).click();
+  const rows: TrialRow[] = [];
+  for (const { delay, name } of plan) {
+    const handle = await page.waitForFunction(
+      (n) =>
+        (
+          globalThis as unknown as { trialClicks: CodeClick[] }
+        ).trialClicks.find((c) => c.name === n) ?? false,
+      name,
+      { timeout: delay + 30_000, polling: 100 },
+    );
+    const click = await handle.jsonValue();
+    if (click === false) {
+      throw new Error(`no click of the code for ${name}`);
+    }
+    const deadline = click.at + DOWNLOAD_WAIT_MS;
+    while (Date.now() < deadline && !seen.some((s) => s.name === name)) {
+      await page.waitForTimeout(100);
+    }
+    const event = seen.find((s) => s.name === name);
+    rows.push({
+      trialCase,
+      name,
+      delay,
+      active: click.active,
+      came: event !== undefined,
+      after: event === undefined ? "" : ms(event.at - click.at),
+      seenName: event?.name ?? "",
+      bytes:
+        event === undefined ? "" : (await event.bytes).toLocaleString("en-US"),
+    });
+  }
+  return rows;
+}
+
+test("DL1 D1 the trial of the automatic download: a file the page's code downloads at once, 10 s and 70 s after a real click, and a second file in the same page, after a second click or with none", async ({
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(600_000);
+  const rows: TrialRow[] = [];
+  const cases: {
+    name: string;
+    clicks: readonly (readonly Planned[])[];
+  }[] = [
+    {
+      name: "at once after the click",
+      clicks: [[{ delay: 0, name: "at-once.filtered.vcf.gz" }]],
+    },
+    {
+      name: "10 s after the click",
+      clicks: [[{ delay: 10_000, name: "after-10s.filtered.vcf.gz" }]],
+    },
+    {
+      name: "70 s after the click",
+      clicks: [[{ delay: 70_000, name: "after-70s.filtered.vcf.gz" }]],
+    },
+    {
+      name: "a second download 10 s after a second click",
+      clicks: [
+        [{ delay: 10_000, name: "first-click.filtered.vcf.gz" }],
+        [{ delay: 10_000, name: "second-click.filtered.nei" }],
+      ],
+    },
+    {
+      name: "a second download 10 s after the first, no click between",
+      clicks: [
+        [
+          { delay: 0, name: "first-of-two.filtered.vcf.gz" },
+          { delay: 10_000, name: "second-no-click.filtered.nei" },
+        ],
+      ],
+    },
+  ];
+  for (const { name, clicks } of cases) {
+    const { page, seen, close } = await trialPage(browser);
+    for (const plan of clicks) {
+      rows.push(...(await clickAndWait(page, seen, name, plan)));
+    }
+    await close();
+  }
+  report(
+    "The trial of the automatic download",
+    `${machine(browser, browserName)}; ${new Date().toISOString().slice(0, 10)}; each case on a new page of the built popgen2.html, from Playwright's click on a button the test adds; a file of ${TRIAL_BYTES.toLocaleString("en-US")} bytes downloaded as downloadFile does; a download counts as come when its event arrives within ${String(DOWNLOAD_WAIT_MS / 1000)} s of the code's click`,
+    [
+      "case",
+      "file",
+      "delay after the click",
+      "activation at the code's click",
+      "download came",
+      "event after the code's click",
+      "name given",
+      "bytes",
+    ],
+    rows.map((r) => [
+      r.trialCase,
+      r.name,
+      ms(r.delay),
+      String(r.active),
+      r.came ? "yes" : "no",
+      r.after,
+      r.seenName,
+      r.bytes,
+    ]),
+  );
+  // Measured whatever came: every planned download had its code's click.
+  expect(rows).toHaveLength(7);
 });
