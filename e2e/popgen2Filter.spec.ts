@@ -321,7 +321,7 @@ test("SF7 D2 after a crash of the pass the box is there, and a click leaves the 
   await expectNoViolations(makeAxeBuilder);
 });
 
-test("SF7 D2 the Tab key reaches the box after the four histograms of the variants and leaves it for the part of the individuals", async ({
+test("SF7 D2 the Tab key reaches the box after the four histograms of the variants, three with a threshold, and leaves it for the part of the individuals", async ({
   page,
 }) => {
   await openPage(page);
@@ -329,7 +329,8 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   await expectDone(page, "panel.vcf.gz");
   const variants = part(page, "Variants");
   const individuals = part(page, "Individuals");
-  await expect(variants.getByRole("slider")).toHaveCount(4);
+  // The expected heterozygosity, the fourth, has no threshold.
+  await expect(variants.getByRole("slider")).toHaveCount(3);
 
   await variants.getByRole("slider").last().focus();
   await page.keyboard.press("Tab");

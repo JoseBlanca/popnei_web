@@ -13,7 +13,8 @@
  * each pass, gives a result so far after every block of the file; and
  * the worker's `postMessage` keeps back its results so far and the final
  * result of the summary until the page releases them, by a message on
- * the BroadcastChannel "e2e-hold", which `release` sends. Each worker the
+ * the BroadcastChannel "e2e-hold", which `release` sends, and which can
+ * also crash the worker on demand. Each worker the
  * page makes is served so, a worker made after a Stop with nothing held.
  *
  * A release sent before the worker's script has made its channel would
@@ -30,8 +31,11 @@ const CHANNEL = "e2e-hold";
 
 /** What a release lets through: the results so far held, one or all, and
     those after them for `all`; or the final results, all and those after
-    them. */
-export type Release = "oneSoFar" | "allSoFar" | "result";
+    them. Or `crash`, which makes the worker stop as a crash of the wasm
+    would, with what it holds, at the moment the flow chooses, after a
+    result so far, where crashWorker.ts crashes it at a message of the
+    page. */
+export type Release = "oneSoFar" | "allSoFar" | "result" | "crash";
 
 /** What a worker says on the channel once it listens. */
 const LISTENING = "listening";
@@ -74,6 +78,10 @@ const FRONT = `{
   const channel = new BroadcastChannel(${JSON.stringify(CHANNEL)});
   channel.onmessage = (event) => {
     const release = event.data;
+    if (release === "crash") {
+      setTimeout(() => { throw new Error("a crash of the test"); }, 0);
+      return;
+    }
     if (release === "oneSoFar") {
       const first = held.soFar.shift();
       if (first !== undefined) realPost(first[0], first[1]);

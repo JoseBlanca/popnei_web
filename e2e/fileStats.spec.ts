@@ -89,13 +89,15 @@ async function titles(
     );
 }
 
-/** The titles of the six histograms, with no mean: the short ones of the
-    owner of 7 October 2026, and the full names. */
+/** The titles of the five histograms with a threshold, with no mean: the
+    short ones of the owner of 7 October 2026, and the full names. The
+    expected heterozygosity has no threshold, and so no box and no label
+    (docs/specs/steps/popgen2-filters.md, "The expected
+    heterozygosity"). */
 const TITLES = [
   ["Missing genotypes\u00a0max:", "Proportion of missing genotypes"],
   ["Major allele frequency\u00a0max:", "Major allele frequency"],
   ["Obs. het.\u00a0max:", "Observed heterozygosity"],
-  ["Exp. het. (unbiased)\u00a0max:", "Expected heterozygosity (unbiased)"],
   [
     "Missing GTs\u00a0max:",
     "Proportion of missing genotypes of each individual",
@@ -177,12 +179,13 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
     "The proportion of missing genotypes of 200 individuals, in 20 bins from 0 to 0.045.",
     "The observed heterozygosity of 200 individuals, in 20 bins from 0.32 to 0.4.",
   ]);
-  // No line of what each threshold keeps: each keeps every variant or
-  // individual, the missing rate's 0.1 too, and is grey.
+  // No line of what each threshold keeps: each of the five keeps every
+  // variant or individual, the missing rate's 0.1 on and the four others
+  // off, and is grey; the expected heterozygosity has no line.
   await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
   await expect(
     stats(page).locator("line.chart-threshold-keeps-all"),
-  ).toHaveCount(6);
+  ).toHaveCount(5);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
@@ -236,12 +239,12 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
     "The observed heterozygosity of 12 individuals, in 20 bins from 0.93 to 0.99.",
   ]);
   // The missing rate's 0.1 removes the variants with a missing rate of
-  // 2 / 12 and 3 / 12: red; the five others at the top of their axis,
-  // grey.
+  // 2 / 12 and 3 / 12: red; the four others off, grey; the expected
+  // heterozygosity with no threshold.
   await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
   await expect(
     stats(page).locator("line.chart-threshold-keeps-all"),
-  ).toHaveCount(5);
+  ).toHaveCount(4);
   const csv = await downloadCsv(page);
   expect(csv.name).toBe("tetraploid.individual_stats.csv");
   expect(csv.text.split("\n")).toHaveLength(14);
@@ -329,13 +332,13 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // variants so far, with no download yet; the box gives the variants
   // and the chromosomes read so far; the status region says it once.
   await release(page, "allSoFar");
-  // The thresholds at the top of their axis, those of the MAF, the two
-  // heterozygosities and the individuals, keep every one read so far.
+  // The thresholds off, those of the MAF, the observed heterozygosity and
+  // the individuals, keep every one.
   await expect(
-    stats(page).locator('[aria-valuetext$="keeps every variant so far"]'),
-  ).not.toHaveCount(0);
+    stats(page).locator('[aria-valuetext="1, keeps every variant"]'),
+  ).toHaveCount(2);
   await expect(
-    stats(page).locator('[aria-valuetext$="keeps every individual so far"]'),
+    stats(page).locator('[aria-valuetext="1, keeps every individual"]'),
   ).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect(downloadButton(page)).toHaveCount(0);

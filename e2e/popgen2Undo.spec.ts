@@ -9,13 +9,12 @@
  * of it; the keys of Undo and Redo; the focus handed from a button that
  * becomes disabled to the other; the order of the Tab key from Undo; a
  * file opened while the pass of the file before it runs, whose own pass
- * starts and is never said to be stopped; and the keys of Undo and Redo
- * kept by the line and the box of a threshold.
+ * starts and is never said to be stopped.
  *
- * No threshold changes the project yet (work package 9), so the change
- * undone here is a click of the FILTER box, shown for panel.vcf.gz and
- * not for panel.nei. Both files hold the same 1,200 variants of 200
- * individuals, counted by popnei.
+ * The change undone here is a click of the FILTER box, shown for
+ * panel.vcf.gz and not for panel.nei; the thresholds, their Undo and the
+ * keys of Undo on them are in popgen2Thresholds.spec.ts. Both files hold
+ * the same 1,200 variants of 200 individuals, counted by popnei.
  */
 import { join } from "node:path";
 
@@ -288,47 +287,4 @@ test("SF7 round a file opened while the pass of the file before it runs starts i
   await release(page, "result");
   await expectDone(page, "panel.nei");
   await expect(stopped).toHaveCount(0);
-});
-
-/** The histogram of the major allele frequency: its line and its box. */
-function mafThreshold(page: Page): {
-  readonly slider: Locator;
-  readonly box: Locator;
-} {
-  const group = stats(page).getByRole("group", {
-    name: "Major allele frequency",
-    exact: true,
-  });
-  return { slider: group.getByRole("slider"), box: group.getByRole("textbox") };
-}
-
-test("SF6 D2 Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z on the line or in the box of a threshold leave the change before them, and Cmd+Z in WebKit", async ({
-  page,
-  browserName,
-}) => {
-  await openPage(page);
-  await openAndUntick(page);
-  const { slider, box } = mafThreshold(page);
-  const keys = [
-    "Control+z",
-    "Control+y",
-    "Control+Shift+z",
-    ...(browserName === "webkit" ? ["Meta+z", "Meta+Shift+z"] : []),
-  ];
-
-  await slider.focus();
-  await page.keyboard.press("ArrowLeft");
-  for (const key of keys) {
-    await page.keyboard.press(key);
-    await expect(slider).toBeFocused();
-  }
-  await box.focus();
-  for (const key of keys) {
-    await page.keyboard.press(key);
-    await expect(box).toBeFocused();
-  }
-
-  await expect(filterBox(page)).not.toBeChecked();
-  await expect(undoButton(page)).toHaveAccessibleDescription(`Undo: ${KEPT}`);
-  await expect(redoButton(page)).toBeDisabled();
 });
