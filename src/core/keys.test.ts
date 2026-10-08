@@ -17,11 +17,13 @@ import { POPGEN_ANALYSES } from "./apps.ts";
 import {
   VARIANT_FILTER_ORDER,
   emptyProject,
+  turnOffVariantFilter,
+} from "./project.ts";
+import {
   filtersApplied,
   filtersAppliedTo,
   keepsPassed,
-  turnOffVariantFilter,
-} from "./project.ts";
+} from "./filtersApplied.ts";
 import type { Project, VariantSource } from "./project.ts";
 import {
   anyLoadId,

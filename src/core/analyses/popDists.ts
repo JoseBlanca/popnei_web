@@ -21,7 +21,6 @@ import {
   bothOf,
   counted,
   escaped,
-  filtersApplied,
   grouped,
   individualsNeeds,
   jobFilters,
@@ -34,6 +33,7 @@ import {
   LARGEST_WHOLE_NUMBER,
   MAX_NAMED,
 } from "../project.ts";
+import { filtersApplied } from "../filtersApplied.ts";
 import {
   populationListsNeeds,
   populationsColumnOf,

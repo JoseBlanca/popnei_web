@@ -9,7 +9,8 @@
  */
 
 import type { IndividualsKept } from "./individualsKept.ts";
-import { filtersApplied, grouped } from "./project.ts";
+import { grouped } from "./project.ts";
+import { filtersApplied } from "./filtersApplied.ts";
 import type { Project } from "./project.ts";
 
 /** The bytes of the file per genotype of a variant kept and an individual

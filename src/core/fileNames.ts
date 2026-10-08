@@ -7,7 +7,7 @@
  * (docs/specs/analyses/writeVariants.md, "The functions of core").
  */
 
-import { filtersApplied } from "./project.ts";
+import { filtersApplied } from "./filtersApplied.ts";
 import type { Project } from "./project.ts";
 
 /** The stem of a name that is only an extension, `.nei`. */

@@ -12,7 +12,6 @@ import {
   analysisOptions,
   emptyProject,
   individualListNeeds,
-  filtersApplied,
   jobFilters,
   loadIndividuals,
   loadVariants,
@@ -26,6 +25,7 @@ import {
   setVariantFilter,
   variantFilterNeeds,
 } from "./project.ts";
+import { filtersApplied } from "./filtersApplied.ts";
 import type {
   IndividualsReadGiven,
   Project,

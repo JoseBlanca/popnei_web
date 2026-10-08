@@ -10,7 +10,8 @@
  * histograms draw.
  */
 
-import { filtersApplied, grouped } from "../project.ts";
+import { grouped } from "../project.ts";
+import { filtersApplied } from "../filtersApplied.ts";
 import type { Project } from "../project.ts";
 import type { Warning } from "../store.ts";
 import { csvField, defect } from "./words.ts";

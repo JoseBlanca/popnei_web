@@ -24,7 +24,6 @@ import type { JsonObject, JsonValue, Key, WriteFormat } from "./keys.ts";
 import { individualsKept, keptNoneReason } from "./individualsKept.ts";
 import type { IndividualStats, IndividualsKept } from "./individualsKept.ts";
 import {
-  filtersApplied,
   freezeProject,
   individualListNeeds,
   jobFilters,
@@ -34,6 +33,7 @@ import {
   recordVariantsRead,
   variantFilterNeeds,
 } from "./project.ts";
+import { filtersApplied } from "./filtersApplied.ts";
 import type {
   AnalysisId,
   AppId,

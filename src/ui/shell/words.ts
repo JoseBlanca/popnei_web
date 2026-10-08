@@ -26,7 +26,6 @@ import {
   columnWarningsOf,
   counted,
   escaped,
-  filtersApplied,
   grouped,
   individualListNeeds,
   individualsCheck,
@@ -40,6 +39,7 @@ import {
   typesLost,
   variantFilterNeeds,
 } from "../../core/project.ts";
+import { filtersApplied } from "../../core/filtersApplied.ts";
 import type {
   AnalysisId,
   IndividualsSource,

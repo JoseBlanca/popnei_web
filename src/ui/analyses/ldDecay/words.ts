@@ -19,12 +19,8 @@ import {
 } from "../../../core/analyses/ldDecay.ts";
 import { fourDecimals } from "../../../core/analyses/words.ts";
 import { variantsStem } from "../../../core/fileNames.ts";
-import {
-  counted,
-  escaped,
-  filtersApplied,
-  grouped,
-} from "../../../core/project.ts";
+import { counted, escaped, grouped } from "../../../core/project.ts";
+import { filtersApplied } from "../../../core/filtersApplied.ts";
 import type { Project } from "../../../core/project.ts";
 import { numberText } from "../../widgets/committedNumber.ts";
 import type { NumberRefusal } from "../../widgets/committedNumber.ts";

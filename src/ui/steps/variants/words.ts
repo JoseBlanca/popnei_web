@@ -7,12 +7,8 @@
  */
 
 import { DEFAULT_ONLY_PASSED, DEFAULT_PLOIDY } from "../../../core/apps.ts";
-import {
-  counted,
-  escaped,
-  filtersApplied,
-  grouped,
-} from "../../../core/project.ts";
+import { counted, escaped, grouped } from "../../../core/project.ts";
+import { filtersApplied } from "../../../core/filtersApplied.ts";
 import type { Project, VariantSource } from "../../../core/project.ts";
 import type { VcfReadOptions } from "../../../worker/protocol.ts";
 import type { ButtonOf } from "../../analyses/status.ts";

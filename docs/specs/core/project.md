@@ -1609,6 +1609,10 @@ export function jobFilters(
   filters: readonly ProjectVariantFilter[],
 ): readonly VariantFilter[];
 
+// The next three are in src/core/filtersApplied.ts, a module that
+// imports only the types of project.ts, so that keys.ts, which
+// project.ts imports, reads them without a cycle of modules.
+
 /** Whether the variants of the file record whether each passed its
     FILTER: the read's keepsPassed once the file is read; before, or
     when the read failed, true for a VCF and false for a .nei file, for

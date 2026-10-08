@@ -23,9 +23,6 @@ import {
   individualsNeeds,
   jobFilters,
   loadIndividuals,
-  filtersApplied,
-  filtersAppliedTo,
-  keepsPassed,
   loadVariants,
   namesOf,
   ordinal,
@@ -59,6 +56,11 @@ import {
   populationsOf,
   populationsToRun,
 } from "./project.ts";
+import {
+  filtersApplied,
+  filtersAppliedTo,
+  keepsPassed,
+} from "./filtersApplied.ts";
 import {
   populationListsNeeds,
   populationsKeptNeeds,

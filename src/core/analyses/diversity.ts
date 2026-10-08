@@ -18,7 +18,6 @@ import { hasIndividualThreshold, individualsKept } from "../individualsKept.ts";
 import type { IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
-  filtersApplied,
   ONE_POPULATION,
   analysisOptions,
   counted,
@@ -36,6 +35,7 @@ import {
   MAX_NAMED,
   bothOf,
 } from "../project.ts";
+import { filtersApplied } from "../filtersApplied.ts";
 import {
   populationListsNeeds,
   populationsColumnOf,

@@ -8,7 +8,8 @@
  */
 
 import { writtenName } from "../../../core/fileNames.ts";
-import { filtersApplied, variantFilterNeeds } from "../../../core/project.ts";
+import { variantFilterNeeds } from "../../../core/project.ts";
+import { filtersApplied } from "../../../core/filtersApplied.ts";
 import type { Project } from "../../../core/project.ts";
 import type { WriteStatus } from "../../../core/store.ts";
 import { WRITE_MAX_BYTES } from "../../../core/writeEstimate.ts";

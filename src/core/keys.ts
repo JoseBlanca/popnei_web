@@ -7,7 +7,11 @@
  */
 
 import type { WriteJob } from "../worker/protocol.ts";
-import { filtersApplied, filtersAppliedTo, keepsPassed } from "./project.ts";
+import {
+  filtersApplied,
+  filtersAppliedTo,
+  keepsPassed,
+} from "./filtersApplied.ts";
 import type { Project, VariantSource } from "./project.ts";
 import type { AnalysisDef } from "./store.ts";
 

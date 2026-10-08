@@ -16,12 +16,12 @@
  */
 
 import {
-  filtersApplied,
   VARIANT_FILTER_ORDER,
   escaped,
   grouped,
   jobFilters,
 } from "../project.ts";
+import { filtersApplied } from "../filtersApplied.ts";
 import type { Project } from "../project.ts";
 import type {
   AnalysisDef,

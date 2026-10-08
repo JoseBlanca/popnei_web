@@ -22,7 +22,6 @@
 import type { IndividualStats, IndividualsKept } from "../individualsKept.ts";
 import type { JsonObject } from "../keys.ts";
 import {
-  filtersApplied,
   MAX_LD_DIST,
   ONE_POPULATION,
   VARIANT_FILTER_ORDER,
@@ -37,6 +36,7 @@ import {
   shown,
   variantFilterNeeds,
 } from "../project.ts";
+import { filtersApplied } from "../filtersApplied.ts";
 import type {
   Grouping,
   IndividualsSource,

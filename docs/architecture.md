@@ -2465,11 +2465,15 @@ owner kept for the new page.
 ```
 src/core/
   project.ts        the Project, its commands, the validation of a project file;
-                    from 7 October 2026 also filtersApplied, the filters
-                    of the variants that apply to the project's file,
-                    which everything that reads the filters applied
-                    reads, and setThreshold, the command of a threshold
-                    of popgen2.html
+                    from 7 October 2026 also setThreshold, the command
+                    of a threshold of popgen2.html
+  filtersApplied.ts from 8 October 2026, filtersApplied, the filters of
+                    the variants that apply to the project's file, which
+                    everything that reads the filters applied reads, and
+                    keepsPassed and filtersAppliedTo beside it; a module
+                    of its own that imports only the types of project.ts,
+                    so that keys.ts reads it and project.ts, which
+                    imports keys.ts, forms no cycle with it
   result.ts         the Result type of what can fail with good code
   keys.ts           the canonical form of the inputs of a result, and its hash
   history.ts        undo and redo over projects
