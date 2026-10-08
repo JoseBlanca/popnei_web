@@ -450,6 +450,12 @@ export interface StoreConfig<J, R, F = never> {
   readonly cacheMaxBytes: number;
   /** The steps of undo kept, `MAX_UNDO_STEPS`. */
   readonly maxUndoSteps: number;
+  /** The step the reason of a lock for no individual kept sends the user
+      to, `keptNoneReason`'s third argument: the Variants step when
+      absent; `null` on a page with no steps, popgen2.html, whose words
+      end "Loosen them." (docs/specs/steps/popgen2-download.md, "Its
+      words"). */
+  readonly keptNoneStep?: string | null;
 }
 
 /** What the store takes from the pass of a result. */
@@ -700,6 +706,11 @@ export function createStore<J, R, F = never>(
     ids.add(def.id);
   }
   const statistics = config.statistics;
+  /** The step the words of no individual kept send the user to. */
+  const keptNoneStep =
+    config.keptNoneStep === undefined
+      ? "the Variants step"
+      : config.keptNoneStep;
   /** The place of the analysis of the statistics of each individual in
       the definitions, -1 when the store has none. */
   const statsIndex =
@@ -1191,7 +1202,7 @@ export function createStore<J, R, F = never>(
         };
       }
       const reason =
-        keptNoneReason(history.present.project, keptNow) ??
+        keptNoneReason(history.present.project, keptNow, keptNoneStep) ??
         keptNeedsOf(def, keptNow);
       if (reason !== null) {
         return { kind: "locked", reason };
@@ -1223,7 +1234,11 @@ export function createStore<J, R, F = never>(
     if (writeKey.kind === "locked") {
       return { kind: "locked", reason: writeKey.reason };
     }
-    const reason = keptNoneReason(history.present.project, keptNow);
+    const reason = keptNoneReason(
+      history.present.project,
+      keptNow,
+      keptNoneStep,
+    );
     if (reason !== null) {
       return { kind: "locked", reason };
     }

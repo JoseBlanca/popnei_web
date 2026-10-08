@@ -75,6 +75,9 @@ export function createPopgen2Store(
     appVersion: deps.appVersion,
     cacheMaxBytes: CACHE_MAX_BYTES,
     maxUndoSteps: MAX_UNDO_STEPS,
+    // The page has no steps, so the words of no individual kept send the
+    // user to none (docs/specs/steps/popgen2-download.md, "Its words").
+    keptNoneStep: null,
   });
 }
 

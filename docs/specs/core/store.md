@@ -1233,6 +1233,9 @@ export function createStore<J, R, F = never>(config: {
   readonly appVersion: string;
   readonly cacheMaxBytes: number;          // CACHE_MAX_BYTES
   readonly maxUndoSteps: number;           // MAX_UNDO_STEPS
+  /** The step the reason of a lock for no individual kept sends the user to, the third argument of
+      `keptNoneReason`: the Variants step when absent; null on popgen2.html, which has no steps. */
+  readonly keptNoneStep?: string | null;
 }): Store<R, F>;
 
 /** What the store takes from the pass of a result. */

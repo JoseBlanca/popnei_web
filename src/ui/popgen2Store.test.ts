@@ -500,7 +500,7 @@ describe("DL4 D3 the store of popgen2.html writes, and works out the individuals
     expect(store.getState().write).toStrictEqual({
       kind: "locked",
       reason:
-        "The filters of individuals keep none of the 2 individuals of panel.vcf.gz. Loosen them in the Variants step.",
+        "The filters of individuals keep none of the 2 individuals of panel.vcf.gz. Loosen them.",
     });
     expect(store.startWrite("vcf")).toBeNull();
     expect(writes).toHaveLength(0);

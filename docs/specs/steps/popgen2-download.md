@@ -114,11 +114,12 @@ it, and it is not built.
 
 When the filters of the individuals keep none, the store's write is
 `locked`, and the button gives way to the words of `keptNoneReason` of
-`docs/specs/core/individualsKept.md` without a step to name, which the
-page asks of it with its new third argument, `null`: "The filters of
+`docs/specs/core/individualsKept.md` without a step to name, its third
+argument `null`, which the store of `popgen2.html` gives it
+(`keptNoneStep` of the store's configuration): "The filters of
 individuals keep none of the 200 individuals of panel.nei. Loosen
-them." The reason the store's lock carries ends "in the Variants step",
-a step of the old page, and is not shown here. Nothing can be written,
+them." The store of the old page keeps the words that end "in the
+Variants step". Nothing can be written,
 since popnei refuses an empty list of individuals. The store's other
 reasons of a lock, `projectNeeds`, `individualListNeeds` and
 `variantFilterNeeds`, cannot hold once the one pass is finished on this
