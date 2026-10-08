@@ -12,7 +12,7 @@
 
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
 import type { VariantStatistic } from "../../core/analyses/variantChecks.ts";
-import { counted, escaped, grouped } from "../../core/project.ts";
+import { counted, escaped } from "../../core/project.ts";
 import type { AppState } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
@@ -119,18 +119,12 @@ export const PART_STOPPED =
     words the box of the file says. */
 export const PART_FAILED = "Not calculated.";
 
-/** What a line of a plot drawn from a result so far ends with. */
+/** What the words of a threshold drawn from a result so far end with. */
 const SO_FAR = " so far";
 
 /** What the description of a histogram drawn from a result so far ends
     with, for a screen reader. */
 export const SO_FAR_DESCRIPTION = "Drawn from the variants read so far.";
-
-/** What the description of a histogram of the variants says, for a
-    screen reader, when its threshold keeps a range: the bar at the line
-    is hatched, and why. */
-export const UNDECIDED_DESCRIPTION =
-  "The bar at the dashed line is hatched: the bins cannot tell how many of its variants the line keeps.";
 
 /** The kind of the words of the progress of the statistics, their start
     and their end, of which the status region says only the latest said
@@ -255,77 +249,40 @@ const INDIVIDUAL_THRESHOLD_NAMES: Readonly<
   observedHeterozygosity: "maximum observed heterozygosity of an individual",
 });
 
-/** What a threshold keeps of the variants or the individuals of one
-    histogram, those with a value: from `keptLow` to `keptHigh`, one
-    number when the two are equal, of `withValue`. */
-export interface ThresholdCounts {
-  /** The fewest it may keep. */
-  readonly keptLow: number;
-  /** The most it may keep, `keptLow` when the bins can tell. */
-  readonly keptHigh: number;
-  /** Those with a value, which it keeps or removes. */
-  readonly withValue: number;
-}
-
-/** The kind of what a histogram counts, in the words under it. */
+/** The kind of what a histogram counts, in the words of its threshold. */
 export type Counted = "variant" | "individual";
 
-/** The line under the row of a threshold, over its plot: what it keeps
-    of those with a value, "Keeps 1,050 of 1,200 variants", the range the
-    bins allow, "Keeps 564 to 566 of 1,200 variants", or "Keeps all 1,200
-    variants"; ending "so far" while the pass runs, `soFar`. No
-    explanation of a range: the hatched bar shows it. The range is
-    written with "to", which a screen reader reads as written, where it
-    may read a dash as nothing, "564 566". */
-export function keepsLine(
-  counts: ThresholdCounts,
-  noun: Counted,
-  soFar = false,
-): string {
-  const keeps = keepsWords(counts, noun);
-  return `${keeps.charAt(0).toUpperCase()}${keeps.slice(1)}${soFar ? SO_FAR : ""}`;
-}
-
-/** The longest the line of a threshold can be over `withValue`
-    variants or individuals with a value: a range of two numbers of the
-    digits of `withValue`, "so far", "Keeps 200,000 to 200,000 of 200,000
-    variants so far". The screen keeps the room of it under the line, so
-    that the plot does not move as the words change, while the line is
-    dragged and at the end of the pass. */
-export function longestKeepsLine(withValue: number, noun: Counted): string {
-  const number = grouped(withValue);
-  return `Keeps ${number} to ${number} of ${counted(withValue, noun)}${SO_FAR}`;
-}
-
-/** What the line of a threshold says to a screen reader as its value:
-    the number, `shown` as the box shows it, and what it keeps of those
-    with a value, "0.1, keeps 1,050 of 1,200 variants", "0.05, keeps 1,113
-    to 1,152 of 1,200 variants", "0.3, keeps all 1,200 variants"; ending
-    "so far" while the pass runs, `soFar`. */
+/** What a screen reader says as the value of the line of a threshold:
+    the number, `shown` as the box shows it, "0.05"; and for a threshold
+    that keeps every variant or individual with a value, `keepsAll`,
+    which the screen draws in grey, what that grey says, "1, keeps every
+    variant", ending "so far" while the pass runs, `soFar`. */
 export function thresholdValueText(
   shown: number,
-  counts: ThresholdCounts,
+  keepsAll: boolean,
   noun: Counted,
   soFar = false,
 ): string {
-  return `${numberText(shown)}, ${keepsWords(counts, noun)}${soFar ? SO_FAR : ""}`;
+  const number = numberText(shown);
+  return keepsAll
+    ? `${number}, keeps every ${noun}${soFar ? SO_FAR : ""}`
+    : number;
 }
 
-/** What a threshold keeps, in lower case: "keeps 1,113 to 1,152 of 1,200
-    variants", "keeps all 1,200 variants", "no variant has a value". */
-function keepsWords(counts: ThresholdCounts, noun: Counted): string {
-  const { keptLow, keptHigh, withValue } = counts;
-  if (withValue === 0) return `no ${noun} has a value`;
-  if (keptLow === withValue && keptHigh === withValue) {
-    return withValue === 1
-      ? `keeps the only ${noun}`
-      : `keeps all ${counted(withValue, noun)}`;
-  }
-  const range =
-    keptLow === keptHigh
-      ? grouped(keptLow)
-      : `${grouped(keptLow)} to ${grouped(keptHigh)}`;
-  return `keeps ${range} of ${counted(withValue, noun)}`;
+/** What a screen reader says of the box of a threshold that keeps every
+    variant or individual with a value, which the screen draws in grey,
+    as its description: "This threshold removes no variant."; ending "so
+    far" while the pass runs, `soFar`. */
+export function removesNothingText(noun: Counted, soFar = false): string {
+  return `This threshold removes no ${noun}${soFar ? SO_FAR : ""}.`;
+}
+
+/** What is announced when a number committed in the box of a threshold
+    that kept every variant or individual with a value makes it remove
+    some, and the grey goes: "This threshold removes variants."; ending
+    "so far" while the pass runs, `soFar`. */
+export function removesSomeText(noun: Counted, soFar = false): string {
+  return `This threshold removes ${noun}s${soFar ? SO_FAR : ""}.`;
 }
 
 /** The line under a histogram of the individuals of those with no value,

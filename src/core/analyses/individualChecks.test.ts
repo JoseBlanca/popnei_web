@@ -513,7 +513,7 @@ describe("VS3 D1 the statistics of each individual: the descriptions", () => {
         0.03,
       ),
     ).toBe(
-      "The proportion of missing genotypes of 200 individuals, in 20 bins from 0.0175 to 0.0442. The threshold 0.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0.0295 to 0.0308, 12 individuals, and removes the 10 bins above it, 84 individuals.",
+      "The proportion of missing genotypes of 200 individuals, in 20 bins from 0.0175 to 0.0442. The threshold 0.03 keeps the 9 bins up to it, 104 individuals, splits the bin from 0.0295 to 0.0308, 25 individuals, and removes the 10 bins above it, 71 individuals.",
     );
   });
 

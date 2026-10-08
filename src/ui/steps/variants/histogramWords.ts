@@ -47,9 +47,11 @@ export const STATE_COLUMN = "This filter";
 /** The words of the button that downloads the bins of a histogram. */
 export const BINS_CSV_LABEL = "Download the bins as CSV";
 
-/** The line above each table of bins. */
+/** The line above each table of bins: each bin holds its upper edge,
+    as popnei's bins of the variants and the page's of the individuals
+    do. */
 export const BINS_LINE =
-  "Each bin runs from its lower edge up to its upper edge, not included; the last bin includes its upper edge.";
+  "Each bin runs from above its lower edge up to its upper edge, included; the first bin includes its lower edge too.";
 
 /** The two rows of the legend under the threshold's. */
 const KEPT_LABEL = "Kept by this filter";

@@ -153,7 +153,7 @@ const RUN = {
     fileId: "load-a",
     filters: [],
     minNumIndividuals: 0,
-    numBins: 1280,
+    numBins: 1000,
     range: [0, 1],
   },
 };

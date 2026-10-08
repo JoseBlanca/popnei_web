@@ -17,6 +17,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
 
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- the test writes a vars file that records the FILTER, from low_qual.vcf.gz, with popnei itself, since no fixture is one
+import { openVcf, writeVars } from "popnei";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type {
@@ -48,7 +50,7 @@ const VCF: LoadToOpen = {
 };
 /** The bins of the histograms of the variants that popgen2.html asks
     for, those of variantChecks.ts. */
-const BINS = { minNumIndividuals: 0, numBins: 1280, range: [0, 1] } as const;
+const BINS = { minNumIndividuals: 0, numBins: 1000, range: [0, 1] } as const;
 const JOB: VariantsSummaryJob = {
   analysis: "variantsSummary",
   fileId: FILE_ID,
@@ -340,6 +342,57 @@ describe("open-variants 1 the runner's summary of the variants file: the lengths
   });
 });
 
+describe("popnei-0.2.2 3 the FILTER failures of the summary, from the same pass", () => {
+  // popnei 0.2.2 under node, 7 October 2026: calcVariantsSummary with
+  // filterColumn {} gives these counts, and refuses panel.nei, whose
+  // keepsPassed is false.
+  test.each([
+    ["low_qual.vcf.gz", { passed: 900, failed: 300 }],
+    ["panel.vcf.gz", { passed: 1200, failed: 0 }],
+  ])("%s read with every variant gives %o", (name, filterColumn) => {
+    const runner = createRunner();
+    expect(runner.open(PAGE_VCF, { name, source: bytesOf(name) }).kind).toBe(
+      "ok",
+    );
+    expect(summaryOf(runner.run(JOB, ignore)).filterColumn).toEqual(
+      filterColumn,
+    );
+  });
+
+  test("low_qual.vcf.gz read with only the passed variants: none failed", () => {
+    expect(
+      summaryOf(opened("low_qual.vcf.gz").run(JOB, ignore)).filterColumn,
+    ).toEqual({ passed: 900, failed: 0 });
+  });
+
+  test.each(["panel.nei", "ld.nei", "tetraploid.nei"])(
+    "%s, a vars file that does not record the FILTER, gives null and the rest of the summary",
+    (name) => {
+      const result = summaryOf(opened(name).run(JOB, ignore));
+      expect(result.filterColumn).toBeNull();
+      expect(result.passStats.numVars).toBeGreaterThan(0);
+    },
+  );
+
+  test("a vars file written by popnei 0.2.2 from low_qual.vcf.gz records the FILTER, and gives 300 failed of 1,200", () => {
+    const written = writeVars(
+      openVcf(bytesOf("low_qual.vcf.gz"), { onlyPassed: false }),
+    );
+    if (!("bytes" in written)) throw new Error("no bytes written");
+    const runner = createRunner();
+    expect(
+      runner.open(NEI, {
+        name: "low_qual.nei",
+        source: new Uint8Array(written.bytes),
+      }).kind,
+    ).toBe("ok");
+    expect(summaryOf(runner.run(JOB, ignore)).filterColumn).toEqual({
+      passed: 900,
+      failed: 300,
+    });
+  });
+});
+
 /** An answer of calcVarDensity made by hand: the windows of `chroms`,
     from `start`, with `numVars`, and a pass of `numVarsOfPass`. */
 function density(
@@ -416,7 +469,11 @@ function halvesVcf(
   for (let v = 0; v < numFirst + numSecond; v += 1) {
     const rows = v < numFirst ? FIRST_HALF_GTS : SECOND_HALF_GTS;
     const gts = rows[v % rows.length] ?? [];
-    lines.push(`1\t${String(v + 1)}\t.\tA\tT\t.\t.\t.\tGT\t${gts.join("\t")}`);
+    // The variants of the second half failed their FILTER.
+    const filter = v < numFirst ? "." : "LowQ";
+    lines.push(
+      `1\t${String(v + 1)}\t.\tA\tT\t.\t${filter}\t.\tGT\t${gts.join("\t")}`,
+    );
   }
   return new Uint8Array(gzipSync(`${lines.join("\n")}\n`));
 }
@@ -488,12 +545,16 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
       result.perVar.missingRate.mean,
     );
     expect(last).toEqual(result);
+    // The FILTER failures so far: none in the first half, 10,000 at the
+    // end, the second half.
+    expect(first?.filterColumn).toEqual({ passed: 10_000, failed: 0 });
+    expect(result.filterColumn).toEqual({ passed: 10_000, failed: 10_000 });
     expect(numbersOf(result)).toEqual({
       chroms: ["1"],
       numVarsPerChrom: [20_000],
       passStats: { numVars: 20_000, filtering: {} },
     });
-    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perVar.binEdges).toHaveLength(1001);
     expect(result.perIndividual.individuals).toEqual(["s0", "s1", "s2"]);
     // No buffer of a result so far is that of the result or of another
     // result so far, and transferring them leaves the result whole.
@@ -508,7 +569,7 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
       }
       structuredClone(given, { transfer: buffers });
     }
-    expect(result.perVar.binEdges).toHaveLength(1281);
+    expect(result.perVar.binEdges).toHaveLength(1001);
   });
 
   test("copiedSummary copies every array transferablesOf lists into a buffer of its own", () => {
@@ -556,6 +617,7 @@ describe("live-stats 2 the results so far of the summary of the variants file", 
         passStats,
       },
       passStats,
+      filterColumn: { passed: 6, failed: 0 },
     };
     const copy = copiedSummary(given);
     const buffers = transferablesOf(copy);

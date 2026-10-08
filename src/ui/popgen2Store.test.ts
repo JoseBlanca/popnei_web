@@ -55,7 +55,7 @@ describe("the store of popgen2.html", () => {
         fileId,
         filters: [],
         minNumIndividuals: 0,
-        numBins: 1280,
+        numBins: 1000,
         range: [0, 1],
       },
     ]);

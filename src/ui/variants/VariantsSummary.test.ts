@@ -196,14 +196,25 @@ function buttonNamed(name: string): HTMLButtonElement {
   return found;
 }
 
-describe("one-pass the box of a file being read has no line of the FILTER failures", () => {
-  for (const format of ["vcf", "nei"] as const) {
-    test(`a ${format} file`, async () => {
-      await drawPage(format, { read: false });
-      expect(linesOf()).toContain("Variants: reading…");
-      expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
-    });
-  }
+describe("popnei-0.2.2 3 the box of a file being read: the line of the FILTER failures for a VCF, none for a .nei file", () => {
+  test("a vcf file", async () => {
+    await drawPage("vcf", { read: false });
+    expect(linesOf()).toEqual([
+      "low_qual.vcf.gz · 30 KB",
+      "Individuals: reading…",
+      "Variants: reading…",
+      "FILTER failures: reading…",
+      "Chromosomes: reading…",
+      "Ploidy: reading…",
+      expect.stringMatching(/^Reading the file\./u),
+    ]);
+  });
+
+  test("a nei file", async () => {
+    await drawPage("nei", { read: false });
+    expect(linesOf()).toContain("Variants: reading…");
+    expect(linesOf().some((line) => line.includes("FILTER"))).toBe(false);
+  });
 });
 
 describe("the one button of the box of the variants file", () => {
@@ -277,6 +288,8 @@ describe("the one button of the box of the variants file", () => {
     });
     expect(lines()).toContain("Variants: 52,007 so far");
     expect(lines()).not.toContain("counting");
+    // A .nei file that does not record the FILTER: no line of it.
+    expect(lines()).not.toContain("FILTER");
     // The chromosomes with a variant among those read.
     expect(lines()).toContain("Chromosomes: 2 so far");
   });
@@ -310,7 +323,29 @@ async function endWith(page: Page, at: number, result: JobResult) {
 }
 
 describe("one-pass a VCF is read once", () => {
-  test("the summary is the one pass: its end ends the chain, with no line of the FILTER failures, and the focus on Stop moves onto the lines", async () => {
+  test("popnei-0.2.2 3 while the summary runs, the FILTER failures are counting…, then those of the variants read so far", async () => {
+    const page = await drawPage("vcf");
+    act(() => {
+      page.autoRuns.sync();
+    });
+    expect(linesOf()).toContain("FILTER failures: counting…");
+    await act(async () => {
+      page.requests[0]?.soFar(
+        summaryResult(["1"], [400], ["i1", "i2"], { passed: 325, failed: 75 }),
+      );
+      await Promise.resolve();
+    });
+    expect(linesOf()).toEqual([
+      "low_qual.vcf.gz · 30 KB",
+      "Individuals: 2",
+      "Variants: 400 so far",
+      "FILTER failures: 75 so far",
+      "Chromosomes: 1 so far",
+      "Ploidy: 2",
+    ]);
+  });
+
+  test("the summary is the one pass: its end ends the chain, with the FILTER failures of its result, and the focus on Stop moves onto the lines", async () => {
     const page = await drawPage("vcf");
     act(() => {
       page.autoRuns.sync();
@@ -321,7 +356,11 @@ describe("one-pass a VCF is read once", () => {
       stop.focus();
     });
 
-    await endWith(page, 0, summaryResult(["1"], [1200], ["i1", "i2"]));
+    await endWith(
+      page,
+      0,
+      summaryResult(["1"], [1200], ["i1", "i2"], { passed: 900, failed: 300 }),
+    );
     expect(page.requests.map((r) => r.job.analysis)).toEqual([
       "variantsSummary",
     ]);
@@ -329,6 +368,7 @@ describe("one-pass a VCF is read once", () => {
       "low_qual.vcf.gz · 30 KB",
       "Individuals: 2",
       "Variants: 1,200",
+      "FILTER failures: 300",
       "Chromosomes: 1",
       "Ploidy: 2",
     ]);
@@ -337,7 +377,7 @@ describe("one-pass a VCF is read once", () => {
     expect(document.activeElement?.textContent).toContain("Variants: 1,200");
   });
 
-  test("a Stop during the summary says not counted on the two lines, beside Start again", async () => {
+  test("a Stop during the summary says not counted on the three lines, beside Start again", async () => {
     const page = await drawPage("vcf");
     act(() => {
       page.autoRuns.sync();
@@ -355,6 +395,7 @@ describe("one-pass a VCF is read once", () => {
       "low_qual.vcf.gz · 30 KB",
       "Individuals: 2",
       "Variants: not counted",
+      "FILTER failures: not counted",
       "Chromosomes: not counted",
       "Ploidy: 2",
     ]);
@@ -385,6 +426,7 @@ describe("one-pass a VCF is read once", () => {
         "low_qual.vcf.gz · 30 KB",
         "Individuals: 2",
         "Variants: not counted",
+        "FILTER failures: not counted",
         "Chromosomes: not counted",
         "Ploidy: 2",
         "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.",

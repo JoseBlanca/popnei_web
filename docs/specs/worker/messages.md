@@ -60,7 +60,11 @@ October 2026 when the owner took that count out, so that popgen2.html
 reads each file once (`docs/plans/one-pass.md`): the job and its result
 are removed, `passed` in the counts of any result is `extraFields`, and
 `PROTOCOL_VERSION` is 11; the count waits for popnei's summary to give
-it, popnei issue #12 (JoseBlanca/popnei).
+it, popnei issue #12 (JoseBlanca/popnei). Revised on 7 October 2026 for
+popnei 0.2.2, whose summary gives it (`docs/plans/popnei-0.2.2.md`, "The
+FILTER failures"): the result of `variantsSummary` has the field
+`filterColumn`, `null` or an object of exactly `passed` and `failed`,
+two whole numbers, and `PROTOCOL_VERSION` is 12.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest
@@ -481,7 +485,7 @@ Every field is `readonly`, and every array `readonly T[]`, in the code;
 The version of the messages.
 
 ```ts
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 ```
 
 The requests of the calculation worker, and what it sends back.

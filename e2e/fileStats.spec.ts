@@ -9,19 +9,17 @@
  * box of the file, and its Start again; a crash of the pass; axe at each
  * state reached.
  *
- * The numbers are popnei's, from js-v0.2.0 under node on the same files,
- * which js-v0.2.1 gives unchanged, with the options the runner gives (1,280 bins over 0 to
- * 1, minNumIndividuals 0, no filter), on 6 October 2026: panel.vcf.gz,
- * 1,200 variants of 200 individuals, the first and the last of popnei's
- * bins with a count from 0 to 0.0805 for the missing rate, 0.5 to 0.9875
- * for the MAF, 0.0258 to 0.6133 and 0.0258 to 0.5016 for the observed and
- * the expected heterozygosity; the individuals' missing rates from 0.0175
+ * The numbers are popnei's, from js-v0.2.2 under node on the same files,
+ * with the options the runner gives (1,000 bins over 0 to 1 that hold
+ * their right edge, minNumIndividuals 0, no filter), on 7 October 2026:
+ * panel.vcf.gz, 1,200 variants of 200 individuals, the MAF from 0.5, in
+ * the bin that ends there, and the variants' axes of
+ * e2e/fixtures/variant_fine_bins.json; the individuals' missing rates from 0.0175
  * to 0.0442 and heterozygosities from 0.3211 to 0.3931; the most missing
  * individual s082 at 0.0442 (heterozygosity 0.3688), the most
  * heterozygous s026 at 0.3931 (missing 0.0333). tetraploid.vcf.gz, 200
- * variants of 12 individuals: 0 to 0.2508, 0.3328 to 0.5688, 0.7266 to 1
- * and 0.9023 to 0.9727; the individuals from 0.02 to 0.085 and 0.9301 to
- * 0.9847; the most missing t04 at 0.0850.
+ * variants of 12 individuals; the individuals from 0.02 to 0.085 and
+ * 0.9301 to 0.9847; the most missing t04 at 0.0850.
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -167,25 +165,23 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   ]);
   expect(await titles(page)).toEqual(TITLES);
   // Each axis over the range of its values rounded out, the missing rates
-  // from 0; the variants' bins popnei's 1,280 added up, about 40.
+  // from 0; the variants' bins popnei's 1,000 added up, about 40, and no
+  // narrower than the distance between two values: for the missing rate
+  // of 200 individuals, a bin of 0 to 0.001, its zeros, and 20 of 0.005.
   await expect(descriptions(page)).toHaveText([
-    "The proportion of missing genotypes of 1,200 variants, in 32 bins from 0 to 0.1.",
-    "The major allele frequency of 1,200 variants, in 40 bins from 0.5 to 1.",
-    "The observed heterozygosity of 1,200 variants, in 32 bins from 0 to 0.7.",
-    "The unbiased expected heterozygosity of 1,200 variants, in 44 bins from 0 to 0.55.",
+    "The proportion of missing genotypes of 1,200 variants, in 21 bins from 0 to 0.1.",
+    "The major allele frequency of 1,200 variants, in 50 bins from 0.45 to 1.",
+    "The observed heterozygosity of 1,200 variants, in 35 bins from 0 to 0.7.",
+    "The unbiased expected heterozygosity of 1,200 variants, in 50 bins from 0 to 0.55.",
     "The proportion of missing genotypes of 200 individuals, in 20 bins from 0 to 0.045.",
     "The observed heterozygosity of 200 individuals, in 20 bins from 0.32 to 0.4.",
   ]);
-  // What each threshold keeps of the variants or the individuals in its
-  // bins.
+  // No line of what each threshold keeps: each keeps every variant or
+  // individual, the missing rate's 0.1 too, and is grey.
+  await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
   await expect(
-    stats(page).getByText(
-      /^Keeps [\d,]+(?: to [\d,]+)? of 1,200 variants$|^Keeps all 1,200 variants$/u,
-    ),
-  ).toHaveCount(4);
-  await expect(stats(page).getByText("Keeps all 200 individuals")).toHaveCount(
-    2,
-  );
+    stats(page).locator("line.chart-threshold-keeps-all"),
+  ).toHaveCount(6);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
@@ -228,22 +224,23 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
 
   await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
   expect(await titles(page)).toEqual(TITLES);
+  // The missing rate, multiples of 1 / 12: a bin of 0 to 0.001, its
+  // zeros, and 3 of 0.1 from 0.001 to 0.3.
   await expect(descriptions(page)).toHaveText([
-    "The proportion of missing genotypes of 200 variants, in 32 bins from 0 to 0.3.",
-    "The major allele frequency of 200 variants, in 32 bins from 0.3 to 0.6.",
-    "The observed heterozygosity of 200 variants, in 32 bins from 0.7 to 1.",
-    "The unbiased expected heterozygosity of 200 variants, in 32 bins from 0.9 to 1.",
+    "The proportion of missing genotypes of 200 variants, in 4 bins from 0 to 0.3.",
+    "The major allele frequency of 200 variants, in 12 bins from 0.3 to 0.6.",
+    "The observed heterozygosity of 200 variants, in 30 bins from 0.7 to 1.",
+    "The unbiased expected heterozygosity of 200 variants, in 50 bins from 0.9 to 1.",
     "The proportion of missing genotypes of 12 individuals, in 20 bins from 0 to 0.09.",
     "The observed heterozygosity of 12 individuals, in 20 bins from 0.93 to 0.99.",
   ]);
+  // The missing rate's 0.1 removes the variants with a missing rate of
+  // 2 / 12 and 3 / 12: red; the five others at the top of their axis,
+  // grey.
+  await expect(stats(page).getByText(/^Keeps /u)).toHaveCount(0);
   await expect(
-    stats(page).getByText(
-      /^Keeps [\d,]+(?: to [\d,]+)? of 200 variants$|^Keeps all 200 variants$/u,
-    ),
-  ).toHaveCount(4);
-  await expect(stats(page).getByText("Keeps all 12 individuals")).toHaveCount(
-    2,
-  );
+    stats(page).locator("line.chart-threshold-keeps-all"),
+  ).toHaveCount(5);
   const csv = await downloadCsv(page);
   expect(csv.name).toBe("tetraploid.individual_stats.csv");
   expect(csv.text.split("\n")).toHaveLength(14);
@@ -331,12 +328,13 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // variants so far, with no download yet; the box gives the variants
   // and the chromosomes read so far; the status region says it once.
   await release(page, "allSoFar");
-  const overSoFar = stats(page).getByText(
-    /^Keeps [\d,]+(?: to [\d,]+)? of [\d,]+ variants so far$|^Keeps all [\d,]+ variants so far$/u,
-  );
-  await expect(overSoFar).toHaveCount(4);
+  // The thresholds at the top of their axis, those of the MAF, the two
+  // heterozygosities and the individuals, keep every one read so far.
   await expect(
-    stats(page).getByText("Keeps all 1,000 individuals so far"),
+    stats(page).locator('[aria-valuetext$="keeps every variant so far"]'),
+  ).not.toHaveCount(0);
+  await expect(
+    stats(page).locator('[aria-valuetext$="keeps every individual so far"]'),
   ).toHaveCount(2);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   await expect(downloadButton(page)).toHaveCount(0);
@@ -360,12 +358,12 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // missing rate, which every variant has, is over every variant the box
   // counted.
   await expect(stats(page).getByText(/so far/u)).toHaveCount(0);
-  await expect(
-    stats(page).getByText(
-      `Keeps all ${HELD_VCF_VARIANTS.toLocaleString("en-US")} variants`,
-      { exact: true },
+  await expect(descriptions(page).first()).toHaveText(
+    new RegExp(
+      `^The proportion of missing genotypes of ${HELD_VCF_VARIANTS.toLocaleString("en-US")} variants, `,
+      "u",
     ),
-  ).not.toHaveCount(0);
+  );
   await expect
     .poll(async () =>
       (await announced(page)).some((text) =>
@@ -379,7 +377,9 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // the variants and the chromosomes in the box, not on the top of the
   // page.
   const counted = `Variants: ${HELD_VCF_VARIANTS.toLocaleString("en-US")}`;
-  await expect(page.locator(":focus")).toHaveText(`${counted}Chromosomes: 1`);
+  await expect(page.locator(":focus")).toHaveText(
+    `${counted}FILTER failures: 0Chromosomes: 1`,
+  );
   await expect(info(page).getByRole("button")).toHaveCount(0);
   await expectNoViolations(makeAxeBuilder);
 });

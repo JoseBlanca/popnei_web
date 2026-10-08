@@ -268,10 +268,12 @@ keeps its rows by the result in a `WeakMap`, as `diversityRows` does.
 popnei bins the statistics of the variants and not those of the
 individuals, which come as one value each, so core bins them, a pure
 function of plain arithmetic over a few thousand numbers
-(`docs/architecture.md`, section 7). The bins are those of
-`numpy.histogram` with a number of bins, so that the Python script,
-`numpy.histogram(individual_stats.missing_gt_rate.dropna(), bins=20)`,
-gives the same counts:
+(`docs/architecture.md`, section 7). The edges are those of
+`numpy.histogram` with a number of bins, and each bin holds its upper
+edge, as popnei's bins of the variants do on both pages from 7 October
+2026 (`docs/plans/popnei-0.2.2.md`); `numpy.histogram` puts a value on
+an inner edge in the bin to its right instead, so its counts differ from
+the page's where a value lies on an edge:
 
 - **Over the range of the values**, from the smallest to the largest,
   NaN left out, and not over 0 to 1: the proportions of missing genotypes
@@ -284,9 +286,9 @@ gives the same counts:
 - **The edges** are `i × ((max − min) / 20) + min` for i from 0 to 19, and
   `max` itself last, as numpy's `linspace` computes them, so that every
   edge is the same double in both.
-- **A value falls in the bin whose left edge is at most it and whose right
-  edge is above it**, the last bin taking its right edge too, as popnei
-  and numpy count.
+- **A value falls in the bin whose left edge is below it and whose right
+  edge is at least it**, the first bin taking its left edge too, as
+  popnei counts with `closed: "right"`.
 - **A NaN**, an individual with no heterozygosity, is in no bin and
   counted apart, for the line under the histogram.
 
@@ -306,20 +308,22 @@ export function binValues(values: Float64Array, numBins: number): Bins | null;
 `numBins` below 1 or not whole is a defect. The panel gives the edges
 and the counts to the histogram of `docs/specs/charts/histogram.md`,
 which takes them as it takes popnei's. Checked with Vitest: on the
-statistics of `panel.nei` over every variant, below, the edges and
-counts of `binValues`, which
-`numpy.histogram(values, bins=20)` of numpy 2 in popnei's environment
-gave on the same values on 28 September 2026, the same edges to the
-last digit: for the proportion of missing genotypes `4, 0, 7, 5, 12, 10,
-20, 19, 27, 12, 24, 15, 13, 10, 12, 1, 5, 1, 2, 1`, with the edges
-0.0175, 0.018833333333333334, …, 0.04416666666666667; for the
-heterozygosity `4, 5, 4, 8, 10, 10, 16, 16, 23, 21, 20, 14, 17, 11, 5, 7,
-3, 3, 1, 2`, from 0.32112436115843274 to 0.3931034482758621. The counts
-over the variants the missing data filter at 0.05 kept, which stage 3
-tested, were other. Also:
-`[0.5, 0.5]` gives edges from 0 to 1; `[0.5, NaN]` gives `numNaN` 1; a
-value on an inner edge falls in the bin to its right, and the largest in
-the last bin.
+statistics of `panel.nei` over every variant, below, the edges of
+`binValues`, which `numpy.histogram(values, bins=20)` of numpy 2 in
+popnei's environment gave on the same values on 28 September 2026, the
+same edges to the last digit, and the counts of bins that hold their
+upper edge, each value compared with the edges in Python on 7 October
+2026: for the proportion of missing genotypes `4, 0, 7, 5, 12, 10, 20,
+19, 27, 25, 11, 15, 13, 10, 12, 1, 5, 1, 2, 1`, the 13 individuals at
+37 / 1,200, on the edge 10, in bin 9, where numpy has them in bin 10,
+with the edges 0.0175, 0.018833333333333334, …, 0.04416666666666667;
+for the heterozygosity `4, 5, 4, 8, 10, 10, 16, 16, 23, 21, 20, 14, 17,
+11, 5, 7, 3, 3, 1, 2`, numpy's, no value on an inner edge, from
+0.32112436115843274 to 0.3931034482758621. The counts over the variants
+the missing data filter at 0.05 kept, which stage 3 tested, were other.
+Also: `[0.5, 0.5]` gives edges from 0 to 1; `[0.5, NaN]` gives `numNaN`
+1; a value on an inner edge falls in the bin to its left, and the least
+in the first bin.
 
 ### The cases
 

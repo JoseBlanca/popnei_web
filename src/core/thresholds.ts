@@ -1,107 +1,104 @@
 /**
- * The counts of the thresholds that popgen2.html draws on its histograms
- * of the open file: what a threshold that keeps the values at most it
- * keeps and removes, of the variants from popnei's 1,280 fine bins over
- * 0 to 1, of the individuals from popnei's value of each
- * (docs/plans/thresholds.md, "The design"). They change no statistic and
- * are no filter of the project.
+ * Whether a threshold that popgen2.html draws on its histograms of the
+ * open file keeps every variant or individual with a value, so that the
+ * screen draws it in grey, a threshold that removes nothing
+ * (docs/plans/popnei-0.2.2.md, "The owner's first round"): of the
+ * variants from popnei's 1,000 fine bins over 0 to 1, of the individuals
+ * from popnei's value of each. And the step a threshold moves by and the
+ * number it is shown at. They change no statistic and are no filter of
+ * the project (docs/plans/thresholds.md, "The design").
  */
 import type { VariantStatistic } from "./analyses/variantChecks.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 
-/** What a threshold keeps of the variants. */
-export interface VariantCounts {
-  /** The fewest variants it may keep. */
-  readonly keptLow: number;
-  /** The most it may keep. */
-  readonly keptHigh: number;
-  /** The variants with a value of the statistic. */
-  readonly withValue: number;
-}
-
-/** What a threshold keeps and removes of the individuals. */
-export interface IndividualCounts {
-  /** The individuals it keeps, those with a value at most it. */
-  readonly kept: number;
-  /** The individuals with a value above it. */
-  readonly removed: number;
-  /** The individuals with no value, NaN, in neither count. */
-  readonly noValue: number;
-}
+/** The most decimals of a threshold of the variants, 3: every number of
+    up to three decimals from 0 to 1 is an edge of popnei's 1,000 fine
+    bins, the decimal k / 1,000. */
+export const VARIANT_THRESHOLD_DECIMALS = 3;
 
 /**
- * What the threshold `value`, which keeps the values at most it, keeps
- * of the variants of `part`, by `statistic`, from popnei's fine bins:
- * from `keptLow` to `keptHigh`, one number when the bins can tell. The
- * variants it removes are `withValue` minus what it keeps.
+ * Whether the threshold `value`, which keeps the values at most it, keeps
+ * every variant of `part` with a value of `statistic`, the variants of
+ * popnei's fine bins, each of which holds its right edge: true when
+ * `value` is at least the right edge of the last bin with a count, or
+ * when no bin has one. `spacing` is the least distance between two values
+ * the statistic can take, `variantValueSpacing` of variantChecks.ts, or
+ * `null` when it is not known.
  *
- * - On one of popnei's edges, `value` equal to k/numBins or to popnei's
- *   edge k, as `variantsAtEdge` counts it: the bins below the edge, and
- *   with them the bin that starts at it when `value` is the edge itself,
- *   where a value equal to it falls; one number at k/numBins below an
- *   edge the double above it.
- * - Between two edges, inside the bin from the edge under `value` to the
- *   edge over it: from the bins below the edge under it to the bins
- *   below the edge over it, that bin's variants being on either side of
- *   `value`, one number when the bin is empty. 0.07 lies inside the bin
- *   from 89/1280 to 90/1280, 0.0695 to 0.0703.
- * - Below the first edge, none; at or above the last, every one.
+ * The bins tell it exactly at every edge but 0, as every number of up to
+ * three decimals from 0 to 1 is on the 1,000 bins over 0 to 1: at an
+ * edge below the right edge of the last bin with a count, that bin holds
+ * values above `value`. At 0, the first edge, the first bin holds 0 and
+ * the values above it up to the next edge, so when every variant is in it
+ * the threshold keeps them all only if the values are spaced wider than
+ * the bin, `spacing`, and the bin then holds 0 alone: the missing rate of
+ * fewer than 1,000 individuals. Otherwise the answer is false, a line in
+ * red for a threshold that might remove nothing.
  *
- * popnei's issue drafted in docs/designs/stats-filters.popnei-issue.md
- * (branch design-stats-filters), bins that hold their right edge, would
- * make the count on an edge one number; this is the one function that
- * counts the variants of a threshold, so that the fix changes it alone.
- * A `value` that is NaN or infinite, and edges that are fewer than two
- * or do not go up, are defects, thrown.
+ * A `value` below the right edge of the last bin with a count that is no
+ * edge of the bins is a defect, thrown, since the bin around it holds
+ * values on both sides of it: `variantThresholdOnStep` makes every
+ * threshold an edge. So are edges that are fewer than two or do not go
+ * up, and counts that are not one fewer than the edges.
  */
-export function variantsAtMost(
+export function variantsAllKept(
   part: VariantStatsPart,
   statistic: VariantStatistic,
   value: number,
-): VariantCounts {
-  if (!Number.isFinite(value)) {
-    throw defect(`a threshold of ${String(value)} for the variants.`);
-  }
+  spacing: number | null,
+): boolean {
   const edges = part.binEdges;
   checkEdges(edges);
+  const counts = part[statistic].counts;
+  if (counts.length !== edges.length - 1) {
+    throw defect(
+      `${String(counts.length)} bins of ${statistic} over ${String(edges.length)} edges.`,
+    );
+  }
+  const last = counts.findLastIndex((count) => count > 0);
+  if (last === -1) return true;
+  if (value >= at(edges, last + 1)) return true;
+  const first = at(edges, 0);
+  return (
+    edgeIndexOf(edges, value) === 0 &&
+    last === 0 &&
+    spacing !== null &&
+    spacing > at(edges, 1) - first
+  );
+}
+
+/** The index of `value` among `edges`, evenly spaced as popnei's are;
+    a defect, thrown, when `value` is none of them. */
+function edgeIndexOf(edges: Float64Array, value: number): number {
   const numBins = edges.length - 1;
-  const nominal = Math.round(value * numBins);
-  if (
-    nominal >= 0 &&
-    nominal <= numBins &&
-    (nominal / numBins === value || at(edges, nominal) === value)
-  ) {
-    return variantsAtEdge(part, statistic, nominal, value);
+  const first = at(edges, 0);
+  const index = Math.round(
+    ((value - first) / (at(edges, numBins) - first)) * numBins,
+  );
+  if (!(index >= 0 && index <= numBins && at(edges, index) === value)) {
+    throw defect(
+      `a threshold of ${String(value)} for the variants, which is no edge of the bins.`,
+    );
   }
-  // The first edge above `value`, or the number of edges when none is.
-  let low = 0;
-  let high = edges.length;
-  while (low < high) {
-    const middle = Math.floor((low + high) / 2);
-    if (at(edges, middle) > value) {
-      high = middle;
-    } else {
-      low = middle + 1;
-    }
-  }
-  const top = at(edges, numBins);
-  if (low === 0) {
-    const { withValue } = variantsAtEdge(part, statistic, numBins, top);
-    return { keptLow: 0, keptHigh: 0, withValue };
-  }
-  if (low > numBins) return variantsAtEdge(part, statistic, numBins, top);
-  // `value` lies inside the bin from the edge low - 1 to the edge low.
-  const under = variantsAtEdge(part, statistic, low - 1, value);
-  const over = variantsAtEdge(part, statistic, low, value);
-  return {
-    keptLow: under.keptLow,
-    keptHigh: over.keptLow,
-    withValue: under.withValue,
-  };
+  return index;
+}
+
+/**
+ * The threshold of the variants for `value`, a number typed or a place
+ * of the slider: `value` rounded to `decimals` decimals, the decimals of
+ * the step of its axis, and to three at most, `thresholdOnStep`; so an
+ * edge of popnei's fine bins, 0 among them, which popnei's filters apply
+ * exactly. A `value` that is not finite is a defect, thrown.
+ */
+export function variantThresholdOnStep(
+  value: number,
+  decimals: number,
+): number {
+  return thresholdOnStep(value, Math.min(decimals, VARIANT_THRESHOLD_DECIMALS));
 }
 
 /** The step a threshold moves by over an axis, and the decimals it is
-    shown and counted with. */
+    shown with. */
 export interface ThresholdStep {
   /** A power of ten: 0.01 on an axis of 0 to 1. */
   readonly step: number;
@@ -138,7 +135,7 @@ const AXIS_POSITIONS = 100;
 const SPAN_TOLERANCE = 1e-9;
 
 /** `value` rounded to `decimals` decimals, the nearest half up, the
-    number a threshold is shown and counted at: 0.07 for 0.0734 and 0.15
+    number a threshold is shown at: 0.07 for 0.0734 and 0.15
     for 0.145 with 2. The point is shifted in the text, where 0.145 × 100
     is 14.499999999999998 and `toFixed` gives 0.14. A `value` that is not
     finite is a defect, thrown. */
@@ -153,101 +150,30 @@ export function thresholdOnStep(value: number, decimals: number): number {
 }
 
 /**
- * What the threshold `value`, at or below the fine edge of index
- * `edgeIndex` and above every value of the bins below it, keeps of the
- * variants of `part`, by `statistic`, when it keeps the values at most
- * it: from `keptLow`, the variants of the bins below the edge, to
- * `keptHigh`, those and the variants of the bin that starts at the edge
- * when `value` is the edge itself, or `keptLow` again when it is not, one
- * number. The variants it removes are `withValue` minus what it keeps.
- *
- * Why a range: popnei's bins hold their left edge, a value on an edge
- * falling in the bin to its right (`bin_of`, the first edge above the
- * value), while its filters keep the values at most their threshold. So
- * the variants on the edge, which "at most" keeps, are somewhere in the
- * bin that starts at it, and the bins cannot tell how many. When `value`
- * is below the edge, a value equal to `value` lies in the bin to the
- * left, already kept, and one on the edge is above `value`, removed: as
- * 0.3, k/1280 for k = 384, is below popnei's edge 384, which popnei made
- * as 384 · (1/1280), 0.30000000000000004, the double above. Neither on
- * the top edge, index numBins, which keeps every variant.
- *
- * On the 1,280 bins of popnei, 817 of the 1,281 edges equal k/1280,
- * among them every multiple of 0.05 a user types, 0.05, 0.1, 0.5.
- *
- * An `edgeIndex` that is not a whole number from 0 to the number of
- * bins, and a part whose counts are not one fewer than its edges, are
- * defects, thrown.
+ * Whether the threshold `threshold`, which keeps the values at most it,
+ * keeps every individual with a value of `values`, popnei's
+ * `missingGtRate` or `obsHetRate` of each: true when some value is not
+ * NaN and no value but NaN is above it. The individuals whose value is
+ * NaN, with no called genotype for the observed heterozygosity, are in
+ * neither count: the threshold alone neither keeps nor removes them,
+ * though `individualsKept` (individualsKept.ts), which applies the
+ * filters of the project, removes them, since NaN is at most no
+ * threshold. So when every value is NaN, or there is none, the answer is
+ * false: there is no individual with a value to keep, and a filter would
+ * remove them all. Exact for any threshold. A `threshold` that is NaN is
+ * a defect, thrown.
  */
-function variantsAtEdge(
-  part: VariantStatsPart,
-  statistic: VariantStatistic,
-  edgeIndex: number,
-  value: number,
-): VariantCounts {
-  const counts = part[statistic].counts;
-  const numBins = counts.length;
-  if (numBins !== part.binEdges.length - 1) {
-    throw defect(
-      `${String(numBins)} bins of ${statistic} over ${String(part.binEdges.length)} edges.`,
-    );
-  }
-  if (!Number.isInteger(edgeIndex) || edgeIndex < 0 || edgeIndex > numBins) {
-    throw defect(
-      `an edge of index ${String(edgeIndex)} of ${String(numBins)} bins.`,
-    );
-  }
-  let keptLow = 0;
-  let withValue = 0;
-  for (const [index, count] of counts.entries()) {
-    if (index < edgeIndex) keptLow += count;
-    withValue += count;
-  }
-  const onEdgeMayBeKept =
-    edgeIndex < numBins && at(part.binEdges, edgeIndex) === value;
-  const keptHigh = onEdgeMayBeKept
-    ? keptLow + (counts[edgeIndex] ?? 0)
-    : keptLow;
-  return { keptLow, keptHigh, withValue };
-}
-
-/**
- * What the threshold `threshold` keeps and removes of the individuals
- * whose values are `values`, popnei's `missingGtRate` or `obsHetRate` of
- * each: kept, those whose value is at most the threshold; removed, the
- * others with a value; and apart, `noValue`, the individuals whose value
- * is NaN, with no called genotype for the observed heterozygosity. Exact
- * for any threshold.
- *
- * The threshold alone removes none of those with no value, but
- * `individualsKept` (individualsKept.ts), which applies the filters of
- * the project, removes them, since NaN is at most no threshold; so when
- * the threshold becomes a filter, the individuals it removes are
- * `removed` plus `noValue`. A `threshold` that is NaN is a defect,
- * thrown.
- */
-export function individualsAtMost(
+export function individualsAllKept(
   values: Float64Array,
   threshold: number,
-): IndividualCounts {
+): boolean {
   if (Number.isNaN(threshold)) {
     throw defect("a threshold of NaN for the individuals.");
   }
-  let kept = 0;
-  let removed = 0;
-  let noValue = 0;
-  for (const value of values) {
-    if (Number.isNaN(value)) {
-      noValue += 1;
-      continue;
-    }
-    if (value <= threshold) {
-      kept += 1;
-    } else {
-      removed += 1;
-    }
-  }
-  return { kept, removed, noValue };
+  return (
+    values.some((value) => !Number.isNaN(value)) &&
+    values.every((value) => Number.isNaN(value) || value <= threshold)
+  );
 }
 
 /** Throws a defect when `binEdges` are fewer than two or do not go up. */

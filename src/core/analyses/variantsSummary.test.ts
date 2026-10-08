@@ -9,7 +9,11 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { numChroms, variantsSummary } from "./variantsSummary.ts";
+import {
+  numChroms,
+  numFilterFailures,
+  variantsSummary,
+} from "./variantsSummary.ts";
 import { createKeyMemo, keyOf } from "../keys.ts";
 import type { Key, KeyedDef } from "../keys.ts";
 import { emptyProject } from "../project.ts";
@@ -134,7 +138,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
       fileId: VARIANTS_ID,
       filters: [],
       minNumIndividuals: 0,
-      numBins: 1280,
+      numBins: 1000,
       range: [0, 1],
     };
     expect(jobs).toEqual([expected]);
@@ -150,7 +154,7 @@ describe("open-variants 1 the summary of the variants file: the request", () => 
   test("the definition is of population genetics alone, reads no filter, and has no key input, no reason, no option and no warning", () => {
     expect(variantsSummary.id).toBe("variantsSummary");
     expect(variantsSummary.app).toEqual(["popgen"]);
-    expect(variantsSummary.keyVersion).toBe(2);
+    expect(variantsSummary.keyVersion).toBe(4);
     expect(variantsSummary.filtersRead).toEqual({
       variants: false,
       individuals: false,
@@ -205,8 +209,8 @@ describe("open-variants 1 the summary of the variants file: the key", () => {
     }
   });
 
-  test("the key version, 2, and the version of popnei change the key", () => {
-    const later: KeyedDef = { ...variantsSummary, keyVersion: 3 };
+  test("the key version, 4, and the version of popnei change the key", () => {
+    const later: KeyedDef = { ...variantsSummary, keyVersion: 5 };
     expect(keyOf(later, base, "0.1.0", createKeyMemo())).not.toBe(baseKey);
     expect(keyFor(base, "0.2.0")).not.toBe(baseKey);
   });
@@ -257,8 +261,28 @@ describe("open-variants 1 the summary of the variants file: the numbers", () => 
   });
 });
 
+describe("popnei-0.2.2 3 the FILTER failures of the summary", () => {
+  test("numFilterFailures gives popnei's failed, and null for a file that did not record the FILTER", () => {
+    const lowQual = summaryResult(["1"], [1200], ["s000"], {
+      passed: 900,
+      failed: 300,
+    });
+    expect(numFilterFailures(lowQual)).toBe(300);
+    expect(numFilterFailures(PANEL)).toBeNull();
+  });
+
+  test("numFilterFailures of another analysis's result throws a defect", () => {
+    expect(() =>
+      numFilterFailures({
+        analysis: "filterCounts",
+        passStats: { numVars: 1, filtering: {} },
+      }),
+    ).toThrow(/^popnei_web defect: /u);
+  });
+});
+
 describe("open-variants 1 the summary of the variants file: the script", () => {
-  test("script of a .nei file opens it with open_vars and makes popnei's three calls, Python having no calc_variants_summary: the variants of each chromosome in one window, the 40 bins of the histograms of the variants, and the statistics of each individual", () => {
+  test("script of a .nei file opens it with open_vars and makes popnei's three calls, Python having no calc_variants_summary: the variants of each chromosome in one window, the 40 bins of the histograms of the variants, and the statistics of each individual; and the FILTER failures when the file recorded them", () => {
     expect(variantsSummary.script(project())).toBe(
       "# The variants of the file on each chromosome, one window per chromosome\n" +
         'variants_as_read = popnei.open_vars("panel.nei")\n' +
@@ -273,14 +297,23 @@ describe("open-variants 1 the summary of the variants file: the script", () => {
         "    variants_as_read,\n" +
         "    stats=[popnei.PerVarStat.MISSING_RATE, popnei.PerVarStat.MAF, popnei.PerVarStat.OBS_HET, popnei.PerVarStat.UNBIASED_EXP_HET],\n" +
         "    min_num_individuals=0,\n" +
-        '    hist_kwargs={"range": (0, 1), "num_bins": 40},\n' +
+        '    hist_kwargs={"range": (0, 1), "num_bins": 40, "closed": "right"},\n' +
         ")\n" +
         "# The statistics of each individual, over every variant of the file\n" +
         "individual_stats = popnei.calc_per_individual_stats(variants_as_read)\n" +
         "print(pandas.DataFrame({\n" +
         '    "missing_genotypes": individual_stats.missing_gt_rate,\n' +
         '    "observed_heterozygosity": individual_stats.obs_het_rate,\n' +
-        "}).to_string())\n",
+        "}).to_string())\n" +
+        "# The variants that failed their FILTER: neither PASS nor a dot\n" +
+        "if variants_as_read.keeps_passed:\n" +
+        '    variants_passed = popnei.open_vars("panel.nei")\n' +
+        "    variants_passed.filter_passed()\n" +
+        "    passed_blocks = variants_passed.iter_blocks(fields=())\n" +
+        "    for _ in passed_blocks:\n" +
+        "        pass\n" +
+        '    passed_counts = passed_blocks.pass_stats.filtering["passed"]\n' +
+        '    print("Failed their FILTER:", passed_counts.vars_processed - passed_counts.vars_kept)\n',
     );
   });
 

@@ -527,7 +527,7 @@ describe("open-variants 1 the summary of the variants file in apps.ts", () => {
         fileId: fiveIndividualsProject([]).variants?.fileId,
         filters: [],
         minNumIndividuals: 0,
-        numBins: 1280,
+        numBins: 1000,
         range: [0, 1],
       },
     ]);

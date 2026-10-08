@@ -47,19 +47,12 @@ import type {
 } from "./plotsPage.ts";
 
 /**
- * The edges of the default 40 bins over [0, 1] as popnei gives them,
- * `histBinEdges` of calcPerVarDistribs with the release js-v0.1.0-dev.2,
- * on 26 September 2026, as in src/charts/histogram.test.ts.
+ * The edges of 40 bins over [0, 1] as popnei 0.2.2 gives them, the
+ * decimals i / 40. The counts below are those popnei js-v0.1.0-dev.2 gave
+ * on 26 September 2026, kept for the measurements of this page: data the
+ * plot draws as it is given.
  */
-const EDGES_40 = Float64Array.from([
-  0, 0.025, 0.05, 0.07500000000000001, 0.1, 0.125, 0.15000000000000002,
-  0.17500000000000002, 0.2, 0.225, 0.25, 0.275, 0.30000000000000004, 0.325,
-  0.35000000000000003, 0.375, 0.4, 0.42500000000000004, 0.45,
-  0.47500000000000003, 0.5, 0.525, 0.55, 0.5750000000000001, 0.6000000000000001,
-  0.625, 0.65, 0.675, 0.7000000000000001, 0.7250000000000001, 0.75, 0.775, 0.8,
-  0.8250000000000001, 0.8500000000000001, 0.875, 0.9, 0.925, 0.9500000000000001,
-  0.9750000000000001, 1,
-]);
+const EDGES_40 = Float64Array.from({ length: 41 }, (_each, i) => i / 40);
 
 /** The counts of the MAF of panel.nei, every variant and individual. */
 const MAF_COUNTS = Uint32Array.from([

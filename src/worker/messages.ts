@@ -40,6 +40,7 @@ import type {
   LeftOut,
   LoadFormat,
   Opened,
+  FilterColumn,
   PassStats,
   PcaJob,
   PcaMethod,
@@ -64,7 +65,7 @@ import type {
  * is raised with any change to a message, to `Job` or `JobResult`, or to a
  * type of protocol.ts that a message carries.
  */
-export const PROTOCOL_VERSION = 11;
+export const PROTOCOL_VERSION = 12;
 
 /** A request of the page to the calculation worker. */
 export type ToRunner =
@@ -2183,6 +2184,7 @@ function checkVariantsSummaryResult(
     "perVar",
     "perIndividual",
     "passStats",
+    "filterColumn",
   ]);
   if (wrong !== null) {
     return wrong;
@@ -2217,6 +2219,15 @@ function checkVariantsSummaryResult(
   if (!passStats.ok) {
     return passStats;
   }
+  const filterColumn = field(
+    record,
+    "filterColumn",
+    place,
+    orNull(checkFilterColumn),
+  );
+  if (!filterColumn.ok) {
+    return filterColumn;
+  }
   return accepted({
     analysis: "variantsSummary",
     chroms: chroms.value,
@@ -2224,7 +2235,29 @@ function checkVariantsSummaryResult(
     perVar: perVar.value,
     perIndividual: perIndividual.value,
     passStats: passStats.value,
+    filterColumn: filterColumn.value,
   });
+}
+
+/** The variants that passed and failed their FILTER, two whole
+    numbers. */
+function checkFilterColumn(
+  value: unknown,
+  place: Place,
+): Checked<FilterColumn> {
+  const record = objectWith(value, place, ["passed", "failed"]);
+  if (!record.ok) {
+    return record;
+  }
+  const passed = field(record.value, "passed", place, isWhole);
+  if (!passed.ok) {
+    return passed;
+  }
+  const failed = field(record.value, "failed", place, isWhole);
+  if (!failed.ok) {
+    return failed;
+  }
+  return accepted({ passed: passed.value, failed: failed.value });
 }
 
 /** A written file, the `Blob` the runner made with its size and the

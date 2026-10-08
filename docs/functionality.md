@@ -68,21 +68,41 @@ leaves out the variants on each of them for now (the owner, 6 October
 October 2026 (docs/plans/one-pass.md). Every variant, whatever its
 FILTER column, stays in the count and the statistics, since the FILTER
 filter as a filter the user sets comes with the filters of that page.
-How many variants of a VCF failed their FILTER, those whose FILTER
-column is neither PASS nor a dot, 300 of 1,200 in low_qual.vcf.gz, is
-not shown: a second pass over the file counted them until 7 October
-2026, when the owner took it out so that the page reads each file once,
-and the count waits for popnei's summary to give it from its own pass,
-popnei issue #12 (JoseBlanca/popnei).
+How many variants failed their FILTER, those whose FILTER column is
+neither PASS nor a dot, is a line of the box of the file, "FILTER
+failures: 300" for low_qual.vcf.gz, 0 for panel.vcf.gz, counted by the
+same one pass from popnei 0.2.2 (docs/plans/popnei-0.2.2.md; popnei
+issue #12), and of the variants read so far while the pass runs. It is
+of every variant of the file. A `.nei` file has the line when it
+recorded its FILTER, as one written by popnei 0.2.2 from a VCF does,
+from the first variants read; after a Stop or a failure before the end,
+its box loses it, since the page learns whether the file recorded its
+FILTER only from a result, until the opening of the file tells it (the
+filters, their work package 2). A `.nei` file that did not record it has
+no line, as panel.nei, written before format 1.2 of the vars file.
 
 On popgen2.html the distributions of the open file, four of the
 variants and two of the individuals, each carry a threshold that keeps
 the values at most it, from 7 October 2026: a line the user drags on
 the plot or a number typed in a box over it, the bars beyond it drawn as
 removed. Over each plot is one row, its short title, "max:" and the box,
-"Obs. het. max: 0.04", and under that row one line of what the threshold
-keeps, "Keeps 1,050 of 1,200 variants", "Keeps all 1,200 variants", with
-"so far" while the file is read. The short titles are the owner's of 7
+"Obs. het. max: 0.04", and no line of what the threshold keeps, which
+the owner took out on 8 October 2026. A threshold that keeps every
+variant or individual with a value, a filter that would remove nothing,
+is drawn in a bluish grey, its line, its handle and the number in its
+box, a colour of its own and not the grey of a control that cannot be
+changed, as the owner asked on 8 October 2026; one that removes some is
+red. The two differ by their shape too, for a reader who does not tell
+the colours apart: the grey line is dotted and its handle hollow, the
+red line dashed and its handle filled. With no individual with a value,
+none is grey, since a filter would remove them all. A screen reader
+hears the grey in words: the value of the line, "1, keeps every
+variant", with "so far" while the file is read, and the description of
+the box, "This threshold removes no variant."; otherwise the value is
+the number alone. A number committed in the box that turns the
+threshold grey or back is announced once, "This threshold removes no
+variant." or "This threshold removes variants.", since a screen reader
+reads the description of the box only as the box takes the focus. The short titles are the owner's of 7
 October 2026: "Missing genotypes", "Major allele frequency", "Obs. het."
 and "Exp. het. (unbiased)" for the variants, "Missing GTs" and "Obs.
 het." for the individuals; the axes and what a screen reader reads keep
@@ -96,18 +116,41 @@ they are no filters, change no statistic and no other part of the page,
 and start again at another file or a reload, the missing rate of the
 variants at 0.1 and the others at the top of their axis.
 
-The number a threshold of the variants shows is the number it is
-counted at, from popnei's bins of 1/1280 of 0 to 1. Where those bins
-cannot tell whether some variants are kept, the line gives the range
-they allow, "Keeps 1,113 to 1,152 of 1,200 variants" at a missing rate of
-0.05 on panel.vcf.gz, and the bar where the bins cannot tell is hatched:
-the variants of the bin that starts at the threshold, when the threshold
-is on the edge of a bin, since popnei's bins hold their left edge, and
-those of the bin the threshold lies inside otherwise, 1,197 to 1,199 at
-0.07. The range holds until popnei counts it exactly
-(docs/plans/thresholds.md). A threshold of the individuals is counted
-exactly from popnei's value of each. Applying them as filters is the
-design docs/designs/stats-filters.md.
+Whether a threshold of the variants keeps every variant is told from
+popnei's 1,000 bins of 0 to 1, each of which holds its upper edge, so
+that every threshold of up to three decimals is an edge and the variants
+at most it are the bins below it (docs/plans/popnei-0.2.2.md). So a
+threshold of the variants has three decimals at most. 0 is a threshold
+too, which popnei's filters apply exactly; the first bin holds 0 and the
+values above it up to 0.001, so at 0 the threshold is grey only when the
+values are spaced wider than 0.001 and that bin holds 0 alone, the
+missing rate of fewer than 1,000 individuals. A threshold of the
+individuals is told exactly from popnei's value of each, at any number.
+At a threshold of 0 the first bar of the missing rate, below, is drawn
+kept.
+
+The bars of the variants are about 40 over the axis, and never narrower
+than the distance between two values the statistic can take, from 8
+October 2026: 1/n for the missing rate of n individuals, 1/(ploidy · n)
+for the major allele frequency, rounded up to a whole number of
+popnei's bins. The missing rate's first bar is popnei's first bin, 0 to
+0.001, which over fewer than 1,000 individuals holds the variants with
+no missing genotype alone, so that a threshold of 0 keeps it whole. Its
+next bars start at 0.001, each a multiple of 1/n that is a whole number
+of popnei's bins, so that every bar can hold as many values: on
+panel.nei, 200 individuals, a bar of 0 to 0.001 and 20 bars of 0.005 to
+0.1, where 50 of 0.002 left more than half of them empty; over 300
+individuals bars of 0.01. Where such bars would be fewer than 5, the
+bars are no narrower than 1/n and the axis may be rounded to a larger
+step: the missing rate of 12 individuals in a bar of 0 to 0.001 and 3
+bars of 0.1 to 0.3. The values of the major allele frequency are not on
+an even grid where genotypes are missing, so its bars may hold more
+values than their neighbours. The heterozygosities, whose values have no
+such step, keep about 40 bars. The histograms of popgen.html are popnei's 40 bins
+and do not change. On both kinds of plot a value on
+the edge between two bars is in the bar to its left, so a bar ends at
+what a threshold keeps, and the table of the bins of popgen.html says
+so. Applying them as filters is the design docs/designs/stats-filters.md.
 
 ### The filters of variants
 

@@ -62,6 +62,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A number that does nothing as it is, a threshold that keeps every
+   value: in its bluish grey, 4.5:1 on the background and 3:1 from the
+   text, and not the grey of a disabled field, since it can be changed. */
+.input[data-muted] {
+  color: var(--chart-threshold-keeps-all);
+}
+
 .input[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
