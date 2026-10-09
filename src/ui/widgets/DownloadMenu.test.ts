@@ -251,6 +251,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
         download: {
           what: "the table of panel_pops.csv",
           fileName: "panel_pops.table.csv",
+          waiting: null,
         },
       }),
     );
@@ -274,6 +275,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
         download: {
           what: "the table of panel_pops.csv",
           fileName: "panel_pops.table.csv",
+          waiting: null,
         },
       }),
     );
@@ -308,7 +310,11 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
         caption: "Distances",
         columns,
         rows,
-        download: { what: "the distances", fileName: "panel.distances.csv" },
+        download: {
+          what: "the distances",
+          fileName: "panel.distances.csv",
+          waiting: null,
+        },
       }),
     );
     await choose("the distances", "Table as CSV");
@@ -329,7 +335,11 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
           sort: null,
           onSortChange: () => undefined,
           ...(withDownload && {
-            download: { what: "the table", fileName: "x.table.csv" },
+            download: {
+              what: "the table",
+              fileName: "x.table.csv",
+              waiting: null,
+            },
           }),
         });
       draw(element(before));
@@ -341,6 +351,44 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     },
   );
 
+  test.each(["sortable", "plain"])(
+    "a %s table given a download that waits has its menu disabled with the reason",
+    (kind) => {
+      const reason = "Download once panel.nei is read to the end.";
+      const download = {
+        what: "the table",
+        fileName: "x.csv",
+        waiting: reason,
+      };
+      draw(
+        kind === "sortable"
+          ? createElement(SortableTable<Id>, {
+              label: "The individuals",
+              columns: SORTABLE_COLUMNS,
+              rows: SORTED_ROWS,
+              sort: null,
+              onSortChange: () => undefined,
+              download,
+            })
+          : createElement(Table, {
+              caption: "Counts",
+              columns: [
+                { id: "pair", label: "Populations", isRowHeader: true },
+              ],
+              rows: [{ id: "p1", cells: ["p1"], values: ["p1"] }],
+              download,
+            }),
+      );
+      const button = trigger("the table");
+      expect(button.getAttribute("aria-disabled")).toBe("true");
+      const describedBy = button.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(reason);
+      focusByKeyboard(button);
+      press("Enter");
+      expect(menuItems()).toBeNull();
+    },
+  );
+
   test("a sortable table given a download and a row with no values is a defect", () => {
     const error = drawThrown(
       createElement(SortableTable<Id>, {
@@ -349,7 +397,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
         rows: [...SORTED_ROWS, { id: "d", cells: ["d", "0.1000"] }],
         sort: null,
         onSortChange: () => undefined,
-        download: { what: "the table", fileName: "x.table.csv" },
+        download: { what: "the table", fileName: "x.table.csv", waiting: null },
       }),
     );
     expect(String(error)).toMatch(/popnei_web defect/u);
@@ -361,7 +409,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
         caption: "Distances",
         columns: [{ id: "pair", label: "Populations", isRowHeader: true }],
         rows: [{ id: "p1", cells: ["p1"] }],
-        download: { what: "the distances", fileName: "x.csv" },
+        download: { what: "the distances", fileName: "x.csv", waiting: null },
       }),
     );
     expect(String(error)).toMatch(/popnei_web defect/u);

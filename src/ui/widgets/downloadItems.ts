@@ -29,6 +29,8 @@ export interface TableDownload {
   readonly what: string;
   /** The name of the file, made by `downloadName` with "csv". */
   readonly fileName: string;
+  /** The reason the menu waits, or null. */
+  readonly waiting: string | null;
 }
 
 /** What a plot takes to be downloaded. */

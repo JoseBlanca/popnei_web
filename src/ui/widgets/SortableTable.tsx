@@ -153,7 +153,7 @@ export function SortableTable<Id extends string>({
                 () => values,
               ),
             ]}
-            waiting={null}
+            waiting={download.waiting}
           />
         </div>
       )}

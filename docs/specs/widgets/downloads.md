@@ -73,7 +73,12 @@ errors of the page shows; the menu closes as after any choice.
 
 `SortableTable` and `Table` of `src/ui/widgets/` take an optional
 `download`. With it they draw the menu above the table's top right
-corner, with one item, "Table as CSV". The CSV:
+corner, with one item, "Table as CSV". Its menu can wait, as a plot's
+does, with the reason the screen gives: the counts per population of
+the box of the individuals file wait for the one pass, "…" in place of
+each (`docs/specs/steps/popgen2-input.md`, "The counts that wait"), and
+a file of them then would hold counts of part of the variants with
+nothing to mark them. The CSV:
 
 - **Every row**, in the order shown, sorted as the user sorted it, and
   every column in its order, the header the labels of the columns.
@@ -201,6 +206,7 @@ export function DownloadMenu(props: DownloadMenuProps): React.JSX.Element;
 export interface TableDownload {
   readonly what: string;       // "the table of panel_pops.csv"
   readonly fileName: string;   // downloadName(…, "csv")
+  readonly waiting: string | null;
 }
 // SortableRow and TableRow gain: readonly values?: readonly CellValue[], one per column,
 // required when the table is given a download (a defect otherwise);

@@ -127,7 +127,7 @@ export function Table({
                 () => values,
               ),
             ]}
-            waiting={null}
+            waiting={download.waiting}
           />
         </div>
       )}
