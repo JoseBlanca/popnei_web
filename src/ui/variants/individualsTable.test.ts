@@ -93,6 +93,16 @@ describe("IN6 D1 the table of the individuals file", () => {
     expect(new Set(columns.map((c) => c.id)).size).toBe(4);
   });
 
+  test("a column is as wide as its whole header on one line in bold, with its padding and the arrow, and not narrower than 96 pixels", () => {
+    const table: IndividualsTable = {
+      columns: ["IID", "Individuo", "Fecha de muestreo"],
+      rows: [["s1", "a", "b"]] satisfies Cell[][],
+    };
+    expect(
+      individualsTableColumns(readOf(table, ".")).map((c) => c.minWidth),
+    ).toEqual([96, 130, 210]);
+  });
+
   test("every row in the order of the file, a missing value empty, a number with the decimal mark of the read, a boolean true or false", () => {
     const rows = individualsTableRows(readOf(TABLE, ","));
     expect(namesOf(rows)).toEqual(["s1", "s2", "s3", "s4"]);

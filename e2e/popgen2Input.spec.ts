@@ -1416,3 +1416,52 @@ test("IN6 D2 individuals_10000.xlsx at 320 pixels: the table of 20 columns scrol
     await grid.evaluate((element) => element.scrollWidth > element.clientWidth),
   ).toBe(true);
 });
+
+test("IN6 D2 individuals_10000.xlsx scrolled sideways: every header in view, the one cut by the edge of the box included, stays on one line, and the row of headers keeps one line's height", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pickIndividuals(page, "individuals_10000.xlsx");
+  await tab(page, "Individuals file").click();
+  const grid = page.getByRole("grid", {
+    name: "The table of individuals_10000.xlsx",
+  });
+  await expect(grid).toBeVisible({ timeout: 60_000 });
+  const headers = grid.getByRole("columnheader");
+  const heights = async (): Promise<number[]> =>
+    headers.evaluateAll((elements) =>
+      elements.map((element) => {
+        const text = element.firstElementChild ?? element;
+        return Math.round(text.getBoundingClientRect().height);
+      }),
+    );
+  const before = await heights();
+  const line = Math.max(...before);
+  const rowHeight = async (): Promise<number> =>
+    headers
+      .first()
+      .evaluate((element) =>
+        Math.round(element.getBoundingClientRect().height),
+      );
+  const rowBefore = await rowHeight();
+  for (const left of [200, 400, 600, 900, 1300]) {
+    await grid.evaluate((element, x) => {
+      element.scrollTo({ left: x });
+    }, left);
+    // Two frames, for the Virtualizer to draw the columns that came into
+    // view and to measure them.
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+    );
+    const now = await heights();
+    expect(Math.max(...now), `headers at scrollLeft ${String(left)}`).toBe(
+      line,
+    );
+    expect(await rowHeight(), `the row at scrollLeft ${String(left)}`).toBe(
+      rowBefore,
+    );
+  }
+});

@@ -39,14 +39,18 @@ const MIN_WIDTH = 96;
 const HEADER_CHARACTER = 10;
 const HEADER_ROOM = 40;
 
-/** The narrowest the column named `label` may be: its longest word in
-    bold whole, with the padding and the arrow. */
+/** The narrowest the column named `label` may be: the whole header in
+    bold on one line, with the padding and the arrow. A header of several
+    words that wrapped, "Fecha de muestreo" of individuals_10000.xlsx at
+    120 pixels, made the row of the headers two lines high when it came
+    into view as the table scrolled sideways, since the Virtualizer
+    measures only the headers in view; on one line each, the row keeps
+    one height. */
 function minWidthOf(label: string): number {
-  const longest = Math.max(
-    0,
-    ...label.split(/\s+/u).map((word) => Array.from(word).length),
+  return Math.max(
+    MIN_WIDTH,
+    HEADER_ROOM + HEADER_CHARACTER * Array.from(label).length,
   );
-  return Math.max(MIN_WIDTH, HEADER_ROOM + HEADER_CHARACTER * longest);
 }
 
 /** The id of the column at `index`. */
