@@ -417,6 +417,7 @@ the project's (`docs/architecture.md`, section 7).
 | the end of `raggedRow` and `unclosedQuote` | "Choose another separator under the tab Individuals file, or open a corrected file." |
 | the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants file." in place of the reader's words after the colon |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
+| `sheetTooLarge` after the colon | "its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table.", the reader's words with the name of the file of this page |
 | `readerNotLoaded` | "panel_pops.csv could not be read: the part of the page that reads tables could not be downloaded. Check the connection and open the file again." |
 | the end of `unreadable` | "Open it again." |
 | the end of `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, whose words say what to do in Excel | "Then open it again." |

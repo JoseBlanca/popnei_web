@@ -1147,7 +1147,10 @@ never find one of the other not yet made (above, "The populations").
   file in the box Variants file." in place of the reader's words; for
   `tooLarge`, "it is 312.4 MB, more than the 20 MB an individuals file
   can have; check that it is the individuals file and not the variants
-  file."; for `readerNotLoaded`, "the part of the page that reads tables
+  file."; for `sheetTooLarge`, "its first sheet, Hoja1, has values as
+  far as row 1,048,576 and column XFD, more than the 20,000,000 cells an
+  individuals file can have; delete the values outside the table.", the
+  reader's words with this page's name of the file; for `readerNotLoaded`, "the part of the page that reads tables
   could not be downloaded. Check the connection and open the file
   again."; for a failure of the worker, by the kind of its `RunError`:
   a crash or a defect, "the page stopped while it read it. Open the file

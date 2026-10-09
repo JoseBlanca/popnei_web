@@ -2531,9 +2531,10 @@ export function individualsBoxNeeds(p: Project): string | null {
 
 /** What follows the colon of a refusal of the reader in the box of the
     individuals file of popgen2.html: the reader's words with a full stop,
-    but for the three refusals whose words name what that page calls
-    otherwise, a variants file, the size of an individuals file and the
-    reader of tables, which the box says in its own words. */
+    but for the four refusals whose words name what that page calls
+    otherwise, a variants file, the size of an individuals file, the cells
+    it can have and the reader of tables, which the box says in its own
+    words. */
 function individualsBoxWords(
   error: IndividualsFileError,
   app: AppId,
@@ -2546,6 +2547,8 @@ function individualsBoxWords(
       return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
     case "readerNotLoaded":
       return "the part of the page that reads tables could not be downloaded. Check the connection and open the file again.";
+    case "sheetTooLarge":
+      return `its first sheet, ${shown(error.sheet)}, has values as far as row ${grouped(error.lastRow)} and column ${error.lastColumn}, more than the ${grouped(error.max)} cells an individuals file can have; delete the values outside the table.`;
     case "empty":
     case "duplicateColumn":
     case "duplicateIndividual":
@@ -2563,7 +2566,6 @@ function individualsBoxWords(
     case "emptySheet":
     case "cellError":
     case "headerError":
-    case "sheetTooLarge":
       return `${saying(individualsFileRefusalWords(error, app, xlsx)).slice(2)}.`;
   }
 }

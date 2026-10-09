@@ -601,7 +601,7 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
     },
   );
 
-  test("individualsBoxNeeds ends a sheet too large with Then open it again", () => {
+  test("individualsBoxNeeds words a sheet too large for the individuals file, and ends it with Then open it again", () => {
     expect(
       individualsBoxNeeds(
         refused(
@@ -615,8 +615,8 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
           "xlsx",
         ),
       ),
-    ).toMatch(
-      /^panel_pops\.csv could not be read: its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, .*\. Then open it again\.$/u,
+    ).toBe(
+      "panel_pops.csv could not be read: its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table. Then open it again.",
     );
   });
 
