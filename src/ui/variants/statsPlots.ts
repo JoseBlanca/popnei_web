@@ -50,6 +50,7 @@ import type {
 } from "../../core/analyses/variantChecks.ts";
 import { individualHistogramDescription } from "../../core/analyses/individualChecks.ts";
 import type { IndividualStatistic } from "../../core/analyses/individualChecks.ts";
+import { binsCsv } from "../../core/csv.ts";
 import { INDIVIDUAL_BINS, binValuesRounded } from "../../core/histogram.ts";
 import {
   individualThresholdLook,
@@ -105,6 +106,10 @@ export interface StatsPlot {
   /** Its threshold: its slider, its box and its words; `null` for the
       expected heterozygosity, which has none. */
   readonly threshold: PlotThreshold | null;
+  /** The CSV of its bins as drawn, written when it is asked for, by
+      `binsCsv` (docs/specs/widgets/downloads.md, "A plot"): for the
+      heterozygosity of the individuals, a last row of those with none. */
+  readonly csv: () => string;
 }
 
 /** The threshold of a histogram, as its slider and its box show it,
@@ -236,7 +241,8 @@ export function variantPlot(
     ),
   };
   const shortTitle = variantTitle(statistic);
-  if (!filtered) return { data, shortTitle, threshold: null };
+  const csv = (): string => binsCsv(bins.edges, bins.counts, null);
+  if (!filtered) return { data, shortTitle, threshold: null, csv };
   const [low, high] = axisOf(data);
   return {
     data,
@@ -251,6 +257,7 @@ export function variantPlot(
       ...wordsOf(shown, look, "variant"),
       onStep,
     },
+    csv,
   };
 }
 
@@ -321,6 +328,15 @@ export function individualPlot(
         ...wordsOf(shown, look, "individual"),
         onStep,
       },
+      // Those with no value, apart, for the heterozygosity alone, whose
+      // plot counts them apart in the line under it
+      // (docs/specs/widgets/downloads.md, "A plot").
+      csv: () =>
+        binsCsv(
+          bins.edges,
+          bins.counts,
+          statistic === "observedHeterozygosity" ? bins.numNaN : null,
+        ),
     },
     noValueLine: noValueThresholdLine(bins.numNaN, look !== "off", from),
     noValueRoom: noValueThresholdLine(bins.numNaN, true, "stopped"),

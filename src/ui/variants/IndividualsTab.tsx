@@ -8,7 +8,8 @@
  * the box; read, how it was read, the options of a CSV or the line of the
  * first sheet of an xlsx, the individuals of the variants file that the
  * file does not have with the button that copies their names, and the
- * table of the file, sortable.
+ * table of the file, sortable, with its menu "Download…", whose CSV has
+ * every row in the order sorted, with the cells as the file holds them.
  *
  * What the screen holds of its own: the format of the last read of each
  * load, and whether it started with the mark of UTF-16, which a read
@@ -36,6 +37,7 @@ import type {
 } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
 import { useAnnouncer } from "../shell/announcer.tsx";
+import { downloadName, individualsStem } from "../../core/fileNames.ts";
 import { csvOptionCommand } from "../steps/individuals/commands.ts";
 import {
   NOT_COPIED,
@@ -67,6 +69,7 @@ import {
   notInFileHeading,
   tableLabel,
   tableSizeText,
+  tableWhat,
 } from "./individualsWords.ts";
 
 /** What the tab is drawn with. */
@@ -371,6 +374,14 @@ function FileTable({ read, name, shown }: FileTableProps): React.JSX.Element {
     () => sortedTableRows(read, individualsTableRows(read), sort),
     [read, sort],
   );
+  const download = useMemo(
+    () => ({
+      what: tableWhat(name),
+      fileName: downloadName(individualsStem(name), "table", "csv"),
+      waiting: null,
+    }),
+    [name],
+  );
   const frame = useRef<HTMLDivElement>(null);
   useScrollPlace(frame, shown);
   return (
@@ -387,6 +398,7 @@ function FileTable({ read, name, shown }: FileTableProps): React.JSX.Element {
           onSortChange={sortBy}
           headingLines={1}
           busy={sorting}
+          download={download}
         />
       </div>
     </div>

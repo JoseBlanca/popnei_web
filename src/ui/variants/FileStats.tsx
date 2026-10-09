@@ -233,15 +233,19 @@ interface StatsProps extends FileStatsProps {
 }
 
 /** The short titles of the histograms of the variants, as their boxes
-    show them, for the room of their plots. */
+    show them, "Obs. het. max:", or alone for the expected heterozygosity,
+    which has no box, for the room of their plots. */
 const VARIANT_ROOM = VARIANT_STATISTICS.map((statistic) =>
-  thresholdShownLabel(variantTitle(statistic)),
+  statistic === "unbiasedExpHet"
+    ? { title: variantTitle(statistic), box: false }
+    : { title: thresholdShownLabel(variantTitle(statistic)), box: true },
 );
 
-/** The same of the histograms of the individuals. */
-const INDIVIDUAL_ROOM = INDIVIDUAL_STATISTICS.map((statistic) =>
-  thresholdShownLabel(individualTitle(statistic)),
-);
+/** The same of the histograms of the individuals, each with a box. */
+const INDIVIDUAL_ROOM = INDIVIDUAL_STATISTICS.map((statistic) => ({
+  title: thresholdShownLabel(individualTitle(statistic)),
+  box: true,
+}));
 
 /** The section of one load of the file. */
 function Stats({
@@ -341,6 +345,7 @@ function Stats({
               numIndividuals={shown.result.perIndividual.individuals.length}
               ploidy={ploidy}
               from={shown.from}
+              variantsName={variantsName}
             />
           </Suspense>
         )}
@@ -369,6 +374,7 @@ function Stats({
               <IndividualPlots
                 result={shown.result.perIndividual}
                 from={shown.from}
+                variantsName={variantsName}
               />
             </Suspense>
             {/* Outside the boundary, which waits for the code of the

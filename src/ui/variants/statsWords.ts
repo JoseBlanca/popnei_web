@@ -93,6 +93,52 @@ export function individualFullTitle(statistic: IndividualStatistic): string {
   return INDIVIDUAL_HISTOGRAMS[statistic].title;
 }
 
+/** What the menu "Download…" of the histogram of the variants of
+    `statistic` downloads, after "Download ": "the plot of the observed
+    heterozygosity of the variants", from its full title
+    (docs/specs/steps/popgen2-pca.md, "Its words"). */
+export function variantPlotWhat(statistic: VariantStatistic): string {
+  return `the plot of the ${lowerFirst(variantFullTitle(statistic))} of the variants`;
+}
+
+/** The same of the histogram of the individuals of `statistic`: "the
+    plot of the observed heterozygosity of each individual". */
+export function individualPlotWhat(statistic: IndividualStatistic): string {
+  return `the plot of the ${lowerFirst(individualFullTitle(statistic))}`;
+}
+
+/** What the files of the histogram of the variants of `statistic` are
+    in their names, "panel.obs_het_variants.svg"
+    (docs/specs/steps/popgen2-pca.md, "The downloads"). */
+export const VARIANT_PLOT_FILES: Readonly<Record<VariantStatistic, string>> =
+  Object.freeze({
+    missingRate: "missing_rate_variants",
+    maf: "maf_variants",
+    obsHet: "obs_het_variants",
+    unbiasedExpHet: "exp_het_variants",
+  });
+
+/** The same of the histograms of the individuals. */
+export const INDIVIDUAL_PLOT_FILES: Readonly<
+  Record<IndividualStatistic, string>
+> = Object.freeze({
+  missingGenotypes: "missing_rate_individuals",
+  observedHeterozygosity: "obs_het_individuals",
+});
+
+/** Why a menu "Download…" of what the one pass of `variantsName` gives,
+    a histogram or the counts per population, waits: a file of part of
+    the variants would hold other numbers with nothing to mark them. */
+export function passDownloadWaitingText(variantsName: string): string {
+  return `Download once ${escaped(variantsName)} is read to the end.`;
+}
+
+/** `text` with its first letter in lower case, for a title inside a
+    sentence. */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 /** The button that downloads the statistics of each individual, their
     missing genotypes and their heterozygosity, as a CSV file. */
 export const INDIVIDUALS_CSV_LABEL =

@@ -77,6 +77,35 @@
   min-inline-size: 0;
 }
 
+/* The row of the title, the box and the menu in the room, as the class
+   top of StatsHistogram.module.css lays it out. */
+.roomTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.roomTop > :last-child {
+  margin-inline-start: auto;
+}
+
+.roomHead {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+/* The title alone of a plot with no threshold, as the class title of
+   StatsHistogram.module.css draws it. */
+.roomTitle {
+  display: flex;
+  align-items: flex-end;
+  min-block-size: calc(var(--target-min) + 2px);
+  margin: 0;
+  font-weight: 600;
+}
+
 /* The room of the plot of a histogram: the shape of the element of
    HistogramPlot.tsx for the histograms of popgen2.html, "wide", 16 by
    10, as wide as its column. */

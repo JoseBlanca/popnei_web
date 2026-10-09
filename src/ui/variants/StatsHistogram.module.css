@@ -11,8 +11,26 @@
   min-inline-size: 0;
 }
 
+/* The row over the plot: the short title, or the short title, "max:"
+   and the box, and at its end the menu "Download…", level with the
+   bottom of the box. Where the two do not fit side by side, as at 320
+   pixels, the menu goes to a line of its own under them, at its end,
+   rather than squeezing the label. */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.top > :last-child {
+  margin-inline-start: auto;
+}
+
 /* The row of the short title, "max:" and the box. */
 .head {
+  flex: 1 1 auto;
   min-inline-size: 0;
 }
 

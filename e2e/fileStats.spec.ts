@@ -198,8 +198,12 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
   // Nothing left to stop or to start again, and the page is plain: no
   // tabs of a table of the bins, no table of the individuals, whose
-  // download is a button, beside the download of the filtered variants.
-  await expect(stats(page).getByRole("button")).toHaveCount(2);
+  // download is a button, beside the download of the filtered variants,
+  // and the menu "Download…" of each of the six plots.
+  await expect(stats(page).getByRole("button")).toHaveCount(8);
+  await expect(
+    stats(page).getByRole("button", { name: /^Download the plot of / }),
+  ).toHaveCount(6);
   await expect(
     stats(page).getByRole("button", { name: "Download filtered variants…" }),
   ).toBeEnabled();

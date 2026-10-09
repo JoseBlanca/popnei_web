@@ -8,6 +8,7 @@
  */
 import { useLayoutEffect, useMemo, useState } from "react";
 
+import { variantsStem } from "../../core/fileNames.ts";
 import { thresholdValue } from "../../core/project.ts";
 import type { Threshold } from "../../core/project.ts";
 
@@ -21,10 +22,20 @@ import type {
   VariantStatsPart,
 } from "../../worker/protocol.ts";
 import type { StatsShown } from "./announceChanges.ts";
+import type { PlotDownload } from "../widgets/downloadItems.ts";
 import { IndividualPlace, Plots } from "./StatsLayout.tsx";
 import { StatsHistogram } from "./StatsHistogram.tsx";
 import { individualPlot, variantPlot } from "./statsPlots.ts";
-import { INDIVIDUAL_STATISTICS, VARIANT_STATISTICS } from "./statsWords.ts";
+import type { StatsPlot } from "./statsPlots.ts";
+import {
+  INDIVIDUAL_PLOT_FILES,
+  INDIVIDUAL_STATISTICS,
+  VARIANT_PLOT_FILES,
+  VARIANT_STATISTICS,
+  individualPlotWhat,
+  passDownloadWaitingText,
+  variantPlotWhat,
+} from "./statsWords.ts";
 import type { DrawnFrom } from "./statsWords.ts";
 import {
   individualThreshold,
@@ -63,6 +74,9 @@ export interface VariantPlotsProps {
   /** What it is drawn from: the result, a result so far, or the last
       result so far of a pass the user stopped. */
   readonly from: DrawnFrom;
+  /** The name of the variants file, which the files of the downloads
+      are named after. */
+  readonly variantsName: string;
 }
 
 /** The four histograms of the variants, each over the variants in its
@@ -74,6 +88,7 @@ export function VariantPlots({
   numIndividuals,
   ploidy,
   from,
+  variantsName,
 }: VariantPlotsProps): React.JSX.Element {
   // The same object until the file changes, so that the plots are not
   // made again on renders that changed nothing.
@@ -90,6 +105,7 @@ export function VariantPlots({
           result={result}
           individuals={individuals}
           from={from}
+          variantsName={variantsName}
         />
       ))}
     </Plots>
@@ -102,6 +118,7 @@ interface VariantHistogramProps {
   readonly result: VariantStatsPart;
   readonly individuals: PassIndividuals;
   readonly from: DrawnFrom;
+  readonly variantsName: string;
 }
 
 /** A histogram of the variants and its threshold, the project's, which
@@ -112,6 +129,7 @@ function VariantHistogram({
   result,
   individuals,
   from,
+  variantsName,
 }: VariantHistogramProps): React.JSX.Element {
   const filter = variantThreshold(statistic);
   const threshold = useAppState((s) =>
@@ -134,9 +152,21 @@ function VariantHistogram({
         : variantPlot(statistic, result, individuals, from, threshold, typed),
     [set, statistic, result, individuals, from, threshold, typed],
   );
+  const download = useMemo(
+    () =>
+      plotDownload(
+        set,
+        variantPlotWhat(statistic),
+        VARIANT_PLOT_FILES[statistic],
+        variantsName,
+        from,
+      ),
+    [set, statistic, variantsName, from],
+  );
   return (
     <StatsHistogram
       plot={drawn}
+      download={download}
       set={set.threshold}
       onMoving={setMoving}
       onTyped={setTyped}
@@ -153,6 +183,9 @@ export interface IndividualPlotsProps {
   /** What it is drawn from: the result, a result so far, or the last
       result so far of a pass the user stopped. */
   readonly from: DrawnFrom;
+  /** The name of the variants file, which the files of the downloads
+      are named after. */
+  readonly variantsName: string;
 }
 
 /** The two histograms of the individuals, each over the individuals
@@ -162,6 +195,7 @@ export interface IndividualPlotsProps {
 export function IndividualPlots({
   result,
   from,
+  variantsName,
 }: IndividualPlotsProps): React.JSX.Element {
   return (
     <Plots>
@@ -171,6 +205,7 @@ export function IndividualPlots({
           statistic={statistic}
           result={result}
           from={from}
+          variantsName={variantsName}
         />
       ))}
     </Plots>
@@ -182,6 +217,7 @@ interface IndividualHistogramProps {
   readonly statistic: IndividualStatistic;
   readonly result: IndividualStatsPart;
   readonly from: DrawnFrom;
+  readonly variantsName: string;
 }
 
 /** A histogram of the individuals and its threshold, as that of the
@@ -190,6 +226,7 @@ function IndividualHistogram({
   statistic,
   result,
   from,
+  variantsName,
 }: IndividualHistogramProps): React.JSX.Element {
   const filter = individualThreshold(statistic);
   const threshold = useAppState((s) => thresholdValue(s.project, filter));
@@ -207,14 +244,28 @@ function IndividualHistogram({
         : individualPlot(statistic, result, from, threshold, typed),
     [set, statistic, result, from, threshold, typed],
   );
+  const download = useMemo(
+    () =>
+      set.plot === null
+        ? null
+        : plotDownload(
+            set.plot,
+            individualPlotWhat(statistic),
+            INDIVIDUAL_PLOT_FILES[statistic],
+            variantsName,
+            from,
+          ),
+    [set, statistic, variantsName, from],
+  );
   return (
     <IndividualPlace
       noValueLine={drawn.noValueLine}
       noValueRoom={drawn.noValueRoom}
     >
-      {drawn.plot !== null && set.plot !== null && (
+      {drawn.plot !== null && set.plot !== null && download !== null && (
         <StatsHistogram
           plot={drawn.plot}
+          download={download}
           set={set.plot.threshold}
           onMoving={setMoving}
           onTyped={setTyped}
@@ -224,6 +275,30 @@ function IndividualHistogram({
       )}
     </IndividualPlace>
   );
+}
+
+/** The download of the histogram `plot`, named for a screen reader by
+    `what` and its files by `file`, "panel.obs_het_variants.svg", after
+    the variants file `variantsName`; it waits while the plot is drawn
+    from part of the variants, `from`, so that no file of part of them
+    leaves the page (docs/specs/steps/popgen2-pca.md, "The downloads"). Its
+    CSV is that of the plot with the threshold set, not the number being
+    typed, which changes no bin. */
+function plotDownload(
+  plot: StatsPlot,
+  what: string,
+  file: string,
+  variantsName: string,
+  from: DrawnFrom,
+): PlotDownload {
+  return {
+    what,
+    stem: variantsStem(variantsName),
+    imageWhat: file,
+    csvWhat: file,
+    csv: plot.csv,
+    waiting: from === "result" ? null : passDownloadWaitingText(variantsName),
+  };
 }
 
 /** How a histogram sets the threshold of `filter` in the project. */

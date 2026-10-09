@@ -448,6 +448,19 @@ export function tableLabel(name: string): string {
   return `The table of ${escaped(name)}`;
 }
 
+/** What the menu "Download…" of the table of the individuals file
+    `name` downloads, after "Download ": "the table of panel_pops.csv". */
+export function tableWhat(name: string): string {
+  return `the table of ${escaped(name)}`;
+}
+
+/** What the menu "Download…" of the counts per population downloads,
+    from their caption: "the table of the individuals of panel.nei after
+    the filters of individuals". */
+export function countsWhat(variantsName: string): string {
+  return `the table of the individuals of ${escaped(variantsName)} after the filters of individuals`;
+}
+
 /** The line over the table of the individuals file, its size, "200
     rows, 2 columns", with "Sorting…" after it while a sort is drawn,
     which takes tenths of a second at 10,000 rows. */

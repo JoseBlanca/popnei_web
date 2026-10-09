@@ -3,7 +3,8 @@
  * popgen2.html, as `SortableTable` takes it
  * (docs/specs/steps/popgen2-input.md, "The table"): every column of the
  * file in its order, the first, the names, the header of each row; every
- * row in its order, each cell as `cellShown` of core writes it, a missing
+ * row in its order, with the cells as the file holds them, which its
+ * download writes, and each cell shown as `cellShown` of core writes it, a missing
  * value empty, a number with the decimal mark of the read; a control or
  * format character of a header or a cell escaped, `escaped` of core, as
  * the list and the counts show them, so that U+202E does not turn the
@@ -21,6 +22,7 @@ import {
 } from "../../core/project.ts";
 import type { TableRead } from "../../core/project.ts";
 import type { Cell, IndividualsTable } from "../../worker/protocol.ts";
+import type { RowValues } from "../widgets/downloadItems.ts";
 import type { SortableColumn, SortableRow } from "../widgets/SortableTable.tsx";
 import type { TableSort } from "../widgets/tableSort.ts";
 
@@ -91,19 +93,28 @@ function isNumbers(rows: IndividualsTable["rows"], index: number): boolean {
   return any;
 }
 
+/** A row of the table: its texts, and its cells as the file holds them,
+    one per column, a cell the row lacks missing, which the CSV of the
+    table writes (docs/specs/widgets/downloads.md, "A table"). */
+export type IndividualsTableRow = SortableRow & RowValues;
+
 /** The rows of each read, made once, so that a sort only reorders the
     same objects and the table keeps what it made of each. */
-const ROWS = new WeakMap<TableRead, readonly SortableRow[]>();
+const ROWS = new WeakMap<TableRead, readonly IndividualsTableRow[]>();
 
 /** The rows of the table of `read`, in the order of the file, the same
     array of the same objects at every call for the same read. */
-export function individualsTableRows(read: TableRead): readonly SortableRow[] {
+export function individualsTableRows(
+  read: TableRead,
+): readonly IndividualsTableRow[] {
   const kept = ROWS.get(read);
   if (kept !== undefined) return kept;
   const decimal = shownDecimal(read);
+  const numColumns = read.table.columns.length;
   const rows = read.table.rows.map((row) => ({
     id: identifierOf(row[0]),
     cells: row.map((cell) => escaped(cellShown(cell, decimal) ?? "")),
+    values: Array.from({ length: numColumns }, (_, at) => row[at] ?? null),
   }));
   ROWS.set(read, rows);
   return rows;
@@ -137,11 +148,11 @@ function compareCells(a: Exclude<Cell, null>, b: Exclude<Cell, null>): number {
  * same objects, by the cells of the column sorted, missing values last in
  * both directions, and equal values in the order of the file.
  */
-export function sortedTableRows(
+export function sortedTableRows<Row extends SortableRow>(
   read: TableRead,
-  rows: readonly SortableRow[],
+  rows: readonly Row[],
   sort: TableSort<TableColumnId> | null,
-): readonly SortableRow[] {
+): readonly Row[] {
   if (sort === null) return rows;
   const index = Number(sort.column.slice(1));
   const cells = read.table.rows.map((row) => row[index] ?? null);

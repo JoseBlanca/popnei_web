@@ -870,3 +870,41 @@ describe("SF10 D1 the plots after a Stop", () => {
     );
   });
 });
+
+describe("AP5 D4 the CSV of each histogram, its bins as drawn", () => {
+  test("a histogram of the variants writes a row per bin drawn, with no row of those with none", () => {
+    const plot = variantPlot("maf", VARIANTS, NO_SPACING, "result", null);
+    const lines = plot.csv().split("\n");
+    expect(lines[0]).toBe("left_edge,right_edge,count");
+    expect(lines.at(-1)).toBe("");
+    // A row per bin drawn, the edges of the plot, and the three variants
+    // with a MAF; the fourth, missing in every individual, has none.
+    expect(lines).toHaveLength(plot.data.counts.length + 2);
+    expect(lines[1]).toBe(
+      `${String(plot.data.edges[0])},${String(plot.data.edges[1])},${String(plot.data.counts[0])}`,
+    );
+    const total = lines
+      .slice(1, -1)
+      .reduce((sum, line) => sum + Number(line.split(",")[2]), 0);
+    expect(total).toBe(3);
+  });
+
+  test("the heterozygosity of the individuals ends with a row of those with none, and the missing rate has no such row", () => {
+    const het = individualPlot(
+      "observedHeterozygosity",
+      INDIVIDUALS,
+      "result",
+      null,
+    ).plot;
+    expect(het?.csv().split("\n").at(-2)).toBe(",,1");
+    const missing = individualPlot(
+      "missingGenotypes",
+      INDIVIDUALS,
+      "result",
+      null,
+    ).plot;
+    const lines = missing?.csv().split("\n") ?? [];
+    expect(lines.some((line) => line.startsWith(",,"))).toBe(false);
+    expect(lines).toHaveLength((missing?.data.counts.length ?? 0) + 2);
+  });
+});

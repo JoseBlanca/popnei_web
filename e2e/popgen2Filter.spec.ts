@@ -322,7 +322,14 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   // The expected heterozygosity, the fourth, has no threshold.
   await expect(variants.getByRole("slider")).toHaveCount(3);
 
+  // Between the last line and the box, the menu "Download…" of the
+  // fourth plot, at the end of its title.
+  const lastMenu = variants.getByRole("button", {
+    name: "Download the plot of the expected heterozygosity (unbiased) of the variants",
+  });
   await variants.getByRole("slider").last().focus();
+  await page.keyboard.press("Tab");
+  await expect(lastMenu).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(filterBox(page)).toBeFocused();
   await page.keyboard.press("Tab");
@@ -330,7 +337,7 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   await page.keyboard.press("Shift+Tab");
   await expect(filterBox(page)).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(variants.getByRole("slider").last()).toBeFocused();
+  await expect(lastMenu).toBeFocused();
 
   // The space bar ticks it off and on, as a check box.
   await page.keyboard.press("Tab");

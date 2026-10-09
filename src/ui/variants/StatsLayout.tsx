@@ -16,6 +16,7 @@
  */
 import { classOf } from "../classOf.ts";
 import { Button } from "../widgets/Button.tsx";
+import { DownloadMenu } from "../widgets/DownloadMenu.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
 import styles from "./StatsLayout.module.css";
 import { INDIVIDUALS_CSV_LABEL, STATS_NAME } from "./statsWords.ts";
@@ -117,15 +118,24 @@ export function Plots({ children }: PlotsProps): React.JSX.Element {
 /** What the room of the plots of a part is drawn with. */
 interface PlotsRoomProps {
   /** The short title of each plot, as the box of its threshold shows
-      it, "Obs. het. max:". */
-  readonly titles: readonly string[];
+      it, "Obs. het. max:", or as a plot with no threshold shows it alone,
+      `box` false. */
+  readonly titles: readonly RoomTitle[];
+}
+
+/** The short title of a plot in the room, and whether it has a box. */
+export interface RoomTitle {
+  readonly title: string;
+  readonly box: boolean;
 }
 
 /** The room of the plots of a part before they are drawn, hidden, and
     out of reach of the keyboard and of a screen reader: for each plot
     the row of its short title and the box of its threshold, a box of the
     same field, which takes the same height and wraps its title at the
-    same width, and under it the room of the plot, of its shape. */
+    same width, or the title alone of a plot with no threshold, with the
+    menu "Download…" at its end, and under it the room of the plot, of its
+    shape. */
 export function PlotsRoom({ titles }: PlotsRoomProps): React.JSX.Element {
   return (
     <div
@@ -133,19 +143,28 @@ export function PlotsRoom({ titles }: PlotsRoomProps): React.JSX.Element {
       aria-hidden="true"
       inert
     >
-      {titles.map((title) => (
+      {titles.map(({ title, box }) => (
         <div key={title} className={classOf(styles, "plotRoom")}>
-          <NumberField
-            label={title}
-            shownLabel={title}
-            value={0}
-            minValue={0}
-            maxValue={1}
-            step={1}
-            refusedText={nothingRefused}
-            onRefused={nothing}
-            onChange={nothing}
-          />
+          <div className={classOf(styles, "roomTop")}>
+            {box ? (
+              <div className={classOf(styles, "roomHead")}>
+                <NumberField
+                  label={title}
+                  shownLabel={title}
+                  value={0}
+                  minValue={0}
+                  maxValue={1}
+                  step={1}
+                  refusedText={nothingRefused}
+                  onRefused={nothing}
+                  onChange={nothing}
+                />
+              </div>
+            ) : (
+              <p className={classOf(styles, "roomTitle")}>{title}</p>
+            )}
+            <DownloadMenu what={title} items={[]} waiting={null} />
+          </div>
           <div className={classOf(styles, "plotShape")} />
         </div>
       ))}

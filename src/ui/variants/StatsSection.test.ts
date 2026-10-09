@@ -240,11 +240,29 @@ function readUnwrapped(page: Page, fileId: string): void {
 /** The section of the statistics, once drawn, or `null`. */
 /** The words of each button of the section, with " disabled" after
     those that are. */
+/** The words of the buttons of the section, each with " disabled" when
+    it is disabled or, as a waiting menu "Download…" is, marked so; not
+    those of the room of the plots, hidden and inert. */
 function buttonsOf(): string[] {
-  return [...(sectionOf()?.querySelectorAll("button") ?? [])].map(
-    (button) => `${button.textContent}${button.disabled ? " disabled" : ""}`,
-  );
+  return [...(sectionOf()?.querySelectorAll("button") ?? [])]
+    .filter((button) => button.closest("[inert]") === null)
+    .map(
+      (button) =>
+        `${button.textContent}${
+          button.disabled || button.getAttribute("aria-disabled") === "true"
+            ? " disabled"
+            : ""
+        }`,
+    );
 }
+
+/** The buttons of the section while the pass has not ended: the menus
+    of the six plots waiting, and the download of the filtered variants
+    disabled, with no download of the statistics of each individual. */
+const WAITING_BUTTONS = [
+  ...Array.from({ length: 6 }, () => "Download… disabled"),
+  "Download filtered variants… disabled",
+];
 
 function sectionOf(): Element | null {
   return container.querySelector(
@@ -447,7 +465,7 @@ describe("the section of the statistics of the open file", () => {
     expect(partsText()).toContain(
       "Calculating the statistics of the variants…",
     );
-    expect(buttonsOf()).toEqual(["Download filtered variants… disabled"]);
+    expect(buttonsOf()).toEqual(WAITING_BUTTONS);
     // Each plot keeps its element as the next result so far comes.
     const before = [...container.querySelectorAll("svg.chart")];
     await act(async () => {
@@ -479,9 +497,13 @@ describe("the section of the statistics of the open file", () => {
         (element) => element.textContent,
       ),
     ).toEqual([
+      // The menus of the four plots of the variants, then of the two of
+      // the individuals, enabled at the result.
+      ...Array.from({ length: 6 }, () => "Download…"),
       "Download the missing genotypes and heterozygosity of each individual (CSV)",
       "Download filtered variants…",
     ]);
+    expect(buttonsOf()).not.toContain("Download… disabled");
   });
 });
 
@@ -532,7 +554,7 @@ describe("SF10 D2 the plots after a Stop, in the section", () => {
       );
     }
     expect(partsText()).not.toContain("so far");
-    expect(buttonsOf()).toEqual(["Download filtered variants… disabled"]);
+    expect(buttonsOf()).toEqual(WAITING_BUTTONS);
   });
 
   test("Start again drops them and reads the file again", async () => {

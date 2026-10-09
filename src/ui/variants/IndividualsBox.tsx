@@ -5,8 +5,9 @@
  * file"). With no file, the words that every individual is unclassified;
  * with one, its name and, as it is read, refused or read, the words of
  * the read, of the refusal, or the list "Column of the populations" with
- * the individuals the filters keep in each population and the lines
- * under them. It ends with the zone that opens an individuals file, its
+ * the individuals the filters keep in each population, with their menu
+ * "Download…", which waits while a count waits for the one pass, and
+ * the lines under them. It ends with the zone that opens an individuals file, its
  * button, a drop or a paste, and with a file the button that removes it.
  *
  * The lines of the file are in a boundary of errors made again for each
@@ -19,6 +20,7 @@
  */
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 
+import { downloadName, variantsStem } from "../../core/fileNames.ts";
 import { populationCounts } from "../../core/populations.ts";
 import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
@@ -64,12 +66,14 @@ import {
   countText,
   countsCaption,
   countsShown,
+  countsWhat,
   noColumnQualifiedText,
   noIndividualsFileText,
   passWaitOf,
   removeLabel,
 } from "./individualsWords.ts";
 import type { CountsLine, PassWait } from "./individualsWords.ts";
+import { passDownloadWaitingText } from "./statsWords.ts";
 
 /** What the box says of a drop, or a paste, that is not of one file. */
 const NOT_FILES_WORDS = {
@@ -294,7 +298,21 @@ function ColumnAndCounts({
           rows={counts.populations.map(({ pop, kept: numKept }) => ({
             id: pop,
             cells: [escaped(pop), countCell(numKept)],
+            values: [pop, numKept],
           }))}
+          // The counts of part of the variants would hold other numbers
+          // with nothing to mark them: the menu waits with the counts.
+          download={{
+            what: countsWhat(project.variants.name),
+            fileName: downloadName(
+              variantsStem(project.variants.name),
+              "population_counts",
+              "csv",
+            ),
+            waiting: counts.populations.some(({ kept }) => kept === null)
+              ? passDownloadWaitingText(project.variants.name)
+              : null,
+          }}
         />
       )}
       {shown.lines.map((line) => (

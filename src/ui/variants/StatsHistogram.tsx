@@ -5,11 +5,13 @@
  * with the line of the threshold the user drags over it
  * (docs/plans/thresholds.md, "Round 1 with the owner"). The expected
  * heterozygosity, on which popnei has no filter, has its short title
- * alone, and no box and no line. No table of its bins and no download,
- * which the owner wants out of this page until the piece of the
- * downloads (docs/plans/file-stats.md, "Where it goes"). Drawn from the
- * result, or from a result so far while the pass runs, whose words say
- * so.
+ * alone, and no box and no line. At the end of that row, the menu
+ * "Download…" of the plot, its images and the CSV of its bins, which
+ * waits while the plot is drawn from part of the variants
+ * (docs/specs/steps/popgen2-pca.md, "The downloads"): outside the box the
+ * line of the threshold is placed against, which holds the plot alone
+ * and the line. Drawn from the result, or from a result so far while
+ * the pass runs, whose words say so.
  *
  * The threshold is a filter of the project
  * (docs/specs/steps/popgen2-filters.md, "A threshold, on and off", "When
@@ -44,6 +46,7 @@ import { useAnnouncer } from "../shell/announcer.tsx";
 import { shortcutOf } from "../shell/shortcuts.ts";
 import type { ThresholdLook } from "../../core/thresholds.ts";
 import { thresholdRefusedText } from "../steps/variants/words.ts";
+import type { PlotDownload } from "../widgets/downloadItems.ts";
 import { HistogramPlot } from "../widgets/HistogramPlot.tsx";
 import { NumberField } from "../widgets/NumberField.tsx";
 import { ThresholdSlider } from "../widgets/ThresholdSlider.tsx";
@@ -61,6 +64,8 @@ export interface StatsHistogramProps {
       its threshold changes, so that the plot is not drawn again on
       renders that changed nothing. */
   readonly plot: StatsPlot;
+  /** The download of the plot, its menu "Download…". */
+  readonly download: PlotDownload;
   /** Its threshold with no number typed: the project's, or the one
       dragged or moved with the keys and not yet a change; `null` for the
       expected heterozygosity, which has none. */
@@ -106,6 +111,7 @@ function writeFrame(
 /** A histogram of the section, with its threshold. */
 export function StatsHistogram({
   plot,
+  download,
   set,
   onMoving,
   onTyped,
@@ -245,10 +251,19 @@ export function StatsHistogram({
         aria-label={plot.data.title}
         className={classOf(styles, "block")}
       >
-        <p className={classOf(styles, "title")}>{plot.shortTitle}</p>
-        <div className={classOf(styles, "plot")}>
-          <HistogramPlot data={plot.data} />
-        </div>
+        <HistogramPlot
+          data={plot.data}
+          download={download}
+          arrange={(menu, element) => (
+            <>
+              <div className={classOf(styles, "top")}>
+                <p className={classOf(styles, "title")}>{plot.shortTitle}</p>
+                {menu}
+              </div>
+              <div className={classOf(styles, "plot")}>{element}</div>
+            </>
+          )}
+        />
       </div>
     );
   }
@@ -260,6 +275,102 @@ export function StatsHistogram({
     onMoving(value);
   };
 
+  const head = (
+    <div ref={boxRef} className={classOf(styles, "head")}>
+      <NumberField
+        label={threshold.name}
+        shownLabel={threshold.shownLabel}
+        value={set.box.value}
+        minValue={threshold.box.minValue}
+        maxValue={threshold.box.maxValue}
+        step={threshold.box.step}
+        decimals={threshold.box.decimals}
+        muted={threshold.look !== "on"}
+        {...(threshold.hiddenDescription !== null && {
+          hiddenDescription: threshold.hiddenDescription,
+        })}
+        refusedText={thresholdRefusedText}
+        onRefused={(text) => {
+          announcer.announce(text);
+        }}
+        onCommitReady={(commit) => {
+          commitRef.current = commit;
+        }}
+        onTyped={onTyped}
+        // The threshold drawn is drawn at the number committed, which
+        // was typed, and the one set is the project's.
+        onChange={(value) => {
+          runRef.current?.end();
+          const committed = threshold.onStep(value);
+          onSet(committed);
+          announceLook(
+            thresholdLookChangeText(
+              set.look,
+              threshold.look,
+              committed,
+              threshold.counted,
+            ),
+          );
+        }}
+        onEmptied={() => {
+          runRef.current?.end();
+          onSet(null);
+          announceLook(
+            thresholdLookChangeText(set.look, "off", 1, threshold.counted),
+          );
+        }}
+        // From where the line is, at the number typed when one is, which
+        // the field puts back and tells the screen it is typed no more.
+        // From off, at the top of the axis, Down goes below it, and Up
+        // leaves the threshold off, where React Aria would go a step
+        // below 1 and widen the axis.
+        onSteps={(steps) => {
+          if (set.look === "off" && steps > 0) return;
+          const { step, value } = threshold.slider;
+          const { minValue, maxValue } = threshold.box;
+          pressed(
+            threshold.onStep(
+              Math.min(maxValue, Math.max(minValue, value + steps * step)),
+            ),
+          );
+        }}
+      />
+    </div>
+  );
+  const slider = framed && (
+    <ThresholdSlider
+      label={threshold.name}
+      minValue={threshold.slider.min}
+      maxValue={threshold.slider.max}
+      step={threshold.slider.step}
+      value={threshold.slider.value}
+      valueText={threshold.valueText}
+      muted={threshold.look !== "on"}
+      onChange={(value, by) => {
+        const moved = threshold.onStep(value);
+        if (by === "key") {
+          pressed(moved);
+          return;
+        }
+        if (drag.current === null) {
+          // A run waiting is a change of its own, before the drag.
+          runRef.current?.end();
+          drag.current = { from: set.slider.value, to: moved };
+        } else {
+          drag.current.to = moved;
+        }
+        onMoving(moved);
+      }}
+      onDragEnd={(value) => {
+        const moved = threshold.onStep(value);
+        const dragged = drag.current;
+        drag.current = null;
+        if (dragged !== null && moved !== dragged.from) onSet(moved);
+        onMoving(null);
+      }}
+    />
+  );
+
   return (
     <div
       ref={blockRef}
@@ -268,10 +379,9 @@ export function StatsHistogram({
       className={classOf(styles, "block")}
       onKeyDown={(event) => {
         // Undo or Redo with a run waiting: the run made a change first,
-        // and the keys go on to the page's Undo or Redo, which the page
-        // does not draw since the owner's decision of 8 October 2026
-        // (VariantsPage.tsx). With something typed in the box, its own
-        // handler has put its number back.
+        // and the keys go on to the page's Undo or Redo, the buttons at
+        // the top right corner of the page. With something typed in the
+        // box, its own handler has put its number back.
         if (
           !event.defaultPrevented &&
           shortcutOf(event) !== null &&
@@ -284,102 +394,27 @@ export function StatsHistogram({
         runRef.current?.end();
       }}
     >
-      <div ref={boxRef} className={classOf(styles, "head")}>
-        <NumberField
-          label={threshold.name}
-          shownLabel={threshold.shownLabel}
-          value={set.box.value}
-          minValue={threshold.box.minValue}
-          maxValue={threshold.box.maxValue}
-          step={threshold.box.step}
-          decimals={threshold.box.decimals}
-          muted={threshold.look !== "on"}
-          {...(threshold.hiddenDescription !== null && {
-            hiddenDescription: threshold.hiddenDescription,
-          })}
-          refusedText={thresholdRefusedText}
-          onRefused={(text) => {
-            announcer.announce(text);
-          }}
-          onCommitReady={(commit) => {
-            commitRef.current = commit;
-          }}
-          onTyped={onTyped}
-          // The threshold drawn is drawn at the number committed, which
-          // was typed, and the one set is the project's.
-          onChange={(value) => {
-            runRef.current?.end();
-            const committed = threshold.onStep(value);
-            onSet(committed);
-            announceLook(
-              thresholdLookChangeText(
-                set.look,
-                threshold.look,
-                committed,
-                threshold.counted,
-              ),
-            );
-          }}
-          onEmptied={() => {
-            runRef.current?.end();
-            onSet(null);
-            announceLook(
-              thresholdLookChangeText(set.look, "off", 1, threshold.counted),
-            );
-          }}
-          // From where the line is, at the number typed when one is, which
-          // the field puts back and tells the screen it is typed no more.
-          // From off, at the top of the axis, Down goes below it, and Up
-          // leaves the threshold off, where React Aria would go a step
-          // below 1 and widen the axis.
-          onSteps={(steps) => {
-            if (set.look === "off" && steps > 0) return;
-            const { step, value } = threshold.slider;
-            const { minValue, maxValue } = threshold.box;
-            pressed(
-              threshold.onStep(
-                Math.min(maxValue, Math.max(minValue, value + steps * step)),
-              ),
-            );
-          }}
-        />
-      </div>
-      <div ref={plotRef} className={classOf(styles, "plot")}>
-        <HistogramPlot data={plot.data} onFrame={onFrame} />
-        {framed && (
-          <ThresholdSlider
-            label={threshold.name}
-            minValue={threshold.slider.min}
-            maxValue={threshold.slider.max}
-            step={threshold.slider.step}
-            value={threshold.slider.value}
-            valueText={threshold.valueText}
-            muted={threshold.look !== "on"}
-            onChange={(value, by) => {
-              const moved = threshold.onStep(value);
-              if (by === "key") {
-                pressed(moved);
-                return;
-              }
-              if (drag.current === null) {
-                // A run waiting is a change of its own, before the drag.
-                runRef.current?.end();
-                drag.current = { from: set.slider.value, to: moved };
-              } else {
-                drag.current.to = moved;
-              }
-              onMoving(moved);
-            }}
-            onDragEnd={(value) => {
-              const moved = threshold.onStep(value);
-              const dragged = drag.current;
-              drag.current = null;
-              if (dragged !== null && moved !== dragged.from) onSet(moved);
-              onMoving(null);
-            }}
-          />
+      <HistogramPlot
+        data={plot.data}
+        onFrame={onFrame}
+        download={download}
+        // The menu at the end of the row of the box, outside the box,
+        // whose focus a commit reads; the plot alone in the box the line
+        // is placed against, so that the menu does not push the plot
+        // down from where the line is placed.
+        arrange={(menu, element) => (
+          <>
+            <div className={classOf(styles, "top")}>
+              {head}
+              {menu}
+            </div>
+            <div ref={plotRef} className={classOf(styles, "plot")}>
+              {element}
+              {slider}
+            </div>
+          </>
         )}
-      </div>
+      />
     </div>
   );
 }

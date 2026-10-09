@@ -4931,6 +4931,54 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-download-waits${at}-${theme}`);
       });
 
+      test("the menu of the download of a histogram, open", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        const button = newPageStats(page).getByRole("button", {
+          name: "Download the plot of the proportion of missing genotypes of the variants",
+        });
+        await expect(button).not.toHaveAttribute("aria-disabled", "true", {
+          timeout: 20_000,
+        });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await button.scrollIntoViewIfNeeded();
+        await button.focus();
+        await page.keyboard.press("Enter");
+        await expect(page.getByRole("menu")).toBeVisible();
+        await save(page, `popgen2-download-menu${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
+      test("the menu of the download of a histogram, waiting for the one pass", async ({
+        page,
+      }, testInfo) => {
+        test.setTimeout(120_000);
+        const vcf = testInfo.outputPath("held.vcf.gz");
+        await writeBigVcf(vcf, 30_000);
+        // The page was opened before, so its worker is fetched again.
+        await holdSummary(page);
+        await page.reload();
+        await pickOnNewPage(page, vcf);
+        await expect(
+          page.getByText("Calculating the statistics of the variants… 100%"),
+        ).toBeVisible({ timeout: 60_000 });
+        await release(page, "oneSoFar");
+        const button = newPageStats(page).getByRole("button", {
+          name: "Download the plot of the proportion of missing genotypes of the variants",
+        });
+        await expect(button).toHaveAttribute("aria-disabled", "true", {
+          timeout: 60_000,
+        });
+        await button.scrollIntoViewIfNeeded();
+        await button.focus();
+        await expect(page.getByRole("tooltip")).toBeVisible();
+        await save(page, `popgen2-download-waiting${at}-${theme}`, {
+          fullPage: false,
+        });
+      });
+
       test("the dialog of the download", async ({ page }) => {
         await pickOnNewPage(page, "low_qual.vcf.gz");
         await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
