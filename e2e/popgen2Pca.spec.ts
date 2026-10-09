@@ -180,12 +180,19 @@ async function runHeld(page: Page): Promise<void> {
     `aria-disabled`, its tooltip shown when the Tab key reaches it. */
 async function expectWaiting(page: Page, control: Locator): Promise<void> {
   await expect(control).toHaveAttribute("aria-disabled", "true");
-  await control.focus();
-  // Out and back by the keyboard, which is what shows a tooltip.
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
-  await expect(control).toBeFocused();
-  await expect(page.getByRole("tooltip")).toHaveText(LOCKED);
+  // Out and back by the keyboard, which is what shows a tooltip. Between
+  // two fields that wait, the tooltip of the field reached did not show
+  // once in 13 runs of Chromium 153, the one left closing after it; so
+  // the move is made again until it shows.
+  await expect(async () => {
+    await control.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(control).toBeFocused();
+    await expect(page.getByRole("tooltip")).toHaveText(LOCKED, {
+      timeout: 1_000,
+    });
+  }).toPass({ timeout: 10_000 });
   await page.keyboard.press("Escape");
 }
 
