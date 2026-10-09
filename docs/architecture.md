@@ -2322,8 +2322,8 @@ reader of BED files in Python:
    be read by its footer, from the first batch that starts past 4 GiB,
    though its batches read in their order hold every variant; the cause,
    reproduced under node, is the writer of arrow-ipc 60, popnei's
-   dependency, whose offsets are of 32 bits under wasm; an issue of
-   popnei is drafted in `docs/designs/stats-filters.popnei-issue-nei-4gib.md`
+   dependency, whose offsets are of 32 bits under wasm; popnei's issue
+   #17, https://github.com/JoseBlanca/popnei/issues/17, asks for it
    (`docs/specs/analyses/writeVariants.md`, "What was measured"). A VCF
    has no footer.
 

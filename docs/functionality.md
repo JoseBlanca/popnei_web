@@ -222,8 +222,8 @@ Mac, an Apple M5 Pro with 64 GB, with `.nei` files of 2, 4 and 8 GB
   first 4 GiB, though its variants, read in order, were all there, and
   popnei itself cannot open it past that point. The cause, reproduced
   without a browser, is in a library popnei writes the file with, which
-  counts places in 32 bits in the browser; an issue of popnei is
-  drafted. The page does not warn of it. A
+  counts places in 32 bits in the browser; popnei's issue #17 asks
+  for it to be fixed. The page does not warn of it. A
   VCF is not affected, and a `.nei` file up to 4 GiB is read whole.
 - Firefox was not measured, since Playwright, the tool that drives the
   browsers in the tests, cannot start it on that Mac; the owner tries it
@@ -880,7 +880,7 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
   of popnei is not written yet.
 - A `.nei` file above 4 GiB written in the browser whose footer points
   to the right batches (section 3, the download of popgen2.html); found
-  on 9 October 2026, its cause found the same day, its issue drafted.
+  on 9 October 2026, its cause found the same day, popnei's issue #17, opened that day.
 
 ## 12. Open points
 

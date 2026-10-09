@@ -438,8 +438,8 @@ from WebKit cannot be read by its footer: pyarrow fails at batch 782 of
 the 7,270,000 variants, the last at 7,270,000,000. The footer of a
 `.nei` file holds the place of each batch. The cause was found on 9
 October 2026 and reproduced under node with popnei 0.2.2, without a
-browser (`docs/designs/stats-filters.popnei-issue-nei-4gib.md`, the
-draft of its issue): the writer of popnei's dependency arrow-ipc 60.0.0
+browser (popnei's issue #17, https://github.com/JoseBlanca/popnei/issues/17,
+from `docs/designs/stats-filters.popnei-issue-nei-4gib.md`): the writer of popnei's dependency arrow-ipc 60.0.0
 keeps that place in a `usize`, 32 bits in wasm, which wraps past 4 GiB
 with no error, so every `.nei` file larger than 4 GiB the application
 writes has a footer that lists each batch past 4 GiB 4,294,967,296
