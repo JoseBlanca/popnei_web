@@ -64,6 +64,11 @@ export function noIndividualsFileText(variants: VariantSource | null): string {
     when their code throws, under the box's "Individuals file". */
 export const INDIVIDUALS_LINES_NAME = "What the individuals file holds";
 
+/** The heading drawn in the tab "Individuals file" in place of what it
+    shows when its code throws. */
+export const INDIVIDUALS_TAB_CONTENT_NAME =
+  "How the individuals file was read and what it holds";
+
 /** The heading drawn in the box in place of the zone that opens an
     individuals file when its code throws. */
 export const OPENING_INDIVIDUALS_ZONE_NAME = "Opening an individuals file";

@@ -19,7 +19,9 @@
  * the page a way to open a file without a reload. The tab "Variants file" holds
  * the statistics of the file open (docs/plans/file-stats.md), and the
  * status region says what changes away from the focus, whichever tab is
- * shown. The page holds the words of the last file not opened, which the
+ * shown. The tab "Individuals file" is in a boundary made again for
+ * each individuals file, as the statistics are for each variants file.
+ * The page holds the words of the last file not opened, which the
  * opening says and the box shows, and the tab shown, which is the
  * screen's and not the project's.
  */
@@ -33,7 +35,10 @@ import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { IndividualsTab } from "./IndividualsTab.tsx";
-import { INDIVIDUALS_BOX_NAME } from "./individualsWords.ts";
+import {
+  INDIVIDUALS_BOX_NAME,
+  INDIVIDUALS_TAB_CONTENT_NAME,
+} from "./individualsWords.ts";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
@@ -75,6 +80,9 @@ export function VariantsPage({
   const [tab, setTab] = useState<FileTab>("variants");
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
+  const individualsId = useAppState(
+    (s) => s.project.individuals?.fileId ?? null,
+  );
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -154,7 +162,17 @@ export function VariantsPage({
             {
               id: "individuals",
               label: INDIVIDUALS_BOX_NAME,
-              content: <IndividualsTab shown={tab === "individuals"} />,
+              content: (
+                // Another load is another boundary, which has caught
+                // nothing, as the statistics of the variants file have.
+                <ErrorBoundary
+                  key={individualsId ?? "none"}
+                  heading={INDIVIDUALS_TAB_CONTENT_NAME}
+                  level={2}
+                >
+                  <IndividualsTab shown={tab === "individuals"} />
+                </ErrorBoundary>
+              ),
             },
           ]}
         />

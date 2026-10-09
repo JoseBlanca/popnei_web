@@ -55,8 +55,9 @@ declare global {
 }
 
 /** How many times the box worked out what it shows of the counts, one
-    for each drawing of the box with a file read. */
-const drawn = vi.hoisted(() => ({ counts: 0 }));
+    for each drawing of the box with a file read; and whether the tab of
+    the individuals file throws a defect as it is drawn with a file. */
+const drawn = vi.hoisted(() => ({ counts: 0, tabThrows: false }));
 
 vi.mock("./individualsWords.ts", async (importOriginal) => {
   const real = await importOriginal<typeof IndividualsWordsModule>();
@@ -67,6 +68,14 @@ vi.mock("./individualsWords.ts", async (importOriginal) => {
     ): ReturnType<typeof real.countsShown> => {
       drawn.counts += 1;
       return real.countsShown(...args);
+    },
+    individualsTabShows: (
+      ...args: Parameters<typeof real.individualsTabShows>
+    ): ReturnType<typeof real.individualsTabShows> => {
+      if (drawn.tabThrows && args[0] !== null) {
+        throw new Error("popnei_web defect: a defect of the test");
+      }
+      return real.individualsTabShows(...args);
     },
   };
 });
@@ -99,6 +108,7 @@ beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
   drawn.counts = 0;
+  drawn.tabThrows = false;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -675,6 +685,36 @@ describe("IN6 D1 the commands of the box and the tab, with their descriptions", 
 });
 
 describe("IN6 D1 the tab of the individuals file in each state", () => {
+  test("a defect in the tab draws its heading alone in its place, leaves the rest of the page, and the next file draws the tab again", async () => {
+    const quiet = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    try {
+      const { store } = await drawPage();
+      await openVariants(store);
+      const headings = (): string[] =>
+        [...container.querySelectorAll("h2")].map((h) => h.textContent);
+      const before = headings();
+      drawn.tabThrows = true;
+      await pickIndividuals("pops.csv");
+      await recorded(store, readOf(POPS));
+      expect(headings()).toEqual([
+        ...before,
+        "How the individuals file was read and what it holds",
+      ]);
+      expect(paragraphs(tab())).toEqual([]);
+      drawn.tabThrows = false;
+      await act(async () => {
+        const command = openIndividualsCommand("b".repeat(32), "other.csv");
+        store.apply(command.description, command.command);
+        await Promise.resolve();
+      });
+      expect(paragraphs(tab())).toEqual(["Reading other.csv."]);
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+
   test("no file: the words of no file", async () => {
     await drawPage();
     expect(paragraphs(tab())).toEqual(["No individuals file open."]);

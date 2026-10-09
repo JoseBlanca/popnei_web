@@ -311,6 +311,13 @@ sheet of panel_pops.xlsx; any other sheet is not read." What the file is
 comes from the read, its `found` or the format of its refusal, never
 from its name.
 
+What the tab shows is in a boundary of errors made anew for each
+individuals file opened, as the statistics of the variants file are for
+each variants file: a throw there leaves its heading alone in the tab,
+"How the individuals file was read and what it holds", and the boxes,
+the other tab and the row of the tabs working; the next file opened
+draws the tab again.
+
 **The individuals not in the file.** When individuals of the variants
 file are not in the individuals file: the heading "Individuals in
 panel.nei but not in panel_pops.csv, before the filters", their full list in the order of the
@@ -430,6 +437,8 @@ the project's (`docs/architecture.md`, section 7).
 | the button of removal | "Remove panel_pops.csv" |
 | the row of the tabs, for a screen reader | "The files" |
 | the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants file" | "Opening a variants file" |
+| the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals file" | "What the individuals file holds"; "Opening an individuals file" |
+| the heading drawn in place of what the tab "Individuals file" shows when its code throws | "How the individuals file was read and what it holds" |
 | the tabs | "Variants file"; "Individuals file" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
 | the caption of the counts | "Individuals of panel.nei after the filters of individuals" |
