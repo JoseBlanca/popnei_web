@@ -86,9 +86,12 @@ nothing to mark them. The CSV:
   shows: each cell a `CellValue`, a string, a number or `null`. A
   number is written as `String` writes it, in full, with the point and
   the hyphen, `-0.7138853335304419`; `NaN` and `null` as an empty field.
-  `SortableTable`'s rows hold their texts only today,
-  `cells: readonly string[]`, and gain `values`; `Table`'s cells may be
-  elements, and its rows gain `values` too.
+  `SortableTable`'s rows hold their texts, `cells: readonly string[]`,
+  and `Table`'s may hold elements; a table given a download takes rows
+  that carry `values` too, which the type of its props asks for, so that
+  a row without them does not compile, and a row of another number of
+  values than the columns is a defect as the table is drawn. The values
+  are taken at the choice, not at each draw.
 - **The text as written**, by `csvField` of `src/core/analyses/words.ts`:
   between double quotes when it holds a comma, a quote or a new line,
   each quote doubled, as RFC 4180, the common rule of CSV files, has it;
@@ -208,9 +211,15 @@ export interface TableDownload {
   readonly fileName: string;   // downloadName(…, "csv")
   readonly waiting: string | null;
 }
-// SortableRow and TableRow gain: readonly values?: readonly CellValue[], one per column,
-// required when the table is given a download (a defect otherwise);
-// SortableTableProps and TableProps gain: readonly download?: TableDownload.
+/** What a row of a table given a download holds beside what it shows. */
+export interface RowValues {
+  readonly id: string;
+  readonly values: readonly CellValue[];   // one per column
+}
+// SortableTableProps and TableProps are their look and one of:
+//   { rows: readonly SortableRow[]; download?: never }             (no menu)
+//   { rows: readonly (SortableRow & RowValues)[]; download: TableDownload }
+// and the same with TableRow.
 
 /** What a plot takes to be downloaded. */
 export interface PlotDownload {
@@ -283,13 +292,16 @@ With Vitest, in node, at `tableCsv`, `binsCsv`, `downloadName` and
 
 With Vitest, the widgets drawn by React in a page that jsdom simulates
 in node, with `createRoot` and `act` and no testing library, as
-`.claude/skills/coding/testing.md` and the tests of the tabs do: a `SortableTable` of three rows sorted descending by a number
-column, "Table as CSV" chosen: the text handed to `downloadText` has
-the rows in that order and the values, not the texts; a table given a
-download and a row with no `values`: a defect; a `DownloadMenu` with a
-`save` that throws `PngError("tooLarge")`: the words under the button
-and in the status region; a waiting menu: `aria-disabled`, its tooltip,
-and no menu on Enter.
+`.claude/skills/coding/testing.md` and the tests of the tabs do: a
+`SortableTable` of three rows sorted descending by a number column, in
+another order than by their names, "Table as CSV" chosen: the text
+handed to `downloadText` has the rows in that order and the values, not
+the texts; a table given a download and a row with fewer `values` than
+columns: a defect as it is drawn, and one with none: a type error, by a
+`@ts-expect-error`; a `DownloadMenu` with a `save` that throws
+`PngError("tooLarge")`: the words under the button and in the status
+region; a waiting menu: `aria-disabled`, its tooltip, and no menu on
+Enter.
 
 With Playwright, in Chromium and WebKit, on the built site, as
 `docs/specs/steps/popgen2-pca.md`, "How it is checked", lists: each

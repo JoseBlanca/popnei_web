@@ -23,6 +23,16 @@ export interface DownloadItem {
   readonly save: () => Promise<string>;
 }
 
+/** What a row of a table given a download holds beside what it shows:
+    its id, and the values of its cells as stored, one per column, in
+    their order, which the CSV of the table holds in place of the texts. */
+export interface RowValues {
+  /** Its id, unique in the table. */
+  readonly id: string;
+  /** The values of its cells as stored, one per column. */
+  readonly values: readonly CellValue[];
+}
+
 /** What a table takes to be downloaded. */
 export interface TableDownload {
   /** What it downloads, after "Download ": "the table of panel_pops.csv". */
@@ -62,19 +72,40 @@ const SVG_TYPE = "image/svg+xml";
 const PNG_SCALE = 2;
 
 /**
- * The item "Table as CSV" of a table of columns labelled `header`, whose
- * rows give their values, one per column, in the order shown: the CSV is
- * written at the choice, of the rows as they are then.
+ * A defect when a row of `rows` has not `numColumns` values: a table
+ * given a download checks its rows as it is drawn, so that a row of too
+ * few or too many values fails at once and not at a choice of the menu.
+ * It reads the length of each row and makes nothing, so that a table of
+ * 10,000 rows drawn again costs no copy of them.
+ */
+export function checkValues(
+  rows: readonly RowValues[],
+  numColumns: number,
+): void {
+  for (const row of rows) {
+    if (row.values.length !== numColumns) {
+      throw new Error(
+        `popnei_web defect: the row ${row.id} of a table given a download has ${String(row.values.length)} values for its ${String(numColumns)} columns.`,
+      );
+    }
+  }
+}
+
+/**
+ * The item "Table as CSV" of a table of columns labelled `header` and of
+ * the rows `rows`, in the order shown: their values are taken, and the
+ * CSV written, at the choice.
  */
 export function tableItem(
   fileName: string,
   header: readonly string[],
-  values: () => readonly (readonly CellValue[])[],
+  rows: readonly RowValues[],
 ): DownloadItem {
   return {
     label: "Table as CSV",
     save: () => {
-      downloadText(fileName, tableCsv(header, values()), CSV_TYPE);
+      const values = rows.map((row) => row.values);
+      downloadText(fileName, tableCsv(header, values), CSV_TYPE);
       return Promise.resolve(fileName);
     },
   };

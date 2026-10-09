@@ -26,11 +26,15 @@ import {
   PNG_NOT_MADE_TEXT,
   PNG_TOO_LARGE_TEXT,
 } from "./DownloadMenu.tsx";
-import type { DownloadItem } from "./downloadItems.ts";
+import type { DownloadItem, RowValues } from "./downloadItems.ts";
 import { SortableTable } from "./SortableTable.tsx";
-import type { SortableColumn, SortableRow } from "./SortableTable.tsx";
+import type {
+  SortableColumn,
+  SortableRow,
+  SortableTableProps,
+} from "./SortableTable.tsx";
 import { Table } from "./Table.tsx";
-import type { TableColumn, TableRow } from "./Table.tsx";
+import type { TableColumn, TableProps, TableRow } from "./Table.tsx";
 
 vi.mock("../download.ts", () => ({
   downloadText: vi.fn(),
@@ -233,7 +237,7 @@ const SORTABLE_COLUMNS: readonly SortableColumn<Id>[] = [
     them, their texts rounded and their values in full; in another order
     than by their names, "=b", "a", "c", so that a CSV in that order
     fails. */
-const SORTED_ROWS: readonly SortableRow[] = [
+const SORTED_ROWS: readonly (SortableRow & RowValues)[] = [
   { id: "c", cells: ["c", "0.9000"], values: ["c", 0.9000000000000001] },
   { id: "a", cells: ["a", "0.5000"], values: ["a", 0.5] },
   { id: "=b", cells: ["=b", "—"], values: ["=b", null] },
@@ -298,7 +302,7 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
       { id: "pair", label: "Populations", isRowHeader: true },
       { id: "distance", label: "Distance", isNumeric: true },
     ];
-    const rows: readonly TableRow[] = [
+    const rows: readonly (TableRow & RowValues)[] = [
       {
         id: "p1-p2",
         cells: [createElement("span", null, "p1 – p2"), "−0.0113"],
@@ -389,12 +393,15 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     },
   );
 
-  test("a sortable table given a download and a row with no values is a defect", () => {
+  test("a sortable table given a download and a row with fewer values than columns is a defect as it is drawn", () => {
     const error = drawThrown(
       createElement(SortableTable<Id>, {
         label: "The individuals",
         columns: SORTABLE_COLUMNS,
-        rows: [...SORTED_ROWS, { id: "d", cells: ["d", "0.1000"] }],
+        rows: [
+          ...SORTED_ROWS,
+          { id: "d", cells: ["d", "0.1000"], values: ["d"] },
+        ],
         sort: null,
         onSortChange: () => undefined,
         download: { what: "the table", fileName: "x.table.csv", waiting: null },
@@ -403,16 +410,40 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(String(error)).toMatch(/popnei_web defect/u);
   });
 
-  test("a plain table given a download and a row with no values is a defect", () => {
+  test("a plain table given a download and a row with fewer values than columns is a defect as it is drawn", () => {
     const error = drawThrown(
       createElement(Table, {
         caption: "Distances",
-        columns: [{ id: "pair", label: "Populations", isRowHeader: true }],
-        rows: [{ id: "p1", cells: ["p1"] }],
+        columns: [
+          { id: "pair", label: "Populations", isRowHeader: true },
+          { id: "distance", label: "Distance", isNumeric: true },
+        ],
+        rows: [{ id: "p1", cells: ["p1", "0.1"], values: ["p1"] }],
         download: { what: "the distances", fileName: "x.csv", waiting: null },
       }),
     );
     expect(String(error)).toMatch(/popnei_web defect/u);
+  });
+
+  test("a table given a download and a row with no values does not compile", () => {
+    const download = { what: "the table", fileName: "x.csv", waiting: null };
+    // @ts-expect-error -- a table given a download takes rows with values
+    const sortable: SortableTableProps<Id> = {
+      label: "The individuals",
+      columns: SORTABLE_COLUMNS,
+      rows: [{ id: "d", cells: ["d", "0.1000"] }],
+      sort: null,
+      onSortChange: () => undefined,
+      download,
+    };
+    // @ts-expect-error -- a table given a download takes rows with values
+    const plain: TableProps = {
+      caption: "Distances",
+      columns: [{ id: "pair", label: "Populations", isRowHeader: true }],
+      rows: [{ id: "p1", cells: ["p1"] }],
+      download,
+    };
+    expect([sortable.download, plain.download]).toEqual([download, download]);
   });
 
   test("a table with no download, as popgen.html draws it, has no button Download…", () => {

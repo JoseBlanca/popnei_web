@@ -28,10 +28,9 @@
  */
 import { useId, useRef } from "react";
 
-import type { CellValue } from "../../core/csv.ts";
 import { classOf } from "../classOf.ts";
-import { tableItem } from "./downloadItems.ts";
-import type { TableDownload } from "./downloadItems.ts";
+import { checkValues, tableItem } from "./downloadItems.ts";
+import type { RowValues, TableDownload } from "./downloadItems.ts";
 import { DownloadMenu } from "./DownloadMenu.tsx";
 import { useSidewaysFrame } from "./sidewaysFrame.ts";
 import styles from "./Table.module.css";
@@ -57,26 +56,37 @@ export interface TableRow {
       or an element of text laid out by the screen, the pair of names of
       the distances between populations, each kept on one line. */
   readonly cells: readonly (string | React.JSX.Element)[];
-  /** The values of its cells as stored, one per column, in their order,
-      which the CSV of the table holds in place of what is shown;
-      required when the table is given a download, a defect otherwise. */
-  readonly values?: readonly CellValue[];
 }
 
-/** What a table is drawn with. */
-export interface TableProps {
+/** What a table is drawn with: its look, and its rows with their
+    download, or without one. */
+export type TableProps = TableLook &
+  (
+    | {
+        /** Its rows. */
+        readonly rows: readonly TableRow[];
+        /** None, as on popgen.html: no menu "Download…". */
+        readonly download?: never;
+      }
+    | {
+        /** Its rows, each with its values as stored, which the CSV holds
+            in place of what is shown. */
+        readonly rows: readonly (TableRow & RowValues)[];
+        /** The download of the table, which draws the menu "Download…"
+            above it. */
+        readonly download: TableDownload;
+      }
+  );
+
+/** What a table is drawn with but its rows and its download. */
+export interface TableLook {
   /** What the table is, shown above it; also its name. */
   readonly caption: string;
   /** Its columns. */
   readonly columns: readonly TableColumn[];
-  /** Its rows. */
-  readonly rows: readonly TableRow[];
   /** Whether its frame has a limited height and scrolls down, its
       headers kept in view: for a table of many rows. */
   readonly limitedHeight?: boolean;
-  /** The download of the table, which draws the menu "Download…" above
-      it; none when absent, as on popgen.html. */
-  readonly download?: TableDownload;
 }
 
 /** The line under the caption while the table is wider than its frame. */
@@ -88,13 +98,9 @@ export const SCROLL_SIDEWAYS_TEXT =
 export const SCROLL_DOWN_TEXT = "Scroll the table to see all its rows.";
 
 /** A table with its caption. */
-export function Table({
-  caption,
-  columns,
-  rows,
-  limitedHeight = false,
-  download,
-}: TableProps): React.JSX.Element {
+export function Table(props: TableProps): React.JSX.Element {
+  const { caption, columns, rows } = props;
+  const limitedHeight = props.limitedHeight ?? false;
   const captionId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether the table is wider than its frame, or higher than a frame of
@@ -107,30 +113,30 @@ export function Table({
       {caption}
     </p>
   );
-  // The values are checked as the table is drawn, so that a row with no
-  // values is a defect at once and not at a choice of the menu.
-  const values = download === undefined ? null : valuesOf(rows, columns.length);
+  let captionOrRow = captionLine;
+  if (props.download !== undefined) {
+    checkValues(props.rows, columns.length);
+    captionOrRow = (
+      <div className={classOf(styles, "captionRow")}>
+        {captionLine}
+        <DownloadMenu
+          what={props.download.what}
+          items={[
+            tableItem(
+              props.download.fileName,
+              columns.map((column) => column.label),
+              props.rows,
+            ),
+          ]}
+          waiting={props.download.waiting}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={classOf(styles, "frame")}>
-      {download === undefined || values === null ? (
-        captionLine
-      ) : (
-        <div className={classOf(styles, "captionRow")}>
-          {captionLine}
-          <DownloadMenu
-            what={download.what}
-            items={[
-              tableItem(
-                download.fileName,
-                columns.map((column) => column.label),
-                () => values,
-              ),
-            ]}
-            waiting={download.waiting}
-          />
-        </div>
-      )}
+      {captionOrRow}
       {scrolls && (
         <p className={classOf(styles, "scrollLine")}>{SCROLL_SIDEWAYS_TEXT}</p>
       )}
@@ -200,23 +206,6 @@ function cellClass(
 ): string {
   const alignment = column.isNumeric === true ? "numeric" : "text";
   return `${classOf(styles, kind)} ${classOf(styles, alignment)}`;
-}
-
-/** The values of `rows`, in their order, each of `numColumns` values; a
-    defect when a row has none, or another number, since a table given a
-    download writes its values and not what it shows. */
-function valuesOf(
-  rows: readonly TableRow[],
-  numColumns: number,
-): readonly (readonly CellValue[])[] {
-  return rows.map((row) => {
-    if (row.values?.length !== numColumns) {
-      throw new Error(
-        `popnei_web defect: the row ${row.id} of a table given a download has no value for each of its ${String(numColumns)} columns.`,
-      );
-    }
-    return row.values;
-  });
 }
 
 /** The contents of the cell `index` of `row`; a defect when it has

@@ -44,10 +44,9 @@ import {
 } from "react-aria-components";
 import type { SortDescriptor } from "react-aria-components";
 
-import type { CellValue } from "../../core/csv.ts";
 import { classOf } from "../classOf.ts";
-import { tableItem } from "./downloadItems.ts";
-import type { TableDownload } from "./downloadItems.ts";
+import { checkValues, tableItem } from "./downloadItems.ts";
+import type { RowValues, TableDownload } from "./downloadItems.ts";
 import { DownloadMenu } from "./DownloadMenu.tsx";
 import styles from "./SortableTable.module.css";
 import { bodyKey } from "./tableSort.ts";
@@ -83,20 +82,34 @@ export interface SortableRow {
   readonly id: string;
   /** The text of its cells, one per column, in their order. */
   readonly cells: readonly string[];
-  /** The values of its cells as stored, one per column, in their order,
-      which the CSV of the table holds in place of the texts; required
-      when the table is given a download, a defect otherwise. */
-  readonly values?: readonly CellValue[];
 }
 
-/** What a sortable table is drawn with. */
-export interface SortableTableProps<Id extends string> {
+/** What a sortable table is drawn with: its look, and its rows with
+    their download, or without one. */
+export type SortableTableProps<Id extends string> = SortableTableLook<Id> &
+  (
+    | {
+        /** Its rows, in the order they are shown, sorted by the screen. */
+        readonly rows: readonly SortableRow[];
+        /** None, as on popgen.html: no menu "Download…". */
+        readonly download?: never;
+      }
+    | {
+        /** Its rows, in the order they are shown, sorted by the screen,
+            each with its values as stored, which the CSV holds. */
+        readonly rows: readonly (SortableRow & RowValues)[];
+        /** The download of the table, which draws the menu "Download…"
+            above it. */
+        readonly download: TableDownload;
+      }
+  );
+
+/** What a sortable table is drawn with but its rows and its download. */
+export interface SortableTableLook<Id extends string> {
   /** Its name for a screen reader, which a heading above it shows. */
   readonly label: string;
   /** Its columns, in their order. */
   readonly columns: readonly SortableColumn<Id>[];
-  /** Its rows, in the order they are shown, sorted by the screen. */
-  readonly rows: readonly SortableRow[];
   /** The column sorted and its direction, or `null` for none. */
   readonly sort: TableSort<Id> | null;
   /** Called when a header asks for another sort. */
@@ -111,17 +124,13 @@ export interface SortableTableProps<Id extends string> {
   /** Whether the screen is drawing another sort of the rows, which the
       grid then tells a screen reader with `aria-busy`. */
   readonly busy?: boolean;
-  /** The download of the table, which draws the menu "Download…" above
-      it; none when absent, as on popgen.html. */
-  readonly download?: TableDownload;
 }
 
 /** A table sorted by any of its columns, in a box that scrolls. */
-export function SortableTable<Id extends string>({
-  busy = false,
-  download,
-  ...props
-}: SortableTableProps<Id>): React.JSX.Element {
+export function SortableTable<Id extends string>(
+  props: SortableTableProps<Id>,
+): React.JSX.Element {
+  const busy = props.busy ?? false;
   const grid = useRef<HTMLTableElement>(null);
   // React Aria's Table passes no aria-busy to its element, so it is set
   // on the element itself, before the frame is painted.
@@ -134,57 +143,54 @@ export function SortableTable<Id extends string>({
       element.removeAttribute("aria-busy");
     }
   }, [busy]);
-  const values =
-    download === undefined ? null : valuesOf(props.rows, props.columns.length);
   // The grid is the same element with a download and without, so that
   // one given or taken away after the first draw keeps its scroll and its
   // focus: the menu is a line of its own before it, and nothing wraps the
   // two.
+  let menuLine: React.JSX.Element | null = null;
+  if (props.download !== undefined) {
+    checkValues(props.rows, props.columns.length);
+    menuLine = (
+      <div className={classOf(styles, "menuLine")}>
+        <DownloadMenu
+          what={props.download.what}
+          items={[
+            tableItem(
+              props.download.fileName,
+              props.columns.map((column) => column.label),
+              props.rows,
+            ),
+          ]}
+          waiting={props.download.waiting}
+        />
+      </div>
+    );
+  }
   return (
     <>
-      {download !== undefined && values !== null && (
-        <div className={classOf(styles, "menuLine")}>
-          <DownloadMenu
-            what={download.what}
-            items={[
-              tableItem(
-                download.fileName,
-                props.columns.map((column) => column.label),
-                () => values,
-              ),
-            ]}
-            waiting={download.waiting}
-          />
-        </div>
-      )}
-      <SortableGrid {...props} grid={grid} />
+      {menuLine}
+      <SortableGrid
+        label={props.label}
+        columns={props.columns}
+        rows={props.rows}
+        sort={props.sort}
+        onSortChange={props.onSortChange}
+        {...(props.headingLines !== undefined && {
+          headingLines: props.headingLines,
+        })}
+        grid={grid}
+      />
     </>
   );
 }
 
-/** The values of `rows`, in their order, each of `numColumns` values; a
-    defect when a row has none, or another number, since a table given a
-    download writes its values and not its texts. */
-function valuesOf(
-  rows: readonly SortableRow[],
-  numColumns: number,
-): readonly (readonly CellValue[])[] {
-  return rows.map((row) => {
-    if (row.values?.length !== numColumns) {
-      throw new Error(
-        `popnei_web defect: the row ${row.id} of a table given a download has no value for each of its ${String(numColumns)} columns.`,
-      );
-    }
-    return row.values;
-  });
-}
-
-/** What the grid is drawn with: the props of the table but `busy`, and
-    the ref of its element. */
+/** What the grid is drawn with: the look of the table but `busy`, its
+    rows, and the ref of its element. */
 interface SortableGridProps<Id extends string> extends Omit<
-  SortableTableProps<Id>,
+  SortableTableLook<Id>,
   "busy"
 > {
+  readonly rows: readonly SortableRow[];
   readonly grid: React.RefObject<HTMLTableElement | null>;
 }
 
