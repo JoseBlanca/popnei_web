@@ -699,13 +699,15 @@ the walking skeleton. On every push and pull request:
   run test:e2e`; the HTML report and
   `test-results/` uploaded as an artifact after every run not cancelled,
   kept 14 days, so the traces can be read, those of a test that passed
-  only on its retry included. It is three jobs side by side, one for
+  only on its retry included. It is nine jobs side by side, three for
   each engine, each installing its browser alone and running
-  `--project=<engine>` after the build with `POPNEI_TEST_PAGES`: the
-  three engines in one job, on the two workers Playwright gives the four
-  processors of GitHub's runner, did not finish in 20 minutes on 27
-  September 2026, when Chromium took about 5.5 minutes, Firefox about 9
-  and WebKit about 10.
+  `--project=<engine> --shard=<n>/3`, a third of that engine's tests,
+  after the build with `POPNEI_TEST_PAGES`. The three engines in one job,
+  on the two workers Playwright gives the four processors of GitHub's
+  runner, did not finish in 20 minutes on 27 September 2026, when
+  Chromium took about 5.5 minutes, Firefox about 9 and WebKit about 10;
+  one job for each engine did not on 9 October 2026, when Chromium's 679
+  tests took 14.7 minutes and WebKit's would have taken about 27.
 
 On a push to `main`, when both passed:
 

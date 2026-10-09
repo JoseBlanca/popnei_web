@@ -41,23 +41,29 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-  # One job for each engine, run side by side. The three in one job, on
-  # the two workers Playwright gives the four processors of the runner,
-  # passed 20 minutes on 27 September 2026 with 781 of the 927 tests run
-  # (runs 36347810899 and 36348662768): Chromium took about 5.5 minutes,
-  # Firefox about 9 and WebKit about 10, after a minute of setup. Each
-  # job builds the site with the pages of the tests and runs its engine's
-  # tests, as `npm run test:e2e` does for the three.
+  # Three jobs for each engine, each a third of its tests (--shard), all
+  # run side by side. One job for each engine, on the two workers
+  # Playwright gives the four processors of the runner, took 5.5 to 10
+  # minutes on 27 September 2026, and 14.7 minutes for Chromium's 679
+  # tests on 9 October 2026 (run 37897260261), when WebKit had run about
+  # 500 of its 679 in 20 minutes and Firefox about 660, and the time limit
+  # stopped both: WebKit's alone would have taken about 27 minutes. A third
+  # of the tests, 212 to 234 of them, takes about 9 minutes in WebKit, and
+  # each job spends 1.5 minutes more to install, build and upload, which
+  # leaves room under the 20 minutes as the suite grows. Each job builds
+  # the site with the pages of the tests and runs its share of its
+  # engine's tests, as `npm run test:e2e` does for the three.
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
-      # An engine that fails does not stop the other two, whose results
-      # are still wanted.
+      # An engine or a share that fails does not stop the others, whose
+      # results are still wanted.
       fail-fast: false
       matrix:
         project: [chromium, firefox, webkit]
-    name: e2e (${{ matrix.project }})
+        shard: [1, 2, 3]
+    name: e2e (${{ matrix.project }} ${{ matrix.shard }}/3)
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -73,7 +79,7 @@ jobs:
       - run: npm run build
         env:
           POPNEI_TEST_PAGES: "1"
-      - run: npx playwright test --project=${{ matrix.project }}
+      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3
       # The report and the traces, to read what the browser did: kept
       # after every run, since a test that passed only on its retry fails
       # the run but leaves its trace from the first attempt, and a job
@@ -82,7 +88,7 @@ jobs:
       - if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-${{ matrix.project }}
+          name: playwright-report-${{ matrix.project }}-${{ matrix.shard }}
           path: |
             playwright-report/
             test-results/
