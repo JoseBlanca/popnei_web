@@ -423,7 +423,10 @@ the notice on a page without the setting. Then the history starts
 afresh at the new project, with nothing to undo or redo, and
 `historyMoves` counts one, as an opening does. A command that gives the
 project it was given changes nothing, the history included. It takes
-no description, since it makes no step to name.
+no description, since it makes no step to name, and so it is a defect
+on a store made without `stopLeftBehind`, where a change can make a
+notice, which names its cause and offers an Undo that `applyAfresh`
+leaves nothing for.
 
 `popgen2.html` sends through it every change of its individuals file
 (`docs/specs/steps/popgen2-input.md`, "What it sends and reads"): the
@@ -438,8 +441,11 @@ setting that stops nothing, which would give one command two meanings.
 On that page the screens reach the store through a gate,
 `gatedStore` of `src/ui/variants/thresholdRun.ts`, which makes a run of
 the arrow keys on a threshold a change before `apply`, `undo`, `redo`
-and `open`. It wraps `applyAfresh` too, so the run is made a change and
-the fresh history then drops its step.
+and `open`, and before `open` applies a number typed in a box and not
+yet applied. It wraps `applyAfresh` as it wraps `open`, both, so the run
+and the number typed are made changes and the fresh history then drops
+their steps; the count of `historyMoves` then finds no text left in a
+box to throw away.
 
 ### The notice, and the calculations it stops
 
@@ -1891,12 +1897,14 @@ analyses:
   result object, and no request sent.
 - A PCA in flight, the threshold moved: its `cancel()` called once, at
   once; the PCA `ready`, with `stopped` `null`; undo: `ready`, not
-  `running`, and no request sent; its result given after the cancel:
-  cached, and `done` after a redo and an undo bring its key back.
+  `running`, and no request sent. In another test, in this order: the
+  PCA in flight, the threshold moved, its `cancel()` called, its result
+  given by `runEnded`: the PCA still `ready` under the new key; undo:
+  `done`, from the cache.
 - A PCA in flight, the colour of the points changed, which its key does
   not hold: no `cancel()`, still `running`.
 - The same three on a store made without the setting: the notices of
-  the old page, unchanged.
+  the old page, unchanged; `applyAfresh` there, a defect.
 - `applyAfresh` of `loadIndividuals` after two threshold steps: the
   project has the individuals file, `undo` and `redo` `null`,
   `historyMoves` one more; the one pass in flight not cancelled. A

@@ -153,7 +153,12 @@ No step: the opening of a variants file, by the store's `open`; the
 opening, the removal and a change of an option of the reader of the
 individuals file, and the column the page chooses at the end of its
 read, by the store's `applyAfresh`. Each starts the history afresh,
-with nothing to undo or redo, so Undo and Redo go after them. The tab
+with nothing to undo or redo, so Undo and Redo go after them. The
+column the page chooses comes when the read of the individuals file
+ends, which may be a second after the opening: a threshold moved in
+that second is a step that the read then drops, and Undo goes with it.
+A number typed and not applied when it comes is applied first, as
+before an opening of the variants file. The tab
 shown, the sort of a table, how far it is scrolled, the turn and the
 zoom of the 3D view and the group highlighted in the legend are of the
 screen, and no step.
@@ -509,7 +514,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, a column of more values than a column of populations can have | "The distances between populations need at least two populations, and country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals file." |
 | Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 among the individuals of panel.nei. Choose another column in the box Individuals file."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals file." |
 | Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab."; with none, "…, and the filters keep no individual of any population. …" |
-| Distances, no individual of the variants file in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a population in popcat. Check that panel_pops.csv names the individuals as panel.nei does, or choose another column in the box Individuals file." |
+| Distances, no individual of the variants file in the individuals file | "The distances between populations need at least two populations, and no individual of panel.nei is in panel_pops.csv. Check that panel_pops.csv names the individuals as panel.nei does." |
+| Distances, the individuals in the file, but none with a value in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column in the box Individuals file." |
 | Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
 | the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
 | the heading of the tab | "PCA"; "PCoA" |

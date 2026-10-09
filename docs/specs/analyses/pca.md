@@ -2028,6 +2028,20 @@ export function statisticsFailedText(
 export function pcaCoordinatesCsv(r: PcaResult): string;
 ```
 
+The commands of the options, in `src/ui/analyses/pca/commands.ts`, read
+and write the options of the page too: `OptionsOf` is made for a page,
+with `read: (p) => pcaOptions(p, page)` and the page's definition, and
+every command takes the page, `methodCommand(method, page)`,
+`colourCommand(colourBy, page)` and the rest, and gives the page's
+description (`docs/specs/steps/popgen2-pca.md`, "What is a step"). On
+`popgen2.html` a command that read the options of the old page would
+write `PCA_DEFAULTS`, whose LD filter follows, and turn the LD pruning
+off at the first change of the colour. The page adds one command,
+`stricterCommand(kind, value, page)`, which sets `follow` false and the
+value in one step. The memos of `pcaFilters` and `pcaColours`, which
+give the same object for the same inputs, are looked up by the page as
+well, so that one page never gets the other's list.
+
 The functions that took no page take one, and the old page's callers
 give `"popgen"`; a page given by the caller, rather than read from the
 project, keeps the project free of which page made it, so that a

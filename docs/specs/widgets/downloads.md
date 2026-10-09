@@ -132,14 +132,19 @@ is the screen's (`docs/specs/steps/popgen2-pca.md`, "The downloads").
 The value of a cell, as stored:
 
 ```ts
-export type CellValue = string | number | null;
+export type CellValue = string | number | boolean | null;
 ```
+
+A boolean, a cell of a column of true and false values of the
+individuals file, is written `true` or `false`; a number that is not
+finite, `Infinity` or `-Infinity` as `String` writes them, and `NaN` as
+an empty field.
 
 The functions of core, in `src/core/csv.ts`, pure and tested in node:
 
 ```ts
-/** A CSV of a header and rows, each field by `csvField` for a string, `String` for a finite
-    number, and empty for null or NaN; "\n" after every line. A defect when a row has
+/** A CSV of a header and rows, each field by `csvField` for a string, `String` for a number
+    or a boolean, and empty for null or NaN; "\n" after every line. A defect when a row has
     another number of fields than the header. */
 export function tableCsv(header: readonly string[], rows: readonly (readonly CellValue[])[]): string;
 
@@ -185,8 +190,9 @@ export interface TableDownload {
 /** What a plot takes to be downloaded. */
 export interface PlotDownload {
   readonly what: string;       // "the plot of the PCA"
-  readonly fileStem: string;   // "panel.pca": the image is fileStem + ".svg" or ".png"
-  readonly csvName: string;    // "panel.pca.coordinates.csv"
+  readonly stem: string;       // "panel"
+  readonly imageWhat: string;  // "pca": downloadName(stem, imageWhat, "svg" | "png")
+  readonly csvWhat: string;    // "pca.coordinates": downloadName(stem, csvWhat, "csv")
   readonly csv: () => string;
   readonly waiting: string | null;
 }

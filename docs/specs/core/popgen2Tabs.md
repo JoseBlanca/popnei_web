@@ -78,6 +78,9 @@ export type TabGreyed =
       readonly column: string;
       readonly numPopulations: 0 | 1;
       readonly variantsName: string;
+      readonly individualsName: string;
+      /** No individual of the variants file is in the individuals file. */
+      readonly noneInFile: boolean;
     }
   | { readonly kind: "fewKept"; readonly numPopulations: 0 | 1 };
 ```
@@ -101,12 +104,15 @@ export function analysisTabs(
 - **Another variants file being opened** over one that was open: the
   read of the new load is `pending`, so the three tabs are greyed with
   `variantsOpening` and the new name, whichever tab is shown.
-- **A column of the populations that is not among those the list
-  offers**, a column of text of more than 20 values: `tooManyValues`,
-  since `populationCounts` gives `tooMany` and no populations.
+- **A column of the populations of more than 20 values**:
+  `tooManyValues`, since `populationCounts` gives `tooMany` and no
+  populations. A column the list does not offer gives `column` null, and
+  `noColumn`.
 - **An individuals file of names none of which are in the variants
-  file**: `fewPopulations` with 0, whose words ask the user to check
-  the names before choosing another column.
+  file**: `fewPopulations` with 0 and `noneInFile` true, from
+  `noneInFile` of `PopulationCounts`, whose words ask the user to check
+  the names; names that match, with every cell of the column empty:
+  `noneInFile` false, whose words ask for another column.
 - **A threshold that keeps no individual**: `fewKept` with 0; the PCA
   and Populations are not greyed, since their own locks say so.
 
