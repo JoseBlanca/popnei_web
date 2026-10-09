@@ -10,7 +10,8 @@
  * element is not read twice in the reading of the page.
  *
  * Used by `Button` and `StepLink`, which give their element the id of the
- * hidden text; a screen does not import it.
+ * hidden text, and by `Tabs` for a greyed tab, which draws the hidden text
+ * itself outside its row of labels; a screen does not import it.
  */
 import { useId } from "react";
 import {
@@ -40,6 +41,11 @@ export interface WithTooltipProps {
       of its description, to set as its `aria-describedby`, or
       `undefined` when there is no text. */
   readonly children: (describedBy: string | undefined) => React.ReactElement;
+  /** The id of an element the caller draws elsewhere with the same text,
+      for a trigger in a collection of React Aria, a tab in its row, where
+      an element that is not an item breaks the collection; the hidden
+      text is then not drawn here. Absent: drawn here. */
+  readonly descriptionId?: string;
 }
 
 /** A button or a link of React Aria, with a tooltip and the same text as
@@ -48,8 +54,10 @@ export interface WithTooltipProps {
 export function WithTooltip({
   text,
   children,
+  descriptionId,
 }: WithTooltipProps): React.JSX.Element {
-  const id = useId();
+  const ownId = useId();
+  const id = descriptionId ?? ownId;
   return (
     <>
       <AriaTooltipTrigger delay={TOOLTIP_DELAY_MS} isDisabled={text === null}>
@@ -62,7 +70,7 @@ export function WithTooltip({
           {text}
         </AriaTooltip>
       </AriaTooltipTrigger>
-      {text !== null && (
+      {text !== null && descriptionId === undefined && (
         <span id={id} hidden>
           {text}
         </span>

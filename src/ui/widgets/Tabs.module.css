@@ -36,6 +36,19 @@
   font-weight: 600;
 }
 
+/* A greyed tab (greyed of Tabs.tsx), in the colour of a control that
+   cannot be used, and never with the bar and the weight of the tab shown,
+   even while it is shown, so that it is not told by colour alone (WCAG
+   1.4.1; docs/specs/steps/popgen2-pca.md, "The row of tabs"). */
+.tab[data-greyed],
+.tab[data-greyed][data-hovered],
+.tab[data-greyed][data-selected] {
+  border-block-end-color: transparent;
+  color: var(--color-text-disabled);
+  font-weight: normal;
+  cursor: default;
+}
+
 .tab[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);

@@ -8,8 +8,16 @@
  * popgen.html use it, only the panel shown is drawn. That the panel not
  * shown takes no room is its style's, which jsdom does not apply, and is
  * checked by the flows of e2e/popgen2Input.spec.ts.
+ *
+ * A greyed tab, as the tabs of the analyses of popgen2.html have it
+ * (docs/specs/steps/popgen2-pca.md, "The row of tabs" and
+ * "Accessibility"; docs/designs/analyses-pca.md, "A greyed tab, for every
+ * user", option (b)): the keyboard reaches it and its tooltip shows, a
+ * choice of it is refused, and it carries `aria-disabled` and its reason
+ * as its description. The flows of e2e/popgen2Tabs.spec.ts see the same
+ * in the browsers.
  */
-import { StrictMode, act, createElement } from "react";
+import { StrictMode, act, createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -114,5 +122,225 @@ describe("IN3 D1 the widget of tabs keeps the tab not shown drawn when asked", (
     draw("second", false);
     expect(field("first")).toBeNull();
     expect(field("second")).not.toBeNull();
+  });
+});
+
+/** The three tabs of the greyed tests, the second greyed or not. */
+type Three = "first" | "second" | "third";
+
+/** The reason the second tab is greyed in the tests. */
+const REASON = "The second needs a file. Open one in the box.";
+
+/** The ids the harness's tabs were chosen with, in order. */
+let chosen: Three[] = [];
+
+/** Three tabs, the one shown held as the page holds it, the second
+    greyed with `reason`, or not with null. */
+function Harness({
+  first,
+  reason,
+}: {
+  readonly first: Three;
+  readonly reason: string | null;
+}): React.JSX.Element {
+  const [selected, setSelected] = useState<Three>(first);
+  return createElement(Tabs<Three>, {
+    label: "Files and analyses",
+    selected,
+    onChange: (id: Three) => {
+      chosen.push(id);
+      setSelected(id);
+    },
+    keepHidden: true,
+    tabs: (["first", "second", "third"] as const).map((id) => ({
+      id,
+      label: `The ${id}`,
+      content: createElement("p", null, `Content of ${id}`),
+      greyed: id === "second" ? reason : null,
+    })),
+  });
+}
+
+/** Draws the harness with `first` shown and the second tab greyed with
+    `reason`. */
+function drawGreyed(first: Three, reason: string | null = REASON): void {
+  chosen = [];
+  act(() => {
+    root.render(
+      createElement(
+        StrictMode,
+        null,
+        createElement(Harness, { first, reason }),
+      ),
+    );
+  });
+}
+
+/** The element of the tab whose label is `The ${id}`. */
+function tabElement(id: Three): HTMLElement {
+  const found = Array.from(
+    container.querySelectorAll<HTMLElement>('[role="tab"]'),
+  ).find((element) => element.textContent === `The ${id}`);
+  if (found === undefined) throw new Error(`no tab ${id}`);
+  return found;
+}
+
+/** The id of the tab marked selected. */
+function selectedTab(): string | null {
+  return (
+    container.querySelector('[role="tab"][aria-selected="true"]')
+      ?.textContent ?? null
+  );
+}
+
+/** The text of the panel shown, the one not inert. */
+function shownContent(): string | null {
+  return (
+    container.querySelector('[role="tabpanel"]:not([inert])')?.textContent ??
+    null
+  );
+}
+
+/** Presses the key `key` on the element that has the focus. */
+function press(key: string): void {
+  const target = document.activeElement;
+  if (!(target instanceof HTMLElement)) throw new Error("no focus");
+  act(() => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+  });
+  act(() => {
+    target.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+  });
+}
+
+/** Puts the focus on the tab `id` by the keyboard: the focus on the
+    first, then the arrow keys. */
+function focusFirst(): void {
+  act(() => {
+    tabElement("first").focus();
+  });
+}
+
+/** The text of the tooltip shown, or null. */
+function tooltip(): string | null {
+  return document.querySelector('[role="tooltip"]')?.textContent ?? null;
+}
+
+describe("AP1 D2 a greyed tab is reached, refused and said", () => {
+  test("a click on the greyed tab leaves the tab shown as it was", () => {
+    drawGreyed("first");
+    act(() => {
+      tabElement("second").click();
+    });
+    expect(chosen).toEqual([]);
+    expect(selectedTab()).toBe("The first");
+    expect(shownContent()).toBe("Content of first");
+  });
+
+  test("the arrow key that reaches the greyed tab rests the focus on it and shows nothing new", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabElement("second"));
+    expect(chosen).toEqual([]);
+    expect(selectedTab()).toBe("The first");
+    expect(shownContent()).toBe("Content of first");
+  });
+
+  test("Enter and Space on the greyed tab show nothing new", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    press("Enter");
+    press(" ");
+    expect(chosen).toEqual([]);
+    expect(selectedTab()).toBe("The first");
+    expect(shownContent()).toBe("Content of first");
+    expect(document.activeElement).toBe(tabElement("second"));
+  });
+
+  test("the next arrow key shows the tab after the greyed one", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabElement("third"));
+    expect(chosen).toEqual(["third"]);
+    expect(selectedTab()).toBe("The third");
+    expect(shownContent()).toBe("Content of third");
+  });
+
+  test("the greyed tab carries aria-disabled and its reason as its description, and the others neither", () => {
+    drawGreyed("first");
+    const second = tabElement("second");
+    expect(second.getAttribute("aria-disabled")).toBe("true");
+    const describedBy = second.getAttribute("aria-describedby");
+    expect(describedBy).not.toBeNull();
+    expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+      REASON,
+    );
+    for (const id of ["first", "third"] as const) {
+      expect(tabElement(id).hasAttribute("aria-disabled")).toBe(false);
+      expect(tabElement(id).hasAttribute("aria-describedby")).toBe(false);
+    }
+  });
+
+  test("aria-disabled is still there after the tabs are drawn again", () => {
+    drawGreyed("first");
+    focusFirst();
+    press("ArrowRight");
+    press("ArrowRight");
+    press("ArrowLeft");
+    expect(selectedTab()).toBe("The third");
+    expect(tabElement("second").getAttribute("aria-disabled")).toBe("true");
+    drawGreyed("third");
+    expect(tabElement("second").getAttribute("aria-disabled")).toBe("true");
+  });
+
+  test("a tab no longer greyed loses aria-disabled and its description, and opens", () => {
+    drawGreyed("first");
+    act(() => {
+      root.render(
+        createElement(
+          StrictMode,
+          null,
+          createElement(Harness, { first: "first", reason: null }),
+        ),
+      );
+    });
+    const second = tabElement("second");
+    expect(second.hasAttribute("aria-disabled")).toBe(false);
+    expect(second.hasAttribute("aria-describedby")).toBe(false);
+    act(() => {
+      second.click();
+    });
+    expect(chosen).toEqual(["second"]);
+    expect(shownContent()).toBe("Content of second");
+  });
+
+  test("a greyed tab that is shown stays shown, with aria-disabled", () => {
+    drawGreyed("second");
+    expect(selectedTab()).toBe("The second");
+    expect(shownContent()).toBe("Content of second");
+    expect(tabElement("second").getAttribute("aria-disabled")).toBe("true");
+  });
+
+  test("the tooltip shows on the focus of the keyboard and goes with Escape", () => {
+    drawGreyed("first");
+    focusFirst();
+    expect(tooltip()).toBeNull();
+    press("ArrowRight");
+    expect(tooltip()).toBe(REASON);
+    press("Escape");
+    expect(tooltip()).toBeNull();
+    expect(document.activeElement).toBe(tabElement("second"));
+  });
+
+  test("without greyed tabs, as popgen.html uses the widget, no tab carries aria-disabled or a description", () => {
+    draw("first", null);
+    for (const element of container.querySelectorAll('[role="tab"]')) {
+      expect(element.hasAttribute("aria-disabled")).toBe(false);
+      expect(element.hasAttribute("aria-describedby")).toBe(false);
+    }
   });
 });
