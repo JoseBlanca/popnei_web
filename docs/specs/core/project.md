@@ -879,10 +879,14 @@ The populations are of one of two kinds:
   October 2026 a number is written with the decimal mark of the read,
   `found.decimal`, or the point for an xlsx and a read with no `found`,
   `1,5` for a CSV read with the comma, as `cellShown` writes it (below,
-  "The counts per population on popgen2.html"): table_io makes numbers
-  of a CSV's numeric columns, and `String` would name `1,5` of the file
-  `1.5`, where the reader of TypeScript kept the text, so the names of
-  the populations of such a file stay what they were. An
+  "The counts per population on popgen2.html"), so that a population of
+  a column of decimals keeps the name it had with the reader of
+  TypeScript. Other names of a CSV do change, since table_io makes
+  numbers and booleans of its numeric and boolean columns: in such a
+  column `01`, `1` and `1,0` are the one population `1`, `+007` is `7`,
+  `1e3` is `1000`, and `TRUE` and `True` are the one population `true`,
+  where they were populations of their own. A column of text, the usual
+  column of populations, keeps its names as written. An
   individual whose cell is missing, empty, `NA` or `-`, is in no
   population (`docs/functionality.md`, section 4). The populations are
   in the order in which each first appears in the file, and the
@@ -1070,7 +1074,11 @@ what its box of the individuals file shows, in `src/core/populations.ts`
 beside the functions of the populations of stage 5, since the counts
 need `individualsKept`, which imports `project.ts`:
 
-- **The counts**, `populationCounts(p, kept)`: for each population of
+- **The counts**, `populationCounts(p, kept)`: before the variants file
+  is read, the column, its number of different values and whether they
+  are too many, with no population and nothing else counted, since the
+  box warns of too many values as soon as the individuals file is read;
+  once it is read, for each population of
   the column chosen with an individual in both files, in the order of
   `populationsToRun`, its individuals kept, from `populationsKept(p,
   list)` with the list of `kept` when it is known, its `emptied`
@@ -1090,8 +1098,8 @@ need `individualsKept`, which imports `project.ts`:
   `cellShown`, counted over every row of the file; above
   `MAX_LISTED_POPULATIONS`, 20, the owner's bound of 9 October 2026
   (answer 5 of the design), no population is given, `tooMany` is true,
-  and the unclassified are not counted. `null` when the variants file is
-  not read, or `kept` is `null`.
+  and the unclassified are not counted. `kept` is `null` exactly when the
+  variants file is not read.
 - **The column chosen by the page**, `defaultPopulationsColumn(read)`:
   the first column after the names one of whose cells is a text and
   whose different values, compared by `cellShown`, are 1 to
@@ -1118,9 +1126,17 @@ need `individualsKept`, which imports `project.ts`:
   can have; check that it is the individuals file and not the variants
   file."; for `readerNotLoaded`, "the part of the page that reads tables
   could not be downloaded. Check the connection and open the file
-  again."; for a failure of the worker, "the page stopped while it read
-  it. Open the file again."; and "Open a corrected file." after every
-  other refusal. "Reading panel_pops.csv." while it is read. `null` with
+  again."; for a failure of the worker, by the kind of its `RunError`:
+  a crash or a defect, "the page stopped while it read it. Open the file
+  again.", and a worker that could not start or a page of another build
+  than its workers, `couldNotStart` and `protocolMismatch`, "the page
+  could not start the part that reads files. Reload the page and open
+  the file again.", since the client answers every later read the same
+  way; for `unreadable`, the reader's words and "Open it again."; for
+  `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`,
+  `headerError` and `sheetTooLarge`, whose words already say what to do
+  in Excel, the words and "Then open it again."; and "Open a corrected
+  file." after every other refusal. "Reading panel_pops.csv." while it is read. `null` with
   no file or a file read. A `notGiven` file cannot be on that page,
   which opens no project file, and is a defect there, thrown.
 
@@ -1136,6 +1152,19 @@ texts the project's binary types hold.
 
 The rules of the counts against what a reader would expect:
 
+- **The same object.** The store works out the individuals kept again
+  at every change of the project (`keptFor` of `src/core/store.ts`), and
+  `individualsKept` makes a new list each time, not frozen, so the memo
+  of `populationsKept`, which keeps only frozen lists, keeps none of
+  them, and a key of the list by its reference would miss at every press
+  of an arrow key on a threshold. So `populationCounts` keeps its last
+  answer with what it was made from, and gives it again when the table,
+  the column and the read of the variants file are the same objects and
+  the new list holds the same individuals in the same order, compared
+  one by one, a walk of at most the individuals of the file, or is
+  unknown, or removes nobody, as the last; otherwise it counts again. A
+  progress of the one pass, which leaves the project as it is, gives the
+  same object at no cost.
 - With no threshold of the individuals on, `individualsKept` gives the
   list as known, removing nobody, with no statistics, so the counts are
   known as soon as both files are read, the one pass running or not.
@@ -1176,7 +1205,12 @@ export interface PopulationCounts {
   /** numValues above MAX_LISTED_POPULATIONS: populations empty, the
       unclassified not counted. */
   tooMany: boolean;
-  /** Whether the list of the individuals kept is known. */
+  /** Whether the variants file is read; with false, populations and
+      notInFile are empty and unclassified, rowsNotInVariants and
+      noneInFile null. */
+  variantsRead: boolean;
+  /** Whether the list of the individuals kept is known; false before
+      the variants file is read. */
   known: boolean;
   /** The populations with an individual in both files, in their order. */
   populations: PopulationCount[];
@@ -1196,10 +1230,11 @@ export interface PopulationCounts {
   noneInFile: { firstOfVariants: string; firstOfFile: string } | null;
 }
 
-/** The counts of the box of popgen2.html; null when the variants file is
-    not read or `kept` is null. The same frozen object for the same
-    table, column, read of the variants file and frozen list of the
-    individuals kept, compared with ===. In src/core/populations.ts. */
+/** The counts of the box of popgen2.html; null with no individuals file
+    read. The same frozen object as the call before for the same table,
+    column and read of the variants file, and a list of the individuals
+    kept that holds the same individuals, compared one by one, or is
+    unknown both times; see below. In src/core/populations.ts. */
 export function populationCounts(p: Project, kept: IndividualsKept | null): PopulationCounts | null;
 
 /** The first column after the names with a text cell and 1 to
@@ -1215,7 +1250,7 @@ export function individualsBoxNeeds(p: Project): string | null;
 How it is verified, with Vitest, at the three functions, on projects
 made in the test with `panel.nei`'s 200 individuals and the table of
 `panel_pops.csv`, as `src/core/fixtures/` holds them: `popcat` gives p0
-48, p1 68, p2 84, the unclassified 0, 0 with a missing cell and none
+48, p2 84, p1 68, in the order each first appears in the file, the unclassified 0, 0 with a missing cell and none
 not in the file, `rowsNotInVariants`
 0; the table without 7 rows gives those 7 in `notInFile`, in the order
 of `panel.nei`, and the unclassified kept 7, the 7 names not in the file; 3 cells

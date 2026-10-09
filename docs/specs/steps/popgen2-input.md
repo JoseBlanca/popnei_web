@@ -150,8 +150,8 @@ values are 20 or fewer, a table of two columns, "Population" and
 | Population | Individuals |
 |---|---|
 | p0 | 31 |
-| p1 | 44 |
 | p2 | 36 |
+| p1 | 44 |
 
 - The rows are the populations with an individual in both files, in the
   order each first appears in the individuals file, named as the cells
@@ -204,7 +204,8 @@ With no threshold of the individuals on, the counts never wait.
 
 **Before a variants file is read**, the counts give way to "The
 individuals are counted once a variants file is open.", and the
-warning of too many values, below, still shows.
+warning of too many values, below, still shows, from `populationCounts`,
+which gives the column and its values before the variants file.
 
 **A column of more than 20 values** gives no table and no line of the
 unclassified: "Warning: accession has 1,845 different values, too many
@@ -375,6 +376,9 @@ the project's (`docs/architecture.md`, section 7).
 | the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants file." in place of the reader's words after the colon |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
 | `readerNotLoaded` | "panel_pops.csv could not be read: the part of the page that reads tables could not be downloaded. Check the connection and open the file again." |
+| the end of `unreadable` | "Open it again." |
+| the end of `files`, `oldExcel`, `encrypted`, `emptySheet`, `cellError`, `headerError`, `sheetTooLarge`, whose words say what to do in Excel | "Then open it again." |
+| a worker that could not start, or a page of another build than its workers | "panel_pops.csv could not be read: the page could not start the part that reads files. Reload the page and open the file again." |
 | the end of every other refusal of a file | "Open a corrected file." |
 | a read that failed in the worker, a crash | "panel_pops.csv could not be read: the page stopped while it read it. Open the file again." |
 | the status region, a file read | "panel_pops.csv read: 200 rows, the populations from popcat."; with no column chosen, "panel_pops.csv read: 200 rows, no column chosen for the populations." |
@@ -460,7 +464,7 @@ core and of the entry in their module specs.
 `individuals_10000.xlsx`, and files the flow makes:
 
 - `panel.nei` then `panel_pops.csv`, and the other order: the list on
-  `popcat`, the counts p0 48, p1 68, p2 84, no line of the
+  `popcat`, the counts p0 48, p2 84, p1 68, in that order, no line of the
   unclassified, "Individuals of panel_pops.csv not in panel.nei: 0";
 - `panel_split.csv` chooses `popsplit`; `ld_pops.csv`, opened over
   `ld.nei`, chooses `pop`, its two populations; `panel_meta.csv` chooses

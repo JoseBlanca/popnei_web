@@ -67,7 +67,7 @@ plots fill in under the tab "Variants file", as today. They open
 box shows its name, and the list of the column of the populations with
 `popcat` chosen, the only column of the file and a column of text. As
 the page opens with no threshold of the individuals on, the box lists at
-once p0 with 48 individuals, p1 with 68 and p2 with 84. When the user
+once p0 with 48 individuals, p2 with 84 and p1 with 68, in the order each first appears in the file. When the user
 sets the missing rate of the individuals to 0.1 under the tab "Variants
 file", the counts change, once `panel.nei` has been read to the end, to
 what the filters keep. Under the tab "Individuals file" they see the 200
@@ -237,8 +237,8 @@ individuals kept by the filters, as the owner decided (answer 2):
 | Population | Individuals |
 |---|---|
 | p0 | 31 |
-| p1 | 44 |
 | p2 | 36 |
+| p1 | 44 |
 
 Over the table, "Individuals of panel.nei kept by the filters". The
 populations are those with an individual in both files, in the order in
@@ -841,7 +841,7 @@ What changes:
 
 - **The counts**, in Vitest under node, with the store of the page and a
   fake worker: `panel.nei`'s 200 individuals and `panel_pops.csv` give
-  48, 68 and 84 and no unclassified; a file without 7 of them gives 7 not
+  48, 84 and 68, p0, p2 and p1 in that order, and no unclassified; a file without 7 of them gives 7 not
   in the file, named in the order of the variants file; a column with 3
   empty cells gives 3 with an empty cell; a file of other names gives the
   warning; a column of 21 values gives the warning of too many and no

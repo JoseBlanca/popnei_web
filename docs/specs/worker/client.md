@@ -382,9 +382,13 @@ the light worker after a read whose `File` is larger than
 `READ_RESTART_BYTES`, whatever its answer, a table, a refusal or a
 failure, as it does the calculation worker after a large write:
 
-1. It gives the read its outcome first, so that the entry records it
-   before anything else happens.
-2. It ends the worker, `terminate()`, as after a cancel.
+1. When the light worker answers the read, the client gives the read
+   its outcome first, so that the entry records it before anything else
+   happens; a read the entry cancelled, which the client answered
+   `cancelled` at once and let run (`cancelLight`), gets nothing more,
+   and its answer, when it comes, still counts for the restart.
+2. It ends the worker, `terminate()`, which a cancel of a read does not
+   do, since a read is short.
 3. It starts a new light worker when the next read is asked, or at once
    when reads wait in the queue, which go to it once it is `ready`. The
    new worker holds no files wasm, and its first read imports it again,

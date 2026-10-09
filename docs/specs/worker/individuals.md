@@ -267,6 +267,15 @@ validation"), so that a character that reverses the text, U+202E, in a
 name shows as `\u202e` and does not turn the rest of the sentence
 around; the reader does not escape it, since it imports nothing of core.
 
+The warning of few whole numbers changes with table_io for a CSV: a
+cell is whole when it is a number that `Number.isInteger` takes, so a
+column of `12,0` and `1e3`, numbers now, gets the warning on
+`popgen.html`, where as texts it did not; and the sentence of one number
+"written in different ways", told by more than one text, can no longer
+come from a CSV read since 9 October 2026, whose `1`, `01` and `001` are
+the one number 1, but only from an xlsx with texts beside its numbers
+or a project saved before. The words do not change.
+
 ### When a type is wrong, in stage 2
 
 The types are shown and not changed in stage 2, and no analysis of stage
@@ -376,7 +385,11 @@ from its bytes as its README says, or with an object of the test in its
 place. It names no import of the package but its types, which the build
 erases; only `filesRunner.ts` loads it. The lint's `filesWasm`, in
 `eslint.config.js`, names `table_io` in the place of `xlsx_rs` and allows
-the imports of its types alone, as `popneiValues` does for popnei.
+the imports of its types alone, as `popneiValues` does for popnei; and
+its rule of `import()`, `filesWasmImportCall`, names `table_io` too. The
+type is imported under another name, `import type { TableRead as
+TableIoRead } from "table_io"`, since core has a `TableRead` of its own
+(`src/core/project.ts`).
 
 ```ts
 export const MAX_INDIVIDUALS_FILE_BYTES = 20_000_000;
@@ -387,7 +400,7 @@ export interface BytesSource { size: number; arrayBuffer(): Promise<ArrayBuffer>
 /** What of table_io's TableRead the light worker reads: the type of the
     package, `import type { TableRead } from "table_io"`, so that a
     release whose declarations lose a field fails the type check. */
-export type TableReadFields = Pick<TableRead,
+export type TableReadFields = Pick<TableIoRead,
   "refusal" | "format" | "encoding" | "separator" | "decimal" | "undecodedLine"
   | "namesHeader" | "names" | "numColumns" | "columnName" | "columnType"
   | "columnMissing" | "columnIntegers" | "columnFloats" | "columnBooleans"

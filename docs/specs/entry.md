@@ -459,8 +459,8 @@ into a read; so the entry acts once on each read, as it is recorded, and
 never at another change of the project.
 
 At a read of kind `read`, when the grouping names no column of its table,
-no column or one of a name the table does not have, it sends
-`dispatch` the command `setGrouping(p, { kind: "populations", column })`
+no column or one of a name the table does not have, it sends with the
+store's `apply` the command `setGrouping(p, { kind: "populations", column })`
 with the column `defaultPopulationsColumn(read)` of core gives, described
 "the column of the populations was chosen", and sends nothing when that
 is `null`. It is a step of the history, as every command of the
@@ -481,15 +481,19 @@ the projects of the history that hold the file (`recordShared` of
 `src/core/store.ts`), and is shared with `popgen.html`, whose user
 chooses every column.
 
-In a module of its own, `src/ui/populationColumn.ts`, made by the entry
-of `popgen2.html` alone:
+It is given the store wrapped by the gate of the thresholds' runs,
+`gatedStore` of `src/ui/variants/thresholdRun.ts`, as the screens are,
+so that a run of the arrow keys on a threshold still held is made a
+change before the command of the column, and the history keeps them in
+the order the user made them. In a module of its own,
+`src/ui/populationColumn.ts`, made by the entry of `popgen2.html` alone:
 
 ```ts
 /** Watches `store` for reads of the individuals file newly recorded,
     sends the column of the populations the page chooses, and says each
     read with `announce`. Gives the function that stops it. */
 export function choosePopulationColumns(deps: {
-  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "dispatch">;
+  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "apply">;  // the store gated as the screens' is
   announce: (words: string) => void;
 }): () => void;
 ```

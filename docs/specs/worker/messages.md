@@ -206,7 +206,7 @@ received it is ended (below):
   read `readerNotLoaded` (until 9 October 2026 `xlsxReaderNotLoaded`), with the browser's message for the console,
   and the light worker goes on (`docs/specs/worker/individuals.md`, "The
   package of xlsx_rs, loaded on first need"). It is not `crashed`, which would end a worker
-  that can still read a CSV, and would tell the user that the reading
+  that can still read a file once the connection is back, and would tell the user that the reading
   stopped where the words of the refusal tell them to check their
   connection; a failed `import()` or `init()` leaves no wasm behind,
   though a browser may keep a failed `import()` as failed until the
@@ -655,7 +655,9 @@ would mislead whoever reads it there.
   `{ kind: "failed", error: { kind: "empty" } }`, and not a failure of the
   worker; so is an xlsx the reader refuses, `encrypted`, and a files wasm
   that could not be downloaded, `readerNotLoaded`.
-- **A read of an xlsx whose answer has a `found`**, or of a CSV whose
+- **A read whose answer's `found` does not match the format of its
+  file** cannot come from table_io, which gives `found` for a text file
+  alone; until 9 October 2026 this point read: **A read of an xlsx whose answer has a `found`**, or of a CSV whose
   answer has none, passes the check, which does not know the request;
   the reader never gives one, and core records the read under the
   options it was asked with (`docs/specs/core/project.md`, "The
