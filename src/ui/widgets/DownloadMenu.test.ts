@@ -268,6 +268,33 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(announcer.getState()).toBe("Saving panel_pops.table.csv.");
   });
 
+  test("a sortable table of more rows than its frame shows saves every row", async () => {
+    // A guard against a CSV of the first rows alone, a slice. It cannot
+    // prove every row in jsdom, where React Aria's Virtualizer draws every
+    // row, so that a CSV of the rows drawn would pass too: the flow of the
+    // downloads in the browsers, where it draws those in view alone, is
+    // the real guard.
+    const rows = Array.from({ length: 100 }, (_, index) => ({
+      id: `s${String(index)}`,
+      cells: [`s${String(index)}`, "0.5000"],
+      values: [`s${String(index)}`, 0.5],
+    }));
+    draw(
+      createElement(SortableTable<Id>, {
+        label: "The individuals",
+        columns: SORTABLE_COLUMNS,
+        rows,
+        sort: null,
+        onSortChange: () => undefined,
+        download: { what: "the table", fileName: "x.table.csv", waiting: null },
+      }),
+    );
+    await choose("the table", "Table as CSV");
+    const lines = savedText().text.split("\n");
+    expect(lines).toHaveLength(1 + 100 + 1);
+    expect(lines.at(-2)).toBe("s99,0.5");
+  });
+
   test("the menu of a table holds Table as CSV alone, and Escape closes it and gives the focus back", async () => {
     draw(
       createElement(SortableTable<Id>, {
