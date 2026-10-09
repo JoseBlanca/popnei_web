@@ -8423,6 +8423,31 @@ describe("AP3 D1 stopLeftBehind on the store of popgen2.html", () => {
     expect(made.sent).toHaveLength(2);
   });
 
+  test("a threshold moved, a PCA started, then undo: its cancel() called once, the PCA ready, no notice", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    moveMissing(made.store, 0.2);
+    made.store.startRun("pca");
+    expect(pcaOf(made.store.getState()).kind).toBe("running");
+    made.store.undo();
+    expect(made.sent[1]?.cancels()).toBe(1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    expect(made.store.getState().notice).toBeNull();
+  });
+
+  test("a threshold moved and undone, a PCA started, then redo: its cancel() called once, the PCA ready, no notice", () => {
+    const made = popgen2Store(true);
+    passDone(made);
+    moveMissing(made.store, 0.2);
+    made.store.undo();
+    made.store.startRun("pca");
+    expect(pcaOf(made.store.getState()).kind).toBe("running");
+    made.store.redo();
+    expect(made.sent[1]?.cancels()).toBe(1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    expect(made.store.getState().notice).toBeNull();
+  });
+
   test("a PCA in flight, the colour of the points changed, which its key does not hold: no cancel(), still running", () => {
     const made = popgen2Store(true);
     passDone(made);
@@ -8452,9 +8477,14 @@ describe("AP3 D1 stopLeftBehind on the store of popgen2.html", () => {
     expect(made.sent).toHaveLength(1);
     expect(made.sent[0]?.cancels()).toBe(0);
     expect(after.runs.map((run) => run.analysis)).toEqual(["variantsSummary"]);
+    // An undo gives the key of the wait back, and the PCA is not Running
+    // again: the wait was ended, not kept for an undo.
+    made.store.undo();
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
     // The one pass ends: nothing is sent for the wait it ended.
     made.end(made.sent[0], summaryResult(["1"], [1200]));
     expect(made.sent).toHaveLength(1);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
   });
 
   test("a write in flight, the threshold moved: its cancel() called, the write ready under the new key, no notice", () => {
