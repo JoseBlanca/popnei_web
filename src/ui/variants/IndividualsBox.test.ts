@@ -816,6 +816,44 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     );
   });
 
+  test("a file of UTF-16 read again for another separator: the line of UTF-16 stays in place of the encoding while the read is under way", async () => {
+    const { store } = await drawPage();
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS, { ...FOUND, encoding: "utf-16" }));
+    await act(async () => {
+      const command = csvOptionCommand("separator", "pops.csv", {
+        encoding: "auto",
+        separator: ";",
+        decimal: "auto",
+      });
+      store.apply(command.description, command.command);
+      await Promise.resolve();
+    });
+    expect(store.getState().project.individuals?.read.kind).toBe("pending");
+    expect(paragraphs(tab())).toEqual([
+      "Encoding: UTF-16, from the mark at the start of the file.",
+      "Reading pops.csv.",
+    ]);
+    expect(selectsOf(tab())).toEqual(["Semicolon", "Detected"]);
+  });
+
+  test("every individual of the variants file in the file: no section of the individuals not in it, and no Copy", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    await pickIndividuals("pops.csv");
+    await recorded(
+      store,
+      readOf({
+        columns: POPS.columns,
+        rows: [...POPS.rows, ["s004", "p1", 1]],
+      }),
+    );
+    expect(paragraphs(tab())).toContain("6 rows, 3 columns");
+    expect(tab().querySelector("h2")).toBeNull();
+    expect(tab().textContent).not.toContain("but not in pops.csv");
+    expect(buttons(tab()).filter((b) => b.startsWith("Copy"))).toEqual([]);
+  });
+
   test("a file of UTF-16 with a character not decoded: the line of UTF-16 in place of the encoding, and the warning", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");

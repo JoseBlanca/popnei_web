@@ -23,6 +23,7 @@ import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { dropFiles } from "./dropFiles.ts";
 import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -1147,6 +1148,137 @@ test("IN6 D3 at the missing rate of the individuals 0.03, the counts and the unc
   const kept = /of ([\d,]+) individuals\./u.exec(words)?.[1] ?? "";
   expect(Number(kept.replace(/,/gu, ""))).toBe(sum);
   expect(sum).toBe(116);
+});
+
+/** Drops a folder on the zone of the box of the individuals file: a
+    script cannot put a folder into a DataTransfer, so the item of a file
+    says, when React Aria asks for its entry of the file system, that it
+    is a folder, as the entry of a folder dragged from the desktop does. */
+async function dropFolder(page: Page): Promise<void> {
+  const dataTransfer = await page.evaluateHandle(() => {
+    Reflect.set(
+      window,
+      "popneiEntryOf",
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- put back after the drop, as it was
+      DataTransferItem.prototype.webkitGetAsEntry,
+    );
+    DataTransferItem.prototype.webkitGetAsEntry = function () {
+      return {
+        isFile: false,
+        isDirectory: true,
+        name: "metadata",
+      } as FileSystemEntry;
+    };
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([], "metadata"));
+    return transfer;
+  });
+  const target = individualsBox(page).getByRole("button", {
+    name: /^Open (another )?individuals file…$/u,
+  });
+  for (const type of ["dragenter", "dragover", "drop"]) {
+    await target.dispatchEvent(type, { dataTransfer });
+  }
+  // React Aria asks for the entries within the drop, so that the files
+  // of the next drops are files again.
+  await page.evaluate(() => {
+    const entryOf: unknown = Reflect.get(window, "popneiEntryOf");
+    if (typeof entryOf === "function") {
+      DataTransferItem.prototype.webkitGetAsEntry =
+        entryOf as DataTransferItem["webkitGetAsEntry"];
+    }
+  });
+}
+
+test("IN6 D2 a folder, then two files, dropped on the box of the individuals file: their words in the box and said, nothing opened; a CSV dropped opens it and takes the words away; a folder again, and Remove takes the words away; axe on the words", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await recordAnnouncements(page);
+  await openPage(page);
+  const folder =
+    "Open an individuals file, a CSV, a TSV or an xlsx, not a folder.";
+  const several = "Open one individuals file at a time.";
+  const zoneButton = individualsBox(page).getByRole("button", {
+    name: /^Open (another )?individuals file…$/u,
+  });
+
+  await dropFolder(page);
+  await expect(individualsBox(page).getByText(folder)).toBeVisible();
+  await expect.poll(() => announced(page)).toContain(folder);
+  await expect(zoneButton).toHaveText("Open individuals file…");
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  const pops = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  await dropFiles(page, zoneButton, [
+    { name: "a.csv", text: pops },
+    { name: "b.csv", text: pops },
+  ]);
+  await expect(individualsBox(page).getByText(several)).toBeVisible();
+  await expect(individualsBox(page).getByText(folder)).toHaveCount(0);
+  await expect.poll(() => announced(page)).toContain(several);
+  await expect(zoneButton).toHaveText("Open individuals file…");
+
+  await dropFiles(page, zoneButton, [{ name: "panel_pops.csv", text: pops }]);
+  await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
+  await expect(individualsBox(page).getByText(several)).toHaveCount(0);
+  await expect(zoneButton).toHaveText("Open another individuals file…");
+
+  await dropFolder(page);
+  await expect(individualsBox(page).getByText(folder)).toBeVisible();
+  await expect(columnList(page)).toContainText("popcat");
+  await individualsBox(page)
+    .getByRole("button", { name: "Remove panel_pops.csv" })
+    .click();
+  await expect(individualsBox(page).getByText(folder)).toHaveCount(0);
+  await expect(zoneButton).toHaveText("Open individuals file…");
+});
+
+test("IN6 D2 an individuals file pasted into the zone of its box is opened as one picked: the list on popcat and its table under the tab", async ({
+  page,
+}) => {
+  await openPage(page);
+  const paste = individualsBox(page).getByRole("button", {
+    name: "Paste an individuals file",
+    exact: true,
+  });
+  await paste.focus();
+  const bytes = [...(await readFile(join(FIXTURES, "panel_pops.csv")))];
+  await paste.evaluate((button, given) => {
+    // As dropFiles: a file a script puts into a DataTransfer has no entry
+    // of the file system in Chromium, and React Aria skips an item
+    // without one.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with its item, by call
+    const entryOf = DataTransferItem.prototype.webkitGetAsEntry;
+    DataTransferItem.prototype.webkitGetAsEntry = function (
+      this: DataTransferItem,
+    ) {
+      return (
+        entryOf.call(this) ??
+        ({ isFile: true, isDirectory: false } as FileSystemEntry)
+      );
+    };
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(given)], "panel_pops.csv"));
+    button.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  }, bytes);
+  await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
+  await expect(
+    individualsBox(page).getByRole("button", { name: "Remove panel_pops.csv" }),
+  ).toBeVisible();
+  await tab(page, "Individuals file").click();
+  await expect(
+    page.getByRole("grid", { name: "The table of panel_pops.csv" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("200 rows, 2 columns", { exact: true }),
+  ).toBeVisible();
 });
 
 test("IN6 D2 individuals_10000.xlsx sorted by a header: in the first frame after the click, Sorting… in the line of its size and the grid busy; a second click before the rows are drawn sorts them once, up; then the line and the grid as before", async ({
