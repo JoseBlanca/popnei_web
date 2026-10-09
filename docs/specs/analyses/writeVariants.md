@@ -436,13 +436,14 @@ from WebKit cannot be read by its footer: pyarrow fails at batch 782 of
 1,454, the first that starts past 4 GiB, "Message metadata too long by
 572 bytes", while its batches read in their order, as a stream, hold
 the 7,270,000 variants, the last at 7,270,000,000. The footer of a
-`.nei` file holds the place of each batch. The cause is suspected, and
-being verified before an issue of popnei is written
-(`docs/designs/stats-filters.popnei-issue-nei-4gib.md`, its draft): the
-writer of popnei's dependency arrow-ipc 60 counts that place in a
-`usize`, 32 bits in wasm, which would wrap past 4 GiB, so that every
-`.nei` file larger than 4 GiB the application writes would have a
-footer that points to the wrong bytes. It is popnei's to fix; a VCF has
+`.nei` file holds the place of each batch. The cause was found on 9
+October 2026 and reproduced under node with popnei 0.2.2, without a
+browser (`docs/designs/stats-filters.popnei-issue-nei-4gib.md`, the
+draft of its issue): the writer of popnei's dependency arrow-ipc 60.0.0
+keeps that place in a `usize`, 32 bits in wasm, which wraps past 4 GiB
+with no error, so every `.nei` file larger than 4 GiB the application
+writes has a footer that lists each batch past 4 GiB 4,294,967,296
+bytes too low, and popnei's own `openVars` fails on it at that batch. It is popnei's to fix; a VCF has
 no footer.
 
 Whether an engine copies the bytes of a `Blob` made of `Blob`s
@@ -863,8 +864,9 @@ and 8 GB:
 - A `.nei` file above 4 GiB, written in the browser, has a broken
   footer: the file of 8 GB saved from WebKit could not be read by its
   footer past its first 4 GiB, though its batches read in their order
-  hold every variant. Found in the browser; the cause is suspected in
-  popnei's writer under wasm and is being verified (above). The
+  hold every variant. Found in the browser and reproduced under node;
+  the cause is in arrow-ipc 60's writer, whose offsets are of 32 bits
+  under wasm (above). The
   application does not warn of it; a VCF has no footer, and a `.nei`
   file up to 4 GiB is read whole.
 - Firefox was not measured: Playwright cannot start it on that Mac. A

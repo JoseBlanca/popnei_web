@@ -2320,9 +2320,10 @@ reader of BED files in Python:
    gives the place of each batch of variants, points to the right bytes.
    The file of 8 GB written by WebKit 26.6 on 9 October 2026 could not
    be read by its footer, from the first batch that starts past 4 GiB,
-   though its batches read in their order hold every variant; the cause
-   is thought to be in popnei's writer under wasm, whose offsets are of
-   32 bits, and is being verified before an issue of popnei
+   though its batches read in their order hold every variant; the cause,
+   reproduced under node, is the writer of arrow-ipc 60, popnei's
+   dependency, whose offsets are of 32 bits under wasm; an issue of
+   popnei is drafted in `docs/designs/stats-filters.popnei-issue-nei-4gib.md`
    (`docs/specs/analyses/writeVariants.md`, "What was measured"). A VCF
    has no footer.
 
