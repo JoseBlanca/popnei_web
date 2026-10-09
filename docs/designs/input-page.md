@@ -80,7 +80,21 @@ The words of `docs/architecture.md` this design uses, as it uses them:
   the names of its columns and one row per individual, with the column
   chosen for the populations, the **grouping** (section 2).
 - **The store**: the part of the code that holds the project, the
-  results and what is being calculated, and that the screens read.
+  results and what is being calculated, and that the screens read. It
+  keeps the **history**, the projects before the current one, which an
+  Undo would go back to; `popgen2.html` keeps it though it shows no
+  Undo. A command sent to it with `dispatch` adds a project to the
+  history; `open`, which opens a variants file, starts the history
+  afresh and stops every calculation.
+- **A key**: the text made from everything a calculation reads, under
+  which its result is kept; a change that leaves a key as it was leaves
+  that calculation running and its result shown (section 3).
+- **The entry of the page**: the code that runs when the page opens,
+  makes the store and the workers, and does what the page does by
+  itself, such as starting the one pass once a variants file is open.
+- **The status region**: a part of the page a screen reader reads aloud
+  as it changes, without the focus moving there, which tells such a
+  user what the page did by itself, "panel.nei read: 1,200 variants".
 - **The one pass**: the one reading of the variants file that
   `popgen2.html` does, which gives the count of the variants, the plots
   and, for each individual, its proportion of missing genotypes and its
@@ -204,8 +218,10 @@ Under the table, the last line, as the owner asked: "Individuals not in
 the variants file: 18", the rows of the individuals file whose
 individual `panel.nei` does not have, which nothing uses; 0 is written
 too. The populations are in the order in which each first appears in the
-file, as on the old page, and a population whose every individual is
-outside the variants file has no row, since it has none to count. A
+file, as on the old page. A population whose every individual is
+outside the variants file has no row, since it has no individual of the
+variants file to count; its individuals are among those of the last
+line. A
 population that the filters leave empty keeps its row, with 0 after the
 filters.
 
@@ -255,8 +271,9 @@ gives.
 
 Both tabs stay drawn while the other is shown; the hidden one is taken
 out of view, out of the reach of the Tab key and out of what a screen
-reader reads (React Aria's `shouldForceMount`, which marks the hidden
-tab inert, and a rule of CSS that hides it), as "What a hidden tab
+reader reads (React Aria's `shouldForceMount` keeps it drawn and marks
+it inert, which takes it out of the keyboard and the screen reader, and
+a rule of the page's styles hides it), as "What a hidden tab
 keeps", below, argues. So a turn to the other tab and back finds
 everything as it was: the plots, a number half typed in the box of a
 threshold, the sort and the place of the table. A plot whose tab is
@@ -305,7 +322,8 @@ the old page (`src/ui/widgets/SortableTable.tsx`): it draws only the rows
 in view and those just beyond, and a click on a header, or Enter on it,
 sorts by that column. With every one of 10,000 rows drawn, a sort froze
 that page for seconds in Chromium 153 and WebKit 26.6; drawn so, for
-tenths of a second (measured on 27 September 2026, the work report of
+tenths of a second (measured on 27 September 2026 on the owner's Mac,
+an Apple M5 Pro, with a table of 10,000 individuals, the work report of
 `docs/plans/variants-step.md`). At 320 px the box scrolls sideways and
 the page does not.
 
@@ -664,11 +682,13 @@ revised when the old page goes.
   then show at once as hundreds of populations of one; and the choice is
   the page's own, which the old page avoided so that every choice was
   the user's (`docs/specs/steps/individuals.md`, "The populations"). It
-  cannot be made by core when it records the read: the store copies a
-  read into every project of the history that holds the file and
-  nothing else of the record (`recordShared` of `src/core/store.ts`), so
-  a column set there would be in some of those projects and not in
-  others, and that record is shared with `popgen.html`. So the entry of
+  cannot be made by core when it writes the read of the file into the
+  project: that writing puts the table, and nothing else, into the
+  current project and the projects of the history that hold the file
+  (`recordShared` of `src/core/store.ts`), so a column chosen there
+  would be lost from the earlier projects, and an Undo, once the page
+  has one, would bring back counts with no column; and that writing is
+  shared with `popgen.html`, whose user chooses every column. So the entry of
   the page sends it, once the read of a new load is recorded and no
   column of that file is chosen, as one command, `setGrouping`, as the
   entry already starts the one pass by itself; one step more in the
@@ -717,7 +737,7 @@ cells of the files wasm into a table, `src/worker/xlsxCells.ts`, go; the
 inference of the types the project keeps, identifier, binary, continuous
 and categorical, is made from table_io's types. A CSV, which today loads
 no wasm, then downloads 0.33 MB the first time, about a quarter of a
-second at 10 Mbit/s by arithmetic, and the first read of a large CSV
+second at 10 Mbit/s (0.33 MB is 2.6 Mbit), and the first read of a large CSV
 takes the time above. Its tests are those of the reader today, on the
 same files, which must give the same tables.
 
