@@ -929,8 +929,12 @@ table that has it, including those not in the variants file; or
 `"all"` for the one population, whose individuals are those of the load
 of the variants file, which every key holds already, so that no key
 reads `p.variants` (`docs/specs/core/keys.md`); or `null` when neither
-can be given yet: a file not read, no column chosen, or no column of
-that name but the first. `populationsToRun(p)` narrows them to the individuals of the
+can be given yet: a file not read, no column chosen, no column of
+that name but the first, or a column of booleans, which no list of
+`popgen2.html` offers (below, "The counts per population on
+popgen2.html") and the Individuals step no longer offers either, from 9
+October 2026: a second file whose column of that name is now `TRUE` and
+`FALSE` groups nobody by it. `populationsToRun(p)` narrows them to the individuals of the
 variants file and drops the populations left empty, since popnei refuses
 a population that names an individual it does not have and an empty
 one; for `"all"` it gives `[["All individuals", every individual of the
@@ -955,7 +959,7 @@ analysis show one text for one condition:
 | the project | its kind | the reason |
 |---|---|---|
 | a file read, and no column chosen | `noColumn` | "Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
-| no column of that name in the table, or only its first column, after a new load of the file | `noSuchColumn` | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
+| no column of that name in the table, only its first column, or a column of booleans, after a new load of the file | `noSuchColumn` | "pops.csv has no column popcat, from which the populations were taken. Choose the column that defines the populations, or all individuals in one population, in the Individuals step." |
 | no individual of the variants file has a population in the column | `noPopulation` | "No individual of panel.nei has a population in the column popcat of pops.csv. Fill in the column and load the file again, or choose another column, in the Individuals step." |
 
 They are the words of stage 2, with the one population named where the
@@ -1085,7 +1089,8 @@ never find one of the other not yet made (above, "The populations").
   are too many, with no population and nothing else counted, since the
   box warns of too many values as soon as the individuals file is read;
   once it is read, for each population of
-  the column chosen with an individual in both files, in the order of
+  the column chosen, when the list offers it (`populationColumnChoices`),
+  with an individual in both files, in the order of
   `populationsToRun`, its individuals kept, from `populationsKept(p,
   list)` with the list of `kept` when it is known, its `emptied`
   populations given 0, so that a population the filters empty keeps its
@@ -1194,7 +1199,8 @@ The rules of the counts against what a reader would expect:
   individual.
 - A population whose every individual of the file is outside the
   variants file has no row; its rows are among `rowsNotInVariants`.
-- With no column chosen, or a column the table does not have, no
+- With no column chosen, a column the table does not have, or one the
+  list does not offer, a column of booleans, no
   population is given and every individual kept is unclassified, none
   counted as with a missing cell or not in the file.
 - With a file read and none of its individuals in the variants file,
@@ -1284,7 +1290,9 @@ not in the file, `rowsNotInVariants`
 of `panel.nei`, and the unclassified kept 7, the 7 names not in the file; 3 cells
 of `popcat` made `null` give 3 with a missing cell; the names of the
 table made `S000` give `noneInFile` with `s000` and `S000`; a column of
-21 values gives `tooMany` and no population; with a threshold of the
+21 values gives `tooMany` and no population; a second file whose
+`popcat` is `true` and `false` gives no population, every individual
+kept unclassified, and `populationsOf` `null`; with a threshold of the
 individuals on and no statistics, `known` false and each count `null`;
 with the statistics of `panel.nei`'s one pass and the missing rate at
 0.1, each count equal to the length of the population of

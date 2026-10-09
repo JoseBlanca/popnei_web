@@ -2715,7 +2715,8 @@ const WHOLE = new WeakMap<Pops, PopulationsKept>();
  * the one population, without an individuals file whatever the
  * grouping, and with a file read and the grouping `onePopulation`;
  * `null` when neither can be given yet, a file not read, no column
- * chosen or no column of that name, and for a project of association.
+ * chosen, no column of that name or a column of booleans, and for a
+ * project of association.
  * Never reads `p.variants`. The same frozen value for the same frozen
  * table and column.
  */
@@ -2745,8 +2746,9 @@ export function populationsOf(p: Project): Pops | "all" | null {
 
 /** The populations of `table` by its column `column`, as `populationsOf`
     gives them, each named by `cellShown` with `decimal`; `null` when the
-    table has no column of that name, or has it first, where it names the
-    individuals. */
+    table has no column of that name, has it first, where it names the
+    individuals, or has it a column of booleans, which is no column of
+    populations (`isBooleanColumn`). */
 function groupedBy(
   table: IndividualsTable,
   column: string,
@@ -2760,8 +2762,9 @@ function groupedBy(
   }
   const index = table.columns.indexOf(column);
   // The first column names the individuals, and is never the column of
-  // the populations.
-  if (index <= 0) {
+  // the populations; nor is a column of booleans, which the list of
+  // popgen2.html does not offer.
+  if (index <= 0 || isBooleanColumn(table.rows, index)) {
     return null;
   }
   const members = new Map<string, string[]>();
@@ -2789,6 +2792,30 @@ function groupedBy(
     byColumn.set(key, pops);
   }
   return pops;
+}
+
+/** Whether the column at `index` of `rows` is a column of booleans: every
+    cell of it that is not missing is `true` or `false`, and one is at
+    least. The owner decided on 9 October 2026 that such a column is no
+    column of populations, in which table_io makes `TRUE` and `true` one
+    value (docs/plans/input-page.md, "The owner's answers, 9 October
+    2026"). */
+export function isBooleanColumn(
+  rows: IndividualsTable["rows"],
+  index: number,
+): boolean {
+  let found = false;
+  for (const row of rows) {
+    const cell = row[index];
+    if (cell === undefined || cell === null) {
+      continue;
+    }
+    if (typeof cell !== "boolean") {
+      return false;
+    }
+    found = true;
+  }
+  return found;
 }
 
 /** Whether a table is frozen with everything it holds, so that its

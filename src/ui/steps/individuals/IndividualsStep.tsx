@@ -10,7 +10,7 @@
  * from the store and sends it commands; what it holds itself is the
  * message of a file it did not load.
  */
-import { Fragment, useId, useRef, useState } from "react";
+import { Fragment, useId, useMemo, useRef, useState } from "react";
 
 import {
   columnAllows,
@@ -20,6 +20,7 @@ import {
   individualsCheck,
   individualsStepMissing,
   individualsStepNeeds,
+  isBooleanColumn,
   populationsNeeds,
   populationsToRun,
   typesLost,
@@ -733,6 +734,16 @@ interface PopulationsProps {
 function Populations({ table, send }: PopulationsProps): React.JSX.Element {
   const heading = useId();
   const grouping = useAppState((s) => s.project.grouping);
+  // The names, and every column but one of booleans, which core takes no
+  // populations from (populationsOf), as the owner decided on 9 October
+  // 2026.
+  const offered = useMemo(
+    () =>
+      table.columns.filter(
+        (_, index) => index === 0 || !isBooleanColumn(table.rows, index),
+      ),
+    [table],
+  );
   const check = useAppState((s) => individualsCheck(s.project));
   const toRun = useAppState((s) => populationsToRun(s.project));
   // Primitives, since populationsNeeds gives a new object each call. The
@@ -749,8 +760,8 @@ function Populations({ table, send }: PopulationsProps): React.JSX.Element {
       </h2>
       <Select
         label="Column that defines the populations"
-        items={populationItems(table.columns)}
-        value={chosenPopulationItem(grouping, table.columns)}
+        items={populationItems(offered)}
+        value={chosenPopulationItem(grouping, offered)}
         placeholder="Choose a column"
         description={
           needKind === "noColumn" && needText !== undefined

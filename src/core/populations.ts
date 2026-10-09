@@ -25,6 +25,7 @@ import {
   grouped,
   identifierOf,
   individualsCheck,
+  isBooleanColumn,
   namesOf,
   populationsKept,
   populationsToRun,
@@ -260,36 +261,16 @@ function valuesOf(
 /**
  * The columns the list "Column of the populations" of popgen2.html offers:
  * every column of the table but the first, which names the individuals,
- * and but a column of booleans, every cell of which that is not missing
- * is `true` or `false`, one at least; in the order of the table. The
- * owner decided on 9 October 2026 that a column of booleans is no column
- * of populations.
+ * and but a column of booleans (`isBooleanColumn`), in the order of the
+ * table. The owner decided on 9 October 2026 that a column of booleans is
+ * no column of populations, so the counts and the analyses take their
+ * populations from no other column.
  */
 export function populationColumnChoices(read: TableRead): readonly string[] {
   const rows = read.table.rows;
   return read.table.columns.filter(
     (_, index) => index > 0 && !isBooleanColumn(rows, index),
   );
-}
-
-/** Whether every cell of the column at `index` of `rows` that is not
-    missing is `true` or `false`, and one is at least. */
-function isBooleanColumn(
-  rows: IndividualsTable["rows"],
-  index: number,
-): boolean {
-  let found = false;
-  for (const row of rows) {
-    const cell = row[index];
-    if (cell === undefined || cell === null) {
-      continue;
-    }
-    if (typeof cell !== "boolean") {
-      return false;
-    }
-    found = true;
-  }
-  return found;
 }
 
 /** A population of the box of the individuals file of popgen2.html and
@@ -450,13 +431,16 @@ function sameList(before: CountedList, now: CountedList): boolean {
   return before.kind === now.kind;
 }
 
-/** The column of the grouping of `p` when it is a column of the table of
-    `read` but its first, which names the individuals; null otherwise. */
+/** The column of the grouping of `p` when the list of the column offers
+    it, `populationColumnChoices` of `read`: a column of the table but its
+    first, which names the individuals, and but a column of booleans; null
+    otherwise. Only the column of the grouping is looked at. */
 function countedColumn(p: Project, read: TableRead): string | null {
   if (p.grouping.kind !== "populations" || p.grouping.column === null) {
     return null;
   }
-  return read.table.columns.indexOf(p.grouping.column) > 0
+  const index = read.table.columns.indexOf(p.grouping.column);
+  return index > 0 && !isBooleanColumn(read.table.rows, index)
     ? p.grouping.column
     : null;
 }

@@ -23,6 +23,8 @@ import type { PopulationCounts } from "./populations.ts";
 import {
   individualsBoxNeeds,
   populationsKept,
+  populationsOf,
+  populationsToRun,
   MAX_LISTED_POPULATIONS,
 } from "./project.ts";
 import type { IndividualsRead, Project, TableRead } from "./project.ts";
@@ -955,6 +957,28 @@ describe("IN4 D2 the counts of the box of the individuals file", () => {
         noneInFile: null,
       });
     }
+  });
+
+  test("a second file whose column popcat is TRUE and FALSE, which the list does not offer, gives no population and every individual kept unclassified, and populationsOf groups by it no more", () => {
+    const p = popgen2Project({
+      read: readOf(
+        panelPopsWith([], (row) => [row[0] ?? null, row[1] === "p0"]),
+      ),
+    });
+    expect(countsOf(p, keptOf(p))).toEqual({
+      column: null,
+      numValues: 0,
+      tooMany: false,
+      variantsRead: true,
+      known: true,
+      populations: [],
+      unclassified: { kept: 200, missingCell: 0, notInFile: [] },
+      notInFile: [],
+      rowsNotInVariants: 0,
+      noneInFile: null,
+    });
+    expect(populationsOf(p)).toBeNull();
+    expect(populationsToRun(p)).toBeNull();
   });
 
   test("a threshold of the individuals on and no statistics: not known, each count null, no unclassified", () => {
