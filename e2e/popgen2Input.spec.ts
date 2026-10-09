@@ -575,10 +575,20 @@ test("IN6 D2 a CSV with an integer column before the populations: the page choos
   await expectCounts(page, ALL_COUNTS);
 });
 
-test("IN6 D2 four rows left out and three cells of popcat emptied: the line of the unclassified with 3 and 4 and three names, and the full list of 4 under the tab with Copy the 4 names", async ({
+test("IN6 D2 four rows left out and three cells of popcat emptied: the line of the unclassified with 3 and 4 and three names, and the full list of 4 under the tab with Copy the 4 names, which copies them", async ({
   page,
+  context,
+  browserName,
   makeAxeBuilder,
 }) => {
+  // Playwright gives Chromium the clipboard only with both permissions;
+  // WebKit lets the page write on a press, and the test read once
+  // granted.
+  await context.grantPermissions(
+    browserName === "chromium"
+      ? ["clipboard-read", "clipboard-write"]
+      : ["clipboard-read"],
+  );
   await recordAnnouncements(page);
   const lines = await panelPopsLines();
   // s010, s011 and s012 with an empty cell; s100 to s103 left out.
@@ -613,14 +623,43 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
     "s103",
   ]);
   await missing.getByRole("button", { name: "Copy the 4 names" }).click();
-  // The clipboard may be refused to the page, in WebKit among others; the
-  // region says which.
   await expect
-    .poll(async () => (await announced(page)).join(" "))
-    .toMatch(
-      /4 names copied\.|The names could not be copied\. Select them in the list\./u,
-    );
+    .poll(async () => (await announced(page)).at(-1))
+    .toBe("4 names copied.");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "s100\ns101\ns102\ns103",
+  );
   await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not granted in Chromium and missing in WebKit: the names could not be copied, and to select them in the list", async ({
+  page,
+  browserName,
+}) => {
+  await recordAnnouncements(page);
+  const lines = await panelPopsLines();
+  const out = new Set(["s100", "s101", "s102", "s103"]);
+  const text = lines
+    .filter((line) => !out.has(line.split(",")[0] ?? ""))
+    .join("\n");
+  // WebKit lets a page write the clipboard on a press, so there the page
+  // has none, as a page served over plain HTTP from another machine.
+  if (browserName === "webkit") {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", { value: undefined });
+    });
+  }
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name: "missing.csv", text });
+  await tab(page, "Individuals file").click();
+  const copy = page.getByRole("button", { name: "Copy the 4 names" });
+  await expect(copy).toBeVisible({ timeout: 20_000 });
+  await copy.click();
+  await expect
+    .poll(async () => (await announced(page)).at(-1))
+    .toBe("The names could not be copied. Select them in the list.");
+  await expect(copy).toBeFocused();
 });
 
 test("IN6 D2 a CSV of the names in capitals: the warning of none of the individuals in the file, and no table", async ({
