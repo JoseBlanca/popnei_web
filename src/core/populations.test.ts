@@ -1127,6 +1127,66 @@ describe("IN4 D3 the counts are the same object for the same individuals kept", 
     ]);
   });
 
+  test("another table with the same column, and the same read of the variants file, gives a new object with the new counts", () => {
+    const p = popgen2Project();
+    const first = countsOf(p, keptOf(p));
+    const individuals = p.individuals;
+    if (individuals === null) {
+      throw new Error("the project has no individuals file");
+    }
+    const other: Project = deepFreeze({
+      ...p,
+      individuals: {
+        ...individuals,
+        read: readOf(
+          panelPopsWith([], (row) => [
+            row[0] ?? null,
+            row[1] === "p2" ? "p1" : (row[1] ?? null),
+          ]),
+        ),
+      },
+    });
+    expect(other.variants).toBe(p.variants);
+    const second = countsOf(other, keptOf(other));
+    expect(second).not.toBe(first);
+    expect(second.populations).toEqual([
+      { pop: "p0", kept: 48 },
+      { pop: "p1", kept: 152 },
+    ]);
+  });
+
+  test("the same table read with the other decimal mark gives a new object, its populations written with that mark", () => {
+    const table = deepFreeze(
+      tableOf(
+        ["pop"],
+        PANEL_INDIVIDUALS.map((_, index) => [index < 100 ? 1.5 : 2.5]),
+      ),
+    );
+    const withPoint = popgen2Project({
+      read: readOf(table, "."),
+      grouping: { kind: "populations", column: "pop" },
+    });
+    const first = countsOf(withPoint, keptOf(withPoint));
+    expect(first.populations).toEqual([
+      { pop: "1.5", kept: 100 },
+      { pop: "2.5", kept: 100 },
+    ]);
+    const individuals = withPoint.individuals;
+    if (individuals === null) {
+      throw new Error("the project has no individuals file");
+    }
+    const withComma: Project = deepFreeze({
+      ...withPoint,
+      individuals: { ...individuals, read: readOf(table, ",") },
+    });
+    const second = countsOf(withComma, keptOf(withComma));
+    expect(second).not.toBe(first);
+    expect(second.populations).toEqual([
+      { pop: "1,5", kept: 100 },
+      { pop: "2,5", kept: 100 },
+    ]);
+  });
+
   test("a threshold of the variants changed gives the same object", () => {
     const stats = panelStats();
     const p = popgen2Project({ individualFilters: missingAt(0.03) });
