@@ -895,6 +895,23 @@ walking skeleton, a diversity `Job` and a CSV.
   then k6; a `refused` of such a job restarts it too, and so does a
   `crashed` that starts "popnei_web defect: ", and a `reopenFailed` does
   not; a result of a diversity ends no worker.
+- **The light worker started again after a large read**, under `IN2
+  D1`: a read of a `File` of `READ_RESTART_BYTES` + 1 bytes, 2,000,001,
+  answered with a table gives the read its table, and then the worker is
+  ended, its handlers taken off first, and no new one is made while no
+  read waits; the next read makes a new worker, and is sent to it once
+  it is `ready`. The same with a refusal, `tooLarge`, which the read
+  gives as `refused`, and with a `crashed`, which fails the read with
+  `workerFailed`. With a second read waiting, the new worker is made at
+  once and sent that read once `ready`. The outcome comes first: with a
+  light worker that cannot be made again, the large read still gives its
+  table, and the read that waited fails with `couldNotStart`. A file of
+  exactly `READ_RESTART_BYTES` ends nothing, and the next read goes to
+  the same worker. A large read cancelled while it runs is answered
+  `cancelled` at once, the worker not ended; when its answer comes, it
+  is ended. The `File`s are real ones, `new File([new
+  Uint8Array(READ_RESTART_BYTES + 1)], …)`, since the client takes the
+  size from the `File` of the request.
 - **Progress**: two `progress` of a run's id, then its `result`: its
   `onProgress` is called twice with the four fields as they came, and
   its outcome is `done`; a `progress` of an id that is not running is a

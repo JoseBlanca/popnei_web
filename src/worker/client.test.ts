@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   createClient,
   PCA_RESTART_INDIVIDUALS,
+  READ_RESTART_BYTES,
   WORKER_READY_TIMEOUT_MS,
   WRITE_RESTART_BYTES,
   type IndividualsAnswer,
@@ -238,7 +239,12 @@ function noSoFar(): void {
 
 /** A client over fake workers, with the workers it made and the versions
     it gave `onPopneiReady`, which calls `hooks.onReady` too. */
-function setUp(options: { readonly calculationThrows?: number } = {}): {
+function setUp(
+  options: {
+    readonly calculationThrows?: number;
+    readonly lightMakes?: number;
+  } = {},
+): {
   readonly client: ReturnType<typeof createClient>;
   readonly calculation: FakeWorker[];
   readonly light: FakeWorker[];
@@ -252,6 +258,7 @@ function setUp(options: { readonly calculationThrows?: number } = {}): {
     onReady: () => undefined,
   };
   let throwsLeft = options.calculationThrows ?? 0;
+  const lightMakes = options.lightMakes ?? Number.POSITIVE_INFINITY;
   const client = createClient({
     calculation: () => {
       if (throwsLeft > 0) {
@@ -263,6 +270,9 @@ function setUp(options: { readonly calculationThrows?: number } = {}): {
       return worker;
     },
     light: () => {
+      if (light.length >= lightMakes) {
+        throw new Error("the script of the light worker is not served");
+      }
       const worker = fakeWorker();
       light.push(worker);
       return worker;
@@ -3414,4 +3424,214 @@ describe("IN1 D2 the refusal of the reader carries the format", () => {
       });
     },
   );
+});
+
+describe("IN2 D1 the light worker started again after a large read", () => {
+  /** A file one byte above the bound, and one of exactly the bound. */
+  const LARGE = new File([new Uint8Array(READ_RESTART_BYTES + 1)], "large.csv");
+  const AT_BOUND = new File([new Uint8Array(READ_RESTART_BYTES)], "bound.csv");
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** A client with the files `large`, `bound` and `small`, a read of
+      `fileId` sent to a ready light worker, and `waiting` more reads of
+      `small` behind it. */
+  function oneRead(
+    fileId: "large" | "bound",
+    waiting = 0,
+    options: Parameters<typeof setUp>[0] = {},
+  ): ReturnType<typeof setUp> & {
+    readonly worker: FakeWorker;
+    readonly read: ReturnType<
+      ReturnType<typeof createClient>["readIndividuals"]
+    >;
+    readonly waiting: readonly ReturnType<
+      ReturnType<typeof createClient>["readIndividuals"]
+    >[];
+  } {
+    const env = setUp(options);
+    env.client.addFile("large", LARGE);
+    env.client.addFile("bound", AT_BOUND);
+    env.client.addFile("small", CSV_FILE);
+    const read = env.client.readIndividuals(fileId, CSV);
+    const others = Array.from({ length: waiting }, () =>
+      env.client.readIndividuals("small", CSV),
+    );
+    const worker = last(env.light);
+    emit(worker, LIGHT_READY);
+    expect(sentToLight(worker)).toMatchObject([
+      { kind: "readIndividuals", file: fileId === "large" ? LARGE : AT_BOUND },
+    ]);
+    return { ...env, worker, read, waiting: others };
+  }
+
+  /** The outcome of the first read that waited. */
+  function waitingOutcome(
+    env: ReturnType<typeof oneRead>,
+  ): Promise<IndividualsAnswer> {
+    const read = env.waiting[0];
+    if (read === undefined) {
+      throw new Error("no read waited");
+    }
+    return read.outcome;
+  }
+
+  /** The id of the request the worker was last sent. */
+  function lastLightId(worker: FakeWorker): number {
+    const id = sentToLight(worker).at(-1)?.id;
+    if (id === undefined) {
+      throw new Error("the light worker was sent nothing");
+    }
+    return id;
+  }
+
+  /** A next read of `small` makes a new worker, which is sent it once
+      ready, and gives its answer. */
+  async function expectNextReadOnNewWorker(
+    env: ReturnType<typeof oneRead>,
+  ): Promise<void> {
+    expect(env.light).toHaveLength(1);
+    const next = env.client.readIndividuals("small", CSV);
+    expect(env.light).toHaveLength(2);
+    const second = last(env.light);
+    expect(second.posted).toHaveLength(0);
+    emit(second, LIGHT_READY);
+    expect(sentToLight(second)).toMatchObject([
+      { kind: "readIndividuals", file: CSV_FILE },
+    ]);
+    emit(second, {
+      kind: "individuals",
+      id: lastLightId(second),
+      read: TABLE_READ,
+    });
+    expect(await now(next.outcome)).toEqual(TABLE_READ);
+  }
+
+  test("a read of READ_RESTART_BYTES + 1 bytes answered with a table gives it, then the worker is ended, and the next read goes to a new one", async () => {
+    expect(LARGE.size).toBe(2_000_001);
+    const env = oneRead("large");
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: TABLE_READ,
+    });
+    expect(await now(env.read.outcome)).toEqual(TABLE_READ);
+    expect(env.worker.terminated).toBe(true);
+    expect(env.worker.endedWithHandlers).toBe(false);
+    await expectNextReadOnNewWorker(env);
+  });
+
+  test("a large read refused, tooLarge, gives its refusal, then the worker is ended", async () => {
+    const env = oneRead("large");
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: {
+        kind: "failed",
+        error: { kind: "tooLarge", size: 2_000_001, max: 20_000_000 },
+        format: "text",
+      },
+    });
+    expect(await now(env.read.outcome)).toEqual({
+      kind: "refused",
+      error: { kind: "tooLarge", size: 2_000_001, max: 20_000_000 },
+      format: "text",
+    });
+    expect(env.worker.terminated).toBe(true);
+    await expectNextReadOnNewWorker(env);
+  });
+
+  test("a large read that crashes the worker fails with workerFailed, and the worker is ended", async () => {
+    const env = oneRead("large");
+    emit(env.worker, { kind: "crashed", message: "out of memory" });
+    expect(await now(env.read.outcome)).toEqual({
+      kind: "failed",
+      error: { kind: "workerFailed", message: "out of memory" },
+    });
+    expect(env.worker.terminated).toBe(true);
+    expect(env.worker.endedWithHandlers).toBe(false);
+  });
+
+  test("with a read waiting, the new worker is made at once and sent it once ready; a message of the old one changes nothing", async () => {
+    const env = oneRead("large", 1);
+    const id = lastLightId(env.worker);
+    emit(env.worker, { kind: "individuals", id, read: TABLE_READ });
+    expect(await now(env.read.outcome)).toEqual(TABLE_READ);
+    expect(env.worker.terminated).toBe(true);
+    expect(env.light).toHaveLength(2);
+    const second = last(env.light);
+    expect(second.posted).toHaveLength(0);
+    emit(second, LIGHT_READY);
+    expect(sentToLight(second)).toMatchObject([
+      { kind: "readIndividuals", file: CSV_FILE },
+    ]);
+    emit(env.worker, { kind: "crashed", message: "late" });
+    emit(second, {
+      kind: "individuals",
+      id: lastLightId(second),
+      read: TABLE_READ,
+    });
+    expect(await now(waitingOutcome(env))).toEqual(TABLE_READ);
+    expect(env.light).toHaveLength(2);
+  });
+
+  test("the outcome comes first: with a light worker that cannot be made again, the large read gives its table and the read that waited fails with couldNotStart", async () => {
+    const env = oneRead("large", 1, { lightMakes: 1 });
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: TABLE_READ,
+    });
+    expect(await now(env.read.outcome)).toEqual(TABLE_READ);
+    expect(env.worker.terminated).toBe(true);
+    expect(await now(waitingOutcome(env))).toEqual({
+      kind: "failed",
+      error: {
+        kind: "couldNotStart",
+        reason:
+          "the worker could not be made: the script of the light worker is not served",
+      },
+    });
+  });
+
+  test("a read of exactly READ_RESTART_BYTES ends nothing, and the next read goes to the same worker", async () => {
+    expect(AT_BOUND.size).toBe(2_000_000);
+    const env = oneRead("bound");
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: TABLE_READ,
+    });
+    expect(await now(env.read.outcome)).toEqual(TABLE_READ);
+    expect(env.worker.terminated).toBe(false);
+    const next = env.client.readIndividuals("small", CSV);
+    expect(env.light).toHaveLength(1);
+    expect(sentToLight(env.worker)).toHaveLength(2);
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: TABLE_READ,
+    });
+    expect(await now(next.outcome)).toEqual(TABLE_READ);
+  });
+
+  test("a large read cancelled while it runs is cancelled at once, the worker not ended until its answer comes", async () => {
+    const env = oneRead("large");
+    env.read.cancel();
+    expect(await now(env.read.outcome)).toEqual({ kind: "cancelled" });
+    expect(env.worker.terminated).toBe(false);
+    emit(env.worker, {
+      kind: "individuals",
+      id: lastLightId(env.worker),
+      read: TABLE_READ,
+    });
+    expect(await now(env.read.outcome)).toEqual({ kind: "cancelled" });
+    expect(env.worker.terminated).toBe(true);
+    await expectNextReadOnNewWorker(env);
+  });
 });

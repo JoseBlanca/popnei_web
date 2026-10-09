@@ -11,8 +11,9 @@
  * `WRITE_RESTART_BYTES`, or one that popnei refused, a PCA of more
  * than `PCA_RESTART_INDIVIDUALS` individuals, done or refused, and every
  * LD decay, done, refused or ended by a defect, since the memory of its
- * wasm never shrinks. The light worker holds nothing
- * between two reads of the individuals file.
+ * wasm never shrinks. The light worker holds nothing between two reads of
+ * the individuals file, and is ended after a read of a file larger than
+ * `READ_RESTART_BYTES`, for the same reason.
  */
 
 import {
@@ -63,6 +64,15 @@ export const WORKER_READY_TIMEOUT_MS = 30_000;
     25 MB leaves at most about 115 MB (writeVariants.md, "What was
     measured"). */
 export const WRITE_RESTART_BYTES = 25_000_000;
+
+/** Above it, in bytes, the light worker is ended after a read of the
+    individuals file, whatever its answer, to give back the memory
+    table_io's wasm took for it, which a wasm never gives back (client.md,
+    "The light worker started again after a large read"); the next read
+    starts a new one. 2 MB, about 20,000 rows of 10 columns, which the
+    design of the input page estimates at tens of MB, until the plan of
+    the input page measures it (its work package 2). */
+export const READ_RESTART_BYTES = 2_000_000;
 
 /** Above it, in individuals, the calculation worker is started again after
     a run of the principal components, done or refused by popnei, to give
@@ -972,9 +982,25 @@ export function createClient(config: {
               break;
           }
         }
+        // After its outcome, so that it reaches the entry even when no
+        // new worker can be made.
+        if (running.file.size > READ_RESTART_BYTES) {
+          restartLight();
+          return;
+        }
         pumpLight();
         return;
       }
+    }
+  }
+
+  /** Ends the light worker after a large read, and starts a new one at
+      once only when reads wait; otherwise the next read starts it
+      (`enqueueLight`). */
+  function restartLight(): void {
+    light.life.end();
+    if (light.queue.length > 0) {
+      startLight();
     }
   }
 
