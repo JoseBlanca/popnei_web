@@ -91,14 +91,20 @@ async function expectPanelCounted(page: Page): Promise<void> {
   ).toBeVisible();
 }
 
-test("OV2 the page opens with its one heading and the open button alone, and no summary", async ({
+test("OV2 the page opens with its heading, the headings of the boxes of the two files, and the open button alone in the box of the variants file, with no summary", async ({
   page,
   makeAxeBuilder,
 }) => {
   await openPage(page);
 
   await expect(page).toHaveTitle("Popnei");
-  await expect(page.getByRole("heading")).toHaveText(["Popnei"]);
+  // Since the two boxes of docs/specs/steps/popgen2-input.md, the
+  // headings of the boxes follow the page's.
+  await expect(page.getByRole("heading")).toHaveText([
+    "Popnei",
+    "Variants file",
+    "Individuals file",
+  ]);
   await expect(openButton(page)).toHaveText("Open variants file…");
   // Nothing asks how a file is read: no ploidy and no box of the passed
   // variants.

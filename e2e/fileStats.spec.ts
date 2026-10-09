@@ -586,14 +586,16 @@ test("FS2 at 320 pixels, the download of the plots failed, the error bar wraps t
   ).toBe(true);
 });
 
-test("FS3 the open button is alone under the heading before a file is opened, and under the statistics once one is, where it opens the file picker", async ({
+test("FS3 the open button is alone in the box of the variants file before a file is opened, and under the lines of the file and above the statistics once one is, where it opens the file picker", async ({
   page,
 }) => {
   await openPage(page);
-  // Under the heading, the open button alone: no box, no statistics.
+  // In the box of the variants file, the open button alone: no lines of
+  // a file, no statistics. The other region is the box of the
+  // individuals file (docs/specs/steps/popgen2-input.md).
   await expect(
     page.locator("main").getByRole("region", { includeHidden: true }),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
   await expect(openButton(page)).toHaveText("Open variants file…");
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
@@ -603,12 +605,13 @@ test("FS3 the open button is alone under the heading before a file is opened, an
     .boundingBox();
   const statsAt = await stats(page).boundingBox();
   const buttonAt = await openButton(page).boundingBox();
-  // The box of the file, then the statistics, then the open button.
+  // The lines of the file, then the open button, both in the box of the
+  // variants file, then the statistics under the tab.
   expect((box?.y ?? NaN) + (box?.height ?? NaN)).toBeLessThanOrEqual(
-    statsAt?.y ?? NaN,
-  );
-  expect((statsAt?.y ?? NaN) + (statsAt?.height ?? NaN)).toBeLessThanOrEqual(
     buttonAt?.y ?? NaN,
+  );
+  expect((buttonAt?.y ?? NaN) + (buttonAt?.height ?? NaN)).toBeLessThanOrEqual(
+    statsAt?.y ?? NaN,
   );
   await expect(openButton(page)).toHaveText("Open another variants file…");
   // Under the plots drawn, the button opens the file picker.
