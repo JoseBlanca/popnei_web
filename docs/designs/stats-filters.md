@@ -24,7 +24,10 @@ sentence when the filters keep no variant ("What the owner decided", 8
 to 11), and the approval with two more answers: the same rule in every
 browser for a download started by itself that a browser blocks, and no
 link to the other format after a download ("What the owner decided",
-12). It
+12); and revised on 9 October 2026 with the measurements of the plan
+of the download, `docs/plans/download.md`: the parts of the written
+file are 16 MiB, where this design had 64 MiB as a value to set (below,
+"How the pieces reach the user's download"). It
 decides how the thresholds that the user drags on the histograms of
 `popgen2.html` become filters of the project, with Undo; how the FILTER
 column becomes a filter; what the page reads from the file, and when,
@@ -875,7 +878,7 @@ file.
 | | the worker gathers the pieces into a `Blob` | each piece posted to the page | the origin private file system |
 |---|---|---|---|
 | what holds the file at the end | one `Blob`, F, held by the browser (below) | one `Blob`, F | a file on the disk |
-| peak beyond the `Blob` | one batch of pieces in the worker, 64 MiB at the most (below) | the pieces in the page until they are made a `Blob`: F more at its making, unless the page batches them as the worker would | none |
+| peak beyond the `Blob` | one batch of pieces in the worker, 16 MiB at the most (below) | the pieces in the page until they are made a `Blob`: F more at its making, unless the page batches them as the worker would | none |
 | work on the page's thread | none: one message at the end | one small message for each MiB, 1,024 for a file of 1 GiB, which would not freeze the page, and the making of the `Blob` | none |
 | a Stop | ends the worker; what it held goes with it | ends the worker; the pieces already on the page must be dropped by the page | ends the worker; the file stays on the disk until the page deletes it |
 | changes to the messages of the worker | none: the answer stays `Written<Blob>` | a new message, a piece, with its checks in the client and the store | none to the answer; a file to delete after each download and after a crash |
@@ -898,15 +901,20 @@ the plan showed Firefox or WebKit failing at sizes users write (below),
 at the cost of a quota and of files left on the disk.
 
 So that the worker does not hold the file twice either, the pieces are
-not kept to the end: every 64 MiB of pieces become a `Blob`, and the
+not kept to the end: every 16 MiB of pieces become a `Blob`, and the
 pieces are dropped; at the end the `Blob`s become one, `new
 Blob(parts)`, whose parts are `Blob`s already made. In Chromium a `Blob`
 made of other `Blob`s refers to their bytes and does not copy them, as
 far as the description of its storage says (below); whether WebKit and
 Firefox copy them is measured in the plan, and if one does, the parts
-are kept as a list and the last `Blob` made once. The 64 MiB is a value
-to set in the plan: smaller holds less in the worker, larger makes
-fewer `Blob`s.
+are kept as a list and the last `Blob` made once. The size of a part
+was a value to set in the plan, 64 MiB until then: smaller holds less in
+the worker, larger makes fewer `Blob`s. The plan measured on 9 October
+2026 a file of 2 GB written with parts of 16, 64 and 256 MiB, whose
+times were within 1.7% of each other in Chromium 153 and WebKit 26.6,
+and kept 16 MiB, the smallest within 2% of the best; the engines'
+processes grew by 1.07 and 1.08 times that file, so neither copies the
+parts (`docs/specs/analyses/writeVariants.md`, "What was measured").
 
 Where the browser keeps a `Blob`, from the sources:
 
@@ -951,7 +959,7 @@ file whole in wasm: the tab held 4.4F more at its peak in Chromium and
 up to 6.1F in WebKit, 2.4F of it in wasm, and a file of about 2.2 GB
 failed in both, since wasm addresses at most 4 GB. With the pieces, wasm
 holds one block, so that failure goes, and the peak becomes about F,
-the `Blob`, and up to 64 MiB of pieces, where it was 4.4F to 6.1F. What
+the `Blob`, and up to 16 MiB of pieces, where it was 4.4F to 6.1F. What
 is left, by engine:
 
 - Chromium: the `Blob` on the disk past 2 GB, up to a tenth of the
@@ -1067,7 +1075,7 @@ page shows can reach the user.
 - The download: in the runner's tests under node, the pieces gathered
   into a `Blob` are the bytes `writeVars` and `writeVcf` give whole, for
   `panel.nei` and `panel.vcf.gz` with filters, and the counts are the
-  same; a file over several batches of 64 MiB is made of its parts in
+  same; a file over several parts of 16 MiB is made of its parts in
   order. In Playwright, in Chromium and WebKit: the dialog downloads a
   `.nei` file and a `.vcf.gz` that popnei and pyarrow read back with the
   variants and individuals of the filters; Stop ends the write and
@@ -1134,7 +1142,7 @@ Made on this branch once the owner approves, each with its paragraph
   whether its variants record their FILTER, with the individuals and the
   ploidy. With the download, "The files written": popnei's writers give
   the file in pieces, which the worker gathers into one `Blob` in parts
-  of 64 MiB; what a file of F bytes holds in the tab becomes about F;
+  of 16 MiB; what a file of F bytes holds in the tab becomes about F;
   the file kept until the write's key changes, and not let go once
   saved; the VCF is written; and `popgen2.html` has no estimate, warning or
   refusal of size, where the old page keeps its own.
@@ -1147,7 +1155,7 @@ Made on this branch once the owner approves, each with its paragraph
   most 1,000 bins at each move of a line, and the individuals kept sort
   the values of the individuals, a few thousand.
 - **Memory:** the download holds the file written, about F for a file
-  of F bytes, and up to 64 MiB of pieces in the worker, where the old
+  of F bytes, and up to 16 MiB of pieces in the worker, where the old
   page's write held 4.4F in Chromium and up to 6.1F in WebKit. Chromium
   keeps the file in its own process up to 2 GB of `Blob`s and on the disk
   past that; Firefox, as far as found, in the tab's process; WebKit is

@@ -9,7 +9,16 @@ develops the section "The download of the filtered variants" of the
 design `docs/designs/stats-filters.md`, approved by the owner on 8
 October 2026 with its decisions 7 to 12, and section 3 of
 `docs/functionality.md`, "Reading and writing". Written on 8 October
-2026; there is no code of it yet. It covers case 1 of
+2026, and built on the branch `download` on 9 October 2026, work
+packages 6 and 7 of `docs/plans/download.md`, with the automatic
+download that work package 1 tried; not yet tried by the owner. The
+rounds of its review changed what is written here: the status region
+says "Writing <file>." once as a write starts, and drops it if the
+write ends first; the sentence of no variant is not said again after a
+change that leaves it on the screen; a change of a filter that takes
+the button from under the focus or a press puts the focus on what
+takes its place; and the words of no individual kept end "Loosen
+them.". It covers case 1 of
 `docs/use-cases.md` to its end, the filtered file in the user's hands.
 
 The module specs it reads, revised for it the same day: the write

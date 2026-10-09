@@ -73,7 +73,12 @@ through the same runner, and keeps its Save, its estimate, its warning
 and its limit of size, which the pieces leave cautious; popgen2.html has
 none of the three. What is new is in the section "On popgen2.html" and
 in the places it names; a sentence below that the pieces made untrue is
-corrected where it stands, with its date.
+corrected where it stands, with its date. Built on the branch `download`, work
+packages 2 to 8 of `docs/plans/download.md`, on 8 and 9 October 2026,
+and not yet tried by the owner; the measurements of work package 8 set
+the parts at 16 MiB, kept the restart of the worker after a large
+file, and found the limits of the download said in "What a write
+holds", below.
 
 **It is not an analysis** in the sense of section 4 of the architecture,
 and it is under `docs/specs/analyses/` only because the architecture names
@@ -431,11 +436,14 @@ from WebKit cannot be read by its footer: pyarrow fails at batch 782 of
 1,454, the first that starts past 4 GiB, "Message metadata too long by
 572 bytes", while its batches read in their order, as a stream, hold
 the 7,270,000 variants, the last at 7,270,000,000. The footer of a
-`.nei` file holds the place of each batch, and the writer of popnei's
-dependency arrow-ipc 60 counts it in a `usize`, 32 bits in wasm, so it
-wraps past 4 GiB: every `.nei` file larger than 4 GiB that the
-application writes has a footer that points to the wrong bytes. It is
-popnei's to fix; a VCF has no footer.
+`.nei` file holds the place of each batch. The cause is suspected, and
+being verified before an issue of popnei is written
+(`docs/designs/stats-filters.popnei-issue-nei-4gib.md`, its draft): the
+writer of popnei's dependency arrow-ipc 60 counts that place in a
+`usize`, 32 bits in wasm, which would wrap past 4 GiB, so that every
+`.nei` file larger than 4 GiB the application writes would have a
+footer that points to the wrong bytes. It is popnei's to fix; a VCF has
+no footer.
 
 Whether an engine copies the bytes of a `Blob` made of `Blob`s
 (`DL8 D2`): at the file of 2 GB the peak was 1.07 times the file in
@@ -835,8 +843,33 @@ for "Save it again".
 No limit is set before the write, as the owner decided on 8 October
 2026. A write the browser cannot hold ends in an error, the worker's
 crash or a `Blob` it cannot read, both `workerFailed`, with the words
-below; a tab the browser closes says nothing, and the plan looks for the
-size at which that happens.
+below; a tab the browser closes says nothing.
+
+The limits of the download, as the measurements of 9 October 2026 found
+them (above, "What was measured", "The download of popgen2.html"), on
+the owner's Mac, an Apple M5 Pro with 64 GB, with `.nei` files of 2, 4
+and 8 GB:
+
+- WebKit 26.6, and Chromium 153 in an ordinary window, a profile of its
+  own, saved every file whole; no tab closed.
+- Chromium in a private window, where it keeps every `Blob` in its own
+  process and none on the disk, refused the files of 4 and 8 GB, twice
+  each: the dialog showed the words of `workerFailed`, the writing
+  stopped unexpectedly, after 57 s and 111 s; it saved the file of 2 GB.
+  Playwright opens its pages so, off the record; an ordinary window
+  saved the same files. A user who meets those words in a private
+  window can write the file from an ordinary one, which the words do
+  not say.
+- A `.nei` file above 4 GiB, written in the browser, has a broken
+  footer: the file of 8 GB saved from WebKit could not be read by its
+  footer past its first 4 GiB, though its batches read in their order
+  hold every variant. Found in the browser; the cause is suspected in
+  popnei's writer under wasm and is being verified (above). The
+  application does not warn of it; a VCF has no footer, and a `.nei`
+  file up to 4 GiB is read whole.
+- Firefox was not measured: Playwright cannot start it on that Mac. A
+  file past Chromium's quota of `Blob`s on the disk, a tenth of the
+  disk, was not tried.
 
 ### Its words on popgen2.html
 
@@ -863,7 +896,9 @@ wasm.
 
 ### What is measured in the plan
 
-As the design asks ("How it is tested, and what would prove it wrong",
+Measured on 9 October 2026, but for Firefox, which is the owner's by
+hand, and a file past Chromium's quota, not tried; the results are in
+"What was measured", above. As the design asks ("How it is tested, and what would prove it wrong",
 and "Whether a limit of size is needed"), on the built site:
 
 - the largest file written and saved in Chromium and WebKit, files of 2,

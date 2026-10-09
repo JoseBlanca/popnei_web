@@ -110,7 +110,12 @@ popgen2.html, until the write's key changes; and popgen2.html makes its
 store with a `write` and with its one pass, `variantsSummary`, as the
 `statistics`, so that the individuals kept are worked out from that
 pass finished (below, "The writing of the filtered variants" and "The
-individuals kept"). No code of it yet. The store is the one object of core that
+individuals kept"). Built on the branch `download`, work packages 4 and
+6 of `docs/plans/download.md`, on 8 and 9 October 2026; its review
+changed that a write of the other format, stopped and answering after
+its cancel, no longer marks the current write dropped, and gave the
+store of popgen2.html the setting `keptNoneStep`, so that its words of
+no individual kept end "Loosen them.". The store is the one object of core that
 changes: it holds the
 history of the projects, the cache of the results, the version of popnei,
 the calculations in flight with their handles, and the ones that failed.

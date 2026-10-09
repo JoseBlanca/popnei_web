@@ -41,8 +41,9 @@ this branch on 8 October 2026 (`git log --oneline c5c724e..1e4c7ef`):
   second reading, made when the user presses Download, that carries the
   filters out and gives the file. Both are the screen spec's terms.
 - **The pieces** are what popnei 0.2.2's `writeVars` and `writeVcf` give
-  their `onBytes`, 1 MiB each; **the parts** are the `Blob`s of 64 MiB of
-  pieces the worker makes on the way, `WRITE_PART_BYTES` of the runner.
+  their `onBytes`, 1 MiB each; **the parts** are the `Blob`s of 16 MiB of
+  pieces the worker makes on the way, `WRITE_PART_BYTES` of the runner,
+  64 MiB until work package 8 set it on 9 October 2026.
   A `Blob` is the browser's object for a file made in the page.
 - **The automatic download** is the browser's download started by the
   page's code when the write ends, minutes after the user's click on
@@ -275,7 +276,8 @@ that does not come is a block, and decides the Save click.
 ## Work package 2: the worker writes a VCF, and the file by pieces
 
 What it gives: the calculation worker writes the filtered variants as a
-`.nei` file or as a bgzipped VCF, holding at most 64 MiB of pieces and
+`.nei` file or as a bgzipped VCF, holding at most one part of pieces,
+16 MiB since work package 8 (64 MiB when this package was built), and
 one block in wasm rather than the whole file, and answers a crash when
 the browser could not keep the file. The old page writes its `.nei`
 file through it, with the same bytes and words as before.
@@ -692,7 +694,7 @@ Tasks:
 - [ ] 9.3 The documents: `docs/architecture.md`, sections 5, 6 and 7, as
   the design's "What changes in `docs/architecture.md`" lists for the
   download (the VCF beside the `.nei` file, the pieces gathered in parts
-  of 64 MiB, a file of F bytes held as about F, no estimate, warning or
+  of 16 MiB, a file of F bytes held as about F, no estimate, warning or
   refusal on `popgen2.html`, the modal dialog that lets no filter change
   while a file is written), with its paragraph "What was revised"; until
   then the specs and the design hold where section 6 still describes the

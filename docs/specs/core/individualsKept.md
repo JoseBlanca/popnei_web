@@ -26,7 +26,10 @@ result gives the statistics. Revised on 8 October 2026 for the download of popge
 (`docs/specs/steps/popgen2-download.md`): `keptNoneReason` takes the
 step its words send the user to, "the Variants step" by default, and
 `null` for a page with no steps, whose words end "Loosen them."; the
-store keeps calling it with the default.
+store keeps calling it with the default, and the store of popgen2.html
+with `null`, from its setting `keptNoneStep`. Built on the branch
+`download`, work packages 3 and 6 of `docs/plans/download.md`, on 8 and
+9 October 2026.
 
 ## What it does
 

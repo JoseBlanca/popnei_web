@@ -99,8 +99,9 @@ filtered variants", approved by the owner that day): popnei 0.2.2
 writes a VCF as well as a `.nei` file, both by pieces, so `WriteJob` and
 `Written` take the format `"vcf"`, always compressed with bgzip, beside
 `"nei"`; the check of the messages and `PROTOCOL_VERSION` 15 are in
-`messages.md`, how the runner writes each in `runner.md`. No code of it
-yet.
+`messages.md`, how the runner writes each in `runner.md`. Built on the
+branch `download`, work package 2 of `docs/plans/download.md`, on 8
+October 2026.
 
 This spec gives the part of `src/worker/protocol.ts` that core
 names: what an opened variants file says, the filters of the variants and of the individuals, the table of

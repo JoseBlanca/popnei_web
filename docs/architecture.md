@@ -29,7 +29,15 @@ and revised on 8 October 2026 for the owner's decisions on trying that
 piece, in sections 3 and 7, in a paragraph "What was revised on 8
 October 2026" at their ends, and in the rows of section 9 of the
 modules it built. The piece is built on the branch `filters` and was
-accepted by the owner on 8 October 2026 (`docs/plans/filters.md`). What was
+accepted by the owner on 8 October 2026 (`docs/plans/filters.md`).
+Revised on 9 October 2026 for the download of the filtered variants on
+`popgen2.html`, in sections 5, 6, 7, 9 and 11, as
+`docs/designs/stats-filters.md`, approved by the owner on 8 October
+2026, lists them, each section with a paragraph "What was revised on 9
+October 2026" at its end, and in the list of what section 6 asks
+of popnei and point 5 of section 13, with the measurements of that
+day; that piece is built on the branch `download`
+(`docs/plans/download.md`) and not yet tried by the owner. What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -1478,7 +1486,7 @@ The page and each worker talk through typed messages
   download of the filtered variants, which popnei 0.2.2's writers in
   pieces allow, or by a later analysis; how the download is made is in
   the revision of 8 October 2026 of `docs/designs/stats-filters.md`,
-  which waits for the owner's approval. A limit the first analysis that
+  approved by the owner that day, and in the bullet on writing below. A limit the first analysis that
   starts by
   itself and reads a filter must settle: such an analysis gets a new key
   at every change of a threshold, and its start, as any new calculation
@@ -1576,7 +1584,15 @@ The page and each worker talk through typed messages
   write that ends after the change and before its stop is dropped, not
   saved, since its file would hold other variants than the step shows. A
   calculation asked for while a file is written waits behind it, in the
-  queue of the one calculation worker.
+  queue of the one calculation worker. From 9 October 2026 the write
+  takes a format, a `.nei` file or a VCF compressed with bgzip, and the
+  key holds it; `popgen.html` asks for the `.nei` file alone. On
+  `popgen2.html` the write runs inside a modal dialog, a box over the
+  page that keeps the rest of the page out of reach of the mouse, the
+  keyboard and a screen reader until the write ends, fails or is
+  stopped, so no filter can change and no other file be opened while a
+  file is written, and that page has no notice and no write left
+  behind.
 - **A request can wait for the statistics of each individual.** A Run of
   an analysis that reads the filters of individuals, while a threshold is
   set and the statistics of the current load are not in the cache,
@@ -1671,6 +1687,14 @@ histograms of the variants read again over the individuals kept after a
 quiet second, the owner's decision of 6 October 2026, replaced on 7
 October 2026 by plots that describe every individual and a page that
 reads nothing while the thresholds move.
+
+What was revised on 9 October 2026, from `docs/designs/stats-filters.md`,
+"The download of the filtered variants", approved by the owner on 8
+October 2026: the write takes the VCF, bgzipped, beside the `.nei`
+file, and on `popgen2.html` it runs in a modal dialog, so that no
+filter changes while it runs (the bullet on writing, above), and the
+case of `popgen.html`, a change of a filter that leaves a write behind,
+does not arise there.
 
 ## 6. The files of the user
 
@@ -2110,54 +2134,88 @@ new URL in `package.json` and a new line in `filesRunner.ts`.
 
 ### The files written
 
-- **The filtered variants, as a `.nei` file**, are written in the
-  Variants step, as the owner decided on 25 September 2026, by a request
-  of the calculation worker (section 5) that calls popnei's `writeVars` of
-  `js/popnei/src/io_vars.ts`. It builds the whole file in the memory of
-  wasm and copies it out, piece by piece, into one array of the memory of
-  JavaScript, outside that of wasm, with the counts of its pass. The
-  worker makes of the array a `Blob`, which the browser can hold on the
-  disk, so that a copy of up to a gigabyte, if the engine makes one,
-  is made off the page and never freezes it, drops the array, and posts
-  the `Blob`, which crosses to the page as a handle, with no copy.
-- **The user saves the file with a Save button** that the step shows when
-  the write ends, with the name and the size of the file, "Save
-  panel.filtered.nei, 19.2 MB" in an example, and that starts the
-  download through a link that names the file, the `download` attribute
-  of a link, which every browser of the floor has. A download started by the code
-  minutes after the click that asked for the write, with no click of its
-  own, may be blocked by the browser or asked about, as Chrome does for a
-  page that starts several downloads. The page releases the address the
-  link read the `Blob` from a minute after the click, and the store keeps
-  the `Blob` itself, saved or not, until a change of the filters, of the
+- **The filtered variants, as a `.nei` file or a VCF**, are written by
+  a request of the calculation worker (section 5): in the Variants step
+  of `popgen.html`, as the owner decided on 25 September 2026, the
+  `.nei` file alone; on `popgen2.html`, from the dialog of "Download
+  filtered variants…", either. From 8 October 2026, with popnei 0.2.2,
+  the worker calls `writeVars` of `js/popnei/src/io_vars.ts` for a
+  `.nei` file and `writeVcf` for a VCF compressed with bgzip, and
+  popnei writes the file as its pass reads, holding one block of it in
+  the memory of wasm, and hands it over in pieces of 1 MiB, through a
+  function the worker gives it, `onBytes`. The worker gathers the
+  pieces into parts of 16 MiB, each made a `Blob`, the browser's object
+  for a file made in the page, which the browser can hold outside the
+  tab or on the disk, and at the end of the pass makes one `Blob` of the
+  parts; 16 MiB is `WRITE_PART_BYTES` of `src/worker/runner.ts`, set on
+  9 October 2026 as the smallest of 16, 64 and 256 MiB whose time to
+  write a file of 2 GB was within 2% of the best
+  (`docs/specs/analyses/writeVariants.md`, "What was measured"). It
+  reads the last byte of the `Blob`, so that a `Blob` the browser could
+  not keep fails in the worker and not in the user's download, and posts
+  the `Blob`, which crosses to the page as a handle, with no copy, with
+  the counts of the pass. Until 8 October 2026 popnei built the whole
+  file in the memory of wasm, and the worker copied it into one array
+  and made the `Blob` of it.
+- **How the file reaches the user's disk.** On `popgen.html` the step
+  shows a Save button when the write ends, with the name and the size of
+  the file, "Save panel.filtered.nei, 19.2 MB" in an example, and that
+  starts the download through a link that names the file, the `download`
+  attribute of a link, which every browser of the floor has. On
+  `popgen2.html`, from 9 October 2026, the page starts that download by
+  itself when the write ends, minutes after the click that asked for
+  the write and with no click of its own, as the owner decided on 8
+  October 2026, and puts in place of the button a text that says what
+  was downloaded and what each filter removed, with "Save it again" for
+  a download the browser blocked or asked about, as Chrome does for a
+  page that starts several downloads (section 7). Chromium 153 and
+  WebKit 26.6 downloaded such a file at once, 10 s and 70 s after the
+  click, the first and the second time, on 8 October 2026
+  (`docs/plans/download.md`, work package 1); Safari, Firefox and
+  Chrome are the owner's to try. The page releases the address the link
+  read the `Blob` from a minute after the click, and the store keeps the
+  `Blob` itself, saved or not, until a change of the filters, of the
   format, a new write or a new load gives the write another key, so that
-  `popgen2.html` can offer it again; until 8 October 2026 it was released
-  once saved.
-- **What a file of F bytes holds in the tab**, at its peak, measured on
-  27 September 2026 in Chromium 153 and WebKit 26.6 on the owner's Mac
-  (`docs/specs/analyses/writeVariants.md`, "What was measured"): about 4F
-  above what the tab held before in Chromium and up to 6.1F in WebKit.
-  In Chromium, where the parts can be told apart, that is about 2.4F in
-  the memory of wasm, which never shrinks, F in the array, and F in the
-  browser's own process, where the engine copies the array into the
-  `Blob`. Once the array is dropped, the tab holds the `Blob` until it
-  is released, and the memory wasm grew to.
-  popnei's `writeVars` writes 0.96 to 1.10 bytes per genotype, by how well
-  its compression takes the genotypes: at 1.10, a million variants of
-  1,000 individuals make a file of 1.1 GB, which needs about 4.5 GB more
-  at the peak in Chromium and 6.7 GB in WebKit. The largest file written
-  in both engines was 1.98 GB; one of about 2.2 GB failed in both, and in
-  WebKit its write closed the tab. So the step says the size it expects,
-  from the variants and the individuals the filters keep, before the user
-  writes, warns from a size, a constant of the code, `WRITE_WARN_BYTES`,
-  500 MB, and refuses from another, `WRITE_MAX_BYTES`, 1.8 GB, both set
-  from that measurement; which is why, too, the report leaves the filtered variants
-  out by default (`docs/functionality.md`, section 9). Reading the
-  variants file by ranges does not change this.
-- **The VCF**, once popnei has a writer of it, is written the same way. It
-  is asked of popnei compressed with bgzip, as a `.vcf.gz`, since a plain
-  VCF takes several bytes per genotype, `0/1` and its tab, where the
-  `.nei` file takes about one.
+  `popgen2.html` can offer it again; until 8 October 2026 it was
+  released once saved.
+- **What a file of F bytes holds in the tab.** With the pieces, the
+  `Blob`, about F, up to 16 MiB of pieces in the worker, and one block
+  of the file in the memory of wasm, about 10 MB of genotypes for 1,000
+  individuals. Measured on 9 October 2026 on `popgen2.html`, `.nei`
+  files of 2, 4 and 8 GB from VCFs of 1,000 individuals, on the
+  owner's Mac, an Apple M5 Pro with 64 GB: the engine's processes grew
+  by 1.07 times the file of 2 GB at the peak in Chromium 153 and 1.08 in
+  WebKit 26.6, so neither copies the parts into the `Blob`; WebKit held
+  the file of 8 GB, 8.20 GB at the peak, and Chromium in an ordinary
+  window held 2.26 GB, the rest on the disk. Every file was saved whole
+  in WebKit and in an ordinary window of Chromium; in a private window,
+  where Chromium keeps no `Blob` on the disk, the files of 4 and 8 GB
+  failed with the words of a write that stopped, and no tab closed
+  (`docs/specs/analyses/writeVariants.md`, "What was measured", which
+  has, too, a fault of the `.nei` files above 4 GiB found there). So
+  `popgen2.html` has no estimate, warning or refusal of the size, as
+  the owner decided on 8 October 2026: a write the browser cannot hold
+  ends in the words of a failure.
+  `popgen.html` keeps its own, from the write of the whole file measured
+  on 27 September 2026 in Chromium 153 and WebKit 26.6: about 4F above
+  what the tab held before in Chromium and up to 6.1F in WebKit, of
+  which, in Chromium, about 2.4F in the memory of wasm, which never
+  shrinks; the largest file written in both engines was 1.98 GB, and one
+  of about 2.2 GB failed in both, and in WebKit its write closed the tab.
+  So that step says the size it expects, from the variants and the
+  individuals the filters keep, before the user writes, warns from a
+  size, a constant of the code, `WRITE_WARN_BYTES`, 500 MB, and refuses
+  from another, `WRITE_MAX_BYTES`, 1.8 GB; which is why, too, the report
+  leaves the filtered variants out by default (`docs/functionality.md`,
+  section 9). The pieces leave those limits cautious, and they are not
+  changed (`docs/specs/analyses/writeVariants.md`, "Not in this spec").
+  popnei's `writeVars` writes 0.96 to 1.10 bytes per genotype, by how
+  well its compression takes the genotypes: at 1.10, a million variants
+  of 1,000 individuals make a file of 1.1 GB.
+- **The VCF** is written by popnei's `writeVcf` compressed with bgzip,
+  as a `.vcf.gz`, since a plain VCF takes several bytes per genotype,
+  `0/1` and its tab, where the `.nei` file takes about one; from 9
+  October 2026 on `popgen2.html`.
 - **The xlsx and the zip of the report** are made in the light worker, by
   the files wasm, the zip as section 13 decides (point 14), and offered
   as a download in the same way.
@@ -2199,6 +2257,25 @@ write that ends after the change saves nothing; and the measurement of
 section 11, if the tab of an engine is closed for its memory well below
 the bound the step warns at.
 
+What was revised on 9 October 2026, from `docs/designs/stats-filters.md`,
+"The download of the filtered variants", approved by the owner on 8
+October 2026, and the measurements of 9 October 2026. The version
+before described the file built whole in wasm and saved with a click.
+popnei 0.2.2 writes the `.nei` file and the VCF by pieces, so the
+worker gathers them into a `Blob` of parts of 16 MiB and the tab holds
+about F for a file of F bytes, where it held 4F to 6.1F; the VCF is
+written, on `popgen2.html`; that page downloads the file by itself, with
+no estimate, warning or refusal of the size, and keeps it for "Save it
+again" until the write's key changes; `popgen.html` keeps its Save, its
+estimate and its limits. Not taken, from the design ("How the pieces
+reach the user's download"): each piece posted to the page, which
+would cost a message per MiB and hold the file twice while the page
+makes the `Blob`; and the origin private file system, still the way out
+if a browser failed at sizes users write, at the cost of a quota and of
+files left on the disk. What would show this wrong: a tab closed, or a
+browser holding the file twice, well below the files of 2 GB the
+measurement saved.
+
 ### What this asks of popnei
 
 Each is asked of popnei and not built around in the applications, and
@@ -2220,7 +2297,9 @@ reader of BED files in Python:
    `calcPerVarDistribs` (section 4, "The checks of the Variants step").
 5. A writer of the VCF, bgzipped (above, "The files written").
 6. A writer of the `.nei` file and of the VCF that gives the file by
-   pieces, with the counts of its pass at the end (the same).
+   pieces, with the counts of its pass at the end (the same). Points 5
+   and 6 are given by `js-v0.2.2`, of 7 October 2026, and used from 8
+   October 2026.
 7. The density of variants along each chromosome, of
    `docs/build-order.md`, section 4, given by `js-v0.1.0-dev.3` as
    `calcVarDensity`. From 5 October 2026 the summary of the variants file
@@ -2237,6 +2316,15 @@ reader of BED files in Python:
    come.
 8. A reader of BED files in popnei's Python, for the Python script
    (above, "The regions of a BED file").
+9. A `.nei` file above 4 GiB whose footer, the index at its end that
+   gives the place of each batch of variants, points to the right bytes.
+   The file of 8 GB written by WebKit 26.6 on 9 October 2026 could not
+   be read by its footer, from the first batch that starts past 4 GiB,
+   though its batches read in their order hold every variant; the cause
+   is thought to be in popnei's writer under wasm, whose offsets are of
+   32 bits, and is being verified before an issue of popnei
+   (`docs/specs/analyses/writeVariants.md`, "What was measured"). A VCF
+   has no footer.
 
 Nothing is asked of popnei for the individuals file, nor for the identity
 of the variant file.
@@ -2333,7 +2421,16 @@ for the smallest part of it.
   the Variants and Individuals sections, part of the variants and not of
   a tools section, as the owner decided on 8 October 2026; its design is
   in `docs/designs/stats-filters.md`, "The download of the filtered
-  variants". The plot draws the threshold, with no legend; the
+  variants", and its screen in `docs/specs/steps/popgen2-download.md`,
+  built on 9 October 2026. The button waits until the one pass is
+  finished; it opens a modal dialog with the choice of the format, a
+  VCF compressed with bgzip or a `.nei` file, then the bar of the write
+  and Stop; when the write ends the dialog closes, the file downloads
+  by itself, and a text takes the button's place, with what was
+  downloaded, what each filter removed and "Save it again", until a
+  filter or the file changes. When the filters keep no variant, a
+  sentence says so in the button's place, before the write when the
+  one pass tells it for certain. The plot draws the threshold, with no legend; the
   line the user drags is a React Aria slider of `src/ui` laid over the
   plot, aligned with its frame, which the histogram tells the screen
   after each draw that moves it (`HistogramEvents.onFrame`), so that the
@@ -2372,6 +2469,15 @@ of the token `--chart-threshold-keeps-all` that the piece
 the slider's value and the box's description. With the count gone, a
 threshold of the variants is no longer raised from below 0.001 to
 0.001, and 0 is given to popnei as 0.
+
+What was revised on 9 October 2026, from `docs/designs/stats-filters.md`,
+"The download of the filtered variants", approved by the owner on 8
+October 2026: the button "Download filtered variants…", its dialog and
+the text that takes its place after a download, as the bullet on the
+thresholds says, built on the branch `download`. Not taken, the
+owner's choices of 8 October 2026: a tools section after the plots; a
+Save click at the end of the write; the counts of each filter in the
+dialog; and a link to the other format after a download.
 
 ## 8. The project file, the report and the script
 
@@ -2544,6 +2650,9 @@ src/core/
                     page
   fileNames.ts      the names of the files the application writes, from
                     the stem of the variants file
+  noVariantKept.ts  from 9 October 2026, whether the filters keep no
+                    variant for certain, told from the one pass of
+                    popgen2.html finished (noVariantForCertain)
   writeEstimate.ts  the size expected of a file of the filtered variants,
                     its bounds, and the sizes in words
   projectFile.ts    the project file, written and read, and its reference
@@ -2647,7 +2756,12 @@ src/ui/
                     page that holds them, their words, the rules of the
                     chain that the box and its words share (chain.ts: its
                     one button, from the first neither done nor locked),
-                    and the defects of the worker given to the error bar
+                    and the defects of the worker given to the error bar;
+                    from 9 October 2026 the download of the filtered
+                    variants, its button, its dialog and the text after
+                    it (DownloadVariants.tsx), what takes the button's
+                    place (downloadState.ts) and its words
+                    (downloadWords.ts)
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -2751,6 +2865,11 @@ module is added and no rule of the imports changes: `popgen2.tsx` takes
 the part of the shell with Undo and Redo, and not the shell itself,
 whose stepper, summary line and notice that page does not have (the
 notice since 8 October 2026).
+
+What was revised on 9 October 2026, from `docs/designs/stats-filters.md`,
+"The download of the filtered variants", and its specs: the row of
+`noVariantKept.ts`, a module of core, and the download in the row of
+`variants/`. No rule of the imports changes.
 
 ## 10. The walking skeleton
 
@@ -2956,7 +3075,18 @@ tests of the application are the same with it.
   on the walking skeleton. The report draws every plot on the page, one
   after another, and gives the page back between two plots.
 
-- **Writing a file of the filtered variants** holds at its peak about 4
+- **Writing a file of the filtered variants**, from 8 October 2026 by
+  popnei 0.2.2's pieces, holds about the file: at its peak the engine's
+  processes grew by 1.07 times a `.nei` file of 2,004,062,114 bytes in
+  Chromium 153 and 1.08 times in WebKit 26.6, which wrote and saved it
+  in 27.3 s and 27.1 s; files of 4 and 8 GB were saved by WebKit and by
+  Chromium in a window of its own profile, and failed with words in
+  Chromium off the record, as in a private window, where it keeps no
+  `Blob` on the disk; no tab closed. Measured on 9 October 2026 on
+  `popgen2.html`, on the owner's Mac, an Apple M5 Pro with 64 GB
+  (`docs/specs/analyses/writeVariants.md`, "What was measured"). So
+  `popgen2.html` sets no limit of size. The write of the whole file,
+  which `popgen.html`'s limits come from, held at its peak about 4
   times the file more than the tab held before in Chromium 153, and up
   to 6.1 times in WebKit 26.6: 8.3 GB and 11.5 GB for the largest file written,
   1,982,018,522 bytes, 1,800,000 variants of 1,000 individuals. A file of
@@ -3047,6 +3177,12 @@ What was revised on 7 October 2026, from `docs/designs/stats-filters.md`,
 approved by the owner that day: the thresholds set in number fields are
 those of `popgen.html`; on `popgen2.html` a threshold is a line and a
 box.
+
+What was revised on 9 October 2026, from the measurements of the plan
+of the download (`docs/plans/download.md`, work package 8): what a
+write of the filtered variants holds by pieces, and that `popgen2.html`
+sets no limit of size, beside the measurement of the write of the whole
+file that `popgen.html`'s limits keep coming from.
 
 ## 12. What is hard to undo
 
@@ -3146,7 +3282,11 @@ that day:
    19,161,178 bytes and its VCF, in Chromium 153 and WebKit 26.6 on the
    owner's Mac, an Apple M5 Pro with 64 GB
    (`docs/plans/walking-skeleton.report.md`). Not taken: a restart after
-   every write, or after none.
+   every write, or after none. With popnei's pieces, from 8 October 2026,
+   wasm no longer grows by the file; the restart after a write of 220 MB
+   still gave back about 120 MB to the tab in Chromium 153 and less than
+   45 MB in WebKit 26.6, on 9 October 2026, so it was kept
+   (`docs/specs/analyses/writeVariants.md`, "What was measured").
 6. **A write that ends after a change of its filters is dropped**, so
    that no file is saved with other variants than the step shows (section
    5). Not taken: saving it with a notice that names the filters it was

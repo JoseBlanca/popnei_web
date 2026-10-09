@@ -269,10 +269,14 @@ So the screens are built in this order:
 1. Cases 2 and 1 together, since they open the same file and the
    filters are chosen from the distributions. By 8 October 2026 they
    are built up to the setting of the filters (`docs/plans/filters.md`).
-   Not built yet: the writing of the filtered file, step 5 of case 1,
-   one button, "Download filtered variants…", after the Variants and
-   Individuals sections (`docs/designs/stats-filters.md`); and, of case
-   2, the site frequency spectrum and the download of the plots.
+   The writing of the filtered file, step 5 of case 1, one button,
+   "Download filtered variants…", after the Variants and Individuals
+   sections (`docs/designs/stats-filters.md`), is built on the branch
+   `download` on 9 October 2026 and waits for the owner to walk through
+   it (`docs/plans/download.md`); with it case 1 reaches its end, the
+   filtered file and the count of what each filter removed. Not built
+   yet, of case 2: the site frequency spectrum and the download of the
+   plots.
 2. Case 3.
 3. Case 4.
 4. Case 5, last, since the association application opens the files,

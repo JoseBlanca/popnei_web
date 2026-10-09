@@ -176,10 +176,56 @@ variant and every individual of the file, and its threshold shades
 what it would leave out. The filters are carried out by the download
 of the filtered variants, as a `.nei` file or a VCF compressed with
 bgzip, from one button, "Download filtered variants…", after the Variants and
-Individuals sections, as the owner decided on 8 October 2026; until it
-is built the filters are set and kept, and nothing carries them out. After a Stop,
+Individuals sections, as the owner decided on 8 October 2026. After a Stop,
 the plots read so far stay, each said to be of the variants read
 before the Stop.
+
+The download is built on the branch `download` on 9 October 2026, and
+not yet tried by the owner (`docs/specs/steps/popgen2-download.md`).
+The button, "Download filtered variants…", is greyed out, with its
+reason beside it, until the file has been read to the end once. It opens
+a dialog with the choice of the format, and while the file is written
+the dialog shows a bar and Stop, and no filter can change. When the
+write ends the browser's download starts by itself, and the button
+gives way to a text that says the file, its size, how many variants of
+how many individuals it holds, and how many variants and individuals
+each filter removed, counted by popnei in the same pass that wrote the
+file: "low_qual.filtered.vcf.gz downloaded, 42 KB: 772 variants of 111
+individuals. Variants removed: 300 by their FILTER, 58 by the missing
+rate, 70 by the MAF. Individuals removed: 84 by the missing rate, 5 by
+the observed heterozygosity." Each filter is counted over what the
+filters before it kept, so the counts do not overlap and add up to what
+was left out. With it is "Save it again", which downloads the same file
+again, kept in the page, for a download the browser blocked. The text stays until a filter or the file
+changes. When the filters keep no variant, one sentence says so in the
+button's place: before any write when the plots of the file already
+show it, such as a threshold below every value of its plot, and after
+the write otherwise.
+
+The page sets no limit of size, as the owner decided on 8 October 2026,
+since popnei 0.2.2 hands the file over in pieces of 1 MiB and the
+memory of the tab grows by about the size of the file, where it grew
+by 4 to 6 times that size when popnei built the file whole. Measured on 9 October 2026 on the owner's
+Mac, an Apple M5 Pro with 64 GB, with `.nei` files of 2, 4 and 8 GB
+(`docs/specs/analyses/writeVariants.md`, "What a write holds"):
+
+- WebKit 26.6, the engine of Safari, and Chromium 153 in an ordinary
+  window saved every file whole.
+- Chromium in a private window, which keeps the file in memory and not
+  on the disk, saved the file of 2 GB and refused those of 4 and 8 GB,
+  with the words of a write that stopped unexpectedly; the same files
+  were saved from an ordinary window, which is what such a user can do;
+  the words do not say so.
+- A `.nei` file above 4 GiB, 4.29 GB, written in the browser has a
+  broken footer, the index at its end that gives the place of each
+  batch of variants: the file of 8 GB could not be read by it past its
+  first 4 GiB, though its variants, read in order, were all there. The
+  cause is suspected in popnei's writer under wasm and is being
+  verified before an issue of popnei. The page does not warn of it. A
+  VCF is not affected, and a `.nei` file up to 4 GiB is read whole.
+- Firefox was not measured, since Playwright, the tool that drives the
+  browsers in the tests, cannot start it on that Mac; the owner tries it
+  by hand.
 
 Whether a threshold of the variants keeps every variant is told from
 popnei's 1,000 bins of 0 to 1, each of which holds its upper edge, so
@@ -830,6 +876,9 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
   well, a second pass over the file.
 - The GWAS with covariates, the λ, the pseudo heritability; the GWAS spec
   of popnei is not written yet.
+- A `.nei` file above 4 GiB written in the browser whose footer points
+  to the right batches (section 3, the download of popgen2.html); found
+  on 9 October 2026, its cause being verified.
 
 ## 12. Open points
 

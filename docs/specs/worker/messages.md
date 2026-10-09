@@ -84,8 +84,9 @@ that merge. Built on the branch `filters`, work packages 1 and 2 of
 (`docs/designs/stats-filters.md`, "The download of the filtered
 variants", approved by the owner that day): the `format` of a `write`
 and of its `written` is `"nei"` or `"vcf"`, the VCF compressed with
-bgzip (`docs/specs/worker/protocol.md`), and `PROTOCOL_VERSION` is 15. No
-code of it yet.
+bgzip (`docs/specs/worker/protocol.md`), and `PROTOCOL_VERSION` is 15.
+Built on the branch `download`, work package 2 of
+`docs/plans/download.md`, on 8 October 2026.
 This spec gives
 `src/worker/messages.ts`: the messages the page and each of the two
 workers send each other, from the walking skeleton, the smallest

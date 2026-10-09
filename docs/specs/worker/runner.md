@@ -80,7 +80,10 @@ write gives popnei's `onBytes` to `writeVars` for a `.nei` file and to
 `Blob` in parts of 16 MiB, and reads the last byte of the `Blob` before
 it answers, where it made the `Blob` of the one array of the whole file
 (below, "The written file", "What a write holds" and "How it is
-verified"). No code of it yet. The
+verified"). Built on the branch `download`, work package 2 of
+`docs/plans/download.md`, on 8 October 2026; work package 8 set the
+parts at 16 MiB on 9 October 2026, and its review tested that what
+`onBytes` throws stays a defect of ours. The
 calculation worker is the thread of the browser tab, beside the page, that runs
 popnei, so that a calculation does not freeze the page
 (`docs/architecture.md`, section 1). Its runner is the code that answers

@@ -189,7 +189,7 @@ with React Aria's modal and dialog, its group of radio buttons and the
 page's code of the download, made the scripts of the first load of
 `popgen2.html` 213.76 KB gzipped against 200.37 KB before it, 13.39 KB
 more, 6.7%, as `vite build` reported them with Vite 8.3.0 on the site
-built at commits d82ac3a and 1364ce3 on 9 October 2026. Of the 47,237
+built at commits d82ac3a and 1ce5e71 on 9 October 2026. Of the 47,237
 bytes it added before compression, given to their sources with the
 source map of the build, 26,862 are of `react-aria`, 6,489 of
 `react-aria-components` and 655 of `react-stately`, the modal, the
