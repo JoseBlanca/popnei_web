@@ -3,8 +3,8 @@
 The screen spec of the page that opens the files of `popgen2.html` once
 it takes a second file, the individuals file: two boxes at the top, the
 variants file's and the individuals file's, each ending with the button
-that opens its file, and under them two tabs, "Variants file" and
-"Individuals file". It develops the design
+that opens its file, and under them two tabs, "Variants" and
+"Individuals". It develops the design
 `docs/designs/input-page.md`, approved by the owner on 9 October 2026
 with its five answers, and section 4 of `docs/functionality.md`, "The
 files of the individuals". Written on 9 October 2026, and built on the
@@ -14,6 +14,11 @@ October 2026, with no change asked. It
 covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.
+
+The two tabs were called "Variants file" and "Individuals file" until 9
+October 2026, when the row of five tabs of `popgen2-pca.md` renamed them
+"Variants" and "Individuals" and named the row "Files and analyses";
+this spec calls them by their new names.
 
 The module specs it reads, revised for it the same day:
 
@@ -31,7 +36,7 @@ The module specs it reads, revised for it the same day:
 - the client of the light worker, which ends it after a read of a large
   file, `docs/specs/worker/client.md`.
 
-What the tab "Variants file" holds is the page as
+What the Variants tab holds is the page as
 `docs/specs/steps/popgen2-filters.md` and `popgen2-download.md` give it,
 moved under the tab and otherwise unchanged; their terms are used here.
 
@@ -44,7 +49,7 @@ moved under the tab and otherwise unchanged; their terms are used here.
   file to its end: not while it runs, not after a Stop, not after a
   failure.
 - **The filters of the individuals** are the two thresholds of the part
-  "Individuals" of the tab "Variants file", on the missing rate and the
+  "Individuals" of the Variants tab, on the missing rate and the
   observed heterozygosity of each individual. **The individuals kept**
   are those they keep; the store works them out from the finished one
   pass, and knows them with no pass when neither threshold is on
@@ -102,9 +107,9 @@ moved under the tab and otherwise unchanged; their terms are used here.
   chosen by the page and changed by the user, and how many individuals
   the filters keep in each population.
 - What the page showed under the box of the variants file is now under
-  the tab "Variants file". The button that opens a variants file moves
+  the Variants tab. The button that opens a variants file moves
   from the end of the page into its box.
-- The tab "Individuals file" shows how the file was read and its table.
+- The Individuals tab shows how the file was read and its table.
 - An individual of the variants file that the individuals file does not
   have is unclassified, not an error.
 
@@ -113,11 +118,11 @@ moved under the tab and otherwise unchanged; their terms are used here.
 ### The order of the page
 
 From the top: the heading "Popnei"; the two boxes, the variants file's
-first; the row of the two tabs, "Variants file" and "Individuals file";
+first; the row of the two tabs, "Variants" and "Individuals";
 the part of the tab shown. From a width of 720 px the two boxes stand
 side by side, each half the width; below it, one above the other, each
 the width of the page less its 16 px margins, at 320 px included. The
-tab "Variants file" is shown when the page opens, and the page never
+Variants tab is shown when the page opens, and the page never
 changes the tab by itself.
 
 ### The box of the variants file
@@ -215,15 +220,15 @@ Under the table, the first that holds:
 - some individuals classified and some unclassified kept: "Unclassified,
   left out of the analyses per population: 7 individuals kept, 3 with an
   empty cell in popcat and 4 that are not in panel_pops.csv. Not in
-  panel_pops.csv: s031, s044, s102 and 1 more; the tab Individuals file
-  lists them all." The count and its causes are of the individuals
+  panel_pops.csv: s031, s044, s102 and 1 more; the Individuals
+  tab lists them all." The count and its causes are of the individuals
   kept; the names are of the kept not in the file, in a sentence of
   their own, so that they are not read as of both causes. Each part is
   left out when its count is 0, and the one cause left needs no count of
   its own, its names then after a colon: "…: 3 individuals kept with an
   empty cell in popcat.", "…: 1 individual kept that is not in
   panel_pops.csv: s031."; past three names, the count of the rest and
-  "; the tab Individuals file lists them all.", whose list holds them
+  "; the Individuals tab lists them all.", whose list holds them
   among those of before the filters. One individual: "1 individual".
 - no individual of the variants file in the individuals file, the table
   then empty and not drawn: the warning "Warning: none of the 200
@@ -270,7 +275,7 @@ are counted in the individuals file, missing ones left out, so the
 warning does not depend on the variants file or the filters. The last
 line still shows.
 
-### The tab "Variants file"
+### The Variants tab
 
 What `popgen2-filters.md` and `popgen2-download.md` give under the box,
 unchanged, but for "Open another variants file…", now in the box: the
@@ -279,7 +284,7 @@ part "Variants", its four histograms and the FILTER box; the part
 download of the filtered variants. With no variants file: "No variants
 file open. Open one in the box Variants file."
 
-### The tab "Individuals file"
+### The Individuals tab
 
 | the individuals file | what the tab shows |
 |---|---|
@@ -365,7 +370,7 @@ React Aria's `TabPanel`): the hidden one is marked inert, so the Tab key
 and a screen reader skip it, and a rule of its style hides it,
 `display: none`. A box hidden so forgets how far it was scrolled, and
 the table, which draws only the rows in view, finds no rows in view
-while its box has no size. So the tab "Individuals file" notes how far
+while its box has no size. So the Individuals tab notes how far
 its table was scrolled as the user leaves it, and scrolls it back there
 when it is shown again, after the table has measured its box and drawn
 its rows. A turn to
@@ -452,18 +457,18 @@ the project's (`docs/architecture.md`, section 7).
 | the heading of each box | "Variants file"; "Individuals file" |
 | the buttons of the zones | "Open variants file…", "Open another variants file…"; "Open individuals file…", "Open another individuals file…" |
 | the button of removal | "Remove panel_pops.csv" |
-| the row of the tabs, for a screen reader | "The files" |
+| the row of the tabs, for a screen reader | "Files and analyses" |
 | the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants file" | "Opening a variants file" |
 | the headings drawn in place of the lines of the individuals file and of its zone when their code throws, under the box's "Individuals file" | "What the individuals file holds"; "Opening an individuals file" |
-| the heading drawn in place of what the tab "Individuals file" shows when its code throws | "How the individuals file was read and what it holds" |
-| the tabs | "Variants file"; "Individuals file" |
+| the heading drawn in place of what the Individuals tab shows when its code throws | "How the individuals file was read and what it holds" |
+| the tabs | "Variants"; "Individuals" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
 | the caption of the counts | "Individuals of panel.nei after the filters of individuals" |
 | the headers of the counts | "Population"; "Individuals" |
 | a count not yet known, for a screen reader | "not counted yet" |
 | the line of the rows not used | "Individuals in panel_pops.csv but not in panel.nei: 18" |
 | the refusals, in the box | "panel_pops.csv could not be read: " and the words of the reader spec after the colon (`docs/specs/worker/individuals.md`, "The refusals and their words"), ending as below |
-| the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the tab Individuals file, or open a corrected file." |
+| the end of `raggedRow` and `unclosedQuote` | "Choose another separator in the Individuals tab, or open a corrected file." |
 | the end of `variantsFile` | "it is a variants file; open it with Open variants file in the box Variants file." in place of the reader's words after the colon |
 | the end of `tooLarge` | "check that it is the individuals file and not the variants file." |
 | `sheetTooLarge` after the colon | "its first sheet, Hoja1, has values as far as row 1,048,576 and column XFD, more than the 20,000,000 cells an individuals file can have; delete the values outside the table.", the reader's words with the name of the file of this page |
@@ -497,8 +502,8 @@ individuals file, the list, then its zone, then Remove;
 the row of the tabs, one stop, whose left and right arrow keys move
 between the two labels and show each as they reach it, and Home and End
 go to the first and the last; then the controls of the tab shown, in the
-order of `popgen2-filters.md` for "Variants file", and for "Individuals
-file" the three selects, the copy button, and the table, one stop, a grid
+order of `popgen2-filters.md` for the Variants tab, and for the
+Individuals tab the three selects, the copy button, and the table, one stop, a grid
 whose arrow keys move from cell to cell and whose headers sort with
 Enter. Each zone is two stops, the zone itself, which takes a paste and
 is named "Paste a variants file" or "Paste an individuals file", then
@@ -547,7 +552,7 @@ yet"; a refusal said once as it appears.
 
 **In Vitest**, in node: the words of the box in each row of its table
 and each line of the counts, from projects and individuals kept made in
-the test; the choice of what the tab "Individuals file" shows from the
+the test; the choice of what the Individuals tab shows from the
 read and its format; the words of the status region; the functions of
 core and of the entry in their module specs.
 
@@ -626,7 +631,7 @@ reader changed.
 
 **The screens**, `--project=screens`: no file; both files read with the
 counts; the counts waiting; a refusal; the warning of too many values;
-the tab "Individuals file" with a CSV and with an xlsx; light and dark;
+the Individuals tab with a CSV and with an xlsx; light and dark;
 1280 and 320 px.
 
 **By hand**, in the plan: the memory of the light worker and of the page
@@ -640,8 +645,7 @@ From the design, and open to the owner's change after trying the page:
 the column chosen by the page; the words of the box and its lines; the
 caption and headers of the counts; "…" for a count that waits; the
 status region silent at a change of the counts; the tab shown first and
-never changed by the page; the order of the parts of the tab
-"Individuals file"; the zone of the individuals file taking any file,
+never changed by the page; the order of the parts of the Individuals tab; the zone of the individuals file taking any file,
 with no check of its name; Remove putting the focus on the zone.
 
 ## Left for the running application

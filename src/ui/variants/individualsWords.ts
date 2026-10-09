@@ -1,7 +1,7 @@
 /**
  * The words of the box and of the tab of the individuals file on
  * popgen2.html (docs/specs/steps/popgen2-input.md, "The box of the
- * individuals file", "The tab Individuals file" and "Its words"): with no
+ * individuals file", "The Individuals tab" and "Its words"): with no
  * file, the list of the column of the populations, the counts and the
  * lines under them, what the tab shows from the read and its format, and
  * what the status region says of a read. Pure, so that a test in node
@@ -326,7 +326,7 @@ function allUnclassifiedText(numKept: number): string {
  * they are not read as of both: "Unclassified, left out of the analyses
  * per population: 7 individuals kept, 3 with an empty cell in popcat and
  * 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044,
- * s102 and 1 more; the tab Individuals file lists them all."
+ * s102 and 1 more; the Individuals tab lists them all."
  */
 function unclassifiedText(
   unclassified: NonNullable<PopulationCounts["unclassified"]>,
@@ -348,11 +348,11 @@ function unclassifiedText(
 
 /** The names of individuals with the full stop that ends them, past
     `MAX_NAMED` the count of the rest and where they all are: "s031,
-    s044, s102 and 1 more; the tab Individuals file lists them all." */
+    s044, s102 and 1 more; the Individuals tab lists them all." */
 function namesShown(names: readonly string[]): string {
   const words = names.slice(0, MAX_NAMED).map(shown);
   if (names.length <= MAX_NAMED) return `${bothOf(words)}.`;
-  return `${bothOf([...words, `${grouped(names.length - MAX_NAMED)} more`])}; the tab ${INDIVIDUALS_BOX_NAME} lists them all.`;
+  return `${bothOf([...words, `${grouped(names.length - MAX_NAMED)} more`])}; the Individuals tab lists them all.`;
 }
 
 /** What the tab "Individuals" shows: no file; a read under way,

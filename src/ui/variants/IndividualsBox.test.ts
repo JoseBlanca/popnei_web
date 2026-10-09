@@ -3,7 +3,7 @@
  * The box and the tab of the individuals file of popgen2.html, drawn by
  * React in jsdom over the real store of the page and a fake worker whose
  * requests the test ends by hand (docs/specs/steps/popgen2-input.md, "The
- * box of the individuals file", "The tab Individuals file", "The states",
+ * box of the individuals file", "The Individuals tab", "The states",
  * "What it sends and reads"; docs/plans/input-page.md, work package 6,
  * deliverable 1). The reads of the individuals file are recorded by the
  * test, as the light worker would give them, and the entry's choice of

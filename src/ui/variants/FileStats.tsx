@@ -1,8 +1,8 @@
 /**
- * The statistics of the open file on popgen2.html, under the tab
- * "Variants file" (docs/specs/steps/popgen2-input.md, "The tab Variants
- * file"; docs/plans/file-stats.md, "The design" and "Round 1 with the
- * owner"; steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
+ * The statistics of the open file on popgen2.html, under the
+ * Variants tab (docs/specs/steps/popgen2-input.md, "The Variants tab";
+ * docs/plans/file-stats.md, "The design" and "Round 1 with the owner";
+ * steps 3 and 4 of case 2 of docs/use-cases.md). Two parts, each
  * under its heading, both from the result of the summary of the variants
  * file, whose one pass counts the variants and calculates them
  * (docs/plans/live-stats.md, "One pass for the count and the

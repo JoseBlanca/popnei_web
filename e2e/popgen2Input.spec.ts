@@ -620,7 +620,7 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
   await pickIndividuals(page, { name: "missing.csv", text });
   await expect(
     individualsBox(page).getByText(
-      "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in missing.csv. Not in missing.csv: s100, s101, s102 and 1 more; the tab Individuals file lists them all.",
+      "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in missing.csv. Not in missing.csv: s100, s101, s102 and 1 more; the Individuals tab lists them all.",
       { exact: true },
     ),
   ).toBeVisible({ timeout: 20_000 });
@@ -913,7 +913,7 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
     individualsBox(page).getByText(/^decimals\.csv could not be read: /u),
   ).toBeVisible({ timeout: 20_000 });
   await expect(individualsBox(page)).toContainText(
-    "Choose another separator in the tab Individuals file, or open a corrected file.",
+    "Choose another separator in the Individuals tab, or open a corrected file.",
   );
   await expect(individualsBox(page)).toContainText("line 2");
   await expect(

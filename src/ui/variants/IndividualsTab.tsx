@@ -1,6 +1,6 @@
 /**
  * The tab "Individuals" of popgen2.html
- * (docs/specs/steps/popgen2-input.md, "The tab Individuals file" and
+ * (docs/specs/steps/popgen2-input.md, "The Individuals tab" and
  * "Both tabs kept drawn"): with no file, its words; while it is read, the
  * words of the read, under the options of a CSV when the last read of the
  * same load was of a text file, so that the select just changed keeps the

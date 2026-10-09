@@ -2572,7 +2572,7 @@ function individualsBoxWords(
 
 /** The end of a refusal of the reader in the box of the individuals file
     of popgen2.html, which opens files by the zone of the box and sets the
-    options of a CSV under the tab "Individuals file": another separator
+    options of a CSV under the Individuals tab: another separator
     for the two refusals a wrong one most often causes; the file opened
     again for one the browser could not read; after the words that say
     what to do in Excel, "Then open it again."; none for the three whose
@@ -2581,7 +2581,7 @@ function boxRefusedEnd(error: IndividualsFileError): string {
   switch (error.kind) {
     case "raggedRow":
     case "unclosedQuote":
-      return "Choose another separator in the tab Individuals file, or open a corrected file.";
+      return "Choose another separator in the Individuals tab, or open a corrected file.";
     case "unreadable":
       return "Open it again.";
     case "files":

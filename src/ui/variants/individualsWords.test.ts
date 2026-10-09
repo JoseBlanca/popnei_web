@@ -1,7 +1,7 @@
 /**
  * The words of the box and of the tab of the individuals file on
  * popgen2.html (docs/specs/steps/popgen2-input.md, "The box of the
- * individuals file", "The tab Individuals file" and "Its words"), each
+ * individuals file", "The Individuals tab" and "Its words"), each
  * asserted whole: with no individuals file, in each row of the box's
  * table and each line of the counts, what the tab shows from the read and
  * its format, and what the status region says of a read.
@@ -412,7 +412,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
       lines: [
         {
           kind: "line",
-          text: "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044, s102 and 1 more; the tab Individuals file lists them all.",
+          text: "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in panel_pops.csv. Not in panel_pops.csv: s031, s044, s102 and 1 more; the Individuals tab lists them all.",
         },
         {
           kind: "line",
@@ -450,7 +450,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     });
     expect(countsShown(five, countsOf(five), "running").lines[0]).toEqual({
       kind: "line",
-      text: "Unclassified, left out of the analyses per population: 5 individuals kept that are not in panel_pops.csv: s031, s044, s102 and 2 more; the tab Individuals file lists them all.",
+      text: "Unclassified, left out of the analyses per population: 5 individuals kept that are not in panel_pops.csv: s031, s044, s102 and 2 more; the Individuals tab lists them all.",
     });
     const one = project({ read: tableRead(panelPopsWith(["s031"])) });
     expect(countsShown(one, countsOf(one), "running").lines[0]).toEqual({
@@ -613,7 +613,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
   });
 });
 
-describe("IN5 D1 what the tab Individuals file shows", () => {
+describe("IN5 D1 what the Individuals tab shows", () => {
   /** The individuals file of `p`. */
   function sourceOf(p: Project): IndividualsSource | null {
     return p.individuals;
@@ -830,7 +830,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
     const words = individualsReadAnnouncement(p, keptOf(p));
     expect(words).toBe(individualsBoxNeeds(p));
     expect(words).toMatch(
-      /^panel_pops\.csv could not be read: .*\. Choose another separator in the tab Individuals file, or open a corrected file\.$/u,
+      /^panel_pops\.csv could not be read: .*\. Choose another separator in the Individuals tab, or open a corrected file\.$/u,
     );
   });
 });
