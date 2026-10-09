@@ -850,3 +850,11 @@ The `code-review` skill's four that always run, `spec`, `tests`,
   done.
 
 ## What was done
+
+### Before the first task, 9 October 2026
+
+The plan starts from `main` at 864cab7, which this branch adds only
+documents to. On this Mac: typecheck and lint clean, Vitest 4,448. On
+GitHub, run 37905998519 of 864cab7: the checks, the flows in Chromium,
+Firefox and WebKit, three jobs each, all passed, and the site was
+published. It stands for the browser check of the starting commit.
