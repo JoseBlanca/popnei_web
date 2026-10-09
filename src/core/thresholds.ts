@@ -9,7 +9,11 @@
  * the number it is shown at. Each threshold is a filter of the project,
  * `setThreshold` of project.ts; these tell only how it is drawn.
  */
-import type { VariantStatistic } from "./analyses/variantChecks.ts";
+import { variantBinsRounded } from "./analyses/variantChecks.ts";
+import type {
+  PassIndividuals,
+  VariantStatistic,
+} from "./analyses/variantChecks.ts";
 import { thresholdIsOff } from "./project.ts";
 import type { VariantStatsPart } from "../worker/protocol.ts";
 
@@ -167,6 +171,46 @@ export function thresholdStep(low: number, high: number): ThresholdStep {
   );
   const decimals = Math.max(0, -exponent);
   return { step: Number(`1e${String(exponent)}`), decimals };
+}
+
+/** The steps made of each result of the one pass, by the statistic and
+    the individuals, kept while the result is. */
+const VARIANT_STEPS = new WeakMap<
+  VariantStatsPart,
+  Map<string, ThresholdStep>
+>();
+
+/**
+ * The step of the threshold of `statistic` over the axis of its histogram
+ * of the variants, `thresholdStep` over the axis that `variantBinsRounded`
+ * rounds out from the result of the one pass `result` over `individuals`:
+ * 0.001 for the missing rate of `panel.nei`, whose axis goes from 0 to
+ * 0.1. The histogram of the Variants tab draws its threshold with it,
+ * and the field of "Stricter for the PCA" takes its decimals, so that the
+ * two always agree (docs/specs/steps/popgen2-pca.md, "Its filters"). Made
+ * once for a result, a statistic and individuals, and the same object
+ * given after, since the field reads it at each change of the store. A
+ * result with no edges is a defect, thrown.
+ */
+export function variantThresholdStep(
+  result: VariantStatsPart,
+  statistic: VariantStatistic,
+  individuals: PassIndividuals,
+): ThresholdStep {
+  const made = VARIANT_STEPS.get(result) ?? new Map<string, ThresholdStep>();
+  VARIANT_STEPS.set(result, made);
+  const key = `${statistic} ${String(individuals.numIndividuals)} ${String(individuals.ploidy)}`;
+  const kept = made.get(key);
+  if (kept !== undefined) return kept;
+  const { edges } = variantBinsRounded(result, statistic, individuals);
+  const low = edges[0];
+  const high = edges.at(-1);
+  if (low === undefined || high === undefined) {
+    throw defect("a histogram of the variants with no edges.");
+  }
+  const step = thresholdStep(low, high);
+  made.set(key, step);
+  return step;
 }
 
 /** The most positions of a threshold over its axis. */

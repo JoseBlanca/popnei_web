@@ -56,6 +56,7 @@ import {
   individualThresholdLook,
   thresholdOnStep,
   thresholdStep,
+  variantThresholdStep,
   variantThresholdLook,
   variantThresholdOnStep,
 } from "../../core/thresholds.ts";
@@ -211,9 +212,14 @@ export function variantPlot(
     individuals.ploidy,
   );
   const bins = variantBinsRounded(result, statistic, individuals);
-  const axisLow = at(bins.edges, 0);
   const axisHigh = at(bins.edges, bins.edges.length - 1);
-  const { step, decimals } = thresholdStep(axisLow, axisHigh);
+  // The step the field of "Stricter for the PCA" takes its decimals
+  // from, made once for the result.
+  const { step, decimals } = variantThresholdStep(
+    result,
+    statistic,
+    individuals,
+  );
   const onStep = (value: number): number =>
     variantThresholdOnStep(value, decimals);
   const filtered = statistic !== "unbiasedExpHet";
