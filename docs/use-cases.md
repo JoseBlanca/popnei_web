@@ -277,7 +277,10 @@ So the screens are built in this order:
    filtered file and the count of what each filter removed. Not built
    yet, of case 2: the site frequency spectrum and the download of the
    plots.
-2. Case 3.
+2. Case 3. Its design, the row of five tabs of `popgen2.html`,
+   Variants, Individuals, PCA, Populations and Distances, and the PCA
+   tab, is a draft of 9 October 2026 that waits for the owner
+   (`docs/designs/analyses-pca.md`).
 3. Case 4.
 4. Case 5, last, since the association application opens the files,
    filters the variants and runs the PCA as cases 1 to 3 do, and those
