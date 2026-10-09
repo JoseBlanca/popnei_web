@@ -137,6 +137,17 @@ header, the stepper, the summary line and the notices, and its **status
 region** a part of the page whose new text a screen reader reads out
 without moving the focus (`docs/specs/shell.md`).
 
+Revised on 9 October 2026 for the PCA tab of `popgen2.html`
+(`docs/designs/analyses-pca.md`, approved by the owner that day with
+its ten answers): a second definition of the analysis for that page,
+whose own filters of missing data and MAF narrow those of the Variants
+tab rather than replace them, whose LD pruning is on by default, which
+no individuals file locks, which names the individuals with no
+population "Unclassified", and which gives the CSV of the coordinates
+that vavilov-explorer imports (below, "On popgen2.html"). The old page
+keeps every rule above and below; the job, the result and the worker do
+not change. No code yet.
+
 The decisions of the owner and of the writers of the specs of stage 4,
 of 27 and 28 September 2026, that this spec takes are named where they
 apply, and gathered in `docs/specs/stage-4-open-points.md`. Two more are
@@ -1901,6 +1912,194 @@ with "7.87%", "0.047", "53%" and "0.22", and the line under the
 explained variance with "0.047" and "198 components". What it cannot
 check, whether the 3D view and the plot read well, is seen by the owner
 in the running application.
+
+## On popgen2.html
+
+The PCA tab of `popgen2.html` (`docs/specs/steps/popgen2-pca.md`) runs
+the analysis of this module through a second definition, made by the
+same code with what differs given as a page, so that the old page
+changes in nothing a user sees. A user of the new page would see three
+things go wrong with the old definition: a PCA whose own missing data
+filter of 0.05 reads variants the Variants tab removed at 0.03; a PCA
+locked while the individuals file is read, though that file only
+colours the points; and a refusal that sends them to "the Variants
+step", which the page does not have.
+
+### What differs
+
+- **The filters, which narrow those of the Variants tab** (the owner's
+  answer 1 of the design). For the missing data and the MAF, a filter
+  that follows, "As in the Variants tab", is the Variants tab's, as on
+  the old page; a filter of the PCA's own is given with the smaller of
+  its value and the Variants tab's, the stricter, when the Variants tab
+  has that filter on, and alone when it has it off. popnei takes one
+  filter of each kind (`filterByMissingData` and `filterByMaf` of
+  `node_modules/popnei/dist/variant.d.ts`), and the smaller value keeps
+  exactly the variants the two filters one after the other would, since
+  each keeps or drops a variant by its own value over the same
+  individuals. The LD filter keeps the old rule, the PCA's own when set,
+  the project's otherwise: the Variants tab has no LD pruning, so an LD
+  filter that follows is no LD filter, and the screen shows `follow`
+  true as the LD pruning off. The FILTER column and the observed
+  heterozygosity are always the Variants tab's.
+- **The defaults**, `PCA_DEFAULTS` with `ld` `{ follow: false,
+  maxAllowedR2: 0.1, maxDist: null }`: the LD pruning on, at r² 0.1,
+  with no distance, so the PCA is locked until the user types one or
+  turns it off (the owner's numbers of 27 September 2026, and the rule
+  of no default that depends on the genome).
+- **`needs`** without `individualsNeeds` of `docs/specs/core/project.md`:
+  the individuals file never locks the PCA on that page, since the key
+  holds nothing of it. The limit of 9,381 individuals and the reason of
+  the LD pruning with no distance stay, the latter in that page's words:
+  "The LD pruning of the PCA needs the distance within which variants
+  are compared. It has no default, because it depends on how far linkage
+  disequilibrium extends in the genome of your species. Type a distance
+  in base pairs, or turn the LD pruning off.", "the PCoA" by the method.
+- **The key**, `keyInputs`, of the filters the narrowing gives and the
+  method, so a threshold of the Variants tab moved while the PCA's own
+  is the stricter changes no key, and the PCA stays on the screen.
+- **The words** of the warnings, the refusals and the crash, with "the
+  Variants tab", "the box Variants file", "the thresholds of the
+  individuals in the Variants tab" and "turn the LD pruning of the PCA
+  off" where the old page names the step and its filters
+  (`docs/specs/steps/popgen2-pca.md`, "Its words").
+- **The colours.** With `colourBy` null, the individuals with no
+  population are one group, its name "Unclassified": with no individuals
+  file, while it is read, after it was refused, with no column chosen,
+  or with an empty cell or no row for the individual. They are drawn as
+  rings, last in the legend. No note says why the points are not
+  coloured by population, since the box of the individuals file says
+  it. A colouring by a column keeps the old rules and its "No value",
+  with "the box Individuals file" in its notes. A result is coloured
+  while the individuals file is read, which the old page's lock kept
+  from happening; the comment of `coloursOf` that assumed it changes.
+- **The coordinates of the plot**, `pcaCoordinatesCsv(r)`, the CSV
+  vavilov-explorer imports (`docs/use-cases.md`, case 3): the header
+  `individual` and `PC1` to `PC‹numComps›`, at most `PC10`, and a row per
+  individual in the order of the result, its projections as `String`
+  writes them. Each name is written as the variants file writes it,
+  between double quotes when it holds a comma, a quote or a new line,
+  each quote doubled, and with no ' before a leading "=", "+", "-" or
+  "@", as the owner confirmed on 9 October 2026 (answer 10 of the
+  design): vavilov-explorer has to find the names again in the variants
+  file, and "'+A12" would not match "+A12". The population is not among
+  the columns, since vavilov-explorer would read it as a component.
+- **The CSV of the tables** is the table component's, from the values
+  of its cells (`docs/specs/widgets/downloads.md`), so `pcaCsv` and
+  `varianceCsv` serve the old page alone.
+
+The script, `script`, gives the filters the narrowing gives; the page
+shows no script yet. The check numbers are the old page's.
+
+### The TypeScript interface
+
+The page a function is for, which picks the rule of the filters, the
+defaults and the words:
+
+```ts
+export type PcaPage = "popgen" | "popgen2";
+
+/** The two definitions, both of the id "pca": `pca`, as above, listed by POPGEN_ANALYSES, and
+    `pcaOnPopgen2`, listed by POPGEN2_ANALYSES of src/core/apps.ts after variantsSummary. */
+export const pca: AnalysisDef<Job, JobResult>;
+export const pcaOnPopgen2: AnalysisDef<Job, JobResult>;
+
+/** The defaults of the page: PCA_DEFAULTS, or PCA2_DEFAULTS, with the LD pruning on. */
+export const PCA2_DEFAULTS: PcaOptions;
+export function pcaOptions(p: Project, page: PcaPage): PcaOptions;
+
+/** The filters of the job, by the rule of the page: "popgen", each own filter in the place of
+    the project's; "popgen2", the missing data and the MAF the stricter of the two. The same
+    frozen value for the same inputs. */
+export function pcaFilters(
+  filters: readonly ProjectVariantFilter[], o: PcaOptions, page: PcaPage,
+): readonly ProjectVariantFilter[];
+
+export function pruningDistanceReason(p: Project, page: PcaPage): string | null;
+export function pcaColours(r: PcaResult, p: Project, page: PcaPage): PcaColours;
+//   noneName gains "Unclassified", which only page "popgen2" gives
+export function refusalText(message: string, p: Project, page: PcaPage): string;
+export function crashText(p: Project, numIndividuals: number, page: PcaPage): string;
+export function statisticsFailedText(
+  error: AnalysisError, p: Project, failureText: (failure: Failure) => string, page: PcaPage,
+): string;
+
+/** The CSV of the coordinates, header `individual,PC1,…`, the names with no ' before them. */
+export function pcaCoordinatesCsv(r: PcaResult): string;
+```
+
+The functions that took no page take one, and the old page's callers
+give `"popgen"`; a page given by the caller, rather than read from the
+project, keeps the project free of which page made it, so that a
+project file, when `popgen2.html` saves one, means the same filters
+wherever it is read (the design, "What is hard to undo").
+
+### The cases
+
+- **The Variants tab turns off a filter the PCA follows**: no filter of
+  that kind for the PCA.
+- **The Variants tab stricter than the PCA's own**: the PCA is given the
+  Variants tab's value, and the project keeps its own; when the Variants
+  tab goes back above it, the key goes back to that of the own value,
+  and a result of it comes back from the cache.
+- **A project whose own value is looser than the Variants tab's**, which
+  the screen cannot make but an undo of the Variants tab can: the same
+  as the case before.
+- **An individuals file of none of the individuals**: every point
+  unclassified, the key unchanged.
+
+### How it is verified
+
+With Vitest, at `pcaFilters` with page `"popgen2"`, as literals, the
+filters of the project as a new `popgen2.html` has them, the FILTER
+filter and the missing data at 0.1:
+
+| the Variants tab | the PCA's options | the filters given |
+|---|---|---|
+| missing data 0.1 | `PCA2_DEFAULTS` | missing data 0.1, LD r² 0.1 with no distance |
+| missing data 0.1 | own missing data 0.05 | missing data 0.05, LD |
+| missing data 0.03 | own missing data 0.05 | missing data 0.03, LD |
+| missing data off | own missing data 0.05 | missing data 0.05, LD |
+| missing data off | following | LD alone |
+| MAF 0.95 | own MAF 0.9 | missing data 0.1, MAF 0.9, LD |
+| MAF off | own MAF 0.9 | missing data 0.1, MAF 0.9, LD |
+| any | LD following | no LD |
+| FILTER and observed heterozygosity 0.5 on | `PCA2_DEFAULTS` | FILTER, missing data 0.1, observed heterozygosity 0.5, LD, in that order |
+
+The same inputs twice give the same frozen value. Page `"popgen"` gives
+the old rows of "How it is verified", above, unchanged.
+
+- **The key** with page `"popgen2"`: the Variants tab's missing data
+  from 0.1 to 0.08 while the PCA's own is 0.05, the same key; from 0.1
+  to 0.03, another; back to 0.1, the first.
+- **`needs`** of `pcaOnPopgen2`: an individuals file pending, refused,
+  or lacking individuals of the variants file, no reason; `PCA2_DEFAULTS`
+  with no distance, the words above; 50000, none; 9,382 individuals,
+  the limit.
+- **`pcaColours`** with page `"popgen2"`, on `panel.nei` and
+  `panel_pops.csv`: no individuals file, one group "Unclassified" of 200
+  and no note; the file pending, the same; `popcat`, p0 48, p2 84, p1
+  68, `numNone` 0; four rows removed and three cells emptied, 7
+  unclassified, "Unclassified".
+- **`pcaCoordinatesCsv`** of the result of the flow, the PCA with the
+  missing data at 0.1 and the LD pruning at r² 0.1 within 50,000: its
+  first line `individual,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10` and
+  its second beginning `s000,-0.7138853335304419,7.676473141448964,-4.384383801903496,`;
+  a result made in the test with the names `+A12`, `a,b` and `=x`:
+  `+A12`, `"a,b"` and `=x`.
+
+The numbers of the PCA of `panel.nei` on that page, from popnei's
+release 0.2.2 under node on 9 October 2026, with the script of "How it
+is verified", above: with the missing data at 0.1 and the LD at r² 0.1
+within 50,000, the numbers of that table to the last bit, 548 variants
+and PC1 3.5476992895181616; the PCoA, PC1 3.679886264523731,
+`lingoesConstant` 0.023674522901958598 and
+`negativeEigenvaluesPercent` 7.87126617431627; with the missing data
+at 0.05, 1,152 variants kept by it and 532 by the LD, PC1
+3.580113383082099, PC2 3.4151063077400026, PC3 1.8800574600855153; with
+the missing data at 0.1 and the MAF at 0.9, 1,102 by the MAF and 510 by
+the LD, PC1 3.6773736003613675, PC2 3.4932715221550747, PC3
+1.966939647392237.
 
 ## The panel
 
