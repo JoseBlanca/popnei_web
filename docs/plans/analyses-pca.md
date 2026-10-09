@@ -140,6 +140,25 @@ answered, and names the tasks an answer would change.
 
 Not given yet.
 
+### The owner's answers, 9 October 2026
+
+The owner approved this plan on 9 October 2026 and answered the two
+questions:
+
+1. Opening, removing or reading again an individuals file starts the
+   history afresh, as the specs say: accepted.
+2. A change while a PCA runs: the session's recommendation, taken as the
+   answer ("OK"): while a PCA runs, the filters it depends on (the
+   thresholds and the FILTER box of the Variants tab, the population
+   column, the PCA's own options) are locked, greyed with "Stop the PCA
+   to change the filters" (words to be settled in the screen spec), and
+   the keys of Undo and Redo wait too, as the download of the filtered
+   variants waits while a PCA runs. So no change leaves a PCA behind
+   while it runs; `stopLeftBehind` stays for what is left behind by an
+   opening. Tasks 3.1, 6.1 and 6.3 change with it: the screen spec and
+   the store spec are corrected first, in the first task that touches
+   them.
+
 ## In and out
 
 In: the ten work packages below. Two of them hold measurements with a
