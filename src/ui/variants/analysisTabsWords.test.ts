@@ -140,7 +140,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         textFile: true,
       }),
     ).toBe(
-      "The distances between populations need at least two populations, and panel_pops.csv has no column to choose besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "The distances between populations need at least two populations, and panel_pops.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.",
     );
     expect(
       greyedText("distances", {
@@ -155,13 +155,13 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
 
   test("Distances with fewer than two populations among the individuals of the variants file", () => {
     expect(greyedText("distances", fewPopulations(1, false))).toBe(
-      "The distances between populations need at least two populations, and popcat gives 1 population among the individuals of panel.nei. Choose another column in the box Individuals file.",
+      "The distances between populations need at least two populations, and popcat gives 1 population among the individuals of panel.nei. Choose another column of the populations in the box Individuals file, or add the populations to panel_pops.csv and open it again.",
     );
     expect(greyedText("distances", fewPopulations(0, true))).toBe(
       "The distances between populations need at least two populations, and no individual of panel.nei is in panel_pops.csv. Check that panel_pops.csv names the individuals as panel.nei does.",
     );
     expect(greyedText("distances", fewPopulations(0, false))).toBe(
-      "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column in the box Individuals file.",
+      "The distances between populations need at least two populations, and no individual of panel.nei has a value in popcat. Choose another column of the populations in the box Individuals file, or add the populations to panel_pops.csv and open it again.",
     );
   });
 
@@ -231,7 +231,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         textFile: true,
       }),
     ).toBe(
-      `${start}, and pops\\u202e.csv has no column to choose besides the names of the individuals. If it has more, choose its separator in the Individuals tab.`,
+      `${start}, and pops\\u202e.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`,
     );
   });
 
@@ -247,13 +247,13 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
       noneInFile,
     });
     expect(greyedText("distances", reason(1, false))).toBe(
-      `${start}, and pop\\u202ecat gives 1 population among the individuals of pan\\u202eel.nei. Choose another column in the box Individuals file.`,
+      `${start}, and pop\\u202ecat gives 1 population among the individuals of pan\\u202eel.nei. Choose another column of the populations in the box Individuals file, or add the populations to pops\\u202e.csv and open it again.`,
     );
     expect(greyedText("distances", reason(0, true))).toBe(
       `${start}, and no individual of pan\\u202eel.nei is in pops\\u202e.csv. Check that pops\\u202e.csv names the individuals as pan\\u202eel.nei does.`,
     );
     expect(greyedText("distances", reason(0, false))).toBe(
-      `${start}, and no individual of pan\\u202eel.nei has a value in pop\\u202ecat. Choose another column in the box Individuals file.`,
+      `${start}, and no individual of pan\\u202eel.nei has a value in pop\\u202ecat. Choose another column of the populations in the box Individuals file, or add the populations to pops\\u202e.csv and open it again.`,
     );
   });
 });

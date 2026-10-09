@@ -84,11 +84,9 @@ export function greyedText(tab: AnalysisTabId, reason: TabGreyed): string {
     case "individualsFailed":
       return `${TWO_POPULATIONS}: ${escaped(reason.name)} could not be read; the box Individuals file says why and what to do.`;
     case "noColumnToChoose":
-      return `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. ${
-        reason.textFile
-          ? "If it has more, choose its separator in the Individuals tab."
-          : "Add a column of the populations to it and open it again in the box Individuals file."
-      }`;
+      return reason.textFile
+        ? `${TWO_POPULATIONS}, and ${escaped(reason.name)} was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`
+        : `${TWO_POPULATIONS}, and ${escaped(reason.name)} has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals file.`;
     case "noColumn":
       return `${TWO_POPULATIONS}, and no column of the populations is chosen. Choose one in the box Individuals file.`;
     case "tooManyValues":
@@ -108,12 +106,13 @@ function fewPopulationsText(
   reason: Extract<TabGreyed, { readonly kind: "fewPopulations" }>,
 ): string {
   const variants = escaped(reason.variantsName);
+  const individuals = escaped(reason.individualsName);
+  const choose = `Choose another column of the populations in the box Individuals file, or add the populations to ${individuals} and open it again.`;
   if (reason.numPopulations === 1) {
-    return `${shown(reason.column)} gives 1 population among the individuals of ${variants}. ${ANOTHER_COLUMN}`;
+    return `${shown(reason.column)} gives 1 population among the individuals of ${variants}. ${choose}`;
   }
   if (reason.noneInFile) {
-    const individuals = escaped(reason.individualsName);
     return `no individual of ${variants} is in ${individuals}. Check that ${individuals} names the individuals as ${variants} does.`;
   }
-  return `no individual of ${variants} has a value in ${shown(reason.column)}. ${ANOTHER_COLUMN}`;
+  return `no individual of ${variants} has a value in ${shown(reason.column)}. ${choose}`;
 }

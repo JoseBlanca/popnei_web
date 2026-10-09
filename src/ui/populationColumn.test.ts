@@ -238,7 +238,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     expect(columnOf(store.getState().project)).toBeNull();
     expect(said).toEqual([
       "panel_pops.csv read: 200 rows, the populations from popcat.",
-      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
       "panel_pops.csv read: 200 rows, no column chosen for the populations.",
     ]);
   });
@@ -315,7 +315,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     // shows None.
     expect(chosen()).toBe(1);
     expect(said.at(-1)).toBe(
-      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
     );
     setSeparator(store, "\t");
     const renamed: IndividualsTable = {
@@ -482,7 +482,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     expect(chosen()).toBe(0);
     expect(columnOf(store.getState().project)).toBeNull();
     expect(said).toEqual([
-      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. Warning: none of the 200 individuals of panel.nei is in panel_pops.csv, so all of them are unclassified. The first column of panel_pops.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and panel_pops.csv with s000,p0. panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
     ]);
   });
 

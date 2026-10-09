@@ -128,11 +128,9 @@ export function noColumnQualifiedText(p: Project): string | null {
   const read = individuals.read;
   const name = escaped(individuals.name);
   if (populationColumnChoices(read).length === 0) {
-    const end =
-      read.found === null
-        ? "Add a column of the populations to it and open it again."
-        : "If it has more, choose its separator in the Individuals tab.";
-    return `${name} has no column to choose as the column of the populations besides the names of the individuals. ${end}`;
+    return read.found === null
+      ? `${name} has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again.`
+      : `${name} was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.`;
   }
   return defaultPopulationsColumn(read) === null
     ? `No column of ${name} holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.`

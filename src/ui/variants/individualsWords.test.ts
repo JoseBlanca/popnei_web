@@ -337,7 +337,7 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
         }),
       ),
     ).toBe(
-      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
     );
     // A column that qualifies, or a column chosen, gives no line.
     expect(
@@ -792,7 +792,7 @@ describe("IN5 D1 what the status region says of a read of the individuals file",
       grouping: { kind: "populations", column: null },
     });
     expect(individualsReadAnnouncement(names, keptOf(names))).toBe(
-      "panel_pops.csv read: 200 rows, no column chosen for the populations. panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations. panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
     );
   });
 
