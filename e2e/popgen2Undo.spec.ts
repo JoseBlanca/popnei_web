@@ -225,6 +225,62 @@ test("SF6 the browser's undo key in a box whose number was typed and committed l
   await expect(maf.box).not.toHaveAttribute("data-muted");
 });
 
+test("SF6 the commands undo and redo of document.execCommand, with the focus on the heading or in a box whose number was typed and committed, leave the number, the line and the threshold", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const maf = threshold(page, "Major allele frequency");
+  // 0.9 typed over the 1 of a threshold that is off, and committed.
+  await maf.box.fill("0.9");
+  await maf.box.press("Enter");
+  await expect(maf.slider).toHaveValue("0.9");
+  // The browser's undo and redo given as commands, a stand-in for its
+  // menu Edit, which no flow can click: Chromium carries them out with no
+  // beforeinput to cancel, only an input after the text changed; WebKit
+  // offers them in a beforeinput, as it does the keys.
+  const command = async (name: "undo" | "redo"): Promise<void> => {
+    await page.evaluate(
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- the only way a page gives the browser's own undo, which the box must withstand
+      (n) => document.execCommand(n),
+      name,
+    );
+  };
+  const expectKept = async (): Promise<void> => {
+    await expect(maf.box).toHaveValue("0.9");
+    await expect(maf.slider).toHaveValue("0.9");
+    await expect(maf.box).not.toHaveAttribute("data-muted");
+  };
+
+  const heading = page.getByRole("heading", { level: 1 });
+  await heading.focus();
+  await command("undo");
+  await command("redo");
+  await command("undo");
+  // The focus may have gone into the box; Tab commits it as it leaves.
+  await page.keyboard.press("Tab");
+  await expectKept();
+
+  await maf.box.focus();
+  await command("undo");
+  await expect(maf.box).toHaveValue("0.9");
+  await command("redo");
+  await command("undo");
+  await page.keyboard.press("Tab");
+  await expectKept();
+
+  // With 0.95 typed and not committed, the undo puts back 0.9.
+  await maf.box.focus();
+  await maf.box.press("End");
+  await maf.box.pressSequentially("5");
+  await expect(maf.box).toHaveValue("0.95");
+  await command("undo");
+  await expect(maf.box).toHaveValue("0.9");
+  await page.keyboard.press("Tab");
+  await expectKept();
+});
+
 test("SF7 round a file opened while the pass of the file before it runs starts its own pass, and no Stop is said", async ({
   page,
 }) => {

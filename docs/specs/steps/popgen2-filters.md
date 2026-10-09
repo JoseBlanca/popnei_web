@@ -454,10 +454,15 @@ How the box is used, on this page:
 - **Escape** puts back the box's number, the project's value, and so
   does **Ctrl+Z** while something typed is not yet committed. With
   nothing typed, Ctrl+Z changes nothing on this page; it would be the
-  page's Undo if the page drew it again. The box cancels the browser's
-  own undo and redo of its text, whatever gives them: Ctrl+Z on Windows
-  and Linux, Cmd+Z on macOS, or the menu Edit. Until 9 October 2026 it
-  did not, and with no handler of the keys on the page the browser took
+  page's Undo if the page drew it again. The box keeps the browser's
+  own undo and redo off its text. Ctrl+Z on Windows and Linux and Cmd+Z
+  on macOS offer them before the text changes, and the box refuses them.
+  The command of an undo given by the page, `document.execCommand`,
+  stands in for the menu Edit, which no flow can click: WebKit offers it
+  the same way, and Chromium carries it out unoffered, so the box puts
+  its text back as soon as it changes, before anything commits it. The
+  real menu Edit of a browser was not tried. Until 9 October 2026 the
+  box refused neither, and with no handler of the keys on the page the browser took
   the text back to the 1 that 0.9 had been typed over and gave it as the
   threshold, off; Chromium did so even with the focus on the heading,
   moving it into the box, as seen on GitHub's Linux runner.
@@ -741,6 +746,11 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
 - the browser's undo key, Ctrl+Z or Cmd+Z, and its redo, in a box whose
   number was typed and committed, leave the number in the box, the line
   and the threshold, also once the focus leaves the box;
+- the browser's undo and redo given by `document.execCommand`, with the
+  focus on the heading and in a box whose number was typed and
+  committed, leave the number in the box, the line and the threshold
+  once the focus leaves the box, and with something typed the undo puts
+  back the box's number;
 - a drag changes the threshold when the line is let go: the box follows
   the line, which then removes some values and is out of the grey;
 - emptying the box, typing 1, and dragging the line of the MAF to the

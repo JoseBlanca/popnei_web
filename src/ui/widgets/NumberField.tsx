@@ -656,10 +656,16 @@ function FieldInput({
   // to the 1 that 0.9 was typed over and gave it as the threshold, off,
   // even pressed on the heading, where Chromium moved the focus into the
   // box to do it (seen in Chromium 153 on GitHub's Linux runner, and in
-  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026). The menu
-  // Edit of the browser undoes the same way. So the undo is cancelled, and
-  // with something typed it puts back the number of the field, as Ctrl+Z
-  // does.
+  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026). The keys
+  // offer the undo in a `beforeinput` that can be cancelled, and it is.
+  // `document.execCommand("undo")`, the command a menu Edit gives, offers
+  // it so in WebKit, but Chromium carries it out with no `beforeinput`
+  // and says so only in the `input` that follows, its text already
+  // changed (seen in Chromium and WebKit on macOS, 9 October 2026): there
+  // the text is put back before React and React Aria read it, so no
+  // commit takes it. The real menu Edit of a browser was not tried. With
+  // something typed, the undo puts back the number of the field, as
+  // Ctrl+Z does.
   const history = useRef<(event: InputEvent) => void>(() => undefined);
   useLayoutEffect(() => {
     history.current = (event) => {
@@ -669,7 +675,13 @@ function FieldInput({
       ) {
         return;
       }
-      event.preventDefault();
+      if (event.type === "beforeinput") {
+        event.preventDefault();
+      } else if (state !== null && inputRef.current !== null) {
+        // Through the setter React's tracker of the value watches, so
+        // React sees no change of the text and gives none to React Aria.
+        inputRef.current.value = state.inputValue;
+      }
       if (event.inputType === "historyUndo" && state !== null && isTyped()) {
         state.setInputValue(committedText);
         onRevert();
@@ -679,12 +691,14 @@ function FieldInput({
   useEffect(() => {
     const input = inputRef.current;
     if (input === null) return;
-    const onHistory = (event: InputEvent): void => {
-      history.current(event);
+    const onHistory = (event: Event): void => {
+      if (event instanceof InputEvent) history.current(event);
     };
     input.addEventListener("beforeinput", onHistory);
+    input.addEventListener("input", onHistory);
     return () => {
       input.removeEventListener("beforeinput", onHistory);
+      input.removeEventListener("input", onHistory);
     };
   }, []);
 

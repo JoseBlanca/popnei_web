@@ -513,3 +513,62 @@ describe("SF6 the browser's own undo of the box's text", () => {
     expect(calls.changes).toEqual([]);
   });
 });
+
+/** The browser's own undo, or redo, of `input`'s text carried out with
+    no `beforeinput` to cancel, as Chromium does for
+    `document.execCommand("undo")`, the command of the menu Edit: the text
+    is already `text` when the `input` arrives. */
+function historyDone(
+  input: HTMLInputElement,
+  inputType: "historyUndo" | "historyRedo",
+  text: string,
+): void {
+  // The setter of the prototype, which React's tracker of the value does
+  // not see, so that React takes the text for one the browser changed.
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- called below with the input, by call
+  const setValue = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  act(() => {
+    setValue?.call(input, text);
+    input.dispatchEvent(new InputEvent("input", { inputType, bubbles: true }));
+  });
+}
+
+describe("SF6 the browser's own undo of the box's text, done with no beforeinput", () => {
+  test("after a number committed, the box puts its number back and gives nothing", () => {
+    const calls = newCalls();
+    const input = draw(thresholdProps(1, calls));
+    focus(input);
+    input.setSelectionRange(0, input.value.length);
+    typeKeys(input, "0.9");
+    press(input, "Enter");
+    expect(calls.changes).toEqual([0.9]);
+    draw(thresholdProps(0.9, calls));
+
+    historyDone(input, "historyUndo", "1");
+    expect(input.value).toBe("0.9");
+    historyDone(input, "historyRedo", "0.95");
+    expect(input.value).toBe("0.9");
+    blur(input);
+
+    expect(input.value).toBe("0.9");
+    expect(calls.changes).toEqual([0.9]);
+  });
+
+  test("with something typed, puts back the box's number, as Ctrl+Z does", () => {
+    const calls = newCalls();
+    const input = draw(thresholdProps(0.1, calls));
+    focus(input);
+    input.setSelectionRange(0, input.value.length);
+    typeKeys(input, "0.05");
+    expect(input.value).toBe("0.05");
+
+    historyDone(input, "historyUndo", "0.0");
+    expect(input.value).toBe("0.1");
+    blur(input);
+
+    expect(calls.changes).toEqual([]);
+  });
+});
