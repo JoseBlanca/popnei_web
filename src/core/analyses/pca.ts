@@ -33,7 +33,6 @@ import {
   namesOf,
   populationsNeeds,
   populationsOf,
-  saying,
   shown,
   variantFilterNeeds,
 } from "../project.ts";
@@ -52,16 +51,15 @@ import type {
   Warning,
   WorkerClient,
 } from "../store.ts";
+import { fileRefusalText } from "./fileRefusals.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
   CHANGE_SETTINGS,
-  EMPTY_SOURCE,
   STEP_LD_FILTER,
   csvField,
   defect,
   emptySourceText,
-  isVcfLineRefusal,
   ldOrderText,
   pythonOpenVariants,
   refusalWords,
@@ -993,10 +991,12 @@ const ALL_DISTANCES_ZERO = "every distance is 0";
  * variant out of the order of its chromosome, with the LD filter of the
  * PCA or of the Variants step as the PCA follows it; the PCA's limit on
  * the individuals; the PCoA's pairs with no distance, its one individual,
- * its distances all 0; and the rows every analysis shares, of
- * `refusalWords`: the PCoA's empty pass, the ploidy, a line of a VCF, and
- * any other, with popnei's message without its backquotes. Throws a
- * defect on a project with no variants file.
+ * its distances all 0; on popgen2.html, the refusals of the variants
+ * file itself, in the words of the box Variants file, `fileRefusalText`;
+ * and the rows every analysis shares, of `refusalWords`: the PCoA's empty
+ * pass, the ploidy, a line of a VCF, and any other, with popnei's message
+ * without its backquotes. Throws a defect on a project with no variants
+ * file.
  */
 export function refusalText(
   message: string,
@@ -1057,7 +1057,13 @@ export function refusalText(
   if (message.startsWith(ALL_DISTANCES_ZERO)) {
     return `Every two of the individuals kept have the same alleles at every variant both have called, so their Kosman distances are all 0 and the PCoA has nothing to place. Keep more individuals, or more variants, with ${places.variantFilters}.`;
   }
-  const ofFile = page === "popgen2" ? fileRefusalText(message, p) : null;
+  const ofFile =
+    page === "popgen2"
+      ? fileRefusalText(message, p, {
+          cannot: `the ${name} cannot be calculated`,
+          where: " in the box Variants file",
+        })
+      : null;
   if (ofFile !== null) {
     return ofFile;
   }
@@ -1082,39 +1088,6 @@ function emptyText(p: Project, consequence: string, page: PcaPage): string {
     return emptySourceText(p, consequence);
   }
   return `${escaped(p.variants.name)} has no variants, so ${consequence}. Open another variants file in the box Variants file.`;
-}
-
-/** popnei's refusal of a genotype of a ploidy other than that the
-    variants are read with: the line, the ploidy found and the one read,
-    as the box Variants file of popgen2.html reads it. */
-const OTHER_PLOIDY =
-  /^line (\d+) of the VCF, .*?its genotype is of the ploidy (\d+) and the variants are read with the ploidy (\d+)/su;
-
-/**
- * The words of a refusal of the variants file itself on popgen2.html,
- * which the one pass of the page would have met first, so that they name
- * the box Variants file as its own words do: a file of no variant, a
- * genotype of another ploidy, a line of the VCF popnei cannot read;
- * `null` for another refusal. Throws a defect on a project with no
- * variants file.
- */
-function fileRefusalText(message: string, p: Project): string | null {
-  if (p.variants === null) {
-    throw defect("a refusal was given a project with no variants file.");
-  }
-  const fileName = escaped(p.variants.name);
-  if (message.startsWith(EMPTY_SOURCE)) {
-    return `${fileName} has no variants. Open another variants file in the box Variants file.`;
-  }
-  const ploidies = OTHER_PLOIDY.exec(message);
-  if (ploidies !== null) {
-    const [, line = "", found = "", read = ""] = ploidies;
-    return `Line ${line} of ${fileName} has a genotype of ploidy ${found} among genotypes of ploidy ${read}, and the application reads one ploidy per file. Remove those variants or individuals from the file and open it again.`;
-  }
-  if (isVcfLineRefusal(message)) {
-    return `popnei could not read ${fileName}${saying(message.replaceAll("`", ""))}. Correct the file, or fetch it again, and open it again in the box Variants file.`;
-  }
-  return null;
 }
 
 /** The words of the PCoA's pairs of individuals with no distance: `pairs`

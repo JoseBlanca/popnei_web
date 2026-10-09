@@ -772,6 +772,80 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     );
   });
 
+  test("the refusals of the variants file itself, as the box Variants file words them, with the box named and the PCA or the PCoA", () => {
+    const vcf = project({
+      variantsName: "panel.vcf.gz",
+      readOptions: { ploidy: 2, onlyPassed: false },
+      options: LD_50000,
+    });
+    const nei = project({ options: LD_50000 });
+    const pcoa = project({ options: { method: "pcoa", ...LD_50000 } });
+    const again = "open it again in the box Variants file.";
+    expect(
+      refusalText(
+        "the pass gave no variant and its source holds none",
+        pcoa,
+        "popgen2",
+      ),
+    ).toBe(
+      "panel.nei has no variants. Open another variants file in the box Variants file.",
+    );
+    expect(
+      refusalText(
+        "the source could not be read: incomplete deflate stream",
+        vcf,
+        "popgen2",
+      ),
+    ).toBe(
+      `panel.vcf.gz could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and ${again}`,
+    );
+    expect(
+      refusalText(
+        "the batch 1 of the vars file could not be read, so the file is damaged and has to be fetched or copied again: Ipc error: Expected compressed length of 480000 got 479861",
+        nei,
+        "popgen2",
+      ),
+    ).toBe(
+      `panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and ${again}`,
+    );
+    expect(
+      refusalText(
+        "a variant of the chromosome chr2 is at the position 0, and the windows of the density of the variants start at the position 1, so it is in none of them; the VCF format puts a telomere there",
+        vcf,
+        "popgen2",
+      ),
+    ).toBe(
+      `A variant of chromosome chr2 in panel.vcf.gz is at position 0, where the VCF format puts a telomere and not a variant, so the PCA cannot be calculated. Remove that line from the file and ${again}`,
+    );
+    expect(
+      refusalText(
+        "the window 9007199254740992 to 18014398509481982 of the chromosome 1 ends past 9007199254740991, the last whole number a number of JavaScript holds: the one after it would be read as another",
+        pcoa,
+        "popgen2",
+      ),
+    ).toBe(
+      `A variant of chromosome 1 in panel.nei is at a position beyond 2,147,483,647, the largest the VCF format allows, so the PCoA cannot be calculated. Correct the position in the file and ${again}`,
+    );
+    expect(
+      refusalText(
+        "line 9 of the VCF, the column of s000: its genotype is of the ploidy 1 and the variants are read with the ploidy 2; popnei does not read a VCF whose genotypes are of different ploidies",
+        vcf,
+        "popgen2",
+      ),
+    ).toBe(
+      `Line 9 of panel.vcf.gz has a genotype of ploidy 1 among genotypes of ploidy 2, and the application reads one ploidy per file. Remove those variants or individuals from the file and ${again}`,
+    );
+    expect(
+      refusalText(
+        "line 84 of the VCF, the column POS: `x80` is not a position",
+        vcf,
+        "popgen2",
+      ),
+    ).toBe(
+      `popnei could not read panel.vcf.gz: line 84 of the VCF, the column POS: \u201cx80\u201d is not a position. Correct the file, or fetch it again, and ${again}`,
+    );
+  });
+
   test("the words of a calculation that stopped with no answer, on popgen2.html", () => {
     const p = project({ options: LD_50000 });
     expect(crashText(p, 200, "popgen2")).toBe(
