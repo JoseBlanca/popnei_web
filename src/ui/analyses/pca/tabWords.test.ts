@@ -25,7 +25,11 @@ import type {
 import { createPopgen2Store, openVariantsFile } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
+  PLOT_WAITS_3D,
+  pcaDownloadWhat,
   pcaEndAnnouncement,
+  pcaResultTitle,
+  pcaTabLoadFailed3d,
   pcaTabLock,
   pcaTabName,
   pcaTabReadyLines,
@@ -192,6 +196,35 @@ describe("AP6 D1 the words of the PCA tab around its options", () => {
     expect(pcaTabLock(projectOf(store), "reading")).toBe(
       "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCoA cannot run at once.",
     );
+  });
+});
+
+describe("AP6 D3 the words of the result of the PCA tab", () => {
+  test("the title over the plot, by the method", () => {
+    expect(pcaResultTitle("pca", "panel.nei")).toBe(
+      "Principal components of panel.nei",
+    );
+    expect(pcaResultTitle("pcoa", "panel.vcf.gz")).toBe(
+      "Principal coordinates of panel.vcf.gz",
+    );
+  });
+
+  test("what each menu downloads, and the wait of the 3D view", () => {
+    expect(pcaDownloadWhat("plot", "pca")).toBe("the plot of the PCA");
+    expect(pcaDownloadWhat("variance", "pca")).toBe(
+      "the explained variance of the PCA",
+    );
+    expect(pcaDownloadWhat("table", "pcoa")).toBe(
+      "the table of the individuals of the PCoA",
+    );
+    expect(PLOT_WAITS_3D).toBe("Download once the 3D view is drawn.");
+  });
+
+  test("the 3D view that could not be downloaded: reload the page and run it again, no project to save", () => {
+    expect(pcaTabLoadFailed3d("pca")).toBe(
+      "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page and run the PCA again.",
+    );
+    expect(pcaTabLoadFailed3d("pcoa")).toMatch(/run the PCoA again\.$/u);
   });
 });
 

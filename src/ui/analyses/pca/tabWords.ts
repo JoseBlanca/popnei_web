@@ -191,3 +191,45 @@ export function pcaEndAnnouncement(
       return null;
   }
 }
+
+/** The title over the plot of a result of the tab, of the variants file
+    `variantsName`: "Principal components of panel.nei", "Principal
+    coordinates of panel.nei" (docs/specs/steps/popgen2-pca.md, "The
+    result"). */
+export function pcaResultTitle(
+  method: PcaMethod,
+  variantsName: string,
+): string {
+  const what =
+    method === "pca" ? "Principal components" : "Principal coordinates";
+  return `${what} of ${escaped(variantsName)}`;
+}
+
+/** The reason the plot's menu waits while three.js downloads. */
+export const PLOT_WAITS_3D = "Download once the 3D view is drawn.";
+
+/** What each menu of a result downloads, after "Download ": "the plot of
+    the PCA", "the explained variance of the PCA", "the table of the
+    individuals of the PCA" (docs/specs/steps/popgen2-pca.md, "Its
+    words"). */
+export function pcaDownloadWhat(
+  part: "plot" | "variance" | "table",
+  method: PcaMethod,
+): string {
+  const name = methodName(method);
+  switch (part) {
+    case "plot":
+      return `the plot of the ${name}`;
+    case "variance":
+      return `the explained variance of the ${name}`;
+    case "table":
+      return `the table of the individuals of the ${name}`;
+  }
+}
+
+/** The words of the 3D view that could not be downloaded, on this page,
+    which saves no project: "… reload the page and run the PCA again."
+    (docs/specs/steps/popgen2-pca.md, "Its words", the errors). */
+export function pcaTabLoadFailed3d(method: PcaMethod): string {
+  return `The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page and run the ${methodName(method)} again.`;
+}

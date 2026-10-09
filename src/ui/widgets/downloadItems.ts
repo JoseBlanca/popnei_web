@@ -111,16 +111,21 @@ export function tableItem(
   };
 }
 
+/** What the images of a plot are made from: the exports of its handle,
+    whatever the data it draws, so that one menu serves the 2D plot and
+    the 3D view of the PCA, of different data. */
+export type PlotExports = Pick<ChartHandle<unknown>, "toSVG" | "toPNG">;
+
 /**
  * The three items of a plot, "Image as SVG", "Image as PNG" and "Data as
  * CSV", whose images come from the handle `handle` holds at the choice; a
  * defect when it holds none, a plot not drawn.
  */
-export function plotItems<Data>(
+export function plotItems(
   download: PlotDownload,
-  handle: { readonly current: ChartHandle<Data> | null },
+  handle: { readonly current: PlotExports | null },
 ): readonly DownloadItem[] {
-  const plot = (): ChartHandle<Data> => {
+  const plot = (): PlotExports => {
     const current = handle.current;
     if (current === null) {
       throw new Error(

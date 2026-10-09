@@ -11,6 +11,16 @@
  * `AnalysisPanel.tsx` draws the warnings above it and gives the words of
  * the comparison with the check numbers, drawn under the table.
  *
+ * On popgen2.html (docs/specs/steps/popgen2-pca.md, "The result" and
+ * "The downloads") the plot has a title, "Principal components of
+ * panel.nei", with the menu "Download…" of the plot at the end of its
+ * line, before the bar of controls: its images from the handle of the
+ * plot drawn, 2D or 3D, and its data the coordinates vavilov-explorer
+ * imports, `pcaCoordinatesCsv`; the menu waits while three.js downloads.
+ * Each table has its menu in the place of the old buttons, and the 3D
+ * view that could not be downloaded says to reload the page, since the
+ * page saves no project.
+ *
  * The state of its own is the group highlighted, kept with the colouring
  * it was pressed in and given to the plots only while that colouring is
  * the one drawn; what became of the 3D view, loading, drawn, or not drawn
@@ -21,10 +31,13 @@ import { useMemo, useRef, useState } from "react";
 import { legendOf } from "../../../charts/legend.ts";
 import type { Pca3dHandle } from "../../../charts/pca3d.ts";
 import { SCATTER_MARGIN } from "../../../charts/scatter.ts";
+import type { ScatterData } from "../../../charts/scatter.ts";
+import type { ChartHandle } from "../../../charts/types.ts";
 import {
   axesShown,
   colourColumns,
   pcaColours,
+  pcaCoordinatesCsv,
   pcaCsv,
   pcaOptions,
   pcaPageOf,
@@ -33,6 +46,7 @@ import {
 } from "../../../core/analyses/pca.ts";
 import type { PcaColours, PcaPage } from "../../../core/analyses/pca.ts";
 import { individualStatsOf } from "../../../core/apps.ts";
+import { downloadName, variantsStem } from "../../../core/fileNames.ts";
 import { shown } from "../../../core/project.ts";
 import type { AnalysisDef } from "../../../core/store.ts";
 import type { Job, JobResult, PcaResult } from "../../../worker/protocol.ts";
@@ -42,6 +56,8 @@ import { summaryStatsOf } from "../../popgen2Store.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
+import { DownloadMenu } from "../../widgets/DownloadMenu.tsx";
+import { plotItems } from "../../widgets/downloadItems.ts";
 import { Link } from "../../widgets/Link.tsx";
 import { Select } from "../../widgets/Select.tsx";
 import { SortableTable } from "../../widgets/SortableTable.tsx";
@@ -66,6 +82,12 @@ import { PcaLegend } from "./PcaLegend.tsx";
 import styles from "./PcaResults.module.css";
 import { pca3dData, scatterData } from "./plotData.ts";
 import { ScatterPlot } from "./ScatterPlot.tsx";
+import {
+  PLOT_WAITS_3D,
+  pcaDownloadWhat,
+  pcaResultTitle,
+  pcaTabLoadFailed3d,
+} from "./tabWords.ts";
 import {
   AXIS_LABELS_2D,
   AXIS_LABELS_3D,
@@ -208,6 +230,10 @@ function PcaResultOf({
   const [sort, setSort] = useState<TableSort<PcaColumnId> | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const why2dRef = useRef<HTMLDivElement>(null);
+  // The handle of the 2D plot, for the images of its menu on
+  // popgen2.html.
+  const scatterRef = useRef<ChartHandle<ScatterData> | null>(null);
+  const onPopgen2 = page === "popgen2";
 
   const numComps = result.numComps;
   const plot: "none" | "2d" | "3d" =
@@ -264,7 +290,12 @@ function PcaResultOf({
       new Map(
         rows.map((row) => [
           row,
-          { id: row.individual, cells: rowCells(row, colours.noneName) },
+          {
+            id: row.individual,
+            cells: rowCells(row, colours.noneName),
+            // The values as stored, which the CSV of the table holds.
+            values: [row.individual, row.colour, ...row.projections],
+          },
         ]),
       ),
     [rows, colours.noneName],
@@ -293,6 +324,7 @@ function PcaResultOf({
       {
         id: "colour",
         label: shown(colours.title),
+        csvLabel: colours.title,
         // A column of numbers, right-aligned as the components are.
         isNumeric: colours.kind === "values",
         minWidth: COLOUR_WIDTH,
@@ -313,6 +345,9 @@ function PcaResultOf({
     );
   }
   const variantsName = variants.name;
+  const stem = variantsStem(variantsName);
+  const method = result.method;
+  const loadFailed3d = onPopgen2 ? pcaTabLoadFailed3d(method) : LOAD_FAILED_3D;
 
   /** Applies an option, and announces the notes it made appear, since the
       focus is then on the control that made them. */
@@ -347,9 +382,48 @@ function PcaResultOf({
   const axesDrawn = drawn === "3d" ? axes : axes.slice(0, 2);
 
   const variancePcoa = pcoaVarianceLine(result);
+  const varianceRows = varianceCells(result).map(([component, percent], i) => ({
+    id: component,
+    cells: [component, percent],
+    values: [component, result.explainedVariancePercent[i] ?? null],
+  }));
+  const varianceColumns = [
+    { id: "component", label: "Component", isRowHeader: true },
+    { id: "percent", label: "Explained variance", isNumeric: true },
+  ];
+
+  // The images of the plot drawn, from its handle at the choice: the 3D
+  // view's once three.js has drawn it, which the menu waits for.
+  const plotHandle = {
+    get current(): ChartHandle<ScatterData> | Pca3dHandle | null {
+      return drawn === "3d" ? handle : scatterRef.current;
+    },
+  };
 
   return (
     <div className={classOf(styles, "results")}>
+      {onPopgen2 && drawn !== "none" && (
+        <div className={classOf(styles, "titleLine")}>
+          <h3 className={classOf(styles, "title")}>
+            {pcaResultTitle(method, variantsName)}
+          </h3>
+          <DownloadMenu
+            what={pcaDownloadWhat("plot", method)}
+            items={plotItems(
+              {
+                what: pcaDownloadWhat("plot", method),
+                stem,
+                imageWhat: method,
+                csvWhat: `${method}.coordinates`,
+                csv: () => pcaCoordinatesCsv(result),
+                waiting: null,
+              },
+              plotHandle,
+            )}
+            waiting={drawn === "3d" && handle === null ? PLOT_WAITS_3D : null}
+          />
+        </div>
+      )}
       <div className={classOf(styles, "bar")}>
         {plot !== "none" && (
           <ToggleButtonGroup
@@ -453,7 +527,7 @@ function PcaResultOf({
       {plot === "3d" && failure3d !== null && (
         <div ref={why2dRef} className={classOf(styles, "why2d")}>
           <p className={classOf(styles, "line")}>
-            {failure3d === "load" ? LOAD_FAILED_3D : NO_WEBGL}
+            {failure3d === "load" ? loadFailed3d : NO_WEBGL}
           </p>
           {failure3d === "load" && (
             <Button
@@ -481,12 +555,19 @@ function PcaResultOf({
               onFailed={(failure) => {
                 setFailure3d(failure);
                 announcer.announce(
-                  failure === "load" ? LOAD_FAILED_3D : NO_WEBGL,
+                  failure === "load" ? loadFailed3d : NO_WEBGL,
                 );
               }}
             />
           ) : (
-            data2d !== null && <ScatterPlot data={data2d} />
+            data2d !== null && (
+              <ScatterPlot
+                data={data2d}
+                onHandle={(drawn2d) => {
+                  scatterRef.current = drawn2d;
+                }}
+              />
+            )
           )}
           {legend !== null && (
             <PcaLegend
@@ -521,57 +602,84 @@ function PcaResultOf({
         </ul>
       )}
       <div className={classOf(styles, "part")}>
-        <Table
-          caption={varianceCaption(result)}
-          columns={[
-            { id: "component", label: "Component", isRowHeader: true },
-            { id: "percent", label: "Explained variance", isNumeric: true },
-          ]}
-          rows={varianceCells(result).map(([component, percent]) => ({
-            id: component,
-            cells: [component, percent],
-          }))}
-        />
+        {onPopgen2 ? (
+          <Table
+            caption={varianceCaption(result)}
+            columns={varianceColumns}
+            rows={varianceRows}
+            download={{
+              what: pcaDownloadWhat("variance", method),
+              fileName: downloadName(stem, `${method}.variance`, "csv"),
+              waiting: null,
+            }}
+          />
+        ) : (
+          <Table
+            caption={varianceCaption(result)}
+            columns={varianceColumns}
+            rows={varianceRows}
+          />
+        )}
         {variancePcoa !== null && (
           <p className={classOf(styles, "line")}>{variancePcoa}</p>
         )}
-        <Button
-          label={VARIANCE_CSV_LABEL}
-          onPress={() => {
-            downloadText(
-              varianceCsvName(variantsName, result.method),
-              varianceCsv(result),
-              "text/csv",
-            );
-          }}
-        />
+        {!onPopgen2 && (
+          <Button
+            label={VARIANCE_CSV_LABEL}
+            onPress={() => {
+              downloadText(
+                varianceCsvName(variantsName, result.method),
+                varianceCsv(result),
+                "text/csv",
+              );
+            }}
+          />
+        )}
       </div>
       <div className={classOf(styles, "part")}>
         <p className={classOf(styles, "line")}>
           {tableCaption(result, variantsName)}
         </p>
         <div ref={tableRef} className={classOf(styles, "table")}>
-          <SortableTable
-            label={tableCaption(result, variantsName)}
-            columns={tableColumns}
-            rows={tableRows}
-            sort={sort}
-            onSortChange={setSort}
-            headingLines={1}
-          />
+          {onPopgen2 ? (
+            <SortableTable
+              label={tableCaption(result, variantsName)}
+              columns={tableColumns}
+              rows={tableRows}
+              sort={sort}
+              onSortChange={setSort}
+              headingLines={1}
+              download={{
+                what: pcaDownloadWhat("table", method),
+                fileName: downloadName(stem, `${method}.table`, "csv"),
+                waiting: null,
+              }}
+            />
+          ) : (
+            <SortableTable
+              label={tableCaption(result, variantsName)}
+              columns={tableColumns}
+              rows={tableRows}
+              sort={sort}
+              onSortChange={setSort}
+              headingLines={1}
+            />
+          )}
         </div>
         {check !== null && <p className={classOf(styles, "line")}>{check}</p>}
         <div className={classOf(styles, "download")}>
-          <Button
-            label={TABLE_CSV_LABEL}
-            onPress={() => {
-              downloadText(
-                tableCsvName(variantsName, result.method),
-                pcaCsv(result, colours),
-                "text/csv",
-              );
-            }}
-          />
+          {!onPopgen2 && (
+            <Button
+              label={TABLE_CSV_LABEL}
+              onPress={() => {
+                downloadText(
+                  tableCsvName(variantsName, result.method),
+                  pcaCsv(result, colours),
+                  "text/csv",
+                );
+              }}
+            />
+          )}
           <p className={classOf(styles, "muted")}>
             {versionsText(popneiVersion, APP_VERSION)}
           </p>
