@@ -155,6 +155,12 @@ function isNewlyRecorded(
   was: IndividualsSource | null,
   now: IndividualsSource,
 ): boolean {
+  // The options of a CSV compared are a guard no change of this page
+  // reaches since 9 October 2026: a change of them makes the read
+  // pending, the store records a read only into the options it was made
+  // with, and the change starts the history afresh, so no undo crosses
+  // it, as one from a separator waiting to the read of another did
+  // before. Kept for a way of changing them that a later page may add.
   if (
     was?.fileId !== now.fileId ||
     !sameCsv(was.csv, now.csv) ||
