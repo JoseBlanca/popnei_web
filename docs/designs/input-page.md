@@ -1,7 +1,8 @@
 # The input page of popgen2.html, with the individuals file
 
 A design of 9 October 2026, approved by the owner on 9 October 2026 with
-the five answers written under "What the owner decided", at the end, and
+the five answers written under "What the owner decided", at the end,
+numbered there and named "answer 1" to "answer 5" in the text, and
 revised the same day for them. It decides how the page that opens the
 files of `popgen2.html` takes a second file, the individuals file, the
 table that assigns each individual of the variants file to a population;
@@ -42,7 +43,7 @@ screen, and the module specs it names there.
   as soon as both files are read; with one on, once the variants file is
   read to the end, and not after a Stop.
 - When a file is opened the page chooses the column of the populations:
-  the first column that table_io reads as text. table_io has no type
+  the first column that table_io reads as text with 20 different values or fewer. table_io has no type
   "categorical", and popnei_web's own type of that name would skip a
   column of two populations, so text is the nearest thing table_io gives
   (below, "The column chosen when a file is opened"). The user can choose
@@ -439,8 +440,6 @@ What the rule misses, and what the page shows then:
   a locality of 12 values before the populations, is chosen in their
   place.
 
-Each of these is seen in the box at once, and mended with the list.
-
 The page knows the type from the table in the project, without asking
 table_io again: a column is text when one of its cells is a text, since
 the light worker makes every value of an integer, float or boolean
@@ -452,7 +451,8 @@ rule. The choice is a pure function of core, beside the counts in
 
 It is made by the entry of the page, as a command, `setGrouping`, at each
 read of the individuals file that the store records as a table, when the
-grouping names no column of that table. "None" in the list is the
+grouping names no column of that table: no column is chosen, or the one
+chosen is not a column of the new file. "None" in the list is the
 grouping of the populations with no column, `{ kind: "populations",
 column: null }`, the grouping a project starts with; the one population
 of the old page, `onePopulation`, is not offered here. So a file opened first gets its
@@ -984,6 +984,18 @@ read "table_io". Not corrected, being a skill: the writing skill's
 example of an error, "12 individuals of panel.nei are not in pops.csv",
 the rule of the old page, which holds there.
 
+## What the session decided
+
+Beyond the owner's answers, and open to the owner's change after trying
+the page: the column chosen, the first of text with 20 values or fewer;
+both pages switched to table_io, since their light worker is one; the
+light worker ended after a read of a file above 2 MB, a number the plan
+sets from its measurement of the memory; an integer column with a value
+beyond 2^53 kept as texts; the names of populations written with the
+decimal mark of the file; the tab "Variants file" shown first and never
+left by the page itself; both tabs kept drawn; the openings of the
+individuals file as steps of the history; and the words of the box.
+
 ## What the owner decided
 
 On 9 October 2026, approving the design:
@@ -991,7 +1003,7 @@ On 9 October 2026, approving the design:
 1. **The column of the populations when a file is opened** is chosen by
    the page, the first categorical column table_io gives, over no column
    until the user chooses. table_io gives no categorical column, so the
-   session took the first column of text, as "The column chosen when a
+   session took the first column of text with 20 values or fewer, as "The column chosen when a
    file is opened" argues. The owner chose with it that table_io
    replaces xlsx_rs as the reader in this piece, over a piece of its own
    right after this one, which the draft recommended, and over keeping
