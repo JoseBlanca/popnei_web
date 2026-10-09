@@ -118,7 +118,8 @@ export function columnShown(p: Project): string | null {
     otherwise, and while the file is not read. When the list offers no
     column at all, as a file of semicolons read with the comma gives, the
     line names the separator of a text file, or asks for a column in an
-    xlsx, since "Choose it in the list" would send the user to a list of
+    xlsx, or, when the other columns hold only true or false, asks for a
+    column, since "Choose it in the list" would send the user to a list of
     "None" alone. */
 export function noColumnQualifiedText(p: Project): string | null {
   const individuals = p.individuals;
@@ -128,6 +129,9 @@ export function noColumnQualifiedText(p: Project): string | null {
   const read = individuals.read;
   const name = escaped(individuals.name);
   if (populationColumnChoices(read).length === 0) {
+    if (read.table.columns.length > 1) {
+      return `${name} has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again.`;
+    }
     return read.found === null
       ? `${name} has no column to choose as the column of the populations besides the names of the individuals. Add a column of the populations to it and open it again.`
       : `${name} was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.`;

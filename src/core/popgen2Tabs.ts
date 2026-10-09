@@ -46,6 +46,9 @@ export type TabGreyed =
       readonly name: string;
       /** A CSV or a TSV, whose separator the user can choose. */
       readonly textFile: boolean;
+      /** Read as one column, the names alone; false when its other
+          columns hold only true or false. */
+      readonly oneColumn: boolean;
     }
   /** No column of the populations is chosen, or the one chosen is not
       among those the list offers. */
@@ -169,6 +172,7 @@ function distancesGreyed(
           kind: "noColumnToChoose",
           name: individuals.name,
           textFile: individuals.read.found !== null,
+          oneColumn: individuals.read.table.columns.length === 1,
         }
       : { kind: "noColumn" };
   }

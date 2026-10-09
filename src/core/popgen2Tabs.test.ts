@@ -347,6 +347,7 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
       kind: "noColumnToChoose",
       name: "panel_pops.csv",
       textFile: true,
+      oneColumn: true,
     });
     const xlsx = project({
       read: { ...readOf(names), found: null },
@@ -356,6 +357,28 @@ describe("AP1 D1 which tab of the analyses is greyed, and why", () => {
       kind: "noColumnToChoose",
       name: "panel_pops.csv",
       textFile: false,
+      oneColumn: true,
+    });
+  });
+
+  test("a table whose columns but the names hold only true or false gives noColumnToChoose, not of one column", () => {
+    const flags: IndividualsTable = {
+      columns: ["IID", "selected"],
+      rows: PANEL_POPS.rows.map((row, index) => [
+        String(row[0]),
+        index % 2 === 0,
+      ]),
+    };
+    const p = project({
+      read: readOf(flags),
+      grouping: { kind: "populations", column: null },
+    });
+    expect(p.individuals?.read.kind).toBe("read");
+    expect(analysisTabs(p, keptOf(p)).distances).toEqual({
+      kind: "noColumnToChoose",
+      name: "panel_pops.csv",
+      textFile: true,
+      oneColumn: false,
     });
   });
 

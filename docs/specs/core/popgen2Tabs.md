@@ -43,7 +43,7 @@ The reasons of Distances, in the order they are asked:
 | the individuals file read `pending` | `individualsReading`, with its name |
 | the individuals file refused or failed | `individualsFailed`, with its name |
 | the individuals file `notGiven`, named by a project file that did not hold it, which `popgen2.html`, opening no project file, never has | `individualsFailed`, with its name: the user opens the file again, as after a failed read |
-| read, and no column the list of the populations offers, the table holding nothing but the names of the individuals and columns of booleans, as a file of semicolons read with the comma gives | `noColumnToChoose`, with the name of the individuals file and whether it is a text file, whose separator may be the wrong one; since 9 October 2026 |
+| read, and no column the list of the populations offers, the table holding nothing but the names of the individuals and columns of booleans, as a file of semicolons read with the comma gives | `noColumnToChoose`, with the name of the individuals file, whether it is a text file, whose separator may be the wrong one, and whether it was read as one column, the names alone, or with other columns, all of booleans; since 9 October 2026 |
 | read, and no column of the populations | `noColumn` |
 | read, the column of more values than a column of populations can have, `tooMany` | `tooManyValues`, with the column and its number of values |
 | read, fewer than two populations with an individual in the variants file | `fewPopulations`, with the column, the number, 0 or 1, and the name of the variants file |
@@ -78,6 +78,9 @@ export type TabGreyed =
       readonly name: string;
       /** A CSV or a TSV, whose separator the user can choose. */
       readonly textFile: boolean;
+      /** Read as one column, the names alone; false when its other
+          columns hold only true or false. */
+      readonly oneColumn: boolean;
     }
   | { readonly kind: "noColumn" }
   | { readonly kind: "tooManyValues"; readonly column: string; readonly numValues: number }
@@ -138,8 +141,9 @@ With Vitest, on frozen projects made with the commands of
   by `parseProject` from a project file: `individualsFailed`.
 - Read, `popcat` chosen, `kept` `null`: the three `null`. None chosen:
   `noColumn`. A table of the names alone, as `panel_pops.csv` read
-  with the semicolon gives: `noColumnToChoose` with "panel_pops.csv"
-  and a text file. A column of one value for every individual:
+  with the semicolon gives: `noColumnToChoose` with "panel_pops.csv",
+  a text file and one column; with a second column of booleans, not one
+  column. A column of one value for every individual:
   `fewPopulations` with 1 and "panel.nei".
 - A list of the individuals kept that keeps only individuals of p0:
   `fewKept` with 1; one that keeps none: `fewKept` with 0.

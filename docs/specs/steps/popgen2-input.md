@@ -200,7 +200,8 @@ populations to choose. If its columns are separated by another
 character, choose that separator in the Individuals tab.", and for an
 xlsx, "panel_pops.xlsx has no column to choose as the column of the
 populations besides the names of the individuals. Add a column of the
-populations to it and open it again." (since 9 October
+populations to it and open it again.", both when the table has the
+names alone; with more columns, all of true or false, "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again." (since 9 October
 2026: "Choose it in the list" sent the user to a list that offers only
 "None").
 

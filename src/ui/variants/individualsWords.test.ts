@@ -370,6 +370,23 @@ describe("IN5 D1 the words of the box of the individuals file", () => {
     expect(noColumnQualifiedText(project({ read: null }))).toBeNull();
   });
 
+  test("the line of no column to choose, the other columns all of true or false, does not say the file was read as one column", () => {
+    const flags: IndividualsTable = {
+      columns: ["IID", "selected"],
+      rows: PANEL_INDIVIDUALS.map((name, index) => [name, index % 2 === 0]),
+    };
+    expect(
+      noColumnQualifiedText(
+        project({
+          read: tableRead(flags),
+          grouping: { kind: "populations", column: null },
+        }),
+      ),
+    ).toBe(
+      "panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again.",
+    );
+  });
+
   test("the line of no column to choose of an xlsx of the names alone asks for a column, not a separator", () => {
     const names: IndividualsTable = {
       columns: ["IID"],

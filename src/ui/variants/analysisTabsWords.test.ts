@@ -138,6 +138,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         kind: "noColumnToChoose",
         name: "panel_pops.csv",
         textFile: true,
+        oneColumn: true,
       }),
     ).toBe(
       "The distances between populations need at least two populations, and panel_pops.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.",
@@ -147,10 +148,26 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         kind: "noColumnToChoose",
         name: "panel_pops.xlsx",
         textFile: false,
+        oneColumn: true,
       }),
     ).toBe(
       "The distances between populations need at least two populations, and panel_pops.xlsx has no column to choose besides the names of the individuals. Add a column of the populations to it and open it again in the box Individuals file.",
     );
+  });
+
+  test("Distances with no column to choose, the other columns of the file all of true or false", () => {
+    for (const textFile of [true, false]) {
+      expect(
+        greyedText("distances", {
+          kind: "noColumnToChoose",
+          name: "panel_pops.csv",
+          textFile,
+          oneColumn: false,
+        }),
+      ).toBe(
+        "The distances between populations need at least two populations, and panel_pops.csv has no column of text to choose as the column of the populations: its other columns hold only true or false. Add a column of the populations to it and open it again in the box Individuals file.",
+      );
+    }
   });
 
   test("Distances with fewer than two populations among the individuals of the variants file", () => {
@@ -229,6 +246,7 @@ describe("AP1 D3 the words of the row of tabs and of each reason", () => {
         kind: "noColumnToChoose",
         name: "pops\u202e.csv",
         textFile: true,
+        oneColumn: true,
       }),
     ).toBe(
       `${start}, and pops\\u202e.csv was read as a single column, the names of the individuals. If its columns are separated by another character, choose that separator in the Individuals tab.`,
