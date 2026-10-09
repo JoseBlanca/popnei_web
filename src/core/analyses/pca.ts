@@ -1377,16 +1377,17 @@ function coloursOf(
   }
   const index = read.table.columns.indexOf(colourBy);
   if (index === -1) {
-    const by =
+    const lacks = `${escaped(individuals.name)} has no column ${shown(colourBy)}, by which the points were coloured`;
+    // On popgen2.html, with no column of the populations or with one,
+    // byPopulations leaves every point unclassified.
+    const pops = page === "popgen2" ? populationsOf(p) : null;
+    const end =
       page === "popgen"
-        ? "the populations"
-        : "the column of the populations chosen in the box Individuals file";
-    return byPopulations(
-      r,
-      p,
-      `${escaped(individuals.name)} has no column ${shown(colourBy)}, by which the points were coloured, so they are coloured by ${by}.`,
-      page,
-    );
+        ? "so they are coloured by the populations."
+        : pops === null || pops === "all"
+          ? "so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."
+          : "so they are coloured by the column of the populations chosen in the box Individuals file.";
+    return byPopulations(r, p, `${lacks}, ${end}`, page);
   }
   const cells = cellsOf(read.table, index);
   if (read.columns[index]?.kind === "continuous") {

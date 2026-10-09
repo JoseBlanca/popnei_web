@@ -1188,6 +1188,37 @@ describe("AP2 D2 pcaColours and pcaCoordinatesCsv on popgen2.html", () => {
     expect(groupsOf(popcat).noneName).toBe("No value");
   });
 
+  test("a colouring by a column the file lacks, with no column of the populations chosen or with one population: every point unclassified, and a note that says so", () => {
+    const byHeight = (grouping: Grouping): PcaColours =>
+      pcaColours(
+        r,
+        deepFreeze<Project>({
+          ...withPops(panelPops()),
+          grouping,
+          analyses: [
+            {
+              analysis: "pca",
+              options: optionsJson({
+                ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50000 },
+                colourBy: "height",
+              }),
+            },
+          ],
+        }),
+        "popgen2",
+      );
+    const note =
+      "panel_pops.csv has no column height, by which the points were coloured, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by.";
+    for (const grouping of [
+      { kind: "populations", column: null },
+      { kind: "onePopulation" },
+    ] as const) {
+      const c = byHeight(grouping);
+      expect(c.note).toBe(note);
+      expectAllUnclassified({ ...c, note: null });
+    }
+  });
+
   test("pcaCoordinatesCsv of the flow: the header of the ten components and the row of s000", () => {
     const lines = pcaCoordinatesCsv(r).split("\n");
     expect(lines[0]).toBe(
