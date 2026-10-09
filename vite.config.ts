@@ -164,14 +164,18 @@ export default defineConfig(({ mode }) => {
       // that share them, rather than one the bundler names after a module
       // in it: React, which the probe shares too, and our code with D3 and
       // React Aria. Each set of pages gets a chunk of its own, so that a
-      // page downloads only what it uses: popgen2.html loads the plots,
-      // D3 and the sortable table only with the statistics of the open
-      // file, by import() once a file is picked
-      // (src/ui/variants/StatsSection.tsx), and they are in a chunk
-      // popgen.html shares with that file. In one chunk for every page,
-      // they were in popgen2.html's first download, 257.0 kB of gzip
-      // against 181.7 without them, on 6 October 2026. A helper of the
-      // bundler is left to the bundler.
+      // page downloads only what it uses: popgen2.html loads the plots
+      // and D3 only with the statistics of the open file, by import()
+      // once a file is picked (src/ui/variants/StatsSection.tsx), and
+      // they are in a chunk popgen.html shares with that file. In one
+      // chunk for every page, they were in popgen2.html's first download,
+      // 257.0 kB of gzip against 181.7 without them, on 6 October 2026.
+      // The sortable table, with React Aria's table, is in that first
+      // download since the tab Individuals file draws it (work package 6
+      // of docs/plans/input-page.md), in the chunk popgen.html and
+      // popgen2.html share: 237.13 kB of gzip -9 before it and 278.45
+      // after, on 9 October 2026. A helper of the bundler is left to the
+      // bundler.
       rolldownOptions: {
         output: {
           codeSplitting: {
