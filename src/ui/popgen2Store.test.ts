@@ -617,3 +617,124 @@ describe("AP3 D1 the store of popgen2.html stops what a change leaves behind", (
     expect(store.getState().notice).toBeNull();
   });
 });
+
+/** A result of the PCA of `s000` and `s001`, from `numVars` variants. */
+function pcaOf(numVars: number): JobResult {
+  return {
+    analysis: "pca",
+    method: "pca",
+    individuals: ["s000", "s001"],
+    numComps: 1,
+    numCompsFound: 1,
+    projections: Float64Array.from([1, -1]),
+    explainedVariancePercent: Float64Array.from([100]),
+    numVarsUsed: numVars,
+    lingoesConstant: null,
+    negativeEigenvaluesPercent: null,
+    passStats: { numVars, filtering: {} },
+  };
+}
+
+/** The store of popgen2.html with a fake worker that records each job,
+    its key, and each cancel of a PCA, and ends a job only when the test
+    ends it; `a.vcf.gz` open, read, its one pass done, and the LD pruning
+    of the PCA given its distance, so that the PCA is ready. */
+function storeWithPassDone(): {
+  readonly store: Store<JobResult, Blob>;
+  readonly jobs: readonly Job[];
+  readonly keys: readonly string[];
+  readonly cancels: () => number;
+  readonly end: (index: number, result: JobResult) => void;
+} {
+  let cancels = 0;
+  const jobs: Job[] = [];
+  const keys: string[] = [];
+  const store = createPopgen2Store({
+    send: (key, job): Run<JobResult> => {
+      jobs.push(job);
+      keys.push(key);
+      return {
+        id: jobs.length,
+        outcome: new Promise<Outcome<JobResult>>(() => undefined),
+        cancel: () => {
+          if (job.analysis === "pca") cancels += 1;
+        },
+      };
+    },
+    sendWrite: () => {
+      throw new Error("popnei_web defect: no write is sent here");
+    },
+    appVersion: "0.1.0",
+  });
+  store.popneiReady("0.2.2");
+  const load = vcfLoad("a".repeat(32), "a.vcf.gz");
+  openVariantsFile(store, load);
+  store.variantsRead(load.fileId, {
+    kind: "read",
+    individuals: ["s000", "s001"],
+    ploidy: 2,
+    numVars: null,
+    keepsPassed: true,
+  });
+  const end = (index: number, result: JobResult): void => {
+    store.runEnded(index + 1, {
+      kind: "done",
+      key: keys[index] ?? "",
+      result,
+    });
+  };
+  store.startRun("variantsSummary");
+  end(0, summaryResult(["1"], [1200]));
+  // The distance typed: a step of the history, as the user makes it.
+  store.apply("the LD pruning of the PCA changed", (p) =>
+    setAnalysisOptions(p, pcaOnPopgen2, {
+      ...pcaOnPopgen2.defaults,
+      ld: { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 },
+    }),
+  );
+  return { store, jobs, keys, cancels: () => cancels, end };
+}
+
+/** The state of the PCA in the store. */
+function pcaKind(store: Store<JobResult, Blob>): string | undefined {
+  return store.getState().analyses.find((a) => a.id === "pca")?.status.kind;
+}
+
+describe("AP6 D2 the store of popgen2.html with the PCA, a fake worker and the real history", () => {
+  test("an undo of a change that removed the PCA's result gives done again, with no request to the worker", () => {
+    const { store, jobs, end } = storeWithPassDone();
+    expect(pcaKind(store)).toBe("ready");
+    store.startRun("pca");
+    end(1, pcaOf(548));
+    expect(pcaKind(store)).toBe("done");
+
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
+    );
+    expect(pcaKind(store)).toBe("ready");
+    expect(store.getState().notice).toBeNull();
+
+    store.undo();
+
+    expect(pcaKind(store)).toBe("done");
+    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
+  });
+
+  test("a PCA running when a threshold changes is stopped at once, and an undo gives ready, with no request", () => {
+    const { store, jobs, cancels } = storeWithPassDone();
+    store.startRun("pca");
+    expect(pcaKind(store)).toBe("running");
+
+    store.apply("the filter of the variants by missing data changed", (p) =>
+      setThreshold(p, { of: "variants", kind: "missing_data" }, 0.2),
+    );
+    expect(cancels()).toBe(1);
+    expect(pcaKind(store)).toBe("ready");
+
+    store.undo();
+
+    expect(pcaKind(store)).toBe("ready");
+    expect(cancels()).toBe(1);
+    expect(jobs.map((job) => job.analysis)).toEqual(["variantsSummary", "pca"]);
+  });
+});
