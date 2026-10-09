@@ -23,10 +23,10 @@
  * the focus moves to the other, which that press has just offered, since
  * the browser would otherwise drop the focus to the start of the page
  * (WCAG 2.4.3). When a button with the focus goes on popgen2.html for any
- * other reason, a command from a control that does not take the focus on
- * a click, as in Safari, or a file dropped on a box, the focus goes to
- * the `<h1>` of the page, as it does when an undo or a redo removes
- * another control that had the focus (focusKept.ts). An undo or a redo is
+ * other reason, as when a file dropped on a box while Redo has the focus
+ * starts the history afresh, the focus goes to the `<h1>` of the page,
+ * as it does when an undo or a redo removes another control that had the
+ * focus (focusKept.ts). An undo or a redo is
  * announced as undoRedo.ts says.
  *
  * The keys, Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y, and Cmd+Z and Cmd+Shift+Z on
@@ -50,7 +50,7 @@ import { useAppState, useStore } from "../store.tsx";
 import { useEndRuns, usePendingChange } from "../variants/runGate.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { useAnnouncer } from "./announcer.tsx";
-import { headingAfter, keepingFocus } from "./focusKept.ts";
+import { focusHeadingIfLeft, keepingFocus } from "./focusKept.ts";
 import {
   keysAction,
   ownerOfKeys,
@@ -97,27 +97,27 @@ export function UndoRedoButtons({
   const undoRef = useRef<HTMLButtonElement | null>(null);
   const redoRef = useRef<HTMLButtonElement | null>(null);
 
-  // The element of each button, kept for the focus; on popgen2.html, a
-  // button that leaves the page with the focus hands it to the heading,
-  // unless the press that removed it has given it to the other. React
-  // lets go of the element before it takes it off the page, so that it
-  // still has the focus then.
-  const placeUndo = useCallback(
+  // The ref of each button, which keeps its element for the focus; on
+  // popgen2.html, a button that leaves the page with the focus hands it
+  // to the heading, unless the press that removed it has given it to the
+  // other. React lets go of the element before it takes it off the page,
+  // so that it still has the focus then.
+  const refUndo = useCallback(
     (node: HTMLButtonElement | null): void => {
       const before = undoRef.current;
       undoRef.current = node;
       if (node === null && before !== null && onlyWithStep) {
-        headingAfter(before);
+        focusHeadingIfLeft(before);
       }
     },
     [onlyWithStep],
   );
-  const placeRedo = useCallback(
+  const refRedo = useCallback(
     (node: HTMLButtonElement | null): void => {
       const before = redoRef.current;
       redoRef.current = node;
       if (node === null && before !== null && onlyWithStep) {
-        headingAfter(before);
+        focusHeadingIfLeft(before);
       }
     },
     [onlyWithStep],
@@ -181,7 +181,7 @@ export function UndoRedoButtons({
   const undo = (
     <Button
       label="Undo"
-      ref={placeUndo}
+      ref={refUndo}
       isDisabled={shownUndo === null}
       hint={shownUndo === null ? null : `Undo: ${shownUndo}`}
       waiting={waits}
@@ -193,7 +193,7 @@ export function UndoRedoButtons({
   const redo = (
     <Button
       label="Redo"
-      ref={placeRedo}
+      ref={refRedo}
       isDisabled={redoText === null}
       hint={redoText === null ? null : `Redo: ${redoText}`}
       waiting={waits}

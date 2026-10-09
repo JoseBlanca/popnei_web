@@ -133,8 +133,9 @@ export function undoesAnotherField(
 }
 
 /** What the page knows of a key of Undo or Redo when it reaches the
-    window. */
-export interface KeysPlace {
+    window: whether it was taken, who the focus gives it to, and whether
+    Undo and Redo wait. */
+export interface KeyContext {
   /** Whether a part of the page took the key first: a number box with
       something typed, which put back its number. */
   readonly handled: boolean;
@@ -151,12 +152,12 @@ export interface KeysPlace {
     "take". */
 export type KeysAction = "leave" | "swallow" | "take";
 
-/** What the window's listener does with a key of Undo or Redo at
-    `place`. */
-export function keysAction(place: KeysPlace): KeysAction {
-  if (place.handled || place.owner === "text") return "leave";
+/** What the window's listener does with a key of Undo or Redo pressed
+    in `context`. */
+export function keysAction(context: KeyContext): KeysAction {
+  if (context.handled || context.owner === "text") return "leave";
   // Also in a dialog, and while they wait, where they do nothing: WebKit
   // would otherwise undo the typing of the last field edited before.
-  if (place.waits || place.owner === "dialog") return "swallow";
+  if (context.waits || context.owner === "dialog") return "swallow";
   return "take";
 }
