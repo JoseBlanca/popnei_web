@@ -138,6 +138,24 @@ another reason than an empty list is a defect, thrown.
 When it is certain that the filters keep no variant, the button gives
 way to the sentence of "When the filters keep no variant", below.
 
+**While a PCA runs**, once the one pass is finished, the button is
+disabled with the line "Waits for the PCA to end; or stop it in the PCA
+tab.", "Waits for the PCoA to end; …" under the PCoA, by the method of
+the project, which the PCA's lock keeps while it runs
+(`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"). The calculation
+worker runs one request at a time, so a write let through would wait in
+its queue behind the PCA, a calculation of up to minutes, with a bar
+that does not move and a Stop that the user would take for a stop of the
+write. When the PCA ends, fails or is stopped, the button is back. Only
+the button waits: the text after the download, with "Save it again",
+which hands the browser a file already written, and the sentences of no
+individual kept and of no variant stay, since none of them sends the
+worker anything. A write cannot meet a PCA that starts: the dialog keeps
+the page, and the PCA's Run, out of reach while the file is written.
+(Written on 9 October 2026, by task 6.2 of `docs/plans/analyses-pca.md`,
+for the PCA tab that the page gains; the design of that piece,
+`docs/designs/analyses-pca.md`, answer 5, gave the words.)
+
 ### The dialog
 
 Before the dialog opens, the button makes every change of a threshold
@@ -406,6 +424,7 @@ state `write`, the first that holds:
 |---|---|---|
 | empty | no file open: the sections of the statistics are not drawn, nor the button | open a file |
 | locked | the button disabled, with "The download waits for the statistics of the file to be read to the end." while the file is opened, while the one pass runs, and after its Stop; with "The download needs the statistics of the file, which could not be calculated." after a failure; or, in place of the button, the words of `keptNoneReason`, or the sentence of no variant when it is certain | Start again in the box of the file, after a Stop or a crash; change the thresholds |
+| waiting for the PCA | once the one pass is finished, while a PCA runs, the button disabled with "Waits for the PCA to end; or stop it in the PCA tab."; the text after the download and the sentences in place of the button stay as they were | wait, or Stop the PCA in the PCA tab |
 | ready | the button | open the dialog; choose the format; Download or Cancel |
 | running | the dialog with the words of the write, the bar and Stop; the rest of the page out of reach | Stop |
 | done | the text after the download, with the focus on it, in place of the button, the store's `saved`; or, after a write of no variant, the sentence of no variant in its place, `noVariant`; or, the store's `done` when the file was not handed to the browser, a defect of the download or a Cancel of a Save click, the same text with "written" and Save | Save it again, or Save; change a filter or open another file, which brings the button back |
@@ -438,7 +457,9 @@ individuals and their counts; the project, for `writtenName`,
 `filtersApplied` and the variants file's name and individuals; and
 `noVariantForCertain` over the project, the one pass's finished
 result, `done`, never a result so far nor that of a stopped pass, and
-the individuals kept. The format chosen in the dialog is the page's own,
+the individuals kept; and whether the PCA is `running`, with the method
+of the project, for its wait (`downloadPlace`'s last argument, from
+`runningPcaOf` of `src/ui/variants/downloadState.ts`). The format chosen in the dialog is the page's own,
 for as long as the page is open, and the one value the screen holds;
 everything else is the store's.
 
@@ -455,6 +476,7 @@ store works out the individuals kept from the finished one pass
 | the button | "Download filtered variants…" |
 | beside it, disabled, while the file is opened, the one pass runs or after its Stop | "The download waits for the statistics of the file to be read to the end." |
 | beside it, disabled, after a failure of the opening or of the one pass | "The download needs the statistics of the file, which could not be calculated." |
+| beside it, disabled, while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab."; under the PCoA, "Waits for the PCoA to end; or stop it in the PCA tab." |
 | in its place, the filters of the individuals keep none | "The filters of individuals keep none of the 200 individuals of panel.nei. Loosen them."; with one individual, "The filters of individuals do not keep the one individual of one.vcf. Loosen them." |
 | in its place, no variant kept, before or after the write | "None of the 1,200 variants of low_qual.vcf.gz pass the filters, so there is nothing to download." |
 | the heading of the dialog | "Download filtered variants" |
@@ -536,7 +558,9 @@ the counts of a pass and of `individualsKept`, each filter left out
 when it removed none, each line left out when no filter of its kind
 removed any, the singular; the choice of what takes the place of the
 button in each state of the table above, from a store made with a fake
-worker; that the end of a write with a file calls `downloadFile` once
+worker, the PCA running among them: the button waiting with its words
+under the PCA and the PCoA, the text after the download and the
+sentences kept, and the button back when the PCA ends; that the end of a write with a file calls `downloadFile` once
 and then `writeSaved`, and that a write of no variant calls neither;
 that Save it again calls `downloadFile` with the file of the state
 `saved`; that Escape does not close the dialog while it writes, at the
@@ -608,6 +632,10 @@ column, as the old page's flow of the write does:
   Download writes again;
 - while the dialog is open, a file dropped on the page or pasted opens
   nothing;
+- the button disabled with "Waits for the PCA to end; or stop it in the
+  PCA tab." while a PCA is held running, and enabled once it is stopped;
+  this flow is in `e2e/popgen2Pca.spec.ts` of the plan
+  `docs/plans/analyses-pca.md` (work package 6), which can start a PCA;
 - the dialog, the button with its reason, and the text after the
   download, checked with axe (`e2e/axe.ts`), in light and in dark.
 
