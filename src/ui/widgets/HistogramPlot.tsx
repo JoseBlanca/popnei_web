@@ -54,16 +54,22 @@ export function HistogramPlot({
     data,
     onFrame === undefined ? {} : { onFrame },
   );
-  const plot = <div ref={ref} className={classOf(styles, shape)} />;
-  if (download === undefined) return plot;
+  // The element of the plot is the same with a download and without, so
+  // that one given or taken away after the first draw leaves the plot in
+  // the element shown: the menu is a line of its own before it, and
+  // nothing wraps the two.
   return (
-    <div className={classOf(styles, "withDownload")}>
-      <DownloadMenu
-        what={download.what}
-        items={plotItems(download, handle)}
-        waiting={download.waiting}
-      />
-      {plot}
-    </div>
+    <>
+      {download !== undefined && (
+        <div className={classOf(styles, "menuLine")}>
+          <DownloadMenu
+            what={download.what}
+            items={plotItems(download, handle)}
+            waiting={download.waiting}
+          />
+        </div>
+      )}
+      <div ref={ref} className={classOf(styles, shape)} />
+    </>
   );
 }

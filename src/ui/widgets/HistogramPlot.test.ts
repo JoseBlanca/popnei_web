@@ -40,15 +40,25 @@ const pngScales: number[] = [];
 /** How many plots the stand-in has made and destroyed. */
 const plots = { made: 0, destroyed: 0 };
 
+/** Each plot the stand-in made: the element it was made in, whether it
+    was destroyed, and how many times its SVG was asked for. */
+const made: { element: HTMLElement; destroyed: boolean; svgs: number }[] = [];
+
 vi.mock("../../charts/histogram.ts", () => ({
-  createHistogram: () => {
+  createHistogram: (element: HTMLElement) => {
     plots.made += 1;
+    const plot = { element, destroyed: false, svgs: 0 };
+    made.push(plot);
     return {
       update: () => undefined,
       destroy: () => {
         plots.destroyed += 1;
+        plot.destroyed = true;
       },
-      toSVG: () => SVG_TEXT,
+      toSVG: () => {
+        plot.svgs += 1;
+        return SVG_TEXT;
+      },
       toPNG: (scale: number) => {
         pngScales.push(scale);
         return Promise.resolve(PNG);
@@ -97,6 +107,7 @@ beforeEach(() => {
   pngScales.length = 0;
   plots.made = 0;
   plots.destroyed = 0;
+  made.length = 0;
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -211,6 +222,29 @@ describe("AP5 D3 the download of a histogram, from the handle usePlot gives", ()
     expect(container.children).toHaveLength(1);
     expect(container.firstElementChild?.children).toHaveLength(0);
     expect(plots.made - plots.destroyed).toBe(1);
+  });
+
+  test("a download given after the first draw leaves the plot in its own element, in the page, and the menu saves its image", async () => {
+    draw(null);
+    draw(DOWNLOAD);
+    const alive = made.filter((plot) => !plot.destroyed);
+    expect(alive).toHaveLength(1);
+    const plot = alive[0];
+    if (plot === undefined) throw new Error("no plot");
+    expect(container.contains(plot.element)).toBe(true);
+    expect(plot.element.childElementCount).toBe(0);
+    expect(plot.element.querySelector("button")).toBeNull();
+    await choose("Image as SVG");
+    expect(plot.svgs).toBe(1);
+  });
+
+  test("a download taken away after the first draw leaves the plot in the element shown", () => {
+    draw(DOWNLOAD);
+    draw(null);
+    const alive = made.filter((plot) => !plot.destroyed);
+    expect(alive).toHaveLength(1);
+    expect(alive[0]?.element).toBe(container.firstElementChild);
+    expect(container.querySelector("button")).toBeNull();
   });
 
   test("the plot is destroyed when the histogram leaves the page", () => {

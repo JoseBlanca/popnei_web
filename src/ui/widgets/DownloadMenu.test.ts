@@ -315,6 +315,32 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(savedText().text).toBe("Populations,Distance\np1 - p2,-0.011283\n");
   });
 
+  test.each([
+    ["given", false, true],
+    ["taken away", true, false],
+  ])(
+    "a sortable table whose download is %s after the first draw keeps the element of its grid",
+    (_change, before, after) => {
+      const element = (withDownload: boolean): React.ReactElement =>
+        createElement(SortableTable<Id>, {
+          label: "The individuals",
+          columns: SORTABLE_COLUMNS,
+          rows: SORTED_ROWS,
+          sort: null,
+          onSortChange: () => undefined,
+          ...(withDownload && {
+            download: { what: "the table", fileName: "x.table.csv" },
+          }),
+        });
+      draw(element(before));
+      const grid = container.querySelector('[role="grid"]');
+      expect(grid).not.toBeNull();
+      draw(element(after));
+      expect(container.querySelector('[role="grid"]')).toBe(grid);
+      expect(container.querySelector("button") !== null).toBe(after);
+    },
+  );
+
   test("a sortable table given a download and a row with no values is a defect", () => {
     const error = drawThrown(
       createElement(SortableTable<Id>, {

@@ -134,24 +134,31 @@ export function SortableTable<Id extends string>({
       element.removeAttribute("aria-busy");
     }
   }, [busy]);
-  const table = <SortableGrid {...props} grid={grid} />;
-  if (download === undefined) return table;
-  const values = valuesOf(props.rows, props.columns.length);
+  const values =
+    download === undefined ? null : valuesOf(props.rows, props.columns.length);
+  // The grid is the same element with a download and without, so that
+  // one given or taken away after the first draw keeps its scroll and its
+  // focus: the menu is a line of its own before it, and nothing wraps the
+  // two.
   return (
-    <div className={classOf(styles, "withDownload")}>
-      <DownloadMenu
-        what={download.what}
-        items={[
-          tableItem(
-            download.fileName,
-            props.columns.map((column) => column.label),
-            () => values,
-          ),
-        ]}
-        waiting={null}
-      />
-      {table}
-    </div>
+    <>
+      {download !== undefined && values !== null && (
+        <div className={classOf(styles, "menuLine")}>
+          <DownloadMenu
+            what={download.what}
+            items={[
+              tableItem(
+                download.fileName,
+                props.columns.map((column) => column.label),
+                () => values,
+              ),
+            ]}
+            waiting={null}
+          />
+        </div>
+      )}
+      <SortableGrid {...props} grid={grid} />
+    </>
   );
 }
 
