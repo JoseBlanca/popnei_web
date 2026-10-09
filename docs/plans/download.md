@@ -895,3 +895,39 @@ button's place under the focus may be heard twice, once from the status
 region and once from the focus, left to the owner's VoiceOver. Vitest
 4,444; the flows of the download 32, the other flows of `popgen2.html`
 178, the old page's write 130, in Chromium and WebKit; screens 180.
+
+### Work package 8, 9 October 2026
+
+80c66fc (the measurements `DL8`), c7c5731 (Chromium with a profile of
+its own; the `.nei` file of 19,161,818 bytes with popnei 0.2.2),
+a1ce4e2 (parts of 16 MiB; "What was measured" of 9 October in
+`writeVariants.md`; `runner.md`). The `.nei` files written, with what
+the engine's processes held above the page before Download:
+
+| file (bytes) | Chromium, Playwright's own context | Chromium, a profile of its own | WebKit |
+|---|---|---|---|
+| 2,004,062,114 | saved, 27.3 s, peak 2.15 GB | not run | saved, 27.1 s, peak 2.17 GB |
+| 4,008,131,338 | failed twice, 57 s | saved, 55.6 s, peak 2.21 GB | saved, 54.5 s, peak 4.16 GB |
+| 8,005,214,850 | failed twice, 111 s | saved, 109 s, peak 2.26 GB | saved, 109 s, peak 8.20 GB, footer broken |
+
+No size under 2 GB failed, so no stop. The saved bytes are the `Blob`'s
+in every case saved; no tab closed. Playwright's context is like a
+private window, where Chromium refused the files of 4 and 8 GB with the
+page's words of a write that stopped; an ordinary window saved them.
+
+- D2: the peak at 2 GB was 1.07 times the file in Chromium and 1.08 in
+  WebKit, under 1.5: no copy of the parts; task 8.2 not needed.
+- D3: the restart gives back about 120 MB in Chromium and under 45 MB
+  in WebKit; both under 50 MB is the rule, so the restart stays; task
+  8.3 not needed.
+- D4: median times at 2 GB with parts of 16, 64 and 256 MiB, Chromium
+  27,915, 27,855 and 28,339 ms, WebKit 27,274, 27,111 and 27,385 ms;
+  the smallest within 2% of the best is 16 MiB, now the value.
+
+Found: the `.nei` file of 8 GB saved by WebKit holds its 7,270,000
+variants when read as a stream, but pyarrow fails by its footer at
+batch 782 of 1,454, the first that starts past 4 GiB. Suspected cause
+in popnei's writer of the vars file under wasm32; the session has it
+reproduced under node before an issue of popnei is drafted. A VCF has
+no footer. The VCF of 2 GB for the owner's try in Firefox is in the
+session's scratchpad, `big/dl8_1820000.vcf.gz`, 1,161,482,233 bytes.
