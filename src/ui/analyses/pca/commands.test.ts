@@ -27,10 +27,11 @@ import {
   stricterCommand,
   viewCommand,
 } from "./commands.ts";
-import type { CommandPage } from "./commands.ts";
+import type { Popgen2CommandPage } from "./commands.ts";
+import { POPGEN2_DESCRIPTIONS } from "./words.ts";
 
 /** popgen2.html with the method `method` in its project. */
-function popgen2(method: PcaMethod): CommandPage {
+function popgen2(method: PcaMethod): Popgen2CommandPage {
   return { page: "popgen2", method };
 }
 
@@ -182,5 +183,29 @@ describe("AP2 D3 the commands of the PCA on popgen2.html", () => {
     expect(
       pcaOptions(methodCommand("pcoa", page).command(p), "popgen2").method,
     ).toBe("pcoa");
+  });
+
+  test("the calls the screen spec's 'Its filters' has no step for are refused by the compiler", () => {
+    // A missing data or a MAF filter of popgen2.html is set for the PCA
+    // by stricterCommand alone; followCommand with follow false would
+    // bring back a value typed long before as "made stricter".
+    expect(() =>
+      // @ts-expect-error -- popgen2.html makes the missing data stricter by stricterCommand
+      followCommand("missing_data", false, popgen2("pca")),
+    ).toThrow(/^popnei_web defect: /u);
+    expect(() =>
+      // @ts-expect-error -- popgen2.html makes the MAF stricter by stricterCommand
+      followCommand("maf", false, popgen2("pcoa")),
+    ).toThrow(/^popnei_web defect: /u);
+    // The lines are never called.
+    const refused = [
+      (): unknown =>
+        // @ts-expect-error -- the old page has no stricterCommand
+        stricterCommand("maf", 0.9, "popgen"),
+      (): unknown =>
+        // @ts-expect-error -- the LD pruning is turned on, never made stricter
+        POPGEN2_DESCRIPTIONS.stricter("ld", "pca"),
+    ];
+    expect(refused).toHaveLength(2);
   });
 });

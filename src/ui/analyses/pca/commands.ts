@@ -62,8 +62,14 @@ function optionsJson(o: PcaOptions): JsonObject {
  * options with it, since a description is made before the command meets
  * the project.
  */
-export type CommandPage =
-  "popgen" | { readonly page: "popgen2"; readonly method: PcaMethod };
+export type CommandPage = "popgen" | Popgen2CommandPage;
+
+/** popgen2.html with the method of its project, the page of
+    `stricterCommand`. */
+export interface Popgen2CommandPage {
+  readonly page: "popgen2";
+  readonly method: PcaMethod;
+}
 
 /** The page of the options of `page`. */
 function pageOf(page: CommandPage): PcaPage {
@@ -119,23 +125,43 @@ export function methodCommand(
 
 /**
  * The filter of `kind` set for the analysis alone, `follow` false, with
- * the values it keeps; or set back to that of the Variants step, `follow`
- * true, the values kept for the next time. On popgen2.html, the LD
- * pruning turned on or off; a missing data or a MAF filter is made
- * stricter there by `stricterCommand`, whose description this gives.
+ * the values it keeps; or set back to that of the Variants step on the
+ * old page, of the Variants tab on popgen2.html, `follow` true, the
+ * values kept for the next time. On popgen2.html, the LD pruning turned
+ * on or off, and a missing data or a MAF filter set back to as in the
+ * Variants tab; such a filter is made stricter there by
+ * `stricterCommand` alone, with its value, and the compiler refuses it
+ * here with `follow` false, which would bring back a value typed long
+ * before (docs/specs/steps/popgen2-pca.md, "Its filters").
  */
+export function followCommand(
+  kind: OwnFilterKind,
+  follow: boolean,
+  page: "popgen",
+): OptionCommand;
+export function followCommand(
+  kind: "ld",
+  follow: boolean,
+  page: CommandPage,
+): OptionCommand;
+export function followCommand(
+  kind: "missing_data" | "maf",
+  follow: true,
+  page: CommandPage,
+): OptionCommand;
 export function followCommand(
   kind: OwnFilterKind,
   follow: boolean,
   page: CommandPage,
 ): OptionCommand {
   const old = follow ? setBackDescription(kind) : setOwnDescription(kind);
-  const ofPopgen2 = (method: PcaMethod): string =>
-    follow
-      ? POPGEN2_DESCRIPTIONS.setBack(kind, method)
-      : kind === "ld"
-        ? POPGEN2_DESCRIPTIONS.turnedOn(method)
-        : POPGEN2_DESCRIPTIONS.stricter(kind, method);
+  const ofPopgen2 = (method: PcaMethod): string => {
+    if (follow) return POPGEN2_DESCRIPTIONS.setBack(kind, method);
+    if (kind === "ld") return POPGEN2_DESCRIPTIONS.turnedOn(method);
+    throw new Error(
+      `popnei_web defect: the ${kind} filter of the PCA of popgen2.html was set for it alone with no value; stricterCommand sets it.`,
+    );
+  };
   return withOptions(page, old, ofPopgen2, (o) => {
     switch (kind) {
       case "missing_data":
@@ -192,14 +218,15 @@ export function ownValueCommand(
 export function stricterCommand(
   kind: "missing_data" | "maf",
   value: number,
-  page: CommandPage,
+  page: Popgen2CommandPage,
 ): OptionCommand {
-  const ofPopgen2 = (method: PcaMethod): string =>
-    POPGEN2_DESCRIPTIONS.stricter(kind, method);
-  return withOptions(page, setOwnDescription(kind), ofPopgen2, (o) =>
-    kind === "missing_data"
-      ? { ...o, missingData: { follow: false, maxAllowedMissingRate: value } }
-      : { ...o, maf: { follow: false, maxAllowedMaf: value } },
+  return optionCommand(
+    PCA_OPTIONS.popgen2,
+    POPGEN2_DESCRIPTIONS.stricter(kind, page.method),
+    (o) =>
+      kind === "missing_data"
+        ? { ...o, missingData: { follow: false, maxAllowedMissingRate: value } }
+        : { ...o, maf: { follow: false, maxAllowedMaf: value } },
   );
 }
 

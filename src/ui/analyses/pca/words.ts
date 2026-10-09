@@ -158,7 +158,7 @@ const FILTER_NAMES_2: Readonly<Record<OwnFilterKind, string>> = Object.freeze({
 export const POPGEN2_DESCRIPTIONS = Object.freeze({
   method: (method: PcaMethod): string =>
     `the method of the ${methodName(method)} changed`,
-  stricter: (kind: OwnFilterKind, method: PcaMethod): string =>
+  stricter: (kind: "missing_data" | "maf", method: PcaMethod): string =>
     `${FILTER_NAMES_2[kind]} of the ${methodName(method)} was made stricter`,
   setBack: (kind: OwnFilterKind, method: PcaMethod): string =>
     kind === "ld"
