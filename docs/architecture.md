@@ -85,11 +85,13 @@ it only through messages.
   seconds or minutes there does not freeze the page.
 - **The light worker** does the jobs that read no genotype: reading the
   individuals file, writing an xlsx, zipping the report. It holds no
-  popnei. It reads a CSV or a TSV with a reader of ours in TypeScript, and
-  an xlsx, or writes one and the zip, with the files wasm, a second wasm
-  module, the package of xlsx_rs, a project of its own that popnei_web
-  installs from a release as it installs popnei, which the worker loads
-  the first time it needs it (section 6, `docs/technology.md`). It exists
+  popnei. It reads a CSV, a TSV or an xlsx, and later writes an xlsx and
+  the zip, with the files wasm, a second wasm module, the package of
+  table_io, a project of its own that popnei_web installs from a release
+  as it installs popnei, which the worker loads the first time it needs
+  it (section 6, `docs/technology.md`); until 9 October 2026 it read a CSV
+  or a TSV with a reader of ours in TypeScript and an xlsx with the
+  package of xlsx_rs. It exists
   so that these jobs of a second do not wait behind a GWAS of minutes
   (section 5).
 
@@ -192,7 +194,11 @@ day:
   has none under way (section 6, "Who asks for a read"). From 5 October
   2026 the entry of `popgen2.html` also starts by itself the summary of
   the variants file once the file is read, whose one pass gives, from 6
-  October 2026, the statistics of the open file too (section 5).
+  October 2026, the statistics of the open file too (section 5). From 9
+  October 2026 it also sends by itself one command, `setGrouping`, the
+  column of the populations it chooses, at each read of the individuals
+  file recorded as a table whose grouping names none of its columns
+  (section 6, "Who asks for a read").
 - A change of the load of the variant file stops every request in flight
   at once, and its notice says they were stopped (section 5).
 - The notice offers the reverse of what caused it: Undo after a command
@@ -1831,7 +1837,9 @@ core and the reader describe it in one way.
 - **The inference of the types of the columns** is in the same module. It
   takes the cells of a CSV, all text, or the cells of an xlsx, as the
   files wasm gives them, numbers, text, booleans or empty, so that the
-  same table gives the same types in both formats. The types are kept in
+  same table gives the same types in both formats; from 9 October 2026
+  the cells of both as table_io types them (below, "What was revised on
+  9 October 2026"). The types are kept in
   the project, where the user can change them (`docs/functionality.md`,
   section 4).
 - **The module is pure**: it takes text or cells and gives a `Result` of
@@ -1848,7 +1856,8 @@ core and the reader describe it in one way.
   screen names the missing ones (`docs/functionality.md`, section 4). The
   reader does not check it, since it does not know the variants.
 
-With a CSV, the light worker loads no wasm at all.
+With a CSV, the light worker loaded no wasm at all until 9 October 2026;
+it now loads table_io's for every file.
 
 What was revised on 9 October 2026, from `docs/designs/input-page.md`,
 approved by the owner that day. On `popgen2.html` the bullet
@@ -1858,7 +1867,15 @@ is not in the individuals file is unclassified, as is one whose cell in
 the column of the populations is empty, and every individual is
 without a file. That page counts the individuals of each population in
 core, from the project and the individuals kept, and calls no
-`individualsNeeds`, which `popgen.html` keeps with its rule. The page
+`individualsNeeds`, which `popgen.html` keeps with its rule. The
+unclassified are one population only when no individual is classified;
+otherwise the analyses per population leave them out. The entry of the
+page chooses the column of the populations when a file is read, the
+first column of text with 1 to 20 different values, by a command,
+`setGrouping`, which is a step of the history; "None" is the grouping
+`{ kind: "populations", column: null }`. The reader of the bullets above
+is table_io's package, for both pages ("The files wasm", its paragraph of
+9 October 2026). The page
 shows the two files in a box each and in two tabs, "Variants file" and
 "Individuals file", both kept drawn and the one not chosen hidden, so
 that a turn to the other tab loses nothing (section 7, "a tab that is
@@ -1907,6 +1924,19 @@ for any more.
 A source whose `File` the page does not hold, which a project file could
 name, cannot be read; what the project file writes of a pending read is
 decided with it, in stage 2 (`docs/specs/core/project.md`, "The cases").
+
+What was revised on 9 October 2026, from `docs/designs/input-page.md`,
+approved by the owner that day: on `popgen2.html` the entry also watches
+the reads it asked for come back. At each read of the individuals file
+that the store records as a table, once, when the grouping names none of
+its columns, it sends the command `setGrouping` with the column it
+chooses, the first column of text with 1 to 20 different values, or
+sends nothing when there is none. It is a step of the history, as any
+command; the store's record of the read is not, and does not choose the
+column itself, since it writes the table into the projects of the history
+that hold the file and is shared with `popgen.html`. The light worker it
+asks may be ended after a read of a large file, for the memory table_io's
+package keeps, and started again at the next read.
 
 ### The regions of a BED file
 

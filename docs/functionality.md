@@ -406,7 +406,10 @@ and its encoding varies with the version. So:
   package the applications install as they install popnei's
   (`docs/architecture.md`, section 6; `docs/technology.md`).
 - CSV and TSV are read by the applications, in TypeScript, and a BOM at
-  the start of the file is removed.
+  the start of the file is removed. From 9 October 2026 every format is
+  read by table_io, xlsx_rs renamed, by the same rules, and the format
+  is found from the first bytes of the file, not from its name
+  (`docs/designs/input-page.md`).
 - Their encoding, their separator and their decimal mark are detected,
   and the user can set each one when the detection is wrong, as the owner
   decided on 24 September 2026. The encoding is UTF-8 when the file

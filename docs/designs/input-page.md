@@ -50,7 +50,7 @@ screen, and the module specs it names there.
 - A column of more than 20 different values gets no table of counts,
   only a warning that it is unlikely to be the column of the populations.
 - table_io reads the individuals file, a CSV, a TSV or an xlsx, on both
-  pages, since both use the same reader. It adds 0.33 MB, downloaded the
+  pages, since both use the same reader. It adds 0.34 MB, downloaded the
   first time any individuals file is read, a CSV included; the reader of
   CSV in TypeScript, about 2,900 lines with its tests, goes, and xlsx_rs
   leaves `package.json`.
@@ -411,8 +411,12 @@ release `js-v0.2.0-dev.1` under node on 9 October 2026:
   populations, would get no column, and a user whose collection is two
   populations, wild and cultivated, would see every individual
   unclassified until they chose.
-- **table_io's type text: taken.** The first column after the names that
-  table_io reads as text and that holds at least one value. It gives
+- **table_io's type text, with at most 20 values: taken.** The first
+  column after the names that table_io reads as text and that holds from
+  1 to 20 different values, missing ones left out, 20 being the bound
+  above which the box counts no populations (answer 5). The bound skips a
+  second column of names, the accessions beside the names of the
+  samples, which many metadata files have. It gives
   `popcat` for `panel_pops.csv`, `panel_pops.txt` and `panel_meta.csv`,
   whose second column, `altitude`, is integer; `popsplit` for
   `panel_split.csv`; `pop`, two populations, for `ld_pops.csv`; and
@@ -425,33 +429,41 @@ What the rule misses, and what the page shows then:
 
 - populations numbered `1`, `2`, `3` are an integer column and are not
   chosen; when no column is text, the list stays on "None" and the box
-  says "No column of panel_pops.csv holds text, so none was chosen as
-  the column of the populations. If a column numbers the populations,
-  choose it in the list.";
+  says "No column of panel_pops.csv holds text with 20 different values
+  or fewer, so none was chosen as the column of the populations. Choose
+  it in the list.";
 - a column of text before the populations, `sex` with `M` and `F`, is
   chosen in their place, and the counts show two populations named `M`
   and `F`;
-- a column of the names of the accessions, one value per row, is
-  chosen, and the warning of more than 20 values says so.
+- a column of text of fewer than 21 values that is not the populations,
+  a locality of 12 values before the populations, is chosen in their
+  place.
 
 Each of these is seen in the box at once, and mended with the list.
 
 The page knows the type from the table in the project, without asking
 table_io again: a column is text when one of its cells is a text, since
 the light worker makes every value of an integer, float or boolean
-column a number or a boolean (below, "What the switch to table_io
-changes"). The choice is a pure function of core, beside the counts in
+column a number or a boolean, but for an integer column with a value
+beyond 2^53, which it keeps as texts (below, "What the switch to table_io
+changes"); such a column, of identifiers, has more than 20 values as a
+rule. The choice is a pure function of core, beside the counts in
 `src/core/populations.ts`.
 
 It is made by the entry of the page, as a command, `setGrouping`, at each
 read of the individuals file that the store records as a table, when the
-grouping names no column of that table. So a file opened first gets its
+grouping names no column of that table. "None" in the list is the
+grouping of the populations with no column, `{ kind: "populations",
+column: null }`, the grouping a project starts with; the one population
+of the old page, `onePopulation`, is not offered here. So a file opened first gets its
 column; another file opened with a column of the name already chosen
 keeps it, as on the old page; and a column the user chose is never
 replaced, since the entry acts once on each read, when it is recorded,
 and not at every change of the project. A user who chooses "None" keeps
 it until the file is read again, by another file or other options of a
-CSV. It cannot be made by core when the read is recorded: that writing
+CSV, when the page chooses a column again: the entry cannot tell a
+"None" the user chose from one no column gave, without keeping a state
+of its own. It cannot be made by core when the read is recorded: that writing
 puts the table, and nothing else, into the current project and the
 projects of the history that hold the file (`recordShared` of
 `src/core/store.ts`), so a column chosen there would be lost from the
@@ -727,10 +739,19 @@ is retired, which nothing asks.
   a missing one `null`, as an xlsx gives them today. A CSV then gives
   numbers where the reader of today gives text: `007` becomes 7 and
   `1,75` the number 1.75. The names of the individuals stay text as
-  written. An integer beyond 2^53 becomes the nearest number, as
-  table_io's own `convertColumn` makes it a float. Within a column of
-  numbers, `1` and `1,0` are one value, and so are `01` and `1`, where
-  today they are two texts.
+  written. An integer column with a value beyond 2^53, which a number of
+  JavaScript cannot hold exactly, is kept whole as texts, each the whole
+  number as table_io read it, so that two identifiers that differ in
+  their last digit stay two. Within a column of numbers, `1` and `1,0`
+  are one value, and so are `01` and `1`, where today they are two
+  texts.
+- **The names of the populations**, and the cells the table under the
+  tab shows, are the text of the cell as the file writes it as nearly as
+  the table holds it: a number written with the decimal mark of the
+  read, `1,75` for a file read with the comma, where `populationsOf`
+  writes it today with `String`, `1.75`; a boolean `true` or `false`.
+  So a population of a column of decimals is named on the old page as
+  it is today, and the box and the table under the tab agree.
 - **The types** the project keeps, identifier, binary, continuous and
   categorical, are inferred as today, by `inferColumnTypes`, from that
   table; the project, its file and the old page's screens of the types do
@@ -738,10 +759,16 @@ is retired, which nothing asks.
 - **The refusals.** A CSV named `.xlsx`, refused today as "not an Excel
   workbook", is read. A zip that holds no workbook is a refusal of its
   own. The refusal of a reader not downloaded is of every file, not only
-  of an xlsx, and its words say so. A refusal that names a row or a
-  column names it as Excel does for an xlsx and as an editor does for a
-  text file, from the format table_io found, and not from the name of
-  the file.
+  of an xlsx, and its words say so. Every failed read carries the format
+  table_io found, text or xlsx, or none when the file was refused before
+  table_io saw it; a refusal that names a row or a column names it as
+  Excel does for an xlsx and as an editor does for a text file, and the
+  options of a CSV are shown beside a refusal of a text file alone, all
+  from that format and not from the name of the file. The words that
+  speak of the name, "although its name ends in .xlsx", lose it, since
+  an `.xls` named `.csv` reaches them too. `popgen2.html` turns no file
+  away by its name: table_io says what each is. The old page keeps its
+  check of the name before the read (`src/ui/steps/individuals/words.ts`).
 - **The old page.** Every file it loads carries the options of a CSV,
   since the format is found from the bytes; its Individuals step shows
   those options for a file read as text, and the line of the first sheet
@@ -800,9 +827,9 @@ What changes:
   the light worker and the page keeps its shape, the read of
   `src/worker/messages.ts` with the table, the types and what was found;
   the union of the refusals, `IndividualsFileError`, loses `notXlsx`,
-  gains `notWorkbook`, renames `xlsxReaderNotLoaded` to
-  `readerNotLoaded`, and gives `emptyIndividual` and `unnamedColumn` the
-  format they were found in. A failed read is never saved in a project
+  gains `notWorkbook`, and renames `xlsxReaderNotLoaded` to
+  `readerNotLoaded`; and a failed read carries the format table_io found,
+  or none. A failed read is never saved in a project
   file (`docs/specs/core/projectFile.md`), so the format of that file
   does not change.
 - **The project's options of a CSV**, `csv` of `IndividualsSource`, are
@@ -884,9 +911,13 @@ What changes:
   the memory of a wasm never shrinks, so the light worker keeps it until
   the page closes or the worker is started again. The plan of the piece
   measures the memory of the light worker and of the page with such a
-  file in Chromium and WebKit; a light worker that keeps hundreds of MB
-  after a read would be ended after each read of a large file, a change
-  of the client. A common file, 5,000 rows of 20 columns, is a hundred
+  file in Chromium and WebKit. Decided now, so that the measurement
+  only sets a number: the light worker is ended, and started again at
+  the next read, after each read of a file larger than a size the plan
+  sets from the measurement, 2 MB until then. It loses nothing, since the
+  table is in the project, and costs the next read the compiling of the
+  package again from the browser's cache, not measured. It is a change of
+  the client of the light worker, not of its messages. A common file, 5,000 rows of 20 columns, is a hundred
   thousand cells. The counts keep one list of names per population,
   which the store keeps once for each table and column. Nothing grows
   with the variants.
@@ -933,10 +964,14 @@ What changes:
   them without a file, by the owner's decision of 9 October 2026, and how
   the analyses per population will treat them, answer 3.
 - `docs/architecture.md`, section 6, "The individuals file": a paragraph
-  at its end, "What was revised on 9 October 2026", with the same and
-  the two tabs; and, at the end of "The files wasm, the package of
-  xlsx_rs", the switch to table_io; and the opening of the document, one
-  sentence.
+  at its end, "What was revised on 9 October 2026", with the same, the
+  rule of answer 3, the column chosen and the two tabs; at the end of
+  "Who asks for a read", the command the entry sends; at the end of "The
+  files wasm, the package of xlsx_rs", the switch to table_io; the light
+  worker of section 1 and the list of what the entry does by itself; and
+  the opening of the document, one sentence.
+- `docs/functionality.md`, section 4, "The format": that table_io reads
+  every format, found from the bytes.
 - `docs/technology.md`, section 2, the rows of the reader of xlsx and of
   the CSV in the table of the choices, and a paragraph "What was revised
   on 9 October 2026" at the end of "xlsx and zip in Rust, in xlsx_rs".
