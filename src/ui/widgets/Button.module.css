@@ -1,6 +1,11 @@
 /* The tokens are those of src/ui/tokens.css. */
 
 .button {
+  /* A word longer than the room, the name of a file with no space in
+     "Remove …", breaks inside the button rather than run out of it, on a
+     page 320 pixels wide (WCAG 1.4.10). */
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   min-block-size: var(--target-min);
   padding-block: var(--space-1);
   padding-inline: var(--space-3);

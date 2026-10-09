@@ -3,6 +3,9 @@
 /* One column, as wide as a line that can be read. */
 .page {
   display: grid;
+  /* A word longer than the page, a name of a file with no space, wraps
+     rather than widen the column past the window (WCAG 1.4.10). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
   max-inline-size: 48rem;
   padding: var(--space-4);
@@ -17,6 +20,7 @@
    page less its margins, at 320 pixels included. */
 .boxes {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -35,6 +39,7 @@
    dashed. */
 .box {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: var(--space-3);
   min-inline-size: 0;

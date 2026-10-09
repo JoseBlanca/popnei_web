@@ -45,8 +45,13 @@
   cursor: default;
 }
 
+/* Each cell fills the box the Virtualizer gives it, as high as the
+   tallest cell of its row, so that an empty cell, a missing value of the
+   individuals file, has its line where its row's other cells have
+   theirs. */
 .cell {
   display: flex;
+  block-size: 100%;
   align-items: center;
   padding-block: var(--space-1);
   padding-inline: var(--space-3);

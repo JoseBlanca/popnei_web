@@ -19,10 +19,26 @@ import type { TableSort } from "../widgets/tableSort.ts";
     columns of a file may share a name. */
 export type TableColumnId = `c${number}`;
 
-/** The narrowest a column may be, in CSS pixels: a name of a few
-    characters in bold, with its padding and the arrow of the sort; past
-    the width of the box, it scrolls sideways. */
+/** The narrowest a column may be, in CSS pixels, whatever its name;
+    past the width of the box, it scrolls sideways. */
 const MIN_WIDTH = 96;
+
+/** The width of a character of a header in bold, at most, and the room of
+    the padding and the arrow of the sort beside its words, in CSS pixels:
+    "Individuo" and "Población" of individuals_10000.xlsx broke inside the
+    word at 96 pixels on a page 320 pixels wide in Chromium 153. */
+const HEADER_CHARACTER = 10;
+const HEADER_ROOM = 40;
+
+/** The narrowest the column named `label` may be: its longest word in
+    bold whole, with the padding and the arrow. */
+function minWidthOf(label: string): number {
+  const longest = Math.max(
+    0,
+    ...label.split(/\s+/u).map((word) => Array.from(word).length),
+  );
+  return Math.max(MIN_WIDTH, HEADER_ROOM + HEADER_CHARACTER * longest);
+}
 
 /** The id of the column at `index`. */
 function columnId(index: number): TableColumnId {
@@ -42,7 +58,7 @@ export function individualsTableColumns(
     label,
     isRowHeader: index === 0,
     isNumeric: index > 0 && isNumbers(rows, index),
-    minWidth: MIN_WIDTH,
+    minWidth: minWidthOf(label),
   }));
 }
 
