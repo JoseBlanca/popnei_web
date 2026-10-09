@@ -580,8 +580,9 @@ for question 3, whatever its answer: below.
   project file: if question 1 gives its own filters another meaning
   than the old page's, a file saved by one page would mean other
   filters on the other. Today the page saves nothing.
-- **"Unclassified" in the legend and in the CSV of the coordinates**,
-  once users have files with it.
+- **"Unclassified" in the legend and in the table of the
+  individuals**, once users have pictures and notes with it; the CSV of
+  the coordinates, by question 4, holds no population.
 
 ## The costs of the web
 
