@@ -586,6 +586,12 @@ test.describe("PA8 D2 the LD decay on the screen", () => {
     page,
     makeAxeBuilder,
   }) => {
+    // Three times the 30 seconds: axe's check of the table of 851 rows
+    // took 21 seconds in WebKit on GitHub's runner on 9 October 2026
+    // (run 37897260261), against 7 seconds for the rest of the test. The
+    // time is axe's over the cells, not the page's, which drew the table
+    // in half a second.
+    test.slow();
     await load(page, {
       name: "pops17.csv",
       text: `IID,pop\n${Array.from(
