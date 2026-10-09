@@ -54,6 +54,67 @@ export function filtersLine(method: PcaMethod): string {
   return `The ${name} uses the filters of the Variants step. Set a filter here to use another value for the ${name} alone.`;
 }
 
+/** The line under the heading of the filters on popgen2.html, whose
+    filters of the PCA narrow those of the Variants tab
+    (docs/specs/steps/popgen2-pca.md, "Its filters"). */
+export function popgen2FiltersLine(method: PcaMethod): string {
+  return `The ${methodName(method)} reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter.`;
+}
+
+/** The radio button of a missing data or a MAF filter of popgen2.html
+    that follows the Variants tab, with the Variants tab's value as its
+    box writes it, "As in the Variants tab: 0.1", or "As in the Variants
+    tab: off" while that threshold is off. */
+export function tabFollowLabel(
+  kind: "missing_data" | "maf",
+  filters: readonly ProjectVariantFilter[],
+): string {
+  const start = "As in the Variants tab: ";
+  const filter = filters.find((one) => one.kind === kind);
+  switch (filter?.kind) {
+    case undefined:
+      return `${start}off`;
+    case "missing_data":
+      return `${start}${numberText(filter.maxAllowedMissingRate)}`;
+    case "maf":
+      return `${start}${numberText(filter.maxAllowedMaf)}`;
+    case "passed":
+    case "obs_het":
+    case "ld":
+      throw new Error(
+        `popnei_web defect: the filter of the kind ${kind} was found as ${filter.kind}.`,
+      );
+  }
+}
+
+/** The radio button of a filter made stricter on popgen2.html: "Stricter
+    for the PCA", "Stricter for the PCoA". */
+export function stricterLabel(method: PcaMethod): string {
+  return `Stricter for the ${methodName(method)}`;
+}
+
+/** The label of the field of a filter made stricter, with its upper end
+    `max`, the Variants tab's value or 1: "Maximum proportion of missing
+    genotypes, from 0 to 0.1", "Maximum major allele frequency, from 0 to
+    0.95". */
+export function stricterFieldLabel(
+  kind: "missing_data" | "maf",
+  max: number,
+): string {
+  const what =
+    kind === "missing_data"
+      ? "Maximum proportion of missing genotypes"
+      : "Maximum major allele frequency";
+  return `${what}, from 0 to ${numberText(max)}`;
+}
+
+/** The reason the filters a running PCA reads are locked, and Undo and
+    Redo wait, as tooltip and description: "Stop the PCA to change the
+    filters." (docs/specs/steps/popgen2-pca.md, "While a PCA runs"). */
+export function filtersLockedText(method: PcaMethod): string {
+  return `Stop the ${methodName(method)} to change the filters.`;
+}
+
 /** The kinds of filter the analysis has of its own, in the order of the
     Variants step. */
 export type OwnFilterKind = "missing_data" | "maf" | "ld";

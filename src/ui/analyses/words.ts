@@ -240,6 +240,38 @@ export function failureText(
   }
 }
 
+/**
+ * What a calculation of popgen2.html that failed otherwise than by
+ * popnei's refusal says went wrong and what to do, `failureText` in the
+ * words of that page, which has the box Variants file in the place of the
+ * Variants step and saves no project (docs/specs/steps/popgen2-pca.md,
+ * "Its words"): a variants file changed on the disk since the one pass
+ * read it is opened again in that box; the calculations that could not
+ * start and a page out of date ask for a reload and the file opened
+ * again. `again` is the sentence that asks for the calculation again. A
+ * failure of the files wasm is a defect, as for `failureText`.
+ */
+export function popgen2FailureText(
+  error: Exclude<RunError, { readonly kind: "popnei" }>,
+  variantsName: string,
+  again = "Run it again.",
+): string {
+  const name = escaped(variantsName);
+  switch (error.kind) {
+    case "reopenFailed":
+      return `${escaped(error.name)} could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file.`;
+    case "workerFailed":
+      return `The calculation stopped unexpectedly. ${again} If it stops again, open ${name} again in the box Variants file.`;
+    case "defect":
+    case "files":
+      return failureText(error, variantsName, again);
+    case "couldNotStart":
+      return `The application could not start its calculations. Reload the page and open ${name} again.`;
+    case "protocolMismatch":
+      return `The page is out of date. Reload the page and open ${name} again.`;
+  }
+}
+
 /** The populations a run will take, with their sizes, the noun with
     each: "3 populations: p0, 48 individuals; p2, 84 individuals; p1, 68
     individuals". The ready state of the diversity and of the distances

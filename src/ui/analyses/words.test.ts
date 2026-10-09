@@ -4,6 +4,7 @@ import type { Notice } from "../../core/store.ts";
 import {
   clockText,
   failureText,
+  popgen2FailureText,
   minimumRefusedText,
   progressShare,
   removedText,
@@ -272,5 +273,48 @@ describe("PA5 D1 the refusals of the minimum of individuals", () => {
     ).toBe(
       "5,000,000,000 is more than 4,294,967,295; the minimum stays 1,500.",
     );
+  });
+});
+
+describe("AP6 D1 the failures on popgen2.html, in its words", () => {
+  test("each failure that is not popnei's names the box Variants file, and a reload with no project to save", () => {
+    expect(
+      popgen2FailureText(
+        { kind: "reopenFailed", name: "panel.nei", message: "gone" },
+        "panel.nei",
+      ),
+    ).toBe(
+      "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file.",
+    );
+    expect(
+      popgen2FailureText(
+        { kind: "workerFailed", message: "trap" },
+        "panel.nei",
+      ),
+    ).toBe(
+      "The calculation stopped unexpectedly. Run it again. If it stops again, open panel.nei again in the box Variants file.",
+    );
+    expect(
+      popgen2FailureText(
+        { kind: "defect", message: "the result had no pops." },
+        "panel.nei",
+      ),
+    ).toBe(
+      "The application met an error of its own: the result had no pops. Run it again.",
+    );
+    expect(
+      popgen2FailureText(
+        { kind: "couldNotStart", reason: "no ready" },
+        "panel.nei",
+      ),
+    ).toBe(
+      "The application could not start its calculations. Reload the page and open panel.nei again.",
+    );
+    expect(popgen2FailureText({ kind: "protocolMismatch" }, "panel.nei")).toBe(
+      "The page is out of date. Reload the page and open panel.nei again.",
+    );
+    expect(() =>
+      popgen2FailureText({ kind: "files", message: "zip" }, "panel.nei"),
+    ).toThrow(/^popnei_web defect: /);
   });
 });
