@@ -1058,3 +1058,20 @@ Task 5.4's flow, from the review: no test in jsdom can tell "every row"
 from "the rows in view", since React Aria's virtualizer draws every row
 there; the flow of the Individuals tab saves the sorted table of
 `individuals_10000.xlsx`, longer than its frame, and counts its lines.
+
+The fixes of the review of tasks 5.1 to 5.3, 9 October 2026: commits
+2af20f0 to bec3526, the seventeen findings all taken. The menu of a
+plot or a table is now a line of its own before the plot or the grid,
+so their element stays the same whether a download is given or not,
+and the old page draws the same elements as before. Each guard of the
+menu was broken on purpose in turn and a test failed. `downloadName`
+and the new `individualsStem` are in `src/core/fileNames.ts`. "SF2 D4"
+of `src/core/store.test.ts` runs from a fixed seed. Checks: Vitest
+4,777 tests in 141 files; `AP5` 42 tests; the old page's flows of
+`popDists`, `ldDecay`, `individualStats`, `diversity`,
+`variantHistograms` and `pcaResults` 254 in Chromium and WebKit (a
+first run, beside another agent's runs, had 4 failures of 86 that
+passed alone and on a second whole run).
+
+For task 5.4: in `StatsHistogram` the box `.plot` is the one the line
+of the threshold is placed against, so the menu goes outside that box.
