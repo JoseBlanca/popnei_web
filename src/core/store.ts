@@ -166,10 +166,14 @@ export interface AppState<R, F = never> {
   readonly undo: string | null;
   /** The description of what a redo would redo, or `null`. */
   readonly redo: string | null;
-  /** The undos, redos and openings so far, 0 when the store is made:
-      a screen that holds text of its own beside a part of the project
-      starts again at the project when it changes, since a command
-      cannot be told from an undo by the project alone. */
+  /** The undos, redos, openings and `applyAfresh` changes so far, 0
+      when the store is made: a screen that holds text of its own beside
+      a part of the project starts again at the project when it changes,
+      since a command cannot be told from an undo by the project alone.
+      So such a screen loses its text at an `applyAfresh` too, which is
+      why popgen2.html's gate commits the number typed in a box before
+      one. A command, an event and `populationColumnChosen` count
+      nothing. */
   readonly historyMoves: number;
   /** The version of popnei the calculation worker gave, or `null` until
       it has started. */
@@ -458,12 +462,17 @@ export interface StoreConfig<J, R, F = never> {
       end "Loosen them." (docs/specs/steps/popgen2-download.md, "Its
       words"). */
   readonly keptNoneStep?: string | null;
-  /** Whether a change makes no notice and stops at once every
-      calculation, every Run waiting for the statistics and every write
-      whose key it leaves behind (docs/specs/core/store.md, "On
-      popgen2.html: no notice, and a history of the filters"): true on
-      popgen2.html, which draws no notice; false when absent. The one
-      pass of that page reads no filter, so no change stops it. */
+  /** Whether the store makes no notice, and so stops at once, after a
+      command, an undo, a redo or an `applyAfresh`, every calculation,
+      every Run waiting for the statistics and every write whose key the
+      change leaves behind, which no notice could then offer to stop or
+      bring back (docs/specs/core/store.md, "On popgen2.html: no notice,
+      and a history of the filters"): true on popgen2.html, which draws
+      no notice; false when absent. `applyAfresh` stands on the first
+      half: a notice names its cause and offers an Undo, which a change
+      that leaves nothing to undo cannot give, so it is a defect on a
+      store made without this. The one pass of that page reads no filter,
+      so no change stops it. */
   readonly stopLeftBehind?: boolean;
 }
 
