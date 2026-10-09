@@ -11,6 +11,7 @@ import {
   columnWarningsOf,
   emptyProject,
   firstValues,
+  cellShown,
   forgetTypesLost,
   typeLostReason,
   typesLost,
@@ -92,6 +93,7 @@ import type { IndividualsKept } from "./individualsKept.ts";
 import type {
   Cell,
   ColumnType,
+  CsvFound,
   CsvOptions,
   IndividualFilter,
   IndividualsFileError,
@@ -3292,7 +3294,7 @@ const NEW_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   ],
   [
     { kind: "notText" },
-    "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx)",
+    "it is neither a text file, a CSV or a TSV, nor an Excel workbook (.xlsx)",
   ],
   [
     { kind: "variantsFile" },
@@ -3653,7 +3655,7 @@ describe("WS1 D3 the additions to project.ts", () => {
       ],
       [
         { kind: "notText" },
-        "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx). Load a corrected file.",
+        "it is neither a text file, a CSV or a TSV, nor an Excel workbook (.xlsx). Load a corrected file.",
       ],
       [
         { kind: "cutShort" },
@@ -6794,14 +6796,15 @@ describe("IP5 D2 columnWarningsOf and firstValues", () => {
         ["i5", 3, "c", null],
       ],
     });
-    const values = firstValues(table);
+    const values = firstValues(table, ".");
     expect(values).toStrictEqual([
       ["i1", "i2", "i3"],
       ["1.5", "true", "2"],
       ["a", "b", "c"],
       [],
     ]);
-    expect(firstValues(table)).toBe(values);
+    expect(firstValues(table, ".")).toBe(values);
+    expect(firstValues(table, ",")[1]).toStrictEqual(["1,5", "1.5", "true"]);
   });
 });
 
@@ -6830,7 +6833,7 @@ const XLSX_REFUSALS: readonly (readonly [IndividualsFileError, string])[] = [
   [{ kind: "notWorkbook" }, "it is a zip file that holds no Excel workbook"],
   [
     { kind: "oldExcel" },
-    "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)",
+    "it is a workbook of Excel 97–2003; in Excel, save it as Excel Workbook (.xlsx)",
   ],
   [
     { kind: "encrypted" },
@@ -7787,5 +7790,186 @@ describe("IN1 D3 the failed read recorded with its format", () => {
       ok: false,
       error: { kind: "wrongValue", path: ["individuals", "read", "format"] },
     });
+  });
+});
+
+describe("IN1 D3 the place of a refusal by the format, the new words, cellShown and the populations", () => {
+  /** The sample project, its individuals file named `name` with the
+      options `csv`, refused as `error` with the format `format`. */
+  function refused(
+    name: string,
+    csv: CsvOptions | null,
+    error: IndividualsFileError,
+    format: "text" | "xlsx" | null,
+  ): Project {
+    const p = sampleProject();
+    return deepFreeze({
+      ...p,
+      individuals: {
+        ...individualsOf(p),
+        name,
+        csv,
+        read: { kind: "failed", error, format },
+      },
+    });
+  }
+
+  test.each([
+    ["pops.xlsx", CSV, "xlsx", "column D has values but no name in the header"],
+    ["pops.csv", CSV, "xlsx", "column D has values but no name in the header"],
+    [
+      "pops.xlsx",
+      null,
+      "text",
+      "column 4 has values but no name in the header",
+    ],
+    ["pops.csv", CSV, "text", "column 4 has values but no name in the header"],
+  ] as const)(
+    "unnamedColumn of %s with the options %o and the format %s: %s",
+    (name, csv, format, words) => {
+      expect(
+        individualsStepNeeds(
+          refused(name, csv, { kind: "unnamedColumn", column: 4 }, format),
+        ),
+      ).toBe(`${name} could not be read: ${words}. Load a corrected file.`);
+    },
+  );
+
+  test.each([
+    ["xlsx", "row 7 has no name of an individual in its first column"],
+    ["text", "line 7 has no name of an individual in its first column"],
+  ] as const)(
+    "emptyIndividual of a source with the options of a CSV and the format %s: %s",
+    (format, words) => {
+      expect(
+        individualsStepNeeds(
+          refused(
+            "pops.xlsx",
+            CSV,
+            { kind: "emptyIndividual", line: 7 },
+            format,
+          ),
+        ),
+      ).toBe(`pops.xlsx could not be read: ${words}. Load a corrected file.`);
+    },
+  );
+
+  test("the words of notWorkbook, of readerNotLoaded for a CSV, of notText and of oldExcel", () => {
+    expect(
+      individualsStepNeeds(
+        refused("pops.zip.xlsx", CSV, { kind: "notWorkbook" }, "xlsx"),
+      ),
+    ).toBe(
+      "pops.zip.xlsx could not be read: it is a zip file that holds no Excel workbook. Load a corrected file.",
+    );
+    expect(
+      individualsNeeds(
+        refused(
+          "pops.csv",
+          CSV,
+          { kind: "readerNotLoaded", message: "Failed to fetch" },
+          null,
+        ),
+      ),
+    ).toBe(
+      "pops.csv could not be read: the part of the application that reads tables could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.",
+    );
+    expect(
+      individualsStepNeeds(
+        refused("panel.csv", CSV, { kind: "notText" }, "text"),
+      ),
+    ).toBe(
+      "panel.csv could not be read: it is neither a text file, a CSV or a TSV, nor an Excel workbook (.xlsx). Load a corrected file.",
+    );
+    expect(
+      individualsStepNeeds(
+        refused("old.csv", CSV, { kind: "oldExcel" }, "xlsx"),
+      ),
+    ).toBe(
+      "old.csv could not be read: it is a workbook of Excel 97–2003; in Excel, save it as Excel Workbook (.xlsx). Load a corrected file.",
+    );
+  });
+
+  test.each([
+    [1.5, ",", "1,5"],
+    [1.5, ".", "1.5"],
+    [-0.25, ",", "-0,25"],
+    [12, ",", "12"],
+    [true, ",", "true"],
+    [false, ".", "false"],
+    ["001", ",", "001"],
+    ["1.5", ",", "1.5"],
+    [null, ",", null],
+  ] as const)("cellShown(%o, %s) is %o", (cell, decimal, shown) => {
+    expect(cellShown(cell, decimal)).toBe(shown);
+  });
+
+  test("the populations of a column of decimals of a CSV read with the comma are named with the comma; with the point, or with no found, with the point", () => {
+    const p = sampleProject();
+    const table = {
+      columns: ["id", "h"],
+      rows: [
+        ["i1", 1.5],
+        ["i2", 2.25],
+        ["i3", 1.5],
+        ["i4", null],
+      ],
+    };
+    const withRead = (found: CsvFound | null): Project =>
+      deepFreeze({
+        ...p,
+        grouping: { kind: "populations", column: "h" },
+        individuals: {
+          ...individualsOf(p),
+          read: {
+            kind: "read",
+            table,
+            columns: [
+              { kind: "identifier" },
+              { kind: "binary", one: "2.25", zero: "1.5" },
+            ],
+            found,
+          },
+        },
+      });
+    const comma: CsvFound = {
+      encoding: "utf-8",
+      separator: ";",
+      decimal: ",",
+      undecodedLine: null,
+    };
+    expect(populationsOf(withRead(comma))).toEqual([
+      ["1,5", ["i1", "i3"]],
+      ["2,25", ["i2"]],
+    ]);
+    expect(populationsOf(withRead({ ...comma, decimal: "." }))).toEqual([
+      ["1.5", ["i1", "i3"]],
+      ["2.25", ["i2"]],
+    ]);
+    expect(populationsOf(withRead(null))).toEqual([
+      ["1.5", ["i1", "i3"]],
+      ["2.25", ["i2"]],
+    ]);
+  });
+
+  test("a project whose xlsx source has the options of a CSV, read with found null, opens; one with null options opens too", () => {
+    const p = sampleProject();
+    const individuals = individualsOf(p);
+    const read = individuals.read;
+    if (read.kind !== "read") {
+      throw new Error("the sample has a table");
+    }
+    for (const csv of [CSV, null]) {
+      const xlsx = deepFreeze({
+        ...p,
+        individuals: {
+          ...individuals,
+          name: "pops.xlsx",
+          csv,
+          read: { ...read, found: null },
+        },
+      });
+      expect(parse(projectJson(xlsx))).toStrictEqual({ ok: true, value: xlsx });
+    }
   });
 });

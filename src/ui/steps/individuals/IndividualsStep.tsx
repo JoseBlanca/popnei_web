@@ -14,6 +14,7 @@ import { Fragment, useId, useRef, useState } from "react";
 
 import {
   columnAllows,
+  shownDecimal,
   columnWarningsOf,
   escaped,
   individualsCheck,
@@ -429,6 +430,7 @@ function Columns({
   // The select of the type of the first column that has one, the second.
   const firstType = useRef<HTMLButtonElement>(null);
   const { table, columns } = read;
+  const decimal = shownDecimal(read);
   const allows = columnAllows(read);
   const warnings = new Map(columnWarningsOf(read).map((w) => [w.column, w]));
   const lost = typesLost(source);
@@ -544,15 +546,17 @@ function Columns({
                     )}
                   >
                     <span className={classOf(styles, "cellText")}>
-                      {firstValuesParts(table, index).map((part, at) => (
-                        // The values are distinct, and so are their parts.
-                        <Fragment key={part}>
-                          {at > 0 && " "}
-                          <span className={classOf(styles, "value")}>
-                            {part}
-                          </span>
-                        </Fragment>
-                      ))}
+                      {firstValuesParts(table, index, decimal).map(
+                        (part, at) => (
+                          // The values are distinct, and so are their parts.
+                          <Fragment key={part}>
+                            {at > 0 && " "}
+                            <span className={classOf(styles, "value")}>
+                              {part}
+                            </span>
+                          </Fragment>
+                        ),
+                      )}
                     </span>
                   </td>
                 </tr>

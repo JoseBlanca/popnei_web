@@ -1059,23 +1059,52 @@ function columnName(table: IndividualsTable, index: number): string {
   return name;
 }
 
+/**
+ * The text of a cell as the screens show it, with numbers written with the
+ * decimal mark of the read, `decimal`: a text as it is; a number as
+ * `String` writes it, its point made `decimal`, so that a column of a CSV
+ * read with the comma shows `1,5` where the file has it; `true` and
+ * `false`; `null` for a missing cell. The names of the populations use it,
+ * and so do the table of the file and the different values of a column,
+ * so that one value is never written two ways. The types keep `cellText`.
+ */
+export function cellShown(cell: Cell, decimal: "." | ","): string | null {
+  if (cell === null) {
+    return null;
+  }
+  if (typeof cell === "number" && decimal === ",") {
+    return String(cell).replace(".", ",");
+  }
+  return String(cell);
+}
+
+/** The decimal mark the cells of a read are shown with: the one it
+    found, or the point for an xlsx and a read with no found. */
+export function shownDecimal(read: TableRead): "." | "," {
+  return read.found?.decimal ?? ".";
+}
+
 /** The number of distinct values `firstValues` gives of each column. */
 const FIRST_VALUES = 3;
 
-/** The answers of `firstValues`, by the table. */
-const FIRST = new WeakMap<IndividualsTable, readonly (readonly string[])[]>();
+/** The answers of `firstValues`, by the table and the decimal mark. */
+const FIRST = new WeakMap<
+  IndividualsTable,
+  Map<"." | ",", readonly (readonly string[])[]>
+>();
 
 /**
  * The first three distinct values of each column of `table` that are not
- * missing, as `String` writes them, in the order of the file: one array
- * per column, in the order of the table, which the Individuals step shows
- * beside each type. The same array for the same table, so that a table of
- * 10,000 rows is walked once.
+ * missing, as `cellShown` writes them with `decimal`, in the order of the
+ * file: one array per column, in the order of the table, which the
+ * Individuals step shows beside each type. The same array for the same
+ * table and mark, so that a table of 10,000 rows is walked once.
  */
 export function firstValues(
   table: IndividualsTable,
+  decimal: "." | ",",
 ): readonly (readonly string[])[] {
-  const kept = FIRST.get(table);
+  const kept = FIRST.get(table)?.get(decimal);
   if (kept !== undefined) {
     return kept;
   }
@@ -1084,10 +1113,13 @@ export function firstValues(
       const found: string[] = [];
       for (const row of table.rows) {
         const cell: Cell | undefined = row[index];
-        if (cell === undefined || cell === null) {
+        if (cell === undefined) {
           continue;
         }
-        const text = String(cell);
+        const text = cellShown(cell, decimal);
+        if (text === null) {
+          continue;
+        }
         if (!found.includes(text)) {
           found.push(text);
         }
@@ -1098,7 +1130,10 @@ export function firstValues(
       return Object.freeze(found);
     }),
   );
-  FIRST.set(table, values);
+  const byDecimal =
+    FIRST.get(table) ?? new Map<"." | ",", readonly (readonly string[])[]>();
+  FIRST.set(table, byDecimal);
+  byDecimal.set(decimal, values);
   return values;
 }
 
@@ -2356,7 +2391,7 @@ function individualsReadNeeds(
           ? workerFailedText(name, error.error.kind, ends)
           : `${name} could not be read: ${READING_STOPPED} ${ends.again}`;
       }
-      const words = `${name} could not be read${saying(individualsFileRefusalWords(error, app, individuals.csv === null))}.`;
+      const words = `${name} could not be read${saying(individualsFileRefusalWords(error, app, read.format === "xlsx"))}.`;
       // Its words say what to do, and take no end.
       return error.kind === "readerNotLoaded"
         ? words
@@ -2580,17 +2615,24 @@ export function populationsOf(p: Project): Pops | "all" | null {
     case "populations":
       return p.grouping.column === null
         ? null
-        : groupedBy(read.table, p.grouping.column);
+        : groupedBy(read.table, p.grouping.column, shownDecimal(read));
     case "roles":
       return null;
   }
 }
 
 /** The populations of `table` by its column `column`, as `populationsOf`
-    gives them; `null` when the table has no column of that name, or has
-    it first, where it names the individuals. */
-function groupedBy(table: IndividualsTable, column: string): Pops | null {
-  const kept = GROUPED.get(table)?.get(column);
+    gives them, each named by `cellShown` with `decimal`; `null` when the
+    table has no column of that name, or has it first, where it names the
+    individuals. */
+function groupedBy(
+  table: IndividualsTable,
+  column: string,
+  decimal: "." | ",",
+): Pops | null {
+  // The mark is one character, so it and the name make one key.
+  const key = `${decimal}${column}`;
+  const kept = GROUPED.get(table)?.get(key);
   if (kept !== undefined) {
     return kept;
   }
@@ -2606,10 +2648,10 @@ function groupedBy(table: IndividualsTable, column: string): Pops | null {
     if (cell === undefined) {
       throw defect(`a row of the individuals table has no cell ${column}.`);
     }
-    if (cell === null) {
+    const pop = cellShown(cell, decimal);
+    if (pop === null) {
       continue;
     }
-    const pop = String(cell);
     const individuals = members.get(pop) ?? [];
     members.set(pop, individuals);
     individuals.push(identifierOf(row[0]));
@@ -2622,7 +2664,7 @@ function groupedBy(table: IndividualsTable, column: string): Pops | null {
   if (isTableFrozen(table)) {
     const byColumn = GROUPED.get(table) ?? new Map<string, Pops>();
     GROUPED.set(table, byColumn);
-    byColumn.set(column, pops);
+    byColumn.set(key, pops);
   }
   return pops;
 }
@@ -2897,8 +2939,9 @@ function megabytes(size: number): string {
 /** What the reader of the individuals file found wrong with it, in the
     words of docs/specs/worker/individuals.md, "The refusals and their
     words", with the file named as the application `app` names it, and, for
-    an xlsx, `xlsx`, a row and a column named as Excel names them, "row 7"
-    and "column D". */
+    a file the reader found an xlsx, `xlsx`, whatever its name and its
+    options, a row and a column named as Excel names them, "row 7" and
+    "column D". */
 function individualsFileRefusalWords(
   error: IndividualsFileError,
   app: AppId,
@@ -2928,7 +2971,7 @@ function individualsFileRefusalWords(
     case "unreadable":
       return "the browser could not read it; it may have been changed, moved or deleted since it was picked";
     case "notText":
-      return "it is not a text file; if it is an Excel workbook, open it in Excel and save it as Excel Workbook (.xlsx)";
+      return "it is neither a text file, a CSV or a TSV, nor an Excel workbook (.xlsx)";
     case "variantsFile":
       return "it is a variants file, which the Variants step takes";
     case "cutShort":
@@ -2936,7 +2979,7 @@ function individualsFileRefusalWords(
     case "files":
       return "it could not be read as an Excel workbook and may be damaged; open it in Excel and save it again";
     case "oldExcel":
-      return "it is a workbook of Excel 97–2003, although its name ends in .xlsx; in Excel, save it as Excel Workbook (.xlsx)";
+      return "it is a workbook of Excel 97–2003; in Excel, save it as Excel Workbook (.xlsx)";
     case "encrypted":
       return "it is protected by a password; in Excel, save a copy without the password";
     case "notWorkbook":

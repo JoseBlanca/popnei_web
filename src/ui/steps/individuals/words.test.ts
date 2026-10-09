@@ -135,17 +135,31 @@ describe("the words of the Individuals step", () => {
       "1 row, 1 column",
     );
     // The values joined by a dot, after a space that does not break.
-    expect(firstValuesText(TABLE, 1)).toBe("España\u00a0· Italia\u00a0· Perú");
-    expect(firstValuesText(TABLE, 2)).toBe("1,75\u00a0· 1,62\u00a0· 1,80");
+    expect(firstValuesText(TABLE, 1, ",")).toBe(
+      "España\u00a0· Italia\u00a0· Perú",
+    );
+    expect(firstValuesText(TABLE, 2, ",")).toBe("1,75\u00a0· 1,62\u00a0· 1,80");
     // Each value with its dot, drawn on one line; joined, the text.
-    expect(firstValuesParts(TABLE, 1)).toEqual([
+    expect(firstValuesParts(TABLE, 1, ",")).toEqual([
       "España\u00a0·",
       "Italia\u00a0·",
       "Perú",
     ]);
     expect(
-      firstValuesText({ columns: ["id", "x"], rows: [["a", "b\n"]] }, 1),
+      firstValuesText({ columns: ["id", "x"], rows: [["a", "b\n"]] }, 1, "."),
     ).toBe("b\\n");
+  });
+
+  test("IN1 D3 the numbers of a read with the decimal comma are written with the comma, and with the point otherwise", () => {
+    const table = {
+      columns: ["id", "h"],
+      rows: [
+        ["a", 1.75],
+        ["b", 2],
+      ],
+    };
+    expect(firstValuesText(table, 1, ",")).toBe("1,75\u00a0· 2");
+    expect(firstValuesText(table, 1, ".")).toBe("1.75\u00a0· 2");
   });
 
   test("the check names the file of the variants, and the rows ignored when there are any", () => {

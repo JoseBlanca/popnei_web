@@ -433,14 +433,16 @@ export function forgetLabel(count: number): string {
 }
 
 /** The first three distinct values of the column at `index` that are
-    not missing, in the order of the file, escaped: "España · Italia ·
-    Perú". Core's `firstValues` keeps them by the table, so that a table
-    of 10,000 rows is not walked at each drawing of the step. */
+    not missing, in the order of the file, numbers written with the
+    decimal mark `decimal` of the read, escaped: "España · Italia · Perú".
+    Core's `firstValues` keeps them by the table, so that a table of
+    10,000 rows is not walked at each drawing of the step. */
 export function firstValuesText(
   table: IndividualsTable,
   index: number,
+  decimal: "." | ",",
 ): string {
-  return firstValuesParts(table, index).join(" ");
+  return firstValuesParts(table, index, decimal).join(" ");
 }
 
 /** The same values as the parts the step draws each on one line, each
@@ -449,8 +451,9 @@ export function firstValuesText(
 export function firstValuesParts(
   table: IndividualsTable,
   index: number,
+  decimal: "." | ",",
 ): string[] {
-  const values = firstValues(table)[index];
+  const values = firstValues(table, decimal)[index];
   if (values === undefined) {
     throw new Error(
       `popnei_web defect: the table has no column ${String(index)}.`,
