@@ -244,7 +244,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
   });
 
   test("another file opened after None gets its column", async () => {
-    const { store, chosen } = page();
+    const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
@@ -253,6 +253,10 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     await recorded(store, loadId(2), readOf(PANEL_POPS));
     expect(chosen()).toBe(2);
     expect(columnOf(store.getState().project)).toBe("popcat");
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+      "other.csv read: 200 rows, the populations from popcat.",
+    ]);
   });
 
   test("a second file with a column popcat keeps it and sends nothing", async () => {
@@ -278,7 +282,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
   });
 
   test("a second file whose popcat is true and false, which the list does not offer, gets the page's column", async () => {
-    const { store, chosen } = page();
+    const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
@@ -294,6 +298,10 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     await recorded(store, loadId(2), readOf(flags));
     expect(chosen()).toBe(2);
     expect(columnOf(store.getState().project)).toBe("region");
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+      "flags.csv read: 200 rows, the populations from region.",
+    ]);
   });
 
   test("with no None of the user, a read again whose table has no popcat gets the page's column, or keeps the grouping when there is none", async () => {
@@ -351,7 +359,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
   });
 
   test("an undo of the column the entry chose is the user's None, kept through a change of separator", async () => {
-    const { store, chosen } = page();
+    const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
@@ -361,6 +369,10 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     expect(chosen()).toBe(1);
     expect(columnOf(store.getState().project)).toBeNull();
+    expect(said).toEqual([
+      "panel_pops.csv read: 200 rows, the populations from popcat.",
+      "panel_pops.csv read: 200 rows, no column chosen for the populations.",
+    ]);
   });
 
   test("a run of the arrow keys on a threshold still held when a read is recorded is made a change before the command of the column", async () => {
