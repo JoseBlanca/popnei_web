@@ -57,14 +57,11 @@ function panelOf(method: PcaMethod): AnalysisUi {
     resultName: "the plot and the table",
     plural: false,
     readyLines: pcaTabReadyLines,
-    refusalText: PCA_TAB_ERRORS.refusalText,
-    statisticsFailedText: PCA_TAB_ERRORS.statisticsFailedText,
+    ...PCA_TAB_ERRORS,
     Results: PcaTabResults,
     Options: PcaTabOptions,
     runningLine: (p: Project): string | null =>
       p.variants === null ? null : decompositionLine(p.variants.name),
-    workerFailedText: PCA_TAB_ERRORS.workerFailedText,
-    failureText: PCA_TAB_ERRORS.failureText,
   });
 }
 

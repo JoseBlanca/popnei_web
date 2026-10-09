@@ -46,7 +46,7 @@
 import { useId, useRef } from "react";
 
 import { checkVerdictText, uncomparedText } from "../../core/projectFile.ts";
-import type { AnalysisId, Project } from "../../core/project.ts";
+import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus } from "../../core/store.ts";
 import type { JobResult } from "../../worker/protocol.ts";
 import { classOf } from "../classOf.ts";
@@ -60,9 +60,13 @@ import { Running } from "./Running.tsx";
 import { buttonOf, statusOf, stoppedNotice } from "./status.ts";
 import type { ButtonOf } from "./status.ts";
 import { Warnings } from "./Warnings.tsx";
-import { removedText, stoppedText } from "./words.ts";
+import { failedWordsOf, removedText, stoppedText } from "./words.ts";
 
-/** What popgen2.html adds to the panel of an analysis. */
+/** What popgen2.html adds to the panel of an analysis. Given at all, it
+    also draws the line of what a run will take before the button, in the
+    states locked, ready and removed, where popgen.html draws it after
+    the button in the states ready and removed alone
+    (docs/specs/steps/popgen2-pca.md, "The PCA tab"). */
 export interface PagePanel {
   /** The reason of a lock of the page beyond the store's, which then
       locks a Run the store offers and takes the place of the store's
@@ -168,50 +172,17 @@ interface PartProps {
     not be calculated. */
 function Above({ ui, status }: PartProps): React.JSX.Element | null {
   const kept = useAppState((s) => s.individualsKept);
-  const own = ui.workerFailedText;
-  const workerFailed =
-    own === null
-      ? {}
-      : { workerFailedText: (p: Project): string => own(p, kept) };
   switch (status.kind) {
     case "removed":
       return <Removed ui={ui} />;
-    case "error": {
-      if (!status.ofStatistics) {
-        return (
-          <Failed
-            error={status.error}
-            name={ui.title}
-            refusalText={ui.refusalText}
-            {...workerFailed}
-            {...(ui.failureText !== undefined && {
-              failureText: ui.failureText,
-            })}
-          />
-        );
-      }
-      // The failure of the statistics its Run waited for, in their
-      // words, never in the analysis's own.
-      const statisticsFailedText = ui.statisticsFailedText;
-      if (statisticsFailedText === null) {
-        throw new Error(
-          `popnei_web defect: ${ui.title} failed by the statistics of each individual, which it does not read.`,
-        );
-      }
+    case "error":
       return (
         <Failed
           error={status.error}
-          name={ui.title}
-          refusalText={ui.refusalText}
-          statisticsFailedText={(error, p, failureText) =>
-            statisticsFailedText(error, p, failureText, status.waited)
-          }
-          {...(ui.failureText !== undefined && {
-            failureText: ui.failureText,
-          })}
+          name={ui.name}
+          {...failedWordsOf(ui, status, kept)}
         />
       );
-    }
     case "locked":
     case "ready":
     case "running":

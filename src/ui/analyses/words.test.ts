@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import type { Notice } from "../../core/store.ts";
+import type { IndividualsKept } from "../../core/individualsKept.ts";
+import type { Project } from "../../core/project.ts";
+import type { AnalysisError, Notice } from "../../core/store.ts";
 import {
   clockText,
+  failedWordsOf,
   failureText,
   popgen2FailureText,
   minimumRefusedText,
@@ -316,5 +319,83 @@ describe("AP6 D1 the failures on popgen2.html, in its words", () => {
     expect(() =>
       popgen2FailureText({ kind: "files", message: "zip" }, "panel.nei"),
     ).toThrow(/^popnei_web defect: /);
+  });
+});
+
+describe("AP6 D1 failedWordsOf, the words a panel gives the errors of its analysis", () => {
+  const refusalText = (message: string): string => `refused: ${message}`;
+  const project = {} as Project;
+  const kept = { list: { kind: "known" } } as unknown as IndividualsKept;
+  const error: AnalysisError = {
+    kind: "failed",
+    error: { kind: "workerFailed", message: "trap" },
+  };
+
+  test("a panel with words of its own for none: its refusal alone, the rest left to failedText", () => {
+    expect(
+      failedWordsOf(
+        {
+          refusalText,
+          statisticsFailedText: null,
+          workerFailedText: null,
+          failureText: null,
+        },
+        { ofStatistics: false, waited: false },
+        kept,
+      ),
+    ).toEqual({ refusalText });
+  });
+
+  test("a panel with its own words of a worker that stopped and of the page's failures: the worker's given the individuals kept", () => {
+    const words = failedWordsOf(
+      {
+        refusalText,
+        statisticsFailedText: null,
+        workerFailedText: (_p, given) =>
+          given === kept ? "out of memory, kept" : "out of memory",
+        failureText: popgen2FailureText,
+      },
+      { ofStatistics: false, waited: false },
+      kept,
+    );
+    expect(words.workerFailedText?.(project)).toBe("out of memory, kept");
+    expect(words.failureText).toBe(popgen2FailureText);
+    expect(words.statisticsFailedText).toBeUndefined();
+  });
+
+  test("the failure of the statistics of each individual: the panel's words of them, told whether its Run waited for them", () => {
+    const told: boolean[] = [];
+    const words = failedWordsOf(
+      {
+        refusalText,
+        statisticsFailedText: (_error, _p, failure, waited) => {
+          told.push(waited);
+          return failure({ kind: "workerFailed", message: "trap" });
+        },
+        workerFailedText: null,
+        failureText: null,
+      },
+      { ofStatistics: true, waited: true },
+      kept,
+    );
+    expect(
+      words.statisticsFailedText?.(error, project, () => "the frame's words"),
+    ).toBe("the frame's words");
+    expect(told).toEqual([true]);
+  });
+
+  test("the failure of the statistics in a panel that does not read them is a defect", () => {
+    expect(() =>
+      failedWordsOf(
+        {
+          refusalText,
+          statisticsFailedText: null,
+          workerFailedText: null,
+          failureText: null,
+        },
+        { ofStatistics: true, waited: false },
+        kept,
+      ),
+    ).toThrow(/^popnei_web defect: /u);
   });
 });

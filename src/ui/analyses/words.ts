@@ -22,6 +22,7 @@ import {
   saying,
 } from "../../core/project.ts";
 import type { Failure } from "../../core/analyses/individualChecks.ts";
+import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { loosenText } from "../../core/populations.ts";
 import type { Project } from "../../core/project.ts";
 import type { AnalysisError, Notice } from "../../core/store.ts";
@@ -300,6 +301,85 @@ export interface FailedWords {
     variantsName: string,
     again?: string,
   ) => string;
+}
+
+/**
+ * The words a panel gives the errors of its analysis, as the panel holds
+ * them (`AnalysisUi` of panels.ts, the PCA tab's of popgen2.html):
+ * each with the project, the individuals kept and whether a Run waited,
+ * which `failedWordsOf` gives them.
+ */
+export interface PanelErrorWords {
+  /** The words of popnei's refusal `message`, for the project `p`. */
+  readonly refusalText: (message: string, p: Project) => string;
+  /** The words of the failure of the statistics of each individual that
+      a Run waited for, the store's error with `ofStatistics`, for an
+      analysis that reads the filters of individuals, "was not run" when
+      its own Run waited for them, `waited`, "cannot run" when it did
+      not; `null` for one that does not read them, which the store never
+      gives that error. */
+  readonly statisticsFailedText:
+    | ((
+        error: AnalysisError,
+        p: Project,
+        failureText: (failure: Failure) => string,
+        waited: boolean,
+      ) => string)
+    | null;
+  /** The words of a worker that stopped with no answer, `workerFailed`,
+      for the project `p` and the individuals kept of the state of the
+      store, when the analysis has its own; `null` for the words every
+      analysis shares. */
+  readonly workerFailedText:
+    ((p: Project, kept: IndividualsKept | null) => string) | null;
+  /** The words of a failure that is not popnei's refusal, of the page
+      the panel is on: `popgen2FailureText` on popgen2.html, which names
+      the box Variants file and saves no project; `null` on popgen.html,
+      for those of `failureText`, which name the Variants step. Required,
+      so that a panel of popgen2.html that forgot them would not compile
+      rather than show the words of popgen.html. */
+  readonly failureText:
+    ((failure: Failure, variantsName: string, again?: string) => string) | null;
+}
+
+/**
+ * The words of the errors of the panel `panel` for `failedText`, in the
+ * error state `status`, with the individuals kept `kept` of the state of
+ * the store: its refusal, its worker's words given the individuals kept,
+ * its page's words of a failure, and, when the error is the failure of
+ * the statistics of each individual, `ofStatistics`, its words of them,
+ * told whether its Run waited for them. The panel draws them and
+ * popgen2.html says them in its status region, from the same words. A
+ * defect for the failure of the statistics in a panel that has no words
+ * of them, which the store never gives it.
+ */
+export function failedWordsOf(
+  panel: PanelErrorWords,
+  status: { readonly ofStatistics: boolean; readonly waited: boolean },
+  kept: IndividualsKept | null,
+): FailedWords {
+  const { refusalText, workerFailedText, failureText, statisticsFailedText } =
+    panel;
+  const words: FailedWords = {
+    refusalText,
+    ...(workerFailedText !== null && {
+      workerFailedText: (p: Project): string => workerFailedText(p, kept),
+    }),
+    ...(failureText !== null && { failureText }),
+  };
+  if (!status.ofStatistics) return words;
+  // The failure of the statistics its Run waited for, in their words,
+  // never in the analysis's own.
+  if (statisticsFailedText === null) {
+    throw new Error(
+      "popnei_web defect: an analysis failed by the statistics of each individual, which it does not read.",
+    );
+  }
+  return {
+    ...words,
+    statisticsFailedText: (error, p, failureOf) =>
+      statisticsFailedText(error, p, failureOf, status.waited),
+  };
 }
 
 /**

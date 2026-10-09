@@ -64,6 +64,7 @@ import {
   readyLines as pcaReadyLines,
 } from "./pca/words.ts";
 import { titleOf } from "./titles.ts";
+import type { PanelErrorWords } from "./words.ts";
 
 /** What the component of a result is drawn with. */
 export interface ResultsProps {
@@ -75,8 +76,9 @@ export interface ResultsProps {
   readonly check: string | null;
 }
 
-/** What the frame needs of one analysis. */
-export interface AnalysisUi {
+/** What the frame needs of one analysis: its words of its errors, and
+    the rest. */
+export interface AnalysisUi extends PanelErrorWords {
   /** The title of the panel, its `<h2>`, "Diversity", by which the shell
       names it. */
   readonly title: string;
@@ -96,23 +98,6 @@ export interface AnalysisUi {
     p: Project,
     kept: IndividualsKept | null,
   ) => readonly string[];
-  /** The words of a refusal of popnei, its message given, for the
-      project `p`. */
-  readonly refusalText: (message: string, p: Project) => string;
-  /** The words of the failure of the statistics of each individual that
-      a Run waited for, the store's error with `ofStatistics`, for an
-      analysis that reads the filters of individuals, "was not run" when
-      its own Run waited for them, `waited`, "cannot run" when it did
-      not; `null` for one that does not read them, which the store never
-      gives that error. */
-  readonly statisticsFailedText:
-    | ((
-        error: AnalysisError,
-        p: Project,
-        failureText: (failure: Failure) => string,
-        waited: boolean,
-      ) => string)
-    | null;
   /** Draws the result: its table, its plot, its download. */
   readonly Results: ComponentType<ResultsProps>;
   /** Draws the options of the analysis, above its Run button, in every
@@ -122,21 +107,6 @@ export interface AnalysisUi {
   /** A line under the bar of a calculation under way, for the project
       `p`, what the bar does not show; `null` for none. */
   readonly runningLine: (p: Project) => string | null;
-  /** The words of a worker that stopped with no answer, `workerFailed`,
-      for the project `p` and the individuals kept of the state of the
-      store, when the analysis has its own; `null` for the words every
-      analysis shares. */
-  readonly workerFailedText:
-    ((p: Project, kept: IndividualsKept | null) => string) | null;
-  /** The words of a failure that is not popnei's refusal, of the page
-      the panel is on: `popgen2FailureText` of words.ts on popgen2.html,
-      which names the box Variants file and saves no project; those of
-      `failureText`, which name the Variants step, when absent. */
-  readonly failureText?: (
-    failure: Failure,
-    variantsName: string,
-    again?: string,
-  ) => string;
 }
 
 /** The panel of the diversity (docs/specs/analyses/diversity.md, "The
@@ -187,6 +157,8 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   Options: DiversityOptionsPart,
   runningLine: (): null => null,
   workerFailedText: null,
+  // The words of popgen.html, which name the Variants step.
+  failureText: null,
 });
 
 /** The page of the principal components of this panel, that of the
@@ -227,6 +199,8 @@ const PCA: AnalysisUi = Object.freeze({
     p.variants === null ? null : decompositionLine(p.variants.name),
   workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
     crashText(p, individualsRunOn(p, kept), PCA_PAGE),
+  // The words of popgen.html, which name the Variants step.
+  failureText: null,
 });
 
 /** The panel of the distances between populations
@@ -272,6 +246,8 @@ const POP_DISTS: AnalysisUi = Object.freeze({
   Options: PopDistsOptionsPart,
   runningLine: (): null => null,
   workerFailedText: null,
+  // The words of popgen.html, which name the Variants step.
+  failureText: null,
 });
 
 /** The panel of the LD decay (docs/specs/analyses/ldDecay.md, "The
@@ -309,6 +285,8 @@ const LD_DECAY: AnalysisUi = Object.freeze({
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : fitLine(p.variants.name),
   workerFailedText: (p: Project): string => ldDecayCrashText(p),
+  // The words of popgen.html, which name the Variants step.
+  failureText: null,
 });
 
 /** The panel of every analysis of the Analyses step, by its id. */

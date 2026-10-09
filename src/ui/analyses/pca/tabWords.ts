@@ -28,12 +28,14 @@ import type {
   AppState,
 } from "../../../core/store.ts";
 import type { JobResult, PcaMethod } from "../../../worker/protocol.ts";
+import { statusOf } from "../status.ts";
 import {
   WAITS_FOR_STATISTICS_TEXT,
   failedText,
+  failedWordsOf,
   popgen2FailureText,
 } from "../words.ts";
-import type { FailedWords } from "../words.ts";
+import type { PanelErrorWords } from "../words.ts";
 import { passLockText } from "./passLock.ts";
 import type { PassLock } from "./passLock.ts";
 import { individualsRunOn, methodName, readyLines } from "./words.ts";
@@ -92,7 +94,7 @@ export function pcaTabLock(p: Project, lock: PassLock | null): string | null {
 
 /** The words the PCA tab gives its errors, as `AnalysisUi` takes
     them. */
-export const PCA_TAB_ERRORS = Object.freeze({
+export const PCA_TAB_ERRORS: PanelErrorWords = Object.freeze({
   refusalText: (message: string, p: Project): string =>
     refusalText(message, p, "popgen2"),
   statisticsFailedText: (
@@ -106,21 +108,11 @@ export const PCA_TAB_ERRORS = Object.freeze({
   failureText: popgen2FailureText,
 });
 
-/** The words of the PCA tab's errors, for `failedText`, given the
-    individuals kept `kept` of the state of the store. */
-function errorWords(kept: IndividualsKept | null): FailedWords {
-  return {
-    refusalText: PCA_TAB_ERRORS.refusalText,
-    workerFailedText: (p: Project): string =>
-      PCA_TAB_ERRORS.workerFailedText(p, kept),
-    failureText: PCA_TAB_ERRORS.failureText,
-  };
-}
-
 /**
  * What the PCA tab says of the error `status` in `p`, with the
- * individuals kept `kept`: the words the tab draws, those of the
- * statistics of each individual when a Run waited for them, `ofStatistics`.
+ * individuals kept `kept`: the words the tab draws, from the same words
+ * of its panel, those of the statistics of each individual when a Run
+ * waited for them, `ofStatistics`.
  */
 export function pcaTabErrorText(
   status: Extract<AnalysisStatus<JobResult>, { readonly kind: "error" }>,
@@ -128,35 +120,12 @@ export function pcaTabErrorText(
   kept: IndividualsKept | null,
 ): string {
   const method = pcaOptions(p, "popgen2").method;
-  const words = errorWords(kept);
   return failedText(
     status.error,
     p,
-    pcaTabTitle(method),
-    status.ofStatistics
-      ? {
-          ...words,
-          statisticsFailedText: (error, project, failureText) =>
-            PCA_TAB_ERRORS.statisticsFailedText(
-              error,
-              project,
-              failureText,
-              status.waited,
-            ),
-        }
-      : words,
+    pcaTabName(method),
+    failedWordsOf(PCA_TAB_ERRORS, status, kept),
   );
-}
-
-/** The state of the PCA in `s`; a defect when the store has none. */
-function pcaStatusOf(
-  s: AppState<JobResult, unknown>,
-): AnalysisStatus<JobResult> {
-  const status = s.analyses.find((a) => a.id === pcaOnPopgen2.id)?.status;
-  if (status === undefined) {
-    throw new Error("popnei_web defect: the store of popgen2.html has no PCA.");
-  }
-  return status;
 }
 
 /**
@@ -173,8 +142,8 @@ export function pcaEndAnnouncement(
   before: AppState<JobResult, unknown>,
   after: AppState<JobResult, unknown>,
 ): string | null {
-  const then = pcaStatusOf(before);
-  const now = pcaStatusOf(after);
+  const then = statusOf(before, pcaOnPopgen2.id);
+  const now = statusOf(after, pcaOnPopgen2.id);
   const variants = after.project.variants;
   if (then.kind !== "running" || variants === null) return null;
   const method = methodName(pcaOptions(after.project, "popgen2").method);
