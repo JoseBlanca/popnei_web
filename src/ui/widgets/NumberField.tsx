@@ -651,13 +651,16 @@ function FieldInput({
   // The browser's own undo and redo of the text, never the field's
   // (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys").
   // Its keys are caught at the key below while something is typed, and
-  // by the shell's header otherwise, on the old page; popgen2.html has no
-  // such header, and there Ctrl+Z, or Cmd+Z on macOS, took the text back
-  // to the 1 that 0.9 was typed over and gave it as the threshold, off,
-  // even pressed on the heading, where Chromium moved the focus into the
-  // box to do it (seen in Chromium 153 on GitHub's Linux runner, and in
-  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026). The keys
-  // offer the undo in a `beforeinput` that can be cancelled, and it is.
+  // otherwise by the page's Undo and Redo, on the window, on both pages
+  // (src/ui/shell/UndoRedoButtons.tsx). On popgen2.html, while it drew no
+  // Undo and caught no key, until 9 October 2026, Ctrl+Z, or Cmd+Z on
+  // macOS, took the text back to the 1 that 0.9 was typed over and gave
+  // it as the threshold, off, even pressed on the heading, where Chromium
+  // moved the focus into the box to do it (seen in Chromium 153 on
+  // GitHub's Linux runner, and in Chromium and WebKit on macOS with Cmd+Z,
+  // 9 October 2026); this refusal is what kept it out then, and keeps out
+  // the undo of the menu Edit now. The keys offer the undo in a
+  // `beforeinput` that can be cancelled, and it is.
   // `document.execCommand("undo")`, the command a menu Edit gives, offers
   // it so in WebKit, but Chromium carries it out with no `beforeinput`
   // and says so only in the `input` that follows, its text already
