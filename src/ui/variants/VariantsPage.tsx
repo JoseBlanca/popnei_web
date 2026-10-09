@@ -45,6 +45,7 @@ import {
   INFO_NAME,
   NO_VARIANTS_FILE_TAB,
   OPENING_NAME,
+  OPENING_ZONE_NAME,
 } from "./words.ts";
 
 /** The ids of the two tabs of the files. */
@@ -114,7 +115,7 @@ export function VariantsPage({
                 refusal={refusal}
               />
             </ErrorBoundary>
-            <ErrorBoundary heading={OPENING_NAME} level={3}>
+            <ErrorBoundary heading={OPENING_ZONE_NAME} level={3}>
               <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
             </ErrorBoundary>
           </section>

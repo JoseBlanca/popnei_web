@@ -23,6 +23,7 @@ import {
   FILES_TABS_LABEL,
   NO_VARIANTS_FILE_TAB,
   OPENING_NAME,
+  OPENING_ZONE_NAME,
   FAILURES_NOT_COUNTED,
   failuresLineOf,
 } from "./words.ts";
@@ -472,6 +473,10 @@ describe("popnei-0.2.2 3 the line of the FILTER failures", () => {
 describe("IN3 the words of the boxes and the tabs of the files", () => {
   test("the heading of the box of the variants file and the label of its tab", () => {
     expect(OPENING_NAME).toBe("Variants file");
+  });
+
+  test("the heading in place of the zone that opens a variants file, when it throws, which is not the box's", () => {
+    expect(OPENING_ZONE_NAME).toBe("Opening a variants file");
   });
 
   test("the name of the row of the tabs, for a screen reader", () => {

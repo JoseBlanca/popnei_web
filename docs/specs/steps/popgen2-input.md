@@ -396,6 +396,7 @@ the project's (`docs/architecture.md`, section 7).
 | the buttons of the zones | "Open variants file…", "Open another variants file…"; "Open individuals file…", "Open another individuals file…" |
 | the button of removal | "Remove panel_pops.csv" |
 | the row of the tabs, for a screen reader | "The files" |
+| the heading drawn in place of the zone of the variants file when its code throws, under the box's "Variants file" | "Opening a variants file" |
 | the tabs | "Variants file"; "Individuals file" |
 | the list | "Column of the populations"; first item "None: every individual unclassified" |
 | the caption of the counts | "Individuals of panel.nei kept by the filters" |

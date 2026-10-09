@@ -5,7 +5,9 @@
  * boundary of errors of the box of the file, made again for each file
  * opened, so that a throw while the box of one file is drawn does not
  * leave the next files with its heading alone. The throw is injected in
- * the words of the box, which no fixture can make throw.
+ * the words of the box, which no fixture can make throw. And the boundary
+ * of the zone that opens a variants file, with a heading of its own; its
+ * throw is injected in the widget of the zone.
  */
 import { StrictMode, act, createElement } from "react";
 import { createRoot } from "react-dom/client";
@@ -26,6 +28,8 @@ import { StoreProvider } from "../store.tsx";
 import { RunGateProvider } from "./runGate.tsx";
 import { createRunGate } from "./thresholdRun.ts";
 import { VariantsPage } from "./VariantsPage.tsx";
+import type * as FileZoneModule from "../widgets/FileZone.tsx";
+import type { FileZoneProps } from "../widgets/FileZone.tsx";
 import type * as WordsModule from "./words.ts";
 
 declare global {
@@ -34,7 +38,23 @@ declare global {
 
 /** The number of chromosomes for which the line of the chromosomes so
     far throws, or null. */
-const inject = vi.hoisted(() => ({ throwAt: null as number | null }));
+const inject = vi.hoisted(() => ({
+  throwAt: null as number | null,
+  zoneThrows: false,
+}));
+
+vi.mock("../widgets/FileZone.tsx", async (importOriginal) => {
+  const real = await importOriginal<typeof FileZoneModule>();
+  return {
+    ...real,
+    FileZone: (props: FileZoneProps): React.JSX.Element => {
+      if (inject.zoneThrows) {
+        throw new Error("the zone could not be drawn");
+      }
+      return real.FileZone(props);
+    },
+  };
+});
 
 vi.mock("./words.ts", async (importOriginal) => {
   const real = await importOriginal<typeof WordsModule>();
@@ -63,6 +83,7 @@ let caught: unknown[];
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   inject.throwAt = null;
+  inject.zoneThrows = false;
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -88,8 +109,9 @@ async function settled(): Promise<void> {
 }
 
 /** Draws the page in <StrictMode>, as the development server draws it,
-    with the analyses it starts by itself. */
-async function drawPage(): Promise<{
+    with the analyses it starts by itself; a file picked is kept under
+    `pickedId`, and with none given the test picks no file. */
+async function drawPage(pickedId?: string): Promise<{
   readonly store: Store<JobResult, Blob>;
   readonly requests: Request[];
 }> {
@@ -119,7 +141,8 @@ async function drawPage(): Promise<{
   });
   const files = {
     addFile: (): string => {
-      throw new Error("the test picks no file");
+      if (pickedId === undefined) throw new Error("the test picks no file");
+      return pickedId;
     },
     fileOf: (): File | null => null,
   };
@@ -304,5 +327,33 @@ describe("IN3 the page in two boxes and two tabs", () => {
     await open(store, "b".repeat(32), "second.nei");
     expect(buttonOf("Open another variants file…")).toBe(button);
     expect(region("Variants file")?.contains(button)).toBe(true);
+  });
+});
+
+/** Draws the page with a throw in the zone that opens a variants file,
+    which the boundary of the zone catches. */
+async function drawWithZoneThrowing(
+  pickedId?: string,
+): Promise<Store<JobResult, Blob>> {
+  inject.zoneThrows = true;
+  const { store } = await drawPage(pickedId);
+  expect(caught).toHaveLength(1);
+  expect(buttonOf("Open variants file…")).toBeNull();
+  inject.zoneThrows = false;
+  return store;
+}
+
+describe("IN3 the boundary of the zone that opens a variants file", () => {
+  test("after a throw in the zone, its heading is its own, under the box's, and not the box's name again", async () => {
+    await drawWithZoneThrowing();
+    const headings = [...container.querySelectorAll("h1, h2, h3")].map(
+      (heading) => `${heading.tagName} ${heading.textContent}`,
+    );
+    expect(headings).toEqual([
+      "H1 Popnei",
+      "H2 Variants file",
+      "H3 Opening a variants file",
+      "H2 Individuals file",
+    ]);
   });
 });
