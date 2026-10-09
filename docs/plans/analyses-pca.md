@@ -909,3 +909,21 @@ the lint pass, the format check passes, and Vitest passes 4,620 tests in
 134 files. `npx vitest list` and `npx playwright test --list` (2,835
 tests in 42 files) name no test that starts with `AP` and a digit. The
 browser check of the starting commit is GitHub's run 37932799753.
+
+### Work package 8, 9 October 2026
+
+Commit 6c0b76b. The flow, now "AP8 D1 WS7 D3 a file picked before
+popnei has loaded is shown as being read, with its clock", reads the
+clock with `/^(1 second|([2-9]|[1-9]\d+) seconds) so far\.$/`. With a
+pause of 2.5 s put before the check and not committed, the old check
+failed and the new one passed, in Chromium and WebKit; `--repeat-each=10`
+passed 20 of 20, ten in each engine. The typecheck and the lint pass.
+
+The review, `tests` and `stale`, found nothing to fix. It checked the
+pattern under node against the clock's words from 0 to 100,000 s: it
+matches each second from 1 to 999 and refuses "0 seconds" and a wrong
+plural; from 1,000 s the clock writes a comma, which the pattern does
+not take and the flow, waiting 5 s, never reaches. It saw the same exact
+check of "1 second so far." in `e2e/screens.spec.ts` (three places) and
+`e2e/popgen2Filter.spec.ts` (`SF7 D2`), which can fail the same way;
+they are fixed after work package 1, which changes those files.
