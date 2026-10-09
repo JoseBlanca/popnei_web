@@ -293,7 +293,22 @@ needs one, would take 16,007 of those bytes out of the first script,
 1.7% of the about 942 KB of a first visit, most of which is the wasm of
 popnei; not taken, for a second request and a moment of waiting before
 the first plot, against 16 KB, and it is measured again if the plots
-grow. three.js is the exception, below.
+grow. three.js is one exception, below. The result of the PCA tab of
+`popgen2.html` is the other: its plot, its tables and their menus are
+loaded with `import()` when the PCA tab is first shown with a variants
+file open, and not with the page (`docs/specs/steps/popgen2-pca.md`,
+"The result"). Its own files are 18.6 KB gzipped, 17,157 bytes of
+script, 1,184 of CSS and 235 of the module that imports it, and it
+shares 15.5 KB more, 14,645 bytes of script and 896 of CSS, with the
+histograms of the Variants tab, which come when a file is opened, all
+with `gzip -9` on the site built on 10 October 2026. With it in the
+first script the first load of `popgen2.html`, 303.5 KB without it,
+would grow by about 34 KB, under the 50 KB the design of the PCA tab
+allows it (`docs/plans/analyses-pca.md`, work package 6, deliverable
+6); it was moved out when its size was taken as about 58 KB, over that
+bound, and stays out so that a user who never runs a PCA downloads
+none of it, for a moment of waiting, "Loading the result…", only when
+a run ends before the code has arrived.
 
 Considered and not taken:
 
