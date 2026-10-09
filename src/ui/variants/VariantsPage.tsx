@@ -5,12 +5,9 @@
  * below, the variants file's first; and under them the row of five tabs,
  * "Variants", "Individuals", "PCA", "Populations" and "Distances"
  * (docs/specs/steps/popgen2-pca.md, "The row of tabs"), the first shown
- * when the page opens and never changed by the page. Every tab stays
- * drawn, those not shown inert and hidden, so that a turn to another and
- * back finds the plots and the thresholds as they were ("Both tabs kept
- * drawn"). A tab of the analyses that cannot run, from `analysisTabs` of
- * core, is greyed with its reason, and shows the reason in place of its
- * content while it is shown greyed.
+ * when the page opens and never changed by the page, drawn by
+ * `PageTabs` in a boundary of errors of its own, so that a throw in it
+ * leaves the two boxes.
  *
  * The box of the variants file holds the lines of the file open, in a
  * boundary of errors made again for each file, which draws their name
@@ -31,42 +28,21 @@
  */
 import { useId, useRef, useState } from "react";
 
-import { analysisTabs } from "../../core/popgen2Tabs.ts";
-import type {
-  AnalysisTabId,
-  PageTab,
-  TabGreyed,
-} from "../../core/popgen2Tabs.ts";
+import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
-import { Tabs } from "../widgets/Tabs.tsx";
-import type { TabItem } from "../widgets/Tabs.tsx";
-import {
-  greyedText,
-  ANALYSES_TABS_LABEL,
-  DISTANCES_NOT_BUILT,
-  PAGE_TAB_LABELS,
-  PCA_HEADING,
-  POPULATIONS_NOT_BUILT,
-} from "./analysisTabsWords.ts";
+import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
-import { IndividualsTab } from "./IndividualsTab.tsx";
-import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
-import { StatsSection } from "./StatsSection.tsx";
+import { PageTabs } from "./PageTabs.tsx";
 import styles from "./VariantsPage.module.css";
 import { VariantsSummary } from "./VariantsSummary.tsx";
-import {
-  INFO_NAME,
-  NO_VARIANTS_FILE_TAB,
-  OPENING_NAME,
-  OPENING_ZONE_NAME,
-} from "./words.ts";
+import { INFO_NAME, OPENING_NAME, OPENING_ZONE_NAME } from "./words.ts";
 
 /** What the page is drawn with. */
 export interface VariantsPageProps {
@@ -92,14 +68,6 @@ export function VariantsPage({
   const [tab, setTab] = useState<PageTab>("variants");
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
-  const individualsId = useAppState(
-    (s) => s.project.individuals?.fileId ?? null,
-  );
-  // The same object while the reasons are the same, so that a threshold
-  // moved does not draw the row again.
-  const tabReasons = useAppState((s) =>
-    analysisTabs(s.project, s.individualsKept),
-  );
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -152,89 +120,19 @@ export function VariantsPage({
           </section>
           <IndividualsBox autoRuns={autoRuns} tab={tab} />
         </div>
-        <Tabs<PageTab>
-          label={ANALYSES_TABS_LABEL}
-          selected={tab}
-          onChange={setTab}
-          keepHidden
-          tabs={[
-            {
-              id: "variants",
-              label: PAGE_TAB_LABELS.variants,
-              content: (
-                <>
-                  {fileId === null && (
-                    <p className={classOf(styles, "boxLine")}>
-                      {NO_VARIANTS_FILE_TAB}
-                    </p>
-                  )}
-                  <StatsSection
-                    autoRuns={autoRuns}
-                    openButton={openButton}
-                    onShown={onStatsShown}
-                  />
-                </>
-              ),
-            },
-            {
-              id: "individuals",
-              label: PAGE_TAB_LABELS.individuals,
-              content: (
-                // Another load is another boundary, which has caught
-                // nothing, as the statistics of the variants file have.
-                <ErrorBoundary
-                  key={individualsId ?? "none"}
-                  heading={INDIVIDUALS_TAB_CONTENT_NAME}
-                  level={2}
-                >
-                  <IndividualsTab shown={tab === "individuals"} />
-                </ErrorBoundary>
-              ),
-            },
-            analysisTab(
-              "pca",
-              tabReasons.pca,
-              <h2 className={classOf(styles, "boxHeading")}>{PCA_HEADING}</h2>,
-            ),
-            analysisTab(
-              "populations",
-              tabReasons.populations,
-              <p className={classOf(styles, "boxLine")}>
-                {POPULATIONS_NOT_BUILT}
-              </p>,
-            ),
-            analysisTab(
-              "distances",
-              tabReasons.distances,
-              <p className={classOf(styles, "boxLine")}>
-                {DISTANCES_NOT_BUILT}
-              </p>,
-            ),
-          ]}
-        />
+        {/* A defect in the reasons of the tabs costs the row alone, not
+            the boxes of the files. */}
+        <ErrorBoundary heading={ANALYSES_TABS_LABEL} level={2}>
+          <PageTabs
+            tab={tab}
+            onTabChange={setTab}
+            autoRuns={autoRuns}
+            openButton={openButton}
+            onStatsShown={onStatsShown}
+          />
+        </ErrorBoundary>
       </main>
       <StatusRegion />
     </>
   );
-}
-
-/** A tab of the analyses: greyed with the words of `reason`, which are
-    then its content too, or showing `content`. */
-function analysisTab(
-  id: AnalysisTabId,
-  reason: TabGreyed | null,
-  content: React.ReactNode,
-): TabItem<AnalysisTabId> {
-  const words = reason === null ? null : greyedText(id, reason);
-  return {
-    id,
-    label: PAGE_TAB_LABELS[id],
-    content:
-      words === null ? (
-        content
-      ) : (
-        <p className={classOf(styles, "boxLine")}>{words}</p>
-      ),
-    greyedReason: words,
-  };
 }

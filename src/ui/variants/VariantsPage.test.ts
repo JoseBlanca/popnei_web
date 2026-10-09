@@ -22,7 +22,12 @@ import {
   vi,
 } from "vitest";
 
-import { loadVariants } from "../../core/project.ts";
+import {
+  loadIndividuals,
+  loadVariants,
+  setGrouping,
+  setIndividualFilter,
+} from "../../core/project.ts";
 import { summaryResult } from "../../core/testSupport.ts";
 import type { Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
@@ -39,6 +44,7 @@ import { VariantsPage } from "./VariantsPage.tsx";
 import type * as FileZoneModule from "../widgets/FileZone.tsx";
 import type { FileZoneProps } from "../widgets/FileZone.tsx";
 import type * as WordsModule from "./words.ts";
+import type * as Popgen2TabsModule from "../../core/popgen2Tabs.ts";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -49,7 +55,25 @@ declare global {
 const inject = vi.hoisted(() => ({
   throwAt: null as number | null,
   zoneThrows: false,
+  tabsThrow: false,
 }));
+
+vi.mock("../../core/popgen2Tabs.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof Popgen2TabsModule>();
+  return {
+    ...real,
+    analysisTabs: (
+      ...args: Parameters<typeof real.analysisTabs>
+    ): ReturnType<typeof real.analysisTabs> => {
+      if (inject.tabsThrow) {
+        throw new Error(
+          "popnei_web defect: an individuals file read gave no counts.",
+        );
+      }
+      return real.analysisTabs(...args);
+    },
+  };
+});
 
 vi.mock("../widgets/FileZone.tsx", async (importOriginal) => {
   const real = await importOriginal<typeof FileZoneModule>();
@@ -115,6 +139,7 @@ beforeEach(() => {
   };
   inject.throwAt = null;
   inject.zoneThrows = false;
+  inject.tabsThrow = false;
   container = document.createElement("div");
   document.body.append(container);
   caught = [];
@@ -237,6 +262,18 @@ async function open(
   await settled();
 }
 
+/** The text of `element` but that of its parts hidden. */
+function shownText(element: Element): string {
+  return [...element.childNodes]
+    .map((node) => {
+      if (node instanceof Element) {
+        return node.hasAttribute("hidden") ? "" : shownText(node);
+      }
+      return node.textContent ?? "";
+    })
+    .join("");
+}
+
 /** The box of the file, by its name. */
 function box(): Element | null {
   return container.querySelector('[aria-label="File information"]');
@@ -291,7 +328,7 @@ function buttonOf(words: string): HTMLButtonElement | null {
 }
 
 describe("IN3 the page in two boxes and the row of tabs", () => {
-  test("with no file: the two boxes with their words of no file, the zone in the box of the variants file, then the two tabs with the variants file's shown", async () => {
+  test("with no file: the two boxes with their words of no file, the zone in the box of the variants file, then the five tabs with the Variants tab shown", async () => {
     await drawPage();
     const variantsBox = region("Variants file");
     const individualsBox = region("Individuals file");
@@ -339,9 +376,9 @@ describe("IN3 the page in two boxes and the row of tabs", () => {
       "No variants file open. Open one in the box Variants file.",
     );
     // The tabs not shown are drawn, inert, those of the analyses with
-    // their reasons.
+    // their reasons, and their content hidden under them.
     const hidden = [...container.querySelectorAll("[inert]")];
-    expect(hidden.map((element) => element.textContent)).toEqual([
+    expect(hidden.map(shownText)).toEqual([
       "No individuals file open.",
       "The PCA needs a variants file. Open one in the box Variants file.",
       "The analyses of the populations need a variants file. Open one in the box Variants file.",
@@ -411,6 +448,9 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
       "H2 Variants file",
       "H3 Opening a variants file",
       "H2 Individuals file",
+      // The heading of the PCA tab, greyed, drawn hidden under its
+      // reason.
+      "H2 PCA",
     ]);
   });
 
@@ -437,5 +477,111 @@ describe("IN3 the boundary of the zone that opens a variants file", () => {
       await Promise.resolve();
     });
     expect(store.getState().project.variants?.name).toBe("panel.vcf");
+  });
+});
+
+/** Opens an individuals file that puts i1 in p0 and i2 in p1, chooses
+    its column pop, and keeps i1 alone. */
+async function openPopulationsKeepingI1(
+  store: Store<JobResult, Blob>,
+): Promise<void> {
+  const fileId = "d".repeat(32);
+  const csv = { encoding: "auto", separator: "auto", decimal: "auto" } as const;
+  await act(async () => {
+    store.apply("an individuals file was loaded", (p) =>
+      loadIndividuals(p, { fileId, name: "pops.csv", csv }),
+    );
+    store.individualsRead(fileId, csv, {
+      kind: "read",
+      table: {
+        columns: ["IID", "pop"],
+        rows: [
+          ["i1", "p0"],
+          ["i2", "p1"],
+        ],
+      },
+      columns: [{ kind: "identifier" }, { kind: "categorical" }],
+      found: {
+        encoding: "utf-8",
+        separator: ",",
+        decimal: ".",
+        undecodedLine: null,
+      },
+    });
+    store.apply("the column of the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: "pop" }),
+    );
+    store.apply("the individuals kept changed", (p) =>
+      setIndividualFilter(p, { kind: "keep", individuals: ["i1"] }),
+    );
+    await Promise.resolve();
+  });
+  await settled();
+}
+
+describe("AP1 the row of five tabs on the page", () => {
+  test("the filters keeping individuals of p0 alone grey Distances with the reason of the individuals kept", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    await openPopulationsKeepingI1(store);
+    const distances = tabOf("Distances");
+    expect(distances.getAttribute("aria-disabled")).toBe("true");
+    expect(
+      document.getElementById(distances.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(
+      "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab.",
+    );
+  });
+
+  test("a tab of the analyses greyed while shown keeps its content drawn, hidden, and shows it again when it opens", async () => {
+    const { store } = await drawPage();
+    await open(store, "a".repeat(32), "first.nei");
+    await act(async () => {
+      tabOf("PCA").click();
+      await Promise.resolve();
+    });
+    const heading = [...container.querySelectorAll("h2")].find(
+      (h) => h.textContent === "PCA",
+    );
+    expect(heading).toBeDefined();
+    await act(async () => {
+      store.apply("a new variants file was loaded", (p) =>
+        loadVariants(p, {
+          fileId: "b".repeat(32),
+          name: "second.nei",
+          size: 1000,
+          format: "nei",
+          readOptions: null,
+        }),
+      );
+      await Promise.resolve();
+    });
+    const panel = container.querySelector('[role="tabpanel"]:not([inert])');
+    expect(panel?.textContent).toContain(
+      "The PCA needs a variants file: second.nei is being opened.",
+    );
+    expect(heading?.isConnected).toBe(true);
+    expect(heading?.closest("[hidden]")).not.toBeNull();
+    await open(store, "b".repeat(32), "second.nei");
+    expect(
+      [...container.querySelectorAll("h2")].find(
+        (h) => h.textContent === "PCA",
+      ),
+    ).toBe(heading);
+    expect(heading?.closest("[hidden]")).toBeNull();
+    expect(panel?.textContent).not.toContain("is being opened");
+  });
+
+  test("a defect in the reasons of the tabs costs the row of tabs alone: both boxes are still drawn", async () => {
+    inject.tabsThrow = true;
+    await drawPage();
+    expect(caught).toEqual([
+      new Error("popnei_web defect: an individuals file read gave no counts."),
+    ]);
+    expect(region("Variants file")).not.toBeNull();
+    expect(region("Individuals file")).not.toBeNull();
+    expect(buttonOf("Open variants file…")).not.toBeNull();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
   });
 });
