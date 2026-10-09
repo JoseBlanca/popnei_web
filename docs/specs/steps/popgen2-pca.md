@@ -167,14 +167,16 @@ of the project after the command, as the words of the tab follow it.
 
 No step: the opening of a variants file, by the store's `open`; the
 opening, the removal and a change of an option of the reader of the
-individuals file, and the column the page chooses at the end of its
-read, by the store's `applyAfresh`. Each starts the history afresh,
-with nothing to undo or redo, so Undo and Redo go after them. The
-column the page chooses comes when the read of the individuals file
-ends, which may be a second after the opening: a threshold moved in
-that second is a step that the read then drops, and Undo goes with it.
-A number typed and not applied when it comes is applied first, as
-before an opening of the variants file. The tab
+individuals file, by the store's `applyAfresh`. Each starts the history
+afresh, with nothing to undo or redo, so Undo and Redo go after them.
+Nor the column the page chooses at the end of the read of the
+individuals file, which may come seconds after the opening: the store
+records it as it records the read, `populationColumnChosen`, into every
+project of the history since the opening, so a threshold moved while
+the file was read stays a step, and its undo keeps the column; a run of
+the arrow keys waiting and a number typed and not applied when it comes
+stay as they were (`docs/specs/entry.md`, "The column of the
+populations on popgen2.html"). The tab
 shown, the sort of a table, how far it is scrolled, the turn and the
 zoom of the 3D view and the group highlighted in the legend are of the
 screen, and no step.
@@ -207,6 +209,7 @@ of a box:
 | a line of a threshold, with a run of the arrow keys waiting | the run is made a change, then undone, so the threshold goes back to where the presses started |
 | the dialog of the download of the filtered variants, open | nothing |
 | an open menu "Download…" | the page's Undo; the menu stays open, unless the undo removes the table or the plot it belongs to, which closes it, and the focus goes to the heading "Popnei" |
+| anywhere, while a PCA runs | nothing: Undo and Redo wait until the PCA ends or is stopped, as the filters it reads are locked (work package 4 of `docs/plans/analyses-pca.md`) |
 | anywhere else on the page | the page's Undo |
 
 The box refuses the browser's own undo of its text, by the keys and by
@@ -519,8 +522,9 @@ It sends the commands of the table of "What is a step", each with
 `startAnalysis(store, "pca")` of `src/ui/runs.ts`; Stop,
 `store.cancelRun("pca")`; Undo and Redo, `undoOrRedo` of
 `src/ui/shell/undoRedo.ts`. The commands of the individuals file go
-through `store.applyAfresh` (`popgen2-input.md`, "What it sends and
-reads", revised).
+that the user makes go through `store.applyAfresh` (`popgen2-input.md`,
+"What it sends and reads", revised), and the column the page chooses at
+a read is the store's `populationColumnChosen` (`docs/specs/entry.md`).
 
 It reads: the state of `pca` among the store's analyses, and its run;
 the project, for `pcaOptions`, `pcaFilters` with the rule of this page,
@@ -748,9 +752,12 @@ engines that start on the owner's Mac, on `panel.nei`,
   (3.68%)" and "PC2 (3.54%)", the warning of the correction with
   "7.87%", "0.047", "53%" and "0.22", and the line under the explained
   variance with "0.047" and "198 components".
-- **A change during a run**: a PCA held running, a threshold moved: the
-  PCA stopped, the tab ready; Undo: the threshold back, the tab ready,
-  not running.
+- **A change during a run**: a PCA held running: the thresholds and the
+  FILTER box of the Variants tab, the column of the populations and the
+  PCA's own options greyed, with "Stop the PCA to change the filters"
+  (words to be settled in work package 6); Ctrl+Z undoes nothing while
+  it runs; an opening of another variants file stops it, the tab
+  ready.
 - **Undo and Redo**: no button when the page opens, after `panel.nei`,
   and after `panel_pops.csv`; a threshold moved: Undo, with its tooltip
   "Undo: the filter of the variants by missing data changed" on the focus; Undo pressed:
@@ -825,8 +832,9 @@ before the lock of the one pass; the LD pruning a
 switch; one button "Download…" with a menu; the names of the files;
 Redo back with Undo, shown by the same rule; their places that stay
 empty; the keys caught on the whole page; the removal of the individuals
-file and a change of its reader as no steps; a PCA stopped by a change
-not started again by an Undo; and the words.
+file and a change of its reader as no steps; the filters a running PCA
+reads locked, and Undo and Redo waiting while it runs (the owner's
+answer 2 of 9 October 2026); and the words.
 
 ## Left for the running application
 

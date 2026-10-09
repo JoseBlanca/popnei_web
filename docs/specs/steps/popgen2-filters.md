@@ -206,6 +206,13 @@ on 8 October 2026 that an Undo of an opening is "not necessary". Until
 then an opening was a step of Undo, named by the file, "Undo:
 panel.nei opened".
 
+An individuals file, opened, removed or read with other options, starts
+the history afresh too, through the store's `applyAfresh` rather than
+`open`, which would stop the one pass; the column the user chooses is a
+step, and the column the page chooses at the end of a read is none
+(`docs/specs/core/store.md`, "On popgen2.html: no notice, and a history
+of the filters").
+
 The part of the shell's header that draws the two buttons and listens
 for the keys was taken out of `src/ui/shell/Header.tsx` into a part of
 its own, `src/ui/shell/UndoRedoButtons.tsx`, which the old page's

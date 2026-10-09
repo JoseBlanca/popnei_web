@@ -981,15 +981,28 @@ change makes none, and stops at once every calculation it leaves behind
 store's `open`, which starts a new history with nothing to undo, stops
 the pass of the file before and gives no notice; the filters are kept
 as the user left them. A change of the individuals file there, its
-opening, its removal, an option of its reader or the column the page
-chooses at the end of its read, is the store's `applyAfresh`, a command
-after which the history starts afresh, so that it stops nothing that a
-command would not, the one pass among them, and is no step of Undo
-either. So the page's Undo and Redo serve the changes of the filters,
-of the column of the populations and of the options of the PCA, and the
-store never gives that page a notice
-(`docs/specs/core/store.md`, "The notice, and the calculations it
-stops").
+opening, its removal or an option of its reader, is the store's
+`applyAfresh`, a command after which the history starts afresh, so that
+it stops nothing that a command would not, the one pass among them, and
+is no step of Undo either. The column the page chooses at the end of a
+read is no change of the user's: the store records it into the projects
+of the history as it records the read, with no step, so the steps made
+while the file was read are kept. So the page's Undo and Redo serve the
+changes of the filters, of the column of the populations the user
+chooses and of the options of the PCA, and the store never gives that
+page a notice (`docs/specs/core/store.md`, "The notice, and the
+calculations it stops").
+
+While a PCA runs there, the screen locks the filters it reads, the
+thresholds and the FILTER box of the Variants tab, the column of the
+populations and the PCA's own options, greyed with the words of
+`docs/specs/steps/popgen2-pca.md`, and the buttons and keys of Undo and
+Redo wait, as the download of the filtered variants waits, as the owner
+answered on 9 October 2026 (answer 2 of `docs/plans/analyses-pca.md`).
+So no change the screen allows leaves a running PCA behind, and the
+store's setting `stopLeftBehind`, which stops what a change leaves
+behind, is a guard for a change the lock missed; its other half, no
+notice, is what the page needs of it at every change.
 
 **A failure is forgotten when its key is left behind.** A failure that
 is not popnei's, a crash of the worker, is kept under its key until a
@@ -1043,9 +1056,14 @@ answer to the open point of that design: Undo and Redo come back to
 it has a step to take, with their keys caught on the whole page; a PCA
 that a change stopped is not kept for an Undo, which brings back the
 results the cache holds and starts nothing; and the changes of the
-individuals file go through `applyAfresh`, new in the store, rather than
-`apply`, whose steps an Undo would take back, or `open`, which would
-stop the one pass (`docs/designs/analyses-pca.md`, "Undo and Redo").
+individuals file the user makes go through `applyAfresh`, new in the
+store, rather than `apply`, whose steps an Undo would take back, or
+`open`, which would stop the one pass (`docs/designs/analyses-pca.md`,
+"Undo and Redo"), while the column the page chooses at a read is
+recorded as the read is, with no step. And, for the owner's answer 2 to
+the plan of that piece, a running PCA locks the filters it reads and
+makes Undo and Redo wait, so the setting's stop is a guard (above, "No
+notice on `popgen2.html`").
 
 ## 4. An analysis is a module
 

@@ -428,14 +428,18 @@ analysis, and has no Run of its own.
 
 Revised on 9 October 2026, when Undo came back to the page
 (`docs/specs/steps/popgen2-pca.md`, "Undo and Redo"): the opening, the
-removal and a change of an option of the reader, and the column the
-entry chooses, go through the store's `applyAfresh`, which starts the
-history afresh and is no step of Undo; only the column the user
-chooses, or None, stays a command of `apply`, a step. The descriptions
-below remain, though only that one is shown, in the tooltip of Undo.
+removal and a change of an option of the reader go through the store's
+`applyAfresh`, which starts the history afresh and is no step of Undo;
+only the column the user chooses, or None, stays a command of `apply`,
+a step. The column the entry chooses at the end of a read is no step
+either, and goes through neither: the store's `populationColumnChosen`
+records it as the read is recorded (`docs/specs/entry.md`). The
+descriptions below remain, though only that one is shown, in the
+tooltip of Undo.
 
-It sends, each a command of `apply`, a step of the history, with its
-description, as the old step's commands (`src/ui/steps/individuals/commands.ts`):
+It sends these commands, as the old step's
+(`src/ui/steps/individuals/commands.ts`), the column and None with
+`apply` and their description, the others with `applyAfresh`:
 
 | what the user does | the command | the description |
 |---|---|---|
