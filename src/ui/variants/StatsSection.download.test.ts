@@ -318,10 +318,12 @@ describe("the section of the statistics while its code downloads", () => {
     // While the code of its plots downloads, the section has its two
     // headings, and says of each part that it is calculated, over the
     // room of its plots, never a count done with no word of the
-    // statistics; nothing is said of them yet. The download of the
-    // filtered variants, the page's, is drawn with the pass finished.
+    // statistics; nothing is said of them yet. The downloads of the
+    // table of the individuals and of the filtered variants, the page's,
+    // are drawn with the pass finished, so that the code of the plots
+    // arriving moves neither.
     expect(shownText(sectionOf())).toBe(
-      "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…Download filtered variants…",
+      "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…Download the missing genotypes and heterozygosity of each individual (CSV)Download filtered variants…",
     );
     expect(page.shown).toEqual([]);
     expect(saidOfStats(page)).toEqual([]);

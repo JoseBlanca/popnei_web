@@ -126,6 +126,15 @@ function downloadButton(page: Page): Locator {
   });
 }
 
+/** Waits for the end of the pass and for its six plots, whose code may
+    come after the result and its download of the individuals. */
+async function drawn(page: Page): Promise<void> {
+  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await expect(stats(page).locator("svg.chart")).toHaveCount(6, {
+    timeout: 20_000,
+  });
+}
+
 /** The open button, under the statistics. */
 function openButton(page: Page): Locator {
   return page.getByRole("button", {
@@ -161,7 +170,7 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
 
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   await expect(stats(page).getByRole("heading", { level: 2 })).toHaveText([
     "Variants",
     "Individuals",
@@ -229,7 +238,7 @@ test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   await openPage(page);
   await pick(page, join(FIXTURES, "tetraploid.vcf.gz"));
 
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   expect(await titles(page)).toEqual(TITLES);
   // The missing rate, multiples of 1 / 12: a bin of 0 to 0.001, its
   // zeros, and 3 of 0.1 from 0.001 to 0.3.
@@ -428,7 +437,7 @@ test("FS2 a crash of the worker during the pass: the box says the variants could
   await expectNoViolations(makeAxeBuilder);
 
   await again.click();
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   await expect(info(page).getByText(failed)).toHaveCount(0);
   await expect(stats(page).getByText("Not calculated.")).toHaveCount(0);
   await expect(stats(page).locator("svg.chart")).toHaveCount(6);
@@ -447,7 +456,7 @@ test("FS2 a file dropped while the focus is on the download of the individuals m
 }) => {
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   await downloadButton(page).focus();
   await expect(downloadButton(page)).toBeFocused();
 
@@ -473,7 +482,7 @@ test("FS2 at 320 pixels the plots are one under the other within the page, which
   await page.setViewportSize({ width: 320, height: 900 });
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   const plots = stats(page).locator("svg.chart");
   await expect(plots).toHaveCount(6);
   const boxes = await plots.evaluateAll((svgs) =>
@@ -500,7 +509,7 @@ test("FS2 on a desktop the plots are two wide", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await openPage(page);
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   const lefts = await stats(page)
     .locator("svg.chart")
     .evaluateAll((svgs) =>
@@ -588,7 +597,7 @@ test("FS3 the open button is alone under the heading before a file is opened, an
   await expect(openButton(page)).toHaveText("Open variants file…");
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
-  await expect(downloadButton(page)).toBeVisible({ timeout: 20_000 });
+  await drawn(page);
   const box = await page
     .getByRole("region", { name: "File information" })
     .boundingBox();

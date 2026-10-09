@@ -49,8 +49,8 @@
  * do not move down by 574 pixels at 1280 as the plots arrive, where a
  * user may be about to click or have the focus (the review of work
  * package 7 of docs/plans/filters.md, 8 October 2026). The download of
- * the table of the individuals comes with the result alone, and moves the
- * open button down by its height.
+ * the table of the individuals comes with the result alone, the code of
+ * the plots there or not, and moves the open button down by its height.
  *
  * The code of the plots, with D3, SectionPlots.tsx, is downloaded apart
  * from the page's, from the moment a file is picked, so that the page's
@@ -359,12 +359,23 @@ function Stats({
             {coming && <PlotsRoom titles={INDIVIDUAL_ROOM} />}
           </>
         ) : (
-          <Suspense fallback={<Waiting part="individuals" />}>
-            <LineOrRoom line={lineOf("individuals")} part="individuals" room />
-            <IndividualPlots
-              result={shown.result.perIndividual}
-              from={shown.from}
-            />
+          <>
+            <Suspense fallback={<Waiting part="individuals" />}>
+              <LineOrRoom
+                line={lineOf("individuals")}
+                part="individuals"
+                room
+              />
+              <IndividualPlots
+                result={shown.result.perIndividual}
+                from={shown.from}
+              />
+            </Suspense>
+            {/* Outside the boundary, which waits for the code of the
+                plots: drawn with the result, as the button of the
+                download under it is enabled, and not 50 pixels above it
+                when that code arrives later, under a press of the
+                pointer on that button. */}
             {done !== undefined && (
               <IndividualsDownload
                 onPress={() => {
@@ -376,7 +387,7 @@ function Stats({
                 }}
               />
             )}
-          </Suspense>
+          </>
         )}
         <DownloadVariants />
       </Part>

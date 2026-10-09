@@ -699,6 +699,36 @@ test("DL7 D2 the sentence after a write that keeps no variant, with no download 
   );
 });
 
+test("DL7 D2 the button stays where it is drawn when the code of the plots arrives after the end of the one pass, the button of the CSV of the individuals drawn above it from that end", async ({
+  page,
+}) => {
+  // The code of the plots, held until the flow lets it through, as on a
+  // slow network: a small file read before it arrives gives the button
+  // over the room of the plots. On 9 October 2026 the CSV of the
+  // individuals came only with that code, and moved the button and the
+  // text after a download 50 pixels down under a press in WebKit, whose
+  // release then fell on the CSV's button.
+  let letThrough = (): void => undefined;
+  const arrived = new Promise<void>((resolve) => {
+    letThrough = resolve;
+  });
+  await page.route(/\/assets\/SectionPlots-[^/]*\.js$/u, async (route) => {
+    await arrived;
+    await route.continue();
+  });
+  await openDone(page, "panel.nei");
+  const csv = stats(page).getByRole("button", {
+    name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+  });
+  await expect(csv).toBeVisible();
+  await expect(stats(page).locator("svg.chart")).toHaveCount(0);
+  const before = await button(page).boundingBox();
+
+  letThrough();
+  await expect(stats(page).locator("svg.chart")).toHaveCount(6);
+  expect(await button(page).boundingBox()).toEqual(before);
+});
+
 test("DL7 D2 the missing rate of the individuals at 0.01 keeps none of the 200, and their words take the place of the button; axe, light and dark", async ({
   page,
   makeAxeBuilder,

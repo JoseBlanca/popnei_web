@@ -80,7 +80,8 @@ async function pick(page: Page, name: string): Promise<void> {
 }
 
 /** Opens popgen2.html and the fixture `name`, and waits for its one pass
-    to end, the download of the individuals' table its sign. */
+    to end, the download of the individuals' table its sign, and for its
+    six plots, whose code may come after it. */
 async function openDone(page: Page, name: string): Promise<void> {
   await page.goto("popgen2.html");
   await pick(page, name);
@@ -89,6 +90,7 @@ async function openDone(page: Page, name: string): Promise<void> {
       name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
     }),
   ).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
 }
 
 /** The histogram titled `title`: its group, its box, its line, the
