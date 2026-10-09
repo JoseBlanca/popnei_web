@@ -1,0 +1,759 @@
+# popgen2.html: the five tabs, the PCA tab, the downloads and Undo
+
+The screen spec of what `popgen2.html` gains with its first analysis:
+the row of five tabs under the two boxes, Variants, Individuals, PCA,
+Populations and Distances, with the tabs of the analyses greyed while
+they cannot run; the PCA tab, a PCA or a PCoA of the individuals of the
+variants file; a button "Download…" on every table and every plot of
+the page; and Undo and Redo at the top right corner of the page. It
+develops the design `docs/designs/analyses-pca.md`, approved by the
+owner on 9 October 2026 with its ten answers, and section 5 of
+`docs/functionality.md`, "The individuals". It covers case 3 of
+`docs/use-cases.md`, "Look for clusters of individuals". Written on 9
+October 2026, before any code; not yet approved by the owner.
+
+The PCA tab is the panel of the old page, `popgen.html`, which is built
+and which the owner approved on 28 September 2026: its screen spec is
+the second half of `docs/specs/analyses/pca.md`, "The panel". This spec
+says what is the same by pointing there, and gives in full what differs.
+The two boxes and the Variants and Individuals tabs are those of
+`docs/specs/steps/popgen2-input.md`, `popgen2-filters.md` and
+`popgen2-download.md`, renamed and otherwise unchanged.
+
+The module specs it reads, revised for it the same day:
+
+- the store, its setting for this page that makes no notice and stops a
+  calculation left behind, and `applyAfresh`, which the changes of the
+  individuals file go through, `docs/specs/core/store.md`, "On
+  popgen2.html: no notice, and a history of the filters";
+- the history, `docs/specs/core/history.md`;
+- the PCA's module, its definition for this page with the filters that
+  narrow those of the Variants tab, its colours with the unclassified,
+  and the CSV of the coordinates, `docs/specs/analyses/pca.md`, "On
+  popgen2.html";
+- the tabs that are greyed and why, a function of core,
+  `docs/specs/core/popgen2Tabs.md`;
+- the download menu of the tables and the plots, and the CSV each
+  writes, `docs/specs/widgets/downloads.md`.
+
+The calculation worker and its PCA do not change: the job is the one of
+the old page, given other filters (`docs/specs/worker/protocol.md`).
+
+## The terms
+
+- **The one pass** is the single reading of the variants file that the
+  page makes by itself when the file is opened, which gives the count of
+  the variants, the plots of the Variants tab and each individual's
+  missing rate and observed heterozygosity (`popgen2-filters.md`, "The
+  terms"). **Read to the end** means that it read the whole file: not
+  while it runs, not after a Stop, not after a failure.
+- **A variants file is open** from the moment its box shows its
+  individuals and its ploidy, before the one pass ends.
+- **The thresholds of the Variants tab** are its five filters on the
+  histograms, and the FILTER box; **the individuals kept** are those its
+  two thresholds of the individuals keep (`popgen2-input.md`, "The
+  terms").
+- **Unclassified**: an individual of the variants file with no
+  population, because there is no individuals file, no column is chosen,
+  its cell is empty, `NA` or `-`, or it is not in the individuals file.
+- **The store** holds the project, the results and the calculations
+  under way, and the screens read it. A **command** changes the project
+  and is a **step of the history**, which Undo takes back; a **key** is
+  the text made from everything a calculation reads, under which its
+  result is kept in the **cache**, the store's memory of results. A
+  result is on the screen only under the key the current project gives
+  (`docs/architecture.md`, section 3).
+- **A lock** is a reason the PCA cannot run, written beside its Run
+  button, which is then disabled.
+- **The focus** is the control the keys act on; the **Tab key** moves it
+  from one control to the next. **The status region** is a line of the
+  page that is not seen and that a screen reader speaks each time its
+  words change. A **tooltip** is the short text shown beside a control
+  while the mouse rests on it or the focus is on it.
+- **A tab** is one of the five labels under the boxes and the part of
+  the page it shows; **greyed** is a tab that does not open, drawn in a
+  lighter colour, with its reason in a tooltip.
+- **React Aria** is the library of controls the page is built with,
+  which gives each its keys and the words a screen reader reads.
+- **WebGL** is the part of the browser that draws the 3D view with the
+  graphics card; **three.js** the library that draws it, 134 KB
+  gzipped, downloaded the first time a 3D view is drawn.
+
+## What changes for the user
+
+- Under the boxes, five tabs: **Variants**, the tab "Variants file" of
+  today; **Individuals**, the tab "Individuals file" of today; **PCA**;
+  **Populations**; **Distances**.
+- PCA and Populations are greyed until a variants file is open;
+  Distances until at least two populations have an individual in the
+  variants file. A greyed tab does not open, and says why on the mouse
+  and on the focus of the keyboard.
+- The PCA tab runs a PCA of the genotypes or a PCoA of the Kosman
+  distances, with its own filters, stricter than the Variants tab's or
+  as they are, and an LD pruning on by default whose distance the user
+  types. Its Run waits for the one pass to end.
+- Populations and Distances, once they open, say that they are not
+  built yet.
+- Every table and every plot of the page has a button "Download…",
+  which offers the table as CSV, or the plot's image as SVG or PNG and
+  its data as CSV.
+- Undo and Redo are back, at the top right corner of the page, each
+  shown only while it has a step to take. Ctrl+Z and Cmd+Z undo.
+- Opening, removing or reading again the individuals file is no step of
+  Undo, as opening the variants file already is not.
+
+## What it shows
+
+### The order of the page
+
+From the top: the line of the heading "Popnei", with Undo and Redo at
+its right end; the two boxes, "Variants file" and "Individuals file", as
+`popgen2-input.md` gives them; the row of the five tabs; the content of
+the tab shown.
+
+### Undo and Redo
+
+**Where.** At the right end of the line of the heading "Popnei", in two
+places of their own, Undo then Redo, Redo's at the right margin of the
+page. A place stays empty while its button is hidden, so neither button
+moves when the other comes or goes, and a second click lands where the
+first did. The line has the height of the heading whether or not a
+button is shown, so the page under it does not move when Undo appears.
+At 320 px the heading and both buttons stay on one line.
+
+**When.** Undo is drawn while the store has a step to undo, or a run of
+the arrow keys on a threshold waits to become one (`popgen2-filters.md`,
+"A threshold moved with the keys"); Redo while the store has a step to
+redo and no run waits. Otherwise each is not drawn at all: not reached by
+the Tab key, not found by a screen reader. So neither is there when the
+page opens, nor after a variants file or an individuals file is opened.
+
+**What is a step.** Each command of this table, with the description
+that names it in the tooltip and in the status region:
+
+| what the user does | the description |
+|---|---|
+| a threshold of the Variants tab moved, typed, turned on or off | as `popgen2-filters.md` gives them, "the MAF filter changed", "the missing data filter of the individuals was turned off", … |
+| the FILTER box ticked or not | as `popgen2-filters.md` gives them |
+| a column chosen in "Column of the populations", or None | "the column of the populations changed" |
+| the method of the PCA | "the method of the PCA changed" |
+| "Stricter for the PCA" chosen for its missing data or its MAF | "the missing data filter of the PCA was made stricter", "the MAF filter of the PCA was made stricter" |
+| "As in the Variants tab" chosen again | "the missing data filter of the PCA was set back to as in the Variants tab", "the MAF filter …" |
+| a value of a filter made stricter, typed | "the missing data filter of the PCA changed", "the MAF filter of the PCA changed" |
+| the LD pruning of the PCA turned on or off | "the LD pruning of the PCA was turned on", "… was turned off" |
+| its r² or its distance typed | "the LD pruning of the PCA changed" |
+| "Colour the points by" | "the colour of the points of the PCA changed" |
+| a component chosen for an axis | "the components on the axes changed" |
+| 3D or 2D | "the PCA was drawn in 3D", "the PCA was drawn in 2D" |
+
+Under the PCoA every "the PCA" of the table is "the PCoA", by the method
+of the project after the command, as the words of the tab follow it.
+
+No step: the opening of a variants file, by the store's `open`; the
+opening, the removal and a change of an option of the reader of the
+individuals file, and the column the page chooses at the end of its
+read, by the store's `applyAfresh`. Each starts the history afresh,
+with nothing to undo or redo, so Undo and Redo go after them. The tab
+shown, the sort of a table, how far it is scrolled, the turn and the
+zoom of the 3D view and the group highlighted in the legend are of the
+screen, and no step.
+
+**What an undo brings back.** The project before the step, and with it
+every result the cache holds under that project's keys, shown with no
+calculation. A PCA that the step stopped is not started again: the tab
+shows its options and Run.
+
+**What they say.** The words on the buttons are "Undo" and "Redo". Each
+has a tooltip, on the mouse and on the focus, that names its step,
+"Undo: the MAF filter changed", which is also its description for a
+screen reader. An undo or a redo, by a button or by a key, is said in
+the status region, "Undone: the MAF filter changed." or "Redone: the
+MAF filter changed." A button that appears is not announced.
+
+**The keys.** The page listens on the whole window from the moment it
+opens, whether or not a button is shown: Ctrl+Z, and Cmd+Z on macOS,
+undo; Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y redo; Cmd+Y is the browser's
+history on macOS and is left to it. With no step to take, the key does
+nothing, and does not reach the browser's own undo. Beside the typing
+of a box:
+
+| where the focus is | Ctrl+Z or Cmd+Z |
+|---|---|
+| a number box with something typed and not yet given to the project by Enter, Tab or a click elsewhere | puts back the box's number, the project's value; the page undoes nothing |
+| a number box with nothing typed | the page's Undo |
+| a line of a threshold, with a run of the arrow keys waiting | the run is made a change, then undone, so the threshold goes back to where the presses started |
+| the dialog of the download of the filtered variants, open | nothing |
+| an open menu "Download…" | the page's Undo; the menu stays open |
+| anywhere else on the page | the page's Undo |
+
+The box refuses the browser's own undo of its text, by the keys and by
+the menu Edit, as it does since 9 October 2026 (`popgen2-filters.md`,
+"The number box"), so the browser's undo and the page's never act on the
+same press. The menu Edit of the browser is not the page's Undo.
+
+**The focus.** When a press of Undo takes the last step and Undo goes,
+the focus moves to Redo, which the press has just shown; the same from
+Redo to Undo. When a button with the focus goes for any other reason, a
+command sent from a control that does not take the focus on a click, as
+in Safari, or a file dropped on a box, the focus goes to the heading
+"Popnei".
+
+### The row of tabs
+
+The labels, in their order: "Variants", "Individuals", "PCA",
+"Populations", "Distances". The row is named "Files and analyses" for a
+screen reader. The tab shown when the page opens is Variants, and the
+page never turns to another tab by itself. All five stay drawn while
+another is shown, as the two tabs of today (`popgen2-input.md`, "Both
+tabs kept drawn"): a turn to another tab and back finds the PCA's plot
+as it was turned, the sort and the scroll of its table, and a number
+half typed.
+
+**When a tab is greyed**, from `analysisTabs` of core
+(`docs/specs/core/popgen2Tabs.md`):
+
+| tab | greyed while |
+|---|---|
+| Variants, Individuals | never |
+| PCA, Populations | no variants file is open: none opened, one being opened, or its opening failed |
+| Distances | as PCA; or, with a variants file open, fewer than two populations have an individual in it, as the box of the individuals file counts them; or, once the individuals kept are known, fewer than two populations keep one |
+
+The unclassified are not a population for the Distances tab. Before the
+one pass has ended, with a threshold of the individuals on, the tab
+follows the counts before the thresholds.
+
+**A greyed tab** is drawn in the colour of a control that cannot be
+used, and has neither the bar under its label nor the weight of its
+words that mark the tab shown. The arrow keys reach it, and its tooltip
+then shows; the mouse resting on it shows it too. A click, Enter, Space
+or the arrow keys do not show it: the content under the row stays that
+of the tab shown before. The arrow keys show each tab they reach that is
+not greyed, and pass the focus over a greyed one without showing it.
+
+**A tab that becomes greyed while it is shown**, the PCA tab while
+another variants file is opened, stays shown, greyed, and its content is
+its reason, in the words of its tooltip, in place of the options. When
+the tab is no longer greyed, its content comes back.
+
+**At 320 px** the five labels wrap to two lines, as the row's style lets
+them; the tab shown keeps its bar and its weight on whichever line it
+is, and the page does not scroll sideways.
+
+### The tabs not built yet
+
+Populations, once not greyed, shows one line: "Not built yet: the
+diversity of each population, its site frequency spectrum and its LD
+decay come in a later version of the page." Distances: "Not built yet:
+the distances between the populations, Hudson's Fst or Jost's D, come
+in a later version of the page."
+
+### The PCA tab
+
+The tab's heading, an `<h2>`, is "PCA" or "PCoA" by the method of the
+project. Under it, as in the old panel, in this order: the options, the
+line of the individuals it will run on, Run or Stop with the lock, and,
+once calculated, the result.
+
+**The method**, as the old panel: two radio buttons, "PCA of the
+genotypes" and "PCoA of the Kosman distances, for data with many
+missing genotypes"; PCA by default.
+
+**Its filters**, under the heading "Filters of the variants for the
+PCA", an `<h3>`, with the line "The PCA reads the variants the Variants
+tab keeps. Its own missing data and MAF filters can only be stricter."
+Every "PCA" of this part is "PCoA" under the PCoA, as in the old panel.
+Then three, in this order:
+
+- **Missing data** and **MAF**, each a group of two radio buttons,
+  named as on the old panel, "Filter the variants by missing data" and
+  "Filter the variants by major allele frequency (MAF)":
+  - "As in the Variants tab: 0.1", chosen by default, the threshold of
+    the Variants tab as its box writes it, or "As in the Variants tab:
+    off" while that threshold is off;
+  - "Stricter for the PCA", which shows its number field under it:
+    "Maximum proportion of missing genotypes, from 0 to 0.1" and
+    "Maximum major allele frequency, from 0 to 0.95", the upper end the
+    Variants tab's value, or 1 while that threshold is off. Under the
+    field, the line of the Variants step that says what popnei filters
+    on, as on the old panel.
+
+  Choosing "Stricter for the PCA" sends the value the option keeps when
+  it is at most the Variants tab's value, and the Variants tab's value
+  otherwise; the first time, the option keeps 0.1 for the missing data
+  and 0.95 for the MAF, the defaults of the old page. So the first
+  choice keeps the variants of the Variants tab until the user lowers
+  the number. Choosing "As in the Variants tab" sends `follow` true
+  alone; the field goes and its value is kept for the next time.
+
+  A number above the upper end is refused with the line under the field,
+  "0.2 is more than the 0.1 of the Variants tab; the maximum proportion
+  of missing genotypes for the PCA stays 0.05.", "0.97 is more than the
+  0.95 of the Variants tab; the maximum major allele frequency for the
+  PCA stays 0.9.", and sends nothing; below 0, or with more than two
+  decimals, the lines of the old panel. While the Variants tab has the
+  threshold off, the upper end is 1, and a number above it has the old
+  panel's line, "1.5 is more than 1; …".
+
+  **When the Variants tab becomes stricter** than the PCA's own value,
+  the PCA uses the Variants tab's: the field shows that value, and under
+  it the line "The Variants tab keeps at most 0.03, stricter than the
+  0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and when
+  the Variants tab goes back above it, the PCA has its 0.05 again with
+  no command. The field never shows a value looser than the one used.
+  A number typed there is bounded by the Variants tab as above.
+
+- **LD pruning**, a switch, "Prune the variants by linkage
+  disequilibrium (LD)", on when the page opens, with two number fields
+  under it while on: "Maximum r² with a variant kept before it, from 0
+  to 1", at 0.1, and "Distance within which variants are compared, in
+  base pairs, from 1", empty. The Variants tab has no LD pruning, so the
+  PCA's is its own alone. While the distance is empty, the reason of the
+  lock, below, stands under that field and describes it to a screen
+  reader. Turning the switch off removes the fields and keeps their
+  values for when it is turned on again.
+
+The number fields follow the rules of the fields of the old panel and
+of the Variants step: at most two decimals for the proportions and r²,
+a whole number from 1 to 9007199254740991 for the distance, written
+with no comma between thousands; the empty distance field sends nothing
+on the arrow keys, Page Up, Page Down, Home and End.
+
+**The line of what it will run on**, as on the old panel: "200
+individuals of panel.nei", or "111 of the 200 individuals of panel.nei,
+those the filters of individuals keep".
+
+**Run and Stop**, one button, with the lock beside it as text that
+describes it, the first of these:
+
+| the lock | the words |
+|---|---|
+| the one pass is running, or is about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once." |
+| the one pass was stopped, or failed | "Run once panel.nei is read to the end: Start again its reading in the box Variants file." |
+| more than 9,381 individuals in the file, the PCA | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
+| more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
+| the filters of the individuals keep none | the store's, ending "Loosen them." |
+| the LD pruning on with no distance | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off." |
+
+The first two are the screen's: they come from the store's state of the
+one pass and from the code that starts the pass by itself, which alone
+tells a pass stopped by the user from one about to start. The others
+come from the module and the store. The individuals file never locks
+the PCA: while it is read, refused or absent, the points are
+unclassified. A PCA running shows Stop, the bar and the clock of the
+old panel, "Calculating · 35% · 0:12", and its line, "The bar shows the
+reading of panel.nei. The components are calculated once it is read,
+and the bar does not move meanwhile: from under a second for 1,000
+individuals to minutes for several thousand."
+
+**The result**, as the old panel shows it (`docs/specs/analyses/pca.md`,
+"What it shows"), with these differences:
+
+- The title over the plot, "Principal components of panel.nei", or
+  "Principal coordinates of panel.nei" under the PCoA.
+- **The bar of controls**: "3D" and "2D", the components on the axes,
+  "Colour the points by" with "Population" and every column of the
+  individuals file but the names, the buttons that turn, tilt, zoom and
+  look along an axis of the 3D view; as the old panel.
+- **The plot**, in 3D first; in 2D one button away, or in the place of
+  the 3D view where the browser cannot draw it, with the old panel's
+  words of why.
+- **The legend**: an entry per population with its mark and its count,
+  "p0 (48)", and last, when there are any, "Unclassified (7)", drawn as
+  rings, in the place of the old "No population". With no individuals
+  file, while it is read, after it was refused, or with None chosen,
+  every point is in the one entry "Unclassified (200)". A colouring by a
+  column of values keeps the old "No value".
+- **The explained variance**: the table of the old panel, with its
+  caption, "The variance of the individuals explained by each
+  component, of the 199 components of the PCA.", and for the PCoA its
+  line under it, of the corrected distances: "The percentages are of the
+  Kosman distances after Lingoes' correction, which added 0.047 to the
+  square of every distance, as the warning says; over all the 198
+  components of the PCoA they add up to 100.", or, when no correction
+  was needed, the old panel's line that says so.
+- **The table of the individuals**, as the old panel's, the second
+  column headed "Population" or the column's name, "Unclassified" for an
+  individual with no population.
+- **The warnings**, above the plot, with their count on the heading:
+  those of the old panel with this page's words, below, "Its words".
+- **The notes** and **the line of the versions**, as the old panel.
+- No button "Download the … as CSV" of the old panel: each table and
+  the plot have the button "Download…" of the next part.
+
+The numbers are written as on the old panel: a coordinate to four
+decimals in the table, "−0.7139"; the percentages to two, "3.55%";
+every negative number on the screen with "−", the minus sign.
+
+### The downloads
+
+Every table and every plot of the page has one button, "Download…",
+above its top right corner, beside its caption or title, which opens a
+menu, React Aria's `MenuTrigger` and `Menu`:
+
+| on | the menu |
+|---|---|
+| a table | "Table as CSV" |
+| a plot | "Image as SVG", "Image as PNG", "Data as CSV" |
+
+The tables and plots of the page in this piece:
+
+| what | where | the files |
+|---|---|---|
+| the histograms of the missing rate, the MAF, the observed heterozygosity and the unbiased expected heterozygosity of the variants | the Variants tab | `panel.missing_rate_variants`, `panel.maf_variants`, `panel.obs_het_variants`, `panel.exp_het_variants`, each `.svg`, `.png` or `.csv` |
+| the histograms of the missing rate and of the observed heterozygosity of the individuals | the Variants tab | `panel.missing_rate_individuals`, `panel.obs_het_individuals` |
+| the table of the individuals file | the Individuals tab | `panel_pops.table.csv` |
+| the counts per population | the box of the individuals file | `panel_pops.counts.csv` |
+| the PCA's plot, 3D or 2D | the PCA tab | `panel.pca.svg`, `panel.pca.png`; `panel.pca.coordinates.csv` |
+| the PCA's explained variance | the PCA tab | `panel.pca.variance.csv` |
+| the PCA's table of the individuals | the PCA tab | `panel.pca.table.csv` |
+
+The stem is that of the variants file, `panel` of `panel.nei` or of
+`panel.vcf.gz`, but for the table of the individuals file, which is
+shown with no variants file open and takes the stem of its own file;
+under the PCoA, `panel.pcoa.…`.
+
+**What each holds**, as `docs/specs/widgets/downloads.md` gives it: a
+table's CSV has every row, sorted as shown, with the values as stored,
+numbers in full with the point as the decimal mark and the hyphen as
+the minus sign, and names with a ' before a leading "=", "+", "-" or
+"@"; a histogram's CSV, a row per bin as drawn, its left edge, its
+right edge and its count, and for the heterozygosity of the individuals
+a last row of those with none; the PCA's plot's CSV, the coordinates
+vavilov-explorer imports, `individual,PC1,…,PC10`, a row per
+individual, its name written as in the variants file, with no '
+before it; the image, the plot as drawn, in the colours of the light
+theme, with its legend and its threshold's line.
+
+**A histogram's menu waits** for the one pass to end. Until then the
+button is shown, disabled, with "Download once panel.nei is read to the
+end." as its tooltip and its description, so that no file of part of
+the variants leaves the page.
+
+**A choice** hands the file to the browser at once, and the status
+region says "Saving panel.pca.coordinates.csv." A PNG the browser
+refuses is said under the button: "The image of this plot is too large
+for a PNG in this browser; download it as SVG." or "The image of this
+plot could not be made as a PNG in this browser; download it as SVG."
+
+## The states
+
+Of the PCA tab. The tab of Populations and of Distances is either
+greyed or shows its line of not built yet.
+
+| state | what the user sees | what they can do |
+|---|---|---|
+| empty | the tab greyed, with its reason, as the row of tabs gives it; if it was shown when it became greyed, the reason in its place | open a variants file |
+| locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop" | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
+| ready | the options, the line of the individuals, Run | change the options; Run |
+| running | Stop, the bar and the clock, and the line under them; the options, whose change stops the PCA if it changes what the PCA reads | Stop; change the options, the thresholds, the FILTER box; turn to another tab, where the PCA goes on |
+| done | the result, its warnings and notes, the downloads | colour, turn, highlight, sort, download; change the options |
+| results removed | the options, the line of the individuals and Run, as in ready, with no words of why: the page makes no notice, as the owner decided on 8 October 2026; an Undo of the change, or the filters set back as they were, show the result again from the cache | Undo; Run |
+| error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal |
+
+A change of the thresholds, of the FILTER box or of an option of the
+PCA that changes what the PCA reads, its key, takes a result off the
+screen and stops at once a PCA that runs. A change that does not, a
+threshold of the Variants tab moved while the PCA's own is stricter, the
+colour, the axes, the view, keeps both. Another individuals file, or
+another column, colours the result again with no calculation. Another
+variants file stops the PCA and keeps its options.
+
+## What it sends and reads
+
+It sends the commands of the table of "What is a step", each with
+`store.apply` and its description; the commands of the PCA are those of
+`src/ui/analyses/pca/commands.ts` with this page's descriptions; Run,
+`startAnalysis(store, "pca")` of `src/ui/runs.ts`; Stop,
+`store.cancelRun("pca")`; Undo and Redo, `undoOrRedo` of
+`src/ui/shell/undoRedo.ts`. The commands of the individuals file go
+through `store.applyAfresh` (`popgen2-input.md`, "What it sends and
+reads", revised).
+
+It reads: the state of `pca` among the store's analyses, and its run;
+the project, for `pcaOptions`, `pcaFilters` with the rule of this page,
+`pcaColours`, `colourColumns` and the names of the files; the
+individuals kept; `analysisTabs` of core for the row of tabs; the
+store's `undo` and `redo` and the run waiting on a threshold
+(`usePendingChange` of `src/ui/variants/runGate.tsx`) for Undo and
+Redo; the state of the one pass and of the code that starts it
+(`src/ui/autoRuns.ts`) for the lock of Run. It holds of its own the tab
+shown, the sort and the scroll of each table, the group highlighted,
+the turn and the zoom of the 3D view, and the words of a PNG refused
+until the next choice of that menu (`docs/architecture.md`, section 7).
+
+## Its words
+
+| where | the words |
+|---|---|
+| the tabs | "Variants"; "Individuals"; "PCA"; "Populations"; "Distances" |
+| the row of tabs, for a screen reader | "Files and analyses" |
+| PCA, no variants file | "The PCA needs a variants file. Open one in the box Variants file." |
+| PCA, a file being opened | "The PCA needs a variants file: panel.nei is being opened." |
+| PCA, an opening that failed | "The PCA needs a variants file: panel.nei could not be opened. Open another in the box Variants file." |
+| Populations | the three of the PCA, with "The analyses of the populations need" in place of "The PCA needs" |
+| Distances, no variants file | the three of the PCA, with "The distances between populations need" |
+| Distances, no individuals file | "The distances between populations need at least two populations. Open an individuals file that assigns the individuals to them." |
+| Distances, the individuals file being read | "The distances between populations need at least two populations: panel_pops.csv is being read." |
+| Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 among the individuals of panel.nei. Choose another column in the box Individuals file."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals file." |
+| Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab." |
+| Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
+| the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
+| the heading of the tab | "PCA"; "PCoA" |
+| the filters | "Filters of the variants for the PCA"; "The PCA reads the variants the Variants tab keeps. Its own missing data and MAF filters can only be stricter."; "As in the Variants tab: 0.1"; "As in the Variants tab: off"; "Stricter for the PCA"; "Prune the variants by linkage disequilibrium (LD)" |
+| a number above the Variants tab's | "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05." |
+| the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
+| the lock and the help of the one pass | the table of "Run and Stop" |
+| the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated." |
+| the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
+| the button of a download | "Download…", named for a screen reader "Download the plot of the missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries |
+| its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
+| a histogram's menu waiting | "Download once panel.nei is read to the end." |
+| the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |
+| a PNG refused | "The image of this plot is too large for a PNG in this browser; download it as SVG."; "The image of this plot could not be made as a PNG in this browser; download it as SVG." |
+
+**The warnings**, those of the old panel (`docs/specs/analyses/pca.md`,
+"The warnings"), with these words where they name a place:
+
+- `pruningOff`: "No LD pruning was applied for the PCA, so a region of
+  the genome counts once for each of its variants, and a region of many
+  variants in linkage disequilibrium, such as an inversion, can make a
+  component of its own that separates the individuals by that region
+  rather than by their ancestry. Turn on the LD pruning of the PCA in
+  its options above, unless such regions are what you are looking for."
+- `fewVariants`: "… If the dataset has more, loosen the filters of the
+  PCA in its options above, or the thresholds of the Variants tab."
+- `lingoesCorrection`: the old panel's, unchanged.
+
+**The errors**, those of the old panel (`docs/specs/analyses/pca.md`,
+"Its words") with "the Variants tab" for "the Variants step", "the box
+Variants file" for "Load … in the Variants step", "the thresholds of the
+individuals in the Variants tab" for "the filters of individuals in the
+Variants step", and the row of the LD order ending "or turn the LD
+pruning of the PCA off". The row of no variant left: "No variant of
+panel.nei is left after the filters of the PCA, so there is no variant
+to do the PCA with. Loosen the filters of the PCA in its options above,
+or the thresholds of the Variants tab." The words of the 3D view are
+the old panel's, but for its failure to download, which ends "reload
+the page and run the PCA again", since this page saves no project.
+
+The page has no help drawer yet. What the help of the PCA tab would
+say, beside the old panel's help: that its filters narrow the Variants
+tab's and why a PCA often wants stricter ones; that the LD pruning is
+on with no distance, and how to choose one; that the CSV of the
+coordinates writes each name as in the variants file, with no ' before
+a name that starts with "=", "+", "-" or "@", so that vavilov-explorer
+finds it again, and that a spreadsheet may read such a name as a
+formula; and that the unclassified are in the PCA as every other
+individual.
+
+## Accessibility
+
+The criteria are those of WCAG 2.2 at level AA.
+
+**The order of the Tab key** (2.4.3): the heading is not a stop; Undo,
+then Redo, when shown; the box of the variants file and the box of the
+individuals file, as `popgen2-input.md` gives them; the row of tabs,
+one stop, whose Left and Right arrow keys move along the labels, greyed
+ones among them, and Home and End go to the first and the last; then
+the content of the tab shown. In the PCA tab: the method; the missing
+data, its field while stricter; the MAF, the same; the LD switch and
+its two fields; Run or Stop; the warnings; the bar of controls; the
+legend; the link to the table; the explained variance with its
+"Download…"; the plot's "Download…" before the bar of controls, beside
+the title; the table with its "Download…". Each "Download…" comes before
+what it downloads, where it is drawn.
+
+**A greyed tab** (4.1.2, 2.1.1, 1.3.1): it carries `aria-disabled`, set
+by the widget, and its reason as its description, so a screen reader
+says "PCA, tab, dimmed, 3 of 5" and then the reason. Its tooltip shows
+on the focus and on the mouse, stays while the mouse is over it, and
+goes with Escape (1.4.13). The tab shown keeps "selected" for a screen
+reader while the focus rests on a greyed one, so the user can tell
+which content is under the row. A greyed tab is not told by colour
+alone (1.4.1): it never has the bar and the weight of the tab shown,
+and a screen reader says "dimmed". Its contrast is exempt from 1.4.3 as
+that of a control that cannot be used.
+
+**What is said without moving the focus** (4.1.3): an undo or a redo; a
+file handed to the browser by a download; the end of a run, "PCA of
+panel.nei calculated.", whichever tab is shown; the reason of the LD
+pruning with no distance when the switch is turned on and the field is
+empty; the line "The Variants tab keeps at most …" when it appears after
+a change of a threshold of the Variants tab, said once; and those of the
+old panel: the loading of the 3D view and its failures, the notes that a
+change of the colour, the axes or the view makes. A tab that becomes
+greyed or not is not said: the change comes from a file the user opened,
+whose box says it.
+
+**The menus** are React Aria's: Enter, Space or the Down arrow key open
+a menu, the arrow keys move in it, Enter chooses, Escape closes it and
+gives the focus back to its button. Each button is named by what it
+downloads, so that the five buttons of the PCA tab are not five
+"Download".
+
+**Undo and Redo**: their tooltips are their descriptions; a button that
+goes hands the focus on, as "The focus" above says.
+
+**The PCA's plot, its legend, its table and its 3D view** are as on the
+old panel (`docs/specs/analyses/pca.md`, "Accessibility"), with
+"Unclassified" in place of "No population" in the description and the
+legend.
+
+**Not yet heard in VoiceOver**, which the session cannot run: the row
+read as "Files and analyses, tab list", a greyed tab read as dimmed with
+its reason; Undo read with its step; a menu of a download.
+
+## How it is checked
+
+**In Vitest**, in node:
+
+- `analysisTabs` of core in each row of its spec; the words of each
+  reason from it.
+- The descriptions of the PCA's commands on this page, method by
+  method; the upper end of each field and the line of a refusal; the
+  line of the Variants tab stricter.
+- The lock of Run from the state of the one pass and of the code that
+  starts it: running, about to start, stopped, failed, read to the end.
+- Undo and Redo, with the real store of the page and a fake worker:
+  nothing to undo after the store is made, after `panel.nei` is opened,
+  and after an individuals file is opened, read and given its column;
+  one step after a threshold; the descriptions of each row of "What is
+  a step"; an undo of a change that removed the PCA's result gives
+  `done` again with no request to the worker; a PCA running when a
+  threshold changes is stopped at once, and an undo gives `ready`.
+- The CSV of each table and plot, in `docs/specs/widgets/downloads.md`.
+
+**In Playwright, on the built site, in Chromium and WebKit**, the two
+engines that start on the owner's Mac, on `panel.nei`,
+`panel_pops.csv` and `panel_meta.csv`:
+
+- **The row of tabs**: before a file, PCA, Populations and Distances
+  greyed; with `panel.nei` opening, the PCA's tooltip "… is being
+  opened."; once open, PCA and Populations not greyed, Distances greyed
+  with "Open an individuals file …"; with `panel_pops.csv`, Distances
+  not greyed. A greyed tab reached by the arrow keys shows its tooltip,
+  hides it with Escape, does not open by a click, Enter, Space or the
+  arrows, and carries `aria-disabled="true"` and its reason as its
+  description; the tab shown keeps `aria-selected="true"`. The PCA tab
+  shown, then another variants file opened: the tab stays shown,
+  greyed, with the reason in its place. At 320 px, the five labels on
+  two lines and no sideways scroll.
+- **The PCA**, all thresholds of the Variants tab as a new page has
+  them, the missing rate of the variants at 0.1: the PCA tab opened
+  during the one pass, held (`e2e/holdWorker.ts`), shows Run disabled
+  with "Run once panel.nei is read to the end: the reading under way
+  …"; after the pass, Run disabled with the reason of the LD pruning
+  with no distance; 50000 typed: Run; "PC1 (3.55%)" and "PC2 (3.40%)"
+  on the 2D plot's axes, PC3 1.89% in the explained variance, `s000` at
+  −0.7139 and 7.6765 in the table, the caption "… from 548 variants",
+  no warning; the legend with "Unclassified (200)" alone, and, after
+  `panel_pops.csv` is opened, p0 (48), p2 (84), p1 (68), with no
+  request to the worker.
+- **Its filters**: the missing data made stricter at 0.05: 532
+  variants, PC1 3.58%; 0.2 typed: the line of refusal, nothing sent;
+  the Variants tab's missing rate moved to 0.03: the field shows 0.03,
+  with the line, and back to 0.1: the field shows 0.05 again. The MAF
+  made stricter at 0.9, the missing data as in the Variants tab: 510
+  variants, PC1 3.68%. The LD pruning turned off: 1,200 variants, PC1
+  7.61%, and the warning of no LD pruning.
+- **The PCoA**, with the LD pruning at r² 0.1 within 50,000: "PC1
+  (3.68%)" and "PC2 (3.54%)", the warning of the correction with
+  "7.87%", "0.047", "53%" and "0.22", and the line under the explained
+  variance with "0.047" and "198 components".
+- **A change during a run**: a PCA held running, a threshold moved: the
+  PCA stopped, the tab ready; Undo: the threshold back, the tab ready,
+  not running.
+- **Undo and Redo**: no button when the page opens, after `panel.nei`,
+  and after `panel_pops.csv`; a threshold moved: Undo, with its tooltip
+  "Undo: the missing data filter changed" on the focus; Undo pressed:
+  Redo appears, Undo goes, the focus on Redo, neither button moved by a
+  pixel; Ctrl+Z and Meta+Z on the heading, on a line and in a box with
+  nothing typed, an undo each; 0.9 typed in the MAF box, Ctrl+Z: the box
+  back to its number and Undo still naming the step before; the PCA
+  done, a threshold that removes it moved, Undo: the plot back with no
+  request to the worker; a menu "Download…" open, Ctrl+Z: an undo, the
+  menu still open; the line of the heading of the same height with and
+  without the buttons, at 320 and 1280 px.
+- **The downloads**: each menu opened and chosen with the keyboard
+  alone; the CSV of the PCA's plot saved and read back, header
+  `individual,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10` and the row of
+  `s000` beginning `s000,-0.7138853335304419,7.676473141448964`; the
+  table of the PCA, sorted by PC1, saved, its rows in that order; the
+  SVG of a histogram, with its threshold's line; a PNG of the 3D view;
+  a histogram's menu disabled while the pass is held, with its tooltip.
+- **Kept drawn**: the PCA in 3D, turned with its buttons, the Variants
+  tab shown and back: the same view, in Chromium and in WebKit, whose
+  WebGL context must survive the hidden tab.
+- axe, the checker of accessibility, in each state of the PCA tab, the
+  greyed tabs and the menus, in light and in dark.
+
+The flows of the old page's PCA are run again, since its module and
+panel are shared, and the flows of `popgen2Undo.spec.ts`, which the
+hidden buttons had cut down, are brought back with the buttons.
+
+**The numbers** are popnei's, from release 0.2.2 under node on 9
+October 2026, on `e2e/fixtures/panel.nei`: the PCA with the missing
+data filter at 0.1 and the LD filter at r² 0.1 within 50,000, 548
+variants, PC1 to PC3 3.5476992895181616, 3.402040462155611 and
+1.8945553874570624, `s000` at −0.7138853335304419,
+7.676473141448964 and −4.384383801903496, the numbers of
+`docs/specs/analyses/pca.md` with `js-v0.1.0-dev.3` to the last bit;
+with the missing data at 0.05, 1,152 variants kept by it, 532 by the
+LD, PC1 3.580113383082099; with the MAF at 0.9 as well as the missing
+data at 0.1, 1,102 by the MAF, 510 by the LD, PC1 3.6773736003613675;
+the PCoA, 198 components, PC1 3.679886264523731, `lingoesConstant`
+0.023674522901958598 and `negativeEigenvaluesPercent`
+7.87126617431627. The script is that of `docs/specs/analyses/pca.md`,
+"How it is verified", with `filterByMissingData` and `filterByMaf` of
+these values.
+
+**The screens**, `--project=screens`: the row with greyed tabs and a
+tooltip shown; the PCA tab locked, ready, running, done in 3D and in
+2D, with the PCoA's warning; a menu of a download open; Undo alone, and
+Undo with Redo; light and dark; 1280 and 320 px.
+
+**By hand**, in the plan: the memory and the time of a PCA and a PCoA
+of 1,000, 4,000 and 9,381 individuals after the one pass of the same
+file, in Chromium and WebKit (the design, "The memory and the time");
+the time of the CSV of a table of 10,000 rows; VoiceOver with Safari on
+the row of tabs, Undo and a menu.
+
+## Choices made by the session
+
+From the design, and open to the owner's change once they try the
+page: the names of the tabs; a greyed tab that the keyboard reaches; a
+tab that stays shown when it becomes greyed; every tab kept drawn; the
+labels wrapping at the width of a phone; Run locked until the one pass
+ends; the unclassified as one group, "Unclassified"; the PCA's own value
+kept when the Variants tab goes below it; "Stricter for the PCA" taking
+the Variants tab's value when the kept one is looser; the LD pruning a
+switch; one button "Download…" with a menu; the names of the files;
+Redo back with Undo, shown by the same rule; their places that stay
+empty; the keys caught on the whole page; the removal of the individuals
+file and a change of its reader as no steps; a PCA stopped by a change
+not started again by an Undo; and the words.
+
+## Left for the running application
+
+The spacing of the line of the heading and of the buttons, the look of
+a greyed tab, the layout of the options and of the bar of controls, the
+size of the plot, where each "Download…" sits beside its caption, and
+whether the options fold away once there is a result.
+
+## Open points
+
+None. The owner answered the design's questions on 9 October 2026.
+
+## Not in this spec
+
+- The PCA's module, its key, its job, its warnings and its numbers:
+  `docs/specs/analyses/pca.md`, with its part "On popgen2.html".
+- The CSV of each table and plot, the menu's component and the handle
+  of a plot: `docs/specs/widgets/downloads.md`.
+- The store's setting of this page and `applyAfresh`:
+  `docs/specs/core/store.md`.
+- The boxes, the Variants tab and the Individuals tab:
+  `popgen2-input.md`, `popgen2-filters.md`, `popgen2-download.md`.
+- The analyses of the Populations and Distances tabs, later pieces.
+- The saving of a project on this page, and the help drawer.
+- The old page, `popgen.html`, which gets none of this.
