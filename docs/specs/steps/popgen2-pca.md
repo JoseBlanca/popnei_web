@@ -494,6 +494,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, no variants file | the three of the PCA, with "The distances between populations need" |
 | Distances, no individuals file | "The distances between populations need at least two populations. Open an individuals file that assigns the individuals to them." |
 | Distances, the individuals file being read | "The distances between populations need at least two populations: panel_pops.csv is being read." |
+| Distances, the individuals file refused or failed | "The distances between populations need at least two populations: panel_pops.csv could not be read. Open another in the box Individuals file." |
+| Distances, a column of more values than a column of populations can have | "The distances between populations need at least two populations, and country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals file." |
 | Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 among the individuals of panel.nei. Choose another column in the box Individuals file."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals file." |
 | Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab." |
 | Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
