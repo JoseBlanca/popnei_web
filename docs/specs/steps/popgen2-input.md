@@ -48,14 +48,37 @@ moved under the tab and otherwise unchanged; their terms are used here.
   (`docs/specs/core/store.md`, "The individuals kept").
 - **The light worker** is the second thread of the tab that reads the
   individuals file with table_io, the owner's reader of tables, whose
-  package it downloads at its first read, 0.34 MB; the page does not
-  freeze while it reads.
+  package it downloads at its first read, 0.34 MB gzipped, measured on
+  the release `js-v0.2.0-dev.1`; the page does not freeze while it
+  reads.
 - **Unclassified**: an individual of the variants file with no
   population, because there is no individuals file, no column is chosen,
   its cell in the column is empty, `NA` or `-`, or it is not in the
   individuals file.
 - **The grouping** is the part of the project that names the column of
   the populations; "None" is the grouping with no column.
+- **The store** holds the project, the results and what is being
+  calculated, and the screens read it; a **command** sent to it with
+  `apply` gives a new project and is a **step of the history**, which an
+  Undo would take back. The **entry** is the code that runs when the
+  page opens and does what the page does by itself.
+- **A load id** is the random name the page gives each file opened, new
+  at every opening; a read of the individuals file is `pending` until
+  the light worker answers, and its `found` is how a text file was read,
+  its encoding, separator and decimal mark (`docs/specs/core/project.md`,
+  `IndividualsRead`).
+- **A zone** is the widget that opens a file, `FileZone.tsx`: a box that
+  takes a dropped or pasted file, with its button that opens the
+  browser's file picker inside it.
+- **A boundary of errors** is a part of the page that, when its code
+  throws, shows its name and an error in its place and leaves the rest
+  of the page working (`ErrorBoundary`); the box of the variants file
+  has one that is made anew for each file opened.
+- **The old step** is the Individuals step of `popgen.html`,
+  `docs/specs/steps/individuals.md`, whose words and widgets this page
+  reuses.
+- **Inert** marks a part of the page that the Tab key, the mouse and a
+  screen reader all pass over.
 - **The focus** is the control the keys act on; **the status region** is
   a line of the page that is not seen and that a screen reader speaks
   each time its words change.
@@ -101,11 +124,12 @@ opened. It ends with the zone that opens a variants file, today's
 "Open variants file…" before a file and "Open another variants file…"
 after, and the drop and the paste it takes today. Before a file is open
 the box holds the zone alone, under its heading "Variants file". Both
-zones, the variants file's and the individuals file's, stay outside any
-boundary of errors that is made again for each load, as the box's
-`ErrorBoundary` keyed by the load id of `VariantsPage.tsx` is: a zone
-drawn anew at an opening would take the focus from its button, which
-`FileZone.tsx` keeps by being the same element.
+zones, the variants file's and the individuals file's, stay outside the
+boundary of errors that is made anew for each file (the `ErrorBoundary`
+keyed by the load id in `VariantsPage.tsx`): a zone inside it would be
+drawn anew at each opening, and the button the user pressed, which then
+holds the focus, would be replaced by another, leaving the focus on
+nothing.
 
 ### The box of the individuals file
 
@@ -138,7 +162,11 @@ is a column of the table, and "None" otherwise. A choice sends a command
 (below, "What it sends and reads"). When the file is read the page
 chooses a column itself, the first column of text with 1 to 20 different
 values, missing ones left out (`defaultPopulationsColumn` of core, sent
-by the entry; `docs/specs/entry.md`). When no column qualifies, the list
+by the entry; `docs/specs/entry.md`). It chooses again only when the file is read again, another file opened
+or other options of a CSV set, and the column chosen is not a column of
+the new table: a second file with a column of the same name keeps it, a
+"None" the user chose stays until the next read, and opening another
+variants file changes nothing. When no column qualifies, the list
 stays on "None" and the line under it says "No column of panel_pops.csv
 holds text with 20 different values or fewer, so none was chosen as the
 column of the populations. Choose it in the list."
@@ -187,7 +215,8 @@ Last, always with a variants file read: "Individuals of panel_pops.csv
 not in panel.nei: 18", 0 written too, which no filter changes.
 
 **The counts that wait.** With a threshold of the individuals on and the
-one pass not finished, the rows are drawn with "…" in place of each
+one pass not finished, once the variants file has given its individuals
+(the opening reads them before the pass starts), the rows are drawn with "…" in place of each
 count, read by a screen reader as "not counted yet", and the line of the
 unclassified gives way to:
 
@@ -249,9 +278,10 @@ character not decoded is the old step's, `undecodedText`: "Warning: line
 an accent shows as �, choose Windows-1252 as the encoding." While the
 same load is read again for options the user changed, the three selects
 stay drawn with the options set, and "Reading panel_pops.csv." shows
-under them, so that the select just changed keeps the focus: the screen
-remembers, for the load id, the format of its last read, its own state
-and not the project's. Beside the options of a text file refused, the
+under them, so that the select just changed keeps the focus. To know
+that the file is a text file while its new read is pending, the screen
+remembers the format of the last read of each load id; it keeps this
+itself, as it keeps the tab shown, since it is not part of the project. Beside the options of a text file refused, the
 line "panel_pops.csv could not be read; the box Individuals file says
 why."  For an xlsx, the line "Read from the first
 sheet of panel_pops.xlsx; any other sheet is not read." What the file is
@@ -287,11 +317,12 @@ does not. The types of the columns are not shown.
 Both tabs stay drawn while the other is shown (`shouldForceMount` of
 React Aria's `TabPanel`): the hidden one is marked inert, so the Tab key
 and a screen reader skip it, and a rule of its style hides it,
-`display: none`. A box hidden so loses where it was scrolled, and a table
-that draws only its rows in view sees a box of no size, so the tab
-"Individuals file" keeps the scroll place of its table, its own state,
-as it is left, and puts it back when it is shown, once the table has
-measured its box again. A turn to
+`display: none`. A box hidden so forgets how far it was scrolled, and
+the table, which draws only the rows in view, finds no rows in view
+while its box has no size. So the tab "Individuals file" notes how far
+its table was scrolled as the user leaves it, and scrolls it back there
+when it is shown again, after the table has measured its box and drawn
+its rows. A turn to
 the other tab and back finds the plots, a number half typed in the box
 of a threshold, the sort of the table and its place as they were. A plot
 whose tab is hidden keeps its last drawing and draws again at the size of
@@ -329,7 +360,7 @@ analysis, and has no Run of its own.
 
 ## What it sends and reads
 
-It sends, each a command of `dispatch`, a step of the history, with its
+It sends, each a command of `apply`, a step of the history, with its
 description, as the old step's commands (`src/ui/steps/individuals/commands.ts`):
 
 | what the user does | the command | the description |
@@ -499,9 +530,11 @@ core and of the entry in their module specs.
   plots as they were; the table sorted and scrolled, the other tab and
   back: the same;
 - `individuals_10000.xlsx`, its table sorted by a header: the time the
-  page does not answer, as `e2e/measure.spec.ts` measures it, written in
-  the report of the plan beside the 149 ms of Chromium and 107 ms of
-  WebKit that the same sort took on the old page (VS7 D4 there);
+  page does not answer, as `e2e/measure.spec.ts` measures it, less being
+  better, written in the report of the plan beside the median of 149 ms
+  in Chromium and 107 ms in WebKit that a sort of the 10,000 rows of the
+  same file took on the old page, measured on the owner's Mac (the case
+  VS7 D4 of that file);
 - a long file name, 80 characters, at 320 px: "Remove …", the name in the
   box and the warnings wrap and the page does not scroll sideways
   (1.4.10, "Reflow");
