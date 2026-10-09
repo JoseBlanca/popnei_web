@@ -48,7 +48,8 @@ vi.mock("../widgets/FileZone.tsx", async (importOriginal) => {
   return {
     ...real,
     FileZone: (props: FileZoneProps): React.JSX.Element => {
-      if (inject.zoneThrows) {
+      // The zone of the variants file alone, not the individuals file's.
+      if (inject.zoneThrows && props.pasteLabel === "Paste a variants file") {
         throw new Error("the zone could not be drawn");
       }
       return real.FileZone(props);
@@ -267,8 +268,8 @@ describe("IN3 the page in two boxes and two tabs", () => {
     expect(variantsBox).not.toBeNull();
     expect(individualsBox).not.toBeNull();
     expect(variantsBox?.contains(buttonOf("Open variants file…"))).toBe(true);
-    expect(individualsBox?.textContent).toBe(
-      "Individuals fileNo individuals file: every individual is unclassified.",
+    expect(individualsBox?.querySelector("p")?.textContent).toBe(
+      "No individuals file: every individual is unclassified.",
     );
     const tabs = [...container.querySelectorAll('[role="tab"]')];
     expect(tabs.map((tab) => tab.textContent)).toEqual([
@@ -304,8 +305,8 @@ describe("IN3 the page in two boxes and two tabs", () => {
   test("with a variants file read, the box of the individuals file says how many individuals of it are unclassified", async () => {
     const { store } = await drawPage();
     await open(store, "a".repeat(32), "first.nei");
-    expect(region("Individuals file")?.textContent).toBe(
-      "Individuals fileNo individuals file: all 2 individuals of first.nei are unclassified, and the analyses per population will take them as one population.",
+    expect(region("Individuals file")?.querySelector("p")?.textContent).toBe(
+      "No individuals file: all 2 individuals of first.nei are unclassified, and the analyses per population will take them as one population.",
     );
     expect(container.textContent).not.toContain("No variants file open.");
   });

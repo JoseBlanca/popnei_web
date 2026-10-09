@@ -32,10 +32,8 @@ import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
 import { IndividualsBox } from "./IndividualsBox.tsx";
-import {
-  INDIVIDUALS_BOX_NAME,
-  NO_INDIVIDUALS_FILE_TAB,
-} from "./individualsWords.ts";
+import { IndividualsTab } from "./IndividualsTab.tsx";
+import { INDIVIDUALS_BOX_NAME } from "./individualsWords.ts";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
 import type { StatsShown } from "./announceChanges.ts";
@@ -127,7 +125,7 @@ export function VariantsPage({
               <OpenVariants buttonRef={openButton} onRefusal={setRefusal} />
             </ErrorBoundary>
           </section>
-          <IndividualsBox />
+          <IndividualsBox autoRuns={autoRuns} tab={tab} />
         </div>
         <Tabs<FileTab>
           label={FILES_TABS_LABEL}
@@ -156,11 +154,7 @@ export function VariantsPage({
             {
               id: "individuals",
               label: INDIVIDUALS_BOX_NAME,
-              content: (
-                <p className={classOf(styles, "boxLine")}>
-                  {NO_INDIVIDUALS_FILE_TAB}
-                </p>
-              ),
+              content: <IndividualsTab shown={tab === "individuals"} />,
             },
           ]}
         />

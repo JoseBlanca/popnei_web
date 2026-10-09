@@ -8,6 +8,7 @@
  * checks them; the widgets draw them.
  */
 import type { IndividualsKept } from "../../core/individualsKept.ts";
+import type { Key } from "../../core/keys.ts";
 import {
   defaultPopulationsColumn,
   populationColumnChoices,
@@ -28,8 +29,10 @@ import type {
   Project,
   VariantSource,
 } from "../../core/project.ts";
-import type { TableFormat } from "../../worker/protocol.ts";
+import type { AppState } from "../../core/store.ts";
+import type { JobResult, TableFormat } from "../../worker/protocol.ts";
 import { firstSheetText } from "../steps/individuals/words.ts";
+import { chainButton, chainStatuses } from "./chain.ts";
 
 /** The heading of the box of the individuals file, and the label of its
     tab. */
@@ -52,6 +55,14 @@ export function noIndividualsFileText(variants: VariantSource | null): string {
     ? `No individuals file: the one individual of ${name} is unclassified.`
     : `No individuals file: all ${grouped(numIndividuals)} individuals of ${name} are unclassified, and the analyses per population will take them as one population.`;
 }
+
+/** The heading drawn in the box in place of the lines of the file open
+    when their code throws, under the box's "Individuals file". */
+export const INDIVIDUALS_LINES_NAME = "What the individuals file holds";
+
+/** The heading drawn in the box in place of the zone that opens an
+    individuals file when its code throws. */
+export const OPENING_INDIVIDUALS_ZONE_NAME = "Opening an individuals file";
 
 /** The button of the zone of the individuals file, with no file and
     with one. */
@@ -132,6 +143,25 @@ export function countText(kept: number | null): string {
     user stopped it, or it, or the opening, failed. Read only while the
     list of the individuals kept is not known. */
 export type PassWait = "running" | "stopped" | "failed";
+
+/** Why the counts of `s` wait for the one pass, read while the list of
+    the individuals kept is not known: "failed" when the opening of the
+    variants file failed, or a member of the chain of the pass did;
+    "stopped" when the box offers Start again, which `startedUnder` of
+    autoRuns.ts tells from the key of the member it would start
+    (`chainButton`); "running" otherwise, while the pass runs or is about
+    to start by itself. */
+export function passWaitOf(
+  s: AppState<JobResult, unknown>,
+  startedUnder: (key: Key) => boolean,
+): PassWait {
+  if (s.project.variants?.read.kind === "failed") return "failed";
+  const statuses = chainStatuses(s.analyses);
+  if (statuses.some((status) => status.kind === "error")) return "failed";
+  return chainButton(statuses, startedUnder)?.kind === "run"
+    ? "stopped"
+    : "running";
+}
 
 /** A line under the list: words, or a warning, whose words follow the
     "Warning: " that the widget writes. */

@@ -1,0 +1,33 @@
+/* The tokens are those of src/ui/tokens.css. The box itself and its
+   heading are those of the box of the variants file,
+   VariantsPage.module.css. */
+
+/* The name of the file, the list, the counts and their lines, one under
+   the other. */
+.lines {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.fileName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Words for a screen reader alone, "not counted yet" beside the "…" of
+   a count that waits. */
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
