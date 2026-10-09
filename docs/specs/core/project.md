@@ -1163,8 +1163,14 @@ text as it is; a number as `String` writes it, its point made `decimal`;
 populations use it (above, "The populations"), and so do the table of
 the file on `popgen2.html` and the different values of a column, so
 that the box, the table and the populations never write one value two
-ways. The types of the columns keep `cellText`, `String` alone, whose
-texts the project's binary types hold.
+ways. It is the reader's `cellText`, by which the types of the columns
+compare the values, so the two values of a binary type are written the
+same way: a column of `1,5` and `2,5` of a CSV read with the comma is
+binary with `one` `"2,5"` and `zero` `"1,5"`, as its cells are shown,
+and not `"2.5"` and `"1.5"`, which the reader's `String` alone gave from
+the switch to table_io until 9 October 2026, when the review of work
+package 1 of `docs/plans/input-page.md` found it. A project saved with
+`"2,5"` before the switch, when a CSV gave only text, matches again.
 
 The rules of the counts against what a reader would expect:
 
@@ -1334,10 +1340,11 @@ table of 10,000 rows is not walked again each time the step is drawn.
 The option not taken, the reader's `allows` in the read, was the first
 draft of this revision, of 27 September 2026.
 
-The values of a column are compared as text, a number or a boolean of
-an xlsx as `String` writes it, as the reader compares them for its
-types; the two values of a binary type are those texts, and `one` is
-not `zero`. A CSV gives only text, so no project of stages 2 and 3 holds
+The values of a column are compared as text, as the reader's
+`cellText` writes them for its types: a text as it is, a number as
+`String` writes it with its point made the decimal mark of the read, a
+boolean as `String` writes it, as `cellShown` writes them (below); the
+two values of a binary type are those texts, and `one` is not `zero`. A CSV gives only text, so no project of stages 2 and 3 holds
 another value in a binary type.
 
 `setColumnType` sets the type of a column and records it in `typesSet`
@@ -1811,8 +1818,8 @@ the analyses that use the populations lock and say so; the grouping is
 not changed in silence.
 
 A `binary` type's two values are the texts of the two distinct values
-of its column that are not missing, a cell of an xlsx written as
-`String` writes it, and `one` is not `zero`; a column with more or fewer
+of its column that are not missing, each written as `cellShown` writes
+it with the decimal mark of the read, and `one` is not `zero`; a column with more or fewer
 than two such values cannot be binary. The column's `binary` in
 `columnAllows` holds the same two, with the reader's coding, and
 `setColumnType` takes either coding. The same rule holds in `setColumnType` and in

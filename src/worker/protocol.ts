@@ -93,9 +93,11 @@ export interface IndividualsTable {
  * The type of a column of the individuals file, as the reader inferred it
  * and the user set it. A binary column holds its two values and which of
  * them is coded 1. They are the texts of two cells of the column, compared
- * exactly: a text as it is, a number or a boolean of an xlsx as `String`
- * writes it, so that a number 1 and a text "1" of one column are one
- * value. A missing cell is neither.
+ * exactly: a text as it is, a number as `String` writes it with its point
+ * made the decimal mark of the read, a boolean as `String` writes it, so
+ * that a number 1 and a text "1" of one column are one value, and a column
+ * of a CSV read with the comma holds "1,5" as the screens show it
+ * (`cellText` of the reader). A missing cell is neither.
  */
 export type ColumnType =
   /** The first column, which names the individuals, and no other. */

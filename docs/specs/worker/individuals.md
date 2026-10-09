@@ -170,8 +170,12 @@ What a user sees change from the reader of TypeScript:
 Each column gets one type, from its values, the cells that are not
 missing, compared as text (`docs/functionality.md`, section 4). The
 **text of a cell** is the cell itself when it is text, and, for a number
-or a boolean of an xlsx, what JavaScript's `String` writes, `1`,
-`0.30000000000000004`, `true`. So a number 1 and a text `1` in one column
+or a boolean, what JavaScript's `String` writes, `1`,
+`0.30000000000000004`, `true`, with the point of a number made the
+decimal mark of the read, `1,5` for a CSV read with the comma, as the
+screens show it (`cellShown` of `docs/specs/core/project.md`), so that a
+binary column never holds a value written otherwise than its cells are
+shown. So a number 1 and a text `1` in one column
 of an xlsx are one value, as the writers of the specs of stage 4
 decided on 27 September 2026, which settles the open point this spec had
 and which the owner may overrule (`docs/specs/stage-4-open-points.md`): a
@@ -367,7 +371,7 @@ Every field is `readonly` and every array `readonly T[]` in the code;
 `src/worker/individuals/columnTypes.ts`, and core imports it as before:
 
 ```ts
-export function cellText(cell: Cell): string | null;
+export function cellText(cell: Cell, decimal: "." | ","): string | null;
 export function cellNumber(cell: Cell, decimal: "." | ","): number | null;
 export function columnLetters(column: number): string;   // 4 is "D"
 export function inferColumnTypes(table: IndividualsTable, decimal: "." | ","): ColumnType[];

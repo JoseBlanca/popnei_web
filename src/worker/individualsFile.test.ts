@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import initTableIo, { importTable } from "table_io";
 import type { ColumnType, CsvOptions } from "./protocol.ts";
 import {
+  cellText,
   columnWarningText,
   columnWarnings,
 } from "./individuals/columnTypes.ts";
@@ -1799,6 +1800,24 @@ describe("IN1 D1 the cases of readCsv of the reader spec at d10cc1b, read by tab
     if (warning === undefined) throw new Error("no warning");
     expect(columnWarningText(warning)).toBe(
       "s holds only one whole number, 1, and is taken as a measurement. If it is a code, such as a numbered population, set its type to categorical.",
+    );
+  });
+
+  test("a binary column of 1,5 and 2,5 read with the comma keeps its two values as the cells are shown, 2,5 coded 1", async () => {
+    const read = await readCsvFile(
+      new Blob([new TextEncoder().encode("id;h\nA;1,5\nB;2,5\nC;1,5\n")]),
+      AUTO,
+    );
+    if (read.kind !== "read") throw new Error("the read failed");
+    expect(read.found?.decimal).toBe(",");
+    expect(read.table.rows.map((row) => row[1])).toEqual([1.5, 2.5, 1.5]);
+    expect(read.columns[1]).toEqual({
+      kind: "binary",
+      one: "2,5",
+      zero: "1,5",
+    });
+    expect(read.table.rows.map((row) => cellText(row[1] ?? null, ","))).toEqual(
+      ["1,5", "2,5", "1,5"],
     );
   });
 

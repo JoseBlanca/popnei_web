@@ -402,8 +402,9 @@ export interface IndividualsTable {
 The type of a column, as the reader inferred it and the user set it
 (`docs/functionality.md`, section 4). A binary column holds its two
 values and which is coded 1. They are the texts of two cells of the
-column, compared exactly: a text as it is, and a number or a boolean of
-an xlsx as JavaScript's `String` writes it, `"1"`, `"true"`, so that a
+column, compared exactly: a text as it is, and a number or a boolean as
+JavaScript's `String` writes it, `"1"`, `"true"`, a number's point made
+the decimal mark of the read, `"1,5"` for a CSV read with the comma, so that a
 number 1 and a text `"1"` of one column of an xlsx are one value
 (`docs/specs/worker/individuals.md`, "The types of the columns"). A
 missing cell is not one of the two values. Until stage 3 they were the

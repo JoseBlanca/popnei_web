@@ -8,8 +8,10 @@
  * the words of a refusal of an xlsx, so every function here is pure.
  *
  * The values of a column are compared as text: a text as it is, a number
- * or a boolean of an xlsx as `String` writes it, so that a number 1 and a
- * text "1" of one column are one value.
+ * as `String` writes it with its point made the decimal mark of the read,
+ * a boolean as `String` writes it, so that a number 1 and a text "1" of one
+ * column are one value, and a binary column of a CSV read with the comma
+ * holds "1,5" as the screens show its cells (`cellShown` of core).
  */
 
 import type { Cell, ColumnType, IndividualsTable } from "../protocol.ts";
@@ -52,10 +54,16 @@ export function columnLetters(column: number): string {
   return letters;
 }
 
-/** The text of a cell by which the types compare it: a text as it is, a
-    number or a boolean as `String` writes it; null for a missing cell. */
-export function cellText(cell: Cell): string | null {
-  return cell === null ? null : String(cell);
+/** The text of a cell by which the types compare it, and the screens
+    show it: a text as it is; a number as `String` writes it, its point
+    made `decimal`, `1,5` for a CSV read with the comma; a boolean as
+    `String` writes it; null for a missing cell. */
+export function cellText(cell: Cell, decimal: "." | ","): string | null {
+  if (cell === null) return null;
+  if (typeof cell === "number" && decimal === ",") {
+    return String(cell).replace(".", ",");
+  }
+  return String(cell);
 }
 
 /**
@@ -83,11 +91,13 @@ function finiteOrNull(value: number): number | null {
 
 /**
  * The type of each column of `table`, in its order, from the values of the
- * column, the texts of its cells that are not missing (`cellText`). The
- * first column is identifier; a column of exactly two distinct values is
- * binary; of three or more, every one a number read with `decimal`,
- * continuous; any other, one value, none, or three with one not a number,
- * categorical. A row not as long as the columns is a defect, and throws.
+ * column, the texts of its cells that are not missing (`cellText` with
+ * `decimal`), so that the two values of a binary type are written as the
+ * screens show them. The first column is identifier; a column of exactly
+ * two distinct values is binary; of three or more, every one a number
+ * read with `decimal`, continuous; any other, one value, none, or three
+ * with one not a number, categorical. A row not as long as the columns is
+ * a defect, and throws.
  */
 export function inferColumnTypes(
   table: IndividualsTable,
@@ -132,11 +142,11 @@ interface ColumnValue {
   readonly number: number | null;
 }
 
-/** The distinct values of the column at `index`, by their texts, in the
-    order of the rows, each with the number of the first of its cells read
-    with `decimal`: a number cell is its number whatever `decimal`, so that
-    a column of numbers of a CSV read with the decimal comma, which
-    `String` writes with a point, is still numbers. */
+/** The distinct values of the column at `index`, by their texts written
+    with `decimal`, in the order of the rows, each with the number of the
+    first of its cells read with `decimal`: a number cell is its number
+    whatever `decimal`, so that a column of numbers of a CSV read with the
+    decimal comma is still numbers. */
 function distinctValues(
   table: IndividualsTable,
   index: number,
@@ -145,7 +155,7 @@ function distinctValues(
   const values = new Map<string, number | null>();
   for (const row of table.rows) {
     const cell = cellAt(row, index);
-    const text = cellText(cell);
+    const text = cellText(cell, decimal);
     if (text !== null && !values.has(text)) {
       values.set(text, cellNumber(cell, decimal));
     }

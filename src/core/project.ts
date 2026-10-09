@@ -32,6 +32,7 @@ import type {
 } from "../worker/protocol.ts";
 import {
   cellNumber,
+  cellText,
   columnLetters,
   columnWarnings,
   inferColumnTypes,
@@ -1066,16 +1067,12 @@ function columnName(table: IndividualsTable, index: number): string {
  * read with the comma shows `1,5` where the file has it; `true` and
  * `false`; `null` for a missing cell. The names of the populations use it,
  * and so do the table of the file and the different values of a column,
- * so that one value is never written two ways. The types keep `cellText`.
+ * so that one value is never written two ways. It is the reader's
+ * `cellText`, by which the types compare the values of a column, so the
+ * two values of a binary type are written the same way.
  */
 export function cellShown(cell: Cell, decimal: "." | ","): string | null {
-  if (cell === null) {
-    return null;
-  }
-  if (typeof cell === "number" && decimal === ",") {
-    return String(cell).replace(".", ",");
-  }
-  return String(cell);
+  return cellText(cell, decimal);
 }
 
 /** The decimal mark the cells of a read are shown with: the one it
@@ -4654,7 +4651,7 @@ function parseCell(value: unknown, path: FieldPath): Parsed<Cell> {
 }
 
 /** A type of a column; the two values of a binary type are texts, those
-    of the cells of its column as `String` writes them. */
+    of the cells of its column as `cellShown` writes them. */
 function parseColumnType(value: unknown, path: FieldPath): Parsed<ColumnType> {
   const read = readKind(value, path, COLUMN_TYPE_KINDS);
   if (!read.ok) {

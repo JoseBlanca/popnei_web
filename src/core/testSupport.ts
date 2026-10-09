@@ -9,6 +9,7 @@ import type { JsonObject, JsonValue, KeyedDef } from "./keys.ts";
 import {
   INDIVIDUAL_FILTER_ORDER,
   VARIANT_FILTER_ORDER,
+  cellShown,
   columnAllows,
   analysisOptions,
   individualsNeeds,
@@ -931,14 +932,23 @@ const numberCell: fc.Arbitrary<Cell> = fc.oneof(
 
 type TypeKind = "binary" | "continuous" | "categorical";
 
-/** A column of `numRows` cells and a type valid for it; a binary column
-    has exactly two distinct values that are not missing. */
+/** The type of a column in a read with the decimal mark `decimal`. */
+type TypeFor = (decimal: "." | ",") => ColumnType;
+
+/** A column of `numRows` cells and a type valid for it in a read with
+    either decimal mark; a binary column has exactly two distinct values
+    that are not missing, written as `cellShown` writes them with the
+    decimal mark of the read. */
 function column(
   kind: TypeKind | "identifier",
   numRows: number,
-): fc.Arbitrary<{ type: ColumnType; cells: readonly Cell[] }> {
+): fc.Arbitrary<{ typeFor: TypeFor; cells: readonly Cell[] }> {
   const cells = (from: fc.Arbitrary<Cell>, length: number) =>
     fc.array(from, { minLength: length, maxLength: length });
+  const same =
+    (type: ColumnType): TypeFor =>
+    () =>
+      type;
   switch (kind) {
     case "identifier":
       // The names of the individuals: texts, none empty, none twice.
@@ -947,7 +957,7 @@ function column(
           minLength: numRows,
           maxLength: numRows,
         })
-        .map((c) => ({ type: { kind }, cells: c }));
+        .map((c) => ({ typeFor: same({ kind }), cells: c }));
     case "continuous":
       // Numbers with either decimal mark, whole numbers as text or numbers
       // of an xlsx, and one at least, so that the values allow the type.
@@ -956,19 +966,34 @@ function column(
           numberCell,
           cells(fc.oneof(fc.constant(null), numberCell), numRows - 1),
         )
-        .map(([first, rest]) => ({ type: { kind }, cells: [first, ...rest] }));
+        .map(([first, rest]) => ({
+          typeFor: same({ kind }),
+          cells: [first, ...rest],
+        }));
     case "categorical":
-      return cells(cell, numRows).map((c) => ({ type: { kind }, cells: c }));
+      return cells(cell, numRows).map((c) => ({
+        typeFor: same({ kind }),
+        cells: c,
+      }));
     case "binary":
-      // Two values of different texts, compared as the types compare them.
+      // Two values of different texts with either decimal mark, compared
+      // as the types compare them.
       return fc
         .tuple(cellValue, cellValue, fc.boolean())
-        .filter(([a, b]) => String(a) !== String(b))
+        .filter(
+          ([a, b]) =>
+            cellShown(a, ".") !== cellShown(b, ".") &&
+            cellShown(a, ",") !== cellShown(b, ","),
+        )
         .chain(([a, b, flip]) =>
           cells(fc.constantFrom<Cell>(a, b, null), numRows - 2).map((rest) => ({
-            type: flip
-              ? { kind, one: String(a), zero: String(b) }
-              : { kind, one: String(b), zero: String(a) },
+            typeFor: (decimal: "." | ","): ColumnType => {
+              const textA = cellShown(a, decimal) ?? "";
+              const textB = cellShown(b, decimal) ?? "";
+              return flip
+                ? { kind, one: textA, zero: textB }
+                : { kind, one: textB, zero: textA };
+            },
             cells: [a, b, ...rest],
           })),
         );
@@ -976,10 +1001,11 @@ function column(
 }
 
 /** Any table read of an individuals file, of two to five rows, with a
-    valid type for each of its columns. */
+    valid type for each of its columns in a read with either decimal
+    mark. */
 const tableRead: fc.Arbitrary<{
   table: IndividualsTable;
-  columns: readonly ColumnType[];
+  columnsFor: (decimal: "." | ",") => readonly ColumnType[];
 }> = fc
   .record({
     numRows: fc.integer({ min: 2, max: 5 }),
@@ -1009,7 +1035,7 @@ const tableRead: fc.Arbitrary<{
         cols.map((c) => c.cells[row] ?? null),
       ),
     },
-    columns: cols.map((c) => c.type),
+    columnsFor: (decimal: "." | ",") => cols.map((c) => c.typeFor(decimal)),
   }));
 
 const csvFound: fc.Arbitrary<CsvFound> = fc.record(
@@ -1102,10 +1128,10 @@ const individualsRead: fc.Arbitrary<IndividualsRead> = fc.oneof(
   fc.constant<IndividualsRead>({ kind: "pending" }),
   fc
     .tuple(tableRead, fc.option(csvFound))
-    .map(([{ table, columns }, found]): IndividualsRead => ({
+    .map(([{ table, columnsFor }, found]): IndividualsRead => ({
       kind: "read",
       table,
-      columns,
+      columns: columnsFor(found?.decimal ?? "."),
       found,
     })),
   fc
@@ -1191,6 +1217,29 @@ function typesSetOf(read: IndividualsRead): fc.Arbitrary<ColumnTypeOf[]> {
     );
 }
 
+/** `read` as a read of an xlsx: no found, and the two values of each
+    binary type written as `cellShown` writes them with the point. */
+function readOfXlsx(read: Extract<IndividualsRead, { kind: "read" }>) {
+  const decimal = read.found?.decimal ?? ".";
+  const columns = read.columns.map((type, index): ColumnType => {
+    if (type.kind !== "binary") {
+      return type;
+    }
+    const withPoint = (text: string): string => {
+      const cell = read.table.rows
+        .map((row) => row[index] ?? null)
+        .find((c) => cellShown(c, decimal) === text);
+      return cell === undefined ? text : (cellShown(cell, ".") ?? text);
+    };
+    return {
+      kind: "binary",
+      one: withPoint(type.one),
+      zero: withPoint(type.zero),
+    };
+  });
+  return { ...read, columns, found: null };
+}
+
 /** Any individuals file, with the types the user set, applied by its read
     and not. */
 const individualsSource: fc.Arbitrary<IndividualsSource> = fc
@@ -1203,10 +1252,11 @@ const individualsSource: fc.Arbitrary<IndividualsSource> = fc
     },
     PLAIN,
   )
-  // An xlsx, whose csv is null, has nothing found of the options of a CSV.
+  // An xlsx, whose csv is null, has nothing found of the options of a CSV,
+  // and its binary values are written with the point.
   .map((source) =>
     source.csv === null && source.read.kind === "read"
-      ? { ...source, read: { ...source.read, found: null } }
+      ? { ...source, read: readOfXlsx(source.read) }
       : source,
   )
   .chain((source) =>

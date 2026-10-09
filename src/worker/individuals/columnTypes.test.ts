@@ -394,12 +394,36 @@ describe("WS4 D2 the numbers and the types", () => {
 });
 
 describe("IP4 D2 the types compared as text", () => {
-  test("cellText: a number and a boolean as String writes them, a text as it is, a missing cell null", () => {
-    expect(cellText(1)).toBe("1");
-    expect(cellText(0.1 + 0.2)).toBe("0.30000000000000004");
-    expect(cellText(true)).toBe("true");
-    expect(cellText("001")).toBe("001");
-    expect(cellText(null)).toBeNull();
+  test("cellText: a number as String writes it with its point made the decimal mark, a boolean as String writes it, a text as it is, a missing cell null", () => {
+    expect(cellText(1, ".")).toBe("1");
+    expect(cellText(0.1 + 0.2, ".")).toBe("0.30000000000000004");
+    expect(cellText(1.5, ".")).toBe("1.5");
+    expect(cellText(1.5, ",")).toBe("1,5");
+    expect(cellText(1e-7, ",")).toBe("1e-7");
+    expect(cellText("1.5", ",")).toBe("1.5");
+    expect(cellText(true, ",")).toBe("true");
+    expect(cellText("001", ".")).toBe("001");
+    expect(cellText(null, ",")).toBeNull();
+  });
+
+  test("a column of the numbers 1.5 and 2.5 typed with the comma is binary with 2,5 coded 1, and with the point 2.5", () => {
+    const table: IndividualsTable = {
+      columns: ["id", "h"],
+      rows: [
+        ["A", 1.5],
+        ["B", 2.5],
+      ],
+    };
+    expect(inferColumnTypes(table, ",")[1]).toEqual({
+      kind: "binary",
+      one: "2,5",
+      zero: "1,5",
+    });
+    expect(inferColumnTypes(table, ".")[1]).toEqual({
+      kind: "binary",
+      one: "2.5",
+      zero: "1.5",
+    });
   });
 
   test("an xlsx column of the number 1, the text 1 and the number 0 is binary, 1 coded 1", () => {
@@ -490,7 +514,7 @@ describe("IN1 D1 the types of a column of numbers read with the decimal comma", 
     ]);
   });
 
-  test("two numbers of a CSV read with the comma are binary, the larger as 1", () => {
+  test("two numbers of a CSV read with the comma are binary, the larger as 1, written with the comma", () => {
     const table = {
       columns: ["id", "h"],
       rows: [
@@ -500,8 +524,8 @@ describe("IN1 D1 the types of a column of numbers read with the decimal comma", 
     };
     expect(inferColumnTypes(table, ",")[1]).toEqual({
       kind: "binary",
-      one: "10.5",
-      zero: "2.5",
+      one: "10,5",
+      zero: "2,5",
     });
   });
 });

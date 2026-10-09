@@ -84,7 +84,7 @@ describe("WS4 D4 the properties of the reader", () => {
             if (type.kind !== "binary") continue;
             const values = new Set(
               table.rows
-                .map((row) => cellText(row[index] ?? null))
+                .map((row) => cellText(row[index] ?? null, decimal))
                 .filter((text) => text !== null),
             );
             expect(values).toEqual(new Set([type.one, type.zero]));
@@ -143,7 +143,9 @@ describe("IP4 D2 the types of an xlsx are those of its text", () => {
           };
           const texts: IndividualsTable = {
             columns,
-            rows: table.rows.map((row) => row.map((cell) => cellText(cell))),
+            rows: table.rows.map((row) =>
+              row.map((cell) => cellText(cell, ".")),
+            ),
           };
           expect(inferColumnTypes(table, ".")).toEqual(
             inferColumnTypes(texts, "."),
