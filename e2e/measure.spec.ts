@@ -2785,6 +2785,146 @@ test("IN6 D4 the table of individuals_10000.xlsx under the tab Individuals file 
 });
 
 // ---------------------------------------------------------------------
+// "Table as CSV" of the table of individuals_10000.xlsx under the tab
+// Individuals of popgen2.html (AP5 D5, the plan of the PCA tab), measured
+// as the sort of IN6 D4: above 200 ms in either engine is a stop of that
+// plan.
+
+/** What a save of the table took, in milliseconds from the choice of
+    "Table as CSV": to the first frame drawn after it, to the end of the
+    task after the frame that follows the file handed to the browser, and
+    the longest stretch between two frames, in which the page answered
+    nothing. */
+interface SaveTimes {
+  readonly firstFrame: number;
+  readonly saved: number;
+  readonly longest: number;
+}
+
+/** The times of a save by `item`, the item of an open menu: the file is
+    handed to the browser when the page asks `URL.createObjectURL` for its
+    address; until a frame after that, a frame is asked for after each
+    frame. */
+async function saveTimes(item: Locator): Promise<SaveTimes> {
+  return item.evaluate(async (element) => {
+    if (!(element instanceof HTMLElement)) {
+      throw new Error("the item is not an HTML element");
+    }
+    const original = URL.createObjectURL.bind(URL);
+    let handedAt: number | null = null;
+    URL.createObjectURL = (object: Blob | MediaSource): string => {
+      handedAt ??= performance.now();
+      return original(object);
+    };
+    try {
+      const t0 = performance.now();
+      let last = t0;
+      let longest = 0;
+      const frames: number[] = [];
+      element.click();
+      const savedAt = await new Promise<number>((resolve) => {
+        const tick = (): void => {
+          const now = performance.now();
+          longest = Math.max(longest, now - last);
+          last = now;
+          frames.push(now - t0);
+          if (handedAt !== null && now > handedAt) {
+            setTimeout(() => {
+              resolve(performance.now() - t0);
+            }, 0);
+          } else {
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      });
+      return { firstFrame: frames[0] ?? savedAt, saved: savedAt, longest };
+    } finally {
+      URL.createObjectURL = original;
+    }
+  });
+}
+
+test("AP5 D5 the table of individuals_10000.xlsx under the tab Individuals of popgen2.html: the page frozen when Table as CSV is chosen", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(300_000);
+  const loadBefore = machineLoad();
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
+    .click();
+  await (
+    await chooser
+  ).setFiles(join(import.meta.dirname, "fixtures", "individuals_10000.xlsx"));
+  await page.getByRole("tab", { name: "Individuals", exact: true }).click();
+  const table = page.getByRole("grid", {
+    name: "The table of individuals_10000.xlsx",
+  });
+  await expect(table).toBeVisible({ timeout: 120_000 });
+  const button = page.getByRole("button", {
+    name: "Download the table of individuals_10000.xlsx",
+    exact: true,
+  });
+  const menu = page.getByRole("menu");
+  const saveOnce = async (): Promise<SaveTimes> => {
+    await button.click();
+    const item = menu.getByRole("menuitem", { name: "Table as CSV" });
+    await expect(item).toBeVisible();
+    const download = page.waitForEvent("download");
+    const times = await saveTimes(item);
+    expect((await download).suggestedFilename()).toBe(
+      "individuals_10000.table.csv",
+    );
+    await expect(menu).toHaveCount(0);
+    return times;
+  };
+  // The first save is left out, as the first sort of IN6 D4 is.
+  await saveOnce();
+  const times: SaveTimes[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    times.push(await saveOnce());
+  }
+  const each = (f: (t: SaveTimes) => number): string =>
+    times.map((t) => ms(f(t))).join(", ");
+  report(
+    "AP5 D5 Table as CSV on the table of individuals_10000.xlsx under the tab Individuals of popgen2.html",
+    `${machine(browser, browserName)}; 10,000 rows of 20 columns; each time from the choice, ${String(REPEATS)} times but the first; the load before, ${loadBefore}`,
+    ["a save of the table as CSV", "median", "range", "each"],
+    [
+      [
+        "the first frame after the choice",
+        ...stats(
+          times.map((t) => t.firstFrame),
+          ms,
+        ),
+        each((t) => t.firstFrame),
+      ],
+      [
+        "the file handed to the browser, a frame after",
+        ...stats(
+          times.map((t) => t.saved),
+          ms,
+        ),
+        each((t) => t.saved),
+      ],
+      [
+        "the longest stretch with no frame",
+        ...stats(
+          times.map((t) => t.longest),
+          ms,
+        ),
+        each((t) => t.longest),
+      ],
+    ],
+  );
+});
+
+// ---------------------------------------------------------------------
 // The time of columnAllows, a metadata file of 10,000 rows and 50
 // columns (IP5 D4).
 
