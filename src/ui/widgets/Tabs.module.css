@@ -47,6 +47,12 @@
   min-inline-size: 0;
 }
 
+/* A panel not shown that is kept drawn (keepHidden of Tabs.tsx): React
+   Aria marks it inert and data-inert, and it takes no room. */
+.panel[data-inert] {
+  display: none;
+}
+
 .panel[data-focus-visible] {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);

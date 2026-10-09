@@ -8,8 +8,15 @@
  * reach it; the panel shown is the next stop, or its first element that
  * the Tab key reaches.
  *
- * Only the panel shown is drawn: a plot in a panel not shown is
- * destroyed, and drawn anew when its label is chosen again.
+ * By default only the panel shown is drawn: a plot in a panel not shown
+ * is destroyed, and drawn anew when its label is chosen again, as the
+ * plot and the table of the bins of popgen.html have it. With
+ * `keepHidden`, as the two tabs of the files of popgen2.html have it
+ * (docs/specs/steps/popgen2-input.md, "Both tabs kept drawn"), every
+ * panel stays drawn: React Aria marks a panel not shown inert, which the
+ * Tab key, the mouse and a screen reader pass over, and its style hides
+ * it, so that a turn to another tab and back finds what the user left
+ * there, a number half typed, the sort of a table, the plots drawn.
  */
 import {
   Tabs as AriaTabs,
@@ -45,6 +52,9 @@ export interface TabsProps<Id extends string> {
   readonly selected: Id;
   /** Called with the id of the tab the user chose. */
   readonly onChange: (id: Id) => void;
+  /** Whether the panels not shown stay drawn, inert and hidden, rather
+      than being taken out of the page; false when absent. */
+  readonly keepHidden?: boolean;
 }
 
 /** A row of labels, and the panel of the one chosen. */
@@ -53,6 +63,7 @@ export function Tabs<Id extends string>({
   tabs,
   selected,
   onChange,
+  keepHidden = false,
 }: TabsProps<Id>): React.JSX.Element {
   return (
     <AriaTabs
@@ -77,7 +88,12 @@ export function Tabs<Id extends string>({
         ))}
       </TabList>
       {tabs.map((tab) => (
-        <TabPanel key={tab.id} id={tab.id} className={classOf(styles, "panel")}>
+        <TabPanel
+          key={tab.id}
+          id={tab.id}
+          shouldForceMount={keepHidden}
+          className={classOf(styles, "panel")}
+        >
           {tab.content}
         </TabPanel>
       ))}
