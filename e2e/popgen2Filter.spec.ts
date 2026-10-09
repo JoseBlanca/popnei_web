@@ -175,7 +175,11 @@ test("SF7 D2 the box is not there while panel.vcf.gz is opened, nor after no_plo
   await page.route("**/*.wasm", () => undefined);
   await openPage(page);
   await pick(page, "panel.vcf.gz");
-  await expect(page.getByText("1 second so far.")).toBeVisible();
+  // The clock says "1 second so far." for one second only, then
+  // "2 seconds so far.", and a slow runner can look after that second.
+  await expect(
+    page.getByText(/^(1 second|([2-9]|[1-9]\d+) seconds) so far\.$/),
+  ).toBeVisible();
   await expect(filterBox(page)).toHaveCount(0);
 
   await page.unroute("**/*.wasm");

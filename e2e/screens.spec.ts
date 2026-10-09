@@ -564,9 +564,15 @@ for (const theme of ["light", "dark"] as const) {
     test("the Variants step reading a file", async ({ page }) => {
       // The wasm is held back, so the read waits for the calculation
       // worker; the page was opened before, so it is fetched again here.
+      // The page's clock is held still and moved on by one second after
+      // the pick, so the picture shows "1 second so far." however slow
+      // the runner is.
       await page.route("**/*.wasm", () => undefined);
+      await page.clock.install();
       await page.reload();
+      await page.clock.pauseAt(Date.now() + 1000);
       await pickVariants(page, "panel.nei");
+      await page.clock.runFor(1000);
       await expect(
         page.getByRole("main").getByText("1 second so far."),
       ).toBeVisible();
@@ -4757,9 +4763,15 @@ for (const theme of ["light", "dark"] as const) {
       test("reading the file", async ({ page }) => {
         // The wasm is held back, so the read waits for the calculation
         // worker; the page was opened before, so it is fetched again.
+        // The page's clock is held still and moved on by one second after
+        // the pick, so the picture shows "1 second so far." however slow
+        // the runner is.
         await page.route("**/*.wasm", () => undefined);
+        await page.clock.install();
         await page.reload();
+        await page.clock.pauseAt(Date.now() + 1000);
         await pickOnNewPage(page, "panel.vcf.gz");
+        await page.clock.runFor(1000);
         await expect(page.getByText("1 second so far.")).toBeVisible();
         await save(page, `popgen2-reading${at}-${theme}`);
       });
@@ -5094,12 +5106,18 @@ for (const theme of ["light", "dark"] as const) {
       test("the FILTER failures of low_qual.vcf.gz while the file is read", async ({
         page,
       }) => {
+        // The page's clock is held still and moved on by one second after
+        // the pick, so the picture shows "1 second so far." however slow
+        // the runner is.
         await page.route("**/*.wasm", () => undefined);
+        await page.clock.install();
         await page.reload();
+        await page.clock.pauseAt(Date.now() + 1000);
         await pickOnNewPage(page, "low_qual.vcf.gz");
         await expect(
           newPageCount(page).getByText("FILTER failures: reading…"),
         ).toBeVisible();
+        await page.clock.runFor(1000);
         await expect(page.getByText("1 second so far.")).toBeVisible();
         await save(page, `popgen2-filter-reading${at}-${theme}`);
       });
