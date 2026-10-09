@@ -1127,9 +1127,18 @@ individuals file go through.
   renaming costs no data.
 - **The options of the PCA on this page**, once `popgen2.html` saves a
   project file: its own filters mean "stricter than the Variants tab"
-  here and "in the place of the step's" on the old page, so a file saved
-  by one page would mean other filters on the other. Today the page
-  saves nothing.
+  here and "in the place of the step's" on the old page, and the two
+  pages start from different defaults, the LD pruning on here, while
+  both definitions have the id "pca" and the key version 1, so a file
+  saved by one page would mean other filters on the other. The cache
+  key is safe, being made from the filters after the narrowing in a
+  store of each page; the file is not. Today the only guards are that
+  the page saves and opens nothing, and that the old page refuses a
+  file with the filter of the FILTER column, on or off, which the first
+  project of this page holds and its box keeps (`newPageFilter` of
+  `src/core/projectFile.ts`). When
+  saving reaches this page, its PCA gets an id of its own, or the file
+  records its page: a decision for the owner then.
 - **The forms of the files downloaded**, the columns of each CSV and the
   names of the files, once users have scripts that read them; the CSV
   of the coordinates above all, which vavilov-explorer reads.

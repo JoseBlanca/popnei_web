@@ -1224,8 +1224,13 @@ export function refusalText(message: string, p: Project): string;
     calculation of numIndividuals needed (below, "Its words"). */
 export function crashText(p: Project, numIndividuals: number): string;
 export const PCA_MEMORY_WORDS_BYTES = 250_000_000;
+/** The words of the statistics of each individual refused or failed: "the PCA was not run"
+    when its own Run waited for them, `waited`, and "the PCA cannot run" when it did not, since
+    the PCA then has nothing of its own to say (stop C 4); the page as "On popgen2.html" gives
+    it, below. */
 export function statisticsFailedText(
   error: AnalysisError, p: Project, failureText: (failure: Failure) => string,
+  waited: boolean, page: PcaPage,
 ): string;
 ```
 
@@ -2023,33 +2028,93 @@ export function pcaColours(r: PcaResult, p: Project, page: PcaPage): PcaColours;
 //   noneName gains "Unclassified", which only page "popgen2" gives
 export function refusalText(message: string, p: Project, page: PcaPage): string;
 export function crashText(p: Project, numIndividuals: number, page: PcaPage): string;
+/** "was not run" when the PCA's own Run waited for the statistics, `waited`, "cannot run"
+    otherwise; on "popgen2", a refusal in the words of the box Variants file. */
 export function statisticsFailedText(
-  error: AnalysisError, p: Project, failureText: (failure: Failure) => string, page: PcaPage,
+  error: AnalysisError, p: Project, failureText: (failure: Failure) => string,
+  waited: boolean, page: PcaPage,
 ): string;
 
 /** The CSV of the coordinates, header `individual,PC1,…`, the names with no ' before them. */
 export function pcaCoordinatesCsv(r: PcaResult): string;
+
+/** The page of the definition a store runs: "popgen" for `pca`, "popgen2" for
+    `pcaOnPopgen2`; a defect for another. */
+export function pcaPageOf(def: AnalysisDef<Job, JobResult>): PcaPage;
 ```
+
+The parts of the panel take the page from the definition the store
+runs, so that the PCA tab, whose store runs `pcaOnPopgen2`, cannot draw
+the options of `PCA_DEFAULTS`: `PcaOptionsPart` and `PcaResults` of
+`src/ui/analyses/pca/` take that definition as the prop `analysis` and
+read its page with `pcaPageOf`, `notesOf(r, p, stats, page)` takes the
+page, and the old page's panel, `src/ui/analyses/panels.ts`, binds them
+to `pca` and gives its refusals and its crash `pcaPageOf(pca)`.
 
 The commands of the options, in `src/ui/analyses/pca/commands.ts`, read
 and write the options of the page too: `OptionsOf` is made for a page,
 with `read: (p) => pcaOptions(p, page)` and the page's definition, and
-every command takes the page, `methodCommand(method, page)`,
-`colourCommand(colourBy, page)` and the rest, and gives the page's
-description (`docs/specs/steps/popgen2-pca.md`, "What is a step"). On
+every command takes the page and gives the page's description
+(`docs/specs/steps/popgen2-pca.md`, "What is a step"). On
 `popgen2.html` a command that read the options of the old page would
 write `PCA_DEFAULTS`, whose LD filter follows, and turn the LD pruning
-off at the first change of the colour. The page adds one command,
-`stricterCommand(kind, value, page)`, which sets `follow` false and the
-value in one step. The memos of `pcaFilters` and `pcaColours`, which
-give the same object for the same inputs, are looked up by the page as
-well, so that one page never gets the other's list.
+off at the first change of the colour. The page of a command carries
+the method of the project on `popgen2.html`, since a description is a
+string fixed before the command meets the project, and that page's
+descriptions name the PCA or the PCoA; the caller, which draws the
+options with the method, gives it:
+
+```ts
+export type CommandPage = "popgen" | Popgen2CommandPage;
+export interface Popgen2CommandPage { readonly page: "popgen2"; readonly method: PcaMethod }
+export function commandPageOf(page: PcaPage, method: PcaMethod): CommandPage;
+
+export function methodCommand(method: PcaMethod, page: CommandPage): OptionCommand;
+/** Any filter on the old page; on popgen2.html the LD pruning turned on or off, and a missing
+    data or a MAF filter set back to as in the Variants tab, never set for the PCA here. */
+export function followCommand(kind: OwnFilterKind, follow: boolean, page: "popgen"): OptionCommand;
+export function followCommand(kind: "ld", follow: boolean, page: CommandPage): OptionCommand;
+export function followCommand(
+  kind: "missing_data" | "maf", follow: true, page: CommandPage,
+): OptionCommand;
+export function ownValueCommand(value: OwnValue, page: CommandPage): OptionCommand;
+/** popgen2.html alone: `follow` false and the value in one step. */
+export function stricterCommand(
+  kind: "missing_data" | "maf", value: number, page: Popgen2CommandPage,
+): OptionCommand;
+export function colourCommand(colourBy: string | null, page: CommandPage): OptionCommand;
+export function viewCommand(view: "3d" | "2d", page: CommandPage): OptionCommand;
+export function axisCommand(
+  shown: readonly number[], axis: number, component: number, page: CommandPage,
+): OptionCommand;
+```
+
+The compiler refuses `followCommand` with a missing data or a MAF
+filter and `follow` false on `popgen2.html`, which would bring back a
+value typed long before and call it "made stricter", and
+`stricterCommand` on the old page. The memos of `pcaFilters` and
+`pcaColours`, which give the same object for the same inputs, are
+looked up by the page as well, so that one page never gets the other's
+list.
 
 The functions that took no page take one, and the old page's callers
-give `"popgen"`; a page given by the caller, rather than read from the
-project, keeps the project free of which page made it, so that a
-project file, when `popgen2.html` saves one, means the same filters
-wherever it is read (the design, "What is hard to undo").
+give the page of `pca`. A page given by the caller, rather than read
+from the project, keeps the project free of which page made it; it does
+not make a project mean the same PCA on both pages. The key is safe:
+it is made from the filters after the narrowing, and each page has its
+own store and its own cache, so neither finds a result of the other. A
+project file is not: the two definitions share the id "pca" and the
+key version 1, and the same options give the two pages different
+filters, the narrowing, and different defaults, the LD pruning on with
+no distance, so a file saved on one page and opened on the other would
+run another PCA than the one saved. Today no file crosses:
+`popgen2.html` neither saves nor opens a project, and the old page
+refuses a file that holds the filter of the FILTER column, on or off
+(`newPageFilter` of `src/core/projectFile.ts`), which the first project
+of `popgen2.html` holds and its box keeps. When saving reaches
+`popgen2.html`, its PCA gets an id of its own, or the file records its
+page; which of the two is the owner's decision then (the design, "What
+is hard to undo").
 
 ### The cases
 
