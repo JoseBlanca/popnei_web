@@ -322,12 +322,20 @@ export function axisLabel(r: PcaResult, component: number): string {
   return `${pcName(component)} (${percentText(percent)})`;
 }
 
-/** The title of the plot, by the components shown: "Principal components,
-    PC1 and PC2", "Principal components, PC1, PC2 and PC3". */
-export function plotTitle(axes: readonly number[]): string {
+/** The title of the plot, its name for a screen reader, by the
+    components shown and the method `method`: "Principal components, PC1
+    and PC2", "Principal coordinates, PC1, PC2 and PC3" under the PCoA;
+    `null` for "Principal components" under both methods, as popgen.html
+    names its plot (docs/specs/steps/popgen2-pca.md, "The result"). */
+export function plotTitle(
+  axes: readonly number[],
+  method: PcaMethod | null,
+): string {
   const names = axes.map(pcName);
   const last = names.at(-1) ?? "";
-  return `Principal components, ${names.slice(0, -1).join(", ")} and ${last}`;
+  const what =
+    method === "pcoa" ? "Principal coordinates" : "Principal components";
+  return `${what}, ${names.slice(0, -1).join(", ")} and ${last}`;
 }
 
 /** The names of the selects of the components, in 2D and in 3D, where

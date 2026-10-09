@@ -285,6 +285,30 @@ describe("IP8 panel: the commands of the options", () => {
   });
 });
 
+describe("AP6 D3 the name of the plots on popgen2.html, by the method", () => {
+  test("under the PCoA the 2D and 3D plots are principal coordinates on popgen2.html, and principal components on popgen.html, as before", () => {
+    const r = result({ method: "pcoa" });
+    const p = sampleProject();
+    const c = pcaColours(r, p, "popgen");
+    expect(pca3dData(r, c, [1, 2, 3], null, p, "popgen2").title).toBe(
+      "Principal coordinates, PC1, PC2 and PC3",
+    );
+    expect(scatterData(r, c, [1, 2], null, p, "popgen2").title).toBe(
+      "Principal coordinates, PC1 and PC2",
+    );
+    expect(pca3dData(r, c, [1, 2, 3], null, p, "popgen").title).toBe(
+      "Principal components, PC1, PC2 and PC3",
+    );
+    const pcaResult = result();
+    expect(pca3dData(pcaResult, c, [1, 2, 3], null, p, "popgen2").title).toBe(
+      "Principal components, PC1, PC2 and PC3",
+    );
+    expect(plotTitle([1, 2], "pcoa")).toBe(
+      "Principal coordinates, PC1 and PC2",
+    );
+  });
+});
+
 describe("IP8 panel: the data of the plots", () => {
   test("a component is a column of the projections", () => {
     expect(Array.from(componentColumn(result(), 2))).toEqual([2, 0.5, 8, 11]);
@@ -295,7 +319,7 @@ describe("IP8 panel: the data of the plots", () => {
     const r = result();
     const p = sampleProject();
     const c = pcaColours(r, p, "popgen");
-    const flat = scatterData(r, c, [2, 1, 3], 1, p);
+    const flat = scatterData(r, c, [2, 1, 3], 1, p, "popgen");
     expect(flat.title).toBe("Principal components, PC2 and PC1");
     expect(flat.xLabel).toBe("PC2 (30.00%)");
     expect(flat.yLabel).toBe("PC1 (40.13%)");
@@ -311,7 +335,7 @@ describe("IP8 panel: the data of the plots", () => {
     expect(flat.description).toMatch(
       /^Principal components of 4 individuals of panel\.nei, PC2/,
     );
-    const deep = pca3dData(r, c, [1, 2, 3], null, p);
+    const deep = pca3dData(r, c, [1, 2, 3], null, p, "popgen");
     expect(deep.axisLabels).toEqual([
       "PC1 (40.13%)",
       "PC2 (30.00%)",
@@ -326,7 +350,7 @@ describe("IP8 panel: the data of the plots", () => {
     const r = result();
     const p = sampleProject();
     const c = pcaColours(r, p, "popgen");
-    const deep = pca3dData(r, c, [3, 1, 2], 0, p);
+    const deep = pca3dData(r, c, [3, 1, 2], 0, p, "popgen");
     expect(deep.axisNames).toEqual(["PC3", "PC1", "PC2"]);
     expect(deep.axisLabels).toEqual([
       "PC3 (20.00%)",
@@ -389,7 +413,7 @@ describe("IP8 panel: the explained variance and the table", () => {
     expect(valueText(-2060)).toBe("−2060");
     expect(valueText(0.07500000000000001)).toBe("0.075");
     expect(axisLabel(r, 1)).toBe("PC1 (40.13%)");
-    expect(plotTitle([1, 2])).toBe("Principal components, PC1 and PC2");
+    expect(plotTitle([1, 2], null)).toBe("Principal components, PC1 and PC2");
     expect(tableCsvName("panel.vcf.gz", "pca")).toBe("panel.pca.csv");
     expect(varianceCsvName("panel.nei", "pcoa")).toBe(
       "panel.pcoa_variance.csv",

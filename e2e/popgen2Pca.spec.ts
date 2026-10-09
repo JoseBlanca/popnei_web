@@ -643,10 +643,10 @@ async function textOf(download: Download): Promise<string> {
   return readFile(await download.path(), "utf8");
 }
 
-/** Switches the plot to 2D. */
-async function to2d(page: Page): Promise<void> {
+/** Switches the plot to 2D, named `name` for a screen reader. */
+async function to2d(page: Page, name = PCA_2D): Promise<void> {
   await shown(page).getByRole("radio", { name: "2D", exact: true }).click();
-  await expect(shown(page).getByRole("img", { name: PCA_2D })).toBeVisible();
+  await expect(shown(page).getByRole("img", { name })).toBeVisible();
 }
 
 /** The status region of the shell, the last of the page's. */
@@ -845,7 +845,15 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     await expect(line).toContainText("added 0.047 to the square");
     await expect(line).toContainText("over all the 198 components of the PCoA");
     await expect(menuButton(page, "the plot of the PCoA")).toBeVisible();
-    await to2d(page);
+    // Its plots named by the method, for a screen reader.
+    if (await givesWebGl(page)) {
+      await expect(
+        shown(page).getByRole("img", {
+          name: "Principal coordinates, PC1, PC2 and PC3",
+        }),
+      ).toBeVisible({ timeout: RESULT_TIMEOUT });
+    }
+    await to2d(page, "Principal coordinates, PC1 and PC2");
     await expect(axisLabels(page)).toHaveText(["PC1 (3.68%)", "PC2 (3.54%)"]);
     await expectAxeBothSchemes(page, makeAxeBuilder);
   });

@@ -466,7 +466,10 @@ column).
 "What it shows"), with these differences:
 
 - The title over the plot, "Principal components of panel.nei", or
-  "Principal coordinates of panel.nei" under the PCoA.
+  "Principal coordinates of panel.nei" under the PCoA; and the plot's
+  name for a screen reader by the method too, "Principal coordinates,
+  PC1, PC2 and PC3" under the PCoA, where the old panel says "Principal
+  components" under both.
 - **The bar of controls**: "3D" and "2D", the components on the axes,
   "Colour the points by" with "Population" and every column of the
   individuals file but the names, the buttons that turn, tilt, zoom and

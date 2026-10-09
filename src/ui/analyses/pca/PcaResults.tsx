@@ -255,10 +255,11 @@ function PcaResultOf({
             axesKey.split(",").map(Number),
             highlighted,
             project,
+            page,
           )
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the project only for the name of its variants file, in the description
-    [drawn, result, colours, axesKey, highlighted, variants],
+    [drawn, result, colours, axesKey, highlighted, variants, page],
   );
   const data3d = useMemo(
     () =>
@@ -269,10 +270,11 @@ function PcaResultOf({
             axesKey.split(",").map(Number),
             highlighted,
             project,
+            page,
           )
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the project only for the name of its variants file, in the description
-    [drawn, result, colours, axesKey, highlighted, variants],
+    [drawn, result, colours, axesKey, highlighted, variants, page],
   );
   const legend = useMemo(() => {
     const data = data3d ?? data2d;

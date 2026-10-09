@@ -9,7 +9,7 @@
  */
 
 import { pcaDescription } from "../../../core/analyses/pca.ts";
-import type { PcaColours } from "../../../core/analyses/pca.ts";
+import type { PcaColours, PcaPage } from "../../../core/analyses/pca.ts";
 import type { Project } from "../../../core/project.ts";
 import type { PointColours } from "../../../charts/marks.ts";
 import type { Pca3dData } from "../../../charts/pca3d.ts";
@@ -56,13 +56,22 @@ export function pointColours(
       };
 }
 
-/** The data of the 2D scatter of the first two components of `axes`. */
+/** The method that names the plots of `r` on the page `page`: its own
+    on popgen2.html, none on popgen.html, which names them principal
+    components under both methods. */
+function titleMethod(r: PcaResult, page: PcaPage): PcaResult["method"] | null {
+  return page === "popgen2" ? r.method : null;
+}
+
+/** The data of the 2D scatter of the first two components of `axes`, on
+    the page `page`, which names it. */
 export function scatterData(
   r: PcaResult,
   c: PcaColours,
   axes: readonly number[],
   highlighted: number | null,
   p: Project,
+  page: PcaPage,
 ): ScatterData {
   const [first, second] = axes;
   if (first === undefined || second === undefined) {
@@ -72,7 +81,7 @@ export function scatterData(
   }
   const shown = [first, second];
   return {
-    title: plotTitle(shown),
+    title: plotTitle(shown, titleMethod(r, page)),
     description: pcaDescription(r, c, shown, highlighted, p),
     xLabel: axisLabel(r, first),
     yLabel: axisLabel(r, second),
@@ -85,13 +94,15 @@ export function scatterData(
   };
 }
 
-/** The data of the 3D view of the three components of `axes`. */
+/** The data of the 3D view of the three components of `axes`, on the
+    page `page`, which names it. */
 export function pca3dData(
   r: PcaResult,
   c: PcaColours,
   axes: readonly number[],
   highlighted: number | null,
   p: Project,
+  page: PcaPage,
 ): Pca3dData {
   const [first, second, third] = axes;
   if (first === undefined || second === undefined || third === undefined) {
@@ -101,7 +112,7 @@ export function pca3dData(
   }
   const shown = [first, second, third];
   return {
-    title: plotTitle(shown),
+    title: plotTitle(shown, titleMethod(r, page)),
     description: pcaDescription(r, c, shown, highlighted, p),
     x: componentColumn(r, first),
     y: componentColumn(r, second),
