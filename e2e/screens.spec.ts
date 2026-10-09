@@ -4430,6 +4430,31 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-empty${at}-${theme}`);
       });
 
+      test("the input page with no file, each tab shown", async ({ page }) => {
+        await save(page, `popgen2-input-no-file${at}-${theme}`);
+        await page
+          .getByRole("tab", { name: "Individuals file", exact: true })
+          .click();
+        await expect(page.getByText("No individuals file open.")).toBeVisible();
+        await save(page, `popgen2-input-no-file-individuals-tab${at}-${theme}`);
+      });
+
+      test("the input page with a variants file, each tab shown", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await expect(
+          newPageCount(page).getByText("Chromosomes: 1"),
+        ).toBeVisible();
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-input-tabs${at}-${theme}`);
+        await page
+          .getByRole("tab", { name: "Individuals file", exact: true })
+          .click();
+        await expect(page.getByText("No individuals file open.")).toBeVisible();
+        await save(page, `popgen2-input-tabs-individuals${at}-${theme}`);
+      });
+
       test("reading the file", async ({ page }) => {
         // The wasm is held back, so the read waits for the calculation
         // worker; the page was opened before, so it is fetched again.
