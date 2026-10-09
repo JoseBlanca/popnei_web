@@ -55,3 +55,20 @@
   color: var(--color-text-disabled);
   cursor: default;
 }
+
+/* A group that waits: its words, its circles and its dot in the colour
+   of a control that cannot be used, while it keeps the focus and the
+   tooltip of its reason. */
+.waiting .radio {
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+.waiting .circle,
+.waiting .radio[data-selected] .circle {
+  border-color: var(--color-text-disabled);
+}
+
+.waiting .radio[data-selected] .dot {
+  background: var(--color-text-disabled);
+}

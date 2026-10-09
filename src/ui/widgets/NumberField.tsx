@@ -47,6 +47,13 @@
  * unless a deletion mended the text before it (the spec, "A character
  * the field does not take").
  *
+ * A field may wait, with its reason, as the thresholds and the options
+ * of the PCA on popgen2.html do while a PCA runs (waiting.ts): read only
+ * for React Aria, so that it keeps the Tab key and nothing can be typed
+ * in it, the keys that step a number move nothing, its number drawn in
+ * the colour of a control that cannot be used, its input marked
+ * `aria-disabled`, with the reason as its tooltip and its description.
+ *
  * Three options serve popgen2.html alone, where a threshold is off by an
  * empty box or by 1 (docs/specs/steps/popgen2-filters.md, "The number
  * box"). A field given `onEmptied` calls it when it is committed empty,
@@ -88,6 +95,7 @@ import {
 import type { NumberRefusal } from "./committedNumber.ts";
 import styles from "./NumberField.module.css";
 import { Problem } from "./Problem.tsx";
+import { WithTooltip } from "./Tooltip.tsx";
 
 /** No separator of thousands, in every language (above); and every
     decimal typed kept, since React Aria commits the number as it formats
@@ -237,6 +245,10 @@ export interface NumberFieldProps {
       whose `value` is NaN, already empty: React Aria sends no change when
       NaN is already its value. */
   readonly onEmptied?: () => void;
+  /** The reason the field waits, its tooltip and its description, while
+      nothing typed or stepped changes it; or `null`, when it does not
+      wait. `null` when absent. */
+  readonly waiting?: string | null;
 }
 
 /** A number field with its label, and the line of a number it refused. */
@@ -260,7 +272,9 @@ export function NumberField({
   onSameCommitted,
   onSteps,
   onEmptied,
+  waiting = null,
 }: NumberFieldProps): React.JSX.Element {
+  const waits = waiting !== null;
   const refusedId = useId();
   const descriptionId = useId();
   const hiddenDescriptionId = useId();
@@ -384,137 +398,146 @@ export function NumberField({
   ];
 
   return (
-    <AriaNumberField
-      className={
-        shownLabel === undefined
-          ? classOf(styles, "field")
-          : `${classOf(styles, "field")} ${classOf(styles, "inline")}`
-      }
-      value={value}
-      minValue={minValue}
-      maxValue={maxValue}
-      step={step}
-      formatOptions={FORMAT_OPTIONS}
-      // React Aria neither rounds nor bounds what is typed, and gives it
-      // as it is; checkCommitted takes it or refuses it.
-      commitBehavior="validate"
-      isWheelDisabled
-      {...(describers.length > 0 && {
-        "aria-describedby": describers.join(" "),
-      })}
-      onChange={(committed) => {
-        // What the field showed was not what was typed: nothing is sent,
-        // and the line of the character stays. React Aria then shows the
-        // value it was given again. After the Tab key, the blur commits
-        // again what that key committed. That guard of the Tab key is a
-        // safeguard no test reaches: React Aria Components 1.21.1 puts back the
-        // formatted value at each commit, so the commit at the blur after
-        // Tab is of the number the field holds and sends nothing, guard
-        // or not (the review of work package 8 of docs/plans/filters.md,
-        // 8 October 2026). It stays for a React Aria that would not.
-        if (refusing.current || tabbed.current) return;
-        // An empty field gives NaN, which sends nothing, or the call of an
-        // emptied field when the screen gives one. React Aria has put back
-        // the number it was given, which the screen may now change.
-        if (!Number.isFinite(committed)) {
-          if (Number.isNaN(committed) && onEmptied !== undefined) {
-            onEmptied();
+    <WithTooltip text={waiting}>
+      {(hintId) => (
+        <AriaNumberField
+          className={
+            shownLabel === undefined
+              ? classOf(styles, "field")
+              : `${classOf(styles, "field")} ${classOf(styles, "inline")}`
           }
-          return;
-        }
-        answered.current = true;
-        const checked = checkCommitted(
-          committed,
-          minValue,
-          maxValue,
-          step,
-          decimals,
-          lastText.current,
-        );
-        if (checked.ok) {
-          setRefused(null);
-          onChange(checked.value);
-          return;
-        }
-        // Nothing is sent, so React Aria shows the value it was given.
-        refuse(checked.error);
-      }}
-    >
-      <Label className={classOf(styles, "label")}>
-        {shownLabel === undefined ? (
-          label
-        ) : (
-          <>
-            {shownLabel}
-            <span className={classOf(styles, "visuallyHidden")}>
-              {hiddenRest(label, shownLabel)}
-            </span>
-          </>
-        )}
-      </Label>
-      <FieldInput
-        onNotTaken={(text) => {
-          refuse({ kind: "notTaken", text });
-        }}
-        onNotTakenPending={() => {
-          notTaken.current = true;
-          typed.current = true;
-          // What the field shows from now on is not what was typed.
-          onTyped?.(null);
-        }}
-        onMended={() => {
-          notTaken.current = false;
-        }}
-        onCommitStarts={commitStarts}
-        onCommitEnds={commitEnds}
-        onTabbed={(leaving) => {
-          tabbed.current = leaving;
-        }}
-        onCommitReady={onCommitReady}
-        inputMode={takesDecimals ? "text" : "numeric"}
-        muted={muted}
-        // An empty field, given NaN, holds no text: "NaN" is no number
-        // of the field to put back.
-        value={value}
-        committedText={Number.isNaN(value) ? "" : numberText(value)}
-        isTyped={() => typed.current}
-        onRevert={revert}
-        onPasted={(text) => {
-          lastText.current = text;
-          pasted.current = true;
-        }}
-        onStepKey={() => {
-          stepping.current = true;
-        }}
-        {...(onSteps !== undefined && { onSteps })}
-        onText={(text) => {
-          lastText.current = text;
-          typed.current = true;
-          // After a character thrown away, and until a deletion mends the
-          // text, what it holds is not what was typed: 0,1 shows as 01.
-          onTyped?.(
-            notTaken.current
-              ? null
-              : typedNumber(text, minValue, maxValue, step, decimals),
-          );
-        }}
-      />
-      {description !== undefined && (
-        <p id={descriptionId} className={classOf(styles, "description")}>
-          {description}
-        </p>
-      )}
-      {/* Hidden from every reader but through aria-describedby, which
+          value={value}
+          minValue={minValue}
+          maxValue={maxValue}
+          step={step}
+          formatOptions={FORMAT_OPTIONS}
+          // React Aria neither rounds nor bounds what is typed, and gives it
+          // as it is; checkCommitted takes it or refuses it.
+          commitBehavior="validate"
+          isWheelDisabled
+          isReadOnly={waits}
+          {...((describers.length > 0 || hintId !== undefined) && {
+            "aria-describedby": [
+              ...describers,
+              ...(hintId === undefined ? [] : [hintId]),
+            ].join(" "),
+          })}
+          onChange={(committed) => {
+            // What the field showed was not what was typed: nothing is sent,
+            // and the line of the character stays. React Aria then shows the
+            // value it was given again. After the Tab key, the blur commits
+            // again what that key committed. That guard of the Tab key is a
+            // safeguard no test reaches: React Aria Components 1.21.1 puts back the
+            // formatted value at each commit, so the commit at the blur after
+            // Tab is of the number the field holds and sends nothing, guard
+            // or not (the review of work package 8 of docs/plans/filters.md,
+            // 8 October 2026). It stays for a React Aria that would not.
+            if (refusing.current || tabbed.current) return;
+            // An empty field gives NaN, which sends nothing, or the call of an
+            // emptied field when the screen gives one. React Aria has put back
+            // the number it was given, which the screen may now change.
+            if (!Number.isFinite(committed)) {
+              if (Number.isNaN(committed) && onEmptied !== undefined) {
+                onEmptied();
+              }
+              return;
+            }
+            answered.current = true;
+            const checked = checkCommitted(
+              committed,
+              minValue,
+              maxValue,
+              step,
+              decimals,
+              lastText.current,
+            );
+            if (checked.ok) {
+              setRefused(null);
+              onChange(checked.value);
+              return;
+            }
+            // Nothing is sent, so React Aria shows the value it was given.
+            refuse(checked.error);
+          }}
+        >
+          <Label className={classOf(styles, "label")}>
+            {shownLabel === undefined ? (
+              label
+            ) : (
+              <>
+                {shownLabel}
+                <span className={classOf(styles, "visuallyHidden")}>
+                  {hiddenRest(label, shownLabel)}
+                </span>
+              </>
+            )}
+          </Label>
+          <FieldInput
+            onNotTaken={(text) => {
+              refuse({ kind: "notTaken", text });
+            }}
+            onNotTakenPending={() => {
+              notTaken.current = true;
+              typed.current = true;
+              // What the field shows from now on is not what was typed.
+              onTyped?.(null);
+            }}
+            onMended={() => {
+              notTaken.current = false;
+            }}
+            onCommitStarts={commitStarts}
+            onCommitEnds={commitEnds}
+            onTabbed={(leaving) => {
+              tabbed.current = leaving;
+            }}
+            onCommitReady={onCommitReady}
+            inputMode={takesDecimals ? "text" : "numeric"}
+            muted={muted}
+            waits={waits}
+            // An empty field, given NaN, holds no text: "NaN" is no number
+            // of the field to put back.
+            value={value}
+            committedText={Number.isNaN(value) ? "" : numberText(value)}
+            isTyped={() => typed.current}
+            onRevert={revert}
+            onPasted={(text) => {
+              lastText.current = text;
+              pasted.current = true;
+            }}
+            onStepKey={() => {
+              stepping.current = true;
+            }}
+            {...(onSteps !== undefined && { onSteps })}
+            onText={(text) => {
+              lastText.current = text;
+              typed.current = true;
+              // After a character thrown away, and until a deletion mends the
+              // text, what it holds is not what was typed: 0,1 shows as 01.
+              onTyped?.(
+                notTaken.current
+                  ? null
+                  : typedNumber(text, minValue, maxValue, step, decimals),
+              );
+            }}
+          />
+          {description !== undefined && (
+            <p id={descriptionId} className={classOf(styles, "description")}>
+              {description}
+            </p>
+          )}
+          {/* Hidden from every reader but through aria-describedby, which
           reads a hidden element it names: drawn off the screen instead,
           it was read a second time as loose text by a screen reader
           going line by line. */}
-      {hiddenDescription !== undefined && (
-        <p id={hiddenDescriptionId} hidden>
-          {hiddenDescription}
-        </p>
+          {hiddenDescription !== undefined && (
+            <p id={hiddenDescriptionId} hidden>
+              {hiddenDescription}
+            </p>
+          )}
+          {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
+        </AriaNumberField>
       )}
-      {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
-    </AriaNumberField>
+    </WithTooltip>
   );
 }
 
@@ -578,6 +601,9 @@ interface FieldInputProps {
   readonly onSteps?: (steps: number) => void;
   /** As the field's. */
   readonly muted: boolean;
+  /** Whether the field waits: its input marked `aria-disabled`, and the
+      keys that step a number moving nothing. */
+  readonly waits: boolean;
 }
 
 /** The input of the field, which reads React Aria's state of it: to
@@ -602,6 +628,7 @@ function FieldInput({
   onPasted,
   onSteps,
   muted,
+  waits,
 }: FieldInputProps): React.JSX.Element {
   const state = useContext(NumberFieldStateContext);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -760,6 +787,7 @@ function FieldInput({
       className={classOf(styles, "input")}
       inputMode={inputMode}
       {...(muted && { "data-muted": "" })}
+      {...(waits && { "aria-disabled": true })}
       {...{ [NUMBER_FIELD_ATTRIBUTE]: "" }}
       onChange={(event) => {
         // A change React Aria took, of the text it showed; one that took
@@ -822,6 +850,13 @@ function FieldInput({
             event.preventDefault();
             moveCaret(event.currentTarget, event.key, event.shiftKey);
           }
+          return;
+        }
+        // A field that waits moves no number at the keys that step one,
+        // React Aria's nor the screen's.
+        if (waits && isStepKey(event)) {
+          event.preventDefault();
+          event.stopPropagation();
           return;
         }
         // In an empty field React Aria moves the number to a bound of its

@@ -31,12 +31,21 @@
  * (docs/specs/steps/popgen2-filters.md, "The end of a drag, and the
  * keys"), and a screen that made a change of its project there would
  * make one at each press.
+ *
+ * It may wait, with its reason, as the thresholds of popgen2.html do
+ * while a PCA runs (waiting.ts): it keeps the Tab key, a key or a drag
+ * moves it nowhere, its handle is drawn in the colour of a control that
+ * cannot be used, and its input is marked `aria-disabled`, with the
+ * reason as its tooltip and its description. React Aria's slider has no
+ * state of its own for that, so it is the value given back unchanged
+ * that holds the thumb where it is.
  */
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Slider, SliderThumb, SliderTrack } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./ThresholdSlider.module.css";
+import { WithTooltip } from "./Tooltip.tsx";
 
 /** The steps Page Up and Page Down move the thumb by. */
 const PAGE_STEPS = 10;
@@ -81,6 +90,10 @@ export interface ThresholdSliderProps {
       it is released; not for a press of the thumb that moved nothing,
       and never after a key. */
   readonly onDragEnd: (value: number) => void;
+  /** The reason the line waits, its tooltip and its description, while a
+      key or a drag moves it nowhere; or `null`, when it does not wait.
+      `null` when absent. */
+  readonly waiting?: string | null;
 }
 
 /** What moved the thumb: the pointer or a key. */
@@ -97,7 +110,9 @@ export function ThresholdSlider({
   muted,
   onChange,
   onDragEnd,
+  waiting = null,
 }: ThresholdSliderProps): React.JSX.Element {
+  const waits = waiting !== null;
   const inputRef = useRef<HTMLInputElement>(null);
   // While a pointer is down on the thumb: the value it last moved it to,
   // or `null` before it moved it; and the function that stops listening
@@ -125,7 +140,12 @@ export function ThresholdSlider({
   // draw, before the browser paints, and before a screen reader reads it,
   // which it does on the change of the value that caused the draw.
   useLayoutEffect(() => {
-    inputRef.current?.setAttribute("aria-valuetext", valueText);
+    const input = inputRef.current;
+    input?.setAttribute("aria-valuetext", valueText);
+    // React Aria never marks the input so; a slider it disables leaves
+    // the order of the Tab key.
+    if (waits) input?.setAttribute("aria-disabled", "true");
+    else input?.removeAttribute("aria-disabled");
   });
 
   const onKeyDownCapture = (event: React.KeyboardEvent): void => {
@@ -135,6 +155,7 @@ export function ThresholdSlider({
     // tenth of the range.
     event.preventDefault();
     event.stopPropagation();
+    if (waits) return;
     const moved = value + direction * PAGE_STEPS * step;
     const bounded = Math.min(maxValue, Math.max(minValue, moved));
     if (bounded !== value) onChange(bounded, "key");
@@ -143,7 +164,7 @@ export function ThresholdSlider({
   /** A pointer pressed on the thumb, before React Aria's handler: its
       release, on the window wherever it is, ends the drag. */
   const onPointerDownCapture = (event: React.PointerEvent): void => {
-    if (!event.isPrimary || drag.current !== null) return;
+    if (waits || !event.isPrimary || drag.current !== null) return;
     const ownerWindow = event.currentTarget.ownerDocument.defaultView;
     if (ownerWindow === null) return;
     const release = (up: PointerEvent): void => {
@@ -170,33 +191,41 @@ export function ThresholdSlider({
     <div
       className={classOf(styles, "overlay")}
       {...(muted && { "data-muted": "" })}
+      {...(waits && { "data-waiting": "" })}
       onKeyDownCapture={onKeyDownCapture}
       onPointerDownCapture={onPointerDownCapture}
     >
-      <Slider
-        aria-label={label}
-        className={classOf(styles, "slider")}
-        value={value}
-        minValue={minValue}
-        maxValue={maxValue}
-        step={step}
-        onChange={(moved) => {
-          const dragged = drag.current;
-          if (dragged === null) {
-            onChange(moved, "key");
-            return;
-          }
-          dragged.moved = moved;
-          onChange(moved, "pointer");
-        }}
-      >
-        <SliderTrack className={classOf(styles, "track")}>
-          <SliderThumb
-            className={classOf(styles, "thumb")}
-            inputRef={inputRef}
-          />
-        </SliderTrack>
-      </Slider>
+      <WithTooltip text={waiting}>
+        {(hintId) => (
+          <Slider
+            aria-label={label}
+            className={classOf(styles, "slider")}
+            value={value}
+            minValue={minValue}
+            maxValue={maxValue}
+            step={step}
+            onChange={(moved) => {
+              // Waiting, the value given back holds the thumb.
+              if (waits) return;
+              const dragged = drag.current;
+              if (dragged === null) {
+                onChange(moved, "key");
+                return;
+              }
+              dragged.moved = moved;
+              onChange(moved, "pointer");
+            }}
+          >
+            <SliderTrack className={classOf(styles, "track")}>
+              <SliderThumb
+                className={classOf(styles, "thumb")}
+                inputRef={inputRef}
+                {...(hintId !== undefined && { "aria-describedby": hintId })}
+              />
+            </SliderTrack>
+          </Slider>
+        )}
+      </WithTooltip>
     </div>
   );
 }

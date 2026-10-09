@@ -32,6 +32,10 @@
  * the threshold on, grey or off from another of the three is announced
  * once, in the words of thresholdLookChangeText; a drag, seen, is not.
  *
+ * While a PCA runs, the box and the line wait, with "Stop the PCA to
+ * change the filters." as their tooltip and their description, and a
+ * key, a number or a drag changes nothing (`useFiltersLock`).
+ *
  * Ctrl+Z and Ctrl+Y on the line or in the box while a run waits make the
  * run a change, and then go on to the page's Undo or Redo, so that Undo
  * undoes the run. A threshold that leaves the page, the worker crashed,
@@ -54,6 +58,7 @@ import { useRunGate } from "./runGate.tsx";
 import type { PlotThreshold, StatsPlot } from "./statsPlots.ts";
 import { thresholdLookChangeText } from "./statsWords.ts";
 import styles from "./StatsHistogram.module.css";
+import { useFiltersLock } from "./filtersLock.ts";
 import { createThresholdRun } from "./thresholdRun.ts";
 import type { ThresholdRun } from "./thresholdRun.ts";
 
@@ -120,6 +125,7 @@ export function StatsHistogram({
 }: StatsHistogramProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const gate = useRunGate();
+  const lock = useFiltersLock();
   const blockRef = useRef<HTMLDivElement>(null);
   // The element of the plot and the line, on which the frame of the plot
   // is written as the plot draws it, the frame last drawn, and whether it
@@ -286,6 +292,7 @@ export function StatsHistogram({
         step={threshold.box.step}
         decimals={threshold.box.decimals}
         muted={threshold.look !== "on"}
+        waiting={lock}
         {...(threshold.hiddenDescription !== null && {
           hiddenDescription: threshold.hiddenDescription,
         })}
@@ -346,6 +353,7 @@ export function StatsHistogram({
       value={threshold.slider.value}
       valueText={threshold.valueText}
       muted={threshold.look !== "on"}
+      waiting={lock}
       onChange={(value, by) => {
         const moved = threshold.onStep(value);
         if (by === "key") {

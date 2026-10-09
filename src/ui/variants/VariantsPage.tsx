@@ -38,6 +38,7 @@ import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { UndoRedoButtons } from "../shell/UndoRedoButtons.tsx";
 import { useAppState } from "../store.tsx";
 import { ANALYSES_TABS_LABEL } from "./analysisTabsWords.ts";
+import { useFiltersLock } from "./filtersLock.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { OpenVariants } from "./OpenVariants.tsx";
 import type { Refusal } from "./OpenVariants.tsx";
@@ -71,6 +72,7 @@ export function VariantsPage({
   const [tab, setTab] = useState<PageTab>("variants");
   const variantsHeadingId = useId();
   const fileId = useAppState((s) => s.project.variants?.fileId ?? null);
+  const filtersLock = useFiltersLock();
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -87,7 +89,8 @@ export function VariantsPage({
           <h1 tabIndex={-1} className={classOf(styles, "title")}>
             Popnei
           </h1>
-          <UndoRedoButtons onlyWithStep />
+          {/* They wait while a PCA runs, as the filters it reads do. */}
+          <UndoRedoButtons onlyWithStep waits={filtersLock} />
         </div>
         <div className={classOf(styles, "boxes")}>
           <section

@@ -44,3 +44,20 @@
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
+
+/* A switch that waits: its words and its track in the colour of a
+   control that cannot be used, while it keeps the focus and the tooltip
+   of its reason. */
+.waiting {
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+.waiting .track {
+  border-color: var(--color-text-disabled);
+}
+
+.waiting[data-selected] .track {
+  border-color: var(--color-text-disabled);
+  background: var(--color-text-disabled);
+}

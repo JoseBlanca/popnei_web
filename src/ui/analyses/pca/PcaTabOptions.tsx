@@ -20,6 +20,10 @@
  * announced when the switch turned on makes it appear, since the focus
  * is then on the switch.
  *
+ * While a PCA runs every option waits, with "Stop the PCA to change the
+ * filters." as its tooltip and its description (`useFiltersLock`), so
+ * that no change leaves the PCA behind.
+ *
  * The decimals of each field are those of the Variants tab's box of that
  * threshold, from the axis of its histogram once the one pass has read
  * the file to the end, and before that those of the Variants tab's
@@ -54,6 +58,7 @@ import { Problem } from "../../widgets/Problem.tsx";
 import { RadioGroup } from "../../widgets/RadioGroup.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import type { OptionCommand } from "../optionCommand.ts";
+import { useFiltersLock } from "../../variants/filtersLock.ts";
 import { summaryStatus } from "../../variants/words.ts";
 import {
   followCommand,
@@ -93,6 +98,7 @@ export function PcaTabOptions(): React.JSX.Element {
     pruningDistanceReason(s.project, "popgen2"),
   );
   const page: Popgen2CommandPage = { page: "popgen2", method: options.method };
+  const lock = useFiltersLock();
   const headingId = useId();
   const lineId = useId();
   const ldLineId = useId();
@@ -111,6 +117,7 @@ export function PcaTabOptions(): React.JSX.Element {
         label={METHOD_LABEL}
         items={METHOD_ITEMS}
         value={options.method}
+        waiting={lock}
         onChange={(method) => {
           apply(methodCommand(method, page));
         }}
@@ -132,6 +139,7 @@ export function PcaTabOptions(): React.JSX.Element {
           stricter={!options.missingData.follow}
           page={page}
           describedBy={lineId}
+          lock={lock}
           onCommand={apply}
           onRefused={announce}
         />
@@ -142,6 +150,7 @@ export function PcaTabOptions(): React.JSX.Element {
           stricter={!options.maf.follow}
           page={page}
           describedBy={lineId}
+          lock={lock}
           onCommand={apply}
           onRefused={announce}
         />
@@ -150,6 +159,7 @@ export function PcaTabOptions(): React.JSX.Element {
             label={LD_SWITCH}
             isSelected={!options.ld.follow}
             describedBy={lineId}
+            waiting={lock}
             onChange={(on) => {
               apply(followCommand("ld", !on, page));
               // The focus stays on the switch, so the reason that turning
@@ -175,6 +185,7 @@ export function PcaTabOptions(): React.JSX.Element {
                   step={R2_STEP}
                   decimals={R2_DECIMALS}
                   describedBy={ldLineId}
+                  waiting={lock}
                   refusedText={r2RefusedText}
                   onRefused={announce}
                   onChange={(maxAllowedR2) => {
@@ -196,6 +207,7 @@ export function PcaTabOptions(): React.JSX.Element {
                     ...(ldReason === null ? [] : [ldReasonId]),
                     ldLineId,
                   ].join(" ")}
+                  waiting={lock}
                   refusedText={distanceRefusedText}
                   onRefused={announce}
                   onChange={(maxDist) => {
@@ -231,6 +243,8 @@ interface StricterFilterProps {
   readonly page: Popgen2CommandPage;
   /** The id of the line under the heading, which describes the group. */
   readonly describedBy: string;
+  /** The reason the filter waits, while a PCA runs, or `null`. */
+  readonly lock: string | null;
   /** Applies a command of the user. */
   readonly onCommand: (step: OptionCommand) => void;
   /** Announces the line of a number refused. */
@@ -246,6 +260,7 @@ function StricterFilter({
   stricter,
   page,
   describedBy,
+  lock,
   onCommand,
   onRefused,
 }: StricterFilterProps): React.JSX.Element {
@@ -280,6 +295,7 @@ function StricterFilter({
         items={items}
         value={stricter ? "stricter" : "follow"}
         describedBy={describedBy}
+        waiting={lock}
         onChange={(choice) => {
           onCommand(
             choice === "follow"
@@ -297,6 +313,7 @@ function StricterFilter({
             maxValue={bound.max}
             step={Number(`1e-${String(bound.decimals)}`)}
             decimals={bound.decimals}
+            waiting={lock}
             describedBy={[
               ...(lines.tabStricter === null ? [] : [tabStricterId]),
               lineId,

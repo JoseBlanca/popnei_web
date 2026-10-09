@@ -9,6 +9,13 @@
  *
  * It is controlled: the screen gives the id of the button chosen, from
  * the store, and is told the id the user chooses, one of those it gave.
+ *
+ * It may wait, with its reason, as the options of the PCA on
+ * popgen2.html do while a PCA runs (waiting.ts): read only for React
+ * Aria, so that its buttons keep the Tab key and the arrow keys move the
+ * focus and choose nothing, drawn greyed, each button marked
+ * `aria-disabled`, and the reason its tooltip and the group's
+ * description.
  */
 import {
   Label,
@@ -19,6 +26,8 @@ import {
 
 import { classOf } from "../classOf.ts";
 import styles from "./RadioGroup.module.css";
+import { WithTooltip } from "./Tooltip.tsx";
+import { ariaDisabledRef, describedByOf } from "./waiting.ts";
 
 /** One radio button of a group. */
 export interface RadioItem<T extends string> {
@@ -45,6 +54,10 @@ export interface RadioGroupProps<T extends string> {
       as the format of the dialog of the download of popgen2.html does as
       it opens; false when absent. */
   readonly autoFocus?: boolean;
+  /** The reason the group waits, its tooltip and its description, while
+      a choice changes nothing; or `null`, when it does not wait. `null`
+      when absent. */
+  readonly waiting?: string | null;
 }
 
 /** A group of radio buttons with its name. */
@@ -55,32 +68,52 @@ export function RadioGroup<T extends string>({
   describedBy,
   onChange,
   autoFocus = false,
+  waiting = null,
 }: RadioGroupProps<T>): React.JSX.Element {
+  const waits = waiting !== null;
   return (
-    <AriaRadioGroup
-      className={classOf(styles, "group")}
-      value={value}
-      onChange={(chosen) => {
-        const item = items.find((one) => one.id === chosen);
-        if (item !== undefined) onChange(item.id);
+    <WithTooltip text={waiting}>
+      {(hintId) => {
+        const description = describedByOf(describedBy, hintId);
+        return (
+          <AriaRadioGroup
+            className={
+              waits
+                ? `${classOf(styles, "group")} ${classOf(styles, "waiting")}`
+                : classOf(styles, "group")
+            }
+            value={value}
+            isReadOnly={waits}
+            onChange={(chosen) => {
+              const item = items.find((one) => one.id === chosen);
+              if (item !== undefined && !waits) onChange(item.id);
+            }}
+            {...(description !== undefined && {
+              "aria-describedby": description,
+            })}
+          >
+            <Label className={classOf(styles, "label")}>{label}</Label>
+            {items.map((item) => (
+              <RadioField
+                key={item.id}
+                value={item.id}
+                autoFocus={autoFocus && item.id === value}
+                inputRef={ariaDisabledRef(waits)}
+              >
+                <RadioButton className={classOf(styles, "radio")}>
+                  <span
+                    className={classOf(styles, "circle")}
+                    aria-hidden="true"
+                  >
+                    <span className={classOf(styles, "dot")} />
+                  </span>
+                  {item.label}
+                </RadioButton>
+              </RadioField>
+            ))}
+          </AriaRadioGroup>
+        );
       }}
-      {...(describedBy !== undefined && { "aria-describedby": describedBy })}
-    >
-      <Label className={classOf(styles, "label")}>{label}</Label>
-      {items.map((item) => (
-        <RadioField
-          key={item.id}
-          value={item.id}
-          autoFocus={autoFocus && item.id === value}
-        >
-          <RadioButton className={classOf(styles, "radio")}>
-            <span className={classOf(styles, "circle")} aria-hidden="true">
-              <span className={classOf(styles, "dot")} />
-            </span>
-            {item.label}
-          </RadioButton>
-        </RadioField>
-      ))}
-    </AriaRadioGroup>
+    </WithTooltip>
   );
 }

@@ -12,12 +12,16 @@
  * nothing to the worker for it, since the key of the one pass holds no
  * filter.
  *
+ * While a PCA runs it waits, with "Stop the PCA to change the filters."
+ * as its tooltip and its description (`useFiltersLock`).
+ *
  * Drawn by FileStats.tsx from the read of the file, whether the code of
  * the plots is there or not, so that it is one element across the
  * arrival of that code and keeps a keyboard user's focus.
  */
 import { useAppState, useStore } from "../store.tsx";
 import { Checkbox } from "../widgets/Checkbox.tsx";
+import { useFiltersLock } from "./filtersLock.ts";
 import {
   passedFilterChange,
   passedFilterOn,
@@ -34,12 +38,14 @@ export function PassedFilterBox(): React.JSX.Element | null {
   const store = useStore();
   const shown = useAppState((s) => passedFilterShown(s.project));
   const on = useAppState((s) => passedFilterOn(s.project));
+  const lock = useFiltersLock();
   if (!shown) return null;
   return (
     <Checkbox
       label={PASSED_FILTER_LABEL}
       description={PASSED_FILTER_DESCRIPTION}
       isSelected={on}
+      waiting={lock}
       onChange={(isSelected) => {
         const change = passedFilterChange(isSelected);
         store.apply(change.description, change.command);

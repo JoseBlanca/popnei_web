@@ -79,3 +79,11 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* A field that waits: its number in the colour of a control that cannot
+   be used, while it keeps the focus and the tooltip of its reason. */
+.input[aria-disabled="true"] {
+  border-color: var(--color-text-disabled);
+  color: var(--color-text-disabled);
+  cursor: default;
+}
