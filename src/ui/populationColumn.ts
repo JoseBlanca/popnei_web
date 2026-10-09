@@ -5,15 +5,15 @@
  * popgen2.html"). The record itself, shared with popgen.html, whose user
  * chooses every column, writes the table into every project of the
  * history that holds the file and chooses nothing; so the entry of the
- * page chooses, once at each read recorded, through the store's
- * `applyAfresh`: the column is part of the opening, which is no step of
- * Undo, so the history starts afresh after it.
+ * page chooses, once at each read recorded, with the store's event
+ * `populationColumnChosen`, which records the column as the read is
+ * recorded, into the projects of the history that hold that read, with
+ * no step: the choice is the page's, not a change of the user's.
  */
 import {
   defaultPopulationsColumn,
   populationColumnChoices,
 } from "../core/populations.ts";
-import { setGrouping } from "../core/project.ts";
 import type {
   IndividualsRead,
   IndividualsSource,
@@ -33,10 +33,11 @@ import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
  * the same load id and options of a CSV as before the change, had a read
  * waiting, pending or failed in its worker, and now has a read or a
  * refusal; an undo, a redo or an opening of a variants file makes none.
- * The command and the words come in a microtask, after every listener of
- * the change has run, so that no command is sent in the middle of
- * telling them; `store` is the one gated as the screens' is, so that a
- * run of the keys on a threshold still held is made a change first.
+ * The choice and the words come in a microtask, after every listener of
+ * the change has run, so that nothing is sent in the middle of telling
+ * them. `store` is the store itself, not the one gated as the screens'
+ * is: the choice ends no run of the keys on a threshold and applies no
+ * number typed in a box, which become steps when the user ends them.
  *
  * The page chooses when the grouping names no column the list offers,
  * but for a "None" the user chose for that load id: the grouping turned
@@ -47,7 +48,7 @@ import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
 export function choosePopulationColumns(deps: {
   readonly store: Pick<
     Store<JobResult, Blob>,
-    "getState" | "subscribe" | "applyAfresh"
+    "getState" | "subscribe" | "populationColumnChosen"
   >;
   readonly announce: (words: string) => void;
 }): () => void {
@@ -70,9 +71,7 @@ export function choosePopulationColumns(deps: {
         userNone.has(fileId),
       );
       if (column !== null) {
-        store.applyAfresh((p) =>
-          setGrouping(p, { kind: "populations", column }),
-        );
+        store.populationColumnChosen(fileId, column);
       }
     }
     const state = store.getState();
@@ -88,7 +87,7 @@ export function choosePopulationColumns(deps: {
     const was = before;
     before = now;
     if (now === was) return;
-    // The entry's own command never makes "None", and makes a column only
+    // The entry's own choice never makes "None", and makes a column only
     // from a "None" not marked, so it is noted as any other change.
     noteUserNone(was, now, userNone);
     const individuals = now.individuals;

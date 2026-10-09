@@ -13,6 +13,7 @@ import type { Cache } from "./cache.ts";
 import { commit, mapProjects, redo, startHistory, undo } from "./history.ts";
 import type { History } from "./history.ts";
 import {
+  canonical,
   createKeyMemo,
   intermediateKeyOf,
   keyFromWire,
@@ -31,6 +32,7 @@ import {
   recordIndividualsRead,
   recordVariantsCounted,
   recordVariantsRead,
+  setGrouping,
   variantFilterNeeds,
 } from "./project.ts";
 import { filtersApplied } from "./filtersApplied.ts";
@@ -513,6 +515,19 @@ export interface Store<R, F = never> {
       `stopLeftBehind`, where a change can make a notice that offers an
       Undo this leaves nothing for. */
   applyAfresh(command: (p: Project) => Project): void;
+  /** The page chose `column` as the column of the populations at the
+      read of the individuals file of the load `fileId`, a choice that is
+      no change of the user's: the grouping `{ kind: "populations",
+      column }` is written, as a read is recorded, into every project of
+      the history whose individuals file is that load with a read of kind
+      `read` and whose grouping is the one the present project has; a
+      project with another grouping keeps it. It makes no step, counts
+      nothing in `historyMoves`, and stops at once, as a read does, a
+      calculation whose key the present project no longer gives; nothing
+      changes when the present project does not hold that load read.
+      popgen2.html sends it from its entry (docs/specs/entry.md, "The
+      column of the populations on popgen2.html"). */
+  populationColumnChosen(fileId: string, column: string): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -2483,6 +2498,31 @@ export function createStore<J, R, F = never>(
           kind: "command",
           description: "",
         }),
+      );
+    },
+    populationColumnChosen: (fileId, column) => {
+      const present = history.present.project;
+      if (
+        present.individuals?.fileId !== fileId ||
+        present.individuals.read.kind !== "read"
+      ) {
+        return;
+      }
+      // setGrouping refuses a grouping the project could not hold; its
+      // object is then shared by every project it is written into.
+      const chosen = setGrouping(present, { kind: "populations", column });
+      if (chosen === present) {
+        return;
+      }
+      const found = canonical(present.grouping, null);
+      moved(
+        mapProjects(history, (p) =>
+          p.individuals?.fileId === fileId &&
+          p.individuals.read.kind === "read" &&
+          canonical(p.grouping, null) === found
+            ? freezeProject({ ...p, grouping: chosen.grouping })
+            : p,
+        ),
       );
     },
     dismissNotice: () => {

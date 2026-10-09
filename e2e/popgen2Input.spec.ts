@@ -485,6 +485,13 @@ const COUNTS_003 = [
   ["p1", "36"],
 ] as const;
 
+/** The same at 0.031. */
+const COUNTS_0031 = [
+  ["p0", "30"],
+  ["p2", "58"],
+  ["p1", "41"],
+] as const;
+
 /** The lines of panel_pops.csv, the header first. */
 async function panelPopsLines(): Promise<string[]> {
   const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
@@ -1160,7 +1167,7 @@ test("IN6 D2 axe on the box and the tab with no file, a file being read, a file 
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("IN6 D2 a run of the arrow keys on the threshold of the individuals, still held as a read of the individuals file ends, is made a change before the column the entry chooses: the counts are of where the keys took it", async ({
+test("IN6 D2 a run of the arrow keys on the threshold of the individuals, still held as a read of the individuals file ends, goes on waiting past the column the page chooses, and is made a change when its second passes", async ({
   page,
 }) => {
   await openDone(page, "panel.nei");
@@ -1196,11 +1203,15 @@ test("IN6 D2 a run of the arrow keys on the threshold of the individuals, still 
   }
   await expect(slider).toHaveValue("0.03");
   letGo();
-  // Through the gate, the entry's command of the column ends the run
-  // first: the counts are at 0.03. Given the store with no gate, the run
-  // would still wait, its second never passing, and the counts be those
-  // of 0.031, p0 30, p2 58 and p1 41.
+  // The column the page chooses is recorded as the read is, with no step
+  // and through no gate, so the run still waits, its second not passing
+  // while the clock stands, and the counts are those of the project's
+  // 0.031.
   await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
+  await expectCounts(page, COUNTS_0031);
+  // Its second passes: the run is made a change, and the counts are at
+  // 0.03.
+  await page.clock.runFor(1000);
   await expectCounts(page, COUNTS_003);
   await expect(individualsMissing(page)).toHaveValue("0.03");
 });

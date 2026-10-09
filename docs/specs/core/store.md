@@ -384,7 +384,9 @@ of the page, the code that starts when the page opens, makes the store and
 the workers and joins them, and change what the screens show without a
 step of undo: the
 version of popnei, the reads of the files, recorded into every project of
-the history that holds their load, and the end of a calculation.
+the history that holds their load, on `popgen2.html` the column of the
+populations the page chooses at a read, recorded so too (below), and
+the end of a calculation.
 
 ### On popgen2.html: no notice, and a history of the filters
 
@@ -452,12 +454,13 @@ on a store made without `stopLeftBehind`, where a change can make a
 notice, which names its cause and offers an Undo that `applyAfresh`
 leaves nothing for.
 
-`popgen2.html` sends through it every change of its individuals file
-(`docs/specs/steps/popgen2-input.md`, "What it sends and reads"): the
-opening, the removal, a change of an option of its reader, and the
-column the page chooses at the end of a read (`docs/specs/entry.md`).
-The owner decided on 8 and 9 October 2026 that an opening of a file is
-no step of Undo. `open` does not do for them: it stops every
+`popgen2.html` sends through it the changes of its individuals file
+the user makes (`docs/specs/steps/popgen2-input.md`, "What it sends and
+reads"): the opening, the removal, and a change of an option of its
+reader. The owner decided on 8 and 9 October 2026 that an opening of a
+file is no step of Undo. The column of the populations the user
+chooses, or "None", is a step, through `apply`; the column the page
+chooses at the end of a read goes through neither (below). `open` does not do for them: it stops every
 calculation, the one pass among them, which reads the variants file and
 does not depend on the individuals file. Not taken: `open` with a
 setting that stops nothing, which would give one command two meanings.
@@ -470,6 +473,38 @@ yet applied. It wraps `applyAfresh` as it wraps `open`, both, so the run
 and the number typed are made changes and the fresh history then drops
 their steps; the count of `historyMoves` then finds no text left in a
 box to throw away.
+
+**`populationColumnChosen(fileId, column)`**, an event of that page
+alone, as the reads of the files are events. When a read of the
+individuals file is recorded, the entry of `popgen2.html` may choose
+the column of the populations (`docs/specs/entry.md`, "The column of
+the populations on popgen2.html"). That choice is the page's, not a
+change of the user's, so it is recorded as the read itself is: into
+every project of the history whose individuals file is the load
+`fileId` with a read of kind `read`, and whose grouping is the one the
+present project has, the grouping the page found naming no column of
+its list. The grouping of each of those projects becomes `{ kind:
+"populations", column }`, one object shared by all of them, and each
+project changed is frozen; a project with another grouping, one the
+user chose in a step, keeps it. It makes no step, so `undo` and `redo`
+keep their descriptions, and counts nothing in `historyMoves`; it stops
+at once, as a read does, every calculation whose key the present
+project no longer gives and no notice names. When no project changes,
+the present project not holding that load read, nothing changes and the
+state is the same object. It passes no gate: it ends no run of the
+arrow keys and applies no number typed in a box, which become changes
+later, when the user ends them, over a history that holds the column.
+
+So the steps the user made between the opening and the end of its
+read, a threshold moved in the seconds a large xlsx or the first load
+of table_io's wasm takes, are kept, and an undo of one of them keeps the
+column, since every project since the opening holds it. Until this
+revision of 9 October 2026, the column went through `applyAfresh`,
+through the gate: it applied a number the user was still typing and
+ended a run of the arrow keys, at a moment the user did not cause, and
+dropped every step made since the opening, those two included. Not
+taken: `apply`, a step the user did not make, whose undo would leave the
+grouping naming no column the list offers.
 
 ### The notice, and the calculations it stops
 
@@ -1388,6 +1423,11 @@ export interface Store<R, F = never> {
       gives, with nothing to undo or redo, counting one in `historyMoves`; nothing changes when
       it gives the project it was given. */
   applyAfresh(command: (p: Project) => Project): void;
+  /** The page chose `column` as the column of the populations of the read of the individuals
+      file of the load `fileId`: the grouping written into every project of the history that
+      holds that load read and the present project's grouping, with no step (above,
+      "On popgen2.html: no notice, and a history of the filters"). */
+  populationColumnChosen(fileId: string, column: string): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -1940,6 +1980,12 @@ analyses:
   `docs/plans/analyses-pca.md`.
 - Through the gate of the page, a run of the arrow keys waiting and
   `applyAfresh`: the run's change made first, then nothing to undo.
+- `populationColumnChosen` after a threshold step made while the read
+  waited: the grouping names the column in the present project and in
+  the one before it, `undo` still the threshold's description,
+  `historyMoves` unchanged; undo: the threshold back, the column kept.
+  A project of the history with another grouping keeps it; a load id
+  the present project does not hold: the state the same object.
 
 ## Open points
 

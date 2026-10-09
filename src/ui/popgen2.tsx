@@ -61,10 +61,11 @@ function startApplication(defects: Defects, drawBar: DrawBar): void {
   const gate = createRunGate();
   const gated = gatedStore(store, gate);
   // The column of the populations at each read of the individuals file,
-  // sent through the gate as the screens' commands are. It watches as
-  // long as the page lives, as the reads and the runs do.
+  // recorded as the read is, with no step: sent to the store itself, so
+  // that it ends no run of the keys and applies nothing typed. It
+  // watches as long as the page lives, as the reads and the runs do.
   choosePopulationColumns({
-    store: gated,
+    store,
     announce: (words) => {
       announcer.announce(words);
     },

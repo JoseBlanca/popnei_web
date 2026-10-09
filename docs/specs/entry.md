@@ -465,16 +465,22 @@ read, as it is recorded, and never at another change of the project.
 At a read of kind `read`, the entry chooses the column when the grouping
 names no column that the list "Column of the populations" offers,
 `populationColumnChoices(read)` of core, but for a "None" the user chose
-for that load, below. It sends with the store's `applyAfresh` the
-command `setGrouping(p, { kind: "populations", column })` with the
-column `defaultPopulationsColumn(read)` of core gives, and sends nothing
-when that is `null`. Until 9 October 2026 it sent it with `apply`,
-described "the column of the populations was chosen", a step of the
-history, as every command of the individuals file was on that page;
-since Undo came back that day, an opening of a file is no step, and the
-column the page chooses is part of the opening, so it starts the
-history afresh (`docs/specs/core/store.md`, "On popgen2.html: no
-notice, and a history of the filters"). So:
+for that load, below. It sends the store's event
+`populationColumnChosen(fileId, column)` with the column
+`defaultPopulationsColumn(read)` of core gives, and sends nothing when
+that is `null`. The store records it as it records the read: the
+grouping becomes `{ kind: "populations", column }` in every project of
+the history that holds that load read and the grouping the present
+project has, with no step (`docs/specs/core/store.md`, "On
+popgen2.html: no notice, and a history of the filters"). The column the
+page chooses is not a change of the user's. Until 9 October 2026 it was
+sent with `apply`, described "the column of the populations was
+chosen", a step of the history, and then that day with `applyAfresh`,
+as part of the opening, which is no step; the review of that change
+found that a fresh history at the end of the read dropped the steps the
+user made while the file was read, and that the gate then applied a
+number the user was still typing and ended a run of the arrow keys,
+neither of which the user caused. So:
 
 - a file opened anew, a load id read for the first time, gets the
   page's column when the grouping names no column, a column its table
@@ -507,32 +513,34 @@ the file, of too many values or of no column qualified
 
 It runs in the subscription of the entry, after the listeners of the
 change have run, `queueMicrotask`, as the start of the one pass does
-(`src/ui/popgen2.tsx`, `startByThemselves`), so that its command is not
+(`src/ui/popgen2.tsx`, `startByThemselves`), so that its event is not
 sent in the middle of telling the listeners of the record. The record of
 the read itself does not choose the column: it writes the table into
 the projects of the history that hold the file (`recordShared` of
 `src/core/store.ts`), and is shared with `popgen.html`, whose user
 chooses every column.
 
-It is given the store wrapped by the gate of the thresholds' runs,
-`gatedStore` of `src/ui/variants/thresholdRun.ts`, as the screens are,
-so that a run of the arrow keys on a threshold still held is made a
-change before the command of the column, and the history keeps them in
-the order the user made them. In a module of its own,
-`src/ui/populationColumn.ts`, made by the entry of `popgen2.html` alone:
+It is given the store itself, not the store wrapped by the gate of the
+thresholds' runs, `gatedStore` of `src/ui/variants/thresholdRun.ts`,
+through which the screens send their commands: the column is an event,
+so a run of the arrow keys on a threshold still held when the read is
+recorded goes on waiting, and a number typed in a box stays typed; each
+becomes a step when the user ends it, over a project that holds the
+column. In a module of its own, `src/ui/populationColumn.ts`, made by
+the entry of `popgen2.html` alone:
 
 ```ts
 /** Watches `store` for reads of the individuals file newly recorded,
     sends the column of the populations the page chooses, and says each
     read with `announce`. Gives the function that stops it. */
 export function choosePopulationColumns(deps: {
-  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "apply">;  // the store gated as the screens' is
+  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "populationColumnChosen">;
   announce: (words: string) => void;
 }): () => void;
 ```
 
 Verified with Vitest, with a store made by `createPopgen2Store` and a
-fake worker: a read of `panel_pops.csv` recorded sends one command, and
+fake worker: a read of `panel_pops.csv` recorded sends one choice, and
 the grouping is `popcat`; "None" chosen after it, nothing is sent; the
 separator changed and the read recorded again, "None" kept and nothing
 sent; another file opened after "None", its column chosen; a second
@@ -540,11 +548,15 @@ file with a column `popcat` sends nothing; a second file whose `popcat`
 is `true` and `false`, its column chosen; with no "None" of the user, a
 read again whose table has no `popcat`, its column chosen; a table of
 numbers alone sends nothing and says the read with no column; an undo
-and a redo send nothing; an undo of the column the entry chose makes
-"None" the user's, kept through a change of separator; a run of the
-arrow keys on a threshold still held when a read is recorded is made a
-change before the command of the column; a refusal says the words of
-the box and sends nothing; the words said, in each case.
+and a redo send nothing; the column the entry chose leaves nothing to
+undo, and the user's "None" after it, undone and redone, is kept
+through a change of separator; a threshold moved while the read waited
+is still a step after the read, and its undo keeps the column; a run of
+the arrow keys on a threshold still held when a read is recorded goes
+on waiting, and when it ends is a step whose undo keeps the column; a
+number typed in a box and not applied when a read is recorded stays
+unapplied; a refusal says the words of the box and sends nothing; the
+words said, in each case.
 
 ### The outcome of a calculation
 

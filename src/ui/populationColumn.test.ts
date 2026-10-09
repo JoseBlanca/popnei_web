@@ -95,8 +95,8 @@ function loadId(n: number): string {
 }
 
 /** The page's store with a fake worker, gated as the screens' is, the
-    entry's watch of it, what it said and the commands of the column it
-    sent, each through `applyAfresh`. */
+    entry's watch of the store itself, what it said and the columns it
+    chose, each sent as `populationColumnChosen`. */
 function page(): {
   readonly store: Store<JobResult, Blob>;
   readonly gate: ReturnType<typeof createRunGate>;
@@ -119,13 +119,14 @@ function page(): {
   const gate = createRunGate();
   const store = gatedStore(raw, gate);
   let chosen = 0;
-  // The entry's own store, which counts what it sends; the test's
-  // commands go to `store`, as the screens' do.
+  // The entry's own store, the store itself and not the gated one, which
+  // counts what it sends; the test's commands go to `store`, as the
+  // screens' do.
   const counted: Store<JobResult, Blob> = {
-    ...store,
-    applyAfresh: (command) => {
+    ...raw,
+    populationColumnChosen: (fileId, column) => {
       chosen += 1;
-      store.applyAfresh(command);
+      raw.populationColumnChosen(fileId, column);
     },
   };
   const said: string[] = [];
@@ -202,8 +203,8 @@ function setSeparator(
   store.applyAfresh((p) => setCsvOptions(p, { ...AUTO, separator }));
 }
 
-describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of popgen2.html, with nothing to undo", () => {
-  test("a read of panel_pops.csv recorded sends one command after the listeners of the record, the grouping is popcat, and the read is said", async () => {
+describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of popgen2.html, recorded with no step", () => {
+  test("a read of panel_pops.csv recorded sends one choice after the listeners of the record, the grouping is popcat, and the read is said", async () => {
     const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
@@ -376,12 +377,14 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     ]);
   });
 
-  test("a run of the arrow keys on a threshold still held when a read is recorded is made a change before the command of the column", async () => {
+  test("a run of the arrow keys on a threshold still held when a read is recorded goes on waiting, and when it ends is a step whose undo keeps the column", async () => {
     const { store, gate, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
+    let ended = 0;
     gate.hold(
       () => {
+        ended += 1;
         store.apply("the threshold of the missing genotypes changed", (p) =>
           setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
         );
@@ -390,13 +393,50 @@ describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of pop
     );
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     expect(chosen()).toBe(1);
-    const project = store.getState().project;
-    expect(columnOf(project)).toBe("popcat");
-    expect(
-      project.individualFilters.some(
-        (filter) => filter.kind === "missing_data",
-      ),
-    ).toBe(true);
+    expect(ended).toBe(0);
+    expect(gate.pending()).toBe(
+      "the threshold of the missing genotypes changed",
+    );
+    expect(columnOf(store.getState().project)).toBe("popcat");
+    gate.endAll();
+    expect(store.getState().undo).toBe(
+      "the threshold of the missing genotypes changed",
+    );
+    store.undo();
+    expect(columnOf(store.getState().project)).toBe("popcat");
+  });
+
+  test("a number typed in a box and not applied when a read is recorded stays unapplied", async () => {
+    const { store, gate, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    let committed = 0;
+    gate.typing(() => {
+      committed += 1;
+    });
+    await recorded(store, loadId(1), readOf(PANEL_POPS));
+    expect(chosen()).toBe(1);
+    expect(committed).toBe(0);
+    expect(store.getState().undo).toBeNull();
+  });
+
+  test("a threshold moved while the read waited is still a step after the read, and its undo keeps the column", async () => {
+    const { store, chosen } = page();
+    openVariants(store);
+    openIndividuals(store, loadId(1));
+    const opened = store.getState().project;
+    store.apply("the threshold of the missing genotypes changed", (p) =>
+      setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
+    );
+    await recorded(store, loadId(1), readOf(PANEL_POPS));
+    expect(chosen()).toBe(1);
+    expect(store.getState().undo).toBe(
+      "the threshold of the missing genotypes changed",
+    );
+    store.undo();
+    const back = store.getState().project;
+    expect(columnOf(back)).toBe("popcat");
+    expect(back.individualFilters).toBe(opened.individualFilters);
     expect(store.getState().undo).toBeNull();
   });
 

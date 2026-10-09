@@ -8585,3 +8585,81 @@ describe("AP3 D1 applyAfresh on the store of popgen2.html", () => {
     expect(made.store.getState()).toBe(before);
   });
 });
+
+describe("AP3 D1 the column the page chooses at a read, recorded into the history with no step", () => {
+  /** Loads pops.csv as the individuals file, with nothing to undo. */
+  const openPops = (store: Store<JobResult, string>): void => {
+    store.applyAfresh((p) =>
+      loadIndividuals(p, {
+        fileId: INDIVIDUALS_ID,
+        name: "pops.csv",
+        csv: CSV,
+      }),
+    );
+  };
+
+  /** The column of the grouping of `p`. */
+  const columnOf = (p: Project): string | null | undefined =>
+    p.grouping.kind === "populations" ? p.grouping.column : undefined;
+
+  test("a threshold moved while the read waited: the column in the present and in the project before it, the step kept, no move counted; undo: the threshold back, the column kept", () => {
+    const made = popgen2Store(true);
+    openPops(made.store);
+    const opened = made.store.getState().project;
+    moveMissing(made.store, 0.2);
+    made.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    const before = made.store.getState();
+
+    made.store.populationColumnChosen(INDIVIDUALS_ID, "pop");
+
+    const after = made.store.getState();
+    expect(columnOf(after.project)).toBe("pop");
+    expect(after.undo).toBe(before.undo);
+    expect(after.undo).not.toBeNull();
+    expect(after.historyMoves).toBe(before.historyMoves);
+    expect(after.notice).toBeNull();
+    made.store.undo();
+    const back = made.store.getState().project;
+    expect(columnOf(back)).toBe("pop");
+    expect(back.filters).toBe(opened.filters);
+    // One grouping object, shared by the projects it was written into.
+    expect(back.grouping).toBe(after.project.grouping);
+  });
+
+  test("a project of the history with another grouping keeps it", () => {
+    const made = popgen2Store(true);
+    openPops(made.store);
+    made.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    made.store.apply("the grouping changed", (p) =>
+      setGrouping(p, { kind: "onePopulation" }),
+    );
+    made.store.apply("the column of the populations changed", (p) =>
+      setGrouping(p, { kind: "populations", column: null }),
+    );
+
+    made.store.populationColumnChosen(INDIVIDUALS_ID, "pop");
+
+    expect(columnOf(made.store.getState().project)).toBe("pop");
+    made.store.undo();
+    expect(made.store.getState().project.grouping).toEqual({
+      kind: "onePopulation",
+    });
+    made.store.undo();
+    expect(columnOf(made.store.getState().project)).toBe("pop");
+  });
+
+  test("a load id the present project does not hold, or a read that still waits: the state the same object", () => {
+    const made = popgen2Store(true);
+    openPops(made.store);
+    const waiting = made.store.getState();
+    made.store.populationColumnChosen(INDIVIDUALS_ID, "pop");
+    expect(made.store.getState()).toBe(waiting);
+    made.store.individualsRead(INDIVIDUALS_ID, CSV, INDIVIDUALS_READ);
+    const read = made.store.getState();
+    made.store.populationColumnChosen(
+      "00000000000000000000000000000009",
+      "pop",
+    );
+    expect(made.store.getState()).toBe(read);
+  });
+});
