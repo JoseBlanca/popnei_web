@@ -542,7 +542,11 @@ test("AP1 D4 on a short window the arrow key onto a greyed tab of the second lin
   await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
   // The browser scrolled the tab into view, which closed every tooltip
   // before.
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
+  // WebKit may scroll after the focus has moved, so the scroll is waited
+  // for, not read once.
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(before);
   await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
 });
 
@@ -605,4 +609,27 @@ test("AP1 D4 the filters of the individuals keeping one population grey Distance
   await threshold.fill("1");
   await threshold.press("Enter");
   await expectOpen(page, "Distances");
+});
+
+test("AP1 D4 the tooltip of a greyed tab opens below the whole row, under its own tab: at 1280 px its left edge at the tab's, at 320 px below both lines", async ({
+  page,
+}) => {
+  for (const width of [1280, 320] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await openPage(page);
+    await tab(page, "Variants").focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+    const tooltipBox = await page.getByRole("tooltip").boundingBox();
+    const tabBox = await tab(page, "PCA").boundingBox();
+    const rowBox = await row(page).boundingBox();
+    if (tooltipBox === null || tabBox === null || rowBox === null) {
+      throw new Error("the tooltip, the tab or the row has no box");
+    }
+    expect(tooltipBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height);
+    if (width === 1280) {
+      expect(Math.abs(tooltipBox.x - tabBox.x)).toBeLessThanOrEqual(4);
+    }
+  }
 });

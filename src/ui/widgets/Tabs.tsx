@@ -103,24 +103,41 @@ export function Tabs<Id extends string>({
   const reasonsId = useId();
   const reasonId = (id: Id): string => `${reasonsId}-${id}`;
   const listRef = useRef<HTMLDivElement>(null);
+  // The element of each tab, by its id, for the place of its tooltip.
+  const tabElements = useRef(new Map<Id, HTMLElement>());
   // The tab whose reason's tooltip is open, held here so that a press on
-  // a greyed tab, which React Aria would let close it, opens it.
-  const [reasonShown, setReasonShown] = useState<Id | null>(null);
+  // a greyed tab, which React Aria would let close it, opens it; with the
+  // distance from the start of the row to the tab's, measured when it
+  // opens, so that the tooltip, placed under the row, stands under its
+  // tab.
+  const [reasonShown, setReasonShown] = useState<{
+    readonly id: Id;
+    readonly crossOffset: number;
+  } | null>(null);
   if (
     reasonShown !== null &&
-    !tabs.some((tab) => tab.id === reasonShown && isGreyed(tab))
+    !tabs.some((tab) => tab.id === reasonShown.id && isGreyed(tab))
   ) {
     setReasonShown(null);
   }
+  const showReason = (id: Id): void => {
+    setReasonShown({
+      id,
+      crossOffset: offsetInRow(listRef.current, tabElements.current.get(id)),
+    });
+  };
   const heldFor = (tab: TabItem<Id>): HeldTooltip => ({
-    isOpen: reasonShown === tab.id,
+    isOpen: reasonShown?.id === tab.id,
     onOpenChange: (isOpen) => {
-      setReasonShown((shown) =>
-        isOpen ? tab.id : shown === tab.id ? null : shown,
-      );
+      if (isOpen) {
+        showReason(tab.id);
+      } else {
+        setReasonShown((shown) => (shown?.id === tab.id ? null : shown));
+      }
     },
     hasFocus: () => listRef.current?.contains(document.activeElement) ?? false,
     placedUnder: listRef,
+    crossOffset: reasonShown?.id === tab.id ? reasonShown.crossOffset : 0,
   });
   return (
     <AriaTabs
@@ -136,7 +153,7 @@ export function Tabs<Id extends string>({
         if (isGreyed(chosen)) {
           // Refused, and the reason shown, for a click, a tap, Enter or
           // Space that would see nothing happen otherwise.
-          setReasonShown(chosen.id);
+          showReason(chosen.id);
           return;
         }
         onChange(chosen.id);
@@ -169,6 +186,11 @@ export function Tabs<Id extends string>({
                 // set alone.
                 ref={(element: HTMLElement | null) => {
                   markGreyed(element, isGreyed(tab));
+                  if (element === null) {
+                    tabElements.current.delete(tab.id);
+                  } else {
+                    tabElements.current.set(tab.id, element);
+                  }
                 }}
                 className={classOf(styles, "tab")}
                 {...(describedBy !== undefined && {
@@ -249,6 +271,21 @@ function TabStopToShown({
     };
   }, [listRef, state]);
   return null;
+}
+
+/** How far the start of the tab `element` is from the start of the row
+    `list`, in pixels; 0 with no row or no tab. Read in a handler, when a
+    tooltip opens. */
+function offsetInRow(
+  list: HTMLElement | null,
+  element: HTMLElement | undefined,
+): number {
+  if (list === null || element === undefined) {
+    return 0;
+  }
+  return (
+    element.getBoundingClientRect().left - list.getBoundingClientRect().left
+  );
 }
 
 /** The attribute that marks a greyed tab for its style; React Aria lets

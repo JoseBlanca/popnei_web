@@ -62,6 +62,10 @@ export interface HeldTooltip {
       the trigger: the row of tabs, so that on two lines the tooltip of
       a tab of the first does not hide the second. */
   readonly placedUnder: React.RefObject<Element | null>;
+  /** How far right of the start of `placedUnder` the tooltip starts, in
+      pixels: the trigger's distance from it, so that the tooltip stands
+      under its trigger; React Aria keeps it within the window. */
+  readonly crossOffset: number;
 }
 
 /** What a trigger with a tooltip is drawn with. */
@@ -137,7 +141,7 @@ export function WithTooltip({
 }
 
 /** The tooltip of a `HeldTooltip`: React Aria's, under the element
-    `placedUnder` at its start, given a state of its trigger that does not
+    `placedUnder`, `crossOffset` from its start, given a state of its trigger that does not
     close on a scroll while the trigger has the focus. React Aria closes
     a tooltip on a scroll with `close(true)`, and on the pointer leaving
     the tooltip with `close()`, which still closes it. */
@@ -170,6 +174,7 @@ function HeldTooltipBox({
         placement="bottom start"
         offset={TOOLTIP_OFFSET_PX}
         triggerRef={held.placedUnder}
+        crossOffset={held.crossOffset}
       >
         {children}
       </AriaTooltip>
