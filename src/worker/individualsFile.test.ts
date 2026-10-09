@@ -684,6 +684,39 @@ describe("IN1 D1 readOfTable, with objects of the test in the place of a TableRe
     ]);
   });
 
+  test("an integer column whose value is 2^53 − 1 stays numbers, and one above it texts", () => {
+    const edge = fakeRead(
+      { format: "xlsx" },
+      ["A"],
+      [
+        {
+          name: "n",
+          type: "integer",
+          missing: [0],
+          integers: [9007199254740991n],
+        },
+      ],
+    );
+    const above = fakeRead(
+      { format: "xlsx" },
+      ["A"],
+      [
+        {
+          name: "n",
+          type: "integer",
+          missing: [0],
+          integers: [9007199254740992n],
+        },
+      ],
+    );
+    const rowsOf = (result: IndividualsFileRead): unknown =>
+      result.kind === "read" ? result.table.rows : null;
+    expect(rowsOf(readOfTable(edge.read))).toEqual([["A", 9007199254740991]]);
+    expect(rowsOf(readOfTable(above.read))).toEqual([
+      ["A", "9007199254740992"],
+    ]);
+  });
+
   test("a boolean column of 1 and 0 gives true and false, and a missing one null", () => {
     const { read } = fakeRead(
       { format: "xlsx" },
@@ -1665,6 +1698,15 @@ const READ_CSV_CASES: readonly (readonly [
     {
       kind: "failed",
       error: { kind: "unclosedQuote", line: 2, separator: "," },
+      format: "text",
+    },
+  ],
+  [
+    'id;pop\nA;"P1\nB;P2\n',
+    ";",
+    {
+      kind: "failed",
+      error: { kind: "unclosedQuote", line: 2, separator: ";" },
       format: "text",
     },
   ],
