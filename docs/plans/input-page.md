@@ -139,6 +139,24 @@ plan follows when the owner has not answered.
    first. If the owner prefers the specs as they are, task 5.1 corrects
    nothing and 5.2 builds them.
 
+### The owner's answers, 9 October 2026
+
+The owner approved this plan on 9 October 2026 and answered:
+
+1. The column chosen when a file is read is the first text column with
+   1 to 20 different values, as above.
+2. A column of numbers may be a column of populations, and `01` and `1`
+   are then one population, as the specs say; a column of booleans may
+   not: the list "Column of the populations" does not offer it (task
+   4.1 and the screen spec, corrected in the first task that touches
+   them). No stop, no issue of table_io.
+3. "None" stays, as this plan has it (the meanwhile).
+4. The old page, `popgen.html`, is deprecated and will be deleted: it
+   switches to table_io with popgen2.html, and its flows are brought to
+   its new behaviour so that they pass, but no flow, check or decision is
+   added for what changes on it (task 1.x's checks of the old page's
+   changes are dropped).
+
 ## In and out
 
 In: the eight work packages below. One of them is a measurement with a
