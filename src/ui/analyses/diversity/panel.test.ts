@@ -36,6 +36,7 @@ import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import type { Announcer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
+import { panelOf } from "../panels.ts";
 import { DiversityOptionsPart } from "./DiversityOptionsPart.tsx";
 import { DiversityResults } from "./DiversityResults.tsx";
 import { noSpectrumLine } from "./spectrumWords.ts";
@@ -598,7 +599,12 @@ describe("PA7 D1 the diversity running, drawn by React", () => {
       waitsForStatistics: false,
       soFar: null,
     };
-    draw(createElement(AnalysisPanel, { id: "diversity" }));
+    draw(
+      createElement(AnalysisPanel, {
+        id: "diversity",
+        ui: panelOf("diversity"),
+      }),
+    );
   }
 
   test("the line names the pass of two it reads, the share of the whole run, and the three fields stay", () => {
@@ -975,7 +981,12 @@ describe("PA7 D2 the block of the spectrum, the review of work package 7", () =>
       warnings: [],
       check: null,
     };
-    draw(createElement(AnalysisPanel, { id: "diversity" }));
+    draw(
+      createElement(AnalysisPanel, {
+        id: "diversity",
+        ui: panelOf("diversity"),
+      }),
+    );
     // The population whose histogram threw keeps its heading, at the
     // level of the others.
     expect(
@@ -1068,7 +1079,12 @@ describe("PA7 D2 the block of the spectrum, the review of work package 7", () =>
       warnings: [],
       check: null,
     };
-    draw(createElement(AnalysisPanel, { id: "diversity" }));
+    draw(
+      createElement(AnalysisPanel, {
+        id: "diversity",
+        ui: panelOf("diversity"),
+      }),
+    );
     const made = vi.mocked(noSpectrumLine).mock.calls.length;
     expect(made).toBeGreaterThanOrEqual(3);
     act(() => {

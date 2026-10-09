@@ -44,5 +44,5 @@ export function PcaTab({ autoRuns }: PcaTabProps): React.JSX.Element {
       passLock(summaryStatus(s), (key) => autoRuns.startedUnder(key)),
     ),
   );
-  return <AnalysisPanel id="pca" page={{ ui: pcaTabPanel(method), lock }} />;
+  return <AnalysisPanel id="pca" ui={pcaTabPanel(method)} page={{ lock }} />;
 }

@@ -12,6 +12,7 @@ import { useRef } from "react";
 import { POPGEN_ANALYSES } from "../../../core/apps.ts";
 import type { AnalysisId } from "../../../core/project.ts";
 import { AnalysisPanel } from "../../analyses/AnalysisPanel.tsx";
+import { panelOf } from "../../analyses/panels.ts";
 import { stepOf, titleOf } from "../../analyses/titles.ts";
 import { classOf } from "../../classOf.ts";
 import { ErrorBoundary } from "../../shell/ErrorBoundary.tsx";
@@ -69,7 +70,7 @@ export function AnalysesStep(): React.JSX.Element {
           }}
         >
           <ErrorBoundary heading={titleOf(analysis.id)} level={2}>
-            <AnalysisPanel id={analysis.id} />
+            <AnalysisPanel id={analysis.id} ui={panelOf(analysis.id)} />
           </ErrorBoundary>
         </div>
       ))}

@@ -589,6 +589,11 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
   page.on("request", (request) => {
     fetched.push(request.url());
   });
+  // The scripts the page downloads as it opens, read for D3.
+  const scripts: Promise<string>[] = [];
+  page.on("response", (response) => {
+    if (response.url().endsWith(".js")) scripts.push(response.text());
+  });
   // The first download of the code of the statistics fails, as with the
   // network down; the next ones are served, though Chromium 153 keeps the
   // failure of an import() until the page is reloaded and asks no more.
@@ -604,11 +609,22 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
   await openPage(page);
   // Read by the names of the files, without the hash of their content,
   // which can hold "d3" by chance: Button.module.css changed on 9
-  // October 2026 gave shared~popgen~popgen2-CXUJd3d1.css.
-  const names = fetched.map((url) => url.replace(/-[\w-]{8}\.\w+$/u, ""));
-  expect(names.filter((name) => /SectionPlots|d3|plots/u.test(name))).toEqual(
-    [],
+  // October 2026 gave shared~popgen~popgen2-CXUJd3d1.css. A chunk of
+  // code the page shares is named for every file that uses it, and one
+  // the page needs as it opens may name the plots among them, since the
+  // result of the PCA, downloaded with import() as the plots are, shares
+  // the page's own code (work package 6 of docs/plans/analyses-pca.md):
+  // so the name of a file the plots alone use, and, in the scripts
+  // downloaded, D3, by d3-format's words of a format it cannot read.
+  const names = fetched.map((url) =>
+    url.replace(/-[\w-]{8}\.\w+$/u, "").replace(/^.*\//u, ""),
   );
+  expect(
+    names.filter((name) => /^(SectionPlots|d3|plots)/u.test(name)),
+  ).toEqual([]);
+  for (const text of await Promise.all(scripts)) {
+    expect(text).not.toContain("invalid format: ");
+  }
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));
   await expect(
@@ -648,11 +664,18 @@ test("FS3 the open button is alone in the box of the variants file before a file
 }) => {
   await openPage(page);
   // In the box of the variants file, the open button alone: no lines of
-  // a file, no statistics. The other region is the box of the
-  // individuals file (docs/specs/steps/popgen2-input.md).
+  // a file, no statistics. The other two regions are the box of the
+  // individuals file (docs/specs/steps/popgen2-input.md) and, in the
+  // greyed PCA tab, drawn hidden, the PCA and its filters
+  // (docs/specs/steps/popgen2-pca.md, "The PCA tab").
   await expect(
     page.locator("main").getByRole("region", { includeHidden: true }),
-  ).toHaveCount(2);
+  ).toHaveCount(4);
+  for (const name of ["File information", "Statistics of the file"]) {
+    await expect(
+      page.getByRole("region", { name, includeHidden: true }),
+    ).toHaveCount(0);
+  }
   await expect(openButton(page)).toHaveText("Open variants file…");
 
   await pick(page, join(FIXTURES, "panel.vcf.gz"));

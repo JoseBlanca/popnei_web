@@ -36,6 +36,7 @@ import { AnnouncerProvider } from "../../shell/announcer.tsx";
 import type { Announcer } from "../../shell/status.ts";
 import { StoreProvider } from "../../store.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
+import { panelOf } from "../panels.ts";
 import { PopDistsOptionsPart } from "./PopDistsOptionsPart.tsx";
 import { PopDistsResults } from "./PopDistsResults.tsx";
 import { Table } from "../../widgets/Table.tsx";
@@ -549,7 +550,9 @@ describe("PA5 the result of the distances, drawn by React", () => {
 
   test("PA5 D1 under the panel's frame, drawn again when a notice comes and goes, the table is not drawn again nor its rows made", () => {
     status = doneWith(FLOW);
-    draw(createElement(AnalysisPanel, { id: "popDists" }));
+    draw(
+      createElement(AnalysisPanel, { id: "popDists", ui: panelOf("popDists") }),
+    );
     expect(heatmapSvg()).not.toBeNull();
     const drawn = vi.mocked(Table).mock.calls.length;
     const made = vi.mocked(numberCells).mock.calls.length;

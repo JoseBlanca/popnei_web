@@ -34,6 +34,7 @@ import type * as LineModule from "../../../charts/line.ts";
 import { Table } from "../../widgets/Table.tsx";
 import type * as TableModule from "../../widgets/Table.tsx";
 import { AnalysisPanel } from "../AnalysisPanel.tsx";
+import { panelOf } from "../panels.ts";
 import { LdDecayOptionsPart } from "./LdDecayOptionsPart.tsx";
 import { LdDecayResults } from "./LdDecayResults.tsx";
 
@@ -900,7 +901,9 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
   test("review of PA8: with the table of the bins shown, a notice that comes and goes draws neither table again", () => {
     project = projectOf(TWO.pops);
     status = doneWith(TWO);
-    draw(createElement(AnalysisPanel, { id: "ldDecay" }));
+    draw(
+      createElement(AnalysisPanel, { id: "ldDecay", ui: panelOf("ldDecay") }),
+    );
     chooseTab("Table of the bins");
     expect(container.querySelectorAll("table")).toHaveLength(2);
     const drawn = vi.mocked(Table).mock.calls.length;
@@ -924,7 +927,9 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
   test("under the panel's frame, drawn again when a notice comes and goes, the plot is the same SVG and the table of the populations is not drawn again", () => {
     project = projectOf(TWO.pops);
     status = doneWith(TWO);
-    draw(createElement(AnalysisPanel, { id: "ldDecay" }));
+    draw(
+      createElement(AnalysisPanel, { id: "ldDecay", ui: panelOf("ldDecay") }),
+    );
     const svg = container.querySelector("svg");
     expect(svg).not.toBeNull();
     const marks = svg?.querySelector(".chart-marks")?.innerHTML;
@@ -979,7 +984,9 @@ describe("PA8 the result of the LD decay, drawn by React", () => {
       ofStatistics: false,
       waited: false,
     };
-    draw(createElement(AnalysisPanel, { id: "ldDecay" }));
+    draw(
+      createElement(AnalysisPanel, { id: "ldDecay", ui: panelOf("ldDecay") }),
+    );
     expect(container.textContent).toContain(
       "The calculation stopped unexpectedly, perhaps because the LD decay needed more memory than the browser tab could give. Type a smaller largest distance, or keep fewer individuals with the filters of individuals in the Variants step, and run it again; or calculate it with popnei in Python, outside the browser. If it stops again at a small distance, load panel.nei again in the Variants step.",
     );

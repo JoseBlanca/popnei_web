@@ -7,14 +7,20 @@
  * this page runs, `pcaOnPopgen2`; the line under the bar of a run under
  * way; and its errors in this page's words, which name the box Variants
  * file and the Variants tab.
+ *
+ * The result is downloaded apart from the page's code, the first time a
+ * result is drawn: it draws its plots with D3 and three.js, which the
+ * page does not download before a file is open (the flow FS2 of
+ * e2e/fileStats.spec.ts), and it would add some 58 KB gzipped to the
+ * first load of popgen2.html, more than the 50 KB the design allows the
+ * PCA tab (docs/plans/analyses-pca.md, work package 6, deliverable 6).
  */
-import { createElement } from "react";
+import { Suspense, createElement, lazy } from "react";
 
 import { pcaOnPopgen2 } from "../../../core/analyses/pca.ts";
 import type { Project } from "../../../core/project.ts";
 import type { PcaMethod } from "../../../worker/protocol.ts";
 import type { AnalysisUi, ResultsProps } from "../panels.ts";
-import { PcaResults } from "./PcaResults.tsx";
 import { PcaTabOptions } from "./PcaTabOptions.tsx";
 import {
   PCA_TAB_ERRORS,
@@ -24,10 +30,21 @@ import {
 } from "./tabWords.ts";
 import { decompositionLine } from "./words.ts";
 
+/** The parts of the old panel that draw a result, downloaded the first
+    time one is drawn. */
+const LazyResults = lazy(async () => {
+  const { PcaResults } = await import("./PcaResults.tsx");
+  return { default: PcaResults };
+});
+
 /** The result of the PCA of the definition the store of popgen2.html
-    runs. */
+    runs; nothing while its code downloads. */
 function PcaTabResults(props: ResultsProps): React.JSX.Element {
-  return createElement(PcaResults, { ...props, analysis: pcaOnPopgen2 });
+  return createElement(
+    Suspense,
+    { fallback: null },
+    createElement(LazyResults, { ...props, analysis: pcaOnPopgen2 }),
+  );
 }
 
 /** The panel of the PCA tab with the method `method`. */

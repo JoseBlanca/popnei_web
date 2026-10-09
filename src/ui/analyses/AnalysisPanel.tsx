@@ -8,9 +8,10 @@
  * the button in every state, since they are what the user may change
  * (docs/specs/analyses/pca.md, "The states").
  *
- * popgen2.html draws the same frame in its PCA tab, given the page's
- * panel, `page` (docs/plans/analyses-pca.md, work package 6): its own
- * words and parts, by the method; a lock of its own, the one pass of the
+ * The page gives the panel, `ui`: popgen.html `panelOf` of panels.ts,
+ * popgen2.html the panel of its PCA tab. popgen2.html draws the same
+ * frame there (docs/plans/analyses-pca.md, work package 6), with its own
+ * words and parts, by the method, and, `page`, a lock of its own, the one pass of the
  * variants file that has not read the file to the end, which takes the
  * place of the store's reason, or makes a ready Run a locked one; and the
  * line of the individuals the PCA will run on before the button, in the
@@ -53,7 +54,6 @@ import { startAnalysis } from "../runs.ts";
 import { useAppState, useStore } from "../store.tsx";
 import styles from "./AnalysisPanel.module.css";
 import { Failed } from "./Failed.tsx";
-import { panelOf } from "./panels.ts";
 import type { AnalysisUi } from "./panels.ts";
 import { RunButton } from "./RunButton.tsx";
 import { Running } from "./Running.tsx";
@@ -62,10 +62,8 @@ import type { ButtonOf } from "./status.ts";
 import { Warnings } from "./Warnings.tsx";
 import { removedText, stoppedText } from "./words.ts";
 
-/** The panel of an analysis on a page other than popgen.html. */
+/** What popgen2.html adds to the panel of an analysis. */
 export interface PagePanel {
-  /** The panel, its words and its parts, in the place of `panelOf`'s. */
-  readonly ui: AnalysisUi;
   /** The reason of a lock of the page beyond the store's, which then
       locks a Run the store offers and takes the place of the store's
       reason; `null` when the page locks nothing. */
@@ -76,18 +74,23 @@ export interface PagePanel {
 export interface AnalysisPanelProps {
   /** The id of the analysis. */
   readonly id: AnalysisId;
-  /** The panel of the page, popgen2.html's; absent on popgen.html, whose
-      panel is `panelOf(id)`, with no lock of its own and the lines of
-      what a run will take after the button. */
+  /** Its panel, its words and its parts: `panelOf(id)` of panels.ts on
+      popgen.html, the PCA tab's on popgen2.html. Given by the page, so
+      that popgen2.html does not download the panels of popgen.html, and
+      their plots, with its own. */
+  readonly ui: AnalysisUi;
+  /** What popgen2.html adds; absent on popgen.html, whose panels have no
+      lock of their own and the lines of what a run will take after the
+      button. */
   readonly page?: PagePanel;
 }
 
 /** The panel of the analysis `id`, in the state the store gives it. */
 export function AnalysisPanel({
   id,
+  ui,
   page,
 }: AnalysisPanelProps): React.JSX.Element {
-  const ui = page?.ui ?? panelOf(id);
   const store = useStore();
   const status = useAppState((s) => statusOf(s, id));
   const notice = useAppState((s) => s.notice);
