@@ -10,7 +10,10 @@ develops the design `docs/designs/analyses-pca.md`, approved by the
 owner on 9 October 2026 with its ten answers, and section 5 of
 `docs/functionality.md`, "The individuals". It covers case 3 of
 `docs/use-cases.md`, "Look for clusters of individuals". Written on 9
-October 2026, before any code; not yet approved by the owner.
+October 2026, before any code. The owner is asked to approve it as a
+whole: every question of the design was answered on 9 October 2026, so
+nothing is left open, and the choices the session made, listed at the
+end, are for the owner to change after trying the page.
 
 The PCA tab is the panel of the old page, `popgen.html`, which is built
 and which the owner approved on 28 September 2026: its screen spec is
@@ -50,7 +53,8 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
 - **A variants file is open** from the moment its box shows its
   individuals and its ploidy, before the one pass ends.
 - **The thresholds of the Variants tab** are its five filters on the
-  histograms, and the FILTER box; **the individuals kept** are those its
+  histograms, and the FILTER box, the check box "Leave out the variants
+  that failed their FILTER"; **the individuals kept** are those its
   two thresholds of the individuals keep (`popgen2-input.md`, "The
   terms").
 - **Unclassified**: an individual of the variants file with no
@@ -63,6 +67,18 @@ the old page, given other filters (`docs/specs/worker/protocol.md`).
   result is kept in the **cache**, the store's memory of results. A
   result is on the screen only under the key the current project gives
   (`docs/architecture.md`, section 3).
+- **A run of the arrow keys** is the presses of the arrow keys on a
+  threshold within a second of each other, which the page makes one
+  change when they stop (`popgen2-filters.md`, "A threshold moved with
+  the keys").
+- **`follow`** is the field of each filter of the PCA's options that
+  says it is as in the Variants tab, true, or the PCA's own, false
+  (`docs/specs/analyses/pca.md`, "Its options").
+- **vavilov-explorer** is the owner's desktop application, which
+  imports the coordinates of a PCA to build groups of individuals by
+  hand (`docs/use-cases.md`, case 3).
+- **The old panel** is the PCA of `popgen.html`; "its words" are those
+  of `docs/specs/analyses/pca.md`, "Its words" and "The warnings".
 - **A lock** is a reason the PCA cannot run, written beside its Run
   button, which is then disabled.
 - **The focus** is the control the keys act on; the **Tab key** moves it
@@ -165,8 +181,10 @@ screen, and no step.
 
 **What an undo brings back.** The project before the step, and with it
 every result the cache holds under that project's keys, shown with no
-calculation. A PCA that the step stopped is not started again: the tab
-shows its options and Run.
+calculation. A PCA that the step stopped had no result, so the undo
+shows none: the tab shows its options and Run, and the PCA is run
+again; a result calculated before it under the same settings, if the
+cache still holds it, is shown.
 
 **What they say.** The words on the buttons are "Undo" and "Redo". Each
 has a tooltip, on the mouse and on the focus, that names its step,
@@ -229,11 +247,12 @@ follows the counts before the thresholds.
 
 **A greyed tab** is drawn in the colour of a control that cannot be
 used, and has neither the bar under its label nor the weight of its
-words that mark the tab shown. The arrow keys reach it, and its tooltip
-then shows; the mouse resting on it shows it too. A click, Enter, Space
-or the arrow keys do not show it: the content under the row stays that
-of the tab shown before. The arrow keys show each tab they reach that is
-not greyed, and pass the focus over a greyed one without showing it.
+words that mark the tab shown. The arrow keys move the focus onto it,
+and stop there, and its tooltip then shows; the mouse resting on it
+shows it too. A click, Enter or Space does not show it, and neither
+does the arrow key that reached it: the content under the row stays
+that of the tab shown before. The next arrow key moves the focus on,
+and shows the tab it reaches if that one is not greyed.
 
 **A tab that becomes greyed while it is shown**, the PCA tab while
 another variants file is opened, stays shown, greyed, and its content is
@@ -311,10 +330,10 @@ Then three, in this order:
   0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and when
   the Variants tab goes back above it, the PCA has its 0.05 again with
   no command. The field never shows a value looser than the one used.
-  A number typed there is bounded by the Variants tab as above, and is
-  sent even when it is the number the field shows, 0.03 typed over the
-  0.03 of the Variants tab, so that the project keeps what the user
-  typed.
+  A number typed there is bounded by the Variants tab as above. Typed
+  over the 0.03 the field shows, 0.03 is still sent, though the field
+  already shows it, so that the project keeps 0.03 as the PCA's own and
+  the PCA does not go back to 0.05 when the Variants tab is loosened.
 
 - **LD pruning**, a switch, "Prune the variants by linkage
   disequilibrium (LD)", on when the page opens, with two number fields
@@ -341,7 +360,7 @@ describes it, the first of these:
 
 | the lock | the words |
 |---|---|
-| more than 9,381 individuals in the file, the PCA, known at the opening | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
+| the PCA, of a file of more than 9,381 individuals, which the opening already tells | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
 | the one pass is running, or is about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once." |
 | the one pass was stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants file." |
 | the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`resume` of `src/ui/autoRuns.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another." |
@@ -359,7 +378,9 @@ unclassified. A PCA running shows Stop, the bar and the clock of the
 old panel, "Calculating · 35% · 0:12", and its line, "The bar shows the
 reading of panel.nei. The components are calculated once it is read,
 and the bar does not move meanwhile: from under a second for 1,000
-individuals to minutes for several thousand."
+individuals to minutes for several thousand.", the times measured on
+the old page in Chromium 153 and WebKit 26.6 on the owner's Mac on 29
+September 2026 (the design, "The memory and the time")
 
 **The result**, as the old panel shows it (`docs/specs/analyses/pca.md`,
 "What it shows"), with these differences:
@@ -543,7 +564,11 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
   its options above, unless such regions are what you are looking for."
 - `fewVariants`: "… If the dataset has more, loosen the filters of the
   PCA in its options above, or the thresholds of the Variants tab."
-- `lingoesCorrection`: the old panel's, unchanged.
+- `lingoesCorrection`: the old panel's, unchanged: the share of the
+  variance that lay in directions no space has, 7.87% on `panel.nei`;
+  the amount added to every squared distance, 0.047, and its share of
+  the mean squared distance, 53%; and how far apart two individuals of
+  the same genotypes are drawn, 0.22.
 
 **The errors**, those of the old panel (`docs/specs/analyses/pca.md`,
 "Its words") with "the Variants tab" for "the Variants step", "the box
@@ -724,7 +749,9 @@ panel are shared, and the flows of `popgen2Undo.spec.ts`, which the
 hidden buttons had cut down, are brought back with the buttons.
 
 **The numbers** are popnei's, from release 0.2.2 under node on 9
-October 2026, on `e2e/fixtures/panel.nei`: the PCA with the missing
+October 2026, on `e2e/fixtures/panel.nei`. The reference is the first
+setting, the missing data at 0.1 and the LD pruning at r² 0.1 within
+50,000; each other setting is one of the flows above: the PCA with the missing
 data filter at 0.1 and the LD filter at r² 0.1 within 50,000, 548
 variants, PC1 to PC3 3.5476992895181616, 3.402040462155611 and
 1.8945553874570624, `s000` at −0.7138853335304419,
@@ -759,8 +786,9 @@ labels wrapping at the width of a phone; Run locked until the one pass
 ends; the unclassified as one group, "Unclassified"; the PCA's own value
 kept when the Variants tab goes below it; "Stricter for the PCA" always
 starting at the upper end of its field, the Variants tab's value or 1,
-where the design had it start there the first time only, since the
-first time cannot be told from a value kept; the decimals of its field
+where the design had it start there only the first time: the project
+always holds a value for the filter, 0.1 or 0.95 before the user types
+one, so the page cannot tell a first choice from a later one; the decimals of its field
 those of the Variants tab's box; the PCA's limit of 9,381 individuals
 before the lock of the one pass; the LD pruning a
 switch; one button "Download…" with a menu; the names of the files;
