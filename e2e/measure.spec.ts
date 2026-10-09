@@ -134,9 +134,11 @@ import { cpus, loadavg, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
 
 import {
+  chromium,
   expect,
   test,
   type Browser,
+  type BrowserContext,
   type Download,
   type Locator,
   type Page,
@@ -161,9 +163,11 @@ const UV = process.env["UV"] ?? "uv";
 /** The sizes of the two files of the restart. The plan of stage 2 gave
     the .nei file 19,161,178 bytes, written by popnei's js-v0.1.0-dev.2;
     writeVars of js-v0.1.0-dev.3 writes the same variants in 16 bytes
-    more, 19,161,194, as it does panel.nei's (runner.md). */
+    more, 19,161,194, as it does panel.nei's (runner.md), and writeVars of
+    popnei 0.2.2 in 19,161,818 (the plan of the download, work package
+    8). */
 const BIG_VCF_BYTES = 80_692_954;
-const BIG_NEI_BYTES = 19_161_194;
+const BIG_NEI_BYTES = 19_161_818;
 
 // ---------------------------------------------------------------------
 // What the page is timed with.
@@ -1529,17 +1533,24 @@ interface Sample {
 
 /** Takes the memory of the engine one time after another until stopped,
     a few tens of milliseconds apart, or `pauseMs` and the time of a
-    sample. */
+    sample; the processes are listed by `list` when given, for an engine
+    with no `Browser`. */
 function sampleMemory(
-  browser: Browser,
+  browser: Browser | null,
   browserName: string,
   pauseMs = 10,
+  list?: () => Promise<readonly EngineProcess[]>,
 ): { readonly samples: readonly Sample[]; stop(): Promise<void> } {
   const samples: Sample[] = [];
   const state = { stopped: false };
   const loop = (async () => {
     while (!state.stopped) {
-      const processes = await engineProcesses(browser, browserName);
+      const processes =
+        list === undefined
+          ? browser === null
+            ? []
+            : await engineProcesses(browser, browserName)
+          : await list();
       const sizes = await footprints(processes);
       const byKind = new Map<string, number>();
       let total = 0;
@@ -4473,6 +4484,9 @@ const DL8_VARIANTS = Number(process.env["DL8_VARIANTS"] ?? "1820000");
     for the writes of DL8 D4, which time the parts alone. */
 const DL8_READ_BACK = process.env["DL8_READ_BACK"] !== "0";
 
+/** Whether the file saved is kept in DL8_DIR, "1", to be looked at. */
+const DL8_KEEP = process.env["DL8_KEEP"] === "1";
+
 /** Above it, in bytes, the summed footprint of the engine's processes,
     half the memory of the Mac, the page is closed. */
 const ENGINE_LIMIT_BYTES = 32e9;
@@ -4512,6 +4526,32 @@ function keepWorkers(): void {
   globalThis.Worker = Kept;
 }
 
+/** The processes of Playwright's Chromium, from their paths, for a
+    browser of a profile of its own, which has no `Browser` to ask; their
+    kinds from the switch `--type` of each. */
+async function chromiumProcesses(): Promise<readonly EngineProcess[]> {
+  const text = await execFileAsync("ps", ["-axo", "pid=,command="]);
+  const found: EngineProcess[] = [];
+  for (const line of text.split("\n")) {
+    const match = /^\s*(\d+) (.*ms-playwright\/chromium.*)$/.exec(line);
+    if (match === null) continue;
+    const command = match[2] ?? "";
+    const type = /--type=([\w-]+)/.exec(command)?.[1];
+    const kind =
+      type === undefined
+        ? "browser"
+        : type === "renderer"
+          ? "renderer"
+          : type === "gpu-process"
+            ? "GPU"
+            : command.includes("NetworkService")
+              ? "network"
+              : type;
+    found.push({ pid: Number(match[1]), kind });
+  }
+  return found;
+}
+
 /** What one download of popgen2.html gave. */
 interface DownloadRun {
   /** Saved whole, the words of a failure in the dialog, the tab closed,
@@ -4537,19 +4577,42 @@ interface DownloadRun {
     back when `readBack`, and deleted. With `kept`, the calculation worker
     is never ended. */
 async function downloadOnce(
-  browser: Browser,
+  browser: Browser | null,
   browserName: string,
   file: string,
-  options: { readonly readBack: boolean; readonly kept: boolean },
+  options: {
+    readonly readBack: boolean;
+    readonly kept: boolean;
+    readonly persistent?: boolean;
+  },
 ): Promise<DownloadRun> {
-  const context = await browser.newContext({ acceptDownloads: true });
-  const page = await context.newPage();
+  const profile =
+    options.persistent === true
+      ? join(DL8_DIR, `profile-${String(Date.now())}`)
+      : null;
+  let context: BrowserContext;
+  if (profile !== null) {
+    context = await chromium.launchPersistentContext(profile, {
+      acceptDownloads: true,
+      baseURL: test.info().project.use.baseURL ?? "",
+    });
+  } else if (browser !== null) {
+    context = await browser.newContext({ acceptDownloads: true });
+  } else {
+    throw new Error("no browser, and no profile of its own");
+  }
+  const page = context.pages()[0] ?? (await context.newPage());
   const state = { crashed: false, over: false, endedAt: 0 };
   page.on("crash", () => {
     state.crashed = true;
     state.endedAt = Date.now();
   });
-  const sampler = sampleMemory(browser, browserName);
+  const sampler = sampleMemory(
+    browser,
+    browserName,
+    10,
+    profile === null ? undefined : chromiumProcesses,
+  );
   const watch = setInterval(() => {
     const last = sampler.samples.at(-1);
     if (!state.over && last !== undefined && last.total > ENGINE_LIMIT_BYTES) {
@@ -4673,7 +4736,7 @@ async function downloadOnce(
           whole = `not read back: ${String(error)}`;
         }
       }
-      await rm(path);
+      if (!DL8_KEEP) await rm(path);
     }
     return {
       outcome:
@@ -4695,6 +4758,7 @@ async function downloadOnce(
     clearInterval(watch);
     await sampler.stop();
     await context.close().catch(() => undefined);
+    if (profile !== null) await rm(profile, { recursive: true, force: true });
   }
 }
 
@@ -4791,7 +4855,7 @@ test(`DL8 D1 the .nei file of the VCF of ${String(DL8_VARIANTS)} variants downlo
   );
 });
 
-test("DL8 D3 what a write leaves: the page's process 3 s after a write of the .nei file of 19,161,178 bytes, and of 200,000 variants, 220 MB, with the restart and with the old worker kept", async ({
+test("DL8 D3 what a write leaves: the page's process 3 s after a write of the .nei file of 20,000 variants from itself, 19,161,818 bytes, and of 200,000 variants, 220 MB, with the restart and with the old worker kept", async ({
   browser,
   browserName,
 }) => {
@@ -4800,7 +4864,11 @@ test("DL8 D3 what a write leaves: the page's process 3 s after a write of the .n
   const vcf = await writeVcfOf(TEN_TIMES_VARIANTS);
   const page = browserName === "chromium" ? "renderer" : "WebContent";
   const cases = [
-    { what: "the .nei file of 19,161,178 bytes", file: nei, kept: false },
+    {
+      what: "the .nei file of 20,000 variants, from itself",
+      file: nei,
+      kept: false,
+    },
     { what: "200,000 variants, the restart", file: vcf, kept: false },
     { what: "200,000 variants, the old worker kept", file: vcf, kept: true },
   ];
@@ -4850,5 +4918,51 @@ test("DL8 D3 what a write leaves: the page's process 3 s after a write of the .n
       "range",
     ],
     rows,
+  );
+});
+
+test(`DL8 D1 the same in a Chromium of a profile of its own, not off the record as Playwright's contexts are, for the VCF of ${String(DL8_VARIANTS)} variants`, async ({
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "a profile of its own in Chromium");
+  test.setTimeout(595_000);
+  const vcf = dl8Vcf(DL8_VARIANTS);
+  expect(existsSync(vcf), `${vcf} is made by "DL8 VCF made"`).toBe(true);
+  const r = await downloadOnce(null, browserName, vcf, {
+    readBack: DL8_READ_BACK,
+    kept: false,
+    persistent: true,
+  });
+  const n = (x: number | null): string =>
+    x === null ? "" : x.toLocaleString("en-US");
+  report(
+    `DL8 D1 the .nei file of ${n(DL8_VARIANTS)} variants downloaded from popgen2.html, Chromium with a profile of its own`,
+    `${browserName}, launchPersistentContext, macOS ${macOs()}; ${new Date().toISOString()}; load ${(loadavg()[0] ?? 0).toFixed(1)}`,
+    [
+      "outcome",
+      "Blob, bytes",
+      "saved, bytes",
+      "Download to the download event",
+      "before",
+      "peak",
+      "peak above before",
+      "3 s after",
+      "read back",
+      "words",
+    ],
+    [
+      [
+        r.outcome,
+        n(r.blobBytes),
+        n(r.savedBytes),
+        r.ms === null ? "" : ms(r.ms),
+        byKinds(r.before, browserName),
+        byKinds(r.peak, browserName),
+        above(r.peak, r.before),
+        byKinds(r.after, browserName),
+        r.whole,
+        r.words === "" ? r.outcome : r.words,
+      ],
+    ],
   );
 });
