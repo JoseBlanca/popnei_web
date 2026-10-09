@@ -108,8 +108,10 @@ export function IndividualsBox({
   const [refusal, setRefusal] = useState<string | null>(null);
   const individuals = useAppState((s) => s.project.individuals);
 
+  // An opening and a removal are no steps of Undo: the history starts
+  // afresh after them (popgen2-input.md, "What it sends and reads").
   const send = (step: StepCommand): void => {
-    store.apply(step.description, step.command);
+    store.applyAfresh(step.command);
   };
 
   const refuse = (text: string): void => {

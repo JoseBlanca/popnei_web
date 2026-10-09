@@ -221,8 +221,9 @@ function ReadOptions({
     option: "encoding" | "separator" | "decimal",
     next: CsvOptions,
   ): void => {
-    const step = csvOptionCommand(option, name, next);
-    store.apply(step.description, step.command);
+    // A read again is no step of Undo: the history starts afresh after
+    // it (popgen2-input.md, "What it sends and reads").
+    store.applyAfresh(csvOptionCommand(option, name, next).command);
   };
   return (
     <div className={classOf(styles, "options")}>

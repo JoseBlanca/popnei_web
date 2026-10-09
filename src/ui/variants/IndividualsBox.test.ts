@@ -389,10 +389,9 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(buttons(box()).some((b) => b.startsWith("Remove"))).toBe(false);
   });
 
-  test("a file opened by the zone is a command of the history, its read pending: its name and Reading, the zone's button Open another, and Remove", async () => {
+  test("a file opened by the zone, its read pending: its name and Reading, the zone's button Open another, and Remove", async () => {
     const { store } = await drawPage();
     await pickIndividuals("pops.csv");
-    expect(undoNames(store)).toBe("an individuals file was opened");
     expect(store.getState().project.individuals?.fileId).toBe(FILE_ID);
     expect(paragraphs(box())).toEqual(["pops.csv", "Reading pops.csv."]);
     expect(buttons(box())).toContain("Open another individuals file…");
@@ -612,23 +611,6 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
       });
     }
     expect(drawn.counts).toBe(before);
-  });
-
-  test("Remove is a command of the history, and puts the focus on the zone's button", async () => {
-    const { store } = await drawPage();
-    await pickIndividuals("pops.csv");
-    await recorded(store, readOf(POPS));
-    const remove = [...box().querySelectorAll("button")].find(
-      (b) => b.textContent === "Remove pops.csv",
-    );
-    if (remove === undefined) throw new Error("no Remove");
-    await act(async () => {
-      remove.click();
-      await Promise.resolve();
-    });
-    expect(undoNames(store)).toBe("the individuals file was removed");
-    expect(store.getState().project.individuals).toBeNull();
-    expect(document.activeElement?.textContent).toBe("Open individuals file…");
   });
 });
 
@@ -871,5 +853,106 @@ describe("IN6 D1 the tab of the individuals file in each state", () => {
     expect(tab().textContent).toContain(
       "Warning: line 3 of pops.csv has bytes that could not be read as UTF-16",
     );
+  });
+});
+
+/** Chooses the item `value` of the select number `index` of `element`,
+    drawn by React Aria, through the hidden select it draws beside it, as
+    a browser's autofill would. */
+async function pickInSelect(
+  element: HTMLElement,
+  index: number,
+  value: string,
+): Promise<void> {
+  const select = element.querySelectorAll("select")[index];
+  if (select === undefined) throw new Error("no such select");
+  await act(async () => {
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+  });
+}
+
+describe("AP3 D3 the changes of the individuals file are no steps of Undo; the column the user chooses is", () => {
+  /** A step of the history before the change, a threshold of the
+      individuals. */
+  const thresholdStep = async (
+    store: Store<JobResult, Blob>,
+  ): Promise<void> => {
+    await act(async () => {
+      store.apply("the threshold of the missing genotypes changed", (p) =>
+        setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.5),
+      );
+      await Promise.resolve();
+    });
+  };
+
+  test("a file opened by the zone after a step leaves nothing to undo or redo, one move of the history more, its read pending", async () => {
+    const { store } = await drawPage();
+    await thresholdStep(store);
+    const moves = store.getState().historyMoves;
+    await pickIndividuals("pops.csv");
+    const state = store.getState();
+    expect(state.project.individuals?.fileId).toBe(FILE_ID);
+    expect(state.project.individuals?.read.kind).toBe("pending");
+    expect(state.undo).toBeNull();
+    expect(state.redo).toBeNull();
+    expect(state.historyMoves).toBe(moves + 1);
+  });
+
+  test("Remove leaves nothing to undo, and puts the focus on the zone's button", async () => {
+    const { store } = await drawPage();
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS));
+    await thresholdStep(store);
+    const remove = [...box().querySelectorAll("button")].find(
+      (b) => b.textContent === "Remove pops.csv",
+    );
+    if (remove === undefined) throw new Error("no Remove");
+    await act(async () => {
+      remove.click();
+      await Promise.resolve();
+    });
+    expect(store.getState().project.individuals).toBeNull();
+    expect(undoNames(store)).toBeNull();
+    expect(document.activeElement?.textContent).toBe("Open individuals file…");
+  });
+
+  test("a separator chosen in the tab reads the file again and leaves nothing to undo", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS));
+    await thresholdStep(store);
+    await pickInSelect(tab(), 1, ";");
+    const individuals = store.getState().project.individuals;
+    expect(individuals?.csv?.separator).toBe(";");
+    expect(individuals?.read.kind).toBe("pending");
+    expect(undoNames(store)).toBeNull();
+  });
+
+  test("the column chosen in the list, and None, are each a step named the column of the populations changed", async () => {
+    const { store } = await drawPage();
+    await openVariants(store);
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS));
+    await pickInSelect(box(), 0, "column:popcat");
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "popcat",
+    });
+    expect(undoNames(store)).toBe("the column of the populations changed");
+    await pickInSelect(box(), 0, "none");
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: null,
+    });
+    act(() => {
+      store.undo();
+    });
+    expect(store.getState().project.grouping).toEqual({
+      kind: "populations",
+      column: "popcat",
+    });
   });
 });

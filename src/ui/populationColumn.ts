@@ -5,8 +5,9 @@
  * popgen2.html"). The record itself, shared with popgen.html, whose user
  * chooses every column, writes the table into every project of the
  * history that holds the file and chooses nothing; so the entry of the
- * page chooses, as a command, a step of the history, once at each read
- * recorded.
+ * page chooses, once at each read recorded, through the store's
+ * `applyAfresh`: the column is part of the opening, which is no step of
+ * Undo, so the history starts afresh after it.
  */
 import {
   defaultPopulationsColumn,
@@ -22,9 +23,6 @@ import type {
 import type { Store } from "../core/store.ts";
 import type { CsvOptions, JobResult } from "../worker/protocol.ts";
 import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
-
-/** The description of the command of the column the page chooses. */
-const CHOSEN = "the column of the populations was chosen";
 
 /**
  * Watches `store` for reads of the individuals file newly recorded,
@@ -49,7 +47,7 @@ const CHOSEN = "the column of the populations was chosen";
 export function choosePopulationColumns(deps: {
   readonly store: Pick<
     Store<JobResult, Blob>,
-    "getState" | "subscribe" | "apply"
+    "getState" | "subscribe" | "applyAfresh"
   >;
   readonly announce: (words: string) => void;
 }): () => void {
@@ -72,7 +70,7 @@ export function choosePopulationColumns(deps: {
         userNone.has(fileId),
       );
       if (column !== null) {
-        store.apply(CHOSEN, (p) =>
+        store.applyAfresh((p) =>
           setGrouping(p, { kind: "populations", column }),
         );
       }

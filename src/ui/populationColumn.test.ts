@@ -30,9 +30,6 @@ import { choosePopulationColumns } from "./populationColumn.ts";
 import { createPopgen2Store } from "./popgen2Store.ts";
 import { createRunGate, gatedStore } from "./variants/thresholdRun.ts";
 
-/** The description of the entry's command. */
-const CHOSEN = "the column of the populations was chosen";
-
 /** The options of a CSV a file is opened with. */
 const AUTO: CsvOptions = {
   encoding: "auto",
@@ -98,8 +95,8 @@ function loadId(n: number): string {
 }
 
 /** The page's store with a fake worker, gated as the screens' is, the
-    entry's watch of it, what it said and the commands of the column
-    sent. */
+    entry's watch of it, what it said and the commands of the column it
+    sent, each through `applyAfresh`. */
 function page(): {
   readonly store: Store<JobResult, Blob>;
   readonly gate: ReturnType<typeof createRunGate>;
@@ -122,11 +119,13 @@ function page(): {
   const gate = createRunGate();
   const store = gatedStore(raw, gate);
   let chosen = 0;
+  // The entry's own store, which counts what it sends; the test's
+  // commands go to `store`, as the screens' do.
   const counted: Store<JobResult, Blob> = {
     ...store,
-    apply: (description, command) => {
-      if (description === CHOSEN) chosen += 1;
-      store.apply(description, command);
+    applyAfresh: (command) => {
+      chosen += 1;
+      store.applyAfresh(command);
     },
   };
   const said: string[] = [];
@@ -136,7 +135,7 @@ function page(): {
       said.push(words);
     },
   });
-  return { store: counted, gate, said, chosen: () => chosen, stop };
+  return { store, gate, said, chosen: () => chosen, stop };
 }
 
 /** Opens `panel.nei` in `store`, read with its 200 individuals. */
@@ -160,15 +159,14 @@ function openVariants(store: Store<JobResult, Blob>): void {
   });
 }
 
-/** Opens the individuals file `name` as the load `fileId`. */
+/** Opens the individuals file `name` as the load `fileId`, as the box
+    does, with nothing to undo after it. */
 function openIndividuals(
   store: Store<JobResult, Blob>,
   fileId: string,
   name = "panel_pops.csv",
 ): void {
-  store.apply("an individuals file was opened", (p) =>
-    loadIndividuals(p, { fileId, name, csv: AUTO }),
-  );
+  store.applyAfresh((p) => loadIndividuals(p, { fileId, name, csv: AUTO }));
 }
 
 /** Records the read `read` of the load `fileId` with the options the
@@ -195,17 +193,16 @@ function chooseNone(store: Store<JobResult, Blob>): void {
   );
 }
 
-/** Sets the separator of the CSV, as the select of the tab does. */
+/** Sets the separator of the CSV, as the select of the tab does, with
+    nothing to undo after it. */
 function setSeparator(
   store: Store<JobResult, Blob>,
   separator: CsvOptions["separator"],
 ): void {
-  store.apply("the separator changed", (p) =>
-    setCsvOptions(p, { ...AUTO, separator }),
-  );
+  store.applyAfresh((p) => setCsvOptions(p, { ...AUTO, separator }));
 }
 
-describe("IN5 D2 the column of the populations chosen by the entry of popgen2.html", () => {
+describe("AP3 D3 IN5 D2 the column of the populations chosen by the entry of popgen2.html, with nothing to undo", () => {
   test("a read of panel_pops.csv recorded sends one command after the listeners of the record, the grouping is popcat, and the read is said", async () => {
     const { store, said, chosen } = page();
     openVariants(store);
@@ -216,7 +213,7 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chosen()).toBe(1);
     expect(columnOf(store.getState().project)).toBe("popcat");
-    expect(store.getState().undo).toBe(CHOSEN);
+    expect(store.getState().undo).toBeNull();
     expect(said).toEqual([
       "panel_pops.csv read: 200 rows, the populations from popcat.",
     ]);
@@ -348,22 +345,26 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
-    store.undo();
+    chooseNone(store);
     store.undo();
     store.redo();
-    store.redo();
+    store.undo();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(chosen()).toBe(1);
     expect(said).toHaveLength(1);
     expect(columnOf(store.getState().project)).toBe("popcat");
   });
 
-  test("an undo of the column the entry chose is the user's None, kept through a change of separator", async () => {
+  test("the column the entry chose leaves nothing to undo; the user's None, undone and redone, is kept through a change of separator", async () => {
     const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
+    expect(store.getState().undo).toBeNull();
+    chooseNone(store);
     store.undo();
+    expect(columnOf(store.getState().project)).toBe("popcat");
+    store.redo();
     expect(columnOf(store.getState().project)).toBeNull();
     setSeparator(store, ",");
     await recorded(store, loadId(1), readOf(PANEL_POPS));
@@ -389,11 +390,14 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     );
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     expect(chosen()).toBe(1);
-    expect(store.getState().undo).toBe(CHOSEN);
-    store.undo();
-    expect(store.getState().undo).toBe(
-      "the threshold of the missing genotypes changed",
-    );
+    const project = store.getState().project;
+    expect(columnOf(project)).toBe("popcat");
+    expect(
+      project.individualFilters.some(
+        (filter) => filter.kind === "missing_data",
+      ),
+    ).toBe(true);
+    expect(store.getState().undo).toBeNull();
   });
 
   test("a refusal sends nothing and says the words of the box", async () => {
@@ -428,15 +432,15 @@ describe("IN5 D2 the column of the populations chosen by the entry of popgen2.ht
     ]);
   });
 
-  test("an undo of a change of separator whose read still waits says nothing", async () => {
+  test("a change of separator whose read still waits says nothing and leaves nothing to undo", async () => {
     const { store, said, chosen } = page();
     openVariants(store);
     openIndividuals(store, loadId(1));
     await recorded(store, loadId(1), readOf(PANEL_POPS));
     setSeparator(store, ";");
-    store.undo();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(store.getState().project.individuals?.read.kind).toBe("read");
+    expect(store.getState().project.individuals?.read.kind).toBe("pending");
+    expect(store.getState().undo).toBeNull();
     expect(chosen()).toBe(1);
     expect(said).toEqual([
       "panel_pops.csv read: 200 rows, the populations from popcat.",
