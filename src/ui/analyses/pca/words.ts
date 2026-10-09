@@ -140,6 +140,40 @@ export function viewDescription(view: "3d" | "2d"): string {
   return `the principal components were drawn in ${view === "3d" ? "3D" : "2D"}`;
 }
 
+/** The filters as the descriptions of the commands of popgen2.html name
+    them, before "of the PCA". */
+const FILTER_NAMES_2: Readonly<Record<OwnFilterKind, string>> = Object.freeze({
+  missing_data: "the missing data filter",
+  maf: "the MAF filter",
+  ld: "the LD pruning",
+});
+
+/**
+ * The descriptions of the commands of the PCA on popgen2.html, which name
+ * the PCA or the PCoA by the method of the project after the command, as
+ * the words of its tab follow the method, and the Variants tab
+ * (docs/specs/steps/popgen2-pca.md, "What is a step"): "the MAF filter of
+ * the PCA was made stricter".
+ */
+export const POPGEN2_DESCRIPTIONS = Object.freeze({
+  method: (method: PcaMethod): string =>
+    `the method of the ${methodName(method)} changed`,
+  stricter: (kind: OwnFilterKind, method: PcaMethod): string =>
+    `${FILTER_NAMES_2[kind]} of the ${methodName(method)} was made stricter`,
+  setBack: (kind: OwnFilterKind, method: PcaMethod): string =>
+    kind === "ld"
+      ? `the LD pruning of the ${methodName(method)} was turned off`
+      : `${FILTER_NAMES_2[kind]} of the ${methodName(method)} was set back to as in the Variants tab`,
+  turnedOn: (method: PcaMethod): string =>
+    `the LD pruning of the ${methodName(method)} was turned on`,
+  value: (kind: OwnFilterKind, method: PcaMethod): string =>
+    `${FILTER_NAMES_2[kind]} of the ${methodName(method)} changed`,
+  colour: (method: PcaMethod): string =>
+    `the colour of the points of the ${methodName(method)} changed`,
+  view: (view: "3d" | "2d", method: PcaMethod): string =>
+    `the ${methodName(method)} was drawn in ${view === "3d" ? "3D" : "2D"}`,
+});
+
 /**
  * The lines of the ready state, and of the state of a result removed: the
  * individuals a run will take, "200 individuals of panel.nei", or "111 of

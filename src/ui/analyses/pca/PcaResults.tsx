@@ -322,7 +322,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             onChange={(view) => {
               if (view === null || view === options.view) return;
               if (view === "3d") setFailure3d(null);
-              applyShown(viewCommand(view));
+              applyShown(viewCommand(view, "popgen"));
             }}
           />
         )}
@@ -334,7 +334,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
               items={axisItems}
               value={String(component)}
               onChange={(id) => {
-                applyShown(axisCommand(axes, axis, Number(id)));
+                applyShown(axisCommand(axes, axis, Number(id), "popgen"));
               }}
             />
           ))}
@@ -346,6 +346,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             applyShown(
               colourCommand(
                 id === POPULATION_ID ? null : id.slice(COLUMN_PREFIX.length),
+                "popgen",
               ),
             );
           }}

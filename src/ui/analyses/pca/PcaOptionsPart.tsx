@@ -82,13 +82,13 @@ export function PcaOptionsPart(): React.JSX.Element {
     store.apply(step.description, step.command);
   };
   const setValue = (value: OwnValue): void => {
-    apply(ownValueCommand(value));
+    apply(ownValueCommand(value, "popgen"));
   };
   const announce = (text: string): void => {
     announcer.announce(text);
   };
   const choose = (kind: OwnFilterKind, choice: FollowChoice): void => {
-    apply(followCommand(kind, choice === "follow"));
+    apply(followCommand(kind, choice === "follow", "popgen"));
     // The focus stays on the radio button, so the reason that the choice
     // made appear beside the field of the distance is announced.
     if (kind === "ld" && choice === "own") {
@@ -112,7 +112,7 @@ export function PcaOptionsPart(): React.JSX.Element {
         items={METHOD_ITEMS}
         value={options.method}
         onChange={(method) => {
-          apply(methodCommand(method));
+          apply(methodCommand(method, "popgen"));
         }}
       />
       <section
