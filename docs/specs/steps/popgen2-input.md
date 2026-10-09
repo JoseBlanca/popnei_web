@@ -9,8 +9,8 @@ that opens its file, and under them two tabs, "Variants file" and
 with its five answers, and section 4 of `docs/functionality.md`, "The
 files of the individuals". Written on 9 October 2026, and built on the
 branch `individuals-file` the same day, work packages 3 to 6 of
-`docs/plans/input-page.md`; not yet tried by the owner, so no round of
-theirs has changed it yet. It
+`docs/plans/input-page.md`; tried and accepted by the owner on 9
+October 2026, with no change asked. It
 covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.

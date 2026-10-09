@@ -216,7 +216,9 @@ Aria's table and list. Both as `vite build` reported them with Vite
 8.3.0. Loading the box's lines and the tab only when the first
 individuals file is opened would take 34.8 KB gzipped out of the first
 load, for a second request and a moment of waiting at that first file;
-not taken for now, and left to the owner.
+not taken: the owner decided on 9 October 2026 to load them with the
+page, since most users of a page of population analyses open an
+individuals file.
 
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of

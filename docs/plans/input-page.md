@@ -813,7 +813,7 @@ turn back, in both engines.
 
 ## Work package 8: the owner tries the page
 
-- [ ] 8.1 The owner tries the page, on both pages, and answers: whether
+- [x] 8.1 The owner tries the page, on both pages, and answers: whether
   the screen is accepted; the choices of the screen spec's "Choices made
   by the session" and of the design's "What the session decided"; the
   three questions above, if not answered before; whether Safari and
@@ -822,13 +822,13 @@ turn back, in both engines.
   yet heard in VoiceOver"; and, if they wish, the CSV of 20 MB of work
   package 2 read in Firefox with `about:memory`, from the path the
   report gives.
-- [ ] 8.2 The rounds. Two are expected. Each change the owner asks for
+- [x] 8.2 The rounds. Two are expected. Each change the owner asks for
   goes into the screen spec first, then into the code, with its commit
   and its screenshots taken again; a change that reaches `src/core/`,
   the worker or `docs/functionality.md` is said to the owner as such and
   becomes a task of its own. After a round that changed the markup, the
   `accessibility`, `react` and `ux` reviewers run again.
-- [ ] 8.3 The owner accepts the screen, and the screen spec says what
+- [x] 8.3 The owner accepts the screen, and the screen spec says what
   the screen now is. The branch is merged into `main` when the owner
   says so.
 
@@ -1038,3 +1038,11 @@ of the decimal mark in the colours of a column, `site.yml`'s comment.
 skill's `categories.md` and an example of `writing-plans` name table_io
 as the reader of every individuals file; the history of 28 September
 2026 stays.
+
+### Work package 8, the owner's try, 9 October 2026
+
+The owner tried the page and found it right ("I have tried the page and
+it is OK"), with no change asked. On the one decision left to them, they
+chose to load the individuals' box and tab with the page, 278.6 KB
+gzipped, rather than at the first individuals file, recorded in
+`docs/technology.md`. Not tried by anyone: Firefox, Safari, VoiceOver.
