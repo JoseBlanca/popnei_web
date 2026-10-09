@@ -1115,3 +1115,12 @@ Chromium and WebKit the flows of `popgen2.html` (`popgen2Input` 70,
 flows of its tabs and of its shell 198, `--repeat-each=3` of
 `popgen2Tabs.spec.ts` 78; the screenshots of the row of tabs, read by
 the session.
+
+The rest of work package 8, 9 October 2026: commit edb515f. The same
+exact check of "1 second so far." in `SF7 D2` of
+`e2e/popgen2Filter.spec.ts` now takes the clock at any second from 1
+(`--repeat-each=5`, 10 of 10 in Chromium and WebKit); the three shots
+of `e2e/screens.spec.ts` that show a file being read hold the page's
+clock still and move it on by one second after the pick, as the shot of
+the thresholds' focus already did, so they still show "1 second so
+far." (10 of 10 in the screens run, read by the subagent).
