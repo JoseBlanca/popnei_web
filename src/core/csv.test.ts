@@ -1,13 +1,13 @@
 /**
- * The CSV of a table and of the bins of a histogram, and the names of
- * the downloaded files (docs/specs/widgets/downloads.md, "How it is
- * verified", with Vitest in node).
+ * The CSV of a table and of the bins of a histogram
+ * (docs/specs/widgets/downloads.md, "How it is verified", with Vitest in
+ * node); the names of the downloaded files are tested in fileNames.test.ts.
  */
 import { describe, expect, test } from "vitest";
 
-import { binsCsv, downloadName, tableCsv } from "./csv.ts";
+import { binsCsv, tableCsv } from "./csv.ts";
 
-describe("AP5 D1 the CSV of a table, of the bins of a histogram, and the names of the files", () => {
+describe("AP5 D1 the CSV of a table and of the bins of a histogram", () => {
   test("a table is written with its values in full, its texts quoted and guarded, and an empty field for null and NaN", () => {
     expect(
       tableCsv(
@@ -72,17 +72,5 @@ describe("AP5 D1 the CSV of a table, of the bins of a histogram, and the names o
     expect(() =>
       binsCsv(new Float64Array([0, 0.5, 1, 2]), new Uint32Array([3, 4]), null),
     ).toThrow(/popnei_web defect/u);
-  });
-
-  test("the name of a file is the stem, what is downloaded and the extension, joined by dots", () => {
-    expect(downloadName("panel", "pca.coordinates", "csv")).toBe(
-      "panel.pca.coordinates.csv",
-    );
-    expect(downloadName("panel_pops", "table", "csv")).toBe(
-      "panel_pops.table.csv",
-    );
-    expect(downloadName("panel", "maf_variants", "png")).toBe(
-      "panel.maf_variants.png",
-    );
   });
 });

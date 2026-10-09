@@ -6,8 +6,9 @@
  * and its data as the CSV the screen writes at the choice.
  */
 import type { ChartHandle } from "../../charts/types.ts";
-import { downloadName, tableCsv } from "../../core/csv.ts";
+import { tableCsv } from "../../core/csv.ts";
 import type { CellValue } from "../../core/csv.ts";
+import { downloadName } from "../../core/fileNames.ts";
 import { downloadFile, downloadText } from "../download.ts";
 
 /** One item of a menu of downloads: its words, and the function that

@@ -120,11 +120,14 @@ What each plot's CSV holds, written by the functions of core below:
 
 ### The names of the files
 
-`downloadName(stem, what, extension)`: the stem, a dot, what is
-downloaded, a dot, the extension, "panel.pca.coordinates.csv". The stem
-is that of the variants file, `variantsStem` of `src/core/fileNames.ts`,
-or, for the table of the individuals file, the name of that file
-without its extension, `panel_pops`. The `what` of each table and plot
+`downloadName(stem, what, extension)` of `src/core/fileNames.ts`, where
+the names of every file the application writes are made: the stem, a
+dot, what is downloaded, a dot, the extension,
+"panel.pca.coordinates.csv". The stem is that of the variants file,
+`variantsStem`, or, for the table of the individuals file,
+`individualsStem`, the name of that file without its last extension,
+`panel_pops` from `panel_pops.csv`, and "individuals" for a file named
+only by an extension, `.csv`. The `what` of each table and plot
 is the screen's (`docs/specs/steps/popgen2-pca.md`, "The downloads").
 
 ## The TypeScript interface
@@ -155,6 +158,15 @@ export function binsCsv(
   counts: Uint32Array | Float64Array,
   none: number | null,
 ): string;
+```
+
+The names of the files, in `src/core/fileNames.ts`, beside
+`variantsStem` and `writtenName`, pure and tested in node:
+
+```ts
+/** "panel_pops" from "panel_pops.csv": the name without its last extension, or
+    "individuals" when nothing is left. */
+export function individualsStem(name: string): string;
 
 /** "panel.pca.coordinates.csv" from "panel", "pca.coordinates", "csv". */
 export function downloadName(stem: string, what: string, extension: "csv" | "svg" | "png"): string;
@@ -241,7 +253,8 @@ A PNG is made by the browser from the SVG, asynchronously.
 
 ## How it is verified
 
-With Vitest, in node, at `tableCsv`, `binsCsv` and `downloadName`:
+With Vitest, in node, at `tableCsv`, `binsCsv`, `downloadName` and
+`individualsStem`:
 
 - `tableCsv(["individual", "PC1"], [["s000", -0.7138853335304419],
   ["a,\"b\"", null], ["=x", NaN], ["-A12", 1e-7]])` gives
@@ -252,6 +265,8 @@ With Vitest, in node, at `tableCsv`, `binsCsv` and `downloadName`:
   line `,,2`.
 - `downloadName("panel", "pca.coordinates", "csv")` is
   `panel.pca.coordinates.csv`.
+- `individualsStem("panel_pops.csv")` is `panel_pops`, and
+  `individualsStem(".csv")` is `individuals`.
 
 With Vitest and React Testing Library, the widgets in a page simulated
 in node: a `SortableTable` of three rows sorted descending by a number

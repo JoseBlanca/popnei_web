@@ -1,10 +1,13 @@
 /**
- * The stem of the name of a variants file, which the files the
- * application writes are named after: the project file
+ * The names of the files the application writes. The stem of the name of
+ * a variants file, which they are named after: the project file
  * (docs/specs/core/projectFile.md, `projectFileName`), the download of
  * a table (docs/specs/analyses/diversity.md, "What it shows"), and the
  * written file of the filtered variants
- * (docs/specs/analyses/writeVariants.md, "The functions of core").
+ * (docs/specs/analyses/writeVariants.md, "The functions of core"); the
+ * stem of an individuals file; and the name of a file the menu
+ * "Download…" of a table or a plot saves (docs/specs/widgets/downloads.md,
+ * "The names of the files").
  */
 
 import { filtersApplied } from "./filtersApplied.ts";
@@ -53,4 +56,34 @@ export function writtenName(p: Project, format: WriteFormat): string {
       return filtered ? `${stem}.filtered.nei` : `${stem}.nei`;
     }
   }
+}
+
+/** The stem of the name of an individuals file that is only an
+    extension, `.csv`. */
+const INDIVIDUALS_FALLBACK_STEM = "individuals";
+
+/** The last extension of a name, a dot and what follows it with no
+    other dot. */
+const LAST_EXTENSION = /\.[^.]*$/u;
+
+/**
+ * The name of an individuals file without its last extension, whatever
+ * it is, since the picker takes any file: `panel_pops.csv` gives
+ * `panel_pops`; or `individuals` when nothing is left, for a file named
+ * `.csv`. The stem of the download of the table of that file
+ * (docs/specs/widgets/downloads.md, "The names of the files").
+ */
+export function individualsStem(name: string): string {
+  const stem = name.replace(LAST_EXTENSION, "");
+  return stem === "" ? INDIVIDUALS_FALLBACK_STEM : stem;
+}
+
+/** The name of a downloaded file, "panel.pca.coordinates.csv" from
+    "panel", "pca.coordinates" and "csv". */
+export function downloadName(
+  stem: string,
+  what: string,
+  extension: "csv" | "svg" | "png",
+): string {
+  return `${stem}.${what}.${extension}`;
 }

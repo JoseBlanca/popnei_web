@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { variantsStem, writtenName } from "./fileNames.ts";
+import {
+  downloadName,
+  individualsStem,
+  variantsStem,
+  writtenName,
+} from "./fileNames.ts";
 import type { Project } from "./project.ts";
 import { deepFreeze, sampleProject, withPassedOn } from "./testSupport.ts";
 
@@ -128,5 +133,31 @@ describe("DL3 D1 the name of the written file in either format", () => {
     const p = deepFreeze<Project>({ ...sampleProject(), variants: null });
     expect(writtenName(p, "vcf")).toBe("project.filtered.vcf.gz");
     expect(writtenName(p, "nei")).toBe("project.nei");
+  });
+});
+
+describe("AP5 D1 the names of the downloaded files", () => {
+  test("the name of a file is the stem, what is downloaded and the extension, joined by dots", () => {
+    expect(downloadName("panel", "pca.coordinates", "csv")).toBe(
+      "panel.pca.coordinates.csv",
+    );
+    expect(downloadName("panel_pops", "table", "csv")).toBe(
+      "panel_pops.table.csv",
+    );
+    expect(downloadName("panel", "maf_variants", "png")).toBe(
+      "panel.maf_variants.png",
+    );
+  });
+
+  test("the stem of an individuals file is its name without its extension", () => {
+    expect(individualsStem("panel_pops.csv")).toBe("panel_pops");
+    expect(individualsStem("panel_pops.XLSX")).toBe("panel_pops");
+    expect(individualsStem("panel.pops.tsv")).toBe("panel.pops");
+    expect(individualsStem("panel_pops")).toBe("panel_pops");
+  });
+
+  test("the stem of an individuals file named only by an extension is individuals", () => {
+    expect(individualsStem(".csv")).toBe("individuals");
+    expect(individualsStem("")).toBe("individuals");
   });
 });

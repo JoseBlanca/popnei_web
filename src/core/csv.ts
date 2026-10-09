@@ -1,10 +1,10 @@
 /**
- * The CSV of a table and of the data of a plot, and the names of the
- * files a download saves (docs/specs/widgets/downloads.md, "A table", "A
- * plot" and "The names of the files"). A table's CSV holds the values as
- * stored, every row in the order shown, so that a spreadsheet, R or
- * Python reads the numbers the application calculated, not the texts it
- * rounds for the screen.
+ * The CSV of a table and of the data of a plot
+ * (docs/specs/widgets/downloads.md, "A table" and "A plot"); the names of
+ * the files a download saves are in fileNames.ts. A table's CSV holds the
+ * values as stored, every row in the order shown, so that a spreadsheet,
+ * R or Python reads the numbers the application calculated, not the texts
+ * it rounds for the screen.
  */
 import { csvField } from "./analyses/words.ts";
 
@@ -83,14 +83,4 @@ function edgeAt(edges: Readonly<Float64Array>, index: number): number {
     );
   }
   return edge;
-}
-
-/** The name of a downloaded file, "panel.pca.coordinates.csv" from
-    "panel", "pca.coordinates" and "csv". */
-export function downloadName(
-  stem: string,
-  what: string,
-  extension: "csv" | "svg" | "png",
-): string {
-  return `${stem}.${what}.${extension}`;
 }
