@@ -470,8 +470,8 @@ export interface StoreConfig<J, R, F = never> {
       and a history of the filters"): true on popgen2.html, which draws
       no notice; false when absent. `applyAfresh` stands on the first
       half: a notice names its cause and offers an Undo, which a change
-      that leaves nothing to undo cannot give, so it is a defect on a
-      store made without this. The one pass of that page reads no filter,
+      that leaves nothing to undo cannot give, so only a store made with
+      this has it, a `Popgen2Store`. The one pass of that page reads no filter,
       so no change stops it. */
   readonly stopLeftBehind?: boolean;
 }
@@ -513,30 +513,6 @@ export interface Store<R, F = never> {
       waiting before the opening (src/ui/variants/thresholdRun.ts) opens
       from the project with that change. */
   open(make: (current: Project) => Project): void;
-  /** Applies `command` to the current project as `apply` does, stopping
-      what it leaves behind, and then starts the history afresh at the
-      project it gives, with nothing to undo or redo, counting one in
-      `historyMoves`; nothing changes when it gives the project it was
-      given. popgen2.html sends through it the changes of its
-      individuals file, which are no steps of its Undo
-      (docs/specs/core/store.md, "On popgen2.html: no notice, and a
-      history of the filters"). A defect on a store made without
-      `stopLeftBehind`, where a change can make a notice that offers an
-      Undo this leaves nothing for. */
-  applyAfresh(command: (p: Project) => Project): void;
-  /** The page chose `column` as the column of the populations at the
-      read of the individuals file of the load `fileId`, a choice that is
-      no change of the user's: the grouping `{ kind: "populations",
-      column }` is written, as a read is recorded, into every project of
-      the history whose individuals file is that load with a read of kind
-      `read` and whose grouping is the one the present project has; a
-      project with another grouping keeps it. It makes no step, counts
-      nothing in `historyMoves`, and stops at once, as a read does, a
-      calculation whose key the present project no longer gives; nothing
-      changes when the present project does not hold that load read.
-      popgen2.html sends it from its entry (docs/specs/entry.md, "The
-      column of the populations on popgen2.html"). */
-  populationColumnChosen(fileId: string, column: string): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -595,6 +571,37 @@ export interface Store<R, F = never> {
     runId: number,
     outcome: Outcome<R | Written<F>>,
   ): readonly Run<R | Written<F>>[];
+}
+
+/** The store of popgen2.html, made with `stopLeftBehind`: the store, and
+    the two changes of the project that leave no step, which only a
+    store that makes no notice has. A notice names its cause and offers
+    an Undo, which neither could give, so the store of popgen.html,
+    made without the setting, has neither (docs/specs/core/store.md, "On
+    popgen2.html: no notice, and a history of the filters"). */
+export interface Popgen2Store<R, F = never> extends Store<R, F> {
+  /** Applies `command` to the current project as `apply` does, stopping
+      what it leaves behind, and then starts the history afresh at the
+      project it gives, with nothing to undo or redo, counting one in
+      `historyMoves`; nothing changes when it gives the project it was
+      given. popgen2.html sends through it the changes of its
+      individuals file, which are no steps of its Undo
+      (docs/specs/core/store.md, "On popgen2.html: no notice, and a
+      history of the filters"). */
+  applyAfresh(command: (p: Project) => Project): void;
+  /** The page chose `column` as the column of the populations at the
+      read of the individuals file of the load `fileId`, a choice that is
+      no change of the user's: the grouping `{ kind: "populations",
+      column }` is written, as a read is recorded, into every project of
+      the history whose individuals file is that load with a read of kind
+      `read` and whose grouping is the one the present project has; a
+      project with another grouping keeps it. It makes no step, counts
+      nothing in `historyMoves`, and stops at once, as a read does, a
+      calculation whose key the present project no longer gives; nothing
+      changes when the present project does not hold that load read.
+      popgen2.html sends it from its entry (docs/specs/entry.md, "The
+      column of the populations on popgen2.html"). */
+  populationColumnChosen(fileId: string, column: string): void;
 }
 
 /** What the cache keeps under a key: a result with the warnings it
@@ -735,8 +742,16 @@ type WrittenKept<F> = Extract<
  * the owner decided on 28 September 2026 they do not.
  */
 export function createStore<J, R, F = never>(
+  config: StoreConfig<J, R, F> & { readonly stopLeftBehind: true },
+): Popgen2Store<R, F>;
+/** The store of a page made without `stopLeftBehind`, as popgen.html's,
+    which has neither `applyAfresh` nor `populationColumnChosen`. */
+export function createStore<J, R, F = never>(
   config: StoreConfig<J, R, F>,
-): Store<R, F> {
+): Store<R, F>;
+export function createStore<J, R, F = never>(
+  config: StoreConfig<J, R, F>,
+): Store<R, F> | Popgen2Store<R, F> {
   const defs = config.analyses;
   const ids = new Set<AnalysisId>();
   for (const def of defs) {
@@ -2436,7 +2451,7 @@ export function createStore<J, R, F = never>(
     }
   };
 
-  return {
+  const store: Store<R, F> = {
     getState: () => state,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -2486,54 +2501,6 @@ export function createStore<J, R, F = never>(
       history = opened;
       historyMoves += 1;
       changed();
-    },
-    applyAfresh: (command) => {
-      if (!stopLeftBehind) {
-        throw defect(
-          "applyAfresh was called on a store made without stopLeftBehind, where a change can make a notice that names its cause and offers an Undo that applyAfresh leaves nothing for.",
-        );
-      }
-      const present = history.present.project;
-      const next = command(present);
-      if (next === present) {
-        return;
-      }
-      // A history of its own, applied as a command is: what it leaves
-      // behind is stopped and no notice is made, since the setting is on.
-      // Its keys are made before the count moves, as `open` makes them,
-      // so that a defect while they are made leaves the count as it was.
-      const fresh = startHistory(freezeProject(next), history.maxSteps);
-      keysFor(fresh.present.project, popneiVersion);
-      historyMoves += 1;
-      changedByUser(fresh, () => ({
-        kind: "command",
-        description: "",
-      }));
-    },
-    populationColumnChosen: (fileId, column) => {
-      const present = history.present.project;
-      if (
-        present.individuals?.fileId !== fileId ||
-        present.individuals.read.kind !== "read"
-      ) {
-        return;
-      }
-      // setGrouping refuses a grouping the project could not hold; its
-      // object is then shared by every project it is written into.
-      const chosen = setGrouping(present, { kind: "populations", column });
-      if (chosen === present) {
-        return;
-      }
-      const found = canonical(present.grouping, null);
-      moved(
-        mapProjects(history, (p) =>
-          p.individuals?.fileId === fileId &&
-          p.individuals.read.kind === "read" &&
-          canonical(p.grouping, null) === found
-            ? freezeProject({ ...p, grouping: chosen.grouping })
-            : p,
-        ),
-      );
     },
     dismissNotice: () => {
       if (notice === null) {
@@ -2761,6 +2728,56 @@ export function createStore<J, R, F = never>(
       return sent;
     },
   };
+  if (!stopLeftBehind) {
+    return store;
+  }
+  const popgen2: Popgen2Store<R, F> = {
+    ...store,
+    applyAfresh: (command) => {
+      const present = history.present.project;
+      const next = command(present);
+      if (next === present) {
+        return;
+      }
+      // A history of its own, applied as a command is: what it leaves
+      // behind is stopped and no notice is made, since the setting is on.
+      // Its keys are made before the count moves, as `open` makes them,
+      // so that a defect while they are made leaves the count as it was.
+      const fresh = startHistory(freezeProject(next), history.maxSteps);
+      keysFor(fresh.present.project, popneiVersion);
+      historyMoves += 1;
+      changedByUser(fresh, () => ({
+        kind: "command",
+        description: "",
+      }));
+    },
+    populationColumnChosen: (fileId, column) => {
+      const present = history.present.project;
+      if (
+        present.individuals?.fileId !== fileId ||
+        present.individuals.read.kind !== "read"
+      ) {
+        return;
+      }
+      // setGrouping refuses a grouping the project could not hold; its
+      // object is then shared by every project it is written into.
+      const chosen = setGrouping(present, { kind: "populations", column });
+      if (chosen === present) {
+        return;
+      }
+      const found = canonical(present.grouping, null);
+      moved(
+        mapProjects(history, (p) =>
+          p.individuals?.fileId === fileId &&
+          p.individuals.read.kind === "read" &&
+          canonical(p.grouping, null) === found
+            ? freezeProject({ ...p, grouping: chosen.grouping })
+            : p,
+        ),
+      );
+    },
+  };
+  return popgen2;
 }
 
 /** Throws a defect when the statistics `stats` are not of the

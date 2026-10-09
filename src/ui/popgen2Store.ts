@@ -27,7 +27,7 @@ import type { IndividualStats } from "../core/individualsKept.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
-import type { Store, StoreConfig } from "../core/store.ts";
+import type { Popgen2Store, Store, StoreConfig } from "../core/store.ts";
 import type { Job, JobResult } from "../worker/protocol.ts";
 
 /** The one group of the analyses the page starts by itself, which the
@@ -62,7 +62,7 @@ export interface Popgen2StoreDeps {
 /** Makes the store of the new page. It sends nothing while it is made. */
 export function createPopgen2Store(
   deps: Popgen2StoreDeps,
-): Store<JobResult, Blob> {
+): Popgen2Store<JobResult, Blob> {
   return createStore<Job, JobResult, Blob>({
     first: popgen2FirstProject(),
     analyses: POPGEN2_ANALYSES,

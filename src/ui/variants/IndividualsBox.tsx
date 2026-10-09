@@ -32,7 +32,7 @@ import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { useAnnouncer } from "../shell/announcer.tsx";
 import { PICKER_ENDINGS } from "../steps/individuals/words.ts";
 import type { StepCommand } from "../steps/variants/commands.ts";
-import { useAppState, useStore } from "../store.tsx";
+import { useAppState, usePopgen2Store, useStore } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { FileZone } from "../widgets/FileZone.tsx";
 import { Problem } from "../widgets/Problem.tsx";
@@ -103,7 +103,7 @@ export function IndividualsBox({
   tab,
 }: IndividualsBoxProps): React.JSX.Element {
   const headingId = useId();
-  const store = useStore();
+  const store = usePopgen2Store();
   const files = useFiles();
   const announcer = useAnnouncer();
   const openButton = useRef<HTMLButtonElement>(null);

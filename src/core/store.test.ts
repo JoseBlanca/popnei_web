@@ -53,7 +53,9 @@ import type {
   AnalysisError,
   AnalysisStatus,
   AppState,
+  Popgen2Store,
   Store,
+  StoreConfig,
   WriteStatus,
 } from "./store.ts";
 import {
@@ -255,15 +257,27 @@ function counter(): {
   };
 }
 
+/** A store of `storeWithTouchyKeys`, of type `S`, and the switch of its
+    defect. */
+type Touchy<S extends Store<TestResult>> = Omit<
+  ReturnType<typeof newStore>,
+  "store"
+> & {
+  readonly store: S;
+  readonly boom: { on: boolean };
+};
+
 /** A store whose analysis of the variants throws a defect in its
     `keyInputs` for a MAF filter at 0.42, or whenever `boom.on` is set:
     popnei 0.1.0, the variants file loaded and read; made with
     `stopLeftBehind` when it is given true. */
-function storeWithTouchyKeys(stopLeftBehind = false): ReturnType<
-  typeof newStore
-> & {
-  readonly boom: { on: boolean };
-} {
+function storeWithTouchyKeys(): Touchy<Store<TestResult>>;
+function storeWithTouchyKeys(
+  stopLeftBehind: true,
+): Touchy<Popgen2Store<TestResult>>;
+function storeWithTouchyKeys(
+  stopLeftBehind = false,
+): Touchy<Store<TestResult>> {
   const { analyses, calls } = fakeAnalyses();
   const [pops, vars] = analyses;
   if (pops === undefined || vars === undefined) {
@@ -283,7 +297,7 @@ function storeWithTouchyKeys(stopLeftBehind = false): ReturnType<
     },
   };
   const { send, sent, log } = fakeSend();
-  const store = createStore({
+  const config: StoreConfig<TestJob, TestResult> = {
     first: emptyProject("popgen"),
     analyses: [pops, touchy],
     send,
@@ -294,8 +308,10 @@ function storeWithTouchyKeys(stopLeftBehind = false): ReturnType<
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
-    stopLeftBehind,
-  });
+  };
+  const store = stopLeftBehind
+    ? createStore({ ...config, stopLeftBehind: true })
+    : createStore(config);
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
   store.variantsRead(VARIANTS_ID, VARIANTS_READ);
@@ -8247,6 +8263,14 @@ function popgen2PcaResult(): PcaResult {
   };
 }
 
+/** A store of `popgen2Store`, of type `S`, with the requests it sent. */
+interface Popgen2Made<S extends Store<JobResult, string>> {
+  readonly store: S;
+  readonly sent: Popgen2Sent[];
+  /** Ends the request `request` done with `result`. */
+  readonly end: (request: Popgen2Sent | undefined, result: JobResult) => void;
+}
+
 /**
  * The store of popgen2.html as `createPopgen2Store` of
  * src/ui/popgen2Store.ts makes it, which core's tests do not import: its
@@ -8255,12 +8279,15 @@ function popgen2PcaResult(): PcaResult {
  * sends that record each request and its `cancel()` and never end one.
  * popnei is ready and panel.nei opened and read.
  */
-function popgen2Store(stopLeftBehind: boolean): {
-  readonly store: Store<JobResult, string>;
-  readonly sent: Popgen2Sent[];
-  /** Ends the request `request` done with `result`. */
-  readonly end: (request: Popgen2Sent | undefined, result: JobResult) => void;
-} {
+function popgen2Store(
+  stopLeftBehind: true,
+): Popgen2Made<Popgen2Store<JobResult, string>>;
+function popgen2Store(
+  stopLeftBehind: false,
+): Popgen2Made<Store<JobResult, string>>;
+function popgen2Store(
+  stopLeftBehind: boolean,
+): Popgen2Made<Store<JobResult, string>> {
   const sent: Popgen2Sent[] = [];
   const record = (key: string, what: string): Popgen2Sent => {
     let cancels = 0;
@@ -8278,7 +8305,7 @@ function popgen2Store(stopLeftBehind: boolean): {
   };
   const handles = new Map<number, () => void>();
   const never = <T>(): Promise<Outcome<T>> => new Promise(() => undefined);
-  const store = createStore<Job, JobResult, string>({
+  const config: StoreConfig<Job, JobResult, string> = {
     first: popgen2FirstProject(),
     analyses: POPGEN2_ANALYSES,
     send: (key, job): Run<JobResult> => {
@@ -8316,8 +8343,10 @@ function popgen2Store(stopLeftBehind: boolean): {
     cacheMaxBytes: 1_000_000_000,
     maxUndoSteps: 100,
     keptNoneStep: null,
-    ...(stopLeftBehind ? { stopLeftBehind: true } : {}),
-  });
+  };
+  const store = stopLeftBehind
+    ? createStore({ ...config, stopLeftBehind: true })
+    : createStore(config);
   store.popneiReady("0.2.2");
   store.open((p) =>
     setAnalysisOptions(
@@ -8658,19 +8687,20 @@ describe("AP3 D1 applyAfresh on the store of popgen2.html", () => {
     expect(after.undo).toBe("the MAF filter changed again");
   });
 
-  test("applyAfresh on a store made without the setting: a defect, and nothing changed", () => {
+  test("a store made without the setting, as popgen.html's, has neither applyAfresh nor populationColumnChosen", () => {
     const made = popgen2Store(false);
-    const before = made.store.getState();
-    expect(() => {
-      made.store.applyAfresh(loadPops);
-    }).toThrow(/^popnei_web defect: applyAfresh/);
-    expect(made.store.getState()).toBe(before);
+    // @ts-expect-error -- the type of the store of popgen.html has no applyAfresh
+    const afresh: unknown = made.store.applyAfresh;
+    // @ts-expect-error -- nor populationColumnChosen
+    const chosen: unknown = made.store.populationColumnChosen;
+    expect(afresh).toBeUndefined();
+    expect(chosen).toBeUndefined();
   });
 });
 
 describe("AP3 D1 the column the page chooses at a read, recorded into the history with no step", () => {
   /** Loads pops.csv as the individuals file, with nothing to undo. */
-  const openPops = (store: Store<JobResult, string>): void => {
+  const openPops = (store: Popgen2Store<JobResult, string>): void => {
     store.applyAfresh((p) =>
       loadIndividuals(p, {
         fileId: INDIVIDUALS_ID,

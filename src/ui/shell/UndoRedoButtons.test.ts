@@ -17,7 +17,7 @@ import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { setVariantFilter } from "../../core/project.ts";
-import type { Store } from "../../core/store.ts";
+import type { Popgen2Store, Store } from "../../core/store.ts";
 import type { JobResult, Outcome, Run } from "../../worker/protocol.ts";
 import { createPopgen2Store } from "../popgen2Store.ts";
 import { StoreProvider } from "../store.tsx";
@@ -55,7 +55,7 @@ afterEach(() => {
 
 /** The store of the page, gated, and its gate. */
 interface Page {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2Store<JobResult, Blob>;
   readonly gate: RunGate;
 }
 

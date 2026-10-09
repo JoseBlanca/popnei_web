@@ -6,12 +6,16 @@
  */
 import { createContext, useContext, useSyncExternalStore } from "react";
 
-import type { AppState, Store } from "../core/store.ts";
+import type { AppState, Popgen2Store, Store } from "../core/store.ts";
 import type { JobResult } from "../worker/protocol.ts";
 
 // The store of the application holds the results of its workers,
-// JobResult, and the file of the filtered variants they wrote, a Blob.
-const StoreContext = createContext<Store<JobResult, Blob> | null>(null);
+// JobResult, and the file of the filtered variants they wrote, a Blob;
+// on popgen2.html it is the store made with no notice, which has the
+// changes that leave no step.
+const StoreContext = createContext<
+  Store<JobResult, Blob> | Popgen2Store<JobResult, Blob> | null
+>(null);
 
 /** Gives the store to every component under it. */
 export const StoreProvider = StoreContext.Provider;
@@ -21,6 +25,19 @@ export function useStore(): Store<JobResult, Blob> {
   const store = useContext(StoreContext);
   if (store === null) {
     throw new Error("popnei_web defect: useStore outside a StoreProvider");
+  }
+  return store;
+}
+
+/** The store of popgen2.html, with the changes that leave no step.
+    Throws a defect outside a `StoreProvider`, and under one that gives
+    the store of popgen.html, which has none of them. */
+export function usePopgen2Store(): Popgen2Store<JobResult, Blob> {
+  const store = useContext(StoreContext);
+  if (store === null || !("applyAfresh" in store)) {
+    throw new Error(
+      "popnei_web defect: usePopgen2Store outside a StoreProvider of the store of popgen2.html",
+    );
   }
   return store;
 }

@@ -19,7 +19,7 @@
  * typed in the box of a threshold and not yet committed, as the old page
  * does before an opening.
  */
-import type { Store } from "../../core/store.ts";
+import type { Popgen2Store } from "../../core/store.ts";
 
 /** The quiet time after the last press of a run that ends it, in
     milliseconds. */
@@ -123,9 +123,9 @@ export function createRunGate(): RunGate {
     is given a project made before the gate changed it. The rest is the
     store's own. */
 export function gatedStore<R, F>(
-  store: Store<R, F>,
+  store: Popgen2Store<R, F>,
   gate: RunGate,
-): Store<R, F> {
+): Popgen2Store<R, F> {
   return {
     ...store,
     apply: (description, command) => {

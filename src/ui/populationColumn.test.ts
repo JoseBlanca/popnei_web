@@ -17,7 +17,7 @@ import {
   setThreshold,
 } from "../core/project.ts";
 import type { IndividualsReadGiven, Project } from "../core/project.ts";
-import type { Store } from "../core/store.ts";
+import type { Popgen2Store } from "../core/store.ts";
 import type {
   Cell,
   CsvOptions,
@@ -98,7 +98,7 @@ function loadId(n: number): string {
     entry's watch of the store itself, what it said and the columns it
     chose, each sent as `populationColumnChosen`. */
 function page(): {
-  readonly store: Store<JobResult, Blob>;
+  readonly store: Popgen2Store<JobResult, Blob>;
   readonly gate: ReturnType<typeof createRunGate>;
   readonly said: string[];
   readonly chosen: () => number;
@@ -122,7 +122,7 @@ function page(): {
   // The entry's own store, the store itself and not the gated one, which
   // counts what it sends; the test's commands go to `store`, as the
   // screens' do.
-  const counted: Store<JobResult, Blob> = {
+  const counted: Popgen2Store<JobResult, Blob> = {
     ...raw,
     populationColumnChosen: (fileId, column) => {
       chosen += 1;
@@ -140,7 +140,7 @@ function page(): {
 }
 
 /** Opens `panel.nei` in `store`, read with its 200 individuals. */
-function openVariants(store: Store<JobResult, Blob>): void {
+function openVariants(store: Popgen2Store<JobResult, Blob>): void {
   const fileId = "ffffffffffffffffffffffffffffffff";
   store.apply("a new variants file was loaded", (p) =>
     loadVariants(p, {
@@ -163,7 +163,7 @@ function openVariants(store: Store<JobResult, Blob>): void {
 /** Opens the individuals file `name` as the load `fileId`, as the box
     does, with nothing to undo after it. */
 function openIndividuals(
-  store: Store<JobResult, Blob>,
+  store: Popgen2Store<JobResult, Blob>,
   fileId: string,
   name = "panel_pops.csv",
 ): void {
@@ -173,7 +173,7 @@ function openIndividuals(
 /** Records the read `read` of the load `fileId` with the options the
     project holds, and lets the entry's microtask run. */
 async function recorded(
-  store: Store<JobResult, Blob>,
+  store: Popgen2Store<JobResult, Blob>,
   fileId: string,
   read: IndividualsReadGiven,
 ): Promise<void> {
@@ -188,7 +188,7 @@ function columnOf(p: Project): string | null | undefined {
 }
 
 /** Chooses "None" in the list, as the screen does. */
-function chooseNone(store: Store<JobResult, Blob>): void {
+function chooseNone(store: Popgen2Store<JobResult, Blob>): void {
   store.apply("the column of the populations changed", (p) =>
     setGrouping(p, { kind: "populations", column: null }),
   );
@@ -197,7 +197,7 @@ function chooseNone(store: Store<JobResult, Blob>): void {
 /** Sets the separator of the CSV, as the select of the tab does, with
     nothing to undo after it. */
 function setSeparator(
-  store: Store<JobResult, Blob>,
+  store: Popgen2Store<JobResult, Blob>,
   separator: CsvOptions["separator"],
 ): void {
   store.applyAfresh((p) => setCsvOptions(p, { ...AUTO, separator }));

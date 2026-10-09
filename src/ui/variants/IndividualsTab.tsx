@@ -51,7 +51,7 @@ import {
   separatorItems,
   undecodedText,
 } from "../steps/individuals/words.ts";
-import { useAppState, useStore } from "../store.tsx";
+import { useAppState, usePopgen2Store } from "../store.tsx";
 import { Button } from "../widgets/Button.tsx";
 import { Select } from "../widgets/Select.tsx";
 import { SortableTable } from "../widgets/SortableTable.tsx";
@@ -219,7 +219,7 @@ function ReadOptions({
   found,
   isUtf16,
 }: ReadOptionsProps): React.JSX.Element {
-  const store = useStore();
+  const store = usePopgen2Store();
   const send = (
     option: "encoding" | "separator" | "decimal",
     next: CsvOptions,

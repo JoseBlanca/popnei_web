@@ -449,10 +449,15 @@ the notice on a page without the setting. Then the history starts
 afresh at the new project, with nothing to undo or redo, and
 `historyMoves` counts one, as an opening does. A command that gives the
 project it was given changes nothing, the history included. It takes
-no description, since it makes no step to name, and so it is a defect
-on a store made without `stopLeftBehind`, where a change can make a
-notice, which names its cause and offers an Undo that `applyAfresh`
-leaves nothing for.
+no description, since it makes no step to name, and so a store made
+without `stopLeftBehind`, where a change can make a notice, which names
+its cause and offers an Undo that `applyAfresh` leaves nothing for, has
+no `applyAfresh`: `createStore` given `stopLeftBehind: true` gives a
+`Popgen2Store`, the store with `applyAfresh` and
+`populationColumnChosen`, and otherwise a `Store`, which has neither, so
+a call on the store of `popgen.html` does not compile. Until the review
+of 9 October 2026 the method was on every store and threw a defect on
+that one.
 
 `popgen2.html` sends through it the changes of its individuals file
 the user makes (`docs/specs/steps/popgen2-input.md`, "What it sends and
@@ -1380,7 +1385,7 @@ export function createStore<J, R, F = never>(config: {
       behind (above, "On popgen2.html: no notice, and a history of the filters"); true on
       popgen2.html, false when absent. */
   readonly stopLeftBehind?: boolean;
-}): Store<R, F>;
+}): Store<R, F>;   // a Popgen2Store<R, F> when given stopLeftBehind: true
 
 /** What the store takes from the pass of a result. */
 export interface PassFound<R> {
@@ -1419,15 +1424,6 @@ export interface Store<R, F = never> {
       current one, so that a page that commits a change before an opening
       opens from it (popgen2.html's runs of the arrow keys). */
   open(make: (current: Project) => Project): void;
-  /** Applies `command` as `apply` does, and then starts the history afresh at the project it
-      gives, with nothing to undo or redo, counting one in `historyMoves`; nothing changes when
-      it gives the project it was given. */
-  applyAfresh(command: (p: Project) => Project): void;
-  /** The page chose `column` as the column of the populations of the read of the individuals
-      file of the load `fileId`: the grouping written into every project of the history that
-      holds that load read and the present project's grouping, with no step (above,
-      "On popgen2.html: no notice, and a history of the filters"). */
-  populationColumnChosen(fileId: string, column: string): void;
   /** Closes the notice, and stops the calculations it left behind. */
   dismissNotice(): void;
 
@@ -1462,6 +1458,19 @@ export interface Store<R, F = never> {
   /** Gives the handles it sent because of this end: the requests of the
       Runs that waited for these statistics. */
   runEnded(runId: number, outcome: Outcome<R | Written<F>>): readonly Run<R | Written<F>>[];
+}
+
+/** The store of popgen2.html, made with stopLeftBehind: the two changes that leave no step. */
+export interface Popgen2Store<R, F = never> extends Store<R, F> {
+  /** Applies `command` as `apply` does, and then starts the history afresh at the project it
+      gives, with nothing to undo or redo, counting one in `historyMoves`; nothing changes when
+      it gives the project it was given. */
+  applyAfresh(command: (p: Project) => Project): void;
+  /** The page chose `column` as the column of the populations of the read of the individuals
+      file of the load `fileId`: the grouping written into every project of the history that
+      holds that load read and the present project's grouping, with no step (above,
+      "On popgen2.html: no notice, and a history of the filters"). */
+  populationColumnChosen(fileId: string, column: string): void;
 }
 ```
 
@@ -1968,7 +1977,10 @@ analyses:
 - A PCA in flight, the colour of the points changed, which its key does
   not hold: no `cancel()`, still `running`.
 - The same three on a store made without the setting: the notices of
-  the old page, unchanged; `applyAfresh` there, a defect.
+  the old page, unchanged, with a result given after the change and an
+  undo; that store has no `applyAfresh` and no
+  `populationColumnChosen`, a type error (`@ts-expect-error`) and
+  `undefined` at run time.
 - `applyAfresh` of `loadIndividuals` after two threshold steps: the
   project has the individuals file, `undo` and `redo` `null`,
   `historyMoves` one more; the one pass in flight not cancelled. A

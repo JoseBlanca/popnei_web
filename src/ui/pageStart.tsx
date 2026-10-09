@@ -146,8 +146,8 @@ export interface Senders {
 }
 
 /** The store, the worker client and the files of a page. */
-export interface Connected {
-  readonly store: Store<JobResult, Blob>;
+export interface Connected<S extends Store<JobResult, Blob>> {
+  readonly store: S;
   readonly client: Client;
   readonly files: Files;
 }
@@ -160,9 +160,9 @@ export interface Connected {
  * that popnei's wasm loads while the user looks for their file, and the
  * files of the page over it.
  */
-export function connectStore(
-  makeStore: (senders: Senders) => Store<JobResult, Blob>,
-): Connected {
+export function connectStore<S extends Store<JobResult, Blob>>(
+  makeStore: (senders: Senders) => S,
+): Connected<S> {
   let client: Client | null = null;
   const madeClient = (): Client => {
     if (client === null) {

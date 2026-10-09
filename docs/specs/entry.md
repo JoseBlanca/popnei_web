@@ -534,7 +534,7 @@ the entry of `popgen2.html` alone:
     sends the column of the populations the page chooses, and says each
     read with `announce`. Gives the function that stops it. */
 export function choosePopulationColumns(deps: {
-  store: Pick<Store<JobResult, Blob>, "getState" | "subscribe" | "populationColumnChosen">;
+  store: Pick<Popgen2Store<JobResult, Blob>, "getState" | "subscribe" | "populationColumnChosen">;
   announce: (words: string) => void;
 }): () => void;
 ```

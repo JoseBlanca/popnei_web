@@ -20,7 +20,7 @@ import type {
   Project,
   TableRead,
 } from "../core/project.ts";
-import type { Store } from "../core/store.ts";
+import type { Popgen2Store } from "../core/store.ts";
 import type { CsvOptions, JobResult } from "../worker/protocol.ts";
 import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
 
@@ -47,7 +47,7 @@ import { individualsReadAnnouncement } from "./variants/individualsWords.ts";
  */
 export function choosePopulationColumns(deps: {
   readonly store: Pick<
-    Store<JobResult, Blob>,
+    Popgen2Store<JobResult, Blob>,
     "getState" | "subscribe" | "populationColumnChosen"
   >;
   readonly announce: (words: string) => void;
