@@ -938,7 +938,7 @@ test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in 
   await chooseIn(page, panel, "Separator", "Semicolon");
   await expect(
     individualsBox(page).getByText(
-      "panel_pops.csv has no column to choose as the column of the populations besides the names of the individuals. If it has more, choose its separator in the Individuals tab.",
+      "panel_pops.csv was read as a single column, the names of the individuals, so it has no column of the populations to choose. If its columns are separated by another character, choose that separator in the Individuals tab.",
       { exact: true },
     ),
   ).toBeVisible({ timeout: 20_000 });
@@ -1022,6 +1022,10 @@ test("IN6 D2 the table of the file sorted by a header and scrolled, the other ta
         .sort((a, b) => a.y - b.y);
       return headers[0]?.text ?? "none";
     });
+  // Waits for the rows of the scrolled place drawn: the table draws only
+  // the rows in view, and in WebKit read "none" between the scroll and
+  // their drawing, once on 9 October 2026.
+  await expect.poll(firstInView).toMatch(/^s\d{3}$/u);
   await expect.poll(firstInView).not.toBe("s004");
   const before = await firstInView();
   await expectAxeBothSchemes(page, makeAxeBuilder);
