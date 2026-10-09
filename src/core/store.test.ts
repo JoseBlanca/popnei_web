@@ -8500,6 +8500,38 @@ describe("AP3 D1 stopLeftBehind on the store of popgen2.html", () => {
     expect(pcaOf(after).kind).toBe("removed");
   });
 
+  test("without the setting, a PCA done, the threshold moved, then undo: done with the same result, no notice, nothing sent", () => {
+    const made = popgen2Store(false);
+    passDone(made);
+    made.store.startRun("pca");
+    const result = popgen2PcaResult();
+    made.end(made.sent[1], result);
+    moveMissing(made.store, 0.2);
+    expect(made.store.getState().notice?.removed).toEqual(["pca"]);
+    made.store.undo();
+    const back = made.store.getState();
+    const pca = pcaOf(back);
+    expect(pca.kind === "done" ? pca.result : null).toBe(result);
+    expect(back.notice).toBeNull();
+    expect(made.sent).toHaveLength(2);
+  });
+
+  test("without the setting, a PCA in flight, the threshold moved, its result given after: not cancelled, the PCA not done under the new key; undo: done, from the cache", () => {
+    const made = popgen2Store(false);
+    passDone(made);
+    made.store.startRun("pca");
+    moveMissing(made.store, 0.2);
+    expect(made.store.getState().notice?.leftBehind).toEqual(["pca"]);
+    const result = popgen2PcaResult();
+    made.end(made.sent[1], result);
+    expect(made.sent[1]?.cancels()).toBe(0);
+    expect(pcaOf(made.store.getState()).kind).toBe("ready");
+    made.store.undo();
+    const back = pcaOf(made.store.getState());
+    expect(back.kind === "done" ? back.result : null).toBe(result);
+    expect(made.sent).toHaveLength(2);
+  });
+
   test("without the setting, a PCA in flight, the threshold moved: not cancelled, left behind in the notice; the colour changed: still running", () => {
     const made = popgen2Store(false);
     passDone(made);
