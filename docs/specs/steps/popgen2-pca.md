@@ -759,11 +759,14 @@ along the labels, greyed ones among them, and Home and End go to the
 first and the last; then
 the content of the tab shown. In the PCA tab: the method; the missing
 data, its field while stricter; the MAF, the same; the LD switch and
-its two fields; Run or Stop; the warnings; the bar of controls; the
-legend; the link to the table; the explained variance with its
-"Download…"; the plot's "Download…" before the bar of controls, beside
-the title; the table with its "Download…". Each "Download…" comes before
-what it downloads, where it is drawn.
+its two fields; Run or Stop; the warnings; the plot's "Download…",
+beside the title of the plot; the bar of controls; the legend; the link
+to the table; the "Download…" of the explained variance; the
+"Download…" of the table of the individuals, then the table. Each
+"Download…" comes before what it downloads, where it is drawn. (Until
+10 October 2026 this list put the plot's "Download…" after the
+explained variance, which is not the order drawn; the review of work
+package 6 of the plan found it.)
 
 **A greyed tab** (4.1.2, 2.1.1, 1.3.1): it carries `aria-disabled`, set
 by the widget, and its reason as its description, so a screen reader

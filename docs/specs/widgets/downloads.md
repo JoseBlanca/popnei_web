@@ -117,10 +117,19 @@ nothing to mark them. The CSV:
 
 ### A plot
 
-The React wrappers of the plots, `HistogramPlot` of
-`src/ui/widgets/`, and `ScatterPlot` and `Pca3dView` of
-`src/ui/analyses/pca/`, take an optional `download`. With it they draw
-the menu above the plot's top right corner, with three items:
+`HistogramPlot` of `src/ui/widgets/` takes an optional `download`, and
+with it draws the menu on a line of its own above the plot, or where the
+screen places it with `arrange`: the histograms of `popgen2.html` put it
+under the row of the threshold's box, so that the plot keeps the box its
+line is placed against. The PCA's plot is one of two plots at a time,
+the 2D scatter or the 3D view, so its menu belongs to neither: the
+result of the PCA, `PcaResults` of `src/ui/analyses/pca/`, draws one
+menu beside the title of the plot, "Principal components of
+panel.nei", before the bar of controls, and `ScatterPlot` and
+`Pca3dView` take no download. Each gives the result the handle of its
+plot by `onHandle` when it creates the plot, and `null` when it destroys
+it. Every menu of a plot has three items, made by `plotItems` of
+`src/ui/widgets/downloadItems.ts`:
 
 - **"Image as SVG"**: `toSVG()` of the plot's handle, the plot as drawn,
   in the colours of the light theme, with its legend and its threshold's
@@ -132,10 +141,18 @@ the menu above the plot's top right corner, with three items:
   function called at the choice, so that a CSV is written only when it
   is asked for.
 
-The handle of the plot comes from `usePlot`, which gives it beside the
-element's ref; the 2D scatter and the 3D view, which mount their plots
-themselves, keep their handle in a ref already and give it to the menu.
-The plots of `src/charts` do not change.
+`plotItems` reads the handle at the choice, from an object whose
+`current` is the handle or `null`: the histogram's comes from `usePlot`,
+which gives it beside the element's ref, and the PCA's is that of the
+plot drawn at the choice, the 3D view's or the scatter's. It takes only
+the exports of the handle, `toSVG` and `toPNG`, whatever the data the
+plot draws, so that one menu serves the two plots of the PCA. A choice
+while it holds no handle is a defect: the menu of the 3D view waits
+until three.js has drawn it ("The cases"). The plots of `src/charts` do
+not change. (Until 10 October 2026 this part said that the three
+wrappers took a `download` each and drew the menu above the plot; the
+review of work package 6 of `docs/plans/analyses-pca.md` found the
+design built otherwise, as above.)
 
 What each plot's CSV holds, written by the functions of core below:
 
@@ -245,7 +262,23 @@ export interface PlotDownload {
   readonly csv: () => string;
   readonly waiting: string | null;
 }
-// HistogramPlotProps, ScatterPlotProps and Pca3dViewProps gain: readonly download?: PlotDownload.
+// HistogramPlotProps gains: readonly download?: PlotDownload, and readonly arrange?, which
+// places the menu and the plot's element.
+
+/** The exports of a plot's handle, whatever the data it draws. */
+export type PlotExports = Pick<ChartHandle<unknown>, "toSVG" | "toPNG">;
+
+/** The three items of a plot, whose images come from the handle `handle` holds at the
+    choice; a defect when it holds none. */
+export function plotItems(
+  download: PlotDownload,
+  handle: { readonly current: PlotExports | null },
+): readonly DownloadItem[];
+
+// ScatterPlotProps gains: readonly onHandle?: (handle: ChartHandle<ScatterData> | null) => void;
+// Pca3dViewProps has: readonly onHandle: (handle: Pca3dHandle | null) => void.
+// The PCA's result gives its menu `waiting` itself, "Download once the 3D view is drawn.",
+// and its PlotDownload `waiting: null`.
 ```
 
 `usePlot` gives the handle beside the ref:
