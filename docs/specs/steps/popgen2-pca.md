@@ -544,6 +544,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a number above the Variants tab's | "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
+| an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants file (`src/core/analyses/fileRefusals.ts`), with "in the box Variants file" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants file."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants file.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants file." |
+| an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants file, or another file." |
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with one population, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
@@ -715,8 +717,10 @@ engines that start on the owner's Mac, on `panel.nei`,
   the Variants tab's missing rate moved to 0.03: the field shows 0.03,
   with the line, and back to 0.1: the field shows 0.05 again. The MAF
   made stricter at 0.9, the missing data as in the Variants tab: 510
-  variants, PC1 3.68%. The LD pruning turned off: 1,200 variants, PC1
-  7.61%, and the warning of no LD pruning.
+  variants, PC1 3.68%. The MAF set back to as in the Variants tab, then
+  the LD pruning turned off: 1,200 variants, PC1 7.61%, and the warning
+  of no LD pruning (with the MAF of 0.9 left on, popnei 0.2.2 gives
+  1,102 variants and PC1 7.98%).
 - **The PCoA**, with the LD pruning at r² 0.1 within 50,000: "PC1
   (3.68%)" and "PC2 (3.54%)", the warning of the correction with
   "7.87%", "0.047", "53%" and "0.22", and the line under the explained
