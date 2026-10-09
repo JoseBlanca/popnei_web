@@ -30,9 +30,12 @@ export type StatsPart = "variants" | "individuals";
     fails. */
 export const STATS_NAME = "Statistics of the file";
 
-/** The headings of the two parts of the section. */
-export const VARIANTS_HEADING = "Variants";
-export const INDIVIDUALS_HEADING = "Individuals";
+/** The headings of the two parts of the section, which name their
+    filters: "Variants" and "Individuals" until 9 October 2026, the names
+    two tabs of the page took then (docs/specs/steps/popgen2-filters.md,
+    "Its words"). */
+export const VARIANTS_HEADING = "Filters of the variants";
+export const INDIVIDUALS_HEADING = "Filters of the individuals";
 
 /** The four histograms of the variants, in the order they are drawn. */
 export const VARIANT_STATISTICS: readonly VariantStatistic[] = Object.freeze([

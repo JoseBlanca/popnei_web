@@ -111,8 +111,8 @@ function descriptions(page: Page): Locator {
   return stats(page).locator("svg.chart desc");
 }
 
-/** The part of the section under the heading `name`, "Variants" or
-    "Individuals". */
+/** The part of the section under the heading `name`, "Filters of the
+    variants" or "Filters of the individuals". */
 function part(page: Page, name: string): Locator {
   return stats(page)
     .getByRole("heading", { level: 2, name })
@@ -172,8 +172,8 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
 
   await drawn(page);
   await expect(stats(page).getByRole("heading", { level: 2 })).toHaveText([
-    "Variants",
-    "Individuals",
+    "Filters of the variants",
+    "Filters of the individuals",
   ]);
   expect(await titles(page)).toEqual(TITLES);
   // Each axis over the range of its values rounded out, the missing rates
@@ -294,10 +294,14 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
   // Both parts say they were stopped, and the section has no bar nor
   // button of its own.
   await expect(
-    part(page, "Variants").getByText(STOPPED_PART, { exact: true }),
+    part(page, "Filters of the variants").getByText(STOPPED_PART, {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
-    part(page, "Individuals").getByText(STOPPED_PART, { exact: true }),
+    part(page, "Filters of the individuals").getByText(STOPPED_PART, {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(stats(page).getByRole("progressbar")).toHaveCount(0);
@@ -332,12 +336,12 @@ test("FS2 the statistics come from the pass of the count: the Stop of the box st
     .poll(async () => started(await announced(page)))
     .toBe(startsBefore + 1);
   await expect(
-    part(page, "Variants").getByText(
+    part(page, "Filters of the variants").getByText(
       /^Calculating the statistics of the variants…( \d+%)?$/u,
     ),
   ).toBeVisible();
   await expect(
-    part(page, "Individuals").getByText(
+    part(page, "Filters of the individuals").getByText(
       /^Calculating the statistics of the individuals…( \d+%)?$/u,
     ),
   ).toBeVisible();
@@ -419,10 +423,14 @@ test("FS2 a crash of the worker during the pass: the box says the variants could
     "The variants of panel.vcf.gz could not be counted, nor their statistics calculated.";
   await expect(info(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
   await expect(
-    part(page, "Variants").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the variants").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
-    part(page, "Individuals").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the individuals").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect
     .poll(() => announced(page))

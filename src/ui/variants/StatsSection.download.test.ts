@@ -323,7 +323,7 @@ describe("the section of the statistics while its code downloads", () => {
     // are drawn with the pass finished, so that the code of the plots
     // arriving moves neither.
     expect(shownText(sectionOf())).toBe(
-      "VariantsCalculating the statistics of the variants…IndividualsCalculating the statistics of the individuals…Download the missing genotypes and heterozygosity of each individual (CSV)Download filtered variants…",
+      "Filters of the variantsCalculating the statistics of the variants…Filters of the individualsCalculating the statistics of the individuals…Download the missing genotypes and heterozygosity of each individual (CSV)Download filtered variants…",
     );
     expect(page.shown).toEqual([]);
     expect(saidOfStats(page)).toEqual([]);

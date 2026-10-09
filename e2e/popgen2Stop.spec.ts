@@ -46,7 +46,10 @@ function info(page: Page): Locator {
 }
 
 /** The part of the section under the heading `name`. */
-function part(page: Page, name: "Variants" | "Individuals"): Locator {
+function part(
+  page: Page,
+  name: "Filters of the variants" | "Filters of the individuals",
+): Locator {
   return stats(page)
     .getByRole("heading", { level: 2, name })
     .locator("xpath=..");
@@ -109,7 +112,10 @@ async function stop(page: Page): Promise<void> {
 async function places(page: Page): Promise<readonly number[]> {
   const elements = [
     ...(await stats(page).locator("svg.chart").all()),
-    stats(page).getByRole("heading", { level: 2, name: "Individuals" }),
+    stats(page).getByRole("heading", {
+      level: 2,
+      name: "Filters of the individuals",
+    }),
     stats(page).getByRole("checkbox"),
     page.getByRole("button", { name: /^Open (another )?variants file…$/u }),
   ];
@@ -160,7 +166,10 @@ for (const width of [null, 320] as const) {
     }
 
     await stop(page);
-    for (const name of ["Variants", "Individuals"] as const) {
+    for (const name of [
+      "Filters of the variants",
+      "Filters of the individuals",
+    ] as const) {
       await expect(
         part(page, name).getByText(STOPPED_WITH_PLOTS, { exact: true }),
       ).toBeVisible();
@@ -227,7 +236,9 @@ test("SF10 D2 a threshold moved over the plots of a Stop changes the project, an
   await expect(line).not.toHaveClass(keepsAll);
   await expect(maf.locator("rect.chart-bar-removed")).not.toHaveCount(0);
   await expect(
-    part(page, "Variants").getByText(STOPPED_WITH_PLOTS, { exact: true }),
+    part(page, "Filters of the variants").getByText(STOPPED_WITH_PLOTS, {
+      exact: true,
+    }),
   ).toBeVisible();
 
   await box.fill(top);
@@ -252,12 +263,14 @@ test("SF10 D2 Start again drops the plots of the Stop and reads the file again",
   await expect(info(page).getByRole("button", { name: "Stop" })).toBeFocused();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(
-    part(page, "Variants").getByText(
+    part(page, "Filters of the variants").getByText(
       /^Calculating the statistics of the variants…( \d+%)?$/u,
     ),
   ).toBeVisible();
   await expect(
-    part(page, "Variants").getByText(STOPPED_WITH_PLOTS, { exact: true }),
+    part(page, "Filters of the variants").getByText(STOPPED_WITH_PLOTS, {
+      exact: true,
+    }),
   ).toBeHidden();
 
   await release(page, "allSoFar");
@@ -293,7 +306,9 @@ test("SF10 D2 another file drops the plots of the Stop", async ({
     expect(description).not.toMatch(/before the Stop/u);
   }
   await expect(
-    part(page, "Variants").getByText(STOPPED_WITH_PLOTS, { exact: true }),
+    part(page, "Filters of the variants").getByText(STOPPED_WITH_PLOTS, {
+      exact: true,
+    }),
   ).toBeHidden();
 });
 
@@ -304,7 +319,10 @@ test("SF10 D2 a Stop before the first result so far leaves no plots and the word
   test.setTimeout(120_000);
   await openHeld(page, testInfo.outputPath("stop.vcf.gz"));
   await stop(page);
-  for (const name of ["Variants", "Individuals"] as const) {
+  for (const name of [
+    "Filters of the variants",
+    "Filters of the individuals",
+  ] as const) {
     await expect(
       part(page, name).getByText(STOPPED, { exact: true }),
     ).toBeVisible();
@@ -324,10 +342,14 @@ test("SF10 D2 a failure of the pass after Start again shows no plot of the Stop"
   await info(page).getByRole("button", { name: "Start again" }).click();
   await release(page, "crash");
   await expect(
-    part(page, "Variants").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the variants").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible({ timeout: 30_000 });
   await expect(
-    part(page, "Individuals").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the individuals").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(stats(page).locator("svg.chart")).toHaveCount(0);
   await expect(stats(page).getByText(/before the Stop/u)).toHaveCount(0);

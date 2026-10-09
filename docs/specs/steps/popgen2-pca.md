@@ -530,6 +530,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | where | the words |
 |---|---|
 | the tabs | "Variants"; "Individuals"; "PCA"; "Populations"; "Distances" |
+| the headings of the two parts of the Variants tab, "Variants" and "Individuals" before 9 October 2026, which named the tabs a second time | "Filters of the variants"; "Filters of the individuals" (`popgen2-filters.md`, "Its words") |
 | the row of tabs, for a screen reader | "Files and analyses" |
 | PCA, no variants file | "The PCA needs a variants file. Open one in the box Variants file." |
 | PCA, a file being opened | "The PCA needs a variants file: panel.nei is being opened." |

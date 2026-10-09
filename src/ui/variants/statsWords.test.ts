@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  INDIVIDUALS_HEADING,
   PART_FAILED,
   PART_STOPPED,
   PART_STOPPED_WITH_PLOTS,
@@ -20,9 +21,15 @@ import {
   variantFullTitle,
   variantThresholdName,
   variantTitle,
+  VARIANTS_HEADING,
 } from "./statsWords.ts";
 
 describe("the words of the statistics of the open file", () => {
+  test("the headings of the two parts name their filters, not the tabs Variants and Individuals", () => {
+    expect(VARIANTS_HEADING).toBe("Filters of the variants");
+    expect(INDIVIDUALS_HEADING).toBe("Filters of the individuals");
+  });
+
   test("the line of a part while the pass runs names its statistics, with the share once known", () => {
     expect(statsRunningLine("variants", null)).toBe(
       "Calculating the statistics of the variants…",

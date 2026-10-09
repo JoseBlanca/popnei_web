@@ -148,11 +148,13 @@ test("SF7 D2 the box is there and ticked for panel.vcf.gz and for low_qual.nei o
   await pick(page, "panel.vcf.gz");
   await expectDone(page, "panel.vcf.gz");
   await expect(
-    part(page, "Variants").getByRole("checkbox"),
+    part(page, "Filters of the variants").getByRole("checkbox"),
   ).toHaveAccessibleName(LABEL);
   await expect(filterBox(page)).toBeChecked();
   await expect(filterBox(page)).toHaveAccessibleDescription(SENTENCE);
-  await expect(part(page, "Variants").getByText(SENTENCE)).toBeVisible();
+  await expect(
+    part(page, "Filters of the variants").getByText(SENTENCE),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 
   await pick(page, "panel.nei");
@@ -284,7 +286,9 @@ test("SF7 D2 after a crash of the pass the box is there, and a click leaves the 
     "The variants of low_qual.vcf.gz could not be counted, nor their statistics calculated.";
   await expect(info(page).getByText(failed)).toBeVisible({ timeout: 20_000 });
   await expect(
-    part(page, "Variants").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the variants").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(filterBox(page)).toBeChecked();
 
@@ -293,7 +297,9 @@ test("SF7 D2 after a crash of the pass the box is there, and a click leaves the 
   await expect(notice(page)).toHaveCount(0);
   await expect(info(page).getByText(failed)).toBeVisible();
   await expect(
-    part(page, "Variants").getByText("Not calculated.", { exact: true }),
+    part(page, "Filters of the variants").getByText("Not calculated.", {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     info(page).getByRole("button", { name: "Start again" }),
@@ -307,8 +313,8 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   await openPage(page);
   await pick(page, "panel.vcf.gz");
   await expectDone(page, "panel.vcf.gz");
-  const variants = part(page, "Variants");
-  const individuals = part(page, "Individuals");
+  const variants = part(page, "Filters of the variants");
+  const individuals = part(page, "Filters of the individuals");
   // The expected heterozygosity, the fourth, has no threshold.
   await expect(variants.getByRole("slider")).toHaveCount(3);
 
@@ -347,7 +353,7 @@ test("SF7 D2 the box shown while the code of the plots downloads keeps the focus
   await pick(page, "low_qual.vcf.gz");
   await expect(filterBox(page)).toBeChecked();
   await expect(
-    part(page, "Variants").getByText(
+    part(page, "Filters of the variants").getByText(
       /^Calculating the statistics of the variants…/u,
     ),
   ).toBeVisible();

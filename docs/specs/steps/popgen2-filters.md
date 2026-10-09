@@ -144,8 +144,8 @@ when").
 
 ### The order of the page
 
-From the top: the heading "Popnei"; the box of the file; the part "Variants", its four histograms and, once the opening of
-the file has said that it records the FILTER of its variants, the check box of the FILTER column; the part "Individuals", its two
+From the top: the heading "Popnei"; the box of the file; the part "Filters of the variants", its four histograms and, once the opening of
+the file has said that it records the FILTER of its variants, the check box of the FILTER column; the part "Filters of the individuals", its two
 histograms and the download of their table; "Open another variants
 file…". Until 8 October 2026 a row of Undo and Redo stood between the
 heading and the box of the file, there before any file was opened, both
@@ -525,7 +525,7 @@ no line and no box: popnei has no filter on it.
 ### The FILTER box
 
 A check box, "Leave out the variants that failed their FILTER", at the
-end of the part "Variants", after its four histograms, with one sentence
+end of the part "Filters of the variants", after its four histograms, with one sentence
 under it: "The plots show every variant. The ones that failed are left
 out of what is downloaded or analysed." Ticking the box changes nothing
 on the page but the box, and the sentence says why. On by default. It is a check box and not a switch because it takes
@@ -664,6 +664,13 @@ runs and after a Stop. It holds no value of a filter of its own but the
 number being dragged, typed or moved by a run of keys.
 
 ## Its words
+
+The headings of the two parts were "Variants" and "Individuals" until 9
+October 2026, when the row of five tabs of `popgen2-pca.md` gave two of
+its tabs the same names; they are "Filters of the variants" and "Filters
+of the individuals" since, so that the reason of the Distances tab,
+"Loosen the filters of the individuals in the Variants tab", names a
+heading the user can find.
 
 | where | the words |
 |---|---|

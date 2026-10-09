@@ -49,7 +49,7 @@ moved under the tab and otherwise unchanged; their terms are used here.
   file to its end: not while it runs, not after a Stop, not after a
   failure.
 - **The filters of the individuals** are the two thresholds of the part
-  "Individuals" of the Variants tab, on the missing rate and the
+  "Filters of the individuals" of the Variants tab, on the missing rate and the
   observed heterozygosity of each individual. **The individuals kept**
   are those they keep; the store works them out from the finished one
   pass, and knows them with no pass when neither threshold is on
@@ -288,8 +288,8 @@ line still shows.
 
 What `popgen2-filters.md` and `popgen2-download.md` give under the box,
 unchanged, but for "Open another variants file…", now in the box: the
-part "Variants", its four histograms and the FILTER box; the part
-"Individuals", its two histograms and the download of their table; the
+part "Filters of the variants", its four histograms and the FILTER box;
+the part "Filters of the individuals", its two histograms and the download of their table; the
 download of the filtered variants. With no variants file: "No variants
 file open. Open one in the box Variants file."
 
