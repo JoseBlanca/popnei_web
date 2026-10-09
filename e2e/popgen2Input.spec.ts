@@ -4,8 +4,9 @@
  * docs/specs/steps/popgen2-input.md, "The order of the page", "Both tabs
  * kept drawn", "Accessibility" and "How it is checked"): the tabs by the
  * keyboard alone; a threshold, its line and its plot as they were after a
- * turn to the other tab and back, and a number typed and refused kept in
- * its box; the tab not shown never reached by the Tab key; the status
+ * turn to the other tab and back, and a number typed in the box of a
+ * threshold with no Enter applied as the focus goes to the tab, its line
+ * moved to it; the tab not shown never reached by the Tab key; the status
  * region speaking of the plots while their tab is hidden; the boxes side
  * by side at 1280 pixels and one above the other at 320, with no sideways
  * scroll; the focus on the button after an opening; axe on each tab, light
@@ -257,7 +258,7 @@ test("IN3 D2 the plots of a hidden tab: a window resized with the other tab show
   expect(line.y + line.height).toBeLessThanOrEqual(plot.y + plot.height);
 });
 
-test("IN3 D2 a number typed in the box of a threshold, with no Enter, is kept through a turn to the other tab by the mouse and back, with its line moved to it", async ({
+test("IN3 D2 a number typed in the box of a threshold, with no Enter, is applied as the focus goes to the other tab by the mouse, and found applied after the turn back, with its line moved to it", async ({
   page,
 }) => {
   await openDone(page, "panel.vcf.gz");
