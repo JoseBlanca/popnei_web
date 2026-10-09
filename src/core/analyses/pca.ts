@@ -34,6 +34,7 @@ import {
   populationsNeeds,
   populationsOf,
   shown,
+  thresholdIsOff,
   variantFilterNeeds,
 } from "../project.ts";
 import { filtersApplied } from "../filtersApplied.ts";
@@ -387,7 +388,9 @@ const FILTERS: Readonly<
  * has none. On popgen2.html, the PCA's own missing data and MAF filters
  * narrow the Variants tab's: each is given with the smaller of its value
  * and the Variants tab's, which keeps exactly the variants the two filters
- * one after the other would; its LD filter keeps the old rule. On both, a
+ * one after the other would, but for a value of 1 while the Variants
+ * tab has that filter off, which is no filter, as a threshold at 1 is off
+ * in the Variants tab; its LD filter keeps the old rule. On both, a
  * filter that follows puts nothing of its own in the list, the FILTER
  * column and the observed heterozygosity are always the dataset's, and an
  * LD filter with no distance is copied as it is, which `needs` locks on.
@@ -430,8 +433,12 @@ export function pcaFilters(
  * it follows the Variants tab: the missing data and the MAF given the
  * smaller of the PCA's value and the Variants tab's, the stricter, when
  * the Variants tab has that filter on, `dataset`, and the PCA's value
- * alone when it has it off; the LD filter, the FILTER column and the
- * observed heterozygosity as `ownFilter` gives them.
+ * alone when it has it off, but `null` for a value of `THRESHOLD_OFF_AT`
+ * then, which "Stricter for the PCA" starts at and which is off in the
+ * Variants tab, so that the choice alone changes no key
+ * (docs/specs/steps/popgen2-pca.md, "Its filters"); the LD filter, the
+ * FILTER column and the observed heterozygosity as `ownFilter` gives
+ * them.
  */
 function stricterFilter(
   kind: ProjectVariantFilter["kind"],
@@ -444,6 +451,9 @@ function stricterFilter(
         return null;
       }
       const own = o.missingData.maxAllowedMissingRate;
+      if (dataset === undefined && thresholdIsOff(own)) {
+        return null;
+      }
       return Object.freeze({
         kind,
         maxAllowedMissingRate:
@@ -457,6 +467,9 @@ function stricterFilter(
         return null;
       }
       const own = o.maf.maxAllowedMaf;
+      if (dataset === undefined && thresholdIsOff(own)) {
+        return null;
+      }
       return Object.freeze({
         kind,
         maxAllowedMaf:

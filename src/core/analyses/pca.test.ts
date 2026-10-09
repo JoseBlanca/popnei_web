@@ -616,6 +616,58 @@ describe("AP2 D2 the key of the PCA on popgen2.html", () => {
   });
 });
 
+describe("AP6 D1 pcaFilters on popgen2.html, the PCA's own value of 1 with the Variants tab's threshold off", () => {
+  const ld50k = { follow: false, maxAllowedR2: 0.1, maxDist: 50_000 };
+  /** A project of popgen2.html with the Variants tab's filters
+      `filters` and the PCA's options `options` over PCA2_DEFAULTS. */
+  const withOptions = (
+    filters: readonly ProjectVariantFilter[],
+    options: Partial<PcaOptions>,
+  ): Project => project({ filters, options: { ld: ld50k, ...options } });
+
+  test("the missing data off and the PCA's own at 1: no filter of the missing data, the key as when the PCA follows", () => {
+    const following = withOptions([], {});
+    const own = withOptions([], {
+      missingData: { follow: false, maxAllowedMissingRate: 1 },
+    });
+    expect(
+      pcaFilters(own.filters, pcaOptions(own, "popgen2"), "popgen2"),
+    ).toEqual([{ kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 }]);
+    expect(keyOfPca(own, "0.2.2", pcaOnPopgen2)).toBe(
+      keyOfPca(following, "0.2.2", pcaOnPopgen2),
+    );
+  });
+
+  test("the MAF off and the PCA's own at 1: no MAF filter, the key as when the PCA follows; at 0.99, a MAF filter", () => {
+    const following = withOptions([missing(0.1)], {});
+    const at = (maf: number): Project =>
+      withOptions([missing(0.1)], {
+        maf: { follow: false, maxAllowedMaf: maf },
+      });
+    expect(
+      pcaFilters(at(1).filters, pcaOptions(at(1), "popgen2"), "popgen2"),
+    ).toEqual([
+      { kind: "missing_data", maxAllowedMissingRate: 0.1 },
+      { kind: "ld", maxAllowedR2: 0.1, maxDist: 50_000 },
+    ]);
+    expect(keyOfPca(at(1), "0.2.2", pcaOnPopgen2)).toBe(
+      keyOfPca(following, "0.2.2", pcaOnPopgen2),
+    );
+    expect(
+      pcaFilters(at(0.99).filters, pcaOptions(at(0.99), "popgen2"), "popgen2"),
+    ).toContainEqual({ kind: "maf", maxAllowedMaf: 0.99 });
+  });
+
+  test("the old page keeps a MAF of the PCA's own at 1 as a filter at 1", () => {
+    const p = withOptions([missing(0.1)], {
+      maf: { follow: false, maxAllowedMaf: 1 },
+    });
+    expect(
+      pcaFilters(p.filters, pcaOptions(p, "popgen"), "popgen"),
+    ).toContainEqual({ kind: "maf", maxAllowedMaf: 1 });
+  });
+});
+
 describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
   /** The PCA's LD pruning on at r² 0.1 within 50,000, as the flows of
       popgen2.html set it. */
