@@ -379,6 +379,16 @@ individuals and runs nothing until the file is fixed. The file may hold
 individuals that are not in the variants, which are ignored, so that one
 file can serve several variant files of the same collection.
 
+On `popgen2.html` an individual of the variants file that is not in the
+file is not an error, as the owner decided on 9 October 2026: it is
+unclassified, as is one whose cell in the column of the populations is
+empty, and without a file every individual is, so that every analysis
+can be done with any file. The page counts the individuals of each
+population and the unclassified, and names those not in the file. How
+the analyses per population treat the unclassified is decided with them
+(`docs/designs/input-page.md`, a draft of 9 October 2026, open question
+4). `popgen.html` keeps the rule above.
+
 ### The format
 
 Most users make these files in Excel, whose default file is `.xlsx`, and

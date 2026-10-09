@@ -37,7 +37,10 @@ Revised on 9 October 2026 for the download of the filtered variants on
 October 2026" at its end, and in the list of what section 6 asks
 of popnei and point 5 of section 13, with the measurements of that
 day; that piece is built on the branch `download`
-(`docs/plans/download.md`) and not yet tried by the owner. What was
+(`docs/plans/download.md`) and not yet tried by the owner. Revised
+on 9 October 2026 in section 6, "The individuals file", for the
+individuals file on `popgen2.html`, from `docs/designs/input-page.md`,
+a draft not yet approved. What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -1844,6 +1847,19 @@ core and the reader describe it in one way.
   reader does not check it, since it does not know the variants.
 
 With a CSV, the light worker loads no wasm at all.
+
+What was revised on 9 October 2026, from `docs/designs/input-page.md`, a
+draft not yet approved by the owner. On `popgen2.html` the bullet
+"Every individual of the variants must be in the file" does not hold,
+as the owner decided that day: an individual of the variants file that
+is not in the individuals file is unclassified, as is one whose cell in
+the column of the populations is empty, and every individual is
+without a file. That page counts the individuals of each population in
+core, from the project and the individuals kept, and calls no
+`individualsNeeds`, which `popgen.html` keeps with its rule. The page
+shows the two files in a box each and in two tabs, "Variants file" and
+"Individuals file", of which only the tab shown is drawn (section 7, "a
+tab that is open").
 
 ### Who asks for a read
 
