@@ -5764,6 +5764,92 @@ for (const theme of ["light", "dark"] as const) {
         await save(page, `popgen2-undo-redo${at}-${theme}`);
       });
 
+      test("the PCA tab locked: Run waits for the one pass, held", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.goto("popgen2.html");
+        await pickOnNewPage(page, "panel.nei");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        await expect(
+          page.getByRole("tabpanel").getByRole("button", { name: "Run" }),
+        ).toHaveAccessibleDescription(/^Run once panel\.nei is read/u);
+        await page.mouse.move(0, 0);
+        await save(page, `popgen2-pca-locked${at}-${theme}`);
+      });
+
+      test("the PCA tab ready: a distance typed, Run", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await page
+          .getByRole("tablist", { name: "Files and analyses" })
+          .getByRole("tab", { name: "PCA", exact: true })
+          .click();
+        const panel = page.getByRole("tabpanel");
+        const run = panel.getByRole("button", { name: "Run", exact: true });
+        await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
+          timeout: 20_000,
+        });
+        const field = panel.getByRole("textbox", {
+          name: /^Distance within which variants are compared/u,
+        });
+        await field.fill("50000");
+        await field.press("Enter");
+        await expect(run).toBeEnabled();
+        await page.mouse.click(1, 1);
+        await save(page, `popgen2-pca-ready${at}-${theme}`);
+      });
+
+      for (const shot of ["running", "undo-waiting"] as const) {
+        test(`a PCA held running: ${shot === "running" ? "its tab with Stop, the bar and its options greyed" : "Undo greyed, its reason shown on the focus"}`, async ({
+          page,
+        }) => {
+          await holdSummary(page, { holdPca: true });
+          await page.goto("popgen2.html");
+          await pickOnNewPage(page, "panel.nei");
+          await release(page, "allSoFar");
+          await release(page, "result");
+          await page
+            .getByRole("tablist", { name: "Files and analyses" })
+            .getByRole("tab", { name: "PCA", exact: true })
+            .click();
+          const panel = page.getByRole("tabpanel");
+          const run = panel.getByRole("button", { name: "Run", exact: true });
+          await expect(run).toHaveAccessibleDescription(/^The LD pruning/u, {
+            timeout: 20_000,
+          });
+          const field = panel.getByRole("textbox", {
+            name: /^Distance within which variants are compared/u,
+          });
+          await field.fill("50000");
+          await field.press("Enter");
+          await run.click();
+          await expect(
+            panel.getByRole("progressbar", { name: "Calculating the PCA" }),
+          ).toHaveAttribute("aria-valuenow", /^[1-9]\d*$/u, {
+            timeout: 20_000,
+          });
+          if (shot === "running") {
+            await page.mouse.move(0, 0);
+            await save(page, `popgen2-pca-running${at}-${theme}`);
+            return;
+          }
+          const undo = page.getByRole("button", { name: "Undo", exact: true });
+          await undo.focus();
+          // Out and back by the keyboard, which shows the tooltip.
+          await page.keyboard.press("Shift+Tab");
+          await page.keyboard.press("Tab");
+          await expect(page.getByRole("tooltip")).toHaveText(
+            "Stop the PCA to change the filters.",
+          );
+          await save(page, `popgen2-undo-waiting${at}-${theme}`, {
+            fullPage: false,
+          });
+        });
+      }
+
       test("a VCF whose ploidy could not be read", async ({ page }) => {
         await pickOnNewPage(page, "no_ploidy.vcf.gz");
         await expect(
