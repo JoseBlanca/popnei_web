@@ -23,6 +23,7 @@ import { useAnnouncer } from "../../shell/announcer.tsx";
 import { loadPca3d, loadedPca3d } from "./load3d.ts";
 import type { Pca3dModule } from "./load3d.ts";
 import styles from "./PcaResults.module.css";
+import { whenShown } from "./whenShown.ts";
 import { CONTEXT_LOST, LOADING_3D } from "./words.ts";
 
 /** Why the 3D view could not be drawn: its download failed, or the
@@ -145,32 +146,4 @@ export function Pca3dView({
       )}
     </div>
   );
-}
-
-/** Whether `element` is shown: not in a tab hidden, nor under another
-    element of no display. A browser without `checkVisibility`, as jsdom,
-    is taken to show it. */
-function isShown(element: HTMLElement): boolean {
-  return typeof element.checkVisibility === "function"
-    ? element.checkVisibility()
-    : true;
-}
-
-/** Calls `then` once `element` is shown, at once when it is; gives the
-    function that stops waiting. A hidden element is shown when it gains
-    a size, which its ResizeObserver tells. */
-function whenShown(element: HTMLElement | null, then: () => void): () => void {
-  if (element === null || isShown(element)) {
-    then();
-    return () => undefined;
-  }
-  const observer = new ResizeObserver(() => {
-    if (!isShown(element)) return;
-    observer.disconnect();
-    then();
-  });
-  observer.observe(element);
-  return () => {
-    observer.disconnect();
-  };
 }

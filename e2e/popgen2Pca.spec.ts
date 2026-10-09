@@ -1060,4 +1060,76 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
     const after = await canvas.screenshot();
     expect(after.equals(before)).toBe(true);
   });
+
+  test("AP6 D3 in a browser without checkVisibility, as Safari before 17.4, a run that ends while the tab is hidden says only that the PCA was calculated, and its 3D view loads unsaid", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      Reflect.deleteProperty(Element.prototype, "checkVisibility");
+    });
+    await recordAnnouncements(page);
+    await openHeld(page, "panel.nei");
+    await typeDistance(page, "50000");
+    await runHeld(page);
+    await tab(page, "Variants").click();
+    const view3d = page.waitForResponse(/\/pca3d-[^/]*\.js$/u, {
+      timeout: RESULT_TIMEOUT,
+    });
+    await release(page, "pca");
+    await expect
+      .poll(
+        async () =>
+          (await announced(page)).some((text) =>
+            text.includes("PCA of panel.nei calculated."),
+          ),
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+    // The 3D view's code arrived while the tab is hidden.
+    await view3d;
+    expect(
+      (await announced(page)).filter((text) => text.includes("3D view")),
+    ).toEqual([]);
+
+    await tab(page, "PCA").click();
+    await expect(tableCaptionOf(page)).toBeVisible();
+  });
+
+  test("AP6 D3 the 3D view that could not be downloaded while the tab is hidden is said when the tab is shown, not before", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.route(/\/pca3d-[^/]*\.js(\?.*)?$/u, (route) => route.abort());
+    await recordAnnouncements(page);
+    await openHeld(page, "panel.nei");
+    await typeDistance(page, "50000");
+    await runHeld(page);
+    await tab(page, "Variants").click();
+    await release(page, "pca");
+    // The failure drawn in the hidden tab, its words over the 2D plot.
+    // A paragraph, where the status region's text is not.
+    const failed = page.locator("p", {
+      hasText: /^The 3D view could not be loaded/u,
+    });
+    await expect(failed).toHaveCount(1, { timeout: RESULT_TIMEOUT });
+    expect(
+      (await announced(page)).filter((text) =>
+        text.includes("The 3D view could not be loaded"),
+      ),
+    ).toEqual([]);
+
+    await tab(page, "PCA").click();
+    await expect
+      .poll(
+        async () =>
+          (await announced(page)).some((text) =>
+            text.includes(
+              "The 3D view could not be loaded, so the 2D plot is shown in its place.",
+            ),
+          ),
+        { timeout: 10_000 },
+      )
+      .toBe(true);
+  });
 });

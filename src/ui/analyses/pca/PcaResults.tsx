@@ -26,7 +26,7 @@
  * the one drawn; what became of the 3D view, loading, drawn, or not drawn
  * and why; its handle, for the buttons; and the sort of the table.
  */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { legendOf } from "../../../charts/legend.ts";
 import type { Pca3dHandle } from "../../../charts/pca3d.ts";
@@ -82,6 +82,7 @@ import { PcaLegend } from "./PcaLegend.tsx";
 import styles from "./PcaResults.module.css";
 import { pca3dData, scatterData } from "./plotData.ts";
 import { ScatterPlot } from "./ScatterPlot.tsx";
+import { whenShown } from "./whenShown.ts";
 import {
   PLOT_WAITS_3D,
   pcaDownloadWhat,
@@ -230,6 +231,17 @@ function PcaResultOf({
   const [sort, setSort] = useState<TableSort<PcaColumnId> | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const why2dRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  // Stops waiting for the result to be shown to say why the 3D view was
+  // not drawn: a failure in a tab hidden is said when the tab is shown,
+  // as "Loading the 3D view…" is.
+  const stopSaying3d = useRef<() => void>(() => undefined);
+  useEffect(
+    () => () => {
+      stopSaying3d.current();
+    },
+    [],
+  );
   // The handle of the 2D plot, for the images of its menu on
   // popgen2.html.
   const scatterRef = useRef<ChartHandle<ScatterData> | null>(null);
@@ -405,7 +417,7 @@ function PcaResultOf({
   };
 
   return (
-    <div className={classOf(styles, "results")}>
+    <div ref={resultsRef} className={classOf(styles, "results")}>
       {onPopgen2 && drawn !== "none" && (
         <div className={classOf(styles, "titleLine")}>
           <h3 className={classOf(styles, "title")}>
@@ -560,9 +572,11 @@ function PcaResultOf({
               onHandle={setHandle}
               onFailed={(failure) => {
                 setFailure3d(failure);
-                announcer.announce(
-                  failure === "load" ? loadFailed3d : NO_WEBGL,
-                );
+                const words = failure === "load" ? loadFailed3d : NO_WEBGL;
+                stopSaying3d.current();
+                stopSaying3d.current = whenShown(resultsRef.current, () => {
+                  announcer.announce(words);
+                });
               }}
             />
           ) : (

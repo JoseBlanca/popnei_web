@@ -132,7 +132,19 @@ let root: Root;
 let handles: (Pca3dHandle | null)[];
 let failures: Pca3dFailure[];
 
+/** jsdom has no ResizeObserver, which waits for a view of no boxes,
+    every view in jsdom, to be shown before it says it loads. */
+class NoResize {
+  observe(): void {
+    // Nothing is laid out.
+  }
+  disconnect(): void {
+    // Nothing observed.
+  }
+}
+
 beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", NoResize);
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   made = [];
   handles = [];
@@ -150,6 +162,7 @@ afterEach(() => {
     root.unmount();
   });
   container.remove();
+  vi.unstubAllGlobals();
 });
 
 const announcer = createAnnouncer();
