@@ -336,7 +336,11 @@ Then three, in this order:
     number with many decimals"), and at least two: three on the missing
     rate of `panel.nei`, whose axis steps by 0.001. Under the field, the
     line of the Variants step that says what popnei filters on, as on
-    the old panel.
+    the old panel. While the Variants tab has the threshold off, and the
+    field shows 1, a line under it says that 1 is no filter: "1 keeps
+    every variant: type a lower value to filter." (since 10 October
+    2026, by the review of work package 6 of the plan, which found
+    nothing on the screen saying so).
 
   Choosing "Stricter for the PCA" sends one command, `stricterCommand`
   of `src/ui/analyses/pca/commands.ts`, with `follow` false and the
@@ -391,9 +395,19 @@ Then three, in this order:
   under it while on: "Maximum r² with a variant kept before it, from 0
   to 1", at 0.1, and "Distance within which variants are compared, in
   base pairs, from 1", empty. The Variants tab has no LD pruning, so the
-  PCA's is its own alone. While the distance is empty, the reason of the
-  lock, below, stands under that field and describes it to a screen
-  reader. Turning the switch off removes the fields and keeps their
+  PCA's is its own alone. Under the distance, a line says what it is in
+  terms of the data, with no number, since no distance holds for every
+  genome (the owner's rule of no default that depends on the genome):
+  "Choose the distance beyond which the r² between two variants falls
+  to its background level in your species, as studies of its LD decay
+  report." While the distance is empty, the reason of the lock, in
+  full, stands under that field and describes it to a screen reader,
+  drawn as a line of what is needed, in the colour of the lines of help
+  and with no mark of a problem, since the user caused no error; beside
+  Run a short line points to it (below). Until 10 October 2026 the same
+  words stood in red under the field and again beside Run, and a screen
+  reader read them twice; the review of work package 6 of the plan
+  found it. Turning the switch off removes the fields and keeps their
   values for when it is turned on again.
 
 The number fields follow the rules of the fields of the old panel and
@@ -417,7 +431,7 @@ describes it, the first of these:
 | the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`resume` of `src/ui/autoRuns.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another." |
 | more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
 | the filters of the individuals keep none | the store's, ending "Loosen them." |
-| the LD pruning on with no distance | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off." |
+| the LD pruning on with no distance | "Type the LD distance above, or turn the LD pruning off."; the reason in full stands under the field of the distance ("Its filters") |
 
 The three of the one pass are the screen's, `passLock` of
 `src/ui/analyses/pca/passLock.ts`, a pure function of the store's state
@@ -687,6 +701,10 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a number above the Variants tab's | "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
+| under the field of a filter made stricter, while the Variants tab has that threshold off | "1 keeps every variant: type a lower value to filter." |
+| under the field of the distance | "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report." |
+| under the field of the distance, while it is empty | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off."; "PCoA" under the PCoA |
+| beside Run, while the distance is empty | "Type the LD distance above, or turn the LD pruning off." |
 | an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants file (`src/core/analyses/fileRefusals.ts`), with "in the box Variants file" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants file."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants file.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants file." |
 | an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants file, or another file." |
 | an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
@@ -949,8 +967,10 @@ the PCoA, 198 components, PC1 3.679886264523731, `lingoesConstant`
 these values.
 
 **The screens**, `--project=screens`: the row with greyed tabs and a
-tooltip shown; the PCA tab locked, ready, running, done in 3D and in
-2D, with the PCoA's warning; a menu of a download open; Undo alone,
+tooltip shown; the PCA tab locked, locked by the empty distance once
+the file is read, `popgen2-pca-locked-ld`, ready, running, done in 3D
+and in 2D, with the PCoA's warning, while the result's code downloads
+and after it could not be; a menu of a download open; Undo alone,
 Undo with Redo, and Undo waiting while a PCA runs,
 `popgen2-undo-waiting`; light and dark; 1280 and 320 px.
 

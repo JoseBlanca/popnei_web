@@ -1962,11 +1962,17 @@ step", which the page does not have.
 - **`needs`** without `individualsNeeds` of `docs/specs/core/project.md`:
   the individuals file never locks the PCA on that page, since the key
   holds nothing of it. The limit of 9,381 individuals and the reason of
-  the LD pruning with no distance stay, the latter in that page's words:
-  "The LD pruning of the PCA needs the distance within which variants
-  are compared. It has no default, because it depends on how far linkage
-  disequilibrium extends in the genome of your species. Type a distance
-  in base pairs, or turn the LD pruning off.", "the PCoA" by the method.
+  the LD pruning with no distance stay, the latter as a short line
+  beside Run, "Type the LD distance above, or turn the LD pruning off.",
+  since the reason in full, `pruningDistanceReason` with that page's
+  words, stands under the field of the distance: "The LD pruning of the
+  PCA needs the distance within which variants are compared. It has no
+  default, because it depends on how far linkage disequilibrium extends
+  in the genome of your species. Type a distance in base pairs, or turn
+  the LD pruning off.", "the PCoA" by the method. Until 10 October 2026
+  `needs` gave the words in full, drawn twice on the screen and read
+  twice by a screen reader (`docs/specs/steps/popgen2-pca.md`, "Its
+  filters").
 - **The key**, `keyInputs`, of the filters the narrowing gives and the
   method, so a threshold of the Variants tab moved while the PCA's own
   is the stricter changes no key, and the PCA stays on the screen.
