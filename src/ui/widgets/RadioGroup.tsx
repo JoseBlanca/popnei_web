@@ -15,8 +15,10 @@
  * Aria, so that its buttons keep the Tab key and the arrow keys move the
  * focus and choose nothing, drawn greyed, each button marked
  * `aria-disabled`, and the reason its tooltip and the group's
- * description.
+ * description; the tooltip shows on the mouse over a button or its words,
+ * on a press and on the focus (WaitingTooltip.tsx), under the group.
  */
+import { useRef } from "react";
 import {
   Label,
   RadioButton,
@@ -26,7 +28,7 @@ import {
 
 import { classOf } from "../classOf.ts";
 import styles from "./RadioGroup.module.css";
-import { WithTooltip } from "./Tooltip.tsx";
+import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
 
 /** One radio button of a group. */
@@ -71,12 +73,14 @@ export function RadioGroup<T extends string>({
   waiting = null,
 }: RadioGroupProps<T>): React.JSX.Element {
   const waits = waiting !== null;
+  const groupRef = useRef<HTMLDivElement>(null);
   return (
-    <WithTooltip text={waiting}>
+    <WaitingTooltip text={waiting} anchor={groupRef}>
       {(hintId) => {
         const description = describedByOf(describedBy, hintId);
         return (
           <AriaRadioGroup
+            ref={groupRef}
             className={
               waits
                 ? `${classOf(styles, "group")} ${classOf(styles, "waiting")}`
@@ -114,6 +118,6 @@ export function RadioGroup<T extends string>({
           </AriaRadioGroup>
         );
       }}
-    </WithTooltip>
+    </WaitingTooltip>
   );
 }

@@ -95,7 +95,7 @@ import {
 import type { NumberRefusal } from "./committedNumber.ts";
 import styles from "./NumberField.module.css";
 import { Problem } from "./Problem.tsx";
-import { WithTooltip } from "./Tooltip.tsx";
+import { WaitingTooltip } from "./WaitingTooltip.tsx";
 
 /** No separator of thousands, in every language (above); and every
     decimal typed kept, since React Aria commits the number as it formats
@@ -275,6 +275,7 @@ export function NumberField({
   waiting = null,
 }: NumberFieldProps): React.JSX.Element {
   const waits = waiting !== null;
+  const fieldRef = useRef<HTMLDivElement>(null);
   const refusedId = useId();
   const descriptionId = useId();
   const hiddenDescriptionId = useId();
@@ -398,9 +399,12 @@ export function NumberField({
   ];
 
   return (
-    <WithTooltip text={waiting}>
+    <WaitingTooltip text={waiting} anchor={fieldRef}>
       {(hintId) => (
         <AriaNumberField
+          ref={fieldRef}
+          // Its label greyed as its number, while it waits.
+          {...(waits && { "data-waiting": true })}
           className={
             shownLabel === undefined
               ? classOf(styles, "field")
@@ -537,7 +541,7 @@ export function NumberField({
           {refused !== null && <Problem id={refusedId}>{refused}</Problem>}
         </AriaNumberField>
       )}
-    </WithTooltip>
+    </WaitingTooltip>
   );
 }
 

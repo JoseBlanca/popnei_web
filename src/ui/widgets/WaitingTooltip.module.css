@@ -1,0 +1,7 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* Around a control that may wait: no box of its own, so that the
+   control is laid out by its parent as if it were not there. */
+.area {
+  display: contents;
+}

@@ -11,7 +11,7 @@ import { StrictMode, act, createElement } from "react";
 import type { ReactElement } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Checkbox } from "./Checkbox.tsx";
 import { NumberField } from "./NumberField.tsx";
@@ -177,6 +177,47 @@ describe("AP6 D3 the widgets that wait while a PCA runs", () => {
     expect(describedWords(input)).toBe(REASON);
   });
 
+  test("the line of a threshold that waits gives no change at the arrow keys, Page Up, Page Down, Home and End, so that no run of the keys starts while a PCA runs", () => {
+    const moves: number[] = [];
+    draw(
+      createElement(ThresholdSlider, {
+        label: "Maximum proportion of missing genotypes",
+        minValue: 0,
+        maxValue: 0.1,
+        step: 0.001,
+        value: 0.05,
+        valueText: "0.05",
+        muted: false,
+        waiting: REASON,
+        onChange: (value) => moves.push(value),
+        onDragEnd: (value) => moves.push(value),
+      }),
+    );
+    const [input] = inputs();
+    if (input === undefined) throw new Error("no input");
+    act(() => {
+      input.focus();
+    });
+    for (const key of [
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+    ]) {
+      act(() => {
+        input.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true }),
+        );
+        input.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+      });
+    }
+    expect(moves).toEqual([]);
+  });
+
   test("with no reason, none of them is marked", () => {
     draw(
       createElement(
@@ -213,6 +254,200 @@ describe("AP6 D3 the widgets that wait while a PCA runs", () => {
     for (const input of inputs()) {
       expect(input.hasAttribute("aria-disabled")).toBe(false);
       expect(describedWords(input)).toBe("");
+    }
+  });
+});
+
+/** The words of the tooltip shown, or null when none is. */
+function tooltipShown(): string | null {
+  const tips = document.querySelectorAll('[role="tooltip"]');
+  if (tips.length > 1) throw new Error(`${String(tips.length)} tooltips shown`);
+  return tips[0]?.textContent ?? null;
+}
+
+/** The element of `container` whose own words are `words`, the visible
+    words of a control. */
+function wordsOf(words: string): HTMLElement {
+  const found = [...container.querySelectorAll<HTMLElement>("*")].find(
+    (element) =>
+      [...element.childNodes].some(
+        (node) =>
+          node.nodeType === Node.TEXT_NODE && node.textContent === words,
+      ),
+  );
+  if (found === undefined) throw new Error(`no element with ${words}`);
+  return found;
+}
+
+/** The four controls that wait, each given the reason or not, drawn one
+    at a time, with the words of each that the pointer or a press
+    reaches. */
+const CONTROLS: readonly {
+  readonly name: string;
+  readonly words: string;
+  readonly draw: (waiting: string | null) => ReactElement;
+}[] = [
+  {
+    name: "a switch",
+    words: "Prune",
+    draw: (waiting) =>
+      createElement(Switch, {
+        label: "Prune",
+        isSelected: true,
+        waiting,
+        onChange: () => undefined,
+      }),
+  },
+  {
+    name: "a check box",
+    words: "Leave out",
+    draw: (waiting) =>
+      createElement(Checkbox, {
+        label: "Leave out",
+        isSelected: true,
+        waiting,
+        onChange: () => undefined,
+      }),
+  },
+  {
+    name: "a radio group",
+    words: "PCoA",
+    draw: (waiting) =>
+      createElement(RadioGroup<"pca" | "pcoa">, {
+        label: "Method",
+        items: [
+          { id: "pca", label: "PCA" },
+          { id: "pcoa", label: "PCoA" },
+        ],
+        value: "pca",
+        waiting,
+        onChange: () => undefined,
+      }),
+  },
+  {
+    name: "a number field",
+    words: "Distance",
+    draw: (waiting) =>
+      createElement(NumberField, {
+        label: "Distance",
+        value: 50_000,
+        minValue: 1,
+        maxValue: 1e9,
+        step: 1,
+        waiting,
+        refusedText: () => "",
+        onRefused: () => undefined,
+        onChange: () => undefined,
+      }),
+  },
+];
+
+describe("AP6 D3 the reason of a control that waits, on the mouse, a press and the focus", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  for (const control of CONTROLS) {
+    test(`${control.name}: a click on its words shows the reason, which Escape hides`, () => {
+      draw(control.draw(REASON));
+      expect(tooltipShown()).toBeNull();
+      act(() => {
+        wordsOf(control.words).click();
+      });
+      expect(tooltipShown()).toBe(REASON);
+      act(() => {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        );
+      });
+      expect(tooltipShown()).toBeNull();
+    });
+
+    test(`${control.name}: the mouse resting on its words shows the reason, and leaving them hides it`, () => {
+      vi.useFakeTimers();
+      draw(control.draw(REASON));
+      const words = wordsOf(control.words);
+      act(() => {
+        words.dispatchEvent(
+          new PointerEvent("pointerover", {
+            bubbles: true,
+            pointerType: "mouse",
+          }),
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(tooltipShown()).toBe(REASON);
+      act(() => {
+        words.dispatchEvent(
+          new PointerEvent("pointerout", {
+            bubbles: true,
+            pointerType: "mouse",
+          }),
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+      expect(tooltipShown()).toBeNull();
+    });
+
+    test(`${control.name}: the focus in it shows the reason, kept while it stays, and gone when it leaves`, () => {
+      draw(control.draw(REASON));
+      const [input] = inputs();
+      if (input === undefined) throw new Error("no input");
+      act(() => {
+        input.focus();
+      });
+      expect(tooltipShown()).toBe(REASON);
+      act(() => {
+        input.blur();
+      });
+      expect(tooltipShown()).toBeNull();
+    });
+
+    test(`${control.name} with no reason: a click, the mouse and the focus show nothing`, () => {
+      vi.useFakeTimers();
+      draw(control.draw(null));
+      const words = wordsOf(control.words);
+      act(() => {
+        words.click();
+        words.dispatchEvent(
+          new PointerEvent("pointerover", {
+            bubbles: true,
+            pointerType: "mouse",
+          }),
+        );
+        inputs()[0]?.focus();
+      });
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(tooltipShown()).toBeNull();
+    });
+  }
+});
+
+describe("AP6 D3 the label of a number field that waits", () => {
+  test("is marked to be drawn in the colour of a control that cannot be used, and not otherwise", () => {
+    for (const waiting of [REASON, null]) {
+      draw(
+        createElement(NumberField, {
+          label: "Distance",
+          value: 1,
+          minValue: 1,
+          maxValue: 10,
+          step: 1,
+          waiting,
+          refusedText: () => "",
+          onRefused: () => undefined,
+          onChange: () => undefined,
+        }),
+      );
+      const label = container.querySelector("label");
+      if (label === null) throw new Error("no label");
+      expect(label.closest("[data-waiting]") !== null).toBe(waiting !== null);
     }
   });
 });

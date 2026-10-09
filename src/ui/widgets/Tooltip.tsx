@@ -13,8 +13,9 @@
  * hidden text, by `Tabs` for a greyed tab, which draws the hidden text
  * itself outside its row of labels (`drawnElsewhereId`) and holds its
  * tooltip open (`held`), and by `DownloadMenu` for a waiting menu, which
- * holds its tooltip open as a greyed tab does; a screen does not import
- * it.
+ * holds its tooltip open as a greyed tab does, and by `WaitingTooltip`
+ * for a radio group, a switch, a check box or a number field that waits,
+ * which holds it too; a screen does not import it.
  *
  * Whether the tooltip is open is state of this widget, or of its caller
  * with `held`, and never React Aria's alone: a text that becomes null
@@ -163,6 +164,13 @@ function HeldTooltipBox({
   }
   const kept = {
     ...state,
+    // No animation: the tooltip has none, and React Aria's wait for the
+    // end of one stays for ever when a tooltip closed at once, as another
+    // opens, is closed again, as its trigger loses the focus; it is then
+    // drawn again, closed, where its trigger was, at the top left corner
+    // of the page when its tab is hidden (seen in Chromium and WebKit on
+    // 10 October 2026, React Aria Components 1.21.1).
+    shouldSkipAnimation: true,
     close: (immediate?: boolean): void => {
       if (immediate === true && held.hasFocus()) {
         return;

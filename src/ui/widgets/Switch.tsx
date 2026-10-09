@@ -5,13 +5,15 @@
  * popgen2.html does while a PCA runs (waiting.ts): read only for React
  * Aria, so that it keeps the Tab key and a press turns nothing, drawn
  * greyed, marked `aria-disabled`, with the reason as its tooltip and its
- * description.
+ * description; the tooltip shows on the mouse over its track or its
+ * words, on a press and on the focus (WaitingTooltip.tsx).
  */
+import { useRef } from "react";
 import { SwitchButton, SwitchField } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Switch.module.css";
-import { WithTooltip } from "./Tooltip.tsx";
+import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
 
 /** What a switch is drawn with. */
@@ -40,8 +42,9 @@ export function Switch({
   waiting = null,
 }: SwitchProps): React.JSX.Element {
   const waits = waiting !== null;
+  const buttonRef = useRef<HTMLLabelElement>(null);
   return (
-    <WithTooltip text={waiting}>
+    <WaitingTooltip text={waiting} anchor={buttonRef}>
       {(hintId) => {
         const description = describedByOf(describedBy, hintId);
         return (
@@ -57,6 +60,7 @@ export function Switch({
             })}
           >
             <SwitchButton
+              ref={buttonRef}
               className={
                 waits
                   ? `${classOf(styles, "switch")} ${classOf(styles, "waiting")}`
@@ -71,6 +75,6 @@ export function Switch({
           </SwitchField>
         );
       }}
-    </WithTooltip>
+    </WaitingTooltip>
   );
 }

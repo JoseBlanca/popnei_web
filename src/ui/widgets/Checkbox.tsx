@@ -8,14 +8,16 @@
  * reason, as the FILTER box of popgen2.html does while a PCA runs
  * (waiting.ts): read only for React Aria, so that it keeps the Tab key
  * and a click ticks nothing, drawn greyed, marked `aria-disabled`, with
- * the reason as its tooltip and its description.
+ * the reason as its tooltip and its description; the tooltip shows on the
+ * mouse over its box or its words, on a press and on the focus
+ * (WaitingTooltip.tsx).
  */
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { CheckboxButton, CheckboxField } from "react-aria-components";
 
 import { classOf } from "../classOf.ts";
 import styles from "./Checkbox.module.css";
-import { WithTooltip } from "./Tooltip.tsx";
+import { WaitingTooltip } from "./WaitingTooltip.tsx";
 import { ariaDisabledRef, describedByOf } from "./waiting.ts";
 
 /** What a check box is drawn with. */
@@ -46,8 +48,9 @@ export function Checkbox({
 }: CheckboxProps): React.JSX.Element {
   const waits = waiting !== null;
   const descriptionId = useId();
+  const buttonRef = useRef<HTMLLabelElement>(null);
   return (
-    <WithTooltip text={waiting}>
+    <WaitingTooltip text={waiting} anchor={buttonRef}>
       {(hintId) => {
         // The sentence first, then the reason the box waits. Given by
         // hand: React Aria's slot of a description loses its tie to the
@@ -71,6 +74,7 @@ export function Checkbox({
             className={classOf(styles, "field")}
           >
             <CheckboxButton
+              ref={buttonRef}
               className={
                 waits
                   ? `${classOf(styles, "checkbox")} ${classOf(styles, "waiting")}`
@@ -95,6 +99,6 @@ export function Checkbox({
           </CheckboxField>
         );
       }}
-    </WithTooltip>
+    </WaitingTooltip>
   );
 }

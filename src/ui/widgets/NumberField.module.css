@@ -87,3 +87,10 @@
   color: var(--color-text-disabled);
   cursor: default;
 }
+
+/* Its label too, in that colour, as the words of a radio button and of
+   a switch that wait; the name of a group above it stays in the colour
+   of the text. */
+.field[data-waiting] .label {
+  color: var(--color-text-disabled);
+}
