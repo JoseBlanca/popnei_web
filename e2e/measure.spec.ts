@@ -113,6 +113,14 @@
  * The time to write and read a project file, and to make a key, is
  * measured in node, by e2e/measure/projectFile.ts.
  *
+ * And the memory of table_io (IN2 D2, the plan of the input page,
+ * docs/plans/input-page.md, work package 2), in both engines: CSVs of 1,
+ * 5 and 20 MB in two shapes read on the old page, with what the engine's
+ * processes hold before each read and 3 s after it, from a build that
+ * keeps the light worker and one that ends it after every read, for
+ * READ_RESTART_BYTES of src/worker/client.ts; and the time of a read of
+ * panel_pops.csv and of individuals_10000.xlsx in each build.
+ *
  * The large files are written outside the repository, into the folder
  * MEASURE_DIR, or a folder of the system's temporary one: the VCF by
  * popnei's crates/popnei/benches/make_big_vcf.py, run with uv, from
@@ -4964,5 +4972,304 @@ test(`DL8 D1 the same in a Chromium of a profile of its own, not off the record 
         r.words === "" ? r.outcome : r.words,
       ],
     ],
+  );
+});
+
+// IN2 D2, the memory of table_io and the restart of the light worker
+// (the plan of the input page, docs/plans/input-page.md, work package 2):
+// CSVs of 1,000,000, 5,000,000 and 19,999,000 bytes in the two shapes of
+// table_io's report of 2 October 2026, read on the old page, whose
+// Individuals step reads its file through the light worker, from a build
+// with READ_RESTART_BYTES at 25,000,000, the worker kept, and one with it
+// at 0, the worker ended after every read. Each build is one command in
+// the foreground, with IN2_BUILD set to "kept" or "ended"; each writes its
+// numbers into IN2_DIR, and the second prints what the restart gives
+// back. The CSVs are made in IN2_DIR, outside the repository.
+
+/** Where the CSVs of IN2 D2 and the numbers of each build go. */
+const IN2_DIR = process.env["IN2_DIR"] ?? MEASURE_DIR;
+
+/** The build the site under test was made with: "kept", READ_RESTART_BYTES
+    at 25,000,000, or "ended", at 0. The test is skipped without it. */
+const IN2_BUILD = process.env["IN2_BUILD"];
+
+/** The sizes of the CSVs, in bytes. */
+const IN2_SIZES = [1_000_000, 5_000_000, 19_999_000] as const;
+
+/** The two shapes: a header of 100 names over rows of a name and 99
+    cells, "0" or empty, the shape that took the most of a file read whole
+    under node (table_io's report, "The memory of a text file"). */
+const IN2_SHAPES = [
+  { shape: "zeros", cell: "0" },
+  { shape: "empty", cell: "" },
+] as const;
+
+/** The CSV of `bytes` bytes of the shape whose 99 cells are `cell`, made in
+    IN2_DIR when it is not there: rows named s0000000 on, the last row's
+    name lengthened by what the rows leave to reach `bytes`. */
+async function in2Csv(
+  bytes: number,
+  shape: string,
+  cell: string,
+): Promise<string> {
+  await mkdir(IN2_DIR, { recursive: true });
+  const path = join(IN2_DIR, `in2_${shape}_${String(bytes)}.csv`);
+  if (existsSync(path) && statSync(path).size === bytes) return path;
+  const header = `IID,${Array.from({ length: 99 }, (_, i) => `c${String(i + 1)}`).join(",")}\n`;
+  const tail = `${`,${cell}`.repeat(99)}\n`;
+  const name = (i: number): string => `s${String(i).padStart(7, "0")}`;
+  const rowBytes = name(0).length + tail.length;
+  const rows = Math.floor((bytes - header.length) / rowBytes);
+  const left = bytes - header.length - rows * rowBytes;
+  const lines = [header];
+  for (let i = 0; i < rows; i++) {
+    const last = i === rows - 1 ? "x".repeat(left) : "";
+    lines.push(`${name(i)}${last}${tail}`);
+  }
+  const text = lines.join("");
+  expect(Buffer.byteLength(text)).toBe(bytes);
+  await writeFile(path, text);
+  return path;
+}
+
+/** The engine's processes summed, macOS's footprint of each. */
+async function engineTotal(
+  browser: Browser,
+  browserName: string,
+): Promise<number> {
+  const processes = await engineProcesses(browser, browserName);
+  const sizes = await footprints(processes);
+  let total = 0;
+  for (const p of processes) total += sizes.get(p.pid) ?? 0;
+  return total;
+}
+
+function metadataZone(page: Page): Locator {
+  return page.getByRole("region", { name: "Metadata file" });
+}
+
+/** Opens the old page at its Individuals step, timed. */
+async function openOldIndividuals(page: Page): Promise<void> {
+  await page.addInitScript(instrument);
+  await page.goto("popgen.html#individuals");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Individuals" }),
+  ).toBeVisible();
+}
+
+/** Picks `file` in the Metadata file zone and waits for the line of the
+    size of its table, or for words of a failure; gives whether it was
+    read, the words, and the time from the pick to them. */
+async function readTimed(
+  page: Page,
+  file: string | { name: string; mimeType: string; buffer: Buffer },
+  columns: number,
+): Promise<{ read: boolean; words: string; ms: number }> {
+  const zone = metadataZone(page);
+  const chooser = page.waitForEvent("filechooser");
+  await zone.getByRole("button", { name: /^(Choose|Replace) .*…$/ }).click();
+  const picker = await chooser;
+  const name =
+    typeof file === "string" ? (file.split("/").at(-1) ?? "") : file.name;
+  const start = Date.now();
+  await picker.setFiles(file);
+  const size = zone.getByText(
+    new RegExp(`^[\\d,]+ rows, ${String(columns)} columns$`),
+  );
+  const failed = zone.getByText(/could not be read|stopped/);
+  await expect(size.or(failed).first()).toBeVisible({ timeout: 300_000 });
+  const ms = Date.now() - start;
+  await expect(
+    zone.getByRole("button", { name: `Replace ${name}…` }),
+  ).toBeVisible();
+  const read = (await size.count()) > 0;
+  const words = read
+    ? await size.innerText()
+    : await failed.first().innerText();
+  return { read, words, ms };
+}
+
+/** The numbers of one build, written to IN2_DIR for the other. */
+interface In2Numbers {
+  readonly build: string;
+  readonly head: string;
+  /** By "shape bytes": the summed footprints before and 3 s after each
+      read, and its time, one entry a read. */
+  readonly files: Record<
+    string,
+    readonly {
+      before: number;
+      after: number;
+      ms: number;
+      read: boolean;
+      words: string;
+      load: number;
+    }[]
+  >;
+  readonly panelMs: readonly number[];
+  readonly xlsxMs: readonly number[];
+  readonly lightStarts: number;
+}
+
+test("IN2 D2 the memory of table_io: CSVs of 1, 5 and 20 MB in two shapes read on the old page, the engine's processes before and 3 s after, with the light worker kept or ended by the build; and the reads of panel_pops.csv and individuals_10000.xlsx", async ({
+  browser,
+  browserName,
+}) => {
+  test.skip(IN2_BUILD === undefined, "needs IN2_BUILD, kept or ended");
+  const build = IN2_BUILD ?? "";
+  test.setTimeout(1_800_000);
+  const files: Record<string, In2Numbers["files"][string]> = {};
+  for (const bytes of IN2_SIZES) {
+    for (const { shape, cell } of IN2_SHAPES) {
+      const path = await in2Csv(bytes, shape, cell);
+      const reads = [];
+      for (let k = 0; k < 3; k++) {
+        const page = await browser.newPage();
+        await openOldIndividuals(page);
+        await page.waitForTimeout(2000);
+        const load = loadavg()[0] ?? 0;
+        const before = await engineTotal(browser, browserName);
+        const { read, words, ms } = await readTimed(page, path, 100);
+        await page.waitForTimeout(3000);
+        const after = await engineTotal(browser, browserName);
+        reads.push({ before, after, ms, read, words, load });
+        await page.context().close();
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      files[`${shape} ${String(bytes)}`] = reads;
+    }
+  }
+
+  // The reads of the small files, five each after a first read that
+  // loads table_io, on one page: each a new worker in the build "ended".
+  const page = await browser.newPage();
+  await openOldIndividuals(page);
+  const pops = await readFile(join(FIXTURES, "panel_pops.csv"));
+  const xlsx = await readFile(join(FIXTURES, "individuals_10000.xlsx"));
+  const csv = (i: number) => ({
+    name: `panel_pops_${String(i)}.csv`,
+    mimeType: "text/csv",
+    buffer: pops,
+  });
+  const book = (i: number) => ({
+    name: `individuals_${String(i)}.xlsx`,
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: xlsx,
+  });
+  expect((await readTimed(page, csv(0), 2)).read).toBe(true);
+  const panelMs: number[] = [];
+  for (let i = 1; i <= 5; i++) {
+    const r = await readTimed(page, csv(i), 2);
+    expect(r.read, r.words).toBe(true);
+    panelMs.push(r.ms);
+  }
+  const xlsxMs: number[] = [];
+  for (let i = 1; i <= 5; i++) {
+    const r = await readTimed(page, book(i), 20);
+    expect(r.read, r.words).toBe(true);
+    xlsxMs.push(r.ms);
+  }
+  const lightStarts = (await logOf(page)).filter(
+    (l) => l.event === "start" && l.url.includes("filesRunner"),
+  ).length;
+  await page.context().close();
+
+  const head = `${machine(browser, browserName)}, macOS ${macOs()}; ${new Date().toISOString()}; build "${build}"; 3 reads of each CSV, each on a new page; the median, and the range`;
+  const numbers: In2Numbers = {
+    build,
+    head,
+    files,
+    panelMs,
+    xlsxMs,
+    lightStarts,
+  };
+  await writeFile(
+    join(IN2_DIR, `in2_${browserName}_${build}.json`),
+    JSON.stringify(numbers, null, 1),
+  );
+  const rows = Object.entries(files).map(([key, reads]) => [
+    key,
+    reads.map((r) => (r.read ? "read" : r.words)).join("; "),
+    ...stats(
+      reads.map((r) => r.ms),
+      ms,
+    ),
+    ...stats(
+      reads.map((r) => r.before),
+      mb,
+    ),
+    ...stats(
+      reads.map((r) => r.after),
+      mb,
+    ),
+    ...stats(
+      reads.map((r) => r.after - r.before),
+      mb,
+    ),
+    reads.map((r) => r.load.toFixed(1)).join(", "),
+  ]);
+  report(
+    `IN2 D2 the CSVs read on popgen.html, the light worker ${build}`,
+    head,
+    [
+      "shape, bytes",
+      "outcome",
+      "pick to table",
+      "range",
+      "before",
+      "range",
+      "3 s after",
+      "range",
+      "after above before",
+      "range",
+      "load",
+    ],
+    rows,
+  );
+  report(
+    `IN2 D2 the small reads, the light worker ${build}`,
+    `${head}; ${String(lightStarts)} starts of the light worker for 11 reads`,
+    ["file", "pick to table, median of 5", "range"],
+    [
+      ["panel_pops.csv", ...stats(panelMs, ms)],
+      ["individuals_10000.xlsx", ...stats(xlsxMs, ms)],
+    ],
+  );
+
+  // What the restart gives back, once both builds are measured.
+  const other = join(
+    IN2_DIR,
+    `in2_${browserName}_${build === "kept" ? "ended" : "kept"}.json`,
+  );
+  if (!existsSync(other)) return;
+  const both = [numbers, JSON.parse(readFileSync(other, "utf8")) as In2Numbers];
+  const kept = both.find((x) => x.build === "kept");
+  const ended = both.find((x) => x.build === "ended");
+  if (kept === undefined || ended === undefined) return;
+  const medianOf = (
+    x: In2Numbers,
+    key: string,
+    f: (r: In2Numbers["files"][string][number]) => number,
+  ): number => median((x.files[key] ?? []).map(f));
+  report(
+    "IN2 D2 what the restart gives back",
+    `${machine(browser, browserName)}; kept: ${kept.head}; ended: ${ended.head}`,
+    [
+      "shape, bytes",
+      "3 s after, kept",
+      "3 s after, ended",
+      "gives back",
+      "above before, kept",
+      "above before, ended",
+      "difference",
+    ],
+    Object.keys(kept.files).map((key) => {
+      const ak = medianOf(kept, key, (r) => r.after);
+      const ae = medianOf(ended, key, (r) => r.after);
+      const gk = medianOf(kept, key, (r) => r.after - r.before);
+      const ge = medianOf(ended, key, (r) => r.after - r.before);
+      return [key, mb(ak), mb(ae), mb(ak - ae), mb(gk), mb(ge), mb(gk - ge)];
+    }),
   );
 });
