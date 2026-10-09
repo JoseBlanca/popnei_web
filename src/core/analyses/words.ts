@@ -148,12 +148,15 @@ export function refusalWords(
   return `popnei could not ${words.calculate}${saying(message.replaceAll("`", ""))}. ${words.change}, ${words.again}.`;
 }
 
-/** How the words of a refusal of an LD filter name the filter and say how
-    to turn it off. */
+/** How the words of a refusal of an LD filter name the filter, where the
+    file sorted is opened again, and how to turn the filter off. */
 export interface LdFilterWords {
   /** The filter, at the start of a sentence: "The LD pruning of the
       Variants step". */
   readonly name: string;
+  /** How the file sorted is opened again, after "Sort the file, … and":
+      "load it again". */
+  readonly openAgain: string;
   /** How to turn it off, after "or": "turn off the LD pruning in the
       Variants step". */
   readonly turnOff: string;
@@ -164,6 +167,7 @@ export interface LdFilterWords {
     decided by the owner on 29 September 2026). */
 export const STEP_LD_FILTER: LdFilterWords = Object.freeze({
   name: "The LD pruning of the Variants step",
+  openAgain: "load it again",
   turnOff: "turn off the LD pruning in the Variants step",
 });
 
@@ -212,7 +216,7 @@ export function ldOrderText(
     return null;
   }
   const fileName = escaped(p.variants.name);
-  return `${filter.name} needs the variants of each chromosome together and in the order of their positions, and ${fileName} does not have them so${ldPlace(message)}. Sort the file, with bcftools sort for a VCF, and load it again, or ${filter.turnOff}.`;
+  return `${filter.name} needs the variants of each chromosome together and in the order of their positions, and ${fileName} does not have them so${ldPlace(message)}. Sort the file, with bcftools sort for a VCF, and ${filter.openAgain}, or ${filter.turnOff}.`;
 }
 
 /** The place of the variant out of order, after a colon, or nothing when

@@ -756,7 +756,20 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
         "popgen2",
       ),
     ).toBe(
-      "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and load it again, or turn the LD pruning of the PCA off.",
+      "The LD pruning of the PCA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the box Variants file, or turn the LD pruning off.",
+    );
+    expect(
+      refusalText(
+        LD_NOT_SORTED,
+        project({
+          variantsName: "panel.vcf.gz",
+          readOptions: { ploidy: 2, onlyPassed: false },
+          options: { method: "pcoa", ...LD_50000 },
+        }),
+        "popgen2",
+      ),
+    ).toBe(
+      "The LD pruning of the PCoA needs the variants of each chromosome together and in the order of their positions, and panel.vcf.gz does not have them so: on chromosome 1, a variant at position 10 comes after one at position 30. Sort the file, with bcftools sort for a VCF, and open it again in the box Variants file, or turn the LD pruning off.",
     );
     expect(
       refusalText(

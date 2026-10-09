@@ -1960,8 +1960,9 @@ step", which the page does not have.
   is the stricter changes no key, and the PCA stays on the screen.
 - **The words** of the warnings, the refusals and the crash, with "the
   Variants tab", "the box Variants file", "the thresholds of the
-  individuals in the Variants tab" and "turn the LD pruning of the PCA
-  off" where the old page names the step and its filters
+  individuals in the Variants tab" and "turn the LD pruning off", the
+  same words as the lock of the LD pruning with no distance, where the
+  old page names the step and its filters
   (`docs/specs/steps/popgen2-pca.md`, "Its words").
 - **The colours.** With `colourBy` null, the individuals with no
   population are one group, its name "Unclassified": with no individuals

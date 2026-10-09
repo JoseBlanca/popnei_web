@@ -575,8 +575,11 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 "Its words") with "the Variants tab" for "the Variants step", "the box
 Variants file" for "Load … in the Variants step", "the thresholds of the
 individuals in the Variants tab" for "the filters of individuals in the
-Variants step", and the row of the LD order ending "or turn the LD
-pruning of the PCA off". The row of no variant left: "No variant of
+Variants step", and the row of the LD order, which names the PCA or
+the PCoA by the method, ending "Sort the file, with bcftools sort for a
+VCF, and open it again in the box Variants file, or turn the LD pruning
+off.", the end of the lock of the LD pruning with no distance. The row
+of no variant left: "No variant of
 panel.nei is left after the filters of the PCA, so there is no variant
 to do the PCA with. Loosen the filters of the PCA in its options above,
 or the thresholds of the Variants tab." The words of the 3D view are

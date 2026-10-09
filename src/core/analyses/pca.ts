@@ -504,15 +504,21 @@ function ownFilter(
 /** The PCA's own LD filter, in the words of a refusal. */
 const PCA_LD_FILTER: LdFilterWords = Object.freeze({
   name: "The LD filter of the PCA",
+  openAgain: "load it again",
   turnOff: "set the LD filter of the PCA back to as in the Variants step",
 });
 
-/** The PCA's LD pruning on popgen2.html, in the words of a refusal; the
-    Variants tab has none. */
-const PCA2_LD_PRUNING: LdFilterWords = Object.freeze({
-  name: "The LD pruning of the PCA",
-  turnOff: "turn the LD pruning of the PCA off",
-});
+/** The LD pruning of popgen2.html's PCA, named by the method `name`,
+    "PCA" or "PCoA", in the words of a refusal, as the reason of the
+    pruning with no distance names it; the Variants tab has none, and the
+    file is opened again in the box Variants file. */
+function pca2LdPruning(name: string): LdFilterWords {
+  return {
+    name: `The LD pruning of the ${name}`,
+    openAgain: "open it again in the box Variants file",
+    turnOff: "turn the LD pruning off",
+  };
+}
 
 /** The places a sentence of the module names, by the page: the old page
     names its Variants step and the filters of individuals there,
@@ -1028,7 +1034,7 @@ export function refusalText(
     message,
     p,
     page === "popgen2"
-      ? PCA2_LD_PRUNING
+      ? pca2LdPruning(name)
       : o.ld.follow
         ? STEP_LD_FILTER
         : PCA_LD_FILTER,
