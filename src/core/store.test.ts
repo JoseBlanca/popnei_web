@@ -257,8 +257,11 @@ function counter(): {
 
 /** A store whose analysis of the variants throws a defect in its
     `keyInputs` for a MAF filter at 0.42, or whenever `boom.on` is set:
-    popnei 0.1.0, the variants file loaded and read. */
-function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
+    popnei 0.1.0, the variants file loaded and read; made with
+    `stopLeftBehind` when it is given true. */
+function storeWithTouchyKeys(stopLeftBehind = false): ReturnType<
+  typeof newStore
+> & {
   readonly boom: { on: boolean };
 } {
   const { analyses, calls } = fakeAnalyses();
@@ -291,6 +294,7 @@ function storeWithTouchyKeys(): ReturnType<typeof newStore> & {
     appVersion: "0.1.0",
     cacheMaxBytes: 1024 * 1024,
     maxUndoSteps: 200,
+    stopLeftBehind,
   });
   store.popneiReady("0.1.0");
   store.apply("a variants file was loaded", loadPanel(VARIANTS_ID));
@@ -8574,6 +8578,22 @@ describe("AP3 D1 applyAfresh on the store of popgen2.html", () => {
     expect(pcaOf(after).kind).toBe("ready");
     expect(after.notice).toBeNull();
     expect(after.undo).toBeNull();
+  });
+
+  test("a defect while the keys of applyAfresh are made leaves the store as it was, the count of the moves included", () => {
+    const { store, boom } = storeWithTouchyKeys(true);
+    store.apply("the MAF filter changed", maf(0.9));
+    const before = store.getState();
+    boom.on = true;
+    expect(() => {
+      store.applyAfresh(maf(0.5));
+    }).toThrow("a keyInputs that throws");
+    expect(store.getState()).toBe(before);
+    boom.on = false;
+    store.apply("the MAF filter changed again", maf(0.8));
+    const after = store.getState();
+    expect(after.historyMoves).toBe(before.historyMoves);
+    expect(after.undo).toBe("the MAF filter changed again");
   });
 
   test("applyAfresh on a store made without the setting: a defect, and nothing changed", () => {

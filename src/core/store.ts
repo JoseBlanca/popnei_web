@@ -2491,14 +2491,15 @@ export function createStore<J, R, F = never>(
       }
       // A history of its own, applied as a command is: what it leaves
       // behind is stopped and no notice is made, since the setting is on.
+      // Its keys are made before the count moves, as `open` makes them,
+      // so that a defect while they are made leaves the count as it was.
+      const fresh = startHistory(freezeProject(next), history.maxSteps);
+      keysFor(fresh.present.project, popneiVersion);
       historyMoves += 1;
-      changedByUser(
-        startHistory(freezeProject(next), history.maxSteps),
-        () => ({
-          kind: "command",
-          description: "",
-        }),
-      );
+      changedByUser(fresh, () => ({
+        kind: "command",
+        description: "",
+      }));
     },
     populationColumnChosen: (fileId, column) => {
       const present = history.present.project;
