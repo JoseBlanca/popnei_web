@@ -23,14 +23,17 @@ import {
   counted,
   escaped,
   grouped,
+  identifierOf,
+  individualsCheck,
   namesOf,
   populationsKept,
+  populationsToRun,
   shown,
   shownDecimal,
   MAX_LISTED_POPULATIONS,
   MAX_NAMED,
 } from "./project.ts";
-import type { Project, TableRead } from "./project.ts";
+import type { Project, SourceRead, TableRead } from "./project.ts";
 import type { IndividualsTable, LeftOut, Pops } from "../worker/protocol.ts";
 
 /** The reason of the lock of `populationsKeptNeeds`, when the `numKept`
@@ -287,6 +290,315 @@ function isBooleanColumn(
     found = true;
   }
   return found;
+}
+
+/** A population of the box of the individuals file of popgen2.html and
+    its individuals kept, or null while the list of the individuals kept
+    is not known. */
+export interface PopulationCount {
+  /** The name of the population, as `cellShown` writes its cell. */
+  readonly pop: string;
+  /** Its individuals the filters keep, 0 for one they all remove; null
+      while the list of the individuals kept is not known. */
+  readonly kept: number | null;
+}
+
+/** The individuals kept that have no population, and why. */
+export interface Unclassified {
+  /** How many of the individuals kept have no population. */
+  readonly kept: number;
+  /** How many of them are in the individuals file with an empty cell in
+      the column. */
+  readonly missingCell: number;
+  /** Those of them not in the individuals file, in the order of the
+      variants file. */
+  readonly notInFile: readonly string[];
+}
+
+/** What the box of the individuals file of popgen2.html counts. */
+export interface PopulationCounts {
+  /** The column the populations are taken from, a column of the table
+      but its first, or null: no column chosen, or none of that name. */
+  readonly column: string | null;
+  /** The different values of the column in the file, missing ones left
+      out; 0 with no column. */
+  readonly numValues: number;
+  /** numValues above MAX_LISTED_POPULATIONS: no population, and the
+      unclassified not counted. */
+  readonly tooMany: boolean;
+  /** Whether the variants file is read; with false, populations and
+      notInFile are empty, and unclassified, rowsNotInVariants and
+      noneInFile null. */
+  readonly variantsRead: boolean;
+  /** Whether the list of the individuals kept is known; false before the
+      variants file is read. */
+  readonly known: boolean;
+  /** The populations with an individual in both files, in the order of
+      `populationsToRun`, the order each first appears in the file. */
+  readonly populations: readonly PopulationCount[];
+  /** The unclassified kept; null while the list is not known, and with
+      tooMany. */
+  readonly unclassified: Unclassified | null;
+  /** The individuals of the variants file not in the individuals file,
+      before the filters, in the order of the variants file. */
+  readonly notInFile: readonly string[];
+  /** The rows of the individuals file whose individual the variants file
+      does not have; null before the variants file is read. */
+  readonly rowsNotInVariants: number | null;
+  /** None of the individuals of the variants file in the individuals
+      file, with the first name of each; null otherwise. */
+  readonly noneInFile: {
+    readonly firstOfVariants: string;
+    readonly firstOfFile: string;
+  } | null;
+}
+
+/**
+ * What the box of the individuals file of popgen2.html counts, from the
+ * project and the individuals kept that the store works out, `kept`,
+ * `null` exactly when the variants file is not read; `null` with no
+ * individuals file read (the project spec, "The counts per population on
+ * popgen2.html"). The same frozen object as the call before when the
+ * table, its decimal mark, the column and the read of the variants file
+ * are the same objects and the list of the individuals kept holds the
+ * same individuals in the same order, or is unknown, or removes nobody,
+ * as the list before: the store makes a new list at every change of the
+ * project, an arrow key on a threshold among them.
+ */
+export function populationCounts(
+  p: Project,
+  kept: IndividualsKept | null,
+): PopulationCounts | null {
+  const read = p.individuals?.read;
+  if (read?.kind !== "read") {
+    return null;
+  }
+  const decimal = shownDecimal(read);
+  const column = countedColumn(p, read);
+  const variantsRead =
+    p.variants?.read.kind === "read" ? p.variants.read : null;
+  const list = keptListOf(kept);
+  const last = lastCounts;
+  if (
+    last !== null &&
+    last.table === read.table &&
+    last.decimal === decimal &&
+    last.column === column &&
+    last.variantsRead === variantsRead &&
+    sameList(last.list, list)
+  ) {
+    return last.counts;
+  }
+  const counts = countPopulations(p, read, column, variantsRead, list);
+  lastCounts = {
+    table: read.table,
+    decimal,
+    column,
+    variantsRead,
+    list,
+    counts,
+  };
+  return counts;
+}
+
+/** The individuals kept as the counts compare them: not known; known,
+    the filters removing nobody; or known, the list of those kept. */
+type CountedList =
+  | { readonly kind: "unknown" }
+  | { readonly kind: "everyone" }
+  | { readonly kind: "list"; readonly individuals: readonly string[] };
+
+/** The last answer of `populationCounts`, with what it was made from. The
+    one state of this module: the store makes a new list of the
+    individuals kept at every change of the project, which no memo keyed
+    by the list's reference would find again (the project spec, "The
+    counts per population on popgen2.html"). Set at the first call, so
+    that this module makes nothing when it loads. */
+let lastCounts: {
+  readonly table: IndividualsTable;
+  readonly decimal: "." | ",";
+  readonly column: string | null;
+  readonly variantsRead: SourceRead | null;
+  readonly list: CountedList;
+  readonly counts: PopulationCounts;
+} | null = null;
+
+/** The list of `kept` as the counts compare it. */
+function keptListOf(kept: IndividualsKept | null): CountedList {
+  if (kept === null || kept.list.kind === "needsStatistics") {
+    return { kind: "unknown" };
+  }
+  const individuals = kept.list.individuals;
+  return individuals === null
+    ? { kind: "everyone" }
+    : { kind: "list", individuals };
+}
+
+/** Whether two lists of the individuals kept give the same counts: both
+    unknown, both removing nobody, or the same individuals in the same
+    order, compared one by one. */
+function sameList(before: CountedList, now: CountedList): boolean {
+  if (before.kind === "list" && now.kind === "list") {
+    return (
+      before.individuals === now.individuals ||
+      (before.individuals.length === now.individuals.length &&
+        before.individuals.every(
+          (individual, index) => now.individuals[index] === individual,
+        ))
+    );
+  }
+  return before.kind === now.kind;
+}
+
+/** The column of the grouping of `p` when it is a column of the table of
+    `read` but its first, which names the individuals; null otherwise. */
+function countedColumn(p: Project, read: TableRead): string | null {
+  if (p.grouping.kind !== "populations" || p.grouping.column === null) {
+    return null;
+  }
+  return read.table.columns.indexOf(p.grouping.column) > 0
+    ? p.grouping.column
+    : null;
+}
+
+/** The counts of `populationCounts`, worked out anew. */
+function countPopulations(
+  p: Project,
+  read: TableRead,
+  column: string | null,
+  variantsRead: Extract<SourceRead, { readonly kind: "read" }> | null,
+  list: CountedList,
+): PopulationCounts {
+  const numValues =
+    column === null
+      ? 0
+      : valuesOf(
+          read.table.rows,
+          read.table.columns.indexOf(column),
+          shownDecimal(read),
+          Number.POSITIVE_INFINITY,
+        );
+  const tooMany = numValues > MAX_LISTED_POPULATIONS;
+  const check = individualsCheck(p);
+  if (variantsRead === null || check === null) {
+    return Object.freeze({
+      column,
+      numValues,
+      tooMany,
+      variantsRead: false,
+      known: false,
+      populations: Object.freeze([]),
+      unclassified: null,
+      notInFile: Object.freeze([]),
+      rowsNotInVariants: null,
+      noneInFile: null,
+    });
+  }
+  const keptIndividuals =
+    list.kind === "unknown"
+      ? null
+      : list.kind === "everyone"
+        ? variantsRead.individuals
+        : list.individuals;
+  const toRun = column === null || tooMany ? [] : (populationsToRun(p) ?? []);
+  return Object.freeze({
+    column,
+    numValues,
+    tooMany,
+    variantsRead: true,
+    known: keptIndividuals !== null,
+    populations: countsOfPopulations(p, toRun, list),
+    unclassified:
+      keptIndividuals === null || tooMany
+        ? null
+        : unclassifiedOf(keptIndividuals, toRun, column, check.missing),
+    notInFile: Object.freeze([...check.missing]),
+    rowsNotInVariants: check.ignoredRows,
+    noneInFile: noneInFileOf(check.found, variantsRead.individuals, read),
+  });
+}
+
+/** Each population of `toRun`, in its order, with its individuals kept by
+    `list`, 0 for one the list empties, or null while it is unknown. */
+function countsOfPopulations(
+  p: Project,
+  toRun: Pops,
+  list: CountedList,
+): readonly PopulationCount[] {
+  if (list.kind === "unknown") {
+    return Object.freeze(
+      toRun.map(([pop]) => Object.freeze({ pop, kept: null })),
+    );
+  }
+  const narrowed = populationsKept(
+    p,
+    list.kind === "everyone" ? null : list.individuals,
+  );
+  const keptOfPop = new Map<string, number>(
+    (narrowed?.pops ?? []).map(([pop, individuals]) => [
+      pop,
+      individuals.length,
+    ]),
+  );
+  return Object.freeze(
+    toRun.map(([pop]) => Object.freeze({ pop, kept: keptOfPop.get(pop) ?? 0 })),
+  );
+}
+
+/** The unclassified among `kept`: those in none of the populations
+    `toRun`, each with an empty cell in `column` or not in the file, one
+    of `notInFile`; with no column, all of them, by no cause. */
+function unclassifiedOf(
+  kept: readonly string[],
+  toRun: Pops,
+  column: string | null,
+  notInFile: readonly string[],
+): Unclassified {
+  if (column === null) {
+    return Object.freeze({
+      kept: kept.length,
+      missingCell: 0,
+      notInFile: Object.freeze([]),
+    });
+  }
+  const classified = new Set(toRun.flatMap(([, individuals]) => individuals));
+  const outside = new Set(notInFile);
+  let missingCell = 0;
+  const keptNotInFile: string[] = [];
+  for (const individual of kept) {
+    if (classified.has(individual)) {
+      continue;
+    }
+    if (outside.has(individual)) {
+      keptNotInFile.push(individual);
+    } else {
+      missingCell += 1;
+    }
+  }
+  return Object.freeze({
+    kept: missingCell + keptNotInFile.length,
+    missingCell,
+    notInFile: Object.freeze(keptNotInFile),
+  });
+}
+
+/** The first name of each file when none of the `found` individuals of
+    the variants file is in the individuals file, for the warning; null
+    when some is. */
+function noneInFileOf(
+  found: number,
+  variantsIndividuals: readonly string[],
+  read: TableRead,
+): PopulationCounts["noneInFile"] {
+  const [firstOfVariants] = variantsIndividuals;
+  const [firstRow] = read.table.rows;
+  if (found > 0 || firstOfVariants === undefined || firstRow === undefined) {
+    return null;
+  }
+  return Object.freeze({
+    firstOfVariants,
+    firstOfFile: identifierOf(firstRow[0]),
+  });
 }
 
 /** An error for a state the code makes impossible. */

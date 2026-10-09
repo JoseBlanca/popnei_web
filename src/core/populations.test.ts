@@ -9,14 +9,22 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
+import { individualsKept } from "./individualsKept.ts";
+import type { IndividualStats, IndividualsKept } from "./individualsKept.ts";
 import {
   defaultPopulationsColumn,
   loosenText,
   populationColumnChoices,
+  populationCounts,
   populationsByLists,
   populationsColumnOf,
 } from "./populations.ts";
-import { individualsBoxNeeds, MAX_LISTED_POPULATIONS } from "./project.ts";
+import type { PopulationCounts } from "./populations.ts";
+import {
+  individualsBoxNeeds,
+  populationsKept,
+  MAX_LISTED_POPULATIONS,
+} from "./project.ts";
 import type { IndividualsRead, Project, TableRead } from "./project.ts";
 import { deepFreeze } from "./testSupport.ts";
 import type {
@@ -695,5 +703,442 @@ describe("IN4 D1 the column the page chooses, the columns its list offers, and t
           : { ...p.individuals, name: "pan\u202eel.csv" },
     });
     expect(individualsBoxNeeds(named)).toBe("Reading pan\\u202eel.csv.");
+  });
+});
+
+/** The statistics of each individual of panel.nei over every variant,
+    with no filter, that make_fixtures.mjs wrote with popnei 0.2.2 under
+    node, a NaN written as null read back as NaN. */
+function panelStats(): IndividualStats {
+  const parsed: unknown = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../e2e/fixtures/panel_individual_stats.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("individuals" in parsed) ||
+    !("missingGtRate" in parsed) ||
+    !("obsHetRate" in parsed) ||
+    !Array.isArray(parsed.individuals) ||
+    !Array.isArray(parsed.missingGtRate) ||
+    !Array.isArray(parsed.obsHetRate)
+  ) {
+    throw new Error("panel_individual_stats.json lacks a field");
+  }
+  const numbers = (values: unknown[]): Float64Array =>
+    Float64Array.from(values, (v) => (typeof v === "number" ? v : NaN));
+  return {
+    individuals: parsed.individuals.map(String),
+    missingGtRate: numbers(parsed.missingGtRate),
+    obsHetRate: numbers(parsed.obsHetRate),
+  };
+}
+
+/** The threshold of the missing rate of the individuals at `rate`. */
+function missingAt(rate: number): Project["individualFilters"] {
+  return [{ kind: "missing_data", maxAllowedMissingRate: rate }];
+}
+
+/** The individuals kept of `p`, with the statistics `stats`, which the
+    variants file of `p` has read. */
+function keptOf(
+  p: Project,
+  stats: IndividualStats | null = null,
+): IndividualsKept {
+  const kept = individualsKept(p, stats);
+  if (kept === null) {
+    throw new Error("the project gives no individuals kept");
+  }
+  return kept;
+}
+
+/** The counts of `p`, which has an individuals file read. */
+function countsOf(p: Project, kept: IndividualsKept | null): PopulationCounts {
+  const counts = populationCounts(p, kept);
+  if (counts === null) {
+    throw new Error("the project gives no counts");
+  }
+  return counts;
+}
+
+/** `panel_pops.csv` with its rows `changed` as `change` makes them, and
+    without the rows of the individuals `dropped`. */
+function panelPopsWith(
+  dropped: readonly string[],
+  change: (row: readonly Cell[]) => readonly Cell[] = (row) => row,
+): IndividualsTable {
+  return {
+    columns: PANEL_POPS.columns,
+    rows: PANEL_POPS.rows
+      .filter((row) => !dropped.includes(String(row[0])))
+      .map(change),
+  };
+}
+
+describe("IN4 D2 the counts of the box of the individuals file", () => {
+  test("no file, or a file not read, gives no counts", () => {
+    expect(populationCounts(popgen2Project({ read: null }), null)).toBeNull();
+    expect(
+      populationCounts(popgen2Project({ read: { kind: "pending" } }), null),
+    ).toBeNull();
+  });
+
+  test("popcat gives p0 48, p2 84 and p1 68 in the order of the file, no unclassified and no row unused", () => {
+    const p = popgen2Project();
+    expect(countsOf(p, keptOf(p))).toEqual({
+      column: "popcat",
+      numValues: 3,
+      tooMany: false,
+      variantsRead: true,
+      known: true,
+      populations: [
+        { pop: "p0", kept: 48 },
+        { pop: "p2", kept: 84 },
+        { pop: "p1", kept: 68 },
+      ],
+      unclassified: { kept: 0, missingCell: 0, notInFile: [] },
+      notInFile: [],
+      rowsNotInVariants: 0,
+      noneInFile: null,
+    });
+  });
+
+  test("the table without 7 rows gives those 7 not in the file, in the order of panel.nei, and 7 unclassified kept", () => {
+    const dropped = ["s150", "s003", "s077", "s010", "s199", "s100", "s042"];
+    const inOrder = ["s003", "s010", "s042", "s077", "s100", "s150", "s199"];
+    const p = popgen2Project({
+      read: readOf(panelPopsWith(dropped)),
+    });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.notInFile).toEqual(inOrder);
+    expect(counts.unclassified).toEqual({
+      kept: 7,
+      missingCell: 0,
+      notInFile: inOrder,
+    });
+    expect(
+      counts.populations.reduce((sum, { kept }) => sum + (kept ?? 0), 0),
+    ).toBe(193);
+    expect(counts.rowsNotInVariants).toBe(0);
+  });
+
+  test("3 cells of popcat emptied give 3 unclassified with an empty cell", () => {
+    const emptied = ["s001", "s060", "s120"];
+    const p = popgen2Project({
+      read: readOf(
+        panelPopsWith([], (row) =>
+          emptied.includes(String(row[0])) ? [row[0] ?? null, null] : row,
+        ),
+      ),
+    });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.unclassified).toEqual({
+      kept: 3,
+      missingCell: 3,
+      notInFile: [],
+    });
+    expect(counts.notInFile).toEqual([]);
+  });
+
+  test("the names of the table in capitals give none in the file, with the first name of each", () => {
+    const p = popgen2Project({
+      read: readOf(
+        panelPopsWith([], (row) => [
+          String(row[0]).toUpperCase(),
+          row[1] ?? null,
+        ]),
+      ),
+    });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.noneInFile).toEqual({
+      firstOfVariants: "s000",
+      firstOfFile: "S000",
+    });
+    expect(counts.populations).toEqual([]);
+    expect(counts.notInFile).toHaveLength(200);
+    expect(counts.rowsNotInVariants).toBe(200);
+    expect(counts.unclassified?.kept).toBe(200);
+    expect(counts.unclassified?.missingCell).toBe(0);
+  });
+
+  test("rows of individuals the variants file does not have are counted, and their populations have no row", () => {
+    const table: IndividualsTable = {
+      columns: PANEL_POPS.columns,
+      rows: [
+        ...PANEL_POPS.rows,
+        ["x001", "p9"],
+        ["x002", "p9"],
+        ["x003", "p0"],
+      ],
+    };
+    const p = popgen2Project({ read: readOf(table) });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.rowsNotInVariants).toBe(3);
+    expect(counts.numValues).toBe(4);
+    expect(counts.populations.map(({ pop }) => pop)).toEqual([
+      "p0",
+      "p2",
+      "p1",
+    ]);
+  });
+
+  test("a column of 21 values gives tooMany, no population and no unclassified counted", () => {
+    const table: IndividualsTable = {
+      columns: [...PANEL_POPS.columns, "accession"],
+      rows: PANEL_POPS.rows.map((row, index) => [
+        ...row,
+        `a${String(index % 21)}`,
+      ]),
+    };
+    const p = popgen2Project({
+      read: readOf(table),
+      grouping: { kind: "populations", column: "accession" },
+    });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts).toMatchObject({
+      column: "accession",
+      numValues: 21,
+      tooMany: true,
+      populations: [],
+      unclassified: null,
+      rowsNotInVariants: 0,
+    });
+  });
+
+  test("before the variants file is read: the column, its values and whether they are too many, and nothing counted", () => {
+    expect(
+      countsOf(popgen2Project({ variantsIndividuals: null }), null),
+    ).toEqual({
+      column: "popcat",
+      numValues: 3,
+      tooMany: false,
+      variantsRead: false,
+      known: false,
+      populations: [],
+      unclassified: null,
+      notInFile: [],
+      rowsNotInVariants: null,
+      noneInFile: null,
+    });
+    const many = tableOf(["pop"], distinctValues(25));
+    expect(
+      countsOf(
+        popgen2Project({
+          read: readOf(many),
+          grouping: { kind: "populations", column: "pop" },
+          variantsIndividuals: null,
+        }),
+        null,
+      ),
+    ).toMatchObject({ column: "pop", numValues: 25, tooMany: true });
+  });
+
+  test("no column chosen, or a column the table does not have, gives no population and every individual kept unclassified, none by a cause", () => {
+    for (const column of [null, "gone", "IID"]) {
+      const p = popgen2Project({ grouping: { kind: "populations", column } });
+      expect(countsOf(p, keptOf(p))).toEqual({
+        column: null,
+        numValues: 0,
+        tooMany: false,
+        variantsRead: true,
+        known: true,
+        populations: [],
+        unclassified: { kept: 200, missingCell: 0, notInFile: [] },
+        notInFile: [],
+        rowsNotInVariants: 0,
+        noneInFile: null,
+      });
+    }
+  });
+
+  test("a threshold of the individuals on and no statistics: not known, each count null, no unclassified", () => {
+    const p = popgen2Project({ individualFilters: missingAt(0.1) });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.known).toBe(false);
+    expect(counts.populations).toEqual([
+      { pop: "p0", kept: null },
+      { pop: "p2", kept: null },
+      { pop: "p1", kept: null },
+    ]);
+    expect(counts.unclassified).toBeNull();
+    expect(counts.notInFile).toEqual([]);
+    expect(counts.rowsNotInVariants).toBe(0);
+  });
+
+  test("with popnei's statistics of panel.nei the missing rate at 0.1 keeps all 200 individuals, whose rates are at most 0.045, and the counts are those of no threshold", () => {
+    const p = popgen2Project({ individualFilters: missingAt(0.1) });
+    const kept = keptOf(p, panelStats());
+    expect(kept.list).toEqual({ kind: "known", individuals: null });
+    const counts = countsOf(p, kept);
+    expect(counts.known).toBe(true);
+    expect(counts.populations).toEqual([
+      { pop: "p0", kept: 48 },
+      { pop: "p2", kept: 84 },
+      { pop: "p1", kept: 68 },
+    ]);
+  });
+
+  test("with popnei's statistics of panel.nei and the missing rate at 0.03, each count is the length of its population in populationsKept: p0 29, p2 51, p1 36", () => {
+    const stats = panelStats();
+    expect(stats.individuals).toEqual(PANEL_INDIVIDUALS);
+    const p = popgen2Project({ individualFilters: missingAt(0.03) });
+    const kept = keptOf(p, stats);
+    if (kept.list.kind !== "known" || kept.list.individuals === null) {
+      throw new Error("the missing rate of 0.03 removes nobody");
+    }
+    const narrowed = populationsKept(p, kept.list.individuals);
+    const counts = countsOf(p, kept);
+    expect(counts.known).toBe(true);
+    expect(counts.populations).toEqual(
+      narrowed?.pops.map(([pop, individuals]) => ({
+        pop,
+        kept: individuals.length,
+      })),
+    );
+    expect(counts.populations).toEqual([
+      { pop: "p0", kept: 29 },
+      { pop: "p2", kept: 51 },
+      { pop: "p1", kept: 36 },
+    ]);
+    expect(counts.unclassified).toEqual({
+      kept: 0,
+      missingCell: 0,
+      notInFile: [],
+    });
+  });
+
+  test("a population the filters empty keeps its row, with 0", () => {
+    const p0 = PANEL_POPS.rows
+      .filter((row) => row[1] === "p0")
+      .map((row) => String(row[0]));
+    const p = popgen2Project({
+      individualFilters: [{ kind: "keep", individuals: p0 }],
+    });
+    expect(countsOf(p, keptOf(p)).populations).toEqual([
+      { pop: "p0", kept: 48 },
+      { pop: "p2", kept: 0 },
+      { pop: "p1", kept: 0 },
+    ]);
+  });
+
+  test("the unclassified are of the individuals kept, and the names those kept not in the file", () => {
+    const dropped = ["s003", "s010", "s042"];
+    const emptied = ["s001"];
+    const p = popgen2Project({
+      read: readOf(
+        panelPopsWith(dropped, (row) =>
+          emptied.includes(String(row[0])) ? [row[0] ?? null, null] : row,
+        ),
+      ),
+      individualFilters: [{ kind: "remove", individuals: ["s010"] }],
+    });
+    const counts = countsOf(p, keptOf(p));
+    expect(counts.unclassified).toEqual({
+      kept: 3,
+      missingCell: 1,
+      notInFile: ["s003", "s042"],
+    });
+    expect(counts.notInFile).toEqual(dropped);
+  });
+
+  test("the counts are frozen", () => {
+    const p = popgen2Project();
+    const counts = countsOf(p, keptOf(p));
+    expect(Object.isFrozen(counts)).toBe(true);
+    expect(Object.isFrozen(counts.populations)).toBe(true);
+    expect(Object.isFrozen(counts.populations[0])).toBe(true);
+    expect(Object.isFrozen(counts.unclassified)).toBe(true);
+    expect(Object.isFrozen(counts.notInFile)).toBe(true);
+  });
+});
+
+describe("IN4 D3 the counts are the same object for the same individuals kept", () => {
+  test("the same inputs twice give the same object", () => {
+    const p = popgen2Project();
+    const kept = keptOf(p);
+    expect(populationCounts(p, kept)).toBe(populationCounts(p, kept));
+  });
+
+  test("a new list of the same individuals in the same order gives the same object", () => {
+    const stats = panelStats();
+    const p = popgen2Project({ individualFilters: missingAt(0.03) });
+    const firstKept = keptOf(p, stats);
+    const first = populationCounts(p, firstKept);
+    const again = keptOf(p, stats);
+    expect(again.list).not.toBe(firstKept.list);
+    expect(again.list.kind === "known" && again.list.individuals).toHaveLength(
+      116,
+    );
+    expect(populationCounts(p, again)).toBe(first);
+  });
+
+  test("a list of the same length that keeps other individuals gives a new object with the new counts", () => {
+    const p0 = PANEL_POPS.rows
+      .filter((row) => row[1] === "p0")
+      .map((row) => String(row[0]));
+    const p1 = PANEL_POPS.rows
+      .filter((row) => row[1] === "p1")
+      .slice(0, 48)
+      .map((row) => String(row[0]));
+    const keepP0 = popgen2Project({
+      individualFilters: [{ kind: "keep", individuals: p0 }],
+    });
+    const first = countsOf(keepP0, keptOf(keepP0));
+    const keepP1: Project = deepFreeze({
+      ...keepP0,
+      individualFilters: [{ kind: "keep", individuals: p1 }],
+    });
+    const second = countsOf(keepP1, keptOf(keepP1));
+    expect(second).not.toBe(first);
+    expect(second.populations).toEqual([
+      { pop: "p0", kept: 0 },
+      { pop: "p2", kept: 0 },
+      { pop: "p1", kept: 48 },
+    ]);
+  });
+
+  test("a threshold of the variants changed gives the same object", () => {
+    const stats = panelStats();
+    const p = popgen2Project({ individualFilters: missingAt(0.03) });
+    const first = populationCounts(p, keptOf(p, stats));
+    const withMaf: Project = deepFreeze({
+      ...p,
+      filters: [{ kind: "maf", maxAllowedMaf: 0.95 }],
+    });
+    expect(populationCounts(withMaf, keptOf(withMaf, stats))).toBe(first);
+  });
+
+  test("an unknown list twice gives the same object, and a list known after it a new one", () => {
+    const p = popgen2Project({ individualFilters: missingAt(0.1) });
+    const first = populationCounts(p, keptOf(p));
+    expect(populationCounts(p, keptOf(p))).toBe(first);
+    expect(populationCounts(p, keptOf(p, panelStats()))).not.toBe(first);
+  });
+
+  test("another column, or another read of the variants file, gives a new object", () => {
+    const p = popgen2Project();
+    const first = populationCounts(p, keptOf(p));
+    const none: Project = deepFreeze({
+      ...p,
+      grouping: { kind: "populations", column: null },
+    });
+    expect(populationCounts(none, keptOf(none))?.column).toBeNull();
+    expect(populationCounts(p, keptOf(p))).not.toBe(first);
+    const variants = p.variants;
+    if (variants === null) {
+      throw new Error("the project has no variants file");
+    }
+    const reread: Project = deepFreeze({
+      ...p,
+      variants: { ...variants, read: { ...variants.read } },
+    });
+    const third = populationCounts(reread, keptOf(reread));
+    expect(third).not.toBe(populationCounts(p, keptOf(p)));
   });
 });
