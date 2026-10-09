@@ -465,12 +465,16 @@ read, as it is recorded, and never at another change of the project.
 At a read of kind `read`, the entry chooses the column when the grouping
 names no column that the list "Column of the populations" offers,
 `populationColumnChoices(read)` of core, but for a "None" the user chose
-for that load, below. It sends with the store's `apply` the command
-`setGrouping(p, { kind: "populations", column })` with the column
-`defaultPopulationsColumn(read)` of core gives, described "the column of
-the populations was chosen", and sends nothing when that is `null`. It
-is a step of the history, as every command of the individuals file is
-on that page. So:
+for that load, below. It sends with the store's `applyAfresh` the
+command `setGrouping(p, { kind: "populations", column })` with the
+column `defaultPopulationsColumn(read)` of core gives, and sends nothing
+when that is `null`. Until 9 October 2026 it sent it with `apply`,
+described "the column of the populations was chosen", a step of the
+history, as every command of the individuals file was on that page;
+since Undo came back that day, an opening of a file is no step, and the
+column the page chooses is part of the opening, so it starts the
+history afresh (`docs/specs/core/store.md`, "On popgen2.html: no
+notice, and a history of the filters"). So:
 
 - a file opened anew, a load id read for the first time, gets the
   page's column when the grouping names no column, a column its table

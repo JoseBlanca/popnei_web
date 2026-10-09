@@ -409,6 +409,14 @@ analysis, and has no Run of its own.
 
 ## What it sends and reads
 
+Revised on 9 October 2026, when Undo came back to the page
+(`docs/specs/steps/popgen2-pca.md`, "Undo and Redo"): the opening, the
+removal and a change of an option of the reader, and the column the
+entry chooses, go through the store's `applyAfresh`, which starts the
+history afresh and is no step of Undo; only the column the user
+chooses, or None, stays a command of `apply`, a step. The descriptions
+below remain, though only that one is shown, in the tooltip of Undo.
+
 It sends, each a command of `apply`, a step of the history, with its
 description, as the old step's commands (`src/ui/steps/individuals/commands.ts`):
 
