@@ -89,7 +89,7 @@ The words of `docs/architecture.md` this design uses, as it uses them:
   results and what is being calculated, and that the screens read. It
   keeps the **history**, the projects before the current one, which an
   Undo would go back to; `popgen2.html` keeps it though it shows no
-  Undo. A command sent to it with `dispatch` adds a project to the
+  Undo. A command sent to it with `apply` adds a project to the
   history; `open`, which opens a variants file, starts the history
   afresh and stops every calculation.
 - **A key**: the text made from everything a calculation reads, under
@@ -603,7 +603,7 @@ pass only once for each key (`src/ui/autoRuns.ts`), so the user would
 have to press Start again and wait for the whole file a second time.
 
 So the individuals file goes through the other way, a command,
-`dispatch` of the store, as on the old page
+`apply` of the store, as on the old page
 (`src/ui/steps/individuals/commands.ts`): its opening, its removal, the
 options of a CSV, the column of the populations and the column the page
 chooses are each a step of the history. None of them changes the key of
