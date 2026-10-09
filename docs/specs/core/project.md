@@ -1,5 +1,15 @@
 # The project and its commands
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, in the places marked "From 9 October 2026", with no
+code yet: the individuals file read by table_io, whose failed read
+carries the format of the file and whose refusals change their kinds and
+some words, and whose loads all carry options of a CSV; the populations
+named with the decimal mark of the read; and, for `popgen2.html`, the
+counts per population, the column chosen by the page and the words of a
+refusal in its box (below, "The counts per population on
+popgen2.html").
+
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/core/project.ts`; revised on 25 September 2026 for the specs of
 stage 2 the owner approved that day, as
@@ -676,7 +686,14 @@ words of the kinds of an xlsx, `notXlsx`, `oldExcel`, `encrypted`,
 `emptyIndividual` and `unnamedColumn` with the row and the column of the
 sheet as Excel names them, "row 7 has no name of an individual in its
 first column" and "column D has values but no name in the header",
-which `project.ts` writes so. A separator is named as the
+which `project.ts` writes so. From 9 October 2026 the place of
+`emptyIndividual` and `unnamedColumn` is written as Excel names it when
+the failed read's `format` is `"xlsx"`, and as an editor does otherwise,
+whatever the `csv` of the source, since every new load has options of a
+CSV; `notXlsx` goes, `notWorkbook` comes, `xlsxReaderNotLoaded` is
+`readerNotLoaded`, and the words of `notText` and `oldExcel` change, as
+the reader's spec gives them (`docs/specs/worker/individuals.md`, "The
+refusals and their words"). A separator is named as the
 Individuals step names it, the comma, the semicolon or the tab. A size
 is in MB of 1,000,000 bytes, with one decimal rounded up, so that a file
 of 20,000,001 bytes is "20.1 MB"; the limit, a whole number of MB, is
@@ -702,7 +719,7 @@ file or a file read, which the step shows otherwise:
 | refused by the reader, `raggedRow` or `unclosedQuote` | "pops.csv could not be read: line 7 has 3 cells where the header has 4, read with the semicolon as the separator. Choose another separator, or load a corrected file." |
 | refused by the reader, `variantsFile` | "pops.csv could not be read: it is a variants file, which the Variants step takes. Load a metadata file." |
 | refused by the reader, `unreadable` | "pops.csv could not be read: the browser could not read it; it may have been changed, moved or deleted since it was picked. Choose it again." |
-| refused by the reader, `xlsxReaderNotLoaded`, the files wasm not downloaded, from stage 4 | "pops.xlsx could not be read: the part of the application that reads Excel files could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with no end, since its words say what to do; the same beside a Run button |
+| refused by the reader, `readerNotLoaded`, the files wasm not downloaded, for any file from 9 October 2026 | "pops.csv could not be read: the part of the application that reads tables could not be downloaded; check the connection and load the file again; if it fails again, the site may have been updated since this page was opened: save the project, reload the page and open the project again.", with no end, since its words say what to do; the same beside a Run button |
 | refused by the reader, any other kind, or by the files wasm | "pops.csv could not be read: it has no row of individuals. Load a corrected file." |
 | its read stopped by a crash of the light worker, or by a defect of our code (**Open 4**, closed) | "pops.csv could not be read: the reading of the file stopped unexpectedly. If it happens again with this file, save it again from Excel as .xlsx or as CSV." |
 | the light worker could not start, or the page is out of date | "pops.csv could not be read: ‹what happened› (**Open 4**). Save the project, reload the page, open the project and choose pops.csv again." |
@@ -858,7 +875,14 @@ The populations are of one of two kinds:
   is named by the text of its cell, whatever the type of the column; a
   number or a boolean of an xlsx is written as `String` writes it,
   `1.5`, `true`, so that a number 1 and a text `1` of one column are one
-  population, as they are one value for the types (below). An
+  population, as they are one value for the types (below). From 9
+  October 2026 a number is written with the decimal mark of the read,
+  `found.decimal`, or the point for an xlsx and a read with no `found`,
+  `1,5` for a CSV read with the comma, as `cellShown` writes it (below,
+  "The counts per population on popgen2.html"): table_io makes numbers
+  of a CSV's numeric columns, and `String` would name `1,5` of the file
+  `1.5`, where the reader of TypeScript kept the text, so the names of
+  the populations of such a file stay what they were. An
   individual whose cell is missing, empty, `NA` or `-`, is in no
   population (`docs/functionality.md`, section 4). The populations are
   in the order in which each first appears in the file, and the
@@ -1032,6 +1056,185 @@ scratch copy. `populations.ts` imports `project.ts` and
   filters of individuals in the Variants step to keep it.", or "…them.",
   which ends those words and the line of the ready state that names the
   populations left empty.
+
+### The counts per population on popgen2.html
+
+From 9 October 2026, for `docs/designs/input-page.md`, approved by the
+owner that day, and the screen `docs/specs/steps/popgen2-input.md`. On
+`popgen2.html` an individual of the variants file with no population is
+**unclassified**: with no individuals file, with no column chosen, with
+its cell of the column missing, or when the individuals file does not
+have it. It is not an error there, and `individualsNeeds`, which
+`popgen.html` keeps, is never called by that page. Three functions give
+what its box of the individuals file shows, in `src/core/populations.ts`
+beside the functions of the populations of stage 5, since the counts
+need `individualsKept`, which imports `project.ts`:
+
+- **The counts**, `populationCounts(p, kept)`: for each population of
+  the column chosen with an individual in both files, in the order of
+  `populationsToRun`, its individuals kept, from `populationsKept(p,
+  list)` with the list of `kept` when it is known, its `emptied`
+  populations given 0, so that a population the filters empty keeps its
+  row; or, while the list is not known, a threshold of the individuals
+  on and the one pass not finished, `null` for each. The unclassified
+  kept, with how many of them have a missing cell in the column and the
+  names of those not in the individuals file, kept, in the order of the
+  variants file, `null` while the list is not known. Those not in the individuals file, all of them, before the
+  filters, in the order of the variants file, `individualsCheck(p).missing`,
+  or every individual of the variants file without a file read. The rows
+  of the individuals file whose individual the variants file does not
+  have, `individualsCheck(p).ignoredRows`. Whether none of the
+  individuals of the variants file is in the individuals file, with the
+  first name of each, for the warning. And the number of different
+  values of the column, the cells that are not missing compared by
+  `cellShown`, counted over every row of the file; above
+  `MAX_LISTED_POPULATIONS`, 20, the owner's bound of 9 October 2026
+  (answer 5 of the design), no population is given, `tooMany` is true,
+  and the unclassified are not counted. `null` when the variants file is
+  not read, or `kept` is `null`.
+- **The column chosen by the page**, `defaultPopulationsColumn(read)`:
+  the first column after the names one of whose cells is a text and
+  whose different values, compared by `cellShown`, are 1 to
+  `MAX_LISTED_POPULATIONS`; `null` when none is. A column is text for
+  table_io when one of its values is not a number nor a boolean, and the
+  light worker makes every value of its other columns a number or a
+  boolean, but for an integer column with a value beyond 2^53, which it
+  keeps as texts (`docs/specs/worker/individuals.md`, "The read by
+  table_io"). So for a table read since 9 October 2026 this is table_io's
+  type text; for a table read before, every cell of a CSV a text, it is
+  the first column of 1 to 20 values. The entry of `popgen2.html` sends
+  it (`docs/specs/entry.md`, "The column of the populations on
+  popgen2.html").
+- **The words of the box**, `individualsBoxNeeds(p)`: the reason the box
+  shows in place of the list and the counts, for a file being read or
+  that could not be read, in the words of `individualsStepNeeds` but for
+  their ends, which are this page's: "panel_pops.csv could not be read: "
+  and the words of the reader's spec after the colon, then
+  "Choose another separator under the tab Individuals file, or open a
+  corrected file." for `raggedRow` and `unclosedQuote`; for
+  `variantsFile`, "it is a variants file; open it with Open variants
+  file in the box Variants file." in place of the reader's words; for
+  `tooLarge`, "it is 312.4 MB, more than the 20 MB an individuals file
+  can have; check that it is the individuals file and not the variants
+  file."; for `readerNotLoaded`, "the part of the page that reads tables
+  could not be downloaded. Check the connection and open the file
+  again."; for a failure of the worker, "the page stopped while it read
+  it. Open the file again."; and "Open a corrected file." after every
+  other refusal. "Reading panel_pops.csv." while it is read. `null` with
+  no file or a file read. A `notGiven` file cannot be on that page,
+  which opens no project file, and is a defect there, thrown.
+
+The cell as the screens show it, `cellShown(cell, decimal)`, is the
+text of a cell with numbers written with the decimal mark of the read: a
+text as it is; a number as `String` writes it, its point made `decimal`;
+`true` and `false`; `null` for a missing cell. The names of the
+populations use it (above, "The populations"), and so do the table of
+the file on `popgen2.html` and the different values of a column, so
+that the box, the table and the populations never write one value two
+ways. The types of the columns keep `cellText`, `String` alone, whose
+texts the project's binary types hold.
+
+The rules of the counts against what a reader would expect:
+
+- With no threshold of the individuals on, `individualsKept` gives the
+  list as known, removing nobody, with no statistics, so the counts are
+  known as soon as both files are read, the one pass running or not.
+- No filter of the variants changes a count, since none removes an
+  individual.
+- A population whose every individual of the file is outside the
+  variants file has no row; its rows are among `rowsNotInVariants`.
+- With no column chosen, or a column the table does not have, no
+  population is given and every individual kept is unclassified, none
+  counted as with a missing cell or not in the file.
+- With a file read and none of its individuals in the variants file,
+  `noneInFile` is true and the names are `firstOfVariants`, the first
+  individual of the variants file, and `firstOfFile`, the first row of
+  the table.
+
+```ts
+/** The most different values of a column whose populations the box
+    of popgen2.html counts; the owner's bound of 9 October 2026. */
+export const MAX_LISTED_POPULATIONS = 20;
+
+/** The text of a cell as the screens show it, numbers with `decimal`;
+    null for a missing cell. In src/core/project.ts. */
+export function cellShown(cell: Cell, decimal: "." | ","): string | null;
+
+/** A population and its individuals kept, or null while the list of the
+    individuals kept is not known. */
+export interface PopulationCount {
+  pop: string;
+  kept: number | null;
+}
+
+export interface PopulationCounts {
+  /** The column the populations are taken from, a column of the table,
+      or null: no file read, no column chosen, or none of that name. */
+  column: string | null;
+  /** The different values of the column in the file; 0 with no column. */
+  numValues: number;
+  /** numValues above MAX_LISTED_POPULATIONS: populations empty, the
+      unclassified not counted. */
+  tooMany: boolean;
+  /** Whether the list of the individuals kept is known. */
+  known: boolean;
+  /** The populations with an individual in both files, in their order. */
+  populations: PopulationCount[];
+  /** The unclassified kept, and how many of them for each cause; null
+      while the list is not known, and with tooMany. */
+  unclassified: { kept: number; missingCell: number;
+    notInFile: string[] } | null;   // the kept not in the file, in the order of the variants file
+  /** The individuals of the variants file not in the individuals file,
+      before the filters, in the order of the variants file; every one
+      with no file read. */
+  notInFile: string[];
+  /** The rows of the individuals file whose individual the variants file
+      does not have; null with no file read. */
+  rowsNotInVariants: number | null;
+  /** A file read none of whose individuals is in the variants file, with
+      the first name of each; null otherwise. */
+  noneInFile: { firstOfVariants: string; firstOfFile: string } | null;
+}
+
+/** The counts of the box of popgen2.html; null when the variants file is
+    not read or `kept` is null. The same frozen object for the same
+    table, column, read of the variants file and frozen list of the
+    individuals kept, compared with ===. In src/core/populations.ts. */
+export function populationCounts(p: Project, kept: IndividualsKept | null): PopulationCounts | null;
+
+/** The first column after the names with a text cell and 1 to
+    MAX_LISTED_POPULATIONS different values, or null. */
+export function defaultPopulationsColumn(read: TableRead): string | null;
+
+/** The reason of the box of the individuals file of popgen2.html, in
+    place of its list and counts, or null with no file or a file read.
+    Throws a defect for a file notGiven. */
+export function individualsBoxNeeds(p: Project): string | null;
+```
+
+How it is verified, with Vitest, at the three functions, on projects
+made in the test with `panel.nei`'s 200 individuals and the table of
+`panel_pops.csv`, as `src/core/fixtures/` holds them: `popcat` gives p0
+48, p1 68, p2 84, the unclassified 0, 0 with a missing cell and none
+not in the file, `rowsNotInVariants`
+0; the table without 7 rows gives those 7 in `notInFile`, in the order
+of `panel.nei`, and the unclassified kept 7, the 7 names not in the file; 3 cells
+of `popcat` made `null` give 3 with a missing cell; the names of the
+table made `S000` give `noneInFile` with `s000` and `S000`; a column of
+21 values gives `tooMany` and no population; with a threshold of the
+individuals on and no statistics, `known` false and each count `null`;
+with the statistics of `panel.nei`'s one pass and the missing rate at
+0.1, each count equal to the length of the population of
+`populationsKept` with the list of `individualsKept`, a population
+emptied at 0; a threshold of the variants changed gives the same object;
+the same inputs twice, the same object by `===`. At
+`defaultPopulationsColumn`: `popcat` for `panel_pops.csv`, `popcat` and
+not `altitude`, numbers, for `panel_meta.csv`, `pop`, two values, for
+`ld_pops.csv`, `Población` for the table of `excel_en.xlsx`, `null` for
+a table of numbers alone and for one whose only text column has 21
+values. At `cellShown`: 1.5 with the comma `"1,5"`, with the point
+`"1.5"`, `true` `"true"`, `"001"` `"001"`, `null` `null`. At
+`individualsBoxNeeds`: each row of the screen spec's words.
 
 ### The types of the columns
 
@@ -1285,7 +1488,7 @@ export type ColumnTypeOf = readonly [column: string, type: ColumnType];
 export interface IndividualsSource {
   fileId: string;
   name: string;
-  csv: CsvOptions | null;          // null for an xlsx
+  csv: CsvOptions | null;          // set for every load from 9 October 2026; null for an xlsx of a project saved before
   typesSet: ColumnTypeOf[];        // the types the user set, by column, applied or not; never identifier
   read: IndividualsRead;
 }
@@ -1294,7 +1497,8 @@ export type IndividualsRead =
   | { kind: "pending" }
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
       found: CsvFound | null }
-  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> } }
+  | { kind: "failed"; error: IndividualsFileError | { kind: "worker"; error: Exclude<RunError, { kind: "files" }> };
+      format: "text" | "xlsx" | null }  // from 9 October 2026: as the reader found it; null for a failure of the worker
   // named by an opened project, not read when it was saved; no read is asked
   | { kind: "notGiven" };
 
@@ -1467,7 +1671,9 @@ export function removeIndividualFilter(p: Project, kind: "keep" | "remove"): Pro
 /** Turns a threshold off: it is kept, with its value, in individualFiltersOff. */
 export function turnOffIndividualFilter(p: Project, kind: IndividualThreshold["kind"]): Project;
 
-/** Puts a new load of the individuals file, pending; `csv` is null for an xlsx. */
+/** Puts a new load of the individuals file, pending; from 9 October 2026
+    every page gives `csv`, AUTO_CSV for a new file, an xlsx too, since
+    the reader finds the format from the bytes; null stays accepted. */
 export function loadIndividuals(p: Project, source: {
   fileId: string; name: string; csv: CsvOptions | null;
 }): Project;

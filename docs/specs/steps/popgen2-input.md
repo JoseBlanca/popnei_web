@@ -100,7 +100,12 @@ opened. It ends with the zone that opens a variants file, today's
 `OpenVariants.tsx`, moved here from the end of the page: its button,
 "Open variants file…" before a file and "Open another variants file…"
 after, and the drop and the paste it takes today. Before a file is open
-the box holds the zone alone, under its heading "Variants file".
+the box holds the zone alone, under its heading "Variants file". Both
+zones, the variants file's and the individuals file's, stay outside any
+boundary of errors that is made again for each load, as the box's
+`ErrorBoundary` keyed by the load id of `VariantsPage.tsx` is: a zone
+drawn anew at an opening would take the focus from its button, which
+`FileZone.tsx` keeps by being the same element.
 
 ### The box of the individuals file
 
@@ -164,7 +169,9 @@ Under the table, the first that holds:
 - some individuals classified and some unclassified kept: "Unclassified,
   left out of the analyses per population: 7 individuals, 3 with an
   empty cell in popcat and 4 that are not in panel_pops.csv: s031, s044,
-  s102 and 1 more." Each part is left out when its count is 0; past
+  s102 and 1 more." The count and its causes are of the individuals
+  kept; the names are of the kept not in the file. Each part is left out
+  when its count is 0; past
   three names, the count of the rest. One individual: "1 individual".
 - no individual of the variants file in the individuals file, the table
   then empty and not drawn: the warning "Warning: none of the 200
@@ -190,7 +197,7 @@ unclassified gives way to:
   it again in the box of panel.nei to count the individuals the filters
   keep.";
 - after a failure of the pass or of the opening: "Not counted: panel.nei
-  could not be read to the end."
+  could not be read to the end; the box of panel.nei says why."
 
 The warning of no individual in the file and the last line do not wait.
 With no threshold of the individuals on, the counts never wait.
@@ -230,10 +237,22 @@ file open. Open one in the box Variants file."
 of the read, three selects as in the old Individuals step
 (`docs/specs/steps/individuals.md`, "How the file was read"):
 "Encoding", "Separator" and "Decimal mark", each with "Detected: …"
-until the user sets it, and the warning of a character not decoded,
-"Warning: line 12 of panel_pops.csv has a character that could not be
-read, shown as �. Choose another encoding if the names look wrong.", in
-the words of the old step. For an xlsx, the line "Read from the first
+until the user sets it, as the old step's `Select`s
+(`src/ui/widgets/Select.tsx`); for a file of UTF-16, whose encoding
+table_io finds from its mark and which cannot be set, the line of the old
+step, "Encoding: UTF-16, from the mark at the start of the file.",
+`UTF16_TEXT`, in place of the select of the encoding. The warning of a
+character not decoded is the old step's, `undecodedText`: "Warning: line
+12 of panel_pops.csv has bytes that could not be read as UTF-8, shown as
+�. Correct them in the file and load it again, or, if every letter with
+an accent shows as �, choose Windows-1252 as the encoding." While the
+same load is read again for options the user changed, the three selects
+stay drawn with the options set, and "Reading panel_pops.csv." shows
+under them, so that the select just changed keeps the focus: the screen
+remembers, for the load id, the format of its last read, its own state
+and not the project's. Beside the options of a text file refused, the
+line "panel_pops.csv could not be read; the box Individuals file says
+why."  For an xlsx, the line "Read from the first
 sheet of panel_pops.xlsx; any other sheet is not read." What the file is
 comes from the read, its `found` or the format of its refusal, never
 from its name.
@@ -250,7 +269,9 @@ its failure (`copyLabel`, `copiedText`, `NOT_COPIED` of
 the file, in its order: the column of the names first, each of its cells
 the header of its row, so that a screen reader reads "s031, popcat, p1";
 a missing value empty; a number written with the decimal mark of the
-read, the comma for a file read with it; a boolean `TRUE` or `FALSE`. It
+read, the comma for a file read with it; a boolean `true` or `false`,
+all as `cellShown` of core writes them, as the names of the populations
+are. It
 is `SortableTable` of `src/ui/widgets/SortableTable.tsx`: a box at most
 28rem high, or 70% of the window, whichever is smaller, that scrolls
 down with the row of the headers kept in view and sideways when the
@@ -264,7 +285,12 @@ does not. The types of the columns are not shown.
 
 Both tabs stay drawn while the other is shown (`shouldForceMount` of
 React Aria's `TabPanel`): the hidden one is marked inert, so the Tab key
-and a screen reader skip it, and a rule of its style hides it. A turn to
+and a screen reader skip it, and a rule of its style hides it,
+`display: none`. A box hidden so loses where it was scrolled, and a table
+that draws only its rows in view sees a box of no size, so the tab
+"Individuals file" keeps the scroll place of its table, its own state,
+as it is left, and puts it back when it is shown, once the table has
+measured its box again. A turn to
 the other tab and back finds the plots, a number half typed in the box
 of a threshold, the sort of the table and its place as they were. A plot
 whose tab is hidden keeps its last drawing and draws again at the size of
@@ -369,15 +395,17 @@ filters of the individuals.
 The criteria are those of WCAG 2.2 at level AA.
 
 **The order of the Tab key** (2.4.3, "Focus order"): in the box of the
-variants file, Stop or Start again, then its zone's button; in the box of
-the individuals file, the list, then its zone's button, then Remove;
+variants file, Stop or Start again, then its zone; in the box of the
+individuals file, the list, then its zone, then Remove;
 the row of the tabs, one stop, whose left and right arrow keys move
 between the two labels and show each as they reach it, and Home and End
 go to the first and the last; then the controls of the tab shown, in the
 order of `popgen2-filters.md` for "Variants file", and for "Individuals
-file" the three selects, the copy button, the headers of the table and
-the box of the table, which scrolls with the arrow keys once it has the
-focus. The hidden tab is never reached.
+file" the three selects, the copy button, and the table, one stop, a grid
+whose arrow keys move from cell to cell and whose headers sort with
+Enter. Each zone is two stops, the zone itself, which takes a paste and
+is named "Paste a variants file" or "Paste an individuals file", then
+its button. The hidden tab is never reached.
 
 **Where the focus goes.** An opening by the button leaves the focus on
 the button, which becomes "Open another …". Remove puts the focus on the
@@ -385,11 +413,24 @@ zone's button, "Open individuals file…", since Remove goes. A turn of
 the tab moves no focus but React Aria's on the labels.
 
 **What is said without moving the focus** (4.1.3, "Status messages").
-The end of a read of the individuals file, its words above, once; a
-refusal, its words, once; the names copied. A change of the counts after
+The end of a read of the individuals file, its words above, once, said
+by the entry after it has sent the column it chooses, so that it names
+that column (`docs/specs/entry.md`), with, after it, the warning the box
+then shows, if any: of no individual in the file, of too many values, or
+of no column qualified, each of which appears with no act of the user; a
+refusal, its words, once; the words of a zone given a folder, a piece of
+text or several files, as the zone of the variants file says them; the
+names copied. A change of the counts after
 a change of a threshold or of the column is not said: the user acted on
 the threshold or the list, which says what changed, and a sentence at
 each count would fill the region while a threshold is moved.
+
+**The widgets.** The counts are `Table.tsx`, whose cells take an
+element, for the "…" with its words for a screen reader; the list
+`Select.tsx`; each warning `Warning.tsx`, which writes "Warning:" itself,
+so the words given to it start after it; the table of the file
+`SortableTable.tsx`, named by its `label`, "The table of
+panel_pops.csv".
 
 **A table that a screen reader can read.** The counts are a table with
 its caption and two header cells; a count waiting is "…" on the screen
@@ -439,9 +480,13 @@ core and of the entry in their module specs.
   the line of a Stop; at Start again's end, the counts;
 - an individuals file opened while the one pass runs: the pass goes on
   to its end, with no second pass started;
-- a CSV with `;` read as `,` by setting the separator: the refusal of a
-  row with its words in the box, and the options under the tab; setting
-  `;` reads it;
+- a CSV the flow makes, `id;pop;h` over rows such as `s000;p0;1,75`,
+  with the separator set to the comma: the refusal of the row of line 2,
+  2 cells where the header has 1, with its words in the box, the options
+  under the tab, and the focus still on the select of the separator;
+  setting the semicolon reads it. And `panel_pops.csv` with the
+  separator set to the semicolon, which gives a table of the names alone:
+  the list with "None" alone and the line of no column qualified;
 - a CSV named `.xlsx` read as text, with its options under the tab; an
   `.xls` named `.csv` refused as a workbook of Excel 97–2003, with no
   options under the tab;
@@ -449,8 +494,17 @@ core and of the entry in their module specs.
   moved, the other tab shown and back: the threshold, its line and the
   plots as they were; the table sorted and scrolled, the other tab and
   back: the same;
-- `individuals_10000.xlsx`, its table sorted by a header, the next key
-  answered within a tenth of a second;
+- `individuals_10000.xlsx`, its table sorted by a header: the time the
+  page does not answer, as `e2e/measure.spec.ts` measures it, written in
+  the report of the plan beside the 149 ms of Chromium and 107 ms of
+  WebKit that the same sort took on the old page (VS7 D4 there);
+- a long file name, 80 characters, at 320 px: "Remove …", the name in the
+  box and the warnings wrap and the page does not scroll sideways
+  (1.4.10, "Reflow");
+- a CSV with an integer column before the column of the populations:
+  the populations chosen, not the integers;
+- a progress of the pass draws the box of the individuals file no
+  more, counted in Vitest with the store and a fake worker;
 - the network: table_io's JavaScript and `.wasm` requested once, at the
   first read, a CSV included, and served as `application/wasm`;
 - 320 px wide: no sideways scroll of the page, the boxes one above the
