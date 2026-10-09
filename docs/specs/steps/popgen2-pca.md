@@ -623,8 +623,10 @@ The criteria are those of WCAG 2.2 at level AA.
 **The order of the Tab key** (2.4.3): the heading is not a stop; Undo,
 then Redo, when shown; the box of the variants file and the box of the
 individuals file, as `popgen2-input.md` gives them; the row of tabs,
-one stop, whose Left and Right arrow keys move along the labels, greyed
-ones among them, and Home and End go to the first and the last; then
+one stop, the tab shown, also after the arrow keys rested on a greyed
+tab before the focus left the row, whose Left and Right arrow keys move
+along the labels, greyed ones among them, and Home and End go to the
+first and the last; then
 the content of the tab shown. In the PCA tab: the method; the missing
 data, its field while stricter; the MAF, the same; the LD switch and
 its two fields; Run or Stop; the warnings; the bar of controls; the

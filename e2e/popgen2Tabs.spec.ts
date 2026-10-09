@@ -9,7 +9,13 @@
  * as its description, and the tab shown still selected; the PCA tab shown
  * while another variants file is opened, its reason in its place; the
  * labels on two lines at 320 pixels with no sideways scroll; axe with
- * each tab shown, light and dark.
+ * each tab shown, light and dark. And, from the review of the work
+ * package: a tooltip gone when its tab opens under the focus; the reason
+ * shown by a press of the mouse, a tap and Enter; the tooltip kept
+ * through the scroll of a short window; the tab stop back on the tab
+ * shown; Distances greyed by the filters of the individuals; End onto
+ * Distances once it opens; the look of a tab greyed while shown, of the
+ * tabs that open, and labels that do not move.
  *
  * panel.nei holds 1,200 variants of 200 diploid individuals, s000 to
  * s199; panel_pops.csv puts them in p0, p2 and p1.
@@ -71,6 +77,13 @@ function shownPanel(page: Page): Locator {
   return page.getByRole("tabpanel");
 }
 
+/** Expects the panel of the tab shown to show `text`, as a user sees it:
+    the content of a tab greyed while shown is drawn, hidden, under its
+    reason. */
+async function expectShown(page: Page, text: string): Promise<void> {
+  await expect(shownPanel(page)).toHaveText(text, { useInnerText: true });
+}
+
 /** The box of the variants file, named by its heading. */
 function variantsBox(page: Page): Locator {
   return page.getByRole("region", { name: "Variants file", exact: true });
@@ -121,14 +134,45 @@ async function holdOpening(page: Page, name: string): Promise<void> {
   });
 }
 
-/** Rests the mouse on the tab `name`. React Aria shows a tooltip on the
-    mouse only once the page has had a press of the pointer, as after the
-    user's first click: on a page just opened, or after keys, the mouse
-    alone shows none (seen in Chromium and WebKit on 9 October 2026), so
-    a click on an empty corner of the page comes first. */
+/** The channel on which a flow lets an opening held by
+    `holdOpeningUntilReleased` through. */
+const RELEASE_CHANNEL = "e2e-tabs-release";
+
+/** Serves every calculation worker with the opening of the file `name`
+    kept from its runner until `releaseOpening` lets it through; to call
+    before the page is opened. */
+async function holdOpeningUntilReleased(
+  page: Page,
+  name: string,
+): Promise<void> {
+  await page.route(/\/runnerWorker-[^/]*\.js$/u, async (route) => {
+    const response = await route.fetch();
+    const script = await response.text();
+    const front = `{ let released = false; const held = []; const channel = new BroadcastChannel(${JSON.stringify(RELEASE_CHANNEL)}); channel.onmessage = () => { released = true; for (const data of held.splice(0)) { self.dispatchEvent(new MessageEvent("message", { data })); } }; self.addEventListener("message", (event) => { if (!released && event.data !== null && typeof event.data === "object" && event.data.kind === "open" && event.data.file.name === ${JSON.stringify(name)}) { held.push(event.data); event.stopImmediatePropagation(); } }); }\n`;
+    await route.fulfill({ response, body: front + script });
+  });
+}
+
+/** Lets the opening held by `holdOpeningUntilReleased` through. */
+async function releaseOpening(page: Page): Promise<void> {
+  await page.evaluate((channel) => {
+    new BroadcastChannel(channel).postMessage("release");
+  }, RELEASE_CHANNEL);
+}
+
+/** Moves the mouse onto the tab `name` in steps, from below the row, as
+    a hand moves it. React Aria shows a tooltip on the mouse once the
+    pointer has moved on the page, which a real mouse always does;
+    Playwright's \`hover()\` jumps there in one step, after which no
+    tooltip showed on a page just opened or after keys (seen in Chromium
+    and WebKit on 9 October 2026). Moved in steps, the tooltip shows with
+    no click first. */
 async function hoverTab(page: Page, name: Label): Promise<void> {
-  await page.mouse.click(2, 2);
-  await tab(page, name).hover();
+  const box = await tab(page, name).boundingBox();
+  if (box === null) throw new Error(`the tab ${name} has no box`);
+  const x = box.x + box.width / 2;
+  await page.mouse.move(x, box.y + box.height + 120);
+  await page.mouse.move(x, box.y + box.height / 2, { steps: 10 });
 }
 
 /** Expects the tab `name` greyed with the reason `reason`: aria-disabled,
@@ -225,6 +269,9 @@ test("AP1 D4 a greyed tab reached by the arrow keys shows its tooltip, hides it 
       "true",
     );
     await expect(shownPanel(page)).toHaveText("No individuals file open.");
+    // The press refused shows the reason again, which Escape had hidden.
+    await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+    await page.keyboard.press("Escape");
   }
   // Forced, since Playwright clicks nothing marked aria-disabled; a user
   // can.
@@ -339,7 +386,21 @@ test("AP1 D4 the PCA tab shown, another variants file opened: the tab stays show
   const reason = "The PCA needs a variants file: panel.vcf.gz is being opened.";
   await expectGreyed(page, "PCA", reason);
   await expect(tab(page, "PCA")).toHaveAttribute("aria-selected", "true");
-  await expect(shownPanel(page)).toHaveText(reason);
+  await expectShown(page, reason);
+  // Its bar kept, in the greyed colour, its words not in bold, so that
+  // the user can tell which tab they are on.
+  const look = await tab(page, "PCA").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      weight: style.fontWeight,
+      barWidth: style.borderBottomWidth,
+      bar: style.borderBottomColor,
+      colour: style.color,
+    };
+  });
+  expect(look.weight).toBe("400");
+  expect(look.barWidth).toBe("3px");
+  expect(look.bar).toBe(look.colour);
   await expectAxeBothSchemes(page, makeAxeBuilder);
 
   await page.unrouteAll({ behavior: "wait" });
@@ -358,12 +419,18 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
   await openPage(page);
   await pick(page, "panel.nei");
   await expectOpen(page, "PCA");
+  const boxes = new Map<string, string>();
   for (const shown of ["Variants", "Populations"] as const) {
     await tab(page, shown).click();
     const tops = new Set<number>();
     for (const name of LABELS) {
       const box = await tab(page, name).boundingBox();
       if (box === null) throw new Error(`the tab ${name} has no box`);
+      // Each label where it was with the other tab shown: the labels do
+      // not move when the tab shown changes.
+      const where = `${String(box.x)},${String(box.y)},${String(box.width)}`;
+      expect(boxes.get(name) ?? where).toBe(where);
+      boxes.set(name, where);
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(320);
       tops.add(Math.round(box.y));
@@ -386,11 +453,156 @@ test("AP1 D4 at 320 pixels the five labels on two lines, the tab shown with its 
       ),
     ).toBe(true);
   }
-  // A greyed tab never has the bar and the weight of the tab shown.
+  // A greyed tab not shown has neither the bar nor the weight of the tab
+  // shown, and a tab that opens is in the colour of the text, the
+  // heading's, apart from the greyed one's.
   const greyed = await tab(page, "Distances").evaluate((element) => {
     const style = getComputedStyle(element);
-    return { weight: style.fontWeight, bar: style.borderBottomColor };
+    return {
+      weight: style.fontWeight,
+      bar: style.borderBottomColor,
+      colour: style.color,
+    };
   });
   expect(greyed.weight).toBe("400");
   expect(greyed.bar).toBe("rgba(0, 0, 0, 0)");
+  const textColour = await page
+    .getByRole("heading", { level: 1, name: "Popnei" })
+    .evaluate((element) => getComputedStyle(element).color);
+  const openColour = await tab(page, "PCA").evaluate(
+    (element) => getComputedStyle(element).color,
+  );
+  expect(openColour).toBe(textColour);
+  expect(greyed.colour).not.toBe(textColour);
+});
+
+test("AP1 D4 a tooltip on a greyed tab goes when the tab opens while the focus stays on it", async ({
+  page,
+}) => {
+  await holdOpeningUntilReleased(page, "panel.nei");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  const reason = "The PCA needs a variants file: panel.nei is being opened.";
+  await expectGreyed(page, "PCA", reason);
+  await tab(page, "Variants").focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(tab(page, "PCA")).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText(reason);
+
+  await releaseOpening(page);
+  await expectOpen(page, "PCA");
+  await expect(tab(page, "PCA")).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("AP1 D4 the mouse moved onto a greyed tab and pressed at once shows its reason, which stays while the mouse rests", async ({
+  page,
+}) => {
+  await openPage(page);
+  await hoverTab(page, "PCA");
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+  await expect(tab(page, "Variants")).toHaveAttribute("aria-selected", "true");
+  // The time the tooltip has to stay is what is checked, not a wait for
+  // the page: 1.5 s, the delay of React Aria's own tooltips.
+  await page.waitForTimeout(1_500);
+  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+});
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true });
+
+  test("AP1 D4 a tap on a greyed tab shows its reason, and the tab shown stays shown", async ({
+    page,
+  }) => {
+    await openPage(page);
+    await tab(page, "PCA").tap({ force: true });
+    await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+    await expect(tab(page, "Variants")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+});
+
+test("AP1 D4 on a short window the arrow key onto a greyed tab of the second line keeps its tooltip through the scroll that brings it into view", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 500 });
+  await openPage(page);
+  await tab(page, "Variants").focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.PCA);
+  const before = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("ArrowRight");
+  await expect(tab(page, "Populations")).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
+  // The browser scrolled the tab into view, which closed every tooltip
+  // before.
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(before);
+  await expect(page.getByRole("tooltip")).toHaveText(NO_VARIANTS.Populations);
+});
+
+test("AP1 D4 the arrows resting on a greyed tab, Tab out and Shift+Tab back put the focus on the tab shown", async ({
+  page,
+}) => {
+  await openPage(page);
+  await tab(page, "Variants").focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(tab(page, "Populations")).toBeFocused();
+  await expect(tab(page, "Individuals")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Tab");
+  await expect(
+    row(page).getByRole("tab").and(page.locator(":focus")),
+  ).toHaveCount(0);
+  await page.keyboard.press("Shift+Tab");
+  await expect(tab(page, "Individuals")).toBeFocused();
+});
+
+test("AP1 D4 the filters of the individuals keeping one population grey Distances with their reason, and a threshold off opens it again; End shows Distances when it opens", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, "panel_pops.csv");
+  await expectOpen(page, "Distances");
+  // The one pass ended, which the thresholds of the individuals need: the
+  // download of the individuals' table is its sign.
+  await expect(
+    page.getByRole("button", {
+      name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+
+  await tab(page, "Variants").focus();
+  await page.keyboard.press("End");
+  await expect(tab(page, "Distances")).toBeFocused();
+  await expect(tab(page, "Distances")).toHaveAttribute("aria-selected", "true");
+  await expectShown(page, DISTANCES_NOT_BUILT);
+  await tab(page, "Variants").click();
+
+  // Only s005, of p2, has an observed heterozygosity of 0.322 or less
+  // (0.3211; the next, s142 of p0, 0.3222), as popnei 0.2.2 gives it in
+  // e2e/fixtures/panel_individual_stats.json.
+  const threshold = page.getByRole("textbox", {
+    name: /maximum observed heterozygosity of an individual$/u,
+  });
+  await threshold.fill("0.322");
+  await threshold.press("Enter");
+  await expectGreyed(
+    page,
+    "Distances",
+    "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab.",
+  );
+  await threshold.fill("1");
+  await threshold.press("Enter");
+  await expectOpen(page, "Distances");
 });

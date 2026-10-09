@@ -37,11 +37,12 @@
  * the tab's element after each drawing, for a screen reader to say
  * "dimmed"; the tests of the widget check that it stays.
  */
-import { useId, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import {
   Tabs as AriaTabs,
   Tab,
   TabList,
+  TabListStateContext,
   TabPanel,
 } from "react-aria-components";
 import type { Key } from "react-aria-components";
@@ -142,6 +143,7 @@ export function Tabs<Id extends string>({
       }}
       className={classOf(styles, "tabs")}
     >
+      <TabStopToShown listRef={listRef} />
       <TabList
         ref={listRef}
         aria-label={label}
@@ -212,6 +214,41 @@ export function Tabs<Id extends string>({
       ))}
     </AriaTabs>
   );
+}
+
+/** Gives the row's one stop of the Tab key back to the tab shown when
+    the focus leaves the row. React Aria keeps it on the tab the arrow
+    keys last reached, so that after the arrows rested on a greyed tab,
+    Tab out and Shift+Tab back landed on the greyed tab, not on the tab
+    shown, as the tabs pattern of WAI-ARIA has it (seen in Chromium and
+    WebKit on 9 October 2026). Draws nothing. */
+function TabStopToShown({
+  listRef,
+}: {
+  readonly listRef: React.RefObject<HTMLDivElement | null>;
+}): null {
+  const state = useContext(TabListStateContext);
+  useEffect(() => {
+    const list = listRef.current;
+    if (list === null || state === null) {
+      return;
+    }
+    const onFocusOut = (event: FocusEvent): void => {
+      const next = event.relatedTarget;
+      if (next instanceof Node && list.contains(next)) {
+        return;
+      }
+      // Not focused first, so that React Aria does not move the focus
+      // back to the tab it is given.
+      state.selectionManager.setFocused(false);
+      state.selectionManager.setFocusedKey(state.selectedKey);
+    };
+    list.addEventListener("focusout", onFocusOut);
+    return () => {
+      list.removeEventListener("focusout", onFocusOut);
+    };
+  }, [listRef, state]);
+  return null;
 }
 
 /** The attribute that marks a greyed tab for its style; React Aria lets
