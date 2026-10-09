@@ -897,6 +897,15 @@ The `code-review` skill's four that always run, `spec`, `tests`,
 
 ## What was done
 
-Nothing yet. Each work package adds its entry here: its commits, the
-counts of its checks, its review, and what it did differently from the
-plan.
+Each work package adds its entry here: its commits, the counts of its
+checks, its review, and what it did differently from the plan.
+
+### Before the first task, 9 October 2026
+
+On 3787fa4, which adds only documents to `main` at a1701c8: popnei
+0.2.2 and table_io 0.2.0 (`js-v0.2.0-dev.1`) in `node_modules`, node
+v26.8.2, Chromium and WebKit installed for Playwright. The typecheck and
+the lint pass, the format check passes, and Vitest passes 4,620 tests in
+134 files. `npx vitest list` and `npx playwright test --list` (2,835
+tests in 42 files) name no test that starts with `AP` and a digit. The
+browser check of the starting commit is GitHub's run 37932799753.
