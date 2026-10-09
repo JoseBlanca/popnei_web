@@ -610,7 +610,8 @@ export function pruningDistanceReason(
  * whatever the filters of individuals keep; on the old page, the
  * individuals file, which colours the points, and which on popgen2.html
  * never locks the PCA, since the key holds nothing of it; and the PCA's
- * own LD filter with no distance. The PCoA's limit is its `keptNeeds`,
+ * own LD filter with no distance, on popgen2.html as a short line that
+ * points to the field. The PCoA's limit is its `keptNeeds`,
  * since it counts the individuals kept.
  */
 function needs(p: Project, page: PcaPage): string | null {
@@ -629,8 +630,23 @@ function needs(p: Project, page: PcaPage): string | null {
     return pcaLimitText(p.variants.name, read.individuals.length);
   }
   const ofIndividuals = page === "popgen" ? individualsNeeds(p) : null;
-  return ofIndividuals ?? pruningDistanceReason(p, page);
+  if (ofIndividuals !== null) {
+    return ofIndividuals;
+  }
+  // popgen2.html draws the reason in full under the field of the
+  // distance, and beside Run a short line that points to it, so that it
+  // is not drawn, nor read, twice (docs/specs/steps/popgen2-pca.md, "Its
+  // filters").
+  const distance = pruningDistanceReason(p, page);
+  return distance !== null && page === "popgen2"
+    ? PRUNING_DISTANCE_SHORT
+    : distance;
 }
+
+/** The line beside Run of popgen2.html while the PCA's LD pruning has no
+    distance, whose reason in full stands under the field. */
+const PRUNING_DISTANCE_SHORT =
+  "Type the LD distance above, or turn the LD pruning off.";
 
 /** The words of the PCA's limit on the individuals of the variants file
     `fileName`, which has `numIndividuals`. */

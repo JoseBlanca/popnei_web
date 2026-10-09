@@ -84,6 +84,10 @@ export interface StricterLines {
   /** The line of the Variants tab stricter than the PCA's own value,
       which the PCA then uses; `null` otherwise. */
   readonly tabStricter: string | null;
+  /** The line that the PCA's own value of 1, while the Variants tab has
+      that threshold off, keeps every variant, "1 keeps every variant:
+      type a lower value to filter."; `null` otherwise. */
+  readonly keepsAll: string | null;
 }
 
 /**
@@ -95,7 +99,9 @@ export interface StricterLines {
  * threshold off, the old panel's line, "1.5 is more than 1; the threshold
  * stays 0.05."; and, while the Variants tab is stricter than the PCA's
  * own value, "The Variants tab keeps at most 0.03, stricter than the 0.05
- * set here, so the PCA uses 0.03.".
+ * set here, so the PCA uses 0.03."; and, while the Variants tab has the
+ * threshold off and the PCA's own value is 1, which is then no filter,
+ * "1 keeps every variant: type a lower value to filter.".
  */
 export function stricterLines(
   p: Project,
@@ -114,8 +120,14 @@ export function stricterLines(
     tab !== null && tab < own
       ? `The Variants tab keeps at most ${numberText(tab)}, stricter than the ${numberText(own)} set here, so the ${name} uses ${numberText(tab)}.`
       : null;
-  return { refusedText, tabStricter };
+  const keepsAll = tab === null && own >= THRESHOLD_OFF_AT ? KEEPS_ALL : null;
+  return { refusedText, tabStricter, keepsAll };
 }
+
+/** The line under a field at 1 while the Variants tab has that threshold
+    off, where 1 is no filter (docs/specs/steps/popgen2-pca.md, "Its
+    filters"). */
+const KEEPS_ALL = "1 keeps every variant: type a lower value to filter.";
 
 /** What each field sets, as its line of a refusal names it. */
 const WHAT: Readonly<Record<StricterKind, string>> = Object.freeze({

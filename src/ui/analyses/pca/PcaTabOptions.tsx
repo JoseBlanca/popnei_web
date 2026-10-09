@@ -15,10 +15,13 @@
  * at the upper end of the field, so that the choice alone changes no
  * variant the PCA reads; a number typed over the one the field shows is
  * sent though it is the same, so that the PCA keeps it as its own when
- * the Variants tab is loosened. While the LD pruning has no distance, the
- * reason of the lock stands under that field and describes it, and is
- * announced when the switch turned on makes it appear, since the focus
- * is then on the switch.
+ * the Variants tab is loosened; a field at 1 while the Variants tab has
+ * that threshold off says that 1 keeps every variant. Under the distance
+ * a line says how to choose it. While the LD pruning has no distance, the
+ * reason of the lock, in full, stands under that field as a line of what
+ * is needed, describes it, and is announced when the switch turned on
+ * makes it appear, since the focus is then on the switch; Run beside it
+ * says only a short line.
  *
  * While a PCA runs every option waits, with "Stop the PCA to change the
  * filters." as its tooltip and its description (`useFiltersLock`), so
@@ -54,7 +57,6 @@ import {
 } from "../../steps/variants/words.ts";
 import { useAppState, useStore } from "../../store.tsx";
 import { NumberField } from "../../widgets/NumberField.tsx";
-import { Problem } from "../../widgets/Problem.tsx";
 import { RadioGroup } from "../../widgets/RadioGroup.tsx";
 import { Switch } from "../../widgets/Switch.tsx";
 import type { OptionCommand } from "../optionCommand.ts";
@@ -71,6 +73,7 @@ import styles from "./PcaTabOptions.module.css";
 import { stepDecimalsOf, stricterBound, stricterLines } from "./stricter.ts";
 import type { StricterKind } from "./stricter.ts";
 import {
+  DISTANCE_HINT,
   METHOD_ITEMS,
   METHOD_LABEL,
   filtersHeading,
@@ -207,6 +210,7 @@ export function PcaTabOptions(): React.JSX.Element {
                     ...(ldReason === null ? [] : [ldReasonId]),
                     ldLineId,
                   ].join(" ")}
+                  description={DISTANCE_HINT}
                   waiting={lock}
                   refusedText={distanceRefusedText}
                   onRefused={announce}
@@ -218,8 +222,13 @@ export function PcaTabOptions(): React.JSX.Element {
               <p id={ldLineId} className={classOf(styles, "muted")}>
                 {LD_LINE}
               </p>
+              {/* What is needed, not an error of the user's: a line,
+                  with no mark of a problem, and said once, the line
+                  beside Run being short. */}
               {ldReason !== null && (
-                <Problem id={ldReasonId}>{ldReason}</Problem>
+                <p id={ldReasonId} className={classOf(styles, "muted")}>
+                  {ldReason}
+                </p>
               )}
             </div>
           )}
@@ -271,6 +280,7 @@ function StricterFilter({
   const lines = stricterLines(project, kind, page.method);
   const lineId = useId();
   const tabStricterId = useId();
+  const keepsAllId = useId();
   const items: readonly {
     readonly id: StricterChoice;
     readonly label: string;
@@ -315,6 +325,7 @@ function StricterFilter({
             decimals={bound.decimals}
             waiting={lock}
             describedBy={[
+              ...(lines.keepsAll === null ? [] : [keepsAllId]),
               ...(lines.tabStricter === null ? [] : [tabStricterId]),
               lineId,
             ].join(" ")}
@@ -325,6 +336,11 @@ function StricterFilter({
             // stricter than the PCA's own, is then kept as the PCA's own.
             onSameCommitted={send}
           />
+          {lines.keepsAll !== null && (
+            <p id={keepsAllId} className={classOf(styles, "line")}>
+              {lines.keepsAll}
+            </p>
+          )}
           {lines.tabStricter !== null && (
             <p id={tabStricterId} className={classOf(styles, "line")}>
               {lines.tabStricter}

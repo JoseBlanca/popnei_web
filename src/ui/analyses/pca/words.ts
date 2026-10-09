@@ -289,6 +289,13 @@ export function decompositionLine(variantsName: string): string {
 }
 
 /** The words of the 3D view (docs/specs/analyses/pca.md, "Its words"). */
+/** The line under the field of the distance of the LD pruning of
+    popgen2.html, on how to choose it, with no number, since no distance
+    holds for every genome (docs/specs/steps/popgen2-pca.md, "Its
+    filters"). */
+export const DISTANCE_HINT =
+  "Choose the distance beyond which the r² between two variants falls to its background level in your species, as studies of its LD decay report.";
+
 export const LOADING_3D = "Loading the 3D view…";
 export const LOAD_FAILED_3D =
   "The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: save the project, reload the page and open the project again.";

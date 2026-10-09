@@ -705,8 +705,10 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     ).toBeNull();
   });
 
-  test("PCA2_DEFAULTS, with no distance: the words of popgen2.html, by the method; 50000 typed: none", () => {
-    expect(pcaOnPopgen2.needs(project())).toBe(PRUNING_DISTANCE_2);
+  test("PCA2_DEFAULTS, with no distance: needs gives the short line of popgen2.html beside Run, the reason in full under the field by the method; 50000 typed: none", () => {
+    expect(pcaOnPopgen2.needs(project())).toBe(
+      "Type the LD distance above, or turn the LD pruning off.",
+    );
     expect(pruningDistanceReason(project(), "popgen2")).toBe(
       PRUNING_DISTANCE_2,
     );
@@ -717,6 +719,9 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
       },
     });
     expect(pcaOnPopgen2.needs(pcoa)).toBe(
+      "Type the LD distance above, or turn the LD pruning off.",
+    );
+    expect(pruningDistanceReason(pcoa, "popgen2")).toBe(
       "The LD pruning of the PCoA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off.",
     );
     expect(pcaOnPopgen2.needs(project({ options: LD_50000 }))).toBeNull();

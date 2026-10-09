@@ -183,6 +183,24 @@ describe("AP6 D1 stricterLines, the line of a refusal and the line of the Varian
     ).toBe("0.0512 has more than three decimals; the threshold stays 0.05.");
   });
 
+  test("the Variants tab's threshold off and the PCA's own at 1: the line that 1 keeps every variant; below 1, or the Variants tab's on, none", () => {
+    expect(
+      stricterLines(project([missing(0.1)], ownMaf(1)), "maf", "pca").keepsAll,
+    ).toBe("1 keeps every variant: type a lower value to filter.");
+    expect(
+      stricterLines(project([], ownMissing(1)), "missing_data", "pcoa")
+        .keepsAll,
+    ).toBe("1 keeps every variant: type a lower value to filter.");
+    expect(
+      stricterLines(project([missing(0.1)], ownMaf(0.9)), "maf", "pca")
+        .keepsAll,
+    ).toBeNull();
+    expect(
+      stricterLines(project([missing(0.1), maf(0.95)], ownMaf(1)), "maf", "pca")
+        .keepsAll,
+    ).toBeNull();
+  });
+
   test("the Variants tab stricter than the PCA's own: at 0.03 the line; at 0.1, at 0.05 and off, none", () => {
     expect(
       stricterLines(
