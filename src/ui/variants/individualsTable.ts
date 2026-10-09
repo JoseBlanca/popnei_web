@@ -4,12 +4,21 @@
  * (docs/specs/steps/popgen2-input.md, "The table"): every column of the
  * file in its order, the first, the names, the header of each row; every
  * row in its order, each cell as `cellShown` of core writes it, a missing
- * value empty, a number with the decimal mark of the read; and the sort by
- * one column, numbers by value, booleans false first, texts by their code
- * units, missing values last whichever the direction, rows of equal values
- * in the order of the file. Pure, so that a test in node checks it.
+ * value empty, a number with the decimal mark of the read; a control or
+ * format character of a header or a cell escaped, `escaped` of core, as
+ * the list and the counts show them, so that U+202E does not turn the
+ * text after it around; and the sort by one column, of the cells as the
+ * file holds them, numbers by value, booleans false first, texts by their
+ * code units, missing values last whichever the direction, rows of equal
+ * values in the order of the file. Pure, so that a test in node checks
+ * it.
  */
-import { cellShown, identifierOf, shownDecimal } from "../../core/project.ts";
+import {
+  cellShown,
+  escaped,
+  identifierOf,
+  shownDecimal,
+} from "../../core/project.ts";
 import type { TableRead } from "../../core/project.ts";
 import type { Cell, IndividualsTable } from "../../worker/protocol.ts";
 import type { SortableColumn, SortableRow } from "../widgets/SortableTable.tsx";
@@ -53,13 +62,16 @@ export function individualsTableColumns(
   read: TableRead,
 ): readonly SortableColumn<TableColumnId>[] {
   const { columns, rows } = read.table;
-  return columns.map((label, index) => ({
-    id: columnId(index),
-    label,
-    isRowHeader: index === 0,
-    isNumeric: index > 0 && isNumbers(rows, index),
-    minWidth: minWidthOf(label),
-  }));
+  return columns.map((name, index) => {
+    const label = escaped(name);
+    return {
+      id: columnId(index),
+      label,
+      isRowHeader: index === 0,
+      isNumeric: index > 0 && isNumbers(rows, index),
+      minWidth: minWidthOf(label),
+    };
+  });
 }
 
 /** Whether every value of the column at `index` of `rows` that is not
@@ -87,7 +99,7 @@ export function individualsTableRows(read: TableRead): readonly SortableRow[] {
   const decimal = shownDecimal(read);
   const rows = read.table.rows.map((row) => ({
     id: identifierOf(row[0]),
-    cells: row.map((cell) => cellShown(cell, decimal) ?? ""),
+    cells: row.map((cell) => escaped(cellShown(cell, decimal) ?? "")),
   }));
   ROWS.set(read, rows);
   return rows;

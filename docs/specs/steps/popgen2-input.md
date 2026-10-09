@@ -332,8 +332,10 @@ the header of its row, so that a screen reader reads "s031, popcat, p1";
 a missing value empty; a number written with the decimal mark of the
 read, the comma for a file read with it; a boolean `true` or `false`,
 all as `cellShown` of core writes them, as the names of the populations
-are. It
-is `SortableTable` of `src/ui/widgets/SortableTable.tsx`: a box at most
+are; a control or format character of a header or a cell escaped, as
+`escaped` of core writes it, `\u202e` for the mark that turns the text
+after it around, as the list and the counts show them. The sort reads
+the cells as the file holds them. It is `SortableTable` of `src/ui/widgets/SortableTable.tsx`: a box at most
 28rem high, or 70% of the window, whichever is smaller, that scrolls
 down with the row of the headers kept in view and sideways when the
 columns are wider than the page; only the rows in view and those just

@@ -50,6 +50,31 @@ function namesOf(rows: readonly { readonly id: string }[]): string[] {
 }
 
 describe("IN6 D1 the table of the individuals file", () => {
+  test("a header and a cell with U+202E, which turns the text after it around, and a tab show them escaped, as the list and the counts do; the sort reads the cells as the file holds them", () => {
+    const table: IndividualsTable = {
+      columns: ["IID", "pop\u202eulation"],
+      rows: [
+        ["s\u202e1", "b\tc"],
+        ["s2", "a\u202e"],
+      ] satisfies Cell[][],
+    };
+    const read = readOf(table, ".");
+    expect(individualsTableColumns(read).map((c) => c.label)).toEqual([
+      "IID",
+      "pop\\u202eulation",
+    ]);
+    const rows = individualsTableRows(read);
+    expect(rows.map((row) => row.cells)).toEqual([
+      ["s\\u202e1", "b\\tc"],
+      ["s2", "a\\u202e"],
+    ]);
+    expect(
+      namesOf(
+        sortedTableRows(read, rows, { column: "c1", direction: "ascending" }),
+      ),
+    ).toEqual(["s2", "s\u202e1"]);
+  });
+
   test("every column in the order of the file, the first the header of each row, a column of numbers aligned as numbers", () => {
     const columns = individualsTableColumns(readOf(TABLE, "."));
     expect(columns.map((c) => c.label)).toEqual(["IID", "pop", "h", "ok"]);
