@@ -1075,3 +1075,43 @@ passed alone and on a second whole run).
 
 For task 5.4: in `StatsHistogram` the box `.plot` is the one the line
 of the threshold is placed against, so the menu goes outside that box.
+
+The review of work package 1, 9 October 2026: `spec`, `tests`,
+`stale`, `errors`, `api`, `architecture`, `react`, `accessibility`,
+`ux`, `browser` and `bundle`. `react` and `bundle` found nothing to fix
+(the first load explained by two new modules, 1.34 KB). Thirty-three
+findings held and went as one list of fixes to a subagent; the ones a
+user would meet: two sentences that sent the user to "the tab
+Individuals file", renamed; a greyed tab hard to tell from one that
+opens (1.34:1 between their colours in light, 1.69:1 in dark; now the
+tabs that open are in the colour of the text, 3.39:1 and 3.26:1); a
+click or a tap on a greyed tab that showed no reason (on touch the
+reason was nowhere on the screen), now shown on a press; the reason of
+a tab closed by the browser's scroll on a short window; an empty
+tooltip left after a tab stopped being greyed; the tab stop left on a
+greyed tab after the arrows; the tooltip over the second line of tabs
+at 320 px; no tab marked while the tab shown is greyed; the labels
+moving 4 px at each turn of tab; "Individuals" naming both a tab and a
+heading of the Variants tab, now "Filters of the variants" and
+"Filters of the individuals"; the reason of a failed read naming a fix
+that does not work, now sending the user to the words of the box; a
+table read as one column given an instruction to choose a column; and
+a greyed tab that dropped its content, which would lose the PCA tab's
+half-typed numbers. Commits 6c8cb1b to 8db3cee.
+
+Seen by the fix, in Chromium and WebKit: a mouse moved in steps shows
+a greyed tab's reason on a page just opened, with no click; only
+Playwright's one jump of `hover()` did not, so the note above, "React
+Aria shows a tooltip on the mouse only after the page has had a first
+pointer interaction", was the test's and not the user's. The tab stop
+did stay on a greyed tab; the widget now gives it back to the tab
+shown. The words of the reasons went to the first reader; two of seven
+were reworded so that the user knows what to do (the file read as one
+column, a column that gives one population).
+
+Checks after the fixes: Vitest 4,778 tests; `AP1` 57 tests; in
+Chromium and WebKit the flows of `popgen2.html` (`popgen2Input` 70,
+`popgen2Thresholds` and `popgen2Stop` 48, the rest 160), the old page's
+flows of its tabs and of its shell 198, `--repeat-each=3` of
+`popgen2Tabs.spec.ts` 78; the screenshots of the row of tabs, read by
+the session.
