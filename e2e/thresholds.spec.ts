@@ -367,14 +367,19 @@ for (const width of [1280, 320]) {
       expect(gap).toBeGreaterThanOrEqual(0);
       expect(gap).toBeLessThan(12);
     }
+    // The tops in the page and not in the window: at 320 pixels the box
+    // typed in sits low enough on popgen2.html, under its two boxes, that
+    // the browser scrolls the page by 44 pixels to keep it in view, which
+    // moves every plot in the window and none in the page.
     const plotTops = async (): Promise<number[]> =>
       Promise.all(
-        ALL_GROUPS.slice(0, 4).map(async (title) => {
-          const plot = await histogram(page, title)
+        ALL_GROUPS.slice(0, 4).map(async (title) =>
+          histogram(page, title)
             .group.locator("svg.chart")
-            .boundingBox();
-          return plot?.y ?? NaN;
-        }),
+            .evaluate(
+              (element) => element.getBoundingClientRect().top + window.scrollY,
+            ),
+        ),
       );
     const before = await plotTops();
     // From grey to red, and back.
