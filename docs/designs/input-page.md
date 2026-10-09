@@ -1,19 +1,23 @@
 # The input page of popgen2.html, with the individuals file
 
-A design of 9 October 2026, a draft for the owner to approve. It
-decides how the page that opens the files of `popgen2.html` takes a
-second file, the individuals file, the table that assigns each
-individual of the variants file to a population, and how the page shows
-the two files: a box for each at the top, and under them two tabs, one
-for each file. It follows the owner's decisions of 9 October 2026,
-written in below as decided, and leaves six questions to the owner, at
-the end. It touches sections 6 and 7 of `docs/architecture.md`, and
-section 4 of `docs/functionality.md`, whose small corrections are listed
-under "The corrections made to the other documents". What the users
-come to do is in `docs/use-cases.md`, cases 3 and 4 above all. The page
-as it is, before this piece, is that of `docs/designs/stats-filters.md`,
-built and accepted by the owner on 8 October 2026, with the download of
-the filtered variants built on the branch `download` on 9 October 2026.
+A design of 9 October 2026, approved by the owner on 9 October 2026 with
+the five answers written under "What the owner decided", at the end, and
+revised the same day for them. It decides how the page that opens the
+files of `popgen2.html` takes a second file, the individuals file, the
+table that assigns each individual of the variants file to a population;
+how the page shows the two files, a box for each at the top and under
+them two tabs, one for each file; and that table_io, the owner's reader
+of tables, replaces xlsx_rs as the reader of the individuals file, for
+both pages. It touches sections 6 and 7 of `docs/architecture.md`,
+section 4 of `docs/functionality.md` and section 5 of
+`docs/technology.md`, whose corrections are listed under "The
+corrections made to the other documents". What the users come to do is
+in `docs/use-cases.md`, cases 3 and 4 above all. The page as it is,
+before this piece, is that of `docs/designs/stats-filters.md`, built and
+accepted by the owner on 8 October 2026, with the download of the
+filtered variants built on the branch `download` on 9 October 2026. The
+specs written from it are `docs/specs/steps/popgen2-input.md`, the
+screen, and the module specs it names there.
 
 ## The design in short, for the owner
 
@@ -21,54 +25,55 @@ the filtered variants built on the branch `download` on 9 October 2026.
   the other on a phone: the box of the variants file, which shows what it
   shows now, and the box of the individuals file, which shows its name, a
   list to choose the column that assigns the populations, and how many
-  individuals each population has. Under them, two tabs, "Variants file"
-  and "Individuals file". The first holds everything the page shows now
+  individuals the filters keep in each population. Each box ends with its
+  own button to open its file. Under them, two tabs, "Variants file" and
+  "Individuals file". The first holds everything the page shows now
   under the box, the plots with their thresholds, the FILTER box and the
   download of the filtered variants. The second shows the table of the
   individuals file as it was read.
 - An individual of the variants file with no population is
   **unclassified**: with no individuals file every individual is, and so
   is one whose cell in the column is empty, or who is not in the
-  individuals file at all. Until now a missing individual was an error
-  that stopped every analysis per population; on this page it is not, as
-  the owner decided on 9 October 2026, so that every analysis can be
-  done with any file.
-- The counts are of the individuals that are in both files, with a row
-  of the unclassified, and a last line, "Individuals not in the variants
-  file: 18", for the rows of the individuals file the variants file does
-  not have, which are not used.
-- The counts after the filters of the individuals can be shown without
-  reading the variants file again, as the owner asked: the page knows
-  which individuals the filters keep from the one reading of the file it
-  already does. The design recommends showing both counts, before and
-  after the filters, which is open question 3.
-- The reader of the individuals file stays the one of the old page,
-  `popgen.html`, which already reads a CSV, a TSV and an xlsx. Its newer
-  replacement, table_io, is ready to install; the design recommends
-  switching to it as a piece of its own right after this one, open
-  question 2.
-- Nothing new is downloaded by a user but the code of the table and the
-  tabs, a few tens of KB, and no part of the page reads the variants file
-  more than once.
+  individuals file at all. The unclassified form a population of their
+  own only when there is no other; otherwise the analyses per population
+  leave them out, and the box says how many they are.
+- The counts are of the individuals the filters keep, one column. With
+  no threshold of the individuals on, as the page opens, they are known
+  as soon as both files are read; with one on, once the variants file is
+  read to the end, and not after a Stop.
+- When a file is opened the page chooses the column of the populations:
+  the first column that table_io reads as text. table_io has no type
+  "categorical", and popnei_web's own type of that name would skip a
+  column of two populations, so text is the nearest thing table_io gives
+  (below, "The column chosen when a file is opened"). The user can choose
+  another.
+- A column of more than 20 different values gets no table of counts,
+  only a warning that it is unlikely to be the column of the populations.
+- table_io reads the individuals file, a CSV, a TSV or an xlsx, on both
+  pages, since both use the same reader. It adds 0.33 MB, downloaded the
+  first time any individuals file is read, a CSV included; the reader of
+  CSV in TypeScript, about 2,900 lines with its tests, goes, and xlsx_rs
+  leaves `package.json`.
 
 ## What the user can do once it is built
 
 A user with `panel.nei`, 200 individuals, and `panel_pops.csv`, which
 assigns them to three populations in its column `popcat`, opens
-`popgen2.html`. They open `panel.nei` in the box of the variants file,
-which counts its variants as the page reads it, while the plots fill in
-under the tab "Variants file", as today. They open `panel_pops.csv` in
-the box of the individuals file. The box shows its name, and the column
-of the populations, chosen by the page or by them (open question 1). The
-box then lists p0 with 48 individuals, p1 with 68 and p2 with 84, and
-the unclassified with 0. Once the reading of `panel.nei` has ended, a
-second count beside each population says how many the filters of the
-individuals keep, and it changes as soon as they move a threshold of the
-individuals under the tab "Variants file". Under the tab "Individuals
-file" they see the 200 rows of `panel_pops.csv`, and how it was read. The
-user of case 4 has then seen what step 2 of that case asks: how many
-individuals each population has, before the analyses per population,
-which later pieces build.
+`popgen2.html`. They open `panel.nei` with the button of the box of the
+variants file, which counts its variants as the page reads it, while the
+plots fill in under the tab "Variants file", as today. They open
+`panel_pops.csv` with the button of the box of the individuals file. The
+box shows its name, and the list of the column of the populations with
+`popcat` chosen, the only column of the file and a column of text. As
+the page opens with no threshold of the individuals on, the box lists at
+once p0 with 48 individuals, p1 with 68 and p2 with 84. When the user
+sets the missing rate of the individuals to 0.1 under the tab "Variants
+file", the counts change, once `panel.nei` has been read to the end, to
+what the filters keep. Under the tab "Individuals file" they see the 200
+rows of `panel_pops.csv`, and how it was read. The user of case 4 has
+then seen what step 2 of that case asks: how many individuals each
+population has, before the analyses per population, which later pieces
+build.
 
 ## The terms
 
@@ -106,9 +111,14 @@ The words of `docs/architecture.md` this design uses, as it uses them:
   runs popnei, which reads the user's small files, the individuals file
   among them, so that the page does not freeze while it reads (section
   5).
-- **The files wasm**: the program in Rust, compiled to run in the
-  browser, that reads an xlsx, from the owner's project xlsx_rs; the
-  light worker downloads it the first time an xlsx is read (section 6).
+- **table_io**: the owner's library that reads a CSV, a TSV or an xlsx
+  into a table of typed columns, the project xlsx_rs renamed and widened
+  on 2 October 2026, in the repository `github.com/JoseBlanca/table_io`,
+  checked out at `~/devel/xlsx_rs`. Its **package** is that library
+  compiled to wasm, the code a browser runs beside JavaScript, with the
+  JavaScript that loads it; the light worker downloads it the first time
+  it reads a file. It replaces the **files wasm**, the package of
+  xlsx_rs, which read only the cells of an xlsx.
 - **React Aria**: the library of controls the screens are built with,
   which gives each control its keys and the names a screen reader reads.
   A **screen reader** reads the page aloud to a user who cannot see it.
@@ -141,7 +151,7 @@ in its Individuals step (`docs/specs/steps/individuals.md`):
 - The store of `popgen2.html` already works out the individuals kept
   from the one pass (`src/ui/popgen2Store.ts`, below).
 
-Three things make this more than a new screen over that code:
+Four things make this more than a new screen over that code:
 
 1. **A missing individual was an error.** `docs/functionality.md`,
    section 4, and `docs/architecture.md`, section 6, say that every
@@ -158,8 +168,17 @@ Three things make this more than a new screen over that code:
    in the table, and the status region would then say at once
    everything the plots had done while they were away.
 3. **Counts that follow the filters.** A count after the filters must
-   change with each change of a threshold of the individuals, and never be the
-   count of other thresholds than those shown.
+   change with each change of a threshold of the individuals, and never
+   be the count of other thresholds than those shown.
+4. **Another reader, which types its columns.** The owner chose on 9
+   October 2026 that table_io reads the individuals file in this piece.
+   It is a new dependency of the site, loaded for every file and not only
+   for an xlsx, and the light worker is shared by both pages. table_io
+   gives each column one of four types of values, integer, float,
+   boolean or text, where popnei_web's project keeps the four of its
+   analyses, identifier, binary, continuous and categorical, and reads a
+   CSV's numbers as numbers where the reader of today keeps every cell of
+   a CSV as text.
 
 ## The page
 
@@ -173,64 +192,70 @@ width of the page less its 16 px margins.
 **The box of the variants file** shows what the box shows now: the name
 and size, the individuals, the variants, the FILTER failures, the
 chromosomes and the ploidy, the bar of the one pass with its Stop and
-Start again, and what went wrong. Nothing in it changes, but its place
-and what follows it.
+Start again, and what went wrong. It ends with the button that opens a
+variants file, "Open variants file…", which also takes a file dropped on
+it, moved here from the end of the page, where the owner had put it on
+6 October 2026, before the page had two files.
 
 **The box of the individuals file** shows:
 
 - with no file: "No individuals file: every individual is
-  unclassified.", and, once a variants file is open, "All 200
-  individuals of panel.nei are unclassified, and every analysis can be
-  done with them.";
+  unclassified.", and, once a variants file is open, "No individuals
+  file: all 200 individuals of panel.nei are unclassified, and the
+  analyses per population will take them as one population.";
 - while the file is read: its name and "Reading panel_pops.csv.";
 - a file refused, or a reading that failed: its name and words of its
   own for this page, made from those of the old page
   (`individualsStepNeeds` of `src/core/project.ts`) as the box of the
   variants file has its own (`variantsOpenNeeds`): "panel_pops.csv could
-  not be read: line 7 has 3 cells where the header has 4. Choose another
-  separator under the tab Individuals file, or open a corrected file."
-  The words of the old page do not do as they are: after a reader that
-  could not start they say to save the project and reload the page,
-  which this page cannot do, and a variants file given in the place of
-  the individuals file is sent to "the Variants step", which this page
-  does not have;
+  not be read: line 7 has 3 cells where the header has 4, read with the
+  comma as the separator. Choose another separator under the tab
+  Individuals file, or open a corrected file." The words of the old page
+  do not do as they are: after a reader that could not start they say
+  to save the project and reload the page, which this page cannot do,
+  and a variants file given in the place of the individuals file is sent
+  to "the Variants step", which this page does not have;
 - a file read: its name, the list "Column of the populations", and the
-  counts.
+  counts;
+
+and it ends with the button "Open individuals file…", which also takes a
+file dropped on it, and, with a file, "Remove panel_pops.csv", which puts
+the page back to no file.
 
 The list has, first, "None: every individual unclassified", and then
 every column but the first, which names the individuals, by its name in
 the file. A choice is a command that sets the grouping, as on the old
 page. A column of any type can be chosen, since a population is the text
-of its cell, "P1" and "p1" being two.
+of its cell, "P1" and "p1" being two. When the file is opened, the page
+chooses a column itself, as "The column chosen when a file is opened",
+below, says.
 
-The counts are a table, with a column for the population, a column of
-the individuals in both files and, as open question 3 recommends, a
-column of the individuals kept by the filters:
+The counts are a table of two columns, the population and its
+individuals kept by the filters, as the owner decided (answer 2):
 
-| Population | In both files | After the filters |
-|---|---|---|
-| p0 | 48 | 31 |
-| p1 | 68 | 44 |
-| p2 | 84 | 36 |
-| Unclassified | 0 | 0 |
+| Population | Individuals |
+|---|---|
+| p0 | 31 |
+| p1 | 44 |
+| p2 | 36 |
 
-Under the table, the last line, as the owner asked: "Individuals not in
-the variants file: 18", the rows of the individuals file whose
-individual `panel.nei` does not have, which nothing uses; 0 is written
-too. The populations are in the order in which each first appears in the
-file, as on the old page. A population whose every individual is
-outside the variants file has no row, since it has no individual of the
-variants file to count; its individuals are among those of the last
-line. A
-population that the filters leave empty keeps its row, with 0 after the
-filters.
+Over the table, "Individuals of panel.nei kept by the filters". The
+populations are those with an individual in both files, in the order in
+which each first appears in the individuals file, as on the old page. A
+population whose every individual is outside the variants file has no
+row; its individuals are among those of the last line, below. A
+population that the filters leave empty keeps its row, with 0.
 
-When some individuals are unclassified, a line under the table says
-why, with the counts of the two causes: "Unclassified: 3 individuals of
-panel.nei with an empty cell in popcat, and 4 that are not in
+Under the table, when some individuals are unclassified and some are
+not, a line says how many the filters keep and why they are
+unclassified: "Unclassified, left out of the analyses per population: 7
+individuals, 3 with an empty cell in popcat and 4 that are not in
 panel_pops.csv: s031, s044, s102 and 1 more." Past three names it gives
 the count of the rest; the full list is under the tab "Individuals
-file", below. When no individual of the variants file is in the
+file", below. When every individual is unclassified, the table has no
+row, and the line says what the analyses will do: "All 200 individuals
+kept are unclassified, and the analyses per population will take them as
+one population." When no individual of the variants file is in the
 individuals file, which a file of other names, "S-001" for "s001", gives
 for all, a warning takes the place of that line: "Warning: none of the
 200 individuals of panel.nei is in panel_pops.csv, so all of them are
@@ -240,21 +265,24 @@ panel_pops.csv with S-000." It is a warning and not an error, since the
 page goes on, but a user who did not see it would compare no
 populations without knowing why.
 
+The last line, as the owner asked: "Individuals of panel_pops.csv not in
+panel.nei: 18", the rows of the individuals file whose individual
+`panel.nei` does not have, which nothing uses; 0 is written too. It
+does not depend on the filters.
+
 Before a variants file is read, the box of a file read shows the list,
 and in the place of the counts, "The individuals are counted once a
-variants file is open."
+variants file is open." With a threshold of the individuals on, the
+counts wait for the one pass, as "Counts after the filters, from the one
+pass", below, says.
 
-A column of more than 200 values, as a column of the names of the
-accessions would give, has no table: the box says "popcat gives 1,845
-populations, too many to list; most hold one or two individuals. Is it
-the column of the populations?" 200 is the bound above which the
-distances between populations are not drawn either
-(`docs/functionality.md`, section 7). Open question 6 asks the owner to
-confirm the bound.
-
-With the box goes a button to open another individuals file, and one to
-remove it, "Remove panel_pops.csv", which puts the page back to no file.
-Where the buttons that open each file go is open question 5.
+A column of more than 20 different values, missing ones left out, as a
+column of the names of the accessions would give, has no table, as the
+owner decided (answer 5): the box says "Warning: accession has 1,845
+different values, too many for a column of populations, so they are not
+counted here. If it is not the column of the populations, choose another
+in the list." The values are counted in the individuals file, so the
+warning is the same before and after a variants file is open.
 
 ### The tab "Variants file"
 
@@ -294,24 +322,28 @@ the place of the download button (`noVariantAnnouncement` of
 
 With no file: "No individuals file open." While it is read: "Reading
 panel_pops.csv." Refused: nothing beyond the box's words, but the
-options of the reader of a CSV, below, since a wrong separator is the
-commonest cause of a refusal and is mended here.
+options of the reader of a text file, below, since a wrong separator is
+the commonest cause of a refusal and is mended here.
 
 A file read shows, in this order:
 
-- For a CSV or a TSV, how it was read, with a list to change each of the
-  encoding, the separator and the decimal mark, each "Detected: …" until
-  the user sets it, as in the old Individuals step
-  (`docs/specs/steps/individuals.md`, "How the file was read"). For an
-  xlsx, the line "Read from the first sheet of panel_pops.xlsx; any other
-  sheet is not read."
+- For a file table_io read as text, a CSV or a TSV, how it was read,
+  with a list to change each of the encoding, the separator and the
+  decimal mark, each "Detected: …" until the user sets it, as in the old
+  Individuals step (`docs/specs/steps/individuals.md`, "How the file was
+  read"). For an xlsx, the line "Read from the first sheet of
+  panel_pops.xlsx; any other sheet is not read." Which of the two is
+  told by what table_io found in the bytes, not by the name of the file,
+  so a CSV named `.xlsx` is read as the CSV it is.
 - When individuals of the variants file are not in the file, their full
   list, under "Individuals of panel.nei not in panel_pops.csv", with a
   button that copies the names, as the old step had it.
 - The table: every row and every column of the file, the column of the
   names first and its cell the header of its row, so that a screen reader
   reads a cell with its individual and its column, "s031, popcat, p1". A
-  missing value shows empty. Over the table, "200 rows, 2 columns".
+  missing value shows empty; a number of a text file is written with the
+  decimal mark of the file, `1,75` in a file read with the comma. Over
+  the table, "200 rows, 2 columns".
 
 A table of 5,000 rows shows about twenty rows at a time, in a box of its
 own at most 28rem high, or 70% of the window, which scrolls down with the
@@ -351,6 +383,83 @@ an estimate that the browser checks, and they wrap to a second line if
 they do not or the user makes the text larger. The page
 remembers no tab across a reload.
 
+## The column chosen when a file is opened
+
+The owner decided (answer 1) that the column of the populations is, by
+default, the first categorical column that table_io gives.
+
+table_io gives no categorical column. Its package types each column but
+the first, which names the individuals and has no type, as `"integer"`,
+`"float"`, `"boolean"` or `"text"`, the first of the four that holds
+every value of the column, its missing values left out
+(`columnType` of `TableRead`, in the package's `wasm/table_io.d.ts`, and
+its README, "What a table is"); a column whose every cell is missing is
+text. What a column means beyond that is each application's, by the
+owner's decision of 2 October 2026 recorded in table_io's
+`docs/architecture.md`, section 2: "Whether a column is categorical, a
+classification of populations, is the choice of each application, by
+its own rule."
+
+Two meanings were weighed, on the fixtures of the tests read with the
+release `js-v0.2.0-dev.1` under node on 9 October 2026:
+
+- **popnei_web's own type categorical** (`inferColumnTypes` of
+  `src/worker/individuals/columnTypes.ts`): a column of exactly two
+  different values is binary, and one of three or more numbers
+  continuous, so categorical is a column of text of one value or of
+  three or more. `ld_pops.csv`, whose column `pop` holds two
+  populations, would get no column, and a user whose collection is two
+  populations, wild and cultivated, would see every individual
+  unclassified until they chose.
+- **table_io's type text: taken.** The first column after the names that
+  table_io reads as text and that holds at least one value. It gives
+  `popcat` for `panel_pops.csv`, `panel_pops.txt` and `panel_meta.csv`,
+  whose second column, `altitude`, is integer; `popsplit` for
+  `panel_split.csv`; `pop`, two populations, for `ld_pops.csv`; and
+  `Población` for `excel_en.xlsx` and `individuals_10000.xlsx`. It is
+  the nearest thing to categorical that table_io gives, and is decided
+  by the session from the owner's answer; the owner may change it after
+  trying the page.
+
+What the rule misses, and what the page shows then:
+
+- populations numbered `1`, `2`, `3` are an integer column and are not
+  chosen; when no column is text, the list stays on "None" and the box
+  says "No column of panel_pops.csv holds text, so none was chosen as
+  the column of the populations. If a column numbers the populations,
+  choose it in the list.";
+- a column of text before the populations, `sex` with `M` and `F`, is
+  chosen in their place, and the counts show two populations named `M`
+  and `F`;
+- a column of the names of the accessions, one value per row, is
+  chosen, and the warning of more than 20 values says so.
+
+Each of these is seen in the box at once, and mended with the list.
+
+The page knows the type from the table in the project, without asking
+table_io again: a column is text when one of its cells is a text, since
+the light worker makes every value of an integer, float or boolean
+column a number or a boolean (below, "What the switch to table_io
+changes"). The choice is a pure function of core, beside the counts in
+`src/core/populations.ts`.
+
+It is made by the entry of the page, as a command, `setGrouping`, at each
+read of the individuals file that the store records as a table, when the
+grouping names no column of that table. So a file opened first gets its
+column; another file opened with a column of the name already chosen
+keeps it, as on the old page; and a column the user chose is never
+replaced, since the entry acts once on each read, when it is recorded,
+and not at every change of the project. A user who chooses "None" keeps
+it until the file is read again, by another file or other options of a
+CSV. It cannot be made by core when the read is recorded: that writing
+puts the table, and nothing else, into the current project and the
+projects of the history that hold the file (`recordShared` of
+`src/core/store.ts`), so a column chosen there would be lost from the
+earlier projects, and an Undo, once the page has one, would bring back
+counts with no column; and that writing is shared with `popgen.html`,
+whose user chooses every column. What it costs: one step more in the
+history at each opening, and code in the entry and not in core.
+
 ## The counts per population, and the unclassified
 
 ### What is counted
@@ -365,13 +474,15 @@ and the store changes many times a second while the one pass reports
 its progress (`src/ui/store.tsx`). It gives, for the individuals of the
 variants file:
 
-- each population of the column chosen, with its individuals that are in
-  both files, and of those, the individuals kept, or none known yet;
-- the unclassified, with how many have an empty cell, how many are not
-  in the individuals file and their names in the order of the variants
-  file, and how many of them are kept;
+- each population of the column chosen with an individual in both files,
+  with its individuals kept, or none known yet;
+- the unclassified kept, with how many have an empty cell and how many
+  are not in the individuals file, and the names of all those not in the
+  individuals file, kept or not, in the order of the variants file, for
+  the tab "Individuals file";
 - the number of rows of the individuals file whose individual is not in
-  the variants file.
+  the variants file;
+- the number of different values of the column, for the bound of 20.
 
 It is built on what core has: the populations of a column
 (`populationsOf`, which reads each table once for each column and keeps
@@ -380,11 +491,10 @@ kept for each pair of reads), and the individuals kept. With no column
 chosen, or no individuals file, every individual of the variants file is
 unclassified and no population has a row.
 
-### Before and after the filters, from the one pass
+### Counts after the filters, from the one pass
 
-The owner asked for the counts before the filters, unless those after
-the filters of the individuals can be shown without reading the
-variants file again. They can, and the code already does what it needs:
+The owner decided (answer 2) that the box shows the counts after the
+filters only. They need no second reading of the variants file:
 
 - The one pass gives, for each individual, its proportion of missing
   genotypes and its observed heterozygosity, over every variant of the
@@ -397,53 +507,71 @@ variants file again. They can, and the code already does what it needs:
   `src/core/individualsKept.ts`). It works them out again at every
   change of the project, with no request to a worker.
 - So when a threshold of the individuals changes the project, the
-  individuals kept, and the counts after the filters made from them,
-  change in the same drawing of the page. A threshold changes the
-  project when the line is let go, when a number typed is committed, or
-  a second after the last press of an arrow key
-  (`src/ui/variants/StatsHistogram.tsx`), so the counts follow those and
-  not the line while it is dragged. No filter of the variants removes an
-  individual, so a threshold of the variants changes neither count.
+  individuals kept, and the counts made from them, change in the same
+  drawing of the page. A threshold changes the project when the line is
+  let go, when a number typed is committed, or a second after the last
+  press of an arrow key (`src/ui/variants/StatsHistogram.tsx`), so the
+  counts follow those and not the line while it is dragged. No filter of
+  the variants removes an individual, so a threshold of the variants
+  changes no count.
 
 With no threshold of the individuals on, as the page starts, the
 filters keep every individual, which the store knows with no pass
 (`individualsKept` gives the list as known, removing nobody), and the
-column "After the filters" equals the one before them from the moment
-both files are read. With a threshold on, the column cannot come before
-the end of the one pass: until then the store does not know the
-individuals kept, and after a Stop it does not either, since the
-numbers of a pass stopped are not kept as a result. So, with a
-threshold on, the column shows "…" while the pass runs, with the words
-"known once panel.nei is read to the end" beside its header, and "not
-known: the reading was stopped" after a Stop, until Start again ends a
-pass. The download of the filtered variants
-waits for the same end, so the two never disagree. The counts before the
-filters need no pass: the individuals of the variants file are known as
-soon as it is opened.
+counts are shown from the moment both files are read. With a threshold
+on, they cannot come before the end of the one pass: until then the
+store does not know the individuals kept, and after a Stop it does not
+either, since the numbers of a pass stopped are not kept as a result.
+So, with a threshold on:
+
+- while the pass runs, the table lists the populations with "…" in the
+  place of each count, and the line under it says "The individuals the
+  filters keep are counted once panel.nei is read to the end.";
+- after a Stop, the same table, and the line "Not counted: the reading
+  of panel.nei was stopped. Start it again in the box of panel.nei to
+  count the individuals the filters keep.", until Start again ends a
+  pass;
+- after a failure of the pass, "Not counted: panel.nei could not be
+  read to the end.", the box of the variants file saying why.
+
+The line of the unclassified waits with the counts; the warning of no
+individual in the file, the list of those not in it and the last line
+do not, since they depend on the two files alone. The download of the
+filtered variants waits for the same end, so the two never disagree.
 
 ### The unclassified in the analyses per population
 
 This piece runs no analysis per population: `popgen2.html` has none yet.
-How the analyses of case 4, the diversity, the distances between
-populations and the LD decay, will treat the unclassified is decided
-with them, and open question 4 gives the options now, since the owner's
-words, "every individual counts as unclassified, so every analysis can be
-done", already lean on it. Until then the old page, `popgen.html`, keeps
-its rule, every individual of the variants file in the file or nothing
-per population runs, since its code is shared and is not changed by this
+The owner decided (answer 3) how the analyses of case 4, the diversity,
+the distances between populations and the LD decay, will treat the
+unclassified when they come to this page: the unclassified are one
+population only when no individual is classified, with no file, no
+column chosen, or a column whose every individual of the variants file
+is unclassified; otherwise they are left out of the analyses per
+population, and the box still says how many they are. They still enter
+the PCA, the filters and the download. It is the rule
+`docs/functionality.md` section 4 has for an empty cell. The option not
+taken: the unclassified as a population of their own beside the others,
+which would compare a mixture of what the file did not classify with
+the populations.
+
+Until those analyses come, the old page, `popgen.html`, keeps its rule,
+every individual of the variants file in the file or nothing per
+population runs, since its code is shared and is not changed by this
 piece.
 
 ## What happens when
 
 | what the user does | what the page does |
 |---|---|
-| opens an individuals file before a variants file | reads it and shows its list; the counts wait for a variants file, as said above |
+| opens an individuals file before a variants file | reads it, chooses its column and shows its list; the counts wait for a variants file, as said above |
 | opens another variants file | keeps the individuals file and the column chosen, and counts again against the new file's individuals; the opening is the store's opening of a file, as today, which keeps the rest of the project |
-| opens another individuals file | replaces the first; the column chosen is kept if the new file has a column of that name, and otherwise is chosen as for a first file (open question 1) |
+| opens another individuals file | replaces the first; the column chosen is kept if the new file has a column of that name, and otherwise is chosen as for a first file |
 | removes the individuals file | every individual is unclassified; the column chosen is kept in the project, so that a file opened again finds it by its name, as on the old page |
-| opens a file with one individual in two rows | the reader refuses it, as it does today, with words that name the individual and end "Load a corrected file."; a population taken from either row would be a guess |
+| opens a file with one individual in two rows | table_io refuses it, as the reader does today, with words that name the individual and end "Open a corrected file."; a population taken from either row would be a guess |
 | leaves cells of the column empty | those individuals are unclassified, counted as "with an empty cell"; `NA` and `-` are empty too, and in an xlsx the errors of Excel, as `docs/functionality.md` section 4 has it |
-| changes the separator of a CSV | the file is read again, the counts with it |
+| changes the separator of a CSV | the file is read again, the counts with it, and the column is chosen again if the new table has none of the name chosen |
+| opens a CSV whose name ends in `.xlsx` | table_io reads it as the CSV it is, from its bytes, and the tab shows how it was read |
 | reloads the page | loses both files, as the page loses the variants file today, since it saves no project yet |
 
 The individuals file is in the project whole, its table and the column
@@ -465,19 +593,20 @@ have to press Start again and wait for the whole file a second time.
 So the individuals file goes through the other way, a command,
 `dispatch` of the store, as on the old page
 (`src/ui/steps/individuals/commands.ts`): its opening, its removal, the
-options of a CSV and the column of the populations are each a step of
-the history. None of them changes the key of the one pass, so none
-stops it, and none changes the key of the download, so the text after a
-download stays. What it costs: the history, which the page keeps ready
-for an Undo it does not show (the owner hid Undo and Redo on 8 October
-2026), holds these steps beside those of the filters, where the opening
-of a variants file is no step. When Undo comes back, whether an Undo
-takes back the opening of an individuals file is decided then; nothing
-of this piece prevents either answer.
+options of a CSV, the column of the populations and the column the page
+chooses are each a step of the history. None of them changes the key of
+the one pass, so none stops it, and none changes the key of the
+download, so the text after a download stays. What it costs: the
+history, which the page keeps ready for an Undo it does not show (the
+owner hid Undo and Redo on 8 October 2026), holds these steps beside
+those of the filters, where the opening of a variants file is no step.
+When Undo comes back, whether an Undo takes back the opening of an
+individuals file is decided then; nothing of this piece prevents either
+answer.
 
 ## The options
 
-Three choices are argued; the rest of the page follows from the owner's
+Four choices are argued; the rest of the page follows from the owner's
 decisions.
 
 ### Where the counts come from
@@ -485,11 +614,11 @@ decisions.
 - **(a) From the project and the individuals kept, in core, on the
   page: taken.** No reading of the variants file and no request to a
   worker; the counts change with each change of the project, in the
-  drawing that shows it. What
-  it costs: a walk over the individuals of the variants file at each
-  change of the project that touches them, a few thousand names, well
-  under a millisecond by the size of the work, not measured; the
-  populations of a column are kept and not found again.
+  drawing that shows it. What it costs: a walk over the individuals of
+  the variants file at each change of the project that touches them, a
+  few thousand names, well under a millisecond by the size of the work,
+  not measured; the populations of a column are kept and not found
+  again.
 - **(b) A count in popnei's pass**, by giving popnei the populations.
   The one pass reads no individuals file, and giving it one would make
   the pass depend on the column: a change of column would read the file
@@ -529,8 +658,103 @@ in this piece.
 
 ### The reader of the individuals file
 
-The reader stays as it is in this piece; open question 2 weighs the
-switch to table_io.
+The owner chose table_io for this piece (answer 1), over a piece of its
+own after this one, which the draft recommended, and over keeping
+xlsx_rs. What table_io offers, from its package's README and its report
+of 2 October 2026:
+
+- One function, `importTable`, that reads a CSV, a TSV or an xlsx, the
+  format found from the first bytes and not from the name, into a table
+  of typed columns with the column of the names apart; or a refusal with
+  its kind and its place, whose kinds are those of the application's
+  reader today, the duplicated individual and the row of the wrong
+  length among them. It finds the encoding, the separator and the
+  decimal mark as the application's reader does, and takes each when the
+  user sets it. It reads `NA`, `-`, an empty cell and, in an xlsx, the
+  seven errors of Excel as missing, the owner's rules of 28 September
+  2026. Its rules are those of `docs/specs/worker/individuals.md`, moved
+  there; run side by side with the reader of today over 420,000 random
+  files under node, the two gave the same table or the same refusal in
+  every one but a file of UTF-16 that starts with its mark three times
+  (table_io's `docs/reports/table-io.md`).
+- A release that `package.json` names, as popnei is taken
+  (`docs/technology.md`, section 5): the pre-release `js-v0.2.0-dev.1` of
+  2 October 2026,
+  `https://github.com/JoseBlanca/table_io/releases/download/js-v0.2.0-dev.1/table_io-0.2.0.tgz`,
+  downloaded on 9 October 2026, whose declarations are those of the
+  checkout at `~/devel/xlsx_rs/js/table_io/wasm/table_io.d.ts`.
+- Speed and memory under node on the owner's Mac: a CSV of 36 MB, 100,000
+  rows, read in 1.04 to 1.07 s the first time and 0.52 s after; a CSV of
+  20 MB of short cells took up to 610 MB of the wasm's memory, a figure
+  not tried in a browser.
+
+### Which pages switch
+
+- **(a) Both pages, `popgen2.html` and `popgen.html`: taken.** The light
+  worker is one script for both pages (`src/worker/filesRunner.ts`), so
+  switching it switches both; the old page keeps working with the same
+  table, and changes where table_io reads differently, below. One reader,
+  one dependency.
+- **(b) `popgen2.html` alone.** The light worker would hold both readers,
+  chosen by a field of the request, and the site both packages; the
+  reader in TypeScript, its tests and xlsx_rs would stay until the old
+  page goes. Two readers of the same rules to keep in step, which
+  table_io was made to end.
+
+(b) would win only if the old page had to stay exactly as it is until it
+is retired, which nothing asks.
+
+### What the switch to table_io changes
+
+- **The light worker.** It loads table_io's package for every file, on
+  the first read, as it loads xlsx_rs's for the first xlsx today, with
+  the same retry after a failed download; checks the size of the file,
+  20 MB, before it reads the bytes, since the package sees them only once
+  they are in its memory; calls `importTable` with the options of the
+  CSV, the 20 MB and the 2,000,000 cells of a sheet of today; makes of
+  the columns the table the project holds, and of a refusal the
+  `IndividualsFileError` of today; and frees what the package holds.
+  `src/worker/individualsFile.ts` and `src/worker/filesRunner.ts` change;
+  `src/worker/xlsxCells.ts` and the reader of text,
+  `src/worker/individuals/csv.ts`, `rows.ts` and `sheet.ts` with their
+  tests and `properties.test.ts`, go: 2,273 lines, and with
+  `xlsxCells.ts`, its test and the parts of `individualsFile.test.ts`
+  that test the decoding, about 2,900. `columnTypes.ts` stays, since
+  core calls it for the types the old page lets the user set, and its
+  inference runs on the table table_io gives.
+- **The table.** A value of an integer or float column becomes a
+  number, of a boolean column a boolean, of a text column its text, and
+  a missing one `null`, as an xlsx gives them today. A CSV then gives
+  numbers where the reader of today gives text: `007` becomes 7 and
+  `1,75` the number 1.75. The names of the individuals stay text as
+  written. An integer beyond 2^53 becomes the nearest number, as
+  table_io's own `convertColumn` makes it a float. Within a column of
+  numbers, `1` and `1,0` are one value, and so are `01` and `1`, where
+  today they are two texts.
+- **The types** the project keeps, identifier, binary, continuous and
+  categorical, are inferred as today, by `inferColumnTypes`, from that
+  table; the project, its file and the old page's screens of the types do
+  not change.
+- **The refusals.** A CSV named `.xlsx`, refused today as "not an Excel
+  workbook", is read. A zip that holds no workbook is a refusal of its
+  own. The refusal of a reader not downloaded is of every file, not only
+  of an xlsx, and its words say so. A refusal that names a row or a
+  column names it as Excel does for an xlsx and as an editor does for a
+  text file, from the format table_io found, and not from the name of
+  the file.
+- **The old page.** Every file it loads carries the options of a CSV,
+  since the format is found from the bytes; its Individuals step shows
+  those options for a file read as text, and the line of the first sheet
+  for an xlsx, by what the read found. Its table shows a CSV's numbers as
+  numbers, and its words of the refusals change as above. Its flows are
+  run again, and their literals of the cells of a CSV change.
+- **`package.json`.** table_io's URL is added, and xlsx_rs's removed,
+  since nothing else uses it; the lint rule that lets only
+  `filesRunner.ts` load the files wasm names table_io.
+- **The tests** of the reader become tests of the mapping, with
+  table_io's package loaded under node as its README says, on the files
+  of the tests of today, which must give the same tables but for the
+  numbers of a text file.
 
 ## The invariants
 
@@ -544,7 +768,9 @@ The six of the designing skill (`.claude/skills/designing/SKILL.md`):
    `src/core/analyses/variantsSummary.ts` gives none), so opening or
    changing an individuals file stops and removes nothing.
 2. **The layers import as the coding skill allows.** Kept: the counts
-   are in `src/core`, the boxes and the tabs in `src/ui`.
+   and the choice of the column are in `src/core`, the boxes and the
+   tabs in `src/ui`, table_io's package in `src/worker/filesRunner.ts`
+   alone.
 3. **The project is one plain value**, changed by commands. Kept: the
    opening, the removal, the options of a CSV and the column are the
    commands of core that exist, `loadIndividuals`, `removeIndividuals`,
@@ -553,34 +779,61 @@ The six of the designing skill (`.claude/skills/designing/SKILL.md`):
    the screen, which section 7 allows, "a tab that is open".
 4. **`src/core` has no DOM and no React.** Kept.
 5. **Two workers, one request at a time in each.** Kept: the light
-   worker reads the individuals file as it does on the old page.
+   worker reads the individuals file as it does today, with another
+   package.
 6. **A cancel ends its worker and starts another.** Kept, and not
    touched: a read of an individuals file is a second or two, and a new
    file picked while one is read leaves the late read unrecorded, by its
    load id (section 6).
 
-What changes is a rule of section 6 for one page: "Every individual of
-the variants must be in the file". The code that relies on it is
-`individualsNeeds` of `src/core/project.ts`, called by the PCA, the
-diversity, the distances and the LD decay of `popgen.html`, and by none
-of `popgen2.html`, whose analyses are the one pass and the write. So no
-code changes for it now; the analyses of case 4 will take the rule of
-open question 4 when they come to this page.
+What changes:
+
+- **A rule of section 6, for one page**: "Every individual of the
+  variants must be in the file". The code that relies on it is
+  `individualsNeeds` of `src/core/project.ts`, called by the PCA, the
+  diversity, the distances and the LD decay of `popgen.html`, and by none
+  of `popgen2.html`, whose analyses are the one pass and the write. So no
+  code changes for it now; the analyses of case 4 will take the rule of
+  answer 3 when they come to this page.
+- **What the site depends on**: table_io's package in the place of
+  xlsx_rs's, loaded for every individuals file. The interface between
+  the light worker and the page keeps its shape, the read of
+  `src/worker/messages.ts` with the table, the types and what was found;
+  the union of the refusals, `IndividualsFileError`, loses `notXlsx`,
+  gains `notWorkbook`, renames `xlsxReaderNotLoaded` to
+  `readerNotLoaded`, and gives `emptyIndividual` and `unnamedColumn` the
+  format they were found in. A failed read is never saved in a project
+  file (`docs/specs/core/projectFile.md`), so the format of that file
+  does not change.
+- **The project's options of a CSV**, `csv` of `IndividualsSource`, are
+  set for every file loaded, an xlsx too, since the light worker finds
+  the format from the bytes; `null` stays valid, for the projects saved
+  before, whose xlsx were loaded with none.
 
 ## How it is tested, and what would prove it wrong
 
 - **The counts**, in Vitest under node, with the store of the page and a
   fake worker: `panel.nei`'s 200 individuals and `panel_pops.csv` give
-  48, 68 and 84 and 0 unclassified; a file without 7 of them gives 7 not
+  48, 68 and 84 and no unclassified; a file without 7 of them gives 7 not
   in the file, named in the order of the variants file; a column with 3
   empty cells gives 3 with an empty cell; a file of other names gives the
-  warning. The counts after the filters are checked against
-  `individualsKept` for the same thresholds, equal to those before the
-  filters with no threshold on, and, with a threshold on, "not known"
-  before the end of the pass and after a Stop. The same inputs give the
-  same object, and a progress of the pass draws no box again. A threshold of the individuals
-  moved changes them with no request sent to a worker, which the fake
-  worker counts.
+  warning; a column of 21 values gives the warning of too many and no
+  table. The counts with a threshold on are checked against
+  `individualsKept` for the same thresholds, equal to those of the whole
+  file with no threshold on, and "not known" before the end of the pass
+  and after a Stop. The same inputs give the same object, and a
+  progress of the pass draws no box again. A threshold of the
+  individuals moved changes them with no request sent to a worker, which
+  the fake worker counts.
+- **The column chosen**, in Vitest: the function of core on the tables
+  above gives `popcat`, `pop` and `Población`, and `null` for a table of
+  numbers; the entry's command is sent once for each read recorded, and
+  not again after the user chooses "None".
+- **The reader**, in Vitest under node with table_io's package: every
+  file of the tests of today gives the table it gives today, the cells
+  of a text file that are numbers or booleans now as numbers or
+  booleans, and every refusal of today its kind and its place; a CSV
+  named `.xlsx` is read.
 - **The page**, in Playwright, in Chromium and WebKit, the two engines
   that start on the owner's Mac: the two files opened in either order;
   the tabs by keyboard alone, the arrow keys, Home and End; a threshold
@@ -588,231 +841,135 @@ open question 4 when they come to this page.
   shown again, the threshold, its line over the plot and the plots as
   they were; a table sorted and scrolled, the other tab shown and back,
   the same; an individuals file opened while the one pass runs, which
-  does not stop it; the table of
-  `individuals_10000.xlsx`, 10,000 rows, sorted, with the page answering
-  a key within a tenth of a second; the page at 320 px with no sideways
-  scroll; and axe, the checker of accessibility the tests run, with no
-  finding. The screen is then looked at in a browser, as `CLAUDE.md`
-  asks.
+  does not stop it; the table of `individuals_10000.xlsx`, 10,000 rows,
+  sorted, with the page answering a key within a tenth of a second; the
+  page at 320 px with no sideways scroll; and axe, the checker of
+  accessibility the tests run, with no finding. The flows of the old
+  page's Individuals step are run again. The screen is then looked at in
+  a browser, as `CLAUDE.md` asks.
 - **What would send the design back**: a plot, or the line of its
   threshold, that comes back from the other tab drawn wrong or at the
-  wrong width; a count after the filters
-  that differs from what the download writes, "Individuals removed: 84
-  by the missing rate", for the same thresholds; or a table of a real
-  individuals file that freezes the page when its tab is shown.
+  wrong width; a count after the filters that differs from what the
+  download writes, "Individuals removed: 84 by the missing rate", for
+  the same thresholds; a table of a real individuals file that freezes
+  the page when its tab is shown; or a file of 20 MB that table_io
+  cannot read in a browser's worker for lack of memory.
 
 ## What is hard to undo
 
-Little. The project, its file format and the keys do not change. The
-word "unclassified", once it is in the tables of the analyses per
-population and in their downloads, is a name users will find in their
-files; until then it is a word of one box. The default column of open
-question 1, if taken, puts a column into the project that the user did
-not choose, which a project file would save; a later version could stop
-choosing it without breaking those files.
+- **The dependency.** table_io's release is named by its URL and never
+  moved once named; a newer table_io is a new tag and a new URL. Going
+  back to xlsx_rs would bring back the reader in TypeScript, from the
+  history of git.
+- **The cells of a text file as numbers**, once a project file of
+  `popgen2.html` saves them; a project saved by the old page before the
+  switch keeps its text, which the project still accepts.
+- **The word "unclassified"**, once it is in the tables of the analyses
+  per population and in their downloads, is a name users will find in
+  their files; until then it is a word of one box.
+- **The column chosen by the page** is put into the project as if the
+  user had chosen it, which a project file would save; a later version
+  could stop choosing it without breaking those files.
 
 ## The costs of the web
 
 - **Memory of the tab.** The table is in the project, as on the old
-  page. The reader refuses a file above 20 MB
+  page. The light worker refuses a file above 20 MB
   (`MAX_INDIVIDUALS_FILE_BYTES` of `src/worker/individualsFile.ts`), but
   that bounds the file and not the table: a CSV of 20 MB of short cells
   makes millions of cells, each a value of JavaScript, in the light
   worker, in the message to the page and in the project, which may take
-  several times the size of the file. Not measured; the plan of the
-  piece measures the memory of the page with such a file. A common
-  file, 5,000 rows of 20 columns, is a hundred thousand cells. The counts keep one
-  list of names per population, which the store keeps once for each
-  table and column. Nothing grows with the variants.
+  several times the size of the file. table_io adds its own: up to 610 MB
+  of the wasm's memory for a CSV of 20 MB of short cells under node, and
+  the memory of a wasm never shrinks, so the light worker keeps it until
+  the page closes or the worker is started again. The plan of the piece
+  measures the memory of the light worker and of the page with such a
+  file in Chromium and WebKit; a light worker that keeps hundreds of MB
+  after a read would be ended after each read of a large file, a change
+  of the client. A common file, 5,000 rows of 20 columns, is a hundred
+  thousand cells. The counts keep one list of names per population,
+  which the store keeps once for each table and column. Nothing grows
+  with the variants.
 - **The page frozen.** The table draws only the rows in view, measured
   at 10,000 rows (above). The counts walk the individuals once per
   change, in core on the page, not measured, a few thousand names. A
   plot draws again when its tab is shown, from numbers in the store, as
-  a change of a threshold already does.
-- **Download size.** No new dependency with the reader as it is. The
-  page's first script grows by the code of React Aria's table, its tabs
-  and its list, which `popgen2.html` does not use yet; React Aria's table
-  alone was 14.19 KB gzipped when it was taken off another page
-  (`src/ui/widgets/Table.tsx`); the build of the piece measures the
-  whole. The files wasm, 0.30 MB gzipped, is downloaded the first time
-  an xlsx is read, as on the old page. With table_io, open question 2,
-  0.33 MB, downloaded for a CSV too.
+  a change of a threshold already does. table_io runs in the light
+  worker, never on the page.
+- **Download size.** table_io's `.wasm` is 651,680 bytes, 330,416
+  gzipped with `gzip -9`, and its JavaScript 37,489 bytes, 6,758
+  gzipped, measured on the release `js-v0.2.0-dev.1` on 9 October 2026:
+  0.34 MB downloaded the first time an individuals file is read, a CSV
+  included. Today a CSV downloads nothing and an xlsx xlsx_rs's package,
+  300,646 and 3,041 bytes gzipped, 0.30 MB. Neither is downloaded before
+  a file is opened, and the browser keeps it after. 0.34 MB is about a
+  quarter of a second at 10 Mbit/s. The page's first script grows by the
+  code of React Aria's table, its tabs and its list, which
+  `popgen2.html` does not use yet; React Aria's table alone was 14.19 KB
+  gzipped when it was taken off another page (`src/ui/widgets/Table.tsx`);
+  the build of the piece measures the whole.
 - **The browsers.** Nothing newer than the floor, Chrome 111, Firefox
   115 and Safari 16.4: React Aria's tabs and table are used on the old
-  page already.
+  page already, and table_io's package is built as xlsx_rs's was,
+  `wasm-bindgen --target web`, with `BigInt64Array`, in every browser of
+  the floor.
 - **What GitHub Pages does not allow.** Nothing asked: no header, no
-  file from another address.
+  file from another address; the `.wasm` is served by the site, as
+  xlsx_rs's is.
 - **Accessibility.** The tabs, the list of the column and the table work
   with the keyboard alone, as React Aria makes them; no meaning is
-  carried by colour alone; the warning says it is a warning in words.
+  carried by colour alone; each warning says it is a warning in words.
 - **What is lost when the tab is closed or a worker restarts.** Both
   files, until the page saves a project; the table is in the project, so
-  a restart of the light worker loses nothing of a file already read.
+  a restart of the light worker loses nothing of a file already read,
+  and the next read downloads table_io's package again from the
+  browser's cache.
 
 ## The corrections made to the other documents
 
 - `docs/functionality.md`, section 4: a paragraph after the rule that
   every individual of the variants must be in the file, which says that
   on `popgen2.html` such an individual is unclassified, as are all of
-  them without a file, by the owner's decision of 9 October 2026, and
-  points here.
+  them without a file, by the owner's decision of 9 October 2026, and how
+  the analyses per population will treat them, answer 3.
 - `docs/architecture.md`, section 6, "The individuals file": a paragraph
-  at its end, "What was revised on 9 October 2026", with the same, the
-  two tabs, and the state of the design, a draft; and the opening of the
-  document, one sentence.
+  at its end, "What was revised on 9 October 2026", with the same and
+  the two tabs; and, at the end of "The files wasm, the package of
+  xlsx_rs", the switch to table_io; and the opening of the document, one
+  sentence.
+- `docs/technology.md`, section 2, the rows of the reader of xlsx and of
+  the CSV in the table of the choices, and a paragraph "What was revised
+  on 9 October 2026" at the end of "xlsx and zip in Rust, in xlsx_rs".
 
-Not corrected, being a skill and not a document of `docs/`: the writing
-skill, whose example of an error, "12 individuals of panel.nei are not in
-pops.csv", is the rule of the old page; it holds there, and is to be
-revised when the old page goes.
+Left for the plan of the piece, which changes them with the code: the
+`coding` skill and its `worker.md`, which say that the light worker loads
+xlsx_rs for an xlsx; and `CLAUDE.md`, whose paragraph on the local build
+of popnei ends "The same holds for xlsx_rs", which the owner may want to
+read "table_io". Not corrected, being a skill: the writing skill's
+example of an error, "12 individuals of panel.nei are not in pops.csv",
+the rule of the old page, which holds there.
 
-## Open questions for the owner
+## What the owner decided
 
-### 1. The column of the populations when a file is opened
+On 9 October 2026, approving the design:
 
-- **(a) A column whose name looks like one of populations, if there is
-  exactly one; otherwise none until the user chooses.** The name, without
-  regard to case, starts with "pop" or is "group", "groups", "breed" or
-  "breeds": `popcat` of `panel_pops.csv` and `pop` of `ld_pops.csv` are
-  found, and a list of exact names, "population", "pop", "group", would
-  have missed `popcat`. Two such columns, `popcat` and `popsplit`, choose
-  none. The user who opens a file sees counts at once, and the list
-  shows which column was taken. What it costs: a column chosen by a name
-  can be the wrong one, a "population_size" of numbers, which the counts
-  then show at once as hundreds of populations of one; and the choice is
-  the page's own, which the old page avoided so that every choice was
-  the user's (`docs/specs/steps/individuals.md`, "The populations"). It
-  cannot be made by core when it writes the read of the file into the
-  project: that writing puts the table, and nothing else, into the
-  current project and the projects of the history that hold the file
-  (`recordShared` of `src/core/store.ts`), so a column chosen there
-  would be lost from the earlier projects, and an Undo, once the page
-  has one, would bring back counts with no column; and that writing is
-  shared with `popgen.html`, whose user chooses every column. So the entry of
-  the page sends it, once the read of a new load is recorded and no
-  column of that file is chosen, as one command, `setGrouping`, as the
-  entry already starts the one pass by itself; one step more in the
-  history, and code in the entry and not in core.
-- **(b) None until the user chooses.** Every individual is unclassified
-  until then, and the box says so. One more action for every user, and a
-  user who misses the list sees everyone unclassified.
-
-Recommended: (a). The counts are what the user opened the file to see,
-and a wrong guess shows itself in them.
-
-### 2. The reader: xlsx_rs or table_io
-
-table_io is the owner's newer reader, the project xlsx_rs renamed, in the
-repository `github.com/JoseBlanca/table_io`, checked out at
-`~/devel/xlsx_rs` (the folder keeps its old name). What it offers, from
-its package's README and its report of 2 October 2026:
-
-- One function, `importTable`, that reads a CSV, a TSV or an xlsx, the
-  format found from the first bytes and not from the name, into a table
-  of typed columns, integer, float, boolean or text, with the column of
-  the names apart; or a refusal with its kind and its place, whose kinds
-  are those of the application's reader today, the duplicated individual
-  and the row of the wrong length among them. It finds the encoding, the
-  separator and the decimal mark as the application's reader does, and
-  takes each when the user sets it. It reads `NA`, `-`, an empty cell
-  and, in an xlsx, the seven errors of Excel as missing, the owner's
-  rules of 28 September 2026.
-- A release that `package.json` can name, as popnei and xlsx_rs are
-  taken (`docs/technology.md`, section 5): the pre-release
-  `js-v0.2.0-dev.1` of 2 October 2026,
-  `https://github.com/JoseBlanca/table_io/releases/download/js-v0.2.0-dev.1/table_io-0.2.0.tgz`,
-  with the hash for the lockfile in its notes. Its `.wasm` is 651,456
-  bytes, 0.33 MB gzipped, where xlsx_rs's is 0.30 MB.
-- Speed and memory under node on the owner's Mac: a CSV of 36 MB, 100,000
-  rows, read in 1.04 to 1.07 s the first time and 0.52 s after; a CSV of
-  20 MB took up to 610 MB of the wasm's memory, a figure not tried in a
-  browser.
-
-What changes for the page if it is taken: nothing a user sees but the
-download. The light worker calls table_io for every file, and makes of
-its columns the table the project holds today, so core and the screens
-do not change; the reader of CSV in TypeScript, about 3,000 lines with
-its tests under `src/worker/individuals/`, and the code that turns the
-cells of the files wasm into a table, `src/worker/xlsxCells.ts`, go; the
-inference of the types the project keeps, identifier, binary, continuous
-and categorical, is made from table_io's types. A CSV, which today loads
-no wasm, then downloads 0.33 MB the first time, about a quarter of a
-second at 10 Mbit/s (0.33 MB is 2.6 Mbit), and the first read of a large CSV
-takes the time above. Its tests are those of the reader today, on the
-same files, which must give the same tables.
-
-- **(a) Switch in this piece.** One piece instead of two, with the
-  reader and the screen tried together; the piece is larger, and a
-  difference between the two readers would show up while the owner tries
-  the screen.
-- **(b) Switch in a piece of its own, right after this one: recommended.**
-  This piece reads with the reader the old page has tested since
-  September; the next one changes the light worker alone, and is checked
-  by the same tests and files giving the same tables, with no screen to
-  try.
-- **(c) Keep xlsx_rs.** No work, and two readers of the same rules to
-  keep, the one in TypeScript here and table_io in Rust.
-
-The change of dependency is the owner's to decide.
-
-### 3. The counts before and after the filters
-
-- **(a) Both, in two columns: recommended.** "In both files" tells what
-  the file gives each population; "After the filters" tells how many the
-  analyses per population will read, which is what step 2 of case 4 asks
-  ("a small one gives values that cannot be compared"). Its cost: the
-  second column is "…" until the end of the one pass, and the column
-  shows, per population, what the thresholds of the individuals keep,
-  which is close to the line "Keeps N of M" the owner took off the
-  thresholds on 8 October 2026; here it is in the box of the populations,
-  not under a threshold.
-- **(b) After the filters only.** One column; nothing to count until the
-  end of the pass, so a user who opens both files sees no number for a
-  while, a time that grows with the file.
-- **(c) Before the filters only.** Known at once; a user who removes
-  individuals with the thresholds does not see which populations they
-  shrink until the analyses run.
-
-### 4. The unclassified in the analyses per population
-
-Not built in this piece; decided with case 4, and asked now because the
-owner's words lean on it.
-
-- **(a) The unclassified are one population of their own,
-  "Unclassified", in every analysis per population.** With no file,
-  every analysis runs on all the individuals as one population, as the
-  old page does with "All individuals". With a file, the individuals left
-  out of it are compared with the populations as if they were one, which
-  they are not: a diversity or an Fst of a mixture of what the file did
-  not classify.
-- **(b) The unclassified are one population only when no individual is
-  classified; otherwise they are left out of the analyses per population
-  and named with their count beside the results: recommended.** With no
-  file, or no column chosen, every analysis runs on all individuals; with
-  populations, the analyses compare the populations, and the unclassified
-  still enter the PCA, the filters and the download. It is the rule
-  `docs/functionality.md` section 4 has for an empty cell.
-- **(c) The unclassified always left out.** With no file no analysis per
-  population runs, against the owner's words.
-
-### 5. Where each file is opened
-
-On 6 October 2026 the owner put the opening of the variants file after
-the plots, at the end of the page; that was before the page had two
-files and two boxes.
-
-- **(a) Each box ends with the opening of its file: recommended**, "Open
-  variants file…" and "Open individuals file…", each a zone that also
-  takes a file dropped on it. The file and the way to change it are in
-  one place, and both are seen before any tab.
-- **(b) Each opening at the end of its tab.** The order of the owner's
-  decision of 6 October kept; an individuals file is opened from a tab
-  that has to be chosen first.
-
-### 6. A column of many values
-
-A column of more than 200 values gives no table in the box, with the
-words above. 200 is the bound of the heatmap of the distances. The
-alternative is no bound, a table of 1,845 rows in the box, scrolled
-inside it. Recommended: the bound, since such a column is almost always
-not one of populations.
+1. **The column of the populations when a file is opened** is chosen by
+   the page, the first categorical column table_io gives, over no column
+   until the user chooses. table_io gives no categorical column, so the
+   session took the first column of text, as "The column chosen when a
+   file is opened" argues. The owner chose with it that table_io
+   replaces xlsx_rs as the reader in this piece, over a piece of its own
+   right after this one, which the draft recommended, and over keeping
+   xlsx_rs.
+2. **The counts per population** are those after the filters only, one
+   column, over both counts in two columns, which the draft recommended,
+   and over the counts before the filters only.
+3. **The unclassified in the analyses per population** are a population
+   only when there is no other; otherwise they are left out of the
+   analyses and the box says how many they are, as the draft
+   recommended, over the unclassified always a population of their own,
+   and always left out.
+4. **Each box ends with its own button to open its file**, as the draft
+   recommended, over each opening at the end of its tab.
+5. **A column of more than 20 different values** gets no table of
+   counts, with its warning; the draft proposed 200.

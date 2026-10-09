@@ -35,15 +35,14 @@ the applications do is in `docs/functionality.md`.
 | 3D plot | three.js, with `@types/three` |
 | calls to the worker | a small typed message layer of our own |
 | documentation and in-app help | Markdown, rendered with markdown-it |
-| xlsx, zip | in Rust, in xlsx_rs, a project of its own whose wasm package the site installs from a GitHub Release and loads when needed (section 5): calamine, and rust_xlsxwriter from stage 6 |
-| CSV and TSV of the individuals | read in TypeScript, by code of ours, with the inference of the types of the columns |
+| xlsx, zip, CSV and TSV | in Rust, in table_io, xlsx_rs renamed, a project of its own whose wasm package the site installs from a GitHub Release and loads when needed (section 5): calamine, and rust_xlsxwriter from stage 6; the inference of the types of the columns of popnei_web in TypeScript, by code of ours (revised on 9 October 2026) |
 | tests | Vitest, Playwright; for development only jsdom, @axe-core/playwright and fast-check |
 | lint and format | ESLint with @eslint/js, typescript-eslint and eslint-plugin-react-hooks, Prettier |
 | types of node | @types/node, for development only |
 | package manager | npm |
 | host | GitHub Pages |
 | popnei itself | its wasm package, from a GitHub Release of popnei (section 5) |
-| the reader of xlsx | the wasm package of xlsx_rs, from a GitHub Release of xlsx_rs, as popnei's (section 5) |
+| the reader of the individuals file | the wasm package of table_io, from a GitHub Release of table_io, as popnei's (section 5) |
 
 ### TypeScript
 
@@ -500,6 +499,17 @@ Considered and not taken:
   missing values and the inference of the types, which are most of the
   work, would still be ours, and it would be a dependency for the
   smallest part of it.
+
+What was revised on 9 October 2026, as the owner decided that day
+(`docs/designs/input-page.md`): the CSV and the TSV are read by
+table_io, xlsx_rs renamed and widened on 2 October 2026 to read every
+format of the individuals file by the rules this reader had, which moved
+into it; the light worker loads its package for every file, 0.34 MB
+gzipped at the first read, a CSV included, where a CSV loaded nothing.
+The reader in TypeScript goes, but the inference of the types of the
+columns of the project, which stays ours. The reason: one reader of
+those rules, shared with Vavilov Explorer, where there were two to keep
+in step.
 
 ### Tests, lint, format, packages
 

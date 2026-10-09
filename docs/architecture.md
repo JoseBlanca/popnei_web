@@ -39,8 +39,10 @@ of popnei and point 5 of section 13, with the measurements of that
 day; that piece is built on the branch `download`
 (`docs/plans/download.md`) and not yet tried by the owner. Revised
 on 9 October 2026 in section 6, "The individuals file", for the
-individuals file on `popgen2.html`, from `docs/designs/input-page.md`,
-a draft not yet approved. What was
+individuals file on `popgen2.html`, and in "The files wasm" for
+table_io, the reader that replaces xlsx_rs, from
+`docs/designs/input-page.md`, approved by the owner on 9 October 2026.
+What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
 popnei, what each one holds, and how a change made by the user reaches the
@@ -1848,8 +1850,8 @@ core and the reader describe it in one way.
 
 With a CSV, the light worker loads no wasm at all.
 
-What was revised on 9 October 2026, from `docs/designs/input-page.md`, a
-draft not yet approved by the owner. On `popgen2.html` the bullet
+What was revised on 9 October 2026, from `docs/designs/input-page.md`,
+approved by the owner that day. On `popgen2.html` the bullet
 "Every individual of the variants must be in the file" does not hold,
 as the owner decided that day: an individual of the variants file that
 is not in the individuals file is unclassified, as is one whose cell in
@@ -2148,6 +2150,30 @@ waiting for a release. What is hard to undo is the name,
 which every URL of a release and the import of the light worker hold,
 and a name on npm if xlsx_rs is ever published there: a later name is a
 new URL in `package.json` and a new line in `filesRunner.ts`.
+
+What was revised on 9 October 2026, from `docs/designs/input-page.md`,
+approved by the owner that day. The files wasm is the package of
+**table_io**, xlsx_rs renamed and widened on 2 October 2026, release
+`js-v0.2.0-dev.1`,
+`https://github.com/JoseBlanca/table_io/releases/download/js-v0.2.0-dev.1/table_io-0.2.0.tgz`,
+in the place of xlsx_rs's, which leaves `package.json`, for both pages,
+whose light worker is one. It reads the whole individuals file, a CSV, a
+TSV or an xlsx, its format found from its bytes and not its name, into
+typed columns, by the rules of `docs/specs/worker/individuals.md`, which
+moved into it; so the light worker loads it for every file, a CSV
+included, at the first read, and the reader of text in TypeScript,
+`src/worker/individuals/` but `columnTypes.ts`, and
+`src/worker/xlsxCells.ts` go. The light worker still checks the size of
+a file before it reads its bytes, makes of table_io's columns the table
+the project holds, values of number and boolean columns as numbers and
+booleans, a CSV's among them, and infers the four types of the project
+from it, so core, the project file and the keys do not change. Its
+`.wasm` is 330,416 bytes gzipped and its JavaScript 6,758, 0.34 MB,
+where xlsx_rs's were 0.30 MB, downloaded for an xlsx alone. The local
+build is packed with `npm pack` in `js/table_io` of the checkout at
+`~/devel/xlsx_rs`, whose folder keeps the old name, and installed as
+above. The option not taken: `popgen2.html` alone on table_io, with
+both readers in the light worker until the old page goes.
 
 ### The files written
 

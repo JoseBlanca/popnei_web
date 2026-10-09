@@ -383,11 +383,13 @@ On `popgen2.html` an individual of the variants file that is not in the
 file is not an error, as the owner decided on 9 October 2026: it is
 unclassified, as is one whose cell in the column of the populations is
 empty, and without a file every individual is, so that every analysis
-can be done with any file. The page counts the individuals of each
-population and the unclassified, and names those not in the file. How
-the analyses per population treat the unclassified is decided with them
-(`docs/designs/input-page.md`, a draft of 9 October 2026, open question
-4). `popgen.html` keeps the rule above.
+can be done with any file. The page counts the individuals the filters
+keep in each population and the unclassified, and names those not in the
+file. The unclassified are one population only when no individual is
+classified; otherwise the analyses per population leave them out, and
+the page says how many they are, as the owner decided the same day
+(`docs/designs/input-page.md`, approved on 9 October 2026). `popgen.html`
+keeps the rule above.
 
 ### The format
 
