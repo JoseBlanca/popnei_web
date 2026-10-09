@@ -510,6 +510,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the button of a download | "Download…", named for a screen reader "Download the plot of the missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries |
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting | "Download once panel.nei is read to the end." |
+| the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
 | the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |
 | a PNG refused | "The image of this plot is too large for a PNG in this browser; download it as SVG."; "The image of this plot could not be made as a PNG in this browser; download it as SVG." |
 
