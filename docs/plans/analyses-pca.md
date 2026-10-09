@@ -1271,3 +1271,62 @@ medians are far under the rule's 200 ms, so the CSV is written on the
 page and nothing changes. The first load of `popgen2.html` is 293.41 KB
 gzipped, against 278.65 KB on `main` (+14.76 KB: the row of tabs, the
 PCA's module on this page, the menus of the downloads, Undo and Redo).
+
+### Work package 6, 9 and 10 October 2026
+
+Tasks 6.1 and 6.2: commits 4707ef33 (the specs for the owner's answer 2:
+a running PCA locks what it reads, the thresholds, the FILTER box and
+its own options, with "Stop the PCA to change the filters.", and Undo
+and Redo wait; the box of the individuals file and "Colour the points
+by" stay open, the session's recommendation pending the owner's
+answer; "Stricter for the PCA" starts at 1 while the Variants tab's
+threshold is off; the legend leaves out populations of no points; this
+page's words of a failure), 2bc9defb (`pcaFilters` takes the PCA's own
+1 as no filter while the Variants tab's threshold is off, so the key
+does not change until the user types a lower value), 05fd4516
+(`stricter.ts`, `passLock.ts`, the tab's words), 7bf6fac0 and 74b3453d
+(the download of the filtered variants waits while a PCA runs). Task
+6.3: commits 1acab94c to ed453143, the tab up to its run; none of the
+plan's stops met: after the one pass Run started the PCA at once, its
+bar above 0. The frame `AnalysisPanel` takes the page's panel and an
+optional lock, and the old page passes its own; the result's code is
+loaded the first time a result is drawn, so task 6.6 came early. Task
+6.4: commits 661bc1f4 to 9d8e8497, the result; the 3D view came back
+drawn from a hidden tab in WebKit too. The plot's "Download…" sits
+beside the PCA's title, before the bar of controls, as the screen spec
+orders the Tab stops, through `ScatterPlot`'s `onHandle`.
+
+Checks at 9d8e8497: Vitest 4,904; `AP6 D1` 32, `AP6 D2` 7, `AP6 D3` 14
+Vitest tests; `AP6 D3` 24 flows, 12 in each engine; the old page's
+flows of the PCA with `popgen2Pca.spec.ts` 234; the other flows of
+`popgen2.html` 328. The first load of `popgen2.html` 306.12 KB gzipped,
++12.6 KB for the PCA tab, under the design's bound of 50 KB.
+
+The review, all eleven categories. `stale` found nothing (the page's
+store run with a fake worker: an individuals file opened while a PCA
+runs colours its result; another variants file stops it and its late
+result is never shown; a method or a threshold set back brings the
+cached result back with no request). The browser reviewer found the 3D
+view's drawing context kept through six hides, the PNG not blank in
+both engines, each lazy chunk asked for once, the flows 72 of 72 over
+three repeats, and about 340 KB more of the heap per run, the cache of
+results. axe found nothing in any state. Thirty findings held; the ones
+a user would meet: a lock left untested on most controls; a click, a
+hover or a tap on a locked radio, switch or box giving no reason, and
+the switch's tooltip missed on a Tab move about one time in two at a
+steady cadence (the flow's retry had hidden it); Run pressed within a
+second of an arrow key on a threshold starting the PCA on the old value,
+which the threshold's change then stopped without a word; the result's
+code failing to download leaving the tab empty until a reload; the
+legend over the points at 320 px; the table of the individuals cut at
+PC5 with no scrollbar drawn; the reason of an empty LD distance drawn
+twice; nothing to help choose the distance; the binning of every
+variant at each change of the store; the old page's first load carrying
+this page's modules; Safari 16.4 to 17.3 announcing the 3D view while
+hidden. They went to two subagents in turn.
+
+Not taken, for the owner when they try the page: the PCoA's warning
+keeps the old page's words, "7.87% of their variance lies in directions
+that no space has"; the reviewer proposed "negative eigenvalues", "not
+Euclidean" and advice on which grouping to trust, which is the owner's
+to judge as a population geneticist.
