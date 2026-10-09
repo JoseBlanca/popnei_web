@@ -1069,10 +1069,16 @@ owner that day, and the screen `docs/specs/steps/popgen2-input.md`. On
 **unclassified**: with no individuals file, with no column chosen, with
 its cell of the column missing, or when the individuals file does not
 have it. It is not an error there, and `individualsNeeds`, which
-`popgen.html` keeps, is never called by that page. Three functions give
-what its box of the individuals file shows, in `src/core/populations.ts`
-beside the functions of the populations of stage 5, since the counts
-need `individualsKept`, which imports `project.ts`:
+`popgen.html` keeps, is never called by that page. Four functions give
+what its box of the individuals file shows. The counts, the column
+chosen by the page and the columns its list offers are in
+`src/core/populations.ts`, beside the functions of the populations of
+stage 5, since the counts need `individualsKept`, which imports
+`project.ts`. The words of the box, and the bound of 20 values, are in
+`project.ts`, beside `individualsStepNeeds`, whose words of the reader
+they share, which no other module needs; and `populations.ts` holds no
+constant made when it loads, so that it and the modules it imports can
+never find one of the other not yet made (above, "The populations").
 
 - **The counts**, `populationCounts(p, kept)`: before the variants file
   is read, the column, its number of different values and whether they
@@ -1112,7 +1118,17 @@ need `individualsKept`, which imports `project.ts`:
   type text; for a table read before, every cell of a CSV a text, it is
   the first column of 1 to 20 values. The entry of `popgen2.html` sends
   it (`docs/specs/entry.md`, "The column of the populations on
-  popgen2.html").
+  popgen2.html"). A column of booleans is never chosen, since its cells
+  are not texts.
+- **The columns the list offers**, `populationColumnChoices(read)`:
+  every column of the table but the first, which names the individuals,
+  and but a column of booleans, every cell of which that is not missing
+  is `true` or `false` and one is at least, in the order of the table. A
+  column of booleans is not a column of populations, as the owner
+  decided on 9 October 2026 (`docs/plans/input-page.md`, "The owner's
+  answers, 9 October 2026", answer 2), in which table_io would make
+  `TRUE` and `true` one population. A column of numbers is offered,
+  whose `01` and `1` are one population.
 - **The words of the box**, `individualsBoxNeeds(p)`: the reason the box
   shows in place of the list and the counts, for a file being read or
   that could not be read, in the words of `individualsStepNeeds` but for
@@ -1182,7 +1198,8 @@ The rules of the counts against what a reader would expect:
 
 ```ts
 /** The most different values of a column whose populations the box
-    of popgen2.html counts; the owner's bound of 9 October 2026. */
+    of popgen2.html counts; the owner's bound of 9 October 2026. In
+    src/core/project.ts. */
 export const MAX_LISTED_POPULATIONS = 20;
 
 /** The text of a cell as the screens show it, numbers with `decimal`;
@@ -1241,9 +1258,14 @@ export function populationCounts(p: Project, kept: IndividualsKept | null): Popu
     MAX_LISTED_POPULATIONS different values, or null. */
 export function defaultPopulationsColumn(read: TableRead): string | null;
 
+/** The columns the list of the column of the populations offers: every
+    column but the first and but a column of booleans, in the order of
+    the table. In src/core/populations.ts. */
+export function populationColumnChoices(read: TableRead): readonly string[];
+
 /** The reason of the box of the individuals file of popgen2.html, in
     place of its list and counts, or null with no file or a file read.
-    Throws a defect for a file notGiven. */
+    Throws a defect for a file notGiven. In src/core/project.ts. */
 export function individualsBoxNeeds(p: Project): string | null;
 ```
 
@@ -1266,8 +1288,11 @@ the same inputs twice, the same object by `===`. At
 `defaultPopulationsColumn`: `popcat` for `panel_pops.csv`, `popcat` and
 not `altitude`, numbers, for `panel_meta.csv`, `pop`, two values, for
 `ld_pops.csv`, `Población` for the table of `excel_en.xlsx`, `null` for
-a table of numbers alone and for one whose only text column has 21
-values. At `cellShown`: 1.5 with the comma `"1,5"`, with the point
+a table of numbers alone, for one whose only text column has 21
+values, and for one of a column of booleans and a column of numbers. At
+`populationColumnChoices`: `Población`, `Altura`, `Fecha`, `Hora` and
+`Código` for the table of `excel_en.xlsx`, without `Afectado`, its
+booleans. At `cellShown`: 1.5 with the comma `"1,5"`, with the point
 `"1.5"`, `true` `"true"`, `"001"` `"001"`, `null` `null`. At
 `individualsBoxNeeds`: each row of the screen spec's words.
 

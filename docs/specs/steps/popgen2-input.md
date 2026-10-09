@@ -161,10 +161,12 @@ individuals file at a time.", as the zone of the variants file does.
 
 **The list "Column of the populations"** is a select. Its first item is
 "None: every individual unclassified", then every column of the file
-but the first, which names the individuals, by its name in the file, in
-the order of the file. Its value is the column of the grouping when it
-is a column of the table, and "None" otherwise. A choice sends a command
-(below, "What it sends and reads"). When the file is read the page
+but the first, which names the individuals, and but a column of
+booleans, `true` and `false`, by its name in the file, in the order of
+the file (`populationColumnChoices` of core). A column of booleans is
+not offered, as the owner decided on 9 October 2026; a column of
+numbers is. Its value is the column of the grouping when the list
+offers it, and "None" otherwise. A choice sends a command (below, "What it sends and reads"). When the file is read the page
 chooses a column itself, the first column of text with 1 to 20 different
 values, missing ones left out (`defaultPopulationsColumn` of core, sent
 by the entry; `docs/specs/entry.md`). It chooses again only when the file is read again, another file opened

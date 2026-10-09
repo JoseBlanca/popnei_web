@@ -19,16 +19,19 @@ import { individualsKept } from "./individualsKept.ts";
 import type { IndividualsKept } from "./individualsKept.ts";
 import {
   bothOf,
+  cellShown,
   counted,
   escaped,
   grouped,
   namesOf,
   populationsKept,
   shown,
+  shownDecimal,
+  MAX_LISTED_POPULATIONS,
   MAX_NAMED,
 } from "./project.ts";
-import type { Project } from "./project.ts";
-import type { LeftOut, Pops } from "../worker/protocol.ts";
+import type { Project, TableRead } from "./project.ts";
+import type { IndividualsTable, LeftOut, Pops } from "../worker/protocol.ts";
 
 /** The reason of the lock of `populationsKeptNeeds`, when the `numKept`
     individuals kept have no population in the column `column`, which
@@ -190,6 +193,100 @@ export function underMinimumText(
       ? `${bothOf(under.map(([, numIndividuals]) => grouped(numIndividuals)))} individuals, fewer than ${minimum}`
       : `fewer individuals than ${minimum}`;
   return `${names} have ${fewer}, ${consequence.many}`;
+}
+
+// The box of the individuals file of popgen2.html (the project spec,
+// "The counts per population on popgen2.html").
+
+/**
+ * The column of the populations the page chooses when an individuals file
+ * is read: the first column after the names one of whose cells is a
+ * text, and whose different values that are not missing, as `cellShown`
+ * writes them, are 1 to `MAX_LISTED_POPULATIONS`; `null` when none is. A
+ * column of numbers or of booleans, which table_io gives as such, is
+ * never chosen, and a table read as texts alone, before table_io, gives
+ * its first column of 1 to 20 values.
+ */
+export function defaultPopulationsColumn(read: TableRead): string | null {
+  const decimal = shownDecimal(read);
+  const { columns, rows } = read.table;
+  for (const [index, column] of columns.entries()) {
+    if (index === 0 || !rows.some((row) => typeof row[index] === "string")) {
+      continue;
+    }
+    const numValues = valuesOf(rows, index, decimal, MAX_LISTED_POPULATIONS);
+    if (numValues >= 1 && numValues <= MAX_LISTED_POPULATIONS) {
+      return column;
+    }
+  }
+  return null;
+}
+
+/**
+ * The number of different values of the column at `index` of `rows` that
+ * are not missing, compared as `cellShown` writes them with `decimal`;
+ * once past `bound`, `bound + 1`, the walk stopped there, since a column
+ * of 10,000 names need not be walked to its end to be too many.
+ */
+function valuesOf(
+  rows: IndividualsTable["rows"],
+  index: number,
+  decimal: "." | ",",
+  bound: number,
+): number {
+  const values = new Set<string>();
+  for (const row of rows) {
+    const cell = row[index];
+    if (cell === undefined) {
+      throw defect(
+        `a row of the individuals table has no cell ${String(index)}.`,
+      );
+    }
+    const text = cellShown(cell, decimal);
+    if (text === null) {
+      continue;
+    }
+    values.add(text);
+    if (values.size > bound) {
+      break;
+    }
+  }
+  return values.size;
+}
+
+/**
+ * The columns the list "Column of the populations" of popgen2.html offers:
+ * every column of the table but the first, which names the individuals,
+ * and but a column of booleans, every cell of which that is not missing
+ * is `true` or `false`, one at least; in the order of the table. The
+ * owner decided on 9 October 2026 that a column of booleans is no column
+ * of populations.
+ */
+export function populationColumnChoices(read: TableRead): readonly string[] {
+  const rows = read.table.rows;
+  return read.table.columns.filter(
+    (_, index) => index > 0 && !isBooleanColumn(rows, index),
+  );
+}
+
+/** Whether every cell of the column at `index` of `rows` that is not
+    missing is `true` or `false`, and one is at least. */
+function isBooleanColumn(
+  rows: IndividualsTable["rows"],
+  index: number,
+): boolean {
+  let found = false;
+  for (const row of rows) {
+    const cell = row[index];
+    if (cell === undefined || cell === null) {
+      continue;
+    }
+    if (typeof cell !== "boolean") {
+      return false;
+    }
+    found = true;
+  }
+  return found;
 }
 
 /** An error for a state the code makes impossible. */

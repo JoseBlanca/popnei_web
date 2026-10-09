@@ -2484,6 +2484,131 @@ export function individualsStepNeeds(p: Project): string | null {
   });
 }
 
+/** The most different values of a column whose populations the box of
+    the individuals file of popgen2.html counts, and of the column the
+    page chooses: the owner's bound of 9 October 2026 (the design of the
+    input page, answer 5). */
+export const MAX_LISTED_POPULATIONS = 20;
+
+/**
+ * The reason the box of the individuals file of popgen2.html shows in
+ * place of its list and its counts, or `null` with no individuals file
+ * or a file read (the project spec, "The counts per population on
+ * popgen2.html"): "Reading panel_pops.csv." while it is read; for a file
+ * refused, "panel_pops.csv could not be read: " and the reader's words,
+ * with this page's ends, which name its tab and its buttons; for a read
+ * that failed in the light worker, what happened and what to do. Throws
+ * a defect for a file `notGiven`, which that page, opening no project
+ * file, cannot have.
+ */
+export function individualsBoxNeeds(p: Project): string | null {
+  const individuals = p.individuals;
+  if (individuals === null) {
+    return null;
+  }
+  const name = escaped(individuals.name);
+  const read = individuals.read;
+  switch (read.kind) {
+    case "read":
+      return null;
+    case "pending":
+      return `Reading ${name}.`;
+    case "notGiven":
+      throw defect(
+        "popgen2.html has an individuals file not given, which only an opened project file makes.",
+      );
+    case "failed": {
+      const error = read.error;
+      const refused = `${name} could not be read: `;
+      if (error.kind === "worker") {
+        return MENDED_BY_RELOAD.has(error.error.kind)
+          ? `${refused}the page could not start the part that reads files. Reload the page and open the file again.`
+          : `${refused}the page stopped while it read it. Open the file again.`;
+      }
+      const words = individualsBoxWords(error, p.app, read.format === "xlsx");
+      const end = boxRefusedEnd(error);
+      return end === "" ? `${refused}${words}` : `${refused}${words} ${end}`;
+    }
+  }
+}
+
+/** What follows the colon of a refusal of the reader in the box of the
+    individuals file of popgen2.html: the reader's words with a full stop,
+    but for the three refusals whose words name what that page calls
+    otherwise, a variants file, the size of an individuals file and the
+    reader of tables, which the box says in its own words. */
+function individualsBoxWords(
+  error: IndividualsFileError,
+  app: AppId,
+  xlsx: boolean,
+): string {
+  switch (error.kind) {
+    case "variantsFile":
+      return "it is a variants file; open it with Open variants file in the box Variants file.";
+    case "tooLarge":
+      return `it is ${megabytes(error.size)}, more than the ${grouped(error.max / BYTES_IN_MB)} MB an individuals file can have; check that it is the individuals file and not the variants file.`;
+    case "readerNotLoaded":
+      return "the part of the page that reads tables could not be downloaded. Check the connection and open the file again.";
+    case "empty":
+    case "duplicateColumn":
+    case "duplicateIndividual":
+    case "raggedRow":
+    case "files":
+    case "unnamedColumn":
+    case "emptyIndividual":
+    case "unclosedQuote":
+    case "unreadable":
+    case "notText":
+    case "cutShort":
+    case "oldExcel":
+    case "encrypted":
+    case "notWorkbook":
+    case "emptySheet":
+    case "cellError":
+    case "headerError":
+    case "sheetTooLarge":
+      return `${saying(individualsFileRefusalWords(error, app, xlsx)).slice(2)}.`;
+  }
+}
+
+/** The end of a refusal of the reader in the box of the individuals file
+    of popgen2.html, which opens files by the zone of the box and sets the
+    options of a CSV under the tab "Individuals file": another separator
+    for the two refusals a wrong one most often causes; the file opened
+    again for one the browser could not read; after the words that say
+    what to do in Excel, "Then open it again."; none for the three whose
+    words say all; a corrected file for every other. */
+function boxRefusedEnd(error: IndividualsFileError): string {
+  switch (error.kind) {
+    case "raggedRow":
+    case "unclosedQuote":
+      return "Choose another separator under the tab Individuals file, or open a corrected file.";
+    case "unreadable":
+      return "Open it again.";
+    case "files":
+    case "oldExcel":
+    case "encrypted":
+    case "emptySheet":
+    case "cellError":
+    case "headerError":
+    case "sheetTooLarge":
+      return "Then open it again.";
+    case "variantsFile":
+    case "tooLarge":
+    case "readerNotLoaded":
+      return "";
+    case "empty":
+    case "duplicateColumn":
+    case "duplicateIndividual":
+    case "unnamedColumn":
+    case "emptyIndividual":
+    case "notText":
+    case "cutShort":
+    case "notWorkbook":
+      return "Open a corrected file.";
+  }
+}
+
 /**
  * The reason of individuals of the variants file missing from the
  * individuals file, in the words of the Individuals step, which name the
