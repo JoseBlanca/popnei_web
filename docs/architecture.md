@@ -1020,6 +1020,18 @@ on `popgen2.html`, with their keys, until a later feature needs them;
 the history and the commands with their descriptions stay in the store
 as they are, ready for them (section 7).
 
+What was revised on 9 October 2026, from
+`docs/designs/analyses-pca.md`, approved by the owner that day. The PCA
+comes to `popgen2.html`, the first calculation of that page that reads
+the filters, so a change of a filter can now remove a result or leave a
+calculation behind. The paragraph "No notice on `popgen2.html`" holds
+by a setting of the store on that page, under which a change makes no
+notice and stops at once every calculation it leaves behind, since the
+page draws no notice and has no Undo to come back to it; a result
+removed stays in the cache under its key, and the filters set back as
+they were show it again. Whether the page gets Undo back is an open
+point of the design.
+
 ## 4. An analysis is a module
 
 Each analysis is one module, with the same shape, in both applications:
@@ -2579,6 +2591,18 @@ thresholds says, built on the branch `download`. Not taken, the
 owner's choices of 8 October 2026: a tools section after the plots; a
 Save click at the end of the write; the counts of each filter in the
 dialog; and a link to the other format after a download.
+
+What was revised on 9 October 2026, from
+`docs/designs/analyses-pca.md`, approved by the owner that day:
+`popgen2.html` has a row of five tabs, Variants, Individuals, PCA,
+Populations and Distances, under its two boxes; a tab of an analysis
+that cannot run is greyed, reached by the keyboard, and does not open.
+Every table and every plot of that page offers its data as CSV, and a
+plot its image as SVG or PNG, from a button "Download…" that the
+components of the tables, `SortableTable` and `Table` of
+`src/ui/widgets/`, and the React wrappers of the plots carry, so that no
+screen writes a download of its own; the histogram of `src/charts` takes
+its threshold to draw it into the exported image.
 
 ## 8. The project file, the report and the script
 

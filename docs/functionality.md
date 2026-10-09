@@ -45,6 +45,9 @@ both.
   table can be downloaded as CSV and every plot as SVG or PNG, and a
   project file restores the settings of an analysis so that it can be run
   again (section 9).
+  On `popgen2.html` the download is part of every table and every plot,
+  the data of each as CSV and the image of each plot, as the owner
+  decided on 9 October 2026 (`docs/designs/analyses-pca.md`).
 
 ## 3. The variants, in both applications
 
@@ -536,6 +539,15 @@ give the principal components that go into the GWAS as covariates.
   the owner decided on 5 October 2026; the groups come back as a file of
   populations. This replaces the lasso of the application, planned for
   later until then (`docs/use-cases.md`, case 3).
+- On `popgen2.html`, by the owner's decision of 9 October 2026
+  (`docs/designs/analyses-pca.md`), the PCA's own filters narrow those
+  of the Variants tab rather than replace them: the PCA reads what the
+  Variants tab keeps, and its own missing data and MAF can only be
+  stricter, their fields bounded by the Variants tab's values; its LD
+  pruning, which the Variants tab does not have, is on at an r² of 0.1
+  with no distance until the user types one or turns it off. The old
+  page keeps the rule above. The coordinates are downloaded from the
+  plot itself, as the names and PC1 to PC10.
 
 ## 6. Each population
 

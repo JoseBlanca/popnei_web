@@ -1,22 +1,25 @@
 # The tabs of the analyses, and the PCA, on popgen2.html
 
-A design of 9 October 2026, a draft that waits for the owner's approval
-and for the answers to the seven questions at its end. It decides how
-`popgen2.html` grows from two tabs, one for each file, to a row of five,
-Variants, Individuals, PCA, Populations and Distances; how a tab of an
-analysis that cannot run yet is greyed out, for every user, the
-keyboard and the screen reader included; and how the PCA tab is made
-from the PCA of the old page, `popgen.html`, which is built and was
-approved by the owner on 28 September 2026
-(`docs/specs/analyses/pca.md`). The Populations and Distances analyses
-come in later pieces; this one gives them their tabs. It serves case 3
-of `docs/use-cases.md`, "Look for clusters of individuals", the second
-in the order of building there. It touches sections 3, 5 and 7 of
-`docs/architecture.md` and section 5 of `docs/functionality.md`, and
-changes none of them until the owner answers; what each answer would
-change is said with it. The page as it is, two boxes and two tabs, is
-that of `docs/designs/input-page.md`, accepted by the owner on 9
-October 2026.
+A design of 9 October 2026, approved by the owner on 9 October 2026
+with the seven answers written under "What the owner decided", at the
+end, and revised the same day for them; one point, Undo on this page,
+is left open there. It decides how `popgen2.html` grows from two tabs,
+one for each file, to a row of five, Variants, Individuals, PCA,
+Populations and Distances; how a tab of an analysis that cannot run yet
+is greyed out, for every user, the keyboard and the screen reader
+included; how the PCA tab is made from the PCA of the old page,
+`popgen.html`, which is built and was approved by the owner on 28
+September 2026 (`docs/specs/analyses/pca.md`); and how every table and
+every plot of the page offers its data and its image to download, from
+the table and the plot themselves. The Populations and Distances
+analyses come in later pieces; this one gives them their tabs. It serves
+case 3 of `docs/use-cases.md`, "Look for clusters of individuals", the
+second in the order of building there. It touches sections 3, 5 and 7
+of `docs/architecture.md` and section 5 of `docs/functionality.md`,
+whose corrections are listed under "The corrections made to the other
+documents". The page as it is, two boxes and two tabs, is that of
+`docs/designs/input-page.md`, accepted by the owner on 9 October 2026.
+The old page gets none of this: it is to be retired.
 
 ## The design in short, for the owner
 
@@ -40,24 +43,33 @@ October 2026.
   keyboard cannot reach, so the application's tabs, its own code around
   React Aria's, mark a tab greyed themselves, about thirty lines more.
 - Populations and Distances are greyed by their real conditions, and
-  once those hold they open on one line, "Not built yet: …", so that the
-  owner can try the greying now and the analyses fill the tabs later.
-- The PCA tab is the PCA of the old page with its words changed: PCA
-  or PCoA, the PCA's own filters of missing data, MAF and LD, a Run
-  button, the plot in 3D and in 2D, the legend by population, the table
-  of the coordinates and their downloads. Its Run waits until the one
-  pass has ended, the one reading of the variants file that the page
-  makes by itself when the file is opened.
+  once those hold they open on one line, "Not built yet: …".
+- The PCA tab is the PCA of the old page: PCA or PCoA, a Run button,
+  the plot in 3D and in 2D, the legend by population, the table of the
+  coordinates. Its Run waits until the one pass has ended, the one
+  reading of the variants file that the page makes by itself when the
+  file is opened.
+- The PCA reads what the Variants tab keeps, and its own thresholds of
+  missing data and MAF can only be stricter: each field of the PCA
+  stops at the value of the Variants tab. Its LD pruning starts on at
+  r² 0.1 with the distance empty, so Run waits for the user to type one
+  or turn the pruning off.
+- The PCoA is of the Kosman distances, corrected by Lingoes' method
+  whenever no space can hold them, the one correction popnei 0.2.2 has;
+  the result says how much of the variance lay in directions no space
+  has, and how large the correction was.
+- A change of a filter that changes what the PCA reads takes its result
+  off the screen, and stops it if it runs. The result stays in the
+  cache, so the filters set back as they were bring it back with no
+  calculation. Whether `popgen2.html` gets its Undo back is left open.
+- Every table and every plot of the page has a button "Download…" that
+  offers its rows as CSV, and, for a plot, its image as SVG or PNG and
+  its data as CSV. The table and the plot components carry it, so a new
+  table or plot has it with no work of its screen. The CSV of the PCA's
+  plot is the one vavilov-explorer imports: the names and PC1 to PC10.
 - An individual the individuals file does not classify is drawn in the
   PCA all the same, as "Unclassified", and the PCA never waits for the
   individuals file: that file only colours the points.
-- Seven questions for the owner are at the end, each with a
-  recommendation: whether the PCA's filters narrow those of the Variants
-  tab or replace them, and where its LD pruning starts; PCA and PCoA in
-  one tab; what happens to a PCA when a filter changes; what the results
-  show and download in this piece; a download of the variants while a
-  PCA runs, and the other cases of the page; when the PCA tab opens; and
-  what the two tabs not built yet show.
 
 ## What the user can do once it is built
 
@@ -171,11 +183,19 @@ that code:
    off the screen, said so in a notice whose Undo brought it back. Here
    neither exists, and the PCA is the first calculation of the page that
    reads the filters, so what a threshold moved in the Variants tab does
-   to a PCA shown, or running, has to be decided anew: question 3.
+   to a PCA shown, or running, had to be decided anew: the owner's
+   answer 3.
 5. **The PCA's own filters beside the page's.** The owner decided on 9
    October 2026 that the PCA needs its own filters of missing data, LD
-   and MAF, usually stricter than those of the other analyses. Whether
-   they narrow the Variants tab's or replace them is question 1.
+   and MAF, usually stricter than those of the other analyses, which
+   narrow the Variants tab's, and that the screen does not let a
+   threshold of the PCA be looser than the Variants tab's.
+6. **Every table and every plot downloadable.** The owner's principle of
+   9 October 2026: the user can download the data of every table and
+   every plot, and the image of every plot, built into the components
+   of the tables and the plots, not added screen by screen. Today the
+   page downloads none, and the old page offered a CSV here and there,
+   each written by its own screen.
 
 ## The row of tabs
 
@@ -190,9 +210,10 @@ that code:
 | Distances | in this piece, "Not built yet: the distances between the populations, Hudson's Fst or Jost's D, come in a later version of the page." | fewer than two populations have an individual in the variants file, as the box of the individuals file counts them; or, once the individuals kept are known, fewer than two populations keep one |
 
 "A variants file is open" is the moment the box of the variants file
-shows its individuals and its ploidy, before the one pass ends; question
-6 asks whether the PCA tab should wait for the end of that pass instead.
-The Distances tab is greyed as well, of course, while no variants file is
+shows its individuals and its ploidy, before the one pass ends, as the
+owner decided (answer 6): the user can set the PCA while a large file
+is read, and Run waits for the end of the pass.
+The Distances tab is greyed as well while no variants file is
 open. The two counts of populations are those of the box of the
 individuals file (`docs/designs/input-page.md`, "The counts per
 population"); the unclassified are not a population here, since the
@@ -395,8 +416,8 @@ As the old panel has them, and `docs/specs/analyses/pca.md` says them:
 - the method, "PCA of the genotypes" or "PCoA of the Kosman distances,
   for data with many missing genotypes", two radio buttons;
 - the PCA's own filters of missing data, MAF and LD, each with the
-  number fields of the Variants tab's thresholds, whose meaning question
-  1 settles;
+  number fields of the Variants tab's thresholds, with the meaning of
+  "The PCA's filters", below;
 - the line of what it will run on, "200 individuals of panel.nei", or
   "111 of the 200 individuals of panel.nei, those the filters of
   individuals keep";
@@ -411,8 +432,8 @@ As the old panel has them, and `docs/specs/analyses/pca.md` says them:
   highlight a population; the table of the explained variance; the
   table of the individuals with their coordinates, sortable; the
   warnings, no LD pruning, fewer variants than individuals, Lingoes'
-  correction of the PCoA; the notes; and the downloads of the two
-  tables as CSV;
+  correction of the PCoA; and the notes. The old panel's two buttons of
+  CSV go: the tables and the plots offer their own downloads, below;
 - the module: its key, which holds the method and the filters the PCA
   is given and nothing of the individuals file, so that a change of the
   colours calculates nothing; its locks, but those of the individuals
@@ -477,7 +498,8 @@ As the old panel has them, and `docs/specs/analyses/pca.md` says them:
   PCA "running" with a bar that does not move for as long as the pass
   lasts.
 - **The downloads of case 3**: the coordinates in the form
-  vavilov-explorer imports, and the plot, question 4.
+  vavilov-explorer imports, and the plot, from the plot itself (below,
+  "Every table and every plot can be downloaded").
 - **The heading of the tab**, "PCA" or "PCoA" by the method, with the
   title of the result, "Principal components of panel.nei".
 
@@ -506,13 +528,242 @@ of the same file, in Chromium and WebKit.
 The result in the cache is at most 0.90 MB, at 9,381 individuals of
 eight characters each.
 
+## The PCA's filters
+
+The owner decided (answer 1) that the PCA's filters narrow those of the
+Variants tab, and that the screen does not let a threshold of the PCA be
+looser than the Variants tab's.
+
+**What the PCA reads.** The variants and the individuals the Variants
+tab keeps: its thresholds of the individuals, its FILTER box, its
+thresholds of the missing rate, the MAF and the observed heterozygosity
+of the variants; then the PCA's own missing data and MAF, and its LD
+pruning, which the Variants tab does not have. popnei takes one filter
+of each kind (`filterByMissingData` and `filterByMaf` of
+`node_modules/popnei/dist/variant.d.ts`, a second of a kind is an
+error), so for the missing data and the MAF the PCA is given one filter,
+the stricter of the two thresholds. That is exactly the two filters one
+after the other, since each keeps or drops a variant by its own value,
+counted over the same individuals. The LD pruning comes last, as in the
+fixed order of the filters (`docs/functionality.md`, section 3). The
+individuals are always those of the Variants tab; the PCA has no
+thresholds of its own on them.
+
+**The fields.** Each of the PCA's missing data and MAF has two choices,
+as on the old page, renamed: "As in the Variants tab: 0.1", and
+"Stricter for the PCA", which shows its number field. The field takes a
+number from 0 to the value of the Variants tab, or to 1 when the
+Variants tab has that threshold off. A number above it is refused with
+the line under the field the fields already give, "0.2 is more than the
+0.1 of the Variants tab; the maximum proportion of missing genotypes for
+the PCA stays 0.05.", and sends nothing. Chosen the first time,
+"Stricter for the PCA" starts at the Variants tab's value, which keeps
+the same variants until the user lowers it.
+
+**When the Variants tab becomes stricter later.** The user sets the PCA's
+missing data at 0.05, then lowers the Variants tab's to 0.03. The PCA is
+given 0.03, the stricter. The field of the PCA shows 0.03, with the
+line "The Variants tab keeps at most 0.03, stricter than the 0.05 set
+here, so the PCA uses 0.03.", and the project keeps 0.05 as the PCA's
+own: when the Variants tab goes back above 0.05, the PCA has its 0.05
+again, with no command of the user. The field never shows a value
+looser than what the PCA uses. Not taken: a command that lowers the
+PCA's own value whenever the Variants tab goes below it, which would
+change an option the user did not touch and lose their 0.05.
+
+**When the Variants tab turns the threshold off.** Its bound goes to 1,
+and the PCA's own value, 0.05, applies alone. "As in the Variants tab:
+off" then means no filter of that kind for the PCA.
+
+**The LD pruning** is the PCA's alone, on when the page opens, at r² at
+most 0.1 with the distance empty, the owner's numbers of 27 September
+2026 and the rule of no default that depends on the genome. While the
+distance is empty Run is locked, with the reason beside the field and
+beside Run, "The LD pruning of the PCA needs the distance within which
+variants are compared. It has no default, because it depends on how far
+linkage disequilibrium extends in the genome of your species. Type a
+distance in base pairs, or turn the LD pruning off." The user can turn
+it off, and the result then carries the warning that no LD pruning was
+applied, as on the old page.
+
+**The key.** The PCA's key holds the filters it is given, the stricter
+of each pair, as on the old page it holds the filters the job carries
+(`keyInputs` of `src/core/analyses/pca.ts`). So a threshold of the
+Variants tab moved while the PCA's own is the stricter changes no key,
+and the PCA stays on the screen.
+
+**What changes in the code.** `pcaFilters` gives, for `popgen2.html`,
+the stricter of each pair where the old page gives the PCA's in the
+place of the step's; the options keep their shape, `{ follow, value }`
+for each filter, with `follow` read as "As in the Variants tab". The
+old page keeps its rule (`docs/functionality.md`, section 5).
+
+## The PCoA and its correction
+
+The owner decided (answer 2) one tab with a choice of method, and the
+PCoA of Kosman's distance with the geometric fix. popnei 0.2.2 has one
+such fix, Lingoes' correction, and none other: its declarations
+(`node_modules/popnei/dist/pcoa.d.ts`) give `doPcoaFromVariants` with
+the option `correctByLingoes`, `correctDistsByLingoes` for a
+`Distances`, and `doPcoa`, which refuses distances that are not
+Euclidean; no Cailliez correction, and no other distance between
+individuals than Kosman's (`calcPairwiseKosmanDists`). So nothing is
+asked of popnei, and the PCoA is that of the old page.
+
+**What the correction does.** Distances are Euclidean when some space
+holds points at those distances. Kosman distances between individuals
+with missing genotypes often are not, since each pair is compared over
+the variants both have called, and the matrix that a PCoA decomposes
+then has negative eigenvalues, variance in directions that no space
+has. Lingoes' correction (Lingoes 1971; R's ape, `pcoa` with
+`correction = "lingoes"`) adds twice c, the most negative eigenvalue in
+absolute value, to the square of every distance between two different
+individuals; every eigenvalue but the 0 of the centering rises by c, so
+none is negative. popnei applies it inside the PCoA, in its one pass,
+when asked; the application always asks, as the owner decided on 27
+September 2026.
+
+**How it shows in the result.** popnei gives two numbers beside the
+components: `negativeEigenvaluesPercent`, the share of the variance of
+the distances that lay in the negative eigenvalues before the
+correction, and `lingoesConstant`, c. On `panel.nei` with the PCA's LD
+pruning at r² 0.1 within 50,000 base pairs, 7.87% of the variance lay
+there, and the correction added 0.047 to every squared distance, 53% of
+their mean (`docs/specs/analyses/pca.md`, "The warnings"). The panel
+shows them in the warning of the old page, which says what the
+correction does to the plot, the nearest individuals moved apart the
+most; and under the table of the explained variance, which is of the
+corrected distances. A PCoA whose distances needed no correction says
+so instead.
+
+## When a filter changes
+
+The owner decided (answer 3) that a change of a filter that changes
+what the PCA reads, its key, takes the result off the screen, as the
+architecture has it for every analysis (section 3). The tab then shows
+its options and Run, as before any run. The result stays in the cache
+under its key, so setting the filters back as they were brings it back
+with no calculation.
+
+The store changes for this page. As it is, it answers such a change
+with a notice, a message for the screen that names the results the
+change removed and the calculations it left running for an Undo to come
+back to (`src/core/store.ts`). This page draws no notice. So a PCA left
+running would go on out of sight, with the calculation worker and up to
+3 GB of the tab, until the next change or a Run. The store gains a
+setting of `popgen2.html`, given where the page makes it
+(`src/ui/popgen2Store.ts`), under which a change makes no notice and
+stops at once every calculation it leaves behind. A PCA stopped so is
+gone: moving the threshold back starts nothing, and Run is pressed
+again. The tab says nothing of why the plot went, since without the
+notice the store does not know which change removed it; the change was
+the user's own, the owner's rule of 8 October 2026 for this page.
+Whether the page gets its Undo back, which would bring the result back
+and could keep a PCA running for it, is the open point at the end.
+
+## Every table and every plot can be downloaded
+
+The owner's principle of 9 October 2026: the user can download the data
+shown in every table and every plot, built into the components of the
+tables and the plots and not added screen by screen.
+
+### The control
+
+Each table and each plot has one button, "Download…", above its top
+right corner, beside its caption or title, that opens a menu, React
+Aria's `MenuTrigger` and `Menu`, wrapped once in `src/ui/widgets/` as
+the other controls are. A table's menu holds "Table as CSV"; a plot's,
+"Image as SVG", "Image as PNG" and "Data as CSV". The button is named,
+for a screen reader, with what it downloads, "Download the plot of the
+missing rate of the variants", from the title the table or the plot
+already carries, so that the five buttons of a tab are not five
+"Download". The keyboard reaches it with the Tab key; Enter, Space or
+the arrow down opens the menu, the arrows move in it, Enter chooses,
+Escape closes it and gives the focus back to the button. A choice
+starts the download at once, with no dialog, and the status region says
+"panel.missing_rate_variants.csv downloaded." One button and a menu, and
+not three buttons, so that a plot of a phone's width keeps its room.
+
+The file is named from the variants file and what is downloaded,
+`panel.pca.csv`, `panel.pca.svg`, `panel.individuals.csv`, with no
+date, as the old page named its files.
+
+### The CSV of a table
+
+- **Its rows**, every one and not only those drawn on the screen, which
+  the sortable table limits to the rows in view; in the order shown,
+  sorted as the user sorted them; its columns in their order, the
+  header the labels of the columns.
+- **The values as stored, not as shown**: a number as JavaScript writes
+  it in full, `-0.71388462`, where the table shows "−0.7139"; the
+  point as the decimal mark, whatever the decimal mark of the file the
+  value came from, since a CSV of commas as separators cannot hold the
+  comma as a decimal mark unquoted; the hyphen as the minus sign; an
+  empty cell for a missing value. A user who opens it in a spreadsheet
+  gets numbers, not text.
+- **The names as written**, in the user's own spelling, with the rules
+  every CSV of the application has (`csvField` of
+  `src/core/analyses/words.ts`): a field that holds a comma, a quote or
+  a new line between double quotes, each quote doubled, as RFC 4180,
+  the common rule of CSV files, has it; and a name that starts with
+  "=", "+", "-" or "@" with a quote, ', before it, so that a spreadsheet
+  does not run it as a formula.
+
+So the component is given, for each cell, the value it stores beside
+the text it shows; the sortable table, `SortableTable.tsx`, holds the
+texts only today (`cells: readonly string[]`), and gains the values.
+
+### What a plot offers
+
+- **Its image**, by the export the plots already have
+  (`src/charts/export.ts`, the handle's `exportSvg` and `exportPng` of
+  `plot2d.ts` and `pca3d.ts`): the plot as drawn, in the colours of the
+  light theme, with its legend and with no mark of the point under the
+  mouse; the 3D view as it is turned. The line of a threshold, today a
+  control of the screen laid over the histogram, is not in the export;
+  the plot is given the threshold to draw it into the image, since an
+  image of a filter with no line would mislead.
+- **Its data**, as CSV, by the rules of a table: for a histogram, a row
+  per bin as the plot draws it, its left edge, its right edge and its
+  count, the bins the plot adds up from popnei's fine bins; for the
+  histograms of the individuals, the bins core makes, and the
+  individuals with no heterozygosity, which the plot counts apart, in a
+  last row with empty edges. For the PCA's plot, in 2D and in 3D, the
+  coordinates of case 3: the first column the names of the individuals,
+  headed `individual`, and one column for each component, PC1 to PC10,
+  every component kept and not only those drawn, so that
+  vavilov-explorer imports it (`docs/use-cases.md`, case 3). The
+  population is not among them: vavilov-explorer would read it as a
+  component, and it is in the individuals file and in the CSV of the
+  PCA's table, which has it.
+
+A plot component makes its CSV from the data it is given, unless its
+screen gives it a fuller table, as the PCA's does with the ten
+components where the plot draws two or three. The plots of `src/charts`
+do not change but for the threshold drawn into the image: the menu and
+the CSV are in their React wrappers of `src/ui`.
+
+### Which components and which screens
+
+| component | screens of `popgen2.html` that get it in this piece |
+|---|---|
+| `src/ui/widgets/SortableTable.tsx` | the table of the individuals file, the Individuals tab; the table of the PCA's individuals |
+| `src/ui/widgets/Table.tsx` | the counts per population of the box of the individuals file; the PCA's explained variance |
+| `src/ui/widgets/HistogramPlot.tsx`, over `src/charts/histogram.ts` | the six histograms of the Variants tab |
+| the PCA's 2D plot and 3D view, `src/ui/analyses/pca/ScatterPlot.tsx` and `Pca3dView.tsx` | the PCA tab |
+
+All the tables and plots of the page, since they are few. The old page,
+`popgen.html`, gets none of it, since it is to be retired; its own
+buttons of CSV stay as they are, and where it shares a component with
+this page the download is an option of the component that the old page
+does not set.
+
 ## The invariants
 
 The six of the designing skill (`.claude/skills/designing/SKILL.md`):
 
-1. **A result is never shown stale.** Kept, if the owner answers
-   question 3 as recommended there; changed otherwise, as that question
-   says.
+1. **A result is never shown stale.** Kept: a change of what the PCA
+   reads takes its result off the screen (answer 3).
 2. **The layers import as the coding skill allows.** Kept: the rule of
    the greyed tabs and the PCA's definition for this page in
    `src/core`, the tabs and the PCA tab in `src/ui`, the plots in
@@ -524,8 +775,8 @@ The six of the designing skill (`.claude/skills/designing/SKILL.md`):
 5. **Two workers, one calculation at a time in each.** Kept: Run waits
    for the end of the one pass, and Start again is not offered once
    the pass has ended, so the page never puts a PCA and the pass in the
-   queue together; the one case left, a download of the variants while
-   a PCA runs, is question 5.
+   queue together; and the download of the filtered variants waits
+   while a PCA runs (answer 5).
 6. **A cancel ends its worker and starts another.** Kept: Stop of the
    PCA, as on the old page; the new worker opens the file again, which
    reads its header only.
@@ -538,8 +789,13 @@ and the colours of the PCA, `pcaColours`, name the unclassified, and
 draw a result while the individuals file is being read, which the old
 page's lock kept from happening (the comment of `coloursOf` in
 `src/core/analyses/pca.ts` assumes it, and changes with the spec). The
-messages of the workers and the plots do not change. The store changes
-for question 3, whatever its answer: below.
+messages of the workers do not change. Three more: the store's setting
+of `popgen2.html` that makes no notice and stops a calculation left
+behind (answer 3); the components of the tables, which take the stored
+value of each cell beside its text, and the React wrappers of the plots,
+which take the name of what they download and, for the PCA, the fuller
+table of its CSV (answer 4); and the histogram of `src/charts`, which
+takes the threshold to draw into its exported image.
 
 ## How it is tested, and what would prove it wrong
 
@@ -564,6 +820,12 @@ for question 3, whatever its answer: below.
   individuals file drawn as unclassified; a turn to another tab and
   back, the 3D view as it was turned. The flows of the old page's PCA
   are run again.
+- **The downloads**, in Vitest for the CSV each component makes, from
+  values with commas, quotes, new lines, a leading "=", missing values
+  and negative numbers, and the PCA's CSV checked against the header
+  vavilov-explorer reads; in Playwright, each menu by the keyboard
+  alone, a file of each kind saved and read back, the SVG of a
+  histogram with its threshold's line, and axe with no finding.
 - **What would send the design back**: a screen reader that does not
   read a greyed tab as unavailable in Chromium, WebKit or VoiceOver
   with Safari, which the attribute set by hand might not survive; a
@@ -577,12 +839,16 @@ for question 3, whatever its answer: below.
 - **The names of the tabs**, once users know the page; a later
   renaming costs no data.
 - **The options of the PCA on this page**, once `popgen2.html` saves a
-  project file: if question 1 gives its own filters another meaning
-  than the old page's, a file saved by one page would mean other
-  filters on the other. Today the page saves nothing.
+  project file: its own filters mean "stricter than the Variants tab"
+  here and "in the place of the step's" on the old page, so a file saved
+  by one page would mean other filters on the other. Today the page
+  saves nothing.
+- **The forms of the files downloaded**, the columns of each CSV and the
+  names of the files, once users have scripts that read them; the CSV
+  of the coordinates above all, which vavilov-explorer reads.
 - **"Unclassified" in the legend and in the table of the
   individuals**, once users have pictures and notes with it; the CSV of
-  the coordinates, by question 4, holds no population.
+  the coordinates holds no population.
 
 ## The costs of the web
 
@@ -593,11 +859,16 @@ for question 3, whatever its answer: below.
   result holds at most 0.90 MB in the cache, and the 3D view about 0.15
   MB while its tab is hidden. The bound of 9,381 individuals is popnei's
   and locks the PCA beyond it, with its words.
-- **The page frozen.** Nothing new runs on the page but the colours of
-  the points, a walk over the individuals once per result and colouring,
+- **The page frozen.** A CSV of a table is written on the page from
+  the values it holds, all its rows: 10,000 rows of 20 columns, the
+  largest table of the tests, is 200,000 fields, a few tenths of a
+  second by its size, not measured, which the plan measures, and moves
+  to the light worker if it freezes the page longer. Nothing else new
+  runs on the page but the colours of the points, a walk over the individuals once per result and colouring,
   and the table, which draws only its rows in view, as on the old page.
 - **Download size.** three.js, 134 KB gzipped, the first time a 3D view
-  is drawn. The code of the PCA tab, its plots and its controls adds to
+  is drawn. React Aria's menu, which the page does not use yet, adds to
+  its first load; the build measures it with the rest. The code of the PCA tab, its plots and its controls adds to
   the first load of `popgen2.html`, 278.6 KB gzipped on 9 October 2026;
   the build of the piece measures how much, and if it is more than 50
   KB, a bound the session set, about a fifth of that first load, the tab's code is loaded the first time the tab opens, as three.js
@@ -606,7 +877,8 @@ for question 3, whatever its answer: below.
   115 and Safari 16.4: WebGL 2 is in all three, and React Aria's tabs and
   tooltips are used on both pages already.
 - **What GitHub Pages does not allow.** Nothing asked.
-- **Accessibility.** The greyed tabs as above; the PCA's plot as on the
+- **Accessibility.** The greyed tabs as above; the menus of the
+  downloads by React Aria, each button named by what it downloads; the PCA's plot as on the
   old page, whose 3D view turns, tilts and zooms by buttons, and whose
   groups are told apart by 49 marks, seven colours by seven shapes, not by colour
   alone.
@@ -620,11 +892,21 @@ for question 3, whatever its answer: below.
 
 - `docs/use-cases.md`, "The order in which the cases are built", item 2:
   a sentence that points to this design.
+- `docs/functionality.md`, section 5: a paragraph on `popgen2.html`,
+  whose PCA's filters narrow those of the Variants tab, and its LD
+  pruning on with no distance; and section 2, "Everything leaves the
+  application", the owner's principle of the downloads built into every
+  table and plot.
+- `docs/architecture.md`, sections 3 and 7: a paragraph "What was
+  revised on 9 October 2026" at the end of each, the store's setting of
+  `popgen2.html` that makes no notice and stops a calculation left
+  behind, and the downloads carried by the components of the tables and
+  the plots.
 
-The corrections of `docs/architecture.md`, sections 3, 5 and 7, and of
-`docs/functionality.md`, section 5, wait for the owner's answers, and
-are made on this branch once they come: what each answer changes is
-said with it.
+Left for the plan of the piece, which changes them with the code:
+`docs/specs/core/store.md`, which says the store gives that page no
+notice; `docs/specs/analyses/pca.md`, for the rules of this page; and the
+comment of `coloursOf` in `src/core/analyses/pca.ts`.
 
 ## What the session decided
 
@@ -633,188 +915,72 @@ tabs; the greyed tab that the keyboard reaches, (b) above; a greyed tab
 that stays shown when it becomes greyed; every tab kept drawn while
 hidden, the 3D view with them; the labels wrapping at the width of a
 phone; Run disabled until the one pass ends; the unclassified as one
-group in the PCA; and the words of the reasons.
+group in the PCA; the PCA's own value kept when the Variants tab goes
+below it; one button "Download…" with a menu; the CSV of the stored
+values with the point as the decimal mark; the threshold's line drawn
+into the image of a histogram; and the words of the reasons.
 
-## Questions for the owner
+## What the owner decided
 
-### 1. The PCA's own filters
+On 9 October 2026, approving the design:
 
-**Narrow those of the Variants tab, or replace them?**
+1. **The PCA's filters narrow those of the Variants tab**, as the draft
+   recommended, over replacing them and over the old page's rule, each
+   filter following the step until set and then replacing it; and the
+   screen does not let a threshold of the PCA be looser than the
+   Variants tab's, the owner's addition. With it, as recommended: the LD
+   pruning on at r² 0.1 with the distance empty, and the individuals
+   always those of the Variants tab ("The PCA's filters").
+2. **PCA and PCoA in one tab**, with a choice of method, and the PCoA of
+   Kosman's distance with the geometric fix, which is Lingoes'
+   correction, the one popnei 0.2.2 has ("The PCoA and its
+   correction").
+3. **A change of a filter takes the PCA's result off the screen**, as
+   recommended, over keeping it marked out of date; the owner added
+   "remember that for that the user has the undo possibility", which
+   leads to the open point below ("When a filter changes").
+4. **Every table and every plot can be downloaded**, its data, and a
+   plot's image, built into the components and not screen by screen,
+   the owner's principle, which replaces the draft's list of the PCA's
+   downloads; the CSV of the PCA's coordinates stays the one
+   vavilov-explorer imports ("Every table and every plot can be
+   downloaded").
+5. **The cases left open**, as recommended: the download of the filtered
+   variants waits while a PCA runs, "Waits for the PCA to end; or stop
+   it in the PCA tab."; a PCA goes on while the user turns to another
+   tab, and the status region says when it ends, "PCA of panel.nei
+   calculated."; another variants file stops it and keeps its options;
+   another individuals file or column colours it again with no
+   calculation; Stop in the PCA tab.
+6. **The PCA tab opens as soon as the variants file is open**, as
+   recommended, over once the one pass has ended; the Populations tab
+   follows it.
+7. **The tabs not built yet** are greyed by their real conditions, and
+   once open say "Not built yet: …", as recommended, over always greyed.
 
-- **(a) Narrow them: recommended.** The PCA reads what the Variants tab
-  keeps, and its own filters remove more. For the missing data and the
-  MAF, the PCA is given the stricter of the two thresholds, which is
-  exactly both filters one after the other, since each judges a variant
-  by itself; popnei takes one filter of each kind, so the two cannot be
-  given as two. The Variants tab has no LD pruning, so the PCA's is the
-  only one. It is the order of `docs/use-cases.md`, which has the user
-  "look for clusters in what the filters kept". What it costs: a PCA
-  looser than the Variants tab needs that tab loosened, which changes
-  the download too; and when the Variants tab is the stricter, the field
-  of the PCA shows a number that does nothing, so the panel says "The
-  Variants tab keeps at most 0.05 already, stricter than 0.1."
-- **(b) Replace them.** The PCA ignores the thresholds of the variants
-  of the Variants tab, missing data, MAF and observed heterozygosity,
-  and uses its own three; the FILTER box and the thresholds of the
-  individuals still apply. A threshold moved in the Variants tab then
-  never touches the PCA, which matters for question 3. What it costs:
-  two sets of thresholds of the same statistics on one page, each with
-  its own numbers; and a user who cleaned the file in the Variants tab,
-  the observed heterozygosity of paralogues among it, has to clean it
-  again for the PCA.
-- **(c) Each filter follows the Variants tab until the user sets it
-  for the PCA, and then replaces it**, the old page's rule, decided by
-  the owner on 28 September 2026 and written in `docs/functionality.md`
-  section 5. It is built: no code changes. What it costs: a mixture
-  that each filter decides, which the panel has to spell out filter by
-  filter, "As in the Variants step: 0.1".
+## Open point: Undo on popgen2.html
 
-(a) changes `pcaFilters` of `src/core/analyses/pca.ts` for this page,
-and section 5 of `docs/functionality.md`; (b) the same; (c) nothing.
+The owner's answer 3 counts on Undo to bring a removed result back.
+`popgen2.html` has none: the owner hid its row and its keys on 8
+October 2026 (`docs/plans/filters.md`). The store still keeps the
+history, and the row is ready to draw again. The session has asked the
+owner; until the answer, the removal is built as above, which works
+either way.
 
-**Where the PCA's LD pruning starts.** Recommended: on, at r² at most
-0.1, with the distance empty, so that Run waits until the user types a
-distance or turns the pruning off, as step 2 of case 3 has the user do,
-and by the owner's rule of no default that depends on the genome. The
-option: off, with the warning on the result that no LD pruning was
-applied, the old page's since 28 September 2026. The MAF and the missing
-data of the PCA start with no threshold of their own.
+- **(a) Undo and Redo back on the page with this piece.** The row of
+  the two buttons, and their keys, Ctrl+Z, Ctrl+Y and Cmd+Shift+Z,
+  drawn again, as they were built on 8 October 2026. An Undo after a
+  change that removed the PCA gives back the filters, and the result
+  from the cache with no calculation. A PCA that ran when the change
+  came could be kept running for an Undo, as the old page does, rather
+  than stopped at once, which brings back the notice or something in
+  its place to say that it runs. What it costs: the row the owner hid;
+  the keys taken from the browser's own; and, if a run is kept for an
+  Undo, the setting of answer 3 changes.
+- **(b) No Undo.** The filters set back by hand as they were give the
+  key back, and the cache gives the result back with no calculation; a
+  PCA stopped by the change is run again. What it costs: the user has
+  to remember the values they changed, and a PCA of minutes stopped by
+  a slip is run again.
 
-**The individuals.** Recommended: always those the filters of the
-Variants tab keep, with no thresholds of the PCA's own, as on the old
-page; a bad sample removed there should not be in the PCA.
-
-### 2. PCA and PCoA in one tab
-
-Recommended: one tab, with the method as two radio buttons, as the old
-page has it and as the owner's words of 9 October 2026 have it, "PCA or
-PCoA". Both read the same variants and give results of the same shape,
-so one plot and one table draw either. The PCoA's distance is Kosman's,
-the only one popnei 0.2.2 gives for a PCoA of the variants
-(`doPcoaFromVariants`, which is `calcPairwiseKosmanDists` and the
-decomposition in one pass, with Lingoes' correction, which the
-application always asks for, by the owner's decision of 28 September
-2026). Another distance would be a request to popnei. The option: two
-tabs, PCA and PCoA, a sixth tab for a choice that is one click.
-
-### 3. A PCA when a filter changes
-
-The PCA's key holds the filters it is given; under (a) or (c) of
-question 1 a threshold moved in the Variants tab can change it, and under
-any answer a threshold of the individuals can. What then?
-
-Whatever the answer, the store changes for this page. The store, as
-it is, answers such a change with a notice, a message for the screen
-that names the results the change removed and the calculations it left
-running for an Undo to come back to (`src/core/store.ts`). This page
-draws no notice. So a PCA left running would go on out of sight, with
-the calculation worker and up to 3 GB of the tab, until the next change
-or a Run; and the words "removed because …", which the screen takes from
-that notice, would go at the next change of any filter. Both
-answers below give the store a setting of `popgen2.html` that makes no
-notice; the paragraph "No notice on popgen2.html" of section 3 of
-`docs/architecture.md`, section 5, and `docs/specs/core/store.md` are
-revised for it, and the test of `src/ui/popgen2Store.test.ts` that
-finds no notice after a change of a filter is kept true by it.
-
-- **(a) The result leaves the screen, as the architecture has it:
-  recommended.** The tab shows the options and Run, as before any
-  run, with no words of why the plot went: the store cannot say which
-  change removed it without a notice, and keeping that would be the new
-  part of its interface that (b) costs. The result stays in the cache
-  under its key, so setting the threshold back brings it back with no
-  calculation. A PCA that runs when the change comes is stopped at once,
-  by the setting above, since nothing on the page brings its key back
-  but moving the threshold again. Invariant 1 is kept. What it costs: a
-  user who nudges a threshold and comes back finds the plot gone with
-  no word of why, and a large PCA costs its minutes again.
-- **(b) The result stays, marked out of date, with Run again.** Above
-  the plot, a warning that names what changed since it was calculated,
-  "Calculated with the missing data at most 0.1; the Variants tab now
-  keeps at most 0.05. Run again for the current filters.", and the
-  downloads disabled until it is run again, so that no file of an old
-  PCA leaves the page unmarked. A PCA that runs when the change comes
-  finishes and is shown so. What it costs: it changes invariant 1. The
-  store would keep, for each analysis, its last result shown and the
-  inputs of its key, and give the screen that result with the inputs
-  that differ, a new part of its interface (sections 3 and 5 of
-  `docs/architecture.md`); a screen that forgot the mark would show an
-  old PCA as current, which is the failure the invariant was made to
-  prevent; and a PCA left behind is kept running, against the setting
-  above, until it ends, a Stop or another Run.
-
-(a) is recommended because it keeps a rule every analysis of both pages
-relies on, and because it seldom bites: with (a) of question 1 the PCA
-is given the stricter of each pair of thresholds, so a threshold moved
-in the Variants tab changes the PCA only when it becomes stricter than
-the PCA's own; with (b), never. (b) would win if the owner, trying the page, finds that the PCA
-disappears too often as they move between the tabs.
-
-### 4. What the results show, and what is downloaded, in this piece
-
-Recommended, in this piece: the 3D view first and the 2D plot, the
-components on each axis, the colours by population or by any column,
-the legend, the table of the explained variance, and the table of the
-coordinates, all as the old page has them; and the downloads of case 3:
-
-- **The coordinates**, as a CSV whose first column holds the names of
-  the individuals and whose other columns hold PC1 to PC10, the form
-  vavilov-explorer imports (`docs/use-cases.md`, case 3). The old CSV
-  had the population as its second column, which vavilov-explorer would
-  read as a component; the population is in the individuals file the
-  user already has. TSV and xlsx, which case 3 also names, later: the
-  site has no writer of xlsx.
-- **The plot**, as SVG and PNG, the 2D plot as drawn, or the 3D view as
-  it is turned, with its legend, by the export functions that the
-  scatter and the 3D view already have (`src/charts/export.ts`), never
-  offered by a button until now.
-- **The explained variance**, as a CSV, as on the old page.
-
-Later: the lasso, which is vavilov-explorer's by the owner's decision of
-5 October 2026; the weights of the variants, which no case asks for.
-
-### 5. The cases of the page that the decisions leave open
-
-- **A download of the filtered variants while a PCA runs.** The write
-  would wait in the queue behind the PCA, in a dialog whose bar does
-  not move. Recommended: the download button waits while a PCA runs,
-  with the reason beside it, "Waits for the PCA to end; or stop it in
-  the PCA tab.", as it waits for the one pass. The option: the write
-  stops the PCA.
-- **A PCA that runs while the user turns to another tab** goes on; the
-  page's status region, which a screen reader reads aloud, says when it
-  ends, "PCA of panel.nei calculated.", and the label of the tab does not
-  change. Recommended; the option, a mark on the label while it runs,
-  is a second sign of the same thing.
-- **Another variants file opened** stops the PCA, as every opening stops
-  the calculations of the file before; its options, the distance typed
-  among them, are kept.
-- **Another individuals file, or another column of the populations**,
-  colours the points again, with no calculation.
-- **Stop** in the PCA tab, as on the old page.
-
-### 6. When the PCA tab opens
-
-- **(a) As soon as the variants file is open: recommended.** The user
-  can set the method and type the distance of the LD pruning while the
-  one pass reads a large file, and sees why Run waits. What it costs: a
-  tab that opens while its Run cannot run yet, for the length of the
-  one pass, under a second for `panel.nei` and minutes for a file of
-  millions of variants.
-- **(b) Once the one pass has ended.** A tab opens only when it can
-  run, which is the owner's rule taken to the letter, and the reason of
-  the greyed tab says "The PCA can run once panel.nei is read to the
-  end." What it costs: nothing can be set in the tab while the file is
-  read.
-
-The Populations tab follows the same answer.
-
-### 7. The tabs not built yet
-
-- **(a) Greyed by their real conditions, and once open, the line "Not
-  built yet: …": recommended.** The owner can try now the rule that
-  greys Distances, which depends on the individuals file, and the
-  analyses fill the tabs later with no change of the frame.
-- **(b) Always greyed, with the reason "Not built yet."** Simpler, and
-  the user never opens an empty tab; the conditions of each are tried
-  when its analysis is built.
+Nothing of this piece prevents either answer.
