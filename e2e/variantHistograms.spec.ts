@@ -353,6 +353,51 @@ for (const locale of ["en-US", "es-ES"] as const) {
 // (docs/specs/shell.md, "The header"): with something typed since the
 // last commit, Ctrl+Z puts the number of the field back; with nothing
 // typed, they are the project's.
+/** The width and the height of the element of each plot, the box of
+    16 by 10 the plot is drawn in. */
+async function plotBoxes(
+  plots: Locator,
+): Promise<{ readonly width: number; readonly height: number }[]> {
+  return plots.evaluateAll((svgs) =>
+    svgs.map((svg) => {
+      const box = svg.parentElement?.getBoundingClientRect();
+      return { width: box?.width ?? NaN, height: box?.height ?? NaN };
+    }),
+  );
+}
+
+/** Whether every box of `boxes` is 16 by 10, within a pixel. */
+function allSixteenByTen(
+  boxes: readonly { readonly width: number; readonly height: number }[],
+): boolean {
+  return boxes.every(
+    ({ width, height }) => Math.abs(height - (width * 10) / 16) <= 1,
+  );
+}
+
+test("VS6 D2 the histograms keep their shape, 16 by 10, when the window narrows from 1,280 to 500 pixels, and do not keep the height they had", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openVariants(page);
+  await pick(page, "panel.nei");
+  await block(page).getByRole("button", { name: CALCULATE }).click();
+  await expect(block(page).getByText(CAPTION, { exact: true })).toBeVisible();
+  // The three beside their filters, outside the block of the button.
+  const plots = page.locator("svg.chart");
+  await expect(plots).toHaveCount(3);
+  const wide = await plotBoxes(plots);
+  expect(allSixteenByTen(wide)).toBe(true);
+  // At 700 pixels they keep their 640 of 1,280.
+  await page.setViewportSize({ width: 500, height: 900 });
+  await expect
+    .poll(async () => (await plotBoxes(plots)).map((box) => box.width))
+    .not.toEqual(wide.map((box) => box.width));
+  await expect
+    .poll(async () => allSixteenByTen(await plotBoxes(plots)))
+    .toBe(true);
+});
+
 test("VS6 D2 0.9 typed back over 0.9 committed: Cmd+Z puts the text back and leaves the project, a second Cmd+Z undoes the project and the line follows", async ({
   page,
 }) => {

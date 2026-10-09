@@ -8,6 +8,12 @@
   inline-size: 100%;
   min-inline-size: 0;
   aspect-ratio: 16 / 10;
+  /* A box shaped by aspect-ratio is otherwise at least as high as what
+     it holds: the SVG drawn at a wider window kept its height, 380
+     pixels, when the window narrowed, and the plot was squeezed
+     sideways until the page was reloaded (seen in Chromium and WebKit
+     on 9 October 2026). The plot is drawn again at the new size. */
+  min-block-size: 0;
 }
 
 /* The histograms of the spectrum: 4 by 3, and never lower than 18rem, so

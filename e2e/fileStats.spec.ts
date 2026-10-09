@@ -235,6 +235,47 @@ test("FS2 panel.vcf.gz: the four distributions of the variants and the two of th
   await expectNoViolations(makeAxeBuilder);
 });
 
+/** The width and the height of the element of each plot, the box of
+    16 by 10 the plot is drawn in. */
+async function plotBoxes(
+  plots: Locator,
+): Promise<{ readonly width: number; readonly height: number }[]> {
+  return plots.evaluateAll((svgs) =>
+    svgs.map((svg) => {
+      const box = svg.parentElement?.getBoundingClientRect();
+      return { width: box?.width ?? NaN, height: box?.height ?? NaN };
+    }),
+  );
+}
+
+/** Whether every box of `boxes` is 16 by 10, within a pixel. */
+function allSixteenByTen(
+  boxes: readonly { readonly width: number; readonly height: number }[],
+): boolean {
+  return boxes.every(
+    ({ width, height }) => Math.abs(height - (width * 10) / 16) <= 1,
+  );
+}
+
+test("FS2 the plots keep their shape, 16 by 10, when the window narrows from 1,280 to 700 pixels, and do not keep the height they had", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openPage(page);
+  await pick(page, join(FIXTURES, "panel.vcf.gz"));
+  await drawn(page);
+  const plots = stats(page).locator("svg.chart");
+  const wide = await plotBoxes(plots);
+  expect(allSixteenByTen(wide)).toBe(true);
+  await page.setViewportSize({ width: 700, height: 900 });
+  await expect
+    .poll(async () => (await plotBoxes(plots)).map((box) => box.width))
+    .not.toEqual(wide.map((box) => box.width));
+  await expect
+    .poll(async () => allSixteenByTen(await plotBoxes(plots)))
+    .toBe(true);
+});
+
 test("FS2 tetraploid.vcf.gz: its own axes and its 12 individuals", async ({
   page,
   makeAxeBuilder,
