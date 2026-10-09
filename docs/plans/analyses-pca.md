@@ -927,3 +927,70 @@ not take and the flow, waiting 5 s, never reaches. It saw the same exact
 check of "1 second so far." in `e2e/screens.spec.ts` (three places) and
 `e2e/popgen2Filter.spec.ts` (`SF7 D2`), which can fail the same way;
 they are fixed after work package 1, which changes those files.
+
+### Work package 1, 9 October 2026
+
+Commits e99ea83 (`analysisTabs`), 4f4a059 (the greyed tab of the
+widget), 44438f2 (the five tabs on the page, the flows renamed) and
+21face0 (the screenshots). Task 1.5 was not needed: `aria-disabled`
+stays on a greyed tab after it is drawn again, in Chromium and WebKit.
+
+Checks at 21face0: Vitest 4,703 tests in 137 files; `AP1 D1` 20, `AP1
+D2` 10, `AP1 D3` 10 tests; `AP1 D4` 12 flows (6 in each engine); the
+flows of `popgen2.html` 266 and the old page's flows of its tabs 164, in
+Chromium and WebKit; the typecheck, the lint and the format check
+clean. The first load of `popgen2.html`, gzipped: 278.65 KB before,
+279.99 KB with this work package alone (+1.34 KB), 281.10 KB with work
+package 2's commits too.
+
+What differs from the plan: the hidden text of a greyed tab's reason
+sits after the row of tabs, not in it, since inside it React Aria's
+list of tabs stopped drawing the tabs after it; `WithTooltip` gained
+`descriptionId` for that. End now lands on the greyed Distances tab, as
+the screen spec says of Home and End, so a keyboard flow of
+`popgen2Input.spec.ts` reaches Individuals with ArrowRight. React Aria
+shows a tooltip on the mouse only after the page has had a first
+pointer interaction; the focus always shows it.
+
+The session's look at the screenshots (greyed 1280 light, open 1280
+dark, not built 320 light): the states are those of deliverable 6; at
+320 px the five tabs wrap onto two lines; a greyed tab (#6b7078) is
+hard to tell from an available one (#555d68), light and dark.
+
+### Work package 2, 9 October 2026
+
+Commits a0998d5 (`pcaFilters` by the page and the key), ae187f4 (the
+rest of the module, `POPGEN2_ANALYSES`) and 658b997 (the commands by
+the page, `stricterCommand`). Checks at 658b997: Vitest 4,703 tests in
+137 files; `AP2 D1` 13, `AP2 D2` 19, `AP2 D3` 6 tests; the old page's
+flows of the PCA 210 in Chromium and WebKit; the typecheck, the lint
+and the format check clean. Deliverable 4: every number the flows read,
+the three of "Before the first task" among them, matched popnei 0.2.2
+under node (the PCoA's PC2 3.54%; with the LD pruning off 1,200
+variants and PC1 7.61%), so the screen spec was not corrected for them.
+
+What differs from the PCA spec, taken: the commands' page is `"popgen" |
+{ page: "popgen2", method }`, since a command's description is fixed
+before it meets the project and names the PCA or the PCoA;
+`statisticsFailedText` keeps `waited`, which tells "was not run" from
+"cannot run".
+
+The review, `spec`, `tests`, `stale`, `errors`, `api` and
+`architecture`: `stale` found nothing (20,000 random projects under
+node, the key always equal to the job's filters). Sixteen findings held
+and went as one list of fixes to a subagent: five tests that could not
+fail (the narrowing of the MAF, `stricterCommand`'s value, the job and
+the script never run, a case of "The cases", the quoting of a new
+line); calls the types let through that the screen spec forbids
+(`followCommand` of the missing data or the MAF set false on
+`popgen2.html`, bringing back an old value under the words "made
+stricter"); the page given by hand in some fifteen places, tied now to
+the definition; four texts (the colour note with every point
+unclassified, the file refusals copied in part from the box and with a
+remedy that does not work, the LD-order refusal under the PCoA, the
+statistics' failure in the old page's words); the script's comment; and
+the specs behind the code. One finding for the owner later, not now:
+both pages keep their PCA under the id `pca` with `keyVersion` 1, while
+one project gives the two pages different filters; the cache is safe,
+a project file would not be, and today `popgen2.html` neither saves nor
+opens one. The PCA spec and the design now say so.
