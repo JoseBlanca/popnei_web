@@ -25,7 +25,7 @@
  * same worker after the JavaScript of the reader failed to download asks
  * for it at another address. Only the read of an empty file keeps its
  * worker, so that is the flow of the retry; the flows check that the
- * file is read in both engines.
+ * file is read in the three engines.
  */
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
@@ -97,7 +97,13 @@ async function pick(
 
 /** The requests of the page and its workers for the two files of the
     package of table_io, as they are made, and the types of the answers
-    of its wasm. */
+    of its wasm that carry it. An answer 304, "not modified", carries
+    neither the wasm nor its type: the browser uses the one it kept from
+    the first answer, whose type was read there. Firefox 155 asks again
+    with the ETag of the first answer, under `Cache-Control: no-cache`,
+    and is answered 304, with no headers as Playwright gives them, on
+    GitHub's runner on 9 October 2026; Chromium and WebKit are answered
+    in full. */
 function xlsxRequests(page: Page): {
   readonly js: () => number;
   readonly jsAddresses: () => readonly string[];
@@ -110,7 +116,10 @@ function xlsxRequests(page: Page): {
     seen.push(request);
   });
   page.on("response", (response) => {
-    if (XLSX_WASM.test(new URL(response.url()).pathname)) {
+    if (
+      XLSX_WASM.test(new URL(response.url()).pathname) &&
+      response.status() !== 304
+    ) {
       wasmTypes.push(response.headers()["content-type"] ?? "");
     }
   });
@@ -211,10 +220,10 @@ test("IN1 D4 a CSV read downloads the reader of tables at its first read, its Ja
   await expect(zone(page).getByText("200 rows, 3 columns")).toBeVisible();
   expect(requests.js()).toBe(2);
   expect(requests.wasm()).toBe(2);
-  expect(requests.wasmTypes()).toEqual([
-    "application/wasm",
-    "application/wasm",
-  ]);
+  // Two answers with the wasm, or the first alone and a 304.
+  const types = requests.wasmTypes();
+  expect(types[0]).toBe("application/wasm");
+  expect(types).toEqual(types.map(() => "application/wasm"));
 });
 
 test("IN1 D4 the wasm of the reader answered with an error: the words of a reader not downloaded for a CSV, and the file loaded again is read", async ({
@@ -284,11 +293,12 @@ test("IN1 D4 the JavaScript of the reader answered with an error at the read of 
   await page.unroute(XLSX_JS);
   await pick(page, { name: "again.xlsx", fixture: "excel_en.xlsx" });
   await expectExcelEn(page, "again.xlsx");
-  // Chromium 153 names the address in its message, and the retry adds
-  // ?retry=1 to it; WebKit 26.6 names none, and asks again at the same.
+  // Chromium 153 and Firefox 155 name the address in their message, and
+  // the retry adds ?retry=1 to it; WebKit 26.6 names none, and asks again
+  // at the same.
   const second = requests.jsAddresses()[1];
   expect(requests.jsAddresses()).toHaveLength(2);
-  if (test.info().project.name === "chromium") {
+  if (test.info().project.name !== "webkit") {
     expect(second).toMatch(/\?retry=1$/);
   } else {
     expect(second).not.toContain("?");

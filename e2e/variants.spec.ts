@@ -10,6 +10,7 @@ import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
+import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -874,6 +875,7 @@ test("WS7 D3 a file dropped while a ploidy is still being typed is read with tha
 test("WS7 D3 a file dropped while the ploidy holds a number it refuses is read with the ploidy kept, and the line says so", async ({
   page,
 }) => {
+  await recordAnnouncements(page);
   await openVariants(page);
   const ploidy = page.getByLabel("Ploidy of the VCF");
   await ploidy.fill("300");
@@ -885,13 +887,16 @@ test("WS7 D3 a file dropped while the ploidy holds a number it refuses is read w
   await expect(zone(page).getByText(/^Read with ploidy 2,/)).toBeVisible();
   await expect(ploidy).toHaveValue("2");
   await expect(page.getByRole("main").getByText(line)).toBeVisible();
-  // With the end of the read after it, when the read ends within the
-  // pause of the announcer.
-  await expect(page.getByRole("status").last()).toHaveText(
-    new RegExp(
-      `^${line.replace(/\./g, "\\.")}( tetraploid\\.vcf\\.gz read: 12 individuals, ploidy 2\\.)?$`,
-    ),
+  // Said by the status region, with the end of the read after it when
+  // the read ends within the pause of the announcer. A read that ends
+  // later replaces it there, as WebKit's on GitHub's runner did on
+  // 9 October 2026, so what the region said is read from the record.
+  const said = new RegExp(
+    `^${line.replace(/\./g, "\\.")}( tetraploid\\.vcf\\.gz read: 12 individuals, ploidy 2\\.)?$`,
   );
+  await expect
+    .poll(async () => (await announced(page)).some((text) => said.test(text)))
+    .toBe(true);
   await expect(
     page.getByRole("button", { name: /^Read .* again/ }),
   ).toHaveCount(0);

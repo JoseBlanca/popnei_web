@@ -583,12 +583,27 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
 }) => {
   // Playwright gives Chromium the clipboard only with both permissions;
   // WebKit lets the page write on a press, and the test read once
-  // granted.
-  await context.grantPermissions(
-    browserName === "chromium"
-      ? ["clipboard-read", "clipboard-write"]
-      : ["clipboard-read"],
-  );
+  // granted. Firefox lets the page write on a press too, and knows
+  // neither permission, which Playwright refuses there; its test cannot
+  // read the clipboard without a prompt, so what the page wrote is kept
+  // as it is written.
+  if (browserName === "firefox") {
+    await page.addInitScript(() => {
+      const clipboard = navigator.clipboard;
+      const write = clipboard.writeText.bind(clipboard);
+      Reflect.set(window, "popneiCopied", []);
+      clipboard.writeText = async (text: string): Promise<void> => {
+        await write(text);
+        (Reflect.get(window, "popneiCopied") as string[]).push(text);
+      };
+    });
+  } else {
+    await context.grantPermissions(
+      browserName === "chromium"
+        ? ["clipboard-read", "clipboard-write"]
+        : ["clipboard-read"],
+    );
+  }
   await recordAnnouncements(page);
   const lines = await panelPopsLines();
   // s010, s011 and s012 with an empty cell; s100 to s103 left out.
@@ -626,13 +641,17 @@ test("IN6 D2 four rows left out and three cells of popcat emptied: the line of t
   await expect
     .poll(async () => (await announced(page)).at(-1))
     .toBe("4 names copied.");
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    "s100\ns101\ns102\ns103",
-  );
+  expect(
+    await page.evaluate(() =>
+      Reflect.has(window, "popneiCopied")
+        ? (Reflect.get(window, "popneiCopied") as string[]).join("|")
+        : navigator.clipboard.readText(),
+    ),
+  ).toBe("s100\ns101\ns102\ns103");
   await expectAxeBothSchemes(page, makeAxeBuilder);
 });
 
-test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not granted in Chromium and missing in WebKit: the names could not be copied, and to select them in the list", async ({
+test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not granted in Chromium and missing in WebKit and Firefox: the names could not be copied, and to select them in the list", async ({
   page,
   browserName,
 }) => {
@@ -642,9 +661,10 @@ test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not gr
   const text = lines
     .filter((line) => !out.has(line.split(",")[0] ?? ""))
     .join("\n");
-  // WebKit lets a page write the clipboard on a press, so there the page
-  // has none, as a page served over plain HTTP from another machine.
-  if (browserName === "webkit") {
+  // WebKit and Firefox let a page write the clipboard on a press, so
+  // there the page has none, as a page served over plain HTTP from
+  // another machine.
+  if (browserName !== "chromium") {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, "clipboard", { value: undefined });
     });
@@ -656,9 +676,13 @@ test("IN6 D2 Copy the 4 names where the page may not write the clipboard, not gr
   const copy = page.getByRole("button", { name: "Copy the 4 names" });
   await expect(copy).toBeVisible({ timeout: 20_000 });
   await copy.click();
+  // After the line of the read, when the press comes within the pause of
+  // the announcer, as it did in Chromium on the Mac on 9 October 2026.
   await expect
     .poll(async () => (await announced(page)).at(-1))
-    .toBe("The names could not be copied. Select them in the list.");
+    .toMatch(
+      /^(missing\.csv read: [^.]*\. )?The names could not be copied\. Select them in the list\.$/u,
+    );
   await expect(copy).toBeFocused();
 });
 
@@ -1326,13 +1350,17 @@ test("IN6 D2 an individuals file pasted into the zone of its box is opened as on
     };
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array(given)], "panel_pops.csv"));
-    button.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
+    // The DataTransfer is set on the event itself, not passed to it:
+    // Firefox 155 gives a script's paste no clipboardData from the
+    // members of its creation, so that nothing was pasted, on GitHub's
+    // runner on 9 October 2026, as variantSwitches.spec.ts found for a
+    // pasted text. A paste of the user carries its own.
+    const event = new ClipboardEvent("paste", {
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "clipboardData", { value: transfer });
+    button.dispatchEvent(event);
   }, bytes);
   await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
   await expect(
