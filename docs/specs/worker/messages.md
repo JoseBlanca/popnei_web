@@ -1,5 +1,14 @@
 # The messages of the two workers
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, which made table_io's package the reader of the
+individuals file (`docs/specs/worker/individuals.md`): the failed read of the individuals file carries the format
+the reader found, `"text"`, `"xlsx"` or `null`, which the check of the
+answer accepts; the refusal of a files wasm not downloaded is
+`readerNotLoaded`, of any file. `PROTOCOL_VERSION` does not change: the
+page and its workers are always built together. No code of the revision
+yet.
+
 25 September 2026, approved by the owner on 25 September 2026; built in
 `src/worker/messages.ts`; revised on 26 September 2026 for stage 3 of
 `docs/build-order.md`, the Variants step whole, as the architecture
@@ -194,7 +203,7 @@ received it is ended (below):
   columns of one name, an xlsx saved with a password, which the reader's
   spec owns and extends, a file it cannot read among them.
 - **A files wasm that could not be downloaded is an answer**, the failed
-  read `xlsxReaderNotLoaded`, with the browser's message for the console,
+  read `readerNotLoaded` (until 9 October 2026 `xlsxReaderNotLoaded`), with the browser's message for the console,
   and the light worker goes on (`docs/specs/worker/individuals.md`, "The
   package of xlsx_rs, loaded on first need"). It is not `crashed`, which would end a worker
   that can still read a CSV, and would tell the user that the reading
@@ -572,7 +581,8 @@ export type FromFilesRunner =
 export type IndividualsFileRead =
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
       found: CsvFound | null }                                  // null for an xlsx
-  | { kind: "failed"; error: IndividualsFileError };
+  | { kind: "failed"; error: IndividualsFileError;
+      format: "text" | "xlsx" | null };                        // null: refused before table_io read it
 ```
 
 The checks, one for each side of each worker, and the text of a refusal,
@@ -644,7 +654,7 @@ would mislead whoever reads it there.
 - **An empty individuals file** is an answer, `individuals` with
   `{ kind: "failed", error: { kind: "empty" } }`, and not a failure of the
   worker; so is an xlsx the reader refuses, `encrypted`, and a files wasm
-  that could not be downloaded, `xlsxReaderNotLoaded`.
+  that could not be downloaded, `readerNotLoaded`.
 - **A read of an xlsx whose answer has a `found`**, or of a CSV whose
   answer has none, passes the check, which does not know the request;
   the reader never gives one, and core records the read under the

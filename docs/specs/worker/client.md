@@ -1,5 +1,13 @@
 # The worker client
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, which made table_io's package the reader of the
+individuals file (`docs/specs/worker/individuals.md`): a refusal of the reader, `refused`, carries the format of
+the file; and the light worker is started again after a read of a file
+larger than `READ_RESTART_BYTES`, for the memory table_io's wasm keeps
+(below, "The light worker started again after a large read"). No code of
+the revision yet.
+
 25 September 2026, approved by the owner on 25 September 2026, and built
 with the walking skeleton; revised on 26 September 2026 for stage 3 of
 `docs/build-order.md`, the Variants step whole, as the architecture
@@ -364,6 +372,33 @@ It has not been seen in a browser; the flow of the Variants step saves a
 file after such a restart in the three engines (below, "How it is
 verified").
 
+### The light worker started again after a large read
+
+table_io's wasm grows by what a read takes, up to 610 MB under node for
+a CSV of 20 MB of short cells (`docs/specs/worker/individuals.md`, "How
+it runs"), and a wasm never gives its memory back. So, as
+`docs/designs/input-page.md` decided on 9 October 2026, the client ends
+the light worker after a read whose `File` is larger than
+`READ_RESTART_BYTES`, whatever its answer, a table, a refusal or a
+failure, as it does the calculation worker after a large write:
+
+1. It gives the read its outcome first, so that the entry records it
+   before anything else happens.
+2. It ends the worker, `terminate()`, as after a cancel.
+3. It starts a new light worker when the next read is asked, or at once
+   when reads wait in the queue, which go to it once it is `ready`. The
+   new worker holds no files wasm, and its first read imports it again,
+   from the browser's cache, and compiles it, a time not measured.
+
+A file of `READ_RESTART_BYTES` or less leaves the worker as it is. The
+size is the `File`'s, known to the client from the request, before any
+byte is read, so a file refused as `tooLarge` ends the worker too, which
+costs only the next read's compiling. `READ_RESTART_BYTES` is a constant
+of `client.ts`, 2,000,000 bytes until the plan measures the memory of
+the light worker after reads of 1, 5 and 20 MB in Chromium and WebKit,
+and sets it there; the design's estimate is that a file of 2 MB, about
+20,000 rows of 10 columns, takes tens of MB, which a worker may keep.
+
 ### A large PCA, and the restart after it
 
 A PCA holds in the memory of wasm the individuals × individuals matrix,
@@ -609,6 +644,11 @@ export interface Client {
     the measurement of stage 3. */
 export const WRITE_RESTART_BYTES = 25_000_000;
 
+/** Above it, the light worker is started again after a read of the
+    individuals file (The light worker started again after a large read,
+    above); 2 MB until the measurement of the plan sets it. */
+export const READ_RESTART_BYTES = 2_000_000;
+
 /** Above it, the calculation worker is started again after a run of the
     principal components (A large PCA, and the restart after it, above);
     the individuals whose matrix is about WRITE_RESTART_BYTES. */
@@ -635,7 +675,8 @@ export type VariantsOpened =
 export type IndividualsAnswer =
   | { kind: "read"; table: IndividualsTable; columns: ColumnType[];
       found: CsvFound | null }                          // null for an xlsx
-  | { kind: "refused"; error: IndividualsFileError }  // the reader refused the file
+  | { kind: "refused"; error: IndividualsFileError;    // the reader refused the file
+      format: "text" | "xlsx" | null }
   | { kind: "failed"; error: Exclude<RunError, { kind: "popnei" | "files" }> }
   | { kind: "cancelled" };
 ```

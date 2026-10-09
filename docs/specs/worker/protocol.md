@@ -1,5 +1,11 @@
 # The types the page, the workers and core share
 
+Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
+the owner that day, which made table_io's package the reader of the
+individuals file (`docs/specs/worker/individuals.md`): the cells of a CSV may be numbers and booleans; and
+`IndividualsFileError` loses `notXlsx`, gains `notWorkbook`, and renames
+`xlsxReaderNotLoaded` to `readerNotLoaded`. No code of the revision yet.
+
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/worker/protocol.ts`; revised on 25 September 2026 for the specs of
 stage 2 the owner approved that day, as
@@ -376,9 +382,12 @@ text, a number, a boolean, or `null` when it is missing: an empty cell,
 `NA` or `-`, and, in an xlsx, a text equal to one of the seven errors
 of Excel, `#N/A`, `#DIV/0!`, `#NAME?`, `#NULL!`, `#NUM!`, `#REF!` and
 `#VALUE!` (`docs/functionality.md`, section 4). The cells of a CSV or
-TSV are text, as written in the file; numbers and booleans come only from
-an xlsx, as the files wasm, the wasm package of xlsx_rs that reads
-xlsx (`docs/architecture.md`, section 6), gives them. The first column
+TSV were text, as written in the file, until 9 October 2026; numbers and
+booleans now come from the integer, float and boolean columns that the
+files wasm, the wasm package of table_io (`docs/architecture.md`,
+section 6), finds in any format, an integer column with a value beyond
+2^53 kept as texts (`docs/specs/worker/individuals.md`, "The read by
+table_io"). The first column
 names the individuals. Every row is as long as the header.
 
 ```ts
@@ -457,16 +466,16 @@ export type IndividualsFileError =
   | { kind: "variantsFile" }                           // a VCF picked by mistake
   | { kind: "cutShort" }                               // UTF-16 that ends in the middle of a character
   // From stage 4, an xlsx (docs/specs/worker/files.md, "The refusals"):
-  | { kind: "notXlsx" }                                // not a zip, as every xlsx is
   | { kind: "oldExcel" }                               // a workbook of Excel 97–2003
   | { kind: "encrypted" }                              // saved with a password
+  | { kind: "notWorkbook" }                            // a zip that holds no workbook, from 9 October 2026
   | { kind: "emptySheet"; sheet: string }              // the first sheet not hidden has no value
   | { kind: "cellError"; error: string }               // an error calamine does not know, "#GETTING_DATA"
   | { kind: "headerError"; row: number; column: number;  // a cell of the header that is an error of Excel;
       error: string }                                  // row and column of the sheet, from 1; "#VALUE!"
   | { kind: "sheetTooLarge"; sheet: string; lastRow: number; // counted from 1
       lastColumn: string; max: number }                // "XFD"; cells, MAX_SHEET_CELLS
-  | { kind: "xlsxReaderNotLoaded"; message: string };  // the files wasm not downloaded; the browser's, for the console
+  | { kind: "readerNotLoaded"; message: string };      // the files wasm not downloaded, for any file; the browser's, for the console
 ```
 
 A request to a worker, as `.claude/skills/coding/worker.md` gives it. `id`

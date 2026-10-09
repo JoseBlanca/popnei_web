@@ -1,5 +1,11 @@
 # xlsx_rs: an xlsx read into cells
 
+From 9 October 2026 the light worker reads the individuals file with
+table_io, xlsx_rs renamed and widened, whose package reads every format
+into a table (`docs/designs/input-page.md`; `docs/specs/worker/individuals.md`,
+"The read by table_io"); xlsx_rs's `readXlsx` is no longer called. What
+follows is the pointer of 28 September 2026.
+
 This spec moved to the repository of xlsx_rs on 28 September 2026, whole,
 as the owner had decided: it is `docs/specs/read.md` there,
 `/Users/jose/devel/xlsx_rs/docs/specs/read.md`, and on GitHub, once the
