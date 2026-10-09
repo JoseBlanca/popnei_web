@@ -52,6 +52,10 @@ for the design.
   retired and gets none of this piece; where it shares code, the change
   is an argument or a prop it does not give, and its flows show it
   unchanged.
+- **The calculation worker** is the second thread of the tab where
+  popnei runs, one calculation at a time, the others waiting in its
+  queue; **the light worker** is a third, which reads the individuals
+  file.
 - **The one pass** is the single reading of the variants file that
   `popgen2.html` makes by itself when the file is opened, which gives the
   plots of the Variants tab and each individual's missing rate and
@@ -161,8 +165,6 @@ Out, each with where it goes:
   10; the fix of work package 8 is seen in Firefox only on GitHub, after
   a push the owner orders.
 
-The specs list no open point.
-
 ## The stops
 
 The `building` skill stops for the owner on a choice hard to undo,
@@ -184,15 +186,21 @@ the answer, and puts the question first in the report.
   WebGL context in WebKit (the part of the browser that draws the 3D
   view with the graphics card), which the design says would send it
   back. Meanwhile: every work package but the rest of 6.
-- **A PCA whose Run, freed at the end of the one pass, still waits in
-  the queue of the calculation worker**, or **a PCA left behind that the
-  store cannot stop** without a change to the messages of the worker;
-  both would send the design back. Meanwhile: the work packages that do
+- **A PCA that, once Run is pressed after the one pass has ended,
+  still shows "running" with a bar that does not move**, because it
+  waits in the queue of the calculation worker; or **a PCA left behind
+  by a change that keeps running** (its `cancel()` not called, as
+  deliverable 2 of work package 6 and the flow "A change during a run"
+  read it) and that the store cannot stop without a change to the
+  messages of the worker; both would send the design back.
+- **The old page's frame of a panel that cannot take the page or the
+  lock of the one pass** without a change the old page would show (work
+  package 6): a choice of the screen's structure the design left to
+  this plan. Meanwhile: work packages 7 to 9 that do not stand on it. Meanwhile: the work packages that do
   not stand on the PCA tab.
 - **A CSV of 10,000 rows that freezes the page more than 200 ms** in
   either engine (work package 5). The downloads spec then moves the
-  writing to the light worker, the second thread that reads the
-  individuals file, which needs a new message of that worker, an
+  writing to the light worker, which needs a new message of that worker, an
   interface between the layers with no spec yet. Meanwhile: the CSV is
   written on the page, and the plan goes on.
 - **A PCA after the one pass that fails or closes the tab** where the old
@@ -462,7 +470,8 @@ Tasks:
   and a history of the filters", its bullets of `stopLeftBehind`, and
   the interface of `createStore`). Deliverable 1, its bullets of the
   setting. A calculation left behind and not stopped runs out of sight
-  with the worker and up to 3 GB of the tab; so this is a commit of its
+  with the worker and up to 3.0 GB of the tab in Chromium and 3.1 GB in
+  WebKit at 9,381 individuals (the PCA spec, "How it runs"); so this is a commit of its
   own. The answer to question 2 changes this task.
 - [ ] 3.2 `applyAfresh` in the store and in the gate (the same section,
   its paragraphs of `applyAfresh` and of the gate; `Store` in the
@@ -597,7 +606,9 @@ Tasks:
 - [ ] 5.4 The menus on the page: the six histograms with their waiting
   reason (`src/ui/variants/StatsHistogram.tsx`, `statsPlots.ts`), the
   table of the Individuals tab and the counts of the box
-  (`IndividualsTab.tsx`, `IndividualsBox.tsx`), each with the `what` and
+  (`IndividualsTab.tsx`, `IndividualsBox.tsx`), each with the `what` of
+  `DownloadMenuProps` and `TableDownload` (the words after "Download "
+  that name it for a screen reader, "the table of panel_pops.csv") and
   the file names of the screen spec's "The downloads". Deliverable 4,
   and the screenshots of 6. Stands on 5.3 and on 3.3.
 - [ ] 5.5 The measurement, alone on the machine, and the first load.
