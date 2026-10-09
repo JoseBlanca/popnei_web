@@ -1169,3 +1169,45 @@ colour its points, and the box of the individuals file stays open
 beside it. The session recommended locking only what the PCA reads (the
 thresholds, the FILTER box and the PCA's own options); meanwhile the
 plan follows that recommendation, in work package 6.
+
+### Work package 4, 9 October 2026
+
+Commits 4d32ccd (`UndoRedoButtons` drawn only while a button has a
+step, its place kept, the focus handed on; the keys in `keysAction`)
+and 18d1c49 (the buttons at the right end of the heading's line of
+`popgen2.html`, the keys on the whole page, the flows, the screenshots
+`popgen2-undo` and `popgen2-undo-redo`). Checks at 18d1c49: `AP4 D1` 14
+and `AP4 D2` 9 Vitest tests; `AP4 D3` 24 flows; the flows of
+`popgen2.html` 270 and the old page's flows of Undo 110 in Chromium and
+WebKit. What differs from the plan: the plan had WebKit click the
+FILTER box with Redo focused; a press there moves the focus to the box
+in both engines, so that flow drops an individuals file instead, which
+moves no focus. The flow of Ctrl+Z with a download menu open went to
+task 5.4.
+
+The review, `spec`, `tests`, `stale`, `errors`, `react`, `api` and
+`accessibility` (`stale`, `errors`, `react` and `accessibility` found
+nothing to fix; the accessibility reviewer read the tree, the Tab
+order, the focus after the last step by key and by click, the status
+region and axe at 320 px, in Chromium and WebKit). Eight findings held
+and were fixed in commits 12627370 to f84ccd65: the buttons did not
+wait while a PCA runs, only the keys, against the store spec and the
+owner's answer 2 (now one reason, `waits`, greys both buttons with
+their tooltip and stops the keys; work package 6 sets "Stop the PCA to
+change the filters."); six flows that commit 34b3ff0 had removed and
+that still held, brought back (a run of the arrow keys undone in its
+box, Undo clicked while a run waits, a drag as one step, Down then Up
+as no step, a crash keeping the run as a step, and the guard of the box
+whose own undo once went back to 1); the screen spec's case of the
+focus; tests that could not fail; three names. Commit 6b109150 fixed
+the `FS2` flow of `e2e/fileStats.spec.ts`, whose filter of addresses
+matched "d3" in a content hash. Checks after them: `AP4` 28 tests;
+Vitest 4,842; `popgen2Undo.spec.ts` with `--repeat-each=2` 76; the
+other flows of `popgen2.html` and the old page's flows of Undo pass in
+Chromium and WebKit. The screenshot of the buttons greyed while a PCA
+runs waits for work package 6, which can start a PCA; the greyed look
+is checked in jsdom until then.
+
+For the owner when they try the page: at 1280 px the buttons sit at the
+right edge of the page's column of 48 rem, not at the window's corner,
+with some 528 px of window to their right.
