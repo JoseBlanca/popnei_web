@@ -71,6 +71,12 @@ export interface Popgen2CommandPage {
   readonly method: PcaMethod;
 }
 
+/** The page of the commands of the options of the page `page`, whose
+    project has the method `method`. */
+export function commandPageOf(page: PcaPage, method: PcaMethod): CommandPage {
+  return page === "popgen" ? "popgen" : { page, method };
+}
+
 /** The page of the options of `page`. */
 function pageOf(page: CommandPage): PcaPage {
   return page === "popgen" ? "popgen" : page.page;

@@ -27,13 +27,15 @@ import {
   pcaColours,
   pcaCsv,
   pcaOptions,
+  pcaPageOf,
   pcaRows,
   varianceCsv,
 } from "../../../core/analyses/pca.ts";
-import type { PcaColours } from "../../../core/analyses/pca.ts";
+import type { PcaColours, PcaPage } from "../../../core/analyses/pca.ts";
 import { individualStatsOf } from "../../../core/apps.ts";
 import { shown } from "../../../core/project.ts";
-import type { PcaResult } from "../../../worker/protocol.ts";
+import type { AnalysisDef } from "../../../core/store.ts";
+import type { Job, JobResult, PcaResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
@@ -49,7 +51,12 @@ import { ToggleButtonGroup } from "../../widgets/ToggleButtonGroup.tsx";
 import type { ResultsProps } from "../panels.ts";
 import { resultOf, statusOf } from "../status.ts";
 import { versionsText } from "../words.ts";
-import { axisCommand, colourCommand, viewCommand } from "./commands.ts";
+import {
+  axisCommand,
+  colourCommand,
+  commandPageOf,
+  viewCommand,
+} from "./commands.ts";
 import type { OptionCommand } from "../optionCommand.ts";
 import { notesAppeared, notesOf } from "./notes.ts";
 import { Pca3dView } from "./Pca3dView.tsx";
@@ -122,23 +129,42 @@ interface Pressed {
   readonly group: number;
 }
 
+/** What the result of the principal components is drawn with. */
+interface PcaResultsProps extends ResultsProps {
+  /** The definition of the principal components the store runs, `pca`
+      or `pcaOnPopgen2`, whose page gives the options, the colours and
+      the notes. */
+  readonly analysis: AnalysisDef<Job, JobResult>;
+}
+
 /** The result of the principal components, as the panel shows it. */
-export function PcaResults({ result, check }: ResultsProps): React.JSX.Element {
+export function PcaResults({
+  result,
+  check,
+  analysis,
+}: PcaResultsProps): React.JSX.Element {
   if (result.analysis !== "pca") {
     throw new Error(
       `popnei_web defect: the panel of the principal components was given a result of ${result.analysis}.`,
     );
   }
-  return <PcaResultOf result={result} check={check} />;
+  return (
+    <PcaResultOf result={result} check={check} page={pcaPageOf(analysis)} />
+  );
 }
 
 /** What the result is drawn with, once it is the PCA's. */
 interface PcaResultOfProps {
   readonly result: PcaResult;
   readonly check: string | null;
+  readonly page: PcaPage;
 }
 
-function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
+function PcaResultOf({
+  result,
+  check,
+  page,
+}: PcaResultOfProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
   const project = useAppState((s) => s.project);
@@ -146,16 +172,17 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
   const checks = useAppState((s) =>
     resultOf(statusOf(s, "individualChecks"), "individualChecks"),
   );
-  const options = pcaOptions(project, "popgen");
+  const options = pcaOptions(project, page);
+  const commandPage = commandPageOf(page, options.method);
   // The same object for the same result, table, grouping and option, so
   // that the highlight is kept with it.
-  const colours = pcaColours(result, project, "popgen");
+  const colours = pcaColours(result, project, page);
   const columns = colourColumns(project);
   const shownAxes = axesShown(options, result);
   const axes = shownAxes.axes;
   const axesKey = axes.join(",");
   const stats = checks === null ? null : individualStatsOf(checks);
-  const notes = notesOf(result, project, stats);
+  const notes = notesOf(result, project, stats, page);
 
   const [pressed, setPressed] = useState<Pressed | null>(null);
   const highlighted =
@@ -274,9 +301,9 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
   /** Applies an option, and announces the notes it made appear, since the
       focus is then on the control that made them. */
   const applyShown = (step: OptionCommand): void => {
-    const before = notesOf(result, store.getState().project, stats);
+    const before = notesOf(result, store.getState().project, stats, page);
     store.apply(step.description, step.command);
-    const after = notesOf(result, store.getState().project, stats);
+    const after = notesOf(result, store.getState().project, stats, page);
     for (const note of notesAppeared(before, after)) {
       announcer.announce(noteAnnounced(note));
     }
@@ -322,7 +349,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             onChange={(view) => {
               if (view === null || view === options.view) return;
               if (view === "3d") setFailure3d(null);
-              applyShown(viewCommand(view, "popgen"));
+              applyShown(viewCommand(view, commandPage));
             }}
           />
         )}
@@ -334,7 +361,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
               items={axisItems}
               value={String(component)}
               onChange={(id) => {
-                applyShown(axisCommand(axes, axis, Number(id), "popgen"));
+                applyShown(axisCommand(axes, axis, Number(id), commandPage));
               }}
             />
           ))}
@@ -346,7 +373,7 @@ function PcaResultOf({ result, check }: PcaResultOfProps): React.JSX.Element {
             applyShown(
               colourCommand(
                 id === POPULATION_ID ? null : id.slice(COLUMN_PREFIX.length),
-                "popgen",
+                commandPage,
               ),
             );
           }}

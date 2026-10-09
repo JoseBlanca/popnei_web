@@ -2077,3 +2077,18 @@ export const pcaOnPopgen2: AnalysisDef<Job, JobResult> = definitionOf(
   "popgen2",
   Object.freeze(["popgen"] as const),
 );
+
+/** The page of the definition `def` that a store runs, "popgen" for `pca`
+    and "popgen2" for `pcaOnPopgen2`, from which the parts of the panel
+    take the options, the colours and the words they show, so that a
+    panel never shows one page's options while the store runs the other's
+    definition. Throws a defect on the definition of another analysis. */
+export function pcaPageOf(def: AnalysisDef<Job, JobResult>): PcaPage {
+  if (def === pca) {
+    return "popgen";
+  }
+  if (def === pcaOnPopgen2) {
+    return "popgen2";
+  }
+  throw defect(`the page of the PCA was asked of the analysis ${def.id}.`);
+}

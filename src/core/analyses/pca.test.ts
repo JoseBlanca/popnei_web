@@ -9,6 +9,7 @@ import {
   pcaFilters,
   pcaOnPopgen2,
   pcaOptions,
+  pcaPageOf,
   pruningDistanceReason,
   refusalText,
   statisticsFailedText,
@@ -532,6 +533,14 @@ describe("AP2 D1 pcaFilters on popgen2.html, the table of 'On popgen2.html'", ()
     expect(pcaOptions(project(), "popgen")).toBe(PCA_DEFAULTS);
     const p = project({ options: ownLd(50_000) });
     expect(pcaOptions(p, "popgen2")).toBe(pcaOptions(p, "popgen"));
+  });
+});
+
+describe("AP2 D2 the page of each definition", () => {
+  test("pca is of the old page, pcaOnPopgen2 of popgen2.html, and another analysis is a defect", () => {
+    expect(pcaPageOf(pca)).toBe("popgen");
+    expect(pcaPageOf(pcaOnPopgen2)).toBe("popgen2");
+    expect(() => pcaPageOf(diversity)).toThrow(/^popnei_web defect: /u);
   });
 });
 

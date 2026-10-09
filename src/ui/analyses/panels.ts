@@ -15,6 +15,7 @@
  * defect for one, which the Analyses step, drawing a panel for every
  * analysis of its step, meets at once.
  */
+import { createElement } from "react";
 import type { ComponentType } from "react";
 
 import {
@@ -25,6 +26,8 @@ import {
 } from "../../core/analyses/diversity.ts";
 import {
   crashText,
+  pca,
+  pcaPageOf,
   refusalText as pcaRefusalText,
   statisticsFailedText as pcaStatisticsFailedText,
 } from "../../core/analyses/pca.ts";
@@ -173,6 +176,22 @@ const DIVERSITY: AnalysisUi = Object.freeze({
   workerFailedText: null,
 });
 
+/** The page of the principal components of this panel, that of the
+    definition the store of popgen.html runs, `pca`. */
+const PCA_PAGE = pcaPageOf(pca);
+
+/** The options of the principal components of the definition the store
+    of popgen.html runs. */
+function PcaOptionsOfPopgen(): React.JSX.Element {
+  return createElement(PcaOptionsPart, { analysis: pca });
+}
+
+/** The result of the principal components of the definition the store
+    of popgen.html runs. */
+function PcaResultsOfPopgen(props: ResultsProps): React.JSX.Element {
+  return createElement(PcaResults, { ...props, analysis: pca });
+}
+
 /** The panel of the principal components (docs/specs/analyses/pca.md,
     "The panel"). */
 const PCA: AnalysisUi = Object.freeze({
@@ -182,19 +201,19 @@ const PCA: AnalysisUi = Object.freeze({
   plural: true,
   readyLines: pcaReadyLines,
   refusalText: (message: string, p: Project): string =>
-    pcaRefusalText(message, p, "popgen"),
+    pcaRefusalText(message, p, PCA_PAGE),
   statisticsFailedText: (
     error: AnalysisError,
     p: Project,
     failureText: (failure: Failure) => string,
     waited: boolean,
-  ): string => pcaStatisticsFailedText(error, p, failureText, waited, "popgen"),
-  Results: PcaResults,
-  Options: PcaOptionsPart,
+  ): string => pcaStatisticsFailedText(error, p, failureText, waited, PCA_PAGE),
+  Results: PcaResultsOfPopgen,
+  Options: PcaOptionsOfPopgen,
   runningLine: (p: Project): string | null =>
     p.variants === null ? null : decompositionLine(p.variants.name),
   workerFailedText: (p: Project, kept: IndividualsKept | null): string =>
-    crashText(p, individualsRunOn(p, kept), "popgen"),
+    crashText(p, individualsRunOn(p, kept), PCA_PAGE),
 });
 
 /** The panel of the distances between populations

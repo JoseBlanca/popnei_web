@@ -16,23 +16,25 @@ import {
   pcaColours,
   pcaOptions,
 } from "../../../core/analyses/pca.ts";
+import type { PcaPage } from "../../../core/analyses/pca.ts";
 import type { IndividualStats } from "../../../core/individualsKept.ts";
 import type { Project } from "../../../core/project.ts";
 import type { PcaResult } from "../../../worker/protocol.ts";
 import { marksNote } from "./words.ts";
 
-/** The notes of the result `r` in the project `p`, with the statistics
-    of each individual `stats` when the store has them, in the order
-    they are shown. */
+/** The notes of the result `r` in the project `p` of the page `page`,
+    with the statistics of each individual `stats` when the store has
+    them, in the order they are shown. */
 export function notesOf(
   r: PcaResult,
   p: Project,
   stats: IndividualStats | null,
+  page: PcaPage,
 ): readonly string[] {
-  const colours = pcaColours(r, p, "popgen");
+  const colours = pcaColours(r, p, page);
   return [
     colours.note,
-    axesShown(pcaOptions(p, "popgen"), r).note,
+    axesShown(pcaOptions(p, page), r).note,
     marksNote(colours),
     manyMissingNote(r, stats, p),
   ].filter((note) => note !== null);

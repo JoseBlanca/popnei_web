@@ -17,9 +17,13 @@ import { useId } from "react";
 
 import {
   pcaOptions,
+  pcaPageOf,
   pruningDistanceReason,
 } from "../../../core/analyses/pca.ts";
 import { MAX_LD_DIST } from "../../../core/project.ts";
+import type { ProjectVariantFilter } from "../../../core/project.ts";
+import type { AnalysisDef } from "../../../core/store.ts";
+import type { Job, JobResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
@@ -41,9 +45,15 @@ import {
   r2RefusedText,
   thresholdRefusedText,
 } from "../../steps/variants/words.ts";
-import { followCommand, methodCommand, ownValueCommand } from "./commands.ts";
+import {
+  commandPageOf,
+  followCommand,
+  methodCommand,
+  ownValueCommand,
+  stricterCommand,
+} from "./commands.ts";
 import type { OptionCommand } from "../optionCommand.ts";
-import type { OwnValue } from "./commands.ts";
+import type { CommandPage, OwnValue } from "./commands.ts";
 import styles from "./PcaOptionsPart.module.css";
 import {
   METHOD_ITEMS,
@@ -64,16 +74,25 @@ const THRESHOLD_DECIMALS = 2;
     the analysis alone. */
 type FollowChoice = "follow" | "own";
 
+/** What the options are drawn with. */
+interface PcaOptionsPartProps {
+  /** The definition of the principal components the store runs, `pca`
+      or `pcaOnPopgen2`, whose page gives the options read and written. */
+  readonly analysis: AnalysisDef<Job, JobResult>;
+}
+
 /** The options of the principal components. */
-export function PcaOptionsPart(): React.JSX.Element {
+export function PcaOptionsPart({
+  analysis,
+}: PcaOptionsPartProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
+  const page = pcaPageOf(analysis);
   // The same object while the options of the project are the same.
-  const options = useAppState((s) => pcaOptions(s.project, "popgen"));
+  const options = useAppState((s) => pcaOptions(s.project, page));
   const filters = useAppState((s) => s.project.filters);
-  const ldReason = useAppState((s) =>
-    pruningDistanceReason(s.project, "popgen"),
-  );
+  const ldReason = useAppState((s) => pruningDistanceReason(s.project, page));
+  const commandPage = commandPageOf(page, options.method);
   const headingId = useId();
   const lineId = useId();
   const ldReasonId = useId();
@@ -82,17 +101,17 @@ export function PcaOptionsPart(): React.JSX.Element {
     store.apply(step.description, step.command);
   };
   const setValue = (value: OwnValue): void => {
-    apply(ownValueCommand(value, "popgen"));
+    apply(ownValueCommand(value, commandPage));
   };
   const announce = (text: string): void => {
     announcer.announce(text);
   };
   const choose = (kind: OwnFilterKind, choice: FollowChoice): void => {
-    apply(followCommand(kind, choice === "follow", "popgen"));
+    apply(followOf(kind, choice === "follow", commandPage, filters));
     // The focus stays on the radio button, so the reason that the choice
     // made appear beside the field of the distance is announced.
     if (kind === "ld" && choice === "own") {
-      const reason = pruningDistanceReason(store.getState().project, "popgen");
+      const reason = pruningDistanceReason(store.getState().project, page);
       if (reason !== null) announce(reason);
     }
   };
@@ -112,7 +131,7 @@ export function PcaOptionsPart(): React.JSX.Element {
         items={METHOD_ITEMS}
         value={options.method}
         onChange={(method) => {
-          apply(methodCommand(method, "popgen"));
+          apply(methodCommand(method, commandPage));
         }}
       />
       <section
@@ -235,6 +254,33 @@ export function PcaOptionsPart(): React.JSX.Element {
       </section>
     </div>
   );
+}
+
+/** The command of a choice of the filter of `kind`, to follow the
+    Variants step or tab, `follow`, or not, on the page `page`, whose
+    project has the filters of the variants `filters`. On popgen2.html a
+    missing data or a MAF filter is set for the PCA by `stricterCommand`,
+    at the upper end of its field, the Variants tab's value, or 1 while
+    the tab has that filter off, so that the choice alone changes no
+    variant the PCA reads (docs/specs/steps/popgen2-pca.md, "Its
+    filters"). */
+function followOf(
+  kind: OwnFilterKind,
+  follow: boolean,
+  page: CommandPage,
+  filters: readonly ProjectVariantFilter[],
+): OptionCommand {
+  if (page === "popgen") return followCommand(kind, follow, page);
+  if (kind === "ld") return followCommand(kind, follow, page);
+  if (follow) return followCommand(kind, true, page);
+  const filter = filters.find((one) => one.kind === kind);
+  const upper =
+    filter?.kind === "missing_data"
+      ? filter.maxAllowedMissingRate
+      : filter?.kind === "maf"
+        ? filter.maxAllowedMaf
+        : 1;
+  return stricterCommand(kind, upper, page);
 }
 
 /** What a filter of the analysis's own is drawn with. */

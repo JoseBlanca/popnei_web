@@ -456,8 +456,8 @@ describe("IP8 panel: the notes", () => {
     const r = result();
     const p = sampleProject();
     const byMissing = withOptions(p, { colourBy: "country" });
-    const before = notesOf(r, p, null);
-    const after = notesOf(r, byMissing, null);
+    const before = notesOf(r, p, null, "popgen");
+    const after = notesOf(r, byMissing, null, "popgen");
     expect(before).toEqual([]);
     expect(notesAppeared(before, after)).toEqual([
       "pops.csv has no column country, by which the points were coloured, so they are coloured by the populations.",
@@ -465,7 +465,7 @@ describe("IP8 panel: the notes", () => {
     // A note already there is not said again.
     expect(notesAppeared(after, after)).toEqual([]);
     const beyond = withOptions(p, { axes: [4, 5, 6] });
-    expect(notesOf(r, beyond, null)).toEqual([
+    expect(notesOf(r, beyond, null, "popgen")).toEqual([
       "The axes chosen, PC4, PC5 and PC6, are beyond the 3 components of this result, so PC1, PC2 and PC3 are drawn.",
     ]);
   });
@@ -480,10 +480,10 @@ describe("IP10 D3 panel: the note of the missing genotypes", () => {
       missingGtRate: Float64Array.from([0.25, 0.2, 0, 0.1]),
       obsHetRate: Float64Array.from([0.3, 0.3, 0.3, 0.3]),
     };
-    expect(notesOf(r, p, stats)).toEqual([
+    expect(notesOf(r, p, stats, "popgen")).toEqual([
       "i1 lacks more than 20% of its genotypes over the variants of panel.nei. The PCA gives a missing genotype the mean of its variant, which draws an individual toward the centre of the plot about as much as it lacks. The PCoA of the Kosman distances compares each pair over the variants both have called, and does not.",
     ]);
-    expect(notesOf(r, p, null)).toEqual([]);
+    expect(notesOf(r, p, null, "popgen")).toEqual([]);
   });
 });
 
