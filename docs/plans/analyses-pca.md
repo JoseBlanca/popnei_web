@@ -1255,3 +1255,19 @@ choice of the menu; a PNG is refused only for a plot too large for the
 browser. Not seen: whether Safari, as opposed to Playwright's WebKit,
 accepts the save of a PNG that starts after the fonts and the image are
 ready.
+
+### Work package 5, task 5.5, 9 October 2026
+
+Commit 10487213, `AP5 D5` of `e2e/measure.spec.ts`: "Table as CSV" of
+the Individuals tab on `individuals_10000.xlsx` (10,000 rows of 20
+columns), the longest gap with no frame from the choice to one frame
+after the file is handed to the browser, the way `IN6 D4` measures a
+sort, the first save left out and five kept. Chromium 153.0.8010.12:
+17, 10, 10, 10 and 10 ms, median 10 ms. WebKit 26.6: 14, 17, 16, 18 and
+18 ms, median 17 ms. Playwright 1.63.0, an Apple M5 Pro with 64 GB, the
+load averages near 11 (10.43 and 10.80 over one minute) because a macOS
+virtual machine outside this work used about 7 cores throughout. Both
+medians are far under the rule's 200 ms, so the CSV is written on the
+page and nothing changes. The first load of `popgen2.html` is 293.41 KB
+gzipped, against 278.65 KB on `main` (+14.76 KB: the row of tabs, the
+PCA's module on this page, the menus of the downloads, Undo and Redo).
