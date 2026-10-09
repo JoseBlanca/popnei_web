@@ -73,9 +73,12 @@ export function Pca3dView({
 
   useEffect(() => {
     let over = false;
+    // Stops waiting for the view to be shown, to say that it loads.
+    let stopWaiting = (): void => undefined;
     const create = (module: Pca3dModule): void => {
       const element = containerRef.current;
       if (over || element === null) return;
+      stopWaiting();
       setLoading(false);
       const given = latest.current.data;
       try {
@@ -99,7 +102,9 @@ export function Pca3dView({
     if (module !== null) {
       create(module);
     } else {
-      latest.current.announcer.announce(LOADING_3D);
+      stopWaiting = whenShown(containerRef.current, () => {
+        if (!over) latest.current.announcer.announce(LOADING_3D);
+      });
       void loadPca3d().then(
         (loaded) => {
           try {
@@ -115,6 +120,7 @@ export function Pca3dView({
     }
     return () => {
       over = true;
+      stopWaiting();
       plotRef.current?.destroy();
       plotRef.current = null;
       drawnRef.current = null;
@@ -139,4 +145,32 @@ export function Pca3dView({
       )}
     </div>
   );
+}
+
+/** Whether `element` is shown: not in a tab hidden, nor under another
+    element of no display. A browser without `checkVisibility`, as jsdom,
+    is taken to show it. */
+function isShown(element: HTMLElement): boolean {
+  return typeof element.checkVisibility === "function"
+    ? element.checkVisibility()
+    : true;
+}
+
+/** Calls `then` once `element` is shown, at once when it is; gives the
+    function that stops waiting. A hidden element is shown when it gains
+    a size, which its ResizeObserver tells. */
+function whenShown(element: HTMLElement | null, then: () => void): () => void {
+  if (element === null || isShown(element)) {
+    then();
+    return () => undefined;
+  }
+  const observer = new ResizeObserver(() => {
+    if (!isShown(element)) return;
+    observer.disconnect();
+    then();
+  });
+  observer.observe(element);
+  return () => {
+    observer.disconnect();
+  };
 }
