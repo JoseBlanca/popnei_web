@@ -209,7 +209,7 @@ of a box:
 | a line of a threshold, with a run of the arrow keys waiting | the run is made a change, then undone, so the threshold goes back to where the presses started |
 | the dialog of the download of the filtered variants, open | nothing |
 | an open menu "Download…" | the page's Undo; the menu stays open, unless the undo removes the table or the plot it belongs to, which closes it, and the focus goes to the heading "Popnei" |
-| anywhere, while a PCA runs | nothing: Undo and Redo wait until the PCA ends or is stopped, as the filters it reads are locked (work package 4 of `docs/plans/analyses-pca.md`) |
+| anywhere, while a PCA runs | nothing: Undo and Redo wait until the PCA ends or is stopped, their buttons greyed, as the filters it reads are locked (below, "While a PCA runs") |
 | anywhere else on the page | the page's Undo |
 
 The box refuses the browser's own undo of its text, by the keys and by
@@ -219,10 +219,23 @@ same press. The menu Edit of the browser is not the page's Undo.
 
 **The focus.** When a press of Undo takes the last step and Undo goes,
 the focus moves to Redo, which the press has just shown; the same from
-Redo to Undo. When a button with the focus goes for any other reason, a
-command sent from a control that does not take the focus on a click, as
-in Safari, or a file dropped on a box, the focus goes to the heading
-"Popnei".
+Redo to Undo. When a button with the focus goes for any other reason, as
+when a file dropped on a box while Redo has the focus starts the history
+afresh, the focus goes to the heading "Popnei". A click on another
+control does not leave the focus on the button: in Chromium and in
+WebKit a click on the words of the FILTER box moves the focus off Redo
+before the box sends its command.
+
+**While a PCA runs**, Undo and Redo wait, as the filters the PCA reads
+are locked (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
+October 2026). A button that has a step stays drawn where it was,
+greyed, and is still reached by the Tab key; its tooltip and its
+description for a screen reader are the reason it waits, "Stop the PCA
+to change the filters.", in place of its step; a click, Enter or Space
+on it does nothing; and the keys do nothing, as the table of the keys
+says. The page gives the reason, the words of the lock of the filters,
+which work package 6 of the plan settles. When the PCA ends or is
+stopped, each button is again as "When" and "What they say" give it.
 
 ### The row of tabs
 
