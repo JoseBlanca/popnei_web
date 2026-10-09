@@ -632,7 +632,7 @@ test("WS7 D3 a comma or a minus sign typed in the ploidy is thrown away, and the
   );
 });
 
-test("WS7 D3 a file picked before popnei has loaded is shown as being read", async ({
+test("AP8 D1 WS7 D3 a file picked before popnei has loaded is shown as being read, with its clock", async ({
   page,
   makeAxeBuilder,
 }) => {
@@ -642,7 +642,11 @@ test("WS7 D3 a file picked before popnei has loaded is shown as being read", asy
   await pick(page, "panel.nei");
 
   await expect(zone(page).getByText("Reading panel.nei.")).toBeVisible();
-  await expect(zone(page).getByText("1 second so far.")).toBeVisible();
+  // The clock says "1 second so far." for one second only, then
+  // "2 seconds so far.", and a slow runner can look after that second.
+  await expect(
+    zone(page).getByText(/^(1 second|([2-9]|[1-9]\d+) seconds) so far\.$/),
+  ).toBeVisible();
   await expectNoViolations(makeAxeBuilder);
 });
 
