@@ -68,6 +68,12 @@ describe("AP5 D1 the CSV of a table, of the bins of a histogram, and the names o
     ).toThrow(/popnei_web defect/u);
   });
 
+  test("edges one too many for the counts are a defect", () => {
+    expect(() =>
+      binsCsv(new Float64Array([0, 0.5, 1, 2]), new Uint32Array([3, 4]), null),
+    ).toThrow(/popnei_web defect/u);
+  });
+
   test("the name of a file is the stem, what is downloaded and the extension, joined by dots", () => {
     expect(downloadName("panel", "pca.coordinates", "csv")).toBe(
       "panel.pca.coordinates.csv",
