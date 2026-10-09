@@ -8,7 +8,11 @@ and Redo come back that day (`docs/designs/analyses-pca.md`, "Undo and
 Redo"): on that page the opening of a variants file, and every change
 of the individuals file but the column the user chooses, start a new
 history, by the store's `open` and `applyAfresh`, which call
-`startHistory`; nothing in this module changes. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
+`startHistory`. The column the page chooses at the end of a read of the
+individuals file is neither a step nor a new history: the store's
+event `populationColumnChosen` writes it into every project of the
+history that holds that read, as a read is recorded, with `mapProjects`.
+Nothing in this module changes. The code is in `src/core/history.ts`. The history keeps the projects the user has had, so that an undo
 gives back the previous one and a redo the one after it. Because a result
 is found by the key that a project gives it (`docs/architecture.md`,
 section 3), an undo also brings back the results of the previous project,
