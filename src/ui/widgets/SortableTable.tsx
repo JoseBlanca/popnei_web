@@ -44,7 +44,11 @@ import {
 } from "react-aria-components";
 import type { SortDescriptor } from "react-aria-components";
 
+import type { CellValue } from "../../core/csv.ts";
 import { classOf } from "../classOf.ts";
+import { tableItem } from "./downloadItems.ts";
+import type { TableDownload } from "./downloadItems.ts";
+import { DownloadMenu } from "./DownloadMenu.tsx";
 import styles from "./SortableTable.module.css";
 import { bodyKey } from "./tableSort.ts";
 import type { TableSort } from "./tableSort.ts";
@@ -79,6 +83,10 @@ export interface SortableRow {
   readonly id: string;
   /** The text of its cells, one per column, in their order. */
   readonly cells: readonly string[];
+  /** The values of its cells as stored, one per column, in their order,
+      which the CSV of the table holds in place of the texts; required
+      when the table is given a download, a defect otherwise. */
+  readonly values?: readonly CellValue[];
 }
 
 /** What a sortable table is drawn with. */
@@ -103,11 +111,15 @@ export interface SortableTableProps<Id extends string> {
   /** Whether the screen is drawing another sort of the rows, which the
       grid then tells a screen reader with `aria-busy`. */
   readonly busy?: boolean;
+  /** The download of the table, which draws the menu "Download…" above
+      it; none when absent, as on popgen.html. */
+  readonly download?: TableDownload;
 }
 
 /** A table sorted by any of its columns, in a box that scrolls. */
 export function SortableTable<Id extends string>({
   busy = false,
+  download,
   ...props
 }: SortableTableProps<Id>): React.JSX.Element {
   const grid = useRef<HTMLTableElement>(null);
@@ -122,7 +134,42 @@ export function SortableTable<Id extends string>({
       element.removeAttribute("aria-busy");
     }
   }, [busy]);
-  return <SortableGrid {...props} grid={grid} />;
+  const table = <SortableGrid {...props} grid={grid} />;
+  if (download === undefined) return table;
+  const values = valuesOf(props.rows, props.columns.length);
+  return (
+    <div className={classOf(styles, "withDownload")}>
+      <DownloadMenu
+        what={download.what}
+        items={[
+          tableItem(
+            download.fileName,
+            props.columns.map((column) => column.label),
+            () => values,
+          ),
+        ]}
+        waiting={null}
+      />
+      {table}
+    </div>
+  );
+}
+
+/** The values of `rows`, in their order, each of `numColumns` values; a
+    defect when a row has none, or another number, since a table given a
+    download writes its values and not its texts. */
+function valuesOf(
+  rows: readonly SortableRow[],
+  numColumns: number,
+): readonly (readonly CellValue[])[] {
+  return rows.map((row) => {
+    if (row.values?.length !== numColumns) {
+      throw new Error(
+        `popnei_web defect: the row ${row.id} of a table given a download has no value for each of its ${String(numColumns)} columns.`,
+      );
+    }
+    return row.values;
+  });
 }
 
 /** What the grid is drawn with: the props of the table but `busy`, and

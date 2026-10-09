@@ -28,7 +28,11 @@
  */
 import { useId, useRef } from "react";
 
+import type { CellValue } from "../../core/csv.ts";
 import { classOf } from "../classOf.ts";
+import { tableItem } from "./downloadItems.ts";
+import type { TableDownload } from "./downloadItems.ts";
+import { DownloadMenu } from "./DownloadMenu.tsx";
 import { useSidewaysFrame } from "./sidewaysFrame.ts";
 import styles from "./Table.module.css";
 
@@ -53,6 +57,10 @@ export interface TableRow {
       or an element of text laid out by the screen, the pair of names of
       the distances between populations, each kept on one line. */
   readonly cells: readonly (string | React.JSX.Element)[];
+  /** The values of its cells as stored, one per column, in their order,
+      which the CSV of the table holds in place of what is shown;
+      required when the table is given a download, a defect otherwise. */
+  readonly values?: readonly CellValue[];
 }
 
 /** What a table is drawn with. */
@@ -66,6 +74,9 @@ export interface TableProps {
   /** Whether its frame has a limited height and scrolls down, its
       headers kept in view: for a table of many rows. */
   readonly limitedHeight?: boolean;
+  /** The download of the table, which draws the menu "Download…" above
+      it; none when absent, as on popgen.html. */
+  readonly download?: TableDownload;
 }
 
 /** The line under the caption while the table is wider than its frame. */
@@ -82,6 +93,7 @@ export function Table({
   columns,
   rows,
   limitedHeight = false,
+  download,
 }: TableProps): React.JSX.Element {
   const captionId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -90,12 +102,35 @@ export function Table({
   // what the frame is then.
   const frame = useSidewaysFrame(scrollRef, limitedHeight);
   const scrolls = frame.scrolls;
+  const captionLine = (
+    <p id={captionId} className={classOf(styles, "caption")}>
+      {caption}
+    </p>
+  );
+  // The values are checked as the table is drawn, so that a row with no
+  // values is a defect at once and not at a choice of the menu.
+  const values = download === undefined ? null : valuesOf(rows, columns.length);
 
   return (
     <div className={classOf(styles, "frame")}>
-      <p id={captionId} className={classOf(styles, "caption")}>
-        {caption}
-      </p>
+      {download === undefined || values === null ? (
+        captionLine
+      ) : (
+        <div className={classOf(styles, "captionRow")}>
+          {captionLine}
+          <DownloadMenu
+            what={download.what}
+            items={[
+              tableItem(
+                download.fileName,
+                columns.map((column) => column.label),
+                () => values,
+              ),
+            ]}
+            waiting={null}
+          />
+        </div>
+      )}
       {scrolls && (
         <p className={classOf(styles, "scrollLine")}>{SCROLL_SIDEWAYS_TEXT}</p>
       )}
@@ -165,6 +200,23 @@ function cellClass(
 ): string {
   const alignment = column.isNumeric === true ? "numeric" : "text";
   return `${classOf(styles, kind)} ${classOf(styles, alignment)}`;
+}
+
+/** The values of `rows`, in their order, each of `numColumns` values; a
+    defect when a row has none, or another number, since a table given a
+    download writes its values and not what it shows. */
+function valuesOf(
+  rows: readonly TableRow[],
+  numColumns: number,
+): readonly (readonly CellValue[])[] {
+  return rows.map((row) => {
+    if (row.values?.length !== numColumns) {
+      throw new Error(
+        `popnei_web defect: the row ${row.id} of a table given a download has no value for each of its ${String(numColumns)} columns.`,
+      );
+    }
+    return row.values;
+  });
 }
 
 /** The contents of the cell `index` of `row`; a defect when it has

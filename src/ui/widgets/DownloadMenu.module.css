@@ -1,0 +1,90 @@
+/* The tokens are those of src/ui/tokens.css. */
+
+/* The button and, under it, the words of a PNG refused, at the end of
+   the line above the table or the plot. */
+.download {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+
+.button {
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.button[data-hovered] {
+  background: var(--color-surface);
+}
+
+.button[data-pressed] {
+  border-color: var(--color-text);
+}
+
+.button[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* A menu that waits: drawn as disabled, while it keeps the focus and
+   the tooltip of its reason. */
+.button[aria-disabled="true"] {
+  background: var(--color-background);
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
+.failure {
+  margin: 0;
+  max-inline-size: calc(var(--space-8) * 10);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: end;
+}
+
+/* React Aria places the popover itself, in a layer at the end of the
+   page. */
+.popover {
+  min-inline-size: var(--trigger-width);
+  max-block-size: inherit;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.menu {
+  display: grid;
+  padding-block: var(--space-1);
+  outline: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* The item the keyboard or the mouse is on. */
+.item[data-focused] {
+  background: var(--color-surface);
+}
+
+.item[data-focus-visible] {
+  outline: var(--focus-ring);
+  outline-offset: calc(var(--focus-offset) * -1);
+}
