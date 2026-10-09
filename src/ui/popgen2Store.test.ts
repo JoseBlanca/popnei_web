@@ -1,6 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { firstProject, popgen2FirstProject } from "../core/apps.ts";
+import {
+  firstProject,
+  popgen2FirstProject,
+  summaryStatsOf,
+} from "../core/apps.ts";
 import { keyFromWire, writeKeyOf, createKeyMemo } from "../core/keys.ts";
 import { pcaOnPopgen2 } from "../core/analyses/pca.ts";
 import {
@@ -26,7 +30,6 @@ import {
   POPGEN2_AUTO_GROUPS,
   createPopgen2Store,
   openVariantsFile,
-  summaryStatsOf,
 } from "./popgen2Store.ts";
 import { startAnalysis } from "./runs.ts";
 import {

@@ -189,3 +189,19 @@ export function individualStatsOf(r: JobResult): IndividualStats {
     obsHetRate: r.obsHetRate,
   };
 }
+
+/** The statistics of each individual in a result of the one pass of
+    popgen2.html, `variantsSummary`, its `perIndividual`, as the store's
+    `statistics.of` there. Throws a defect for a result of another
+    analysis. Beside `individualStatsOf`, so that the result of the PCA,
+    which popgen.html draws too, reads it without the modules of
+    popgen2.html's store. */
+export function summaryStatsOf(r: JobResult): IndividualStats {
+  if (r.analysis !== "variantsSummary") {
+    throw defect(
+      `the statistics of each individual were asked of a result of ${r.analysis}.`,
+    );
+  }
+  const { individuals, missingGtRate, obsHetRate } = r.perIndividual;
+  return { individuals, missingGtRate, obsHetRate };
+}

@@ -45,14 +45,13 @@ import {
   varianceCsv,
 } from "../../../core/analyses/pca.ts";
 import type { PcaColours, PcaPage } from "../../../core/analyses/pca.ts";
-import { individualStatsOf } from "../../../core/apps.ts";
+import { individualStatsOf, summaryStatsOf } from "../../../core/apps.ts";
 import { downloadName, variantsStem } from "../../../core/fileNames.ts";
 import { shown } from "../../../core/project.ts";
 import type { AnalysisDef } from "../../../core/store.ts";
 import type { Job, JobResult, PcaResult } from "../../../worker/protocol.ts";
 import { classOf } from "../../classOf.ts";
 import { downloadText } from "../../download.ts";
-import { summaryStatsOf } from "../../popgen2Store.ts";
 import { useAnnouncer } from "../../shell/announcer.tsx";
 import { useAppState, useStore } from "../../store.tsx";
 import { Button } from "../../widgets/Button.tsx";
@@ -84,17 +83,12 @@ import { pca3dData, scatterData } from "./plotData.ts";
 import { ScatterPlot } from "./ScatterPlot.tsx";
 import { whenShown } from "./whenShown.ts";
 import {
-  PLOT_WAITS_3D,
-  pcaDownloadWhat,
-  pcaResultTitle,
-  pcaTabLoadFailed3d,
-} from "./tabWords.ts";
-import {
   AXIS_LABELS_2D,
   AXIS_LABELS_3D,
   COLOUR_LABEL,
   LOAD_FAILED_3D,
   NO_WEBGL,
+  PLOT_WAITS_3D,
   POPULATION_ITEM,
   RESET_VIEW,
   TABLE_CSV_LABEL,
@@ -111,6 +105,9 @@ import {
   ZOOM_IN,
   ZOOM_OUT,
   noteAnnounced,
+  pcaDownloadWhat,
+  pcaResultTitle,
+  pcaTabLoadFailed3d,
   pcName,
   pcoaVarianceLine,
   rowCells,

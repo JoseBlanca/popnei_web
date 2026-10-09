@@ -19,11 +19,11 @@ import {
   POPGEN2_ANALYSES,
   countsOf,
   popgen2FirstProject,
+  summaryStatsOf,
   writeCountsOf,
 } from "../core/apps.ts";
 import { CACHE_MAX_BYTES } from "../core/cache.ts";
 import { MAX_UNDO_STEPS } from "../core/history.ts";
-import type { IndividualStats } from "../core/individualsKept.ts";
 import { loadVariants } from "../core/project.ts";
 import type { AnalysisId, VariantLoad } from "../core/project.ts";
 import { createStore } from "../core/store.ts";
@@ -86,19 +86,6 @@ export function createPopgen2Store(
     // history of the filters").
     stopLeftBehind: true,
   });
-}
-
-/** The statistics of each individual in a result of the one pass,
-    `variantsSummary`, its `perIndividual`, as the store's
-    `statistics.of`. Throws a defect for a result of another analysis. */
-export function summaryStatsOf(r: JobResult): IndividualStats {
-  if (r.analysis !== "variantsSummary") {
-    throw new Error(
-      `popnei_web defect: the statistics of each individual were asked of a result of ${r.analysis}.`,
-    );
-  }
-  const { individuals, missingGtRate, obsHetRate } = r.perIndividual;
-  return { individuals, missingGtRate, obsHetRate };
 }
 
 /**

@@ -25,18 +25,20 @@ import type {
 import { createPopgen2Store, openVariantsFile } from "../../popgen2Store.ts";
 import { WAITS_FOR_STATISTICS_TEXT } from "../words.ts";
 import {
-  PLOT_WAITS_3D,
-  pcaDownloadWhat,
   pcaEndAnnouncement,
-  pcaResultTitle,
   LOADING_RESULT,
-  pcaTabLoadFailed3d,
   pcaTabResultFailed,
   pcaTabLock,
   pcaTabName,
   pcaTabReadyLines,
   pcaTabTitle,
 } from "./tabWords.ts";
+import {
+  PLOT_WAITS_3D,
+  pcaDownloadWhat,
+  pcaResultTitle,
+  pcaTabLoadFailed3d,
+} from "./words.ts";
 
 /** The store of popgen2.html with `panel.nei` of `numIndividuals`
     open and read, the PCA of `method` with the distance of its LD
