@@ -10,9 +10,11 @@
  * element is not read twice in the reading of the page.
  *
  * Used by `Button` and `StepLink`, which give their element the id of the
- * hidden text, and by `Tabs` for a greyed tab, which draws the hidden text
+ * hidden text, by `Tabs` for a greyed tab, which draws the hidden text
  * itself outside its row of labels (`drawnElsewhereId`) and holds its
- * tooltip open (`held`); a screen does not import it.
+ * tooltip open (`held`), and by `DownloadMenu` for a waiting menu, which
+ * holds its tooltip open as a greyed tab does; a screen does not import
+ * it.
  *
  * Whether the tooltip is open is state of this widget, or of its caller
  * with `held`, and never React Aria's alone: a text that becomes null
@@ -58,9 +60,10 @@ export interface HeldTooltip {
       into view, and React Aria closes every tooltip on a scroll of what
       holds its trigger. */
   readonly hasFocus: () => boolean;
-  /** The element the tooltip is placed under, at its start, in place of
-      the trigger: the row of tabs, so that on two lines the tooltip of
-      a tab of the first does not hide the second. */
+  /** The element the tooltip is placed under, at its start: the row of
+      tabs, so that on two lines the tooltip of a tab of the first does
+      not hide the second; or the trigger itself, as a menu "Download…"
+      gives it. */
   readonly placedUnder: React.RefObject<Element | null>;
   /** How far right of the start of `placedUnder` the tooltip starts, in
       pixels: the trigger's distance from it, so that the tooltip stands

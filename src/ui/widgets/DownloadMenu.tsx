@@ -17,7 +17,11 @@
  * button stays enabled for React Aria and a stop of the Tab key, carries
  * `aria-disabled` and its reason as its tooltip and its description, is
  * drawn as disabled, and opens nothing, as the greyed tabs of
- * docs/specs/steps/popgen2-pca.md do.
+ * docs/specs/steps/popgen2-pca.md do. As theirs, its tooltip is held
+ * here (`HeldTooltip` of Tooltip.tsx): a press, of a click, a tap, Enter
+ * or Space, shows it, since a tap leaves no pointer resting on the
+ * button; and it stays through the scroll that brings a button reached
+ * by Tab into view.
  *
  * A PNG the browser refuses, a `PngError`, is said in words under the
  * button and in the status region, until the next choice of the menu or
@@ -42,6 +46,7 @@ import { useAnnouncer } from "../shell/announcer.tsx";
 import styles from "./DownloadMenu.module.css";
 import type { DownloadItem } from "./downloadItems.ts";
 import { WithTooltip } from "./Tooltip.tsx";
+import type { HeldTooltip } from "./Tooltip.tsx";
 
 /** What the menu of a download is drawn with. */
 export interface DownloadMenuProps {
@@ -101,20 +106,40 @@ export function DownloadMenu({
   // the open menu would come back by itself when the wait ends, and the
   // words would describe a file the menu no longer offers.
   const [wasWaiting, setWasWaiting] = useState(isWaiting);
+  // Whether the reason's tooltip is shown, held here so that a press,
+  // which React Aria would let close it, shows it.
+  const [reasonShown, setReasonShown] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   if (wasWaiting !== isWaiting) {
     setWasWaiting(isWaiting);
     if (isWaiting) {
       setOpen(false);
       setFailure(null);
+    } else {
+      // So that the tooltip does not show by itself when a wait begins
+      // again.
+      setReasonShown(false);
     }
   }
+  const held: HeldTooltip = {
+    isOpen: reasonShown,
+    onOpenChange: setReasonShown,
+    hasFocus: () =>
+      buttonRef.current !== null &&
+      buttonRef.current === document.activeElement,
+    placedUnder: buttonRef,
+    crossOffset: 0,
+  };
   useEffect(() => {
     if (isWaiting) lastChoice.current += 1;
   }, [isWaiting]);
 
   const onOpenChange = (open: boolean): void => {
-    // A waiting menu opens nothing.
-    if (open && isWaiting) return;
+    // A waiting menu opens nothing, and shows its reason.
+    if (open && isWaiting) {
+      setReasonShown(true);
+      return;
+    }
     setOpen(open);
   };
 
@@ -153,9 +178,10 @@ export function DownloadMenu({
   return (
     <div className={classOf(styles, "download")}>
       <MenuTrigger isOpen={isOpen} onOpenChange={onOpenChange}>
-        <WithTooltip text={waiting}>
+        <WithTooltip text={waiting} held={held}>
           {(describedBy) => (
             <AriaButton
+              ref={buttonRef}
               aria-label={`Download ${what}`}
               {...(isWaiting && { "aria-disabled": true })}
               {...(describedBy !== undefined && {

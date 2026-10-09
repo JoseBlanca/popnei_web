@@ -597,6 +597,81 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     expect(saves).toBe(0);
   });
 
+  test("a menu that waits shows its reason on a click, which opens nothing, and Escape hides it", () => {
+    const reason = "Download once panel.nei is read to the end.";
+    draw(
+      createElement(DownloadMenu, {
+        what: "the plot of the MAF",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting: reason,
+      }),
+    );
+    const button = trigger("the plot of the MAF");
+    act(() => {
+      button.click();
+    });
+    expect(menuItems()).toBeNull();
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    press("Escape");
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    act(() => {
+      button.click();
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+  });
+
+  test("a menu that waits keeps its reason through a scroll of the page while its button has the focus, as the browser scrolls a button reached by Tab into view", () => {
+    const reason = "Download once panel.nei is read to the end.";
+    draw(
+      createElement(DownloadMenu, {
+        what: "the plot of the MAF",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting: reason,
+      }),
+    );
+    focusByKeyboard(trigger("the plot of the MAF"));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+    act(() => {
+      document.body.dispatchEvent(new Event("scroll"));
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      reason,
+    );
+  });
+
+  test("a menu that waits, its reason shown by a click, hides it when it stops waiting, and does not show it by itself when it waits again", () => {
+    const element = (waiting: string | null): React.ReactElement =>
+      createElement(DownloadMenu, {
+        what: "the plot of the MAF",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting,
+      });
+    draw(element("Download once panel.nei is read to the end."));
+    act(() => {
+      trigger("the plot of the MAF").click();
+    });
+    expect(document.querySelector('[role="tooltip"]')).not.toBeNull();
+    draw(element(null));
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    act(() => {
+      document.body.focus();
+    });
+    draw(element("Download once panel.nei is read to the end."));
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+  });
+
   test("a save rejected with an error that is not a PNG refused reaches the bar of the errors, with no words under the button", async () => {
     const defect = new Error("x");
     const rejections = await rejectionsOf(async () => {
