@@ -20,6 +20,7 @@
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 
 import { populationCounts } from "../../core/populations.ts";
+import type { PageTab } from "../../core/popgen2Tabs.ts";
 import { escaped, individualsBoxNeeds } from "../../core/project.ts";
 import type { IndividualsSource, Project } from "../../core/project.ts";
 import type { AutoRuns } from "../autoRuns.ts";
@@ -89,7 +90,7 @@ export interface IndividualsBoxProps {
       from one about to start. */
   readonly autoRuns: AutoRuns;
   /** The tab shown, whose turn draws the zone again after a throw. */
-  readonly tab: string;
+  readonly tab: PageTab;
 }
 
 /** The box of the individuals file. */

@@ -1,9 +1,12 @@
 /**
  * Tabs: React Aria's `Tabs`, `TabList`, `Tab` and `TabPanel`, with our
- * look (react.md, "Widgets: React Aria, wrapped once"), for the parts of
- * one result of which one is shown at a time, the plot of a histogram and
- * the table of its bins (docs/specs/steps/variants.md, "The plot and the
- * table of its bins"). The row of the labels is one stop of the Tab key,
+ * look (react.md, "Widgets: React Aria, wrapped once"). Two uses: the
+ * parts of one result of which one is shown at a time, the plot of a
+ * histogram and the table of its bins of popgen.html
+ * (docs/specs/steps/variants.md, "The plot and the table of its bins");
+ * and the row of the five tabs of popgen2.html, Variants, Individuals,
+ * PCA, Populations and Distances (docs/specs/steps/popgen2-pca.md, "The
+ * row of tabs"). The row of the labels is one stop of the Tab key,
  * whose arrow keys move between the labels and show each panel as they
  * reach it; the panel shown is the next stop, or its first element that
  * the Tab key reaches.
@@ -11,14 +14,14 @@
  * By default only the panel shown is drawn: a plot in a panel not shown
  * is destroyed, and drawn anew when its label is chosen again, as the
  * plot and the table of the bins of popgen.html have it. With
- * `keepHidden`, as the two tabs of the files of popgen2.html have it
+ * `keepHidden`, as the row of popgen2.html has it
  * (docs/specs/steps/popgen2-input.md, "Both tabs kept drawn"), every
  * panel stays drawn: React Aria marks a panel not shown inert, which the
  * Tab key, the mouse and a screen reader pass over, and its style hides
  * it, so that a turn to another tab and back finds what the user left
  * there, a number half typed, the sort of a table, the plots drawn.
  *
- * A tab given a reason, `greyed`, as the tabs of the analyses of
+ * A tab given a reason, `greyedReason`, as the tabs of the analyses of
  * popgen2.html have it while they cannot run (docs/specs/steps/popgen2-pca.md,
  * "The row of tabs"; docs/designs/analyses-pca.md, "A greyed tab, for every
  * user", option (b)), is not disabled for React Aria, which would take it
@@ -54,8 +57,9 @@ export interface TabItem<Id extends string> {
   /** What its panel shows. */
   readonly content: React.ReactNode;
   /** Why it does not open, its tooltip and its description, or `null`
-      or absent when it opens. */
-  readonly greyed?: string | null;
+      or absent when it opens; never empty, which would give an empty
+      tooltip and an empty description, and is refused as a defect. */
+  readonly greyedReason?: string | null;
 }
 
 /** What a set of tabs is drawn with, whose ids are of the union
@@ -107,14 +111,14 @@ export function Tabs<Id extends string>({
         {tabs.map((tab) => (
           <WithTooltip
             key={tab.id}
-            text={tab.greyed ?? null}
-            descriptionId={reasonId(tab.id)}
+            text={tab.greyedReason ?? null}
+            drawnElsewhereId={reasonId(tab.id)}
           >
             {(describedBy) => (
               <Tab
                 id={tab.id}
                 // Called at each drawing of this component, a new function
-                // each time, so the mark follows `greyed`; React Aria
+                // each time, so the mark follows `greyedReason`; React Aria
                 // drawing the tab again leaves an attribute it does not
                 // set alone.
                 ref={(element: HTMLElement | null) => {
@@ -139,7 +143,7 @@ export function Tabs<Id extends string>({
         (tab) =>
           isGreyed(tab) && (
             <span key={tab.id} id={reasonId(tab.id)} hidden>
-              {tab.greyed}
+              {tab.greyedReason}
             </span>
           ),
       )}
@@ -161,9 +165,15 @@ export function Tabs<Id extends string>({
     a `data-` attribute through to the tab's element. */
 const GREYED_ATTRIBUTE = "data-greyed";
 
-/** Whether `tab` is greyed. */
+/** Whether `tab` is greyed. Throws a defect on an empty reason. */
 function isGreyed<Id extends string>(tab: TabItem<Id>): boolean {
-  return tab.greyed !== undefined && tab.greyed !== null;
+  const reason = tab.greyedReason;
+  if (reason === "") {
+    throw new Error(
+      `popnei_web defect: the tab ${tab.id} was greyed with an empty reason.`,
+    );
+  }
+  return reason !== undefined && reason !== null;
 }
 
 /** Sets `aria-disabled` on the element of a tab when it is greyed, and

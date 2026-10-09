@@ -156,7 +156,7 @@ function Harness({
       id,
       label: `The ${id}`,
       content: createElement("p", null, `Content of ${id}`),
-      greyed: id === "second" ? reason : null,
+      greyedReason: id === "second" ? reason : null,
     })),
   });
 }
@@ -334,6 +334,12 @@ describe("AP1 D2 a greyed tab is reached, refused and said", () => {
     press("Escape");
     expect(tooltip()).toBeNull();
     expect(document.activeElement).toBe(tabElement("second"));
+  });
+
+  test("an empty reason is refused as a defect, since it would give an empty tooltip and an empty description", () => {
+    expect(() => {
+      drawGreyed("first", "");
+    }).toThrow(/^popnei_web defect: /u);
   });
 
   test("without greyed tabs, as popgen.html uses the widget, no tab carries aria-disabled or a description", () => {

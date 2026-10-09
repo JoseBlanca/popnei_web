@@ -9,16 +9,17 @@
  * them.
  */
 
-import type { AnalysisTabId, TabGreyed } from "../../core/popgen2Tabs.ts";
+import type {
+  AnalysisTabId,
+  PageTab,
+  TabGreyed,
+} from "../../core/popgen2Tabs.ts";
 import {
   escaped,
   grouped,
   shown,
   MAX_LISTED_POPULATIONS,
 } from "../../core/project.ts";
-
-/** The ids of the five tabs of the page, in their order. */
-export type PageTab = "variants" | "individuals" | AnalysisTabId;
 
 /** The label of each tab, in the order of the row. */
 export const PAGE_TAB_LABELS: Readonly<Record<PageTab, string>> = {

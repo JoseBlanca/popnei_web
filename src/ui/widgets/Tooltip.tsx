@@ -1,8 +1,8 @@
 /**
  * A tooltip: React Aria's `TooltipTrigger` and `Tooltip`, with our look
  * (react.md, "Widgets: React Aria, wrapped once"). It shows a short text
- * beside a button or a link while the pointer rests on it or the keyboard
- * has put the focus on it, and Escape hides it. React Aria gives the
+ * beside a button, a link or a tab while the pointer rests on it or the
+ * keyboard has put the focus on it, and Escape hides it. React Aria gives the
  * trigger the tooltip as its description only while it is shown, so the
  * text is also on the page, hidden, as the trigger's description at all
  * times, for a screen reader that reads the page without moving the
@@ -11,7 +11,8 @@
  *
  * Used by `Button` and `StepLink`, which give their element the id of the
  * hidden text, and by `Tabs` for a greyed tab, which draws the hidden text
- * itself outside its row of labels; a screen does not import it.
+ * itself outside its row of labels (`drawnElsewhereId`); a screen does not
+ * import it.
  */
 import { useId } from "react";
 import {
@@ -37,27 +38,30 @@ export interface WithTooltipProps {
   /** The text of the tooltip, or `null` for none: the trigger is then
       drawn the same, with no tooltip and no description. */
   readonly text: string | null;
-  /** Draws the trigger, a button or a link of React Aria, given the id
-      of its description, to set as its `aria-describedby`, or
+  /** Draws the trigger, a button, a link or a tab of React Aria, given
+      the id of its description, to set as its `aria-describedby`, or
       `undefined` when there is no text. */
   readonly children: (describedBy: string | undefined) => React.ReactElement;
-  /** The id of an element the caller draws elsewhere with the same text,
-      for a trigger in a collection of React Aria, a tab in its row, where
-      an element that is not an item breaks the collection; the hidden
-      text is then not drawn here. Absent: drawn here. */
-  readonly descriptionId?: string;
+  /** Given, the caller draws the hidden text itself, elsewhere, under
+      this id, and this widget draws none: for a trigger in a collection
+      of React Aria, a tab in its row, where an element that is not an
+      item breaks the collection. Absent, this widget draws the hidden
+      text beside the trigger, under an id of its own. Not the
+      `descriptionId` of `Button`, which names an element the button
+      draws. */
+  readonly drawnElsewhereId?: string;
 }
 
-/** A button or a link of React Aria, with a tooltip and the same text as
-    its description. The tree is the same with a text and without, so
+/** A button, a link or a tab of React Aria, with a tooltip and the same
+    text as its description. The tree is the same with a text and without, so
     that a trigger that gains or loses one keeps the focus. */
 export function WithTooltip({
   text,
   children,
-  descriptionId,
+  drawnElsewhereId,
 }: WithTooltipProps): React.JSX.Element {
   const ownId = useId();
-  const id = descriptionId ?? ownId;
+  const id = drawnElsewhereId ?? ownId;
   return (
     <>
       <AriaTooltipTrigger delay={TOOLTIP_DELAY_MS} isDisabled={text === null}>
@@ -70,7 +74,7 @@ export function WithTooltip({
           {text}
         </AriaTooltip>
       </AriaTooltipTrigger>
-      {text !== null && descriptionId === undefined && (
+      {text !== null && drawnElsewhereId === undefined && (
         <span id={id} hidden>
           {text}
         </span>

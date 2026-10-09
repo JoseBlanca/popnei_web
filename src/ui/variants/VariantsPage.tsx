@@ -32,13 +32,18 @@
 import { useId, useRef, useState } from "react";
 
 import { analysisTabs } from "../../core/popgen2Tabs.ts";
-import type { AnalysisTabId, TabGreyed } from "../../core/popgen2Tabs.ts";
+import type {
+  AnalysisTabId,
+  PageTab,
+  TabGreyed,
+} from "../../core/popgen2Tabs.ts";
 import { classOf } from "../classOf.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import { ErrorBoundary } from "../shell/ErrorBoundary.tsx";
 import { StatusRegion } from "../shell/StatusRegion.tsx";
 import { useAppState } from "../store.tsx";
 import { Tabs } from "../widgets/Tabs.tsx";
+import type { TabItem } from "../widgets/Tabs.tsx";
 import {
   greyedText,
   ANALYSES_TABS_LABEL,
@@ -47,7 +52,6 @@ import {
   PCA_HEADING,
   POPULATIONS_NOT_BUILT,
 } from "./analysisTabsWords.ts";
-import type { PageTab } from "./analysisTabsWords.ts";
 import { IndividualsBox } from "./IndividualsBox.tsx";
 import { IndividualsTab } from "./IndividualsTab.tsx";
 import { INDIVIDUALS_TAB_CONTENT_NAME } from "./individualsWords.ts";
@@ -93,7 +97,9 @@ export function VariantsPage({
   );
   // The same object while the reasons are the same, so that a threshold
   // moved does not draw the row again.
-  const greyed = useAppState((s) => analysisTabs(s.project, s.individualsKept));
+  const tabReasons = useAppState((s) =>
+    analysisTabs(s.project, s.individualsKept),
+  );
   return (
     <>
       <main className={classOf(styles, "page")}>
@@ -187,19 +193,19 @@ export function VariantsPage({
             },
             analysisTab(
               "pca",
-              greyed.pca,
+              tabReasons.pca,
               <h2 className={classOf(styles, "boxHeading")}>{PCA_HEADING}</h2>,
             ),
             analysisTab(
               "populations",
-              greyed.populations,
+              tabReasons.populations,
               <p className={classOf(styles, "boxLine")}>
                 {POPULATIONS_NOT_BUILT}
               </p>,
             ),
             analysisTab(
               "distances",
-              greyed.distances,
+              tabReasons.distances,
               <p className={classOf(styles, "boxLine")}>
                 {DISTANCES_NOT_BUILT}
               </p>,
@@ -218,12 +224,7 @@ function analysisTab(
   id: AnalysisTabId,
   reason: TabGreyed | null,
   content: React.ReactNode,
-): {
-  readonly id: AnalysisTabId;
-  readonly label: string;
-  readonly content: React.ReactNode;
-  readonly greyed: string | null;
-} {
+): TabItem<AnalysisTabId> {
   const words = reason === null ? null : greyedText(id, reason);
   return {
     id,
@@ -234,6 +235,6 @@ function analysisTab(
       ) : (
         <p className={classOf(styles, "boxLine")}>{words}</p>
       ),
-    greyed: words,
+    greyedReason: words,
   };
 }

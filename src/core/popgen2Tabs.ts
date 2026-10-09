@@ -18,6 +18,10 @@ import type { Project } from "./project.ts";
 /** The ids of the three tabs of the analyses. */
 export type AnalysisTabId = "pca" | "populations" | "distances";
 
+/** The ids of the five tabs of the page, in their order: the two of the
+    files, then the three of the analyses. */
+export type PageTab = "variants" | "individuals" | AnalysisTabId;
+
 /** Why a tab of the analyses is greyed, each with what its words need;
     `name` is the file's name as the project holds it. */
 export type TabGreyed =
