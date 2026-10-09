@@ -403,13 +403,20 @@ The page keeps those changes from happening while a calculation runs,
 as the owner answered on 9 October 2026 (answer 2 of
 `docs/plans/analyses-pca.md`). While the PCA is `running`, its screen
 greys the filters the PCA reads, the thresholds and the FILTER box of
-the Variants tab, the column of the populations and the PCA's own
-options, with the words of `docs/specs/steps/popgen2-pca.md` (work
-package 6 of that plan); and the buttons and keys of Undo and Redo
-wait, as the download of the filtered variants waits (work package 4).
-The changes of the individuals file stay open, through `applyAfresh`
-(below), and leave the PCA running: its key holds neither the file nor
-its column (`docs/specs/analyses/pca.md`, "What goes into its key").
+the Variants tab and the PCA's own options, with the words of
+`docs/specs/steps/popgen2-pca.md`, "While a PCA runs"; and the buttons
+and keys of Undo and Redo wait, as the download of the filtered
+variants waits. The individuals file stays open to every change, its
+opening, its removal, its reader's options through `applyAfresh`
+(below), and the column of the populations through `apply`, and each
+leaves the PCA running: its key holds neither the file nor its column
+(`docs/specs/analyses/pca.md`, "What goes into its key"), which only
+colour its points. The owner's answer named the column of the
+populations among the filters to lock; the session asked on 9 October
+2026 whether it should be, since the PCA does not read it, and until
+the owner answers the page follows the session's recommendation, to
+lock only what the PCA reads (corrected on 9 October 2026, by task 6.1
+of that plan, from a list that held the column).
 The writing of the filtered variants takes the page out of reach in a
 modal dialog while it runs (`docs/specs/steps/popgen2-download.md`).
 So on that page no change the screen allows leaves a calculation

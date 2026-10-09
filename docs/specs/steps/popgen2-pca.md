@@ -233,9 +233,10 @@ greyed, and is still reached by the Tab key; its tooltip and its
 description for a screen reader are the reason it waits, "Stop the PCA
 to change the filters.", in place of its step; a click, Enter or Space
 on it does nothing; and the keys do nothing, as the table of the keys
-says. The page gives the reason, the words of the lock of the filters,
-which work package 6 of the plan settles. When the PCA ends or is
-stopped, each button is again as "When" and "What they say" give it.
+says. The reason is that of the lock of the filters, "Stop the PCoA to
+change the filters." under the PCoA (below, "While a PCA runs"; settled
+on 9 October 2026 by task 6.1 of the plan). When the PCA ends, fails or
+is stopped, each button is again as "When" and "What they say" give it.
 
 ### The row of tabs
 
@@ -341,20 +342,38 @@ Then three, in this order:
   of `src/ui/analyses/pca/commands.ts`, with `follow` false and the
   upper end of the field as the value: the Variants tab's, or 1 while
   that threshold is off. So the choice alone never changes the variants
-  the PCA reads; the user then lowers the number. A value typed before,
+  the PCA reads, nor its key, and a result of the PCA stays on the
+  screen; the user then lowers the number. While the Variants tab has
+  the threshold off, the PCA's own value of 1 is no filter, as a
+  threshold at 1 is off in the Variants tab (`THRESHOLD_OFF_AT` of
+  `src/core/project.ts`, the owner's decision of 7 October 2026), so
+  the PCA reads as the Variants tab until the user types a number below
+  1 (`pcaFilters`, `docs/specs/analyses/pca.md`, "On popgen2.html").
+  Until 9 October 2026 that value was a filter at 1, a new key for the
+  same variants of the missing data and a second run of minutes; the
+  review of work package 2 of the plan found it, and task 6.1 settled
+  it so. A value typed before,
   and set back by "As in the Variants tab", is not brought back: a value
   kept looser than the Variants tab of now would be shown as the
   Variants tab's anyway. Choosing "As in the Variants tab" sends
   `follow` true alone; the field goes.
 
+  The upper end and the decimals of the field are `stricterBound` of
+  `src/ui/analyses/pca/stricter.ts`, from the project and the decimals
+  of the step of the Variants tab's box of that threshold, which the
+  axis of its histogram gives once the one pass has drawn it; before
+  that, the decimals of the Variants tab's value, and at least two.
+
   A number above the upper end is refused with the line under the field,
   "0.2 is more than the 0.1 of the Variants tab; the maximum proportion
   of missing genotypes for the PCA stays 0.05.", "0.97 is more than the
   0.95 of the Variants tab; the maximum major allele frequency for the
-  PCA stays 0.9.", and sends nothing; below 0, or with more than two
-  decimals, the lines of the old panel. While the Variants tab has the
-  threshold off, the upper end is 1, and a number above it has the old
-  panel's line, "1.5 is more than 1; …".
+  PCA stays 0.9.", and sends nothing; below 0, or with more decimals
+  than the field takes, the lines of the old panel. While the Variants
+  tab has the threshold off, the upper end is 1, and a number above it
+  has the old panel's line, "1.5 is more than 1; …". These lines and the
+  line of the Variants tab stricter, below, are `stricterLines` of the
+  same module.
 
   **When the Variants tab becomes stricter** than the PCA's own value,
   the PCA uses the Variants tab's: the field shows that value, and under
@@ -412,7 +431,36 @@ reading of panel.nei. The components are calculated once it is read,
 and the bar does not move meanwhile: from under a second for 1,000
 individuals to minutes for several thousand.", the times measured on
 the old page in Chromium 153 and WebKit 26.6 on the owner's Mac on 29
-September 2026 (the design, "The memory and the time")
+September 2026 (the design, "The memory and the time").
+
+**While a PCA runs**, what it reads is locked, so that no change leaves
+it behind (the owner's answer 2 to `docs/plans/analyses-pca.md`, 9
+October 2026): the five thresholds of the Variants tab, their lines and
+their boxes, the FILTER box, and the PCA's own options, the method, the
+two groups of the missing data and the MAF with their fields, the LD
+switch and its two fields. Each is drawn greyed, carries
+`aria-disabled`, and is still reached by the Tab key, so that a user of
+the keyboard learns why; its tooltip, on the mouse, the focus and a
+press, and its description for a screen reader, are "Stop the PCA to
+change the filters.", "Stop the PCoA …" under the PCoA, the way the
+greyed tabs give their reason (`WithTooltip` of the widgets). A press, a
+key or a drag on it changes nothing. Undo and Redo wait with the same
+words (above, "Undo and Redo"), and so does the download of the
+filtered variants, with its own ("Its words"). When the PCA ends, fails
+or is stopped, each is as before.
+
+Not locked, since the PCA's key holds none of them: the box of the
+individuals file, its Open, its Remove, its reader's options and its
+"Column of the populations", which only colour the points and the
+counts; "Colour the points by", the axes, 3D or 2D and the buttons of
+the 3D view; the row of tabs; and the opening of another variants file,
+which stops the PCA, as an opening stops every calculation. The owner's
+answer named the column of the populations among the filters to lock;
+the session asked on 9 October 2026 whether it should be, since the PCA
+does not read it, and until the owner answers the page follows the
+session's recommendation, to lock only what the PCA reads (written on 9
+October 2026, by task 6.1 of the plan; until then this spec listed the
+column).
 
 **The result**, as the old panel shows it (`docs/specs/analyses/pca.md`,
 "What it shows"), with these differences:
@@ -431,7 +479,21 @@ September 2026 (the design, "The memory and the time")
   rings, in the place of the old "No population". With no individuals
   file, while it is read, after it was refused, or with None chosen,
   every point is in the one entry "Unclassified (200)". A colouring by a
-  column of values keeps the old "No value".
+  column of values keeps the old "No value". A population with no point
+  of the result, of the individuals file but with none of its
+  individuals in the variants file or among those the filters keep, has
+  no entry, where the old panel draws it with "(0)": its entry would
+  name a group the plot does not show, and with every point
+  unclassified the legend would list the file's populations at 0 under
+  "Unclassified (200)". Each population keeps its mark, the order of
+  first appearance in the file, so that a mark does not change when the
+  filters take a population's last individual and give it back (decided
+  on 9 October 2026 by task 6.1 of the plan, from the review of work
+  package 2). With no column of the populations chosen yet, or None,
+  every point is unclassified, and the note of a colour column the file
+  lacks says so ("Its words"), which fits what the plot then shows: the
+  one entry "Unclassified (200)" (`pcaColours` of core with page
+  `"popgen2"`, read on 9 October 2026).
 - **The explained variance**: the table of the old panel, with its
   caption, "The variance of the individuals explained by each
   component, of the 199 components of the PCA.", and for the PCoA its
@@ -516,16 +578,18 @@ greyed or shows its line of not built yet.
 | empty | the tab greyed, with its reason, as the row of tabs gives it; if it was shown when it became greyed, the reason in its place | open a variants file |
 | locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop" | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
 | ready | the options, the line of the individuals, Run | change the options; Run |
-| running | Stop, the bar and the clock, and the line under them; the options, whose change stops the PCA if it changes what the PCA reads | Stop; change the options, the thresholds, the FILTER box; turn to another tab, where the PCA goes on |
+| running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA to change the filters." (above, "While a PCA runs") | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
 | done | the result, its warnings and notes, the downloads | colour, turn, highlight, sort, download; change the options |
 | results removed | the options, the line of the individuals and Run, as in ready, with no words of why: the page makes no notice, as the owner decided on 8 October 2026; an Undo of the change, or the filters set back as they were, show the result again from the cache | Undo; Run |
 | error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 A change of the thresholds, of the FILTER box or of an option of the
 PCA that changes what the PCA reads, its key, takes a result off the
-screen and stops at once a PCA that runs. A change that does not, a
-threshold of the Variants tab moved while the PCA's own is stricter, the
-colour, the axes, the view, keeps both. Another individuals file, or
+screen. While a PCA runs no such change can be made, since they are
+locked; the store would stop it at once if one were. A change that does
+not, a threshold of the Variants tab moved while the PCA's own is
+stricter, the colour, the axes, the view, keeps the result on the
+screen. Another individuals file, or
 another column, colours the result again with no calculation. Another
 variants file stops the PCA and keeps its options.
 
@@ -548,7 +612,9 @@ individuals kept; `analysisTabs` of core for the row of tabs; the
 store's `undo` and `redo` and the run waiting on a threshold
 (`usePendingChange` of `src/ui/variants/runGate.tsx`) for Undo and
 Redo; the state of the one pass and of the code that starts it
-(`src/ui/autoRuns.ts`) for the lock of Run. It holds of its own the tab
+(`src/ui/autoRuns.ts`) for the lock of Run; and the state of `pca`,
+running or not, for the lock of the filters and the wait of Undo and
+Redo. It holds of its own the tab
 shown, the sort and the scroll of each table, the group highlighted,
 the turn and the zoom of the 3D view, and the words of a PNG refused
 until the next choice of that menu (`docs/architecture.md`, section 7).
@@ -583,9 +649,11 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the lock and the help of the one pass | the table of "Run and Stop" |
 | an error, a refusal of the variants file itself, which the one pass would have met first | the words of the box Variants file (`src/core/analyses/fileRefusals.ts`), with "in the box Variants file" after "open it again" and "Open another variants file", and "so the PCA cannot be calculated" where the box says the variants cannot be counted: "panel.nei has no variants. Open another variants file in the box Variants file."; "panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants file.", for a gzipped file cut short or a damaged batch of a `.nei` file; a variant at position 0, a position beyond 2,147,483,647, a genotype of another ploidy, and a line of the VCF popnei cannot read, each ending "and open it again in the box Variants file." |
 | an error, the statistics of each individual refused | "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so the PCA was not run.", or "… so the PCA cannot run." when its own Run did not wait for them, followed by the row above with "so the statistics of each individual cannot be calculated", or, for another refusal, "popnei could not read panel.nei: ‹popnei's words›. Open the file again in the box Variants file, or another file." |
-| the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with one population, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
+| an error, a failure that is not popnei's refusal, in this page's words where the old panel's name the Variants step or a project to save (`popgen2FailureText` of `src/ui/analyses/words.ts`; since 9 October 2026, by task 6.1 of the plan, from the review of work package 2, which found the old words on this page) | the variants file changed on the disk since the one pass read it, a failure and not a refusal, "panel.nei could not be read again; it may have changed on the disk since it was opened. Open it again in the box Variants file."; an error of the application's own, "The application met an error of its own: ‹its words›. Run it again."; the calculations that could not start, "The application could not start its calculations. Reload the page and open panel.nei again."; the page out of date, "The page is out of date. Reload the page and open panel.nei again."; the worker that stopped, the PCA's own words of the memory, `crashText` of core with the page |
+| the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with None, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
+| the thresholds and the FILTER box of the Variants tab, the PCA's options, Undo and Redo, while a PCA runs, as tooltip and description | "Stop the PCA to change the filters."; under the PCoA, "Stop the PCoA to change the filters." |
 | the button of a download | "Download…", named for a screen reader "Download the plot of the proportion of missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries; but "Download the plot of the unbiased expected heterozygosity of the variants", whose title says "Expected heterozygosity (unbiased)", and "Download the counts per population of panel_pops.csv", whose caption names the individuals of the variants file |
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting, and the menu of the counts per population | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants file says why." |
@@ -713,12 +781,21 @@ its reason; Undo read with its step; a menu of a download.
 - The descriptions of the PCA's commands on this page, method by
   method, from `src/ui/analyses/pca/commands.ts` given the page;
   `stricterCommand` sets `follow` and the value in one step.
-- `stricterBound(p, kind)` of `src/ui/analyses/pca/stricter.ts`, the
-  upper end and the decimals of each field, and `stricterLines`, the
-  line of a refusal and the line of the Variants tab stricter: the
-  Variants tab at 0.1, at 0.0035, off.
+- `stricterBound(p, kind, stepDecimals)` of
+  `src/ui/analyses/pca/stricter.ts`, the upper end and the decimals of
+  each field, and `stricterLines`, the line of a refusal and the line of
+  the Variants tab stricter: the Variants tab at 0.1, at 0.0035, off;
+  the decimals of the step of the Variants tab's box given and not
+  given. (`stepDecimals` since 9 October 2026, by task 6.1 of the plan:
+  the decimals of the box come from the axis of its histogram, which the
+  project alone does not give.)
+- `pcaFilters` with page `"popgen2"`, an own value of 1 while the
+  Variants tab has the threshold off: no filter, the key of the PCA as
+  when it follows.
 - `passLock`: running, about to start, stopped by the user, failed with
   Start again offered, refused by popnei, read to the end.
+- The words of the lock of the filters by the method, and
+  `popgen2FailureText` for each failure that is not popnei's refusal.
 - Undo and Redo, with the real store of the page and a fake worker:
   nothing to undo after the store is made, after `panel.nei` is opened,
   and after an individuals file is opened, read and given its column;
@@ -768,10 +845,13 @@ engines that start on the owner's Mac, on `panel.nei`,
   "7.87%", "0.047", "53%" and "0.22", and the line under the explained
   variance with "0.047" and "198 components".
 - **A change during a run**: a PCA held running: the thresholds and the
-  FILTER box of the Variants tab, the column of the populations and the
-  PCA's own options greyed, with "Stop the PCA to change the filters"
-  (words to be settled in work package 6); Ctrl+Z undoes nothing while
-  it runs; an opening of another variants file stops it, the tab
+  FILTER box of the Variants tab and the PCA's own options greyed, each
+  with `aria-disabled="true"`, reached by the Tab key, and "Stop the PCA
+  to change the filters." as its tooltip and description; a press, a
+  key or a drag on one changes nothing; the column of the populations
+  and "Colour the points by" not greyed, a column chosen leaving the PCA
+  running; Undo greyed with the same words, and Ctrl+Z undoes nothing
+  while it runs; an opening of another variants file stops it, the tab
   ready.
 - **Undo and Redo**: no button when the page opens, after `panel.nei`,
   and after `panel_pops.csv`; a threshold moved: Undo, with its tooltip
@@ -821,8 +901,9 @@ these values.
 
 **The screens**, `--project=screens`: the row with greyed tabs and a
 tooltip shown; the PCA tab locked, ready, running, done in 3D and in
-2D, with the PCoA's warning; a menu of a download open; Undo alone, and
-Undo with Redo; light and dark; 1280 and 320 px.
+2D, with the PCoA's warning; a menu of a download open; Undo alone,
+Undo with Redo, and Undo waiting while a PCA runs,
+`popgen2-undo-waiting`; light and dark; 1280 and 320 px.
 
 **By hand**, in the plan: the memory and the time of a PCA and a PCoA
 of 1,000, 4,000 and 9,381 individuals after the one pass of the same
@@ -849,7 +930,11 @@ Redo back with Undo, shown by the same rule; their places that stay
 empty; the keys caught on the whole page; the removal of the individuals
 file and a change of its reader as no steps; the filters a running PCA
 reads locked, and Undo and Redo waiting while it runs (the owner's
-answer 2 of 9 October 2026); and the words.
+answer 2 of 9 October 2026), and the column of the populations left
+open meanwhile, pending the owner's answer to the session's question of
+the same day; "Stricter for the PCA" at 1 while the Variants tab has the
+threshold off, read as no filter; a population with no point left out
+of the legend; and the words.
 
 ## Left for the running application
 
