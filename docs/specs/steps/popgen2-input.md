@@ -209,8 +209,10 @@ Under the table, the first that holds:
   empty cell in popcat and 4 that are not in panel_pops.csv: s031, s044,
   s102 and 1 more." The count and its causes are of the individuals
   kept; the names are of the kept not in the file. Each part is left out
-  when its count is 0; past
-  three names, the count of the rest. One individual: "1 individual".
+  when its count is 0, and the one cause left needs no count of its own:
+  "…: 3 individuals with an empty cell in popcat.", "…: 1 individual that
+  is not in panel_pops.csv: s031."; past three names, the count of the
+  rest. One individual: "1 individual".
 - no individual of the variants file in the individuals file, the table
   then empty and not drawn: the warning "Warning: none of the 200
   individuals of panel.nei is in panel_pops.csv, so all of them are
@@ -219,7 +221,8 @@ Under the table, the first that holds:
   panel_pops.csv with S-000."
 - every individual kept unclassified, for another cause, the table not
   drawn: "All 200 individuals kept are unclassified, and the analyses per
-  population will take them as one population."
+  population will take them as one population."; for one, "The one
+  individual kept is unclassified."
 
 Last, always with a variants file read: "Individuals of panel_pops.csv
 not in panel.nei: 18", 0 written too, which no filter changes.
