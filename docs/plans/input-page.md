@@ -596,7 +596,7 @@ Deliverables:
 2. `populationCounts`: each case of the same section for it, the
    statistics of `panel.nei`'s one pass taken from
    `e2e/fixtures/panel_individual_stats.json` or written by popnei 0.2.2
-   under node, with the missing rate at 0.1, each count equal to the
+   under node, with the missing rate at 0.03, each count equal to the
    length of that population in `populationsKept` with the list of
    `individualsKept`; under `IN4 D2`.
 3. The same object, under `IN4 D3`: the same inputs twice give the same
@@ -709,7 +709,7 @@ Deliverables:
    in either order with p0 48, p2 84 and p1 68; the column chosen for
    each fixture it names; the unclassified and their names; the warnings
    of none in the file and of 21 values; "None" kept through a change of
-   separator; the counts at the missing rate 0.1, then "…" and the line
+   separator; the counts at the missing rate 0.03, then "…" and the line
    of waiting while the pass is held by `e2e/holdWorker.ts`, the line
    after Stop, and the counts at Start again's end; a file opened while
    the one pass runs, the pass going to its end with no second pass;
@@ -720,7 +720,7 @@ Deliverables:
    populations; table_io requested once at the first read; axe on each
    state of the box and of the tab, light and dark.
 3. The counts against the download: at the missing rate of the
-   individuals at 0.1, the sum of the counts and of the unclassified
+   individuals at 0.03, the sum of the counts and of the unclassified
    kept equals the individuals the text after a download of the
    filtered variants says it kept, under `IN6 D3`. A difference is a
    stop (above).
