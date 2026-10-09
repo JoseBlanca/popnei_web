@@ -61,7 +61,7 @@ link, `npm link`
 or `"file:../popnei/js/popnei"`, does not do: the development server
 refuses to serve popnei's `.wasm` through it, "403 Forbidden", and
 `../popnei` names no folder from a worktree, as the specs of stage 4 found
-on 28 September 2026. The same holds for xlsx_rs. A session that needs something popnei does not have
+on 28 September 2026. The same holds for table_io, the reader of the individuals file, named xlsx_rs until 2 October 2026, whose source is at `~/devel/xlsx_rs`. A session that needs something popnei does not have
 says so and does not work around it in the application, because the
 numbers of the applications are popnei's, verified there.
 

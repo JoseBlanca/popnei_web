@@ -1,6 +1,6 @@
 ---
 name: coding
-description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers, one that runs the wasm package of popnei and a light one for the files of the user, which loads the wasm package of xlsx_rs for an xlsx. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
+description: How code is written in popnei_web, the static web applications of popnei, in TypeScript with React, D3, three.js and two web workers, one that runs the wasm package of popnei and a light one for the files of the user, which loads the wasm package of table_io to read the individuals file, CSV, TSV or xlsx. Use it before writing or changing any code or test of popnei_web. It covers the layers and what each may import, the order of the work, the core layer, dependencies and the checks to run before the work is called done, and it points to typescript.md, the rules of the language and of errors that every session reads with it, and to the topic file of each layer, react.md, css.md, charts.md, worker.md and testing.md, beside it.
 ---
 
 # Coding
@@ -13,9 +13,10 @@ that reads the individuals file and writes the xlsx and the zip, and the
 messages the page and they exchange; `src/charts`, the plots, functions
 over D3 and three.js; and `src/ui`, the React screens. There is no Rust
 here: the two wasm modules the workers load come as packages from their
-releases, popnei's, and xlsx_rs's, the project of its own that reads, and
-from stage 6 writes, an xlsx for the light worker, which calls it the
-files wasm (`docs/architecture.md`, section 6). What the applications do is in `docs/functionality.md`, and
+releases, popnei's, and table_io's, the project of its own (xlsx_rs
+until 2 October 2026) that reads every individuals file, CSV, TSV or
+xlsx, and from stage 6 writes an xlsx, for the light worker, which calls
+it the files wasm (`docs/architecture.md`, section 6). What the applications do is in `docs/functionality.md`, and
 what they are built with, and why, in `docs/technology.md`.
 
 `src/core` is where a mistake gives a wrong result: a stale number shown
@@ -54,7 +55,7 @@ import:
 | layer | may import | must not import |
 |---|---|---|
 | `src/core` | itself; the types of `src/worker/protocol.ts` and its constants; from stage 4, `src/worker/individuals/columnTypes.ts`, the reader's pure functions of the numbers and the types of a column, for `columnAllows` and the colours of the PCA (`configs.md`); the types of `popnei` | `src/ui`, `src/charts`, `src/worker/client.ts`, `src/worker/messages.ts`, `src/worker/start.ts`, `src/worker/runner.ts`, `src/worker/filesRunner.ts`, React, D3, three.js, a value of `popnei` |
-| `src/worker` | itself; `popnei`, in `runner.ts` only; `xlsx_rs`, the files wasm, in `filesRunner.ts` only; the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
+| `src/worker` | itself; `popnei`, in `runner.ts` only; `table_io`, the files wasm, in `filesRunner.ts` only (its types anywhere in the worker); the types of `src/core/result.ts` | anything else of `src/core`, `src/ui`, `src/charts`, React, D3, three.js |
 | `src/charts` | itself; D3; three.js | `src/core`, `src/ui`, `src/worker`, React, a value of `popnei` |
 | `src/ui` | everything above; React; React Aria | `src/worker/runner.ts`, `src/worker/filesRunner.ts`, D3, three.js, a value of `popnei` |
 
@@ -314,22 +315,24 @@ possible break and a possible abandonment.
   installed with `npm install --no-save` and the absolute path of the
   `.tgz`, which copies it into `node_modules/` and changes neither
   `package.json` nor the lockfile; never linked, for the reasons given
-  under xlsx_rs below. A newer popnei is a new tag there and a new URL
+  under table_io below. A newer popnei is a new tag there and a new URL
   here, in a commit of its own that says what changed in popnei.
-- **xlsx_rs comes from a GitHub Release too**, in the same way, as
-  section 5 of `docs/technology.md` has it since 28 September 2026: a URL
-  of the `.tgz` of a tag of xlsx_rs in `package.json`, and a newer
-  xlsx_rs in a commit of its own. For work on both at once, the local
-  build is packed with `npm pack` in xlsx_rs and installed with `npm
+- **table_io comes from a GitHub Release too**, in the same way, as
+  section 5 of `docs/technology.md` has it since 28 September 2026, when
+  it was named xlsx_rs: a URL of the `.tgz` of a tag of table_io in
+  `package.json`, and a newer table_io in a commit of its own. Its
+  source is checked out at `~/devel/xlsx_rs`. For work on both at once,
+  the local build is packed with `npm pack` in table_io's `js/table_io`
+  and installed with `npm
   install --no-save` and the absolute path of the `.tgz`, which copies it
   into `node_modules/` and changes neither `package.json` nor the
   lockfile. Not a link, `npm link` or a `file:` path: the development
   server refuses to serve a `.wasm` whose real folder is outside the
-  repository, "403 Forbidden", and `../xlsx_rs` names no folder from a
+  repository, "403 Forbidden", and a path of a sibling folder names no folder from a
   worktree (`docs/architecture.md`, section 6). A link of popnei meets
-  the same 403 in the development server. A fix of how an
-  xlsx is read is made in xlsx_rs, by its own skills, and not worked
-  around in the light worker.
+  the same 403 in the development server. A fix of how a
+  CSV, TSV or xlsx is read is made in table_io, by its own skills, and
+  not worked around in the light worker.
 
 ## Tools
 
@@ -349,7 +352,7 @@ npm test
 npm run build
 npm run test:e2e
 npm pkg get dependencies.popnei
-npm pkg get dependencies.xlsx_rs
+npm pkg get dependencies.table_io
 ```
 
 The scripts are those of `configs.md`: `prettier --check .`; `tsc -b`, `eslint --max-warnings=0 .`, `vitest run`, `vite
@@ -362,10 +365,9 @@ the unit tests load. The tests in a browser, `test:e2e`, run for a change
 to `src/core` too, because core reaches the screens through the store;
 `testing.md` says how.
 
-The last two print the dependencies on popnei and on xlsx_rs, which have
+The last two print the dependencies on popnei and on table_io, which have
 to be URLs of `https://github.com/JoseBlanca/popnei/releases/download/`
-and `https://github.com/JoseBlanca/xlsx_rs/releases/download/`; until
-stage 4 adds xlsx_rs, the second prints nothing. A local build installed
+and `https://github.com/JoseBlanca/table_io/releases/download/`. A local build installed
 with `npm install --no-save` leaves the URL in place, so the check
 passes over it; a `file:` path or a link printed there is a local build
 that must not be committed.

@@ -176,10 +176,10 @@ finding: a name you would choose differently that says the same.
   from nowhere else; popnei is imported by the calculation worker's runner
   alone, never by the light worker or the reader of
   `src/worker/individuals/`.
-- The files wasm is the package of xlsx_rs, named in `package.json` by
+- The files wasm is the package of table_io, named in `package.json` by
   the URL of a release, never by a `file:` path, and imported by its name
-  with `import()` in `filesRunner.ts` alone. How it reads an xlsx is
-  reviewed in xlsx_rs, not here; a fix of it worked around in the light
+  with `import()` in `filesRunner.ts` alone. How it reads a CSV, TSV or
+  xlsx is reviewed in table_io, not here; a fix of it worked around in the light
   worker is a finding.
 - Adding an analysis added its module and its panel and changed nothing
   else, as section 4 says; a change outside is a finding or a reason
@@ -358,8 +358,9 @@ and `worker.md` where they say what is loaded when.
   taken. A development dependency among the dependencies of the site.
 - The size: the output of `npm run build` before and after, gzipped,
   for the file that each page loads first and for each lazy chunk.
-- What is loaded when: the files wasm is fetched only when an xlsx is
-  read or the report is written, so a run with a CSV makes no request
+- What is loaded when: the files wasm is fetched only when an
+  individuals file is read or the report is written, so a run with no
+  individuals file makes no request
   for it, and the light worker never requests popnei's wasm; check it
   with the requests logged by Playwright. The same for
   any chunk the `coding` skill says is loaded lazily.

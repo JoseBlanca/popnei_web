@@ -44,6 +44,9 @@ instead of the folder of the crate. The code of the repository still has
 those lines of `.gitignore`, ESLint and Vite, and the comment at the head
 of `.github/workflows/site.yml` that says the Rust setup comes with the
 files crate, and the work package that adds xlsx_rs takes them out.
+xlsx_rs was renamed table_io on 2 October 2026, and table_io reads every
+individuals file, CSV, TSV and xlsx, since 9 October 2026
+(`docs/plans/input-page.md`, work package 1).
 
 The configuration of Vitest and of Playwright is in `testing.md`.
 
@@ -82,7 +85,7 @@ install on a Node older than `engines` fail instead of warn.
 }
 ```
 
-- No script builds or tests a wasm: popnei's and xlsx_rs's come built,
+- No script builds or tests a wasm: popnei's and table_io's come built,
   from their releases, and are tested in their own repositories
   (`docs/technology.md`, section 5).
 - `private` keeps it from being published to npm by mistake.
@@ -467,8 +470,10 @@ const testOnly = {
   message: "Only the tests import testSupport.ts, fast-check and Vitest.",
 };
 const filesWasm = {
-  group: ["xlsx_rs", "xlsx_rs/*"],
-  message: "Only src/worker/filesRunner.ts calls the files wasm.",
+  group: ["table_io", "table_io/*"],
+  allowTypeImports: true,
+  message:
+    "Only src/worker/filesRunner.ts loads the files wasm, table_io; elsewhere import its types.",
 };
 const client = {
   group: ["**/worker/client*", "**/worker/messages*", "**/worker/start*"],
@@ -510,8 +515,8 @@ const workerLoaded = {
 // The same for the files wasm, which filesRunner.ts alone loads, and only
 // with import() (worker.md, "The files wasm, on first need").
 const filesWasmImportCall = {
-  selector: "ImportExpression[source.value='xlsx_rs']",
-  message: "Only src/worker/filesRunner.ts loads the files wasm, xlsx_rs.",
+  selector: "ImportExpression[source.value='table_io']",
+  message: "Only src/worker/filesRunner.ts loads the files wasm, table_io.",
 };
 const noPopneiImportCall = [
   "error",
@@ -1123,7 +1128,7 @@ export default defineConfig(
   passed the lint; with the rule each failed. A rule of syntax matches
   the text of the call, so an `import()` of a variable is not caught;
   none of ours needs one.
-- `filesWasmImportCall` refuses `import("xlsx_rs")`, the files wasm,
+- `filesWasmImportCall` refuses `import("table_io")`, the files wasm,
   everywhere but `src/worker/filesRunner.ts`, which loads it only so, on
   first need; its block has `noPopneiImportCallButFiles`, and the blocks
   of `src/worker/start.ts` and of the probe, which give the rule lists of

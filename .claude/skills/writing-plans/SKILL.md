@@ -154,7 +154,7 @@ Each work package has:
   analysis calls among them. The walking skeleton stands on nothing that
   popnei 0.1.0 lacks, and it reads its individuals file as a CSV, so it
   does not need the files wasm either, which comes with the first work
-  package that reads an xlsx, and stands on a release of xlsx_rs
+  package that reads an xlsx, and stands on a release of xlsx_rs (table_io since 2 October 2026)
   (`docs/architecture.md`, sections 6 and 10).
 - **Its tasks.**
 - **What could go wrong**, when something is known: the part of the spec

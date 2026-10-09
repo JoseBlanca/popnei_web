@@ -28,8 +28,8 @@ timing, and when it fails says only that something on the path broke.
 | part | tool | environment | what it checks |
 |---|---|---|---|
 | `src/core` | Vitest | node | the project and its commands, the keys, undo, the cache, the project file, the script; examples and properties |
-| `src/worker` | Vitest | node | the protocol, the client's queues, progress, cancelling and restart against fake workers, and the reader of CSV and TSV with the inference of the types of the columns |
-| the light worker with the files wasm | Playwright | browser | an xlsx read, and from stage 6 a report written, through the real package of xlsx_rs, loaded on first need |
+| `src/worker` | Vitest | node | the protocol, the client's queues, progress, cancelling and restart against fake workers, and the reading of the individuals file through the real package of table_io, with the inference of the types of the columns |
+| the light worker with the files wasm | Playwright | browser | an individuals file read, CSV, TSV or xlsx, and from stage 6 a report written, through the real package of table_io, loaded at each read |
 | `src/charts`, 2D | Vitest | jsdom | the SVG each plot function builds, its update and its removal |
 | `src/charts/pca3d.ts`, the PNG export | Playwright | browser | what needs WebGL or a canvas, which jsdom does not have |
 | `src/ui` | Playwright | browser | the screens, as part of the flows of the use cases |
@@ -103,13 +103,13 @@ tested in node. The tests give popnei the bytes of a fixture, a
 `FileReaderSync`; a `File` read by ranges is checked by the Playwright
 flow (`docs/specs/worker/runner.md`). The reader of the
 individuals file, `src/worker/individuals/`, is pure TypeScript and is
-tested in node over the text of CSV and TSV files, as `worker.md` lists.
-What the light worker does with the files wasm, the package of xlsx_rs,
-is tested here twice: `readXlsxCells`, which makes of what the package
-returns the cells or a refusal, under Vitest with an object of the test
-in its place, and the real package in the worker by Playwright. How it
-reads each kind of cell is tested in xlsx_rs, with `cargo test` and the
-owner's files (`docs/specs/worker/files.md`). What node does not have is the
+tested in node over the typed cells of the files, as `worker.md` lists.
+What the light worker does with the files wasm, the package of table_io,
+is tested here twice: `readIndividualsFile` and `readOfTable`, which make
+of what the package returns the table or a refusal, under Vitest with the
+real package loaded in node or an object of the test in its place, and
+the real package in the worker by Playwright. How it reads each kind of
+cell is tested in table_io, with `cargo test` and the owner's files. What node does not have is the
 browser's `FileReaderSync`, so the reading of a user's `File` and the real
 passing of messages between two threads are tested only by Playwright, in
 the flows.
@@ -725,15 +725,16 @@ has a `timeout-minutes`, 20 for e2e and 10 for the others, so that a
 browser that hangs stops the run instead of holding a runner for six
 hours.
 
-The workflow needs no Rust at any stage: the reader of xlsx, from stage
-4, is the package of xlsx_rs, a project of its own, which `npm ci`
+The workflow needs no Rust at any stage: the reader of the individuals
+file is the package of table_io (xlsx_rs until 2 October 2026), a
+project of its own, which `npm ci`
 installs from its release as it installs popnei's (`docs/architecture.md`,
 section 6). A Rust setup, with its cache, its toolchain and wasm-bindgen's
 command line, was specified for a crate of this repository from 27 to 28
 September 2026 and taken out when the owner moved the reader to xlsx_rs.
 
-`npm ci` installs the wasm packages of popnei and, from stage 4, of
-xlsx_rs from their GitHub Releases, by the URL and the hash of the
+`npm ci` installs the wasm packages of popnei and of table_io from their
+GitHub Releases, by the URL and the hash of the
 lockfile (`docs/technology.md`, section 5), so the workflow needs no
 token and no checkout of either.
 

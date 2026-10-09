@@ -29,8 +29,9 @@ src/worker/xlsxCells.ts    the cells of an xlsx or its refusal, from what the
                            files wasm returns, with no wasm in it
 ```
 
-The files wasm is the package `xlsx_rs`, installed from a release of
-xlsx_rs, a project of its own, and imported only by `filesRunner.ts`.
+The files wasm is the package `table_io`, installed from a release of
+table_io, a project of its own (named xlsx_rs until 2 October 2026), and
+imported only by `filesRunner.ts`.
 
 `protocol.ts` and `messages.ts` are apart because core imports the types
 of the first and is checked with no DOM (`configs.md`), while a message
@@ -58,9 +59,10 @@ package does not have yet.
   a job of a second (`docs/architecture.md`, section 5).
 - **The light worker holds no popnei.** CSV and TSV, and the inference of
   the types of the columns, are TypeScript of ours, as the owner decided
-  on 24 September 2026, and the xlsx is the files wasm, the package of
-  xlsx_rs, a project of its own, as the owner decided on 28 September
-  2026 (`docs/architecture.md`, section 6). So it neither
+  on 24 September 2026, and every individuals file, CSV, TSV or xlsx, is
+  read by the files wasm, the package of table_io, a project of its own,
+  as the owner decided on 28 September 2026 for the xlsx and on 9 October
+  2026 for every format (`docs/architecture.md`, section 6). So it neither
   imports popnei nor compiles its wasm, and the lint keeps popnei out of
   it (`configs.md`).
 - **Not a pool of calculation workers**, which would run two analyses at
@@ -303,24 +305,19 @@ export function createClient(make: {
   was picked. Load it again in the Variants step." The runner tells it
   from a refusal of the data by popnei's message
   (`docs/specs/worker/runner.md`).
-- **A refusal of the files wasm is a value too.** A file xlsx_rs
-  refuses for a reason the user can mend, not a zip, an old `.xls`, a
-  password, an empty first sheet, an error cell calamine does not know,
-  a sheet too large, is a code in the struct `readXlsx` returns, with
-  the fields its words need, and `filesRunner.ts` makes of it the kind of
-  `IndividualsFileError` it names; only a file calamine cannot open
-  throws, a `Result` whose error wasm-bindgen turns into a JavaScript
-  `Error` with calamine's message, which `filesRunner.ts` catches at the
-  call and gives as the refusal `files` with that message
-  (`docs/specs/worker/files.md`, xlsx_rs's spec, "The Rust
-  interface"). Either way the
+- **A refusal of the files wasm is a value too.** A file table_io
+  refuses for a reason the user can mend, a CSV with a ragged row or an
+  unclosed quote, not a zip, an old `.xls`, a password, an empty first
+  sheet, a sheet too large, is a kind of refusal in what `importTable`
+  returns, with the fields its words need and the format it found, and
+  `readOfTable` of `src/worker/individualsFile.ts` makes of it the kind of
+  `IndividualsFileError` it names; a file the browser cannot read is
+  `unreadable`, and a package that did not load is `readerNotLoaded`. The
   read answers `individuals` with a failed read, and the worker goes on.
-  A file that the reader of CSV and TSV refuses is not an error of the
-  run either: the reader returns a `Result`, and the job gives it back as
-  its result, the table or the ways the file is wrong, which the module
-  spec of the reader lists. Decided on 27 September 2026 with the specs
-  of stage 4, where this bullet had every error of the files wasm sent as
-  `files` with its message.
+  A kind of refusal the page does not know, or a throw of `importTable`,
+  is a defect, which the runner answers `crashed`
+  (`docs/specs/worker/individuals.md`). Decided on 27 September 2026 with
+  the specs of stage 4, and on 9 October 2026 for table_io.
 - **A trap of the wasm is fatal for the worker.** A panic of Rust in wasm
   is a `WebAssembly.RuntimeError`, and after one the memory of the wasm
   keeps what it held and an object that was borrowed stays borrowed
@@ -461,84 +458,87 @@ const ready = init().then(() => {
 
 ### The files wasm, on first need
 
-The second wasm module, the reader of xlsx, is the package of xlsx_rs, a
-project of its own that releases it as popnei releases its own;
-`package.json` names a release by its URL, and `npm ci` installs it into
-`node_modules/` (`docs/architecture.md`, section 6; `docs/technology.md`,
-section 5). It is loaded the first time a request needs it, so that a
-user of CSV files never downloads it.
+The second wasm module, the reader of every individuals file, CSV, TSV or
+xlsx, is the package of table_io, a project of its own (xlsx_rs renamed
+and widened on 2 October 2026) that releases it as popnei releases its
+own; `package.json` names a release by its URL, and `npm ci` installs it
+into `node_modules/` (`docs/architecture.md`, section 6;
+`docs/technology.md`, section 5). It is loaded at the first read of an
+individuals file, so that a user who opens none never downloads it.
 
 - **Both its JavaScript and its wasm are loaded on first need**, in the
   light worker only. The worker is built as a module worker (section "How
   Vite builds the workers"), whose bundle Vite splits, so `filesRunner.ts`
-  imports the package with a dynamic `await import("xlsx_rs")`, which
+  imports the package with a dynamic `await import("table_io")`, which
   Vite makes a chunk of its own, and calls its default export, the `init`
   that `wasm-bindgen --target web` generates, which fetches the `.wasm`
-  from `new URL("xlsx_rs_bg.wasm", import.meta.url)` as popnei's loader
+  from `new URL("table_io_bg.wasm", import.meta.url)` as popnei's loader
   does. That Vite 8.3.0 does so for a package of `node_modules/`, and
   finds its `.wasm` in the build and in the development server, was tried
   on 28 September 2026 with popnei's package in its place, in Chromium
   and WebKit (`docs/architecture.md`, section 6).
-  What weighs is the `.wasm`, 0.30 MB gzipped while it only reads,
-  calamine alone, 295,475 and 295,521 bytes with `gzip -9` in the two
-  crates of trial of 27 September 2026 (`docs/specs/worker/files.md`), and about 0.58 MB once
-  the writer joins it for the report in stage 6
-  (`docs/technology.md`, section 2); the JavaScript that wasm-bindgen
-  generates is 2,962 bytes gzipped in that trial, and it no longer rides
-  in the worker's first file. A static `import` of it would put that
+  What weighs is the `.wasm`, 651,680 bytes, 330,425 with `gzip -9`, and
+  its JavaScript 3,196 bytes gzipped, measured on table_io's release
+  `js-v0.2.0-dev.1` on 9 October 2026 (`docs/plans/input-page.md`, work
+  package 1); the JavaScript no longer rides in the worker's first
+  file. A static `import` of it would put that
   JavaScript back into the first file.
 - `filesRunner.ts` keeps one promise, `filesReady ??= loadFiles()`, where
-  `loadFiles` does the import and the `init()`, and awaits it in the
-  handlers that read an xlsx or write a report, as popnei's own `init`
-  does. A CSV or TSV of the individuals, and the inference of the types of
-  its columns, are read by the TypeScript of `src/worker/individuals/`
-  and never load the files wasm (`docs/architecture.md`, section 6).
+  `loadFiles` does the import and the `init()`, and awaits it at every
+  read of an individuals file, as popnei's own `init` does. The inference
+  of the types of the columns stays TypeScript of ours, in
+  `src/worker/individuals/`, over the typed cells `importTable` gives
+  (`docs/architecture.md`, section 6).
+- **The light worker is ended after every read** of a file that is not
+  empty, `READ_RESTART_BYTES = 0` in `src/worker/client.ts`: the memory
+  of table_io's wasm never shrinks, and a read of 1 MB left 47 to 76 MB
+  in Chromium and 32 to 52 MB in WebKit that only the end of the worker
+  gives back (measured on 9 October 2026, `docs/specs/worker/individuals.md`,
+  "How it runs"). So each read loads the package again; WebKit fetches
+  the `.wasm` again where Chromium takes it from its cache.
 - **A load that fails is a value, and is tried again.** When the
   `import()` or the `init()` rejects, a network that drops or a page
   left open across a deploy whose files are gone, the promise is reset,
-  `filesReady = null`, so that the next xlsx tries again, and the read
-  answers the failed read `xlsxReaderNotLoaded`, with the browser's
-  message for the console; the worker goes on, since a failed load leaves
-  no wasm behind and a CSV can still be read. It is not
+  `filesReady = null`, so that the next read tries again, and the read
+  answers the failed read `readerNotLoaded`, with the browser's message
+  for the console; the worker goes on, since a failed load leaves no
+  wasm behind. It is not
   `crashed`, which a popnei that does not load is for the calculation
   worker, which can do nothing without it (`docs/specs/worker/files.md`,
-  `docs/specs/worker/individuals.md`, "The package of xlsx_rs, loaded on
-  first need"; decided on 27 September 2026).
+  `docs/specs/worker/individuals.md`; decided on 27 September 2026).
   A browser may keep an `import()` whose download failed as failed for
   the life of the worker, as the HTML standard has it, so that the next
-  try fails with no request; the words of `xlsxReaderNotLoaded` then
+  try fails with no request; the words of `readerNotLoaded` then
   tell the user to save the project and reload, and a Playwright test
   finds which engines do it (`docs/specs/worker/individuals.md`).
 - **What the files wasm returns is made a plain value outside the
-  runner**, by `readXlsxCells` of `src/worker/xlsxCells.ts`, which takes
-  the files wasm's `readXlsx` as an argument and so runs under Vitest with
-  an object of the test in its place: the codes of refusal, the `Error`
-  that is `files`, the `free()` in a `finally`, and the defects it
-  throws for (`docs/specs/worker/individuals.md`, "The package of
-  xlsx_rs, loaded on first need").
+  runner**, by `readIndividualsFile` and `readOfTable` of
+  `src/worker/individualsFile.ts`, which take the files wasm's
+  `importTable` as an argument and so run under Vitest with the real
+  package or an object of the test in its place: the kinds of refusal,
+  the `free()` in a `finally`, and the defects they throw for
+  (`docs/specs/worker/individuals.md`).
 
 ### The reader of the individuals file
 
-`src/worker/individuals/` reads a CSV or TSV into the table of the
-project and infers the types of its columns, as section 4 of
-`docs/functionality.md` lists: the separator detected, `,`, `;` or a tab;
-decimals with a comma; a BOM removed; an empty cell, `NA` and `-` as
-missing. The inference takes the cells of a CSV, all text, or those of an
-xlsx as the files wasm gives them, numbers, text, booleans or empty, so
-both formats give the same types.
+table_io reads a CSV, TSV or xlsx into typed cells, numbers, text,
+booleans or empty, as section 4 of `docs/functionality.md` lists: the
+separator detected, `,`, `;` or a tab; decimals with a comma; a BOM
+removed; an empty cell, `NA` and `-` as missing. `src/worker/individuals/`
+makes of them the table of the project and infers the types of its
+columns, the same for every format.
 
 - **It is pure.** It takes text, or cells, and returns a `Result` of the
   table, with no DOM, no global of a worker, no popnei and no files wasm,
   which the lint and `tsconfig.core.json` check (`configs.md`). The type
   of the table is in `protocol.ts`, as `VariantFilter` is, so core and the
   reader name one type.
-- **The runner decodes the bytes** with the encoding of the source's
-  `csv` options. With `"auto"`, first with `new TextDecoder("utf-8",
-  { fatal: true })`, and when that throws, with `new
-  TextDecoder("windows-1252")`, which is what Excel on Windows writes for
-  "CSV (comma delimited)" in Spanish and the other languages of Western
-  Europe. The reader takes the separator and the decimal mark the same
-  way, set or detected. The result says what was used for each of the
+- **table_io decodes the bytes** with the encoding of the source's
+  `csv` options, `""` to detect it: UTF-8, and when that fails,
+  windows-1252, which is what Excel on Windows writes for "CSV (comma
+  delimited)" in Spanish and the other languages of Western Europe. It
+  takes the separator and the decimal mark the same way, set or
+  detected. The result says what was used for each of the
   three, so that the screen shows it and offers to change it; a read is
   recorded only into the source with its load id and its options. No file
   is refused for its encoding (`docs/architecture.md`, section 6).
@@ -799,7 +799,7 @@ the release `js-v0.1.0-dev.2` of 25 September 2026.
   missing values, quoted fields, and over cells as the files wasm gives
   them, for the inference. That the result helper copies an array that
   does not own its buffer, and transfers one that does, is a test too.
-- **In xlsx_rs, not here**: the Rust of the reader, with `cargo test`
+- **In table_io, not here**: the Rust of the reader, with `cargo test`
   over files its tests write and the files the owner makes, and its
   package as built (`docs/specs/worker/files.md`, "How it is verified").
 - **Only in a browser, with Playwright**: the real workers, `FileReaderSync`,
@@ -859,5 +859,5 @@ of `WORKER_READY_TIMEOUT_MS`. The first work package that reads an xlsx
 checks that the files wasm is a chunk of its own, fetched on first need,
 and that its loader finds its `.wasm` in the worker as popnei's does,
 which a project of trial saw on 28 September 2026 with popnei's package
-in the place of xlsx_rs's.
+in the place of xlsx_rs's, the name table_io had then.
 What they find is corrected here.
