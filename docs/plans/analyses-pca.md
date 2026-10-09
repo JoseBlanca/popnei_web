@@ -1017,3 +1017,44 @@ replaces that part. From the stale review, for work package 6: with the
 Variants tab's threshold off, "Stricter for the PCA" writes the PCA's
 own value at the top of the field, a new key and a second run of the
 same variants.
+
+### Work package 5, tasks 5.1 to 5.3, 9 October 2026
+
+Commits 2d7a937 (`src/core/csv.ts`), d8588a7 (`DownloadMenu`,
+`downloadItems`, the download of `SortableTable` and `Table`) and
+906db86 (`usePlot`'s handle, the download of `HistogramPlot`). Checks at
+906db86: Vitest 4,743 tests in 140 files; `AP5 D1` 9, `AP5 D2` 10, and
+5 tests of `HistogramPlot.test.ts`; the old page's flows of the
+distances between populations and of the LD decay 52 in Chromium and
+WebKit. The first load of `popgen2.html`, gzipped: 284.20 KB before
+(after the fixes of work package 2), 289.93 KB after (+5.73 KB, React
+Aria's menu, `DownloadMenu`, `downloadItems`, `csv.ts` and their CSS).
+The widget tests use jsdom with `createRoot` and `act`, as
+`.claude/skills/coding/testing.md` and `Tabs.test.ts` do, not React
+Testing Library as task 5.2 said.
+
+The review, `spec`, `tests`, `stale`, `errors`, `api`, `architecture`,
+`react` and `bundle` (`accessibility`, `ux` and `browser` after task
+5.4, when the menus are on the page). Seventeen findings held and went
+as one list of fixes to a subagent: a plot or a table given its
+download after its first drawing left in the wrong element; a menu open
+when it starts waiting that opens again by itself when the wait ends;
+the words of a refused PNG outliving their choice; a save that throws
+at once leaving the menu open; a table's download that cannot wait,
+which the counts per population need while the one pass runs; a table
+given a download without the values of its rows, accepted by the
+typecheck; the values of 10,000 rows taken at every drawing; the names
+of the downloads made outside `fileNames.ts`; tests that could not
+fail; and a test of `src/core/store.test.ts` ("SF2 D4", outside the
+work package) that fails about one run in ten, from a random seed.
+Not taken: React Aria's menu is now in the chunk the old page shares,
+about 5 KB gzipped it never uses; the old page is to be deleted, and
+moving the menu out of the tables would undo the owner's principle that
+every table offers its data. Not taken: a plot narrower than its
+margins (160 px) would show the error bar on a download; no layout of
+the page draws a histogram that narrow.
+
+Task 5.4's flow, from the review: no test in jsdom can tell "every row"
+from "the rows in view", since React Aria's virtualizer draws every row
+there; the flow of the Individuals tab saves the sorted table of
+`individuals_10000.xlsx`, longer than its frame, and counts its lines.
