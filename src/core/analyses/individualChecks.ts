@@ -141,21 +141,23 @@ export type Failure = Extract<
  * each individual when those were refused or failed, the store's error
  * with `ofStatistics`: that the statistics could not be calculated, so
  * that `notDone`, "the diversity was not run", "the file was not
- * written", then the words of the statistics' own part, their
- * `refusalText` for a refusal of popnei and `failureText`, the frame's,
- * for another failure; never the words of the calculation that waited,
- * which would name it for a calculation that was not its own
- * (docs/specs/analyses/diversity.md and writeVariants.md, "Its words").
+ * written", then the words of the statistics' own part, `refusal` for a
+ * refusal of popnei, their `refusalText` unless a page gives its own, and
+ * `failureText`, the frame's, for another failure; never the words of the
+ * calculation that waited, which would name it for a calculation that was
+ * not its own (docs/specs/analyses/diversity.md and writeVariants.md, "Its
+ * words").
  */
 export function statisticsFailedWords(
   error: AnalysisError,
   p: Project,
   failureText: (failure: Failure) => string,
   notDone: string,
+  refusal: (message: string, p: Project) => string = refusalText,
 ): string {
   const words =
     error.kind === "refused"
-      ? refusalText(error.message, p)
+      ? refusal(error.message, p)
       : failureText(error.error);
   return `The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so ${notDone}. ${words}`;
 }

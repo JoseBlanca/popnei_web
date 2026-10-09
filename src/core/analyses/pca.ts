@@ -51,7 +51,7 @@ import type {
   Warning,
   WorkerClient,
 } from "../store.ts";
-import { fileRefusalText } from "./fileRefusals.ts";
+import { fileRefusalText, passRefusalText } from "./fileRefusals.ts";
 import { statisticsFailedWords } from "./individualChecks.ts";
 import type { Failure } from "./individualChecks.ts";
 import {
@@ -1162,7 +1162,18 @@ export function statisticsFailedText(
     p,
     failureText,
     waited ? `the ${name} was not run` : `the ${name} cannot run`,
+    page === "popgen" ? undefined : popgen2StatisticsRefusal,
   );
+}
+
+/** The words of popnei's refusal of the statistics of each individual on
+    popgen2.html, which the one pass calculates: those of the box Variants
+    file, with the file opened again there. */
+function popgen2StatisticsRefusal(message: string, p: Project): string {
+  return passRefusalText(message, p, {
+    cannot: "the statistics of each individual cannot be calculated",
+    where: " in the box Variants file",
+  });
 }
 
 // What the panel reads of a result (docs/specs/analyses/pca.md, "The

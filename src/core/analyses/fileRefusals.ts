@@ -100,3 +100,23 @@ export function fileRefusalText(
   }
   return null;
 }
+
+/**
+ * The words of popnei's refusal `message` of the one pass of popgen2.html
+ * over the variants file of `p`, with the place `place`: those of the
+ * variants file itself, `fileRefusalText`, or, for any other, popnei's
+ * message and to open the file again, or another. Throws a defect on a
+ * project with no variants file.
+ */
+export function passRefusalText(
+  message: string,
+  p: Project,
+  place: FileRefusalPlace,
+): string {
+  const ofFile = fileRefusalText(message, p, place);
+  if (ofFile !== null) {
+    return ofFile;
+  }
+  const fileName = escaped(p.variants?.name ?? "");
+  return `popnei could not read ${fileName}${saying(withoutBackquotes(message))}. Open the file again${place.where}, or another file.`;
+}

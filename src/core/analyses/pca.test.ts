@@ -859,6 +859,38 @@ describe("AP2 D2 needs of pcaOnPopgen2, and the words of popgen2.html", () => {
     );
   });
 
+  test("the statistics of each individual refused, in the words of the box Variants file, whether the PCA's Run waited or not", () => {
+    const p = project({ options: LD_50000 });
+    const failureText = (): string => "unused";
+    const start =
+      "The statistics of each individual, which the thresholds of the individuals need, could not be calculated, so";
+    expect(
+      statisticsFailedText(
+        {
+          kind: "refused",
+          message: "the source could not be read: incomplete deflate stream",
+        },
+        p,
+        failureText,
+        true,
+        "popgen2",
+      ),
+    ).toBe(
+      `${start} the PCA was not run. panel.nei could not be read to its end: it may be damaged or cut short. Fetch or copy it again, and open it again in the box Variants file.`,
+    );
+    expect(
+      statisticsFailedText(
+        { kind: "refused", message: "out of memory" },
+        project({ options: { method: "pcoa", ...LD_50000 } }),
+        failureText,
+        false,
+        "popgen2",
+      ),
+    ).toBe(
+      `${start} the PCoA cannot run. popnei could not read panel.nei: out of memory. Open the file again in the box Variants file, or another file.`,
+    );
+  });
+
   test("the words of a calculation that stopped with no answer, on popgen2.html", () => {
     const p = project({ options: LD_50000 });
     expect(crashText(p, 200, "popgen2")).toBe(

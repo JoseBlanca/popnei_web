@@ -9,16 +9,14 @@
  * Pure, so that a test in node checks them; the widgets draw them.
  */
 
-import { fileRefusalText } from "../../core/analyses/fileRefusals.ts";
+import { passRefusalText } from "../../core/analyses/fileRefusals.ts";
 import { BGZIP_REFUSAL, SOURCE_UNREADABLE } from "../../core/analyses/words.ts";
 import {
   counted,
   escaped,
   grouped,
   isHidden,
-  saying,
   variantsOpenNeeds,
-  withoutBackquotes,
 } from "../../core/project.ts";
 import type { Project, VariantSource } from "../../core/project.ts";
 import type {
@@ -371,15 +369,10 @@ export function countedText(numVars: number, numChroms: number): string {
  * with no variants file.
  */
 export function refusalText(message: string, p: Project): string {
-  const ofFile = fileRefusalText(message, p, {
+  return passRefusalText(message, p, {
     cannot: "the variants cannot be counted, nor their statistics calculated",
     where: "",
   });
-  if (ofFile !== null) {
-    return ofFile;
-  }
-  const fileName = escaped(p.variants?.name ?? "");
-  return `popnei could not read ${fileName}${saying(withoutBackquotes(message))}. Open the file again, or another file.`;
 }
 
 /**
