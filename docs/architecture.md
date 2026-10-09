@@ -980,9 +980,14 @@ change makes none, and stops at once every calculation it leaves behind
 (below, "What was revised on 9 October 2026"). Opening a file there, the first or another, is the
 store's `open`, which starts a new history with nothing to undo, stops
 the pass of the file before and gives no notice; the filters are kept
-as the user left them. So the page's Undo and Redo, when the page
-draws them, serve the changes of the filters alone, and the store never
-gives that page a notice
+as the user left them. A change of the individuals file there, its
+opening, its removal, an option of its reader or the column the page
+chooses at the end of its read, is the store's `applyAfresh`, a command
+after which the history starts afresh, so that it stops nothing that a
+command would not, the one pass among them, and is no step of Undo
+either. So the page's Undo and Redo serve the changes of the filters,
+of the column of the populations and of the options of the PCA, and the
+store never gives that page a notice
 (`docs/specs/core/store.md`, "The notice, and the calculations it
 stops").
 
@@ -1032,8 +1037,15 @@ still, by a setting of the store on that page, under which a change makes no
 notice and stops at once every calculation it leaves behind, since the
 page draws no notice and has no Undo to come back to it; a result
 removed stays in the cache under its key, and the filters set back as
-they were show it again. Whether the page gets Undo back is an open
-point of the design.
+they were show it again. Revised again that day for the owner's
+answer to the open point of that design: Undo and Redo come back to
+`popgen2.html`, at the top right corner of the page and each only while
+it has a step to take, with their keys caught on the whole page; a PCA
+that a change stopped is not kept for an Undo, which brings back the
+results the cache holds and starts nothing; and the changes of the
+individuals file go through `applyAfresh`, new in the store, rather than
+`apply`, whose steps an Undo would take back, or `open`, which would
+stop the one pass (`docs/designs/analyses-pca.md`, "Undo and Redo").
 
 ## 4. An analysis is a module
 
@@ -2524,13 +2536,13 @@ for the smallest part of it.
   change of a threshold or of the FILTER box is a command; an empty box,
   or 1 however it is reached, typed or by the line dragged to the top of
   an axis that ends at 1, turns a threshold off (`setThreshold` of
-  `docs/specs/core/project.md`). The page has no Undo and no Redo and
-  catches none of their keys, and no notice, as the owner decided on 8
-  October 2026: the row of the shell's Undo and Redo, which undid and
-  redid the changes of the filters and not the opening of a file, is
-  hidden until a later feature needs it, and the store's history, the
-  commands and the run of the keys made a change before any other
-  command stay ready for it; its
+  `docs/specs/core/project.md`). The page has no notice, as the owner
+  decided on 8 October 2026. It hid Undo and Redo that day, and brought
+  them back on 9 October 2026 at the top right corner of the page, each
+  drawn only while it has a step to take, with their keys caught on the
+  whole page; they undo and redo the changes of the filters, of the
+  column of the populations and of the options of the PCA, and not the
+  opening of a file (`docs/designs/analyses-pca.md`, "Undo and Redo"); its
   first project has the filter of the FILTER column on and the missing
   rate of the variants at 0.1, the rest off. The download of the
   filtered variants is one button, "Download filtered variants…", after
@@ -2852,8 +2864,10 @@ src/ui/
                     with no stepper and no saving; from 7 October 2026
                     with the row of Undo and Redo and their keys, reused
                     from shell/ without the rest of the shell, a row the
-                    owner hid on 8 October 2026 until a later feature
-                    needs it, and, from that day, no notice
+                    owner hid on 8 October 2026 and brought back on 9
+                    October 2026 at the top right corner, each button
+                    drawn only while it has a step; and, from 8 October
+                    2026, no notice
   popgen2Store.ts   the store of popgen2.html, with POPGEN2_ANALYSES, the
                     summary of the variants file alone, POPGEN2_CHAIN,
                     and no counts, statistics config or writing, and the

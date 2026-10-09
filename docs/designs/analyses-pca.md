@@ -2,8 +2,12 @@
 
 A design of 9 October 2026, approved by the owner on 9 October 2026
 with the seven answers written under "What the owner decided", at the
-end, and revised the same day for them; one point, Undo on this page,
-is left open there. It decides how `popgen2.html` grows from two tabs,
+end, and revised the same day for them; revised again that day for the
+owner's three answers after it, 8 to 10 there: Undo and Redo come back
+to the page, at its top right corner and only when there is something
+to undo (below, "Undo and Redo"); the PCoA's correction is Lingoes';
+and the CSV of the PCA's coordinates writes the names as they are. No
+point is left open. It decides how `popgen2.html` grows from two tabs,
 one for each file, to a row of five, Variants, Individuals, PCA,
 Populations and Distances; how a tab of an analysis that cannot run yet
 is greyed out, for every user, the keyboard and the screen reader
@@ -60,10 +64,16 @@ The old page gets none of this: it is to be retired.
   has, and how large the correction was.
 - A change of a filter that changes what the PCA reads takes its result
   off the screen, and stops it if it runs. The result stays in the
-  cache, so the filters set back as they were bring it back with no
-  calculation (the cache: the store's memory of results, each under a
-key made from everything it was calculated from). Whether `popgen2.html`
-gets its Undo back is left open.
+  cache, so an Undo, or the filters set back by hand, bring it back with
+  no calculation (the cache: the store's memory of results, each under
+  a key made from everything it was calculated from). A PCA stopped so
+  is run again.
+- Undo and Redo come back, at the top right corner of the page, each
+  shown only while it has a step to take: a threshold, the FILTER box,
+  the column of the populations or an option of the PCA. Opening a
+  file, either of the two, is no step of Undo. Ctrl+Z and Cmd+Z are the
+  page's Undo wherever the focus is but in a box being typed in, which
+  keeps its own.
 - Every table and every plot of the page has a button "Download…" that
   offers its rows as CSV, and, for a plot, its image as SVG or PNG and
   its data as CSV. The table and the plot components carry it, so a new
@@ -188,7 +198,7 @@ that code:
    neither exists, and the PCA is the first calculation of the page that
    reads the filters, so what a threshold moved in the Variants tab does
    to a PCA shown, or running, had to be decided anew: the owner's
-   answer 3.
+   answer 3, and, after it, answer 8, which brings Undo back.
 5. **The PCA's own filters beside the page's.** The owner decided on 9
    October 2026 that the PCA needs its own filters of missing data, LD
    and MAF, usually stricter than those of the other analyses, which
@@ -451,7 +461,8 @@ As the old panel has them, and `docs/specs/analyses/pca.md` says them:
 
 - **The words.** "The Variants step" becomes "the Variants tab"
   throughout; the words that name the Undo of a notice go, since the
-  page has neither; the words of the individuals file use
+  page has no notice; the descriptions of the PCA's commands, which
+  name the steps of Undo, say "the PCA" and "the Variants tab"; the words of the individuals file use
   "unclassified".
 - **No lock by the individuals file.** The old PCA was locked while the
   individuals file was read, when its read failed, and when it lacked
@@ -647,8 +658,8 @@ The owner decided (answer 3) that a change of a filter that changes
 what the PCA reads, its key, takes the result off the screen, as the
 architecture has it for every analysis (section 3). The tab then shows
 its options and Run, as before any run. The result stays in the cache
-under its key, so setting the filters back as they were brings it back
-with no calculation.
+under its key, so an Undo of the change, or the filters set back as
+they were, bring it back with no calculation.
 
 The store changes for this page. As it is, it answers such a change
 with a notice, a message for the screen that names the results the
@@ -659,12 +670,195 @@ running would go on out of sight, with the calculation worker and up to
 setting of `popgen2.html`, given where the page makes it
 (`src/ui/popgen2Store.ts`), under which a change makes no notice and
 stops at once every calculation it leaves behind. A PCA stopped so is
-gone: moving the threshold back starts nothing, and Run is pressed
-again. The tab says nothing of why the plot went, since without the
-notice the store does not know which change removed it; the change was
-the user's own, the owner's rule of 8 October 2026 for this page.
-Whether the page gets its Undo back, which would bring the result back
-and could keep a PCA running for it, is the open point at the end.
+gone: an Undo, or moving the threshold back, starts nothing, and Run is
+pressed again. The tab says nothing of why the plot went, since without
+the notice the store does not know which change removed it; the change
+was the user's own, the owner's rule of 8 October 2026 for this page.
+
+Undo came back after this answer (answer 8, below), and the old page
+keeps a calculation left behind running for its Undo. This page does
+not, a choice of the session. The user would not know that a PCA of
+the earlier filters runs: the tab shows its options and Run for the
+filters of now, and the page has no notice to say it. Meanwhile it
+would hold the calculation worker and up to 3 GB of the tab, and the
+download of the filtered variants would wait for it with the words
+"Waits for the PCA to end; or stop it in the PCA tab.", where no Stop
+is shown. What it costs: a PCA of minutes, stopped by a threshold
+moved by mistake, is run again after the Undo. Keeping it for an Undo
+would win if the tab said, under its options, that a PCA of the
+earlier filters runs on, with its Stop; that is a screen to add, not
+a change of the store.
+
+## Undo and Redo
+
+The owner decided (answer 8) that `popgen2.html` gets its Undo back:
+"we could show the undo button, when it makes sense, in the superior
+part of the page, at the right corner". This section says when the two
+buttons show, what they take back, what they say, and how their keys
+live beside the typing of the number boxes. Most of it was built on 7
+and 8 October 2026 and kept when the owner hid the buttons
+(`docs/plans/filters.md`, "Work package 11, the owner's try"): the
+store's history of 200 steps (`MAX_UNDO_STEPS` of
+`src/core/history.ts`), each command with the description that names
+its step, the run of the arrow keys on a threshold made a change before
+an undo, and the buttons with their keys, `UndoRedoButtons` of
+`src/ui/shell/`, which the old page draws.
+
+### What they take back
+
+The steps of the page's history are the commands of the user on the
+project:
+
+- a threshold of the Variants tab, moved, typed, turned on or off, of
+  the variants or of the individuals;
+- the box that leaves out the variants that failed their FILTER, ticked
+  or not;
+- the column of the populations, chosen in the box of the individuals
+  file;
+- an option of the PCA: the method, each of its filters made stricter,
+  set back to the Variants tab's or given another value, the LD pruning
+  turned on or off or its values, the column that colours the points,
+  the components on the axes, 2D or 3D.
+
+An undo gives back the project before the step, and with it every
+result the cache holds under the keys of that project, with no
+calculation; a PCA that the step stopped is not started again
+("When a filter changes"). The tab shown, the sort of a table, the turn
+of the 3D view and the scroll are of the screen, not of the project,
+and no undo moves them.
+
+Opening a file, either of the two, is no step, as the owner decided on
+8 October 2026 for the variants file ("We don't need to undo the
+opening of a file, the user could reload the page") and repeated on 9
+October 2026 for both. The variants file already opens through the
+store's `open`, which starts a new history. The individuals file does
+not: its opening, its removal, a change of an option of its reader,
+the encoding, the separator or the decimal mark, which reads the file
+again, and the column the page chooses when a read ends are each a step
+of the history today (`docs/designs/input-page.md`, "How an opening of
+the individuals file reaches the store"). `open` does not do for them,
+since it stops every calculation, the one pass among them, which the
+user would have to start again and wait for. So the store gains a
+third way to change the project, `applyAfresh`: the command changes the
+project as `apply` does, stopping and removing what a command would,
+and the history then starts afresh at the new project, with nothing to
+undo or redo. The five changes of the individuals file go through it.
+Two of them are choices of the session, listed at the end: the removal
+of the file and a change of an option of its reader are no steps either,
+since each is part of reading a file, and the user puts either back by
+opening the file again or choosing the option again. What it costs: a
+change made while the individuals file is read, a threshold moved in
+the second the read takes, leaves the history with the column the page
+then chooses, and its own step is lost.
+
+Not taken: the individuals file's changes kept as steps, which would
+let Undo take back an opening, against the owner's rule; and `open`
+with a setting that stops nothing, which would mix two meanings in one
+command of the store, an opening of the variants file that must stop
+the pass and one of the individuals file that must not.
+
+### When they show, and where
+
+The two buttons stand at the right end of the line of the heading
+"Popnei", the top right corner of the page. Undo is drawn while there
+is a step to undo, or a run of the arrow keys on a threshold waits to
+become one, and is not drawn otherwise; Redo while there is a step to
+redo and no run waits. A button not drawn is not in the page at all: the
+Tab key does not stop on it and a screen reader does not find it. So
+when the page opens, and after an opening of either file, neither is
+there; the first change of a threshold shows Undo; an undo shows Redo;
+the next command hides Redo.
+
+Each button has a place of its own on that line, Undo then Redo, and a
+place stays empty while its button is hidden. So neither moves when the
+other comes or goes, and a second click lands where the first did: a
+user who presses Undo three times does not press Redo by the third,
+which a pair that closed up would put under the pointer. The line keeps
+the height of the heading whether or not a button is shown, so the page
+under it never moves when Undo appears. At 320 px the heading and the
+two buttons need about 260 px, an estimate from the font of the page and
+not measured, and fit the 288 px left by the margins; the browser
+checks it.
+
+Not taken: the two buttons always drawn, disabled when they have no
+step, as on the old page, which the owner did not ask for; Redo only
+in a menu of Undo, which hides it from a user who does not know it is
+there.
+
+### What they say
+
+The words on the buttons are "Undo" and "Redo". Each has a tooltip,
+shown on the mouse and on the focus, that names its step, "Undo: the
+MAF filter changed", "Redo: the method of the PCA changed", from the
+description of the command, and the same words are its description for
+a screen reader, as on the old page. An undo or a redo, by a button or
+by a key, is said in the status region, "Undone: the MAF filter
+changed." (`src/ui/shell/undoRedo.ts`), since a user of a screen reader
+who pressed Ctrl+Z would otherwise hear nothing. A button that appears
+is not announced: the change that shows it is the user's own, and its
+control already says it.
+
+The descriptions of the PCA's commands are those of the old page with
+this page's names: "the PCA" for "the principal components", and "the
+Variants tab" for "the Variants step", as "the MAF filter of the PCA
+was set back to as in the Variants tab"; the screen spec gives each.
+
+### The keys
+
+Ctrl+Z, and Cmd+Z on macOS, undo; Ctrl+Shift+Z, Cmd+Shift+Z and Ctrl+Y
+redo, as on the old page (`src/ui/shell/shortcuts.ts`). The page catches
+them on the whole window from the moment it opens, whether or not a
+button is shown: a key with no step to take does nothing, rather than
+reaching the browser's own undo of the text of a box, which on 9
+October 2026 turned a threshold off (commit ebc9918). How they live
+beside the typing of a box:
+
+- **A number box with something typed** and not yet given to the
+  project, by Enter, Tab or a click elsewhere: Ctrl+Z puts back the
+  box's number, the project's value, and the page does nothing. It is
+  the box's own key, as on the old page and on this one since 8 October
+  2026.
+- **A number box with nothing typed**: the page's Undo.
+- **The browser's own undo of a box's text** never acts: the box refuses
+  it when it is offered and puts its text back when Chromium does it
+  unoffered (commits ebc9918 and d10cc1b). So the page's undo and the
+  browser's never act on the same key press.
+- **A field of free text**, none on this page today: the browser's own,
+  as the old page leaves it to the field of the name of Save.
+- **A run of the arrow keys waiting** on a threshold, its second not
+  yet up: Ctrl+Z makes it a change and undoes it, so the threshold goes
+  back to where the presses started, as Undo pressed then does.
+- **The dialog of the download** open: the keys do nothing, since they
+  would change the filters behind the question it asks.
+
+The menu Edit of the browser is not the page's Undo: its Undo acts on
+the text of a box, which the box puts back as above, and on nothing
+else.
+
+### The focus
+
+When a press of Undo takes the last step and Undo goes, the focus
+moves to Redo, which that press has just shown, and the same from Redo
+to Undo; without it the focus would be on nothing, and the next Tab
+would start again from the top of the page in some browsers and from
+the end in others. When a button with the focus goes for another reason,
+an opening of a file by a drop, the focus goes to the heading
+"Popnei" (`src/ui/shell/focusKept.ts`). Both are the old page's rules;
+this page reaches the second more often, since the old page disables
+its buttons and this one removes them.
+
+### What changes in the code
+
+- `UndoRedoButtons` draws a button only while it has a step, by a
+  setting this page gives, and the old page draws them as it does; its
+  keys are caught by the same part while it is drawn, which on this page
+  is always.
+- The store's `applyAfresh`, beside `apply` and `open`, in
+  `src/core/store.ts`, with its spec.
+- The commands of the individuals file, of its box and its tab, and the
+  column the page chooses (`src/ui/populationColumn.ts`), sent through
+  `applyAfresh`.
+- The descriptions of the PCA's commands on this page.
 
 ## Every table and every plot can be downloaded
 
@@ -838,7 +1032,9 @@ definition, since its defaults differ, the LD pruning on, and
 words of the refusals call, given the page's rule of the stricter of
 each pair; and the words of the LD field, which say "turn the LD pruning
 off" where the old page says "set it back to as in the Variants
-step".
+step". And one for Undo (answer 8): the store's `applyAfresh`, a
+command after which the history starts afresh, which the changes of the
+individuals file go through.
 
 ## How it is tested, and what would prove it wrong
 
@@ -869,6 +1065,20 @@ step".
   vavilov-explorer reads; in Playwright, each menu by the keyboard
   alone, a file of each kind saved and read back, the SVG of a
   histogram with its threshold's line, and axe with no finding.
+- **Undo and Redo**, in Vitest under node: `applyAfresh` leaves nothing
+  to undo or redo, stops and removes what `apply` would, and changes
+  nothing when the command gives the same project; the store of the page
+  after an individuals file opened, read and given its column has
+  nothing to undo. In Playwright, in Chromium and WebKit: no button when
+  the page opens and after either file is opened; Undo after a
+  threshold moved, with its tooltip on the focus; Redo after an undo,
+  and neither button moved; the focus from Undo to Redo at the last
+  step; Ctrl+Z and Cmd+Z on the heading, on a line and in a box with
+  nothing typed, an undo each, and in a box with 0.9 typed, the box's
+  number back and nothing undone; an undo of a change that removed the
+  PCA shows the plot again with no request to the worker; and the
+  heading's line of the same height with and without the buttons, at
+  320 px and 1280 px.
 - **What would send the design back**: a screen reader that does not
   read a greyed tab as unavailable in Chromium, WebKit or VoiceOver
   with Safari, which the attribute set by hand might not survive; a
@@ -921,7 +1131,9 @@ step".
   tooltips are used on both pages already.
 - **What GitHub Pages does not allow.** Nothing asked.
 - **Accessibility.** The greyed tabs as above; the menus of the
-  downloads by React Aria, each button named by what it downloads; the PCA's plot as on the
+  downloads by React Aria, each button named by what it downloads;
+  Undo and Redo named by their step and announced when used, as on the
+  old page; the PCA's plot as on the
   old page, whose 3D view turns, tilts and zooms by buttons, and whose
   groups are told apart by 49 marks, seven colours by seven shapes, not by colour
   alone.
@@ -944,12 +1156,18 @@ step".
   revised on 9 October 2026" at the end of each, the store's setting of
   `popgen2.html` that makes no notice and stops a calculation left
   behind, and the downloads carried by the components of the tables and
-  the plots.
+  the plots; and, for answer 8, the paragraph "No notice on
+  `popgen2.html`" of section 3 and the line of section 7 that said the
+  page has no Undo.
 
-Left for the plan of the piece, which changes them with the code:
-`docs/specs/core/store.md`, which says the store gives that page no
-notice; `docs/specs/analyses/pca.md`, for the rules of this page; and the
-comment of `coloursOf` in `src/core/analyses/pca.ts`.
+Changed with the specs of the piece: `docs/specs/core/store.md`, the
+setting of the page and `applyAfresh`; `docs/specs/core/history.md`;
+`docs/specs/analyses/pca.md`, for the rules of this page;
+`docs/specs/steps/popgen2-filters.md`, "Undo, Redo and their keys", and
+`docs/specs/steps/popgen2-input.md`, "What it sends and reads", for
+Undo; and `docs/specs/steps/popgen2-pca.md`, the screen spec of the
+tabs and the PCA tab. Left for the plan, which changes it with the
+code: the comment of `coloursOf` in `src/core/analyses/pca.ts`.
 
 ## What the session decided
 
@@ -964,6 +1182,16 @@ values with the point as the decimal mark; the names of the PCA's
 coordinates written with no quote before a leading "=", "+", "-" or "@";
 the menus of the histograms waiting for the end of the one pass; the
 names of the files; and the words of the reasons.
+
+For Undo and Redo, on 9 October 2026, after the owner's answer 8: Redo
+back with Undo, shown by the same rule; the two in places of their own
+that stay empty, so that neither moves; their words, "Undo" and "Redo"
+with the step in the tooltip; the keys caught on the whole page whether
+or not a button is shown; the removal of the individuals file and a
+change of an option of its reader as no steps, like its opening; the
+column the page chooses at the end of a read as no step; `applyAfresh`
+rather than an `open` that stops nothing; and a PCA stopped by a change
+not kept running for an Undo ("When a filter changes").
 
 ## What the owner decided
 
@@ -983,7 +1211,8 @@ On 9 October 2026, approving the design:
 3. **A change of a filter takes the PCA's result off the screen**, as
    recommended, over keeping it marked out of date; the owner added
    "remember that for that the user has the undo possibility", which
-   leads to the open point below ("When a filter changes").
+   left open whether the page gets Undo back, answered in 8 below
+   ("When a filter changes").
 4. **Every table and every plot can be downloaded**, its data, and a
    plot's image, built into the components and not screen by screen,
    the owner's principle, which replaces the draft's list of the PCA's
@@ -1003,34 +1232,19 @@ On 9 October 2026, approving the design:
 7. **The tabs not built yet** are greyed by their real conditions, and
    once open say "Not built yet: …", as recommended, over always greyed.
 
-## Open point: Undo on popgen2.html
+Later on 9 October 2026, to the questions left after the approval:
 
-The owner's answer 3 counts on Undo to bring a removed result back.
-`popgen2.html` has none: the owner hid its row and its keys on 8
-October 2026 (`docs/plans/filters.md`). The store still keeps the
-history, and the row is ready to draw again. The session has asked the
-owner; until the answer, the removal is built as above: a change stops
-the PCA it leaves behind and removes its result. If Undo comes back,
-an Undo of that change gives the filters and the result back from the
-cache; only a PCA that was running is lost, unless (a) below also keeps
-it running.
-
-- **(a) Undo and Redo back on the page with this piece.** The row of
-  the two buttons, and their keys, Ctrl+Z, Ctrl+Y and Cmd+Shift+Z,
-  drawn again, as they were built on 8 October 2026. An Undo after a
-  change that removed the PCA gives back the filters, and the result
-  from the cache with no calculation. A PCA that ran when the change
-  came could be kept running for an Undo, as the old page does, rather
-  than stopped at once, which brings back the notice or something in
-  its place to say that it runs. What it costs: the row the owner hid;
-  the keys taken from the browser's own; and, if a run is kept for an
-  Undo, the store's setting of answer 3 no longer stops at once a
-  calculation left behind, and the PCA tab has to say that a PCA of the
-  earlier filters runs on, out of sight of its plot.
-- **(b) No Undo.** The filters set back by hand as they were give the
-  key back, and the cache gives the result back with no calculation; a
-  PCA stopped by the change is run again. What it costs: the user has
-  to remember the values they changed, and a PCA of minutes stopped by
-  a slip is run again.
-
-Nothing of this piece prevents either answer.
+8. **Undo comes back** on `popgen2.html`: "we could show the undo
+   button, when it makes sense, in the superior part of the page, at the
+   right corner"; not for the opening of a file, as decided on 8 October
+   2026 ("Undo and Redo"). The open point of the approved design, Undo
+   on this page, offered (a) Undo and Redo back with this piece, the
+   row of 8 October 2026 always drawn, and (b) no Undo; the owner took
+   (a) with the buttons shown only when they have a step, at the top
+   right corner.
+9. **The PCoA uses Lingoes' correction** of the Kosman distances,
+   confirmed ("The PCoA and its correction").
+10. **The CSV of the PCA's coordinates writes the names as they are**,
+    with no ' before a name that starts with "=", "+", "-" or "@", for
+    the round trip with vavilov-explorer, and the help says so,
+    confirmed ("What a plot offers").
