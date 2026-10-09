@@ -110,14 +110,22 @@ describe("AP2 D3 the commands of the PCA on popgen2.html", () => {
   });
 
   test("stricterCommand sets follow false and the value in one step", () => {
-    const p = withOptions();
-    const stricter = stricterCommand("missing_data", 0.1, popgen2("pca"));
+    // Values kept from before, unlike those the command gives, so that a
+    // command that only set follow false would keep them and fail.
+    const p = withOptions({
+      missingData: { follow: true, maxAllowedMissingRate: 0.05 },
+      maf: { follow: true, maxAllowedMaf: 0.8 },
+    });
+    const stricter = stricterCommand("missing_data", 0.07, popgen2("pca"));
     const after = stricter.command(p);
     expect(pcaOptions(after, "popgen2").missingData).toEqual({
       follow: false,
-      maxAllowedMissingRate: 0.1,
+      maxAllowedMissingRate: 0.07,
     });
-    expect(pcaOptions(after, "popgen2").maf).toEqual(PCA2_DEFAULTS.maf);
+    expect(pcaOptions(after, "popgen2").maf).toEqual({
+      follow: true,
+      maxAllowedMaf: 0.8,
+    });
     const maf = stricterCommand("maf", 1, popgen2("pca")).command(after);
     expect(pcaOptions(maf, "popgen2").maf).toEqual({
       follow: false,
@@ -125,7 +133,7 @@ describe("AP2 D3 the commands of the PCA on popgen2.html", () => {
     });
     expect(pcaOptions(maf, "popgen2").missingData).toEqual({
       follow: false,
-      maxAllowedMissingRate: 0.1,
+      maxAllowedMissingRate: 0.07,
     });
   });
 
