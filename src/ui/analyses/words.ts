@@ -539,3 +539,11 @@ export function minimumRefusedText(
 ): string {
   return `${refusedWhy(refusal, MINIMUM_NOT_TAKEN, grouped)}; the minimum stays ${grouped(kept)}.`;
 }
+
+/** The reason the filters a running analysis reads are locked, and Undo
+    and Redo wait, as tooltip and description, `name` being the analysis
+    in a sentence: "Stop the PCA to change the filters."
+    (docs/specs/steps/popgen2-pca.md, "While a PCA runs"). */
+export function filtersLockedText(name: string): string {
+  return `Stop ${name} to change the filters.`;
+}

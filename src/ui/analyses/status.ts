@@ -5,9 +5,11 @@
  * analysis, the button that state offers, Run or its Calculate, Stop, or
  * none, its result once done, and the notice that stopped it.
  */
+import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import type { AnalysisId } from "../../core/project.ts";
 import type { AnalysisStatus, AppState, Notice } from "../../core/store.ts";
-import type { JobResult } from "../../worker/protocol.ts";
+import type { JobResult, PcaMethod } from "../../worker/protocol.ts";
+import { methodName } from "./pca/words.ts";
 
 /** The state of the analysis `id` in `s`; a defect when the store has
     none. */
@@ -95,5 +97,39 @@ export function stoppedNotice(
   return notice?.stopped.includes(id) === true &&
     (status.kind === "ready" || status.kind === "locked")
     ? notice
+    : null;
+}
+
+/** A calculation of popgen2.html that, while it runs, locks the filters
+    it reads and keeps the download of the filtered variants waiting
+    (docs/specs/steps/popgen2-pca.md, "While a PCA runs"). */
+export interface RunningAnalysis {
+  /** The analysis in the middle of a sentence: "the PCA", "the PCoA". */
+  readonly name: string;
+  /** The label of the tab where it is stopped: "PCA". */
+  readonly tab: string;
+}
+
+/** The running PCA by its method, the same object for the same method,
+    so that a selector may return it. Its tab is the PCA tab, labelled as
+    `PAGE_TAB_LABELS` of src/ui/variants/analysisTabsWords.ts labels it,
+    which is not imported here, so that popgen.html, which reads this
+    module, does not download the words of popgen2.html's tabs. */
+const RUNNING_PCA: Readonly<Record<PcaMethod, RunningAnalysis>> = Object.freeze(
+  {
+    pca: Object.freeze({ name: `the ${methodName("pca")}`, tab: "PCA" }),
+    pcoa: Object.freeze({ name: `the ${methodName("pcoa")}`, tab: "PCA" }),
+  },
+);
+
+/** The calculation of popgen2.html running in `s` that locks the
+    filters it reads, the PCA, named by the method of its project, which
+    the lock keeps while it runs; `null` while none runs. Read on
+    popgen2.html alone, whose store runs the PCA of `pcaOnPopgen2`. */
+export function runningAnalysisOf(
+  s: AppState<JobResult, unknown>,
+): RunningAnalysis | null {
+  return statusOf(s, pcaOnPopgen2.id).kind === "running"
+    ? RUNNING_PCA[pcaOptions(s.project, "popgen2").method]
     : null;
 }

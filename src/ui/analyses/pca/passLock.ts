@@ -16,9 +16,8 @@
 import type { Key } from "../../../core/keys.ts";
 import { escaped } from "../../../core/project.ts";
 import type { AnalysisStatus } from "../../../core/store.ts";
-import type { JobResult, PcaMethod } from "../../../worker/protocol.ts";
+import type { JobResult } from "../../../worker/protocol.ts";
 import { startAgainMends } from "../../variants/chain.ts";
-import { methodName } from "./words.ts";
 
 /** Why the one pass locks the PCA. */
 export type PassLock =
@@ -62,8 +61,9 @@ export function passLock(
 }
 
 /**
- * The words of the lock `lock` beside the PCA's Run, of the variants
- * file `variantsName`, the method `method` naming the PCA or the PCoA:
+ * The words of the lock `lock` beside the Run of an analysis, of the
+ * variants file `variantsName`, `name` being the analysis in a sentence,
+ * "the PCA", "the PCoA":
  * "Run once panel.nei is read to the end: the reading under way in the
  * box Variants file and the PCA cannot run at once.", "…: Start again its
  * reading in the box Variants file.", "…: it could not be read, as the
@@ -72,12 +72,12 @@ export function passLock(
 export function passLockText(
   lock: PassLock,
   variantsName: string,
-  method: PcaMethod,
+  name: string,
 ): string {
   const start = `Run once ${escaped(variantsName)} is read to the end: `;
   switch (lock) {
     case "reading":
-      return `${start}the reading under way in the box Variants file and the ${methodName(method)} cannot run at once.`;
+      return `${start}the reading under way in the box Variants file and ${name} cannot run at once.`;
     case "stopped":
       return `${start}Start again its reading in the box Variants file.`;
     case "unreadable":

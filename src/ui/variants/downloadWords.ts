@@ -18,10 +18,10 @@ import { sizeText } from "../../core/writeEstimate.ts";
 import type {
   IndividualFilterKind,
   PassStats,
-  PcaMethod,
   VariantFilterKind,
 } from "../../worker/protocol.ts";
 import type { WriteFormat } from "../../core/keys.ts";
+import type { RunningAnalysis } from "../analyses/status.ts";
 import { clockText } from "../analyses/words.ts";
 import { failedText } from "./words.ts";
 
@@ -39,12 +39,12 @@ export const DOWNLOAD_WAITS =
 export const DOWNLOAD_NEEDS =
   "The download needs the statistics of the file, which could not be calculated.";
 
-/** Why the button is disabled while a PCA runs, once the one pass is
-    finished, by the method of the project: "Waits for the PCA to end; or
-    stop it in the PCA tab." (docs/specs/steps/popgen2-download.md, "While
-    a PCA runs"). */
-export function pcaWaitsText(method: PcaMethod): string {
-  return `Waits for the ${method === "pca" ? "PCA" : "PCoA"} to end; or stop it in the PCA tab.`;
+/** Why the button is disabled while an analysis runs, `running`, once
+    the one pass is finished: "Waits for the PCA to end; or stop it in the
+    PCA tab." (docs/specs/steps/popgen2-download.md, "While a PCA
+    runs"). */
+export function analysisWaitsText(running: RunningAnalysis): string {
+  return `Waits for ${running.name} to end; or stop it in the ${running.tab} tab.`;
 }
 
 /** The heading of the dialog, which is also its name. */

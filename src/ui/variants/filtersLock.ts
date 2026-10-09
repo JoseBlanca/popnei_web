@@ -9,13 +9,13 @@
  * file and the colour of the points are not locked: the PCA's key holds
  * neither.
  */
-import { filtersLockedText } from "../analyses/pca/words.ts";
+import { runningAnalysisOf } from "../analyses/status.ts";
+import { filtersLockedText } from "../analyses/words.ts";
 import { useAppState } from "../store.tsx";
-import { runningPcaOf } from "./downloadState.ts";
 
-/** The reason the filters a PCA reads wait while it runs, or `null`
-    while no PCA runs. */
+/** The reason the filters a running analysis reads wait while it runs,
+    or `null` while none runs. */
 export function useFiltersLock(): string | null {
-  const method = useAppState(runningPcaOf);
-  return method === null ? null : filtersLockedText(method);
+  const name = useAppState((s) => runningAnalysisOf(s)?.name ?? null);
+  return name === null ? null : filtersLockedText(name);
 }

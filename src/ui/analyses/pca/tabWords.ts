@@ -89,7 +89,7 @@ export function pcaTabLock(p: Project, lock: PassLock | null): string | null {
   ) {
     return null;
   }
-  return passLockText(lock, variants.name, method);
+  return passLockText(lock, variants.name, pcaTabName(method));
 }
 
 /** The words the PCA tab gives its errors, as `AnalysisUi` takes

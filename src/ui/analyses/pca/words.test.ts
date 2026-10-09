@@ -10,12 +10,12 @@ import { describe, expect, test } from "vitest";
 import type { ProjectVariantFilter } from "../../../core/project.ts";
 import {
   filtersHeading,
-  filtersLockedText,
   popgen2FiltersLine,
   stricterFieldLabel,
   stricterLabel,
   tabFollowLabel,
 } from "./words.ts";
+import { filtersLockedText } from "../words.ts";
 
 const FILTERS: readonly ProjectVariantFilter[] = [
   { kind: "missing_data", maxAllowedMissingRate: 0.1 },
@@ -63,10 +63,10 @@ describe("AP6 D1 the words of the PCA tab", () => {
   });
 
   test("the lock of the filters while a PCA runs, by the method", () => {
-    expect(filtersLockedText("pca")).toBe(
+    expect(filtersLockedText("the PCA")).toBe(
       "Stop the PCA to change the filters.",
     );
-    expect(filtersLockedText("pcoa")).toBe(
+    expect(filtersLockedText("the PCoA")).toBe(
       "Stop the PCoA to change the filters.",
     );
   });

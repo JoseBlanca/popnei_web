@@ -32,6 +32,7 @@ import { writtenName } from "../../core/fileNames.ts";
 import type { WriteFormat } from "../../core/keys.ts";
 import type { WriteStatus } from "../../core/store.ts";
 import type { Progress } from "../../worker/protocol.ts";
+import { runningAnalysisOf } from "../analyses/status.ts";
 import { progressShare } from "../analyses/words.ts";
 import { classOf } from "../classOf.ts";
 import { downloadFile } from "../download.ts";
@@ -45,12 +46,7 @@ import { whenNoDialog } from "../widgets/dialogMark.ts";
 import { ProgressBar } from "../widgets/ProgressBar.tsx";
 import { RadioGroup } from "../widgets/RadioGroup.tsx";
 import styles from "./DownloadVariants.module.css";
-import {
-  downloadPlace,
-  endOfWrite,
-  runningPcaOf,
-  saveAgain,
-} from "./downloadState.ts";
+import { downloadPlace, endOfWrite, saveAgain } from "./downloadState.ts";
 import { useRunGate } from "./runGate.tsx";
 import type { DownloadPlace, WriteEnd } from "./downloadState.ts";
 import {
@@ -122,8 +118,8 @@ export function DownloadVariants(): React.JSX.Element {
   // of a write stopped does nothing.
   const attempt = useRef(0);
 
-  const pcaRunning = useAppState(runningPcaOf);
-  const place = downloadPlace(summary, write, project, kept, pcaRunning);
+  const running = useAppState(runningAnalysisOf);
+  const place = downloadPlace(summary, write, project, kept, { running });
 
   // Listened to on the element itself, not through React, whose events
   // come up from the dialog drawn elsewhere in the page.
@@ -276,7 +272,7 @@ export function DownloadVariants(): React.JSX.Element {
               now.write,
               now.project,
               now.individualsKept,
-              runningPcaOf(now),
+              { running: runningAnalysisOf(now) },
             ).kind !== "enabled"
           ) {
             focusFrom.current = "enabled";

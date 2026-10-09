@@ -108,13 +108,6 @@ export function stricterFieldLabel(
   return `${what}, from 0 to ${numberText(max)}`;
 }
 
-/** The reason the filters a running PCA reads are locked, and Undo and
-    Redo wait, as tooltip and description: "Stop the PCA to change the
-    filters." (docs/specs/steps/popgen2-pca.md, "While a PCA runs"). */
-export function filtersLockedText(method: PcaMethod): string {
-  return `Stop the ${methodName(method)} to change the filters.`;
-}
-
 /** The kinds of filter the analysis has of its own, in the order of the
     Variants step. */
 export type OwnFilterKind = "missing_data" | "maf" | "ld";

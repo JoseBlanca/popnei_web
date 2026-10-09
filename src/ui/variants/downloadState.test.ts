@@ -27,14 +27,15 @@ import type {
   WriteJob,
   Written,
 } from "../../worker/protocol.ts";
+import { runningAnalysisOf } from "../analyses/status.ts";
 import { createPopgen2Store, openVariantsFile } from "../popgen2Store.ts";
 import { ANNOUNCE_DELAY_MS, createAnnouncer } from "../shell/status.ts";
+import { PAGE_TAB_LABELS } from "./analysisTabsWords.ts";
 import { announceChanges } from "./announceChanges.ts";
 import {
   downloadPlace,
   endOfWrite,
   noVariantAnnouncement,
-  runningPcaOf,
   saveAgain,
 } from "./downloadState.ts";
 import type { DownloadPlace } from "./downloadState.ts";
@@ -129,7 +130,7 @@ function placeOf(store: Store<JobResult, Blob>): DownloadPlace {
     state.write,
     state.project,
     state.individualsKept,
-    runningPcaOf(state),
+    { running: runningAnalysisOf(state) },
   );
 }
 
@@ -429,7 +430,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "The store's words." },
         state.project,
         state.individualsKept,
-        null,
+        { running: null },
       ),
     ).toStrictEqual({ kind: "sentence", text: "The store's words." });
   });
@@ -445,7 +446,7 @@ describe("DL7 D1 when there is nothing to download, and a file written and not h
         { kind: "locked", reason: "Open a project first." },
         state.project,
         state.individualsKept,
-        null,
+        { running: null },
       ),
     ).toThrow(
       "popnei_web defect: the write of popgen2.html is locked once the one pass is finished, for another reason than no individual kept: Open a project first.",
@@ -647,18 +648,21 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
   test("the button, enabled once the one pass is finished, waits with its words while the PCA runs, and is back when it is stopped", () => {
     const { store, jobs } = storeOfPanel();
     finishPass(store, jobs, pass(false));
-    expect(runningPcaOf(store.getState())).toBeNull();
+    expect(runningAnalysisOf(store.getState())).toBeNull();
     expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
 
     startPca(store);
 
-    expect(runningPcaOf(store.getState())).toBe("pca");
+    expect(runningAnalysisOf(store.getState())).toStrictEqual({
+      name: "the PCA",
+      tab: PAGE_TAB_LABELS.pca,
+    });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
       reason: "Waits for the PCA to end; or stop it in the PCA tab.",
     });
     store.cancelRun("pca");
-    expect(runningPcaOf(store.getState())).toBeNull();
+    expect(runningAnalysisOf(store.getState())).toBeNull();
     expect(placeOf(store)).toStrictEqual({ kind: "enabled" });
   });
 
@@ -668,7 +672,10 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
 
     startPca(store, { method: "pcoa" });
 
-    expect(runningPcaOf(store.getState())).toBe("pcoa");
+    expect(runningAnalysisOf(store.getState())).toStrictEqual({
+      name: "the PCoA",
+      tab: PAGE_TAB_LABELS.pca,
+    });
     expect(placeOf(store)).toStrictEqual({
       kind: "disabled",
       reason: "Waits for the PCoA to end; or stop it in the PCA tab.",
@@ -728,7 +735,7 @@ describe("AP6 D3 the download waits while a PCA runs", () => {
         store.getState().write,
         store.getState().project,
         store.getState().individualsKept,
-        "pca",
+        { running: { name: "the PCA", tab: "PCA" } },
       ),
     ).toStrictEqual(WAITS);
   });

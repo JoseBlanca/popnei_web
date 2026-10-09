@@ -7,7 +7,6 @@
  * a test in node runs them over a store made with a fake worker.
  */
 
-import { pcaOnPopgen2, pcaOptions } from "../../core/analyses/pca.ts";
 import { writtenName } from "../../core/fileNames.ts";
 import type { IndividualsKept } from "../../core/individualsKept.ts";
 import { noVariantForCertain } from "../../core/noVariantKept.ts";
@@ -20,10 +19,11 @@ import type {
 } from "../../core/store.ts";
 import type {
   JobResult,
-  PcaMethod,
   VariantsSummaryResult,
   Written,
 } from "../../worker/protocol.ts";
+import { runningAnalysisOf } from "../analyses/status.ts";
+import type { RunningAnalysis } from "../analyses/status.ts";
 import type { FileHanded } from "./downloadWords.ts";
 import { summaryStatus } from "./words.ts";
 import {
@@ -31,8 +31,17 @@ import {
   DOWNLOAD_WAITS,
   downloadedText,
   noVariantText,
-  pcaWaitsText,
+  analysisWaitsText,
 } from "./downloadWords.ts";
+
+/** What `downloadPlace` reads beyond the one pass, the write and the
+    filters. */
+export interface DownloadPlaceOptions {
+  /** The analysis running that locks the filters it reads,
+      `runningAnalysisOf` of src/ui/analyses/status.ts, which the write
+      waits for; `null` while none runs. */
+  readonly running: RunningAnalysis | null;
+}
 
 /** What takes the place of the button. */
 export type DownloadPlace =
@@ -60,8 +69,9 @@ export type DownloadPlace =
  * finished, with the reason of a pass not finished or of one failed;
  * once it is, the words of no individual kept, the text after a download
  * or the sentence of no variant after a write, the sentence of no variant
- * when the finished pass makes it certain, the button disabled while a PCA
- * runs, `pcaRunning`, its method, with the reason that names it, since the
+ * when the finished pass makes it certain, the button disabled while an
+ * analysis that locks the filters runs, `running` of `options`, with the
+ * reason that names it, since the
  * calculation worker would put the write in its queue behind the PCA
  * (docs/specs/steps/popgen2-download.md, "While a PCA runs"), and
  * otherwise the button.
@@ -76,7 +86,7 @@ export function downloadPlace(
   write: WriteStatus<Blob> | null,
   p: Project,
   kept: IndividualsKept | null,
-  pcaRunning: PcaMethod | null,
+  options: DownloadPlaceOptions,
 ): DownloadPlace {
   switch (summary.kind) {
     case "error":
@@ -116,13 +126,13 @@ export function downloadPlace(
     case "ready": {
       const certain = certainSentence(p, result, kept);
       return certain === null
-        ? buttonOf(pcaRunning)
+        ? buttonOf(options.running)
         : { kind: "sentence", text: certain };
     }
     case "error":
       // Download writes again from the dialog's failure, so the button
       // waits for the PCA as before a first write.
-      return buttonOf(pcaRunning);
+      return buttonOf(options.running);
     case "running":
       // The dialog keeps the PCA's Run out of reach while it writes.
       return { kind: "enabled" };
@@ -130,24 +140,11 @@ export function downloadPlace(
 }
 
 /** The button once the one pass is finished: disabled with the reason
-    of the PCA that runs, `pcaRunning`, its method, and enabled while none
-    runs. */
-function buttonOf(pcaRunning: PcaMethod | null): DownloadPlace {
-  return pcaRunning === null
+    of the analysis that runs, `running`, and enabled while none runs. */
+function buttonOf(running: RunningAnalysis | null): DownloadPlace {
+  return running === null
     ? { kind: "enabled" }
-    : { kind: "disabled", reason: pcaWaitsText(pcaRunning) };
-}
-
-/** The method of the PCA that runs in `s`, the method of its project,
-    which the lock of the filters keeps while it runs; `null` while no PCA
-    runs. */
-export function runningPcaOf(
-  s: AppState<JobResult, unknown>,
-): PcaMethod | null {
-  const status = s.analyses.find((a) => a.id === pcaOnPopgen2.id)?.status;
-  return status?.kind === "running"
-    ? pcaOptions(s.project, "popgen2").method
-    : null;
+    : { kind: "disabled", reason: analysisWaitsText(running) };
 }
 
 /** Whether the filters of the individuals keep none, the one lock of the
@@ -210,7 +207,7 @@ export function noVariantAnnouncement(
     before.write,
     before.project,
     before.individualsKept,
-    runningPcaOf(before),
+    { running: runningAnalysisOf(before) },
   );
   return was.kind === "sentence" && was.text === now ? null : now;
 }
