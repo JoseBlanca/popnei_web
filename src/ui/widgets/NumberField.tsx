@@ -648,6 +648,46 @@ function FieldInput({
     };
   }, [state, onNotTaken, onNotTakenPending, onMended, onText]);
 
+  // The browser's own undo and redo of the text, never the field's
+  // (docs/specs/steps/popgen2-filters.md, "Undo, Redo and their keys").
+  // Its keys are caught at the key below while something is typed, and
+  // by the shell's header otherwise, on the old page; popgen2.html has no
+  // such header, and there Ctrl+Z, or Cmd+Z on macOS, took the text back
+  // to the 1 that 0.9 was typed over and gave it as the threshold, off,
+  // even pressed on the heading, where Chromium moved the focus into the
+  // box to do it (seen in Chromium 153 on GitHub's Linux runner, and in
+  // Chromium and WebKit on macOS with Cmd+Z, 9 October 2026). The menu
+  // Edit of the browser undoes the same way. So the undo is cancelled, and
+  // with something typed it puts back the number of the field, as Ctrl+Z
+  // does.
+  const history = useRef<(event: InputEvent) => void>(() => undefined);
+  useLayoutEffect(() => {
+    history.current = (event) => {
+      if (
+        event.inputType !== "historyUndo" &&
+        event.inputType !== "historyRedo"
+      ) {
+        return;
+      }
+      event.preventDefault();
+      if (event.inputType === "historyUndo" && state !== null && isTyped()) {
+        state.setInputValue(committedText);
+        onRevert();
+      }
+    };
+  });
+  useEffect(() => {
+    const input = inputRef.current;
+    if (input === null) return;
+    const onHistory = (event: InputEvent): void => {
+      history.current(event);
+    };
+    input.addEventListener("beforeinput", onHistory);
+    return () => {
+      input.removeEventListener("beforeinput", onHistory);
+    };
+  }, []);
+
   // The text follows the number the field is given whenever nothing is
   // typed. React Aria puts the text in step only in the render where the
   // number changes, and its commit at the loss of the focus sets again the

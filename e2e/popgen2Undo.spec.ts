@@ -4,7 +4,7 @@
  * owner hid the row of Undo and Redo, and their keys, on 8 October 2026,
  * until a later feature needs them. So the page has no button Undo nor
  * Redo, before a file or after one and its changes, and Ctrl+Z,
- * Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z in WebKit, change
+ * Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z, change
  * neither the FILTER box nor a threshold, pressed on the heading, on the
  * line of a threshold while its run of the keys waits and after, and in
  * its box with nothing typed. A file opened while the pass of the file
@@ -101,11 +101,16 @@ function threshold(
   return { box: group.getByRole("textbox"), slider: group.getByRole("slider") };
 }
 
-/** Every key of Undo and Redo, those of macOS in WebKit alone. */
-function undoKeys(browserName: string): string[] {
-  const keys = ["Control+z", "Control+y", "Control+Shift+z"];
-  return browserName === "webkit" ? [...keys, "Meta+z", "Meta+Shift+z"] : keys;
-}
+/** Every key of Undo and Redo, those of Windows and Linux and those of
+    macOS: the browser's own undo of a text is Ctrl+Z on the first two and
+    Cmd+Z on macOS, so pressing both reaches it wherever the flow runs. */
+const UNDO_KEYS: readonly string[] = [
+  "Control+z",
+  "Control+y",
+  "Control+Shift+z",
+  "Meta+z",
+  "Meta+Shift+z",
+];
 
 async function expectNoViolations(
   makeAxeBuilder: () => { analyze(): Promise<{ violations: unknown[] }> },
@@ -137,7 +142,6 @@ test("SF6 the page has no button of Undo nor Redo, before a file, after one and 
 
 test("SF6 the keys of Undo and Redo on the heading, on the line of a threshold while its run waits and after, and in its box, change neither the FILTER box nor a threshold", async ({
   page,
-  browserName,
 }) => {
   await openPage(page);
   await pick(page, "panel.vcf.gz");
@@ -157,8 +161,13 @@ test("SF6 the keys of Undo and Redo on the heading, on the line of a threshold w
     await expect(missing.slider).toHaveValue(missingRate);
   };
 
-  await page.getByRole("heading", { level: 1 }).focus();
-  for (const key of undoKeys(browserName)) await page.keyboard.press(key);
+  // The browser's undo pressed on the heading went into the box to take
+  // its 0.9 back, in Chromium; the focus stays on the heading.
+  const heading = page.getByRole("heading", { level: 1 });
+  await heading.focus();
+  await expect(heading).toBeFocused();
+  for (const key of UNDO_KEYS) await page.keyboard.press(key);
+  await expect(heading).toBeFocused();
   await expectKept("0.1");
 
   // A run of three presses on the line, waiting: the keys leave it where
@@ -171,24 +180,49 @@ test("SF6 the keys of Undo and Redo on the heading, on the line of a threshold w
     await page.keyboard.press("ArrowLeft");
   }
   await expect(missing.slider).toHaveValue("0.097");
-  for (const key of undoKeys(browserName)) await page.keyboard.press(key);
+  for (const key of UNDO_KEYS) await page.keyboard.press(key);
   await expectKept("0.097");
   await missing.box.focus();
-  for (const key of undoKeys(browserName)) await page.keyboard.press(key);
+  for (const key of UNDO_KEYS) await page.keyboard.press(key);
   await page.keyboard.press("Tab");
   await expectKept("0.097");
 
   // The box of the MAF, whose 0.9 was typed and committed: nothing typed
   // is left in it for the keys to take back.
   await maf.box.focus();
-  for (const key of undoKeys(browserName)) await page.keyboard.press(key);
+  for (const key of UNDO_KEYS) await page.keyboard.press(key);
   await page.keyboard.press("Tab");
   await expectKept("0.097");
 
-  await page.getByRole("heading", { level: 1 }).focus();
-  for (const key of undoKeys(browserName)) await page.keyboard.press(key);
+  await heading.focus();
+  for (const key of UNDO_KEYS) await page.keyboard.press(key);
+  await expect(heading).toBeFocused();
   await expectKept("0.097");
   await expect(notice(page)).toHaveCount(0);
+});
+
+test("SF6 the browser's undo key in a box whose number was typed and committed leaves the number, the line and the threshold", async ({
+  page,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expectDone(page, "panel.vcf.gz");
+  const maf = threshold(page, "Major allele frequency");
+  // 0.9 typed over the 1 of a threshold that is off, and committed.
+  await maf.box.fill("0.9");
+  await maf.box.press("Enter");
+  await expect(maf.slider).toHaveValue("0.9");
+
+  await maf.box.press("ControlOrMeta+z");
+  await expect(maf.box).toHaveValue("0.9");
+  await expect(maf.slider).toHaveValue("0.9");
+  await maf.box.press("ControlOrMeta+Shift+z");
+  await expect(maf.box).toHaveValue("0.9");
+  // The box committed again as the focus leaves it: still 0.9, on.
+  await page.keyboard.press("Tab");
+  await expect(maf.box).toHaveValue("0.9");
+  await expect(maf.slider).toHaveValue("0.9");
+  await expect(maf.box).not.toHaveAttribute("data-muted");
 });
 
 test("SF7 round a file opened while the pass of the file before it runs starts its own pass, and no Stop is said", async ({

@@ -454,7 +454,13 @@ How the box is used, on this page:
 - **Escape** puts back the box's number, the project's value, and so
   does **Ctrl+Z** while something typed is not yet committed. With
   nothing typed, Ctrl+Z changes nothing on this page; it would be the
-  page's Undo if the page drew it again.
+  page's Undo if the page drew it again. The box cancels the browser's
+  own undo and redo of its text, whatever gives them: Ctrl+Z on Windows
+  and Linux, Cmd+Z on macOS, or the menu Edit. Until 9 October 2026 it
+  did not, and with no handler of the keys on the page the browser took
+  the text back to the 1 that 0.9 had been typed over and gave it as the
+  threshold, off; Chromium did so even with the focus on the heading,
+  moving it into the box, as seen on GitHub's Linux runner.
 - **The Up and Down arrow keys** move the number one step of the axis,
   **Page Up and Page Down** ten steps, as on the line; the presses make a
   run, which becomes one change. In the box of a threshold that is off,
@@ -728,10 +734,13 @@ popnei 0.2.2 writes from `low_qual.vcf.gz`, for the FILTER box, beside the check
   is dragged, typed, moved with the arrow keys or turned off, or the
   FILTER box ticked;
 - the page has no button Undo nor Redo, before a file and after one;
-- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z in WebKit,
-  pressed on the heading, on a line while its run waits, the page's
-  clock stopped, and after, and in a box, change neither a threshold
-  nor the FILTER box;
+- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z, and Cmd+Z and Cmd+Shift+Z, pressed
+  on the heading, on a line while its run waits, the page's clock
+  stopped, and after, and in a box, change neither a threshold nor the
+  FILTER box, and leave the focus on the heading;
+- the browser's undo key, Ctrl+Z or Cmd+Z, and its redo, in a box whose
+  number was typed and committed, leave the number in the box, the line
+  and the threshold, also once the focus leaves the box;
 - a drag changes the threshold when the line is let go: the box follows
   the line, which then removes some values and is out of the grey;
 - emptying the box, typing 1, and dragging the line of the MAF to the

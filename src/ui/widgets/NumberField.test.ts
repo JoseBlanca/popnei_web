@@ -457,3 +457,59 @@ describe("SF8 D1 the options of the number box", () => {
     expect(input.disabled).toBe(false);
   });
 });
+
+/** Offers the browser's own undo, or redo, of `input`'s text, as
+    Chromium and WebKit do at Ctrl+Z or Cmd+Z, even with the focus on the
+    heading, and as the menu Edit does: true when the browser may go on
+    with it, false when it was cancelled. */
+function offerHistory(
+  input: HTMLInputElement,
+  inputType: "historyUndo" | "historyRedo",
+): boolean {
+  let offered = true;
+  act(() => {
+    offered = input.dispatchEvent(
+      new InputEvent("beforeinput", {
+        inputType,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  return offered;
+}
+
+describe("SF6 the browser's own undo of the box's text", () => {
+  test("is cancelled after a number committed, so the box keeps it and gives nothing", () => {
+    const calls = newCalls();
+    const input = draw(thresholdProps(1, calls));
+    focus(input);
+    input.setSelectionRange(0, input.value.length);
+    typeKeys(input, "0.9");
+    press(input, "Enter");
+    expect(calls.changes).toEqual([0.9]);
+    draw(thresholdProps(0.9, calls));
+
+    expect(offerHistory(input, "historyUndo")).toBe(false);
+    expect(offerHistory(input, "historyRedo")).toBe(false);
+    blur(input);
+
+    expect(input.value).toBe("0.9");
+    expect(calls.changes).toEqual([0.9]);
+  });
+
+  test("with something typed, is cancelled and puts back the box's number, as Ctrl+Z does", () => {
+    const calls = newCalls();
+    const input = draw(thresholdProps(0.1, calls));
+    focus(input);
+    input.setSelectionRange(0, input.value.length);
+    typeKeys(input, "0.05");
+    expect(input.value).toBe("0.05");
+
+    expect(offerHistory(input, "historyUndo")).toBe(false);
+    expect(input.value).toBe("0.1");
+    blur(input);
+
+    expect(calls.changes).toEqual([]);
+  });
+});
