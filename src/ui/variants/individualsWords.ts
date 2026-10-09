@@ -149,13 +149,15 @@ export function countText(kept: number | null): string {
 }
 
 /** Why the counts wait for the one pass: it runs or has not started, the
-    user stopped it, or it, or the opening, failed. Read only while the
-    list of the individuals kept is not known. */
+    user stopped it, or it failed. Read only while the variants file is
+    read and the list of the individuals kept is not known. */
 export type PassWait = "running" | "stopped" | "failed";
 
-/** Why the counts of `s` wait for the one pass, read while the list of
-    the individuals kept is not known: "failed" when the opening of the
-    variants file failed, or a member of the chain of the pass did;
+/** Why the counts of `s` wait for the one pass, read while the variants
+    file is read and the list of the individuals kept is not known, so
+    never for an opening of the variants file that failed, whose box
+    shows no counts (`countsShown`): "failed" when a member of the chain
+    of the pass failed;
     "stopped" when the box offers Start again, which `startedUnder` of
     autoRuns.ts tells from the key of the member it would start
     (`chainButton`); "running" otherwise, while the pass runs or is about
@@ -164,7 +166,6 @@ export function passWaitOf(
   s: AppState<JobResult, unknown>,
   startedUnder: (key: Key) => boolean,
 ): PassWait {
-  if (s.project.variants?.read.kind === "failed") return "failed";
   const statuses = chainStatuses(s.analyses);
   if (statuses.some((status) => status.kind === "error")) return "failed";
   return chainButton(statuses, startedUnder)?.kind === "run"
