@@ -105,7 +105,8 @@ export function analysisTabs(
   offers**, a column of text of more than 20 values: `tooManyValues`,
   since `populationCounts` gives `tooMany` and no populations.
 - **An individuals file of names none of which are in the variants
-  file**: `fewPopulations` with 0.
+  file**: `fewPopulations` with 0, whose words ask the user to check
+  the names before choosing another column.
 - **A threshold that keeps no individual**: `fewKept` with 0; the PCA
   and Populations are not greyed, since their own locks say so.
 

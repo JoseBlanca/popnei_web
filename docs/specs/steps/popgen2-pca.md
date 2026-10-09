@@ -133,11 +133,11 @@ that names it in the tooltip and in the status region:
 
 | what the user does | the description |
 |---|---|
-| a threshold of the Variants tab moved, typed, turned on or off | as `popgen2-filters.md` gives them, "the MAF filter changed", "the missing data filter of the individuals was turned off", … |
+| a threshold of the Variants tab moved, typed, turned on or off | those of `thresholdChange.ts` of `src/ui/variants/`: "the filter of the variants by missing data changed", "the MAF filter was turned on", "the filter of individuals by missing data was turned off", … |
 | the FILTER box ticked or not | as `popgen2-filters.md` gives them |
 | a column chosen in "Column of the populations", or None | "the column of the populations changed" |
 | the method of the PCA | "the method of the PCA changed" |
-| "Stricter for the PCA" chosen for its missing data or its MAF | "the missing data filter of the PCA was made stricter", "the MAF filter of the PCA was made stricter" |
+| "Stricter for the PCA" chosen for its missing data or its MAF, one command, `stricterCommand`, that sets `follow` false and the value together | "the missing data filter of the PCA was made stricter", "the MAF filter of the PCA was made stricter" |
 | "As in the Variants tab" chosen again | "the missing data filter of the PCA was set back to as in the Variants tab", "the MAF filter …" |
 | a value of a filter made stricter, typed | "the missing data filter of the PCA changed", "the MAF filter of the PCA changed" |
 | the LD pruning of the PCA turned on or off | "the LD pruning of the PCA was turned on", "… was turned off" |
@@ -183,7 +183,7 @@ of a box:
 | a number box with nothing typed | the page's Undo |
 | a line of a threshold, with a run of the arrow keys waiting | the run is made a change, then undone, so the threshold goes back to where the presses started |
 | the dialog of the download of the filtered variants, open | nothing |
-| an open menu "Download…" | the page's Undo; the menu stays open |
+| an open menu "Download…" | the page's Undo; the menu stays open, unless the undo removes the table or the plot it belongs to, which closes it, and the focus goes to the heading "Popnei" |
 | anywhere else on the page | the page's Undo |
 
 The box refuses the browser's own undo of its text, by the keys and by
@@ -273,17 +273,23 @@ Then three, in this order:
   - "Stricter for the PCA", which shows its number field under it:
     "Maximum proportion of missing genotypes, from 0 to 0.1" and
     "Maximum major allele frequency, from 0 to 0.95", the upper end the
-    Variants tab's value, or 1 while that threshold is off. Under the
-    field, the line of the Variants step that says what popnei filters
-    on, as on the old panel.
+    Variants tab's value, or 1 while that threshold is off. The field
+    takes as many decimals as the box of that threshold in the Variants
+    tab, which rounds to the step of its axis (`popgen2-filters.md`, "A
+    number with many decimals"), and at least two: three on the missing
+    rate of `panel.nei`, whose axis steps by 0.001. Under the field, the
+    line of the Variants step that says what popnei filters on, as on
+    the old panel.
 
-  Choosing "Stricter for the PCA" sends the value the option keeps when
-  it is at most the Variants tab's value, and the Variants tab's value
-  otherwise; the first time, the option keeps 0.1 for the missing data
-  and 0.95 for the MAF, the defaults of the old page. So the first
-  choice keeps the variants of the Variants tab until the user lowers
-  the number. Choosing "As in the Variants tab" sends `follow` true
-  alone; the field goes and its value is kept for the next time.
+  Choosing "Stricter for the PCA" sends one command, `stricterCommand`
+  of `src/ui/analyses/pca/commands.ts`, with `follow` false and the
+  upper end of the field as the value: the Variants tab's, or 1 while
+  that threshold is off. So the choice alone never changes the variants
+  the PCA reads; the user then lowers the number. A value typed before,
+  and set back by "As in the Variants tab", is not brought back: a value
+  kept looser than the Variants tab of now would be shown as the
+  Variants tab's anyway. Choosing "As in the Variants tab" sends
+  `follow` true alone; the field goes.
 
   A number above the upper end is refused with the line under the field,
   "0.2 is more than the 0.1 of the Variants tab; the maximum proportion
@@ -300,7 +306,10 @@ Then three, in this order:
   0.05 set here, so the PCA uses 0.03." The project keeps 0.05, and when
   the Variants tab goes back above it, the PCA has its 0.05 again with
   no command. The field never shows a value looser than the one used.
-  A number typed there is bounded by the Variants tab as above.
+  A number typed there is bounded by the Variants tab as above, and is
+  sent even when it is the number the field shows, 0.03 typed over the
+  0.03 of the Variants tab, so that the project keeps what the user
+  typed.
 
 - **LD pruning**, a switch, "Prune the variants by linkage
   disequilibrium (LD)", on when the page opens, with two number fields
@@ -327,16 +336,18 @@ describes it, the first of these:
 
 | the lock | the words |
 |---|---|
+| more than 9,381 individuals in the file, the PCA, known at the opening | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
 | the one pass is running, or is about to start | "Run once panel.nei is read to the end: the reading under way in the box Variants file and the PCA cannot run at once." |
-| the one pass was stopped, or failed | "Run once panel.nei is read to the end: Start again its reading in the box Variants file." |
-| more than 9,381 individuals in the file, the PCA | the old panel's, "panel.nei has 12,000 individuals, and the principal components of more than 9,381 need more memory than a browser tab can hold. Calculate them with popnei in Python, outside the browser." |
+| the one pass was stopped by the user, or failed in a way its box offers Start again for | "Run once panel.nei is read to the end: Start again its reading in the box Variants file." |
+| the one pass refused by popnei, or the file could no longer be read, where the box offers no Start again (`resume` of `src/ui/autoRuns.ts`) | "Run once panel.nei is read to the end: it could not be read, as the box Variants file says. Open it again there, or open another." |
 | more than 9,381 individuals kept, the PCoA | the old panel's, with "Keep at most 9,381 with the filters of individuals in the Variants tab" |
 | the filters of the individuals keep none | the store's, ending "Loosen them." |
 | the LD pruning on with no distance | "The LD pruning of the PCA needs the distance within which variants are compared. It has no default, because it depends on how far linkage disequilibrium extends in the genome of your species. Type a distance in base pairs, or turn the LD pruning off." |
 
-The first two are the screen's: they come from the store's state of the
-one pass and from the code that starts the pass by itself, which alone
-tells a pass stopped by the user from one about to start. The others
+The three of the one pass are the screen's, `passLock` of
+`src/ui/analyses/pca/passLock.ts`, a pure function of the store's state
+of the one pass and of the state of the code that starts it by itself,
+which alone tells a pass stopped by the user from one about to start. The others
 come from the module and the store. The individuals file never locks
 the PCA: while it is read, refused or absent, the points are
 unclassified. A PCA running shows Stop, the bar and the clock of the
@@ -402,7 +413,7 @@ The tables and plots of the page in this piece:
 | the histograms of the missing rate, the MAF, the observed heterozygosity and the unbiased expected heterozygosity of the variants | the Variants tab | `panel.missing_rate_variants`, `panel.maf_variants`, `panel.obs_het_variants`, `panel.exp_het_variants`, each `.svg`, `.png` or `.csv` |
 | the histograms of the missing rate and of the observed heterozygosity of the individuals | the Variants tab | `panel.missing_rate_individuals`, `panel.obs_het_individuals` |
 | the table of the individuals file | the Individuals tab | `panel_pops.table.csv` |
-| the counts per population | the box of the individuals file | `panel_pops.counts.csv` |
+| the counts per population | the box of the individuals file | `panel.population_counts.csv` |
 | the PCA's plot, 3D or 2D | the PCA tab | `panel.pca.svg`, `panel.pca.png`; `panel.pca.coordinates.csv` |
 | the PCA's explained variance | the PCA tab | `panel.pca.variance.csv` |
 | the PCA's table of the individuals | the PCA tab | `panel.pca.table.csv` |
@@ -448,7 +459,7 @@ greyed or shows its line of not built yet.
 | running | Stop, the bar and the clock, and the line under them; the options, whose change stops the PCA if it changes what the PCA reads | Stop; change the options, the thresholds, the FILTER box; turn to another tab, where the PCA goes on |
 | done | the result, its warnings and notes, the downloads | colour, turn, highlight, sort, download; change the options |
 | results removed | the options, the line of the individuals and Run, as in ready, with no words of why: the page makes no notice, as the owner decided on 8 October 2026; an Undo of the change, or the filters set back as they were, show the result again from the cache | Undo; Run |
-| error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal |
+| error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
 A change of the thresholds, of the FILTER box or of an option of the
 PCA that changes what the PCA reads, its key, takes a result off the
@@ -497,7 +508,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | Distances, the individuals file refused or failed | "The distances between populations need at least two populations: panel_pops.csv could not be read. Open another in the box Individuals file." |
 | Distances, a column of more values than a column of populations can have | "The distances between populations need at least two populations, and country has 35 values, more than the 20 a column of populations can have. Choose another column in the box Individuals file." |
 | Distances, no column, or a column of fewer than two populations among the individuals of the variants file | "The distances between populations need at least two populations, and popcat gives 1 among the individuals of panel.nei. Choose another column in the box Individuals file."; with no column, "…, and no column of the populations is chosen. Choose one in the box Individuals file." |
-| Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab." |
+| Distances, the filters leave fewer than two | "The distances between populations need at least two populations, and the filters keep individuals of 1 population. Loosen the filters of the individuals in the Variants tab."; with none, "…, and the filters keep no individual of any population. …" |
+| Distances, no individual of the variants file in the column | "The distances between populations need at least two populations, and no individual of panel.nei has a population in popcat. Check that panel_pops.csv names the individuals as panel.nei does, or choose another column in the box Individuals file." |
 | Undo, Redo | "Undo"; "Redo"; their tooltips "Undo: ‹the description›", "Redo: ‹the description›" |
 | the status region, an undo or a redo | "Undone: ‹the description›."; "Redone: ‹the description›." |
 | the heading of the tab | "PCA"; "PCoA" |
@@ -505,7 +517,7 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | a number above the Variants tab's | "0.2 is more than the 0.1 of the Variants tab; the maximum proportion of missing genotypes for the PCA stays 0.05." |
 | the Variants tab stricter than the PCA's own | "The Variants tab keeps at most 0.03, stricter than the 0.05 set here, so the PCA uses 0.03." |
 | the lock and the help of the one pass | the table of "Run and Stop" |
-| the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated." |
+| the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
 | the button of a download | "Download…", named for a screen reader "Download the plot of the missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries |
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
@@ -578,11 +590,11 @@ and a screen reader says "dimmed". Its contrast is exempt from 1.4.3 as
 that of a control that cannot be used.
 
 **What is said without moving the focus** (4.1.3): an undo or a redo; a
-file handed to the browser by a download; the end of a run, "PCA of
-panel.nei calculated.", whichever tab is shown; the reason of the LD
-pruning with no distance when the switch is turned on and the field is
-empty; the line "The Variants tab keeps at most …" when it appears after
-a change of a threshold of the Variants tab, said once; and those of the
+file handed to the browser by a download, and a PNG refused; the end of
+a run, "PCA of panel.nei calculated.", and its refusal or failure,
+whichever tab is shown, since the user may have turned to another; the
+reason of the LD pruning with no distance when the switch is turned on
+and the field is empty; and those of the
 old panel: the loading of the 3D view and its failures, the notes that a
 change of the colour, the axes or the view makes. A tab that becomes
 greyed or not is not said: the change comes from a file the user opened,
@@ -596,6 +608,13 @@ downloads, so that the five buttons of the PCA tab are not five
 
 **Undo and Redo**: their tooltips are their descriptions; a button that
 goes hands the focus on, as "The focus" above says.
+
+**The size of what is pressed** (2.5.8): Undo, Redo, each "Download…"
+and each tab are at least 24 by 24 px, as every button of the page.
+
+The line "The Variants tab keeps at most …" is not said: it appears
+after a change made in the Variants tab, about a field the user is not
+looking at, and is read when they reach the field.
 
 **The PCA's plot, its legend, its table and its 3D view** are as on the
 old panel (`docs/specs/analyses/pca.md`, "Accessibility"), with
@@ -613,10 +632,14 @@ its reason; Undo read with its step; a menu of a download.
 - `analysisTabs` of core in each row of its spec; the words of each
   reason from it.
 - The descriptions of the PCA's commands on this page, method by
-  method; the upper end of each field and the line of a refusal; the
-  line of the Variants tab stricter.
-- The lock of Run from the state of the one pass and of the code that
-  starts it: running, about to start, stopped, failed, read to the end.
+  method, from `src/ui/analyses/pca/commands.ts` given the page;
+  `stricterCommand` sets `follow` and the value in one step.
+- `stricterBound(p, kind)` of `src/ui/analyses/pca/stricter.ts`, the
+  upper end and the decimals of each field, and `stricterLines`, the
+  line of a refusal and the line of the Variants tab stricter: the
+  Variants tab at 0.1, at 0.0035, off.
+- `passLock`: running, about to start, stopped by the user, failed with
+  Start again offered, refused by popnei, read to the end.
 - Undo and Redo, with the real store of the page and a fake worker:
   nothing to undo after the store is made, after `panel.nei` is opened,
   and after an individuals file is opened, read and given its column;
@@ -668,7 +691,7 @@ engines that start on the owner's Mac, on `panel.nei`,
   not running.
 - **Undo and Redo**: no button when the page opens, after `panel.nei`,
   and after `panel_pops.csv`; a threshold moved: Undo, with its tooltip
-  "Undo: the missing data filter changed" on the focus; Undo pressed:
+  "Undo: the filter of the variants by missing data changed" on the focus; Undo pressed:
   Redo appears, Undo goes, the focus on Redo, neither button moved by a
   pixel; Ctrl+Z and Meta+Z on the heading, on a line and in a box with
   nothing typed, an undo each; 0.9 typed in the MAF box, Ctrl+Z: the box
@@ -728,8 +751,12 @@ page: the names of the tabs; a greyed tab that the keyboard reaches; a
 tab that stays shown when it becomes greyed; every tab kept drawn; the
 labels wrapping at the width of a phone; Run locked until the one pass
 ends; the unclassified as one group, "Unclassified"; the PCA's own value
-kept when the Variants tab goes below it; "Stricter for the PCA" taking
-the Variants tab's value when the kept one is looser; the LD pruning a
+kept when the Variants tab goes below it; "Stricter for the PCA" always
+starting at the upper end of its field, the Variants tab's value or 1,
+where the design had it start there the first time only, since the
+first time cannot be told from a value kept; the decimals of its field
+those of the Variants tab's box; the PCA's limit of 9,381 individuals
+before the lock of the one pass; the LD pruning a
 switch; one button "Download…" with a menu; the names of the files;
 Redo back with Undo, shown by the same rule; their places that stay
 empty; the keys caught on the whole page; the removal of the individuals
