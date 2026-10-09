@@ -388,8 +388,14 @@ keep in each population and the unclassified, and names those not in the
 file. The unclassified are one population only when no individual is
 classified; otherwise the analyses per population leave them out, and
 the page says how many they are, as the owner decided the same day
-(`docs/designs/input-page.md`, approved on 9 October 2026). `popgen.html`
-keeps the rule above.
+(`docs/designs/input-page.md`, approved on 9 October 2026). The page
+shows the file in a box of its own beside the variants file's, with the
+list of the column of the populations and the counts, and under a tab,
+"Individuals file", how it was read, the individuals of the variants
+file it lacks, and the whole file as a table sorted by any column
+(`docs/specs/steps/popgen2-input.md`, built on the branch
+`individuals-file` on 9 October 2026 and not yet tried by the owner).
+`popgen.html` keeps the rule above.
 
 ### The format
 
@@ -402,13 +408,14 @@ and its encoding varies with the version. So:
   its tabs that is not hidden, which the application says in a line
   that names no sheet, as the owner decided on 28 September 2026, a merged cell giving its value to every
   cell of its range as Excel shows it, with calamine,
-  which is pure Rust, in xlsx_rs, a small project of its own whose
+  which is pure Rust, in table_io, a small project of its own whose
   package the applications install as they install popnei's
-  (`docs/architecture.md`, section 6; `docs/technology.md`).
-- CSV and TSV are read by the applications, in TypeScript, and a BOM at
-  the start of the file is removed. From 9 October 2026 every format is
-  read by table_io, xlsx_rs renamed, by the same rules, and the format
-  is found from the first bytes of the file, not from its name
+  (`docs/architecture.md`, section 6; `docs/technology.md`); until 9
+  October 2026 in xlsx_rs, the same project before it was renamed.
+- CSV and TSV are read by table_io too, from 9 October 2026, by the
+  rules the applications' own reader in TypeScript had until then, and
+  a BOM at the start of the file is removed. The format is found from
+  the first bytes of the file, not from its name
   (`docs/designs/input-page.md`).
 - Their encoding, their separator and their decimal mark are detected,
   and the user can set each one when the detection is wrong, as the owner
@@ -907,7 +914,11 @@ and popnei's release `js-v0.1.0-dev.3` of 28 September 2026 has them.
    popnei's business: CSV and TSV, and the inference of the types of the
    columns, are read by the applications in TypeScript, and xlsx by
    xlsx_rs, a small Rust project of its own, since 28 September 2026
-   (`docs/architecture.md`, section 6). Nothing of it is asked of popnei. The Python script reads the file
+   (`docs/architecture.md`, section 6). Settled again by the owner on 9
+   October 2026: every format, CSV and TSV included, is read by
+   table_io, xlsx_rs renamed and widened, and the inference of the types
+   stays in TypeScript (`docs/designs/input-page.md`). Nothing of it is
+   asked of popnei. The Python script reads the file
    with pandas (section 9).
 3. Whether the unfolded SFS, with the ancestral allele given by the user,
    is in the 95%.

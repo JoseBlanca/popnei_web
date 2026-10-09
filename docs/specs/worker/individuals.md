@@ -13,8 +13,10 @@ holds, or a refusal, and the words of each refusal. The rules of the
 bytes, the encoding, the separator, the rows and the cells, the decimal
 mark and the xlsx, which this spec held until then, are table_io's
 `docs/specs/import.md`, `text-files.md` and `values.md`, in
-`github.com/JoseBlanca/table_io`, checked out at `~/devel/xlsx_rs`. No
-code of the revision yet.
+`github.com/JoseBlanca/table_io`, checked out at `~/devel/xlsx_rs`.
+Built on the branch `individuals-file` on 9 October 2026, work packages
+1 and 2 of `docs/plans/input-page.md`; not yet tried by the owner, so no
+round of theirs has changed it yet.
 
 The reader turns the file of the individuals, a CSV, a TSV or an xlsx,
 the metadata file of population genetics or the traits file of

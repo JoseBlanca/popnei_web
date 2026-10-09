@@ -6,8 +6,10 @@ individuals file (`docs/specs/worker/individuals.md`): the failed read of the in
 the reader found, `"text"`, `"xlsx"` or `null`, which the check of the
 answer accepts; the refusal of a files wasm not downloaded is
 `readerNotLoaded`, of any file. `PROTOCOL_VERSION` does not change: the
-page and its workers are always built together. No code of the revision
-yet.
+page and its workers are always built together. Built on the branch
+`individuals-file` on 9 October 2026, work package 1 of
+`docs/plans/input-page.md`; not yet tried by the owner, so no round of
+theirs has changed it yet.
 
 25 September 2026, approved by the owner on 25 September 2026; built in
 `src/worker/messages.ts`; revised on 26 September 2026 for stage 3 of

@@ -7,7 +7,10 @@ that opens its file, and under them two tabs, "Variants file" and
 "Individuals file". It develops the design
 `docs/designs/input-page.md`, approved by the owner on 9 October 2026
 with its five answers, and section 4 of `docs/functionality.md`, "The
-files of the individuals". Written on 9 October 2026; no code yet. It
+files of the individuals". Written on 9 October 2026, and built on the
+branch `individuals-file` the same day, work packages 3 to 6 of
+`docs/plans/input-page.md`; not yet tried by the owner, so no round of
+theirs has changed it yet. It
 covers step 2 of case 4 of `docs/use-cases.md`, how many individuals
 each population has, and the file of the populations that case 3 needs
 for the colours of its PCA.
@@ -349,7 +352,11 @@ changing; both are painted in the first frame after the click, before
 the rows, so that the user sees the click was taken. A click on a header
 while a sort is drawn asks for the same sort again, since the header
 still shows the sort before it. At 320 px the box scrolls sideways and
-the page does not. The types of the columns are not shown.
+the page does not. Each column is at least as wide as its whole header
+on one line, so that no header wraps and the row of the headers keeps
+one height as the table scrolls sideways: "Fecha de muestreo" of
+`individuals_10000.xlsx` wrapped onto two lines, and the row grew from
+33 to 57 pixels when it came into view. The types of the columns are not shown.
 
 ### Both tabs kept drawn
 

@@ -4,7 +4,10 @@ Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
 the owner that day, which made table_io's package the reader of the
 individuals file (`docs/specs/worker/individuals.md`): the cells of a CSV may be numbers and booleans; and
 `IndividualsFileError` loses `notXlsx`, gains `notWorkbook`, and renames
-`xlsxReaderNotLoaded` to `readerNotLoaded`. No code of the revision yet.
+`xlsxReaderNotLoaded` to `readerNotLoaded`. Built on the branch
+`individuals-file` on 9 October 2026, work package 1 of
+`docs/plans/input-page.md`; not yet tried by the owner, so no round of
+theirs has changed it yet.
 
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/worker/protocol.ts`; revised on 25 September 2026 for the specs of

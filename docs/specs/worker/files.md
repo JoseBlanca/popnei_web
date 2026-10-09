@@ -4,7 +4,10 @@ From 9 October 2026 the light worker reads the individuals file with
 table_io, xlsx_rs renamed and widened, whose package reads every format
 into a table (`docs/designs/input-page.md`; `docs/specs/worker/individuals.md`,
 "The read by table_io"); xlsx_rs's `readXlsx` is no longer called. What
-follows is the pointer of 28 September 2026.
+follows is the pointer of 28 September 2026. Built on the branch
+`individuals-file` on 9 October 2026, work package 1 of
+`docs/plans/input-page.md`, which removed xlsx_rs from the site; not yet
+tried by the owner, so no round of theirs has changed it yet.
 
 This spec moved to the repository of xlsx_rs on 28 September 2026, whole,
 as the owner had decided: it is `docs/specs/read.md` there,

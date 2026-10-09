@@ -18,7 +18,10 @@ before this piece, is that of `docs/designs/stats-filters.md`, built and
 accepted by the owner on 8 October 2026, with the download of the
 filtered variants built on the branch `download` on 9 October 2026. The
 specs written from it are `docs/specs/steps/popgen2-input.md`, the
-screen, and the module specs it names there.
+screen, and the module specs it names there. It was built on the
+branch `individuals-file` on 9 October 2026 (`docs/plans/input-page.md`);
+where the build set a number this design left open, or found one that
+differs from it, the paragraph says so with "as built".
 
 ## The design in short, for the owner
 
@@ -726,7 +729,9 @@ is retired, which nothing asks.
 ### What the switch to table_io changes
 
 - **The light worker.** It loads table_io's package for every file, on
-  the first read, as it loads xlsx_rs's for the first xlsx today, with
+  the first read, as it loads xlsx_rs's for the first xlsx today (and,
+  as built, again at every read, since the worker is ended after each),
+  with
   the same retry after a failed download; checks the size of the file,
   20 MB, before it reads the bytes, since the package sees them only once
   they are in its memory; calls `importTable` with the options of the
@@ -924,7 +929,18 @@ What changes:
   sets from the measurement, 2 MB until then. It loses nothing, since the
   table is in the project, and costs the next read the compiling of the
   package again from the browser's cache, not measured. It is a change of
-  the client of the light worker, not of its messages. A common file, 5,000 rows of 20 columns, is a hundred
+  the client of the light worker, not of its messages. As built on the
+  branch `individuals-file` on 9 October 2026 (`docs/plans/input-page.md`,
+  "What was done", work package 2): the size is 0, the worker ended
+  after every read of a file that is not empty, since a CSV of 1 MB
+  already left 123.7 MB held after its read in Chromium 153 and 285.1 MB
+  in WebKit 26.6, of which ending the worker gave back 47.0 and 32.4 MB;
+  a restart costs a read 0 to 110 ms; and the next read takes the
+  package from the browser's cache in Chromium only, WebKit fetching its
+  `.wasm` from the site again, 0.33 MB, at every read. The page itself
+  holds about 550 MB in Chromium and 1.3 GB in WebKit after a file of 20
+  MB with empty cells, the worker ended; not acted on. A common file,
+  5,000 rows of 20 columns, is a hundred
   thousand cells. The counts keep one list of names per population,
   which the store keeps once for each table and column. Nothing grows
   with the variants.
@@ -940,7 +956,13 @@ What changes:
   0.34 MB downloaded the first time an individuals file is read, a CSV
   included. Today a CSV downloads nothing and an xlsx xlsx_rs's package,
   300,646 and 3,041 bytes gzipped, 0.30 MB. Neither is downloaded before
-  a file is opened, and the browser keeps it after. 0.34 MB is about a
+  a file is opened, and the browser keeps it after; WebKit, as built,
+  fetches the `.wasm` again at every read (the memory, above). As built
+  on 9 October 2026 the `.wasm` is 330,425 bytes gzipped and the
+  JavaScript 3,196, 0.33 MB, and the first load of `popgen2.html` grew
+  by 15.95 KB gzipped with the tabs and by 41.3 KB with the box and the
+  table, to 278.6 KB (`docs/technology.md`, "React Aria Components").
+  0.34 MB is about a
   quarter of a second at 10 Mbit/s. The page's first script grows by the
   code of React Aria's table, its tabs and its list, which
   `popgen2.html` does not use yet; React Aria's table alone was 14.19 KB
@@ -960,8 +982,8 @@ What changes:
 - **What is lost when the tab is closed or a worker restarts.** Both
   files, until the page saves a project; the table is in the project, so
   a restart of the light worker loses nothing of a file already read,
-  and the next read downloads table_io's package again from the
-  browser's cache.
+  and the next read loads table_io's package again, from the browser's
+  cache in Chromium and from the site in WebKit, as built.
 
 ## The corrections made to the other documents
 
@@ -997,7 +1019,8 @@ Beyond the owner's answers, and open to the owner's change after trying
 the page: the column chosen, the first of text with 20 values or fewer;
 both pages switched to table_io, since their light worker is one; the
 light worker ended after a read of a file above 2 MB, a number the plan
-sets from its measurement of the memory; an integer column with a value
+sets from its measurement of the memory, which set it to 0, every read;
+an integer column with a value
 beyond 2^53 kept as texts; the names of populations written with the
 decimal mark of the file; the tab "Variants file" shown first and never
 left by the page itself; both tabs kept drawn; the openings of the

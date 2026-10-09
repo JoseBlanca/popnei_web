@@ -41,7 +41,12 @@ day; that piece is built on the branch `download`
 on 9 October 2026 in section 6, "The individuals file", for the
 individuals file on `popgen2.html`, and in "The files wasm" for
 table_io, the reader that replaces xlsx_rs, from
-`docs/designs/input-page.md`, approved by the owner on 9 October 2026.
+`docs/designs/input-page.md`, approved by the owner on 9 October 2026;
+and, the same day, with what the branch `individuals-file` built and
+measured (`docs/plans/input-page.md`), in the figure of section 1, the
+bullets of section 6 that named the reader in TypeScript or xlsx_rs,
+and section 11, the download of table_io's package, the memory of a
+read and the table of the individuals file.
 What was
 revised each time until 30 September 2026 is at the end
 of section 1. The document gives the parts of the web applications of
@@ -66,11 +71,12 @@ it only through messages.
 │         results, undo, the cache    │    └──────────────────────────────┘
 │   ▼                                 │     light worker
 │ charts  D3 and three.js             │    ┌──────────────────────────────┐
-│                                     │◀──▶│ no popnei: our reader of CSV │
-│ the File objects, by file id        │    │   and TSV, in TypeScript     │
-└─────────────────────────────────────┘    │ the files wasm, on first need│
-                                           │ the individuals file, xlsx,  │
-                                           │   the zip of the report      │
+│                                     │◀──▶│ no popnei                    │
+│ the File objects, by file id        │    │ the files wasm, table_io's,  │
+└─────────────────────────────────────┘    │   loaded for each read of    │
+                                           │   the individuals file, CSV, │
+                                           │   TSV or xlsx; later the zip │
+                                           │   of the report              │
                                            └──────────────────────────────┘
 ```
 
@@ -1806,7 +1812,9 @@ id and is dropped: the name would not tell the two apart. The type of the table 
 in `src/worker/protocol.ts`, as the filters are, so that the project of
 core and the reader describe it in one way.
 
-- **CSV and TSV are read by popnei_web, in TypeScript**, by the module
+- **CSV and TSV were read by popnei_web, in TypeScript, until 9 October
+  2026**, and are now read by table_io's package by the same rules
+  (below, "What was revised on 9 October 2026"); until then by the module
   `src/worker/individuals/`, which the light worker's runner calls: the
   separator detected, `,`, `;` or a tab; decimals with a comma accepted;
   a BOM at the start removed; an empty cell, `NA` and `-` read as
@@ -1848,8 +1856,8 @@ core and the reader describe it in one way.
   English and in Spanish, and it is checked by the compiler with no
   globals, as core is (`.claude/skills/coding/configs.md`).
 - **An xlsx** is read by calamine in the files wasm, the package of
-  xlsx_rs, loaded on first need (below), and its cells go through the
-  same inference.
+  table_io since 9 October 2026 and of xlsx_rs before it, loaded for
+  each read (below), and its cells go through the same inference.
 - **Every individual of the variants must be in the file.** Core checks
   it, in the `needs` of each analysis that uses the file, against the
   individuals the calculation worker read from the variant file, and the
@@ -1938,8 +1946,8 @@ sends nothing when there is none. It is a step of the history, as any
 command; the store's record of the read is not, and does not choose the
 column itself, since it writes the table into the projects of the history
 that hold the file and is shared with `popgen.html`. The light worker it
-asks may be ended after a read of a large file, for the memory table_io's
-package keeps, and started again at the next read.
+asks is ended after every read of a file that is not empty, for the
+memory table_io's package keeps, and started again at the next read.
 
 ### The regions of a BED file
 
@@ -2008,6 +2016,14 @@ of the keys, two BED files of the same regions giving one key and two of
 other regions two keys; and users who bring such masks.
 
 ### The files wasm, the package of xlsx_rs
+
+Since 9 October 2026 the files wasm is the package of table_io, xlsx_rs
+renamed and widened, which reads every individuals file, a CSV, a TSV or
+an xlsx; what the bullets below say of xlsx_rs holds for it with the
+name changed, but where the paragraph "What was revised on 9 October
+2026" at the end of this section says otherwise: it is loaded for every
+read and not on the first need of an xlsx, and its worker is ended after
+each read.
 
 An xlsx is read, and from stage 6 written, by **xlsx_rs**, a project of
 its own in a repository of its own, as the owner decided on 28 September
@@ -2201,8 +2217,16 @@ a file before it reads its bytes, makes of table_io's columns the table
 the project holds, values of number and boolean columns as numbers and
 booleans, a CSV's among them, and infers the four types of the project
 from it, so core, the project file and the keys do not change. Its
-`.wasm` is 330,416 bytes gzipped and its JavaScript 6,758, 0.34 MB,
-where xlsx_rs's were 0.30 MB, downloaded for an xlsx alone. The local
+`.wasm` is 651,680 bytes, 330,425 gzipped, and its JavaScript 3,196
+gzipped, 0.33 MB, where xlsx_rs's were 0.30 MB, downloaded for an xlsx
+alone, as the build of the branch `individuals-file` gave them on 9
+October 2026 (`docs/plans/input-page.md`, "What was done"; the design
+had 330,416 and 6,758 from the package before its build). The light
+worker is ended after every read of a file that is not empty, for the
+memory table_io's wasm keeps (section 11), so a worker started again
+imports the package again: from the cache of the browser in Chromium,
+and in WebKit 26.6 the `.wasm` fetched from the site again at every
+read. The local
 build is packed with `npm pack` in `js/table_io` of the checkout at
 `~/devel/xlsx_rs`, whose folder keeps the old name, and installed as
 above. The option not taken: `popgen2.html` alone on table_io, with
@@ -2750,14 +2774,15 @@ src/worker/
                     and the results so far
   filesRunner.ts    the light worker, with no popnei: the individuals file,
                     the files wasm, xlsx and zip
-  xlsxCells.ts      the cells of an xlsx or its refusal, from what the files
-                    wasm gives, with no wasm in it
-                    (docs/specs/worker/individuals.md)
   individualsFile.ts
-                    the bytes of the individuals file, read and decoded,
-                    for filesRunner.ts
-  individuals/      the reader of CSV and TSV and the inference of the types
-                    of the columns, pure, called by filesRunner.ts
+                    the read of the individuals file: its size checked,
+                    its bytes read, table_io's importTable called, and
+                    the table of the project made of its columns, or a
+                    refusal (docs/specs/worker/individuals.md); tested in
+                    node; until 9 October 2026 xlsxCells.ts made the
+                    cells of an xlsx and individuals/ read a CSV
+  individuals/      columnTypes.ts, the inference of the types of the
+                    columns, pure, called by individualsFile.ts
   regions/          the reader of a BED file, pure, called by filesRunner.ts
 src/charts/
   plot2d.ts         the base every 2D plot makes its handle with: its SVG,
@@ -2838,7 +2863,16 @@ src/ui/
                     variants, its button, its dialog and the text after
                     it (DownloadVariants.tsx), what takes the button's
                     place (downloadState.ts) and its words
-                    (downloadWords.ts)
+                    (downloadWords.ts); from 9 October 2026, built on the
+                    branch individuals-file, the two boxes, of the
+                    variants file and of the individuals file, and the
+                    two tabs under them (VariantsPage.tsx), the box of
+                    the individuals file with the list of the column of
+                    the populations and the counts of each population
+                    (IndividualsBox.tsx, individualsCommands.ts,
+                    individualsWords.ts), and the tab with how the file
+                    was read, the individuals it lacks and its table,
+                    sortable (IndividualsTab.tsx, individualsTable.ts)
   popgenStore.ts    the store of the population genetics page, made with
                     the analyses and the functions of apps.ts and the
                     functions of the worker client that send; apart from
@@ -2894,8 +2928,14 @@ src/ui/
                     few rows that is only read, SortableTable.tsx, the
                     table sorted by any column, whose Virtualizer draws
                     only the rows in view, for thousands of rows such as
-                    the statistics of each individual, and TextArea.tsx,
-                    the text of several lines, the lists of individuals
+                    the statistics of each individual and, from 9
+                    October 2026, the individuals file under the tab of
+                    popgen2.html, whose rows are not drawn anew at
+                    each sort above 8 columns (tableSort.ts);
+                    Tabs.tsx, whose option keepHidden keeps every panel
+                    drawn and the hidden one inert, for the two tabs of
+                    popgen2.html; and TextArea.tsx, the text of several
+                    lines, the lists of individuals
   tokens.css        the design tokens
 src/probe/          the probe of stage 0, a page of its own outside the
                     layers, that checks a deploy still loads popnei
@@ -2905,8 +2945,9 @@ index.html popgen.html popgen2.html gwas.html probe.html
 docs/
 ```
 
-The files wasm is not in the repository: it is the package of xlsx_rs,
-installed into `node_modules/` from its release, as popnei is (section
+The files wasm is not in the repository: it is the package of table_io,
+until 9 October 2026 of xlsx_rs, installed into `node_modules/` from its
+release, as popnei is (section
 6).
 
 `core` has no DOM and no React, and is tested with Vitest alone. Nothing
@@ -3130,13 +3171,38 @@ tests of the application are the same with it.
   VCF and the filter of the regions made it 74.5 KB larger, and `gzip`
   72 KB, 774,080 bytes against 701,996. It is loaded by the calculation
   worker alone, before anything runs; the page's first script is 191.81
-  KB gzipped with either release. The files wasm,
-  the package of xlsx_rs,
-  0.30 MB gzipped while it only reads, in stage 4, and about 0.58 MB with
-  the writing of the report from stage 6, by the light worker the first
-  time an xlsx is read or a report is written (`docs/technology.md`,
-  section 2), measured again from the site built with its first
-  release.
+  KB gzipped with either release. The files wasm, the package of
+  table_io since 9 October 2026, is loaded by the light worker for every
+  read of an individuals file, a CSV included: its `.wasm` 651,680 bytes,
+  330,425 gzipped, and its JavaScript 3,196 bytes gzipped, as the build
+  of the branch `individuals-file` gave them on 9 October 2026
+  (`docs/plans/input-page.md`, "What was done", work package 1). Chromium
+  takes it from its cache after the first read; WebKit 26.6 fetched the
+  `.wasm` from the site again at every read, against the headers GitHub
+  Pages sends. Until 9 October 2026 the package of xlsx_rs, 0.30 MB
+  gzipped, was loaded for an xlsx alone. The writer of the report, from
+  stage 6, adds about 0.28 MB to it, by the trial of
+  `docs/technology.md`, section 2.
+- **The memory of a read of the individuals file.** table_io's wasm
+  keeps the room it took, so the light worker is ended after every read
+  of a file that is not empty and started again at the next, at a cost of
+  0 to 110 ms a read, as the plan of the input page decided on 9 October
+  2026 from its measurement on the Apple M5 Pro: a CSV of 1 MB of zeros
+  left 123.7 MB held 3 s after its read in Chromium 153 and 285.1 MB in
+  WebKit 26.6, of which ending the worker gave back 47.0 and 32.4 MB; one
+  of 20 MB with empty cells 1,364.5 MB and 4,615.3 MB, of which ending it
+  gave back 816.6 and 3,326.7 MB; the median of three reads each, the
+  table of all six files in `docs/plans/input-page.md`, "What was done",
+  work package 2. What the page itself holds after a file of 20 MB, the
+  table of the project, about 550 MB in Chromium and 1.3 GB in WebKit
+  with the worker ended, is not acted on yet.
+- **The table of the individuals file** on `popgen2.html` draws only the
+  rows in view; a sort of 10,000 rows and 20 columns,
+  `individuals_10000.xlsx`, shows "Sorting…" in its first frame, 11 ms
+  in Chromium and 6 ms in WebKit, and the rows in 311 and 382 ms, on the
+  Apple M5 Pro, 1,294 ms with the processor slowed 4 times in Chromium,
+  where it had frozen the page for 675 and 430 ms with nothing drawn
+  (`docs/plans/input-page.md`, "What was done", work package 6).
 - **Picking a file again calculates everything again.** Each load of the
   variant file has a new id, so the results of an earlier load of the same
   file are not found (section 3): the user waits the time of each analysis

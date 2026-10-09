@@ -7,7 +7,10 @@ allows and the file already writes for an xlsx; the source of an xlsx
 loaded since then has options of a CSV, which the validation accepts,
 while one saved before, with `null`, still opens; a failed read, which
 now carries the format of its file, is never written, as before, but
-as `notGiven`. `FORMAT_VERSION` stays 1.
+as `notGiven`. `FORMAT_VERSION` stays 1. Built on the branch
+`individuals-file` on 9 October 2026, work package 1 of
+`docs/plans/input-page.md`; not yet tried by the owner, so no round of
+theirs has changed it yet.
 
 Written on 25 September 2026, and approved by the owner the same day;
 its example revised the same day for the line of a character not

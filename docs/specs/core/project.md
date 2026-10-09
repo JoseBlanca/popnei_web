@@ -1,14 +1,16 @@
 # The project and its commands
 
 Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
-the owner that day, in the places marked "From 9 October 2026", with no
-code yet: the individuals file read by table_io, whose failed read
+the owner that day, in the places marked "From 9 October 2026": the
+individuals file read by table_io, whose failed read
 carries the format of the file and whose refusals change their kinds and
 some words, and whose loads all carry options of a CSV; the populations
 named with the decimal mark of the read; and, for `popgen2.html`, the
 counts per population, the column chosen by the page and the words of a
 refusal in its box (below, "The counts per population on
-popgen2.html").
+popgen2.html"). Built on the branch `individuals-file` on 9 October
+2026, work packages 1, 4 and 5 of `docs/plans/input-page.md`; not yet
+tried by the owner, so no round of theirs has changed it yet.
 
 24 September 2026, approved by the owner on 24 September 2026; built in
 `src/core/project.ts`; revised on 25 September 2026 for the specs of

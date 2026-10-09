@@ -1,11 +1,14 @@
 # The entry of the population genetics page
 
 Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
-the owner that day, with no code yet: the refusal of the individuals
+the owner that day: the refusal of the individuals
 file is recorded with its format; every page loads an individuals file
 with options of a CSV; and the entry of `popgen2.html` chooses the
 column of the populations of each file read and says the read in the
 status region (below, "The column of the populations on popgen2.html").
+Built on the branch `individuals-file` on 9 October 2026, work packages
+1, 4 and 5 of `docs/plans/input-page.md`; not yet tried by the owner, so
+no round of theirs has changed it yet.
 
 25 September 2026, approved by the owner on 25 September 2026, and revised
 on 26 September 2026 with the owner's decisions at stop 9.6 of

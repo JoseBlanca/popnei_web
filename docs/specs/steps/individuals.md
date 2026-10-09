@@ -2,7 +2,7 @@
 
 Revised on 9 October 2026 for `docs/designs/input-page.md`, approved by
 the owner that day, which made table_io the reader of the individuals
-file for both pages, with no code yet: every file picked is loaded with
+file for both pages: every file picked is loaded with
 the options of a CSV, `AUTO_CSV`, an xlsx too, since the reader finds
 the format from the bytes; the options of the reader are shown for a
 file read as text, by its `found`, or refused as text, by the format of
@@ -13,7 +13,9 @@ written with the decimal mark of the read (`cellShown`); a CSV named
 `docs/specs/worker/individuals.md` gives them, `notXlsx` gone,
 `notWorkbook` and `readerNotLoaded` new. The check of the name before a
 read, `.csv`, `.tsv`, `.txt` and `.xlsx` taken and `.xls` refused with
-its words, stays.
+its words, stays. Built on the branch `individuals-file` on 9 October
+2026, work package 1 of `docs/plans/input-page.md`; not yet tried by the
+owner, so no round of theirs has changed it yet.
 
 Written on 25 September 2026 for the walking skeleton, stage 2 of
 `docs/build-order.md`, approved by the owner the same day and revised

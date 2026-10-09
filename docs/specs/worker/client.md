@@ -8,7 +8,9 @@ larger than `READ_RESTART_BYTES`, for the memory table_io's wasm keeps
 (below, "The light worker started again after a large read"). Revised
 again on 9 October 2026: `READ_RESTART_BYTES` is 0, the worker ended
 after every read of a file that is not empty, set by the measurement of
-the plan of the input page.
+the plan of the input page. Built on the branch `individuals-file` on 9
+October 2026, work packages 1 and 2 of `docs/plans/input-page.md`; not
+yet tried by the owner, so no round of theirs has changed it yet.
 
 25 September 2026, approved by the owner on 25 September 2026, and built
 with the walking skeleton; revised on 26 September 2026 for stage 3 of
@@ -419,7 +421,8 @@ MB and 3,326.7 MB. The plan's rule ends the worker after every read when
 the file of 1 MB already gives back 50 MB or more in both engines, the
 bound by which the plan of the download kept the restart after a write.
 What it costs is the next read's start of a worker and its import of
-table_io's package from the browser's cache: a read of `panel_pops.csv`
+table_io's package, from the browser's cache in Chromium, and in WebKit
+26.6 with its `.wasm` fetched from the site again: a read of `panel_pops.csv`
 took 30 ms in Chromium either way, and 31 ms in WebKit against 15 ms
 with the worker kept; one of `individuals_10000.xlsx` 344 ms against 235
 ms in Chromium, and 272 ms against 257 ms in WebKit, the medians of

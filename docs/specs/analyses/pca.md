@@ -2709,7 +2709,8 @@ Variants step by default, in the place of the recommendation of 27
 September 2026 on which variants the PCA reads; the panel opening on
 the 3D view; and, as recommended, the variants of more than two
 alleles, the lasso out of stage 4, and the zoom by the wheel with Ctrl
-held. The two that follow, this spec's own, are decided by the owner.
+held. The first two that follow, this spec's own, are decided by the
+owner; the third is left for a later plan.
 
 **Open 1, decided by the owner on 27 September 2026: the calculation
 worker started again after a large PCA.** A PCA of n individuals grows
@@ -2744,6 +2745,22 @@ counted in one pass for each load, over every variant of the file, and
 the note says so. Not taken: the PCA's Run calculating the statistics
 of each individual first, as a Run with a threshold on the individuals
 does, a pass more for every PCA without them.
+
+**Open 3, left for when the PCA comes to `popgen2.html`: the values of
+a column of colours written with the decimal mark of the read.** Since 9
+October 2026 table_io reads a CSV's numbers as numbers, so a categorical
+or binary column of decimals read with the comma, "2,5" and "3,5" in the
+file, holds the numbers 2.5 and 3.5. The colours by such a column name
+each value with `String(cell)`, in `coloursOf` of
+`src/core/analyses/pca.ts`, and so write "2.5" in the legend, where the
+table of the individuals file and the names of the populations write
+"2,5", with `cellShown` of `src/core/project.ts` and the decimal mark of
+the read (`docs/specs/core/project.md`). A continuous column already
+takes the read's mark. Found on 9 October 2026 on the branch
+`individuals-file` (`docs/plans/input-page.md`); not changed there,
+since the PCA is only on `popgen.html`, which is deprecated, and left
+for the plan that brings the PCA to `popgen2.html`, which names the
+values with `cellShown` as the populations are named.
 
 ## Not in this spec
 

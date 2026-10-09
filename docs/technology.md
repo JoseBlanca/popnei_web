@@ -203,6 +203,21 @@ for the table above, for a second request and a moment of waiting
 before the dialog, against a first load 13.39 KB larger, and left to
 the owner.
 
+The input page of `popgen2.html`, built on the branch `individuals-file`
+on 9 October 2026 (`docs/plans/input-page.md`), added React Aria's tabs,
+its list and its sortable table to the first load. The two boxes and the
+two tabs, "Variants file" and "Individuals file", made it 231.34 KB
+gzipped against 215.39 KB before them, 15.95 KB more, about 86% of it
+React Aria's code of lists and of selection, which the list of the
+column and the table need as well. The box of the individuals file and
+the tab with the table of the file and the list of its individuals made
+it 278.6 KB against 237.3 KB before them, 41.3 KB more, 68% of it React
+Aria's table and list. Both as `vite build` reported them with Vite
+8.3.0. Loading the box's lines and the tab only when the first
+individuals file is opened would take 34.8 KB gzipped out of the first
+load, for a second request and a moment of waiting at that first file;
+not taken for now, and left to the owner.
+
 Not taken: component libraries with their own look, MUI, Chakra,
 Mantine, which bring a style we would fight and, for Chakra, a history of
 large rewrites; and Radix Primitives, whose maintenance slowed.
@@ -334,6 +349,11 @@ rendered by markdown-it, which has been maintained since 2014.
 
 ### xlsx and zip in Rust, in xlsx_rs
 
+Since 9 October 2026 the project below is **table_io**, xlsx_rs renamed
+and widened, and it reads the CSV and the TSV as well; what this section
+says of a CSV that downloads nothing held until then (the paragraph "What
+was revised on 9 October 2026" under "CSV and TSV in TypeScript", below).
+
 An xlsx file of the individuals is read with calamine, and from stage 6
 written with rust_xlsxwriter, all pure Rust, in **xlsx_rs**, a project of
 its own in a repository of its own, which is not part of popnei and
@@ -342,10 +362,10 @@ releases a wasm package that the site installs as it installs popnei's
 28 September 2026; until then it was a crate of this repository,
 `crates/files/`. Where the report is zipped, with the `zip` crate in
 xlsx_rs or otherwise, is decided with stage 6 (`docs/architecture.md`,
-section 13, point 14). A CSV or TSV file of
+section 13, point 14). Until 9 October 2026 a CSV or TSV file of
 the individuals, and the inference of the types of the columns of either,
-are not in this module but in TypeScript of ours (below), so that a user
-whose file is a CSV never downloads it.
+were not in this module but in TypeScript of ours (below), so that a user
+whose file is a CSV never downloaded it; the inference still is.
 
 They were measured on 24 September 2026, in a crate of trial that read an
 xlsx with calamine 0.36.1, wrote one with rust_xlsxwriter 0.99.1 and
@@ -400,8 +420,9 @@ missing, and no sheet is refused for it. `#CALC!` was not tried.
 Together they would almost double what a user downloads before anything
 runs. So they are a second wasm module, apart from the wasm package of
 popnei, which the application loads the first time it is asked to read an
-xlsx or to write the report, and which the browser keeps after that. A
-user whose file is a CSV never downloads it. The owner decided it on 24
+xlsx or to write the report, and which the browser keeps after that; a
+user whose file was a CSV never downloaded it until 9 October 2026. The
+owner decided it on 24
 September 2026, and decided the same day that the module is not built
 and released beside popnei, because reading and writing these files is
 not popnei's business; on 28 September 2026, that it is a project of its
@@ -504,10 +525,17 @@ What was revised on 9 October 2026, as the owner decided that day
 (`docs/designs/input-page.md`): the CSV and the TSV are read by
 table_io, xlsx_rs renamed and widened on 2 October 2026 to read every
 format of the individuals file by the rules this reader had, which moved
-into it; the light worker loads its package for every file, 0.34 MB
-gzipped at the first read, a CSV included, where a CSV loaded nothing.
+into it; the light worker loads its package for every file, a CSV
+included, where a CSV loaded nothing: its `.wasm` 651,680 bytes, 330,425
+gzipped, and its JavaScript 3,196 bytes gzipped, 0.33 MB, as the build
+of the branch `individuals-file` gave them on 9 October 2026
+(`docs/plans/input-page.md`, "What was done"), where xlsx_rs's were
+0.30 MB.
 The light worker is ended after every read, for the memory the package
-keeps, as the plan of the input page measured on 9 October 2026, so
+keeps, as the plan of the input page measured on 9 October 2026 (a CSV
+of 1 MB left 123.7 MB held after its read in Chromium 153 and 285.1 MB
+in WebKit 26.6, one of 20 MB with empty cells 1,364.5 and 4,615.3 MB;
+`docs/architecture.md`, section 11), so
 every read loads the package again: from the browser's cache in
 Chromium, and in WebKit 26.6 its `.wasm` from the site, 0.33 MB, at
 every read (`docs/specs/worker/individuals.md`, "Loading the files wasm
@@ -554,7 +582,9 @@ browser (`.claude/skills/coding/testing.md`).
 src/core/      plain TypeScript: the project, the keys of the results,
                undo, the project file. No React, no DOM.
 src/worker/    the web workers: the wasm package of popnei in the
-               calculation worker, the reader of CSV and TSV, the messages
+               calculation worker, the read of the individuals file
+               with table_io's package and the inference of the types
+               of its columns, the messages
                to the workers and from them, in src/worker/protocol.ts
                and src/worker/messages.ts, and the page's side of them.
 src/charts/    D3 and three.js. Each plot is a function that takes an
@@ -567,7 +597,8 @@ docs/          these documents, and the Markdown of the help.
 `src/core` is where a mistake would give a wrong result, a stale number
 shown as current or a project that does not restore, so it is the part
 tested most. There is no Rust in the repository: the two wasm modules,
-popnei's and xlsx_rs's, come as packages from their releases (section 5).
+popnei's and table_io's, xlsx_rs's until 9 October 2026, come as
+packages from their releases (section 5).
 
 ## 4. The site
 
@@ -651,7 +682,12 @@ from a worktree under `.claude/worktrees/` (`docs/architecture.md`,
 section 6). What is committed, and what the site is built from, is
 always a release.
 
-xlsx_rs is taken in the same way, from its own releases, on tags
+The reader of the individuals file is taken in the same way: since 9
+October 2026 table_io's package, release `js-v0.2.0-dev.1`,
+`"table_io": "https://github.com/JoseBlanca/table_io/releases/download/js-v0.2.0-dev.1/table_io-0.2.0.tgz"`,
+its local build packed with `npm pack` in `js/table_io` of the checkout
+at `~/devel/xlsx_rs`, whose folder keeps the old name. Before it,
+xlsx_rs was taken from its own releases, on tags
 `js-v…` of its repository, `github.com/JoseBlanca/xlsx_rs`, under the
 owner's account and public as popnei's is, as the owner decided on 28
 September 2026 (`docs/architecture.md`, section 13, point 11): `"xlsx_rs":
