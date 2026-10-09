@@ -734,8 +734,10 @@ and no undo moves them.
 Opening a file, either of the two, is no step, as the owner decided on
 8 October 2026 for the variants file ("We don't need to undo the
 opening of a file, the user could reload the page") and repeated on 9
-October 2026 for both. The variants file already opens through the
-store's `open`, which starts a new history. The individuals file does
+October 2026 for both. The store changes the project in two ways today: `apply`, which
+makes a command a step of the history, and `open`, which puts in a new
+project as a new history with nothing to undo and stops every
+calculation. The variants file already opens through `open`. The individuals file does
 not: its opening, its removal, a change of an option of its reader,
 the encoding, the separator or the decimal mark, which reads the file
 again, and the column the page chooses when a read ends are each a step
@@ -746,14 +748,18 @@ user would have to start again and wait for. So the store gains a
 third way to change the project, `applyAfresh`: the command changes the
 project as `apply` does, stopping and removing what a command would,
 and the history then starts afresh at the new project, with nothing to
-undo or redo. It counts as a move of the history, as an opening does
-(`historyMoves` of the store), so that a screen holding text of its own
-starts again at the project. On this page it passes through the gate of
-the screens, as `open` does: a run of the arrow keys waiting on a
-threshold is made a change first, and the fresh start then takes it
-with the other steps. The five changes of the individuals file go
+undo or redo. Two details follow `open`. The store counts it among
+its moves of the history (`historyMoves`), which a box that holds text
+the user typed and has not applied reads to take the project's value
+again. And a run of the arrow keys on a threshold, the presses of the
+last second, which the page makes one change when they stop, is made
+that change before `applyAfresh`, by the same code that does it before
+`open` (the gate of the screens, `gatedStore` of
+`src/ui/variants/thresholdRun.ts`); the fresh start then drops it with
+the other steps, so it cannot be undone. The five changes of the individuals file go
 through it.
-Two of them are choices of the session, listed at the end: the removal
+Two of them are choices of the session, listed under "What the session
+decided": the removal
 of the file and a change of an option of its reader are no steps either,
 since each is part of reading a file, and the user puts either back by
 opening the file again or choosing the option again. What it costs:
@@ -768,10 +774,10 @@ Not taken: the individuals file's changes kept as steps, which would
 let Undo take back an opening, against the owner's rule; the change
 written into every project of the history, as the store already writes
 the read of a file there (`recordShared` of `src/core/store.ts`), which
-would keep the steps before it, but leaves steps of the column that
-take back nothing once every project holds the column of the new file,
-an Undo the user presses for no change, and gives the two files two
-rules where the owner tried one; and `open`
+would keep the steps before it. But a step that chose a column of the
+old file would then sit between two projects that both hold the column
+of the new one, so its Undo would change nothing on the screen; and the
+two files would have two rules where the owner tried one; and `open`
 with a setting that stops nothing, which would mix two meanings in one
 command of the store, an opening of the variants file that must stop
 the pass and one of the individuals file that must not.
@@ -779,7 +785,7 @@ the pass and one of the individuals file that must not.
 ### When they show, and where
 
 The two buttons stand at the right end of the line of the heading
-"Popnei", the top right corner of the page. Undo is drawn while there
+"Popnei", the title at the top of the page, its top right corner. Undo is drawn while there
 is a step to undo, or a run of the arrow keys on a threshold waits to
 become one, and is not drawn otherwise; Redo while there is a step to
 redo and no run waits. A button not drawn is not in the page at all: the
