@@ -453,18 +453,44 @@ when a file is opened"). The entry of `popgen2.html` watches the store
 for a read of the individuals file newly recorded: the present
 project's `individuals.read` of kind `read` or `failed`, where the
 present project before the change had, for the same load id and the
-same options of the CSV, a read `pending`. An undo, a redo or an opening
-of a variants file does not make one, since none turns a pending read
-into a read; so the entry acts once on each read, as it is recorded, and
-never at another change of the project.
+same options of the CSV, a read `pending`, or `failed` because its
+worker failed, which the read after the worker's restart replaces. An
+undo, a redo or an opening of a variants file does not make one, since
+none turns a pending read into a read; so the entry acts once on each
+read, as it is recorded, and never at another change of the project.
 
-At a read of kind `read`, when the grouping names no column of its table,
-no column or one of a name the table does not have, it sends with the
-store's `apply` the command `setGrouping(p, { kind: "populations", column })`
-with the column `defaultPopulationsColumn(read)` of core gives, described
-"the column of the populations was chosen", and sends nothing when that
-is `null`. It is a step of the history, as every command of the
-individuals file is on that page. Then, the column chosen or not, it
+At a read of kind `read`, the entry chooses the column when the grouping
+names no column that the list "Column of the populations" offers,
+`populationColumnChoices(read)` of core, but for a "None" the user chose
+for that load, below. It sends with the store's `apply` the command
+`setGrouping(p, { kind: "populations", column })` with the column
+`defaultPopulationsColumn(read)` of core gives, described "the column of
+the populations was chosen", and sends nothing when that is `null`. It
+is a step of the history, as every command of the individuals file is
+on that page. So:
+
+- a file opened anew, a load id read for the first time, gets the
+  page's column when the grouping names no column, a column its table
+  does not have, or one it has as booleans, which the list does not
+  offer and core groups nobody by; a column of the same name that the
+  list offers is kept, as on `popgen.html`;
+- the same file read again with other options of a CSV gets it only
+  when the grouping names a column the new table's list does not offer,
+  or names none and the user did not choose "None" for that load id: a
+  "None" the user chose stays through a change of separator, and the
+  page never undoes a choice the user made.
+
+The entry tells a "None" the user chose from one that no column gave by
+watching the project: a change made by a command it did not send, an
+undo included, after which the grouping is "None" and before which it
+named a column, with the same load id of the individuals file before
+and after, marks that load id; such a change that makes the grouping
+name a column again unmarks it. The entry keeps the marked load ids
+itself, in memory, as the screen keeps the tab shown, since they are
+not part of the project; they are lost at a reload, with the files. A
+grouping of another kind than `populations`, the one population of
+`popgen.html` or the roles of a project of association, neither of which
+this page makes, is never changed. Then, the column chosen or not, it
 says the read in the status region, "panel_pops.csv read: 200 rows, the
 populations from popcat." or "…, no column chosen for the populations.",
 followed by the warning the box then shows, if any, of no individual in
@@ -501,10 +527,17 @@ export function choosePopulationColumns(deps: {
 Verified with Vitest, with a store made by `createPopgen2Store` and a
 fake worker: a read of `panel_pops.csv` recorded sends one command, and
 the grouping is `popcat`; "None" chosen after it, nothing is sent; the
-separator changed and the read recorded again, `popcat` is chosen again,
-as the design says; a second file with a column `popcat` sends nothing;
-a table of numbers alone sends nothing and says the read with no column;
-an undo and a redo send nothing; the words said, in each case.
+separator changed and the read recorded again, "None" kept and nothing
+sent; another file opened after "None", its column chosen; a second
+file with a column `popcat` sends nothing; a second file whose `popcat`
+is `true` and `false`, its column chosen; with no "None" of the user, a
+read again whose table has no `popcat`, its column chosen; a table of
+numbers alone sends nothing and says the read with no column; an undo
+and a redo send nothing; an undo of the column the entry chose makes
+"None" the user's, kept through a change of separator; a run of the
+arrow keys on a threshold still held when a read is recorded is made a
+change before the command of the column; a refusal says the words of
+the box and sends nothing; the words said, in each case.
 
 ### The outcome of a calculation
 

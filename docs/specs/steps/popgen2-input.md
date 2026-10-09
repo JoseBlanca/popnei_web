@@ -169,11 +169,14 @@ numbers is. Its value is the column of the grouping when the list
 offers it, and "None" otherwise. A choice sends a command (below, "What it sends and reads"). When the file is read the page
 chooses a column itself, the first column of text with 1 to 20 different
 values, missing ones left out (`defaultPopulationsColumn` of core, sent
-by the entry; `docs/specs/entry.md`). It chooses again only when the file is read again, another file opened
-or other options of a CSV set, and the column chosen is not a column of
-the new table: a second file with a column of the same name keeps it, a
-"None" the user chose stays until the next read, and opening another
-variants file changes nothing. When no column qualifies, the list
+by the entry; `docs/specs/entry.md`). It chooses again when another
+individuals file is opened and the list of its table does not offer the
+column chosen; and when the same file is read again with other options
+of a CSV, only when the new list does not offer the column chosen, or
+no column is chosen and "None" was not the user's choice. So a second
+file with a column of the same name keeps it, a "None" the user chose
+stays through a change of the options of a CSV until another file is
+opened, and opening another variants file changes nothing. When no column qualifies, the list
 stays on "None" and the line under it says "No column of panel_pops.csv
 holds text with 20 different values or fewer, so none was chosen as the
 column of the populations. Choose it in the list."
@@ -519,7 +522,8 @@ core and of the entry in their module specs.
   file;
 - a CSV with a column of 21 values: its warning, and no table;
 - "None" chosen: "All 200 individuals kept are unclassified, …"; the
-  separator changed afterwards: the page chooses `popcat` again;
+  separator set to the semicolon and back to the comma afterwards: the
+  list still on "None", with the same line;
 - with the missing rate of the individuals at 0.03: the counts change to
   those of `individualsKept` for 0.03, p0 29, p2 51 and p1 36, which the
   flow reads from popnei

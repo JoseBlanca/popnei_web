@@ -454,8 +454,9 @@ rule. The choice is a pure function of core, beside the counts in
 
 It is made by the entry of the page, as a command, `setGrouping`, at each
 read of the individuals file that the store records as a table, when the
-grouping names no column of that table: no column is chosen, or the one
-chosen is not a column of the new file. "None" in the list is the
+grouping names no column of that table that its list offers: no column
+is chosen, the one chosen is not a column of the new file, or it is a
+column of booleans there, which the list does not offer. "None" in the list is the
 grouping of the populations with no column, `{ kind: "populations",
 column: null }`, the grouping a project starts with; the one population
 of the old page, `onePopulation`, is not offered here. So a file opened first gets its
@@ -463,10 +464,13 @@ column; another file opened with a column of the name already chosen
 keeps it, as on the old page; and a column the user chose is never
 replaced, since the entry acts once on each read, when it is recorded,
 and not at every change of the project. A user who chooses "None" keeps
-it until the file is read again, by another file or other options of a
-CSV, when the page chooses a column again: the entry cannot tell a
-"None" the user chose from one no column gave, without keeping a state
-of its own. It cannot be made by core when the read is recorded: that writing
+it through a read again of the same file with other options of a CSV,
+and until another file is opened, when the page chooses a column again:
+the entry tells a "None" the user chose from one no column gave by
+watching the grouping become "None" through a command it did not send,
+and keeps the load ids of those itself, lost at a reload with the files
+(`docs/specs/entry.md`, "The column of the populations on
+popgen2.html"). It cannot be made by core when the read is recorded: that writing
 puts the table, and nothing else, into the current project and the
 projects of the history that hold the file (`recordShared` of
 `src/core/store.ts`), so a column chosen there would be lost from the
@@ -998,6 +1002,10 @@ beyond 2^53 kept as texts; the names of populations written with the
 decimal mark of the file; the tab "Variants file" shown first and never
 left by the page itself; both tabs kept drawn; the openings of the
 individuals file as steps of the history; and the words of the box.
+And, in the plan of 9 October 2026 (`docs/plans/input-page.md`, question
+3, which the owner approved with it), a "None" chosen by the user kept
+through a change of the options of a CSV, where this design had the page
+choose a column again at every read.
 
 ## What the owner decided
 
