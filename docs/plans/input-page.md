@@ -42,11 +42,17 @@ this branch on 9 October 2026 (`git log --oneline main..046a0ae`):
 
 ## Words used below
 
+- **A load id** is the random name the page gives each file opened, new
+  at every opening; a read again of the same file with other options of
+  a CSV keeps it. **The grouping** is the part of the project that names
+  the column of the populations; "None" is the grouping with no column.
 - **The old page** is `popgen.html`, which shares the light worker, core
   and the store with `popgen2.html`. **The old step** is its Individuals
   step.
-- **The light worker** is the second thread of the tab that reads the
-  individuals file. **table_io's package** is table_io compiled to wasm
+- **The light worker** is the second thread of the tab, beside the one
+  that runs popnei, which reads the individuals file so that the page
+  does not freeze; both pages use the same one,
+  `src/worker/filesRunner.ts`. **table_io's package** is table_io compiled to wasm
   with the JavaScript that loads it, the release `js-v0.2.0-dev.1`,
   `https://github.com/JoseBlanca/table_io/releases/download/js-v0.2.0-dev.1/table_io-0.2.0.tgz`;
   the specs also call it **the files wasm**. Its declarations are
@@ -77,7 +83,8 @@ this branch on 9 October 2026 (`git log --oneline main..046a0ae`):
   that load an individuals file on the old page: `individuals`,
   `individualTypes`, `xlsx`, `onePopulation`, `skeleton`, `saving`,
   `shell`, `diversity`, `diversityKept`, `popDists`, `ldDecay`, `pca`,
-  `pcaPanel` and `pcaResults`, about 250 tests in each engine. **The old
+  `pcaPanel` and `pcaResults`, 253 `test(` calls in their files on
+  046a0ae, some of them run once per theme or per file. **The old
   page's screens of the individuals** are those of `e2e/screens.spec.ts`
   named `popgen-individuals-…`, run with `-g popgen-individuals`.
 - **The flows of popgen2.html** are `e2e/popgen2*.spec.ts`,
@@ -85,8 +92,9 @@ this branch on 9 October 2026 (`git log --oneline main..046a0ae`):
 - **A tag** starts the name of a Vitest `describe` or of a Playwright
   test: `IN2 D1` is work package 2, deliverable 1, of this plan (`IN` for
   the input page). No test name of 046a0ae starts with `IN` followed by a
-  digit, so on that commit every check below selects no test, and fails.
-  A Vitest count is read from the summary line of `npx vitest run <path>
+  digit, so on that commit every check below selects no test; a check
+  is read by its count, which is then 0, short of the count it asks for,
+  and so fails there. A Vitest count is read from the summary line of `npx vitest run <path>
   -t "<tag>"`, "Tests N passed", since a tag that selects nothing exits
   0; a Playwright count from the summary of the browser check, half in
   each engine.
@@ -152,7 +160,7 @@ Out, each with where it goes:
 - an issue for table_io, should one be found: drafted under "What was
   done", not filed.
 
-The specs list no open point.
+The specs list no open point beyond these three questions.
 
 ## The stops
 
@@ -245,7 +253,8 @@ end and the owner's try.
 - 2 stands on 1. Task 2.1 may run beside 3 and 4; task 2.2 runs alone on
   the machine, no other agent building or running a browser, since its
   numbers are of memory and time.
-- 4 stands on task 1.3 (the failed read with its format, `cellShown`).
+- 4 stands on task 1.3 (the failed read with its format, `cellShown`),
+  and may run beside 3 and 2.1.
 - 5 stands on 4. 6 stands on 1, 3 and 5.
 - 7 and 8 run after everything, in order.
 
@@ -344,9 +353,10 @@ Deliverables:
    than `filesRunner.ts` fails the lint; `csv.ts`, `rows.ts`, `sheet.ts`,
    `xlsxCells.ts`, their tests and the round trip of
    `properties.test.ts` removed; the build's `dist/` holds
-   `table_io_bg.wasm` and no `xlsx_rs_bg.wasm`, whose sizes, raw and
-   gzipped with `gzip -9`, are written under "What was done" beside the
-   reader spec's 651,680 and 330,416 bytes.
+   `table_io_bg.wasm` and no `xlsx_rs_bg.wasm`; the sizes of table_io's
+   `.wasm` and JavaScript in `dist/`, raw and gzipped with `gzip -9`, are
+   written under "What was done" beside those the reader spec measured
+   on the release's package, 651,680 and 330,416 bytes for the `.wasm`.
 
 Tasks:
 
@@ -431,13 +441,16 @@ Deliverables:
    comes. At least six tests.
 2. The measurement, under `IN2 D2` in `e2e/measure.spec.ts`, on the old
    page, whose Individuals step reads the file through the same light
-   worker, with the memory helpers of `DL8` there (`engineProcesses`,
-   `footprints`). The files, made by the test in its output folder: CSVs
+   worker, with the helpers that measured the memory of a write of the
+   download there, the tests `DL8` of `docs/plans/download.md`
+   (`engineProcesses`, `footprints`, which sum what the engine's
+   processes hold). The files, made by the test in its output folder: CSVs
    of 1,000,000, 5,000,000 and 19,999,000 bytes in the two shapes of
    table_io's report of 2 October 2026 (`~/devel/xlsx_rs/docs/reports/table-io.md`,
    "The memory of a text file"), a header of 100 names over rows of a
    name and 99 `0`, and the same rows with their 99 cells empty, the
-   shape that took the most of a file read whole, 548.0 MB under node.
+   shape that took the most of a file read whole, 548.0 MB of the wasm's
+   memory under node 26.8.2 on the owner's Mac, an Apple M5 Pro.
    For each file and engine: whether it was read, the time from the pick
    to the table, and the memory of the engine's processes summed before
    the read and 3 s after it, from a build with `READ_RESTART_BYTES` set
@@ -456,8 +469,9 @@ Deliverables:
    larger file measured gives back 50 MB or more; 0, the worker ended
    after every read, when the file of 1 MB already gives back 50 MB or
    more; and the restart is dropped when the file of 20 MB gives back
-   less than 50 MB in both engines. 50 MB is the rule `DL8 D3` of
-   `docs/plans/download.md` used for the restart after a write.
+   less than 50 MB in both engines. 50 MB is the bound by which the plan
+   of the download, `docs/plans/download.md` (its `DL8 D3`), kept the
+   restart of the calculation worker after a write.
 
 Tasks:
 
@@ -691,10 +705,12 @@ Deliverables:
    filtered variants says it kept, under `IN6 D3`. A difference is a
    stop (above).
 4. The sort of `individuals_10000.xlsx` under the tab: the time the page
-   does not answer, as `VS7 D4` of `e2e/measure.spec.ts` measures it,
+   does not answer, as the test `VS7 D4` of `e2e/measure.spec.ts`
+   measures it for the table of the statistics of 10,000 individuals,
    under `IN6 D4`, by the measurement run, written under "What was done"
    beside the medians of 149 ms in Chromium and 107 ms in WebKit that
-   the old page's sort of the same rows took.
+   the old page's sort of the same rows took on the owner's Mac, an
+   Apple M5 Pro (the screen spec, "How it is checked").
 5. The screenshots: `popgen2-input-counts`, `popgen2-input-waiting`,
    `popgen2-input-refused`, `popgen2-input-too-many`,
    `popgen2-input-tab-csv` and `popgen2-input-tab-xlsx`, light and dark,
