@@ -16,12 +16,14 @@
  * panel.vcf.gz holds 1,200 variants of 200 diploid individuals; the axis
  * of its missing rate goes from 0 to 0.1.
  */
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Locator, Page } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
+import { holdSummary, release } from "./holdWorker.ts";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -151,7 +153,7 @@ test("IN3 D2 the tabs by the keyboard alone: the row is one stop of the Tab key,
   ) {
     await page.keyboard.press("Tab");
     presses += 1;
-    expect(presses).toBeLessThanOrEqual(4);
+    expect(presses).toBeLessThanOrEqual(6);
   }
   await expect(tab(page, "Variants file")).toHaveAttribute(
     "aria-selected",
@@ -389,4 +391,781 @@ test("IN3 D2 axe on the page with each tab shown, light and dark, with no file a
   await expectAxeBothSchemes(page, makeAxeBuilder);
   await tab(page, "Individuals file").click();
   await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+// ---------------------------------------------------------------------
+// Work package 6: the box and the tab of the individuals file (IN6 D2,
+// IN6 D3). The counts of panel_pops.csv are p0 48, p2 84 and p1 68; at a
+// missing rate of the individuals of 0.03, p0 29, p2 51 and p1 36, the
+// individuals of each population whose proportion of missing genotypes
+// popnei 0.2.2 gives at most 0.03, read under node into
+// e2e/fixtures/panel_individual_stats.json.
+
+/** The name of the box of the threshold of the missing genotypes of each
+    individual. */
+const INDIVIDUALS_MISSING =
+  "Missing GTs max: maximum proportion of missing genotypes of an individual";
+
+/** A file the flow makes: its name and its text. */
+interface Made {
+  readonly name: string;
+  readonly text: string;
+}
+
+/** Opens the individuals file `file`, a fixture by its name or a file
+    the flow makes, with the button of its box. */
+async function pickIndividuals(page: Page, file: string | Made): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await individualsBox(page)
+    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
+    .click();
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/csv",
+          buffer: Buffer.from(file.text, "utf8"),
+        },
+  );
+}
+
+/** The list "Column of the populations", by its button. */
+function columnList(page: Page): Locator {
+  return individualsBox(page).getByRole("button", {
+    name: "Column of the populations",
+  });
+}
+
+/** Chooses `item` in the select named `label` of `scope`. */
+async function chooseIn(
+  page: Page,
+  scope: Locator,
+  label: string,
+  item: string,
+): Promise<void> {
+  await scope.getByRole("button", { name: label }).click();
+  await page.getByRole("option", { name: item, exact: true }).click();
+}
+
+/** The table of the counts in the box. */
+function counts(page: Page): Locator {
+  return individualsBox(page).getByRole("table", {
+    name: /^Individuals of .* after the filters of individuals$/u,
+  });
+}
+
+/** Expects the rows of the counts, each a population and its count. */
+async function expectCounts(
+  page: Page,
+  rows: readonly (readonly [string, string])[],
+): Promise<void> {
+  await expect(counts(page).getByRole("rowheader")).toHaveText(
+    rows.map(([pop]) => pop),
+    { timeout: 20_000 },
+  );
+  await expect(counts(page).getByRole("cell")).toHaveText(
+    rows.map(([, count]) => count),
+  );
+}
+
+/** The counts of panel_pops.csv with no threshold. */
+const ALL_COUNTS = [
+  ["p0", "48"],
+  ["p2", "84"],
+  ["p1", "68"],
+] as const;
+
+/** The counts of panel_pops.csv at the missing rate 0.03. */
+const COUNTS_003 = [
+  ["p0", "29"],
+  ["p2", "51"],
+  ["p1", "36"],
+] as const;
+
+/** The lines of panel_pops.csv, the header first. */
+async function panelPopsLines(): Promise<string[]> {
+  const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  return text.split("\n").filter((line) => line !== "");
+}
+
+/** The box of the threshold of the missing genotypes of each
+    individual. */
+function individualsMissing(page: Page): Locator {
+  return stats(page).getByRole("textbox", { name: INDIVIDUALS_MISSING });
+}
+
+/** Commits `value` in the box of the threshold of the individuals. */
+async function setIndividualsMissing(page: Page, value: string): Promise<void> {
+  const box = individualsMissing(page);
+  await box.fill(value);
+  await box.press("Enter");
+  await expect(box).toHaveValue(value);
+}
+
+test("IN6 D2 panel.nei then panel_pops.csv, and the other order: the list on popcat, the counts p0 48, p2 84, p1 68 in that order, no line of the unclassified, and no row not used", async ({
+  page,
+}) => {
+  for (const order of ["variants first", "individuals first"] as const) {
+    await openPage(page);
+    if (order === "variants first") {
+      await pick(page, "panel.nei");
+      await pickIndividuals(page, "panel_pops.csv");
+    } else {
+      await pickIndividuals(page, "panel_pops.csv");
+      await expect(columnList(page)).toContainText("popcat");
+      await expect(
+        individualsBox(page).getByText(
+          "The individuals are counted once a variants file is open.",
+        ),
+      ).toBeVisible();
+      await pick(page, "panel.nei");
+    }
+    await expect(columnList(page)).toContainText("popcat");
+    await expectCounts(page, ALL_COUNTS);
+    await expect(individualsBox(page).getByText(/^Unclassified/u)).toHaveCount(
+      0,
+    );
+    await expect(
+      individualsBox(page).getByText(
+        "Individuals in panel_pops.csv but not in panel.nei: 0",
+        { exact: true },
+      ),
+    ).toBeVisible();
+  }
+});
+
+for (const [variants, file, column, pops] of [
+  ["panel.nei", "panel_split.csv", "popsplit", ["p0a", "p0b", "p2", "p1"]],
+  ["ld.nei", "ld_pops.csv", "pop", ["pop_a", "pop_b"]],
+  ["panel.nei", "panel_meta.csv", "popcat", ["p0", "p2", "p1"]],
+] as const) {
+  test(`IN6 D2 ${file} over ${variants}: the page chooses ${column}`, async ({
+    page,
+  }) => {
+    await openPage(page);
+    await pick(page, variants);
+    await pickIndividuals(page, file);
+    await expect(columnList(page)).toContainText(column);
+    await expect(counts(page).getByRole("rowheader")).toHaveText([...pops], {
+      timeout: 20_000,
+    });
+  });
+}
+
+test("IN6 D2 a CSV with an integer column before the populations: the page chooses the populations, not the integers", async ({
+  page,
+}) => {
+  const lines = await panelPopsLines();
+  const text = lines
+    .map((line, index) => {
+      const [name, pop] = line.split(",");
+      return index === 0
+        ? `${String(name)},plot,${String(pop)}`
+        : `${String(name)},${String(index % 3)},${String(pop)}`;
+    })
+    .join("\n");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name: "plots.csv", text });
+  await expect(columnList(page)).toContainText("popcat");
+  await expectCounts(page, ALL_COUNTS);
+});
+
+test("IN6 D2 four rows left out and three cells of popcat emptied: the line of the unclassified with 3 and 4 and three names, and the full list of 4 under the tab with Copy the 4 names", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await recordAnnouncements(page);
+  const lines = await panelPopsLines();
+  // s010, s011 and s012 with an empty cell; s100 to s103 left out.
+  const out = new Set(["s100", "s101", "s102", "s103"]);
+  const empty = new Set(["s010", "s011", "s012"]);
+  const text = lines
+    .filter((line) => !out.has(line.split(",")[0] ?? ""))
+    .map((line) => {
+      const name = line.split(",")[0] ?? "";
+      return empty.has(name) ? `${name},` : line;
+    })
+    .join("\n");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name: "missing.csv", text });
+  await expect(
+    individualsBox(page).getByText(
+      "Unclassified, left out of the analyses per population: 7 individuals kept, 3 with an empty cell in popcat and 4 that are not in missing.csv. Not in missing.csv: s100, s101, s102 and 1 more; the tab Individuals file lists them all.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 20_000 });
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await tab(page, "Individuals file").click();
+  const missing = page.getByRole("region", {
+    name: "Individuals in panel.nei but not in missing.csv, before the filters",
+  });
+  await expect(missing.getByRole("listitem")).toHaveText([
+    "s100",
+    "s101",
+    "s102",
+    "s103",
+  ]);
+  await missing.getByRole("button", { name: "Copy the 4 names" }).click();
+  // The clipboard may be refused to the page, in WebKit among others; the
+  // region says which.
+  await expect
+    .poll(async () => (await announced(page)).join(" "))
+    .toMatch(
+      /4 names copied\.|The names could not be copied\. Select them in the list\./u,
+    );
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 a CSV of the names in capitals: the warning of none of the individuals in the file, and no table", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  const lines = await panelPopsLines();
+  const text = lines
+    .map((line, index) => (index === 0 ? line : line.replace(/^s/u, "S")))
+    .join("\n");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name: "capitals.csv", text });
+  await expect(
+    individualsBox(page).getByText(
+      "Warning: none of the 200 individuals of panel.nei is in capitals.csv, so all of them are unclassified. The first column of capitals.csv has to hold their names as panel.nei writes them: panel.nei starts with s000, and capitals.csv with S000.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(counts(page)).toHaveCount(0);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 a column of 21 values chosen: its warning, and no table", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  const lines = await panelPopsLines();
+  const text = lines
+    .map((line, index) =>
+      index === 0 ? `${line},accession` : `${line},a${String(index % 21)}`,
+    )
+    .join("\n");
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name: "accessions.csv", text });
+  await expect(columnList(page)).toContainText("popcat");
+  await chooseIn(
+    page,
+    individualsBox(page),
+    "Column of the populations",
+    "accession",
+  );
+  await expect(
+    individualsBox(page).getByText(
+      "Warning: accession has 21 different values, too many for a column of populations: the individuals are counted here only for a column of 20 different values or fewer. If it is not the column of the populations, choose another in the list.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(counts(page)).toHaveCount(0);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 None chosen: every individual kept unclassified; the separator set to the semicolon and back to the comma, the list still on None with the same line", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, "panel_pops.csv");
+  await expectCounts(page, ALL_COUNTS);
+  await chooseIn(
+    page,
+    individualsBox(page),
+    "Column of the populations",
+    "None: every individual unclassified",
+  );
+  const all = individualsBox(page).getByText(
+    "All 200 individuals kept are unclassified, and the analyses per population will take them as one population.",
+    { exact: true },
+  );
+  await expect(all).toBeVisible();
+  await expect(counts(page)).toHaveCount(0);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await tab(page, "Individuals file").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await chooseIn(page, panel, "Separator", "Semicolon");
+  await expect(panel.getByRole("button", { name: "Separator" })).toContainText(
+    "Semicolon",
+  );
+  await expect(panel.getByText("1 column", { exact: false })).toBeVisible({
+    timeout: 20_000,
+  });
+  await chooseIn(page, panel, "Separator", "Comma");
+  await expect(panel.getByText("200 rows, 2 columns")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(columnList(page)).toContainText(
+    "None: every individual unclassified",
+  );
+  await expect(all).toBeVisible();
+});
+
+test("IN6 D2 the missing rate of the individuals at 0.03, the pass held: … and the line of waiting; after Stop, the line of a Stop; at the end of Start again, the counts p0 29, p2 51 and p1 36", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  test.setTimeout(120_000);
+  await holdSummary(page);
+  await openPage(page);
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(columnList(page)).toContainText("popcat");
+  await pick(page, "panel.nei");
+  // The plots of what was read so far, the pass held before its end.
+  await release(page, "oneSoFar");
+  await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
+  await expectCounts(page, ALL_COUNTS);
+  await setIndividualsMissing(page, "0.03");
+  await expect(counts(page).getByRole("cell")).toHaveText([
+    "…not counted yet",
+    "…not counted yet",
+    "…not counted yet",
+  ]);
+  await expect(
+    individualsBox(page).getByText(
+      "The individuals the filters keep are counted once panel.nei is read to the end.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await variantsBox(page).getByRole("button", { name: "Stop" }).click();
+  await expect(
+    individualsBox(page).getByText(
+      "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  await variantsBox(page).getByRole("button", { name: "Start again" }).click();
+  await release(page, "allSoFar");
+  await release(page, "result");
+  await expectCounts(page, COUNTS_003);
+});
+
+/** Counts, on `window`, the requests of the summary of the variants
+    file the page sends to its calculation workers, the one pass. */
+async function countPasses(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const record = { passes: 0 };
+    Object.defineProperty(window, "__e2ePasses", { value: record });
+    const RealWorker = window.Worker;
+    window.Worker = class extends RealWorker {
+      override postMessage(
+        message: unknown,
+        options?: Transferable[] | StructuredSerializeOptions,
+      ): void {
+        if (
+          typeof message === "object" &&
+          message !== null &&
+          Reflect.get(message, "kind") === "run"
+        ) {
+          const job: unknown = Reflect.get(message, "job");
+          if (
+            typeof job === "object" &&
+            job !== null &&
+            Reflect.get(job, "analysis") === "variantsSummary"
+          ) {
+            record.passes += 1;
+          }
+        }
+        if (Array.isArray(options)) {
+          super.postMessage(message, options);
+        } else {
+          super.postMessage(message, options);
+        }
+      }
+    };
+  });
+}
+
+/** The passes counted by `countPasses`. */
+async function passes(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const record: unknown = Reflect.get(window, "__e2ePasses");
+    const count: unknown =
+      typeof record === "object" && record !== null
+        ? Reflect.get(record, "passes")
+        : null;
+    return typeof count === "number" ? count : -1;
+  });
+}
+
+test("IN6 D2 an individuals file opened while the one pass runs: the pass goes on to its end, with no second pass", async ({
+  page,
+}) => {
+  await countPasses(page);
+  await holdSummary(page);
+  await openPage(page);
+  await pick(page, "panel.vcf.gz");
+  await expect(
+    variantsBox(page).getByRole("button", { name: "Stop" }),
+  ).toBeVisible({ timeout: 20_000 });
+  expect(await passes(page)).toBe(1);
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(columnList(page)).toContainText("popcat");
+  await expect(
+    variantsBox(page).getByRole("button", { name: "Stop" }),
+  ).toBeVisible();
+  await release(page, "allSoFar");
+  await release(page, "result");
+  await expect(
+    page.getByRole("button", {
+      name: "Download the missing genotypes and heterozygosity of each individual (CSV)",
+    }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expectCounts(page, ALL_COUNTS);
+  expect(await passes(page)).toBe(1);
+});
+
+test("IN6 D2 a CSV of semicolons read with the comma: the refusal of its row in the box, the options under the tab, the focus kept on the separator; the semicolon reads it; and panel_pops.csv read with the semicolon, the list with None alone and the line of no column", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await recordAnnouncements(page);
+  await openPage(page);
+  await pickIndividuals(page, {
+    name: "decimals.csv",
+    text: "id;pop;h\ns000;p0;1,75\ns001;p1;2,5\n",
+  });
+  await expect(columnList(page)).toContainText("pop", { timeout: 20_000 });
+  await tab(page, "Individuals file").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await chooseIn(page, panel, "Separator", "Comma");
+  const separator = panel.getByRole("button", { name: "Separator" });
+  await expect(
+    individualsBox(page).getByText(/^decimals\.csv could not be read: /u),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(individualsBox(page)).toContainText(
+    "Choose another separator in the tab Individuals file, or open a corrected file.",
+  );
+  await expect(individualsBox(page)).toContainText("line 2");
+  await expect(
+    panel.getByText(
+      "decimals.csv could not be read; the box Individuals file says why.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(separator).toBeFocused();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await chooseIn(page, panel, "Separator", "Semicolon");
+  await expect(panel.getByText("2 rows, 3 columns")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(panel.getByRole("gridcell", { name: "1,75" })).toBeVisible();
+
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(panel.getByText("200 rows, 2 columns")).toBeVisible({
+    timeout: 20_000,
+  });
+  await chooseIn(page, panel, "Separator", "Semicolon");
+  await expect(
+    individualsBox(page).getByText(
+      "No column of panel_pops.csv holds text with 20 different values or fewer, so none was chosen as the column of the populations. Choose it in the list.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 20_000 });
+  await columnList(page).click();
+  await expect(page.getByRole("option")).toHaveText([
+    "None: every individual unclassified",
+  ]);
+  await page.keyboard.press("Escape");
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 a CSV named .xlsx is read as text, with its options under the tab; an .xls named .csv is refused as a workbook of Excel 97–2003, with no options", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  await openPage(page);
+  await pickIndividuals(page, { name: "pops.xlsx", text });
+  await tab(page, "Individuals file").click();
+  const panel = page.getByRole("tabpanel", { name: "Individuals file" });
+  await expect(panel.getByText("200 rows, 2 columns")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(panel.getByRole("button", { name: "Separator" })).toBeVisible();
+
+  const chooser = page.waitForEvent("filechooser");
+  await individualsBox(page)
+    .getByRole("button", { name: "Open another individuals file…" })
+    .click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "old.csv",
+    mimeType: "text/csv",
+    buffer: await readFile(join(FIXTURES, "excel97.xls")),
+  });
+  await expect(individualsBox(page)).toContainText(
+    "a workbook of Excel 97–2003",
+    { timeout: 20_000 },
+  );
+  await expect(panel.getByRole("button", { name: "Separator" })).toHaveCount(0);
+  await expect(
+    panel.getByText(
+      "old.csv could not be read; the box Individuals file says why.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 the table of the file sorted by a header and scrolled, the other tab and back: the same sort and the same first row in view", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pickIndividuals(page, "panel_pops.csv");
+  await tab(page, "Individuals file").click();
+  const grid = page.getByRole("grid", { name: "The table of panel_pops.csv" });
+  await expect(grid).toBeVisible({ timeout: 20_000 });
+  const header = grid.getByRole("columnheader", { name: /^popcat/u });
+  await header.click();
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await header.click();
+  await expect(header).toHaveAttribute("aria-sort", "descending");
+  await expect(grid.getByRole("rowheader").first()).toHaveText("s004");
+  await grid.evaluate((element) => {
+    element.scrollTo({ top: 1200 });
+  });
+  /** The first row header wholly under the header of the grid. */
+  const firstInView = (): Promise<string> =>
+    grid.evaluate((element) => {
+      const top = element.getBoundingClientRect().top;
+      const head = element.querySelector('[role="columnheader"]');
+      const below = top + (head?.getBoundingClientRect().height ?? 0);
+      const headers = [...element.querySelectorAll('[role="rowheader"]')]
+        .map((cell) => ({
+          text: cell.textContent,
+          y: cell.getBoundingClientRect().top,
+        }))
+        .filter((cell) => cell.y >= below - 1)
+        .sort((a, b) => a.y - b.y);
+      return headers[0]?.text ?? "none";
+    });
+  await expect.poll(firstInView).not.toBe("s004");
+  const before = await firstInView();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+
+  await tab(page, "Variants file").click();
+  await expect(grid).toBeHidden();
+  await tab(page, "Individuals file").click();
+  await expect(grid).toBeVisible();
+  await expect(header).toHaveAttribute("aria-sort", "descending");
+  await expect.poll(firstInView).toBe(before);
+});
+
+test("IN6 D2 a file name of 80 characters at 320 pixels: Remove, the name in the box and the warnings wrap, and the page does not scroll sideways", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const lines = await panelPopsLines();
+  const text = lines
+    .map((line, index) => (index === 0 ? line : line.replace(/^s/u, "S")))
+    .join("\n");
+  const name = `${"a_rather_long_name_of_the_individuals_".repeat(2).slice(0, 76)}.csv`;
+  expect(name).toHaveLength(80);
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await pickIndividuals(page, { name, text });
+  await expect(individualsBox(page).getByText(/^Warning: none/u)).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(
+    individualsBox(page).getByRole("button", { name: `Remove ${name}` }),
+  ).toBeVisible();
+  for (const shown of ["Individuals file", "Variants file"] as const) {
+    await tab(page, shown).click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
+});
+
+test("IN6 D2 table_io's JavaScript and wasm are requested at the first read, a CSV, the wasm served as application/wasm, and once more at the next read, by its new light worker", async ({
+  page,
+}) => {
+  const requested: string[] = [];
+  const types = new Map<string, string>();
+  page.on("response", (response) => {
+    const name = new URL(response.url()).pathname.replace(/^.*\//u, "");
+    if (name.startsWith("table_io")) {
+      requested.push(name.endsWith(".wasm") ? "wasm" : "js");
+      types.set(name, response.headers()["content-type"] ?? "");
+    }
+  });
+  await openPage(page);
+  await page.waitForLoadState("networkidle");
+  expect(requested).toEqual([]);
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
+  await expect.poll(() => requested.filter((r) => r === "wasm").length).toBe(1);
+  expect(requested.filter((r) => r === "js")).toHaveLength(1);
+  const wasmType = [...types].find(([name]) => name.endsWith(".wasm"))?.[1];
+  expect(wasmType).toBe("application/wasm");
+
+  await pickIndividuals(page, "panel_split.csv");
+  await expect(columnList(page)).toContainText("popsplit", {
+    timeout: 20_000,
+  });
+  // Chromium takes the second from its cache, which the page's log of
+  // responses still lists; WebKit fetches it again.
+  await expect.poll(() => requested.filter((r) => r === "wasm").length).toBe(2);
+});
+
+test("IN6 D2 axe on the box and the tab with no file, a file being read, a file read with its counts and with an xlsx", async ({
+  page,
+  makeAxeBuilder,
+}) => {
+  await openPage(page);
+  await pick(page, "panel.nei");
+  await expect(page.locator("svg.chart")).toHaveCount(6, { timeout: 20_000 });
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await pickIndividuals(page, "panel_pops.csv");
+  await expectCounts(page, ALL_COUNTS);
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await tab(page, "Individuals file").click();
+  await expect(
+    page.getByRole("grid", { name: "The table of panel_pops.csv" }),
+  ).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await pickIndividuals(page, "excel_en.xlsx");
+  await expect(
+    page.getByText(
+      "Read from the first sheet of excel_en.xlsx; any other sheet is not read.",
+    ),
+  ).toBeVisible({ timeout: 20_000 });
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+  await individualsBox(page)
+    .getByRole("button", { name: "Remove excel_en.xlsx" })
+    .click();
+  await expect(
+    individualsBox(page).getByRole("button", {
+      name: "Open individuals file…",
+    }),
+  ).toBeFocused();
+  await expect(page.getByText("No individuals file open.")).toBeVisible();
+  await expectAxeBothSchemes(page, makeAxeBuilder);
+});
+
+test("IN6 D2 a run of the arrow keys on the threshold of the individuals, still held as a read of the individuals file ends, is made a change before the column the entry chooses: the counts are of where the keys took it", async ({
+  page,
+}) => {
+  await openDone(page, "panel.nei");
+  await setIndividualsMissing(page, "0.031");
+  // The light worker's script held, so that the read waits while the
+  // keys run.
+  let letGo: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    letGo = resolve;
+  });
+  await page.route(/\/filesRunner-[^/]*\.js$/u, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await pickIndividuals(page, "panel_pops.csv");
+  await expect(
+    individualsBox(page).getByText("Reading panel_pops.csv.", { exact: true }),
+  ).toBeVisible();
+  // The page's timers stand still from here, so that the run waits at
+  // the keys whatever the speed of the machine.
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1000);
+  const slider = stats(page)
+    .getByRole("group", {
+      name: "Proportion of missing genotypes of each individual",
+      exact: true,
+    })
+    .getByRole("slider");
+  await slider.focus();
+  for (let press = 0; press < 20; press += 1) {
+    if ((await slider.inputValue()) === "0.03") break;
+    await page.keyboard.press("ArrowLeft");
+  }
+  await expect(slider).toHaveValue("0.03");
+  letGo();
+  // Through the gate, the entry's command of the column ends the run
+  // first: the counts are at 0.03. Given the store with no gate, the run
+  // would still wait, its second never passing, and the counts be those
+  // of 0.031, p0 30, p2 58 and p1 41.
+  await expect(columnList(page)).toContainText("popcat", { timeout: 20_000 });
+  await expectCounts(page, COUNTS_003);
+  await expect(individualsMissing(page)).toHaveValue("0.03");
+});
+
+test("IN6 D3 at the missing rate of the individuals 0.03, the counts and the unclassified kept add up to the individuals the download of the filtered variants says it kept", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await openDone(page, "panel.nei");
+  await pickIndividuals(page, "panel_pops.csv");
+  await setIndividualsMissing(page, "0.03");
+  await expectCounts(page, COUNTS_003);
+  const shown = await counts(page).getByRole("cell").allTextContents();
+  const sum = shown.reduce((total, count) => total + Number(count), 0);
+  // No line of the unclassified: none is kept.
+  await expect(individualsBox(page).getByText(/^Unclassified/u)).toHaveCount(0);
+
+  const button = stats(page).getByRole("button", {
+    name: "Download filtered variants…",
+    exact: true,
+  });
+  await button.click();
+  const dialog = page.getByRole("dialog", {
+    name: "Download filtered variants",
+  });
+  await dialog
+    .locator("label")
+    .filter({ hasText: "popnei's .nei file" })
+    .click();
+  const coming = page.waitForEvent("download", { timeout: 60_000 });
+  await dialog.getByRole("button", { name: "Download" }).click();
+  await coming;
+  const after = stats(page).locator("p", { hasText: /^panel\.filtered\./u });
+  await expect(after).toContainText(/of [\d,]+ individuals\./u, {
+    timeout: 60_000,
+  });
+  const words = (await after.textContent()) ?? "";
+  const kept = /of ([\d,]+) individuals\./u.exec(words)?.[1] ?? "";
+  expect(Number(kept.replace(/,/gu, ""))).toBe(sum);
+  expect(sum).toBe(116);
+});
+
+test("IN6 D2 individuals_10000.xlsx at 320 pixels: the table of 20 columns scrolls sideways in its box, and the page does not", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await openPage(page);
+  await pickIndividuals(page, "individuals_10000.xlsx");
+  await tab(page, "Individuals file").click();
+  const grid = page.getByRole("grid", {
+    name: "The table of individuals_10000.xlsx",
+  });
+  await expect(grid).toBeVisible({ timeout: 60_000 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  expect(
+    await grid.evaluate((element) => element.scrollWidth > element.clientWidth),
+  ).toBe(true);
 });

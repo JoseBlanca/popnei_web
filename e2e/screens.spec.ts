@@ -4378,6 +4378,58 @@ function newPageStats(page: Page): Locator {
   return page.getByRole("region", { name: "Statistics of the file" });
 }
 
+/** Opens the individuals file `file` on popgen2.html, a fixture by its
+    name or a CSV made by the screen, with the button of its box. */
+async function pickIndividualsOnNewPage(
+  page: Page,
+  file: string | { readonly name: string; readonly text: string },
+): Promise<void> {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("button", { name: /^Open (another )?individuals file…$/u })
+    .click();
+  await (
+    await chooser
+  ).setFiles(
+    typeof file === "string"
+      ? join(FIXTURES, file)
+      : {
+          name: file.name,
+          mimeType: "text/csv",
+          buffer: Buffer.from(file.text, "utf8"),
+        },
+  );
+}
+
+/** The box of the individuals file on popgen2.html. */
+function individualsBoxOnNewPage(page: Page): Locator {
+  return page.getByRole("region", { name: "Individuals file", exact: true });
+}
+
+/** panel_pops.csv with `edit` applied to each line but the header. */
+async function panelPopsMade(
+  name: string,
+  edit: (line: string, index: number) => string | null,
+): Promise<{ readonly name: string; readonly text: string }> {
+  const text = await readFile(join(FIXTURES, "panel_pops.csv"), "utf8");
+  const lines = text.split("\n").filter((line) => line !== "");
+  return {
+    name,
+    text: lines
+      .map((line, index) => (index === 0 ? line : edit(line, index)))
+      .filter((line): line is string => line !== null)
+      .join("\n"),
+  };
+}
+
+/** Shows the tab "Individuals file" of popgen2.html. */
+async function individualsTabOnNewPage(page: Page): Promise<void> {
+  await page
+    .getByRole("tab", { name: "Individuals file", exact: true })
+    .click();
+}
+
 /** The button of the download of the filtered variants on popgen2.html. */
 function downloadButton(page: Page): Locator {
   return newPageStats(page).getByRole("button", {
@@ -4453,6 +4505,186 @@ for (const theme of ["light", "dark"] as const) {
           .click();
         await expect(page.getByText("No individuals file open.")).toBeVisible();
         await save(page, `popgen2-input-tabs-individuals${at}-${theme}`);
+      });
+
+      test("the box of the individuals file with its counts", async ({
+        page,
+      }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        await expect(
+          individualsBoxOnNewPage(page).getByRole("cell", { name: "84" }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6);
+        await save(page, `popgen2-input-counts${at}-${theme}`);
+      });
+
+      test("the box of the individuals file with the unclassified, and the tab with the full list of those not in the file", async ({
+        page,
+      }) => {
+        const out = new Set(["s100", "s101", "s102", "s103"]);
+        const empty = new Set(["s010", "s011", "s012"]);
+        const made = await panelPopsMade("missing.csv", (line) => {
+          const name = line.split(",")[0] ?? "";
+          if (out.has(name)) return null;
+          return empty.has(name) ? `${name},` : line;
+        });
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, made);
+        await expect(
+          individualsBoxOnNewPage(page).getByText(/^Unclassified, /u),
+        ).toBeVisible({ timeout: 20_000 });
+        await save(page, `popgen2-input-unclassified${at}-${theme}`);
+        await individualsTabOnNewPage(page);
+        await expect(
+          page.getByRole("button", { name: "Copy the 4 names" }),
+        ).toBeVisible();
+        await save(page, `popgen2-input-tab-csv${at}-${theme}`);
+      });
+
+      test("the warning of no name of the variants file in the individuals file", async ({
+        page,
+      }) => {
+        const made = await panelPopsMade("capitals.csv", (line) =>
+          line.replace(/^s/u, "S"),
+        );
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, made);
+        await expect(
+          individualsBoxOnNewPage(page).getByText(/^Warning: none/u),
+        ).toBeVisible({ timeout: 20_000 });
+        await save(page, `popgen2-input-no-match${at}-${theme}`);
+      });
+
+      test("the warning of a column of more than 20 values", async ({
+        page,
+      }) => {
+        const made = await panelPopsMade(
+          "accessions.csv",
+          (line, index) => `${line},a${String(index % 21)}`,
+        );
+        const withHeader = {
+          ...made,
+          text: made.text.replace(/^IID,popcat/u, "IID,popcat,accession"),
+        };
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, withHeader);
+        const box = individualsBoxOnNewPage(page);
+        await box
+          .getByRole("button", { name: "Column of the populations" })
+          .click();
+        await page
+          .getByRole("option", { name: "accession", exact: true })
+          .click();
+        await expect(box.getByText(/^Warning: accession/u)).toBeVisible();
+        await save(page, `popgen2-input-too-many${at}-${theme}`);
+      });
+
+      test("None chosen in the list", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        const box = individualsBoxOnNewPage(page);
+        await expect(box.getByRole("cell", { name: "84" })).toBeVisible({
+          timeout: 20_000,
+        });
+        await box
+          .getByRole("button", { name: "Column of the populations" })
+          .click();
+        await page
+          .getByRole("option", {
+            name: "None: every individual unclassified",
+            exact: true,
+          })
+          .click();
+        await expect(box.getByText(/^All 200 individuals kept/u)).toBeVisible();
+        await save(page, `popgen2-input-none${at}-${theme}`);
+      });
+
+      test("an individuals file refused, in the box and under the tab", async ({
+        page,
+      }) => {
+        await pickIndividualsOnNewPage(page, {
+          name: "decimals.csv",
+          text: "id;pop;h\ns000;p0;1,75\ns001;p1;2,5\n",
+        });
+        await expect(
+          individualsBoxOnNewPage(page).getByRole("button", {
+            name: "Column of the populations",
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await individualsTabOnNewPage(page);
+        await page.getByRole("button", { name: "Separator" }).click();
+        await page.getByRole("option", { name: "Comma", exact: true }).click();
+        await expect(
+          individualsBoxOnNewPage(page).getByText(/could not be read: /u),
+        ).toBeVisible({ timeout: 20_000 });
+        await save(page, `popgen2-input-refused${at}-${theme}`);
+      });
+
+      test("the counts waiting for the pass, with a threshold of the individuals", async ({
+        page,
+      }) => {
+        await holdSummary(page);
+        await page.reload();
+        await pickIndividualsOnNewPage(page, "panel_pops.csv");
+        await pickOnNewPage(page, "panel.vcf.gz");
+        await release(page, "oneSoFar");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await typeThreshold(
+          page,
+          "Missing GTs max: maximum proportion of missing genotypes of an individual",
+          "0.03",
+        );
+        await expect(
+          individualsBoxOnNewPage(page).getByText(
+            /^The individuals the filters keep are counted once/u,
+          ),
+        ).toBeVisible();
+        await save(page, `popgen2-input-waiting${at}-${theme}`);
+      });
+
+      test("the tab of the individuals file with an xlsx", async ({ page }) => {
+        await pickOnNewPage(page, "panel.nei");
+        await expect(newPageStats(page).locator("svg.chart")).toHaveCount(6, {
+          timeout: 20_000,
+        });
+        await pickIndividualsOnNewPage(page, "excel_en.xlsx");
+        await individualsTabOnNewPage(page);
+        await expect(
+          page.getByText(/^Read from the first sheet of excel_en\.xlsx/u),
+        ).toBeVisible({ timeout: 20_000 });
+        await save(page, `popgen2-input-tab-xlsx${at}-${theme}`);
+      });
+
+      test("the tab of the individuals file with a table of 10,000 rows, sorted", async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await pickIndividualsOnNewPage(page, "individuals_10000.xlsx");
+        await individualsTabOnNewPage(page);
+        const grid = page.getByRole("grid", {
+          name: "The table of individuals_10000.xlsx",
+        });
+        await expect(grid).toBeVisible({ timeout: 60_000 });
+        await grid.getByRole("columnheader").nth(1).click();
+        await save(page, `popgen2-input-tab-10000${at}-${theme}`);
       });
 
       test("reading the file", async ({ page }) => {

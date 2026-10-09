@@ -2633,6 +2633,51 @@ test("VS7 D4 the table at 10,000 individuals: the page frozen when the column Ke
 });
 
 // ---------------------------------------------------------------------
+// The table of individuals_10000.xlsx under the tab "Individuals file" of
+// popgen2.html, sorted by a header (IN6 D4, the plan of the input page),
+// beside the sort of the 10,000 rows of the statistics of VS7 D4.
+
+test("IN6 D4 the table of individuals_10000.xlsx under the tab Individuals file of popgen2.html: the page frozen when a header sorts it", async ({
+  page,
+  browser,
+  browserName,
+}) => {
+  test.setTimeout(300_000);
+  await page.goto("popgen2.html");
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("region", { name: "Individuals file", exact: true })
+    .getByRole("button", { name: "Open individuals file…" })
+    .click();
+  await (
+    await chooser
+  ).setFiles(join(import.meta.dirname, "fixtures", "individuals_10000.xlsx"));
+  await page
+    .getByRole("tab", { name: "Individuals file", exact: true })
+    .click();
+  const table = page.getByRole("grid", {
+    name: "The table of individuals_10000.xlsx",
+  });
+  await expect(table).toBeVisible({ timeout: 120_000 });
+  const drawn = await table.getByRole("row").count();
+  const header = table.getByRole("columnheader").nth(1);
+  // The first sort, which makes the order of the column, is left out, as
+  // the first of VS7 D4 is.
+  await frozenBy(header);
+  const sorted: number[] = [];
+  for (let k = 0; k < REPEATS; k++) {
+    sorted.push(await frozenBy(header));
+  }
+  await expect(header).toHaveAttribute("aria-sort", /ascending|descending/u);
+  report(
+    "The table of individuals_10000.xlsx under the tab Individuals file of popgen2.html",
+    `${machine(browser, browserName)}; ${String(drawn)} rows of the table in the page, its header among them; each time from the click to the end of the task after the next frame, ${String(REPEATS)} times but the first`,
+    ["change", "median", "range"],
+    [["a header sorts the rows", ...stats(sorted, ms)]],
+  );
+});
+
+// ---------------------------------------------------------------------
 // The time of columnAllows, a metadata file of 10,000 rows and 50
 // columns (IP5 D4).
 
