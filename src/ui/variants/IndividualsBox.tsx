@@ -303,14 +303,14 @@ function ColumnAndCounts({
           // The counts of part of the variants would hold other numbers
           // with nothing to mark them: the menu waits with the counts.
           download={{
-            what: countsWhat(project.variants.name),
+            what: countsWhat(project.individuals?.name ?? ""),
             fileName: downloadName(
               variantsStem(project.variants.name),
               "population_counts",
               "csv",
             ),
             waiting: counts.populations.some(({ kept }) => kept === null)
-              ? passDownloadWaitingText(project.variants.name)
+              ? passDownloadWaitingText(project.variants.name, wait)
               : null,
           }}
         />

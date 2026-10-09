@@ -34,6 +34,7 @@ import {
   VARIANT_STATISTICS,
   individualPlotWhat,
   passDownloadWaitingText,
+  plotWaitOf,
   variantPlotWhat,
 } from "./statsWords.ts";
 import type { DrawnFrom } from "./statsWords.ts";
@@ -297,8 +298,14 @@ function plotDownload(
     imageWhat: file,
     csvWhat: file,
     csv: plot.csv,
-    waiting: from === "result" ? null : passDownloadWaitingText(variantsName),
+    waiting: waitingOf(from, variantsName),
   };
+}
+
+/** Why the menu of a histogram drawn from `from` waits, or null. */
+function waitingOf(from: DrawnFrom, variantsName: string): string | null {
+  const wait = plotWaitOf(from);
+  return wait === null ? null : passDownloadWaitingText(variantsName, wait);
 }
 
 /** How a histogram sets the threshold of `filter` in the project. */

@@ -454,11 +454,13 @@ export function tableWhat(name: string): string {
   return `the table of ${escaped(name)}`;
 }
 
-/** What the menu "Download…" of the counts per population downloads,
-    from their caption: "the table of the individuals of panel.nei after
-    the filters of individuals". */
-export function countsWhat(variantsName: string): string {
-  return `the table of the individuals of ${escaped(variantsName)} after the filters of individuals`;
+/** What the menu "Download…" of the counts per population of the
+    individuals file `individualsName` downloads: "the counts per
+    population of panel_pops.csv", as the table of the downloads names
+    them, not from their caption, which names the individuals of the
+    variants file (docs/specs/steps/popgen2-pca.md, "Its words"). */
+export function countsWhat(individualsName: string): string {
+  return `the counts per population of ${escaped(individualsName)}`;
 }
 
 /** The line over the table of the individuals file, its size, "200

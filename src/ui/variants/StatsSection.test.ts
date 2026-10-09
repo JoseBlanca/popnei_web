@@ -21,6 +21,7 @@ import {
   vi,
 } from "vitest";
 
+import { VARIANT_FINE_BINS } from "../../core/analyses/variantChecks.ts";
 import { loadVariants } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
 import { summaryResult } from "../../core/testSupport.ts";
@@ -30,8 +31,11 @@ import type {
   Outcome,
   Run,
   RunError,
+  VariantDistrib,
+  VariantsSummaryResult,
 } from "../../worker/protocol.ts";
 import { createAutoRuns } from "../autoRuns.ts";
+import { downloadText } from "../download.ts";
 import type { AutoRuns } from "../autoRuns.ts";
 import {
   POPGEN2_AUTO_GROUPS,
@@ -45,7 +49,13 @@ import { StoreProvider } from "../store.tsx";
 import { announceChanges } from "./announceChanges.ts";
 import { RunGateProvider } from "./runGate.tsx";
 import { StatsSection } from "./StatsSection.tsx";
+import { individualPlot, variantPlot } from "./statsPlots.ts";
 import { createRunGate, gatedStore } from "./thresholdRun.ts";
+
+vi.mock("../download.ts", () => ({
+  downloadText: vi.fn(),
+  downloadFile: vi.fn(),
+}));
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean | undefined;
@@ -514,6 +524,143 @@ describe("the section of the statistics of the open file", () => {
   });
 });
 
+/** The summary of panel.nei with each statistic in other bins than the
+    others, so that a histogram that wrote another's bins would be seen:
+    of the variants, the missing rate in the first fine bin, the MAF
+    split between 0.75 and 1, the observed heterozygosity between 0 and
+    0.5, the expected heterozygosity at a third; of the two individuals,
+    missing rates 0.1 and 0.3, and heterozygosities 0.5 and none. */
+function distinctResult(): VariantsSummaryResult {
+  const base = summaryResult(["1"], [1200], ["i1", "i2"]);
+  const distrib = (
+    bins: readonly (readonly [number, number])[],
+  ): VariantDistrib => {
+    const counts = new Uint32Array(VARIANT_FINE_BINS);
+    for (const [bin, count] of bins) counts[bin] = count;
+    return { mean: 0.25, counts };
+  };
+  const last = VARIANT_FINE_BINS - 1;
+  return {
+    ...base,
+    perVar: {
+      ...base.perVar,
+      missingRate: distrib([[0, 1200]]),
+      maf: distrib([
+        [Math.round(VARIANT_FINE_BINS * 0.75), 500],
+        [last, 700],
+      ]),
+      obsHet: distrib([
+        [0, 900],
+        [VARIANT_FINE_BINS / 2, 300],
+      ]),
+      unbiasedExpHet: distrib([[Math.round(VARIANT_FINE_BINS / 3), 1200]]),
+    },
+    perIndividual: {
+      ...base.perIndividual,
+      missingGtRate: Float64Array.from([0.1, 0.3]),
+      obsHetRate: Float64Array.from([0.5, NaN]),
+    },
+  };
+}
+
+/** Opens the menu "Download…" named "Download `what`" by the keyboard,
+    chooses "Data as CSV", the third item, and lets the save end. */
+async function chooseCsv(what: string): Promise<void> {
+  const button = sectionOf()?.querySelector(
+    `button[aria-label="Download ${what}"]`,
+  );
+  if (!(button instanceof HTMLElement)) throw new Error(`no menu ${what}`);
+  act(() => {
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Shift", bubbles: true }),
+    );
+    button.focus();
+  });
+  for (const key of ["Enter", "ArrowDown", "ArrowDown", "Enter"]) {
+    const target = document.activeElement;
+    if (!(target instanceof HTMLElement)) throw new Error("no focus");
+    act(() => {
+      target.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      );
+    });
+    act(() => {
+      target.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+    });
+  }
+  await settled();
+}
+
+describe("AP5 D4 the menus of the histograms, in the section", () => {
+  test("each histogram's menu is named by its statistic and writes the bins of its own statistic, not another's", async () => {
+    vi.mocked(downloadText).mockClear();
+    const page = await drawPage();
+    await open(page, FIRST);
+    const request = page.requests.at(-1);
+    if (request === undefined) throw new Error("no request was sent");
+    const result = distinctResult();
+    request.end({ kind: "done", key: request.key, result });
+    await settled();
+    expect(
+      [
+        ...(sectionOf()?.querySelectorAll(
+          "button[aria-label^='Download the plot']",
+        ) ?? []),
+      ].map((button) => button.getAttribute("aria-label")),
+    ).toEqual([
+      "Download the plot of the proportion of missing genotypes of the variants",
+      "Download the plot of the major allele frequency of the variants",
+      "Download the plot of the observed heterozygosity of the variants",
+      "Download the plot of the unbiased expected heterozygosity of the variants",
+      "Download the plot of the proportion of missing genotypes of each individual",
+      "Download the plot of the observed heterozygosity of each individual",
+    ]);
+    const individuals = { numIndividuals: 2, ploidy: 2 };
+    const expected = [
+      ...(["missingRate", "maf", "obsHet", "unbiasedExpHet"] as const).map(
+        (statistic) =>
+          variantPlot(
+            statistic,
+            result.perVar,
+            individuals,
+            "result",
+            null,
+          ).csv(),
+      ),
+      ...(["missingGenotypes", "observedHeterozygosity"] as const).map(
+        (statistic) =>
+          individualPlot(
+            statistic,
+            result.perIndividual,
+            "result",
+            null,
+          ).plot?.csv(),
+      ),
+    ];
+    // Each statistic's bins are other than every other's.
+    expect(new Set(expected).size).toBe(6);
+    const names = [
+      "the plot of the proportion of missing genotypes of the variants",
+      "the plot of the major allele frequency of the variants",
+      "the plot of the observed heterozygosity of the variants",
+      "the plot of the unbiased expected heterozygosity of the variants",
+      "the plot of the proportion of missing genotypes of each individual",
+      "the plot of the observed heterozygosity of each individual",
+    ];
+    for (const what of names) await chooseCsv(what);
+    expect(
+      vi.mocked(downloadText).mock.calls.map(([name, text]) => [name, text]),
+    ).toEqual([
+      ["panel.missing_rate_variants.csv", expected[0]],
+      ["panel.maf_variants.csv", expected[1]],
+      ["panel.obs_het_variants.csv", expected[2]],
+      ["panel.exp_het_variants.csv", expected[3]],
+      ["panel.missing_rate_individuals.csv", expected[4]],
+      ["panel.obs_het_individuals.csv", expected[5]],
+    ]);
+  });
+});
+
 describe("SF10 D2 the plots after a Stop, in the section", () => {
   /** Opens the first file, gives the store a result so far of 523
       variants, and stops the pass as the Stop of the box does; the
@@ -562,6 +709,23 @@ describe("SF10 D2 the plots after a Stop, in the section", () => {
     }
     expect(partsText()).not.toContain("so far");
     expect(buttonsOf()).toEqual(WAITING_BUTTONS);
+  });
+
+  test("the menus of the plots read before the Stop say that the reading was stopped and where to start it again", async () => {
+    await stoppedAfterSoFar({ kind: "cancelled" });
+    const menus = [
+      ...(sectionOf()?.querySelectorAll(
+        "button[aria-label^='Download the plot']",
+      ) ?? []),
+    ];
+    expect(menus).toHaveLength(6);
+    for (const menu of menus) {
+      expect(menu.getAttribute("aria-disabled")).toBe("true");
+      const describedBy = menu.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(
+        "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file.",
+      );
+    }
   });
 
   test("Start again drops them and reads the file again", async () => {

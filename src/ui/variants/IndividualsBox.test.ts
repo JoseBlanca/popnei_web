@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { loadVariants, setGrouping, setThreshold } from "../../core/project.ts";
 import type { IndividualsReadGiven } from "../../core/project.ts";
 import type { Store } from "../../core/store.ts";
+import { summaryResult } from "../../core/testSupport.ts";
 import type {
   Cell,
   CsvFound,
@@ -379,6 +380,26 @@ function undoNames(store: Store<JobResult, Blob>): string | null {
   return store.getState().undo;
 }
 
+/** The menu "Download…" of the counts per population of pops.csv:
+    whether it is marked disabled, and its description, or null. */
+function countsMenu(): {
+  readonly disabled: boolean;
+  readonly description: string | null;
+} {
+  const button = box().querySelector(
+    'button[aria-label="Download the counts per population of pops.csv"]',
+  );
+  if (button === null) throw new Error("the box has no menu of the counts");
+  const describedBy = button.getAttribute("aria-describedby");
+  return {
+    disabled: button.getAttribute("aria-disabled") === "true",
+    description:
+      describedBy === null
+        ? null
+        : (document.getElementById(describedBy)?.textContent ?? null),
+  };
+}
+
 describe("IN6 D1 the box of the individuals file in each state", () => {
   test("no file, no variants file: the words of no file and the zone's button, no Remove", async () => {
     await drawPage();
@@ -554,6 +575,10 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "The individuals the filters keep are counted once panel.nei is read to the end.",
     );
+    expect(countsMenu()).toEqual({
+      disabled: true,
+      description: "Download once panel.nei is read to the end.",
+    });
 
     await act(async () => {
       autoRuns.stop(POPGEN2_CHAIN);
@@ -563,6 +588,11 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "Not counted: the reading of panel.nei was stopped. Start it again in the box of panel.nei to count the individuals the filters keep.",
     );
+    expect(countsMenu()).toEqual({
+      disabled: true,
+      description:
+        "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file.",
+    });
 
     await act(async () => {
       autoRuns.resume(POPGEN2_CHAIN);
@@ -580,6 +610,45 @@ describe("IN6 D1 the box of the individuals file in each state", () => {
     expect(paragraphs(box())).toContain(
       "Not counted: panel.nei could not be read to the end; the box of panel.nei says why.",
     );
+    expect(countsMenu()).toEqual({
+      disabled: true,
+      description:
+        "Nothing to download: panel.nei could not be read to the end; the box Variants file says why.",
+    });
+  });
+
+  test("the menu of the counts waits, marked disabled with its reason, while the statistics wait, and is enabled once panel.nei is read to the end", async () => {
+    const { store, requests } = await drawPage();
+    await openVariants(store);
+    await pickIndividuals("pops.csv");
+    await recorded(store, readOf(POPS));
+    await choose(store, "popcat");
+    await act(async () => {
+      store.apply("the threshold of the missing genotypes changed", (p) =>
+        setThreshold(p, { of: "individuals", kind: "missing_data" }, 0.03),
+      );
+      await Promise.resolve();
+    });
+    await settled();
+    expect(countsMenu()).toEqual({
+      disabled: true,
+      description: "Download once panel.nei is read to the end.",
+    });
+    await act(async () => {
+      requests.at(-1)?.end({
+        kind: "done",
+        key: store.getState().runs.at(-1)?.key ?? "",
+        result: summaryResult(["1"], [1200], INDIVIDUALS),
+      });
+      await Promise.resolve();
+    });
+    await settled();
+    expect(
+      countRows()
+        .slice(1)
+        .every(([, count]) => count !== "…not counted yet"),
+    ).toBe(true);
+    expect(countsMenu()).toEqual({ disabled: false, description: null });
   });
 
   test("a progress of the one pass draws the box no more", async () => {

@@ -41,7 +41,7 @@ const HISTOGRAMS = [
     "obs_het_variants",
   ],
   [
-    "the plot of the expected heterozygosity (unbiased) of the variants",
+    "the plot of the unbiased expected heterozygosity of the variants",
     "exp_het_variants",
   ],
   [
@@ -291,7 +291,7 @@ test("AP5 D4 the counts per population of panel_pops.csv saved by the keyboard: 
   await pickIndividuals(page, "panel_pops.csv");
   const button = menuButton(
     individualsBox(page),
-    "the table of the individuals of panel.nei after the filters of individuals",
+    "the counts per population of panel_pops.csv",
   );
   await expect(button).not.toHaveAttribute("aria-disabled", "true", {
     timeout: 20_000,

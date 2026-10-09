@@ -325,7 +325,7 @@ test("SF7 D2 the Tab key reaches the box after the four histograms of the varian
   // Between the last line and the box, the menu "Download…" of the
   // fourth plot, at the end of its title.
   const lastMenu = variants.getByRole("button", {
-    name: "Download the plot of the expected heterozygosity (unbiased) of the variants",
+    name: "Download the plot of the unbiased expected heterozygosity of the variants",
   });
   await variants.getByRole("slider").last().focus();
   await page.keyboard.press("Tab");

@@ -19,6 +19,7 @@ import type { JobResult } from "../../worker/protocol.ts";
 import { VARIANT_HISTOGRAMS } from "../steps/variants/histogramWords.ts";
 import { INDIVIDUAL_HISTOGRAMS } from "../steps/variants/individualStats.ts";
 import { numberText } from "../widgets/committedNumber.ts";
+import type { PassWait } from "./individualsWords.ts";
 import { summaryStatus } from "./words.ts";
 
 /** The two parts of the statistics of the open file, the parts of the
@@ -95,10 +96,16 @@ export function individualFullTitle(statistic: IndividualStatistic): string {
 
 /** What the menu "Download…" of the histogram of the variants of
     `statistic` downloads, after "Download ": "the plot of the observed
-    heterozygosity of the variants", from its full title
-    (docs/specs/steps/popgen2-pca.md, "Its words"). */
+    heterozygosity of the variants", from its full title; but "the plot
+    of the unbiased expected heterozygosity of the variants", whose title,
+    "Expected heterozygosity (unbiased)", would read wrong inside a
+    sentence (docs/specs/steps/popgen2-pca.md, "Its words"). */
 export function variantPlotWhat(statistic: VariantStatistic): string {
-  return `the plot of the ${lowerFirst(variantFullTitle(statistic))} of the variants`;
+  const name =
+    statistic === "unbiasedExpHet"
+      ? "unbiased expected heterozygosity"
+      : lowerFirst(variantFullTitle(statistic));
+  return `the plot of the ${name} of the variants`;
 }
 
 /** The same of the histogram of the individuals of `statistic`: "the
@@ -128,9 +135,38 @@ export const INDIVIDUAL_PLOT_FILES: Readonly<
 
 /** Why a menu "Download…" of what the one pass of `variantsName` gives,
     a histogram or the counts per population, waits: a file of part of
-    the variants would hold other numbers with nothing to mark them. */
-export function passDownloadWaitingText(variantsName: string): string {
-  return `Download once ${escaped(variantsName)} is read to the end.`;
+    the variants would hold other numbers with nothing to mark them. The
+    words say whether the pass runs, or will not end by itself, `wait`:
+    the user stopped it, or it failed (docs/specs/steps/popgen2-pca.md,
+    "Its words"). */
+export function passDownloadWaitingText(
+  variantsName: string,
+  wait: PassWait,
+): string {
+  const name = escaped(variantsName);
+  switch (wait) {
+    case "running":
+      return `Download once ${name} is read to the end.`;
+    case "stopped":
+      return `Download once ${name} is read to the end: its reading was stopped; start it again in the box Variants file.`;
+    case "failed":
+      return `Nothing to download: ${name} could not be read to the end; the box Variants file says why.`;
+  }
+}
+
+/** Why the menu of a histogram drawn from `from` waits, or null for one
+    drawn from the result of the pass: a plot drawn from a result so far
+    waits for a pass that runs, one drawn from the last result so far of
+    a pass the user stopped for one that will not end by itself. */
+export function plotWaitOf(from: DrawnFrom): PassWait | null {
+  switch (from) {
+    case "result":
+      return null;
+    case "soFar":
+      return "running";
+    case "stopped":
+      return "stopped";
+  }
 }
 
 /** `text` with its first letter in lower case, for a title inside a
