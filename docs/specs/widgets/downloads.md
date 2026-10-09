@@ -45,14 +45,24 @@ dialog, which the user may cancel.
 
 The button can wait, disabled, with its reason as its tooltip and its
 description, as the histograms of the Variants tab do until the one
-pass ends: "Download once panel.nei is read to the end." A button
+pass ends: "Download once panel.nei is read to the end.", or, once the
+user stopped the pass or it failed, the words of
+`docs/specs/steps/popgen2-pca.md`, "Its words", which say that it will
+not end by itself. A button
 disabled for React Aria cannot take the focus, so its tooltip would show
 to the mouse alone, and a keyboard user would not learn why it waits.
 So a waiting button stays a stop of the Tab key: the widget gives React
 Aria an enabled button, marks it `aria-disabled` itself, draws it as
 disabled, and opens nothing on a press, as the greyed tabs of
 `docs/specs/steps/popgen2-pca.md` do; its tooltip shows on the focus
-and on the mouse. A menu open when it begins to wait, as when a new
+and on the mouse, and on a click, a tap, Enter or Space, which open
+nothing else and do not close it, since a click that did nothing
+visible, or a tap on a touch screen, where no mouse rests on the
+button, would otherwise leave the user without the reason. The tooltip
+stays while the focus is on the button, through a scroll of the page
+that brings the button into view, and while the mouse is over the
+button or the tooltip; it goes with Escape, when the focus or the
+mouse leaves, and when the button no longer waits. A menu open when it begins to wait, as when a new
 file is dropped, closes, and does not open again by itself when the
 wait ends.
 

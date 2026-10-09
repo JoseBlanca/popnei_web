@@ -496,7 +496,9 @@ theme, with its legend and its threshold's line.
 **A histogram's menu waits** for the one pass to end. Until then the
 button is shown, disabled, with "Download once panel.nei is read to the
 end." as its tooltip and its description, so that no file of part of
-the variants leaves the page.
+the variants leaves the page. A pass the user stopped, or one that
+failed, will not end by itself, so the reason then says so, as "Its
+words" gives it.
 
 **A choice** hands the file to the browser at once, and the status
 region says "Saving panel.pca.coordinates.csv." A PNG the browser
@@ -584,9 +586,9 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | the note of the colours, a column to colour by that the individuals file lacks | "panel_pops.csv has no column height, by which the points were coloured, so they are coloured by the column of the populations chosen in the box Individuals file."; with no column of the populations chosen, or with one population, "…, so every point is unclassified. Choose a column of the populations in the box Individuals file, or another column to colour the points by."; with no individuals file, "No individuals file is open in the box Individuals file, so the points cannot be coloured by height." |
 | the end of a run, in the status region | "PCA of panel.nei calculated."; "PCoA of panel.nei calculated."; a refusal or a failure, "The PCA of panel.nei could not be calculated: " followed by the words of its error |
 | the download of the filtered variants while a PCA runs | "Waits for the PCA to end; or stop it in the PCA tab." |
-| the button of a download | "Download…", named for a screen reader "Download the plot of the missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries |
+| the button of a download | "Download…", named for a screen reader "Download the plot of the proportion of missing genotypes of the variants", "Download the table of panel_pops.csv", "Download the plot of the PCA", "Download the explained variance of the PCA", "Download the table of the individuals of the PCA", from the title the table or the plot carries; but "Download the plot of the unbiased expected heterozygosity of the variants", whose title says "Expected heterozygosity (unbiased)", and "Download the counts per population of panel_pops.csv", whose caption names the individuals of the variants file |
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
-| a histogram's menu waiting | "Download once panel.nei is read to the end." |
+| a histogram's menu waiting, and the menu of the counts per population | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants file says why." |
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
 | the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |
 | a PNG refused | "The image of this plot is too large for a PNG in this browser; download it as SVG."; "The image of this plot could not be made as a PNG in this browser; download it as SVG." |
