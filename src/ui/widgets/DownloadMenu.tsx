@@ -20,12 +20,12 @@
  * docs/specs/steps/popgen2-pca.md do.
  *
  * A PNG the browser refuses, a `PngError`, is said in words under the
- * button and in the status region, until the next choice of the menu;
- * any other failure of an item is a defect, thrown again in a promise
- * that nothing handles, which the bar of the errors of the page shows
- * (react.md, "Errors").
+ * button and in the status region, until the next choice of the menu or
+ * the start of a wait; any other failure of an item, a rejection or a
+ * throw, is a defect, thrown again in a promise that nothing handles,
+ * which the bar of the errors of the page shows (react.md, "Errors").
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button as AriaButton,
   Menu,
@@ -88,13 +88,32 @@ export function DownloadMenu({
 }: DownloadMenuProps): React.JSX.Element {
   const announcer = useAnnouncer();
   const [isOpen, setOpen] = useState(false);
-  // The words of the last choice that failed, until the next choice.
+  // The words of the last choice that failed, until the next choice or
+  // the start of a wait.
   const [failure, setFailure] = useState<string | null>(null);
   const isWaiting = waiting !== null;
+  // The number of the last choice, raised also when a wait begins: a save
+  // that ends after another choice, or after the wait began, says
+  // nothing, so that the words are always those of the last choice.
+  const lastChoice = useRef(0);
+
+  // A menu that begins to wait closes, and drops the words of a failure:
+  // the open menu would come back by itself when the wait ends, and the
+  // words would describe a file the menu no longer offers.
+  const [wasWaiting, setWasWaiting] = useState(isWaiting);
+  if (wasWaiting !== isWaiting) {
+    setWasWaiting(isWaiting);
+    if (isWaiting) {
+      setOpen(false);
+      setFailure(null);
+    }
+  }
+  useEffect(() => {
+    if (isWaiting) lastChoice.current += 1;
+  }, [isWaiting]);
 
   const onOpenChange = (open: boolean): void => {
-    // A waiting menu opens nothing; it closes, if it was open when it
-    // began to wait.
+    // A waiting menu opens nothing.
     if (open && isWaiting) return;
     setOpen(open);
   };
@@ -107,25 +126,33 @@ export function DownloadMenu({
       );
     }
     setFailure(null);
-    // The rejection of anything but a PNG refused is thrown again here,
-    // and reaches the window's unhandledrejection, the bar of the errors
-    // of the page, as a defect.
-    void item.save().then(
-      (fileName) => {
-        announcer.announce(savingText(fileName));
-      },
-      (error: unknown) => {
-        if (!(error instanceof PngError)) throw error;
-        const words = pngRefusedText(error.kind);
-        setFailure(words);
-        announcer.announce(words);
-      },
-    );
+    lastChoice.current += 1;
+    const choice = lastChoice.current;
+    // Every save is called in a promise, so that one that throws before
+    // it gives its promise fails the same way as one that rejects, and
+    // the menu closes. The rejection of anything but a PNG refused is
+    // thrown again here, and reaches the window's unhandledrejection, the
+    // bar of the errors of the page, as a defect.
+    void Promise.resolve()
+      .then(() => item.save())
+      .then(
+        (fileName) => {
+          if (choice !== lastChoice.current) return;
+          announcer.announce(savingText(fileName));
+        },
+        (error: unknown) => {
+          if (!(error instanceof PngError)) throw error;
+          if (choice !== lastChoice.current) return;
+          const words = pngRefusedText(error.kind);
+          setFailure(words);
+          announcer.announce(words);
+        },
+      );
   };
 
   return (
     <div className={classOf(styles, "download")}>
-      <MenuTrigger isOpen={isOpen && !isWaiting} onOpenChange={onOpenChange}>
+      <MenuTrigger isOpen={isOpen} onOpenChange={onOpenChange}>
         <WithTooltip text={waiting}>
           {(describedBy) => (
             <AriaButton

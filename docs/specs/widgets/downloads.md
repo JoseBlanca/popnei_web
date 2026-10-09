@@ -52,15 +52,22 @@ So a waiting button stays a stop of the Tab key: the widget gives React
 Aria an enabled button, marks it `aria-disabled` itself, draws it as
 disabled, and opens nothing on a press, as the greyed tabs of
 `docs/specs/steps/popgen2-pca.md` do; its tooltip shows on the focus
-and on the mouse.
+and on the mouse. A menu open when it begins to wait, as when a new
+file is dropped, closes, and does not open again by itself when the
+wait ends.
 
 An item that fails says so in words under the button, until the next
-choice of that menu: the PNG of a plot, which the browser can refuse,
+choice of that menu or until the menu begins to wait: the PNG of a plot, which the browser can refuse,
 `PngError` of `src/charts/export.ts`, `tooLarge`, "The image of this
 plot is too large for a PNG in this browser; download it as SVG.", or
 `notMade`, "The image of this plot could not be made as a PNG in this
 browser; download it as SVG."; the words are also said in the status
-region. Any other error of an item is a defect, thrown again.
+region. The words, of a file saved or refused, are always those of the
+last choice: a PNG that ends after a later choice, or after the menu
+began to wait, says nothing. Any other error of an item, whether its
+function rejects or throws before it gives its promise, is a defect,
+thrown again in a promise that nothing handles, which the bar of the
+errors of the page shows; the menu closes as after any choice.
 
 ### A table
 

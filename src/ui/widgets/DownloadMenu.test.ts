@@ -5,8 +5,10 @@
  * the widgets): a sorted table saves every row in the order shown, with
  * its values and not its texts; a table given a download and a row with
  * no values is a defect; a PNG refused is said under the button and in
- * the status region; a menu that waits carries `aria-disabled` and its
- * reason, and opens nothing. The flows of e2e/popgen2Downloads.spec.ts see
+ * the status region, and only for the last choice; any other failure of
+ * a save reaches the bar of the errors; a menu that waits carries
+ * `aria-disabled` and its reason, opens nothing, and closes when it
+ * begins to wait. The flows of e2e/popgen2Downloads.spec.ts see
  * the menus in the browsers.
  */
 import { StrictMode, act, createElement } from "react";
@@ -144,6 +146,53 @@ function menuItems(): string[] | null {
   return [...menu.querySelectorAll('[role="menuitem"]')].map(
     (item) => item.textContent,
   );
+}
+
+/** Runs `during` with the rejections that nothing handles caught in
+    place of Vitest, which would fail the run on them, and gives them:
+    what the window's unhandledrejection, the bar of the errors of the
+    page, would show. */
+async function rejectionsOf(during: () => Promise<void>): Promise<unknown[]> {
+  const listeners = process.listeners("unhandledRejection");
+  process.removeAllListeners("unhandledRejection");
+  const rejections: unknown[] = [];
+  process.on("unhandledRejection", (reason) => {
+    rejections.push(reason);
+  });
+  try {
+    await during();
+    // Node reports a rejection nothing handled after the microtasks.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    process.removeAllListeners("unhandledRejection");
+    for (const listener of listeners) {
+      process.on("unhandledRejection", listener);
+    }
+  }
+  return rejections;
+}
+
+/** A promise and the functions that settle it, for a save that ends when
+    the test says. */
+function deferred(): {
+  readonly promise: Promise<string>;
+  readonly resolve: (name: string) => void;
+  readonly reject: (error: Error) => void;
+} {
+  let resolve: (name: string) => void = () => undefined;
+  let reject: (error: Error) => void = () => undefined;
+  const promise = new Promise<string>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
+/** Lets the promises of a save settle, and the status region speak. */
+async function settle(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ANNOUNCE_DELAY_MS * 2));
+  });
 }
 
 /** Opens the menu of `what` by the keyboard and chooses the item
@@ -387,6 +436,138 @@ describe("AP5 D2 the menu Download… and the downloads of the tables", () => {
     });
     expect(menuItems()).toBeNull();
     expect(saves).toBe(0);
+  });
+
+  test("a save rejected with an error that is not a PNG refused reaches the bar of the errors, with no words under the button", async () => {
+    const defect = new Error("x");
+    const rejections = await rejectionsOf(async () => {
+      draw(
+        createElement(DownloadMenu, {
+          what: "the plot of the PCA",
+          items: [
+            { label: "Image as SVG", save: () => Promise.reject(defect) },
+          ],
+          waiting: null,
+        }),
+      );
+      await choose("the plot of the PCA", "Image as SVG");
+    });
+    expect(rejections).toEqual([defect]);
+    expect(menuItems()).toBeNull();
+    expect(container.querySelector("p")).toBeNull();
+  });
+
+  test("a save that throws before its promise closes the menu and reaches the bar of the errors as a rejection", async () => {
+    const defect = new Error("popnei_web defect: no plot");
+    const rejections = await rejectionsOf(async () => {
+      draw(
+        createElement(DownloadMenu, {
+          what: "the plot of the PCA",
+          items: [
+            {
+              label: "Image as SVG",
+              save: () => {
+                throw defect;
+              },
+            },
+          ],
+          waiting: null,
+        }),
+      );
+      await choose("the plot of the PCA", "Image as SVG");
+    });
+    expect(rejections).toEqual([defect]);
+    expect(menuItems()).toBeNull();
+  });
+
+  test.each([" ", "ArrowDown"])("the key %j opens the menu", (key) => {
+    draw(
+      createElement(DownloadMenu, {
+        what: "the plot of the PCA",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting: null,
+      }),
+    );
+    focusByKeyboard(trigger("the plot of the PCA"));
+    press(key);
+    expect(menuItems()).toEqual(["Image as SVG"]);
+  });
+
+  test("a menu open when it begins to wait closes, and stays closed when the wait ends", () => {
+    const element = (waiting: string | null): React.ReactElement =>
+      createElement(DownloadMenu, {
+        what: "the plot of the MAF",
+        items: [
+          { label: "Image as SVG", save: () => Promise.resolve("x.svg") },
+        ],
+        waiting,
+      });
+    draw(element(null));
+    focusByKeyboard(trigger("the plot of the MAF"));
+    press("Enter");
+    expect(menuItems()).toEqual(["Image as SVG"]);
+    draw(element("Download once panel.nei is read to the end."));
+    expect(menuItems()).toBeNull();
+    draw(element(null));
+    expect(menuItems()).toBeNull();
+  });
+
+  test("a PNG refused after a later choice says nothing of it: the words are those of the last choice", async () => {
+    const png = deferred();
+    draw(
+      createElement(DownloadMenu, {
+        what: "the plot of the PCA",
+        items: [
+          {
+            label: "Image as SVG",
+            save: () => Promise.resolve("panel.pca.svg"),
+          },
+          { label: "Image as PNG", save: () => png.promise },
+        ],
+        waiting: null,
+      }),
+    );
+    await choose("the plot of the PCA", "Image as PNG");
+    await choose("the plot of the PCA", "Image as SVG");
+    expect(announcer.getState()).toBe("Saving panel.pca.svg.");
+    png.reject(new PngError("tooLarge"));
+    await settle();
+    expect(container.textContent).not.toContain(PNG_TOO_LARGE_TEXT);
+    expect(announcer.getState()).toBe("Saving panel.pca.svg.");
+  });
+
+  test("the words of a PNG refused go when the menu begins to wait, and a refusal that ends during the wait says nothing", async () => {
+    const late = deferred();
+    let refusals = 0;
+    const element = (waiting: string | null): React.ReactElement =>
+      createElement(DownloadMenu, {
+        what: "the plot of the PCA",
+        items: [
+          {
+            label: "Image as PNG",
+            save: () => {
+              refusals += 1;
+              return refusals === 1
+                ? Promise.reject(new PngError("tooLarge"))
+                : late.promise;
+            },
+          },
+        ],
+        waiting,
+      });
+    draw(element(null));
+    await choose("the plot of the PCA", "Image as PNG");
+    expect(container.textContent).toContain(PNG_TOO_LARGE_TEXT);
+    draw(element("Download once panel.nei is read to the end."));
+    expect(container.textContent).not.toContain(PNG_TOO_LARGE_TEXT);
+    draw(element(null));
+    await choose("the plot of the PCA", "Image as PNG");
+    draw(element("Download once panel.nei is read to the end."));
+    late.reject(new PngError("notMade"));
+    await settle();
+    expect(container.textContent).not.toContain(PNG_NOT_MADE_TEXT);
   });
 
   test("a menu that stops waiting loses aria-disabled and its description, and opens", () => {
