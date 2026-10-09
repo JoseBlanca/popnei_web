@@ -123,9 +123,17 @@ export function PageTabs({
           "pca",
           tabReasons.pca,
           // A defect in the tab costs the tab alone, the rest of the page
-          // stays.
-          <ErrorBoundary heading={PCA_HEADING} level={2}>
-            <PcaTab autoRuns={autoRuns} />
+          // stays, until another variants file draws it again; a tab that
+          // caught nothing keeps what it holds, a number half typed.
+          <ErrorBoundary
+            heading={PCA_HEADING}
+            level={2}
+            resetOn={fileId ?? "none"}
+          >
+            <PcaTab
+              autoRuns={autoRuns}
+              shown={tab === "pca" && tabReasons.pca === null}
+            />
           </ErrorBoundary>,
         ),
         analysisTab(

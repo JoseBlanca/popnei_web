@@ -31,7 +31,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { Download, Locator, Page } from "@playwright/test";
+import type { Download, Locator, Page, Route } from "@playwright/test";
 
 import { announced, recordAnnouncements } from "./announced.ts";
 import { expect, test } from "./axe.ts";
@@ -1164,5 +1164,61 @@ test.describe("AP6 D3 the result of the PCA tab", () => {
         { timeout: 10_000 },
       )
       .toBe(true);
+  });
+
+  test('AP6 D3 the result\'s code that could not be downloaded: "Loading the result…" while it is asked for, then its words in the tab and the status region with Try again, no error bar; Try again draws the result', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await recordAnnouncements(page);
+    await page.goto("popgen2.html");
+    await pick(page, "panel.nei");
+    // The plots of the Variants tab drawn, their code there. The first
+    // file of the result is held, which Try again asks for at another
+    // address in Chromium; a file it imports, which popgen.html shares,
+    // Chromium would not ask for again until a reload.
+    await expect(
+      stats(page).getByRole("group", {
+        name: "Proportion of missing genotypes",
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 30_000 });
+    const resultsFile = /\/PcaTabResultView-[^/]*\.js(\?.*)?$/u;
+    const held: Route[] = [];
+    await page.route(resultsFile, (route) => {
+      held.push(route);
+    });
+    await tab(page, "PCA").click();
+    await expect(run(page)).toHaveAccessibleDescription(NO_DISTANCE, {
+      timeout: 30_000,
+    });
+    await typeDistance(page, "50000");
+    await run(page).click();
+    await expect(
+      shown(page).getByText("Loading the result…", { exact: true }),
+    ).toBeVisible({ timeout: RESULT_TIMEOUT });
+
+    for (const route of held) await route.abort();
+    await page.unroute(resultsFile);
+    const words =
+      "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again.";
+    await expect(shown(page).getByText(words, { exact: true })).toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          // The region may say it with what comes in the same pause.
+          (await announced(page)).some((text) => text.includes(words)),
+        { timeout: 10_000 },
+      )
+      .toBe(true);
+    // The error bar, there from the start, says nothing.
+    await expect(page.getByRole("alert")).toHaveText("");
+
+    await shown(page).getByRole("button", { name: "Try again" }).click();
+    await expect(
+      shown(page).getByRole("heading", { level: 2, name: "PCA" }),
+    ).toBeFocused();
+    await expect(tableCaptionOf(page)).toBeVisible({ timeout: RESULT_TIMEOUT });
+    await expect(shown(page).getByText(words, { exact: true })).toHaveCount(0);
   });
 });

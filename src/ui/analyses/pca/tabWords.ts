@@ -207,3 +207,19 @@ export function pcaTabLoadFailed3d(
 ): string {
   return `The 3D view could not be loaded, so the 2D plot is shown in its place. If the connection works, the site may have been updated since this page was opened: reload the page, open ${escaped(variantsName)} again and run the ${methodName(method)} again.`;
 }
+
+/** The line in the place of the result while its code downloads
+    (docs/specs/steps/popgen2-pca.md, "The result", its code). */
+export const LOADING_RESULT = "Loading the result…";
+
+/** The words in the place of the result whose code could not be
+    downloaded, of the variants file `variantsName`, with "Try again"
+    beside them: "The result of the PCA could not be loaded. …"
+    (docs/specs/steps/popgen2-pca.md, "Its words"). */
+export function pcaTabResultFailed(
+  method: PcaMethod,
+  variantsName: string,
+): string {
+  const name = methodName(method);
+  return `The result of the ${name} could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open ${escaped(variantsName)} again and run the ${name} again.`;
+}

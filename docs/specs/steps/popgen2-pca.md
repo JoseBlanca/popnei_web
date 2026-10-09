@@ -531,6 +531,19 @@ column).
 - **The notes** and **the line of the versions**, as the old panel.
 - No button "Download the … as CSV" of the old panel: each table and
   the plot have the button "Download…" of the next part.
+- **Its code**, which draws the plot, the tables and their menus, is
+  downloaded apart from the page's (`docs/technology.md`, section 3),
+  from the moment the PCA tab is first shown with a variants file open,
+  so that it is there when a run of minutes ends. While it downloads,
+  "Loading the result…" stands in the place of the result. When it
+  cannot be downloaded, the connection lost or the site deployed again
+  since the page was opened, the words of "Its words" stand there with a
+  button "Try again", which asks for it again and gives the focus to the
+  heading of the tab as it goes; the status region says them once the
+  tab is shown. Until 10 October 2026 such a failure emptied the tab
+  until the page was reloaded, and the error bar called it an error of
+  the application's own; the review of work package 6 of the plan found
+  it.
 
 The numbers are written as on the old panel: a coordinate to four
 decimals in the table, "−0.7139"; the percentages to two, "3.55%";
@@ -600,7 +613,7 @@ greyed or shows its line of not built yet.
 | locked | the options, the line of the individuals, Run disabled with the lock beside it, from the table of "Run and Stop" | change the options; type the distance or turn the LD pruning off; Start again the one pass in the box; change the thresholds of the individuals |
 | ready | the options, the line of the individuals, Run | change the options; Run |
 | running | Stop, the bar and the clock, and the line under them; the options and the thresholds and FILTER box of the Variants tab greyed, with "Stop the PCA to change the filters." (above, "While a PCA runs") | Stop; change the individuals file, its column of the populations and the colour of the points; turn to another tab, where the PCA goes on; open another variants file, which stops it |
-| done | the result, its warnings and notes, the downloads | colour, turn, highlight, sort, download; change the options |
+| done | the result, its warnings and notes, the downloads; "Loading the result…" in its place while its code downloads, or the words of its code that could not be downloaded, with "Try again" | colour, turn, highlight, sort, download; change the options; Try again |
 | results removed | the options, the line of the individuals and Run, as in ready, with no words of why: the page makes no notice, as the owner decided on 8 October 2026; an Undo of the change, or the filters set back as they were, show the result again from the cache | Undo; Run |
 | error | what happened and what to do, the old panel's words with this page's names, below | Run again after a failure that is not popnei's refusal; change the options or the thresholds after a refusal; open the variants file again after it could no longer be read |
 
@@ -613,6 +626,12 @@ stricter, the colour, the axes, the view, keeps the result on the
 screen. Another individuals file, or
 another column, colours the result again with no calculation. Another
 variants file stops the PCA and keeps its options.
+
+A defect of the application's own while the tab is drawn leaves its
+heading alone in its place, and the error bar says what happened, as
+for every part of the page; another variants file opened draws the tab
+again, and a tab that caught nothing keeps what it holds, a number
+half typed among it.
 
 ## What it sends and reads
 
@@ -679,6 +698,8 @@ until the next choice of that menu (`docs/architecture.md`, section 7).
 | its menu | "Table as CSV"; "Image as SVG"; "Image as PNG"; "Data as CSV" |
 | a histogram's menu waiting, and the menu of the counts per population | "Download once panel.nei is read to the end."; once the user stopped the one pass, "Download once panel.nei is read to the end: its reading was stopped; start it again in the box Variants file."; once it failed, "Nothing to download: panel.nei could not be read to the end; the box Variants file says why." |
 | the PCA's menu while three.js downloads | "Download once the 3D view is drawn." |
+| the result while its code downloads | "Loading the result…" |
+| the result whose code could not be downloaded | "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again."; "PCoA" under the PCoA; its button "Try again" |
 | the status region, a file handed to the browser | "Saving panel.pca.coordinates.csv." |
 | a PNG refused | "The image of this plot is too large for a PNG in this browser; download it as SVG."; "The image of this plot could not be made as a PNG in this browser; download it as SVG." |
 
@@ -765,7 +786,10 @@ whichever tab is shown, since the user may have turned to another; the
 reason of the LD pruning with no distance when the switch is turned on
 and the field is empty; and those of the
 old panel: the loading of the 3D view and its failures, the notes that a
-change of the colour, the axes or the view makes. A tab that becomes
+change of the colour, the axes or the view makes; and the words of the
+result whose code could not be downloaded. Those of the 3D view and of
+the result's code are said once the PCA tab is shown, not while it is
+hidden behind another. A tab that becomes
 greyed or not is not said: the change comes from a file the user opened,
 whose box says it.
 

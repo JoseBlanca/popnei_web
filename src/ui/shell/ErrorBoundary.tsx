@@ -29,6 +29,12 @@ export interface ErrorBoundaryProps {
       of the Variants step, 4 for the spectrum of a population, under
       the heading of its block. */
   readonly level?: 1 | 2 | 3 | 4;
+  /** A value whose change draws again what caught a defect, the id of
+      the variants file loaded for the PCA tab of popgen2.html, so that a
+      defect does not last past another file; what caught nothing keeps
+      what it holds, where a `key` would draw it anew. Absent, nothing
+      draws it again but a `key`. */
+  readonly resetOn?: string;
   /** The body of the step. */
   readonly children: ReactNode;
 }
@@ -36,6 +42,8 @@ export interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   /** Something under the boundary threw while it was drawn. */
   readonly failed: boolean;
+  /** The `resetOn` the boundary was last drawn with. */
+  readonly resetOn: string | undefined;
 }
 
 /** The boundary of a step's body. */
@@ -43,10 +51,22 @@ export class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
-  override state: ErrorBoundaryState = { failed: false };
+  override state: ErrorBoundaryState = {
+    failed: false,
+    resetOn: this.props.resetOn,
+  };
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
+  static getDerivedStateFromError(): Partial<ErrorBoundaryState> {
     return { failed: true };
+  }
+
+  static getDerivedStateFromProps(
+    props: ErrorBoundaryProps,
+    state: ErrorBoundaryState,
+  ): Partial<ErrorBoundaryState> | null {
+    return props.resetOn === state.resetOn
+      ? null
+      : { failed: false, resetOn: props.resetOn };
   }
 
   override render(): ReactNode {

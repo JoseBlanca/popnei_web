@@ -29,7 +29,9 @@ import {
   pcaDownloadWhat,
   pcaEndAnnouncement,
   pcaResultTitle,
+  LOADING_RESULT,
   pcaTabLoadFailed3d,
+  pcaTabResultFailed,
   pcaTabLock,
   pcaTabName,
   pcaTabReadyLines,
@@ -218,6 +220,16 @@ describe("AP6 D3 the words of the result of the PCA tab", () => {
       "the table of the individuals of the PCoA",
     );
     expect(PLOT_WAITS_3D).toBe("Download once the 3D view is drawn.");
+  });
+
+  test("the result while its code downloads, and when it could not be downloaded", () => {
+    expect(LOADING_RESULT).toBe("Loading the result…");
+    expect(pcaTabResultFailed("pca", "panel.nei")).toBe(
+      "The result of the PCA could not be loaded. If the connection works, the site may have been updated since this page was opened: try again, or reload the page, open panel.nei again and run the PCA again.",
+    );
+    expect(pcaTabResultFailed("pcoa", "panel.nei")).toMatch(
+      /^The result of the PCoA could not be loaded\..*run the PCoA again\.$/u,
+    );
   });
 
   test("the 3D view that could not be downloaded: reload the page, open the file again and run it again, no project to save", () => {

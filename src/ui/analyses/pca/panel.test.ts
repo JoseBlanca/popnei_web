@@ -26,7 +26,7 @@ import {
   ownValueCommand,
   viewCommand,
 } from "./commands.ts";
-import { failedAddressOf } from "./load3d.ts";
+import { failedAddressOf } from "../../codeDownload.ts";
 import { notesAppeared, notesOf } from "./notes.ts";
 import {
   componentColumn,
