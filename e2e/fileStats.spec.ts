@@ -561,7 +561,11 @@ test("FS2 the plots are downloaded once a file is picked, not with the page; a d
     }
   });
   await openPage(page);
-  expect(fetched.filter((url) => /SectionPlots|d3|plots/u.test(url))).toEqual(
+  // Read by the names of the files, without the hash of their content,
+  // which can hold "d3" by chance: Button.module.css changed on 9
+  // October 2026 gave shared~popgen~popgen2-CXUJd3d1.css.
+  const names = fetched.map((url) => url.replace(/-[\w-]{8}\.\w+$/u, ""));
+  expect(names.filter((name) => /SectionPlots|d3|plots/u.test(name))).toEqual(
     [],
   );
 
