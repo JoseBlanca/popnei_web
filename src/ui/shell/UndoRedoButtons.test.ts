@@ -36,6 +36,10 @@ declare global {
 /** The description of the change of the MAF that the tests make. */
 const MAF_CHANGED = "the MAF filter changed";
 
+/** The reason Undo and Redo wait, as the page gives it while a PCA
+    runs. */
+const WAITS = "Stop the PCA to change the filters.";
+
 let container: HTMLElement;
 let root: Root;
 
@@ -166,6 +170,41 @@ function heading(): HTMLElement {
   const found = container.querySelector("h1");
   if (found === null) throw new Error("the page has no h1");
   return found;
+}
+
+/** The text of the tooltip shown, or null. */
+function tooltip(): string | null {
+  return document.querySelector('[role="tooltip"]')?.textContent ?? null;
+}
+
+/** Presses the key `key` on `element`, down and up, as the keyboard
+    does. */
+async function pressKey(element: HTMLElement, key: string): Promise<void> {
+  await act(async () => {
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+    );
+    await Promise.resolve();
+  });
+  await act(async () => {
+    element.dispatchEvent(
+      new KeyboardEvent("keyup", { key, bubbles: true, cancelable: true }),
+    );
+    await Promise.resolve();
+  });
+  await settled();
+}
+
+/** Puts the focus on `element` as the Tab key does, so that React Aria
+    takes it for the keyboard's and shows a tooltip. */
+async function tabTo(element: HTMLElement): Promise<void> {
+  await act(async () => {
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+    );
+    element.focus();
+    await Promise.resolve();
+  });
 }
 
 describe("AP4 D1 Undo and Redo on popgen2.html, each drawn only while it has a step", () => {
@@ -399,13 +438,59 @@ describe("AP4 D2 the keys of Undo and Redo on popgen2.html, caught on the whole 
     expect(button("Redo")).toBeNull();
   });
 
-  test("while the keys wait, as during a PCA, Ctrl+Z and Ctrl+Y are taken from the browser and do nothing", async () => {
-    const { store } = await draw({ onlyWithStep: true, keysWait: true });
+  test("while Undo and Redo wait, as during a PCA, Ctrl+Z and Ctrl+Y are taken from the browser and do nothing", async () => {
+    const { store } = await draw({ onlyWithStep: true, waits: WAITS });
     await changeMaf(store, 0.9);
     const after = store.getState().project;
     expect(await pressKeys("undo")).toBe(true);
     expect(store.getState().project).toBe(after);
     expect(await pressKeys("redo")).toBe(true);
     expect(store.getState().project).toBe(after);
+  });
+});
+
+describe("AP4 D1 Undo and Redo of popgen2.html while they wait, as during a PCA", () => {
+  test("Undo, with its step, stays drawn, greyed for a screen reader and still a stop of the Tab key, described by the reason", async () => {
+    const { store } = await draw({ onlyWithStep: true, waits: WAITS });
+    await changeMaf(store, 0.9);
+    const undo = drawn("Undo");
+    expect(undo.getAttribute("aria-disabled")).toBe("true");
+    expect(undo.disabled).toBe(false);
+    expect(description(undo)).toBe(WAITS);
+  });
+
+  test("a click on Undo, and Enter and Space on it, undo nothing", async () => {
+    const { store } = await draw({ onlyWithStep: true, waits: WAITS });
+    await changeMaf(store, 0.9);
+    const after = store.getState().project;
+    await press(drawn("Undo"));
+    expect(store.getState().project).toBe(after);
+    drawn("Undo").focus();
+    await pressKey(drawn("Undo"), "Enter");
+    await pressKey(drawn("Undo"), " ");
+    expect(store.getState().project).toBe(after);
+    expect(button("Redo")).toBeNull();
+  });
+
+  test("Redo waits as Undo does: drawn, greyed, and a click redoes nothing", async () => {
+    const { store } = await draw({ onlyWithStep: true, waits: WAITS });
+    await changeMaf(store, 0.9);
+    await act(async () => {
+      store.undo();
+      await Promise.resolve();
+    });
+    const before = store.getState().project;
+    const redo = drawn("Redo");
+    expect(redo.getAttribute("aria-disabled")).toBe("true");
+    expect(description(redo)).toBe(WAITS);
+    await press(redo);
+    expect(store.getState().project).toBe(before);
+  });
+
+  test("the focus of the keyboard on Undo shows the reason in its tooltip", async () => {
+    const { store } = await draw({ onlyWithStep: true, waits: WAITS });
+    await changeMaf(store, 0.9);
+    await tabTo(drawn("Undo"));
+    expect(tooltip()).toBe(WAITS);
   });
 });

@@ -33,9 +33,11 @@
  * macOS, are caught on the whole window while this part is drawn, which on
  * both pages is from their opening, whether or not a button is shown, as
  * shortcuts.ts says: a key with no step to take does nothing and does not
- * reach the browser's own undo. The page may make them wait, as
- * popgen2.html is to do while a PCA runs. The browser's own undo in a
- * text field is kept from reaching another field.
+ * reach the browser's own undo. The page may make Undo and Redo wait,
+ * with a reason, as popgen2.html is to do while a PCA runs: the keys then
+ * do nothing, and a button drawn is greyed with the reason and does
+ * nothing when pressed. The browser's own undo in a text field is kept
+ * from reaching another field.
  *
  * The two buttons, or their two places, are drawn with nothing around
  * them, so that the page places them.
@@ -67,17 +69,20 @@ export interface UndoRedoButtonsProps {
       given to the heading. Absent, as on popgen.html, both are always
       drawn, disabled when they have no step. */
   readonly onlyWithStep?: boolean;
-  /** Whether the keys wait: while true, they do nothing and do not reach
-      the browser's own undo, as popgen2.html is to make them while a PCA
-      runs (docs/plans/analyses-pca.md, the owner's answer 2 of 9 October
-      2026). False when absent. */
-  readonly keysWait?: boolean;
+  /** The reason Undo and Redo wait, or `null` when they do not: while
+      given, the keys do nothing and do not reach the browser's own undo,
+      and a button drawn is greyed, with the reason as its tooltip and its
+      description, and does nothing when pressed, as popgen2.html is to
+      make them while a PCA runs, "Stop the PCA to change the filters."
+      (docs/specs/steps/popgen2-pca.md, "Undo and Redo", "While a PCA
+      runs"). `null` when absent. */
+  readonly waits?: string | null;
 }
 
 /** The buttons Undo and Redo, and the keys of both on the window. */
 export function UndoRedoButtons({
   onlyWithStep = false,
-  keysWait = false,
+  waits = null,
 }: UndoRedoButtonsProps): React.JSX.Element {
   const store = useStore();
   const announcer = useAnnouncer();
@@ -147,7 +152,7 @@ export function UndoRedoButtons({
       const action = keysAction({
         handled: event.defaultPrevented,
         owner: ownerOfKeys(event.target),
-        waits: keysWait,
+        waits: waits !== null,
       });
       if (action === "leave") return;
       event.preventDefault();
@@ -179,6 +184,7 @@ export function UndoRedoButtons({
       ref={placeUndo}
       isDisabled={shownUndo === null}
       hint={shownUndo === null ? null : `Undo: ${shownUndo}`}
+      waiting={waits}
       onPress={() => {
         change("undo");
       }}
@@ -190,6 +196,7 @@ export function UndoRedoButtons({
       ref={placeRedo}
       isDisabled={redoText === null}
       hint={redoText === null ? null : `Redo: ${redoText}`}
+      waiting={waits}
       onPress={() => {
         change("redo");
       }}

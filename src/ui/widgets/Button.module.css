@@ -36,6 +36,14 @@
   cursor: default;
 }
 
+/* A button that waits: drawn as disabled, while it keeps the focus and
+   the tooltip of its reason. */
+.button[aria-disabled="true"] {
+  background: var(--color-background);
+  color: var(--color-text-disabled);
+  cursor: default;
+}
+
 /* A button that looks like a link, in a line of text: no border and no
    background, the colour of the links and underlined, at the size of the
    text around it. Inline in a sentence, it needs no target of its own

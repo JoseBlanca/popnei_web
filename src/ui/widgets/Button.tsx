@@ -17,6 +17,14 @@
  * line of text, as "Use the default" of the diversity does, so that it is
  * not taken for the button of a step; it keeps the role and the keys of a
  * button, since it changes the project and goes nowhere.
+ *
+ * A button may wait, with its reason, as Undo and Redo of popgen2.html do
+ * while a PCA runs (docs/specs/steps/popgen2-pca.md, "Undo and Redo"). A
+ * disabled button cannot take the focus, and its tooltip would show to
+ * the mouse alone; so a waiting button stays enabled for React Aria and a
+ * stop of the Tab key, carries `aria-disabled` and its reason as its
+ * tooltip and its description in place of its hint, is drawn as
+ * disabled, and a press does nothing, as the greyed tabs of that spec do.
  */
 import { useId } from "react";
 import { Button as AriaButton } from "react-aria-components";
@@ -69,6 +77,10 @@ interface ButtonBaseProps {
   /** What pressing it would do, shown in a tooltip and read with it, or
       `null` for none; none when absent. */
   readonly hint?: string | null;
+  /** The reason it waits, shown in the tooltip and read in place of the
+      hint, while a press does nothing; or `null`, when it does not wait.
+      `null` when absent. */
+  readonly waiting?: string | null;
   /** The element of the button, for a screen that moves the focus to it. */
   readonly ref?: React.Ref<HTMLButtonElement>;
   /** Whether it sends the form it is in, as Enter in a field of the form
@@ -90,6 +102,7 @@ export function Button({
   description,
   descriptionId: givenId,
   hint = null,
+  waiting = null,
   ref,
   descriptionRef,
   descriptionName = "",
@@ -100,7 +113,7 @@ export function Button({
   const ownId = useId();
   const descriptionId = givenId ?? ownId;
   const button = (
-    <WithTooltip text={hint}>
+    <WithTooltip text={waiting ?? hint}>
       {(hintId) => {
         const describedBy = [
           description === undefined ? undefined : descriptionId,
@@ -112,7 +125,8 @@ export function Button({
             isDisabled={isDisabled}
             type={isSubmit ? "submit" : "button"}
             autoFocus={autoFocus}
-            {...(onPress !== undefined && { onPress })}
+            {...(onPress !== undefined && waiting === null && { onPress })}
+            {...(waiting !== null && { "aria-disabled": true })}
             {...(ref !== undefined && { ref })}
             {...(describedBy.length > 0 && {
               "aria-describedby": describedBy.join(" "),
